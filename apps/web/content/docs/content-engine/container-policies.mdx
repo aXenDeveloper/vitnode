@@ -2,6 +2,25 @@
 title: Publishing policies
 description: Set per-container publishing rules in the VitNode Content Engine. Decide who may post in a forum, whether new posts and edits wait for approval, and how long authors may edit, with defineContentContainer policies and the AdminCP Publishing sheet.
 icon: ShieldCheck
+implementation:
+  objective: Set who may post in a set of containers and whether new posts and edits wait for approval.
+  decisions:
+    - Which containers get publishing rules? Offer container definitions in the project whose content types members can write to. If none exist, say so and ask how to proceed.
+    - 'Who may start posts: members or only moderators?'
+    - Do new posts go live at once or wait for approval? And edits to published posts?
+    - 'How long may authors edit their posts: always, never, or for a set number of minutes (60 by default)?'
+    - Does a content type in these containers, such as replies, need different rules? Offer the content types filed into the chosen containers.
+  constraints:
+    - 'Write the rules in `policies: { defaults, contentTypes }` on `defineContentContainer`. Per-container overrides are set in the AdminCP, not in code, and nothing needs migrating.'
+    - Label the container-scoped `can_edit` and `can_approve` moderator permissions in the plugin's locale.
+    - When approval is on, public forms must handle the draft status and the `approval` object in write responses.
+  related:
+    - title: Approvals
+      href: /docs/content-engine/approvals
+    - title: Review approvals
+      href: /docs/dev/moderation/review-approvals
+    - title: Scoped permissions
+      href: /docs/dev/moderation/scoped-permissions
 ---
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";

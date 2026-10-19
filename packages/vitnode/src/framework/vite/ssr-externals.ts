@@ -26,14 +26,7 @@ export const vitNodeSsrExternals = ({
   config: async (_userConfig, { command }) => ({
     nitro:
       command === "build"
-        ? {
-            // Writes `.gz`/`.br` next to every static asset and prerendered
-            // page at build time; Nitro's static handler serves the one the
-            // browser accepts, so no CPU is spent compressing per request.
-            // An app's own `nitro({ compressPublicAssets })` still wins.
-            compressPublicAssets: { brotli: true, gzip: true },
-            traceDeps: [...NITRO_TRACED_DEPENDENCIES],
-          }
+        ? { traceDeps: [...NITRO_TRACED_DEPENDENCIES] }
         : undefined,
     ssr: {
       external:

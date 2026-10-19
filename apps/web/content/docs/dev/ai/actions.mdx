@@ -2,6 +2,26 @@
 title: AI Actions
 description: Define managed AI features with defineAiAction, register them in a plugin and run them with c.get("ai").run(). VitNode Core handles permissions, limits, budgets and history.
 icon: Wand
+implementation:
+  objective: Add an AI feature to a plugin through a registered AI action.
+  decisions:
+    - Which plugin offers the AI feature? Offer plugins in the project with an API part (`config.api.ts`).
+    - What should the AI do, and with what input? Settle it in user terms. The input comes from data the chosen trigger already has.
+    - Plain text or structured data? Structured data needs a model with structured output and cannot be streamed.
+    - 'Who runs it: people on request, background jobs, or both? People are the default, and their runs need an access check.'
+    - Where is it triggered, and is it on for every role by default? Offer routes, AdminCP screens, queue tasks or cron jobs found in the chosen plugin.
+  constraints:
+    - Define the action with `defineAiAction` and register it in `aiActions` of the plugin's `buildApiPlugin()`.
+    - Run it through `aiActionRef` with `c.get("ai").run()`, `runAsSystem()` or `stream()`. Never hard-code a model or call a provider SDK directly.
+    - '`authorize()` checks access to the content the action reads, for example with `checkStaffPermission`.'
+    - The action's `title` and `description` are message keys in the plugin's locale, not plain text.
+  related:
+    - title: AI in fields and the editor
+      href: /docs/dev/ai/fields-and-editor
+    - title: AI costs and limits
+      href: /docs/dev/ai/costs-and-limits
+    - title: AI in the AdminCP
+      href: /docs/dev/ai/admin
 ---
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'

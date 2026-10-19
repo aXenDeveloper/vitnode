@@ -2,6 +2,25 @@
 title: Editable Pages
 description: Declare a page's zones once, and the people who run the site rearrange them on the page itself - Edit widgets from the user menu, drag, Save, done. No admin screen, no zone-to-column mapping, no hand-written save route.
 icon: PanelsTopLeft
+implementation:
+  objective: Let moderators place and arrange widgets on an existing public page.
+  decisions:
+    - Which page becomes editable? Offer public pages declared in the project's plugins, not AdminCP screens.
+    - Where on the page can widgets go? Settle the areas in user terms, such as above the content, a sidebar or before the footer.
+    - Which widgets may each area hold? Only this plugin's widgets, named widgets, core widgets too, or every installed widget.
+    - Who may arrange the page? Offer existing moderator permissions in the plugin, or a new one.
+    - Should an area show default widgets before anyone edits it?
+  constraints:
+    - Declare the page with `defineEditablePage` using a stable, hand-written id, and register it in `editablePages` of `buildApiPlugin()` together with its moderator permission.
+    - Render `EditablePage` around one `ContentZone` per area, and save through `createContentEditorAdapter`. Write no save route of your own.
+    - If reading the saved layout fails, the loader throws instead of rendering the defaults.
+  related:
+    - title: Content Zones
+      href: /docs/dev/widgets/content-zones
+    - title: Defining a widget
+      href: /docs/dev/widgets/defining-a-block
+    - title: Visual edit mode
+      href: /docs/dev/widgets/visual-editor
 ---
 
 A settings page is edited on the settings page. A forum index is edited on the forum index. Nobody opens an admin screen to arrange a page they cannot see.

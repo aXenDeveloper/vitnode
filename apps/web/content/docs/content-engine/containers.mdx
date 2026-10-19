@@ -2,6 +2,25 @@
 title: Containers
 description: Organize Content Engine records into a tree of containers, such as forum boards, blog sections or knowledge-base categories, with defineContentContainer and field.container.
 icon: FolderTree
+implementation:
+  objective: File the records of an existing content type into a tree of containers, such as forums or categories.
+  decisions:
+    - Which plugin owns the containers? Offer plugins in the project that define Content Engine content types.
+    - Which items are filed into them? Offer content types from the chosen plugin that have no container field yet; a type can have only one. If its table already has rows, say that a default container is needed.
+    - What are the containers called, and what extra details does each one carry? Settle it in user terms, such as "Boards" with a description. Extra details can be text, long text, numbers, yes/no switches or choices.
+    - How deep do they nest, and how are siblings sorted? A flat list or 2 to 10 levels (5 by default), sorted by hand or alphabetically.
+    - Do members pick the container when they post? Only for a content type that members can write to.
+  constraints:
+    - Use `defineContentContainer` and `field.container({ definition })`. Do not build a separate categories table.
+    - Register the definition with the admin and public content modules and in the plugin's `adminNav` and `adminContent` containers, as the guide shows.
+    - A required container on a table that already has rows needs the generated migration edited to create and assign a default before `SET NOT NULL`.
+  related:
+    - title: Containers on the frontend
+      href: /docs/content-engine/container-frontend
+    - title: Publishing policies
+      href: /docs/content-engine/container-policies
+    - title: Container hierarchy
+      href: /docs/content-engine/container-hierarchy
 ---
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";

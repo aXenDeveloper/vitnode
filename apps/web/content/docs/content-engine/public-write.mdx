@@ -2,6 +2,25 @@
 title: Public write
 description: Let signed-in members create and edit Content Engine records from the public site with publicWrite, with server-stamped ownership, moderator permissions, strict field allowlists and rate limiting.
 icon: PenLine
+implementation:
+  objective: Let signed-in members create and edit records of an existing content type from the public site.
+  decisions:
+    - Which plugin owns the content? Offer plugins in the project that define Content Engine content types.
+    - Which items do members write? Offer content types from the chosen plugin by their user-facing names. The type needs a public API and one user field that holds the owner; if either is missing, say so and ask whether to add it.
+    - What can members fill in when they create a record, and what can they change later? Offer the type's top-level fields. Files, users, groups, repeatables and widget fields cannot be written by members.
+    - Does a new record go live at once or start as a draft? Published or draft; draft is the default.
+    - Can authors edit their own records afterwards, and should creating a record ask for a captcha?
+  constraints:
+    - Use the content type `publicWrite` option with `ownership.field`. The server stamps the owner, so never accept it from the payload.
+    - Mount the generated routes through the plugin's `buildContentPublicModule`. Write no create or update route by hand, and add no public publish, hide or delete route.
+    - Label the generated `can_edit` moderator permission in the plugin's locale, then build and migrate with the project's scripts.
+  related:
+    - title: Public write frontend
+      href: /docs/content-engine/public-write-frontend
+    - title: Public write API
+      href: /docs/content-engine/public-write-api
+    - title: Public API
+      href: /docs/content-engine/public-api
 ---
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";

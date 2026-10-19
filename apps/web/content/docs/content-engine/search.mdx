@@ -2,6 +2,25 @@
 title: Search
 description: Add a Content Engine content type to the VitNode site search, keep the search index in sync with published records, and rebuild it from the AdminCP.
 icon: Search
+implementation:
+  objective: Make an existing content type findable in site search.
+  decisions:
+    - Which items appear in search? Offer content types with a public API that already have a public page. If the choice has no page yet, say so and ask how to proceed.
+    - What is the result heading? Offer the type's public text fields, or a required relation to another searchable type to borrow its title.
+    - Which text is searched, and which text leads the excerpt? Offer the type's public text, long text, rich text and slug fields.
+    - Where does a result link to? Offer the existing public routes for the chosen type that take one slug.
+    - Should results credit the authors or show an image? Offer the type's user field and public file field, if it has them.
+  constraints:
+    - Add a `search` block to the content type. Indexing is automatic, so do not call the search service for Content Engine records.
+    - Every indexed field except `authorField` must be in `publicApi.fields`.
+    - Records saved before the change need a Reindex in Debug Panel → Search. Own code that writes records must use the editorial service with `contentEditorialEffects` to keep the index current.
+  related:
+    - title: Public pages
+      href: /docs/content-engine/public-pages
+    - title: Search
+      href: /docs/dev/search
+    - title: Search reference
+      href: /docs/content-engine/reference#search
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";
