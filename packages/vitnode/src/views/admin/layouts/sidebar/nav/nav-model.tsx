@@ -1,5 +1,6 @@
 import {
   FileTextIcon,
+  FlagIcon,
   FolderTreeIcon,
   LayoutDashboardIcon,
   ServerIcon,
@@ -229,6 +230,18 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           title: key("admin.global.nav.staff.admins"),
           href: "/admin/core/staff/admins",
           permission: core("staff_admins"),
+        },
+      ],
+    },
+    {
+      href: "/admin/core/moderation",
+      title: key("admin.global.nav.moderation.title"),
+      icon: <FlagIcon />,
+      items: [
+        {
+          title: key("admin.global.nav.moderation.report_reasons"),
+          href: "/admin/core/moderation/report-reasons",
+          permission: core("report_reasons"),
         },
       ],
     },

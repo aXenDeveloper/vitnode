@@ -1,5 +1,4 @@
 import type { RichTextDocument } from "@/content/rich-text/document";
-import type { ModerationReportReason } from "@/lib/moderation/const";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { manifest } from "@/manifest";
@@ -8,11 +7,13 @@ const REPORTED_FAILURES = [
   "already_claimed",
   "assignee_not_eligible",
   "conflict",
+  "details_required",
   "duplicate",
   "forbidden",
   "not_found",
   "note_not_found",
   "rate_limited",
+  "reason_not_found",
   "report_closed",
   "report_open",
   "target_gone",
@@ -75,7 +76,7 @@ export interface CreateReportInput {
   description: null | string;
   locale: null | string;
   pluginId: string;
-  reason: ModerationReportReason;
+  reason: string;
   requestedLocale?: null | string;
   targetId: string;
   targetType: string;

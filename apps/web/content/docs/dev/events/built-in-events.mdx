@@ -481,22 +481,26 @@ member is notified.
 
 ## Moderation events
 
-Seven names, declared in `VitNodeEvents` in
+Eleven names, declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts` and emitted by core with
-`pluginId: "@vitnode/core"`. Each fires **after** its database transaction
-commits. The envelope's `actor` is the reporter for `created` and the
-moderator for the rest. Adding an internal note emits nothing. See
+`pluginId: "@vitnode/core"`. Each fires **after** its database write
+commits. The envelope's `actor` is the reporter for `created`, the
+administrator for `report_reason.*` and the moderator for the rest. Adding an internal note emits nothing. See
 [Moderation](/docs/dev/moderation).
 
 | Event                        | Payload                                                | Fires when                                                                  |
 | ---------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------- |
-| `moderation.report.created`  | `{ reportId, pluginId, targetType, targetId, reason }` | A signed-in user files a report                                             |
+| `moderation.report.created`  | `{ reportId, pluginId, targetType, targetId, reason }` | A signed-in user files a report. `reason` is the reason's `code`            |
 | `moderation.report.assigned` | `{ reportId, assigneeId, previousAssigneeId }`         | A moderator takes, reassigns or unassigns a report. `assigneeId` may be `null` |
 | `moderation.report.action`   | `{ reportId, action, pluginId, targetType, targetId }` | A content action from the ModCP changed the content. `action` is `hide` or `unhide` |
 | `moderation.report.resolved` | `{ reportId, resolution }`                             | A report is closed with an outcome                                          |
 | `moderation.report.reopened` | `{ reportId }`                                         | A closed report is reopened                                                 |
 | `moderation.report.note_updated` | `{ reportId, noteId }`                             | A moderator edits an internal note                                          |
 | `moderation.report.note_deleted` | `{ reportId, noteId }`                             | A moderator deletes an internal note                                        |
+| `moderation.report_reason.created` | `{ reasonId, code }`                             | An admin adds a [report reason](/docs/dev/moderation/manage-report-reasons) |
+| `moderation.report_reason.updated` | `{ reasonId, code }`                             | An admin edits a report reason                                              |
+| `moderation.report_reason.deleted` | `{ reasonId, code }`                             | An admin deletes a report reason. Its reports stay                          |
+| `moderation.report_reason.reordered` | `{ reasonIds }`                                | An admin saves a new order. `reasonIds` lists every reason in that order    |
 
 A hide or restore from the ModCP also emits the content type's own
 `content.{id}.hidden` or `unhidden` event, because it goes through the same

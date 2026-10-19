@@ -138,7 +138,9 @@ const ReorderableBodyDataTable = React.lazy(async () =>
  * each page. Optional row selection with bulk actions, expandable and
  * reorderable rows, and grouping.
  *
- * Pass the API's `edges` and `pageInfo` for the current page.
+ * Pass the API's `edges` and `pageInfo` for the current page. Leave
+ * `pageInfo` out for a short list that is never paged, and the pagination
+ * footer is not rendered.
  */
 export function ContentDataTable<T extends DataTableTMin>({
   bulkActions,
@@ -324,7 +326,7 @@ export function ContentDataTable<T extends DataTableTMin>({
         </div>
       </div>
 
-      <PaginationDataTable pageInfo={pageInfo} />
+      {pageInfo ? <PaginationDataTable pageInfo={pageInfo} /> : null}
     </div>
   );
 

@@ -14,6 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+import { ReportReasonLabel } from "@/views/moderation/report-reason-label";
 
 import type { ModcpBoardReport, ModcpBoardStatus } from "../modcp-query";
 
@@ -42,7 +43,7 @@ const ExtraReports = ({ row }: { row: ModcpBoardReport }) => {
         aria-label={t("extra_reports", { count: row.relatedCount })}
         className={cn(
           "relative z-10 inline-flex h-6 items-center rounded-full px-2 text-xs font-medium tabular-nums",
-          TONE_SURFACE[REASON_TONE[row.reason]],
+          TONE_SURFACE[REASON_TONE],
         )}
         role="img"
       >
@@ -118,8 +119,8 @@ export const BoardCardBody = ({
     <>
       <div className="flex items-start justify-between gap-2">
         <span className="flex min-w-0 items-center gap-1">
-          <Chip icon={FlagIcon} tone={REASON_TONE[row.reason]}>
-            {t(`reasons.${row.reason}`)}
+          <Chip icon={FlagIcon} tone={REASON_TONE}>
+            <ReportReasonLabel code={row.reason} />
           </Chip>
           <ExtraReports row={row} />
         </span>

@@ -5,6 +5,7 @@
   "pages": [
     "index",
     "enable-reports",
+    "manage-report-reasons",
     "scoped-permissions",
     "configure-moderators",
     "process-reports",

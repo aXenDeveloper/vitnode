@@ -2,7 +2,6 @@ import { camelCase, index } from "drizzle-orm/pg-core";
 
 import type {
   ModerationReportEventType,
-  ModerationReportReason,
   ModerationReportResolution,
   ModerationReportStatus,
 } from "@/lib/moderation/const";
@@ -10,12 +9,28 @@ import type { ModerationReportSnapshot } from "@/lib/moderation/snapshot";
 
 import {
   MODERATION_REPORT_EVENT_TYPES,
-  MODERATION_REPORT_REASONS,
   MODERATION_REPORT_RESOLUTIONS,
   MODERATION_REPORT_STATUSES,
 } from "@/lib/moderation/const";
 
 import { core_users } from "./users";
+
+export const core_moderation_report_reasons = camelCase.table.withRLS(
+  "core_moderation_report_reasons",
+  t => ({
+    id: t.serial().primaryKey(),
+    code: t.varchar({ length: 32 }).notNull().unique(),
+    requiresDetails: t.boolean().notNull().default(false),
+    position: t.integer().notNull().default(0),
+    createdAt: t.timestamp().notNull().defaultNow(),
+    updatedAt: t
+      .timestamp()
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  }),
+  t => [index("core_moderation_report_reasons_position_idx").on(t.position)],
+);
 
 export const core_moderation_reports = camelCase.table.withRLS(
   "core_moderation_reports",
@@ -27,10 +42,7 @@ export const core_moderation_reports = camelCase.table.withRLS(
     reporterId: t.integer().references(() => core_users.id, {
       onDelete: "set null",
     }),
-    reason: t
-      .varchar({ enum: MODERATION_REPORT_REASONS, length: 32 })
-      .$type<ModerationReportReason>()
-      .notNull(),
+    reason: t.varchar({ length: 32 }).notNull(),
     description: t.text(),
     snapshot: t.jsonb().$type<ModerationReportSnapshot>().notNull(),
     targetTitle: t.varchar({ length: 500 }),

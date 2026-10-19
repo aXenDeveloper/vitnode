@@ -6,6 +6,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
+import { ReportReasonLabel } from "@/views/moderation/report-reason-label";
 
 import type { ModcpReportDetail } from "./modcp-query";
 import type { ReportPerson } from "./report-tone";
@@ -132,8 +133,8 @@ const LinkedReports = ({
                     <span aria-hidden>·</span>
                   </>
                 ) : null}
-                <span className={cn("font-medium", REASON_TEXT[entry.reason])}>
-                  {t(`reasons.${entry.reason}`)}
+                <span className={cn("font-medium", REASON_TEXT)}>
+                  <ReportReasonLabel code={entry.reason} />
                 </span>
                 <span aria-hidden>·</span>
                 <DateFormat date={entry.createdAt} />
@@ -167,7 +168,6 @@ const ModcpReportDetailView = ({
   userId: number;
 }) => {
   const t = useTranslations("core.moderation.modcp.detail");
-  const tModeration = useTranslations("core.moderation");
   const tRoot = useTranslations();
   const queryClient = useQueryClient();
   const { data } = useSuspenseQuery(modcpReportQueryOptions(id));
@@ -205,11 +205,11 @@ const ModcpReportDetailView = ({
           <span
             className={cn(
               "inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-sm font-semibold tracking-normal",
-              TONE_SURFACE[REASON_TONE[report.reason]],
+              TONE_SURFACE[REASON_TONE],
             )}
           >
             <FlagIcon aria-hidden className="size-4" />
-            {tModeration(`reasons.${report.reason}`)}
+            <ReportReasonLabel code={report.reason} />
             <span className="sr-only">:</span>
           </span>
           {author

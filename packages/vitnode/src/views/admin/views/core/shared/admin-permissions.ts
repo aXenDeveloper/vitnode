@@ -45,6 +45,13 @@ export const ADMIN_ROLE_PERMISSIONS = {
   view: core("roles", "can_view"),
 } as const;
 
+export const ADMIN_REPORT_REASON_PERMISSIONS = {
+  create: core("report_reasons", "can_create"),
+  delete: core("report_reasons", "can_delete"),
+  edit: core("report_reasons", "can_edit"),
+  view: core("report_reasons", "can_view"),
+} as const;
+
 export const staffPermissionModuleFor = (
   type: PermissionStaffType,
 ): "staff_admins" | "staff_moderators" =>

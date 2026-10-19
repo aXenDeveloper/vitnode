@@ -10,6 +10,7 @@ import { defineModerationScope, defineReportTarget } from "@/api/moderation";
 import { core_files } from "@/database/files";
 import {
   core_moderation_report_events,
+  core_moderation_report_reasons,
   core_moderation_reports,
 } from "@/database/moderation";
 import { core_roles } from "@/database/roles";
@@ -165,6 +166,13 @@ const harness = async () => {
     [core_files, []],
     [core_moderation_reports, []],
     [core_moderation_report_events, []],
+    [
+      core_moderation_report_reasons,
+      [
+        { code: "spam", id: 1, position: 0, requiresDetails: false },
+        { code: "other", id: 2, position: 1, requiresDetails: true },
+      ],
+    ],
   ]);
   const emit = vi.fn(async () => Promise.resolve());
 
@@ -351,10 +359,10 @@ describe("filing a report", () => {
   });
 
   it.each([
-    [MODERATION_LIMITS.otherDescriptionMinLength - 1, 400],
-    [MODERATION_LIMITS.otherDescriptionMinLength, 201],
+    [MODERATION_LIMITS.requiredDescriptionMinLength - 1, 400],
+    [MODERATION_LIMITS.requiredDescriptionMinLength, 201],
   ])(
-    'needs a description of the problem for "other" (%i characters: %i)',
+    "needs a description for a reason that requires details (%i characters: %i)",
     async (length, status) => {
       const h = await harness();
 

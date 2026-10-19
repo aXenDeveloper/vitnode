@@ -6,7 +6,10 @@ import { buildRoute } from "@/api/builders";
 import { isUniqueViolation } from "@/api/lib/db-errors";
 import { findReportTarget } from "@/api/lib/moderation/registry";
 import { sealReportSnapshot } from "@/api/lib/moderation/snapshot";
-import { core_moderation_reports } from "@/database/moderation";
+import {
+  core_moderation_report_reasons,
+  core_moderation_reports,
+} from "@/database/moderation";
 import { MODERATION_LIMITS } from "@/lib/moderation/const";
 
 import {
@@ -22,44 +25,36 @@ const localeSchema = z
   .max(20)
   .regex(/^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/);
 
-const createBody = z
-  .object({
-    pluginId: z.string().min(1).max(100),
-    targetType: z.string().min(1).max(100),
-    targetId: z.string().min(1).max(64),
-    locale: localeSchema.nullable().optional(),
-    requestedLocale: localeSchema.nullable().optional(),
-    reason: reasonSchema,
-    description: z
-      .string()
-      .trim()
-      .max(MODERATION_LIMITS.descriptionMaxLength)
-      .nullable()
-      .optional(),
-  })
-  .refine(
-    body =>
-      body.reason !== "other" ||
-      (body.description?.length ?? 0) >=
-        MODERATION_LIMITS.otherDescriptionMinLength,
-    {
-      message: `Describe the problem in at least ${MODERATION_LIMITS.otherDescriptionMinLength} characters when the reason is "other".`,
-      path: ["description"],
-    },
-  );
+const createBody = z.object({
+  pluginId: z.string().min(1).max(100),
+  targetType: z.string().min(1).max(100),
+  targetId: z.string().min(1).max(64),
+  locale: localeSchema.nullable().optional(),
+  requestedLocale: localeSchema.nullable().optional(),
+  reason: reasonSchema,
+  description: z
+    .string()
+    .trim()
+    .max(MODERATION_LIMITS.descriptionMaxLength)
+    .nullable()
+    .optional(),
+});
 
 export const createReportRoute = buildRoute({
   route: {
     method: "post",
     path: "/reports",
     description:
-      "Report content to the moderators. The server captures the snapshot - the client sends only the target, locale, reason and description",
+      "Report content to the moderators. The server captures the snapshot - the client sends only the target, locale, reason code and description. A reason that requires details needs a description",
     request: {
       body: { content: { "application/json": { schema: createBody } } },
     },
     responses: {
       201: json(z.object({ id: z.number() }), "Report filed"),
-      400: { description: "Invalid reason or description" },
+      400: json(
+        errorSchema,
+        "The reason does not exist (`reason_not_found`) or needs details (`details_required`)",
+      ),
       401: { description: "Sign in first" },
       404: json(
         errorSchema,
@@ -77,6 +72,23 @@ export const createReportRoute = buildRoute({
     if (!user) throw new HTTPException(401, { message: "Sign in first." });
 
     const body = c.req.valid("json");
+    const [reason] = await c
+      .get("db")
+      .select({
+        requiresDetails: core_moderation_report_reasons.requiresDetails,
+      })
+      .from(core_moderation_report_reasons)
+      .where(eq(core_moderation_report_reasons.code, body.reason))
+      .limit(1);
+    if (!reason) throw reportError(400, { error: "reason_not_found" });
+    if (
+      reason.requiresDetails &&
+      (body.description?.length ?? 0) <
+        MODERATION_LIMITS.requiredDescriptionMinLength
+    ) {
+      throw reportError(400, { error: "details_required" });
+    }
+
     const registered = findReportTarget(c.get("core").moderation, {
       pluginId: body.pluginId,
       type: body.targetType,

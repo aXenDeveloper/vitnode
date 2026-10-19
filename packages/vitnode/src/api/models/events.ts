@@ -115,6 +115,21 @@ export interface VitNodeEvents {
     reportId: number;
     resolution: string;
   };
+  "moderation.report_reason.created": {
+    code: string;
+    reasonId: number;
+  };
+  "moderation.report_reason.deleted": {
+    code: string;
+    reasonId: number;
+  };
+  "moderation.report_reason.reordered": {
+    reasonIds: number[];
+  };
+  "moderation.report_reason.updated": {
+    code: string;
+    reasonId: number;
+  };
   "notifications.deleted_all": {
     items: number;
   };

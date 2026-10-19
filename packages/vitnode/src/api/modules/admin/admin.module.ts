@@ -7,6 +7,7 @@ import { debugAdminModule } from "./debug/debug.admin.module";
 import { filesAdminModule } from "./files/files.admin.module";
 import { notificationsAdminModule } from "./notifications/notifications.admin.module";
 import { pluginsAdminModule } from "./plugins/plugins.admin.module";
+import { reportReasonsAdminModule } from "./report-reasons/report-reasons.admin.module";
 import { rolesAdminModule } from "./roles/roles.admin.module";
 import { sendNotificationRoute } from "./routes/notifications.route";
 import { sessionAdminRoute } from "./routes/session.route";
@@ -27,6 +28,7 @@ export const adminModule = buildModule({
     dashboardAdminModule,
     notificationsAdminModule,
     pluginsAdminModule,
+    reportReasonsAdminModule,
   ],
   cronJobs: [],
 });

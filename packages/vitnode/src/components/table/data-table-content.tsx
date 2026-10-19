@@ -63,7 +63,7 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
   React.ComponentProps<typeof Table>,
   "columns"
 > &
-  React.ComponentProps<typeof PaginationDataTable> &
+  Partial<React.ComponentProps<typeof PaginationDataTable>> &
   React.ComponentProps<typeof SearchDataTable> & {
     /** Adds a checkbox per row and shows these actions while rows are selected. */
     bulkActions?: React.ReactNode;

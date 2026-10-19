@@ -189,7 +189,10 @@ const EventBody = ({ event }: { event: ReportEvent }) => {
   if (event.type === "note_edited" || event.type === "note_deleted") {
     return <NoteChange event={event} />;
   }
-  const body = event.data.body ?? event.data.explanation ?? event.data.reason;
+  const body =
+    event.data.body ??
+    event.data.explanation ??
+    (event.type === "reopened" ? event.data.reason : undefined);
   if (!body) return null;
 
   return (
