@@ -1,0 +1,315 @@
+---
+title: Public lists
+description: Build a public VitNode Content Engine list page with search, filters, sorting and pagination kept in the URL, using listFields, defineContentList and the ContentList components.
+icon: LayoutGrid
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import noResults from './public-lists-no-results.webp'
+
+A public list is a page such as `/blog` that shows published records a page at a time, with search, filters and sorting in its URL. The Content Engine provides the data and the list behavior; your plugin defines the route, the item layout and the words. This guide walks through the blog plugin's `/blog` page, so every snippet is real code you can open in `plugins/blog/src`.
+
+| The Content Engine provides                                                                                          | Your plugin defines                                     |
+| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| The list route `GET /content/{publicApi.path}` with paging, search, filters, locale fallback, caching and cache tags | The `page()` route and where it lives                   |
+| Only published, already-live and not-hidden records - drafts and scheduled posts never appear                        | Which sorts and filters the URL accepts                 |
+| `defineContentList`, `contentListQueryOptions`, `contentListPageHead`                                                | The `fetcher` call, the item schema and the card layout |
+| `ContentListResults`, `ContentListPagination`, `useContentListSearchInput`                                           | Every label, through its own locale namespace           |
+
+The Content Engine never creates list pages on its own. You add one where a list belongs.
+
+<Steps>
+
+<Step>
+
+### Keep list rows light
+
+Set `publicApi.listFields` to the fields a list item needs. The list route then selects only those, while the detail route still returns every field in `fields`:
+
+```ts title="plugins/blog/src/content/post.ts"
+publicApi: {
+  path: "blog",
+  fields: ["id", "title", "friendlyUrl", "content", "excerpt", "categoryId", "coverImage", "coverImageAlt", "publishedAt"],
+  // [!code ++:10]
+  listFields: [
+    "id",
+    "title",
+    "friendlyUrl",
+    "excerpt",
+    "categoryId",
+    "coverImage",
+    "coverImageAlt",
+    "publishedAt",
+  ],
+  searchableFields: ["title", "content"],
+  orderableFields: ["publishedAt"],
+  filterableFields: ["categoryId", "friendlyUrl"],
+},
+```
+
+`listFields` must be a subset of `fields`. The list route's OpenAPI schema and the `ContentPublicListRow` type follow it, so `content` is gone from both. Search still scans `content`, because `searchableFields` reads the database, not the response.
+
+</Step>
+
+<Step>
+
+### Declare the list
+
+`defineContentList` from `@vitnode/core/tanstack/content` names the sorts, the URL filters and the page size once:
+
+```ts title="plugins/blog/src/pages/blog-list.ts"
+import type { ContentListSearch } from '@vitnode/core/tanstack/content'
+
+import {
+  contentListIdFilter,
+  defineContentList,
+} from '@vitnode/core/tanstack/content'
+
+export const BLOG_HREF = '/blog'
+
+export const blogPostList = defineContentList({
+  defaultSort: 'newest',
+  filters: { category: contentListIdFilter },
+  pageSize: 12,
+  sorts: {
+    newest: { order: 'desc', orderBy: 'publishedAt' },
+    oldest: { order: 'asc', orderBy: 'publishedAt' },
+  },
+})
+
+export type BlogListSearch = ContentListSearch<
+  (typeof blogPostList.sorts)[number],
+  { category: typeof contentListIdFilter }
+>
+
+export const blogListSearch = (
+  input: Record<string, unknown>,
+): BlogListSearch => blogPostList.parseSearch(input)
+```
+
+Each `orderBy` must be in `publicApi.orderableFields` or be `publishedAt`. The URL keys are `q`, `sort`, `page` and one per filter, here `category`.
+
+</Step>
+
+<Step>
+
+### Fetch one page
+
+`contentListQueryOptions` builds TanStack Query options keyed by the locale and the normalized URL state. Write the `fetcher` call inline in `fetch`, so its route stays typed:
+
+```ts title="plugins/blog/src/pages/blog-queries.ts"
+import { zodContentFileDescriptor } from '@vitnode/core/content'
+import { contentListQueryOptions } from '@vitnode/core/tanstack/content'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+import { z } from 'zod'
+
+import { manifest } from '@/manifest.gen'
+
+import type { BlogListSearch } from './blog-list'
+
+import { blogPostList } from './blog-list'
+
+const zodBlogPostCard = z.object({
+  categoryId: z.array(z.number()),
+  coverImage: zodContentFileDescriptor.nullable(),
+  coverImageAlt: z.string().nullable(),
+  excerpt: z.string().nullable(),
+  friendlyUrl: z.string(),
+  id: z.number(),
+  locale: z.string(),
+  publishedAt: z.string().nullable(),
+  title: z.string(),
+})
+
+export const blogPostsQueryOptions = (request: {
+  locale: string
+  search: BlogListSearch
+}) =>
+  contentListQueryOptions({
+    ...request,
+    queryKey: ['@vitnode/blog', 'posts'],
+    fetch: async ({ locale, search }) => {
+      const res = await fetcher({
+        plugin: manifest.id,
+        method: 'get',
+        module: 'content/blog',
+        path: '/',
+        args: {
+          query: {
+            ...blogPostList.apiQuery(search),
+            ...(search.category === undefined
+              ? {}
+              : { categoryId: search.category }),
+            locale,
+          },
+        },
+      })
+      if (res.status !== 200) throw new Error('Loading the blog failed.')
+
+      const { edges, pageInfo } = await res.json()
+
+      return { edges: z.array(zodBlogPostCard).parse(edges), pageInfo }
+    },
+  })
+```
+
+`apiQuery` turns the state into `first`, `page`, `order`, `orderBy` and `search`. Route-specific filters are mapped here, so `?category=3` in the URL becomes `categoryId=3` for the API. Passing `locale` explicitly keeps the response, and its cache, tied to the page's language.
+
+</Step>
+
+<Step>
+
+### Add the route
+
+Register the page with the list's `search` validator:
+
+```ts title="plugins/blog/src/routes.ts"
+import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
+import { CardsPendingSkeleton } from '@vitnode/core/tanstack/pending'
+
+import { blogListSearch } from './pages/blog-list'
+
+export const routes = definePluginRoutes([
+  page('/blog', {
+    cache: { maxAge: 300, staleWhileRevalidate: 60 },
+    component: lazy(() => import('./pages/blog-page')),
+    messages: ['@vitnode/blog.list'],
+    pendingComponent: CardsPendingSkeleton,
+    search: blogListSearch,
+  }),
+])
+```
+
+The [page cache](/docs/dev/cache/pages) only stores a URL with no query string, so `/blog` is reused and `/blog?q=vite` always renders fresh. Each locale has its own URL, so a Polish page is never served to an English reader.
+
+</Step>
+
+<Step>
+
+### Load and render the page
+
+Warm the query in `load`, build the head with `contentListPageHead`, and render the states with `ContentListResults` and `ContentListPagination`. An excerpt of `blog-page.tsx`:
+
+```tsx title="plugins/blog/src/pages/blog-page.tsx"
+export const route = defineRoute<BlogPageData, BlogListSearch>({
+  load: async ({ context, search }) => ({
+    posts: await context.queryClient
+      .query({
+        ...blogPostsQueryOptions({ locale: context.locale, search }),
+        meta: LOADER_DATA_QUERY_META,
+      })
+      .catch(() => null),
+  }),
+
+  head: ({ search, t }) =>
+    contentListPageHead({
+      description: t('@vitnode/blog.list.desc'),
+      pathname: BLOG_HREF,
+      search,
+      title: t('@vitnode/blog.list.title'),
+    }),
+})
+
+const BlogPage = ({
+  loaderData: { posts },
+  navigate,
+  search,
+}: PluginRoutePageProps<BlogPageData, BlogListSearch>) => {
+  const t = useTranslations('@vitnode/blog.list')
+  const [isPending, startTransition] = React.useTransition()
+  const update = (patch: Partial<BlogListSearch>) => {
+    startTransition(async () => {
+      await navigate({
+        resetScroll: false,
+        search: blogPostList.withSearch(search, patch),
+      })
+    })
+  }
+  const input = useContentListSearchInput({
+    onCommit: (q) => update({ q }),
+    value: search.q,
+  })
+
+  return (
+    <>
+      <input
+        aria-label={t('search_label')}
+        onChange={(event) => input.setValue(event.target.value)}
+        type="search"
+        value={input.value}
+      />
+
+      <ContentListResults
+        className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+        empty={<BlogEmpty title={t('empty.title')} />}
+        error={<BlogEmpty title={t('error.title')} />}
+        getKey={(post) => post.id}
+        isError={posts === null}
+        isFetching={isPending}
+        isFiltered={blogPostList.isFiltered(search)}
+        items={posts?.edges}
+        label={t('articles')}
+        loading={<BlogGridSkeleton />}
+        noResults={<BlogEmpty title={t('no_results.title')} />}
+        renderItem={(post) => <BlogPostCard post={post} />}
+      />
+
+      {posts ? (
+        <ContentListPagination
+          hrefFor={(page) => blogPostList.href(BLOG_HREF, { ...search, page })}
+          label={t('pagination')}
+          pageInfo={posts.pageInfo}
+        />
+      ) : null}
+    </>
+  )
+}
+```
+
+- `withSearch` returns the new URL state and drops `page` when anything else changes, because page 4 of the old results says nothing about the new ones.
+- `useContentListSearchInput` waits 500 ms after the last keystroke before it navigates, and follows the URL when the reader goes back or forward.
+- `navigate` inside `startTransition` keeps the current cards on screen, dimmed and `aria-busy`, while the next page loads.
+- `ContentListResults` shows `empty` when nothing is published and `noResults` when a search or filter matches nothing, so only the second one needs a "Clear filters" link to `BLOG_HREF`.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Run `pnpm build:plugins`, restart `pnpm dev` and open `http://localhost:3000/blog`. Search, pick a category, change the sort and move to page 2: the URL changes each time, and refreshing or pressing back shows the same view.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={noResults}
+  alt="Blog page with the search term kangaroo-free and the Releases category selected, showing No articles match and a Clear filters button"
+/>
+
+The plain list is the indexable one; every other state stays out of the index but keeps its links followable:
+
+```bash
+curl -s http://localhost:3000/blog | grep -oE '<meta content="[^"]*" name="robots"/>|<link href="[^"]*" rel="canonical"/>'
+curl -s "http://localhost:3000/blog?q=vite" | grep -oE '<meta content="[^"]*" name="robots"/>'
+```
+
+```html
+<meta content="index, follow" name="robots" />
+<link href="http://localhost:3000/blog" rel="canonical" />
+<meta content="noindex, follow" name="robots" />
+```
+
+## How URL parameters, locales and pagination interact
+
+- **Normalized URLs.** `parseSearch` drops unknown keys, invalid values, `page=1` and the default sort. `/blog?sort=newest&page=1&utm_source=x` and `/blog` are the same state, so they share a query key and a canonical link.
+- **Locales.** The query key holds the locale, and the request passes it as `?locale=`. A locale with no translation of a record gets the default language's when the content type uses `fallback: "default"`, and each row says which language it is in under `locale`. An unknown `?locale=` answers `404` rather than an English list.
+- **Pagination.** Lists are page-numbered. `pageInfo` carries `currentPage`, `totalPages`, `hasNextPage` and `totalCount`, which is what `ContentListPagination` and the "Showing 1–12 of 15" text read. A `page` past the end gets the last page.
+- **Caching and freshness.** The API caches each list read per query and locale, and every publish, edit, unpublish, hide or delete of the content type expires them, along with any cached page that read the list.
+
+Records also reach crawlers through their own pages and the [sitemap](/docs/content-engine/seo#sitemap). The sitemap route lists records, not lists, so add the list's own URL, such as `/blog`, where your app builds `/sitemap.xml`.
+
+## Related
+
+- [Add a list to another page](/docs/content-engine/public-lists-embed) with your own item layout.
+- [Public list API](/docs/content-engine/public-lists-api) for every option and return value.
+- [Public API](/docs/content-engine/public-api) for the list route's query parameters.

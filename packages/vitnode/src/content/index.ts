@@ -587,6 +587,7 @@ export type {
   ContentPublicExposableField,
   ContentPublicFieldName,
   ContentPublicFilterInput,
+  ContentPublicListFieldName,
   ContentPublicListRow,
   ContentPublicOrderableFieldName,
   ContentPublicOwnershipField,

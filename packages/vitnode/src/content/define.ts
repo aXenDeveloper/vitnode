@@ -20,6 +20,7 @@ import type {
   ContentPreviewEnabled,
   ContentPublicApiConfig,
   ContentPublicExposableField,
+  ContentPublicListFieldsResolved,
   ContentPublicOwnershipField,
   ContentPublicPeopleResolved,
   ContentPublicPersonField,
@@ -263,6 +264,7 @@ export const defineContentType = <
       >
     | undefined = undefined,
   TPublicPeople extends ContentPublicPersonField<TFields> = never,
+  TPublicListField extends TPublicField = never,
 >({
   admin = {},
   delivery,
@@ -360,7 +362,12 @@ export const defineContentType = <
    * one exposed slug field. Omit it and nothing public is generated.
    */
   publicApi?:
-    | ContentPublicApiConfig<TPublicField, TPublicPath, TPublicPeople>
+    | ContentPublicApiConfig<
+        TPublicField,
+        TPublicPath,
+        TPublicPeople,
+        TPublicListField
+      >
     | false;
   /**
    * Opts into the draft/published lifecycle: adds `status` and `publishedAt`,
@@ -421,7 +428,8 @@ export const defineContentType = <
   ContentDuplicationEnabled<TDuplication>,
   TIdStrategy,
   ContentPublicWriteResolved<TPublicWrite>,
-  ContentPublicPeopleResolved<TPublicPeople>
+  ContentPublicPeopleResolved<TPublicPeople>,
+  ContentPublicListFieldsResolved<TPublicListField>
 > => {
   if (!CONTENT_ID_PATTERN.test(id)) {
     throw new ContentEngineError(
@@ -699,7 +707,8 @@ export const defineContentType = <
     ContentDuplicationEnabled<TDuplication>,
     TIdStrategy,
     ContentPublicWriteResolved<TPublicWrite>,
-    ContentPublicPeopleResolved<TPublicPeople>
+    ContentPublicPeopleResolved<TPublicPeople>,
+    ContentPublicListFieldsResolved<TPublicListField>
   > = {
     admin: resolvedAdmin,
     advanced: resolvedAdvanced,
@@ -733,7 +742,8 @@ export const defineContentType = <
       TPublicField,
       TPublicEnabled,
       TPublicPath,
-      ContentPublicPeopleResolved<TPublicPeople>
+      ContentPublicPeopleResolved<TPublicPeople>,
+      ContentPublicListFieldsResolved<TPublicListField>
     >,
     publicWrite:
       resolvedPublicWrite as ContentPublicWriteResolved<TPublicWrite>,
@@ -755,7 +765,8 @@ export const defineContentType = <
         ContentDuplicationEnabled<TDuplication>,
         TIdStrategy,
         ContentPublicWriteResolved<TPublicWrite>,
-        ContentPublicPeopleResolved<TPublicPeople>
+        ContentPublicPeopleResolved<TPublicPeople>,
+        ContentPublicListFieldsResolved<TPublicListField>
       >
     >({
       admin: resolvedAdmin,

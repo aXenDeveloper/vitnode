@@ -29,8 +29,11 @@ const all = [manifest.id] as const;
  */
 export const blogQueryKeys = {
   all,
+  categories: (locale: string) => [...all, "categories", locale] as const,
   post: (request: { locale: string; slug: string }) =>
     [...all, "post", request] as const,
+  /** Every page of every article list, in every locale. */
+  posts: [...all, "posts"] as const,
 };
 
 const fetchBlogPost = async ({

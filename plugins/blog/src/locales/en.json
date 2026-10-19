@@ -174,6 +174,38 @@
         }
       }
     },
+    "list": {
+      "title": "Blog",
+      "title_page": "Blog - page {page}",
+      "desc": "Articles, guides and news from the team, newest first.",
+      "filters": "Filter articles",
+      "search_label": "Search",
+      "search_placeholder": "Search articles...",
+      "category_label": "Category",
+      "all_categories": "All categories",
+      "sort_label": "Sort by",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first"
+      },
+      "articles": "Articles",
+      "categories": "Categories",
+      "published": "Published",
+      "pagination": "Blog pages",
+      "empty": {
+        "title": "No articles yet",
+        "desc": "Nothing has been published here yet. Check back soon - the kettle is on."
+      },
+      "no_results": {
+        "title": "No articles match",
+        "desc": "Try another search term or category, or clear the filters to see every article."
+      },
+      "error": {
+        "title": "The articles did not load",
+        "desc": "Something went wrong on our side. Give it another go in a moment.",
+        "retry": "Try again"
+      }
+    },
     "post": {
       "published": "Published",
       "hidden": {

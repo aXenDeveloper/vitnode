@@ -1,5 +1,12 @@
-/** What a crawler may do with a plugin page. */
-export type PluginRouteRobots = "index, follow" | "noindex, nofollow";
+/**
+ * What a crawler may do with a plugin page. `noindex, follow` keeps a page out
+ * of the index while its links still count - a search or filter variant of a
+ * list, whose articles a crawler should still reach.
+ */
+export type PluginRouteRobots =
+  | "index, follow"
+  | "noindex, follow"
+  | "noindex, nofollow";
 
 export interface PluginRouteHead {
   alternates?: Readonly<Record<string, string>>;

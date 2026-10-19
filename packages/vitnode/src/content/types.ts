@@ -1143,6 +1143,7 @@ export interface ContentPublicApiConfig<
   TField extends string = string,
   TPath extends string = string,
   TPeople extends string = string,
+  TListField extends string = TField,
 > {
   /** Direction of the list route's default order. */
   defaultOrder?: "asc" | "desc";
@@ -1155,10 +1156,11 @@ export interface ContentPublicApiConfig<
   /**
    * The fields a list row carries - a subset of `fields`, checked at definition
    * time. Defaults to `fields`. Lets a list skip a heavy `body` or a gallery the
-   * detail route still serves. The list row *type* stays the full projection,
-   * so a field left out here is simply absent at runtime.
+   * detail route still serves. The list route's response schema and
+   * `ContentPublicListRow` carry exactly these fields (plus `people` and, when
+   * localized, `locale`).
    */
-  listFields?: readonly [TField, ...TField[]];
+  listFields?: readonly [TListField, ...TListField[]];
   /** Columns `orderBy` accepts, besides `publishedAt`. Defaults to none. */
   orderableFields?: readonly TField[];
   /** One lowercase URL segment, e.g. `articles`. Never `admin`. */
@@ -1186,6 +1188,7 @@ export interface ResolvedContentPublicApiConfig<
   TEnabled extends boolean = boolean,
   TPath extends string = string,
   TPeople extends string = string,
+  TListField extends string = string,
 > {
   defaultOrder: "asc" | "desc";
   defaultOrderBy: string;
@@ -1193,7 +1196,7 @@ export interface ResolvedContentPublicApiConfig<
   fields: TField[];
   filterableFields: string[];
   /** What a list row carries. Absent means the same as `fields`. */
-  listFields?: TField[];
+  listFields?: TListField[];
   orderableFields: string[];
   path: TPath;
   /** User fields published as a {@link ContentPublicPerson}. */
@@ -2046,6 +2049,7 @@ export interface ContentTypeDefinition<
   TPublicWrite extends ResolvedContentPublicWriteConfig =
     ResolvedContentPublicWriteConfig,
   TPublicPeople extends string = string,
+  TPublicListField extends string = string,
 > {
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
@@ -2076,7 +2080,8 @@ export interface ContentTypeDefinition<
     TPublicField,
     TPublicEnabled,
     TPublicPath,
-    TPublicPeople
+    TPublicPeople,
+    TPublicListField
   >;
   publication: ResolvedContentPublicationConfig<TPublication>;
   publicWrite: TPublicWrite;
@@ -2100,7 +2105,8 @@ export interface ContentTypeDefinition<
       TDuplicationEnabled,
       TIdStrategy,
       TPublicWrite,
-      TPublicPeople
+      TPublicPeople,
+      TPublicListField
     >
   >;
   /** Search synchronization, or the disabled default when `search` is omitted. */
@@ -2371,22 +2377,35 @@ type ContentPublicNested<TFields, TName extends string> = {
  * absent from this type *and* absent from the generated `SELECT`, so it never
  * leaves Postgres. Adding a field to the content type does not add it here.
  */
-export type ContentPublicSelect<TDefinition> = Prettify<
+export type ContentPublicSelect<TDefinition> = ContentPublicProjectionOf<
+  TDefinition,
+  ContentPublicFieldName<TDefinition>
+>;
+
+/** One public row carrying the exposed fields named by `TName`. */
+type ContentPublicProjectionOf<TDefinition, TName extends string> = Prettify<
   ContentPublicLocaleColumn<TDefinition> &
-    ContentPublicNested<
-      ContentFieldsOf<TDefinition>,
-      ContentPublicFieldName<TDefinition>
-    > &
+    ContentPublicNested<ContentFieldsOf<TDefinition>, TName> &
     ContentPublicPeopleColumns<TDefinition> & {
-      [
-        K in PublicFlatName<ContentPublicFieldName<TDefinition>>
-      ]: ContentPublicValue<
+      [K in PublicFlatName<TName>]: ContentPublicValue<
         ContentFieldsOf<TDefinition>,
         K,
         ContentIdOf<TDefinition>
       >;
     }
 >;
+
+/**
+ * The fields a public list row carries: `publicApi.listFields` when the
+ * content type sets it, every exposed field otherwise.
+ */
+export type ContentPublicListFieldName<TDefinition> = TDefinition extends {
+  publicApi: { listFields?: (infer TName extends string)[] };
+}
+  ? string extends TName
+    ? ContentPublicFieldName<TDefinition>
+    : TName
+  : ContentPublicFieldName<TDefinition>;
 
 /** The `publicApi.people` names of one content type, read off its resolved config. */
 export type ContentPublicPeopleName<TDefinition> = TDefinition extends {
@@ -2403,6 +2422,17 @@ export type ContentPublicPeopleName<TDefinition> = TDefinition extends {
  * without people stays comparable with the erased one; it publishes nothing
  * because {@link ContentPublicPeopleName} reads `string` as "none".
  */
+/**
+ * What `defineContentType` records for `publicApi.listFields`. No list fields
+ * is `string`, which {@link ContentPublicListFieldName} reads as "every exposed
+ * field".
+ */
+export type ContentPublicListFieldsResolved<TListField extends string> = [
+  TListField,
+] extends [never]
+  ? string
+  : TListField;
+
 export type ContentPublicPeopleResolved<TPeople extends string> = [
   TPeople,
 ] extends [never]
@@ -2434,14 +2464,14 @@ type ContentPublicLocaleColumn<TDefinition> = TDefinition extends {
   : Record<never, never>;
 
 /**
- * A row in a public list.
- *
- * Typed as the detail projection. `publicApi.listFields` narrows what a list row
- * carries at runtime only, so with it set, a field outside that list is absent
- * from the row even though this type names it.
+ * A row in a public list: the detail projection narrowed to
+ * `publicApi.listFields` when the content type sets it. `people` and, on a
+ * localized content type, `locale` are always included.
  */
-export type ContentPublicListRow<TDefinition> =
-  ContentPublicSelect<TDefinition>;
+export type ContentPublicListRow<TDefinition> = ContentPublicProjectionOf<
+  TDefinition,
+  ContentPublicListFieldName<TDefinition>
+>;
 
 /**
  * Equality filters the public service accepts.

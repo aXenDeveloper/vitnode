@@ -165,7 +165,7 @@ What `fields` accepts:
 
 `people` is the explicit opt-in for a user. Each named field comes back under its own name as `{ id, name, nameCode, avatarColor, avatarUrl, role: { color, prefix } }`, or `null` when nobody is set or the account was deleted. The summaries for a whole page are loaded in one query. `people` refuses a field that is not a `field.user()`, a `multiple: true` or localized user field, and a name listed twice.
 
-`listFields` keeps a public list light: leave a long `body` or a gallery to the detail route, and the list neither selects nor loads them. The list row's TypeScript type is still the full detail shape, so a field you left out is simply missing at runtime. `people` are always included.
+`listFields` keeps a public list light: leave a long `body` or a gallery to the detail route, and the list neither selects nor loads them. The list route's OpenAPI schema and the `ContentPublicListRow` type carry exactly these fields, so a field you left out is a compile error rather than a surprise `undefined`. `people` and, on a localized content type, `locale` are always included. [Public lists](/docs/content-engine/public-lists) shows `listFields` on the blog.
 
 `searchableFields`, `filterableFields` and `orderableFields` must all be in `fields`. Repeatable leaves fit none of them. `orderableFields` also refuses file fields, to-many relations and localized fields.
 

@@ -10,6 +10,7 @@ import { isInternalPathname } from "../metadata/alternates";
 
 const ROBOTS: readonly PluginRouteRobots[] = [
   "index, follow",
+  "noindex, follow",
   "noindex, nofollow",
 ];
 

@@ -36,7 +36,6 @@ import { contentContainerFieldOf } from "../containers/association";
 import { createContentContainerService } from "../containers/server/service";
 import { ContentEngineError } from "../errors";
 import { parseContentId } from "../ids";
-import { resolveContentPublicLocale } from "../locale";
 import { partitionContentFields } from "../localization";
 import {
   contentColumnsToValues,
@@ -47,7 +46,7 @@ import { publicOrderableColumns } from "../registry";
 import { buildContentDeliveryRoutes } from "./delivery-routes";
 import { resolveContentPublicRowFiles } from "./files";
 import { findViewableHiddenBySlug } from "./hidden-access";
-import { findContentLanguage, listContentLanguages } from "./language-resolver";
+import { findContentLanguage } from "./language-resolver";
 import {
   contentListPageCacheTags,
   contentRecordPageCacheTags,
@@ -61,6 +60,10 @@ import {
   createContentPublicProjector,
 } from "./public-service";
 import { contentPublicWriteRoutes } from "./public-write-routes";
+import {
+  contentLocaleHeaders,
+  resolveContentRequestLocale,
+} from "./request-locale";
 import {
   contentSnapshotRow,
   projectTranslationRevisionSnapshot,
@@ -136,56 +139,13 @@ export const buildContentPublicRoutes = <
   const project = createContentPublicProjector(definition);
 
   /**
-   * Which language this request is for, or `null`.
-   *
-   * `null` is a 404, always. An explicit `?locale=xx` that names no language this
-   * install serves is a request for something that does not exist - substituting
-   * the default would answer a Polish URL with English content and then cache it
-   * under the Polish tag, which is the one failure locale-aware caching is here to
-   * prevent.
-   *
-   * A *negotiated* locale is a preference rather than an instruction, so an
-   * unmatched `Accept-Language` falls through to the default inside
-   * {@link resolveContentPublicLocale} and never reaches this as a `null`.
+   * Which language this request is for, or `null` - always a 404. An explicit
+   * `?locale=xx` naming no language this install serves is a request for
+   * something that does not exist; a negotiated `Accept-Language` that matches
+   * nothing falls through to the default instead.
    */
-  const localeFor = async (c: Context) => {
-    if (!localized) return { locale: undefined, source: "default" as const };
-
-    const languages = await listContentLanguages(c);
-
-    return resolveContentPublicLocale({
-      acceptLanguage: c.req.header("accept-language"),
-      // Only the locales this install actually serves. A disabled language is
-      // readable in the AdminCP and unreachable in public, which is the read-side
-      // half of the rule that already stops content being written into one.
-      available: languages
-        .filter(language => language.isEnabled)
-        .map(language => language.locale),
-      defaultLocale: definition.localization.defaultLocale,
-      explicit: c.req.query("locale"),
-    });
-  };
-
-  /**
-   * The response headers a localized read carries.
-   *
-   * `Content-Language` is the resolved locale, which with a fallback is not always
-   * the one that was asked for. `Vary: Accept-Language` is added only when the
-   * locale actually came from the header - a response chosen by an explicit
-   * `?locale=` is keyed by its URL, and varying on a header that did not decide
-   * anything would fragment every shared cache for nothing.
-   */
-  const localeHeaders = (
-    locale: string | undefined,
-    source: "default" | "explicit" | "negotiated",
-  ): Record<string, string> => {
-    if (locale === undefined) return {};
-
-    return {
-      "Content-Language": locale,
-      ...(source === "negotiated" ? { Vary: "Accept-Language" } : {}),
-    };
-  };
+  const localeFor = async (c: Context) =>
+    await resolveContentRequestLocale(c, definition);
 
   // Widened, not cast: the generated table type carries every column as a
   // literal, which Drizzle's `.from()` overloads cannot resolve through a
@@ -346,7 +306,7 @@ export const buildContentPublicRoutes = <
           content: {
             "application/json": {
               schema: z.object({
-                edges: z.array(schemas.publicSelectObject),
+                edges: z.array(schemas.publicListSelectObject),
                 pageInfo: zodPaginationPageInfo,
               }),
             },
@@ -435,7 +395,7 @@ export const buildContentPublicRoutes = <
           : []),
       ]);
 
-      return c.json(data, 200, localeHeaders(resolved.locale, resolved.source));
+      return c.json(data, 200, contentLocaleHeaders(resolved));
     },
   });
 
@@ -532,7 +492,7 @@ export const buildContentPublicRoutes = <
         {
           "Cache-Control": "private, no-store",
           "X-Robots-Tag": "noindex, nofollow",
-          ...localeHeaders(resolved.locale, resolved.source),
+          ...contentLocaleHeaders(resolved),
         },
       );
     },
@@ -689,11 +649,7 @@ export const buildContentPublicRoutes = <
           ),
         );
 
-        return c.json(
-          row,
-          200,
-          localeHeaders(resolved.locale, resolved.source),
-        );
+        return c.json(row, 200, contentLocaleHeaders(resolved));
       }
 
       const hidden = await findViewableHiddenBySlug(c, {
@@ -707,7 +663,7 @@ export const buildContentPublicRoutes = <
       return c.json(hidden, 200, {
         "Cache-Control": "private, no-store",
         "X-Robots-Tag": "noindex, nofollow",
-        ...localeHeaders(resolved.locale, resolved.source),
+        ...contentLocaleHeaders(resolved),
       });
     },
   });

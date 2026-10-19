@@ -86,6 +86,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/users/:nameCode' },
   { path: '/solutions/:slug' },
   { path: '/admin' },
+  { path: '/blog', maxAge: 300, staleWhileRevalidate: 60 },
   { path: '/boards' },
   { path: '/discover' },
   { path: '/files' },

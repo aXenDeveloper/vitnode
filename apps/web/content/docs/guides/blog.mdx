@@ -1,15 +1,23 @@
 ---
 title: Install the Blog Plugin
-description: Install @vitnode/blog, enable its API and TanStack Start integration, then publish your first article in AdminCP.
+description: Install @vitnode/blog, enable its API and TanStack Start integration, publish your first article in AdminCP and read it on the /blog page.
 icon: NotebookPen
 ---
 
-import { CompassIcon, LayoutDashboardIcon, RouteIcon } from 'lucide-react'
+import {
+  CompassIcon,
+  LayoutDashboardIcon,
+  LayoutGridIcon,
+  RouteIcon,
+} from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { ImgDocs } from '@/components/fumadocs/img'
+import blogIndex from './blog-index.webp'
 
 `@vitnode/blog` is the Content Engine reference plugin. It brings articles,
-categories, editorial screens, revisions, public delivery data, and search
-indexing—without making your host app impersonate a blog plugin.
+categories, editorial screens, revisions, a public `/blog` index, article
+pages and search indexing, without making your host app impersonate a blog
+plugin.
 
 <Steps>
   <Step>
@@ -101,6 +109,67 @@ boringly reliable.
 
   </Step>
 </Steps>
+
+## Read the blog at /blog
+
+Installing the plugin adds `/blog`: every published article as a card with its
+cover, categories, title, excerpt and date, 12 to a page, newest first. Drafts,
+articles scheduled for later and hidden articles never appear. Readers can
+search, pick a category and switch to oldest first, and each card opens the
+article at `/blog/:slug`.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={blogIndex}
+  alt="The /blog page with a search field, a category filter, a sort control and a grid of article cards"
+/>
+
+Everything a reader picks lives in the URL, so a refresh, a shared link and the
+back button all show the same view:
+
+| Parameter  | Example        | What it does                                      |
+| ---------- | -------------- | ------------------------------------------------- |
+| `q`        | `?q=vite`      | Searches article titles and content               |
+| `category` | `?category=3`  | Shows one category's articles                     |
+| `sort`     | `?sort=oldest` | Oldest first. Newest first is the default         |
+| `page`     | `?page=2`      | The page number. Changing anything else resets it |
+
+The page follows the reader's language. In Polish it lists the Polish
+translation of each article, or the English one where none is published yet,
+and category names fall back the same way. "No articles yet" means nothing is
+published; "No articles match" means the current search or category hides
+everything, and offers **Clear filters**.
+
+Only the plain `/blog` is indexed by search engines, with a canonical link and
+`hreflang` alternates. Searches, categories, other sorts and later pages get
+`noindex, follow`, so crawlers still reach every article. Add `/blog` to your
+app's `/sitemap.xml` next to the article entries; the
+[sitemap route](/docs/content-engine/seo#sitemap) lists articles, not the
+index.
+
+### Category names in your own pages
+
+The filter and the card labels come from a small public route that returns
+each category's id, name in the requested language and colour, and nothing
+else:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/blog/categories?locale=pl"
+```
+
+```json
+{
+  "items": [
+    { "color": "hsl(215, 81%, 52%)", "id": 1, "name": "Poradniki" },
+    { "color": null, "id": 3, "name": "Wydania" }
+  ]
+}
+```
+
+It is cached per language until a category changes. To put a blog list on
+another page with your own layout, see
+[Add a list to another page](/docs/content-engine/public-lists-embed).
 
 ## Write and translate articles
 
@@ -238,6 +307,12 @@ together.
     title="Content delivery and SEO"
     description="Add plugin routes, redirects, canonical metadata, and sitemaps."
     href="/docs/content-engine/public-pages"
+  />
+  <Card
+    icon={<LayoutGridIcon />}
+    title="Public lists"
+    description="Build a list page like /blog for your own content type."
+    href="/docs/content-engine/public-lists"
   />
   <Card
     icon={<LayoutDashboardIcon />}
