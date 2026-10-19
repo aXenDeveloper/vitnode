@@ -15,7 +15,7 @@ import { SITE_ORIGIN } from '@/site/marketing/links'
 
 import type { DocsImplementation } from './implementation/schema'
 
-import { buildImplementationPrompt } from './implementation/prompt'
+import { ImplementationPromptActions } from './implementation/prompt-actions'
 
 const markdownCache = new Map<string, string>()
 
@@ -103,21 +103,13 @@ export const DocsPageHeader = ({
         </DocsDescription>
         <div className="flex flex-wrap items-center gap-2 pt-1">
           {implementation && (
-            <CopyButton
-              content={() =>
-                buildImplementationPrompt({
-                  implementation,
-                  markdownUrl,
-                  origin: SITE_ORIGIN,
-                  title,
-                  url,
-                })
-              }
-              size="sm"
-              variant="default"
-            >
-              Copy implementation prompt
-            </CopyButton>
+            <ImplementationPromptActions
+              implementation={implementation}
+              markdownUrl={markdownUrl}
+              origin={SITE_ORIGIN}
+              title={title}
+              url={url}
+            />
           )}
           <CopyButton
             content={async () => await loadMarkdown(markdownUrl)}

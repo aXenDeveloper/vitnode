@@ -123,7 +123,7 @@ Requesting a docs page with an `Accept: text/markdown` header redirects to its `
 
 ### Implementation prompts
 
-A guide that adds a feature to someone's project can also show **Copy implementation prompt**. One click copies a prompt for a coding agent: it links the guide and its Markdown, tells the agent to inspect the reader's project, ask a few questions, and then build the feature where the reader chose.
+A guide that adds a feature to someone's project can also show **Copy implementation prompt**. One click copies a prompt for a coding agent: it links the guide and its Markdown, tells the agent to inspect the reader's project, ask a few questions, and then build the feature where the reader chose. The eye button next to it opens a preview of the exact same text, with its own copy button.
 
 Add it only to a how-to or tutorial that ends in working code inside a plugin or app. Overviews, references and UI component demos do not get one.
 
@@ -159,7 +159,7 @@ Write each decision as a question in the reader's words, followed by where the a
 
 The shared workflow (inspect first, skip answered questions, ask dependent questions after their answer, work without a structured question tool, report the result) lives once in `apps/web/src/docs/implementation/prompt.ts`. Do not repeat it in a guide, and do not copy the tutorial into the metadata: the prompt links to it.
 
-To check your prompt, run `pnpm dev`, open the guide, click **Copy implementation prompt** and paste it into a text editor. Every link should open, and every decision should make sense for a project that has never heard of the guide's example plugin. A typo in the field, such as an unknown key or a link that is not a `/docs/` path, fails the docs build with the file name. YAML reads `key: value` inside a list item as an object, so wrap a line that contains `: ` in single quotes.
+To check your prompt, run `pnpm dev`, open the guide, and open the preview with the eye button next to **Copy implementation prompt**. Every link should open, and every decision should make sense for a project that has never heard of the guide's example plugin. A typo in the field, such as an unknown key or a link that is not a `/docs/` path, fails the docs build with the file name. YAML reads `key: value` inside a list item as an object, so wrap a line that contains `: ` in single quotes.
 
 ---
 
