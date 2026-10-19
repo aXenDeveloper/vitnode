@@ -36,6 +36,7 @@ export const AutoFormRadioGroup = ({
   description,
   otherProps: { enum: enumValues = [], isOptional },
   labels = [],
+  tip,
   variant = "default",
   ...props
 }: ItemAutoFormComponentProps &
@@ -59,7 +60,11 @@ export const AutoFormRadioGroup = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={labelRight}
+          tip={tip}
+        >
           {label}
         </AutoFormLabel>
       )}

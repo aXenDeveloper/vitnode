@@ -37,6 +37,7 @@ import {
   TabsPanels,
   TabsTrigger,
 } from "../ui/tabs";
+import { AUTO_FORM_TIP_SLOT } from "./common/tip";
 
 export type { AnyFormFieldApi, FormFieldApi } from "../ui/form";
 export { setFormFieldError } from "../ui/form";
@@ -123,6 +124,13 @@ export interface ItemAutoFormComponentProps {
     pattern?: string;
     type?: string;
   };
+  /**
+   * Extra help opened from a question-mark button beside the label - on
+   * hover, click, tap or keyboard. Unlike `description`, it is hidden until
+   * asked for. Not filled by `AutoForm`; pass it to the field component
+   * yourself, translated. Empty content renders no button.
+   */
+  tip?: React.ReactNode;
 }
 
 type AutoFormValidator<T extends z.ZodObject<z.ZodRawShape>> = StandardSchemaV1<
@@ -187,10 +195,20 @@ const outermostInvalidFields = (root: HTMLElement): HTMLElement[] =>
     element => !element.parentElement?.closest(INVALID_FIELD_SELECTOR),
   );
 
-const focusTargetOf = (fieldElement: HTMLElement): HTMLElement | null =>
-  fieldElement.querySelector<HTMLElement>(
-    `[aria-invalid=true]:is(${FOCUSABLE_SELECTOR})`,
-  ) ?? fieldElement.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+// Help buttons sit before the control, so they are never a focus target.
+const focusTargetOf = (fieldElement: HTMLElement): HTMLElement | null => {
+  const candidates = [
+    ...fieldElement.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+  ].filter(element => element.dataset.slot !== AUTO_FORM_TIP_SLOT);
+
+  return (
+    candidates.find(
+      element => element.getAttribute("aria-invalid") === "true",
+    ) ??
+    candidates[0] ??
+    null
+  );
+};
 
 // Mirrors SHAKE_KEYFRAMES in lib/motion, run through WAAPI so the form does
 // not pull motion's animation engine into every bundle that renders it.

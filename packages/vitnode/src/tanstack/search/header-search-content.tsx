@@ -499,7 +499,7 @@ const HeaderSearchMorph = ({
   );
 
   return (
-    <div className="bg-popover text-popover-foreground ring-foreground/10 overflow-hidden rounded-2xl shadow-2xl ring-1">
+    <div className="bg-popover/80 text-popover-foreground ring-foreground/10 overflow-hidden rounded-2xl shadow-2xl ring-1 backdrop-blur-sm">
       <div className="flex h-14 items-center gap-3 px-4 sm:h-16 sm:px-5">
         <SearchIcon
           aria-hidden

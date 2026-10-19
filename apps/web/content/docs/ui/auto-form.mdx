@@ -79,7 +79,54 @@ Import each one from `@vitnode/core/components/form/fields/<file>`. Spread
 | `AutoFormArray`          | `array`           | [Arrays](#arrays)                                 |
 
 Every field takes `label`, `labelRight` (content pinned to the label's right
-edge) and `description`.
+edge), `description` and [`tip`](#field-tips).
+
+## Field tips
+
+<Preview name="auto-form-tip" className="*:max-w-full" />
+
+`tip` adds a small question-mark button right after the label. It opens a
+bubble with extra help that most people can skip. Every built-in field
+supports it, `AutoFormArray` included.
+
+```tsx
+{
+  id: "slug",
+  component: props => (
+    <AutoFormInput
+      {...props}
+      label={t("slug.label")}
+      description={t("slug.description")}
+      tip={t("slug.tip")}
+      labelRight={<Badge variant="secondary">{t("public")}</Badge>}
+    />
+  ),
+}
+```
+
+Pick the right slot for your text:
+
+| Prop          | Shows                                      | Use it for                                |
+| ------------- | ------------------------------------------ | ----------------------------------------- |
+| `label`       | Always, above the control                  | The field's name                          |
+| `description` | Always, below the control                  | What the field does, in one line          |
+| `tip`         | Only when asked, in a bubble by the label  | Background, edge cases, "why would I..."  |
+| `labelRight`  | Always, at the end of the label row        | Actions, badges, a language switcher      |
+
+- **Mouse:** hover the icon for a moment, then move onto the bubble to read it.
+  Or click the icon: the bubble stays open until you click it again or
+  anywhere else.
+- **Touch:** tap the icon to open, tap it again or anywhere else to close.
+- **Keyboard:** Tab reaches the icon, Enter or Space opens it, Escape closes it.
+
+Pressing the icon never focuses the control, toggles a checkbox or switch, or
+submits the form. When a submit fails, focus still lands on the invalid
+control, not on the icon. Empty values (`undefined`, `""`, `false`) render no
+icon, so `tip={isAdmin && t("slug.tip")}` is fine.
+
+Translate the tip like the label, with `use-intl`. In a
+[multi-language field](#multi-language-fields) it stays in the UI language
+while you switch the language you're editing.
 
 ## Schema
 
@@ -324,7 +371,8 @@ import {
 A field is any component. Build it from AutoForm's parts and it gets the same
 ids, ARIA and errors as the built-in ones:
 
-- `AutoFormLabel` and `AutoFormDesc` render the label and description.
+- `AutoFormLabel` and `AutoFormDesc` render the label and description. Pass
+  `tip` to `AutoFormLabel` for the [help icon](#field-tips).
 - `FormControl` passes `id`, `aria-invalid` and `aria-describedby` to its child.
 - `FormMessage` shows the field's errors.
 
@@ -343,12 +391,13 @@ import { FormControl, FormMessage } from '@vitnode/core/components/ui/form'
 const SlowModeField = ({
   label,
   description,
+  tip,
   field,
 }: Omit<ItemAutoFormComponentProps, 'field'> & {
   field: FormFieldApi<number>
 }) => (
   <>
-    <AutoFormLabel>{label}</AutoFormLabel>
+    <AutoFormLabel tip={tip}>{label}</AutoFormLabel>
     <FormControl>
       <input
         type="range"

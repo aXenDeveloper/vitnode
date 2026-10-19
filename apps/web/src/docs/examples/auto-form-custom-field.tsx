@@ -13,12 +13,13 @@ const SlowModeField = ({
   description,
   field,
   label,
+  tip,
 }: Omit<ItemAutoFormComponentProps, 'field'> & {
   field: FormFieldApi<number>
 }) => (
   <>
     <div className="flex items-center justify-between gap-4">
-      <AutoFormLabel>{label}</AutoFormLabel>
+      <AutoFormLabel tip={tip}>{label}</AutoFormLabel>
       <output className="text-muted-foreground text-sm tabular-nums">
         {field.value === 0 ? 'Off' : `${field.value}s`}
       </output>
@@ -59,6 +60,7 @@ export default function AutoFormCustomFieldExample() {
               {...props}
               description="Seconds a member waits between posts in this thread."
               label="Slow mode"
+              tip="Moderators skip the wait. Existing posts are not affected."
             />
           ),
         },

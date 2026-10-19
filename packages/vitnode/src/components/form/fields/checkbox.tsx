@@ -12,6 +12,7 @@ export const AutoFormCheckbox = ({
   label,
   labelRight,
   description,
+  tip,
   otherProps: { isOptional },
   field,
   className,
@@ -46,7 +47,11 @@ export const AutoFormCheckbox = ({
       {!!(label ?? description) && (
         <div className="space-y-1 leading-none">
           {!!label && (
-            <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+            <AutoFormLabel
+              isOptional={isOptional}
+              labelRight={labelRight}
+              tip={tip}
+            >
               {label}
             </AutoFormLabel>
           )}

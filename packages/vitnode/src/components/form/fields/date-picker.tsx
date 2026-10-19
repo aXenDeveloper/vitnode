@@ -18,6 +18,7 @@ export const AutoFormDatePicker = ({
   label,
   labelRight,
   description,
+  tip,
   field,
   onChange,
   allowClear,
@@ -36,7 +37,7 @@ export const AutoFormDatePicker = ({
   }) => (
   <>
     {!!label && (
-      <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+      <AutoFormLabel isOptional={isOptional} labelRight={labelRight} tip={tip}>
         {label}
       </AutoFormLabel>
     )}

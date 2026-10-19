@@ -68,6 +68,7 @@ const MultiLangEditorLayout = ({
   languages,
   onSelect,
   selected,
+  tip,
 }: {
   canSelect: boolean;
   children: React.ReactNode;
@@ -78,6 +79,7 @@ const MultiLangEditorLayout = ({
   languages: React.ComponentProps<typeof MultiLangLabel>["languages"];
   onSelect: (code: string) => void;
   selected: string;
+  tip?: React.ReactNode;
 }) => (
   <>
     <MultiLangLabel
@@ -88,6 +90,7 @@ const MultiLangEditorLayout = ({
       languages={languages}
       onSelect={onSelect}
       selected={selected}
+      tip={tip}
     />
 
     <FormControl>
@@ -107,6 +110,7 @@ const MultiLangHtmlEditor = ({
   description,
   isOptional,
   field,
+  tip,
   ...props
 }: MultiLangEditorProps<MultiLangFieldProps["field"]>) => {
   const {
@@ -129,6 +133,7 @@ const MultiLangHtmlEditor = ({
       languages={languages}
       onSelect={setSelected}
       selected={selected}
+      tip={tip}
     >
       <Editor
         aria-labelledby={labelledBy}
@@ -148,6 +153,7 @@ const MultiLangJsonEditor = ({
   description,
   isOptional,
   field,
+  tip,
   ...props
 }: MultiLangEditorProps<
   FormFieldApi<MultiLangValue<null | RichTextDocument> | undefined>
@@ -175,6 +181,7 @@ const MultiLangJsonEditor = ({
       languages={languages}
       onSelect={setSelected}
       selected={selected}
+      tip={tip}
     >
       {collaborative ? (
         <CollaborativeEditorSlot
@@ -218,6 +225,7 @@ export const AutoFormEditor = ({
   // oxlint-disable-next-line no-unused-vars
   itemParams,
   multiLang,
+  tip,
   ...props
 }: AutoFormEditorProps) => {
   const labelledBy = useEditorLabelledBy(label);
@@ -231,6 +239,7 @@ export const AutoFormEditor = ({
         isOptional={isOptional}
         label={label}
         labelRight={labelRight}
+        tip={tip}
         {...props}
       />
     );
@@ -244,6 +253,7 @@ export const AutoFormEditor = ({
         isOptional={isOptional}
         label={label}
         labelRight={labelRight}
+        tip={tip}
         {...props}
       />
     );
@@ -252,7 +262,11 @@ export const AutoFormEditor = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={labelRight}
+          tip={tip}
+        >
           {label}
         </AutoFormLabel>
       )}

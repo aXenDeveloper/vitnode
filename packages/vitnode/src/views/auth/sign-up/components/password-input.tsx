@@ -26,6 +26,7 @@ export const PasswordInput = ({
   itemParams: _itemParams,
   field,
   otherProps: { isOptional, maxLength, minLength, pattern },
+  tip,
   ...props
 }: ItemAutoFormComponentProps &
   Omit<React.ComponentProps<typeof Input>, "type">) => {
@@ -53,7 +54,7 @@ export const PasswordInput = ({
 
   return (
     <>
-      <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+      <AutoFormLabel isOptional={isOptional} labelRight={labelRight} tip={tip}>
         {label}
       </AutoFormLabel>
 

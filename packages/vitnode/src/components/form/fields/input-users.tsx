@@ -113,6 +113,7 @@ export const AutoFormUser = ({
   search,
   searchPlaceholder,
   selected,
+  tip,
 }: ItemAutoFormComponentProps & {
   className?: string;
   /** Adds a button that sets the field back to `null`. */
@@ -144,6 +145,7 @@ export const AutoFormUser = ({
         <AutoFormLabel
           isOptional={otherProps.isOptional}
           labelRight={labelRight}
+          tip={tip}
         >
           {label}
         </AutoFormLabel>

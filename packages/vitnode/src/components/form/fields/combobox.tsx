@@ -353,6 +353,7 @@ export const AutoFormCombobox = ({
   labels = [],
   labelRight,
   maxVisibleChips,
+  tip,
   onValueChange,
   onInputValueChange,
   disabled,
@@ -404,6 +405,7 @@ export const AutoFormCombobox = ({
         <AutoFormLabel
           isOptional={otherProps.isOptional}
           labelRight={labelRight}
+          tip={tip}
         >
           {label}
         </AutoFormLabel>

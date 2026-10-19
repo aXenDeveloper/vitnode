@@ -31,6 +31,7 @@ export const AutoFormDateTime = ({
   label,
   labelRight,
   description,
+  tip,
   field,
   // oxlint-disable-next-line no-unused-vars
   itemParams,
@@ -49,7 +50,11 @@ export const AutoFormDateTime = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={labelRight}
+          tip={tip}
+        >
           {label}
         </AutoFormLabel>
       )}

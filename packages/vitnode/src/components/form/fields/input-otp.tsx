@@ -42,6 +42,7 @@ export const AutoFormInputOTP = ({
   label,
   labelRight,
   description,
+  tip,
   otherProps,
   field,
   groups,
@@ -68,6 +69,7 @@ export const AutoFormInputOTP = ({
         <AutoFormLabel
           isOptional={otherProps.isOptional}
           labelRight={labelRight}
+          tip={tip}
         >
           {label}
         </AutoFormLabel>

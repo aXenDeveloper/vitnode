@@ -46,9 +46,10 @@ export const AutoFormContainerSelect = ({
   options,
   otherProps: { isOptional },
   placeholder,
+  tip,
 }: Pick<
   ItemAutoFormComponentProps,
-  "description" | "field" | "label" | "labelRight" | "otherProps"
+  "description" | "field" | "label" | "labelRight" | "otherProps" | "tip"
 > & {
   disabled?: boolean;
   options: readonly ContainerSelectOption[];
@@ -70,7 +71,11 @@ export const AutoFormContainerSelect = ({
   return (
     <>
       {!!label && (
-        <AutoFormLabel isOptional={isOptional} labelRight={labelRight}>
+        <AutoFormLabel
+          isOptional={isOptional}
+          labelRight={labelRight}
+          tip={tip}
+        >
           {label}
         </AutoFormLabel>
       )}
