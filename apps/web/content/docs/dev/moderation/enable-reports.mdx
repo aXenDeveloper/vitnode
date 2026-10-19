@@ -2,6 +2,24 @@
 title: Enable reports
 description: Let signed-in readers report a VitNode Content Engine content type, such as blog articles, with one option and a Report button.
 icon: Flag
+implementation:
+  objective: Let readers report records of an existing content type to moderators.
+  decisions:
+    - Which items can readers report? Offer content types with a public API that do not have reports yet.
+    - What should moderators see in a report's snapshot? Recommend the default (the title plus the public text, rich text, choice and file fields), or pick fields; they may be private.
+    - Where does the Report button appear? Offer the plugin's public pages that show the chosen items.
+    - Should moderators also be able to hide reported items? This needs visibility; if the type has none, ask whether to turn it on.
+  constraints:
+    - 'Set `reports: true` or `{ titleField, snapshotFields }` on the content type. Nothing needs migrating.'
+    - Place `ReportButton` from `@vitnode/core/tanstack/moderation` with the content type id and the record id, so `id` must be in `publicApi.fields`.
+    - Enabling reports grants nothing by itself. Label the generated moderator permissions in the plugin's locale.
+  related:
+    - title: Configure moderators
+      href: /docs/dev/moderation/configure-moderators
+    - title: Scoped permissions
+      href: /docs/dev/moderation/scoped-permissions
+    - title: Process reports
+      href: /docs/dev/moderation/process-reports
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";

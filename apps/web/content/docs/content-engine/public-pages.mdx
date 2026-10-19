@@ -2,6 +2,25 @@
 title: Public pages
 description: Give every published VitNode Content Engine record its own URL with delivery, a plugin page, slug redirects and localized URLs.
 icon: Compass
+implementation:
+  objective: Give each published record of an existing content type its own public page and URL.
+  decisions:
+    - Which items get their own page? Offer content types with a public API that have no `delivery` block yet.
+    - What URL do the pages use? Recommend the default `/{publicApi.path}/:slug`, or a custom path with exactly one `:slug` that does not start with `/admin` or `/api`.
+    - Which fields fill the page title, the description and "hide from search engines"? Offer the type's public text fields, its text or rich text fields, and a yes/no field.
+    - Should old URLs redirect after a slug changes? This needs editorial history; if the type has none, ask whether to add it.
+    - Should the pages be listed in the sitemap, and how often do they change? Always, hourly, daily, weekly, monthly, yearly or never.
+  constraints:
+    - Add the `delivery` block and claim the URL with a `page()` in the plugin's routes; the build fails while a content URL has no page.
+    - In the page loader, read the record with `fetcher` and build the page and its head with `contentDeliveryPage` and `contentDeliveryPageHead`, as the guide shows.
+    - Delivery adds no columns, so there is nothing to migrate.
+  related:
+    - title: SEO
+      href: /docs/content-engine/seo
+    - title: Localized URLs
+      href: /docs/dev/i18n/localized-urls
+    - title: Delivery reference
+      href: /docs/content-engine/reference#delivery
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";

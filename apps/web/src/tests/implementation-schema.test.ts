@@ -1,6 +1,6 @@
 import { frontmatter } from 'fumadocs-core/content/md/frontmatter'
 import assert from 'node:assert/strict'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, it } from 'node:test'
 
@@ -40,16 +40,24 @@ describe('docsPageSchema', () => {
   }
 })
 
-describe('pilot implementation metadata', () => {
-  const pilots = [
-    'content-engine/threads.mdx',
-    'dev/notifications/publishing.mdx',
-    'dev/widgets/end-to-end.mdx',
-  ]
+describe('guide implementation metadata', () => {
+  const guides = readdirSync(docsDir, { recursive: true, encoding: 'utf8' })
+    .filter((path) => path.endsWith('.mdx'))
+    .map((path) => ({
+      data: frontmatter(readFileSync(join(docsDir, path), 'utf8')).data,
+      path,
+    }))
+    .filter(
+      ({ data }) =>
+        typeof data === 'object' && data !== null && 'implementation' in data,
+    )
 
-  for (const pilot of pilots) {
-    it(`${pilot} is valid and links only to existing docs pages`, () => {
-      const { data } = frontmatter(readFileSync(join(docsDir, pilot), 'utf8'))
+  it('is declared on several guides', () => {
+    assert.ok(guides.length >= 3, `found ${guides.length}`)
+  })
+
+  for (const { data, path } of guides) {
+    it(`${path} is valid and links only to existing docs pages`, () => {
       const page = docsPageSchema.parse(data)
 
       assert.ok(page.implementation, 'implementation frontmatter is missing')
