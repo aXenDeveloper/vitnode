@@ -38,13 +38,6 @@ Wrap the fetcher call in `queryOptions` and warm it in the route loader, exactly
 import { queryOptions } from '@tanstack/react-query'
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
 import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
-import { z } from 'zod'
-
-const zodArticleCard = z.object({
-  excerpt: z.string().nullable(),
-  slug: z.string(),
-  title: z.string(),
-})
 
 export const latestArticlesQuery = () =>
   queryOptions({
@@ -64,7 +57,7 @@ export const latestArticlesQuery = () =>
 
       const { edges } = await response.json()
 
-      return z.array(zodArticleCard).parse(edges)
+      return edges
     },
   })
 

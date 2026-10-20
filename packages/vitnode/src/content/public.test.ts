@@ -264,10 +264,13 @@ describe("publicApi", () => {
       expect(define().publicApi.people).toEqual([]);
     });
 
-    it("keeps the user fields it was given", () => {
+    it("keeps the to-one and to-many user fields it was given", () => {
       expect(
-        define({ publicApi: { people: ["author"] } }).publicApi.people,
-      ).toEqual(["author"]);
+        define({
+          fields: { ...baseFields, editors: field.user({ multiple: true }) },
+          publicApi: { people: ["author", "editors"] },
+        }).publicApi.people,
+      ).toEqual(["author", "editors"]);
     });
 
     it.each([
@@ -277,11 +280,6 @@ describe("publicApi", () => {
         "a field that is not a user",
         { people: ["title"] },
         /"title", which is a "text" field/,
-      ],
-      [
-        "a to-many user",
-        { people: ["editors"] },
-        /to-many user field "editors"/,
       ],
       ["a duplicate", { people: ["author", "author"] }, /lists "author" twice/],
     ])("rejects %s", (_label, publicApi, message) => {
@@ -302,6 +300,29 @@ describe("publicApi", () => {
         "category",
         "excerpt",
         "publishedAt",
+        "slug",
+        "title",
+      ]);
+    });
+
+    it.each([
+      ["every exposed field without listFields", {}, ["body", "slug", "title"]],
+      [
+        "only listFields when set",
+        { listFields: ["title", "slug"] },
+        ["slug", "title"],
+      ],
+    ])("lists %s, while the detail keeps them all", (_label, extra, keys) => {
+      const { schemas } = define({
+        fields: { ...baseFields, body: field.textarea({ nullable: true }) },
+        publicApi: { fields: ["title", "slug", "body"], ...extra },
+      });
+
+      expect(Object.keys(schemas.publicListSelectObject.shape).sort()).toEqual(
+        keys,
+      );
+      expect(Object.keys(schemas.publicSelectObject.shape).sort()).toEqual([
+        "body",
         "slug",
         "title",
       ]);

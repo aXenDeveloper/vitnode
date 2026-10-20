@@ -138,7 +138,8 @@ const ApprovalNotice = ({
   status,
   submitted,
 }: {
-  approval: ContentApprovalState | null;
+  /** Only what the notice reads, so the edit route's JSON answer fits as is. */
+  approval: null | Pick<ContentApprovalState, "kind" | "reason" | "status">;
   status: EditableTopic["status"];
   submitted: boolean;
 }) => {

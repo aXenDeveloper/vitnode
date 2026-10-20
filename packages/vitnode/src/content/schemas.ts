@@ -10,6 +10,7 @@ import type {
   ContentLocalizedValues,
   ContentPublicCreateBody,
   ContentPublicCreateInput,
+  ContentPublicListRow,
   ContentPublicSelect,
   ContentPublicUpdateBody,
   ContentPublicUpdateInput,
@@ -145,6 +146,13 @@ export interface ContentSchemas<TDefinition = AnyContentTypeDefinition> {
    * `publicApi.filterableFields`. Empty when public exposure is off.
    */
   publicFilters: z.ZodObject<z.ZodRawShape>;
+  /**
+   * One public list row - `publicApi.listFields`, or every exposed field when
+   * it is not set.
+   */
+  publicListSelect: z.ZodType<ContentPublicListRow<TDefinition>>;
+  /** The same shape, left as a `ZodObject` so routes can compose it. */
+  publicListSelectObject: z.ZodObject<z.ZodRawShape>;
   /** `orderBy` allowlist for the public list route, plus direction. */
   publicOrder: z.ZodObject<z.ZodRawShape>;
   /** Path parameters for the public detail route. */
@@ -678,16 +686,26 @@ const publicSelectShape = (
   publicApi: ResolvedContentPublicApiConfig,
   localization: ResolvedContentLocalizationConfig,
   owner: ContentIdStrategy,
+  exposed: readonly string[] = publicApi.fields,
 ): z.ZodRawShape => ({
   // The language actually served, which with a fallback is not always the one
   // that was asked for. `defineContentType` reserves the name on a localized
   // content type, so this cannot shadow a declared field.
   ...(localization.enabled ? { locale: z.string() } : {}),
   ...Object.fromEntries(
-    publicApi.people.map(name => [name, zodContentPublicPerson.nullable()]),
+    publicApi.people.map(name => {
+      const fieldValue = fields[name];
+
+      return [
+        name,
+        fieldValue?.kind === "user" && fieldValue.multiple
+          ? z.array(zodContentPublicPerson)
+          : zodContentPublicPerson.nullable(),
+      ];
+    }),
   ),
   ...Object.fromEntries(
-    publicApi.fields
+    exposed
       .filter(name => splitContentFieldPath(name) === null)
       .map(name => {
         if (name === "id") return [name, recordIdOutputSchema(owner)];
@@ -741,7 +759,7 @@ const publicSelectShape = (
       }),
   ),
   ...Object.fromEntries(
-    [...groupPublicLeafPaths(publicApi.fields)].map(([owner, leaves]) => [
+    [...groupPublicLeafPaths(exposed)].map(([owner, leaves]) => [
       owner,
       publicContainerSchema(fields[owner], leaves),
     ]),
@@ -1013,6 +1031,19 @@ export const buildContentSchemas = <TDefinition>({
   const publicSelectObject = z.object(
     publicSelectShape(fields, publicApi, localization, idStrategy),
   );
+  // The same projection the list route's service reads, so the documented
+  // response and the runtime one cannot disagree about a field the list skips.
+  const publicListSelectObject = publicApi.listFields
+    ? z.object(
+        publicSelectShape(
+          fields,
+          publicApi,
+          localization,
+          idStrategy,
+          publicApi.listFields,
+        ),
+      )
+    : publicSelectObject;
   const publicFilterable = new Set(publicApi.filterableFields);
   // Derived from the same `filterShape`, then narrowed to the configured
   // allowlist - so a public filter can never reach a field the admin filter
@@ -1093,6 +1124,10 @@ export const buildContentSchemas = <TDefinition>({
     // there is nothing for a stricter pattern to buy. The value is a bound
     // parameter, never an identifier.
     publicParams: z.object({ slug: z.string().min(1) }),
+    publicListSelect: publicListSelectObject as unknown as z.ZodType<
+      ContentPublicListRow<TDefinition>
+    >,
+    publicListSelectObject,
     publicSelect: publicSelectObject as unknown as z.ZodType<
       ContentPublicSelect<TDefinition>
     >,

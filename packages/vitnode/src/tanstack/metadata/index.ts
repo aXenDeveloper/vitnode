@@ -19,7 +19,10 @@ export {
 } from "./alternates";
 
 /** What a crawler may do with a page. */
-export type RouteRobots = "index, follow" | "noindex, nofollow";
+export type RouteRobots =
+  | "index, follow"
+  | "noindex, follow"
+  | "noindex, nofollow";
 
 /** What kind of thing a page is, to a social card. */
 export type RouteOpenGraphType = "article" | "website";

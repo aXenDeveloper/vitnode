@@ -5,6 +5,7 @@ import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 import { blogAiActions } from "@/api/ai/actions";
 import { buildContentPublicModule } from "@/api/builders";
 import { adminModule } from "@/api/modules/admin/admin.module";
+import { categoriesModule } from "@/api/modules/categories/categories.module";
 import { categoryContent } from "@/database/categories";
 import { postContent } from "@/database/posts";
 import { manifest } from "@/manifest.gen";
@@ -18,8 +19,10 @@ import { manifest } from "@/manifest.gen";
  *   categories, the AI writing routes, and the compatibility event listeners
  *   from `@/api/lib/events`.
  * - `content/blog` - the public read and delivery routes the Content Engine
- *   generates from the article's `publicApi`. Categories have no `publicApi`,
- *   so they are not exposed publicly.
+ *   generates from the article's `publicApi`.
+ * - `categories` - the public category summaries (id, localized name, colour,
+ *   article count) the `/blog` sidebar and article labels read. Categories
+ *   have no `publicApi`, so this is their only public route.
  *
  * The blog's AI actions (field translation, excerpt and article review) are
  * registered here too.
@@ -42,6 +45,7 @@ export const blogApiPlugin = () =>
     aiActions: blogAiActions,
     modules: [
       adminModule,
+      categoriesModule,
       buildContentPublicModule({
         // Skips any content type without `publicApi`, so the category
         // contributes nothing - it has no public URL of its own.

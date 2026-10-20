@@ -12,6 +12,8 @@
     "public-write",
     "public-write-frontend",
     "public-pages",
+    "public-lists",
+    "public-lists-embed",
     "seo",
     "search",
     "caching",
@@ -43,6 +45,7 @@
     "reference",
     "fields",
     "plugin-files",
+    "public-lists-api",
     "public-write-api",
     "container-policies-api",
     "live-editing-api"

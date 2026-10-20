@@ -39,6 +39,7 @@ import {
   contentPublicCollectionFields,
   contentPublicDetailProjection,
   contentPublicListProjection,
+  contentPublicPeopleColumnFields,
   contentPublicSelectProjection,
   createContentPublicProjector,
 } from "./public-service";
@@ -264,7 +265,9 @@ export const createContentLocalizedPublicService = <
         // translation to attribute a timestamp to.
         ...Object.fromEntries(exposedShared.map(name => [name, columns[name]])),
         ...Object.fromEntries(
-          projection.people.map(name => [name, columns[name]]),
+          contentPublicPeopleColumnFields(definition, projection.people).map(
+            name => [name, columns[name]],
+          ),
         ),
         ...Object.fromEntries(
           exposedLocalized.map(name => [

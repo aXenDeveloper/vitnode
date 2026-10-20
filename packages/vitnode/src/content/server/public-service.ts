@@ -31,7 +31,10 @@ import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { isContentPublicPerson } from "../public-person";
 import { publicOrderableColumns } from "../registry";
 import { groupPublicLeafPaths } from "../schemas";
-import { createContentPublicRowHydrator } from "./public-row-hydration";
+import {
+  createContentPublicRowHydrator,
+  isContentPublicPeopleList,
+} from "./public-row-hydration";
 import {
   contentPublicReadCondition,
   publicationColumns,
@@ -270,6 +273,14 @@ export const createContentPublicProjector = <
     // is dropped rather than published.
     for (const name of people) {
       const person = row[name];
+
+      if (isContentPublicPeopleList(definition, name)) {
+        projected[name] = Array.isArray(person)
+          ? person.filter(isContentPublicPerson)
+          : [];
+        continue;
+      }
+
       projected[name] = isContentPublicPerson(person) ? person : null;
     }
 
@@ -285,9 +296,15 @@ const pick = (
 ): Record<string, unknown> =>
   Object.fromEntries(keys.map(key => [key, values[key] ?? null]));
 
+export const contentPublicPeopleColumnFields = (
+  definition: AnyContentTypeDefinition,
+  people: readonly string[],
+): string[] =>
+  people.filter(name => !isContentPublicPeopleList(definition, name));
+
 /**
- * The columns a public read selects: `id`, the `publicApi.people` user ids
- * (later swapped for public summaries) and the exposed field columns.
+ * The columns a public read selects: `id`, the to-one `publicApi.people` user
+ * ids (later swapped for public summaries) and the exposed field columns.
  */
 export const contentPublicSelection = (
   definition: AnyContentTypeDefinition,
@@ -297,9 +314,14 @@ export const contentPublicSelection = (
   ),
 ): Record<string, PgColumn> => ({
   id: columns.id,
-  // The user ids behind `publicApi.people`; the hydrator swaps each for a
-  // public summary and the projector never lets a bare id through.
-  ...Object.fromEntries(projection.people.map(name => [name, columns[name]])),
+  // The user ids behind the to-one `publicApi.people`; the hydrator swaps each
+  // for a public summary and the projector never lets a bare id through.
+  ...Object.fromEntries(
+    contentPublicPeopleColumnFields(definition, projection.people).map(name => [
+      name,
+      columns[name],
+    ]),
+  ),
   ...Object.fromEntries(
     projection.fields
       // A collection has no column, and a repeatable leaf is a column on a

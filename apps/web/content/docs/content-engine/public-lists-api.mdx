@@ -1,0 +1,122 @@
+---
+title: Public list API
+description: Reference for the VitNode Content Engine public list helpers in @vitnode/core/tanstack/content - defineContentList, contentListQueryOptions, contentListPageHead, ContentListResults, ContentListPagination and useContentListSearchInput.
+icon: FileJson
+---
+
+Every helper on this page is exported from `@vitnode/core/tanstack/content` and is universal unless noted. For a guided setup, follow [Public lists](/docs/content-engine/public-lists). Examples use the blog plugin's `/blog` list.
+
+## `defineContentList`
+
+Declares a list's sorts, URL filters and page size, and returns pure helpers for the URL state.
+
+```ts
+const blogPostList = defineContentList({
+  defaultSort: 'newest',
+  filters: { category: contentListIdFilter },
+  pageSize: 12,
+  sorts: {
+    newest: { order: 'desc', orderBy: 'publishedAt' },
+    oldest: { order: 'asc', orderBy: 'publishedAt' },
+  },
+})
+```
+
+| Name          | Type                                                   | Required | Default | Description                                                                                        |
+| ------------- | ------------------------------------------------------ | -------- | ------- | -------------------------------------------------------------------------------------------------- |
+| `sorts`       | `Record<string, { orderBy; order: "asc" \| "desc" }>`  | Yes      |         | Each URL value of `sort`. `orderBy` must be in `publicApi.orderableFields` or be `publishedAt`     |
+| `defaultSort` | a key of `sorts`                                       | Yes      |         | The sort a URL without `sort` uses. Never written to the URL                                       |
+| `filters`     | `Record<string, (raw: unknown) => value \| undefined>` | No       | none    | URL filters by URL name. A parser returns a string, number or boolean, or `undefined` to ignore it |
+| `pageSize`    | `number`                                               | No       | `12`    | Sent as `first`. Clamped to 1-50, the public list route's limit                                    |
+
+`contentListIdFilter` parses a positive integer id, such as `?category=3`.
+
+| Method                       | Returns               | Behavior                                                                                                                                                   |
+| ---------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `parseSearch(input)`         | `ContentListSearch`   | The route's `search` validator. Keeps `page` above 1, a trimmed `q` of up to 256 characters, a non-default `sort` and valid filters. Drops everything else |
+| `withSearch(current, patch)` | `ContentListSearch`   | Applies a change. Changing anything but `page` resets it to the first page. `undefined` clears a value                                                     |
+| `isFiltered(search)`         | `boolean`             | `true` when a term, a filter or a non-default sort is set. `page` does not count                                                                           |
+| `apiQuery(search)`           | `ContentListApiQuery` | `{ first, order, orderBy, page, search? }` for the list route. Map filters yourself                                                                        |
+| `href(pathname, search)`     | `string`              | The internal URL of one state, e.g. `/blog?category=3&page=2`                                                                                              |
+| `sorts`                      | `string[]`            | Every sort, in declaration order                                                                                                                           |
+| `defaultSort`, `pageSize`    | value                 | The resolved config                                                                                                                                        |
+
+## `contentListQueryOptions`
+
+TanStack Query options for one page of a list. Use them in a loader with `queryClient.query(...)` and in a component with `useQuery(...)`.
+
+| Name        | Type                                     | Required | Default  | Description                                                               |
+| ----------- | ---------------------------------------- | -------- | -------- | ------------------------------------------------------------------------- |
+| `queryKey`  | `QueryKey`                               | Yes      |          | The prefix every page shares, e.g. `["@vitnode/blog", "posts"]`           |
+| `locale`    | `string`                                 | Yes      |          | The page's locale. Pass it on to the API as `?locale=`                    |
+| `search`    | object                                   | Yes      |          | The normalized state from `parseSearch`, or a fixed one such as `{}`      |
+| `fetch`     | `({ locale, search }) => Promise<TData>` | Yes      |          | Makes the request. Write the `fetcher` call here so its route stays typed |
+| `staleTime` | `number`                                 | No       | `60_000` | Milliseconds a page stays fresh, `RECORD_STALE_TIME`                      |
+
+The key is `[...queryKey, { locale, ...search }]`. Add `meta: LOADER_DATA_QUERY_META` when a route returns the data from its loader, so it is not sent to the browser twice.
+
+## `contentListPageHead`
+
+Builds a plugin route `head` for a list page.
+
+| Name          | Type                | Required | Default                 | Description                            |
+| ------------- | ------------------- | -------- | ----------------------- | -------------------------------------- |
+| `pathname`    | `string`            | Yes      |                         | The list's internal path, e.g. `/blog` |
+| `search`      | object              | Yes      |                         | The normalized state                   |
+| `title`       | `string`            | No       |                         | The page title, already translated     |
+| `description` | `string`            | No       |                         | The meta description                   |
+| `locales`     | `readonly string[]` | No       | every configured locale | The locales the page exists in         |
+
+With an empty `search`, the head is `index, follow` with a canonical link and one `hreflang` alternate per locale. Any other state is `noindex, follow` without a canonical.
+
+## `ContentListResults`
+
+Renders one of the list's states. A React component; item rendering and every label come from you.
+
+| Prop                                     | Type                         | Required | Default | Description                                      |
+| ---------------------------------------- | ---------------------------- | -------- | ------- | ------------------------------------------------ |
+| `items`                                  | `TItem[] \| undefined`       | Yes      |         | `undefined` while the first page loads           |
+| `renderItem`                             | `(item, index) => ReactNode` | Yes      |         | One item, inside an `<li>`                       |
+| `getKey`                                 | `(item) => Key`              | Yes      |         | The React key                                    |
+| `label`                                  | `string`                     | Yes      |         | The list's accessible name                       |
+| `isFiltered`                             | `boolean`                    | Yes      |         | Picks `noResults` over `empty` for an empty page |
+| `loading`, `error`, `empty`, `noResults` | `ReactNode`                  | Yes      |         | What each state shows                            |
+| `isError`                                | `boolean`                    | No       | `false` | Shows `error` while there are no items           |
+| `isFetching`                             | `boolean`                    | No       | `false` | Marks the list `aria-busy` and dims it           |
+| `as`                                     | `"ul" \| "ol"`               | No       | `"ul"`  | The list element                                 |
+| `className`, `itemClassName`             | `string`                     | No       |         | Classes for the list and each `<li>`             |
+
+## `ContentListPagination`
+
+Numbered page links from the list route's `pageInfo`. Renders nothing for a single page. Links go through `HrefLink`, so the locale prefix is added and every page works without JavaScript.
+
+| Prop         | Type                       | Required | Default      | Description                                     |
+| ------------ | -------------------------- | -------- | ------------ | ----------------------------------------------- |
+| `pageInfo`   | `ContentListPageInfo`      | Yes      |              | The list response's `pageInfo`                  |
+| `hrefFor`    | `(page: number) => string` | Yes      |              | A page's internal URL, usually `list.href(...)` |
+| `label`      | `string`                   | No       | "Pagination" | The `<nav>`'s accessible name                   |
+| `onNavigate` | `(event) => void`          | No       |              | Called on a page link click                     |
+| `className`  | `string`                   | No       |              | Classes for the `<nav>`                         |
+
+## `useContentListSearchInput`
+
+Keeps a search field's text apart from the URL while somebody types. A React hook.
+
+| Name       | Type                                  | Required | Default | Description                                                                      |
+| ---------- | ------------------------------------- | -------- | ------- | -------------------------------------------------------------------------------- |
+| `value`    | `string \| undefined`                 | Yes      |         | The term the URL holds                                                           |
+| `onCommit` | `(term: string \| undefined) => void` | Yes      |         | Runs with the trimmed term, or `undefined`                                       |
+| `delay`    | `number`                              | No       | `500`   | Milliseconds to wait after the last keystroke, `CONTENT_LIST_SEARCH_DEBOUNCE_MS` |
+
+It returns `{ value, setValue, commit }`. `commit()` skips the wait, for example on Enter. When the URL's term changes on its own (back, forward, a "clear filters" link), `value` follows it.
+
+## Server helpers
+
+These live in `@vitnode/core/content/server` and are server-only. Use them in a plugin's own public route, as the blog's `GET /categories` does:
+
+| Export                                                       | Behavior                                                                                                                                  |
+| ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolveContentRequestLocale(c, definition)`                 | The request's locale - `?locale=`, then `Accept-Language`, then the default - or `null` for an explicit locale the install does not serve |
+| `contentLocaleHeaders(resolved)`                             | `Content-Language`, plus `Vary: Accept-Language` when the header decided the locale                                                       |
+| `rememberContentPublicRead(c, { contentTypeId, key, load })` | Caches a read that is the same for every reader until the content type's next write                                                       |
+| `contentListPageCacheTags(definition)`                       | The tags a cached page that read the content type's records needs, for `setPageCacheTags`                                                 |

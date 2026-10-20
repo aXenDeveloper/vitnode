@@ -262,16 +262,16 @@ Renaming a slug breaks links people already shared. With `delivery.redirects`, t
 
 ## Localized URLs
 
-Every URL delivery builds follows the app's [localized URL rules](/docs/dev/i18n/localized-urls): language prefixes, per-language domains and translated route segments. The blog plugin's posts are a working example. They are [localized](/docs/content-engine/localization) and live at `/blog/:slug`, and the web app translates that route for Polish:
+Every URL delivery builds follows the app's [localized URL rules](/docs/dev/i18n/localized-urls): language prefixes, per-language domains and translated route segments. The blog plugin's posts are a working example. They are [localized](/docs/content-engine/localization) and live at `/blog/article/:slug`, and the web app translates that route for Polish:
 
 ```ts title="apps/web/src/vitnode.config.ts"
 i18n: {
   routePaths: {
     pl: {
-      '/blog/:slug': '/wpisy/:slug',
+      '/blog/article/:slug': '/wpisy/:slug',
     },
   },
 },
 ```
 
-The blog's sitemap then lists `/blog/english-title` for English and `/pl/wpisy/polish-title` for Polish, and only published translations become `hreflang` alternates. Every `delivery` option is in the [content type reference](/docs/content-engine/reference#delivery).
+The blog's sitemap then lists `/blog/article/english-title` for English and `/pl/wpisy/polish-title` for Polish, and only published translations become `hreflang` alternates. Every `delivery` option is in the [content type reference](/docs/content-engine/reference#delivery).

@@ -177,6 +177,10 @@ export type {
 } from "./model";
 export { buildContentAdminModule } from "./module";
 export {
+  contentListPageCacheTags,
+  contentRecordPageCacheTags,
+} from "./page-cache";
+export {
   assertContentPreviewIsServable,
   contentPreviewSecret,
   contentPreviewUrl,
@@ -200,6 +204,7 @@ export type {
   ContentPreviewToken,
   ContentPreviewTokenPayload,
 } from "./preview-token";
+export { rememberContentPublicRead } from "./public-cache";
 export { contentPublicLocaleStates } from "./public-locales";
 export { buildContentPublicModule } from "./public-module";
 export type {
@@ -262,6 +267,10 @@ export {
 } from "./query";
 export { LABEL_PREFIX, resolveReferenceTargets, toLabel } from "./references";
 export type { ReferenceTarget } from "./references";
+export {
+  contentLocaleHeaders,
+  resolveContentRequestLocale,
+} from "./request-locale";
 export {
   contentRevisionSnapshot,
   contentSnapshotRow,

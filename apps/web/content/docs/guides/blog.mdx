@@ -1,15 +1,23 @@
 ---
 title: Install the Blog Plugin
-description: Install @vitnode/blog, enable its API and TanStack Start integration, then publish your first article in AdminCP.
+description: Install @vitnode/blog, enable its API and TanStack Start integration, publish your first article in AdminCP and read it on the /blog page.
 icon: NotebookPen
 ---
 
-import { CompassIcon, LayoutDashboardIcon, RouteIcon } from 'lucide-react'
+import {
+  CompassIcon,
+  LayoutDashboardIcon,
+  LayoutGridIcon,
+  RouteIcon,
+} from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { ImgDocs } from '@/components/fumadocs/img'
+import blogIndex from './blog-index.webp'
 
 `@vitnode/blog` is the Content Engine reference plugin. It brings articles,
-categories, editorial screens, revisions, public delivery data, and search
-indexing—without making your host app impersonate a blog plugin.
+categories, editorial screens, revisions, a public `/blog` index, article
+pages and search indexing, without making your host app impersonate a blog
+plugin.
 
 <Steps>
   <Step>
@@ -94,13 +102,138 @@ npm run dev
 </Tabs>
 
 In AdminCP, create a category at **Blog → Categories**, then publish an article
-at **Blog → Articles**. The plugin owns the editorial work so the host can stay
+at **Blog → Articles**. A category's **Friendly URL** is filled in from its name
+in each language when you leave it empty, like an article's. The plugin owns the editorial work so the host can stay
 boringly reliable.
 
 {/* Image prompt: VitNode AdminCP Blog article management screen. Show categories in a side navigation, article list with draft and published badges, and a prominent “Create article” button. Dark theme, 1440x900. */}
 
   </Step>
 </Steps>
+
+## Read the blog at /blog
+
+Installing the plugin adds `/blog`: every published article, newest first, 12 to
+a page. Drafts, articles scheduled for later and hidden articles never appear.
+
+- The first page opens with the six newest articles as image tiles: one large
+  story, two beside it and three below. Each tile shows the article's
+  categories, title, authors and date on top of its cover.
+- The other articles follow as cards with the cover, up to three categories,
+  the title, the excerpt when there is one, the authors with their avatars and
+  the date. The whole card opens the article at `/blog/article/:slug`.
+- A sidebar lists every category that has articles, with how many each holds.
+  Each one opens the category's own page at `/blog/category/:slug`, with its
+  articles as cards. On phones the list turns into a row of chips.
+- Moving between pages animates with view transitions: an article's cover and
+  title grow into the article page, and the category highlight slides to the
+  category you picked. Visitors who prefer reduced motion get no animation.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={blogIndex}
+  alt="The /blog page with a large story and five smaller image tiles, then article cards beside a category list with article counts"
+/>
+
+Every view has its own address, so a refresh, a shared link and the back
+button all show the same view:
+
+| URL                                | What it shows                                          |
+| ---------------------------------- | ------------------------------------------------------ |
+| `/blog`                            | Every article, with the image tiles on the first page |
+| `/blog?page=2`                     | A later page of every article                          |
+| `/blog/category/guides`            | One category's articles, using its friendly URL        |
+| `/blog/category/guides?page=2`     | A later page of that category                          |
+| `/blog/article/building-a-plugin`  | One article                                            |
+
+Category and article slugs are per language: a Polish reader gets each
+category's Polish friendly URL, and a category link in another language
+redirects to it. Older links still work: `/blog/:slug` and `/blog?category=3`
+redirect permanently to the new addresses. Any other query parameter is
+ignored. There is no search box on `/blog`; readers find articles through the
+site search, which indexes every published article.
+
+The page follows the reader's language. In Polish it lists the Polish
+translation of each article, or the English one where none is published yet,
+and category names fall back the same way. "No articles yet" means nothing is
+published; "Nothing in this category yet" means the picked category has no
+articles in that language, and offers **See all articles**.
+
+The first page of `/blog` and of every category is indexed by search engines,
+with a canonical link and `hreflang` alternates that use each language's own
+slug. Later pages get `noindex, follow`, so crawlers still reach every
+article. Add `/blog` to your app's `/sitemap.xml`
+next to the article entries; the
+[sitemap route](/docs/content-engine/seo#sitemap) lists articles, not the
+index.
+
+### Categories and article counts in your own pages
+
+The sidebar and the category tags come from a small public route that returns
+each category's id, name and friendly URL in the requested language, its
+friendly URL in every language, its colour and article count, plus the total
+for **All articles**:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/blog/categories?locale=pl"
+```
+
+```json
+{
+  "items": [
+    {
+      "articleCount": 4,
+      "color": "hsl(215, 81%, 52%)",
+      "id": 1,
+      "name": "Poradniki",
+      "slug": "poradniki",
+      "slugs": { "en": "guides", "pl": "poradniki" }
+    }
+  ],
+  "total": 4
+}
+```
+
+A count only includes articles a reader can open in that language, the same
+ones `/blog` lists. Names stay cached until a category changes, and counts until
+an article is published, edited, hidden or deleted. To put a blog list on
+another page with your own layout, see
+[Add a list to another page](/docs/content-engine/public-lists-embed).
+
+### Article authors
+
+Every article carries its authors under `authorId`, in the order the article
+lists them, on both the list and the article route. The blog opts the field into
+[`publicApi.people`](/docs/content-engine/reference#publicapi), so each author
+is a small public profile, never a raw user row:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/blog/content/blog?locale=en&first=1"
+```
+
+```json
+{
+  "edges": [
+    {
+      "authorId": [
+        {
+          "avatarColor": "a8295c",
+          "avatarUrl": null,
+          "id": 1,
+          "name": "Ada",
+          "nameCode": "ada",
+          "role": { "color": null, "prefix": null }
+        }
+      ],
+      "id": 4,
+      "title": "Building a plugin"
+    }
+  ]
+}
+```
+
+The response is trimmed here. A deleted account simply drops out of the list.
 
 ## Write and translate articles
 
@@ -201,8 +334,17 @@ Articles have a localized **Excerpt** field. Search results use it as the
 description and fall back to the article content when it is empty. The article
 content is now stored as [rich text](/docs/content-engine/rich-text) JSON
 instead of HTML; the migration keeps the words of existing articles as one
-paragraph, so re-check their formatting. Run your migrations after you upgrade
-`@vitnode/blog`:
+paragraph, so re-check their formatting.
+
+Articles moved from `/blog/:slug` to `/blog/article/:slug`, and categories got
+a localized **Friendly URL**. The migration gives every existing category one
+made from its name and id, such as `guides-3`; rename it in AdminCP if you want
+a shorter one. Old article links redirect, but search results store their URL,
+so rebuild the `blog.post` collection in **AdminCP → Debug Panel → Search**
+afterwards. If you map the article route in `routePaths`, rename the key to
+`'/blog/article/:slug'`.
+
+Run your migrations after you upgrade `@vitnode/blog`:
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the blog excerpt">
 
@@ -238,6 +380,12 @@ together.
     title="Content delivery and SEO"
     description="Add plugin routes, redirects, canonical metadata, and sitemaps."
     href="/docs/content-engine/public-pages"
+  />
+  <Card
+    icon={<LayoutGridIcon />}
+    title="Public lists"
+    description="Build a list page like /blog for your own content type."
+    href="/docs/content-engine/public-lists"
   />
   <Card
     icon={<LayoutDashboardIcon />}

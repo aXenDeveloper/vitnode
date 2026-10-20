@@ -25,7 +25,7 @@ Set in `buildConfig()` in the host app's `src/vitnode.config.ts`.
 | --------- | ---------------------------------- | -------- | ---------- | ---------------------------------------------------------------------------------- |
 | `enabled` | `boolean`                          | No       | `true`     | `false` turns the cache off for every route. Development never caches either way.  |
 | `storage` | `"memory" \| "redis"`              | No       | `"memory"` | `"redis"` reads `REDIS_URL` (and `REDIS_PASSWORD`, if set) when the server starts. |
-| `routes`  | `Record<string, PageCacheSetting>` | No       | `{}`       | Per-route override, keyed by canonical path (`"/blog/:slug"`). `false` disables.   |
+| `routes`  | `Record<string, PageCacheSetting>` | No       | `{}`       | Per-route override, keyed by canonical path (`"/blog/article/:slug"`). `false` disables.   |
 
 An override wins over the route's own `cache`, and may opt in one of the app's own route files. A key that matches no page route fails the build.
 

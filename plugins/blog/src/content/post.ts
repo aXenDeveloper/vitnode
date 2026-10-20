@@ -119,11 +119,24 @@ export const blogPostContentType = defineContentType({
       "coverImageAlt",
       "publishedAt",
     ],
+    // What a card on `/blog` needs. The rich-text body is left to the detail
+    // route, so a page of 12 articles never selects 12 full documents.
+    listFields: [
+      "id",
+      "title",
+      "friendlyUrl",
+      "excerpt",
+      "categoryId",
+      "coverImage",
+      "coverImageAlt",
+      "publishedAt",
+    ],
     searchableFields: ["title", "content"],
     // Shared columns only: a list ordered by a localized title would reshuffle
     // itself per language, and a cursor would mean two positions at once.
     orderableFields: ["publishedAt"],
     filterableFields: ["categoryId", "friendlyUrl"],
+    people: ["authorId"],
     defaultOrderBy: "publishedAt",
     defaultOrder: "desc",
   },
@@ -131,12 +144,13 @@ export const blogPostContentType = defineContentType({
   search: {
     titleField: "title",
     contentFields: ["title", "content"],
-    pathTemplate: "/blog/{slug}",
+    pathTemplate: "/blog/article/{slug}",
     authorField: "authorId",
     imageField: "coverImage",
   },
 
   delivery: {
+    path: "/blog/article/:slug",
     redirects: true,
     seo: {
       titleField: "title",

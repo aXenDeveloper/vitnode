@@ -103,13 +103,13 @@ The field must be shared, not localized. A record has one indexing decision, and
 
 ## Localized alternates and hreflang
 
-For a [localized](/docs/content-engine/localization) content type, the page head links every published translation of the record. The blog post `english-title` is published in English and Polish, so `/blog/english-title` gets:
+For a [localized](/docs/content-engine/localization) content type, the page head links every published translation of the record. The blog post `english-title` is published in English and Polish, so `/blog/article/english-title` gets:
 
 ```html
-<link href="http://localhost:3000/blog/english-title" rel="canonical"/>
-<link href="http://localhost:3000/blog/english-title" hrefLang="en" rel="alternate"/>
+<link href="http://localhost:3000/blog/article/english-title" rel="canonical"/>
+<link href="http://localhost:3000/blog/article/english-title" hrefLang="en" rel="alternate"/>
 <link href="http://localhost:3000/pl/wpisy/polish-title" hrefLang="pl" rel="alternate"/>
-<link href="http://localhost:3000/blog/english-title" hrefLang="x-default" rel="alternate"/>
+<link href="http://localhost:3000/blog/article/english-title" hrefLang="x-default" rel="alternate"/>
 ```
 
 - The canonical link is the page's own language.
@@ -240,7 +240,7 @@ curl -s http://localhost:3000/articles/hello-content-engine | grep -oE '<title>[
 <meta content="A first article from the example plugin, served by the public API and rendered on its own page." name="description"/>
 ```
 
-Run the same command for `http://localhost:3000/blog/english-title` and you get its title, description and the four links from [Localized alternates](#localized-alternates-and-hreflang). The SVG logo's `<title>Logo VitNode</title>` may show up too; it is not page metadata.
+Run the same command for `http://localhost:3000/blog/article/english-title` and you get its title, description and the four links from [Localized alternates](#localized-alternates-and-hreflang). The SVG logo's `<title>Logo VitNode</title>` may show up too; it is not page metadata.
 
 Then ask the resolve route what the page was given, `openGraph` and `robots` included:
 

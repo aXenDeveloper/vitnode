@@ -207,14 +207,6 @@ The [fetcher](/docs/dev/fetcher) types the routes from the plugin's API registry
 
 ```ts title="featured-articles.ts"
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
-import { z } from 'zod'
-
-const zodArticleCard = z.object({
-  excerpt: z.string().nullable(),
-  publishedAt: z.string().nullable(),
-  slug: z.string(),
-  title: z.string(),
-})
 
 export const fetchFeaturedArticles = async () => {
   const response = await fetcher({
@@ -231,11 +223,11 @@ export const fetchFeaturedArticles = async () => {
 
   const { edges } = await response.json()
 
-  return z.array(zodArticleCard).parse(edges)
+  return edges
 }
 ```
 
-The path, the query and `pageInfo` are typed. Each record is a `Record<string, unknown>`, so parse the fields you use with Zod, as the example's article page does. A content type without `publicApi` adds no module: `module: "content/categories"` is a compile error. An `orderBy` outside the allowlist type-checks but answers `400`.
+The path, the query, `pageInfo` and every record are typed. A record carries exactly the content type's `publicApi.fields` (or `listFields` on the list route), with dates as the ISO strings JSON delivers, so `edges[0].publishedAt` is `string | null`. A content type without `publicApi` adds no module: `module: "content/categories"` is a compile error. An `orderBy` outside the allowlist type-checks but answers `400`.
 
 ## Public API routes
 
@@ -251,7 +243,7 @@ All routes are `GET` and live under `/api/{pluginId}/content/{publicApi.path}`.
 | `/delivery/sitemap`        | Sitemap entries, only with `delivery.sitemap`                                                             |
 | `/thread?root={id}`        | One page of a reply tree under a root record, only with [`thread`](/docs/content-engine/threads)          |
 
-The list accepts `first` or `last` (at most 50, also the default), `cursor`, `page`, `search` over `searchableFields`, `orderBy`, `order` and one parameter per filterable field. A filterable [container field](/docs/content-engine/fields#container) also accepts `includeDescendants=true`, so `?board=4&includeDescendants=true` lists board 4 and every board below it; an unknown container answers `404`. See [Containers on the frontend](/docs/content-engine/container-frontend#add-the-board-page). A record is public only when its `status` is `published`, its `publishedAt` is set and not later than the database clock, and it is not [hidden](/docs/content-engine/content-visibility). List rows carry every field in `fields` unless you set `listFields` to a smaller set - handy when a `body` would make every page heavy. Every `publicApi` option is in the [content type reference](/docs/content-engine/reference#publicapi).
+The list accepts `first` or `last` (at most 50, also the default), `cursor`, `page`, `search` over `searchableFields`, `orderBy`, `order` and one parameter per filterable field. A filterable [container field](/docs/content-engine/fields#container) also accepts `includeDescendants=true`, so `?board=4&includeDescendants=true` lists board 4 and every board below it; an unknown container answers `404`. See [Containers on the frontend](/docs/content-engine/container-frontend#add-the-board-page). A record is public only when its `status` is `published`, its `publishedAt` is set and not later than the database clock, and it is not [hidden](/docs/content-engine/content-visibility). List rows carry every field in `fields` unless you set `listFields` to a smaller set - handy when a `body` would make every page heavy. To build a page on top of this route, follow [Public lists](/docs/content-engine/public-lists). Every `publicApi` option is in the [content type reference](/docs/content-engine/reference#publicapi).
 
 Next, give each article a web page with [Public pages](/docs/content-engine/public-pages), or see how these reads are cached in [Caching](/docs/content-engine/caching).
 

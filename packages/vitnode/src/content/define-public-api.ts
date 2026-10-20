@@ -137,13 +137,6 @@ const resolvePublicPeople = (
       );
     }
 
-    if (fieldValue.multiple) {
-      throw new ContentEngineError(
-        `publicApi.people includes the to-many user field "${name}". A person summary is published for one user per record - use a to-one \`field.user()\`.`,
-        { contentTypeId: id },
-      );
-    }
-
     if ((fieldValue as { localized?: boolean }).localized === true) {
       throw new ContentEngineError(
         `publicApi.people includes the localized field "${name}". A person is the same in every language - make the field shared.`,

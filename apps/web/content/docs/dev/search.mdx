@@ -187,7 +187,7 @@ export const blogPostContentType = defineContentType({
   search: {
     titleField: 'title',
     contentFields: ['title', 'content'],
-    pathTemplate: '/blog/{slug}',
+    pathTemplate: '/blog/article/{slug}',
     authorField: 'authorId', // [!code ++]
   },
 })
@@ -208,9 +208,9 @@ The timelines come from two routes:
 
 | `pathTemplate` | English result      | Polish result (`as-needed`) | Polish result (with `domains`)          |
 | :------------- | :------------------ | :-------------------------- | :-------------------------------------- |
-| `/blog/{slug}` | `/blog/hello-world` | `/pl/blog/witaj-swiecie`    | `https://vitnode.pl/blog/witaj-swiecie` |
+| `/blog/article/{slug}` | `/blog/article/hello-world` | `/pl/blog/article/witaj-swiecie`    | `https://vitnode.pl/blog/article/witaj-swiecie` |
 
-With `'/blog/:slug': '/wpisy/:slug'` in `routePaths.pl`, the Polish result becomes `/pl/wpisy/witaj-swiecie`.
+With `'/blog/article/:slug': '/wpisy/:slug'` in `routePaths.pl`, the Polish result becomes `/pl/wpisy/witaj-swiecie`.
 
 Once `domains` is configured, every result URL is absolute, so a click always opens the right domain.
 
@@ -218,7 +218,7 @@ The rules:
 
 - It starts with `/` and holds exactly one `{slug}`. No other placeholder, empty segment, `..` or whitespace.
 - A page route has to serve it (`{slug}` read as `:slug`). If a plugin exports its content types from `src/content.ts` and none does, `dev` and `build` stop with `content-url-without-page`. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).
-- `{locale}` is no longer needed. A legacy leading `/{locale}/` (like `/{locale}/blog/{slug}`) is still accepted and stripped.
+- `{locale}` is no longer needed. A legacy leading `/{locale}/` (like `/{locale}/blog/article/{slug}`) is still accepted and stripped.
 - `{locale}` anywhere else fails with: `search.pathTemplate "..." places "{locale}" somewhere other than the start of the path. The language is no longer part of the template: i18n.localePrefix, i18n.domains and i18n.routePaths now place it. Remove "{locale}" (recommended), or keep it only as the first segment ("/{locale}/...").`
 - A content type that isn't localized can't use `{locale}` at all.
 

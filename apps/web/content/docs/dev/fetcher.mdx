@@ -93,7 +93,7 @@ await fetcher({
 })
 ```
 
-The response is status-aware: `response.status` is typed as a union of declared HTTP codes (e.g. `200 | 404`). Once you narrow on `response.status`, `response.json()` automatically narrows to that status code's specific schema.
+The response is status-aware: `response.status` is typed as a union of declared HTTP codes (e.g. `200 | 404`). Once you narrow on `response.status`, `response.json()` automatically narrows to that status code's specific schema. The body is typed as the JSON the route sends, the same way Hono types `c.json()`: a `z.date()` field arrives as its ISO `string`, so convert it with `new Date(value)` when you need a date.
 
 ## How the registry types your calls
 

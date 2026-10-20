@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { PluginRoutePageProps } from "@vitnode/core/routing";
 
+import { useRouter } from "@tanstack/react-router";
 import { DateFormat } from "@vitnode/core/components/date-format";
 import { HiddenIcon } from "@vitnode/core/components/hidden-icon";
 import { RichTextContent } from "@vitnode/core/components/rich-text";
@@ -20,11 +21,19 @@ import { ReportButton } from "@vitnode/core/tanstack/moderation";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { useRecordView } from "@vitnode/core/tanstack/search";
 import { EyeOffIcon } from "lucide-react";
+import React from "react";
 import { useFormatter, useTranslations } from "use-intl";
 
 import { blogPostContentType } from "@/content/post";
 import { manifest } from "@/manifest.gen";
 
+import { BLOG_HREF } from "./blog-list";
+import {
+  blogArticleCoverTransition,
+  blogArticleTitleTransition,
+  BlogTransitionStyles,
+  rememberBlogArticle,
+} from "./blog-transitions";
 import { blogPostQueryOptions } from "./post-query";
 
 const loadBlogPost = async (
@@ -53,6 +62,18 @@ const BlogPostPage = ({
 }: PluginRoutePageProps<BlogPostPageData>) => {
   const t = useTranslations("@vitnode/blog.post");
   const format = useFormatter();
+  const router = useRouter();
+
+  React.useEffect(() => {
+    rememberBlogArticle(item.id);
+  }, [item.id]);
+
+  React.useEffect(() => {
+    void router.preloadRoute({ to: BLOG_HREF } as Parameters<
+      typeof router.preloadRoute
+    >[0]);
+  }, [router]);
+
   useRecordView({
     itemId: metadata.hidden ? null : metadata.itemId,
     itemType: blogPostContentType.id,
@@ -63,6 +84,7 @@ const BlogPostPage = ({
       className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 md:gap-8 md:py-12"
       lang={metadata.locale ?? undefined}
     >
+      <BlogTransitionStyles />
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           {item.publishedAt ? (
@@ -100,7 +122,10 @@ const BlogPostPage = ({
           ) : null}
         </div>
 
-        <h1 className="text-foreground flex items-start gap-3 text-3xl font-semibold tracking-tight text-balance md:text-4xl">
+        <h1
+          className="text-foreground flex items-start gap-3 text-3xl font-semibold tracking-tight text-balance md:text-4xl"
+          style={blogArticleTitleTransition(item.id)}
+        >
           {metadata.hidden ? (
             <HiddenIcon
               className="mt-1 size-7 md:mt-1.5 md:size-8"
@@ -135,6 +160,7 @@ const BlogPostPage = ({
           // The article column: `max-w-3xl` less its `px-4` gutters.
           sizes="(min-width: 48rem) 46rem, calc(100vw - 2rem)"
           src={item.coverImage.url}
+          style={blogArticleCoverTransition(item.id)}
           width={item.coverImage.width}
         />
       ) : null}

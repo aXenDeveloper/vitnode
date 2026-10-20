@@ -38,7 +38,8 @@ type IsomorphicFetcher = (request: never) => Promise<Response>;
  * and `method` must name a registered route - a wrong one is a compile error
  * at that property. `args` (`body`, `params`, `query`) is typed by the route's
  * Zod schemas and required exactly when the route declares one of them. The
- * response's `json()` and `status` are typed per declared response.
+ * response's `json()` and `status` are typed per declared response; a JSON
+ * body is typed as it arrives, so a `z.date()` field is its ISO `string`.
  *
  * On the server it forwards the visitor's cookie, user agent and IP to the API
  * at `VITNODE_API_URL` (or this request's origin). In the browser it sends

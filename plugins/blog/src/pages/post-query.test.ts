@@ -4,9 +4,15 @@ import { describe, expect, it, vi } from "vitest";
 import { type BlogPostAnswer, blogPostQueryOptions } from "./post-query";
 
 const ITEM: BlogPostAnswer["item"] = {
+  authorId: [],
+  categoryId: [1],
   content: { content: [], type: "doc" },
   coverImage: null,
   coverImageAlt: null,
+  excerpt: null,
+  friendlyUrl: "hello",
+  id: 1,
+  locale: "en",
   publishedAt: "2026-01-01T00:00:00.000Z",
   title: "Hello",
 };

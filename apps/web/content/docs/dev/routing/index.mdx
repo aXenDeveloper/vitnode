@@ -466,7 +466,7 @@ export const routes = definePluginRoutes([
 A page that looks the same for every visitor can declare `cache`, and VitNode reuses its server-rendered HTML for the given number of seconds:
 
 ```ts title="plugins/blog/src/routes.ts"
-page('/blog/:slug', {
+page('/blog/article/:slug', {
   cache: { maxAge: 300, staleWhileRevalidate: 60 }, // [!code ++]
   component: lazy(() => import('./pages/post-page')),
 })

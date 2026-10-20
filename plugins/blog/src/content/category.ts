@@ -30,6 +30,11 @@ export const blogCategoryContentType = defineContentType({
       minLength: 1,
       maxLength: 100,
     }),
+    friendlyUrl: field.slug({
+      localized: true,
+      maxLength: 255,
+      source: "name",
+    }),
     color: field.text({ maxLength: 50, nullable: true }),
   },
 

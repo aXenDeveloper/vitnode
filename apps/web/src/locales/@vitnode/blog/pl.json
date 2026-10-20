@@ -138,6 +138,7 @@
         "fields": {
           "color": "Kolor",
           "name": "Nazwa",
+          "friendlyUrl": "Przyjazny URL",
           "updatedAt": "Zaktualizowano"
         },
         "label": "{count, plural, one {Kategoria} few {Kategorie} many {Kategorii} other {Kategorii}}",
@@ -169,6 +170,40 @@
         "label": "Artykuł ukryty",
         "title": "Ten artykuł jest ukryty",
         "desc": "Widzą go tylko jego autorzy i redaktorzy. Pozostali zobaczą stronę „nie znaleziono”, a artykuł nie pojawia się w wyszukiwarce ani w mapie strony."
+      }
+    },
+    "list": {
+      "title": "Blog",
+      "title_page": "Blog - strona {page}",
+      "desc": "Artykuły, poradniki i nowości od zespołu, od najnowszych.",
+      "category_title": "{name} - Blog",
+      "category_title_page": "{name} - Blog - strona {page}",
+      "category_desc": "Wszystkie artykuły w kategorii {name}, od najnowszych.",
+      "top_stories": "Najważniejsze",
+      "more_articles": "Więcej artykułów",
+      "all_articles": "Wszystkie artykuły",
+      "articles": "Artykuły",
+      "categories": "Kategorie",
+      "article_count": "{count, plural, one {# artykuł} few {# artykuły} many {# artykułów} other {# artykułu}}",
+      "more_categories": "{count, plural, one {# kategoria więcej} few {# kategorie więcej} many {# kategorii więcej} other {# kategorii więcej}}",
+      "by": "Autor",
+      "authors_two": "{first} i {second}",
+      "authors_many": "{first} +{count}",
+      "published": "Opublikowano",
+      "pagination": "Strony bloga",
+      "empty": {
+        "title": "Brak artykułów",
+        "desc": "Nic tu jeszcze nie opublikowano. Zajrzyj wkrótce - czajnik już się grzeje."
+      },
+      "no_results": {
+        "title": "W tej kategorii nic jeszcze nie ma",
+        "desc": "Wybierz inną kategorię albo zobacz wszystkie artykuły.",
+        "action": "Zobacz wszystkie artykuły"
+      },
+      "error": {
+        "title": "Nie udało się wczytać artykułów",
+        "desc": "Coś poszło nie tak po naszej stronie. Spróbuj ponownie za chwilę.",
+        "retry": "Spróbuj ponownie"
       }
     }
   },

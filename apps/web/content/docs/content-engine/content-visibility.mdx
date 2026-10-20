@@ -175,8 +175,8 @@ Front ends listed in [`content.revalidateOrigins`](/docs/content-engine/caching#
 Hide the published "Second post", then request its page and its API entry:
 
 ```bash
-curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/blog/second-post"
-curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/api/@vitnode/blog/content/blog/second-post"
+curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/blog/article/second-post"
+curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/api/@vitnode/blog/content/blog/article/second-post"
 ```
 
 Both answer `404`, like a draft, and the article drops out of the blog list and the sitemap. In the AdminCP it is still **Published**. Unhide it, and the same requests answer `200` with the original `publishedAt`. Open the page while signed in as one of its authors, and it loads with the hidden note instead.
