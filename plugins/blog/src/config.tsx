@@ -6,7 +6,7 @@ import { routes } from "./routes";
 
 /**
  * The blog's frontend half: its manifest, locale files and the public
- * `/blog/:slug` article page.
+ * `/blog/article/:slug` article page.
  *
  * Register it in the app's `src/vitnode.config.ts`, next to
  * `blogApiPlugin` in `src/vitnode.api.config.ts` - both read the same

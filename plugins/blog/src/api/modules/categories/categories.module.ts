@@ -10,31 +10,49 @@ import {
 import {
   contentListPageCacheTags,
   contentLocaleHeaders,
+  listContentLanguages,
   rememberContentPublicRead,
   resolveContentRequestLocale,
 } from "@vitnode/core/content/server";
-import { asc } from "drizzle-orm";
+import { asc, count, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { buildModule, buildRoute } from "@/api/builders";
+import { publicPostConditionIn } from "@/api/lib/public-posts";
 import { blog_categories, categoryContent } from "@/database/categories";
+import {
+  blog_posts,
+  blog_posts_category_id,
+  postContent,
+} from "@/database/posts";
 
 const { definition } = categoryContent;
 
 /** One category as readers see it: never its translations, never its timestamps. */
 export const zodBlogCategorySummary = z.object({
+  articleCount: z.number().int(),
   color: z.string().nullable(),
   id: z.number(),
   /** In the requested locale, or the default locale's when it has none. */
   name: z.string(),
+  slug: z.string(),
+  slugs: z.record(z.string(), z.string()),
 });
 
-type BlogCategorySummary = z.infer<typeof zodBlogCategorySummary>;
+type LocalizedBlogCategory = Omit<
+  z.infer<typeof zodBlogCategorySummary>,
+  "articleCount"
+>;
+
+interface BlogArticleCounts {
+  byCategory: Record<number, number>;
+  total: number;
+}
 
 const readCategorySummaries = async (
   c: Context<EnvVitNode>,
   locale: string | undefined,
-): Promise<BlogCategorySummary[]> => {
+): Promise<LocalizedBlogCategory[]> => {
   const rows = await c
     .get("db")
     .select({ color: blog_categories.color, id: blog_categories.id })
@@ -48,44 +66,87 @@ const readCategorySummaries = async (
       .findManyRowsForItems(rows.map(row => row.id))) ?? [];
 
   const { defaultLocale, fallback } = definition.localization;
-  const nameIn = (id: number, wanted: string | undefined) =>
-    wanted === undefined
-      ? undefined
-      : translations.find(
-          translation =>
-            translation.itemId === id &&
-            contentLocalesMatch(translation.locale, wanted),
-        )?.values.name;
+  const languages = (await listContentLanguages(c))
+    .filter(language => language.isEnabled)
+    .map(language => language.locale);
+  const valueIn = (id: number, wanted: string) =>
+    translations.find(
+      translation =>
+        translation.itemId === id &&
+        contentLocalesMatch(translation.locale, wanted),
+    )?.values;
+  // The content type's own fallback rule, the one its articles follow too.
+  const resolve = (id: number, wanted: string) =>
+    valueIn(id, wanted) ??
+    (fallback === "default" ? valueIn(id, defaultLocale) : undefined);
 
   const collator = new Intl.Collator(locale ?? defaultLocale);
 
   return rows
     .flatMap(({ color, id }) => {
-      // The content type's own fallback rule, the one its articles follow too.
-      const name =
-        nameIn(id, locale ?? defaultLocale) ??
-        (fallback === "default" ? nameIn(id, defaultLocale) : undefined);
+      const values = resolve(id, locale ?? defaultLocale);
+      if (!values?.name || !values.friendlyUrl) return [];
 
-      return name ? [{ color, id, name }] : [];
+      const slugs = Object.fromEntries(
+        languages.flatMap(language => {
+          const slug = resolve(id, language)?.friendlyUrl;
+
+          return slug ? [[language, slug]] : [];
+        }),
+      );
+
+      return [
+        { color, id, name: values.name, slug: values.friendlyUrl, slugs },
+      ];
     })
     .sort((a, b) => collator.compare(a.name, b.name));
 };
 
+const readArticleCounts = async (
+  c: Context<EnvVitNode>,
+  locale: string | undefined,
+): Promise<BlogArticleCounts> => {
+  const condition = await publicPostConditionIn(c, locale);
+  if (condition === null) return { byCategory: {}, total: 0 };
+
+  const db = c.get("db");
+  const [rows, [totals]] = await Promise.all([
+    db
+      .select({
+        categoryId: blog_posts_category_id.relatedItemId,
+        value: count(),
+      })
+      .from(blog_posts_category_id)
+      .innerJoin(blog_posts, eq(blog_posts_category_id.itemId, blog_posts.id))
+      .where(condition)
+      .groupBy(blog_posts_category_id.relatedItemId),
+    db.select({ value: count() }).from(blog_posts).where(condition),
+  ]);
+
+  return {
+    byCategory: Object.fromEntries(
+      rows.map(row => [Number(row.categoryId), row.value]),
+    ),
+    total: totals.value,
+  };
+};
+
 /**
- * Every blog category with its name in one language and its colour, for
- * filters and article labels. Public: categories have no draft state, and this
- * is exactly the allowlist - no translation metadata, no timestamps.
+ * Every blog category with its name in one language, its colour and how many
+ * articles readers can open in it, plus the total for "All articles". Public:
+ * categories have no draft state, and this is exactly the allowlist - no
+ * translation metadata, no timestamps.
  *
- * Cached per locale until a category changes: every category write moves the
- * Content Engine's public-read generation for `blog.category` and expires the
- * pages tagged with its list tag.
+ * Names are cached per locale until a category changes, counts until an
+ * article changes: each half lives in its own content type's public-read
+ * generation, and the response carries both list tags.
  */
 const publicCategoriesRoute = buildRoute({
   route: {
     method: "get",
     path: "/",
     description:
-      "Every blog category with its name in the requested locale and its colour",
+      "Every blog category with its name in the requested locale, its colour and its article count",
     request: {
       query: z.object({
         locale: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH).optional(),
@@ -95,7 +156,10 @@ const publicCategoriesRoute = buildRoute({
       200: {
         content: {
           "application/json": {
-            schema: z.object({ items: z.array(zodBlogCategorySummary) }),
+            schema: z.object({
+              items: z.array(zodBlogCategorySummary),
+              total: z.number().int(),
+            }),
           },
         },
         description: "Every category, ordered by name",
@@ -109,19 +173,39 @@ const publicCategoriesRoute = buildRoute({
       throw new HTTPException(404, { message: "Locale not found." });
     }
 
-    const items = await rememberContentPublicRead(c, {
-      contentTypeId: definition.id,
-      key: {
-        locale: resolved.locale ?? null,
-        route: "@vitnode/blog:category-summaries",
-        source: resolved.source,
+    const key = {
+      locale: resolved.locale ?? null,
+      source: resolved.source,
+    };
+    const [names, counts] = await Promise.all([
+      rememberContentPublicRead(c, {
+        contentTypeId: definition.id,
+        key: { ...key, route: "@vitnode/blog:category-summaries" },
+        load: async () => await readCategorySummaries(c, resolved.locale),
+      }),
+      rememberContentPublicRead(c, {
+        contentTypeId: postContent.definition.id,
+        key: { ...key, route: "@vitnode/blog:category-counts" },
+        load: async () => await readArticleCounts(c, resolved.locale),
+      }),
+    ]);
+
+    setPageCacheTags(c, [
+      ...contentListPageCacheTags(definition),
+      ...contentListPageCacheTags(postContent.definition),
+    ]);
+
+    return c.json(
+      {
+        items: names.map(category => ({
+          ...category,
+          articleCount: counts.byCategory[category.id] ?? 0,
+        })),
+        total: counts.total,
       },
-      load: async () => await readCategorySummaries(c, resolved.locale),
-    });
-
-    setPageCacheTags(c, contentListPageCacheTags(definition));
-
-    return c.json({ items }, 200, contentLocaleHeaders(resolved));
+      200,
+      contentLocaleHeaders(resolved),
+    );
   },
 });
 

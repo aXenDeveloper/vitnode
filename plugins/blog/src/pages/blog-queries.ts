@@ -10,6 +10,24 @@ import type { BlogListSearch } from "./blog-list";
 import { blogPostList } from "./blog-list";
 import { blogQueryKeys } from "./post-query";
 
+const fetchPostAuthors = async (postIds: number[]) => {
+  const res = await fetcher({
+    plugin: manifest.id,
+    method: "get",
+    module: "authors",
+    path: "/",
+    args: { query: { posts: postIds.join(",") } },
+  });
+
+  if (res.status !== 200) {
+    throw new Error(`Loading the blog authors answered ${res.status}.`);
+  }
+
+  const { items } = await res.json();
+
+  return new Map(items.map(item => [item.postId, item.authors]));
+};
+
 const fetchBlogPosts = async ({
   locale,
   search,
@@ -37,19 +55,34 @@ const fetchBlogPosts = async ({
     throw new Error(`Loading the blog answered ${res.status}.`);
   }
 
-  return await res.json();
+  const page = await res.json();
+  const authors =
+    page.edges.length > 0
+      ? await fetchPostAuthors(page.edges.map(post => post.id))
+      : null;
+
+  return {
+    ...page,
+    edges: page.edges.map(post => ({
+      ...post,
+      authors: authors?.get(post.id) ?? [],
+    })),
+  };
 };
 
-/** One page of `/blog`, typed from the list route: `publicApi.listFields` plus `locale`. */
+/**
+ * One page of `/blog`, typed from the list route - `publicApi.listFields` plus
+ * `locale` - with each article's `authors` from the blog's authors route.
+ */
 export type BlogPostPage = Awaited<ReturnType<typeof fetchBlogPosts>>;
 
-/** One `/blog` card. `locale` is the language it was served in. */
+/** One `/blog` article. `locale` is the language it was served in. */
 export type BlogPostCardData = BlogPostPage["edges"][number];
 
 /**
- * One page of published articles in one locale, for `/blog` or any other page
- * that lists them. Every locale, category, term, sort and page is its own
- * entry under `blogQueryKeys.posts`.
+ * One page of published articles in one locale, with their authors, for
+ * `/blog` or any other page that lists them. Every locale, category and page is
+ * its own entry under `blogQueryKeys.posts`.
  *
  * @example
  * ```ts
@@ -81,19 +114,18 @@ const fetchBlogCategories = async (locale: string) => {
     throw new Error(`Loading the blog categories answered ${res.status}.`);
   }
 
-  const { items } = await res.json();
-
-  return items;
+  return await res.json();
 };
 
-/** One category as readers see it: its id, localized name and colour. */
-export type BlogCategory = Awaited<
-  ReturnType<typeof fetchBlogCategories>
->[number];
+export type BlogCategories = Awaited<ReturnType<typeof fetchBlogCategories>>;
+
+/** One category as readers see it: its id, localized name, colour and article count. */
+export type BlogCategory = BlogCategories["items"][number];
 
 /**
- * Every category's name in one locale and its colour, for filters and card
- * labels. One request for the whole page, never one per article.
+ * Every category's name in one locale, its colour and how many articles it
+ * holds, plus the total - for the sidebar and article labels. One request for
+ * the whole page, never one per article.
  */
 export const blogCategoriesQueryOptions = (locale: string) =>
   queryOptions({

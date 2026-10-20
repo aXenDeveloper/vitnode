@@ -102,7 +102,8 @@ npm run dev
 </Tabs>
 
 In AdminCP, create a category at **Blog → Categories**, then publish an article
-at **Blog → Articles**. The plugin owns the editorial work so the host can stay
+at **Blog → Articles**. A category's **Friendly URL** is filled in from its name
+in each language when you leave it empty, like an article's. The plugin owns the editorial work so the host can stay
 boringly reliable.
 
 {/* Image prompt: VitNode AdminCP Blog article management screen. Show categories in a side navigation, article list with draft and published badges, and a prominent “Create article” button. Dark theme, 1440x900. */}
@@ -112,47 +113,67 @@ boringly reliable.
 
 ## Read the blog at /blog
 
-Installing the plugin adds `/blog`: every published article as a card with its
-cover, categories, title, excerpt and date, 12 to a page, newest first. Drafts,
-articles scheduled for later and hidden articles never appear. Readers can
-search, pick a category and switch to oldest first, and each card opens the
-article at `/blog/:slug`.
+Installing the plugin adds `/blog`: every published article, newest first, 12 to
+a page. Drafts, articles scheduled for later and hidden articles never appear.
+
+- The first page opens with the six newest articles as image tiles: one large
+  story, two beside it and three below. Each tile shows the article's
+  categories, title, authors and date on top of its cover.
+- The other articles follow as cards with the cover, up to three categories,
+  the title, the excerpt when there is one, the authors with their avatars and
+  the date. The whole card opens the article at `/blog/article/:slug`.
+- A sidebar lists every category that has articles, with how many each holds.
+  Each one opens the category's own page at `/blog/category/:slug`, with its
+  articles as cards. On phones the list turns into a row of chips.
+- Moving between pages animates with view transitions: an article's cover and
+  title grow into the article page, and the category highlight slides to the
+  category you picked. Visitors who prefer reduced motion get no animation.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={blogIndex}
-  alt="The /blog page with a search field, a category filter, a sort control and a grid of article cards"
+  alt="The /blog page with a large story and five smaller image tiles, then article cards beside a category list with article counts"
 />
 
-Everything a reader picks lives in the URL, so a refresh, a shared link and the
-back button all show the same view:
+Every view has its own address, so a refresh, a shared link and the back
+button all show the same view:
 
-| Parameter  | Example        | What it does                                      |
-| ---------- | -------------- | ------------------------------------------------- |
-| `q`        | `?q=vite`      | Searches article titles and content               |
-| `category` | `?category=3`  | Shows one category's articles                     |
-| `sort`     | `?sort=oldest` | Oldest first. Newest first is the default         |
-| `page`     | `?page=2`      | The page number. Changing anything else resets it |
+| URL                                | What it shows                                          |
+| ---------------------------------- | ------------------------------------------------------ |
+| `/blog`                            | Every article, with the image tiles on the first page |
+| `/blog?page=2`                     | A later page of every article                          |
+| `/blog/category/guides`            | One category's articles, using its friendly URL        |
+| `/blog/category/guides?page=2`     | A later page of that category                          |
+| `/blog/article/building-a-plugin`  | One article                                            |
+
+Category and article slugs are per language: a Polish reader gets each
+category's Polish friendly URL, and a category link in another language
+redirects to it. Older links still work: `/blog/:slug` and `/blog?category=3`
+redirect permanently to the new addresses. Any other query parameter is
+ignored. There is no search box on `/blog`; readers find articles through the
+site search, which indexes every published article.
 
 The page follows the reader's language. In Polish it lists the Polish
 translation of each article, or the English one where none is published yet,
 and category names fall back the same way. "No articles yet" means nothing is
-published; "No articles match" means the current search or category hides
-everything, and offers **Clear filters**.
+published; "Nothing in this category yet" means the picked category has no
+articles in that language, and offers **See all articles**.
 
-Only the plain `/blog` is indexed by search engines, with a canonical link and
-`hreflang` alternates. Searches, categories, other sorts and later pages get
-`noindex, follow`, so crawlers still reach every article. Add `/blog` to your
-app's `/sitemap.xml` next to the article entries; the
+The first page of `/blog` and of every category is indexed by search engines,
+with a canonical link and `hreflang` alternates that use each language's own
+slug. Later pages get `noindex, follow`, so crawlers still reach every
+article. Add `/blog` to your app's `/sitemap.xml`
+next to the article entries; the
 [sitemap route](/docs/content-engine/seo#sitemap) lists articles, not the
 index.
 
-### Category names in your own pages
+### Categories and article counts in your own pages
 
-The filter and the card labels come from a small public route that returns
-each category's id, name in the requested language and colour, and nothing
-else:
+The sidebar and the category tags come from a small public route that returns
+each category's id, name and friendly URL in the requested language, its
+friendly URL in every language, its colour and article count, plus the total
+for **All articles**:
 
 ```bash
 curl "http://localhost:3000/api/@vitnode/blog/categories?locale=pl"
@@ -161,15 +182,58 @@ curl "http://localhost:3000/api/@vitnode/blog/categories?locale=pl"
 ```json
 {
   "items": [
-    { "color": "hsl(215, 81%, 52%)", "id": 1, "name": "Poradniki" },
-    { "color": null, "id": 3, "name": "Wydania" }
+    {
+      "articleCount": 4,
+      "color": "hsl(215, 81%, 52%)",
+      "id": 1,
+      "name": "Poradniki",
+      "slug": "poradniki",
+      "slugs": { "en": "guides", "pl": "poradniki" }
+    }
+  ],
+  "total": 4
+}
+```
+
+A count only includes articles a reader can open in that language, the same
+ones `/blog` lists. Names stay cached until a category changes, and counts until
+an article is published, edited, hidden or deleted. To put a blog list on
+another page with your own layout, see
+[Add a list to another page](/docs/content-engine/public-lists-embed).
+
+### Article authors
+
+The Content Engine never puts user fields in its public API, so the bylines come
+from the blog's own route. Pass up to 50 article ids:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/blog/authors?posts=4,5"
+```
+
+```json
+{
+  "items": [
+    {
+      "authors": [
+        {
+          "avatarColor": "a8295c",
+          "avatarUrl": null,
+          "id": 1,
+          "name": "Ada",
+          "nameCode": "ada",
+          "role": { "color": null, "prefix": null }
+        }
+      ],
+      "postId": 4
+    }
   ]
 }
 ```
 
-It is cached per language until a category changes. To put a blog list on
-another page with your own layout, see
-[Add a list to another page](/docs/content-engine/public-lists-embed).
+Authors come in the order the article lists them. Drafts, scheduled and hidden
+articles are left out, so an id never reveals who is writing what.
+`blogPostsQueryOptions` calls this route for you and adds `authors` to every
+article it returns.
 
 ## Write and translate articles
 
@@ -270,8 +334,17 @@ Articles have a localized **Excerpt** field. Search results use it as the
 description and fall back to the article content when it is empty. The article
 content is now stored as [rich text](/docs/content-engine/rich-text) JSON
 instead of HTML; the migration keeps the words of existing articles as one
-paragraph, so re-check their formatting. Run your migrations after you upgrade
-`@vitnode/blog`:
+paragraph, so re-check their formatting.
+
+Articles moved from `/blog/:slug` to `/blog/article/:slug`, and categories got
+a localized **Friendly URL**. The migration gives every existing category one
+made from its name and id, such as `guides-3`; rename it in AdminCP if you want
+a shorter one. Old article links redirect, but search results store their URL,
+so rebuild the `blog.post` collection in **AdminCP → Debug Panel → Search**
+afterwards. If you map the article route in `routePaths`, rename the key to
+`'/blog/article/:slug'`.
+
+Run your migrations after you upgrade `@vitnode/blog`:
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the blog excerpt">
 

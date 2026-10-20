@@ -26,6 +26,7 @@
         "desc": "Group articles together.",
         "fields": {
           "name": "Name",
+          "friendlyUrl": "Friendly URL",
           "color": "Color",
           "updatedAt": "Updated"
         }
@@ -178,18 +179,19 @@
       "title": "Blog",
       "title_page": "Blog - page {page}",
       "desc": "Articles, guides and news from the team, newest first.",
-      "filters": "Filter articles",
-      "search_label": "Search",
-      "search_placeholder": "Search articles...",
-      "category_label": "Category",
-      "all_categories": "All categories",
-      "sort_label": "Sort by",
-      "sort": {
-        "newest": "Newest first",
-        "oldest": "Oldest first"
-      },
+      "category_title": "{name} - Blog",
+      "category_title_page": "{name} - Blog - page {page}",
+      "category_desc": "Every article in {name}, newest first.",
+      "top_stories": "Top stories",
+      "more_articles": "More articles",
+      "all_articles": "All articles",
       "articles": "Articles",
       "categories": "Categories",
+      "article_count": "{count, plural, one {# article} other {# articles}}",
+      "more_categories": "{count, plural, one {# more category} other {# more categories}}",
+      "by": "By",
+      "authors_two": "{first} & {second}",
+      "authors_many": "{first} +{count}",
       "published": "Published",
       "pagination": "Blog pages",
       "empty": {
@@ -197,8 +199,9 @@
         "desc": "Nothing has been published here yet. Check back soon - the kettle is on."
       },
       "no_results": {
-        "title": "No articles match",
-        "desc": "Try another search term or category, or clear the filters to see every article."
+        "title": "Nothing in this category yet",
+        "desc": "Pick another category, or see every article.",
+        "action": "See all articles"
       },
       "error": {
         "title": "The articles did not load",

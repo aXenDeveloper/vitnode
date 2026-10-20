@@ -28,8 +28,6 @@ export interface ContentListPageInfo {
   totalPages: number;
 }
 
-const disabledStep = "pointer-events-none opacity-50";
-
 /**
  * Numbered pagination for a public list, read straight off the list route's
  * `pageInfo`: previous and next, every page on wider screens (with gaps past
@@ -103,14 +101,9 @@ export const ContentListPagination = ({
         {content}
       </HrefLink>
     ) : (
-      <span
-        aria-disabled="true"
-        aria-label={name}
-        className={cn(className, disabledStep)}
-        role="link"
-      >
+      <button aria-label={name} className={className} disabled type="button">
         {content}
-      </span>
+      </button>
     );
   };
 

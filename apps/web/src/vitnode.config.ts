@@ -8,6 +8,7 @@ import {
   CompassIcon,
   ListIcon,
   MessagesSquareIcon,
+  NewspaperIcon,
   PuzzleIcon,
   SearchIcon,
 } from 'lucide-react'
@@ -36,7 +37,7 @@ export const vitNodeConfig = buildConfig({
     ],
     routePaths: {
       pl: {
-        '/blog/:slug': '/wpisy/:slug',
+        '/blog/article/:slug': '/blog/artykul/:slug',
         '/discover': '/odkrywaj',
         '/search': '/szukaj',
         '/users/:nameCode': '/uzytkownicy/:nameCode',
@@ -53,6 +54,7 @@ export const vitNodeConfig = buildConfig({
     header: [
       { href: '/docs', icon: BookOpenIcon, title: 'site.menu.docs' },
       { href: '/plugins', icon: PuzzleIcon, title: 'site.menu.plugins' },
+      { href: '/blog', icon: NewspaperIcon, title: 'site.menu.blog' },
       {
         href: '/forum',
         icon: MessagesSquareIcon,

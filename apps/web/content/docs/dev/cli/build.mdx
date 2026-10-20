@@ -60,7 +60,7 @@ Routes
   ├ /                                                 prerendered
   └ /pl                                               prerendered
   /admin/*  24 AdminCP routes (--verbose lists all)   SSR           None
-  /blog/:slug                                         SSR           TTL 5m · SWR 1m
+  /blog/article/:slug                                 SSR           TTL 5m · SWR 1m
   └ /pl/wpisy/:slug                                   pattern
   /login                                              SSR           None
   /solutions/:slug                                    Partial       Build-time HTML × 10, others: None

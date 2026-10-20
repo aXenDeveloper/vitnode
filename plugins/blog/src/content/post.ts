@@ -143,12 +143,13 @@ export const blogPostContentType = defineContentType({
   search: {
     titleField: "title",
     contentFields: ["title", "content"],
-    pathTemplate: "/blog/{slug}",
+    pathTemplate: "/blog/article/{slug}",
     authorField: "authorId",
     imageField: "coverImage",
   },
 
   delivery: {
+    path: "/blog/article/:slug",
     redirects: true,
     seo: {
       titleField: "title",

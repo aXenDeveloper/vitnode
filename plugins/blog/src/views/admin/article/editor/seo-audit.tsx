@@ -6,6 +6,8 @@ import { CircleAlertIcon, CircleCheckIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import { blogPostHref } from "@/pages/blog-post-href";
+
 import { CharacterCount } from "./fields";
 import {
   type ArticleCheck,
@@ -174,7 +176,7 @@ export const SeoAudit = ({
         </AuditRow>
 
         <AuditRow label={t("rows.url")} ok={slug !== ""}>
-          <Detail>{slug ? `/blog/${slug}` : t("url_missing")}</Detail>
+          <Detail>{slug ? blogPostHref(slug) : t("url_missing")}</Detail>
         </AuditRow>
 
         <AuditRow label={t("rows.cover")} ok={coverCheck?.ok ?? true}>

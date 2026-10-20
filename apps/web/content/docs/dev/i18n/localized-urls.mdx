@@ -33,7 +33,7 @@ export const vitNodeConfig = buildConfig({
     // [!code ++:8]
     routePaths: {
       pl: {
-        '/blog/:slug': '/wpisy/:slug',
+        '/blog/article/:slug': '/wpisy/:slug',
         '/discover': '/odkrywaj',
         '/search': '/szukaj',
         '/users/:nameCode': '/uzytkownicy/:nameCode',
@@ -55,7 +55,7 @@ Every link, redirect, canonical URL and sitemap line now uses the new spelling. 
 
 | Page      | English         | Polish before      | Polish after               |
 | :-------- | :-------------- | :----------------- | :------------------------- |
-| A post    | `/blog/hello`   | `/pl/blog/czesc`   | `/pl/wpisy/czesc`          |
+| A post    | `/blog/article/hello`   | `/pl/blog/article/czesc`   | `/pl/wpisy/czesc`          |
 | Discover  | `/discover`     | `/pl/discover`     | `/pl/odkrywaj`             |
 | Search    | `/search`       | `/pl/search`       | `/pl/szukaj`               |
 | A profile | `/users/jane-1` | `/pl/users/jane-1` | `/pl/uzytkownicy/jane-1`   |
@@ -299,7 +299,7 @@ Two different things change in a URL, and they're owned by different people:
 | Static segments (`blog` → `wpisy`)                 | Your app, `routePaths`              | `/blog/…` → `/pl/wpisy/…`         |
 | Parameter values (`hello-world` → `witaj-swiecie`) | The content, a localized slug field | each translation has its own slug |
 
-Put together, Blog's `/blog/hello-world` in English is `/pl/wpisy/witaj-swiecie` in Polish. The translation table never touches `witaj-swiecie`, and the content never touches `wpisy`.
+Put together, Blog's `/blog/article/hello-world` in English is `/pl/wpisy/witaj-swiecie` in Polish. The translation table never touches `witaj-swiecie`, and the content never touches `wpisy`.
 
 ## Content, sitemaps and search follow along
 
@@ -308,11 +308,11 @@ Content Engine builds every URL with the same rules as the router, so nothing dr
 - Canonical URLs, hreflang, `x-default`, sitemap lines, preview links and slug-history redirects all use your `localePrefix`, `domains` and `routePaths`.
 - Only published translations become alternates. A Polish request that falls back to English content keeps the **English** canonical URL, so fallback text is never labelled as Polish.
 - Slug-history redirects stay within their language.
-- Search result URLs are built from `search.pathTemplate` (like `/blog/{slug}`) the same way, and they're absolute once domains are configured.
+- Search result URLs are built from `search.pathTemplate` (like `/blog/article/{slug}`) the same way, and they're absolute once domains are configured.
 
 ### Content URLs need a page
 
-A content type publishes URLs from `delivery.path` (default `/{publicApi.path}/:slug`) and `search.pathTemplate`. Both are English route paths, and **a page route has to serve them**. Otherwise every canonical link, sitemap line and search result would be a 404. So the build checks it: a content type whose URL no page route serves stops `dev` and `build` with `content-url-without-page`. Blog serves `/blog/:slug` with its own page, which is also why `'/blog/:slug'` is a valid `routePaths` key.
+A content type publishes URLs from `delivery.path` (default `/{publicApi.path}/:slug`) and `search.pathTemplate`. Both are English route paths, and **a page route has to serve them**. Otherwise every canonical link, sitemap line and search result would be a 404. So the build checks it: a content type whose URL no page route serves stops `dev` and `build` with `content-url-without-page`. Blog serves `/blog/article/:slug` with its own page, which is also why `'/blog/article/:slug'` is a valid `routePaths` key.
 
 The web build can't read your API: `config.api.ts` is server code, and a plugin factory may need options only your app knows. So a plugin states its public content types **once**, in a browser-safe module exposed as `./content`, and both sides load that same module:
 
@@ -427,9 +427,9 @@ A bad configuration fails loudly, when `dev` or `build` starts, not quietly in p
   language.
 </Callout>
 
-- **`search.pathTemplate` no longer needs `{locale}`.** Write `/blog/{slug}`. A legacy leading `/{locale}/` is still accepted and stripped. `{locale}` anywhere else is an error. Then rebuild the search index.
+- **`search.pathTemplate` no longer needs `{locale}`.** Write `/blog/article/{slug}`. A legacy leading `/{locale}/` is still accepted and stripped. `{locale}` anywhere else is an error. Then rebuild the search index.
 - **Content URLs in the default locale are unprefixed** under `as-needed`. Canonical URLs, hreflang and sitemaps used to emit `/en/...` for every record, and now emit `/...`. Old `/en/...` links redirect with a 308.
-- **Every content URL needs a page, and every plugin with public content ships a `./content` module.** A plugin that registers content types with delivery or search must export them as `contentTypes` from a browser-safe module exposed as `./content`. Until it does, the API refuses to boot with `content-module-missing`, which names each content type and URL. That's deliberate: the alternative is a site publishing links nobody checked. Every URL in that module then needs a page route (`content-url-without-page`). Blog now ships its `/blog/:slug` page. Plugins without public content are unaffected.
+- **Every content URL needs a page, and every plugin with public content ships a `./content` module.** A plugin that registers content types with delivery or search must export them as `contentTypes` from a browser-safe module exposed as `./content`. Until it does, the API refuses to boot with `content-module-missing`, which names each content type and URL. That's deliberate: the alternative is a site publishing links nobody checked. Every URL in that module then needs a page route (`content-url-without-page`). Blog now ships its `/blog/article/:slug` page. Plugins without public content are unaffected.
 - **Single apps pass `contentModules`.** Add `import { contentModules } from './content-modules.gen'` and `contentModules` to `buildApiConfig` in `src/vitnode.api.config.ts`. The file is generated by `dev` and `build`. Without it the API falls back to resolving packages at runtime, which a bundled production server can't do.
 - **A split API needs the same routing config.** In a single app, `vitnode.api.config.ts` reuses `vitNodeConfig.i18n`, so nothing to do. In a separate API app (`apiMonorepo` or `onlyApi` in `create-vitnode-app`), its own `i18n` must mirror `localePrefix`, `domains` and `routePaths`. Otherwise canonical URLs, sitemaps and search links built by the API won't match the site.
 

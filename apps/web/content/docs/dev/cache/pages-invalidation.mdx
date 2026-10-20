@@ -8,7 +8,7 @@ A cached page is one rendered copy of HTML that every visitor receives. This pag
 
 ## TTL and stale-while-revalidate
 
-A route policy has two windows. Take `{ maxAge: 300, staleWhileRevalidate: 60 }` on `/blog/:slug`, and an article first requested at 12:00:00:
+A route policy has two windows. Take `{ maxAge: 300, staleWhileRevalidate: 60 }` on `/blog/article/:slug`, and an article first requested at 12:00:00:
 
 | Request at  | What the visitor gets                                                                    | Header        |
 | ----------- | ---------------------------------------------------------------------------------------- | ------------- |

@@ -7,7 +7,7 @@ icon: LayoutGrid
 import { ImgDocs } from '@/components/fumadocs/img'
 import noResults from './public-lists-no-results.webp'
 
-A public list is a page such as `/blog` that shows published records a page at a time, with search, filters and sorting in its URL. The Content Engine provides the data and the list behavior; your plugin defines the route, the item layout and the words. This guide walks through the blog plugin's `/blog` page, so every snippet is real code you can open in `plugins/blog/src`.
+A public list is a page such as `/blog` that shows published records a page at a time, with search, filters and sorting in its URL. The Content Engine provides the data and the list behavior; your plugin defines the route, the item layout and the words. This guide builds an article list with search, a category filter, sorting and pages. The blog plugin's own `/blog` uses the same pieces with only categories and pages, so its files in `plugins/blog/src` are a shorter version of these snippets.
 
 | The Content Engine provides                                                                                          | Your plugin defines                                     |
 | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -164,7 +164,7 @@ export const routes = definePluginRoutes([
 ])
 ```
 
-The [page cache](/docs/dev/cache/pages) only stores a URL with no query string, so `/blog` is reused and `/blog?q=vite` always renders fresh. Each locale has its own URL, so a Polish page is never served to an English reader.
+The [page cache](/docs/dev/cache/pages) only stores a URL with no query string, so `/blog` is reused and `/blog?category=3` always renders fresh. Each locale has its own URL, so a Polish page is never served to an English reader.
 
 </Step>
 
@@ -261,20 +261,20 @@ const BlogPage = ({
 
 ## Check the result
 
-Run `pnpm build:plugins`, restart `pnpm dev` and open `http://localhost:3000/blog`. Search, pick a category, change the sort and move to page 2: the URL changes each time, and refreshing or pressing back shows the same view.
+Run `pnpm build:plugins`, restart `pnpm dev` and open your list page. Search, pick a category, change the sort and move to page 2: the URL changes each time, and refreshing or pressing back shows the same view.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={noResults}
-  alt="Blog page with the search term kangaroo-free and the Releases category selected, showing No articles match and a Clear filters button"
+  alt="An article list with the search term kangaroo-free and the Releases category selected, showing No articles match and a Clear filters button"
 />
 
 The plain list is the indexable one; every other state stays out of the index but keeps its links followable:
 
 ```bash
 curl -s http://localhost:3000/blog | grep -oE '<meta content="[^"]*" name="robots"/>|<link href="[^"]*" rel="canonical"/>'
-curl -s "http://localhost:3000/blog?q=vite" | grep -oE '<meta content="[^"]*" name="robots"/>'
+curl -s "http://localhost:3000/blog?category=3" | grep -oE '<meta content="[^"]*" name="robots"/>'
 ```
 
 ```html
