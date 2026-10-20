@@ -9,15 +9,26 @@ import { isContentId } from "../ids";
 import { splitContentFieldPath } from "../paths";
 import { resolveContentPublicRowFiles } from "./files";
 
+export const isContentPublicPeopleList = (
+  definition: AnyContentTypeDefinition,
+  name: string,
+): boolean => {
+  const fieldValue = definition.fields[name];
+
+  return fieldValue?.kind === "user" && fieldValue.multiple;
+};
+
 /**
- * The `publicApi.people` half of each row - every name mapped to its public
- * summary, or `null` - without the rest of the row, so it can be merged onto
- * rows another step is still building.
+ * The `publicApi.people` half of each row - every to-one name mapped to its
+ * public summary or `null`, every to-many name to its summaries in stored
+ * order with deleted users left out - without the rest of the row, so it can
+ * be merged onto rows another step is still building.
  *
  * One query for the whole page, whatever number of people fields and rows.
  */
 const loadContentPublicPeopleOverlay = async (
   c: Context,
+  definition: AnyContentTypeDefinition,
   people: readonly string[],
   rows: readonly Record<string, unknown>[],
 ): Promise<Record<string, unknown>[]> => {
@@ -25,22 +36,33 @@ const loadContentPublicPeopleOverlay = async (
 
   const loaded = await loadPublicPeople(
     c,
-    rows.flatMap(row => people.map(name => row[name])),
+    rows.flatMap(row => people.flatMap(name => row[name])),
   );
+  const personOf = (id: unknown) =>
+    typeof id === "number" ? loaded.get(id) : undefined;
 
   return rows.map(row =>
     Object.fromEntries(
       people.map(name => {
-        const id = row[name];
+        const value = row[name];
 
-        return [name, typeof id === "number" ? (loaded.get(id) ?? null) : null];
+        if (isContentPublicPeopleList(definition, name)) {
+          return [
+            name,
+            Array.isArray(value) ? value.flatMap(id => personOf(id) ?? []) : [],
+          ];
+        }
+
+        return [name, personOf(value) ?? null];
       }),
     ),
   );
 };
 
 /**
- * Swaps each `publicApi.people` user id for its public summary, or `null`.
+ * Swaps each `publicApi.people` user id for its public summary, or `null`,
+ * and each to-many people field's ids for their summaries. The rows must
+ * already carry a to-many field's ids, as a revision snapshot does.
  *
  * One query for the whole page, whatever number of people fields and rows.
  */
@@ -52,7 +74,12 @@ export const resolveContentPublicRowPeople = async (
   const { people } = definition.publicApi;
   if (people.length === 0 || rows.length === 0) return [...rows];
 
-  const overlay = await loadContentPublicPeopleOverlay(c, people, rows);
+  const overlay = await loadContentPublicPeopleOverlay(
+    c,
+    definition,
+    people,
+    rows,
+  );
 
   return rows.map((row, index) => ({ ...row, ...overlay[index] }));
 };
@@ -95,10 +122,10 @@ export const nestContentPublicRow = (
  * 3. batch-resolve the file fields and the `publicApi.people` summaries.
  *
  * Steps 2 and 3 run side by side: none of them reads what another writes. The
- * one exception is a `multiple: true` file field, which has no column - its
- * identifiers only exist on the row once `loadMany` has put them there - so
- * when the allowlist exposes one, the files wait for the collections (the
- * people still do not).
+ * exceptions are a `multiple: true` file or people field, which has no column -
+ * its identifiers only exist on the row once `loadMany` has put them there - so
+ * the files wait for the collections when the allowlist exposes such a file,
+ * and the people wait for them when `people` names such a user field.
  *
  * One batch per page either way. Shared by the localized public service and the
  * plain one, whose statements and localization strategies are deliberately
@@ -123,6 +150,10 @@ export const createContentPublicRowHydrator = ({
   const filesNeedCollections = publicCollections.some(
     name => definition.fields[name]?.kind === "file",
   );
+  const peopleLists = people.filter(name =>
+    isContentPublicPeopleList(definition, name),
+  );
+  const collectionFields = [...publicCollections, ...peopleLists];
 
   return async (
     rows: readonly Record<string, unknown>[],
@@ -136,10 +167,9 @@ export const createContentPublicRowHydrator = ({
     const collections: Promise<
       Map<ContentId, Record<string, unknown>> | undefined
     > =
-      publicCollections.length === 0 || !advanced
+      collectionFields.length === 0 || !advanced
         ? Promise.resolve(undefined)
-        : advanced.loadMany(ids, c.get("db"), [...publicCollections]);
-    const peopleOverlay = loadContentPublicPeopleOverlay(c, people, nested);
+        : advanced.loadMany(ids, c.get("db"), collectionFields);
 
     const collectionValuesOf = (
       loaded: Map<ContentId, Record<string, unknown>> | undefined,
@@ -148,6 +178,22 @@ export const createContentPublicRowHydrator = ({
       loaded !== undefined && isContentId(definition.idStrategy, row.id)
         ? loaded.get(row.id)
         : undefined;
+
+    const peopleOverlay =
+      peopleLists.length === 0
+        ? loadContentPublicPeopleOverlay(c, definition, people, nested)
+        : collections.then(
+            async loaded =>
+              await loadContentPublicPeopleOverlay(
+                c,
+                definition,
+                people,
+                nested.map(row => ({
+                  ...row,
+                  ...collectionValuesOf(loaded, row),
+                })),
+              ),
+          );
 
     // The identifier is replaced by the descriptor here rather than in the
     // projector, so the projector stays the one place that decides *what* is

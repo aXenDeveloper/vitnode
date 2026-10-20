@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { type BlogPostAnswer, blogPostQueryOptions } from "./post-query";
 
 const ITEM: BlogPostAnswer["item"] = {
+  authorId: [],
   categoryId: [1],
   content: { content: [], type: "doc" },
   coverImage: null,

@@ -30,7 +30,7 @@ const translationTable = (() => {
   return table;
 })();
 
-export const publishedPostCondition = (): SQL | undefined =>
+const publishedPostCondition = (): SQL | undefined =>
   publishedCondition(publicationColumns(definition, columns));
 
 const publishedTranslationIn = (

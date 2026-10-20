@@ -10,24 +10,6 @@ import type { BlogListSearch } from "./blog-list";
 import { blogPostList } from "./blog-list";
 import { blogQueryKeys } from "./post-query";
 
-const fetchPostAuthors = async (postIds: number[]) => {
-  const res = await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "authors",
-    path: "/",
-    args: { query: { posts: postIds.join(",") } },
-  });
-
-  if (res.status !== 200) {
-    throw new Error(`Loading the blog authors answered ${res.status}.`);
-  }
-
-  const { items } = await res.json();
-
-  return new Map(items.map(item => [item.postId, item.authors]));
-};
-
 const fetchBlogPosts = async ({
   locale,
   search,
@@ -55,24 +37,12 @@ const fetchBlogPosts = async ({
     throw new Error(`Loading the blog answered ${res.status}.`);
   }
 
-  const page = await res.json();
-  const authors =
-    page.edges.length > 0
-      ? await fetchPostAuthors(page.edges.map(post => post.id))
-      : null;
-
-  return {
-    ...page,
-    edges: page.edges.map(post => ({
-      ...post,
-      authors: authors?.get(post.id) ?? [],
-    })),
-  };
+  return await res.json();
 };
 
 /**
  * One page of `/blog`, typed from the list route - `publicApi.listFields` plus
- * `locale` - with each article's `authors` from the blog's authors route.
+ * `locale` and the `authorId` people.
  */
 export type BlogPostPage = Awaited<ReturnType<typeof fetchBlogPosts>>;
 

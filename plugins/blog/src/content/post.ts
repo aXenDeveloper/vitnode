@@ -136,6 +136,7 @@ export const blogPostContentType = defineContentType({
     // itself per language, and a cursor would mean two positions at once.
     orderableFields: ["publishedAt"],
     filterableFields: ["categoryId", "friendlyUrl"],
+    people: ["authorId"],
     defaultOrderBy: "publishedAt",
     defaultOrder: "desc",
   },

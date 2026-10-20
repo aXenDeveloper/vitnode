@@ -1127,12 +1127,13 @@ type ExposableFlatFieldKeys<TFields> = Exclude<
  * public - this block is the only thing that does, by being present.
  */
 /**
- * The `field.user()` fields `publicApi.people` may name: top-level, shared and
- * to-one. Each is published as a {@link ContentPublicPerson}.
+ * The `field.user()` fields `publicApi.people` may name: top-level and shared.
+ * A to-one field is published as a {@link ContentPublicPerson}, a to-many one
+ * as an ordered list of them.
  */
 export type ContentPublicPersonField<TFields> = string &
   {
-    [K in keyof TFields]: TFields[K] extends { kind: "user"; multiple: false }
+    [K in keyof TFields]: TFields[K] extends { kind: "user" }
       ? TFields[K] extends { localized: true }
         ? never
         : K
@@ -1166,8 +1167,10 @@ export interface ContentPublicApiConfig<
   /** One lowercase URL segment, e.g. `articles`. Never `admin`. */
   path: TPath;
   /**
-   * To-one user fields published as a person summary (name, avatar, role) -
-   * an explicit opt-in, since `fields` never exposes a user. Defaults to none.
+   * User fields published as a person summary (name, avatar, role) - an
+   * explicit opt-in, since `fields` never exposes a user. A to-one field is one
+   * person or `null`; a `multiple: true` field is a list in its stored order,
+   * without deleted users. Defaults to none.
    */
   people?: readonly TPeople[];
   /** Columns `search` scans. Defaults to none. */
@@ -2439,11 +2442,19 @@ export type ContentPublicPeopleResolved<TPeople extends string> = [
   ? string
   : TPeople;
 
-/** One {@link ContentPublicPerson} per `publicApi.people` entry. */
-type ContentPublicPeopleColumns<TDefinition> = Record<
-  ContentPublicPeopleName<TDefinition>,
-  ContentPublicPerson | null
->;
+/**
+ * One {@link ContentPublicPerson} per to-one `publicApi.people` entry, and an
+ * ordered list of them per to-many one.
+ */
+type ContentPublicPeopleColumns<TDefinition> = {
+  [
+    K in ContentPublicPeopleName<TDefinition>
+  ]: K extends keyof ContentFieldsOf<TDefinition>
+    ? ContentFieldsOf<TDefinition>[K] extends { multiple: true }
+      ? ContentPublicPerson[]
+      : ContentPublicPerson | null
+    : ContentPublicPerson | null;
+};
 
 /**
  * The language a public row is actually in, on a localized content type.

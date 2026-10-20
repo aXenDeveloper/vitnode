@@ -203,18 +203,20 @@ another page with your own layout, see
 
 ### Article authors
 
-The Content Engine never puts user fields in its public API, so the bylines come
-from the blog's own route. Pass up to 50 article ids:
+Every article carries its authors under `authorId`, in the order the article
+lists them, on both the list and the article route. The blog opts the field into
+[`publicApi.people`](/docs/content-engine/reference#publicapi), so each author
+is a small public profile, never a raw user row:
 
 ```bash
-curl "http://localhost:3000/api/@vitnode/blog/authors?posts=4,5"
+curl "http://localhost:3000/api/@vitnode/blog/content/blog?locale=en&first=1"
 ```
 
 ```json
 {
-  "items": [
+  "edges": [
     {
-      "authors": [
+      "authorId": [
         {
           "avatarColor": "a8295c",
           "avatarUrl": null,
@@ -224,16 +226,14 @@ curl "http://localhost:3000/api/@vitnode/blog/authors?posts=4,5"
           "role": { "color": null, "prefix": null }
         }
       ],
-      "postId": 4
+      "id": 4,
+      "title": "Building a plugin"
     }
   ]
 }
 ```
 
-Authors come in the order the article lists them. Drafts, scheduled and hidden
-articles are left out, so an id never reveals who is writing what.
-`blogPostsQueryOptions` calls this route for you and adds `authors` to every
-article it returns.
+The response is trimmed here. A deleted account simply drops out of the list.
 
 ## Write and translate articles
 

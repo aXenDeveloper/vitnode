@@ -693,7 +693,16 @@ const publicSelectShape = (
   // content type, so this cannot shadow a declared field.
   ...(localization.enabled ? { locale: z.string() } : {}),
   ...Object.fromEntries(
-    publicApi.people.map(name => [name, zodContentPublicPerson.nullable()]),
+    publicApi.people.map(name => {
+      const fieldValue = fields[name];
+
+      return [
+        name,
+        fieldValue?.kind === "user" && fieldValue.multiple
+          ? z.array(zodContentPublicPerson)
+          : zodContentPublicPerson.nullable(),
+      ];
+    }),
   ),
   ...Object.fromEntries(
     exposed

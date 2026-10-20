@@ -129,7 +129,7 @@ const BlogPostByline = ({
 }) => {
   const t = useTranslations("@vitnode/blog.list");
   const format = useFormatter();
-  const { authors } = post;
+  const { authorId: authors } = post;
   const [first, second] = authors;
   const authorsLabel =
     authors.length === 2
