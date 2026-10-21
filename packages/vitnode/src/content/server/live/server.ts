@@ -341,6 +341,13 @@ export const createContentLiveServer = ({
           store: createStore(c),
           userId: result.user.id,
         });
+        // The socket closed while the document loaded: its close cleanup has
+        // already run, so nothing else would ever release this member.
+        if (outcome === "ok" && !isMember(connection, room, clientId)) {
+          await documents.close({ clientId, connection, doc: message.doc });
+
+          return;
+        }
         if (outcome !== "ok") fail(outcome);
 
         return;
