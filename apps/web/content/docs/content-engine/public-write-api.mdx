@@ -1,6 +1,6 @@
 ---
 title: Public write API
-description: Reference for Content Engine publicWrite - options and defaults, writable fields, generated create and edit routes, request and response bodies, status and error codes, createContentPublicWriteService and definition errors.
+description: Reference for Content Engine publicWrite, with options and defaults, writable fields, generated create and edit routes, request and response bodies, status and error codes, createContentPublicWriteService and definition errors.
 icon: FileJson
 ---
 
@@ -67,15 +67,18 @@ When the content type lives in a container collection with [publishing policies]
 
 ## Generated routes
 
-The routes live in the public module, under `/api/{pluginId}/content/{publicApi.path}`, next to the [public read routes](/docs/content-engine/public-api#public-api-routes). Only the ones `publicWrite` enables are mounted, and the [fetcher](/docs/dev/fetcher) types them the same way: a `post` to a content type without `create` is a compile error.
+The routes live in the public module, under `/api/{pluginId}/content/{publicApi.path}`, next to the [public read routes](/docs/content-engine/public-api#the-routes). Only the ones `publicWrite` enables are mounted, and the [fetcher](/docs/dev/fetcher) types them the same way: a `post` to a content type without `create` is a compile error.
 
 | Method and path  | Enabled by | Body                          | Success                                                                    |
 | ---------------- | ---------- | ----------------------------- | -------------------------------------------------------------------------- |
 | `POST /`         | `create`   | `{ values }`                  | `201` with the record                                                      |
 | `GET /{id}/edit` | `update`   |                               | `200` with the record, drafts included, `Cache-Control: private, no-store` |
 | `PATCH /{id}`    | `update`   | `{ values, expectedVersion }` | `200` with the record                                                      |
+| `GET /permissions?ids=1,2` | `update` or `reports` |                 | `200` with `{ items: [{ id, canEdit, canReport }] }`, `Cache-Control: private, no-store` |
 
 `GET /{id}/edit` and `PATCH /{id}` answer only for the owner and for moderators. There is no public delete, publish or hide route.
+
+`GET /permissions` takes up to 50 comma-separated ids and answers for guests too. `canEdit` follows the same rules as `PATCH`; `canReport` is `true` for a public record, with `reports` on, that the visitor did not write. A record the visitor can neither read nor edit is left out of `items`, so the route never confirms a draft exists.
 
 A request passes these checks in order: the rate limit, the captcha (create only), the session, the body, then for an edit the owner or moderator check and the relation targets, all before anything is written.
 
@@ -298,6 +301,41 @@ const rejection = parseContentPublicWriteRejection(
   await res.json().catch(() => null),
 );
 ```
+
+## Frontend helpers
+
+From `@vitnode/core/tanstack/content`, for pages in the browser.
+
+### `useContentPermissions`
+
+```ts
+const permissions = useContentPermissions({ fetch, ids, queryKey });
+permissions.of(id); // { canEdit, canReport }
+```
+
+| Option     | Type                                                    | Description                                                                 |
+| ---------- | ------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `ids`      | `readonly (number \| string)[]`                         | The records on screen, at most 50                                           |
+| `fetch`    | `(ids) => Promise<{ items }>`                           | Calls `GET /permissions` through `fetcher` with `ids.join(",")`             |
+| `queryKey` | `QueryKey`                                              | The content type's query prefix; invalidating it refreshes the answer      |
+
+`of(id)` returns all `false` until the answer arrives and for a record left out. The hook waits for the session and asks again when somebody signs in or out.
+
+### `useContentPublicWrite`
+
+```ts
+const write = useContentPublicWrite({ fields, latestVersion, uniqueField, version });
+const record = await write.submit(form, async expectedVersion => await fetcher(/* ... */));
+```
+
+| Option          | Type                              | Description                                                                          |
+| --------------- | --------------------------------- | ------------------------------------------------------------------------------------ |
+| `fields`        | `readonly string[]`               | The form's fields. Server issues on them show under the field; others are a toast    |
+| `uniqueField`   | `string`                          | Where "already taken" shows on `409 CONTENT_UNIQUE_CONFLICT`. Without it, a toast    |
+| `version`       | `number`                          | The version the edit form opened with. Leave it out for a create                     |
+| `latestVersion` | `() => Promise<number \| null>`   | Reads the current version for **Keep my version**. Without it, only a reload is offered |
+
+`submit` returns the record on a `2xx` and `null` otherwise, after showing the reason. It passes the current `expectedVersion` to `request` and stores the new one after each save. `write.conflict` is the version-conflict alert, or `null`; render it above the form. Messages come from `core.global.content_write` and follow the reader's language.
 
 ## Server API
 

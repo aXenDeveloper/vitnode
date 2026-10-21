@@ -1,6 +1,7 @@
 import type { Context } from "hono";
 
 import { and, eq, lt, sql } from "drizzle-orm";
+import * as Y from "yjs";
 
 import type { ContentLiveDocRef } from "@/content/live/protocol";
 
@@ -124,4 +125,52 @@ export const cleanupStaleContentDocuments = async (
     .returning({ id: table.id });
 
   return removed.length;
+};
+
+export const patchStoredContentDocuments = async (
+  c: Context,
+  {
+    mutate,
+    skip,
+  }: {
+    mutate: (doc: Y.Doc) => boolean;
+    skip: (ref: ContentLiveDocRef) => boolean;
+  },
+): Promise<{ ref: ContentLiveDocRef; update: Uint8Array }[]> => {
+  const db = c.get("db");
+  const rows = await db
+    .select({
+      contentTypeId: table.contentTypeId,
+      field: table.field,
+      id: table.id,
+      itemId: table.itemId,
+      language: table.language,
+      state: table.state,
+    })
+    .from(table)
+    .where(sql`octet_length(${table.state}) > 0`);
+
+  const patched: { ref: ContentLiveDocRef; update: Uint8Array }[] = [];
+  for (const row of rows) {
+    const ref: ContentLiveDocRef = {
+      contentTypeId: row.contentTypeId,
+      field: row.field,
+      itemId: row.itemId,
+      locale: row.language === CONTENT_LIVE_SHARED_LOCALE ? null : row.language,
+    };
+    if (skip(ref)) continue;
+
+    const doc = new Y.Doc({ gc: true });
+    Y.applyUpdate(doc, row.state);
+    const before = Y.encodeStateVector(doc);
+    if (!mutate(doc)) continue;
+
+    await db
+      .update(table)
+      .set({ state: Y.encodeStateAsUpdate(doc), updatedAt: new Date() })
+      .where(eq(table.id, row.id));
+    patched.push({ ref, update: Y.encodeStateAsUpdate(doc, before) });
+  }
+
+  return patched;
 };

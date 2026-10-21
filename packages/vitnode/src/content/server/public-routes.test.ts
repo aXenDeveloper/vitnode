@@ -411,8 +411,14 @@ describe("generated surface", () => {
       openapi: "3.1.0",
     });
     interface ObjectSchema {
+      allOf?: ObjectSchema[];
       properties: Record<string, ObjectSchema & { items: ObjectSchema }>;
     }
+    const propertyNames = (schema: ObjectSchema): string[] =>
+      [
+        ...Object.keys(schema.properties ?? {}),
+        ...(schema.allOf ?? []).flatMap(propertyNames),
+      ].sort();
     const okSchema = (path: string): ObjectSchema => {
       const response = paths[path]?.get?.responses?.["200"] as
         | undefined
@@ -422,9 +428,11 @@ describe("generated surface", () => {
       return response.content["application/json"].schema;
     };
 
-    expect(
-      Object.keys(okSchema("/").properties.edges.items.properties).sort(),
-    ).toEqual(["slug", "title"]);
+    expect(propertyNames(okSchema("/").properties.edges.items)).toEqual([
+      "hidden",
+      "slug",
+      "title",
+    ]);
     expect(Object.keys(okSchema("/{slug}").properties).sort()).toEqual([
       "body",
       "slug",

@@ -9,6 +9,7 @@ import {
   CollaborativeEditorSlot,
   EditorCollaborationContext,
 } from "@/components/tiptap/collaboration";
+import { reusableEditorUploads } from "@/components/tiptap/uploads/reuse";
 import { Editor } from "@/components/ui/editor";
 import { FormControl, FormMessage, useFormField } from "@/components/ui/form";
 import { isRichTextEmpty } from "@/content/rich-text/document";
@@ -170,6 +171,9 @@ const MultiLangJsonEditor = ({
   });
   const labelledBy = useEditorLabelledBy(label);
   const collaborative = React.use(EditorCollaborationContext);
+  const reusableUploads = props.uploads
+    ? reusableEditorUploads(field.value ?? undefined, selected)
+    : undefined;
 
   return (
     <MultiLangEditorLayout
@@ -191,6 +195,7 @@ const MultiLangJsonEditor = ({
           onBlur={field.onBlur}
           onChange={setValue}
           render={collaborative}
+          reusableUploads={reusableUploads}
           value={currentValue ?? null}
           {...props}
         />
@@ -201,6 +206,7 @@ const MultiLangJsonEditor = ({
           key={selected}
           onBlur={field.onBlur}
           onChange={setValue}
+          reusableUploads={reusableUploads}
           value={currentValue ?? null}
           {...props}
         />

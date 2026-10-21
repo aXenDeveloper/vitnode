@@ -15,10 +15,23 @@ export interface EditorEmojiSection {
   label: string;
 }
 
+/** Where editor images may come from. */
+export interface EditorImagesConfig {
+  /**
+   * Lets people insert an image by its `https://` address instead of
+   * uploading it. Off by default, so every image is uploaded to the
+   * install's storage and recorded in `core_files`. Only `https` addresses
+   * are accepted. It only matters for editors that allow uploads.
+   */
+  remote?: boolean;
+}
+
 /** Editor settings, from the `editor` option of the app's `buildConfig`. */
 export interface VitNodeEditorConfig {
   /** Custom emoji sections in the picker. Empty sections are dropped. */
   emojis?: EditorEmojiSection[];
+  /** Where images inserted into an editor may come from. */
+  images?: EditorImagesConfig;
 }
 
 const EditorConfigContext = React.createContext<VitNodeEditorConfig>({});
@@ -32,8 +45,11 @@ export const EditorConfigProvider = ({
   config?: VitNodeEditorConfig;
 }) => {
   const value = React.useMemo(
-    () => ({ emojis: config.emojis?.filter(section => section.emojis.length) }),
-    [config.emojis],
+    () => ({
+      emojis: config.emojis?.filter(section => section.emojis.length),
+      images: config.images,
+    }),
+    [config.emojis, config.images],
   );
 
   return <EditorConfigContext value={value}>{children}</EditorConfigContext>;

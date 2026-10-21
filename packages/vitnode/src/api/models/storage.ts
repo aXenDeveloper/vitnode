@@ -26,6 +26,7 @@ import { STORAGE_FILE_IN_USE } from "@/lib/files/in-use";
 import { formatBytes } from "@/lib/format-bytes";
 
 import { enqueueAltAfterUpload } from "../lib/ai/alt";
+import { releaseEditorFileReferences } from "../lib/editor-file-references";
 
 const DEFAULT_IMAGE_QUALITY = 85;
 
@@ -517,6 +518,7 @@ export class StorageModel {
     }
 
     await releaseUserImageHolders(this.c, deleted.holders);
+    await releaseEditorFileReferences(this.c, id);
   }
 
   /** The public URL of a stored object. */

@@ -203,6 +203,14 @@ export const CONTENT_DEFAULT_PAGE_SIZE = 10;
 export const CONTENT_OPTIONS_LIMIT = 25;
 
 export const CONTENT_PUBLIC_DEFAULT_PAGE_SIZE = 25;
+/**
+ * Set to `"true"` on a public `GET /{slug}` that returns a hidden record to
+ * someone allowed to see it - its author or a moderator. Read it with
+ * `res.headers.get(CONTENT_HIDDEN_HEADER)` to show a "hidden" notice.
+ */
+export const CONTENT_HIDDEN_HEADER = "X-Content-Hidden";
+
+/** The most records one public list read returns, as `first` or `last`. */
 export const CONTENT_PUBLIC_MAX_PAGE_SIZE = 50;
 
 export const CONTENT_PUBLIC_PATH_PATTERN = /^[a-z][a-z0-9-]*$/;
@@ -253,6 +261,13 @@ export const CONTENT_PUBLIC_WRITABLE_KINDS = [
   "textarea",
 ] as const;
 
+/**
+ * Issue codes the public write routes add next to Zod's own:
+ * `edit_window_closed` and `moderators_only` come with a `403` from a
+ * container's publishing policy, `not_writable` flags a field outside the
+ * allowlist, `unavailable` a relation or container target the writer may not
+ * use, and `invalid_json` a body that is not JSON.
+ */
 export const CONTENT_PUBLIC_WRITE_ISSUE_CODES = {
   editWindowClosed: "edit_window_closed",
   invalidJson: "invalid_json",
@@ -261,6 +276,12 @@ export const CONTENT_PUBLIC_WRITE_ISSUE_CODES = {
   unavailable: "unavailable",
 } as const;
 
+/**
+ * The `code` of a refused public write: `CONTENT_INVALID_INPUT` (`400`),
+ * `CONTENT_UNAUTHENTICATED` (`401`), `CONTENT_FORBIDDEN` (`403`) and
+ * `CONTENT_NOT_FOUND` (`404`). Read the body with
+ * `parseContentPublicWriteRejection`.
+ */
 export const CONTENT_PUBLIC_WRITE_CODES = {
   forbidden: "CONTENT_FORBIDDEN",
   invalidInput: "CONTENT_INVALID_INPUT",
@@ -436,6 +457,7 @@ export const CONTENT_PERMISSIONS = {
   view: "can_view",
 } as const;
 
+/** The `code` of a `409` from a content write. See `zodContentConflict`. */
 export const CONTENT_CONFLICT_CODES = {
   unique: "CONTENT_UNIQUE_CONFLICT",
   version: "CONTENT_VERSION_CONFLICT",
@@ -451,6 +473,12 @@ export const CONTENT_TRANSLATION_CONFLICT_CODES = {
 
 export const CONTENT_UNPROCESSABLE_CODES = {
   notRestorable: "CONTENT_REVISION_NOT_RESTORABLE",
+} as const;
+
+export const CONTENT_INVALID_INPUT_CODE = "CONTENT_INVALID_INPUT";
+
+export const CONTENT_INPUT_ISSUE_CODES = {
+  required: "required",
 } as const;
 
 export const CONTENT_DUPLICATE_CODES = {

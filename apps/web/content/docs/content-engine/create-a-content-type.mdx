@@ -194,18 +194,18 @@ Labels come from your plugin's `src/locales/en.json`. Content type strings live 
 
 Run this from the workspace root:
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
 
 ```bash tab="bun"
-bun run build:plugins && bun run db:migrate
+bun run db:migrate
 ```
 
 ```bash tab="pnpm"
-pnpm build:plugins && pnpm db:migrate
+pnpm db:migrate
 ```
 
 ```bash tab="npm"
-npm run build:plugins && npm run db:migrate
+npm run db:migrate
 ```
 
 </Tabs>
@@ -225,14 +225,6 @@ CREATE INDEX "example_categories_updated_at_idx" ON "example_categories" USING b
 ```
 
 You declared one field. The engine added `id`, the two timestamps and their indexes. [Database](/docs/content-engine/database) lists everything it generates.
-
-</Step>
-
-<Step>
-
-### Restart the dev server
-
-Stop `pnpm dev` and start it again. The API registers routes when it starts, so the new staff routes exist only after a restart.
 
 </Step>
 

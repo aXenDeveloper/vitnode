@@ -130,6 +130,11 @@ const richText = <
     SharedArgs<TRequired, TNullable> & {
       /** Largest serialised document accepted, in bytes. Defaults to 1 MiB. */
       maxBytes?: number;
+      /**
+       * Lets the AdminCP editor accept dropped, pasted and inserted images,
+       * stored in `core_files`. Needs the staff permission `files:can_upload`.
+       */
+      uploads?: boolean;
     } = {},
 ): ContentRichTextField<TRequired, TNullable, TLocalized> => ({
   ...args,

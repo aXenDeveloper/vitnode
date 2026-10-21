@@ -29,6 +29,7 @@
   "dependencies": {
     "@hono/zod-openapi": "^1.6.3",
     "@tanstack/react-form": "^1.33.5",
+    "@tanstack/react-query": "^5.104.1",
     "@vitnode/core": "workspace:*",
     "drizzle-kit": "1.0.0-rc.4",
     "drizzle-orm": "1.0.0-rc.4",

@@ -14,6 +14,7 @@
   "@vitnode/core:files": "Pliki",
   "@vitnode/core:files:can_delete": "Usuwanie plików",
   "@vitnode/core:files:can_download": "Pobieranie plików",
+  "@vitnode/core:files:can_upload": "Przesyłanie obrazów w edytorach",
   "@vitnode/core:files:can_view": "Wyświetlanie przesłanych plików",
   "@vitnode/core:notifications": "Powiadomienia",
   "@vitnode/core:notifications:can_edit": "Edycja ustawień powiadomień",
@@ -2537,6 +2538,65 @@
           "submit": "Wstaw audio",
           "title": "Wstaw audio"
         },
+        "image": {
+          "label": "Obraz",
+          "hint": "Prześlij lub upuść zdjęcie",
+          "title": "Wstaw obraz",
+          "desc": "Upuść zdjęcie tutaj, wybierz je z urządzenia albo wklej prosto do edytora.",
+          "dropzone": "Upuść obrazy tutaj lub kliknij, aby wybrać",
+          "limits": "PNG, JPEG, WebP, GIF lub AVIF, do {size} każdy.",
+          "tabs": {
+            "upload": "Prześlij",
+            "url": "Z adresu URL"
+          },
+          "url": {
+            "label": "Adres URL obrazu",
+            "desc": "Działają tylko adresy https://.",
+            "https": "Użyj adresu zaczynającego się od https://.",
+            "submit": "Wstaw obraz"
+          },
+          "uploading": "Przesyłanie obrazu…",
+          "settings": "Ustawienia obrazu",
+          "resize": "Przeciągnij, aby zmienić rozmiar",
+          "wrap": {
+            "label": "Opływanie obrazu",
+            "none": "Domyślnie",
+            "left": "Opływanie z lewej",
+            "right": "Opływanie z prawej"
+          },
+          "width": {
+            "label": "Szerokość",
+            "value": "{value}%"
+          },
+          "alt": {
+            "label": "Tekst alternatywny",
+            "desc": "Opisz swój obraz"
+          },
+          "replace": "Zamień",
+          "remove": "Usuń"
+        },
+        "attachment": {
+          "label": "Plik",
+          "hint": "PDF, Word, PowerPoint lub ZIP",
+          "uploading": "Przesyłanie…",
+          "open": "Otwórz {name}"
+        },
+        "uploads": {
+          "errors": {
+            "title": "Nie dodano pliku",
+            "type": "{name} to typ pliku, którego ten edytor nie przyjmuje.",
+            "too_large": "{name} jest większy niż {size}.",
+            "upload": "Nie udało się przesłać {name}."
+          },
+          "deleted_file": "Plik został usunięty",
+          "deleted_image": "Obraz został usunięty",
+          "reuse": {
+            "from": "Użyj ponownie z: {languages}",
+            "insert": "Wstaw {name}",
+            "insert_all": "Wstaw wszystkie ({count})",
+            "image": "Obraz"
+          }
+        },
         "blocks": {
           "bullet_list": {
             "hint": "Proste punkty",
@@ -2926,7 +2986,34 @@
           }
         }
       },
-      "unsaved_changes": "Niezapisane zmiany"
+      "unsaved_changes": "Niezapisane zmiany",
+      "content_write": {
+        "title": "Nie udało się zapisać",
+        "unknown": "Coś poszło nie tak po naszej stronie. Spróbuj ponownie.",
+        "unauthenticated": "Twoja sesja wygasła. Zaloguj się ponownie i spróbuj jeszcze raz.",
+        "forbidden": "Nie możesz tego zmienić.",
+        "not_found": "To już nie istnieje.",
+        "rate_limited": "Robisz to zbyt często. Odczekaj minutę i spróbuj ponownie.",
+        "unique": "To jest już zajęte. Spróbuj czegoś innego.",
+        "issues": {
+          "invalid": "Sprawdź tę wartość.",
+          "not_writable": "Tego nie można tu zmienić.",
+          "unavailable": "To nie jest już dostępne. Wybierz coś innego.",
+          "moderators_only": "Tylko moderatorzy mogą tu publikować.",
+          "edit_window_closed": "Czas na edycję minął."
+        },
+        "conflict": {
+          "title": "Ktoś inny zapisał zmiany w międzyczasie",
+          "desc": "Nic nie zostało zapisane, a Twój tekst jest nadal w formularzu. Zachowaj swoją wersję, aby nadpisać tamtą zmianę, albo wczytaj najnowszą wersję i porzuć swoje zmiany.",
+          "desc_reload": "Nic nie zostało zapisane, a Twój tekst jest nadal w formularzu. Skopiuj to, co chcesz zachować, a potem wczytaj najnowszą wersję.",
+          "keep": "Zachowaj moją wersję",
+          "reload": "Wczytaj najnowszą wersję",
+          "kept": {
+            "title": "Gotowe do zapisania Twojej wersji",
+            "desc": "Zapisz ponownie, aby zastąpić tamtą zmianę swoją."
+          }
+        }
+      }
     },
     "profile": {
       "about": "O użytkowniku",

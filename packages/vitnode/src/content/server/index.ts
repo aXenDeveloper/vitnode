@@ -139,6 +139,12 @@ export {
   resolveContentPublicRowFiles,
   withContentRowFiles,
 } from "./files";
+export { contentListHiddenAccess } from "./hidden-access";
+export { contentPublicListCondition } from "./hidden-list";
+export type {
+  ContentPublicHiddenAccess,
+  ContentPublicHiddenFlag,
+} from "./hidden-list";
 export {
   contentConflict,
   contentUnprocessable,

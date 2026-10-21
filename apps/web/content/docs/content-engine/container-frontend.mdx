@@ -426,24 +426,25 @@ Render it with `AutoFormSelect` before the title and body fields:
 On submit, send the board as a number inside `values`, like every other writable field:
 
 ```tsx title="plugins/example/src/pages/discussion-new-page.tsx"
+const write = useContentPublicWrite({
+  fields: ["title", "body", "board"],
+  uniqueField: "title",
+});
+
 const onSubmit: AutoFormOnSubmit<DiscussionCreateFormSchema> = async (
   { board, ...values },
   form,
 ) => {
-  const res = await fetcher({
-    plugin: manifest.id,
-    method: "post",
-    module: "content/discussions",
-    path: "/",
-    args: { body: { values: { ...values, board: Number(board) } } },
-  });
-
-  if (res.status === 201) {
-    // Redirect to the new discussion, as in Public write frontend.
-    return;
-  }
-
-  await rejectDiscussion(res, form);
+  const record = await write.submit(form, async () =>
+    await fetcher({
+      plugin: manifest.id,
+      method: "post",
+      module: "content/discussions",
+      path: "/",
+      args: { body: { values: { ...values, board: Number(board) } } },
+    }),
+  );
+  // Redirect to the new discussion, as in Public create form.
 };
 ```
 
@@ -463,20 +464,7 @@ The server never trusts the id. It reads the board back inside the write's trans
 }
 ```
 
-`useDiscussionRejection` from [Public write frontend](/docs/content-engine/public-write-frontend#build-the-shared-form) already puts field issues under their field. Add `"board"` to its list of fields and a board-specific message for `unavailable`:
-
-```tsx title="plugins/example/src/pages/discussion-form.tsx"
-const DISCUSSION_FIELDS = ["title", "body", "board"] as const; // [!code highlight]
-
-const messageOf = (code: string, field?: DiscussionField) =>
-  t(
-    field === "board" && code === "unavailable"
-      ? "issues.board_unavailable"
-      : isKnownIssueCode(code)
-        ? ISSUE_MESSAGE_KEYS[code]
-        : "invalid",
-  );
-```
+Because `"board"` is in `fields`, [`useContentPublicWrite`](/docs/content-engine/public-write-frontend) shows that issue under the board select.
 
 The edit form stays as it was. A container field cannot be in `publicWrite.update.fields`, so moving a discussion to another board is a staff edit in the AdminCP.
 

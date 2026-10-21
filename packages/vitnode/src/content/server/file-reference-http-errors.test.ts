@@ -11,6 +11,7 @@ import {
   ROOT_STAFF_PERMISSIONS,
 } from "@/tests/staff-permissions";
 
+import { zodContentInvalidInput } from "../conflicts";
 import { CONTENT_FILE_CODES } from "../const";
 import { defineContentType } from "../define";
 import { field } from "../fields";
@@ -352,12 +353,12 @@ describe("the OpenAPI contract for that 400", () => {
     ).toBeDefined();
   });
 
-  it("says nothing about it for a content type with no file field", async () => {
+  it("declares only the invalid-input body for a content type with no file field", async () => {
     const { testPostContentType } = await import("@/tests/content-fixtures");
     const plain = createContentModel(testPostContentType, {
       references: { category: () => filePosts.table.id },
     });
 
-    expect(body400(plain as never, "post", "/")).toBeUndefined();
+    expect(body400(plain as never, "post", "/")).toBe(zodContentInvalidInput);
   });
 });

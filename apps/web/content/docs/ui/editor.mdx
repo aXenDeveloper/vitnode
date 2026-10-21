@@ -66,7 +66,9 @@ One row, even in a narrow form. Everyday tools sit up front, the rest in menus:
   alignment, _Clear formatting_.
 - **Text color**, **lists** (bulleted, numbered, task), **link**, **emoji**,
   **table**, **code block**.
-- **+ Insert**: quote, code block, table, divider, emoji, audio and panels.
+- **+ Insert**: quote, code block, table, divider, emoji, audio and panels,
+  plus images and files when the editor allows [uploads](/docs/ui/editor-images).
+  Images and files from other languages show in a **Reuse** bar under the toolbar.
 
 ## Slash commands
 
@@ -218,6 +220,17 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       description:
         'AutoFormEditor only. Edit per language; the value becomes { languageCode, value }[].',
       type: 'boolean',
+      default: 'false',
+    },
+    reusableUploads: {
+      description:
+        'Images and files from other language versions, shown in a Reuse bar under the toolbar. AutoFormEditor with multiLang fills it in.',
+      type: 'EditorReusableUpload[]',
+    },
+    uploads: {
+      description:
+        'Lets people drop, paste and insert images, stored in core_files. `{ session: "admin" }` uploads with the AdminCP session; add `files: true` for PDF, Word, PowerPoint and ZIP attachments. See Editor images.',
+      type: 'boolean | { session?: "member" } | { session: "admin"; files?: boolean }',
       default: 'false',
     },
   }}

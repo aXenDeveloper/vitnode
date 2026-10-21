@@ -15,6 +15,7 @@ import { createCacheClient } from "@/api/lib/cache-client";
 import { clientIpMiddleware } from "@/api/lib/client-ip";
 import { collectCronJobs } from "@/api/lib/cron";
 import { describeError } from "@/api/lib/error-details";
+import { processSingleton } from "@/api/lib/process-singleton";
 import { newBuildPluginApiCore } from "@/api/plugin";
 import {
   createBlockRegistry,
@@ -68,8 +69,12 @@ interface CSRFOptions {
  * Mounts VitNode on a Hono app: security headers, CORS, CSRF, the body limit,
  * rate limiting, the per-request context (`c.get("db")`, `c.get("cache")` and
  * friends), core and every plugin at `/{pluginId}`, cron registration, and an
- * error handler that hides details outside development. Call it once at
- * startup; it returns the same `app`.
+ * error handler that hides details outside development. It returns the same
+ * `app`.
+ *
+ * Call it at startup. Calling it again in the same process, as a dev server
+ * does after a plugin's API code changes, builds a fresh set of routes while
+ * the Redis connection and the cron schedule stay the ones created first.
  *
  * Server-only. Give `app` its base path (`/api`) before calling it.
  *
@@ -104,7 +109,14 @@ export function VitNodeAPI({
   // (which runs before the request context exists), the realtime pub/sub bridge,
   // and the per-request cache exposed as `c.get("cache")`. Without `redis` the
   // cache falls back to a small in-process store; see `MemoryCacheStore`.
-  const redisClient = createCacheClient(vitNodeApiConfig.redis);
+  //
+  // Process-wide, so a dev server that rebuilds the API after a plugin edit
+  // reuses the connection instead of opening another one each time.
+  const redisClient = vitNodeApiConfig.redis
+    ? processSingleton(`redis:${JSON.stringify(vitNodeApiConfig.redis)}`, () =>
+        createCacheClient(vitNodeApiConfig.redis),
+      )
+    : null;
 
   // Bridge realtime (WebSocket) messages across instances via Redis pub/sub, so
   // `broadcast`/`sendToUser` reach clients on every instance. No-op without Redis.
@@ -258,8 +270,14 @@ export function VitNodeAPI({
     return next();
   });
 
-  if (vitNodeApiConfig.cron) {
-    vitNodeApiConfig.cron.schedule();
+  const { cron } = vitNodeApiConfig;
+  if (cron) {
+    // Once per process: a rebuilt API must not add a second schedule.
+    processSingleton("cron:schedule", () => {
+      cron.schedule();
+
+      return true;
+    });
   }
 
   plugins.map(root => {

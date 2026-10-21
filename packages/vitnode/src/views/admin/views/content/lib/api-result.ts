@@ -4,6 +4,7 @@ import {
   parseContentConflict,
   parseContentDeliveryConflict,
   parseContentDuplicateRejection,
+  parseContentInvalidInput,
   parseContentScheduleRejection,
   parseContentTranslationConflict,
   parseContentUnprocessable,
@@ -74,6 +75,7 @@ export const contentFailureResult = (result: {
   delivery: parseContentDeliveryConflict(result.error) ?? undefined,
   duplicate: parseContentDuplicateRejection(result.error) ?? undefined,
   error: result.error ?? "",
+  invalid: parseContentInvalidInput(result.error) ?? undefined,
   rejection: parseContentScheduleRejection(result.error) ?? undefined,
   status: result.status,
   translationConflict:

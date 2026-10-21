@@ -1,4 +1,10 @@
-import { AudioLinesIcon, ChevronDownIcon, PlusIcon } from "lucide-react";
+import {
+  AudioLinesIcon,
+  ChevronDownIcon,
+  ImageIcon,
+  PaperclipIcon,
+  PlusIcon,
+} from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
@@ -14,10 +20,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+import { EDITOR_ATTACHMENT_ACCEPT } from "@/lib/editor-uploads";
 
 import { BLOCK_COMMANDS } from "../../block-commands";
+import { insertEditorFiles } from "../../uploads/flow";
+import { useEditorUploadRuntime } from "../../uploads/runtime";
 import { useToolbarEditor } from "../use-toolbar-editor";
 import { AudioDialog } from "./audio-action";
+import { ImageDialog } from "./image-action";
 
 const INSERT_COMMANDS = BLOCK_COMMANDS.filter(
   command => command.group === "insert" || command.id === "quote",
@@ -27,6 +37,9 @@ export const InsertAction = () => {
   const t = useTranslations("core.global.editor");
   const { editor } = useToolbarEditor();
   const [isAudioOpen, setIsAudioOpen] = React.useState(false);
+  const [isImageOpen, setIsImageOpen] = React.useState(false);
+  const uploadRuntime = useEditorUploadRuntime();
+  const attachmentInputRef = React.useRef<HTMLInputElement>(null);
 
   return (
     <>
@@ -64,6 +77,30 @@ export const InsertAction = () => {
                 </span>
               </DropdownMenuItem>
             ))}
+            {uploadRuntime && (
+              <DropdownMenuItem onClick={() => setIsImageOpen(true)}>
+                <ImageIcon />
+                <span className="flex min-w-0 flex-col">
+                  <span>{t("image.label")}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {t("image.hint")}
+                  </span>
+                </span>
+              </DropdownMenuItem>
+            )}
+            {uploadRuntime?.attachments && (
+              <DropdownMenuItem
+                onClick={() => attachmentInputRef.current?.click()}
+              >
+                <PaperclipIcon />
+                <span className="flex min-w-0 flex-col">
+                  <span>{t("attachment.label")}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {t("attachment.hint")}
+                  </span>
+                </span>
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => setIsAudioOpen(true)}>
               <AudioLinesIcon />
               <span className="flex min-w-0 flex-col">
@@ -84,6 +121,25 @@ export const InsertAction = () => {
       </DropdownMenu>
 
       <AudioDialog onOpenChange={setIsAudioOpen} open={isAudioOpen} />
+      {uploadRuntime && (
+        <ImageDialog onOpenChange={setIsImageOpen} open={isImageOpen} />
+      )}
+      {uploadRuntime?.attachments && (
+        <input
+          accept={EDITOR_ATTACHMENT_ACCEPT}
+          aria-hidden="true"
+          className="sr-only"
+          multiple
+          onChange={event => {
+            const files = Array.from(event.target.files ?? []);
+            event.target.value = "";
+            insertEditorFiles(editor, uploadRuntime, files);
+          }}
+          ref={attachmentInputRef}
+          tabIndex={-1}
+          type="file"
+        />
+      )}
     </>
   );
 };

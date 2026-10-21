@@ -185,6 +185,7 @@
       "top_stories": "Top stories",
       "more_articles": "More articles",
       "all_articles": "All articles",
+      "hidden": "Article hidden",
       "articles": "Articles",
       "categories": "Categories",
       "article_count": "{count, plural, one {# article} other {# articles}}",

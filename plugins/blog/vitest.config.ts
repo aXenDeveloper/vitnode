@@ -9,10 +9,6 @@ export default defineConfig({
     environment: "node",
     exclude: ["**/node_modules/**", "**/dist/**"],
     passWithNoTests: true,
-    typecheck: {
-      tsconfig: "./tsconfig.json",
-      include: ["**/*.test-d.ts"],
-    },
   },
   resolve: {
     alias: {

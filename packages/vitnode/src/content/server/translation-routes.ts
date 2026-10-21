@@ -15,6 +15,7 @@ import { buildRoute } from "../../api/lib/route";
 import { contentTypeName } from "../admin/labels";
 import {
   zodContentDeliveryConflict,
+  zodContentInvalidInput,
   zodContentTranslationConflict,
   zodContentUnprocessable,
 } from "../conflicts";
@@ -218,7 +219,7 @@ export const buildContentTranslationRoutes = <
       },
       responses: {
         201: jsonResponse(translationSchemas.select, "Translation created"),
-        400: { description: "Invalid input data" },
+        400: jsonResponse(zodContentInvalidInput, "Invalid input data"),
         404: notFound,
         409: conflict,
       },
@@ -272,7 +273,7 @@ export const buildContentTranslationRoutes = <
           }),
           "Translation updated, or already at those values",
         ),
-        400: { description: "Invalid or empty payload" },
+        400: jsonResponse(zodContentInvalidInput, "Invalid or empty payload"),
         404: notFound,
         409: conflict,
       },

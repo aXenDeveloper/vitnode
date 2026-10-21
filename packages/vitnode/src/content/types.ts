@@ -158,6 +158,7 @@ export interface ContentRichTextField<
   kind: "richText";
   localized: TLocalized;
   maxBytes?: number;
+  uploads?: boolean;
 }
 
 export interface ContentNumberField<

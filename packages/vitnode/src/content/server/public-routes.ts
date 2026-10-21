@@ -29,6 +29,7 @@ import {
 import { contentTypeName } from "../admin/labels";
 import { contentContainerTag } from "../cache";
 import {
+  CONTENT_HIDDEN_HEADER,
   CONTENT_LOCALE_MAX_LENGTH,
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
 } from "../const";
@@ -45,7 +46,10 @@ import {
 import { publicOrderableColumns } from "../registry";
 import { buildContentDeliveryRoutes } from "./delivery-routes";
 import { resolveContentPublicRowFiles } from "./files";
-import { findViewableHiddenBySlug } from "./hidden-access";
+import {
+  contentListHiddenAccess,
+  findViewableHiddenBySlug,
+} from "./hidden-access";
 import { findContentLanguage } from "./language-resolver";
 import {
   contentListPageCacheTags,
@@ -54,6 +58,7 @@ import {
 import { contentPreviewSecret } from "./preview-link";
 import { verifyContentPreviewToken } from "./preview-token";
 import { rememberContentPublicRead } from "./public-cache";
+import { contentPermissionsRoute } from "./public-permissions";
 import { resolveContentPublicRowPeople } from "./public-row-hydration";
 import {
   contentPublicSelection,
@@ -306,7 +311,11 @@ export const buildContentPublicRoutes = <
           content: {
             "application/json": {
               schema: z.object({
-                edges: z.array(schemas.publicListSelect),
+                edges: z.array(
+                  schemas.publicListSelect.and(
+                    z.object({ hidden: z.literal(true).optional() }),
+                  ),
+                ),
                 pageInfo: zodPaginationPageInfo,
               }),
             },
@@ -359,6 +368,31 @@ export const buildContentPublicRoutes = <
       const resolved = await localeFor(c);
       if (!resolved) throw notFound();
 
+      const hidden = await contentListHiddenAccess(c, { model, pluginId });
+      const readPage = async () =>
+        await service(c).findMany({
+          filters,
+          hidden,
+          locale: resolved.locale,
+          // Both narrowings restate what the schemas just proved: `orderBy`
+          // came out of a literal enum built from `publicApi.orderableFields`,
+          // and `filters` out of a shape built from
+          // `publicApi.filterableFields`. The service re-checks both, since
+          // the type is not what protects the query.
+          orderBy: {
+            column: orderBy as ContentPublicOrderableFieldName<TDefinition>,
+            order,
+          },
+          query: { cursor, first, last, page, search },
+        });
+
+      if (hidden) {
+        return c.json(await readPage(), 200, {
+          "Cache-Control": "private, no-store",
+          ...contentLocaleHeaders(resolved),
+        });
+      }
+
       // A published list is the same for every reader, so it is cached under
       // everything that shapes it: the parsed query - never the raw string, so a
       // tracking parameter does not fork the key - and the resolved locale.
@@ -371,21 +405,7 @@ export const buildContentPublicRoutes = <
           route: "list",
           source: resolved.source,
         },
-        load: async () =>
-          await service(c).findMany({
-            filters,
-            locale: resolved.locale,
-            // Both narrowings restate what the schemas just proved: `orderBy`
-            // came out of a literal enum built from `publicApi.orderableFields`,
-            // and `filters` out of a shape built from
-            // `publicApi.filterableFields`. The service re-checks both, since
-            // the type is not what protects the query.
-            orderBy: {
-              column: orderBy as ContentPublicOrderableFieldName<TDefinition>,
-              order,
-            },
-            query: { cursor, first, last, page, search },
-          }),
+        load: readPage,
       });
 
       setPageCacheTags(c, [
@@ -662,6 +682,9 @@ export const buildContentPublicRoutes = <
 
       return c.json(hidden, 200, {
         "Cache-Control": "private, no-store",
+        // The body is the record as usual; this is how a page tells its author
+        // or a moderator that readers cannot see it.
+        [CONTENT_HIDDEN_HEADER]: "true",
         "X-Robots-Tag": "noindex, nofollow",
         ...contentLocaleHeaders(resolved),
       });
@@ -679,6 +702,9 @@ export const buildContentPublicRoutes = <
       ? buildContentDeliveryRoutes(model, { pluginId })
       : []),
     ...(definition.thread.enabled ? [thread] : []),
+    ...(definition.publicWrite.update.enabled || definition.reports.enabled
+      ? [contentPermissionsRoute(model, { pluginId })]
+      : []),
     detail,
     ...contentPublicWriteRoutes(model, { pluginId }),
   ];

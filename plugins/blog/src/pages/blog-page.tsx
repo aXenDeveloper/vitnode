@@ -84,6 +84,7 @@ const BlogPage = ({
     hrefFor={page => blogPostList.href(BLOG_HREF, { page })}
     page={search.page ?? 1}
     posts={posts}
+    search={{ page: search.page }}
   />
 );
 

@@ -4,7 +4,14 @@ description: Show a VitNode Content Engine public list inside any page or compon
 icon: PanelsTopLeft
 ---
 
-A list does not need its own route. The same query options that feed `/blog` can fill a "Latest articles" box on a home page, a sidebar or another plugin's page, rendered however that page needs. This guide reuses the blog's query from [Public lists](/docs/content-engine/public-lists) and draws each article as a compact row instead of a card.
+import { ImgDocs } from "@/components/fumadocs/img";
+import latest from "./public-lists-embed-latest.webp";
+
+A list does not need its own route. The same query options that feed `/discussions` can fill a "Latest discussions" box on a home page, a sidebar or another page, rendered however that page needs. This guide adds the five newest discussions to the example plugin's `/boards` page, reusing the query from [Public lists](/docs/content-engine/public-lists).
+
+## Before you begin
+
+You need list query options built with `contentListQueryOptions`, such as `discussionsQueryOptions` in `plugins/example/src/pages/discussion-list.ts`.
 
 <Steps>
 
@@ -12,59 +19,61 @@ A list does not need its own route. The same query options that feed `/blog` can
 
 ### Render the list with your own items
 
-Call the list's query options with `useQuery` and hand the rows to `ContentListResults`. `renderItem` receives each row exactly as the query returned it, so nothing is article-shaped unless you make it so:
+Call the query options with `useQuery` and hand the rows to `ContentListResults`. `renderItem` receives each row exactly as the query returned it:
 
-```tsx title="src/components/latest-articles.tsx"
-import { useQuery } from '@tanstack/react-query'
-import { blogPostHref } from '@vitnode/blog/pages/blog-card'
-import { blogPostsQueryOptions } from '@vitnode/blog/pages/blog-queries'
-import { ContentListResults } from '@vitnode/core/tanstack/content'
-import { HrefLink } from '@vitnode/core/tanstack/link'
-import { useLocale } from 'use-intl'
+```tsx title="plugins/example/src/pages/latest-discussions.tsx"
+import { useQuery } from "@tanstack/react-query";
+import { ContentListResults } from "@vitnode/core/tanstack/content";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { useLocale, useTranslations } from "use-intl";
 
-export const LatestArticles = () => {
-  const locale = useLocale()
+import { discussionsQueryOptions } from "./discussion-list";
+import { discussionHref } from "./discussion-search";
+
+export const LatestDiscussions = () => {
+  const t = useTranslations("@vitnode/example.boards.latest");
+  const locale = useLocale();
   const { data, isError, isFetching } = useQuery(
-    blogPostsQueryOptions({ locale, search: {} }),
-  )
+    discussionsQueryOptions({ locale, search: {} }),
+  );
 
   return (
-    <section aria-labelledby="latest-articles" className="flex flex-col gap-3">
-      <h2 className="text-lg font-semibold" id="latest-articles">
-        Latest articles
+    <section aria-labelledby="latest-discussions" className="flex flex-col gap-3">
+      <h2 className="text-xl font-semibold" id="latest-discussions">
+        {t("title")}
       </h2>
       <ContentListResults
-        className="flex flex-col divide-y rounded-xl border"
-        empty={<p className="text-muted-foreground text-sm">Nothing yet.</p>}
-        error={
-          <p className="text-muted-foreground text-sm">
-            Could not load articles.
-          </p>
-        }
-        getKey={(post) => post.id}
+        className="flex flex-col divide-y rounded-lg border"
+        empty={<p className="text-muted-foreground text-sm">{t("empty")}</p>}
+        error={<p className="text-muted-foreground text-sm">{t("error")}</p>}
+        getKey={discussion => discussion.id}
         isError={isError}
         isFetching={isFetching}
         isFiltered={false}
-        itemClassName="p-3"
+        itemClassName="px-4 py-3"
         items={data?.edges.slice(0, 5)}
-        label="Latest articles"
-        loading={<p className="text-muted-foreground text-sm">Loading...</p>}
+        label={t("title")}
+        loading={<p className="text-muted-foreground text-sm">{t("loading")}</p>}
         noResults={null}
-        renderItem={(post) => (
-          <HrefLink
-            className="font-medium hover:underline"
-            href={blogPostHref(post.friendlyUrl)}
-          >
-            {post.title}
-          </HrefLink>
-        )}
+        renderItem={discussion =>
+          discussion.slug === null ? (
+            <span className="font-medium">{discussion.title}</span>
+          ) : (
+            <HrefLink
+              className="font-medium hover:underline"
+              href={discussionHref(discussion.slug)}
+            >
+              {discussion.title}
+            </HrefLink>
+          )
+        }
       />
     </section>
-  )
-}
+  );
+};
 ```
 
-Translate the strings through your own locale namespace in real code. They are inline here to keep the example short.
+An empty `search` is the plain list, newest first. The box never filters, so `isFiltered` is `false` and `noResults` is never shown. The labels live under `@vitnode/example.boards.latest`, a namespace the `/boards` route already loads.
 
 </Step>
 
@@ -72,31 +81,47 @@ Translate the strings through your own locale namespace in real code. They are i
 
 ### Render it on the server too
 
-`useQuery` does not fetch during SSR, so the box starts as `loading`. To send it with the HTML, warm the same options in the host route's loader. Leave out `LOADER_DATA_QUERY_META`, so the query is dehydrated and `useQuery` finds it in the browser:
+`useQuery` does not fetch during SSR, so on its own the box starts as `loading`. To send it with the HTML, warm the same options in the host route's loader. Leave out `LOADER_DATA_QUERY_META`, so the query is dehydrated and `useQuery` finds it in the browser:
 
-```ts title="src/pages/home-page.tsx"
-import { blogPostsQueryOptions } from '@vitnode/blog/pages/blog-queries'
-import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
+```tsx title="plugins/example/src/pages/boards-page.tsx"
+const loadBoards = async (
+  queryClient: RouteLoadContext["queryClient"],
+  locale: string,
+) => {
+  const [boards] = await Promise.all([
+    queryClient.query(boardsQueryOptions()),
+    // [!code ++:3]
+    queryClient
+      .query(discussionsQueryOptions({ locale, search: {} }))
+      .catch(() => null),
+  ]);
 
-export const route = defineRoute({
-  load: async ({ context }) => {
-    await context.queryClient.query(
-      blogPostsQueryOptions({ locale: context.locale, search: {} }),
-    )
-  },
-})
+  return { tree: contentContainerTree(boards) };
+};
+
+export const route = defineRoute<BoardsPageData>({
+  load: async ({ context }) =>
+    await loadBoards(context.queryClient, context.locale), // [!code highlight]
+});
 ```
 
-Both calls build the same key, `["@vitnode/blog", "posts", { locale }]` - the same one the first page of `/blog` uses - so they share one cache entry, and a later `invalidateQueries({ queryKey: ["@vitnode/blog", "posts"] })` refreshes the box together with `/blog`.
+Then render `<LatestDiscussions />` anywhere in the page. Both calls build the key `["@vitnode/example", "discussions", { locale }]`, the same one the first page of `/discussions` uses, so they share one cache entry. `invalidateDiscussionLists` refreshes the box together with the list after a member posts.
 
 </Step>
 
 </Steps>
 
-## Check the result
-
-Open the page that renders `<LatestArticles />` and view its source: the article titles are in the HTML. Publish an article in **AdminCP → Blog → Articles** and reload the page: it appears at the top. An empty `search` is the plain list, newest first.
-
 ## Use a different list shape
 
-The blog's list shows 12 rows a page. For a box that needs a different page size, sort or filter set, declare a second list with [`defineContentList`](/docs/content-engine/public-lists-api#definecontentlist) and its own query options. Keep the same `queryKey` prefix, such as `["@vitnode/blog", "posts"]`, so one invalidation still covers both.
+`/discussions` shows ten rows a page, newest first. For a box that needs a different page size, sort or filter set, declare a second list with [`defineContentList`](/docs/content-engine/public-lists-api#definecontentlist) and its own query options. Keep the same `queryKey` prefix, `[manifest.id, "discussions"]`, so one invalidation still covers both.
+
+## Check the result
+
+Open `http://localhost:3000/boards` and view the page source. The discussion titles are in the HTML. Start a discussion from **Start a discussion**, then come back to `/boards`, and it sits at the top of the box.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={latest}
+  alt="A Latest discussions box with an All discussions link and the five newest discussion titles in a bordered list"
+/>

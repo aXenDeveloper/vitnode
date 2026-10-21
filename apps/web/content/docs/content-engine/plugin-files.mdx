@@ -130,8 +130,8 @@ Keep the module browser-safe: it imports definitions only, never `src/database`.
 
 | Error or symptom                               | Cause                                                                                      | Fix                                                                                |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| A content type has no sidebar entry or screen  | `admin/nav` or `admin/content` did not resolve, or the export name is wrong                | Check the file path, the `adminNav` / `adminContent` export and rebuild the plugin |
-| A table is missing from the migration          | The table is not exported from `src/database/*.ts`, or the plugin was not rebuilt          | Export it and run `build:plugins` before `db:migrate`                              |
+| A content type has no sidebar entry or screen  | `admin/nav` or `admin/content` did not resolve, or the export name is wrong                | Check the file path and the `adminNav` / `adminContent` export                    |
+| A table is missing from the migration          | The table is not exported from `src/database/*.ts`, or the plugin was not built          | Export it and run `db:migrate` while `pnpm dev` runs                               |
 | `content-module-missing` when the API starts   | A content type has `delivery` or `search`, but `<pluginId>/content` does not resolve       | Add `src/content.ts` with `export const contentTypes`                              |
 | `incomplete-content-types` when the API starts | `src/content.ts` leaves out a content type that publishes URLs, or declares it differently | Export the same definition the API registers in `contentTypes`                     |
 | `content-url-without-page` in `dev` or `build` | No page route serves a `delivery` or `search` URL                                          | Add the page to `src/routes.ts`, or change the URL                                 |

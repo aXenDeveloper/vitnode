@@ -182,6 +182,7 @@
       "top_stories": "Najważniejsze",
       "more_articles": "Więcej artykułów",
       "all_articles": "Wszystkie artykuły",
+      "hidden": "Artykuł ukryty",
       "articles": "Artykuły",
       "categories": "Kategorie",
       "article_count": "{count, plural, one {# artykuł} few {# artykuły} many {# artykułów} other {# artykułu}}",

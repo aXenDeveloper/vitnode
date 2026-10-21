@@ -2,29 +2,22 @@ import type {
   AutoFormOnSubmit,
   ItemAutoFormComponentProps,
 } from "@vitnode/core/components/form/auto-form";
-import type { ContentPublicWriteRejection } from "@vitnode/core/content";
 
-import {
-  AutoForm,
-  setFormFieldError,
-} from "@vitnode/core/components/form/auto-form";
+import { AutoForm } from "@vitnode/core/components/form/auto-form";
 import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import { AutoFormSelect } from "@vitnode/core/components/form/fields/select";
 import {
   emptyRichTextDocument,
   isRichTextEmpty,
-  parseContentPublicWriteRejection,
   type RichTextDocument,
   zodRichTextDocument,
 } from "@vitnode/core/content";
-import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-const DISCUSSION_FIELDS = ["title", "body", "board"] as const;
-
-type DiscussionField = (typeof DISCUSSION_FIELDS)[number];
+/** The fields the forms render, so server issues on them show in place. */
+export const DISCUSSION_FIELDS = ["title", "body", "board"] as const;
 
 export interface DiscussionFormValues {
   body: RichTextDocument;
@@ -79,67 +72,6 @@ const createDiscussionCreateFormSchema = (
 export type DiscussionCreateFormSchema = ReturnType<
   typeof createDiscussionCreateFormSchema
 >;
-
-type DiscussionFormApi = Parameters<typeof setFormFieldError>[0];
-
-const isDiscussionField = (field: null | string): field is DiscussionField =>
-  DISCUSSION_FIELDS.some(name => name === field);
-
-const ISSUE_MESSAGE_KEYS = {
-  not_writable: "issues.not_writable",
-  unavailable: "issues.unavailable",
-} as const;
-
-const BOARD_ISSUE_MESSAGE_KEY = "issues.board_unavailable";
-
-const isKnownIssueCode = (
-  code: string,
-): code is keyof typeof ISSUE_MESSAGE_KEYS => code in ISSUE_MESSAGE_KEYS;
-
-const REJECTION_MESSAGE_KEYS = {
-  CONTENT_FORBIDDEN: "forbidden",
-  CONTENT_INVALID_INPUT: "invalid",
-  CONTENT_NOT_FOUND: "not_found",
-  CONTENT_UNAUTHENTICATED: "unauthenticated",
-} as const satisfies Record<ContentPublicWriteRejection["code"], string>;
-
-export const useDiscussionRejection = () => {
-  const t = useTranslations("@vitnode/example.discussions.errors");
-
-  return async (response: Response, form: DiscussionFormApi) => {
-    const rejection = parseContentPublicWriteRejection(
-      await response.json().catch(() => null),
-    );
-
-    const messageOf = (code: string, field?: DiscussionField) =>
-      t(
-        field === "board" && code === "unavailable"
-          ? BOARD_ISSUE_MESSAGE_KEY
-          : isKnownIssueCode(code)
-            ? ISSUE_MESSAGE_KEYS[code]
-            : "invalid",
-      );
-
-    const unmatched = (rejection?.issues ?? []).filter(issue => {
-      if (!isDiscussionField(issue.field)) return true;
-      setFormFieldError(form, issue.field, messageOf(issue.code, issue.field));
-
-      return false;
-    });
-
-    if (rejection?.code === "CONTENT_INVALID_INPUT" && unmatched.length === 0) {
-      return;
-    }
-
-    toast.error(t("title"), {
-      description: rejection
-        ? rejection.code === "CONTENT_INVALID_INPUT"
-          ? messageOf(unmatched[0]?.code ?? "")
-          : t(REJECTION_MESSAGE_KEYS[rejection.code])
-        : t("unknown"),
-    });
-  };
-};
 
 const useDiscussionFields = () => {
   const t = useTranslations("@vitnode/example.discussions.form");

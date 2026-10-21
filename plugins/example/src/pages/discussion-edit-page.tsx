@@ -1,13 +1,7 @@
-import {
-  type AutoFormOnSubmit,
-  setFormFieldError,
-} from "@vitnode/core/components/form/auto-form";
-import {
-  Alert,
-  AlertDescription,
-  AlertTitle,
-} from "@vitnode/core/components/ui/alert";
-import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
+import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
+
+import { useQueryClient } from "@tanstack/react-query";
+import { buttonVariants } from "@vitnode/core/components/ui/button";
 import {
   Empty,
   EmptyContent,
@@ -20,22 +14,34 @@ import {
   definePluginRoute,
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
+import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import { LogInIcon, SearchXIcon, ShieldAlertIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import { manifest } from "@/manifest.gen";
 
 import {
+  DISCUSSION_FIELDS,
   DiscussionForm,
   type DiscussionFormSchema,
-  useDiscussionRejection,
 } from "./discussion-form";
+import { invalidateDiscussionLists } from "./discussion-list";
 import { discussionEditHref, discussionHref } from "./discussion-search";
 import { DiscussionShell } from "./discussion-shell";
+
+// Answers only for the owner and moderators, drafts and hidden records included.
+const fetchEditableDiscussion = async (id: number) =>
+  await fetcher({
+    plugin: manifest.id,
+    method: "get",
+    module: "content/discussions",
+    path: "/{id}/edit",
+    args: { params: { id } },
+  });
 
 const loadEditableDiscussion = async (param: string) => {
   const id = Number(param);
@@ -43,13 +49,7 @@ const loadEditableDiscussion = async (param: string) => {
     return { state: "notFound" as const };
   }
 
-  const res = await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "content/discussions",
-    path: "/{id}/edit",
-    args: { params: { id } },
-  });
+  const res = await fetchEditableDiscussion(id);
 
   if (res.status === 200) {
     return { record: await res.json(), state: "ready" as const };
@@ -87,74 +87,50 @@ export const route = definePluginRoute({
 
 const DiscussionEditForm = ({ record }: { record: EditableDiscussion }) => {
   const t = useTranslations("@vitnode/example.discussions");
-  const rejectDiscussion = useDiscussionRejection();
-  const versionRef = useRef(record.version);
+  const queryClient = useQueryClient();
   const [slug, setSlug] = useState(record.slug);
-  const [hasConflict, setHasConflict] = useState(false);
+  const write = useContentPublicWrite({
+    fields: DISCUSSION_FIELDS,
+    latestVersion: async () => {
+      const res = await fetchEditableDiscussion(record.id);
+
+      return res.status === 200 ? (await res.json()).version : null;
+    },
+    uniqueField: "title",
+    version: record.version,
+  });
 
   const onSubmit: AutoFormOnSubmit<DiscussionFormSchema> = async (
     values,
     form,
   ) => {
-    const res = await fetcher({
-      plugin: manifest.id,
-      method: "patch",
-      module: "content/discussions",
-      path: "/{id}",
-      args: {
-        params: { id: record.id },
-        body: { values, expectedVersion: versionRef.current },
-      },
+    const updated = await write.submit(
+      form,
+      async expectedVersion =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "patch",
+          module: "content/discussions",
+          path: "/{id}",
+          args: {
+            params: { id: record.id },
+            body: { values, expectedVersion },
+          },
+        }),
+    );
+    if (!updated) return;
+
+    setSlug(updated.slug);
+    form.reset(values);
+    await invalidateDiscussionLists(queryClient);
+    toast.success(t("edit.success.title"), {
+      description: t("edit.success.desc", { title: updated.values.title }),
     });
-
-    if (res.status === 200) {
-      const updated = await res.json();
-      versionRef.current = updated.version;
-      setSlug(updated.slug);
-      setHasConflict(false);
-      form.reset(values);
-
-      toast.success(t("edit.success.title"), {
-        description: t("edit.success.desc", { title: updated.values.title }),
-      });
-
-      return;
-    }
-
-    if (res.status === 409) {
-      const conflict = await res.json();
-
-      if (conflict.code === "CONTENT_VERSION_CONFLICT") {
-        setHasConflict(true);
-      } else {
-        setFormFieldError(form, "title", t("errors.unique"));
-      }
-
-      return;
-    }
-
-    await rejectDiscussion(res, form);
   };
 
   return (
     <>
-      {hasConflict && (
-        <Alert variant="warning">
-          <AlertTitle>{t("edit.conflict.title")}</AlertTitle>
-          <AlertDescription>{t("edit.conflict.desc")}</AlertDescription>
-          <div className="flex pt-2">
-            <Button
-              onClick={() => {
-                window.location.reload();
-              }}
-              size="sm"
-              variant="outline"
-            >
-              {t("edit.conflict.reload")}
-            </Button>
-          </div>
-        </Alert>
-      )}
+      {write.conflict}
 
       <DiscussionForm
         defaultValues={record.values}

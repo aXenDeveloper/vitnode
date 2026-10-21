@@ -21,6 +21,7 @@ import { contentTypeName } from "../admin/labels";
 import {
   zodContentConflict,
   zodContentDeliveryConflict,
+  zodContentInvalidInput,
   zodContentTranslationConflict,
 } from "../conflicts";
 import { CONTENT_LOCALE_MAX_LENGTH, CONTENT_PERMISSIONS } from "../const";
@@ -73,21 +74,13 @@ export const buildContentLocalizedAdminRoutes = <
   const editorial = definition.editorial.enabled;
   const { defaultLocale } = definition.localization;
 
-  /**
-   * The 400 a composite save answers when a file identifier is refused.
-   *
-   * Composite writes go through the same `withHttpErrors` as the plain ones, so
-   * the body is identical - and a file field is always shared, which is why one
-   * shape covers a route that writes the base row and every translation at once.
-   * Declared only when there is a file field to refuse.
-   */
   const writeRejection = (description: string) =>
     Object.keys(contentFileFields(definition)).length > 0
       ? jsonResponse(
-          zodContentFileReferenceRejection,
+          z.union([zodContentInvalidInput, zodContentFileReferenceRejection]),
           `${description}, or a file this field may not hold`,
         )
-      : { description };
+      : jsonResponse(zodContentInvalidInput, description);
 
   // Every arm a composite save can be refused with, in one union: the base row's
   // (version, unique), the translations' (version, exists, disabled language,
@@ -169,9 +162,9 @@ export const buildContentLocalizedAdminRoutes = <
       entry.expectedVersion === undefined ? "create" : "update",
       async () => {
         if (entry.expectedVersion === undefined) {
-          const complete = translationSchemas.createObject.parse(
-            entry.values,
-          ) as ContentLocalizedValues<TDefinition>;
+          const complete = translationSchemas.createObject.parse(entry.values, {
+            reportInput: true,
+          }) as ContentLocalizedValues<TDefinition>;
 
           if (buildEditorial) {
             return await buildEditorial(c, { pluginId }).create(

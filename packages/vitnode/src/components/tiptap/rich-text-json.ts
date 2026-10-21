@@ -69,12 +69,22 @@ const toNode = (
   emojis: EmojiItem[],
 ): null | RichTextNode => {
   if (typeof json.type !== "string") return null;
+  const isUpload = json.type === "image" || json.type === "attachment";
+  if (
+    isUpload &&
+    typeof json.attrs?.src !== "string" &&
+    json.attrs?.deleted !== true
+  ) {
+    return null;
+  }
 
   const node: RichTextNode = { type: json.type };
   const attrs =
     json.type === "emoji"
       ? withEmoji(toAttrs(json.attrs), emojis)
-      : toAttrs(json.attrs);
+      : isUpload
+        ? toAttrs({ ...json.attrs, uploadId: undefined })
+        : toAttrs(json.attrs);
   if (attrs) node.attrs = attrs;
 
   const content = (json.content ?? []).flatMap(child => {

@@ -91,6 +91,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/blog', maxAge: 300, staleWhileRevalidate: 60 },
   { path: '/boards' },
   { path: '/discover' },
+  { path: '/discussions' },
   { path: '/files' },
   { path: '/forum', maxAge: 60, staleWhileRevalidate: 30 },
   { path: '/login' },

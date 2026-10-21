@@ -1,0 +1,175 @@
+---
+title: Public edit form
+description: Let authors and moderators edit Content Engine records from the site with an Edit button from canEdit, a form loaded from GET /{id}/edit, and useContentPublicWrite for versions, conflicts and errors.
+icon: FilePen
+implementation:
+  objective: Let authors and moderators edit existing records from the public site.
+  decisions:
+    - Which items can be edited? Offer content types from the project's plugins that have `publicWrite.update`; if none has it, point to the Public write guide.
+    - Where do the Edit button and the edit page go? Offer the pages that show the chosen items; recommend `/{items}/:id/edit` for the form.
+  constraints:
+    - Show Edit only when `useContentPermissions` answers `canEdit`; never decide it from the author or the session.
+    - Load the form with `GET /{id}/edit` and save with `PATCH /{id}` inside `useContentPublicWrite().submit`, passing `version` so conflicts are caught.
+    - Show pending proposals from `approval` instead of claiming the edit is live.
+  related:
+    - title: Public create form
+      href: /docs/content-engine/public-write-frontend
+    - title: Report content
+      href: /docs/content-engine/reports
+    - title: Approvals
+      href: /docs/content-engine/approvals
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import conflict from "./public-write-edit-conflict.webp";
+import forbidden from "./public-write-edit-forbidden.webp";
+
+This guide adds an **Edit** button to each discussion and the page behind it. The Content Engine decides who may edit; your page asks it and shows the button. Saving catches the case where someone else saved first, without losing what the member typed.
+
+You need [public write](/docs/content-engine/public-write) with `update`, and the create form from [Public create form](/docs/content-engine/public-write-frontend).
+
+<Steps>
+
+<Step>
+
+### Show the Edit button
+
+`useContentPermissions` answers `canEdit` for every record on screen in one request. It is `true` for the owner while the rules allow it and for moderators with the edit permission; you never compare user ids yourself:
+
+```tsx title="plugins/example/src/pages/discussion-page.tsx"
+const { canEdit } = useDiscussionPermissions([item.id]).of(item.id);
+
+{canEdit ? (
+  <HrefLink className={buttonVariants({ variant: "outline" })} href={`/discussions/${item.id}/edit`}>
+    {t("edit")}
+  </HrefLink>
+) : null}
+```
+
+`useDiscussionPermissions` is a five-line wrapper with the typed `fetcher` call, shown in [Report content](/docs/content-engine/reports#ask-who-may-report-what). On a list, pass every row's id at once.
+
+</Step>
+
+<Step>
+
+### Load the record
+
+`GET /{id}/edit` answers for the people who may edit, drafts included. Turn every other answer into a page state:
+
+```tsx title="plugins/example/src/pages/discussion-edit-page.tsx"
+const fetchEditable = async (id: number) =>
+  await fetcher({
+    plugin: manifest.id,
+    method: "get",
+    module: "content/discussions",
+    path: "/{id}/edit",
+    args: { params: { id } },
+  });
+
+export const route = definePluginRoute({
+  load: async ({ params }) => {
+    const res = await fetchEditable(Number(params.id));
+    if (res.status === 200) return { record: await res.json(), state: "ready" as const };
+    if (res.status === 401) return { state: "signIn" as const };
+    if (res.status === 403) return { state: "forbidden" as const };
+
+    return { state: "notFound" as const };
+  },
+});
+```
+
+- `401`: the visitor is signed out. Show a sign-in link.
+- `403`: they can read the record but not edit it.
+- `404`: it does not exist, or it is a draft or hidden record that is not theirs. The page never confirms it exists.
+
+</Step>
+
+<Step>
+
+### Save with the version
+
+Pass the record's `version` to `useContentPublicWrite`. It sends the right `expectedVersion` with every save and keeps it current afterwards:
+
+```tsx title="plugins/example/src/pages/discussion-edit-page.tsx"
+const DiscussionEditForm = ({ record }: { record: EditableDiscussion }) => {
+  const t = useTranslations("@vitnode/example.discussions");
+  const write = useContentPublicWrite({
+    fields: ["title", "body"],
+    latestVersion: async () => {
+      const res = await fetchEditable(record.id);
+
+      return res.status === 200 ? (await res.json()).version : null;
+    },
+    uniqueField: "title",
+    version: record.version,
+  });
+
+  const onSubmit: AutoFormOnSubmit<DiscussionFormSchema> = async (values, form) => {
+    const updated = await write.submit(form, async expectedVersion =>
+      await fetcher({
+        plugin: manifest.id,
+        method: "patch",
+        module: "content/discussions",
+        path: "/{id}",
+        args: { params: { id: record.id }, body: { values, expectedVersion } },
+      }),
+    );
+    if (!updated) return;
+
+    form.reset(values);
+    toast.success(t("edit.success.title"));
+  };
+
+  return (
+    <>
+      {write.conflict}
+      <DiscussionForm defaultValues={record.values} onSubmit={onSubmit} submitLabel={t("edit.submit")} />
+    </>
+  );
+};
+```
+
+- `record.values` holds exactly the editable fields, so it fills the form as is.
+- `PATCH` changes only the fields you send.
+- **When someone else saved first**, nothing is written and `write.conflict` shows an alert above the form. The member's text stays. **Keep my version** uses `latestVersion` so the next save replaces the other change; **Load latest version** reloads the page.
+- Field errors, an expired session and a refusal show the same way as on the create form.
+
+</Step>
+
+</Steps>
+
+## Edits that wait for a moderator
+
+In a container whose [publishing policy](/docs/content-engine/container-policies) says `edits: "approve"`, an author's save of a published record succeeds, but readers still see the old text. `updated.approval?.status` is `"pending"` and `updated.values` is the live record. Say so instead of "Changes saved", and open the form on the proposal next time:
+
+```ts
+const proposed =
+  record.approval?.status === "pending" && record.approval.kind === "edit"
+    ? record.approval.values
+    : null;
+```
+
+[Approvals](/docs/content-engine/approvals#show-it-on-your-pages) shows the notice the forum renders.
+
+## Check the result
+
+Sign in as the author of a discussion:
+
+1. Its page shows **Edit**. Other members see **Report** instead.
+2. Change the title and click **Save changes**. A **Changes saved** toast appears.
+3. Save the same discussion in a second tab, then save in the first. **Someone else saved in the meantime** appears and your text stays. Click **Keep my version**, then save again.
+4. Open the edit URL as another member. The page says they can't edit it.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={forbidden}
+  alt="The edit page for another member's discussion, saying You can't edit this discussion"
+/>
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={conflict}
+  alt="The Edit discussion page with the warning Someone else saved in the meantime, the buttons Keep my version and Load latest version, and the member's text still in the form"
+/>

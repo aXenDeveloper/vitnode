@@ -217,7 +217,7 @@ Every record is in the index, but only public ones show up on `/search`. A draft
 
 An edit rewrites the document only when an indexed field changed: the title, description, content fields, slug or author. Unpublishing keeps the document but makes it private, so the record drops out of `/search` at once. Deleting the record removes its document.
 
-The plain service writes rows and nothing else. To change records from your own code and keep search in sync, follow [a "Feature this article" button](/docs/content-engine/services#example-3-a-feature-this-article-button).
+The plain service writes rows and nothing else. To change records from your own code and keep search in sync, use [the editorial service](/docs/content-engine/services#save-like-the-admincp).
 
 If the search engine fails, the save still succeeds. The failure is logged with a `[content-search]` prefix and listed under **Recent sync failures** on the AdminCP Search screen. Reindex the collection to repair it.
 

@@ -15,6 +15,7 @@ import {
   CONTENT_CONFLICT_CODES,
   CONTENT_DELIVERY_CODES,
   CONTENT_DUPLICATE_CODES,
+  CONTENT_INVALID_INPUT_CODE,
   CONTENT_UNPROCESSABLE_CODES,
 } from "../const";
 import { ContentContainerAssignmentError } from "../containers/association";
@@ -28,6 +29,7 @@ import {
   ContentVersionConflict,
 } from "../errors";
 import { ContentFileReferenceError } from "./files";
+import { contentInputIssues } from "./input-issues";
 
 const {
   foreignKeyViolation: FOREIGN_KEY_VIOLATION,
@@ -67,6 +69,16 @@ export const contentFileRejected = (body: {
   field: string;
   message: string;
 }): HTTPException => jsonError(400, body);
+
+export const contentInvalidInput = (
+  error: ZodError,
+  { contentTypeId, locale }: { contentTypeId: string; locale: null | string },
+): HTTPException =>
+  jsonError(400, {
+    code: CONTENT_INVALID_INPUT_CODE,
+    contentTypeId,
+    issues: contentInputIssues(error, locale),
+  });
 
 export const contentScheduleRejected = (body: {
   code: ContentScheduleCode;
@@ -144,12 +156,11 @@ export const rethrowAsHttpError = (
     });
   }
 
-  // The service validates its own input, so a payload that slipped past the
-  // route's validator surfaces here. The issue tree stays out of the response:
-  // it names internal field paths, and the route schema already described the
-  // contract in OpenAPI.
   if (error instanceof ZodError) {
-    throw new HTTPException(400, { message: "Invalid input data." });
+    throw contentInvalidInput(error, {
+      contentTypeId: contentTypeId ?? "",
+      locale: null,
+    });
   }
 
   // Before the generic `ContentInputError` branch below, which is what this used

@@ -22,6 +22,7 @@ import { contentIdKey, parseContentId } from "../ids";
 import { listContentLanguages } from "./language-resolver";
 import { contentLocaleRouting } from "./locale-routing";
 import {
+  contentPublicReadCondition,
   contentTranslationPublicationColumns,
   publicationColumns,
   publishedCondition,
@@ -31,15 +32,18 @@ export const readDeliveryAlternates = async <
   TDefinition extends AnyContentTypeDefinition,
 >({
   c,
+  hidden,
   itemId,
   model,
 }: {
   c: Context;
+  hidden?: boolean;
   itemId: ContentId;
   model: ContentModel<TDefinition>;
 }): Promise<ContentDeliveryAlternate[]> => {
   const batched = await readDeliveryAlternatesMany({
     c,
+    hidden,
     itemIds: [itemId],
     model,
   });
@@ -52,11 +56,13 @@ export const readDeliveryAlternatesMany = async <
 >({
   c,
   database,
+  hidden = false,
   itemIds,
   model,
 }: {
   c: Context;
   database?: ContentDatabase;
+  hidden?: boolean;
   itemIds: readonly ContentId[];
   model: ContentModel<TDefinition>;
 }): Promise<Map<string, ContentDeliveryAlternate[]>> => {
@@ -107,7 +113,7 @@ export const readDeliveryAlternatesMany = async <
     .where(
       and(
         inArray(translationColumns.itemId, [...itemIds]),
-        publishedCondition(base),
+        contentPublicReadCondition(base, { hidden }),
         publishedCondition(translation),
       ),
     )

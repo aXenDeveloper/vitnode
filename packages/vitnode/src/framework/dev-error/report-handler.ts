@@ -1,3 +1,6 @@
+import type { DevErrorRuntime } from "./render";
+
+import { buildErrorHints } from "./build-hints";
 import { devErrorHintsOf } from "./hints";
 import { buildDevErrorPage } from "./page";
 
@@ -12,9 +15,12 @@ interface ReportBody {
   message: string;
   name: string;
   path: string;
-  runtime: "browser" | "server";
+  runtime: DevErrorRuntime;
   stack: string;
 }
+
+const runtimeOf = (value: unknown): DevErrorRuntime =>
+  value === "browser" || value === "build" ? value : "server";
 
 const textField = (value: unknown, fallback: string): string =>
   typeof value === "string" ? value.slice(0, MAX_TEXT_LENGTH) : fallback;
@@ -32,7 +38,7 @@ const parseBody = (value: unknown): null | ReportBody => {
     message: textField(body.message, ""),
     name: textField(body.name, "Error"),
     path: body.path.startsWith("/") ? textField(body.path, "/") : "/",
-    runtime: body.runtime === "browser" ? "browser" : "server",
+    runtime: runtimeOf(body.runtime),
     stack: textField(body.stack, ""),
   };
 };
@@ -59,7 +65,10 @@ const devErrorReportHandler = async ({
   const html = await buildDevErrorPage({
     dismissible: true,
     error: { message: body.message, name: body.name, stack: body.stack },
-    hints: devErrorHintsOf({ hints: body.hints }),
+    hints: [
+      ...devErrorHintsOf({ hints: body.hints }),
+      ...(body.runtime === "build" ? buildErrorHints(body.message) : []),
+    ].slice(0, 3),
     method: "GET",
     origin: new URL(req.url).origin,
     path: body.path,

@@ -17,27 +17,12 @@ const createVitNodeApi = () => {
   return app
 }
 
-// `VitNodeAPI` is a boot step, not a request step: it opens the Redis client,
-// starts the cron scheduler and registers every plugin route. Vite re-evaluates
-// server modules on HMR, so the instance is parked on `globalThis` to keep one
-// API per process instead of one per edit.
-const cache = globalThis as typeof globalThis & {
-  __vitnodeApi?: {
-    app: ReturnType<typeof createVitNodeApi>
-    plugins: string
-  }
-}
-
-const configuredPlugins = vitNodeApiConfig.plugins
-  .map((plugin) => plugin.pluginId)
-  .sort()
-  .join(',')
-
-if (cache.__vitnodeApi?.plugins !== configuredPlugins) {
-  cache.__vitnodeApi = { app: createVitNodeApi(), plugins: configuredPlugins }
-}
-
-export const vitNodeApi = cache.__vitnodeApi.app
+// Built on every evaluation of this module. In production that is once per
+// process. In development Vite evaluates it again whenever a plugin's API code
+// changes, so a new content type option or route is live without a restart;
+// `VitNodeAPI` keeps the Redis connection and the cron schedule it created
+// first, so nothing boots twice.
+export const vitNodeApi = createVitNodeApi()
 
 export const apiBridge = createApiBridge(vitNodeApi)
 

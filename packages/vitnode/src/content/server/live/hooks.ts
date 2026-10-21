@@ -19,8 +19,14 @@ type ResetListener = (args: {
   room: ContentLiveRoomRef;
 }) => Promise<void> | void;
 
+type FileDeletedListener = (args: {
+  c: Context;
+  fileId: number;
+}) => Promise<void> | void;
+
 const userLeftListeners = new Set<UserLeftListener>();
 const resetListeners = new Set<ResetListener>();
+const fileDeletedListeners = new Set<FileDeletedListener>();
 
 export const onContentLiveUserLeft = (
   listener: UserLeftListener,
@@ -37,6 +43,16 @@ export const onContentLiveReset = (listener: ResetListener): (() => void) => {
 
   return () => {
     resetListeners.delete(listener);
+  };
+};
+
+export const onContentLiveFileDeleted = (
+  listener: FileDeletedListener,
+): (() => void) => {
+  fileDeletedListeners.add(listener);
+
+  return () => {
+    fileDeletedListeners.delete(listener);
   };
 };
 
@@ -71,4 +87,11 @@ export const resetContentLiveRecord = async (
 ): Promise<void> => {
   await runAll(resetListeners, { c, reason, room });
   broadcastContentLive(room, { reason, room, type: "reset" });
+};
+
+export const contentLiveFileDeleted = async (
+  c: Context,
+  fileId: number,
+): Promise<void> => {
+  await runAll(fileDeletedListeners, { c, fileId });
 };

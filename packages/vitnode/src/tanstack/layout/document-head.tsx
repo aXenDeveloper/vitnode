@@ -2,6 +2,8 @@ import type { RouterManagedTag } from "@tanstack/router-core";
 
 import { Asset, HeadContent, useRouter, useTags } from "@tanstack/react-router";
 
+import { DEV_ERROR_CLIENT_URL } from "@/framework/dev-error/report-route";
+
 const isModulePreload = (tag: RouterManagedTag) =>
   tag.tag === "link" && tag.attrs?.rel === "modulepreload";
 
@@ -50,11 +52,15 @@ const HeadContentWithoutPreloads = () => {
 /**
  * The root document's `<head>` tags, in place of TanStack Router's
  * `<HeadContent />`. In production it leaves out module preloads, which
- * `DocumentScripts` adds after first paint.
+ * `DocumentScripts` adds after first paint. In development it also loads the
+ * client that shows Vite's build errors on VitNode's error page.
  */
 export const DocumentHead = () =>
   process.env.NODE_ENV === "production" ? (
     <HeadContentWithoutPreloads />
   ) : (
-    <HeadContent />
+    <>
+      <HeadContent />
+      <script src={DEV_ERROR_CLIENT_URL} type="module" />
+    </>
   );

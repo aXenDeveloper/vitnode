@@ -40,20 +40,20 @@ export const articleContentType = defineContentType({
 });
 ```
 
-Then rebuild the plugin and migrate:
+Then migrate from the workspace root:
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
 
 ```bash tab="bun"
-bun run build:plugins && bun run db:migrate
+bun run db:migrate
 ```
 
 ```bash tab="pnpm"
-pnpm build:plugins && pnpm db:migrate
+pnpm db:migrate
 ```
 
 ```bash tab="npm"
-npm run build:plugins && npm run db:migrate
+npm run db:migrate
 ```
 
 </Tabs>
@@ -91,7 +91,7 @@ Each editorial write raises the record's `version` by one and succeeds only when
 }
 ```
 
-The AdminCP sends the version for you. Your own calls to the edit routes must send it too: `PUT /{id}` takes `{ "expectedVersion": 3, "values": { "title": "…" } }` and `DELETE /{id}` takes `{ "expectedVersion": 3 }`. In server code, `articleContent.editorialService` does the same check; see the [Feature this article example](/docs/content-engine/services#example-3-a-feature-this-article-button). A translation has its own version and fails with `CONTENT_TRANSLATION_VERSION_CONFLICT`.
+The AdminCP sends the version for you. Your own calls to the edit routes must send it too: `PUT /{id}` takes `{ "expectedVersion": 3, "values": { "title": "…" } }` and `DELETE /{id}` takes `{ "expectedVersion": 3 }`. In server code, `articleContent.editorialService` does the same check; see [Save like the AdminCP](/docs/content-engine/services#save-like-the-admincp). A translation has its own version and fails with `CONTENT_TRANSLATION_VERSION_CONFLICT`.
 
 ## Preview links
 

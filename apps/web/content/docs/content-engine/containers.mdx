@@ -241,22 +241,22 @@ Without labels, the screen falls back to a name derived from the id, such as "Bo
 
 <Step>
 
-### Build, migrate and restart
+### Migrate
 
-Run this from the workspace root, then restart `pnpm dev`:
+Run this from the workspace root while `pnpm dev` is running:
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
 
 ```bash tab="bun"
-bun run build:plugins && bun run db:migrate
+bun run db:migrate
 ```
 
 ```bash tab="pnpm"
-pnpm build:plugins && pnpm db:migrate
+pnpm db:migrate
 ```
 
 ```bash tab="npm"
-npm run build:plugins && npm run db:migrate
+npm run db:migrate
 ```
 
 </Tabs>

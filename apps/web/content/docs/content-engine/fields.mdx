@@ -108,6 +108,7 @@ content: field.richText({ localized: true, required: true }),
 | ----------- | --------- | -------- | ------- | ------------------------------------------------------- |
 | `maxBytes`  | `number`  | No       | 1 MB    | Largest document, measured as UTF-8 JSON. At most 16 MB |
 | `localized` | `boolean` | No       | `false` | One document per language                               |
+| `uploads`   | `boolean` | No       | `false` | The AdminCP editor accepts images, see [Editor images](/docs/ui/editor-images) |
 
 The value is a ProseMirror JSON document. A rich text field has no `defaultValue`, so set `required` or `nullable`. With `required: true` a document without any text or media is refused. Documents nested deeper than 64 levels are refused too. [Rich text](/docs/content-engine/rich-text) covers rendering and the plain text and HTML helpers.
 

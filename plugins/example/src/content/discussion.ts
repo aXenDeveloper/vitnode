@@ -17,6 +17,7 @@ export const discussionContentType = defineContentType({
   publication: true,
   visibility: true,
   editorial: { revisions: { retention: 20 } },
+  reports: true,
 
   publicApi: {
     path: "discussions",
@@ -24,6 +25,9 @@ export const discussionContentType = defineContentType({
     // A board's discussion list shows titles and dates, never the body.
     listFields: ["id", "title", "slug", "board", "publishedAt"],
     filterableFields: ["board"],
+    searchableFields: ["title"],
+    orderableFields: ["title"],
+    people: ["author"],
   },
 
   publicWrite: {

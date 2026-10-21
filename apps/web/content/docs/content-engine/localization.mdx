@@ -74,18 +74,18 @@ Drizzle Kit only sees exported tables, so without this line the migration has no
 
 ### Build and migrate
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
 
 ```bash tab="bun"
-bun run build:plugins && bun run db:migrate
+bun run db:migrate
 ```
 
 ```bash tab="pnpm"
-pnpm build:plugins && pnpm db:migrate
+pnpm db:migrate
 ```
 
 ```bash tab="npm"
-npm run build:plugins && npm run db:migrate
+npm run db:migrate
 ```
 
 </Tabs>
@@ -116,6 +116,20 @@ This is the blog plugin's category dialog, where `name` is `field.text({ localiz
 />
 
 Saving the form sends the shared fields and every language you typed into in one request: `POST /localized` for a new record, `PUT /{id}/localized` for an existing one. The server writes them in one transaction. A new record must include its default language. A Polish-only edit does not touch the shared row, so it does not bump the record's version or expire the English cache.
+
+The first time you type into a language, the save creates that translation, so it needs that language's required fields too. If a new translation (other than the default language) is still missing one, the AdminCP leaves that language out, saves everything else and warns "Polish was not saved: fill in Title in this language to save it." With live editing on, the unfinished translation stays in its draft until you finish it.
+
+When the server refuses a value anyway, nothing is saved. The save answers `400` with a body that names each field and its language, and the AdminCP shows it as "Fill in Title (Polish), then save again.":
+
+```json title="PUT /api/@vitnode/blog/admin/content/posts/5/localized → 400"
+{
+  "code": "CONTENT_INVALID_INPUT",
+  "contentTypeId": "blog.post",
+  "issues": [{ "code": "required", "field": "title", "locale": "pl" }]
+}
+```
+
+`code` is `required` for a missing value and Zod's own issue code (`too_big`, `invalid_format`, …) otherwise. `locale` is `null` for a shared field. Read the body with `parseContentInvalidInput` from `@vitnode/core/content`. Every admin write route answers invalid input this way, not only the localized ones.
 
 With publication, each language has its own status. Publishing the record publishes its languages too, and you can then unpublish one language alone. A translation is public only when both the record and that translation are published, and the record is not [hidden](/docs/content-engine/content-visibility). With `editorial`, each language also keeps its own revisions and preview links.
 

@@ -762,6 +762,7 @@ describe("generated surface", () => {
   it("documents the write routes beside the reads", () => {
     expect(operations(harness().app)).toEqual({
       "/": ["get", "post"],
+      "/permissions": ["get"],
       "/{id}": ["patch"],
       "/{id}/edit": ["get"],
       "/{slug}": ["get"],

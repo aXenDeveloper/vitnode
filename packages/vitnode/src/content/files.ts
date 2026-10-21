@@ -22,17 +22,29 @@ export {
   normalizeContentFileMimeTypes,
 } from "./file-rules";
 
+/**
+ * A file as a `field.file()` value crosses the API: what a page needs to link
+ * or render it, never the storage key or the uploader. Public reads return it
+ * for every file field in `publicApi.fields`.
+ */
 export interface ContentFileDescriptor {
+  /** The file's own alt text per locale. Pick one with `resolveImageAlt`. */
   alts?: Record<string, string>;
+  /** Pixels. Images only. */
   height?: number;
   id: number;
   mimeType: null | string;
+  /** The original file name. */
   name: string;
+  /** Bytes. */
   size: number;
+  /** Where the browser downloads or displays the file from. */
   url: string;
+  /** Pixels. Images only. */
   width?: number;
 }
 
+/** Validates a {@link ContentFileDescriptor}, e.g. in a page's response schema. */
 export const zodContentFileDescriptor = z.strictObject({
   alts: z.record(z.string(), z.string()).optional(),
   height: z.number().int().positive().optional(),

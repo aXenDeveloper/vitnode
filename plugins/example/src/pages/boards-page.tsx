@@ -19,12 +19,26 @@ import { FolderTreeIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { BoardTree } from "./board-tree";
+import { discussionsQueryOptions } from "./discussion-list";
 import { discussionNewHref } from "./discussion-search";
 import { boardsQueryOptions } from "./example-queries";
+import { LatestDiscussions } from "./latest-discussions";
 
-const loadBoards = async (queryClient: RouteLoadContext["queryClient"]) => ({
-  tree: contentContainerTree(await queryClient.query(boardsQueryOptions())),
-});
+const loadBoards = async (
+  queryClient: RouteLoadContext["queryClient"],
+  locale: string,
+) => {
+  const [boards] = await Promise.all([
+    queryClient.query(boardsQueryOptions()),
+    // No `LOADER_DATA_QUERY_META`: the entry is dehydrated, so
+    // `LatestDiscussions` finds it in the browser and renders on the server.
+    queryClient
+      .query(discussionsQueryOptions({ locale, search: {} }))
+      .catch(() => null),
+  ]);
+
+  return { tree: contentContainerTree(boards) };
+};
 
 type BoardsPageData = Awaited<ReturnType<typeof loadBoards>>;
 
@@ -35,7 +49,8 @@ const BoardsBreadcrumb = () => {
 };
 
 export const route = defineRoute<BoardsPageData>({
-  load: async ({ context }) => await loadBoards(context.queryClient),
+  load: async ({ context }) =>
+    await loadBoards(context.queryClient, context.locale),
 
   head: ({ t }) => ({
     description: t("@vitnode/example.boards.desc"),
@@ -89,6 +104,8 @@ const BoardsPage = ({ loaderData }: PluginRoutePageProps<BoardsPageData>) => {
       ) : (
         <BoardTree label={t("tree")} nodes={loaderData.tree} />
       )}
+
+      <LatestDiscussions />
     </div>
   );
 };
