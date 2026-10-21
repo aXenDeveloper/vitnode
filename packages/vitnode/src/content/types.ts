@@ -1654,8 +1654,8 @@ export interface ContentDeliveryOgImageConfig<TCover extends string = string> {
  * Separate fields rather than a flag, because the two audiences differ: a
  * `<title>` competes in a search result and an `og:title` competes in a chat
  * preview, and an author who wants them identical simply names the same field
- * twice. There is deliberately no `imageField` - see
- * `apps/web/content/docs/dev/content-engine/content-delivery-limitations.mdx`.
+ * twice. There is no `imageField`: the image is generated from these same
+ * fields by `delivery.seo.ogImage`.
  */
 export interface ContentDeliveryOpenGraphConfig<
   TTitle extends string = string,
