@@ -173,7 +173,7 @@ export const AiUserOverrideCardContent = ({
                   <AlertDialogFooter>
                     <AlertDialogCancel>{t("remove.cancel")}</AlertDialogCancel>
                     <Button
-                      disabled={isDeleting}
+                      isLoading={isDeleting}
                       onClick={async () => {
                         setIsDeleting(true);
                         let result: Awaited<ReturnType<typeof onDelete>>;
@@ -196,7 +196,6 @@ export const AiUserOverrideCardContent = ({
                       }}
                       variant="destructive"
                     >
-                      {isDeleting ? <Spinner /> : null}
                       {t("remove.confirm")}
                     </Button>
                   </AlertDialogFooter>

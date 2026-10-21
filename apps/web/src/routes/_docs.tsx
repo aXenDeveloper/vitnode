@@ -4,7 +4,7 @@ import { loadMainShell } from '@vitnode/core/tanstack/layout'
 import docsCss from '@/docs/docs.css?url'
 import { useDocsPageTree } from '@/docs/page-tree'
 import { DocsShellPendingSkeleton } from '@/docs/pending'
-import { DOCS_PENDING_MS, DOCS_STALE_TIME } from '@/docs/shared'
+import { DOCS_STALE_TIME } from '@/docs/shared'
 import { DocsShellContent } from '@/docs/shell-content'
 import { DOCS_STYLESHEET_PRECEDENCE } from '@/docs/stylesheet'
 import { getDocsPageTree } from '@/docs/transport'
@@ -29,7 +29,6 @@ export const Route = createFileRoute('/_docs')({
     ],
   }),
   staleTime: DOCS_STALE_TIME,
-  pendingMs: DOCS_PENDING_MS,
   component: DocsShell,
   pendingComponent: DocsShellPendingSkeleton,
 })

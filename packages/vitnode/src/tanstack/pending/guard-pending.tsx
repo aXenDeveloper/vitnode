@@ -1,11 +1,6 @@
 import type { AnyRoute, AnyRouter } from "@tanstack/react-router";
 
-import {
-  Outlet,
-  useMatch,
-  useRouter,
-  useRouterState,
-} from "@tanstack/react-router";
+import { Outlet, useMatch, useRouter } from "@tanstack/react-router";
 import {
   createContext,
   createElement,
@@ -15,6 +10,8 @@ import {
   useMemo,
   useState,
 } from "react";
+
+import { useIsRouteNavigating } from "./navigation-pending";
 
 type PendingComponent = NonNullable<AnyRoute["options"]["pendingComponent"]>;
 
@@ -97,13 +94,12 @@ export const RouteGuardPending = ({
   children: React.ReactNode;
 }): React.ReactNode => {
   const router = useRouter();
-  const isNavigating = useRouterState({
-    select: state => state.status === "pending",
-  });
-  const isGuarding = useMatch({
-    select: match => match.isFetching === "beforeLoad",
-    strict: false,
-  });
+  const isNavigating = useIsRouteNavigating();
+  const isGuarding =
+    useMatch({
+      select: match => match.isFetching === "beforeLoad",
+      strict: false,
+    }) && isNavigating;
   const shellRouteId: string | undefined = useMatch({
     select: match => match.routeId,
     strict: false,
@@ -115,17 +111,19 @@ export const RouteGuardPending = ({
       ? destinationPending(router, outlets, shellRouteId)
       : null;
   const delay = destination?.delay ?? 0;
+  // A non-finite delay means the router keeps the current page on screen.
+  const reveals = Number.isFinite(delay);
 
   if (showing && !isNavigating) setShowing(false);
-  else if (!showing && isGuarding && delay <= 0) setShowing(true);
+  else if (!showing && isGuarding && reveals && delay <= 0) setShowing(true);
 
   useEffect(() => {
-    if (!isGuarding || delay <= 0) return;
+    if (!isGuarding || !reveals || delay <= 0) return;
 
     const timer = setTimeout(() => setShowing(true), delay);
 
     return () => clearTimeout(timer);
-  }, [delay, isGuarding]);
+  }, [delay, isGuarding, reveals]);
 
   const [register] = useState(() => (routeId: string) => {
     setOutlets(current => new Set(current).add(routeId));

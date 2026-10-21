@@ -339,7 +339,7 @@ export const ContentContainerPoliciesFormContent = ({
     }),
   );
 
-  if (query.isFetching) {
+  if (query.isPending) {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
         <Spinner size="xl" />

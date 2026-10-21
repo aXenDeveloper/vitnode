@@ -211,6 +211,7 @@ const FieldRow = ({
 
 const Decision = ({ data }: { data: ModcpApprovalDetail }) => {
   const t = useTranslations("core.moderation.modcp.approvals");
+  const tGlobal = useTranslations("core.global");
   const fail = useApprovalFailure();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -263,6 +264,7 @@ const Decision = ({ data }: { data: ModcpApprovalDetail }) => {
       </Button>
       <Button
         className="w-full"
+        disabled={approving}
         onClick={() => {
           setRejecting(true);
         }}
@@ -284,7 +286,10 @@ const Decision = ({ data }: { data: ModcpApprovalDetail }) => {
           </DialogHeader>
           <React.Suspense
             fallback={
-              <div className="flex flex-col gap-3">
+              <div aria-busy="true" className="flex flex-col gap-3">
+                <span className="sr-only" role="status">
+                  {tGlobal("loading")}
+                </span>
                 <Skeleton className="h-28 w-full" />
                 <Skeleton className="ms-auto h-9 w-32" />
               </div>

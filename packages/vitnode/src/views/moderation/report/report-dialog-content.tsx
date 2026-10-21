@@ -353,6 +353,7 @@ const ReasonStep = (
         {t("load_error")}
       </p>
       <Button
+        isLoading={reasonsQuery.isFetching}
         onClick={async () => {
           await reasonsQuery.refetch();
         }}

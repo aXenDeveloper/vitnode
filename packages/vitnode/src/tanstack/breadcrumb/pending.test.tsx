@@ -25,9 +25,11 @@ const deferred = () => {
 const routerFor = ({
   hereHasCrumb,
   load,
+  pendingMs = PENDING_MS,
 }: {
   hereHasCrumb: boolean;
   load: () => Promise<void>;
+  pendingMs?: number;
 }) => {
   const rootRoute = createRootRoute({
     component: () => (
@@ -59,7 +61,7 @@ const routerFor = ({
 
   return createRouter({
     defaultPendingMinMs: 300,
-    defaultPendingMs: PENDING_MS,
+    defaultPendingMs: pendingMs,
     history: createMemoryHistory({ initialEntries: ["/"] }),
     routeTree: rootRoute.addChildren([hereRoute, thereRoute]),
   });
@@ -129,6 +131,29 @@ describe("the breadcrumb area during a navigation", () => {
     await tick(PENDING_MS - 50);
 
     expect(showsShape()).toBe(false);
+  });
+
+  it("keeps the current trail when the router never shows a pending screen", async () => {
+    const { promise, settle } = deferred();
+    const router = routerFor({
+      hereHasCrumb: true,
+      load: async () => await promise,
+      pendingMs: Number.POSITIVE_INFINITY,
+    });
+    await mount(router);
+
+    act(() => {
+      void router.navigate({ to: "/there" });
+    });
+    await tick(2_000);
+
+    expect(showsShape()).toBe(false);
+    expect(screen.queryByText("Here")).not.toBeNull();
+
+    settle();
+    await tick(500);
+
+    expect(screen.queryByText("There")).not.toBeNull();
   });
 
   it("invents no trail for a shell that had none", async () => {

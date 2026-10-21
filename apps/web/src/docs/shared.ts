@@ -1,7 +1,6 @@
 export const DOCS_ROUTE = '/docs'
 export const DOCS_SEARCH_PATH = `${DOCS_ROUTE}/search`
 export const DOCS_STALE_TIME = import.meta.env.PROD ? Infinity : 0
-export const DOCS_PENDING_MS = 1000
 
 const DOCS_SOURCE_DIRECTORY = 'apps/web/content/docs'
 const REPOSITORY_BLOB_URL =

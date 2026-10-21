@@ -29,6 +29,7 @@ export function ClientButton({
   const button = (
     <ButtonPrimitive
       {...props}
+      aria-busy={isLoading === true || undefined}
       aria-describedby={
         hasDisabledTooltip
           ? [ariaDescribedBy, disabledReasonId].filter(Boolean).join(" ")

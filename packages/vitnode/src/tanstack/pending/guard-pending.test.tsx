@@ -28,11 +28,13 @@ const deferred = () => {
 const routerFor = ({
   guard,
   load = async () => await Promise.resolve(),
+  pendingMs = PENDING_MS,
   shapelessDestination = false,
   wrapOutlet,
 }: {
   guard: () => Promise<void>;
   load?: () => Promise<void>;
+  pendingMs?: number;
   shapelessDestination?: boolean;
   wrapOutlet: boolean;
 }) => {
@@ -84,7 +86,7 @@ const routerFor = ({
   return createRouter({
     defaultPendingComponent: RoutePendingSpinner,
     defaultPendingMinMs: PENDING_MIN_MS,
-    defaultPendingMs: PENDING_MS,
+    defaultPendingMs: pendingMs,
     history: createMemoryHistory({ initialEntries: ["/"] }),
     routeTree: rootRoute.addChildren([
       shellRoute.addChildren([dashboardRoute, usersRoute]),
@@ -174,6 +176,29 @@ describe("a shell whose guard blocks the navigation", () => {
       void router.navigate({ to: "/users" });
     });
     await tick(PENDING_MS - 50);
+
+    expect(showsTableShape()).toBe(false);
+    expect(showsPreviousScreen()).toBe(true);
+
+    guard.settle();
+    await tick(PENDING_MIN_MS + 100);
+
+    expect(screen.queryByText("users table")).not.toBeNull();
+  });
+
+  it("keeps the previous screen when the router never shows a pending screen", async () => {
+    const guard = deferred();
+    const router = routerFor({
+      guard: async () => await guard.promise,
+      pendingMs: Number.POSITIVE_INFINITY,
+      wrapOutlet: true,
+    });
+    await mount(router);
+
+    act(() => {
+      void router.navigate({ to: "/users" });
+    });
+    await tick(2_000);
 
     expect(showsTableShape()).toBe(false);
     expect(showsPreviousScreen()).toBe(true);
