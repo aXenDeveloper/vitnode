@@ -454,6 +454,9 @@ const evaluate = (
       if (["bigint", "int", "integer", "numeric"].includes(node.to)) {
         return Number(value);
       }
+      if (node.to === "timestamp" || node.to === "timestamptz") {
+        return value instanceof Date ? value : new Date(textOf(value));
+      }
       if (node.to === "jsonb") {
         return typeof value === "string" ? JSON.parse(value) : value;
       }

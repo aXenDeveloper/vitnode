@@ -12,8 +12,10 @@ implementation:
   constraints:
     - Use the content type `thread` option. Do not build a separate comments table, tree query or placement checks.
     - 'The root relation is required, to-one and `container: true`; `parent` is a nullable to-one self relation. Both belong in `publicApi.fields` and neither in `publicWrite.update.fields`.'
-    - 'Read replies with `GET /{publicApi.path}/thread` through `fetcher`, render tombstones (`removed: true`) so the tree keeps its shape, and show Edit and Report from `useContentPermissions`.'
+    - 'Build the comment section with the Threaded replies on the frontend guide: read `GET /{publicApi.path}/thread` through `fetcher`, render tombstones (`removed: true`) and show Edit and Report from `useContentPermissions`.'
   related:
+    - title: Threaded replies on the frontend
+      href: /docs/content-engine/threads-frontend
     - title: Public write
       href: /docs/content-engine/public-write
     - title: Report content
@@ -24,10 +26,7 @@ implementation:
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-import { ImgDocs } from "@/components/fumadocs/img";
-import tree from "./threads-frontend-tree.webp";
-
-The `thread` option turns a content type into replies that answer each other under one record, like comments under a forum topic. The server keeps the tree valid and returns it a page at a time; your page draws it. This guide follows the Forum plugin's comments: the content type first, then the comment section in `plugins/forum/src/pages/`.
+The `thread` option turns a content type into replies that answer each other under one record, like comments under a forum topic. The server keeps the tree valid and returns it a page at a time; your page draws it. This guide sets up the Forum plugin's comments on the server. [Threaded replies on the frontend](/docs/content-engine/threads-frontend) then builds the comment section.
 
 You need the root content type, here `forum.topic`, with a [public API](/docs/content-engine/public-api) and a page. For members to reply, read [Public write](/docs/content-engine/public-write) too.
 
@@ -124,123 +123,6 @@ npm run db:migrate
 
 </Step>
 
-<Step>
-
-### Read the thread
-
-`GET /comments/thread?root={topicId}` returns a page of top-level replies, oldest first, each followed by every public answer below it:
-
-```ts title="plugins/forum/src/pages/thread-data.ts"
-const res = await fetcher({
-  plugin: manifest.id,
-  method: "get",
-  module: "content/comments",
-  path: "/thread",
-  args: { query: { root: String(topicId), first: 20, ...(after ? { after } : {}) } },
-});
-```
-
-The answer is flat, so a parent always comes before its replies:
-
-```json
-{
-  "items": [
-    { "depth": 1, "id": 17, "parentId": null, "removed": false, "record": { "id": 17, "body": {}, "author": {} } },
-    { "depth": 2, "id": 18, "parentId": 17, "removed": true, "record": null },
-    { "depth": 3, "id": 21, "parentId": 18, "removed": false, "record": { "id": 21 } }
-  ],
-  "pageInfo": { "endCursor": "WyIyMDI2...", "hasNextPage": false, "totalCount": 1 },
-  "replyCount": 2,
-  "truncated": false
-}
-```
-
-Warm the first page in the topic page's loader, so comments are in the server-rendered HTML.
-
-</Step>
-
-<Step>
-
-### Draw the tree
-
-Turn the flat list into a tree in one pass, then render nested `<ol>` lists:
-
-```tsx title="plugins/forum/src/pages/thread.tsx"
-const buildThreadTree = (items: ThreadNode[]) => {
-  const nodes = new Map<number, ThreadTreeNode>();
-  const roots: ThreadTreeNode[] = [];
-  for (const item of items) {
-    const node = { ...item, children: [] };
-    nodes.set(item.id, node);
-    const parent = item.parentId === null ? undefined : nodes.get(item.parentId);
-    if (parent) parent.children.push(node);
-    else roots.push(node);
-  }
-
-  return roots;
-};
-
-const ThreadNodeView = ({ node }: { node: ThreadTreeNode }) => (
-  <li>
-    {node.record ? (
-      <CommentBody comment={node.record} />
-    ) : (
-      <p className="text-muted-foreground italic">{t("removed")}</p>
-    )}
-    {node.children.length > 0 ? (
-      <ol className="border-l-2 pl-3 md:pl-6">
-        {node.children.map(child => <ThreadNodeView key={child.id} node={child} />)}
-      </ol>
-    ) : null}
-  </li>
-);
-```
-
-**Tombstones.** `removed: true` is a reply readers can't see, such as a hidden one, that still has public answers. Show a short placeholder and keep its children, so the conversation keeps its shape. A hidden reply with no answers is left out.
-
-</Step>
-
-<Step>
-
-### Load more pages
-
-Keep the pages you loaded and pass the last `endCursor` as `after`:
-
-```tsx title="plugins/forum/src/pages/thread.tsx"
-{last.pageInfo.hasNextPage ? (
-  <Button onClick={loadMore} variant="outline">{t("load_more")}</Button>
-) : null}
-{last.truncated ? <p>{t("truncated")}</p> : null}
-```
-
-One answer holds at most 500 replies. `truncated: true` means some deep answers did not fit; say so instead of pretending the thread ends there. `replyCount` counts every public reply, the number for a "5 comments" heading.
-
-</Step>
-
-<Step>
-
-### Reply, edit and report
-
-Ask what the visitor may do with every reply on screen, in one request:
-
-```tsx title="plugins/forum/src/pages/thread.tsx"
-const permissions = useCommentPermissions(
-  items.flatMap(item => (item.record ? [item.id] : [])),
-);
-
-const { canEdit, canReport } = permissions.of(comment.id);
-```
-
-`useCommentPermissions` wraps `useContentPermissions` with the `content/comments` route, like [`useDiscussionPermissions`](/docs/content-engine/reports#ask-who-may-report-what). Then:
-
-- **Reply** posts `{ values: { body, parent: comment.id, topic: topicId } }` with `useContentPublicWrite`, like the [create form](/docs/content-engine/public-write-frontend). Show it to signed-in members while the reply sits above `maxDepth`.
-- **Edit** appears when `canEdit`. It loads `GET /comments/{id}/edit` and saves with `PATCH`, like the [edit form](/docs/content-engine/public-write-edit).
-- **Report** appears when `canReport`, with `contentTarget(manifest.id, commentContentType, comment.id)`. See [Report content](/docs/content-engine/reports).
-
-When the forum's policy holds new comments for a moderator, the post answers `approval.status: "pending"`. Tell the author it is waiting; the comment appears in the thread after approval.
-
-</Step>
-
 </Steps>
 
 ## What the server checks
@@ -256,17 +138,12 @@ Every reply is placed on the server, in the AdminCP too. A broken rule answers `
 
 A missing, draft or hidden topic makes `GET /thread` answer `404`. Every option is in the [`thread` reference](/docs/content-engine/reference#thread).
 
-## Use it in another plugin
-
-The forum's `thread-data.ts`, `thread.tsx` and `comment-composer.tsx` are a reference to copy, not an export. Change the module to `content/` plus your reply type's path, `topic` to your `thread.root` field, and the depth limit to your `maxDepth`. The tree, tombstones, paging and buttons need nothing else.
-
 ## Check the result
 
-Open a topic with replies, such as `/forum/topics/show-us-your-first-content-engine-type`. Replies nest under the one they answer, a hidden reply leaves **This comment was removed.** with its answer still below it, your own replies show **Edit**, and the others show **Report**.
+Read the thread of a topic with replies, such as `forum.topic` 1:
 
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={tree}
-  alt="A forum comment thread titled 5 comments, with nested replies, Reply, Edit and Report buttons, and a This comment was removed placeholder that keeps its answer"
-/>
+```bash
+curl "http://localhost:3000/api/@vitnode/forum/content/comments/thread?root=1"
+```
+
+The answer lists the replies depth first with `depth` and `parentId`, and `replyCount` counts every public reply. Answering a reply at depth 6 answers `400` with **Replies nest at most 6 levels deep**. Next, draw it: [Threaded replies on the frontend](/docs/content-engine/threads-frontend).

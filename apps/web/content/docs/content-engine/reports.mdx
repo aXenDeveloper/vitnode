@@ -10,7 +10,7 @@ implementation:
     - What should moderators see in a report? Recommend the default snapshot (the title and the public text, rich text, choice and file fields), or pick fields.
   constraints:
     - 'Set `reports: true` or `{ titleField, snapshotFields }` on the content type. Nothing needs migrating.'
-    - Show the button when `useContentPermissions` answers `canReport`, and build its target with `contentTarget`.
+    - Show the button when `useContentPermissions` answers `canReport` (see the Viewer permissions guide), and build its target with `contentTarget`.
     - Enabling reports grants nothing by itself. Label the generated moderator permissions in the plugin's locale.
   related:
     - title: Process reports
@@ -52,34 +52,7 @@ Reports live in core tables, so there is nothing to migrate. The content type ge
 
 ### Ask who may report what
 
-`useContentPermissions` asks the Content Engine what the visitor may do with the records on screen, in one request. `canReport` is `true` for a public record the visitor did not write, guests included; their dialog asks them to sign in.
-
-```ts title="plugins/example/src/pages/discussion-list.ts"
-import { useContentPermissions } from "@vitnode/core/tanstack/content";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-
-import { manifest } from "@/manifest.gen";
-
-export const useDiscussionPermissions = (ids: readonly number[]) =>
-  useContentPermissions({
-    ids,
-    queryKey: [manifest.id, "discussions"],
-    fetch: async request => {
-      const res = await fetcher({
-        plugin: manifest.id,
-        method: "get",
-        module: "content/discussions",
-        path: "/permissions",
-        args: { query: { ids: request.join(",") } },
-      });
-      if (res.status !== 200) throw new Error("Loading permissions failed.");
-
-      return await res.json();
-    },
-  });
-```
-
-The same hook answers `canEdit`, used by the [edit form](/docs/content-engine/public-write-edit#show-the-edit-button).
+`canReport` from `useContentPermissions` says whether the Report button makes sense for this visitor: `true` for a public record they did not write, guests included, whose dialog asks them to sign in. Add a small wrapper with the typed `fetcher` call, `useDiscussionPermissions` here, as [Viewer permissions](/docs/content-engine/public-permissions#ask-from-a-page) shows. The same answer carries `canEdit` for the [edit form](/docs/content-engine/public-write-edit).
 
 </Step>
 
@@ -117,7 +90,7 @@ The button loads its own messages and its form only when the dialog opens.
 
 ### Add it to every row of a list
 
-Ask once for the whole page, and point each button at its row's title with `describedBy`, so a screen reader hears "Report discussion, Captcha on public forms" instead of ten identical buttons:
+Ask once for the whole page; the hook batches any number of rows. Point each button at its row's title with `describedBy`, so a screen reader hears "Report discussion, Captcha on public forms" instead of ten identical buttons:
 
 ```tsx title="plugins/example/src/pages/discussions-page.tsx"
 const permissions = useDiscussionPermissions(

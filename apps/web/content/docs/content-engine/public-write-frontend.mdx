@@ -17,8 +17,8 @@ implementation:
       href: /docs/content-engine/public-write-edit
     - title: Public write
       href: /docs/content-engine/public-write
-    - title: Public write API
-      href: /docs/content-engine/public-write-api
+    - title: useContentPublicWrite reference
+      href: /docs/content-engine/public-write-form-api
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";
@@ -132,7 +132,7 @@ export default DiscussionNewPage;
 That is the whole page. Here is what each part does:
 
 - **`formSchema`** checks the values in the browser first. Copy the server's limits, such as `minLength: 3`, so members see mistakes before they submit.
-- **`write.submit`** sends the request and returns the new record, or `null` when the server said no. It already showed the reason: a server issue on `title` appears under the title, a taken title too (`uniqueField`), and anything else, such as an expired session, is a toast. You write no error handling.
+- **`write.submit`** sends the request and returns the new record, or `null` when the server said no. It already showed the reason: a server issue on `title` appears under the title, a taken title too (`uniqueField`), and anything else, such as an expired session, is a toast. You write no error handling. Every case is in the [`useContentPublicWrite` reference](/docs/content-engine/public-write-form-api#how-answers-are-handled).
 - **The owner** is set by the server. `values` never includes the author.
 - **Double posts** cannot happen, because `AutoForm` disables the button while `onSubmit` runs.
 - **`invalidateDiscussionLists`** refreshes the cached [discussion list](/docs/content-engine/public-lists), so the new discussion shows up there at once.

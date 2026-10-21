@@ -27,7 +27,7 @@ Each item is `{ id, parentId, name, slug, position, depth, metadata }`, where `m
 
 ### Add the routes
 
-Register the two board pages in `src/routes.ts`, and give the create page a `search` parser so it can read `?board=`. A `pendingComponent` is drawn while the loader runs, so import it directly rather than through `lazy()`:
+Register the two board pages in `src/routes.ts`, and give the create page a `search` parser so it can read `?board=`. A `pendingComponent` is the fallback while a page suspends, not a navigation screen: navigations keep the current page and show the top progress bar. It can render before the page's chunk arrives, so import it directly rather than through `lazy()`:
 
 ```ts title="plugins/example/src/routes.ts"
 // [!code ++:4]

@@ -8,6 +8,7 @@
     "index",
     "create-a-content-type",
     "---Publish---",
+    "public-frontend",
     "publication",
     "public-api",
     "public-pages",
@@ -20,10 +21,12 @@
     "public-write",
     "public-write-frontend",
     "public-write-edit",
+    "public-permissions",
     "reports",
     "---Model content---",
     "relations",
     "threads",
+    "threads-frontend",
     "localization",
     "rich-text",
     "id-strategy",
@@ -51,6 +54,7 @@
     "plugin-files",
     "public-lists-api",
     "public-write-api",
+    "public-write-form-api",
     "container-policies-api",
     "live-editing-api"
   ]

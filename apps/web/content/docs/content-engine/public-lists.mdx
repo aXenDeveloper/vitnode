@@ -184,7 +184,7 @@ export const routes = definePluginRoutes([
 ]);
 ```
 
-`messages` loads the `@vitnode/example.discussions` namespace for the page, its `head` and every component inside it. `pendingComponent` shows while the loader runs on a client-side navigation. A server render waits for the loader instead.
+`messages` loads the `@vitnode/example.discussions` namespace for the page, its `head` and every component inside it. During a client-side navigation, the current page stays on screen with the top progress bar until the loader finishes, and a server render waits for the loader too. `pendingComponent` is only the fallback while the page itself suspends, for example on a query the loader does not await. See [Loading states](/docs/dev/routing/loading).
 
 </Step>
 
@@ -392,7 +392,7 @@ The excerpt trims styling, the author line and the per-row actions. `ListState` 
   alt="The discussion list with the search term kangaroo and the Help & questions board selected, showing No discussions match and a Clear filters button"
 />
 
-To put Edit and Report buttons on each row, see [Public edit form](/docs/content-engine/public-write-edit#show-the-edit-button) and [Report content](/docs/content-engine/reports#add-it-to-every-row-of-a-list).
+To put Edit and Report buttons on each row, ask once for every row with [Viewer permissions](/docs/content-engine/public-permissions#ask-from-a-page), then see [Public edit form](/docs/content-engine/public-write-edit#show-the-edit-link) and [Report content](/docs/content-engine/reports#add-it-to-every-row-of-a-list).
 
 </Step>
 

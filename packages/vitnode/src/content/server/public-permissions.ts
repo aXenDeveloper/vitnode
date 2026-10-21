@@ -124,7 +124,9 @@ export const resolveContentViewerPermissions = async (
 /**
  * `GET /{publicApi.path}/permissions?ids=1,2,3`: what the current visitor may
  * do with each record, as `can*` flags. Mounted for content types with
- * `publicWrite.update` or `reports`. Personal, so never cached.
+ * `publicWrite.update` or `reports`. At most `CONTENT_PUBLIC_MAX_PAGE_SIZE`
+ * distinct ids per request - `useContentPermissions` batches for you.
+ * Personal, so never cached.
  */
 export const contentPermissionsRoute = <
   TDefinition extends AnyContentTypeDefinition,

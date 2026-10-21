@@ -195,7 +195,7 @@ const hidden = detail.headers.get(CONTENT_HIDDEN_HEADER) === "true";
 ) : null}
 ```
 
-[`useContentPermissions`](/docs/content-engine/reports#ask-who-may-report-what) already answers `canReport: false` for a hidden record, and `canEdit: false` for its author, so the page needs no extra checks for its buttons. A moderator can still edit it.
+[`useContentPermissions`](/docs/content-engine/public-permissions) already answers `canReport: false` for a hidden record, and `canEdit: false` for its author, so the page needs no extra checks for its buttons. A moderator can still edit it.
 
 ## Delete, hide, unpublish or reject
 

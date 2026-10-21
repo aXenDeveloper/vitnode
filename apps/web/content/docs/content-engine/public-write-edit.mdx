@@ -1,102 +1,264 @@
 ---
 title: Public edit form
-description: Let authors and moderators edit Content Engine records from the site with an Edit button from canEdit, a form loaded from GET /{id}/edit, and useContentPublicWrite for versions, conflicts and errors.
+description: Build a Content Engine edit page for authors and moderators with useContentPermissions, GET /{id}/edit, AutoForm and useContentPublicWrite, including version conflicts and edits that wait for approval.
 icon: FilePen
 implementation:
   objective: Let authors and moderators edit existing records from the public site.
   decisions:
     - Which items can be edited? Offer content types from the project's plugins that have `publicWrite.update`; if none has it, point to the Public write guide.
-    - Where do the Edit button and the edit page go? Offer the pages that show the chosen items; recommend `/{items}/:id/edit` for the form.
+    - Where do the Edit link and the edit page go? Offer the pages that show the chosen items; recommend `/{items}/:id/edit` for the form.
   constraints:
     - Show Edit only when `useContentPermissions` answers `canEdit`; never decide it from the author or the session.
-    - Load the form with `GET /{id}/edit` and save with `PATCH /{id}` inside `useContentPublicWrite().submit`, passing `version` so conflicts are caught.
-    - Show pending proposals from `approval` instead of claiming the edit is live.
+    - Load the form with `GET /{id}/edit`, keep 401, 403, 404 and unexpected failures apart, and save with `PATCH /{id}` inside `useContentPublicWrite().submit`, passing `version`.
+    - Open a pending edit on `approval.values` and say it waits for a moderator instead of claiming it is live.
   related:
-    - title: Public create form
-      href: /docs/content-engine/public-write-frontend
-    - title: Report content
-      href: /docs/content-engine/reports
+    - title: useContentPublicWrite reference
+      href: /docs/content-engine/public-write-form-api
+    - title: Viewer permissions
+      href: /docs/content-engine/public-permissions
     - title: Approvals
       href: /docs/content-engine/approvals
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";
 import conflict from "./public-write-edit-conflict.webp";
-import forbidden from "./public-write-edit-forbidden.webp";
+import editForm from "./public-write-edit-form.webp";
+import pending from "./public-write-edit-pending.webp";
 
-This guide adds an **Edit** button to each discussion and the page behind it. The Content Engine decides who may edit; your page asks it and shows the button. Saving catches the case where someone else saved first, without losing what the member typed.
+This guide builds the Forum plugin's `/forum/topics/:id/edit`: an **Edit** link for the people who may use it, and the page behind it. The Content Engine decides who may edit and checks every save; the page asks, shows the answer and keeps what the member typed when something goes wrong.
 
-You need [public write](/docs/content-engine/public-write) with `update`, and the create form from [Public create form](/docs/content-engine/public-write-frontend).
+You need a content type with [public write](/docs/content-engine/public-write) and `update`. Here it is `forum.topic`, with `update: { fields: ["title", "body"] }` and `editorial` turned on, so every record has a `version`.
+
+## Three kinds of values
+
+An edit page works with three different things. Keep them apart, or a member will think their change is live when it is not:
+
+| What | Where it comes from | Shown to readers |
+| --- | --- | --- |
+| **Live values** | `record.values` from `GET /{id}/edit` and `PATCH /{id}` | Yes |
+| **Proposed values** | `record.approval.values`, when `approval.status` is `"pending"` and `approval.kind` is `"edit"` | No, until a moderator approves |
+| **A successful save that changes nothing public** | `PATCH /{id}` answers `200` with `approval.status: "pending"` | No. `values` is still the live record |
+
+The last two only happen in a container whose [publishing policy](/docs/content-engine/container-policies) says `edits: "approve"`. Everywhere else a `200` means the change is live.
 
 <Steps>
 
 <Step>
 
-### Show the Edit button
+### Register the route
 
-`useContentPermissions` answers `canEdit` for every record on screen in one request. It is `true` for the owner while the rules allow it and for moderators with the edit permission; you never compare user ids yourself:
+```ts title="Excerpt: plugins/forum/src/routes.ts"
+import { definePluginRoutes, lazy, page } from "@vitnode/core/routing";
+import { FormPendingSkeleton } from "@vitnode/core/tanstack/pending";
 
-```tsx title="plugins/example/src/pages/discussion-page.tsx"
-const { canEdit } = useDiscussionPermissions([item.id]).of(item.id);
+export const routes = definePluginRoutes([
+  page("/forum/topics/:id/edit", {
+    component: lazy(() => import("./pages/topic-edit-page")),
+    messages: ["@vitnode/forum.topics"],
+    pendingComponent: FormPendingSkeleton,
+  }),
+]);
+```
+
+`messages` loads the `@vitnode/forum.topics` namespace for the page, its `head` and its breadcrumb. The error messages of `useContentPublicWrite` come from `core.global`, which every page already has. During a client-side navigation the current page stays on screen with the top progress bar until the loader finishes; `pendingComponent` only shows if the page itself suspends. See [Loading states](/docs/dev/routing/loading).
+
+The route has no `requires: "authenticated"` on purpose: the page answers a guest with its own sign-in prompt, below. Add it if you would rather redirect guests to the sign-in page.
+
+</Step>
+
+<Step>
+
+### Show the Edit link
+
+Ask the Content Engine whether this visitor may edit, with a hook from [Viewer permissions](/docs/content-engine/public-permissions#ask-from-a-page). It is `true` for the author while the container allows it and for moderators with `can_edit`:
+
+```tsx title="Excerpt: plugins/forum/src/pages/topic-page.tsx"
+const { canEdit } = useTopicPermissions([topic.id]).of(topic.id);
 
 {canEdit ? (
-  <HrefLink className={buttonVariants({ variant: "outline" })} href={`/discussions/${item.id}/edit`}>
+  <HrefLink
+    className={buttonVariants({ size: "sm", variant: "outline" })}
+    href={`/forum/topics/${topic.id}/edit`}
+  >
     {t("edit")}
   </HrefLink>
 ) : null}
 ```
 
-`useDiscussionPermissions` is a five-line wrapper with the typed `fetcher` call, shown in [Report content](/docs/content-engine/reports#ask-who-may-report-what). On a list, pass every row's id at once.
+The flag only hides a link nobody could use. The page below checks again, and so does every save.
 
 </Step>
 
 <Step>
 
-### Load the record
+### Write the page
 
-`GET /{id}/edit` answers for the people who may edit, drafts included. Turn every other answer into a page state:
+Create the page. This is the complete file:
 
-```tsx title="plugins/example/src/pages/discussion-edit-page.tsx"
-const fetchEditable = async (id: number) =>
+```tsx title="plugins/forum/src/pages/topic-edit-page.tsx"
+import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
+import type { ContentApprovalState } from "@vitnode/core/content";
+
+import { useQueryClient } from "@tanstack/react-query";
+import { AutoForm } from "@vitnode/core/components/form/auto-form";
+import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
+import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@vitnode/core/components/ui/alert";
+import { buttonVariants } from "@vitnode/core/components/ui/button";
+import {
+  isRichTextEmpty,
+  type RichTextDocument,
+  zodRichTextDocument,
+} from "@vitnode/core/content";
+import {
+  definePluginRoute,
+  type PluginRoutePageProps,
+} from "@vitnode/core/routing";
+import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useTranslations } from "use-intl";
+import { z } from "zod";
+
+import { manifest } from "@/manifest.gen";
+
+// Answers only for the author and moderators, drafts included.
+const fetchEditableTopic = async (id: number) =>
   await fetcher({
     plugin: manifest.id,
     method: "get",
-    module: "content/discussions",
+    module: "content/topics",
     path: "/{id}/edit",
     args: { params: { id } },
   });
 
-export const route = definePluginRoute({
-  load: async ({ params }) => {
-    const res = await fetchEditable(Number(params.id));
-    if (res.status === 200) return { record: await res.json(), state: "ready" as const };
-    if (res.status === 401) return { state: "signIn" as const };
-    if (res.status === 403) return { state: "forbidden" as const };
-
+const loadEditableTopic = async (param: string) => {
+  const id = Number(param);
+  if (!Number.isSafeInteger(id) || id < 1)
     return { state: "notFound" as const };
-  },
+
+  const res = await fetchEditableTopic(id);
+  if (res.status === 200) {
+    return { record: await res.json(), state: "ready" as const };
+  }
+  if (res.status === 401) return { id, state: "unauthenticated" as const };
+  if (res.status === 403) return { state: "forbidden" as const };
+  if (res.status === 404) return { state: "notFound" as const };
+
+  // A 500 or a network failure is not "not found": let the error page show it.
+  throw new Error(`Loading topic ${id} for editing failed.`);
+};
+
+type TopicEditData = Awaited<ReturnType<typeof loadEditableTopic>>;
+
+type EditableTopic = Extract<TopicEditData, { state: "ready" }>["record"];
+
+const TopicEditBreadcrumb = () => {
+  const t = useTranslations("@vitnode/forum.topics.edit");
+
+  return <span>{t("title")}</span>;
+};
+
+export const route = definePluginRoute({
+  load: async ({ params }) => await loadEditableTopic(params.id),
+
+  head: ({ t }) => ({
+    robots: "noindex, nofollow",
+    title: t("@vitnode/forum.topics.edit.title"),
+  }),
+
+  breadcrumb: TopicEditBreadcrumb,
 });
-```
 
-- `401`: the visitor is signed out. Show a sign-in link.
-- `403`: they can read the record but not edit it.
-- `404`: it does not exist, or it is a draft or hidden record that is not theirs. The page never confirms it exists.
+const zodProposal = z
+  .object({
+    body: zodRichTextDocument.optional(),
+    title: z.string().optional(),
+  })
+  .catch({});
 
-</Step>
+/** A pending edit opens on what the author proposed, not on the live text. */
+const formValuesOf = (record: EditableTopic) => {
+  const { approval } = record;
+  const proposed =
+    approval?.status === "pending" && approval.kind === "edit"
+      ? zodProposal.parse(approval.values ?? {})
+      : {};
 
-<Step>
+  return {
+    body: proposed.body ?? record.values.body,
+    title: proposed.title ?? record.values.title,
+  };
+};
 
-### Save with the version
+const createFormSchema = (defaults: {
+  body: RichTextDocument;
+  title: string;
+}) =>
+  z.object({
+    title: z.string().trim().min(3).max(200).default(defaults.title),
+    body: zodRichTextDocument
+      .refine(doc => !isRichTextEmpty(doc))
+      .default(defaults.body),
+  });
 
-Pass the record's `version` to `useContentPublicWrite`. It sends the right `expectedVersion` with every save and keeps it current afterwards:
+type TopicFormSchema = ReturnType<typeof createFormSchema>;
 
-```tsx title="plugins/example/src/pages/discussion-edit-page.tsx"
-const DiscussionEditForm = ({ record }: { record: EditableDiscussion }) => {
-  const t = useTranslations("@vitnode/example.discussions");
+const ApprovalNotice = ({
+  approval,
+}: {
+  approval: null | Pick<ContentApprovalState, "kind" | "reason" | "status">;
+}) => {
+  const t = useTranslations("@vitnode/forum.topics.approval");
+
+  if (approval?.status === "rejected") {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>{t("rejected.title")}</AlertTitle>
+        <AlertDescription>
+          {approval.reason
+            ? t("rejected.reason", { reason: approval.reason })
+            : t("rejected.desc")}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (approval?.status === "pending") {
+    const key = approval.kind === "edit" ? "pending_edit" : "pending_create";
+
+    return (
+      <Alert variant="info">
+        <AlertTitle>{t(`${key}.title`)}</AlertTitle>
+        <AlertDescription>{t(`${key}.desc`)}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  return null;
+};
+
+const TopicEditForm = ({ record }: { record: EditableTopic }) => {
+  const t = useTranslations("@vitnode/forum.topics");
+  const queryClient = useQueryClient();
+  const [current, setCurrent] = useState({
+    approval: record.approval,
+    slug: record.slug,
+    status: record.status,
+  });
+  // AutoForm resets an untouched form to the `defaultValues` it renders with,
+  // so the defaults follow every save.
+  const [defaults, setDefaults] = useState(() => formValuesOf(record));
   const write = useContentPublicWrite({
     fields: ["title", "body"],
     latestVersion: async () => {
-      const res = await fetchEditable(record.id);
+      const res = await fetchEditableTopic(record.id);
 
       return res.status === 200 ? (await res.json()).version : null;
     },
@@ -104,72 +266,264 @@ const DiscussionEditForm = ({ record }: { record: EditableDiscussion }) => {
     version: record.version,
   });
 
-  const onSubmit: AutoFormOnSubmit<DiscussionFormSchema> = async (values, form) => {
-    const updated = await write.submit(form, async expectedVersion =>
-      await fetcher({
-        plugin: manifest.id,
-        method: "patch",
-        module: "content/discussions",
-        path: "/{id}",
-        args: { params: { id: record.id }, body: { values, expectedVersion } },
-      }),
+  const onSubmit: AutoFormOnSubmit<TopicFormSchema> = async (values, form) => {
+    const updated = await write.submit(
+      form,
+      async expectedVersion =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "patch",
+          module: "content/topics",
+          path: "/{id}",
+          args: {
+            params: { id: record.id },
+            body: { values, expectedVersion },
+          },
+        }),
     );
     if (!updated) return;
 
+    setCurrent({
+      approval: updated.approval,
+      slug: updated.slug,
+      status: updated.status,
+    });
+    setDefaults(values);
     form.reset(values);
-    toast.success(t("edit.success.title"));
+    await queryClient.invalidateQueries({ queryKey: [manifest.id] });
+
+    if (updated.approval?.status === "pending") {
+      toast.info(t("edit.pending.title"), {
+        description: t("edit.pending.desc"),
+      });
+    } else {
+      toast.success(t("edit.success.title"), {
+        description: t("edit.success.desc", { title: values.title }),
+      });
+    }
   };
 
   return (
     <>
+      <ApprovalNotice approval={current.approval} />
       {write.conflict}
-      <DiscussionForm defaultValues={record.values} onSubmit={onSubmit} submitLabel={t("edit.submit")} />
+
+      <AutoForm
+        fields={[
+          {
+            id: "title",
+            component: props => (
+              <AutoFormInput {...props} label={t("form.title.label")} />
+            ),
+          },
+          {
+            id: "body",
+            component: props => (
+              <AutoFormEditor
+                {...props}
+                format="json"
+                label={t("form.body.label")}
+              />
+            ),
+          },
+        ]}
+        formSchema={createFormSchema(defaults)}
+        onSubmit={onSubmit}
+        submitButtonProps={{ children: t("edit.submit") }}
+      />
+
+      {current.status === "published" && current.slug !== null ? (
+        <HrefLink
+          className={buttonVariants({ variant: "link" })}
+          href={`/forum/topics/${current.slug}`}
+        >
+          {t("edit.view")}
+        </HrefLink>
+      ) : null}
     </>
   );
 };
+
+const TopicEditPage = ({
+  loaderData,
+  params,
+}: PluginRoutePageProps<TopicEditData>) => {
+  const t = useTranslations("@vitnode/forum.topics");
+
+  if (loaderData.state === "unauthenticated") {
+    return (
+      <main className="container mx-auto flex max-w-3xl flex-col gap-4 px-4 py-8">
+        <h1 className="text-2xl font-semibold text-balance">
+          {t("state.unauthenticated.title")}
+        </h1>
+        <HrefLink
+          className={buttonVariants({ className: "self-start" })}
+          href={`/login?returnTo=${encodeURIComponent(`/forum/topics/${loaderData.id}/edit`)}`}
+        >
+          {t("state.unauthenticated.action")}
+        </HrefLink>
+      </main>
+    );
+  }
+
+  if (loaderData.state !== "ready") {
+    const key = loaderData.state === "forbidden" ? "forbidden" : "not_found";
+
+    return (
+      <main className="container mx-auto flex max-w-3xl flex-col gap-2 px-4 py-8">
+        <h1 className="text-2xl font-semibold text-balance">
+          {t(`state.${key}.title`)}
+        </h1>
+        <p className="text-muted-foreground leading-relaxed">
+          {t(`state.${key}.desc`)}
+        </p>
+      </main>
+    );
+  }
+
+  return (
+    <main className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
+      <h1 className="text-2xl font-semibold text-balance">{t("edit.title")}</h1>
+      <TopicEditForm key={params.id} record={loaderData.record} />
+    </main>
+  );
+};
+
+export default TopicEditPage;
 ```
 
-- `record.values` holds exactly the editable fields, so it fills the form as is.
-- `PATCH` changes only the fields you send.
-- **When someone else saved first**, nothing is written and `write.conflict` shows an alert above the form. The member's text stays. **Keep my version** uses `latestVersion` so the next save replaces the other change; **Load latest version** reloads the page.
-- Field errors, an expired session and a refusal show the same way as on the create form.
+What each part does:
+
+- **`loadEditableTopic`** runs `GET /{id}/edit`, which answers only for the author and moderators, drafts included. Each status becomes its own page state:
+  - `401`: the visitor is signed out. Offer a sign-in link that comes back here.
+  - `403`: they can read the topic but not edit it.
+  - `404`: it does not exist, or it is a draft or a hidden topic that is not theirs. The page never confirms it exists.
+  - Anything else is thrown, so a server failure shows the app's error page instead of "not found".
+- **`formValuesOf`** fills the form. `record.values` holds exactly the editable fields. When an edit is pending, the form opens on `approval.values` instead, so the author keeps working on what they sent rather than on the live text.
+- **`useContentPublicWrite`** gets the `version` the form opened with and sends it as `expectedVersion` on every save. After a save it stores the new version itself.
+- **`write.submit`** returns the record, or `null` after showing why the save failed: a field error under **Title** or **Message**, a taken title under **Title** (`uniqueField`), or a toast for the rest, such as an expired session. The [reference](/docs/content-engine/public-write-form-api#how-answers-are-handled) lists every case.
+- **After a save**, the page keeps `approval`, `slug` and `status` from the answer, moves the form's defaults to the saved values and resets the form so it is no longer dirty, invalidates the plugin's cached queries so lists and the topic page show the change, and picks the toast: **Topic saved** for a live change, **Sent for approval** for a proposal.
+- **`defaults`** lives in state because `AutoForm` resets an untouched form to the `defaultValues` it renders with. Without `setDefaults(values)`, the next render would put the old text back into the form after a successful save.
+- **`key={params.id}`** remounts the form for another topic, because the hook reads `version` once.
+- **View topic** links to the public page while the topic is published. The slug comes from the latest answer, because a new title can change it.
+
+`queryClient.invalidateQueries({ queryKey: [manifest.id] })` refreshes everything the plugin cached. Narrow it to the record's detail and list keys when your plugin has many queries; the Forum plugin uses `invalidateForumTopics`.
+
+</Step>
+
+<Step>
+
+### Add the labels
+
+Every key the page reads, in the plugin's locale file:
+
+```json title="plugins/forum/src/locales/en.json"
+{
+  "@vitnode/forum": {
+    "topics": {
+      "form": {
+        "title": { "label": "Title" },
+        "body": { "label": "Message" }
+      },
+      "edit": {
+        "title": "Edit topic",
+        "submit": "Save changes",
+        "view": "View topic",
+        "success": {
+          "title": "Topic saved",
+          "desc": "\"{title}\" is up to date."
+        },
+        "pending": {
+          "title": "Sent for approval",
+          "desc": "A moderator will review your changes. Readers see the published version until then."
+        }
+      },
+      "state": {
+        "unauthenticated": { "title": "Sign in to edit", "action": "Sign in" },
+        "forbidden": {
+          "title": "Not your topic",
+          "desc": "Only the author and moderators can edit this topic."
+        },
+        "not_found": {
+          "title": "Topic not found",
+          "desc": "This topic does not exist, or you cannot see it."
+        }
+      },
+      "approval": {
+        "rejected": {
+          "title": "A moderator declined this",
+          "desc": "Your submission was not approved. You can edit it and send it again.",
+          "reason": "Reason: {reason}"
+        },
+        "pending_edit": {
+          "title": "Your changes are waiting for approval",
+          "desc": "Readers still see the published version. You are looking at your proposed changes."
+        },
+        "pending_create": {
+          "title": "Waiting for a moderator",
+          "desc": "Your topic goes live as soon as a moderator approves it. You can still polish it here."
+        }
+      }
+    }
+  }
+}
+```
 
 </Step>
 
 </Steps>
 
-## Edits that wait for a moderator
-
-In a container whose [publishing policy](/docs/content-engine/container-policies) says `edits: "approve"`, an author's save of a published record succeeds, but readers still see the old text. `updated.approval?.status` is `"pending"` and `updated.values` is the live record. Say so instead of "Changes saved", and open the form on the proposal next time:
-
-```ts
-const proposed =
-  record.approval?.status === "pending" && record.approval.kind === "edit"
-    ? record.approval.values
-    : null;
-```
-
-[Approvals](/docs/content-engine/approvals#show-it-on-your-pages) shows the notice the forum renders.
-
-## Check the result
-
-Sign in as the author of a discussion:
-
-1. Its page shows **Edit**. Other members see **Report** instead.
-2. Change the title and click **Save changes**. A **Changes saved** toast appears.
-3. Save the same discussion in a second tab, then save in the first. **Someone else saved in the meantime** appears and your text stays. Click **Keep my version**, then save again.
-4. Open the edit URL as another member. The page says they can't edit it.
-
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
-  src={forbidden}
-  alt="The edit page for another member's discussion, saying You can't edit this discussion"
+  src={editForm}
+  alt="The Edit topic page with the topic's title and message in the form, a Save changes button and a View topic link"
 />
+
+## When someone else saved first
+
+Two people can open the same topic: the author in two tabs, or the author and a moderator. When the second one saves, `PATCH /{id}` answers `409 CONTENT_VERSION_CONFLICT` and writes nothing. `write.conflict` then shows **Someone else saved in the meantime** above the form, and the form keeps every character the member typed:
+
+- **Keep my version** reads the current version with `latestVersion`. The next **Save changes** replaces the other change with the member's.
+- **Load latest version** reloads the page and drops the unsaved text, so the member can start from the other change.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={conflict}
-  alt="The Edit discussion page with the warning Someone else saved in the meantime, the buttons Keep my version and Load latest version, and the member's text still in the form"
+  alt="The Edit topic page with the warning Someone else saved in the meantime, the buttons Keep my version and Load latest version, and the member's changed title still in the form"
 />
+
+## When an edit waits for a moderator
+
+In the **Feature requests** forum of this example, an administrator set **Edits** to approval for topics: in `/admin/containers/forum/forums`, the forum's row menu → **Publishing**. When the author saves a published topic there:
+
+1. `PATCH /{id}` answers `200`, but `updated.values` is still the live topic and `updated.approval` is `{ status: "pending", kind: "edit", values: { ... } }`.
+2. The page shows **Sent for approval** instead of **Topic saved**, and `ApprovalNotice` says the changes are waiting.
+3. Readers keep seeing the published version. Reloading the edit page opens the form on `approval.values`, the proposal.
+4. A moderator approves or rejects it, as [Approvals](/docs/content-engine/approvals#what-a-decision-does) explains. After a rejection, `GET /{id}/edit` returns `approval.status: "rejected"` with the moderator's `reason`, and the notice shows it.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={pending}
+  alt="The Edit topic page with the notice Your changes are waiting for approval above the form, which shows the proposed title, and a Sent for approval toast"
+/>
+
+The `approval` object and the author's list of submissions are described in [Approvals](/docs/content-engine/approvals#what-the-author-sees).
+
+## Optional details
+
+- **A closed edit window.** With `authorEdit: "window"`, `GET /{id}/edit` answers `403` with an `edit_window_closed` issue once the time is up. Read it with `parseContentPublicWriteRejection` from `@vitnode/core/content` to show "Editing has closed" instead of "Not your topic". The Forum plugin's `topic-edit-page.tsx` does this.
+- **After creating a pending topic**, the Forum plugin's create page sends the author here with `?submitted=true`, so the notice appears even before the page reloads. See [Public create form](/docs/content-engine/public-write-frontend#when-a-post-waits-for-a-moderator).
+- **Shared layout.** The Forum plugin wraps the page in its own `ForumShell` and reuses the create form's fields through `TopicForm`. Both are plugin code, not core exports.
+
+## Check the result
+
+Sign in as the author of a topic in the **General** forum:
+
+1. The topic page shows **Edit**. Another member sees **Report** instead.
+2. Change the title and click **Save changes**. **Topic saved** appears, and **View topic** opens the page with the new title.
+3. Open the edit page in a second tab and save there. Save again in the first tab: **Someone else saved in the meantime** appears and your text stays. Click **Keep my version**, then save again.
+4. Edit a topic in **Feature requests**. **Sent for approval** appears, readers still see the old title, and reloading the edit page shows your proposal under **Your changes are waiting for approval**.
+5. Open the edit URL as another member: **Not your topic**. Signed out: **Sign in to edit**. With a made-up id: **Topic not found**.
