@@ -4,6 +4,8 @@
   },
   "@vitnode/core:cron": "Zadania Cron",
   "@vitnode/core:cron:can_run": "Uruchamianie zadań cron",
+  "@vitnode/core:seo": "SEO",
+  "@vitnode/core:seo:can_view": "Wyświetlanie narzędzi SEO i podgląd obrazów OG",
   "@vitnode/core:cron:can_view": "Wyświetlanie zadań cron",
   "@vitnode/core:dashboard": "Pulpit",
   "@vitnode/core:dashboard:can_edit": "Dostosowywanie własnego układu pulpitu",
@@ -486,6 +488,10 @@
           "title": "Moderacja",
           "report_reasons": "Powody zgłoszeń"
         },
+        "seo": {
+          "title": "SEO",
+          "og_images": "Obrazy OG"
+        },
         "system": {
           "files": "Pliki",
           "integrations": "Integracje",
@@ -784,6 +790,60 @@
           "error": "Nie udało się usunąć powodu",
           "last_reason": "Zostaw co najmniej jeden powód - członkowie muszą mieć z czego wybierać.",
           "unknown": "Coś poszło nie tak. Spróbuj ponownie za chwilę."
+        }
+      }
+    },
+    "seo": {
+      "og_images": {
+        "title": "Obrazy OG",
+        "desc": "Podgląd obrazów społecznościowych, które VitNode generuje dla udostępnianych linków.",
+        "info": {
+          "title": "Tylko podgląd",
+          "desc": "Szablony, czcionki i branding są w vitnode.api.config.ts w bloku ogImages. Wpisane tu dane są tymczasowe: służą do narysowania jednego obrazu i nigdy nie są zapisywane."
+        },
+        "disabled": {
+          "title": "Generowane obrazy OG są wyłączone",
+          "desc": "Dodaj blok ogImages do vitnode.api.config.ts i uruchom ponownie serwer, aby je włączyć. Wbudowany szablon działa bez pisania kodu."
+        },
+        "form": {
+          "template": {
+            "label": "Szablon",
+            "desc": "Szablony rejestruje się w kodzie, w ogImages.templates.",
+            "default": "{id} (domyślny)"
+          },
+          "locale": {
+            "label": "Język",
+            "desc": "Język tekstu. Szablony mogą go użyć, na przykład do dat."
+          },
+          "title": {
+            "label": "Tytuł",
+            "sample": "Zażółć gęślą jaźń: przykładowy tytuł artykułu"
+          },
+          "description": {
+            "label": "Opis",
+            "sample": "Tymczasowy opis, użyty tylko do narysowania tego podglądu."
+          },
+          "cover": {
+            "label": "Obraz okładki",
+            "desc": "JPEG, PNG, WebP lub AVIF do 5 MB. Wysyłany z żądaniem podglądu i nigdy nie zapisywany.",
+            "empty": "Brak okładki",
+            "hint": "Bez okładki szablon zajmuje całą szerokość.",
+            "choose": "Wybierz obraz okładki",
+            "remove": "Usuń obraz okładki",
+            "optional": "(opcjonalnie)",
+            "invalid": "Wybierz obraz JPEG, PNG, WebP lub AVIF do 5 MB."
+          },
+          "submit": "Odśwież podgląd"
+        },
+        "preview": {
+          "title": "Podgląd",
+          "alt": "Podgląd wygenerowanego obrazu Open Graph",
+          "loading": "Rysowanie podglądu…",
+          "size": "PNG 1200 × 630, rysowany tym samym generatorem co obrazy publiczne.",
+          "error": {
+            "title": "Nie udało się narysować podglądu",
+            "desc": "Sprawdź szablon i obraz okładki, a potem spróbuj ponownie. Szczegóły są w logu serwera."
+          }
         }
       }
     },

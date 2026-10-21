@@ -117,6 +117,11 @@
       "types": "./dist/src/content/index.d.ts",
       "default": "./dist/src/content/index.js"
     },
+    "./og-image": {
+      "import": "./dist/src/og-image/index.js",
+      "types": "./dist/src/og-image/index.d.ts",
+      "default": "./dist/src/og-image/index.js"
+    },
     "./content/server": {
       "import": "./dist/src/content/server/index.js",
       "types": "./dist/src/content/server/index.d.ts",
@@ -274,6 +279,7 @@
     "@tiptap/starter-kit": "^3.31.4",
     "@tiptap/suggestion": "^3.31.4",
     "@tiptap/y-tiptap": "^3.0.9",
+    "@vercel/og": "1.0.1",
     "ai": "^7.0.134",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",

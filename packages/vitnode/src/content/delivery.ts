@@ -47,6 +47,7 @@ export const contentDeliveryDisabled: ResolvedContentDeliveryConfig<false> = {
     fallbackDescriptionField: null,
     fallbackTitleField: null,
     noIndexField: null,
+    ogImage: null,
     openGraph: null,
     titleField: null,
   },
@@ -410,6 +411,51 @@ export const resolveContentDelivery = ({
     });
   }
 
+  const ogImage =
+    seo.ogImage === undefined || seo.ogImage === false
+      ? null
+      : seo.ogImage === true
+        ? {}
+        : seo.ogImage;
+
+  if (ogImage?.coverField !== undefined) {
+    const cover = fields[ogImage.coverField];
+    if (cover?.kind !== "file" || (cover as { multiple?: boolean }).multiple) {
+      throw new ContentEngineError(
+        `delivery.seo.ogImage.coverField names "${ogImage.coverField}", which is not a single-file field. An Open Graph image has one cover.`,
+        { contentTypeId: id },
+      );
+    }
+
+    if (!exposed.has(ogImage.coverField)) {
+      throw new ContentEngineError(
+        `delivery.seo.ogImage.coverField names "${ogImage.coverField}", which is not in publicApi.fields. The image is public, so its cover has to be publicly readable already.`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
+  if (
+    ogImage?.template !== undefined &&
+    !/^[a-z0-9_-]{1,64}$/.test(ogImage.template)
+  ) {
+    throw new ContentEngineError(
+      `delivery.seo.ogImage.template is "${ogImage.template}"; template ids are 1-64 characters of a-z, 0-9, "-" and "_".`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (
+    ogImage !== null &&
+    seo.titleField === undefined &&
+    seo.openGraph?.titleField === undefined
+  ) {
+    throw new ContentEngineError(
+      "delivery.seo.ogImage needs `titleField` or `openGraph.titleField`: the image is drawn from the SEO projection, and an image without a title is not worth drawing.",
+      { contentTypeId: id },
+    );
+  }
+
   // A fallback with no primary is a configuration that reads as if it does
   // something and does nothing: the primary is what is consulted first, so
   // naming only the fallback means the fallback is never reached.
@@ -440,6 +486,13 @@ export const resolveContentDelivery = ({
       fallbackDescriptionField: seo.fallbackDescriptionField ?? null,
       fallbackTitleField: seo.fallbackTitleField ?? null,
       noIndexField: seo.noIndexField ?? null,
+      ogImage:
+        ogImage === null
+          ? null
+          : {
+              coverField: ogImage.coverField ?? null,
+              template: ogImage.template ?? null,
+            },
       openGraph:
         seo.openGraph === undefined
           ? null

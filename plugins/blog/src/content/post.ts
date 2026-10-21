@@ -156,6 +156,10 @@ export const blogPostContentType = defineContentType({
       titleField: "title",
       descriptionField: "excerpt",
       fallbackDescriptionField: "content",
+      // A generated 1200 × 630 social image per article and language, drawn
+      // from the title and excerpt above with the cover on the right. Needs
+      // `ogImages` in the app's API config.
+      ogImage: { coverField: "coverImage" },
     },
     sitemap: { changeFrequency: "weekly", priority: 0.7 },
     hreflang: { xDefault: "defaultLocale" },

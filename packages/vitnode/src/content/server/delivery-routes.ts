@@ -19,7 +19,9 @@ import {
 import { ContentDeliveryNotEnabled } from "../errors";
 import { contentIdParamSchema, contentIdSchema } from "../ids";
 import { resolveContentPublicLocale } from "../locale";
+import { contentOgImageHandler } from "./delivery-og-image";
 import { listContentLanguages } from "./language-resolver";
+import { contentLocaleRouting } from "./locale-routing";
 import { contentRecordPageCacheTags } from "./page-cache";
 import { contentIdentifier } from "./route-helpers";
 
@@ -102,6 +104,16 @@ export const buildContentDeliveryRoutes = <
     // type whose allowlist withholds `id` reports none rather than inventing one.
     itemId: itemIdSchema.nullable(),
     locale: z.string().nullable(),
+    ogImage: z
+      .object({
+        alt: z.string(),
+        height: z.number().int(),
+        path: z.string(),
+        type: z.string(),
+        url: z.string(),
+        width: z.number().int(),
+      })
+      .nullable(),
     openGraph: zodSeo.nullable(),
     requestedLocale: z.string().nullable(),
     hidden: z.boolean(),
@@ -225,6 +237,67 @@ export const buildContentDeliveryRoutes = <
     },
   });
 
+  const ogImage = buildRoute({
+    pluginId,
+    route: {
+      method: "get",
+      path: "/delivery/og-image/{id}",
+      description: `The generated Open Graph image of one published ${name}`,
+      request: {
+        params: z.object({
+          id: serial
+            ? z.coerce.number().int().positive()
+            : contentIdSchema(definition.idStrategy),
+        }),
+        query: z.object({
+          ...localeQuery,
+          // Cache-busting only: the image is always drawn from current data.
+          v: z.string().max(64).optional(),
+        }),
+      },
+      responses: {
+        200: {
+          content: {
+            "image/png": {
+              schema: z.string().openapi({ format: "binary", type: "string" }),
+            },
+          },
+          description: "A 1200 × 630 PNG",
+        },
+        304: { description: "Unchanged since the `If-None-Match` ETag" },
+        404: {
+          description: `${name} not found, not public, or images are off`,
+        },
+      },
+    },
+    handler: async c => {
+      const resolved = await localeFor(c);
+      if (!resolved) {
+        throw new HTTPException(404, {
+          res: new Response("Not Found", {
+            headers: { "Cache-Control": "private, no-store" },
+            status: 404,
+          }),
+        });
+      }
+
+      const buildPublic = model.publicService;
+      if (!buildPublic) {
+        throw new ContentDeliveryNotEnabled({ contentTypeId: definition.id });
+      }
+
+      return await contentOgImageHandler({
+        c,
+        definition,
+        findPublic: async (itemId, options) =>
+          await buildPublic(c).findById(itemId as never, options),
+        itemId: contentIdentifier(c, definition),
+        locale: resolved.locale,
+        routing: contentLocaleRouting(c),
+      });
+    },
+  });
+
   const sitemap = buildRoute({
     pluginId,
     route: {
@@ -277,6 +350,7 @@ export const buildContentDeliveryRoutes = <
     resolve,
     item,
     ...(definition.delivery.sitemap.enabled ? [sitemap] : []),
+    ...(definition.delivery.seo.ogImage === null ? [] : [ogImage]),
   ];
 };
 

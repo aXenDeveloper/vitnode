@@ -7,8 +7,10 @@ import { SupabaseStorageAdapter } from '@vitnode/supabase-storage'
 import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 
+import logoSvg from '../public/logo_vitnode_icon.svg?raw'
 import { contentModules } from './content-modules.gen'
 import { appMessages } from './locales/app'
+import { spotlightOgTemplate } from './og/spotlight-template'
 import { frontendPlugins } from './plugin-inventory.gen'
 import { vitNodeConfig } from './vitnode.config'
 
@@ -61,5 +63,18 @@ export const vitNodeApiConfig = buildApiConfig({
   metadata: {
     title: 'VitNode API',
     shortTitle: 'VitNode',
+  },
+  /**
+   * Generated Open Graph images. The built-in `default` template needs no
+   * code; `spotlight` shows a custom template from its own `.tsx` file. Bump
+   * `version` after changing `branding` or `fonts`.
+   */
+  ogImages: {
+    version: '1',
+    templates: { spotlight: spotlightOgTemplate },
+    branding: {
+      siteName: 'VitNode',
+      logo: `data:image/svg+xml;utf8,${encodeURIComponent(logoSvg)}`,
+    },
   },
 })

@@ -9,6 +9,7 @@ import type {
 import type { ContentId, ContentIdOf } from "../ids";
 import type { ContentSitemapEntry } from "../sitemap";
 import type { AnyContentTypeDefinition } from "../types";
+import type { ContentDeliveryOgImage } from "./delivery-og-image";
 import type { ContentDeliverySitemapPage } from "./delivery-sitemap";
 import type { ContentModel } from "./model";
 import type { ContentSlugHistoryEntry } from "./slug-history-model";
@@ -29,6 +30,10 @@ import { parseContentId } from "../ids";
 import { contentLocalesMatch, normalizeContentLocale } from "../locale";
 import { contentPublicHref } from "../public-url";
 import { readDeliveryAlternates } from "./delivery-alternates";
+import {
+  contentOgImageDescriptor,
+  contentOgImageFields,
+} from "./delivery-og-image";
 import { readContentDeliverySitemapPage } from "./delivery-sitemap";
 import { findViewableHiddenBySlug } from "./hidden-access";
 import { findContentLanguage, listContentLanguages } from "./language-resolver";
@@ -51,6 +56,13 @@ export interface ContentDeliveryMetadata {
   itemId: ContentId | null;
   /** The language this response is actually in. */
   locale: null | string;
+  /**
+   * The generated Open Graph image, or `null` unless `delivery.seo.ogImage` is
+   * set, `ogImages` is configured and the record is public (never for a hidden
+   * record). Building it draws nothing - the image is rendered when its URL is
+   * first requested.
+   */
+  ogImage: ContentDeliveryOgImage | null;
   /** `null` unless `delivery.seo.openGraph` is configured. */
   openGraph: ContentDeliverySeo | null;
   /** What was asked for, normalized. `null` for a nonlocalized content type. */
@@ -170,6 +182,7 @@ export const createContentDeliveryService = <
     seo.openGraph?.titleField ?? null,
     seo.openGraph?.descriptionField ?? null,
     seo.noIndexField,
+    ...contentOgImageFields(definition),
   ].filter((name): name is string => name !== null);
 
   const slugHistory = createContentSlugHistoryModel({
@@ -238,6 +251,17 @@ export const createContentDeliveryService = <
         !contentLocalesMatch(requestedLocale, locale),
       itemId,
       locale,
+      ogImage:
+        hidden || itemId === null
+          ? null
+          : contentOgImageDescriptor({
+              c,
+              definition,
+              itemId,
+              pluginId,
+              row,
+              routing,
+            }),
       openGraph: contentDeliveryOpenGraph(definition, row),
       requestedLocale,
       hidden,

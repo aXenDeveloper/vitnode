@@ -78,17 +78,57 @@ The blog plugin's own article editor checks the fields this rule reads in its **
 
 The page's `head` calls `contentDeliveryPageHead` with the resolve route's answer, as shown in [Write the page](/docs/content-engine/public-pages#write-the-page). This is what the HTML gets today:
 
-| Tag                                         | Rendered                                    |
-| ------------------------------------------- | ------------------------------------------- |
-| `<title>`                                   | Yes, followed by the site title (`- VitNode`) |
-| `<meta name="description">`                 | Yes, at most 160 characters                 |
-| `<meta name="robots">`                      | Only for a no-index record                  |
-| `<link rel="canonical">` and `hreflang` links | Only for a localized content type         |
-| `og:title`, `og:description`                | No                                          |
+| Tag                                           | Rendered                                                         |
+| --------------------------------------------- | ---------------------------------------------------------------- |
+| `<title>`                                     | Yes, followed by the site title (`- VitNode`)                    |
+| `<meta name="description">`                   | Yes, at most 160 characters                                      |
+| `<meta name="robots">`                        | Only for a no-index record                                       |
+| `<link rel="canonical">` and `hreflang` links | Only for a localized content type                                |
+| `og:title`, `og:description`, `og:type`       | With `openGraph` or `ogImage`; `og:type` is `article`            |
+| `og:image*`, `twitter:card`, `twitter:image`  | With [`ogImage`](#generated-social-images) and `ogImages` on     |
 
-<Callout type="warn">
-  The resolve route returns `openGraph` and `canonicalPath` for every record, but nothing turns them into tags yet. A nonlocalized type such as `example.article` gets no canonical link, and no content type gets Open Graph tags. A plugin page cannot add them either, because its `head` only accepts `title`, `description`, `robots` and `alternates`. Keep `openGraph` in your definition so the data is ready, and read it from the resolve route if you render pages outside VitNode.
-</Callout>
+A nonlocalized type such as `example.article` gets no canonical link. The resolve route also returns `canonicalPath`, which you can read if you render pages outside VitNode.
+
+## Generated social images
+
+`delivery.seo.ogImage` gives every public record a generated 1200 × 630 [OG image](/docs/dev/og-images), drawn from the same title and description as the page, so nothing is declared twice. The blog draws its articles with the cover on the right:
+
+```ts title="plugins/blog/src/content/post.ts"
+delivery: {
+  seo: {
+    titleField: "title",
+    descriptionField: "excerpt",
+    fallbackDescriptionField: "content",
+    ogImage: { coverField: "coverImage" },
+  },
+},
+```
+
+| Option       | Default                     | Description                                                                                           |
+| ------------ | --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `coverField` | none                        | A single-file field in `publicApi.fields`, drawn as the cover. Files are shared, so every language gets the same cover. |
+| `template`   | `ogImages.defaultTemplate`  | A template id from `ogImages.templates`. An id that is not registered falls back to the default.      |
+
+`ogImage: true` uses the default template and no cover. The title is `openGraph.titleField`, else the page title; the description follows the same rule. The definition throws at startup when `coverField` is not a public single-file field or when neither title field is set. Nothing happens until the app's API config has [`ogImages`](/docs/dev/og-images#turn-on-og-images).
+
+The resolve route then answers with an `ogImage` descriptor, and `contentDeliveryPageHead` turns it into tags. The page only builds the URL; the PNG is drawn when a crawler first requests it.
+
+```json
+"ogImage": {
+  "alt": "Open Graph images land in VitNode",
+  "height": 630,
+  "path": "/api/@vitnode/blog/content/blog/delivery/og-image/1?locale=en&v=FL4o_lYmiJD3",
+  "type": "image/png",
+  "url": "http://localhost:3000/api/@vitnode/blog/content/blog/delivery/og-image/1?locale=en&v=FL4o_lYmiJD3",
+  "width": 1200
+}
+```
+
+- The image route is `GET /delivery/og-image/{id}` on the type's public API, with `?locale=` on a localized type.
+- `locale` is the language the record was actually served in. A Polish visitor of an article with no Polish translation gets the English image, like the page itself.
+- The URL is absolute: `VITNODE_API_URL` when set, otherwise `VITNODE_WEB_URL`.
+- A hidden record gets `ogImage: null`, even for staff who can open it.
+- Every request re-reads the record as a guest. Drafts, scheduled and hidden records, unpublished translations and deleted records answer `404`, also when their image is already cached. See [Caching and runtimes](/docs/dev/og-images/caching).
 
 ## Hide a record from search engines
 

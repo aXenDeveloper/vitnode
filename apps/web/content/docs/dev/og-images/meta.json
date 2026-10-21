@@ -1,0 +1,11 @@
+{
+  "title": "OG images",
+  "description": "Generate Open Graph images for shared links with @vercel/og",
+  "icon": "ImagePlay",
+  "pages": [
+    "index",
+    "custom-templates",
+    "plugin-endpoints",
+    "caching"
+  ]
+}

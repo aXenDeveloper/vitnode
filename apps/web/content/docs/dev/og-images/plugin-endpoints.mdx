@@ -1,0 +1,135 @@
+---
+title: OG images for plugin pages
+description: Serve a generated VitNode Open Graph image from your own plugin's Hono route with ogImageResponse, and point the page's og:image at it with generatedOgImage.
+icon: Plug
+---
+
+Content Engine records get their image automatically. For any other page, such as a product, a profile or a leaderboard, your plugin adds a small Hono route that reads its own data and hands trusted text to `ogImageResponse`. The page then links that route as its `og:image`.
+
+The examples use a `products` module in a plugin with a `shop_products` table.
+
+## Before you begin
+
+[Turn on OG images](/docs/dev/og-images#turn-on-og-images) in `vitnode.api.config.ts`. Without `ogImages`, `ogImageResponse` answers `404`.
+
+<Steps>
+
+<Step>
+
+### Add the image route
+
+Add a route to your plugin's API module. It looks the product up, refuses anything a guest may not see, and only then calls the generator.
+
+```ts title="src/api/modules/products/routes/og-image.route.ts"
+import { ogImageResponse } from "@vitnode/core/og-image";
+import { and, eq } from "drizzle-orm";
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
+
+import { buildRoute } from "@/api/builders";
+import { shop_products } from "@/database/products";
+
+export const productOgImageRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/{id}/og-image",
+    description: "The Open Graph image of one public product",
+    request: { params: z.object({ id: z.coerce.number().int().positive() }) },
+    responses: {
+      200: {
+        content: {
+          "image/png": { schema: z.string().openapi({ format: "binary", type: "string" }) },
+        },
+        description: "A 1200 × 630 PNG",
+      },
+      404: { description: "Not found or not public" },
+    },
+  },
+  handler: async c => {
+    const { id } = c.req.valid("param");
+    const [product] = await c
+      .get("db")
+      .select()
+      .from(shop_products)
+      .where(and(eq(shop_products.id, id), eq(shop_products.isPublic, true)))
+      .limit(1);
+    if (!product) throw new HTTPException(404);
+
+    return (await ogImageResponse(c, {
+      identity: ["product", product.id],
+      title: product.name,
+      description: product.summary,
+      cover: product.imageId ? { fileId: product.imageId } : null,
+    })) as never;
+  },
+});
+```
+
+Add `productOgImageRoute` to the `routes` of your `products` module. The route is served at `GET /api/{pluginId}/products/{id}/og-image`.
+
+</Step>
+
+<Step>
+
+### Point the page at it
+
+In the page's `head`, pass the route's URL to `generatedOgImage`. It fills in the size and type, and the path is turned into an absolute URL with `VITNODE_WEB_URL`.
+
+```tsx title="src/pages/product-page.tsx"
+import { generatedOgImage } from "@vitnode/core/tanstack/metadata";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
+
+import { manifest } from "@/manifest.gen";
+
+export const route = defineRoute({
+  load: async ({ params }) => await loadProduct(params.id),
+  head: ({ loaderData }) => ({
+    title: loaderData?.name,
+    openGraph: loaderData
+      ? {
+          title: loaderData.name,
+          type: "website",
+          image: generatedOgImage({
+            url: `/api/${manifest.id}/products/${loaderData.id}/og-image`,
+            alt: loaderData.name,
+          }),
+        }
+      : undefined,
+  }),
+});
+```
+
+A route file in the host app uses `pageHead({ openGraph: { image: generatedOgImage(...) } })` from `@vitnode/core/tanstack/metadata` the same way. A page never draws the PNG; it only links it, and the image is drawn when a crawler first asks for it.
+
+</Step>
+
+</Steps>
+
+## What `ogImageResponse` takes
+
+| Name           | Type                          | Required | Description                                                                                              |
+| -------------- | ----------------------------- | -------- | -------------------------------------------------------------------------------------------------------- |
+| `identity`     | `unknown[]`                   | Yes      | What the image belongs to. Add a version such as `updatedAt` when the text can change without the id.    |
+| `title`        | `string`                      | Yes      | Answers `404` when empty.                                                                                |
+| `description`  | `string \| null`              | No       | Plain text; strip HTML first.                                                                            |
+| `cover`        | `{ fileId } \| { url } \| { bytes }` | No | A `core_files` id, a public `https://` URL, or bytes you already hold. 5 MB and 8 seconds at most.       |
+| `template`     | `string`                      | No       | A registered template; unknown ids fall back to `defaultTemplate`.                                       |
+| `locale`       | `string`                      | No       | Defaults to `en`.                                                                                        |
+| `url`          | `string`                      | No       | The canonical page URL, shown by the built-in template.                                                  |
+| `cacheControl` | `string`                      | No       | Defaults to `public, max-age=300, s-maxage=600, stale-while-revalidate=60`.                              |
+
+The text, cover, template version and `ogImages.version` are part of the cache key on top of `identity`, so editing the name draws a new image. See [Caching and runtimes](/docs/dev/og-images/caching).
+
+<Callout type="warn" title="Never pass request input">
+  Read the title from your database, never from the query string. A route that
+  draws whatever text it is given lets anyone render any text under your
+  domain. VitNode has no public "draw this text" endpoint for that reason.
+</Callout>
+
+## Check the result
+
+```bash
+curl -sI http://localhost:3000/api/@acme/shop/products/42/og-image
+```
+
+The first answer has `content-type: image/png` and `x-vitnode-og-cache: miss`, the second `hit`. Mark the product private and the same URL answers `404`, cached image or not.

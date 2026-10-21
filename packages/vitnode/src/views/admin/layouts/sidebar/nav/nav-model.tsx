@@ -3,6 +3,7 @@ import {
   FlagIcon,
   FolderTreeIcon,
   LayoutDashboardIcon,
+  SearchCheckIcon,
   ServerIcon,
   ShieldUserIcon,
   SparklesIcon,
@@ -242,6 +243,18 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           title: key("admin.global.nav.moderation.report_reasons"),
           href: "/admin/core/moderation/report-reasons",
           permission: core("report_reasons"),
+        },
+      ],
+    },
+    {
+      href: "/admin/core/seo",
+      title: key("admin.global.nav.seo.title"),
+      icon: <SearchCheckIcon />,
+      items: [
+        {
+          title: key("admin.global.nav.seo.og_images"),
+          href: "/admin/core/seo/og-images",
+          permission: core("seo"),
         },
       ],
     },

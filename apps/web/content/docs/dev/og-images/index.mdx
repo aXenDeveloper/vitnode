@@ -1,0 +1,106 @@
+---
+title: OG images
+description: Generate 1200 × 630 Open Graph images for VitNode pages with @vercel/og - turn them on in vitnode.api.config.ts, use the built-in template, and preview them in the AdminCP.
+icon: ImagePlay
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import adminPreview from "./admin-og-images-preview.webp";
+import defaultCover from "./og-default-template-cover.webp";
+import defaultPolish from "./og-default-template-polish.webp";
+
+When someone shares a link on Slack, Discord or X, the preview card shows the page's `og:image`. VitNode can draw that image for you: a 1200 × 630 PNG with the page title, its description, an optional cover and your site name, rendered on the API server with [`@vercel/og`](https://github.com/vercel/satori). No designer, no image per article, and no Vercel account needed.
+
+| You want to                                              | Guide                                                                  |
+| -------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Turn images on and use the built-in template             | This page                                                              |
+| Draw your own design from a `.tsx` file, with your fonts | [Custom templates](/docs/dev/og-images/custom-templates)               |
+| Give every Content Engine record its own image           | [Content Engine SEO](/docs/content-engine/seo#generated-social-images) |
+| Serve an image from your own plugin route                | [Images for plugin pages](/docs/dev/og-images/plugin-endpoints)        |
+| Know when images are cached and where it runs            | [Caching and runtimes](/docs/dev/og-images/caching)                    |
+
+## Turn on OG images
+
+Add an `ogImages` block to the API config. An empty object is enough: the built-in `default` template needs no code.
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/core/vitnode.config";
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...your existing options
+  ogImages: {
+    version: "1",
+    branding: {
+      siteName: "My community",
+      logo: "https://example.com/logo.png",
+    },
+  },
+});
+```
+
+Everything lives in code, so an image looks the same on every server and every deploy. The AdminCP only previews it.
+
+| Option            | Type                             | Default                                     | Description                                                                                                                                     |
+| ----------------- | -------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `defaultTemplate` | `string`                         | `"default"`                                 | Template used when a caller names none, or names one that is not registered.                                                                    |
+| `templates`       | `Record<string, OgImageTemplate>` | `{}`                                        | Your templates by id: 1-64 characters of `a-z`, `0-9`, `-`, `_`. See [Custom templates](/docs/dev/og-images/custom-templates).                  |
+| `fonts`           | `OgImageFont[]`                  | Geist Regular                               | Extra fonts, tried before the bundled Geist Regular.                                                                                            |
+| `branding.siteName` | `string`                       | `metadata.shortTitle ?? metadata.title`     | Name in the image footer.                                                                                                                       |
+| `branding.logo`   | `string \| () => Uint8Array`     | none                                        | An `https://` URL (5 MB, 8 s timeout), a `data:` URI, or a function returning the bytes. PNG, JPEG, WebP or SVG.                                |
+| `branding.colors` | `Partial<OgImageColors>`         | `accent #3261bf`, white background          | `accent`, `background`, `foreground` and `muted` of the built-in template.                                                                      |
+| `version`         | `string`                         | `""`                                        | Bump it after changing `branding` or `fonts`, so cached images are drawn again.                                                                 |
+
+The server checks the block at startup and refuses to boot with an unknown `defaultTemplate`, an invalid template id, or a template without `render` and `version`.
+
+## The built-in template
+
+The `default` template puts the title, the description and your logo and site name on the left. With a cover, the cover fills the right side; without one, the text uses the full width. Titles shrink in two steps as they get longer and stop at three lines with `…`, and descriptions stop at two lines (three next to a cover). Polish and other Latin Extended letters are covered by the bundled Geist font.
+
+<ImgDocs
+  withoutBackground
+  className="p-4"
+  src={defaultCover}
+  alt="Built-in OG template with the title Building a forum with VitNode, a two-line description, the VitNode logo and site name, and a blue cover image filling the right side"
+/>
+
+<ImgDocs
+  withoutBackground
+  className="p-4"
+  src={defaultPolish}
+  alt="Built-in OG template without a cover, showing a Polish title with ż, ó, ł, ć, ę, ś, ą and ń, a Polish description, the VitNode logo and the host localhost:3000"
+/>
+
+## Preview in the AdminCP
+
+Open **AdminCP → SEO → OG Images**. Pick a template, change the language, type a title and a description, optionally choose a cover, and press **Refresh preview**. The API draws the image with the same generator public pages use.
+
+<ImgDocs
+  withoutBackground
+  className="p-4"
+  src={adminPreview}
+  alt="AdminCP OG Images page with a Preview only notice, the Template, Language, Title, Description and Cover image fields, a Refresh preview button, and the generated image on the right"
+/>
+
+What you type is temporary. Nothing is stored or cached, and the cover is sent with the preview request only. The page needs the **SEO → View SEO tools and preview OG images** staff permission (`seo.can_view`). When `ogImages` is not configured, the page says so instead of showing the form.
+
+## Check the result
+
+1. Open **AdminCP → SEO → OG Images** and confirm the first preview appears without pressing anything.
+2. Give a [Content Engine type an image](/docs/content-engine/seo#generated-social-images), publish a record, and print its tags:
+
+```bash
+curl -s http://localhost:3000/blog/article/og-images-land | grep -oE '<meta [^>]*(og:image|twitter:)[^>]*>'
+```
+
+```html
+<meta content="http://localhost:3000/api/@vitnode/blog/content/blog/delivery/og-image/1?locale=en&amp;v=FL4o_lYmiJD3" property="og:image"/>
+<meta content="1200" property="og:image:width"/>
+<meta content="630" property="og:image:height"/>
+<meta content="image/png" property="og:image:type"/>
+<meta content="Open Graph images land in VitNode" property="og:image:alt"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="http://localhost:3000/api/@vitnode/blog/content/blog/delivery/og-image/1?locale=en&amp;v=FL4o_lYmiJD3" name="twitter:image"/>
+<meta content="Open Graph images land in VitNode" name="twitter:image:alt"/>
+```
+
+Open the `og:image` URL in a browser to see the PNG. Social networks cache cards on their side; their link debuggers re-fetch on demand.

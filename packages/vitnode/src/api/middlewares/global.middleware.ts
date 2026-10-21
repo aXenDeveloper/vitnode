@@ -9,6 +9,7 @@ import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
 import type { UpdateChannel } from "@/lib/updates/manifest";
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
+import type { ResolvedOgImagesConfig } from "@/og-image/config";
 import type { VitNodeApiConfig, VitNodeConfig } from "@/vitnode.config";
 import type { VitNodeRealtime } from "@/ws/registry";
 
@@ -47,6 +48,7 @@ import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
 import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
 import { manifest as coreManifest } from "@/manifest";
+import { resolveOgImagesConfig } from "@/og-image/config";
 import { realtime, runWithRealtimeKeepAlive } from "@/ws/registry";
 
 import type { AiActionRegistry } from "../lib/ai/registry";
@@ -213,6 +215,8 @@ export interface EnvVariablesVitNode {
     moderation: ModerationRegistry;
     notifications?: NotificationRegistry;
     notificationWorkers?: NotificationWorkerSettings;
+    /** Generated Open Graph images, or `null` when `ogImages` is not configured. */
+    ogImages: null | ResolvedOgImagesConfig;
     permissionStaff: PermissionStaffCatalogEntry[];
     /** Which personal-information fields this install offers. */
     personalInformationFields: PersonalInformationFields;
@@ -314,6 +318,7 @@ export const globalMiddleware = ({
   plugins,
   i18n,
   notifications,
+  ogImages,
   search,
   storage,
   updates,
@@ -332,6 +337,7 @@ export const globalMiddleware = ({
   | "frontendPlugins"
   | "i18n"
   | "notifications"
+  | "ogImages"
   | "plugins"
   | "search"
   | "storage"
@@ -613,6 +619,7 @@ export const globalMiddleware = ({
       contentModels: contentModelsMetadata,
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,
+      ogImages: resolveOgImagesConfig(ogImages),
     };
   let core: CoreVariables | undefined;
 

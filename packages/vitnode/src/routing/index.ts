@@ -24,6 +24,8 @@ export type {
   PluginRouteLayoutModule,
   PluginRouteLoadArgs,
   PluginRouteModule,
+  PluginRouteOpenGraph,
+  PluginRouteOpenGraphImage,
   PluginRouteOptions,
   PluginRoutePageModule,
   PluginRoutePageProps,

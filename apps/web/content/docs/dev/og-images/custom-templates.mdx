@@ -1,0 +1,153 @@
+---
+title: Custom OG templates
+description: Draw your own VitNode Open Graph image design in a .tsx file with defineOgImageTemplate, register it in ogImages.templates, and add fonts that Satori can render.
+icon: Palette
+---
+
+A custom template is a function from the page's data to JSX, kept in its own `.tsx` file and registered in `vitnode.api.config.ts`. The API draws it with `@vercel/og`, so it runs on the server only and never reaches the browser bundle.
+
+<Steps>
+
+<Step>
+
+### Create the template
+
+Create a `.tsx` file next to your API config. This one is the `spotlight` template from the VitNode demo app: dark, centered, logo on top.
+
+```tsx title="src/og/spotlight-template.tsx"
+import { defineOgImageTemplate } from "@vitnode/core/og-image";
+
+export const spotlightOgTemplate = defineOgImageTemplate({
+  version: "1",
+  render: ({ colors, description, logo, siteName, title }) => (
+    <div
+      style={{
+        alignItems: "center",
+        background: "#0b1220",
+        color: "#f8fafc",
+        display: "flex",
+        flexDirection: "column",
+        gap: 32,
+        height: "100%",
+        justifyContent: "center",
+        padding: 80,
+        textAlign: "center",
+        width: "100%",
+      }}
+    >
+      {logo ? (
+        <img
+          alt=""
+          height={88}
+          src={logo.src}
+          width={Math.round((logo.width / logo.height) * 88)}
+        />
+      ) : null}
+      <div
+        style={{
+          display: "block",
+          fontSize: title.length > 60 ? 56 : 68,
+          lineClamp: 3,
+          lineHeight: 1.1,
+        }}
+      >
+        {title}
+      </div>
+      {description ? (
+        <div style={{ color: "#cbd5e1", display: "block", fontSize: 28, lineClamp: 2 }}>
+          {description}
+        </div>
+      ) : null}
+      <div style={{ color: colors.accent, display: "flex", fontSize: 26 }}>
+        {siteName}
+      </div>
+    </div>
+  ),
+});
+```
+
+`render` receives already-cleaned data: text trimmed, whitespace collapsed, titles cut to 140 characters and descriptions to 220 at a word boundary. `cover` and `logo` are `{ src, width, height }` with a `data:` URI `src`, already resized and converted to PNG or JPEG, or `null`.
+
+| Field         | Type                     | Description                                                     |
+| ------------- | ------------------------ | --------------------------------------------------------------- |
+| `title`       | `string`                 | Always set; an image is never drawn without one.                |
+| `description` | `string \| null`         | Plain text.                                                     |
+| `cover`       | `OgImageAsset \| null`   | The record's cover, or the file chosen in the AdminCP preview.  |
+| `logo`        | `OgImageAsset \| null`   | `ogImages.branding.logo`.                                       |
+| `siteName`    | `string`                 | `branding.siteName`, else the API config's `metadata`.          |
+| `locale`      | `string`                 | The language the text is actually in, after locale fallback.    |
+| `url`         | `string \| null`         | The canonical URL of the page, when known.                      |
+| `colors`      | `OgImageColors`          | `branding.colors` merged over the defaults.                     |
+
+</Step>
+
+<Step>
+
+### Register it
+
+Import the template into the API config and give it an id. Make it the default to use it everywhere nobody names a template.
+
+```ts title="src/vitnode.api.config.ts"
+import { spotlightOgTemplate } from "./og/spotlight-template";
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  ogImages: {
+    defaultTemplate: "spotlight",
+    templates: { spotlight: spotlightOgTemplate },
+  },
+});
+```
+
+`vitnode.api.config.ts` stays a `.ts` file: the JSX lives only in the template file it imports.
+
+</Step>
+
+<Step>
+
+### Bump the version after every change
+
+Cached images are keyed by the template id **and** its `version`. Change the design, change `version: "1"` to `"2"`, and every image is drawn again on its next request. A `v` parameter in the image URL changes with it, so social networks fetch the new card too.
+
+</Step>
+
+</Steps>
+
+## Styling rules
+
+`@vercel/og` uses Satori, which turns JSX into SVG. It is not a browser:
+
+- Use inline `style` objects. Tailwind classes, CSS files and VitNode UI components do not render.
+- Give every element with more than one child `display: "flex"`. Text that should clamp uses `display: "block"` with `lineClamp`.
+- Flexbox, `position: absolute`, borders, `borderRadius`, gradients, shadows and `objectFit` work. Grid and `calc()` do not. The full list is in the [Satori CSS reference](https://github.com/vercel/satori#css).
+- Draw images with `<img src={cover.src} width={...} height={...} />`. Give both dimensions.
+- Do not fetch anything in `render`. It must be pure: same input, same image.
+
+## Add fonts
+
+The bundled Geist Regular covers Latin and Latin Extended, Polish included. Add a font for another look or another script. Satori reads TTF, OTF and WOFF, not WOFF2, and never fakes bold: register each weight you use.
+
+```ts title="src/vitnode.api.config.ts"
+import { readFile } from "node:fs/promises";
+
+ogImages: {
+  version: "2",
+  fonts: [
+    { name: "Inter", weight: 400, data: () => readFile("assets/fonts/Inter-Regular.ttf") },
+    { name: "Inter", weight: 700, data: () => readFile("assets/fonts/Inter-Bold.ttf") },
+  ],
+},
+```
+
+Each `data` function runs once per server process, and the bytes are reused for every image. Your fonts come first and Geist stays as the fallback, so the built-in template switches to your font without changes. In a custom template, pick the family with `fontFamily: "Inter"`. Paths are relative to the directory the server starts in, so keep font files where your deployment copies them.
+
+<Callout type="warn" title="Missing glyphs are fetched at render time">
+  When no configured font has a character (Chinese, Arabic, emoji), `@vercel/og`
+  downloads a font or emoji image from Google Fonts or a CDN while drawing. On a
+  server without outbound access those characters render as boxes, so register a
+  font that covers the languages you publish in.
+</Callout>
+
+## Check the result
+
+Open **AdminCP → SEO → OG Images**, pick your template in **Template**, and press **Refresh preview**. The template list comes from your config, so a template missing from it is not registered.

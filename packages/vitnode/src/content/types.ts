@@ -2,6 +2,7 @@ import type { BlockAllowedSpec, ContentNode } from "../blocks/types";
 import type { ContentApprovalState } from "./approvals/schema";
 import type {
   CONTENT_ADMIN_FORM_MODES,
+  CONTENT_DELIVERY_COVER_KINDS,
   CONTENT_DELIVERY_DESCRIPTION_KINDS,
   CONTENT_DELIVERY_NO_INDEX_KINDS,
   CONTENT_DELIVERY_TITLE_KINDS,
@@ -1617,6 +1618,37 @@ export type ContentDeliveryNoIndexField<
 >;
 
 /**
+ * Field names `delivery.seo.ogImage.coverField` accepts: a public, top-level
+ * file field. It must also be single-file (checked at definition time).
+ */
+export type ContentDeliveryCoverField<
+  TFields,
+  TPublicField extends string,
+> = Extract<
+  TPublicField,
+  ContentFieldNamesOfKind<
+    TFields,
+    (typeof CONTENT_DELIVERY_COVER_KINDS)[number]
+  >
+>;
+
+/**
+ * A generated Open Graph image for every public record (`delivery.seo.ogImage`).
+ * The text comes from the SEO projection - `openGraph.titleField`, else the
+ * page title, and the same for the description - so nothing is declared twice.
+ * Needs `ogImages` in the API config; without it the option is ignored.
+ */
+export interface ContentDeliveryOgImageConfig<TCover extends string = string> {
+  /** A single-file field drawn as the cover. Unset draws the template without one. */
+  coverField?: TCover;
+  /**
+   * A template id registered in `ogImages.templates` (or `"default"`). Unset,
+   * or not registered, means the configured `defaultTemplate`.
+   */
+  template?: string;
+}
+
+/**
  * Optional Open Graph projection, on top of the SEO one.
  *
  * Separate fields rather than a flag, because the two audiences differ: a
@@ -1645,6 +1677,7 @@ export interface ContentDeliverySeoConfig<
   TTitle extends string = string,
   TDescription extends string = string,
   TNoIndex extends string = string,
+  TCover extends string = string,
 > {
   descriptionField?: TDescription;
   /** Used when `descriptionField` resolves to `null` or an empty string. */
@@ -1661,6 +1694,12 @@ export interface ContentDeliverySeoConfig<
    * localized field here is a definition-time error.
    */
   noIndexField?: TNoIndex;
+  /**
+   * Generate a 1200 × 630 Open Graph image per record and locale. `true` uses
+   * the default template and no cover. Hidden and unpublished records never get
+   * one. See {@link ContentDeliveryOgImageConfig}.
+   */
+  ogImage?: boolean | ContentDeliveryOgImageConfig<TCover>;
   openGraph?: ContentDeliveryOpenGraphConfig<TTitle, TDescription>;
   titleField?: TTitle;
 }
@@ -1704,6 +1743,7 @@ export interface ContentDeliveryConfig<
   TTitle extends string = string,
   TDescription extends string = string,
   TNoIndex extends string = string,
+  TCover extends string = string,
 > {
   /** Emit an `x-default` alternate. Needs `localization`. */
   hreflang?: ContentDeliveryHreflangConfig;
@@ -1718,7 +1758,7 @@ export interface ContentDeliveryConfig<
    */
   redirects?: TEditorialEnabled extends true ? boolean : false;
   /** Which public fields fill `<title>`, the description and Open Graph tags. */
-  seo?: ContentDeliverySeoConfig<TTitle, TDescription, TNoIndex>;
+  seo?: ContentDeliverySeoConfig<TTitle, TDescription, TNoIndex, TCover>;
   /** List published records in the sitemap. Needs `publication`. Off unless set. */
   sitemap?: boolean | ContentDeliverySitemapConfig;
 }
@@ -1729,6 +1769,7 @@ export type ContentDeliveryInput<
   TTitle extends string = string,
   TDescription extends string = string,
   TNoIndex extends string = string,
+  TCover extends string = string,
 > =
   | false
   | (TPublicEnabled extends true
@@ -1737,7 +1778,8 @@ export type ContentDeliveryInput<
               TEditorialEnabled,
               TTitle,
               TDescription,
-              TNoIndex
+              TNoIndex,
+              TCover
             >
           | true
       : never);
@@ -1750,6 +1792,8 @@ export interface ResolvedContentDeliverySeoConfig {
   fallbackDescriptionField: null | string;
   fallbackTitleField: null | string;
   noIndexField: null | string;
+  /** `null` unless `ogImage` is set. */
+  ogImage: null | { coverField: null | string; template: null | string };
   openGraph: null | {
     descriptionField: null | string;
     titleField: null | string;

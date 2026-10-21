@@ -46,6 +46,8 @@
   "@vitnode/core:cron": "Cron Jobs",
   "@vitnode/core:cron:can_view": "View cron jobs",
   "@vitnode/core:cron:can_run": "Run cron jobs",
+  "@vitnode/core:seo": "SEO",
+  "@vitnode/core:seo:can_view": "View SEO tools and preview OG images",
   "@vitnode/core:report_reasons": "Report reasons",
   "@vitnode/core:report_reasons:can_view": "View report reasons",
   "@vitnode/core:report_reasons:can_create": "Create report reasons",
@@ -2839,6 +2841,10 @@
           "title": "Moderation",
           "report_reasons": "Report reasons"
         },
+        "seo": {
+          "title": "SEO",
+          "og_images": "OG Images"
+        },
         "user_bar": {
           "home_page": "Home Page",
           "debug": "Debug Panel",
@@ -3527,6 +3533,60 @@
           "error": "Could not delete the reason",
           "last_reason": "Keep at least one reason - members need something to pick.",
           "unknown": "Something went wrong. Try again in a moment."
+        }
+      }
+    },
+    "seo": {
+      "og_images": {
+        "title": "OG Images",
+        "desc": "Preview the social images VitNode generates for shared links.",
+        "info": {
+          "title": "Preview only",
+          "desc": "Templates, fonts and branding live in vitnode.api.config.ts under ogImages. What you type here is temporary: it draws one image and is never saved."
+        },
+        "disabled": {
+          "title": "Generated OG images are off",
+          "desc": "Add an ogImages block to vitnode.api.config.ts and restart the server to turn them on. The built-in template works without any code."
+        },
+        "form": {
+          "template": {
+            "label": "Template",
+            "desc": "Templates are registered in code, in ogImages.templates.",
+            "default": "{id} (default)"
+          },
+          "locale": {
+            "label": "Language",
+            "desc": "The language the text is in. Templates can use it, for example for dates."
+          },
+          "title": {
+            "label": "Title",
+            "sample": "Zażółć gęślą jaźń: a sample article title"
+          },
+          "description": {
+            "label": "Description",
+            "sample": "A temporary description, only used to draw this preview."
+          },
+          "cover": {
+            "label": "Cover image",
+            "desc": "JPEG, PNG, WebP or AVIF up to 5 MB. Sent with the preview request and never stored.",
+            "empty": "No cover",
+            "hint": "Without a cover the template uses the full width.",
+            "choose": "Choose a cover image",
+            "remove": "Remove the cover image",
+            "optional": "(optional)",
+            "invalid": "Pick a JPEG, PNG, WebP or AVIF image up to 5 MB."
+          },
+          "submit": "Refresh preview"
+        },
+        "preview": {
+          "title": "Preview",
+          "alt": "Generated Open Graph image preview",
+          "loading": "Drawing the preview…",
+          "size": "1200 × 630 PNG, drawn by the same generator as public images.",
+          "error": {
+            "title": "The preview could not be drawn",
+            "desc": "Check the template and the cover image, then try again. The server log has the details."
+          }
         }
       }
     },

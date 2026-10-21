@@ -3,6 +3,7 @@ import type {
   AnyContentTypeDefinition,
   ContentAdminConfig,
   ContentDeliveryConfig,
+  ContentDeliveryCoverField,
   ContentDeliveryDescriptionField,
   ContentDeliveryEnabled,
   ContentDeliveryInput,
@@ -250,7 +251,8 @@ export const defineContentType = <
     ContentEditorialEnabled<TEditorial>,
     ContentDeliveryTitleField<TFields, TPublicField>,
     ContentDeliveryDescriptionField<TFields, TPublicField>,
-    ContentDeliveryNoIndexField<TFields, TPublicField>
+    ContentDeliveryNoIndexField<TFields, TPublicField>,
+    ContentDeliveryCoverField<TFields, TPublicField>
   > = false,
   TPublicPath extends string = string,
   TVisibility extends boolean = false,

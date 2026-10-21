@@ -1,6 +1,12 @@
 import type { VitNodeMetadata } from "@/lib/metadata";
 
+import { CONFIG } from "@/lib/config";
 import { formatPageTitle } from "@/lib/metadata";
+import {
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_TYPE,
+  OG_IMAGE_WIDTH,
+} from "@/og-image/types";
 import { getVitNodeConfig } from "@/vitnode.config";
 
 import type { LocaleAlternates, RouteHeadLink } from "./alternates";
@@ -27,9 +33,31 @@ export type RouteRobots =
 /** What kind of thing a page is, to a social card. */
 export type RouteOpenGraphType = "article" | "website";
 
+/**
+ * The image a social card shows. Emits `og:image` (plus its width, height, alt
+ * and type when given) and the `twitter:card` / `twitter:image` pair.
+ */
+export interface RouteOpenGraphImage {
+  /** `og:image:alt` and `twitter:image:alt`: what the image shows, for screen readers. */
+  alt?: string;
+  height?: number;
+  /** `og:image:type`, e.g. `image/png`. */
+  type?: string;
+  /**
+   * Absolute, or a root-relative path (`/api/...`) resolved against the public
+   * site origin (`VITNODE_WEB_URL`). Crawlers ignore relative image URLs, so a
+   * path is always turned into an absolute URL; anything else that is not
+   * `http(s)` emits nothing.
+   */
+  url: string;
+  width?: number;
+}
+
 export interface RouteOpenGraph {
   /** The `<meta property="og:description">`. */
   description?: string;
+  /** The social card image; see {@link RouteOpenGraphImage}. */
+  image?: RouteOpenGraphImage;
 
   /** The `<meta property="og:title">`, used as is - no site-name suffix. */
   title?: string;
@@ -69,6 +97,90 @@ export interface RouteHeadResult {
   meta: RouteHeadMeta[];
 }
 
+/**
+ * An {@link RouteOpenGraphImage} for a VitNode-generated image: 1200 × 630
+ * PNG at `url`. Universal.
+ *
+ * @example
+ * ```ts
+ * import { generatedOgImage, pageHead } from "@vitnode/core/tanstack/metadata";
+ *
+ * head: ({ loaderData }) =>
+ *   pageHead({
+ *     title: loaderData?.name,
+ *     openGraph: {
+ *       image: generatedOgImage({
+ *         url: `/api/@acme/shop/products/${loaderData?.id}/og-image`,
+ *         alt: loaderData?.name,
+ *       }),
+ *     },
+ *   }),
+ * ```
+ */
+export const generatedOgImage = ({
+  alt,
+  url,
+}: {
+  alt?: string;
+  url: string;
+}): RouteOpenGraphImage => ({
+  ...(alt ? { alt } : {}),
+  height: OG_IMAGE_HEIGHT,
+  type: OG_IMAGE_TYPE,
+  url,
+  width: OG_IMAGE_WIDTH,
+});
+
+/**
+ * `url` as an absolute `http(s)` URL: kept when already absolute, resolved
+ * against `origin` when it is a root-relative path, `undefined` otherwise.
+ */
+export const absoluteImageUrl = (
+  url: string,
+  origin: string | URL = CONFIG.web,
+): string | undefined => {
+  try {
+    const resolved = /^\/(?![/\\])/.test(url)
+      ? new URL(url, origin)
+      : new URL(url);
+
+    return resolved.protocol === "https:" || resolved.protocol === "http:"
+      ? resolved.href
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const positiveInteger = (value: number | undefined): number | undefined =>
+  typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : undefined;
+
+const imageMeta = (image: RouteOpenGraphImage | undefined): RouteHeadMeta[] => {
+  if (!image) return [];
+
+  const url = absoluteImageUrl(image.url);
+  if (url === undefined) return [];
+
+  const width = positiveInteger(image.width);
+  const height = positiveInteger(image.height);
+  const alt = image.alt?.trim();
+
+  return [
+    { content: url, property: "og:image" },
+    ...(width ? [{ content: String(width), property: "og:image:width" }] : []),
+    ...(height
+      ? [{ content: String(height), property: "og:image:height" }]
+      : []),
+    ...(image.type ? [{ content: image.type, property: "og:image:type" }] : []),
+    ...(alt ? [{ content: alt, property: "og:image:alt" }] : []),
+    { content: "summary_large_image", name: "twitter:card" },
+    { content: url, name: "twitter:image" },
+    ...(alt ? [{ content: alt, name: "twitter:image:alt" }] : []),
+  ];
+};
+
 const alternateLinksOf = (
   alternates: LocaleAlternates | undefined,
   locale: string | undefined,
@@ -103,6 +215,7 @@ const routeMeta = (
   ...(openGraph?.type
     ? [{ content: openGraph.type, property: "og:type" }]
     : []),
+  ...imageMeta(openGraph?.image),
 ];
 
 /** {@link pageHead} with explicit site metadata, for code that runs before the config is registered. */
@@ -134,8 +247,11 @@ export const createRouteHead =
 /**
  * A route's `head` from translated page data: title (suffixed with the site
  * name from `buildConfig({ metadata })`), description, robots, Open Graph and
- * locale alternates. Universal; use it in a route's `head`, written after
- * `loader` so `loaderData` is typed.
+ * locale alternates. `openGraph.image` adds `og:image` (with its size, type and
+ * alt) plus `twitter:card` `summary_large_image` and `twitter:image`, resolving
+ * a root-relative URL against `VITNODE_WEB_URL`; without it no image tag is
+ * emitted. Universal; use it in a route's `head`, written after `loader` so
+ * `loaderData` is typed.
  *
  * @throws When the VitNode config has not been registered with `buildConfig`.
  *

@@ -29,6 +29,7 @@ import type { BuildPluginReturn } from "./lib/plugin";
 import type { FrontendPluginInventory } from "./lib/plugin-manifest";
 import type { UpdateChannel } from "./lib/updates/manifest";
 import type { PersonalInformationFieldsConfig } from "./lib/user-personal-information";
+import type { OgImagesConfig } from "./og-image/types";
 import type { PageCacheConfig } from "./page-cache/config";
 
 import { assertNavigationConfig } from "./lib/navigation";
@@ -239,6 +240,14 @@ export interface VitNodeApiConfig {
    * `retentionDays` 90.
    */
   notifications?: Partial<NotificationWorkerSettings>;
+  /**
+   * Generated 1200 × 630 Open Graph images, drawn with `@vercel/og` on the API
+   * server. Off until set; `{}` turns them on with the built-in template.
+   * Content Engine types then opt in with `delivery.seo.ogImage`, and plugin
+   * routes call `ogImageResponse` from `@vitnode/core/og-image`. See
+   * `OgImagesConfig`.
+   */
+  ogImages?: OgImagesConfig;
   /**
    * For an API that runs in its own process, next to a web app that caches
    * pages in Redis (`vitNodeConfig.pageCache.storage: "redis"`). Content

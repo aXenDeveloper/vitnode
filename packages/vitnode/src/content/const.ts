@@ -396,6 +396,9 @@ export const CONTENT_DELIVERY_DESCRIPTION_KINDS = [
 
 export const CONTENT_DELIVERY_NO_INDEX_KINDS = ["boolean"] as const;
 
+/** `delivery.seo.ogImage.coverField`: one shared, single-file field. */
+export const CONTENT_DELIVERY_COVER_KINDS = ["file"] as const;
+
 export const CONTENT_SITEMAP_CHANGE_FREQUENCIES = [
   "always",
   "hourly",

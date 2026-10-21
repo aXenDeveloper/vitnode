@@ -1,0 +1,55 @@
+---
+title: OG image caching and runtimes
+description: How VitNode caches generated Open Graph images in Redis or memory, what invalidates them, which HTTP headers they carry, and where @vercel/og runs.
+icon: DatabaseZap
+---
+
+A generated OG image is drawn the first time its URL is requested, stored, and served from the store until something it depends on changes. This page explains what "depends on" means and what that implies for your deployment.
+
+## When an image is drawn again
+
+Every image has a cache key: a SHA-256 of everything its pixels depend on.
+
+- the plugin and what the image belongs to: for a Content Engine record, the content type and record id;
+- the language the record was served in, after [locale fallback](/docs/content-engine/localization);
+- the title, description, cover file and canonical URL read from the record **now**;
+- the template id and its `version`;
+- the configuration version: `ogImages.version`, branding and font names.
+
+The key is computed from current data on every request, so there is nothing to purge. Edit an article's title and the next request finds no image under the new key and draws one. Bump a template's `version` and every image using it is drawn again. Old entries are never served again and expire on their own.
+
+The first 12 characters of the key are the `v` parameter in a Content Engine image URL. The page head changes with the image, so Slack or X see a new URL and fetch the new card. The API never trusts `v`: it only busts caches outside VitNode.
+
+## Who may see an image
+
+Each request reads the record through the Content Engine's public service before looking at the cache, exactly as a guest would. A draft, a scheduled post, a hidden record, an unpublished translation or a deleted record answers `404` with `Cache-Control: private, no-store`, even when its image is still in the cache and the request carries a matching `If-None-Match`. Staff who can read hidden records get no image either, so an image never shows content a guest could not open.
+
+## Where images are stored
+
+| Setup                   | Store                                                                     | Shared by instances |
+| ----------------------- | ------------------------------------------------------------------------- | ------------------- |
+| `redis` in the API config | Redis, base64 under `vitnode:cache:__system__:og-image:*`, kept 7 days  | Yes                 |
+| No Redis                | An in-process LRU of at most 32 MB, entries kept 10 minutes               | No                  |
+
+The general [API cache](/docs/dev/cache/api) holds JSON and its in-memory fallback keeps entries for 15 seconds, which is wrong for 100 KB PNGs, hence the separate in-memory store. Concurrent requests for one missing image in one process share a single render. Across instances, two servers may each draw the same image once; the result is identical.
+
+## HTTP headers
+
+| Response            | Headers                                                                                         |
+| ------------------- | ----------------------------------------------------------------------------------------------- |
+| Public image        | `Content-Type: image/png`, `Cache-Control: public, max-age=300, s-maxage=600, stale-while-revalidate=60`, `ETag`, `X-VitNode-Og-Cache: hit \| miss` |
+| Unchanged image     | `304` for a matching `If-None-Match`, after the access check                                    |
+| Not public, missing | `404`, `Cache-Control: private, no-store`                                                       |
+| AdminCP preview     | `Cache-Control: private, no-store`, never stored                                                |
+
+The `max-age` is short on purpose. VitNode checks access on every request it receives, but it cannot recall a copy a CDN or a browser already holds: after you hide a record, a CDN may serve its image for up to 10 minutes (`s-maxage`), browsers for 5. Purge the CDN if that window matters.
+
+## Runtimes
+
+Images are drawn by the Node.js build of `@vercel/og` inside the API process: `node` and `node-server` Nitro presets, `vitnode start`, and a standalone API on Node. No Vercel account or hosting is needed. On Vercel the API runs as a Node function, which works the same way.
+
+- **Pinned version.** VitNode pins `@vercel/og` to `1.0.1`. Versions `1.0.2` and `1.0.3` crash when imported as an ES module on Node 22 (`Dynamic require of "fs" is not supported`).
+- **Edge and Workers are not supported.** Core needs Node APIs (`sharp`, Postgres), so the API cannot run there anyway.
+- **`sharp` is required.** Covers and logos are converted with it, because Satori draws neither WebP nor AVIF, the formats VitNode stores uploads in. Without `sharp`, images are drawn without them.
+- **Outbound requests.** Remote logos and covers are downloaded over `https` only, never from private addresses. Characters no configured font covers, and emoji, are downloaded by `@vercel/og` from Google Fonts or a CDN while drawing.
+- **Cost.** A render takes roughly 20-120 ms of CPU; the first one in a process also loads the WebAssembly renderer.

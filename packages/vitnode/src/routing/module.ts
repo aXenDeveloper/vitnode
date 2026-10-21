@@ -8,10 +8,30 @@ export type PluginRouteRobots =
   | "noindex, follow"
   | "noindex, nofollow";
 
+/** A plugin page's social card image. Structurally `RouteOpenGraphImage`. */
+export interface PluginRouteOpenGraphImage {
+  alt?: string;
+  height?: number;
+  type?: string;
+  /** Absolute, or a root-relative path resolved against the public site origin. */
+  url: string;
+  width?: number;
+}
+
+/** A plugin page's Open Graph tags. Structurally `RouteOpenGraph`. */
+export interface PluginRouteOpenGraph {
+  description?: string;
+  image?: PluginRouteOpenGraphImage;
+  title?: string;
+  type?: "article" | "website";
+}
+
 export interface PluginRouteHead {
   alternates?: Readonly<Record<string, string>>;
   /** The `<meta name="description">`, when the page has one. */
   description?: string;
+  /** `og:*` tags, and the `twitter:*` image tags when it has an `image`. */
+  openGraph?: PluginRouteOpenGraph;
 
   robots?: PluginRouteRobots;
   /** The page's own title, already translated. */

@@ -73,6 +73,7 @@ describe("delivery definition validation", () => {
         fallbackDescriptionField: null,
         fallbackTitleField: null,
         noIndexField: null,
+        ogImage: null,
         openGraph: null,
         titleField: null,
       },

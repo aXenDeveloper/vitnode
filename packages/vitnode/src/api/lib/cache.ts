@@ -314,4 +314,12 @@ export class CacheModel {
       return { configured: true, connected: false };
     }
   }
+
+  /**
+   * Whether values live in Redis, shared by every instance. `false` for the
+   * in-process fallback and for no store at all.
+   */
+  get shared(): boolean {
+    return this.client !== null;
+  }
 }
