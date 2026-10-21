@@ -1,4 +1,9 @@
-import { keepPreviousData, useQueries, useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  type QueryClient,
+  useQueries,
+  useQuery,
+} from "@tanstack/react-query";
 import { cn } from "cn";
 import {
   ArrowRightIcon,
@@ -31,7 +36,7 @@ import {
 } from "@/views/search/search-suggest-query";
 
 import { useLocale } from "../i18n/locale";
-import { GLOBAL_NAMESPACE } from "../i18n/query";
+import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
 import { RouteMessages } from "../i18n/route-messages";
 import {
   getSearchSources,
@@ -41,6 +46,32 @@ import {
 } from "./sources";
 
 const HEADER_SEARCH_NAMESPACES = [GLOBAL_NAMESPACE, "core.search"];
+
+const headerSearchNamespaces = (): string[] => [
+  ...new Set([
+    ...HEADER_SEARCH_NAMESPACES,
+    ...getSearchSources().map(source => source.namespace),
+  ]),
+];
+
+export const prepareHeaderSearch = async ({
+  locale,
+  queryClient,
+}: {
+  locale: string;
+  queryClient: QueryClient;
+}) => {
+  await Promise.allSettled([
+    queryClient.query({
+      ...intlQueryOptions({ locale, namespaces: headerSearchNamespaces() }),
+      staleTime: "static",
+    }),
+    queryClient.query({
+      ...searchPopularQueryOptions({ locale }),
+      staleTime: "static",
+    }),
+  ]);
+};
 
 type SearchSourceLabelTranslator = (key: string) => string;
 
@@ -118,7 +149,7 @@ const AutoHeight = ({
   open: boolean;
 }) => {
   const innerRef = React.useRef<HTMLDivElement>(null);
-  const [height, setHeight] = React.useState(0);
+  const [height, setHeight] = React.useState<null | number>(null);
 
   React.useEffect(() => {
     const inner = innerRef.current;
@@ -135,7 +166,7 @@ const AutoHeight = ({
   return (
     <div
       className="overflow-hidden transition-[height] duration-180 ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none"
-      style={{ height: open ? height : 0 }}
+      style={{ height: open ? (height ?? "auto") : 0 }}
     >
       <div ref={innerRef}>{children}</div>
     </div>
@@ -675,14 +706,7 @@ export const HeaderSearchContent = ({
   onNavigate: (href: string) => void;
   open: boolean;
 }) => (
-  <RouteMessages
-    namespaces={[
-      ...new Set([
-        ...HEADER_SEARCH_NAMESPACES,
-        ...getSearchSources().map(source => source.namespace),
-      ]),
-    ]}
-  >
+  <RouteMessages namespaces={headerSearchNamespaces()}>
     <HeaderSearchMorph
       firstSourceId={firstSourceId}
       onNavigate={onNavigate}

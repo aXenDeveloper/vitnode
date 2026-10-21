@@ -145,7 +145,7 @@ function CommandSeparator({
 }: React.ComponentProps<typeof CommandPrimitive.Separator>) {
   return (
     <CommandPrimitive.Separator
-      className={cn("bg-border -mx-1 h-px w-auto", className)}
+      className={cn("bg-foreground/10 -mx-1 h-px w-auto", className)}
       data-slot="command-separator"
       {...props}
     />
@@ -164,7 +164,7 @@ function CommandItem({
   return (
     <CommandPrimitive.Item
       className={cn(
-        "group/command-item data-selected:bg-muted data-selected:text-foreground data-selected:**:[svg]:text-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-md data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 pointer-coarse:py-2.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "group/command-item data-selected:bg-foreground/5 data-selected:text-foreground data-selected:**:[svg]:text-foreground relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none in-data-[slot=dialog-content]:rounded-md data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50 pointer-coarse:py-2.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className,
       )}
       data-slot="command-item"

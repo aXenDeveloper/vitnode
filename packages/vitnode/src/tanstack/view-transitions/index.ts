@@ -8,6 +8,7 @@ export const HEADER_VIEW_TRANSITION_NAMES = {
   actions: "vitnode-header-actions",
   bar: "vitnode-header",
   navigation: "vitnode-header-navigation",
+  search: "vitnode-header-search",
 } as const;
 
 export const PAGE_VIEW_TRANSITION_TYPE = "vitnode-page";

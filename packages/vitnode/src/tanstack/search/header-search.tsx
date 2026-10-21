@@ -1,6 +1,9 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
+import { cn } from "cn";
 import { SearchIcon } from "lucide-react";
 import React from "react";
+import { flushSync } from "react-dom";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
@@ -15,14 +18,20 @@ import { InputGroup, InputGroupAddon } from "@/components/ui/input-group";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import type { HeaderSearchContent } from "./header-search-content";
+
+import { useLocale } from "../i18n/locale";
+import { HEADER_VIEW_TRANSITION_NAMES } from "../view-transitions";
+
+const PREPARE_BUDGET_MS = 250;
+
 const importHeaderSearchContent = async () =>
   await import("./header-search-content");
 
-const HeaderSearchContent = React.lazy(async () =>
-  importHeaderSearchContent().then(module => ({
-    default: module.HeaderSearchContent,
-  })),
-);
+const waitFor = async (ms: number) =>
+  await new Promise<void>(resolve => {
+    setTimeout(resolve, ms);
+  });
 
 const HeaderSearchSkeleton = () => {
   const t = useTranslations("core.global");
@@ -43,6 +52,25 @@ const HeaderSearchSkeleton = () => {
     </div>
   );
 };
+
+type SearchMorphTarget = "dialog" | "trigger";
+
+const MORPH_DIRECTION_ATTRIBUTE = "data-header-search-morph";
+
+const DIALOG_CLASS_NAME =
+  "top-4 max-h-none origin-top translate-y-0 gap-0 overflow-visible rounded-none border-0 bg-transparent p-0 shadow-none transition-[opacity,scale,translate] outline-none data-ending-style:-translate-y-1 data-ending-style:scale-98 data-starting-style:-translate-y-2 data-starting-style:scale-97 sm:top-24 sm:max-w-2xl starting:-translate-y-2 starting:scale-97";
+
+const MORPHING_DIALOG_CLASS_NAME =
+  "transition-none *:backdrop-blur-none data-starting-style:translate-y-0 data-starting-style:scale-100 data-starting-style:opacity-100";
+
+const canMorph = (): boolean =>
+  "startViewTransition" in document &&
+  !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const morphName = (
+  target: SearchMorphTarget,
+  morphTarget: null | SearchMorphTarget,
+) => (morphTarget === target ? HEADER_VIEW_TRANSITION_NAMES.search : undefined);
 
 const isTypingTarget = (target: EventTarget | null): boolean =>
   target instanceof HTMLElement &&
@@ -66,7 +94,17 @@ const isOpenShortcut = (event: KeyboardEvent): boolean => {
 export const HeaderSearch = ({ firstSourceId }: { firstSourceId?: string }) => {
   const t = useTranslations("core.global");
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const locale = useLocale();
   const [open, setOpen] = React.useState(false);
+  const [morphTarget, setMorphTarget] =
+    React.useState<null | SearchMorphTarget>(null);
+  const morphRef = React.useRef<null | ViewTransition>(null);
+  const openingRef = React.useRef(false);
+  const prepareRef = React.useRef<null | Promise<void>>(null);
+  const [PreparedContent, setPreparedContent] = React.useState<
+    null | typeof HeaderSearchContent
+  >(null);
   const pendingHrefRef = React.useRef<null | string>(null);
   const [isApple, setIsApple] = React.useState<boolean | undefined>(undefined);
 
@@ -75,21 +113,79 @@ export const HeaderSearch = ({ firstSourceId }: { firstSourceId?: string }) => {
     setIsApple(/Mac|iPhone|iPad|iPod/.test(navigator.userAgent));
   }, []);
 
+  const prepare = async () => {
+    prepareRef.current ??= importHeaderSearchContent()
+      .then(async module => {
+        await module.prepareHeaderSearch({ locale, queryClient });
+        setPreparedContent(() => module.HeaderSearchContent);
+      })
+      .catch(() => {
+        prepareRef.current = null;
+      });
+
+    await prepareRef.current;
+  };
+
+  const morph = (nextOpen: boolean) => {
+    const root = document.documentElement;
+    // oxlint-disable-next-line @eslint-react/dom-no-flush-sync
+    flushSync(() => setMorphTarget(nextOpen ? "trigger" : "dialog"));
+    root.setAttribute(MORPH_DIRECTION_ATTRIBUTE, nextOpen ? "open" : "close");
+
+    const transition = document.startViewTransition(() => {
+      // oxlint-disable-next-line @eslint-react/dom-no-flush-sync
+      flushSync(() => {
+        setMorphTarget(nextOpen ? "dialog" : "trigger");
+        setOpen(nextOpen);
+      });
+    });
+    morphRef.current = transition;
+
+    void transition.finished.finally(() => {
+      if (morphRef.current !== transition) return;
+
+      morphRef.current = null;
+      root.removeAttribute(MORPH_DIRECTION_ATTRIBUTE);
+      setMorphTarget(null);
+    });
+  };
+
+  const changeOpen = (nextOpen: boolean) => {
+    if (nextOpen === open || openingRef.current) return;
+    if (!canMorph()) {
+      if (nextOpen) void prepare();
+      setOpen(nextOpen);
+
+      return;
+    }
+    if (!nextOpen) {
+      morph(false);
+
+      return;
+    }
+
+    openingRef.current = true;
+    void Promise.race([prepare(), waitFor(PREPARE_BUDGET_MS)]).then(() => {
+      openingRef.current = false;
+      morph(true);
+    });
+  };
+
+  const onShortcut = React.useEffectEvent((event: KeyboardEvent) => {
+    if (!isOpenShortcut(event)) return;
+
+    event.preventDefault();
+    changeOpen(event.key === "/" ? true : !open);
+  });
+
   React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!isOpenShortcut(event)) return;
+    window.addEventListener("keydown", onShortcut);
 
-      event.preventDefault();
-      setOpen(prev => (event.key === "/" ? true : !prev));
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", onShortcut);
   }, []);
 
   const handlePrefetch = () => {
-    void importHeaderSearchContent();
+    void prepare();
   };
 
   const navigateOnClose = (href: string) => {
@@ -111,20 +207,25 @@ export const HeaderSearch = ({ firstSourceId }: { firstSourceId?: string }) => {
         aria-haspopup="dialog"
         aria-keyshortcuts="Meta+K Control+K /"
         aria-label={t("search_dialog.open")}
-        className="md:hidden"
-        onClick={() => setOpen(true)}
+        className={cn("md:hidden", open && "opacity-0")}
+        onClick={() => changeOpen(true)}
         onFocus={handlePrefetch}
         onPointerEnter={handlePrefetch}
         size="icon"
+        style={{ viewTransitionName: morphName("trigger", morphTarget) }}
         variant="ghost"
       >
         <SearchIcon />
       </Button>
 
       <InputGroup
-        className="hidden w-48 cursor-text select-none md:flex lg:w-64"
-        onClick={() => setOpen(true)}
+        className={cn(
+          "hidden w-48 cursor-text select-none md:flex lg:w-64",
+          open && "opacity-0",
+        )}
+        onClick={() => changeOpen(true)}
         onPointerEnter={handlePrefetch}
+        style={{ viewTransitionName: morphName("trigger", morphTarget) }}
       >
         <button
           aria-haspopup="dialog"
@@ -152,24 +253,33 @@ export const HeaderSearch = ({ firstSourceId }: { firstSourceId?: string }) => {
       </InputGroup>
 
       <Dialog
-        onOpenChange={setOpen}
+        onOpenChange={changeOpen}
         onOpenChangeComplete={handleOpenChangeComplete}
         open={open}
       >
         <DialogContent
-          className="top-4 max-h-none origin-top translate-y-0 gap-0 overflow-visible rounded-none border-0 bg-transparent p-0 shadow-none transition-[opacity,scale,translate] outline-none data-ending-style:-translate-y-1 data-ending-style:scale-98 data-starting-style:-translate-y-2 data-starting-style:scale-97 sm:top-24 sm:max-w-2xl starting:-translate-y-2 starting:scale-97"
+          className={cn(
+            DIALOG_CLASS_NAME,
+            morphTarget && MORPHING_DIALOG_CLASS_NAME,
+            morphTarget === "trigger" && "invisible",
+          )}
           showCloseButton={false}
+          style={{ viewTransitionName: morphName("dialog", morphTarget) }}
         >
           <DialogHeader className="sr-only">
             <DialogTitle>{t("search_dialog.title")}</DialogTitle>
             <DialogDescription>{t("search_dialog.desc")}</DialogDescription>
           </DialogHeader>
           <React.Suspense fallback={<HeaderSearchSkeleton />}>
-            <HeaderSearchContent
-              firstSourceId={firstSourceId}
-              onNavigate={navigateOnClose}
-              open={open}
-            />
+            {PreparedContent ? (
+              React.createElement(PreparedContent, {
+                firstSourceId,
+                onNavigate: navigateOnClose,
+                open,
+              })
+            ) : (
+              <HeaderSearchSkeleton />
+            )}
           </React.Suspense>
         </DialogContent>
       </Dialog>

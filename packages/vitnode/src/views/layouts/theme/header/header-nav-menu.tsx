@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import { ChevronDownIcon } from "lucide-react";
 import React from "react";
+import { flushSync } from "react-dom";
 
 import type { NavigationIcon } from "@/lib/navigation";
 
@@ -238,11 +239,11 @@ const useVisibleNavCount = (navigation: HeaderNavItem[]) => {
     const widthOf = (element: Element | null) =>
       element?.getBoundingClientRect().width ?? 0;
 
-    const update = () => {
+    const measureVisibleCount = () => {
       const availableWidth = container.clientWidth;
-      if (availableWidth === 0) return;
+      if (availableWidth === 0) return null;
 
-      const count = visibleHeaderNavCount({
+      return visibleHeaderNavCount({
         availableWidth,
         gap: Number.parseFloat(getComputedStyle(measure).columnGap) || 0,
         itemWidths: [...measure.querySelectorAll(MEASURE_ITEM_SELECTOR)].map(
@@ -250,13 +251,20 @@ const useVisibleNavCount = (navigation: HeaderNavItem[]) => {
         ),
         moreWidth: widthOf(measure.querySelector(MEASURE_MORE_SELECTOR)),
       });
-
-      React.startTransition(() => {
-        setVisibleCount(count);
-      });
     };
 
-    const resize = new ResizeObserver(update);
+    const initialCount = measureVisibleCount();
+    if (initialCount !== null) setVisibleCount(initialCount);
+
+    const resize = new ResizeObserver(() => {
+      const count = measureVisibleCount();
+      if (count === null) return;
+
+      // oxlint-disable-next-line @eslint-react/dom-no-flush-sync
+      flushSync(() => {
+        setVisibleCount(count);
+      });
+    });
     resize.observe(container);
     resize.observe(measure);
 
@@ -283,18 +291,21 @@ export const HeaderNavMenu = ({
     visibleCount === null ? navigation : navigation.slice(0, visibleCount);
   const overflowItems =
     visibleCount === null ? [] : navigation.slice(visibleCount);
+  const isMeasured = visibleCount !== null;
 
   return (
     <div
       className={cn(
         "relative hidden min-w-0 flex-1 sm:flex",
-        visibleCount === null && "overflow-x-clip",
+        !isMeasured && "h-9 items-start overflow-clip",
         className,
       )}
       ref={containerRef}
     >
       <NavigationMenu>
-        <NavigationMenuList>
+        <NavigationMenuList
+          className={cn(!isMeasured && "flex-wrap justify-start")}
+        >
           {visibleItems.map(item => (
             <HeaderNavEntry item={item} key={item.id} />
           ))}

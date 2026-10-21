@@ -42,6 +42,82 @@
   height: 100%;
 }
 
+@keyframes vitnode-header-search-surface-open {
+  from {
+    border-radius: 0.5rem;
+    box-shadow: none;
+  }
+}
+
+@keyframes vitnode-header-search-surface-close {
+  to {
+    border-radius: 0.5rem;
+    box-shadow: none;
+  }
+}
+
+html[data-header-search-morph] {
+  view-transition-name: none;
+}
+
+html[data-header-search-morph]
+  [style*="view-transition-name"]:not([style*="vitnode-header-search"]) {
+  view-transition-name: none !important;
+}
+
+::view-transition-group(vitnode-header-search) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+::view-transition-image-pair(vitnode-header-search) {
+  overflow: clip;
+  border-radius: 1rem;
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+    0 25px 50px -12px rgb(0 0 0 / 0.25);
+  backdrop-filter: blur(8px);
+  animation: vitnode-header-search-surface-open 300ms
+    cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+::view-transition-old(vitnode-header-search),
+::view-transition-new(vitnode-header-search) {
+  inline-size: auto;
+  block-size: auto;
+  animation-direction: normal;
+  animation-timing-function: ease-out;
+}
+
+::view-transition-old(vitnode-header-search) {
+  animation-duration: 90ms;
+}
+
+::view-transition-new(vitnode-header-search) {
+  animation-duration: 200ms;
+  animation-delay: 70ms;
+}
+
+html[data-header-search-morph="close"] {
+  &::view-transition-group(vitnode-header-search) {
+    animation-duration: 220ms;
+  }
+
+  &::view-transition-image-pair(vitnode-header-search) {
+    animation-name: vitnode-header-search-surface-close;
+    animation-duration: 220ms;
+  }
+
+  &::view-transition-old(vitnode-header-search) {
+    animation-duration: 100ms;
+  }
+
+  &::view-transition-new(vitnode-header-search) {
+    animation-duration: 100ms;
+    animation-delay: 120ms;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),
