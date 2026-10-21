@@ -8,7 +8,7 @@ export const DOCS_URLS = {
   queue: "https://vitnode.com/docs/dev/advanced/queue",
   redis: "https://vitnode.com/docs/dev/advanced/redis",
   storage: "https://vitnode.com/docs/dev/storage",
-  websocket: "https://vitnode.com/docs/dev/websocket",
+  websocket: "https://vitnode.com/docs/dev/websocket/setup",
 };
 
 export const VITNODE_WEBSITE_URL = "https://vitnode.com/";

@@ -37,8 +37,9 @@ export const vitnode = ({
   appRoot,
   clientEnv,
   hostRoutesDir,
+  webSocket,
 }: VitNodeViteOptions): Plugin[] => [
-  vitNodeEnv({ clientEnv }),
+  vitNodeEnv({ clientEnv, webSocket }),
   vitNodeOptimizeDeps(),
   vitNodeSsrExternals({ appRoot }),
   vitNodeTailwindSources({ appRoot }),

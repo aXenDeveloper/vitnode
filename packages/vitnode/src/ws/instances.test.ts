@@ -10,6 +10,7 @@ import {
   onInstanceMessage,
   onRemoteRoomMessage,
   publishToInstances,
+  realtime,
   wsRegistry,
 } from "./registry";
 
@@ -46,6 +47,11 @@ const bus = () => {
     fromOtherInstance: (message: Record<string, unknown>) => {
       deliver?.(JSON.stringify({ origin: "other-instance", ...message }));
     },
+    /** Redis hands every subscriber the message, its own publisher included. */
+    echoLast: () => {
+      const raw = published.at(-1);
+      if (raw) deliver?.(raw);
+    },
     published: () =>
       published.map(raw => JSON.parse(raw) as Record<string, unknown>),
   };
@@ -58,14 +64,14 @@ await Promise.resolve();
 
 const sockets: WSContext[] = [];
 
-const socket = () => {
+const socket = (userId = 1) => {
   const sent: unknown[] = [];
   const ws = {
     send: (raw: string) => {
       sent.push(JSON.parse(raw));
     },
   } as unknown as WSContext;
-  wsRegistry.add(ws, 1);
+  wsRegistry.add(ws, userId);
   sockets.push(ws);
 
   return { sent, ws };
@@ -157,4 +163,64 @@ describe("room messages from another instance", () => {
     expect(member.sent).toEqual([{ data: { type: "reset" }, id: "live" }]);
     expect(outside.sent).toEqual([]);
   });
+});
+
+describe("socket messages from another instance", () => {
+  it.each([
+    [
+      "a broadcast reaches every local socket",
+      { data: "all", id: "x", type: "broadcast" },
+      [[{ data: "all", id: "x" }], [{ data: "all", id: "x" }]],
+    ],
+    [
+      "a user's message reaches only that user's sockets",
+      { data: "one", id: "x", type: "sendToUser", userId: 2 },
+      [[], [{ data: "one", id: "x" }]],
+    ],
+    [
+      "a batch gives each user only their own payload",
+      {
+        data: [
+          { data: "a", userId: 1 },
+          { data: "b", userId: 2 },
+        ],
+        id: "x",
+        type: "sendToUsers",
+      },
+      [[{ data: "a", id: "x" }], [{ data: "b", id: "x" }]],
+    ],
+  ])("%s", (_, message, [first, second]) => {
+    const one = socket(1);
+    const two = socket(2);
+
+    pubsub.fromOtherInstance(message);
+
+    expect(one.sent).toEqual(first);
+    expect(two.sent).toEqual(second);
+  });
+});
+
+describe("this instance's own publishes", () => {
+  const channel = { id: "x" };
+
+  it.each([
+    ["broadcast", () => realtime.broadcast(channel, 1)],
+    ["sendToUser", () => realtime.sendToUser(1, channel, 1)],
+    [
+      "sendToUsers",
+      () => realtime.sendToUsers(channel, [{ data: 1, userId: 1 }]),
+    ],
+    ["toRoom", () => realtime.toRoom("room", channel, 1)],
+  ])(
+    "reach a local socket once, though %s comes back from Redis",
+    (_, send) => {
+      const local = socket(1);
+      wsRegistry.join(local.ws, "room", "tab-a");
+
+      send();
+      pubsub.echoLast();
+
+      expect(local.sent).toEqual([{ data: 1, id: "x" }]);
+    },
+  );
 });

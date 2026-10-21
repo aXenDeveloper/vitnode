@@ -18,10 +18,19 @@ const config = defineConfig({
   },
   server: { strictPort: true },
   plugins: [
-    vitnode({ appRoot: import.meta.dirname }),
+    vitnode({ appRoot: import.meta.dirname, webSocket: true }),
     fumadocsMdx({ index: false }),
     devtools(),
     nitro({
+      // `/api/ws` is a Nitro route, so the upgrade never reaches the TanStack
+      // Start catch-all; every other `/api/*` request still does.
+      features: { websocket: true },
+      handlers: [
+        {
+          handler: `${import.meta.dirname}/src/server/websocket.ts`,
+          route: '/api/ws',
+        },
+      ],
       prerender: {
         routes: prerenderRoutes({
           i18n: vitNodeConfig.i18n,

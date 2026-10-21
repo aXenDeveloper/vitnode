@@ -407,6 +407,81 @@ describe("useContentLiveSession", () => {
     });
   });
 
+  describe("in a tab that follows another tab's socket", () => {
+    class FakeBroadcastChannel {
+      constructor() {
+        channels.push(this);
+      }
+
+      onmessage: ((event: { data: unknown }) => void) | null = null;
+      posted: unknown[] = [];
+
+      close() {
+        this.onmessage = null;
+      }
+
+      postMessage(message: unknown) {
+        this.posted.push(message);
+      }
+    }
+
+    let channels: FakeBroadcastChannel[] = [];
+
+    const leaderOpened = (connectionId: string) => {
+      act(() => {
+        channels[0]?.onmessage?.({
+          data: { connectionId, payload: 1, type: "ready-state" },
+        });
+      });
+    };
+
+    const joinsRelayed = () =>
+      (channels[0]?.posted ?? []).flatMap(message => {
+        const { payload, type } = message as {
+          payload?: { data: ContentLiveClientMessage };
+          type: string;
+        };
+
+        return type === "send" && payload?.data.type === "join"
+          ? [payload.data]
+          : [];
+      });
+
+    beforeEach(() => {
+      channels = [];
+      sockets = [];
+      vi.stubEnv("VITNODE_API_URL", "http://localhost:8000");
+      vi.stubGlobal("WebSocket", FakeWebSocket);
+      vi.stubGlobal("BroadcastChannel", FakeBroadcastChannel);
+      // The leader tab holds the lock, so this one never opens a socket.
+      vi.stubGlobal("navigator", {
+        locks: { request: async () => await new Promise(() => {}) },
+        onLine: true,
+        userAgent: navigator.userAgent,
+      });
+    });
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    });
+
+    it("joins again through the leader for every new connection, though it never saw the socket close", async () => {
+      await mount();
+
+      leaderOpened("connection-1");
+      leaderOpened("connection-2");
+
+      const joins = joinsRelayed();
+      expect(sockets).toHaveLength(0);
+      expect(joins).toEqual([
+        expect.objectContaining({ room: ROOM, type: "join" }),
+        expect.objectContaining({ room: ROOM, type: "join" }),
+      ]);
+      expect(joins[1]?.clientId).toBe(joins[0]?.clientId);
+    });
+  });
+
   describe("without a socket", () => {
     beforeEach(() => {
       vi.useFakeTimers({ toFake: ["setInterval", "clearInterval"] });

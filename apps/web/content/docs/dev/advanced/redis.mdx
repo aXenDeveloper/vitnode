@@ -38,7 +38,7 @@ export const vitNodeApiConfig = buildApiConfig({
 | :--- | :--- | :--- |
 | **API Domain Cache** | No-op (always executes DB query) | Shared key-value store via `c.get("cache")` |
 | **Rate Limiter** | In-memory counters per instance | Distributed sliding-window across cluster |
-| **WebSocket Realtime** | Single instance only | Cross-instance broadcasts via Redis Pub/Sub |
+| **WebSocket Realtime** | Single instance only | Cross-instance delivery via Redis Pub/Sub; required on serverless hosts ([details](/docs/dev/websocket/reconnects#delivery-across-instances)) |
 | **Sessions** | Database queries on every request | Instant cache hits with DB fallback |
 
 ---

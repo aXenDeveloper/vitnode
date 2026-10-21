@@ -1,0 +1,72 @@
+---
+title: Reconnects and missed messages
+description: How VitNode's WebSocket reconnects, why realtime delivery is best effort with no replay, and how to restore rooms and reload state in every tab after a reconnect.
+icon: RefreshCw
+---
+
+A VitNode socket will close: a Wi-Fi drop, a deploy, a laptop lid, or a serverless host reaching its function's time limit. The client reconnects on its own, but the new connection starts empty, and nothing sent in between is replayed. This page shows how a feature gets back to the right state.
+
+## What a reconnect keeps and loses
+
+| After a reconnect               | State                                                                       |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| The connection itself           | Reopened by the leader tab, with backoff and jitter (about 1 s, up to 30 s) |
+| The user                        | Read again from the session cookie on the new handshake                     |
+| Rooms                           | Gone. Each tab joins again.                                                 |
+| Messages sent while disconnected | Gone. Pub/sub has no replay.                                                |
+| Durable data in the database    | Untouched. Reload it.                                                       |
+
+Treat every realtime message as a hint that something changed, and the database as the truth. A toast is transient and may be missed; an unread count is durable and is reloaded.
+
+## Restore state when the connection opens
+
+`useVitNodeWebSocket` returns `connectionId`, which changes every time the shared connection opens and is `null` while it is down. All tabs share one socket, held by a leader tab, and every tab - leader or follower - gets the new `connectionId`. Depend on it to rejoin and reload:
+
+```tsx title="plugins/chat/src/views/chat-room.tsx"
+const { connectionId, send } = useVitNodeWebSocket(roomsChannel, {
+  onMessage: (message) => appendMessage(message),
+})
+
+React.useEffect(() => {
+  if (!connectionId) return
+
+  send({ clientId, roomId, type: "join" }) // the server forgot the room
+  void queryClient.invalidateQueries({ queryKey: ["chat", roomId] }) // reload what was missed
+}, [clientId, connectionId, queryClient, roomId, send])
+```
+
+Messages sent before the socket is open are queued and sent once it opens, so the join is never lost. Do not resend writes from that effect: a mutation that went over HTTP already happened, and sending it again would do it twice.
+
+VitNode's own features follow the same rule:
+
+- **Notifications**: the server sends the user's unread count and revision as soon as a socket opens. Every tab compares it with what it has and refetches the inbox when it changed. While no socket is open, the bell polls every 60 seconds.
+- **Live editing**: each tab joins its record's room on every new connection, then reloads the field locks and the shared draft, and reopens its rich text documents so the server sends the edits it missed. Without a socket the form polls over HTTP.
+
+## Delivery across instances
+
+`c.get("realtime")` delivers to the sockets on the instance that called it, then publishes the message to Redis. Every other instance delivers it to its own matching sockets and ignores its own echo, so nobody gets a message twice. An instance accepts sockets only once it is subscribed.
+
+| Setup                     | Who receives a message                                         |
+| ------------------------- | -------------------------------------------------------------- |
+| No `REDIS_URL`            | Sockets on the same instance only. Fine for one server.         |
+| `REDIS_URL`, one instance | Same as above, plus a ready check before sockets are accepted. |
+| `REDIS_URL`, many         | Matching sockets on every instance.                            |
+
+On serverless hosts such as Vercel the HTTP request that sends a message and the socket that should receive it often run on different instances, even within one deployment, so set `REDIS_URL` there. A publish started during a request is kept alive with the request's `waitUntil`, so the instance is not frozen before Redis has it.
+
+When the Redis subscription drops and comes back, the instance closes its sockets with code `1012`. The clients reconnect and run the restore above, which picks up whatever was published while the instance could not hear it. While Redis is down, new handshakes on that instance answer `503` and the client keeps retrying.
+
+## Related
+
+<Cards>
+  <Card
+    title="Set up the endpoint"
+    description="Serve /api/ws from a single app or a standalone API"
+    href="/docs/dev/websocket/setup"
+  />
+  <Card
+    title="Redis"
+    description="Shared cache, rate limits and realtime pub/sub"
+    href="/docs/dev/advanced/redis"
+  />
+</Cards>

@@ -17,6 +17,7 @@ const ENV_FILE = [
 const TOUCHED = [
   "CRON_SECRET",
   "VITNODE_API_URL",
+  "VITNODE_EMBEDDED_WEBSOCKET",
   "VITNODE_EXTRA",
   "VITNODE_UNLISTED",
   "VITNODE_WEB_URL",
@@ -89,8 +90,15 @@ describe("vitNodeEnv", () => {
   it("inlines the API and web URLs into the client bundle", async () => {
     expect(clientDefine(await runConfig(root))).toStrictEqual({
       "process.env.VITNODE_API_URL": '"https://api.example.test"',
+      "process.env.VITNODE_EMBEDDED_WEBSOCKET": "undefined",
       "process.env.VITNODE_WEB_URL": '"https://web.example.test"',
     });
+  });
+
+  it("tells the browser an app with webSocket serves its own socket", async () => {
+    const define = clientDefine(await runConfig(root, { webSocket: true }));
+
+    expect(define["process.env.VITNODE_EMBEDDED_WEBSOCKET"]).toBe('"true"');
   });
 
   it("publishes nothing to the client beyond the listed keys", async () => {
@@ -123,6 +131,7 @@ describe("vitNodeEnv", () => {
     // instead of falling through to the default the core config has for it.
     expect(clientDefine(await runConfig(root))).toStrictEqual({
       "process.env.VITNODE_API_URL": "undefined",
+      "process.env.VITNODE_EMBEDDED_WEBSOCKET": "undefined",
       "process.env.VITNODE_WEB_URL": "undefined",
     });
   });
@@ -138,6 +147,7 @@ describe("vitNodeEnv", () => {
         clientDefine(await runConfig(root, { clientEnv: ["VITNODE_EXTRA"] })),
       ).toStrictEqual({
         "process.env.VITNODE_API_URL": '"https://api.example.test"',
+        "process.env.VITNODE_EMBEDDED_WEBSOCKET": "undefined",
         "process.env.VITNODE_EXTRA": '"from-the-app"',
         "process.env.VITNODE_WEB_URL": '"https://web.example.test"',
       });
@@ -162,6 +172,7 @@ describe("vitNodeEnv", () => {
       expect(Object.keys(define)).toStrictEqual([
         "process.env.VITNODE_API_URL",
         "process.env.VITNODE_WEB_URL",
+        "process.env.VITNODE_EMBEDDED_WEBSOCKET",
       ]);
     });
 
@@ -173,6 +184,7 @@ describe("vitNodeEnv", () => {
       expect(Object.keys(define)).toStrictEqual([
         "process.env.VITNODE_API_URL",
         "process.env.VITNODE_WEB_URL",
+        "process.env.VITNODE_EMBEDDED_WEBSOCKET",
       ]);
     });
   });

@@ -10,6 +10,7 @@ import { createWebSocketManager } from "./manager";
 type Listener = (data: unknown) => void;
 
 interface VitNodeWebSocketContextValue {
+  connectionId: null | string;
   readyState: number;
   reconnect: () => void;
   send: (id: string, data: unknown) => void;
@@ -37,17 +38,22 @@ const getWebSocketUrl = (): string => {
   return url.toString();
 };
 
+// A separate API always serves `/api/ws`; an app that embeds the API serves it
+// only when its Vite config enables `webSocket` (and mounts the Nitro route).
 const shouldConnectWebSocket = (): boolean =>
+  process.env.VITNODE_EMBEDDED_WEBSOCKET === "true" ||
   CONFIG.api.pathname !== CONFIG.web.pathname ||
   CONFIG.api.port !== CONFIG.web.port;
 
 /**
  * Owns the browser's single WebSocket connection to `/api/ws` for
  * `useVitNodeWebSocket` hooks below it. Tabs share one socket
- * (one tab holds it and relays for the others) and it reconnects after a drop.
+ * (one tab holds it and relays for the others) and it reconnects after a drop,
+ * with backoff and jitter - expected on serverless hosts, which close sockets
+ * at the function's maximum duration.
  *
- * It does not connect when the API is served from the same path and port as
- * the web app.
+ * In an app that embeds the API it connects only when `vitnode({ webSocket:
+ * true })` is set in `vite.config.ts`; with a separate API it always does.
  */
 export const VitNodeWebSocketProvider = ({
   children,
@@ -57,10 +63,20 @@ export const VitNodeWebSocketProvider = ({
   const listenersRef = React.useRef<Map<string, Set<Listener>>>(new Map());
   const managerRef = React.useRef<null | WebSocketManager>(null);
   const pendingSendRef = React.useRef<VitNodeWSMessage[]>([]);
-  const [readyState, setReadyState] = React.useState<number>(() => {
-    if (typeof WebSocket === "undefined") return 0;
+  const [connection, setConnection] = React.useState<{
+    connectionId: null | string;
+    readyState: number;
+  }>(() => {
+    if (typeof WebSocket === "undefined") {
+      return { connectionId: null, readyState: 0 };
+    }
 
-    return shouldConnectWebSocket() ? WebSocket.CONNECTING : WebSocket.CLOSED;
+    return {
+      connectionId: null,
+      readyState: shouldConnectWebSocket()
+        ? WebSocket.CONNECTING
+        : WebSocket.CLOSED,
+    };
   });
 
   const dispatch = React.useCallback((message: VitNodeWSMessage) => {
@@ -75,9 +91,9 @@ export const VitNodeWebSocketProvider = ({
     const manager = createWebSocketManager({
       url: getWebSocketUrl(),
       onMessage: dispatch,
-      onReadyStateChange: state => {
+      onReadyStateChange: (readyState, connectionId) => {
         React.startTransition(() => {
-          setReadyState(state);
+          setConnection({ connectionId, readyState });
         });
       },
     });
@@ -118,9 +134,10 @@ export const VitNodeWebSocketProvider = ({
     managerRef.current?.reconnect();
   }, []);
 
+  const { connectionId, readyState } = connection;
   const value = React.useMemo<VitNodeWebSocketContextValue>(
-    () => ({ readyState, reconnect, send, subscribe }),
-    [readyState, reconnect, send, subscribe],
+    () => ({ connectionId, readyState, reconnect, send, subscribe }),
+    [connectionId, readyState, reconnect, send, subscribe],
   );
 
   return (

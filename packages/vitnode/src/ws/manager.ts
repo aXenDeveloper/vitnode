@@ -7,7 +7,7 @@ import { WS_PING_ID, WS_PONG_ID } from "./types";
  * {@link BroadcastChannel}.
  */
 type CrossTabMessage =
-  | { payload: number; type: "ready-state" }
+  | { connectionId: null | string; payload: number; type: "ready-state" }
   | { payload: VitNodeWSMessage; type: "message" }
   | { payload: VitNodeWSMessage; type: "send" }
   | { type: "reconnect" }
@@ -20,6 +20,11 @@ const RECONNECT_BASE_DELAY = 1000;
 const RECONNECT_MAX_DELAY = 30_000;
 const HEARTBEAT_INTERVAL = 25_000;
 const HEARTBEAT_TIMEOUT = 10_000;
+
+const newConnectionId = (): string =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 const isOffline = (): boolean =>
   typeof navigator !== "undefined" &&
@@ -40,13 +45,18 @@ const reconnectDelay = (attempt: number): number => {
 export interface WebSocketManagerOptions {
   /** Called once per logical server message, in every tab. */
   onMessage: (message: VitNodeWSMessage) => void;
-  /** Called whenever the shared connection's `readyState` changes. */
-  onReadyStateChange: (state: number) => void;
+  /**
+   * Called whenever the shared connection's `readyState` changes, in every
+   * tab. `connectionId` is new for every socket the leader opens, so a tab can
+   * tell a reconnect apart even when it never saw the state leave `OPEN`.
+   */
+  onReadyStateChange: (state: number, connectionId: null | string) => void;
   url: string;
 }
 
 export interface WebSocketManager {
   destroy: () => void;
+  getConnectionId: () => null | string;
   getReadyState: () => number;
 
   reconnect: () => void;
@@ -62,6 +72,7 @@ export const createWebSocketManager = ({
   let isLeader = false;
   let isDestroyed = false;
   let readyState = 0; // WebSocket.CONNECTING
+  let connectionId: null | string = null;
   let releaseLeadership: (() => void) | undefined;
   let reconnectTimeout: ReturnType<typeof setTimeout> | undefined;
   let reconnectAttempt = 0;
@@ -79,14 +90,15 @@ export const createWebSocketManager = ({
     channel?.postMessage(message);
   };
 
-  const setReadyState = (state: number) => {
+  const setReadyState = (state: number, id: null | string) => {
     readyState = state;
-    onReadyStateChange(state);
+    connectionId = id;
+    onReadyStateChange(state, id);
   };
 
-  const publishReadyState = (state: number) => {
-    setReadyState(state);
-    post({ payload: state, type: "ready-state" });
+  const publishReadyState = (state: number, id: null | string = null) => {
+    setReadyState(state, id);
+    post({ connectionId: id, payload: state, type: "ready-state" });
   };
 
   const clearPongTimeout = () => {
@@ -151,7 +163,7 @@ export const createWebSocketManager = ({
 
     ws.onopen = () => {
       reconnectAttempt = 0;
-      publishReadyState(ws.readyState);
+      publishReadyState(ws.readyState, newConnectionId());
       outgoingQueue
         .splice(0)
         .forEach(message => ws.send(JSON.stringify(message)));
@@ -231,6 +243,7 @@ export const createWebSocketManager = ({
     if (!isLeader || isDestroyed) return;
     if (reconnectTimeout) clearTimeout(reconnectTimeout);
     closeSocket();
+    publishReadyState(WebSocket.CONNECTING);
     openSocket();
   };
 
@@ -268,13 +281,15 @@ export const createWebSocketManager = ({
           onMessage(message.payload);
           break;
         case "ready-state":
-          if (!isLeader) setReadyState(message.payload);
+          if (!isLeader) setReadyState(message.payload, message.connectionId);
           break;
         case "reconnect":
           if (isLeader) reconnectLeader();
           break;
         case "request-state":
-          if (isLeader) post({ payload: readyState, type: "ready-state" });
+          if (isLeader) {
+            post({ connectionId, payload: readyState, type: "ready-state" });
+          }
           break;
         case "send":
           if (isLeader) sendOverSocket(message.payload);
@@ -332,6 +347,7 @@ export const createWebSocketManager = ({
 
   return {
     destroy,
+    getConnectionId: () => connectionId,
     getReadyState: () => readyState,
     reconnect,
     send,

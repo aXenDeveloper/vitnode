@@ -138,3 +138,124 @@ describe("createWebSocketManager", () => {
     ).not.toThrow();
   });
 });
+
+const managers: ReturnType<typeof createWebSocketManager>[] = [];
+
+const managed = (onReadyStateChange = vi.fn()) => {
+  const manager = createWebSocketManager({
+    onMessage: vi.fn(),
+    onReadyStateChange,
+    url: "ws://localhost/api/ws",
+  });
+  managers.push(manager);
+
+  return { channel: bcInstances.at(-1), manager, onReadyStateChange };
+};
+
+const readyStatesPosted = (channel: FakeBroadcastChannel | undefined) =>
+  channel?.posted.filter(
+    message => (message as { type: string }).type === "ready-state",
+  );
+
+afterEach(() => {
+  managers.splice(0).forEach(manager => manager.destroy());
+  vi.useRealTimers();
+});
+
+describe("connection ids", () => {
+  it("are new for every socket the leader opens, and null while closed", () => {
+    vi.useFakeTimers();
+    const { onReadyStateChange } = managed();
+
+    wsInstances[0]?.fireOpen();
+    wsInstances[0]?.fireClose();
+    vi.advanceTimersByTime(1000);
+    wsInstances[1]?.fireOpen();
+
+    const calls = onReadyStateChange.mock.calls;
+    expect(calls).toEqual([
+      [1, expect.any(String)],
+      [3, null],
+      [1, expect.any(String)],
+    ]);
+    expect(calls[2]?.[1]).not.toBe(calls[0]?.[1]);
+  });
+
+  it("go through CONNECTING to a new one when the leader is asked to reconnect", () => {
+    const { channel, manager, onReadyStateChange } = managed();
+    wsInstances[0]?.fireOpen();
+    const first = manager.getConnectionId();
+
+    manager.reconnect();
+    wsInstances[1]?.fireOpen();
+
+    expect(onReadyStateChange.mock.calls.slice(1)).toEqual([
+      [0, null],
+      [1, manager.getConnectionId()],
+    ]);
+    expect(manager.getConnectionId()).not.toBe(first);
+    expect(readyStatesPosted(channel)).toEqual([
+      { connectionId: first, payload: 1, type: "ready-state" },
+      { connectionId: null, payload: 0, type: "ready-state" },
+      {
+        connectionId: manager.getConnectionId(),
+        payload: 1,
+        type: "ready-state",
+      },
+    ]);
+  });
+
+  it("are told again to a tab that asks for the state late", () => {
+    const { channel, manager } = managed();
+    wsInstances[0]?.fireOpen();
+
+    channel?.onmessage?.({ data: { type: "request-state" } });
+
+    expect(readyStatesPosted(channel)?.at(-1)).toEqual({
+      connectionId: manager.getConnectionId(),
+      payload: 1,
+      type: "ready-state",
+    });
+  });
+});
+
+describe("a follower tab", () => {
+  beforeEach(() => {
+    // Another tab holds the leader lock for as long as this test runs.
+    vi.stubGlobal("navigator", {
+      locks: { request: async () => await new Promise(() => {}) },
+    });
+  });
+
+  it("takes the leader's connection id and asks the leader to send for it", () => {
+    const { channel, manager, onReadyStateChange } = managed();
+
+    channel?.onmessage?.({
+      data: { connectionId: "conn-2", payload: 1, type: "ready-state" },
+    });
+    manager.send({ data: 1, id: "x" });
+
+    expect(wsInstances).toHaveLength(0);
+    expect(onReadyStateChange).toHaveBeenLastCalledWith(1, "conn-2");
+    expect(manager.getConnectionId()).toBe("conn-2");
+    expect(channel?.posted).toContainEqual({
+      payload: { data: 1, id: "x" },
+      type: "send",
+    });
+  });
+});
+
+describe("the leader tab", () => {
+  it("sends a follower's message over its socket", () => {
+    const { channel } = managed();
+    wsInstances[0]?.fireOpen();
+
+    channel?.onmessage?.({
+      data: { payload: { data: 1, id: "x" }, type: "send" },
+    });
+
+    expect(wsInstances[0]?.sent).toEqual([
+      JSON.stringify({ data: 1, id: "x" }),
+    ]);
+  });
+});

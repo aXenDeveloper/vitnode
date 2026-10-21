@@ -14,6 +14,7 @@ import type { VitNodeRealtime } from "@/ws/registry";
 
 import { LocalEventsAdapter } from "@/api/adapters/events/local";
 import { PostgresSearchAdapter } from "@/api/adapters/search/postgres";
+import { runAfterResponse } from "@/api/lib/after-response";
 import { DEFAULT_SESSION_COOKIE_NAME } from "@/api/lib/auth-cookie";
 import { CacheModel } from "@/api/lib/cache";
 import { MemoryCacheStore } from "@/api/lib/cache-memory";
@@ -46,7 +47,7 @@ import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
 import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
 import { manifest as coreManifest } from "@/manifest";
-import { realtime } from "@/ws/registry";
+import { realtime, runWithRealtimeKeepAlive } from "@/ws/registry";
 
 import type { AiActionRegistry } from "../lib/ai/registry";
 import type { BuildCronReturn } from "../lib/cron";
@@ -678,10 +679,20 @@ export const globalMiddleware = ({
     c.set("adminSessionExpiresAt", null);
     c.set("log", loggerMiddleware(c));
 
-    await next();
+    // Realtime publishes started anywhere in this request - `c.get("realtime")`
+    // or a module that has no context of its own - are kept alive past the
+    // response, so a serverless instance does not freeze them half-sent.
+    await runWithRealtimeKeepAlive(
+      task => {
+        runAfterResponse(c, task);
+      },
+      async () => {
+        await next();
 
-    c.get("notifications").flushAfterResponse();
-    c.get("email").flushAfterResponse();
+        c.get("notifications").flushAfterResponse();
+        c.get("email").flushAfterResponse();
+      },
+    );
   };
 };
 

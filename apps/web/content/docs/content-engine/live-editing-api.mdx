@@ -8,12 +8,14 @@ The AdminCP drives [live editing](/docs/content-engine/live-editing) for you. Th
 
 ## Deployment requirements
 
-Live editing runs on two channels. Field locks and the shared draft are plain HTTP routes, so they work everywhere. Presence and rich text co-editing travel over the [WebSocket](/docs/dev/websocket) at `/api/ws`, which only a long-lived Node API server provides, such as `apps/api` or a [self-hosted](/docs/dev/deployments/self-hosted) install.
+Live editing runs on two channels. Field locks and the shared draft are plain HTTP routes, so they work everywhere. Presence and rich text co-editing travel over the [WebSocket](/docs/dev/websocket) at `/api/ws`, which a standalone API server or a single app with the [Nitro WebSocket route](/docs/dev/websocket/setup) provides, on [Vercel](/docs/dev/deployments/cloud/vercel) too.
 
-| Deployment                                                         | Field locks and autosave     | Presence | Rich text                                       |
-| ------------------------------------------------------------------ | ---------------------------- | -------- | ----------------------------------------------- |
-| Long-lived Node API server with the WebSocket                      | Live, pushed over the socket | Yes      | Co-edited                                       |
-| No WebSocket, such as [Vercel](/docs/dev/deployments/cloud/vercel) | Polled over HTTP every 10 s  | No       | One editor at a time, locked like a plain field |
+| Deployment                                    | Field locks and autosave     | Presence | Rich text                                       |
+| --------------------------------------------- | ---------------------------- | -------- | ----------------------------------------------- |
+| WebSocket at `/api/ws`                        | Live, pushed over the socket | Yes      | Co-edited                                       |
+| No WebSocket, or while the socket reconnects  | Polled over HTTP every 10 s  | No       | One editor at a time, locked like a plain field |
+
+After a reconnect each editor joins the room again, reloads the locks and the draft, and reopens its rich text documents, which fetches the edits it missed.
 
 A form without a socket polls `GET /{id}/locks` and `GET /{id}/draft` every 10 seconds, on top of lock renewals. Every request counts against the [rate limiter](/docs/dev/advanced/rate-limiter), which is keyed by IP address: the polls against the read budget (300 a minute), lock renewals and draft saves against the write budget (60 a minute). A newsroom behind one office IP can reach the write budget. A refused lock request leaves the field without autosave, so raise `rateLimiter.write.points` if that is you.
 

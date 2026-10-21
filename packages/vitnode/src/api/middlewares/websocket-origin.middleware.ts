@@ -35,7 +35,10 @@ const originOf = (value: string | undefined): string | undefined => {
  * WebSocket handshake is a `GET`.
  *
  * The `Origin` header is the defence, and it is a sound one here precisely
- * because the browser sets it and a page cannot override it. A handshake that
+ * because the browser sets it and a page cannot override it. Allowed are the
+ * configured web and API origins, any extra `origin`, and the handshake's own
+ * origin - a page served by the same host, as on a single app's preview
+ * deployment, which a cross-site page cannot fake. A handshake that
  * carries **no** `Origin` is allowed through: browsers always send one, so an
  * originless handshake is a non-browser client, which has no cookies to be
  * ridden in the first place.
@@ -62,7 +65,11 @@ export const websocketOriginMiddleware = ({
 
     // No `Origin` at all: not a browser, so not a cross-site ride on somebody's
     // cookies. See the note above.
-    if (requestOrigin && !allowed.has(requestOrigin)) {
+    if (
+      requestOrigin &&
+      !allowed.has(requestOrigin) &&
+      requestOrigin !== new URL(c.req.url).origin
+    ) {
       throw new HTTPException(403, {
         message: "WebSocket connections are not allowed from this origin.",
       });
