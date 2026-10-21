@@ -16,7 +16,6 @@ import {
   zodRichTextDocument,
 } from "@vitnode/core/content";
 import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
-import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
@@ -44,6 +43,7 @@ import {
   topicHref,
   topicNewHref,
 } from "./forum-links";
+import { useTopicPermissions } from "./forum-permissions";
 import {
   forumQueryKeys,
   isSharedResponse,
@@ -205,8 +205,8 @@ export const route = defineRoute<TopicPageData, TopicSearch>({
 });
 
 /**
- * Rendered in the browser from the session, so a cached page stays shared: the
- * author gets Edit, everyone else gets Report.
+ * Asked in the browser, so a cached page stays shared: the Content Engine says
+ * whether this visitor may edit or report the topic.
  */
 const TopicViewerActions = ({
   author,
@@ -218,28 +218,28 @@ const TopicViewerActions = ({
   topicId: number;
 }) => {
   const t = useTranslations("@vitnode/forum.topics.detail");
-  const { data: session } = useSessionQuery();
-  const userId = session?.user?.id;
-
-  if (userId !== undefined && author !== null && author.id === userId) {
-    return (
-      <HrefLink
-        className={buttonVariants({ size: "sm", variant: "outline" })}
-        href={topicEditHref(topicId)}
-      >
-        <PencilIcon aria-hidden="true" />
-        {t("edit")}
-      </HrefLink>
-    );
-  }
+  const { canEdit, canReport } = useTopicPermissions([topicId]).of(topicId);
 
   return (
-    <ReportButton
-      className="text-muted-foreground"
-      preview={{ meta: author?.name ?? null, title }}
-      target={contentTarget(manifest.id, topicContentType, topicId)}
-      typeLabel={t("report_type")}
-    />
+    <>
+      {canEdit ? (
+        <HrefLink
+          className={buttonVariants({ size: "sm", variant: "outline" })}
+          href={topicEditHref(topicId)}
+        >
+          <PencilIcon aria-hidden="true" />
+          {t("edit")}
+        </HrefLink>
+      ) : null}
+      {canReport ? (
+        <ReportButton
+          className="text-muted-foreground"
+          preview={{ meta: author?.name ?? null, title }}
+          target={contentTarget(manifest.id, topicContentType, topicId)}
+          typeLabel={t("report_type")}
+        />
+      ) : null}
+    </>
   );
 };
 

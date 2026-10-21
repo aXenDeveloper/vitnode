@@ -23,7 +23,10 @@ import {
 import { uploadContentFile } from "@/content/admin/upload";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 
-import type { TranslationRow } from "../content-mutation";
+import type {
+  ContentMutationResult,
+  TranslationRow,
+} from "../content-mutation";
 import type { ContentFormHeaderValue } from "../form/context";
 import type { ContentFormSkeletonOverrides } from "../form/skeleton";
 import type { ContentOptionsLoader } from "../lib/field-component";
@@ -34,7 +37,9 @@ import { ContentFormProvider } from "../form/context";
 import {
   contentSharedChanged,
   contentTranslationDiff,
+  type IncompleteContentTranslation,
   missingContentCollections,
+  splitIncompleteTranslations,
 } from "../form/diff";
 import { ContentFormHeader } from "../form/layout-primitives";
 import { useContentFormNavigation } from "../form/navigation";
@@ -47,6 +52,10 @@ import {
 import { useContentFormTransport } from "../form/transport";
 import { ContentFormHiddenNotice } from "../form/visibility";
 import { ContentField } from "../lib/field-component";
+import {
+  type ContentInvalidField,
+  contentInvalidFields,
+} from "../lib/invalid-input";
 import { contentErrorKey } from "../lib/mutation-feedback";
 import { useInvalidateContentOptions } from "../lib/options-query";
 import { useContentLive } from "../live/context";
@@ -205,6 +214,44 @@ const ContentFormFields = ({
   const transport = useContentFormTransport();
   const locale = useLocale();
   const invalidateOptions = useInvalidateContentOptions();
+
+  const languages = new Intl.DisplayNames([locale], { type: "language" });
+  const conjunction = new Intl.ListFormat(locale, { type: "conjunction" });
+  const languageName = (code: string) =>
+    languages.of(code) ?? code.toUpperCase();
+  const formatList = (items: string[]) => conjunction.format(items);
+
+  const describeFailure = (failure: ContentMutationResult): string => {
+    const errorKey = contentErrorKey(failure.status, failure);
+    const fallback = errorKey
+      ? tContentErrors(errorKey)
+      : tErrors("internal_server_error");
+    if (!failure.invalid) return fallback;
+
+    const { invalid, required } = contentInvalidFields(spec, failure.invalid);
+    const named = (fields: ContentInvalidField[]) =>
+      formatList(
+        fields.map(field =>
+          field.locale === null
+            ? field.label
+            : tContentErrors("field_in_language", {
+                field: field.label,
+                language: languageName(field.locale),
+              }),
+        ),
+      );
+
+    const sentences = [
+      required.length > 0
+        ? tContentErrors("missing_fields", { fields: named(required) })
+        : null,
+      invalid.length > 0
+        ? tContentErrors("invalid_fields", { fields: named(invalid) })
+        : null,
+    ].filter(sentence => sentence !== null);
+
+    return sentences.length > 0 ? sentences.join(" ") : fallback;
+  };
   const liveSession = useContentLive();
   const canPublish = useAdminStaffPermission({
     module: spec.permissionModule,
@@ -290,7 +337,25 @@ const ContentFormFields = ({
   };
 
   const translationPayload = (submitted: Record<string, unknown>) =>
-    contentTranslationDiff(spec, submitted, opened);
+    splitIncompleteTranslations(
+      spec,
+      contentTranslationDiff(spec, submitted, opened),
+    );
+
+  const warnIncomplete = (incomplete: IncompleteContentTranslation[]) => {
+    for (const translation of incomplete) {
+      toast.warning(
+        t("translations.incomplete.title", {
+          language: languageName(translation.locale),
+        }),
+        {
+          description: t("translations.incomplete.desc", {
+            fields: formatList(translation.missing),
+          }),
+        },
+      );
+    }
+  };
 
   const transition = async (action: "publish" | "unpublish") => {
     if (!data) return false;
@@ -301,12 +366,8 @@ const ContentFormFields = ({
         : await transport.unpublish(spec.contentTypeId, data.id);
 
     if (mutation.error !== undefined) {
-      const errorKey = contentErrorKey(mutation.status, mutation);
-
       toast.error(tErrors("title"), {
-        description: errorKey
-          ? tContentErrors(errorKey)
-          : tErrors("internal_server_error"),
+        description: describeFailure(mutation),
       });
 
       return false;
@@ -361,12 +422,8 @@ const ContentFormFields = ({
         return true;
       }
 
-      const errorKey = contentErrorKey(mutation.status, mutation);
-
       toast.error(tErrors("title"), {
-        description: errorKey
-          ? tContentErrors(errorKey)
-          : tErrors("internal_server_error"),
+        description: describeFailure(mutation),
       });
 
       return false;
@@ -392,6 +449,9 @@ const ContentFormFields = ({
     { intent },
   ) => {
     const payload = contentFormValuesToPayload(spec, submitted);
+    const { incomplete, ready: translations } = localized
+      ? translationPayload(submitted)
+      : { incomplete: [], ready: [] };
 
     const mutation = localized
       ? data
@@ -399,13 +459,13 @@ const ContentFormFields = ({
             spec.contentTypeId,
             data.id,
             contentSharedChanged(data, payload) ? payload : undefined,
-            translationPayload(submitted),
+            translations,
             expectedVersion,
           )
         : await transport.createLocalized(
             spec.contentTypeId,
             payload,
-            translationPayload(submitted),
+            translations,
           )
       : data
         ? await transport.edit(
@@ -431,19 +491,16 @@ const ContentFormFields = ({
         return;
       }
 
-      const errorKey = contentErrorKey(mutation.status, mutation);
-
       toast.error(tErrors("title"), {
-        description: errorKey
-          ? tContentErrors(errorKey)
-          : tErrors("internal_server_error"),
+        description: describeFailure(mutation),
       });
 
       return;
     }
 
     if (mutation.unchanged) {
-      toast.info(t("edit.unchanged"));
+      if (incomplete.length > 0) warnIncomplete(incomplete);
+      else toast.info(t("edit.unchanged"));
 
       return;
     }
@@ -468,15 +525,11 @@ const ContentFormFields = ({
         : null;
 
     if (published?.error !== undefined) {
-      const errorKey = contentErrorKey(published.status, published);
-
       toast.success(t("create.success", { name: singular }), {
         description: toastTitle,
       });
       toast.error(tErrors("title"), {
-        description: errorKey
-          ? tContentErrors(errorKey)
-          : tErrors("internal_server_error"),
+        description: describeFailure(published),
       });
     } else {
       toast.success(
@@ -491,6 +544,7 @@ const ContentFormFields = ({
         { description: toastTitle },
       );
     }
+    warnIncomplete(incomplete);
 
     if (presentation === "page") {
       if (!data && mutation.id !== undefined) {

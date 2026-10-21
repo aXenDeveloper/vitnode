@@ -8,13 +8,14 @@ import { ImgDocs } from "@/components/fumadocs/img";
 import hideDialog from "./content-visibility-hide-dialog.webp";
 import hiddenFilter from "./content-visibility-filter.webp";
 import hiddenEditor from "./content-visibility-editor.webp";
+import hiddenNotice from "./content-visibility-hidden-notice.webp";
 
 Hiding takes a record off the public site right away while it stays published. It disappears from the public API, its page, search and the sitemap, and unhiding brings it back with its original URL and publish date. Reach for it when a post has to go now and the questions can wait. This guide follows the blog plugin, whose articles can be hidden.
 
 | You want to                                                            | Use                                                             |
 | ---------------------------------------------------------------------- | --------------------------------------------------------------- |
 | Take a record down for now and put it back as it was                   | Hide                                                            |
-| Turn a record back into a draft to rework it before it goes live again | [Unpublish](/docs/content-engine/public-api#publish-an-article) |
+| Turn a record back into a draft to rework it before it goes live again | [Unpublish](/docs/content-engine/publication) |
 | Remove it for good                                                     | Delete                                                          |
 
 ## Before you begin
@@ -47,7 +48,7 @@ export const blogPostContentType = defineContentType({
 
 ### Build and migrate
 
-Run `pnpm build:plugins && pnpm db:migrate`, then restart `pnpm dev`. The migration adds two nullable columns to the main table. For the blog, `apps/api/migrations/20261011093549_content_visibility_id_strategies` contains:
+Run `pnpm db:migrate`. The migration adds two nullable columns to the main table. For the blog, `apps/api/migrations/20261011093549_content_visibility_id_strategies` contains:
 
 ```sql title="migration.sql (excerpt)"
 ALTER TABLE "blog_posts" ADD COLUMN "hiddenAt" timestamp;
@@ -119,26 +120,29 @@ Cleaning up after a spam wave? Tick several articles and choose **Visibility →
 
 A record is public only when it is published, its `publishedAt` is not in the future, and it is not hidden. While a record is hidden:
 
-- The public API list leaves it out and its detail route answers `404`, in every language, including a language that falls back to the default one.
+- The public API list leaves it out for everybody but the [people who can still see it](#who-can-still-see-it), and its detail route answers `404`, in every language, including a language that falls back to the default one.
 - Its [page](/docs/content-engine/public-pages) answers `404`, and so do its old slugs instead of redirecting.
-- The [sitemap](/docs/content-engine/seo#sitemap) and `hreflang` alternates leave it out, and [site search](/docs/content-engine/search) marks its document private.
+- The [sitemap](/docs/content-engine/seo#sitemap) and other pages' `hreflang` alternates leave it out, and [site search](/docs/content-engine/search) marks its document private.
 - Signed [preview links](/docs/content-engine/editorial#preview-links) still work, and the AdminCP still shows it.
 
 ## Who can still see it
 
 Hidden doesn't mean gone for the people working on it. Signed in, a record's **authors**, its **editors** and its **moderators** still reach it:
 
-- **Authors** are the users in the content type's [`search.authorField`](/docs/content-engine/search), such as the blog's **Author** field.
+- **Authors** are the users in the content type's [`search.authorField`](/docs/content-engine/search), such as the blog's **Author** field. Without one, the [public write](/docs/content-engine/public-write) owner is the author.
 - **Editors** are staff with `can_edit` on the content type, such as `posts:can_edit` for the blog.
 - **Moderators** with the moderator permission `can_view_hidden` on a [reportable](/docs/dev/moderation/enable-reports) content type, in the record's scope when it has one. They need no AdminCP permission.
 
 The route tells whose record it is by its `id`, so `id` must be in `publicApi.fields`. For them:
 
 - The page opens with an eye-off icon before the title and a **This article is hidden** note, so nobody mistakes it for a live page. The response sends `noindex` and `Cache-Control: private, no-store`, so search engines and caches never keep it.
-- The detail route answers `200`, and `GET .../delivery/resolve/{slug}` returns `hidden: true`.
+- The detail route answers `200`, and `GET .../delivery/resolve/{slug}` returns `hidden: true` plus the record's own published translations in `alternates`, so the language switcher opens the same article in another language at its own slug.
+- The public list, such as `/blog`, shows it among the published records with the eye-off icon before its title. API rows carry `hidden: true`, and the response is `Cache-Control: private, no-store`.
 - [Site search](/docs/content-engine/search) and the member timeline list it with the eye-off icon before its title and a tooltip like **Article hidden**.
 
-Everyone else, signed in or not, still gets a `404`. Old slugs never redirect to a hidden record, and the list, sitemap and `hreflang` alternates leave it out for everybody.
+On a list, moderators see every hidden record only when the content type has no moderation scope. With a scope, the list shows them what they authored or can edit, and the page itself still opens for them.
+
+Everyone else, signed in or not, still gets a `404`. Old slugs never redirect to a hidden record, and the list, sitemap and other pages' `hreflang` alternates leave it out for everybody.
 
 <Callout type="info">
 Search learns that a record is hidden when it is hidden or unhidden. Records hidden before you updated VitNode show up for their authors and editors only after a reindex: **Debug Panel → Search** (`/admin/core/debug/search`), then **Reindex** on the collection, such as `blog.post`. See [Search](/docs/content-engine/search).
@@ -162,7 +166,49 @@ With `expectedVersion`, the call fails with `409` and `CONTENT_VERSION_CONFLICT`
 
 The admin list route accepts `?visibility=hidden` or `?visibility=visible`, and it combines with `?status=`.
 
-From your own code, `hide(id, options)` and `unhide(id, options)` exist on the services when visibility is on. See [Services](/docs/content-engine/services#hide-duplicate-and-content-ids).
+From your own code, `hide(id, options)` and `unhide(id, options)` exist on the services when visibility is on. See [Services](/docs/content-engine/services#save-like-the-admincp).
+
+## Show it on your pages
+
+The people who still see a hidden record should know readers don't. Tell them on the page:
+
+- **A page with [delivery](/docs/content-engine/public-pages)** reads `metadata.hidden` from `contentDeliveryPage`. The blog shows an eye-off icon before the title and a notice, and drops the Report button.
+- **A page without delivery** reads the `X-Content-Hidden` header of `GET /{slug}`, which is `"true"` only for a hidden record:
+
+```tsx title="plugins/example/src/pages/discussion-page.tsx"
+import { CONTENT_HIDDEN_HEADER } from "@vitnode/core/content";
+
+const detail = await fetcher({
+  plugin: manifest.id,
+  method: "get",
+  module: "content/discussions",
+  path: "/{slug}",
+  args: { params: { slug: encodeURIComponent(slug) } },
+});
+const hidden = detail.headers.get(CONTENT_HIDDEN_HEADER) === "true";
+
+{hidden ? (
+  <Alert icon={<EyeOffIcon />} variant="warning">
+    <AlertTitle>{t("hidden.title")}</AlertTitle>
+    <AlertDescription>{t("hidden.desc")}</AlertDescription>
+  </Alert>
+) : null}
+```
+
+[`useContentPermissions`](/docs/content-engine/reports#ask-who-may-report-what) already answers `canReport: false` for a hidden record, and `canEdit: false` for its author, so the page needs no extra checks for its buttons. A moderator can still edit it.
+
+## Delete, hide, unpublish or reject
+
+The public site creates and edits; it never deletes or hides. These actions belong to staff:
+
+| Action          | Readers afterwards                                  | Who, and where                                                                                     |
+| --------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| Hide            | `404`; authors and moderators still see it          | Staff with `can_hide` in the AdminCP, or moderators acting on a [report](/docs/dev/moderation/process-reports) |
+| Unpublish       | `404`; the record is a draft again                  | Staff with `can_publish`, in the AdminCP                                                           |
+| Reject approval | A new record stays a draft; a proposed edit never applies | Moderators with `can_approve`, in the [approvals queue](/docs/dev/moderation/review-approvals) |
+| Delete          | Gone for good, with its URL                         | Staff with `can_delete`, in the [AdminCP](/docs/content-engine/admincp#bulk-actions)               |
+
+Hiding is the reversible one. The record keeps its revisions, its reports and its place in a thread. There is no public delete route, so don't put a Delete button on a public page.
 
 ## Events and caches
 
@@ -179,4 +225,13 @@ curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/blog/article/second
 curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/api/@vitnode/blog/content/blog/article/second-post"
 ```
 
-Both answer `404`, like a draft, and the article drops out of the blog list and the sitemap. In the AdminCP it is still **Published**. Unhide it, and the same requests answer `200` with the original `publishedAt`. Open the page while signed in as one of its authors, and it loads with the hidden note instead.
+Both answer `404`, like a draft, and the article drops out of the blog list and the sitemap. In the AdminCP it is still **Published**. Unhide it, and the same requests answer `200` with the original `publishedAt`. Open `/blog` and the page while signed in as one of its authors, and the list shows it with the eye-off icon and the page loads with the hidden note.
+
+The example plugin's discussions show the same note through the header. Ben Ortiz opens his own hidden discussion, and only he and the moderators can:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={hiddenNotice}
+  alt="A discussion page with a warning This discussion is hidden above the message, seen by its author"
+/>

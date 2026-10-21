@@ -2,142 +2,163 @@
 title: Public lists
 description: Build a public VitNode Content Engine list page with search, filters, sorting and pagination kept in the URL, using listFields, defineContentList and the ContentList components.
 icon: LayoutGrid
+implementation:
+  objective: Add a public list page with search, filters, sorting and pagination for an existing content type.
+  decisions:
+    - Which items does the page list? Offer content types with a public API from the plugins in the project.
+    - Where does the list live? Recommend a URL next to the items' own pages, such as the plural of the type's name.
+    - What can readers search and sort by? Offer the type's text, textarea and slug fields for search, and its orderable fields plus the publish date for sorting.
+    - Which filters does the page offer? Offer the type's container, relation and enum fields that can be filtered.
+    - How many items fit on a page? From 1 to 50; recommend 10 to 12.
+  constraints:
+    - Declare the list with `defineContentList` and fetch it with `contentListQueryOptions` and an inline `fetcher` call, as the guide shows.
+    - Add `searchableFields`, `orderableFields`, `filterableFields` and `listFields` to `publicApi` instead of filtering in the browser.
+    - Render the list with `ContentListResults` and `ContentListPagination`, and build the head with `contentListPageHead`.
+    - Keep every label in the plugin's locale files.
+  related:
+    - title: Public list API
+      href: /docs/content-engine/public-lists-api
+    - title: Add a list to another page
+      href: /docs/content-engine/public-lists-embed
+    - title: Public pages
+      href: /docs/content-engine/public-pages
 ---
 
-import { ImgDocs } from '@/components/fumadocs/img'
-import noResults from './public-lists-no-results.webp'
+import { ImgDocs } from "@/components/fumadocs/img";
+import listPage from "./public-lists-discussions.webp";
+import noResults from "./public-lists-no-results.webp";
 
-A public list is a page such as `/blog` that shows published records a page at a time, with search, filters and sorting in its URL. The Content Engine provides the data and the list behavior; your plugin defines the route, the item layout and the words. This guide builds an article list with search, a category filter, sorting and pages. The blog plugin's own `/blog` uses the same pieces with only categories and pages, so its files in `plugins/blog/src` are a shorter version of these snippets.
+A public list is a page such as `/discussions` that shows published records a page at a time, with search, filters and sorting in its URL. The Content Engine provides the data and the list behavior; your plugin defines the route, the item layout and the words. This guide builds the example plugin's discussion list: search by title, a board filter, three sorts, ten discussions a page, and links to each discussion.
 
-| The Content Engine provides                                                                                          | Your plugin defines                                     |
-| -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| The list route `GET /content/{publicApi.path}` with paging, search, filters, locale fallback, caching and cache tags | The `page()` route and where it lives                   |
-| Only published, already-live and not-hidden records - drafts and scheduled posts never appear                        | Which sorts and filters the URL accepts                 |
-| `defineContentList`, `contentListQueryOptions`, `contentListPageHead`                                                | The `fetcher` call, the item schema and the card layout |
-| `ContentListResults`, `ContentListPagination`, `useContentListSearchInput`                                           | Every label, through its own locale namespace           |
+| The Content Engine provides                                                                                              | Your plugin defines                                     |
+| ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| The list route `GET /content/{publicApi.path}` with paging, search, filters, locale fallback, caching and cache tags     | The `page()` route and where it lives                   |
+| Only published, already-live records. Drafts and scheduled records never appear, and hidden ones only for their authors and editors | Which sorts and filters the URL accepts                 |
+| `defineContentList`, `contentListQueryOptions`, `contentListPageHead`                                                    | The `fetcher` call and the item layout                  |
+| `ContentListResults`, `ContentListPagination`, `useContentListSearchInput`                                               | The search field, the selects and every label           |
 
-The Content Engine never creates list pages on its own. You add one where a list belongs.
+The Content Engine never creates list pages on its own, and it ships no sort or filter controls. You add a list where it belongs and draw the controls you want.
+
+## Before you begin
+
+You need a content type with a [public API](/docs/content-engine/public-api) and pages for its records, such as [public pages](/docs/content-engine/public-pages). This guide uses `example.discussion` from the example plugin, which members write through [public write](/docs/content-engine/public-write).
 
 <Steps>
 
 <Step>
 
-### Keep list rows light
+### Choose what the list can read
 
-Set `publicApi.listFields` to the fields a list item needs. The list route then selects only those, while the detail route still returns every field in `fields`:
+Tell the public API which fields a list row carries and what readers may search, sort and filter by:
 
-```ts title="plugins/blog/src/content/post.ts"
+```ts title="plugins/example/src/content/discussion.ts"
 publicApi: {
-  path: "blog",
-  fields: ["id", "title", "friendlyUrl", "content", "excerpt", "categoryId", "coverImage", "coverImageAlt", "publishedAt"],
-  // [!code ++:10]
-  listFields: [
-    "id",
-    "title",
-    "friendlyUrl",
-    "excerpt",
-    "categoryId",
-    "coverImage",
-    "coverImageAlt",
-    "publishedAt",
-  ],
-  searchableFields: ["title", "content"],
-  orderableFields: ["publishedAt"],
-  filterableFields: ["categoryId", "friendlyUrl"],
+  path: "discussions",
+  fields: ["id", "title", "slug", "body", "board", "publishedAt"],
+  // [!code ++:5]
+  listFields: ["id", "title", "slug", "board", "publishedAt"],
+  filterableFields: ["board"],
+  searchableFields: ["title"],
+  orderableFields: ["title"],
+  people: ["author"],
 },
 ```
 
-`listFields` must be a subset of `fields`. The list route's OpenAPI schema and the `ContentPublicListRow` type follow it, so `content` is gone from both. Search still scans `content`, because `searchableFields` reads the database, not the response.
+- `listFields` must be a subset of `fields`. The list route selects only these, so a page of ten discussions never loads ten rich text bodies. The detail route still returns every field in `fields`.
+- `searchableFields` takes text, textarea and slug fields. `orderableFields` adds sorts; `publishedAt` is always orderable.
+- `filterableFields` adds one query parameter per field. A [container field](/docs/content-engine/containers) such as `board` also accepts `includeDescendants=true`.
+- `people: ["author"]` adds a small public profile of each discussion's author to every row. A user field never appears through `fields`.
+
+These options change the API, not the table, so there is nothing to migrate. Every option is in the [`publicApi` reference](/docs/content-engine/reference#publicapi).
 
 </Step>
 
 <Step>
 
-### Declare the list
+### Declare the list and its query
 
-`defineContentList` from `@vitnode/core/tanstack/content` names the sorts, the URL filters and the page size once:
+Create `src/pages/discussion-list.ts`. `defineContentList` from `@vitnode/core/tanstack/content` names the sorts, the URL filters and the page size once. `contentListQueryOptions` turns one URL state into TanStack Query options. Write the `fetcher` call inline in `fetch`, so the route stays typed:
 
-```ts title="plugins/blog/src/pages/blog-list.ts"
-import type { ContentListSearch } from '@vitnode/core/tanstack/content'
+```ts title="plugins/example/src/pages/discussion-list.ts"
+import type { QueryClient } from "@tanstack/react-query";
+import type { ContentListSearch } from "@vitnode/core/tanstack/content";
 
 import {
   contentListIdFilter,
+  contentListQueryOptions,
   defineContentList,
-} from '@vitnode/core/tanstack/content'
+} from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
-export const BLOG_HREF = '/blog'
+import { manifest } from "@/manifest.gen";
 
-export const blogPostList = defineContentList({
-  defaultSort: 'newest',
-  filters: { category: contentListIdFilter },
-  pageSize: 12,
+export const DISCUSSIONS_HREF = "/discussions";
+
+export const discussionList = defineContentList({
+  defaultSort: "newest",
+  filters: { board: contentListIdFilter },
+  pageSize: 10,
   sorts: {
-    newest: { order: 'desc', orderBy: 'publishedAt' },
-    oldest: { order: 'asc', orderBy: 'publishedAt' },
+    newest: { order: "desc", orderBy: "publishedAt" },
+    oldest: { order: "asc", orderBy: "publishedAt" },
+    title: { order: "asc", orderBy: "title" },
   },
-})
+});
 
-export type BlogListSearch = ContentListSearch<
-  (typeof blogPostList.sorts)[number],
-  { category: typeof contentListIdFilter }
->
+export type DiscussionListSearch = ContentListSearch<
+  (typeof discussionList.sorts)[number],
+  { board: typeof contentListIdFilter }
+>;
 
-export const blogListSearch = (
+export const discussionListSearch = (
   input: Record<string, unknown>,
-): BlogListSearch => blogPostList.parseSearch(input)
-```
+): DiscussionListSearch => discussionList.parseSearch(input);
 
-Each `orderBy` must be in `publicApi.orderableFields` or be `publishedAt`. The URL keys are `q`, `sort`, `page` and one per filter, here `category`.
+const discussionQueryKeys = {
+  all: [manifest.id, "discussions"] as const,
+};
 
-</Step>
-
-<Step>
-
-### Fetch one page
-
-`contentListQueryOptions` builds TanStack Query options keyed by the locale and the normalized URL state. Write the `fetcher` call inline in `fetch`, so its route stays typed:
-
-```ts title="plugins/blog/src/pages/blog-queries.ts"
-import { contentListQueryOptions } from '@vitnode/core/tanstack/content'
-import { fetcher } from '@vitnode/core/tanstack/fetcher'
-
-import { manifest } from '@/manifest.gen'
-
-import type { BlogListSearch } from './blog-list'
-
-import { blogPostList } from './blog-list'
-
-export const blogPostsQueryOptions = (request: {
-  locale: string
-  search: BlogListSearch
+export const discussionsQueryOptions = (request: {
+  locale: string;
+  search: DiscussionListSearch;
 }) =>
   contentListQueryOptions({
     ...request,
-    queryKey: ['@vitnode/blog', 'posts'],
-    fetch: async ({ locale, search }) => {
+    queryKey: discussionQueryKeys.all,
+    fetch: async ({ search }) => {
       const res = await fetcher({
         plugin: manifest.id,
-        method: 'get',
-        module: 'content/blog',
-        path: '/',
+        method: "get",
+        module: "content/discussions",
+        path: "/",
         args: {
           query: {
-            ...blogPostList.apiQuery(search),
-            ...(search.category === undefined
+            ...discussionList.apiQuery(search),
+            ...(search.board === undefined
               ? {}
-              : { categoryId: search.category }),
-            locale,
+              : { board: String(search.board), includeDescendants: "true" }),
           },
         },
-      })
-      if (res.status !== 200) throw new Error('Loading the blog failed.')
+      });
+      if (res.status !== 200) {
+        throw new Error(`Loading discussions answered ${res.status}.`);
+      }
 
-      return await res.json()
+      return await res.json();
     },
-  })
+  });
+
+export const invalidateDiscussionLists = async (queryClient: QueryClient) => {
+  await queryClient.invalidateQueries({ queryKey: discussionQueryKeys.all });
+};
 ```
 
-The response is typed from the content type: each row carries exactly `listFields` plus `locale`, with `publishedAt` as `string | null`, so there is nothing to re-validate. `apiQuery` turns the state into `first`, `page`, `order`, `orderBy` and `search`. Route-specific filters are mapped here, so `?category=3` in the URL becomes `categoryId=3` for the API. Passing `locale` explicitly keeps the response, and its cache, tied to the page's language.
+- The URL keys are `q`, `sort`, `page` and one per filter, here `board`. Each `orderBy` must be in `publicApi.orderableFields` or be `publishedAt`.
+- `apiQuery` turns the URL state into `first`, `page`, `order`, `orderBy` and `search`. Filters are yours to map, because a URL name and an API name can differ.
+- The response is typed from the content type. Each row carries exactly `listFields` plus `author`, with dates as ISO strings. There is nothing to re-validate.
+- `invalidateDiscussionLists` expires every cached page of the list. The create and edit pages call it after a save. See [Public create form](/docs/content-engine/public-write-frontend#write-the-page).
+
+A localized content type also passes `locale` in the query, so each language gets its own response and cache entry. Discussions are not localized, so the locale only keys the cache.
 
 </Step>
 
@@ -145,155 +166,305 @@ The response is typed from the content type: each row carries exactly `listField
 
 ### Add the route
 
-Register the page with the list's `search` validator:
+Register the page with the list's `search` validator and a skeleton for the first load:
 
-```ts title="plugins/blog/src/routes.ts"
-import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'
-import { CardsPendingSkeleton } from '@vitnode/core/tanstack/pending'
+```ts title="plugins/example/src/routes.ts"
+import { FeedPendingSkeleton } from "@vitnode/core/tanstack/pending";
 
-import { blogListSearch } from './pages/blog-list'
+import { discussionListSearch } from "./pages/discussion-list";
 
 export const routes = definePluginRoutes([
-  page('/blog', {
-    cache: { maxAge: 300, staleWhileRevalidate: 60 },
-    component: lazy(() => import('./pages/blog-page')),
-    messages: ['@vitnode/blog.list'],
-    pendingComponent: CardsPendingSkeleton,
-    search: blogListSearch,
+  // [!code ++:6]
+  page("/discussions", {
+    component: lazy(() => import("./pages/discussions-page")),
+    messages: ["@vitnode/example.discussions"],
+    pendingComponent: FeedPendingSkeleton,
+    search: discussionListSearch,
   }),
-])
+]);
 ```
 
-The [page cache](/docs/dev/cache/pages) only stores a URL with no query string, so `/blog` is reused and `/blog?category=3` always renders fresh. Each locale has its own URL, so a Polish page is never served to an English reader.
+`messages` loads the `@vitnode/example.discussions` namespace for the page, its `head` and every component inside it. `pendingComponent` shows while the loader runs on a client-side navigation. A server render waits for the loader instead.
 
 </Step>
 
 <Step>
 
-### Load and render the page
+### Load the page and build its head
 
-Warm the query in `load`, build the head with `contentListPageHead`, and render the states with `ContentListResults` and `ContentListPagination`. An excerpt of `blog-page.tsx`:
+Create `src/pages/discussions-page.tsx`. The loader warms the query, so the server renders the list and the browser starts with it:
 
-```tsx title="plugins/blog/src/pages/blog-page.tsx"
-export const route = defineRoute<BlogPageData, BlogListSearch>({
-  load: async ({ context, search }) => ({
-    posts: await context.queryClient
+```tsx title="plugins/example/src/pages/discussions-page.tsx"
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
+import { contentListPageHead } from "@vitnode/core/tanstack/content";
+import {
+  defineRoute,
+  type RouteLoadContext,
+} from "@vitnode/core/tanstack/plugin-routes";
+
+import {
+  DISCUSSIONS_HREF,
+  type DiscussionListSearch,
+  discussionsQueryOptions,
+} from "./discussion-list";
+import { boardsQueryOptions } from "./example-queries";
+
+const loadDiscussions = async (
+  queryClient: RouteLoadContext["queryClient"],
+  { locale, search }: { locale: string; search: DiscussionListSearch },
+) => {
+  // A failed list is an error state on the page, not an error page.
+  const [discussions, boards] = await Promise.all([
+    queryClient
       .query({
-        ...blogPostsQueryOptions({ locale: context.locale, search }),
+        ...discussionsQueryOptions({ locale, search }),
         meta: LOADER_DATA_QUERY_META,
       })
       .catch(() => null),
-  }),
+    queryClient.query(boardsQueryOptions()).catch(() => []),
+  ]);
+
+  return { boards, discussions };
+};
+
+type DiscussionsPageData = Awaited<ReturnType<typeof loadDiscussions>>;
+
+export const route = defineRoute<DiscussionsPageData, DiscussionListSearch>({
+  load: async ({ context, search }) =>
+    await loadDiscussions(context.queryClient, {
+      locale: context.locale,
+      search,
+    }),
 
   head: ({ search, t }) =>
     contentListPageHead({
-      description: t('@vitnode/blog.list.desc'),
-      pathname: BLOG_HREF,
+      description: t("@vitnode/example.discussions.list.desc"),
+      pathname: DISCUSSIONS_HREF,
       search,
-      title: t('@vitnode/blog.list.title'),
+      title: t("@vitnode/example.discussions.list.title"),
     }),
-})
-
-const BlogPage = ({
-  loaderData: { posts },
-  navigate,
-  search,
-}: PluginRoutePageProps<BlogPageData, BlogListSearch>) => {
-  const t = useTranslations('@vitnode/blog.list')
-  const [isPending, startTransition] = React.useTransition()
-  const update = (patch: Partial<BlogListSearch>) => {
-    startTransition(async () => {
-      await navigate({
-        resetScroll: false,
-        search: blogPostList.withSearch(search, patch),
-      })
-    })
-  }
-  const input = useContentListSearchInput({
-    onCommit: (q) => update({ q }),
-    value: search.q,
-  })
-
-  return (
-    <>
-      <input
-        aria-label={t('search_label')}
-        onChange={(event) => input.setValue(event.target.value)}
-        type="search"
-        value={input.value}
-      />
-
-      <ContentListResults
-        className="grid gap-6 md:grid-cols-2 lg:grid-cols-3"
-        empty={<BlogEmpty title={t('empty.title')} />}
-        error={<BlogEmpty title={t('error.title')} />}
-        getKey={(post) => post.id}
-        isError={posts === null}
-        isFetching={isPending}
-        isFiltered={blogPostList.isFiltered(search)}
-        items={posts?.edges}
-        label={t('articles')}
-        loading={<BlogGridSkeleton />}
-        noResults={<BlogEmpty title={t('no_results.title')} />}
-        renderItem={(post) => <BlogPostCard post={post} />}
-      />
-
-      {posts ? (
-        <ContentListPagination
-          hrefFor={(page) => blogPostList.href(BLOG_HREF, { ...search, page })}
-          label={t('pagination')}
-          pageInfo={posts.pageInfo}
-        />
-      ) : null}
-    </>
-  )
-}
+});
 ```
 
-- `withSearch` returns the new URL state and drops `page` when anything else changes, because page 4 of the old results says nothing about the new ones.
-- `useContentListSearchInput` waits 500 ms after the last keystroke before it navigates, and follows the URL when the reader goes back or forward.
-- `navigate` inside `startTransition` keeps the current cards on screen, dimmed and `aria-busy`, while the next page loads.
-- `ContentListResults` shows `empty` when nothing is published and `noResults` when a search or filter matches nothing, so only the second one needs a "Clear filters" link to `BLOG_HREF`.
+- `LOADER_DATA_QUERY_META` keeps the result out of the dehydrated cache, because the loader data already carries it to the browser.
+- `.catch(() => null)` turns a failed request into the list's error state instead of the app's error page.
+- `contentListPageHead` gives the plain list `index, follow` and a canonical link, and every searched, filtered, sorted or paged view `noindex, follow`.
+- `boardsQueryOptions` is the example's own query for the board picker. It is not part of the list.
 
 </Step>
 
-</Steps>
+<Step>
 
-## Check the result
+### Render the controls and the results
 
-Run `pnpm build:plugins`, restart `pnpm dev` and open your list page. Search, pick a category, change the sort and move to page 2: the URL changes each time, and refreshing or pressing back shows the same view.
+Add the component to the same file. `ContentListResults` decides between the loading, error, empty, no-results and item states. `ContentListPagination` renders page links from `pageInfo`:
+
+```tsx title="plugins/example/src/pages/discussions-page.tsx"
+const DiscussionsPage = ({
+  loaderData: { boards, discussions },
+  navigate,
+  search,
+}: PluginRoutePageProps<DiscussionsPageData, DiscussionListSearch>) => {
+  const t = useTranslations("@vitnode/example.discussions.list");
+  const [isPending, startTransition] = React.useTransition();
+  const update = (patch: Partial<DiscussionListSearch>) => {
+    startTransition(async () => {
+      await navigate({
+        resetScroll: false,
+        search: discussionList.withSearch(search, patch),
+      });
+    });
+  };
+  const input = useContentListSearchInput({
+    onCommit: q => {
+      update({ q });
+    },
+    value: search.q,
+  });
+
+  return (
+    <div className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
+      <div className="flex flex-col gap-3 md:flex-row" role="search">
+        <Input
+          aria-label={t("search_label")}
+          onChange={event => {
+            input.setValue(event.target.value);
+          }}
+          onKeyDown={event => {
+            if (event.key === "Enter") input.commit();
+          }}
+          placeholder={t("search_placeholder")}
+          type="search"
+          value={input.value}
+        />
+        <NativeSelect
+          aria-label={t("board_label")}
+          onChange={event => {
+            const board = Number(event.target.value);
+            update({ board: board > 0 ? board : undefined });
+          }}
+          value={String(search.board ?? "")}
+        >
+          <NativeSelectOption value="">{t("all_boards")}</NativeSelectOption>
+          {boards.map(board => (
+            <NativeSelectOption key={board.id} value={String(board.id)}>
+              {board.name}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+        <NativeSelect
+          aria-label={t("sort_label")}
+          onChange={event => {
+            update({
+              sort: discussionList.sorts.find(
+                sort => sort === event.target.value,
+              ),
+            });
+          }}
+          value={search.sort ?? discussionList.defaultSort}
+        >
+          {discussionList.sorts.map(sort => (
+            <NativeSelectOption key={sort} value={sort}>
+              {t(`sort.${sort}`)}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      </div>
+
+      <ContentListResults
+        className="flex flex-col divide-y rounded-lg border"
+        empty={<ListState title={t("empty.title")} />}
+        error={<ListState title={t("error.title")} />}
+        getKey={discussion => discussion.id}
+        isError={discussions === null}
+        isFetching={isPending}
+        isFiltered={discussionList.isFiltered(search)}
+        itemClassName="flex flex-col gap-2 p-4 md:flex-row md:justify-between"
+        items={discussions?.edges}
+        label={t("title")}
+        loading={null}
+        noResults={
+          <ListState
+            action={<HrefLink href={DISCUSSIONS_HREF}>{t("no_results.clear")}</HrefLink>}
+            title={t("no_results.title")}
+          />
+        }
+        renderItem={discussion =>
+          discussion.slug === null ? (
+            <span>{discussion.title}</span>
+          ) : (
+            <HrefLink href={discussionHref(discussion.slug)}>
+              {discussion.title}
+            </HrefLink>
+          )
+        }
+      />
+
+      {discussions ? (
+        <ContentListPagination
+          hrefFor={page =>
+            discussionList.href(DISCUSSIONS_HREF, { ...search, page })
+          }
+          label={t("pagination")}
+          pageInfo={discussions.pageInfo}
+        />
+      ) : null}
+    </div>
+  );
+};
+
+export default DiscussionsPage;
+```
+
+The excerpt trims styling, the author line and the per-row actions. `ListState` is a small wrapper around the `Empty` components from `@vitnode/core/components/ui/empty`. The full file is `plugins/example/src/pages/discussions-page.tsx`.
+
+- `withSearch` returns the new URL state and drops `page` when anything else changes, because page 2 of the old results says nothing about the new ones.
+- `useContentListSearchInput` waits 500 ms after the last keystroke before it navigates, commits at once on Enter, and follows the URL when the reader goes back or forward.
+- `navigate` inside `startTransition` keeps the current rows on screen, dimmed and `aria-busy`, while the next page loads.
+- `empty` shows when nothing is published and `noResults` when a search or filter matches nothing, so only the second one offers **Clear filters**.
+- `loading` renders while `items` is `undefined`. This page always has data from its loader, so it passes `null`; a list that fetches in the browser shows a skeleton there.
+- Link each row to its record's page with the same helper that page's route uses, here `discussionHref(slug)`. A row whose `slug` is `null` has no page to link to.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={noResults}
-  alt="An article list with the search term kangaroo-free and the Releases category selected, showing No articles match and a Clear filters button"
+  alt="The discussion list with the search term kangaroo and the Help & questions board selected, showing No discussions match and a Clear filters button"
 />
+
+To put Edit and Report buttons on each row, see [Public edit form](/docs/content-engine/public-write-edit#show-the-edit-button) and [Report content](/docs/content-engine/reports#add-it-to-every-row-of-a-list).
+
+</Step>
+
+<Step>
+
+### Add the messages
+
+Every label lives in the plugin's locale file, under the namespace the route loads:
+
+```json title="plugins/example/src/locales/en.json"
+{
+  "@vitnode/example": {
+    "discussions": {
+      "list": {
+        "title": "Discussions",
+        "desc": "Questions, ideas and show-and-tell from the community, newest first.",
+        "search_label": "Search discussions",
+        "search_placeholder": "Search by title",
+        "board_label": "Board",
+        "all_boards": "All boards",
+        "sort_label": "Sort by",
+        "sort": { "newest": "Newest", "oldest": "Oldest", "title": "Title (A-Z)" },
+        "pagination": "Discussion pages",
+        "empty": { "title": "No discussions yet" },
+        "no_results": { "title": "No discussions match", "clear": "Clear filters" },
+        "error": { "title": "Couldn't load discussions" }
+      }
+    }
+  }
+}
+```
+
+</Step>
+
+</Steps>
+
+## How URL parameters, locales and pagination interact
+
+- **Normalized URLs.** `parseSearch` drops unknown keys, invalid values, `page=1` and the default sort. `/discussions?sort=newest&page=1&utm_source=x` and `/discussions` are the same state, so they share a query key and a canonical link.
+- **Locales.** On a [localized](/docs/content-engine/localization) content type, pass `locale` in the query. A record with no translation in that language falls back to the default language when the type uses `fallback: "default"`, and each row says which language it is in under `locale`. An unknown `?locale=` answers `404` rather than an English list.
+- **Pagination.** `ContentListPagination` reads `currentPage`, `totalPages`, `hasNextPage` and `hasPreviousPage` from `pageInfo`, and every page is a real link, so it works before hydration. A `page` past the end gets the last page. The list route also accepts `cursor` for "Older" and "Newer" links; [Containers on the frontend](/docs/content-engine/container-frontend#add-the-board-page) uses it.
+- **Caching.** The API caches each list read per query and locale, and every publish, edit, unpublish, hide or delete of the content type expires it. TanStack Query keeps its own copy in the browser for `RECORD_STALE_TIME`, which is why a page that writes records invalidates its list.
+- **Hidden records.** With [`visibility`](/docs/content-engine/content-visibility#who-can-still-see-it), a signed-in author, editor or moderator also gets the hidden records they may see. Those rows carry `hidden: true`, so mark them, for example with `HiddenIcon` from `@vitnode/core/components/hidden-icon`. That response is `private, no-store` and skips the API cache. A route with a page `cache` serves signed-in visitors the HTML rendered for guests, so refetch the list in the browser under a key that includes the viewer, like the blog's `blogViewerPostsQueryOptions`. For your own counts or queries, combine `contentListHiddenAccess` and `contentPublicListCondition` from `@vitnode/core/content/server`.
+
+Records reach crawlers through their own pages and the [sitemap](/docs/content-engine/seo#sitemap). The sitemap route lists records, not lists, so add the list's own URL, such as `/discussions`, where your app builds `/sitemap.xml`.
+
+The blog plugin builds `/blog` and `/blog/category/:slug` from the same pieces with only pages and a category, in `plugins/blog/src/pages/blog-list.ts` and `blog-queries.ts`.
+
+## Check the result
+
+Open `http://localhost:3000/discussions`:
+
+1. Type a word from a title. After half a second the URL gets `?q=...` and the list narrows.
+2. Pick a board, then **Title (A-Z)**. The URL keeps both, and the list jumps back to page 1.
+3. Search for a word no title contains. **No discussions match** shows with **Clear filters**.
+4. Move to page 2, refresh, then press back. Each view comes back exactly as the URL describes it.
 
 The plain list is the indexable one; every other state stays out of the index but keeps its links followable:
 
 ```bash
-curl -s http://localhost:3000/blog | grep -oE '<meta content="[^"]*" name="robots"/>|<link href="[^"]*" rel="canonical"/>'
-curl -s "http://localhost:3000/blog?category=3" | grep -oE '<meta content="[^"]*" name="robots"/>'
+curl -s http://localhost:3000/discussions | grep -oE '<meta content="[^"]*" name="robots"/>'
+curl -s "http://localhost:3000/discussions?board=1" | grep -oE '<meta content="[^"]*" name="robots"/>'
 ```
 
 ```html
 <meta content="index, follow" name="robots" />
-<link href="http://localhost:3000/blog" rel="canonical" />
 <meta content="noindex, follow" name="robots" />
 ```
 
-## How URL parameters, locales and pagination interact
-
-- **Normalized URLs.** `parseSearch` drops unknown keys, invalid values, `page=1` and the default sort. `/blog?sort=newest&page=1&utm_source=x` and `/blog` are the same state, so they share a query key and a canonical link.
-- **Locales.** The query key holds the locale, and the request passes it as `?locale=`. A locale with no translation of a record gets the default language's when the content type uses `fallback: "default"`, and each row says which language it is in under `locale`. An unknown `?locale=` answers `404` rather than an English list.
-- **Pagination.** Lists are page-numbered. `pageInfo` carries `currentPage`, `totalPages`, `hasNextPage` and `totalCount`, which is what `ContentListPagination` and the "Showing 1–12 of 15" text read. A `page` past the end gets the last page.
-- **Caching and freshness.** The API caches each list read per query and locale, and every publish, edit, unpublish, hide or delete of the content type expires them, along with any cached page that read the list.
-
-Records also reach crawlers through their own pages and the [sitemap](/docs/content-engine/seo#sitemap). The sitemap route lists records, not lists, so add the list's own URL, such as `/blog`, where your app builds `/sitemap.xml`.
-
-## Related
-
-- [Add a list to another page](/docs/content-engine/public-lists-embed) with your own item layout.
-- [Public list API](/docs/content-engine/public-lists-api) for every option and return value.
-- [Public API](/docs/content-engine/public-api) for the list route's query parameters.
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={listPage}
+  alt="The Discussions page with a search field, an All boards select and a Newest select above ten discussions, each with its author, its date and an Edit or Report button, and pagination below"
+/>

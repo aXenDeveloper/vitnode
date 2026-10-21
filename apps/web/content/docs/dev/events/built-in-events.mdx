@@ -59,6 +59,7 @@ the write it describes has committed.
 | `user.passkey.deleted`         | `{ userId, passkeyId }`                   | A passkey is removed - by its owner or by staff                                                                          |
 | `user.avatar.updated`          | `{ userId, fileId }`                      | An avatar is uploaded or removed - by the user on their profile, or by staff in the AdminCP                              |
 | `user.cover.updated`           | `{ userId, fileId }`                      | A profile cover is uploaded or removed - by the user on their profile, or by staff in the AdminCP                        |
+| `file.editor.uploaded`         | `{ fileId, userId, kind }`                | An image or attachment is dropped, pasted or inserted into an [editor that allows uploads](/docs/ui/editor-images)        |
 | `role.created`                 | `{ roleId }`                              | A role is created in the AdminCP                                                                                         |
 | `role.updated`                 | `{ roleId }`                              | A role is edited in the AdminCP                                                                                          |
 | `role.deleted`                 | `{ roleId }`                              | A role is deleted in the AdminCP                                                                                         |
@@ -180,6 +181,35 @@ same two triggers.
     },
   }}
 />
+
+</Accordion>
+<Accordion title="file.editor.uploaded">
+
+Emitted after an editor image or attachment is stored in `core_files`, from the member route
+(`POST /users/files/editor`) or the AdminCP one (`POST /admin/files/editor`).
+The file is not part of any saved document yet, and the person may still remove
+it before saving.
+
+<TypeTable
+  type={{
+    fileId: {
+      description: 'The new `core_files` id.',
+      type: 'number',
+    },
+    userId: {
+      description: 'Id of the member or admin who uploaded it.',
+      type: 'number',
+    },
+    kind: {
+      description:
+        '`image` for a picture, `attachment` for a PDF, Word, PowerPoint or ZIP file.',
+      type: '"image" | "attachment"',
+    },
+  }}
+/>
+
+**A listener would** scan the file with a malware or moderation service, or count uploads
+per member for a quota.
 
 </Accordion>
 <Accordion title="user.sso.linked">

@@ -14,6 +14,7 @@ import type { ExampleSearch } from "./pages/example-page";
 
 import { boardSearch } from "./pages/board-search";
 import { browseSearch } from "./pages/browse-search";
+import { discussionListSearch } from "./pages/discussion-list";
 import {
   discussionNewSearch,
   discussionSearch,
@@ -90,6 +91,13 @@ export const routes = definePluginRoutes([
     messages: ["@vitnode/example.boards"],
     pendingComponent: FeedPendingSkeleton,
     search: boardSearch,
+  }),
+
+  page("/discussions", {
+    component: lazy(() => import("./pages/discussions-page")),
+    messages: ["@vitnode/example.discussions"],
+    pendingComponent: FeedPendingSkeleton,
+    search: discussionListSearch,
   }),
 
   page("/discussions/new", {

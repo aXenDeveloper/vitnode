@@ -75,6 +75,8 @@ export interface ContentFormFieldSpec {
 
   targetContentTypeId?: string;
   targetIdStrategy?: ContentIdStrategy;
+  /** `richText` fields only: the editor accepts image uploads. */
+  uploads?: true;
 }
 
 export interface ContentFormSectionSpec {
@@ -249,6 +251,8 @@ export const projectFormField = (
             }
           : {}),
       };
+    case "richText":
+      return fieldValue.uploads === true ? { ...base, uploads: true } : base;
     case "slug":
       // No default and no minimum: an empty slug input means "derive it",
       // and the server is what decides whether that is possible.

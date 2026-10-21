@@ -1,9 +1,7 @@
+import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
 import type { PluginRoutePageProps } from "@vitnode/core/routing";
 
-import {
-  type AutoFormOnSubmit,
-  setFormFieldError,
-} from "@vitnode/core/components/form/auto-form";
+import { useQueryClient } from "@tanstack/react-query";
 import { buttonVariants } from "@vitnode/core/components/ui/button";
 import {
   Empty,
@@ -13,6 +11,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
+import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink, useHrefNavigate } from "@vitnode/core/tanstack/link";
 import {
@@ -29,10 +28,11 @@ import type { DiscussionNewSearch } from "./discussion-search";
 
 import { BOARDS_HREF } from "./board-search";
 import {
+  DISCUSSION_FIELDS,
   DiscussionCreateForm,
   type DiscussionCreateFormSchema,
-  useDiscussionRejection,
 } from "./discussion-form";
+import { invalidateDiscussionLists } from "./discussion-list";
 import { discussionEditHref, discussionHref } from "./discussion-search";
 import { DiscussionShell } from "./discussion-shell";
 import { boardsQueryOptions } from "./example-queries";
@@ -68,41 +68,38 @@ const DiscussionNewPage = ({
   search,
 }: PluginRoutePageProps<DiscussionNewData, DiscussionNewSearch>) => {
   const t = useTranslations("@vitnode/example.discussions");
-  const rejectDiscussion = useDiscussionRejection();
+  const write = useContentPublicWrite({
+    fields: DISCUSSION_FIELDS,
+    uniqueField: "title",
+  });
   const [isLeaving, setIsLeaving] = useState(false);
   const navigate = useHrefNavigate();
+  const queryClient = useQueryClient();
 
   const onSubmit: AutoFormOnSubmit<DiscussionCreateFormSchema> = async (
     { board, ...values },
     form,
   ) => {
-    const res = await fetcher({
-      plugin: manifest.id,
-      method: "post",
-      module: "content/discussions",
-      path: "/",
-      args: { body: { values: { ...values, board: Number(board) } } },
-    });
+    const record = await write.submit(
+      form,
+      async () =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "post",
+          module: "content/discussions",
+          path: "/",
+          args: { body: { values: { ...values, board: Number(board) } } },
+        }),
+    );
+    if (!record) return;
 
-    if (res.status === 201) {
-      const record = await res.json();
-      setIsLeaving(true);
-      await navigate(
-        record.slug === null
-          ? discussionEditHref(record.id)
-          : discussionHref(record.slug, { created: true }),
-      );
-
-      return;
-    }
-
-    if (res.status === 409) {
-      setFormFieldError(form, "title", t("errors.unique"));
-
-      return;
-    }
-
-    await rejectDiscussion(res, form);
+    setIsLeaving(true);
+    await invalidateDiscussionLists(queryClient);
+    await navigate(
+      record.slug === null
+        ? discussionEditHref(record.id)
+        : discussionHref(record.slug, { created: true }),
+    );
   };
 
   return (

@@ -18,6 +18,10 @@ import type {
   ContentPublicSelect,
 } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
+import type {
+  ContentPublicHiddenAccess,
+  ContentPublicHiddenFlag,
+} from "./hidden-list";
 import type { ContentPageInfo } from "./service";
 
 import { withPagination } from "../../api/lib/with-pagination";
@@ -31,6 +35,10 @@ import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { isContentPublicPerson } from "../public-person";
 import { publicOrderableColumns } from "../registry";
 import { groupPublicLeafPaths } from "../schemas";
+import {
+  contentPublicListCondition,
+  flagHiddenContentRows,
+} from "./hidden-list";
 import {
   createContentPublicRowHydrator,
   isContentPublicPeopleList,
@@ -83,6 +91,11 @@ export interface ContentPublicFindManyArgs<
 > extends ContentPublicReadOptions {
   /** Equality filters, restricted to `publicApi.filterableFields`. */
   filters?: ContentPublicFilterInput<TDefinition>;
+  /**
+   * Also list the published-but-hidden records this viewer may see, flagged
+   * `hidden: true`. Per viewer, so never cache such a page for everybody.
+   */
+  hidden?: ContentPublicHiddenAccess;
   orderBy?: {
     column?: ContentPublicOrderableFieldName<TDefinition>;
     order?: "asc" | "desc";
@@ -120,7 +133,7 @@ export interface ContentPublicService<TDefinition> {
   ) => Promise<ContentPublicSelect<TDefinition> | null>;
   /** One page of published records, filtered and ordered within the public allowlists. */
   findMany: (args?: ContentPublicFindManyArgs<TDefinition>) => Promise<{
-    edges: ContentPublicListRow<TDefinition>[];
+    edges: (ContentPublicHiddenFlag & ContentPublicListRow<TDefinition>)[];
     pageInfo: ContentPageInfo;
   }>;
   /**
@@ -484,11 +497,9 @@ export const createContentPublicService = <
       return (await detail.hydrate(rows)).map(detail.project);
     },
 
-    findMany: async ({ filters = {}, orderBy, query = {} } = {}) => {
+    findMany: async ({ filters = {}, hidden, orderBy, query = {} } = {}) => {
       const conditions = [
-        // Not optional, not a parameter, and first: whatever else a caller
-        // passes, an unpublished row cannot come back.
-        publishedCondition(published),
+        contentPublicListCondition({ advanced, columns, definition }, hidden),
         buildFilterCondition({
           allowed: publicApi.filterableFields,
           columns,
@@ -549,8 +560,12 @@ export const createContentPublicService = <
             .offset(offset),
       });
 
+      const edges = (await list.hydrate(data.edges)).map(list.project);
+
       return {
-        edges: (await list.hydrate(data.edges)).map(list.project),
+        edges: hidden
+          ? await flagHiddenContentRows(c, { columns, rows: edges, table })
+          : edges,
         pageInfo: data.pageInfo,
       };
     },

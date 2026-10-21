@@ -4,6 +4,7 @@ import {
   CONTENT_CONFLICT_CODES,
   CONTENT_DELIVERY_CODES,
   CONTENT_DUPLICATE_CODES,
+  CONTENT_INVALID_INPUT_CODE,
   CONTENT_PUBLIC_WRITE_CODES,
   CONTENT_SCHEDULE_CODES,
   CONTENT_TRANSLATION_CONFLICT_CODES,
@@ -23,6 +24,13 @@ export type ContentTranslationConflictCode =
 export type ContentUnprocessableCode =
   (typeof CONTENT_UNPROCESSABLE_CODES)[keyof typeof CONTENT_UNPROCESSABLE_CODES];
 
+/**
+ * The JSON body of a `409` from a content write, AdminCP or public:
+ * `CONTENT_VERSION_CONFLICT` when `expectedVersion` no longer matches the
+ * record (nothing was written; `currentVersion` is the stored one), or
+ * `CONTENT_UNIQUE_CONFLICT` when a unique field, such as a derived slug, is
+ * taken.
+ */
 export const zodContentConflict = z.discriminatedUnion("code", [
   z.object({
     code: z.literal(CONTENT_CONFLICT_CODES.version),
@@ -38,6 +46,7 @@ export const zodContentConflict = z.discriminatedUnion("code", [
   }),
 ]);
 
+/** A parsed `409` body. See {@link zodContentConflict}. */
 export type ContentConflict = z.infer<typeof zodContentConflict>;
 
 export const zodContentTranslationConflict = z.discriminatedUnion("code", [
@@ -158,6 +167,11 @@ export const parseContentScheduleRejection = (
   }
 };
 
+/**
+ * Reads a `409` body from its raw text, as `response.text()` returns it, and
+ * returns `null` for an empty or unrelated body. A typed `fetcher` call can
+ * read `code` from `await res.json()` directly instead.
+ */
 export const parseContentConflict = (
   body: string | undefined,
 ): ContentConflict | null => {
@@ -179,6 +193,36 @@ export const parseContentUnprocessable = (
 
   try {
     const parsed = zodContentUnprocessable.safeParse(JSON.parse(body));
+
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+};
+
+export const zodContentInvalidInput = z.object({
+  code: z.literal(CONTENT_INVALID_INPUT_CODE),
+  contentTypeId: z.string(),
+  issues: z.array(
+    z.object({
+      code: z.string(),
+      field: z.string().nullable(),
+      locale: z.string().nullable(),
+    }),
+  ),
+});
+
+export type ContentInvalidInput = z.infer<typeof zodContentInvalidInput>;
+
+export type ContentInputIssue = ContentInvalidInput["issues"][number];
+
+export const parseContentInvalidInput = (
+  body: string | undefined,
+): ContentInvalidInput | null => {
+  if (body === undefined || body === "") return null;
+
+  try {
+    const parsed = zodContentInvalidInput.safeParse(JSON.parse(body));
 
     return parsed.success ? parsed.data : null;
   } catch {
@@ -219,6 +263,13 @@ export const parseContentDuplicateRejection = (
   }
 };
 
+/**
+ * The JSON body a public write route answers with on `400`, `401`, `403` and
+ * `404`. Each issue's `code` is stable - a Zod code such as `too_small`, or one
+ * of `CONTENT_PUBLIC_WRITE_ISSUE_CODES` - so translate by it; `message` is
+ * English developer text. `field` is `null` for an issue about the whole
+ * request.
+ */
 export const zodContentPublicWriteRejection = z.object({
   code: z.enum([
     CONTENT_PUBLIC_WRITE_CODES.forbidden,
@@ -246,7 +297,20 @@ export type ContentPublicWriteRejection = z.infer<
 
 /**
  * Reads a refused public write's body. Takes the already-parsed JSON (not a
- * string) and returns `null` for any other shape.
+ * string) and returns `null` for any other shape - a `409`, the rate
+ * limiter's `429` or a captcha failure. Pure; runs anywhere.
+ *
+ * @example
+ * ```ts
+ * import { parseContentPublicWriteRejection } from "@vitnode/core/content";
+ *
+ * const rejection = parseContentPublicWriteRejection(
+ *   await res.json().catch(() => null),
+ * );
+ * for (const issue of rejection?.issues ?? []) {
+ *   if (issue.field) setFormFieldError(form, issue.field, t(issue.code));
+ * }
+ * ```
  */
 export const parseContentPublicWriteRejection = (
   body: unknown,

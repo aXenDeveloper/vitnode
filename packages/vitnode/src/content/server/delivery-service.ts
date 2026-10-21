@@ -216,7 +216,7 @@ export const createContentDeliveryService = <
         ? null
         : contentDeliveryInternalPath({ definition, slug });
     const alternates =
-      localized && itemId !== null ? await readAlternates(itemId) : [];
+      localized && itemId !== null ? await readAlternates(itemId, hidden) : [];
 
     return {
       alternates,
@@ -250,8 +250,9 @@ export const createContentDeliveryService = <
 
   const readAlternates = async (
     itemId: ContentId,
+    hidden = false,
   ): Promise<ContentDeliveryAlternate[]> =>
-    localized ? await readDeliveryAlternates({ c, itemId, model }) : [];
+    localized ? await readDeliveryAlternates({ c, hidden, itemId, model }) : [];
 
   const strictCanonical = async (
     itemId: ContentId,

@@ -65,7 +65,7 @@ export const DevErrorOverlay = ({ error }: { error: unknown }) => {
   return (
     <dialog
       aria-label="Error details"
-      className="bg-background m-0 size-full max-h-none max-w-none border-0 p-0"
+      className="m-0 size-full max-h-none max-w-none border-0 bg-transparent p-0 backdrop:bg-transparent"
       onClose={() => {
         setClosedError(error);
       }}

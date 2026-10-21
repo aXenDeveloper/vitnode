@@ -23,6 +23,7 @@ import { ContentFileReferenceError } from "./files";
 import {
   contentDeliveryConflict,
   contentFileRejected,
+  contentInvalidInput,
   contentUnprocessable,
   rethrowAsHttpError,
 } from "./http-errors";
@@ -149,7 +150,10 @@ export const withTranslationHttpErrors = async <TResult>(
     }
 
     if (error instanceof ZodError) {
-      throw new HTTPException(400, { message: "Invalid input data." });
+      throw contentInvalidInput(error, {
+        contentTypeId,
+        locale: locale ?? null,
+      });
     }
 
     try {

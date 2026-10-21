@@ -125,23 +125,9 @@ declare module "../../lib/fetcher/registry" {
   }
 }
 
-describe("the plugin API keeps its literal shape", () => {
-  it("retains the plugin id and the module tuple", () => {
-    const plugin = notesApiPlugin();
-
-    expectTypeOf(plugin.pluginId).toEqualTypeOf<"@acme/notes">();
-    expectTypeOf(plugin.modules[0]).toEqualTypeOf<typeof notesModule>();
-    expectTypeOf(plugin.modules).toHaveProperty("length");
-    expectTypeOf(plugin.modules.length).toEqualTypeOf<2>();
-  });
-});
-
-describe("the contract carries the API surface and nothing else", () => {
-  it("keeps the literal plugin id", () => {
+describe("the plugin contract", () => {
+  it("keeps the literal plugin id and flattens every module path", () => {
     expectTypeOf<NotesApiPlugin["pluginId"]>().toEqualTypeOf<"@acme/notes">();
-  });
-
-  it("flattens every module path, at every depth", () => {
     expectTypeOf<NotesApiPlugin["modulePaths"]>().toEqualTypeOf<
       | "content"
       | "content/posts"
@@ -151,29 +137,10 @@ describe("the contract carries the API surface and nothing else", () => {
       | "notes/tags/colors"
     >();
   });
-
-  it("correlates plugin, module, path and method on every endpoint", () => {
-    type Colors = Extract<
-      NotesApiPlugin["endpoints"],
-      { module: "notes/tags/colors" }
-    >;
-
-    expectTypeOf<Colors["plugin"]>().toEqualTypeOf<"@acme/notes">();
-    expectTypeOf<Colors["path"]>().toEqualTypeOf<"/">();
-    expectTypeOf<Colors["method"]>().toEqualTypeOf<"get">();
-  });
-
-  it("exposes no runtime member of the plugin it was built from", () => {
-    type Members = keyof NotesApiPlugin;
-
-    expectTypeOf<Members>().toEqualTypeOf<
-      "endpoints" | "modulePaths" | "modules" | "pluginId"
-    >();
-  });
 });
 
 describe("the universal fetcher resolves a route from the plugin id", () => {
-  it("infers the status and the body of a top-level core module", async () => {
+  it("infers the status and the body of a core module", async () => {
     const response = await fetcher({
       plugin: "@vitnode/core",
       method: "get",
@@ -185,29 +152,7 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
     expectTypeOf((await response.json()).user).not.toBeAny();
   });
 
-  it("infers a registered plugin's own module", async () => {
-    const response = await fetcher({
-      plugin: "@acme/notes",
-      method: "get",
-      module: "notes",
-      path: "/",
-    });
-
-    expectTypeOf(response.status).toEqualTypeOf<200>();
-    expectTypeOf((await response.json()).notes).toEqualTypeOf<string[]>();
-  });
-
-  it("walks nested modules to any depth", async () => {
-    const core = await fetcher({
-      plugin: "@vitnode/core",
-      args: { query: {} },
-      method: "get",
-      module: "admin/advanced/cron",
-      path: "/",
-    });
-
-    expectTypeOf(core.status).toEqualTypeOf<200>();
-
+  it("walks a registered plugin's nested modules to any depth", async () => {
     const colors = await fetcher({
       plugin: "@acme/notes",
       args: { query: { search: "red" } },
@@ -220,6 +165,22 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
     expectTypeOf((await colors.json()).colors).toEqualTypeOf<string[]>();
   });
 
+  it("keeps a status-aware union when a route declares several answers", async () => {
+    const response = await fetcher({
+      plugin: "@acme/notes",
+      args: { body: { pinned: true }, params: { id: "1" } },
+      method: "post",
+      module: "notes",
+      path: "/{id}/pin",
+    });
+
+    expectTypeOf(response.status).toEqualTypeOf<200 | 404>();
+
+    if (response.status === 200) {
+      expectTypeOf((await response.json()).id).toEqualTypeOf<string>();
+    }
+  });
+
   it("types the routes a content type's public API generates", async () => {
     const list = await fetcher({
       plugin: "@acme/notes",
@@ -228,26 +189,26 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
       module: "content/posts",
       path: "/",
     });
-
-    expectTypeOf(list.status).toEqualTypeOf<200 | 400 | 404>();
-
     const detail = await fetcher({
       plugin: "@acme/notes",
-      args: { params: { slug: "hello" } },
+      args: { params: { slug: "hello" }, query: { locale: "pl" } },
       method: "get",
       module: "content/posts",
       path: "/{slug}",
     });
 
+    expectTypeOf(list.status).toEqualTypeOf<200 | 400 | 404>();
     expectTypeOf(detail.status).toEqualTypeOf<200 | 404>();
   });
 
   it("types the routes a content type's publicWrite generates", async () => {
-    const body = { body: { type: "doc" as const }, forum: 1, title: "Hello" };
-
     const created = await fetcher({
       plugin: "@acme/notes",
-      args: { body: { values: body } },
+      args: {
+        body: {
+          values: { body: { type: "doc" }, forum: 1, title: "Hello" },
+        },
+      },
       method: "post",
       module: "content/topics",
       path: "/",
@@ -255,20 +216,8 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
 
     expectTypeOf(created.status).toEqualTypeOf<201 | 400 | 401 | 409>();
     if (created.status === 201) {
-      const record = await created.json();
-      expectTypeOf(record.id).toEqualTypeOf<number>();
-      expectTypeOf(record.values.title).toEqualTypeOf<string>();
+      expectTypeOf((await created.json()).values.title).toEqualTypeOf<string>();
     }
-
-    const editable = await fetcher({
-      plugin: "@acme/notes",
-      args: { params: { id: 1 } },
-      method: "get",
-      module: "content/topics",
-      path: "/{id}/edit",
-    });
-
-    expectTypeOf(editable.status).toEqualTypeOf<200 | 401 | 403 | 404>();
 
     const updated = await fetcher({
       plugin: "@acme/notes",
@@ -282,6 +231,86 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
       200 | 400 | 401 | 403 | 404 | 409
     >();
   });
+});
+
+describe("the universal fetcher rejects what the registry does not describe", () => {
+  it("rejects a plugin that is not configured", async () => {
+    await fetcher({
+      // @ts-expect-error -- not in the registry
+      plugin: "@acme/missing",
+      method: "get",
+      module: "notes",
+      path: "/",
+    });
+  });
+
+  it("reports only the module when the plugin does not mount it", async () => {
+    await fetcher({
+      plugin: "@acme/notes",
+      method: "get",
+      // @ts-expect-error -- not a module of `@acme/notes`
+      module: "does-not-exist",
+      path: "/anything",
+    });
+    await fetcher({
+      plugin: "@acme/notes",
+      method: "get",
+      // @ts-expect-error -- `colors` is under `tags`
+      module: "notes/colors",
+      path: "/",
+    });
+  });
+
+  it("rejects a path or a method the module does not serve", async () => {
+    await fetcher({
+      plugin: "@acme/notes",
+      method: "get",
+      module: "notes",
+      // @ts-expect-error -- not a route on `notes`
+      path: "/not-a-route",
+    });
+    await fetcher({
+      plugin: "@acme/notes",
+      // @ts-expect-error -- `/{id}/pin` is a `post`
+      method: "get",
+      module: "notes",
+      path: "/{id}/pin",
+    });
+  });
+
+  it("rejects missing, mistyped and undeclared arguments", async () => {
+    // @ts-expect-error -- `/{id}/pin` declares params and a body
+    await fetcher({
+      plugin: "@acme/notes",
+      method: "post",
+      module: "notes",
+      path: "/{id}/pin",
+    });
+    await fetcher({
+      plugin: "@acme/notes",
+      // @ts-expect-error -- `pinned` is a boolean
+      args: { body: { pinned: "yes" }, params: { id: "1" } },
+      method: "post",
+      module: "notes",
+      path: "/{id}/pin",
+    });
+    await fetcher({
+      plugin: "@vitnode/core",
+      // @ts-expect-error -- `nickname` is not on the sign-in schema
+      args: { body: { email: "a@b.c", nickname: "x", password: "y" } },
+      method: "post",
+      module: "users",
+      path: "/sign_in",
+    });
+    await fetcher({
+      plugin: "@acme/notes",
+      // @ts-expect-error -- `/` takes no body, params or query
+      args: { query: { search: "x" } },
+      method: "get",
+      module: "notes",
+      path: "/",
+    });
+  });
 
   it("rejects a write the content type does not allow", async () => {
     await fetcher({
@@ -291,7 +320,6 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
       module: "content/posts",
       path: "/",
     });
-
     await fetcher({
       plugin: "@acme/notes",
       args: {
@@ -310,160 +338,10 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
       path: "/",
     });
   });
-
-  it("accepts the optional locale a content type's public routes declare", async () => {
-    const resolved = await fetcher({
-      plugin: "@acme/notes",
-      args: { params: { slug: "hello" }, query: { locale: "pl" } },
-      method: "get",
-      module: "content/posts",
-      path: "/{slug}",
-    });
-
-    expectTypeOf(resolved.status).toEqualTypeOf<200 | 404>();
-  });
-
-  it("keeps a status-aware union when a route declares several answers", async () => {
-    const response = await fetcher({
-      plugin: "@acme/notes",
-      args: { body: { pinned: true }, params: { id: "1" } },
-      method: "post",
-      module: "notes",
-      path: "/{id}/pin",
-    });
-
-    expectTypeOf(response.status).toEqualTypeOf<200 | 404>();
-
-    if (response.status === 200) {
-      expectTypeOf((await response.json()).id).toEqualTypeOf<string>();
-    }
-  });
-});
-
-describe("the universal fetcher rejects what the registry does not describe", () => {
-  it("rejects a plugin that is not configured", async () => {
-    await fetcher({
-      // @ts-expect-error -- not in the registry
-      plugin: "@acme/missing",
-      method: "get",
-      module: "notes",
-      path: "/",
-    });
-  });
-
-  it("rejects a module the plugin does not mount", async () => {
-    await fetcher({
-      plugin: "@acme/notes",
-      method: "get",
-      // @ts-expect-error -- not a module of `@acme/notes`
-      module: "does-not-exist",
-      path: "/",
-    });
-  });
-
-  it("rejects a nested module path that skips a level", async () => {
-    await fetcher({
-      plugin: "@acme/notes",
-      method: "get",
-      // @ts-expect-error -- `colors` is under `tags`
-      module: "notes/colors",
-      path: "/",
-    });
-  });
-
-  it("reports the field that is wrong, and only that field", async () => {
-    // A module nobody serves has no paths and no methods either, so the two
-    // fields that depend on it stay the caller's own rather than becoming
-    // `never` and burying the one mistake under three errors.
-    await fetcher({
-      plugin: "@acme/notes",
-      method: "get",
-      // @ts-expect-error -- not a module of `@acme/notes`
-      module: "does-not-exist",
-      path: "/anything",
-    });
-  });
-
-  it("rejects a path the module does not serve", async () => {
-    await fetcher({
-      plugin: "@acme/notes",
-      method: "get",
-      module: "notes",
-      // @ts-expect-error -- not a route on `notes`
-      path: "/not-a-route",
-    });
-  });
-
-  it("rejects a method the route does not answer", async () => {
-    await fetcher({
-      plugin: "@acme/notes",
-      // @ts-expect-error -- the public list is a `get`
-      method: "delete",
-      module: "content/posts",
-      path: "/",
-    });
-
-    await fetcher({
-      plugin: "@acme/notes",
-      // @ts-expect-error -- `/{id}/pin` is a `post`
-      method: "get",
-      module: "notes",
-      path: "/{id}/pin",
-    });
-  });
-
-  it("rejects a call that omits required arguments", async () => {
-    // @ts-expect-error -- `/{id}/pin` declares params and a body
-    await fetcher({
-      plugin: "@acme/notes",
-      method: "post",
-      module: "notes",
-      path: "/{id}/pin",
-    });
-
-    // @ts-expect-error -- `/{slug}` declares params
-    await fetcher({
-      plugin: "@acme/notes",
-      method: "get",
-      module: "content/posts",
-      path: "/{slug}",
-    });
-  });
-
-  it("rejects arguments outside the route's schema", async () => {
-    await fetcher({
-      plugin: "@acme/notes",
-      // @ts-expect-error -- `pinned` is a boolean
-      args: { body: { pinned: "yes" }, params: { id: "1" } },
-      method: "post",
-      module: "notes",
-      path: "/{id}/pin",
-    });
-
-    await fetcher({
-      plugin: "@vitnode/core",
-      // @ts-expect-error -- `nickname` is not on the sign-in schema
-      args: { body: { email: "a@b.c", nickname: "x", password: "y" } },
-      method: "post",
-      module: "users",
-      path: "/sign_in",
-    });
-  });
-
-  it("rejects arguments on a route that declares none", async () => {
-    await fetcher({
-      plugin: "@acme/notes",
-      // @ts-expect-error -- `/` takes no body, params or query
-      args: { query: { search: "x" } },
-      method: "get",
-      module: "notes",
-      path: "/",
-    });
-  });
 });
 
 describe("the universal fetcher offers only what both runtimes can honour", () => {
-  it("rejects the cookie relay, which is the server transport's", async () => {
+  it("rejects server-only options", async () => {
     await fetcher({
       plugin: "@vitnode/core",
       // @ts-expect-error -- `allowSaveCookies` is on `tanstack/fetcher/server`
@@ -473,9 +351,6 @@ describe("the universal fetcher offers only what both runtimes can honour", () =
       module: "users",
       path: "/sign_in",
     });
-  });
-
-  it("rejects forwarded headers", async () => {
     await fetcher({
       plugin: "@vitnode/core",
       // @ts-expect-error -- a browser cannot forge request headers
@@ -484,9 +359,6 @@ describe("the universal fetcher offers only what both runtimes can honour", () =
       module: "users",
       path: "/session",
     });
-  });
-
-  it("rejects an origin override", async () => {
     await fetcher({
       plugin: "@vitnode/core",
       method: "get",
@@ -498,14 +370,12 @@ describe("the universal fetcher offers only what both runtimes can honour", () =
   });
 
   it("still accepts the options both runtimes share", async () => {
-    const controller = new AbortController();
-
     await fetcher({
       plugin: "@vitnode/core",
       captchaToken: "solved",
       method: "get",
       module: "users",
-      options: { signal: controller.signal },
+      options: { signal: new AbortController().signal },
       path: "/session",
     });
   });

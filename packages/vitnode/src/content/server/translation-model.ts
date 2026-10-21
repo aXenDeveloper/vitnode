@@ -371,6 +371,8 @@ export const createContentTranslationModel = <
       .returning(fullSelection());
 
     if (row) {
+      await touchItem(itemId, database);
+
       return {
         changed: true,
         row: toRow(row, target.locale),
@@ -401,6 +403,16 @@ export const createContentTranslationModel = <
       row: toRow(current, target.locale),
       version: versionOf(current),
     };
+  };
+
+  const touchItem = async (
+    itemId: ContentId,
+    database: ContentDatabase,
+  ): Promise<void> => {
+    await database
+      .update(table)
+      .set({ updatedAt: new Date() })
+      .where(eq(baseId, itemId));
   };
 
   const assertItemExists = async (
@@ -465,7 +477,11 @@ export const createContentTranslationModel = <
         })
         .returning(fullSelection());
 
-      if (row) return toRow(row, target.locale);
+      if (row) {
+        await touchItem(itemId, database);
+
+        return toRow(row, target.locale);
+      }
 
       throw new ContentTranslationExists({
         contentTypeId,
@@ -505,7 +521,11 @@ export const createContentTranslationModel = <
         )
         .returning(fullSelection());
 
-      if (row) return toRow(row, target.locale);
+      if (row) {
+        await touchItem(itemId, database);
+
+        return toRow(row, target.locale);
+      }
 
       const current = await readOne(itemId, target.id, database);
       // Gone already is not a conflict: the caller wanted it removed, and it is.
@@ -763,6 +783,8 @@ export const createContentTranslationModel = <
           locale: target.locale,
         });
       }
+
+      await touchItem(itemId, database);
 
       return {
         changed: true,

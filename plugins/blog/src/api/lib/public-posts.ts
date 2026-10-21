@@ -1,12 +1,13 @@
 import type { EnvVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+import type { ContentPublicHiddenAccess } from "@vitnode/core/content/server";
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
 import {
+  contentPublicListCondition,
   contentTranslationPublicationColumns,
   findContentLanguage,
-  publicationColumns,
   publishedCondition,
 } from "@vitnode/core/content/server";
 import { and, eq, exists, or, sql } from "drizzle-orm";
@@ -29,9 +30,6 @@ const translationTable = (() => {
 
   return table;
 })();
-
-const publishedPostCondition = (): SQL | undefined =>
-  publishedCondition(publicationColumns(definition, columns));
 
 const publishedTranslationIn = (
   c: Context<EnvVitNode>,
@@ -59,6 +57,7 @@ const publishedTranslationIn = (
 export const publicPostConditionIn = async (
   c: Context<EnvVitNode>,
   locale: string | undefined,
+  hidden?: ContentPublicHiddenAccess,
 ): Promise<null | SQL | undefined> => {
   const { defaultLocale, fallback } = definition.localization;
   const requested = await findContentLanguage(c, locale ?? defaultLocale);
@@ -69,7 +68,10 @@ export const publicPostConditionIn = async (
   const direct = publishedTranslationIn(c, requested.id);
 
   return and(
-    publishedPostCondition(),
+    contentPublicListCondition(
+      { advanced: postContent.advanced, columns, definition },
+      hidden,
+    ),
     fallbackTo && fallbackTo.id !== requested.id
       ? or(direct, publishedTranslationIn(c, fallbackTo.id))
       : direct,

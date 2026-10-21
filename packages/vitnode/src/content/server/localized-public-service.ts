@@ -32,6 +32,10 @@ import { ContentEngineError } from "../errors";
 import { partitionContentFields } from "../localization";
 import { isContentReferenceCollection, splitContentFieldPath } from "../paths";
 import { publicOrderableColumns } from "../registry";
+import {
+  contentPublicListCondition,
+  flagHiddenContentRows,
+} from "./hidden-list";
 import { findContentLanguage } from "./language-resolver";
 import { createContentPublicRowHydrator } from "./public-row-hydration";
 import {
@@ -474,7 +478,13 @@ export const createContentLocalizedPublicService = <
       );
     },
 
-    findMany: async ({ filters = {}, locale, orderBy, query = {} } = {}) => {
+    findMany: async ({
+      filters = {},
+      hidden,
+      locale,
+      orderBy,
+      query = {},
+    } = {}) => {
       const resolved = await resolveLocale(locale);
       if (!resolved) return { edges: [], pageInfo: EMPTY_PAGE };
 
@@ -497,9 +507,7 @@ export const createContentLocalizedPublicService = <
       );
 
       const where = conditions(
-        // Not optional, not a parameter, and first: whatever else a caller
-        // passes, an unpublished record cannot come back.
-        publishedCondition(basePublication),
+        contentPublicListCondition({ advanced, columns, definition }, hidden),
         // The localized filter goes through the same visibility test as the read
         // itself, so a filter can only ever match the translation the reader
         // would actually be shown.
@@ -577,10 +585,14 @@ export const createContentLocalizedPublicService = <
           }),
       });
 
+      const edges = (await list.hydrate(data.edges)).map(row =>
+        projectRow(list, row, resolved),
+      );
+
       return {
-        edges: (await list.hydrate(data.edges)).map(row =>
-          projectRow(list, row, resolved),
-        ),
+        edges: hidden
+          ? await flagHiddenContentRows(c, { columns, rows: edges, table })
+          : edges,
         pageInfo: data.pageInfo,
       };
     },

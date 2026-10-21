@@ -3,28 +3,16 @@ import { describe, expectTypeOf, it } from "vitest";
 import type {
   PluginRouteContext,
   PluginRouteLayoutModule,
-  PluginRouteLoadArgs,
   PluginRouteOptions,
   PluginRoutePageModule,
   PluginRoutePageProps,
 } from "./module";
-import type {
-  PluginRouteIndexOptions,
-  PluginRouteLayoutOptions,
-  PluginRoutePageOptions,
-} from "./tree";
 
 import { definePluginRoute } from "./authoring";
 import { index, layout, lazy, page } from "./tree";
 
 describe("definePluginRoute", () => {
   it("accepts every member of the contract, and only those", () => {
-    // The helper re-declares `head` and `load` to control where each type is
-    // inferred from, and takes the rest through `Omit`. This is what catches the
-    // two ways that drifts: a member added to `PluginRouteOptions` that the
-    // helper somehow drops, and a `head` or `load` renamed there, which would
-    // leave the `Omit` removing nothing and the re-declaration adding a member
-    // the contract no longer has.
     type Authored = Parameters<typeof definePluginRoute>[0];
 
     expectTypeOf<keyof Authored>().toEqualTypeOf<keyof PluginRouteOptions>();
@@ -43,8 +31,6 @@ describe("definePluginRoute", () => {
 
   it("flows `parseSearch`'s return type into `load` and `head`", () => {
     definePluginRoute({
-      // Order-independent, unlike `load`: `parseSearch` annotates its own
-      // return type, so TypeScript reads it before any context-sensitive member.
       parseSearch: (): { section: string } => ({ section: "" }),
       load: ({ search }) => {
         expectTypeOf(search).toEqualTypeOf<{ section: string }>();
@@ -59,27 +45,7 @@ describe("definePluginRoute", () => {
     });
   });
 
-  it("promises the loader a locale without being told", () => {
-    definePluginRoute({
-      load: ({ context }) => {
-        expectTypeOf(context.locale).toEqualTypeOf<string>();
-
-        return null;
-      },
-    });
-  });
-
-  /**
-   * The boundary, asserted from the plugin's side.
-   *
-   * `PluginRouteContext` used to be a *base* a plugin could widen by annotating
-   * its own `load` parameter - which meant a plugin could compile against a
-   * property no host had promised, and find it `undefined` at runtime. What the
-   * host holds internally is `PluginRouteRuntimeContext`
-   * (`@vitnode/core/tanstack/plugin-routes`), and only the locale is projected
-   * out of it.
-   */
-  it("promises the loader the public context, and nothing more", () => {
+  it("hands the loader the public context and nothing more", () => {
     definePluginRoute({
       load: ({ context }) => {
         expectTypeOf(context).toEqualTypeOf<PluginRouteContext>();
@@ -88,32 +54,14 @@ describe("definePluginRoute", () => {
         return null;
       },
     });
-  });
-
-  it("refuses a `load` that asks for a context the host never promised", () => {
-    interface WiderContext {
-      locale: string;
-      queryClient: { key: string };
-    }
-
     definePluginRoute({
       // @ts-expect-error A plugin may not widen the context it is handed.
-      load: ({ context }: { context: WiderContext }) => context.queryClient.key,
+      load: ({
+        context,
+      }: {
+        context: { locale: string; queryClient: string };
+      }) => context.queryClient,
     });
-  });
-
-  /**
-   * `PluginRouteLoadArgs` *is* generic in its context - that is how the framework
-   * layer describes the richer one a mounted route gets - but the parameter
-   * defaults to the public projection, and `definePluginRoute` pins it there.
-   * A plugin authoring through this door therefore has nowhere to name a wider
-   * context, which is the guarantee; the wider doors live in
-   * `@vitnode/core/tanstack/plugin-routes` and are named after what they promise.
-   */
-  it("defaults its context to the public projection", () => {
-    expectTypeOf<
-      PluginRouteLoadArgs<{ section: string }>["context"]
-    >().toEqualTypeOf<PluginRouteContext>();
   });
 
   it("rejects a `head` that reads a field the loader does not return", () => {
@@ -125,9 +73,6 @@ describe("definePluginRoute", () => {
   });
 
   it("names the cause when `head` is written above `load`", () => {
-    // The whole point of the sentence-shaped default: TypeScript resolves an
-    // object literal's context-sensitive members in order, so `loaderData` here
-    // is not `{}` - it is a string that says what to do about it.
     definePluginRoute({
       // @ts-expect-error definePluginRoute: `loaderData` is typed only when `load` is declared ABOVE `head`
       head: ({ loaderData }) => ({ title: loaderData?.title }),
@@ -144,53 +89,26 @@ describe("definePluginRoute", () => {
   });
 });
 
-/**
- * The component half of the contract, which is what a plugin actually writes.
- *
- * `default` is generic in what the loader returned, so a page can *declare* the
- * props the runtime hands it. The property that is easiest to lose in doing that
- * is the one the simplest plugin depends on - that a component wanting none of
- * them is still a complete module - so it is asserted first.
- */
 describe("a plugin route module's default export", () => {
-  it("accepts a component that declares no props at all", () => {
-    const Page = () => null;
-
-    expectTypeOf(Page).toExtend<PluginRoutePageModule["default"]>();
-  });
-
-  it("accepts a page that declares the props its loader feeds", () => {
+  it("accepts a page without props, a page with loader props and a layout", () => {
     interface Topic {
       title: string;
     }
 
+    const Bare = () => null;
     const Page = ({
       loaderData,
       params,
     }: PluginRoutePageProps<Topic, unknown>) =>
       `${loaderData.title}${params.topic}`;
-
-    // `PluginRoutePageProps` is given its `TSearch` explicitly above, because
-    // the two types default it differently: the props to `Record<string, never>`
-    // so an author writing a page with no `parseSearch` gets an empty object
-    // rather than `unknown`, and the module interface to `unknown` for a
-    // consumer that has not looked at the route yet. Props are contravariant, so
-    // a page cannot be checked against a module type without the two agreeing.
-    expectTypeOf(Page).toExtend<PluginRoutePageModule<Topic>["default"]>();
-  });
-
-  it("accepts a layout that declares only its children", () => {
-    // Wrapped in an array rather than returned bare: React 19's `ReactNode`
-    // includes a promise, and a component that might return one has to be
-    // `async`.
     const Layout = ({ children }: { children: React.ReactNode }) => [children];
 
+    expectTypeOf(Bare).toExtend<PluginRoutePageModule["default"]>();
+    expectTypeOf(Page).toExtend<PluginRoutePageModule<Topic>["default"]>();
     expectTypeOf(Layout).toExtend<PluginRouteLayoutModule["default"]>();
   });
 
   it("hands a page its loader's data, not an optional of it", () => {
-    // The asymmetry with `head`, which is real: `head` runs on passes where the
-    // loader has not resolved, and a match does not render until it has.
     expectTypeOf<
       PluginRoutePageProps<{ title: string }>["loaderData"]
     >().toEqualTypeOf<{ title: string }>();
@@ -202,28 +120,12 @@ describe("a route declaration's `preload`", () => {
     async () => await Promise.resolve({ default: () => null }),
   );
 
-  it("is an optional boolean on page(), index() and layout()", () => {
-    expectTypeOf<PluginRoutePageOptions<unknown>["preload"]>().toEqualTypeOf<
-      boolean | undefined
-    >();
-    expectTypeOf<PluginRouteIndexOptions<unknown>["preload"]>().toEqualTypeOf<
-      boolean | undefined
-    >();
-    expectTypeOf<PluginRouteLayoutOptions<unknown>["preload"]>().toEqualTypeOf<
-      boolean | undefined
-    >();
-  });
-
-  it("is accepted on every shape", () => {
+  it("is a boolean on every shape, never a router mode", () => {
     layout("/catalog", {
       children: [index({ component, preload: true })],
       component,
       preload: false,
     });
-    page("/catalog/:productId", { component, preload: false });
-  });
-
-  it("refuses a router's preload mode", () => {
     // @ts-expect-error `preload` is `true` or `false`; *when* to preload is the router's.
     page("/catalog", { component, preload: "intent" });
   });

@@ -73,3 +73,42 @@ export const contentSharedChanged = (
     return before !== value;
   });
 };
+
+export interface IncompleteContentTranslation {
+  locale: string;
+  missing: string[];
+}
+
+export const splitIncompleteTranslations = (
+  spec: ContentFormSpec,
+  entries: readonly ContentTranslationInput[],
+): {
+  incomplete: IncompleteContentTranslation[];
+  ready: ContentTranslationInput[];
+} => {
+  const required = spec.fields.filter(
+    field => field.localized === true && field.required,
+  );
+  const defaultLocale = spec.defaultLocale?.toLowerCase() ?? null;
+  const incomplete: IncompleteContentTranslation[] = [];
+  const ready: ContentTranslationInput[] = [];
+
+  for (const entry of entries) {
+    const isNewSecondary =
+      entry.expectedVersion === undefined &&
+      entry.locale.toLowerCase() !== defaultLocale;
+    const missing = isNewSecondary
+      ? required
+          .filter(field => entry.values[field.name] == null)
+          .map(field => field.label)
+      : [];
+
+    if (missing.length > 0) {
+      incomplete.push({ locale: entry.locale, missing });
+    } else {
+      ready.push(entry);
+    }
+  }
+
+  return { incomplete, ready };
+};

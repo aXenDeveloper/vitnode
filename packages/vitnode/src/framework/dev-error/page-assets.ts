@@ -48,6 +48,7 @@ export const DEV_ERROR_STYLES = `
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; }
+body[data-dismissible] { background: color-mix(in oklab, var(--background) 50%, transparent); }
 body {
   min-height: 100dvh;
   background: var(--background);

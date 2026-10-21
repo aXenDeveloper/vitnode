@@ -113,6 +113,7 @@ const BlogCategoryPage = ({
     }
     page={search.page ?? 1}
     posts={posts}
+    search={{ category: selected.id, page: search.page }}
     selected={selected}
   />
 );

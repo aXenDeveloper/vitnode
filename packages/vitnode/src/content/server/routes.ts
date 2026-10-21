@@ -33,6 +33,7 @@ import {
   zodContentConflict,
   zodContentDeliveryConflict,
   zodContentDuplicateRejection,
+  zodContentInvalidInput,
   zodContentScheduleRejection,
   zodContentUnprocessable,
 } from "../conflicts";
@@ -317,25 +318,13 @@ export const buildContentRoutes = <
   const invalidIdentifier = { description: "Invalid identifier" };
   const editorial = definition.editorial.enabled;
 
-  /**
-   * The 400 a write answers when a file identifier is refused.
-   *
-   * Declared only for a content type that has a file field, the same way
-   * `uniqueConflict` is declared only for an editorial one: a content type with
-   * no file field cannot produce this body, and saying it might would describe a
-   * response that can never arrive.
-   *
-   * The status is shared with plain-text 400s - an unparseable payload is still
-   * `Invalid input data.` - so a client reads the body as this shape only once it
-   * has one. That is the same contract the upload route publishes.
-   */
   const writeRejection = (description: string) =>
     hasFileFields
       ? jsonResponse(
-          zodContentFileReferenceRejection,
+          z.union([zodContentInvalidInput, zodContentFileReferenceRejection]),
           `${description}, or a file this field may not hold`,
         )
-      : { description };
+      : jsonResponse(zodContentInvalidInput, description);
 
   // An editorial content type answers both conflict kinds with a JSON body, so
   // a client can tell "someone saved first" from "that value is taken" and act

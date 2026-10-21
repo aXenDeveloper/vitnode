@@ -6,17 +6,52 @@ import {
 } from "@tiptap/react";
 import { cn } from "cn";
 import React from "react";
+import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import type { RichTextDocument } from "@/content/rich-text/document";
 
 import { useEditorConfig } from "@/components/editor-provider";
+import {
+  EDITOR_ATTACHMENT_MAX_BYTES,
+  EDITOR_IMAGE_MAX_BYTES,
+  isEditorImageMimeType,
+} from "@/lib/editor-uploads";
+import { formatBytes } from "@/lib/format-bytes";
 
 import { TipTapDragHandle } from "./drag-handle";
 import { EditorSkeleton } from "./editor-skeleton";
 import { createTipTapExtensions } from "./extension";
 import { editorEmojiItems, toRichTextDocument } from "./rich-text-json";
 import { TipTapToolbar } from "./toolbar/tiptap-toolbar";
+import { ReusableUploadsBar } from "./uploads/reusable-uploads-bar";
+import {
+  type EditorReusableUpload,
+  EditorReusableUploadsContext,
+} from "./uploads/reuse";
+import {
+  type EditorUploadRuntime,
+  EditorUploadRuntimeContext,
+} from "./uploads/runtime";
+import { uploadEditorFile } from "./uploads/upload";
+
+/**
+ * Options for an editor that accepts uploads. `session: "member"` (the
+ * default) posts to `/users/files/editor` as the signed-in user and accepts
+ * images only. `session: "admin"` posts to `/admin/files/editor` with the
+ * AdminCP session, needs the staff permission `files:can_upload`, and can
+ * also accept `files`.
+ */
+export type EditorUploadsOptions =
+  | {
+      /**
+       * Also accepts PDF, Word, PowerPoint and ZIP files as downloadable
+       * attachment cards. Defaults to `false`.
+       */
+      files?: boolean;
+      session: "admin";
+    }
+  | { session?: "member" };
 
 export type TipTapEditorBaseProps = Omit<
   React.ComponentProps<"div">,
@@ -26,7 +61,21 @@ export type TipTapEditorBaseProps = Omit<
   extensions?: Extensions;
   onEditor?: (editor: Editor | null) => void;
   placeholder?: string;
+  /**
+   * Images and files from other language versions of the same field, offered
+   * under **+ Insert → From other languages** so they can be reused without
+   * uploading them again. `AutoFormEditor` with `multiLang` fills it in.
+   */
+  reusableUploads?: EditorReusableUpload[];
   undoRedo?: boolean;
+  /**
+   * Lets people drop, paste or insert images (and, with `files`, attachments).
+   * Off by default: an editor without it keeps the images and attachments a
+   * document already has but accepts no new ones. Uploads are stored in
+   * `core_files`; `editor.images.remote` in the app config also allows
+   * `https://` image addresses.
+   */
+  uploads?: boolean | EditorUploadsOptions;
 };
 
 export type TipTapEditorHtmlProps = TipTapEditorBaseProps & {
@@ -62,6 +111,8 @@ const textboxAttributesOf = ({
 // the form's submit, Escape and unmount flush it, so nothing typed is lost.
 const ON_CHANGE_DELAY_MS = 200;
 
+const NO_REUSABLE_UPLOADS: EditorReusableUpload[] = [];
+
 const EDITOR_CLASS =
   "max-w-full min-h-40 py-4 ps-5 pe-4 text-base focus:outline-none md:text-sm";
 
@@ -75,6 +126,8 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
     format: _format,
     placeholder,
     undoRedo,
+    reusableUploads,
+    uploads,
     value: _value,
     onChange: _onChange,
     onBlur,
@@ -83,22 +136,59 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
     ...rest
   } = props;
   const t = useTranslations("core.global.editor");
-  const { emojis } = useEditorConfig();
+  const { emojis, images } = useEditorConfig();
   const emojiItems = React.useMemo(() => editorEmojiItems(emojis), [emojis]);
   const placeholderText = placeholder ?? t("placeholder");
   const invalid = rest["aria-invalid"];
+
+  const uploadOptions: EditorUploadsOptions =
+    typeof uploads === "object" ? uploads : {};
+  const uploadSession = uploads ? (uploadOptions.session ?? "member") : null;
+  const allowsAttachments =
+    uploadOptions.session === "admin" && uploadOptions.files === true;
+  const allowsRemoteImages = images?.remote === true;
+  const uploadRuntime = React.useMemo<EditorUploadRuntime | null>(
+    () =>
+      uploadSession === null
+        ? null
+        : {
+            attachments: allowsAttachments,
+            onReject: (rejection, file, detail) => {
+              toast.error(t("uploads.errors.title"), {
+                description: [
+                  t(`uploads.errors.${rejection}`, {
+                    name: file.name,
+                    size: formatBytes(
+                      isEditorImageMimeType(file.type)
+                        ? EDITOR_IMAGE_MAX_BYTES
+                        : EDITOR_ATTACHMENT_MAX_BYTES,
+                      0,
+                    ),
+                  }),
+                  detail,
+                ]
+                  .filter(Boolean)
+                  .join(" "),
+              });
+            },
+            remote: allowsRemoteImages,
+            upload: async file => await uploadEditorFile(uploadSession, file),
+          },
+    [allowsAttachments, allowsRemoteImages, t, uploadSession],
+  );
 
   // Stable options keep `useEditor` from calling `setOptions` on every render.
   const allExtensions = React.useMemo(
     () => [
       ...createTipTapExtensions({
         customEmojis: emojis,
+        getUploadRuntime: () => uploadRuntime,
         placeholder: placeholderText,
         undoRedo,
       }),
       ...(extensions ?? []),
     ],
-    [emojis, extensions, placeholderText, undoRedo],
+    [emojis, extensions, placeholderText, undoRedo, uploadRuntime],
   );
   const editorProps = React.useMemo(
     () => ({
@@ -198,12 +288,19 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
       }}
       {...rest}
     >
-      <TipTapToolbar editor={editor} />
-      <TipTapDragHandle editor={editor} />
-      <EditorContent
-        className="w-full min-w-full cursor-text"
-        editor={editor}
-      />
+      <EditorUploadRuntimeContext value={uploadRuntime}>
+        <EditorReusableUploadsContext
+          value={reusableUploads ?? NO_REUSABLE_UPLOADS}
+        >
+          <TipTapToolbar editor={editor} />
+          <ReusableUploadsBar editor={editor} />
+          <TipTapDragHandle editor={editor} />
+          <EditorContent
+            className="w-full min-w-full cursor-text"
+            editor={editor}
+          />
+        </EditorReusableUploadsContext>
+      </EditorUploadRuntimeContext>
     </div>
   );
 };

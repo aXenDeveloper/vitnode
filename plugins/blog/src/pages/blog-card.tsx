@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
 import { Avatar } from "@vitnode/core/components/avatar";
+import { HiddenIcon } from "@vitnode/core/components/hidden-icon";
 import { resolveImageAlt } from "@vitnode/core/lib/files/resolve-alt";
 import { getIntlRuntime } from "@vitnode/core/tanstack/i18n";
 import { HrefLink } from "@vitnode/core/tanstack/link";
@@ -236,6 +237,23 @@ const BlogPostCover = ({
   </div>
 );
 
+const PostHiddenIcon = ({
+  className,
+  post,
+}: {
+  className?: string;
+  post: BlogPostCardData;
+}) => {
+  const t = useTranslations("@vitnode/blog.list");
+
+  return post.hidden ? (
+    <HiddenIcon
+      className={cn("relative z-10 me-1.5 align-middle", className)}
+      label={t("hidden")}
+    />
+  ) : null;
+};
+
 const PostTitleLink = ({
   className,
   post,
@@ -317,6 +335,10 @@ export const BlogPostTile = ({
             data-blog-title=""
             style={blogCardTitleTransition(post.id)}
           >
+            <PostHiddenIcon
+              className={isLead ? "size-5 md:size-8" : "size-4"}
+              post={post}
+            />
             <PostTitleLink className="decoration-white/40" post={post} />
           </h3>
           {isLead && post.excerpt ? (
@@ -377,6 +399,7 @@ export const BlogPostCard = ({
           data-blog-title=""
           style={blogCardTitleTransition(post.id)}
         >
+          <PostHiddenIcon className="size-5" post={post} />
           <PostTitleLink className="decoration-foreground/30" post={post} />
         </h3>
         {post.excerpt ? (

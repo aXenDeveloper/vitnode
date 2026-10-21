@@ -1,14 +1,26 @@
 import { z } from "zod";
 
-/** The public summary of a person named by `publicApi.people`. */
+/**
+ * The public summary of a person named by `publicApi.people`, such as a
+ * record's author. The field is `null` when the account was deleted. Render it
+ * with `UserFormat` from `@vitnode/core/components/user-format` and `Avatar` from
+ * `@vitnode/core/components/avatar`.
+ */
 export interface ContentPublicPerson {
+  /** The background of the initials avatar shown without `avatarUrl`. */
   avatarColor: string;
   avatarUrl: null | string;
+  /** The user id - compare it with the session's user to find the owner. */
   id: number;
+  /** The display name. */
   name: string;
+  /** The profile URL segment: `/users/{nameCode}`. */
   nameCode: string;
+  /** The role's name color and prefix icon, both optional. */
   role: { color: null | string; prefix: null | string };
 }
+
+/** Validates a {@link ContentPublicPerson}; add `.nullable()` for a person field. */
 
 export const zodContentPublicPerson = z.object({
   avatarColor: z.string(),
@@ -22,6 +34,7 @@ export const zodContentPublicPerson = z.object({
   }),
 });
 
+/** Narrows an unknown value to a {@link ContentPublicPerson}. */
 export const isContentPublicPerson = (
   value: unknown,
 ): value is ContentPublicPerson =>

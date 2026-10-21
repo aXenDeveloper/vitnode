@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import type { WSContext } from "hono/ws";
+import type * as Y from "yjs";
 
 import { z } from "zod";
 
@@ -14,6 +15,7 @@ import { contentAnyIdSchema } from "@/content/ids";
 import {
   CONTENT_LIVE_HEARTBEAT_MS,
   contentLiveChannel,
+  contentLiveDocRoom,
   contentLiveRoom,
 } from "@/content/live/protocol";
 import { publishToInstances, realtime, wsRegistry } from "@/ws/registry";
@@ -30,10 +32,18 @@ import {
   createContentLiveAuthCache,
   isContentLiveDocValid,
 } from "./auth";
-import { createContentDocumentStore } from "./document-store";
+import {
+  createContentDocumentStore,
+  patchStoredContentDocuments,
+} from "./document-store";
 import { createContentDocuments } from "./documents";
+import { markLiveDocumentFileDeleted } from "./file-references";
 import { contentLiveUserLeft } from "./hooks";
-import { clientIdOf, contentLiveClientMessageSchema } from "./messages";
+import {
+  clientIdOf,
+  contentLiveClientMessageSchema,
+  encodeContentLiveBytes,
+} from "./messages";
 import { createContentLivePresence } from "./presence";
 
 export const CONTENT_LIVE_PRESENCE_TOPIC = `${contentLiveChannel.id}:presence`;
@@ -436,6 +446,30 @@ export const createContentLiveServer = ({
       }
       const reset = resetSchema.safeParse(data);
       if (reset.success) documents.resetRecord(reset.data.room);
+    },
+    onFileDeleted: async ({
+      c,
+      fileId,
+    }: {
+      c: Context;
+      fileId: number;
+    }): Promise<void> => {
+      const mutate = (doc: Y.Doc) => markLiveDocumentFileDeleted(doc, fileId);
+      const loaded = new Set(
+        documents.patch(mutate).map(ref => contentLiveDocRoom(ref)),
+      );
+      const stored = await patchStoredContentDocuments(c, {
+        mutate,
+        skip: ref => loaded.has(contentLiveDocRoom(ref)),
+      });
+      for (const { ref, update } of stored) {
+        realtime.toRoom(contentLiveDocRoom(ref), contentLiveChannel, {
+          doc: ref,
+          from: null,
+          type: "doc:update",
+          update: encodeContentLiveBytes(update),
+        } satisfies ContentLiveServerMessage);
+      }
     },
     onReset: async ({
       c,

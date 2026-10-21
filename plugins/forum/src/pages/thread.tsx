@@ -1,3 +1,5 @@
+import type { ContentPermissions } from "@vitnode/core/tanstack/content";
+
 import { useQueryClient } from "@tanstack/react-query";
 import { RichTextContent } from "@vitnode/core/components/rich-text";
 import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
@@ -42,6 +44,7 @@ import type { ThreadComment, ThreadPage, ThreadTreeNode } from "./thread-data";
 
 import { useForumRejection } from "./forum-errors";
 import { commentAnchorId, loginHref, topicHref } from "./forum-links";
+import { useCommentPermissions } from "./forum-permissions";
 import { invalidateForumComments } from "./forum-queries";
 import { PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
 import {
@@ -118,8 +121,9 @@ const useCommentEditor = () => {
 
 interface ThreadActions {
   canComment: boolean;
-  currentUserId: null | number;
   onChanged: (outcome: { pending: boolean }) => void;
+  /** What the visitor may do with each comment, from the Content Engine. */
+  permissionsOf: (id: number) => ContentPermissions;
   topicId: number;
   topicSlug: string;
 }
@@ -141,9 +145,7 @@ const CommentBody = ({
     version: number;
   }>(null);
   const [isOpeningEditor, setIsOpeningEditor] = useState(false);
-  const isOwner =
-    actions.currentUserId !== null &&
-    comment.author?.id === actions.currentUserId;
+  const { canEdit, canReport } = actions.permissionsOf(comment.id);
   const canAnswer = actions.canComment && node.depth < FORUM_COMMENT_MAX_DEPTH;
   const authorId = `${commentAnchorId(comment.slug)}-author`;
   const edited =
@@ -214,7 +216,7 @@ const CommentBody = ({
               {t("reply")}
             </Button>
           ) : null}
-          {isOwner ? (
+          {canEdit ? (
             <Button
               isLoading={isOpeningEditor}
               onClick={async () => {
@@ -231,7 +233,8 @@ const CommentBody = ({
               <PencilIcon aria-hidden="true" />
               {t("edit")}
             </Button>
-          ) : (
+          ) : null}
+          {canReport ? (
             <ReportButton
               className="text-muted-foreground"
               describedBy={authorId}
@@ -242,7 +245,7 @@ const CommentBody = ({
               )}
               typeLabel={t("report_type")}
             />
-          )}
+          ) : null}
         </div>
       )}
 
@@ -370,6 +373,9 @@ export const ForumThread = ({
   const items = useMemo(() => pages.flatMap(page => page.items), [pages]);
   const tree = useMemo(() => buildThreadTree(items), [items]);
   const descendants = useMemo(() => countDescendants(tree), [tree]);
+  const permissions = useCommentPermissions(
+    items.flatMap(item => (item.record ? [item.id] : [])),
+  );
   const commentCount = last.commentCount;
 
   const loadMore = async () => {
@@ -421,12 +427,12 @@ export const ForumThread = ({
   const actions = useMemo<ThreadActions>(
     () => ({
       canComment: currentUserId !== null,
-      currentUserId,
       onChanged,
+      permissionsOf: permissions.of,
       topicId,
       topicSlug,
     }),
-    [currentUserId, onChanged, topicId, topicSlug],
+    [currentUserId, onChanged, permissions.of, topicId, topicSlug],
   );
 
   return (

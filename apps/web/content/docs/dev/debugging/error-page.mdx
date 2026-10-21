@@ -71,6 +71,18 @@ or the close icon to see the 500 page underneath.
 In production, `RouteErrorPage` renders only the 500 page. No stack trace,
 file path or source line ever leaves the server.
 
+## Build errors
+
+When Vite can't compile a module, like an import that doesn't resolve or a
+syntax error, the same page replaces Vite's error overlay and says **in the
+build**. The code frame points at the line Vite stopped on. An import that
+doesn't resolve also gets hints: check the package's `exports`, rebuild a
+workspace package, or install a missing dependency.
+
+`DocumentHead` loads the small script that does this, in development only.
+When you save a fix and Vite clears its overlay, this page closes too. If the
+page can't be built for some reason, Vite's own overlay stays as a fallback.
+
 ## Add hints to your own errors
 
 Any error with a `hints` array gets a **Ways to fix this** section. Implement

@@ -334,7 +334,7 @@ describe("domain failures map onto their documented codes", () => {
     expect(result.status).toBe(400);
   });
 
-  it("answers invalid input with 400 and no issue tree", async () => {
+  it("answers invalid input with 400 naming the field, not Zod's message", async () => {
     const result = await responseOf(
       throwing(
         new ZodError([
@@ -350,8 +350,12 @@ describe("domain failures map onto their documented codes", () => {
     );
 
     expect(result.status).toBe(400);
-    expect(result.body).toBe("Invalid input data.");
-    expect(result.body).not.toContain("title");
+    expect(JSON.parse(result.body)).toEqual({
+      code: "CONTENT_INVALID_INPUT",
+      contentTypeId: CONTENT_TYPE_ID,
+      issues: [{ code: "too_small", field: "title", locale: null }],
+    });
+    expect(result.body).not.toContain("Too small");
   });
 
   it("keeps a written-for-the-client input error readable", async () => {

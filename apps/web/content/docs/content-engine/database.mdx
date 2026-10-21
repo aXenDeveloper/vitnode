@@ -12,23 +12,23 @@ Every content type becomes ordinary Postgres tables managed by Drizzle. `createC
 
 After you add or change a content type, run this from the workspace root:
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
 
 ```bash tab="bun"
-bun run build:plugins && bun run db:migrate
+bun run db:migrate
 ```
 
 ```bash tab="pnpm"
-pnpm build:plugins && pnpm db:migrate
+pnpm db:migrate
 ```
 
 ```bash tab="npm"
-npm run build:plugins && npm run db:migrate
+npm run db:migrate
 ```
 
 </Tabs>
 
-1. `build:plugins` compiles each plugin to `dist/`. `db:migrate` reads that output and does not build, so skipping this step migrates the old schema.
+1. `db:migrate` reads each plugin's built `dist/` folder. `pnpm dev` rebuilds a plugin every time you save, so while it runs the output is always current. Without `pnpm dev`, such as in CI or right after a checkout, run `pnpm build:plugins` first, or the migration sees the old schema.
 2. `db:migrate` compares the exported tables of every plugin in your API config with the last snapshot and writes a new folder to `apps/api/migrations/`.
 3. It applies pending migrations, then makes sure the initial data exists.
 

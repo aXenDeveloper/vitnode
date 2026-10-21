@@ -76,6 +76,11 @@ export interface VitNodeEvents {
     changedZones: string[];
     pageId: string;
   };
+  "file.editor.uploaded": {
+    fileId: number;
+    kind: "attachment" | "image";
+    userId: number;
+  };
   "files.alt.updated": {
     fileId: number;
     languageCodes: string[];

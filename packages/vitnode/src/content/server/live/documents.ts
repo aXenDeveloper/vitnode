@@ -458,6 +458,26 @@ export const createContentDocuments = <TConnection>({
 
       return "ok";
     },
+    patch: (mutate: (doc: Y.Doc) => boolean): ContentLiveDocRef[] => {
+      const patched: ContentLiveDocRef[] = [];
+      for (const entry of docs.values()) {
+        const before = Y.encodeStateVector(entry.doc);
+        if (!mutate(entry.doc)) continue;
+
+        relay(entry.room, {
+          doc: entry.ref,
+          from: null,
+          type: "doc:update",
+          update: encodeContentLiveBytes(
+            Y.encodeStateAsUpdate(entry.doc, before),
+          ),
+        });
+        schedulePersist(entry);
+        patched.push(entry.ref);
+      }
+
+      return patched;
+    },
     resetRecord: (room: ContentLiveRoomRef): void => {
       for (const entry of [...docs.values()]) {
         if (!sameContentLiveRoom(entry.ref, room)) continue;

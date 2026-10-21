@@ -23,8 +23,6 @@ implementation:
       href: /docs/dev/moderation/scoped-permissions
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
-
 Publishing policies let each container decide how members post in it: who may start, whether new records go live or wait for a moderator, whether edits to live records wait too, and how long authors may edit. One forum can be a free-for-all while the one next to it reviews every post.
 
 This guide uses the Forum plugin: the `forum.forums` container collection, with topics (`forum.topic`) filed into forums and comments (`forum.comment`) living in their topic's forum.
@@ -74,25 +72,9 @@ Topics go live straight away and stay editable by their authors. Comments go liv
 
 <Step>
 
-### Build and restart
+### Save
 
-Policies are stored in a column core already has, so there is no migration. Rebuild the plugin and restart `pnpm dev`:
-
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins">
-
-```bash tab="bun"
-bun run build:plugins
-```
-
-```bash tab="pnpm"
-pnpm build:plugins
-```
-
-```bash tab="npm"
-npm run build:plugins
-```
-
-</Tabs>
+Policies are stored in a column core already has, so there is no migration. `pnpm dev` picks up the change when you save.
 
 Turning policies on also gives each content type in the collection container-scoped `can_edit` and `can_approve` moderator permissions. Grant and label them as described in [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions).
 

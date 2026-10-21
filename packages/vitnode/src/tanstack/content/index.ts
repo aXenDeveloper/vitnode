@@ -28,3 +28,9 @@ export {
   ContentListResults,
   useContentListSearchInput,
 } from "./list-ui";
+export type {
+  ContentPermissions,
+  ContentPermissionsResponse,
+} from "./permissions";
+export { useContentPermissions } from "./permissions";
+export { useContentPublicWrite } from "./public-write";

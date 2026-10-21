@@ -1,4 +1,5 @@
 import type { EnvVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+import type { ContentPublicHiddenAccess } from "@vitnode/core/content/server";
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
@@ -8,6 +9,7 @@ import {
   contentLocalesMatch,
 } from "@vitnode/core/content";
 import {
+  contentListHiddenAccess,
   contentListPageCacheTags,
   contentLocaleHeaders,
   listContentLanguages,
@@ -25,6 +27,7 @@ import {
   blog_posts_category_id,
   postContent,
 } from "@/database/posts";
+import { manifest } from "@/manifest.gen";
 
 const { definition } = categoryContent;
 
@@ -105,8 +108,9 @@ const readCategorySummaries = async (
 const readArticleCounts = async (
   c: Context<EnvVitNode>,
   locale: string | undefined,
+  hidden?: ContentPublicHiddenAccess,
 ): Promise<BlogArticleCounts> => {
-  const condition = await publicPostConditionIn(c, locale);
+  const condition = await publicPostConditionIn(c, locale, hidden);
   if (condition === null) return { byCategory: {}, total: 0 };
 
   const db = c.get("db");
@@ -177,17 +181,23 @@ const publicCategoriesRoute = buildRoute({
       locale: resolved.locale ?? null,
       source: resolved.source,
     };
+    const hidden = await contentListHiddenAccess(c, {
+      model: postContent,
+      pluginId: manifest.id,
+    });
     const [names, counts] = await Promise.all([
       rememberContentPublicRead(c, {
         contentTypeId: definition.id,
         key: { ...key, route: "@vitnode/blog:category-summaries" },
         load: async () => await readCategorySummaries(c, resolved.locale),
       }),
-      rememberContentPublicRead(c, {
-        contentTypeId: postContent.definition.id,
-        key: { ...key, route: "@vitnode/blog:category-counts" },
-        load: async () => await readArticleCounts(c, resolved.locale),
-      }),
+      hidden
+        ? readArticleCounts(c, resolved.locale, hidden)
+        : rememberContentPublicRead(c, {
+            contentTypeId: postContent.definition.id,
+            key: { ...key, route: "@vitnode/blog:category-counts" },
+            load: async () => await readArticleCounts(c, resolved.locale),
+          }),
     ]);
 
     setPageCacheTags(c, [
@@ -204,7 +214,12 @@ const publicCategoriesRoute = buildRoute({
         total: counts.total,
       },
       200,
-      contentLocaleHeaders(resolved),
+      hidden
+        ? {
+            "Cache-Control": "private, no-store",
+            ...contentLocaleHeaders(resolved),
+          }
+        : contentLocaleHeaders(resolved),
     );
   },
 });

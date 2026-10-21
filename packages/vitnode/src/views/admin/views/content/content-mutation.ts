@@ -2,6 +2,7 @@ import type {
   ContentConflict,
   ContentDeliveryConflict,
   ContentDuplicateRejection,
+  ContentInvalidInput,
   ContentScheduleRejection,
   ContentTranslationConflict,
   ContentUnprocessable,
@@ -43,6 +44,7 @@ export interface ContentMutationResult {
   error?: string;
 
   id?: ContentId;
+  invalid?: ContentInvalidInput;
   /** Why a schedule was refused, when the API said. */
   rejection?: ContentScheduleRejection;
   /** Lets the UI tell a restricted delete (409) from a generic failure. */

@@ -14,17 +14,32 @@ export interface DevErrorPageSource {
   start: number;
 }
 
-export type DevErrorRuntime = "browser" | "server";
+export type DevErrorRuntime = "browser" | "build" | "server";
 
 const RUNTIME_WHERE: Record<DevErrorRuntime, string> = {
   browser: "in the browser",
+  build: "in the build",
   server: "on the server",
 };
 
-const failedRequestText = ({ method, path, runtime }: DevErrorPageInput) =>
-  runtime === "browser"
+const failedRequestText = ({
+  frames,
+  method,
+  path,
+  runtime,
+}: DevErrorPageInput) => {
+  if (runtime === "build") {
+    const failedFile = frames.find(frame => frame.isApp)?.displayFile;
+
+    return failedFile
+      ? `Vite couldn't build <code>${escapeHtml(failedFile)}</code>, which this page imports.`
+      : "Vite couldn't build a module this page imports.";
+  }
+
+  return runtime === "browser"
     ? `<code>${escapeHtml(path)}</code> failed to render in the browser.`
     : `<code>${escapeHtml(method)} ${escapeHtml(path)}</code> failed on the server.`;
+};
 
 export interface DevErrorPageInput {
   dismissible?: boolean;
@@ -76,7 +91,7 @@ const stackText = ({ error, frames }: DevErrorPageInput) =>
 
 const promptText = (input: DevErrorPageInput, hint: DevErrorHint) =>
   [
-    "Fix this server error in my VitNode app:",
+    `Fix this error in my VitNode app (it happened ${RUNTIME_WHERE[input.runtime]}):`,
     "",
     stackText(input),
     "",

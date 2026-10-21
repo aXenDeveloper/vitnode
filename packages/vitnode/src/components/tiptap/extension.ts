@@ -12,20 +12,27 @@ import StarterKit from "@tiptap/starter-kit";
 
 import type { EditorEmojiSection } from "@/components/editor-provider";
 
+import type { EditorUploadRuntime } from "./uploads/runtime";
+
+import { EditorAttachment } from "./attachment/attachment";
 import { customEmojiToTipTap } from "./emoji/custom-emoji";
 import { emojiSuggestion } from "./emoji/emoji-suggestion";
+import { EditorImage } from "./image/image";
 import { Panel } from "./panel";
 import { SlashCommand } from "./slash-command/slash-command";
 import { SubmitFormShortcut } from "./submit-form-shortcut";
+import { EditorUploads } from "./uploads/extension";
 
 export const SUPPORTED_HEADINGS_LEVELS = [1, 2, 3, 4] as const;
 
 export const createTipTapExtensions = ({
   customEmojis,
+  getUploadRuntime = () => null,
   placeholder,
   undoRedo = true,
 }: {
   customEmojis?: EditorEmojiSection[];
+  getUploadRuntime?: () => EditorUploadRuntime | null;
   placeholder?: string;
   undoRedo?: boolean;
 } = {}): Extensions => [
@@ -55,7 +62,7 @@ export const createTipTapExtensions = ({
     },
   }),
   TextAlign.configure({
-    types: ["heading", "paragraph"],
+    types: ["heading", "paragraph", "image"],
   }),
   TextStyle,
   Color,
@@ -79,6 +86,9 @@ export const createTipTapExtensions = ({
       resizable: true,
     },
   }),
+  EditorImage,
+  EditorAttachment,
+  EditorUploads.configure({ getRuntime: getUploadRuntime }),
   TaskList,
   TaskItem.configure({ nested: true }),
   Panel,

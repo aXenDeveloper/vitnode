@@ -14,6 +14,9 @@ import {
   richTextMarkElement,
   richTextNodeElement,
 } from "@/content/rich-text/elements";
+import { richTextToHtml } from "@/content/rich-text/html";
+
+import { DeletedUpload, isDeletedUploadNode } from "./deleted-upload";
 
 export interface RichTextNodeRendererProps {
   children?: React.ReactNode;
@@ -58,12 +61,33 @@ const REACT_PROP_NAMES: Readonly<Record<string, string>> = {
   rowspan: "rowSpan",
 };
 
+const DRAGGABLE_UPLOAD_TYPES: ReadonlySet<string> = new Set([
+  "attachment",
+  "image",
+]);
+
+const uploadDragProps = (node: RichTextNode): Record<string, unknown> =>
+  DRAGGABLE_UPLOAD_TYPES.has(node.type) &&
+  typeof node.attrs?.fileId === "number"
+    ? {
+        draggable: true,
+        onDragStart: (event: React.DragEvent) => {
+          event.dataTransfer.effectAllowed = "copy";
+          event.dataTransfer.setData(
+            "text/html",
+            richTextToHtml({ content: [node], type: "doc" }),
+          );
+        },
+      }
+    : {};
+
 const renderElement = (
   element: RichTextElement,
   slot: React.ReactNode,
   key?: number,
+  extraProps: Record<string, unknown> = {},
 ): React.ReactElement => {
-  const props: Record<string, unknown> = { key };
+  const props: Record<string, unknown> = { key, ...extraProps };
   for (const [name, value] of Object.entries(element.attrs ?? {})) {
     props[REACT_PROP_NAMES[name] ?? name] = value;
   }
@@ -132,10 +156,14 @@ const renderNode = (
     );
   }
 
+  if (isDeletedUploadNode(node)) {
+    return <DeletedUpload attrs={node.attrs} key={key} type={node.type} />;
+  }
+
   const element = richTextNodeElement(node);
 
   return element ? (
-    renderElement(element, children, key)
+    renderElement(element, children, key, uploadDragProps(node))
   ) : (
     <React.Fragment key={key}>{children}</React.Fragment>
   );

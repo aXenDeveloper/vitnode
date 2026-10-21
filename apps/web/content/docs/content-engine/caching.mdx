@@ -19,7 +19,9 @@ cross-origin-opener-policy: same-origin
 
 So a published article shows up on the next request, with nothing to expire.
 
-With [Redis](/docs/dev/cache/api) (`REDIS_URL`), the server also keeps the public list and detail responses for up to 60 seconds. Each entry is keyed by the parsed query, the resolved locale and a generation number per content type, and every content write moves that generation - so a write still shows up on the next request, and nothing old is ever read again. A record whose future `publishedAt` simply comes due, with no write, can take up to that minute to appear. Only responses that look the same to every reader are kept: a [hidden](/docs/content-engine/content-visibility) record shown to a moderator, a preview link and the delivery routes always go to Postgres. The language list and the container tree behind `includeDescendants` are cached the same way. There is nothing to configure.
+With [Redis](/docs/dev/cache/api) (`REDIS_URL`), the server also keeps the public list and detail responses for up to 60 seconds. Each entry is keyed by the parsed query, the resolved locale and a generation number per content type. Every content write bumps that generation, so a write still shows up on the next request and a stale entry is never read. A record whose future `publishedAt` comes due without a write can take up to that minute to appear. The language list and the container tree behind `includeDescendants` are cached the same way. There is nothing to configure.
+
+Only responses that look the same to every reader are cached. A [hidden](/docs/content-engine/content-visibility) record shown to its author, editor or moderator (on its page or in a list), a preview link and the delivery routes always go to Postgres.
 
 Add caching where it pays off:
 

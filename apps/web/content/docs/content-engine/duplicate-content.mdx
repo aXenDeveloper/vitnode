@@ -27,7 +27,7 @@ export const blogPostContentType = defineContentType({
 });
 ```
 
-Duplication adds no column, so there is nothing to migrate, and no new permission. Duplicating needs `can_create` and `can_view`, because it creates a record by reading another. For the blog those are **Create articles** and **View articles list**. Run `pnpm build:plugins` and restart `pnpm dev`.
+Duplication adds no column, so there is nothing to migrate, and no new permission. Duplicating needs `can_create` and `can_view`, because it creates a record by reading another. For the blog those are **Create articles** and **View articles list**.
 
 </Step>
 

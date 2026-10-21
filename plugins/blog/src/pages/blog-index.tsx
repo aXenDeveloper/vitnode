@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
 import {
@@ -8,6 +9,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
+import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { ContentListPagination } from "@vitnode/core/tanstack/content";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import {
@@ -17,8 +19,9 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import React from "react";
-import { useTranslations } from "use-intl";
+import { useLocale, useTranslations } from "use-intl";
 
+import type { BlogListSearch } from "./blog-list";
 import type {
   BlogCategories,
   BlogCategory,
@@ -29,6 +32,10 @@ import type {
 import { BlogCategorySwatch, BlogPostCard, BlogPostTile } from "./blog-card";
 import { BlogCategoryChips, BlogCategorySidebar } from "./blog-categories";
 import { BLOG_HREF, blogCategoryHref } from "./blog-list";
+import {
+  blogViewerCategoriesQueryOptions,
+  blogViewerPostsQueryOptions,
+} from "./blog-queries";
 import { BlogTransitionStyles } from "./blog-transitions";
 
 const TOP_STORIES = 6;
@@ -91,20 +98,52 @@ const TopStories = ({
   );
 };
 
+const useSharedRenderViewerId = (): null | number => {
+  const session = useSessionQuery();
+  const [isSharedRender] = React.useState(session.isPending);
+
+  return isSharedRender ? (session.data?.user?.id ?? null) : null;
+};
+
 export const BlogIndex = ({
-  categories,
+  categories: renderedCategories,
   hrefFor,
   page,
-  posts,
-  selected,
+  posts: renderedPosts,
+  search,
+  selected: renderedSelected,
 }: {
   categories: BlogCategories;
   hrefFor: (page: number) => string;
   page: number;
   posts: BlogPostPage | null;
+  search: BlogListSearch;
   selected?: BlogCategory;
 }) => {
   const t = useTranslations("@vitnode/blog.list");
+  const locale = useLocale();
+  const viewerId = useSharedRenderViewerId();
+  const isViewerRead = viewerId !== null;
+  const { data: viewerPosts } = useQuery({
+    ...blogViewerPostsQueryOptions({
+      locale,
+      search,
+      viewerId: viewerId ?? 0,
+    }),
+    enabled: isViewerRead,
+  });
+  const { data: viewerCategories } = useQuery({
+    ...blogViewerCategoriesQueryOptions({ locale, viewerId: viewerId ?? 0 }),
+    enabled: isViewerRead,
+  });
+  const posts = isViewerRead ? (viewerPosts ?? renderedPosts) : renderedPosts;
+  const categories = isViewerRead
+    ? (viewerCategories ?? renderedCategories)
+    : renderedCategories;
+  const selected = renderedSelected
+    ? (categories.items.find(category => category.id === renderedSelected.id) ??
+      renderedSelected)
+    : undefined;
   const router = useRouter();
   const [isPending, startTransition] = React.useTransition();
   const categoryById = new Map(

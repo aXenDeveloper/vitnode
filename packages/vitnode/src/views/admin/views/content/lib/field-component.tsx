@@ -277,6 +277,7 @@ export const ContentField = ({
             format="json"
             label={spec.label}
             multiLang={multiLang}
+            uploads={spec.uploads ? { session: "admin" } : undefined}
             {...props}
           />
         </React.Suspense>

@@ -1,5 +1,12 @@
 import type { RichTextAttrs, RichTextMark, RichTextNode } from "./document";
 
+import {
+  EDITOR_IMAGE_MAX_ALT_LENGTH,
+  editorAttachmentKindOf,
+  editorAttachmentMeta,
+  isEditorImageWrap,
+  normalizeEditorImageWidth,
+} from "../../lib/editor-uploads";
 import { richTextToPlainText } from "./plain-text";
 
 export const RICH_TEXT_SLOT = 0;
@@ -233,10 +240,103 @@ const emojiElement = (node: RichTextNode): RichTextElement => {
   return { attrs, children: [name === "" ? "" : `:${name}:`], tag: "span" };
 };
 
+const fileIdAttr = (
+  node: RichTextNode,
+): Record<string, RichTextElementAttrValue> => {
+  const fileId = positiveInteger(node.attrs?.fileId);
+
+  return fileId === null ? {} : { "data-file-id": fileId };
+};
+
+const imageElement = (node: RichTextNode): null | RichTextElement => {
+  const src = sanitizeRichTextSrc(node.attrs?.src);
+  if (src === null) return null;
+
+  const alt =
+    typeof node.attrs?.alt === "string"
+      ? node.attrs.alt.slice(0, EDITOR_IMAGE_MAX_ALT_LENGTH)
+      : "";
+  const width = normalizeEditorImageWidth(node.attrs?.width);
+  const wrap = isEditorImageWrap(node.attrs?.wrap) ? node.attrs.wrap : "none";
+  const naturalWidth = positiveInteger(node.attrs?.naturalWidth);
+  const naturalHeight = positiveInteger(node.attrs?.naturalHeight);
+
+  const align = sanitizeRichTextAlign(node.attrs?.textAlign);
+  const style = {
+    ...(align === null ? {} : { textAlign: align }),
+    ...(width === null ? {} : { width: `${width}%` }),
+  };
+
+  return withStyle(
+    {
+      attrs: {
+        class: "tiptap-image",
+        "data-wrap": wrap,
+        ...(align === null ? {} : { "data-align": align }),
+      },
+      children: [
+        {
+          attrs: {
+            alt,
+            decoding: "async",
+            loading: "lazy",
+            src,
+            ...fileIdAttr(node),
+            ...(naturalWidth !== null && naturalHeight !== null
+              ? { height: naturalHeight, width: naturalWidth }
+              : {}),
+          },
+          tag: "img",
+        },
+      ],
+      tag: "figure",
+    },
+    Object.keys(style).length === 0 ? undefined : style,
+  );
+};
+
+const attachmentElement = (node: RichTextNode): null | RichTextElement => {
+  const href = sanitizeRichTextSrc(node.attrs?.src);
+  if (href === null) return null;
+
+  const name = typeof node.attrs?.name === "string" ? node.attrs.name : "";
+  const size = positiveInteger(node.attrs?.size);
+  const mimeType =
+    typeof node.attrs?.mimeType === "string" ? node.attrs.mimeType : null;
+
+  return {
+    attrs: {
+      class: "tiptap-attachment",
+      "data-kind": editorAttachmentKindOf(mimeType) ?? "file",
+      href,
+      rel: "noopener noreferrer nofollow",
+      target: "_blank",
+      ...fileIdAttr(node),
+      ...(size === null ? {} : { "data-size": size }),
+      ...(mimeType === null ? {} : { type: mimeType }),
+    },
+    children: [
+      {
+        attrs: { class: "tiptap-attachment-name" },
+        children: [name],
+        tag: "span",
+      },
+      {
+        attrs: { class: "tiptap-attachment-meta" },
+        children: [editorAttachmentMeta({ name, size })],
+        tag: "span",
+      },
+    ],
+    tag: "a",
+  };
+};
+
 export const richTextNodeElement = (
   node: RichTextNode,
 ): null | RichTextElement => {
   switch (node.type) {
+    case "attachment":
+      return attachmentElement(node);
     case "audio": {
       const src = sanitizeRichTextSrc(node.attrs?.src);
       if (src === null) return null;
@@ -296,6 +396,8 @@ export const richTextNodeElement = (
     }
     case "horizontalRule":
       return { tag: "hr" };
+    case "image":
+      return imageElement(node);
     case "listItem":
       return { children: [RICH_TEXT_SLOT], tag: "li" };
     case "orderedList": {

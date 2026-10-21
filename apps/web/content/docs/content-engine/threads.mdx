@@ -1,46 +1,41 @@
 ---
 title: Threaded replies
-description: Build nested replies with the VitNode Content Engine thread option - a to-one self relation for the parent, a root relation that also gives the reply its container, generated slugs, public author summaries and the GET /thread route.
+description: Add nested replies, such as comments under a forum topic, with the VitNode Content Engine thread option, from the content type to a comment section with replying, editing, tombstones and reporting.
 icon: MessagesSquare
 implementation:
-  objective: Add threaded replies, such as comments, under an existing content type.
+  objective: Add threaded replies, such as comments, under an existing content type and show them on its page.
   decisions:
     - Which plugin owns the replies? Offer plugins in the project that define Content Engine content types.
-    - Which items get replies? Offer content types from the chosen plugin by their user-facing names, such as "Topics" or "Articles". A root needs a public API; if the choice has none, say so and ask whether to add it.
+    - Which items get replies? Offer content types from the chosen plugin with a public API and a public page.
     - Who writes replies? Signed-in members from the public site (uses Public write), or only staff in the AdminCP.
-    - Where do replies appear? Offer the public pages that already show the chosen items, such as the detail page.
-    - How deep can replies nest? From 1 (a flat list) to 32 levels; recommend the guide's depth unless a flat list is wanted.
+    - How deep can replies nest? From 1 (a flat list) to 32 levels; recommend 6.
   constraints:
     - Use the content type `thread` option. Do not build a separate comments table, tree query or placement checks.
     - 'The root relation is required, to-one and `container: true`; `parent` is a nullable to-one self relation. Both belong in `publicApi.fields` and neither in `publicWrite.update.fields`.'
-    - 'Read replies with the generated `GET /{publicApi.path}/thread` route through `fetcher`, and render tombstones (`removed: true`) so the tree keeps its shape.'
-    - Create the table with the project's build and migration scripts, not hand-written SQL.
+    - 'Read replies with `GET /{publicApi.path}/thread` through `fetcher`, render tombstones (`removed: true`) so the tree keeps its shape, and show Edit and Report from `useContentPermissions`.'
   related:
     - title: Public write
       href: /docs/content-engine/public-write
-    - title: Public write frontend
-      href: /docs/content-engine/public-write-frontend
+    - title: Report content
+      href: /docs/content-engine/reports
     - title: Thread reference
       href: /docs/content-engine/reference#thread
 ---
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-The `thread` option turns a content type into replies that answer each other under one root record, like comments under a forum topic or under a blog post. The server keeps the tree valid, and one public route returns a page of it, nested and in order.
+import { ImgDocs } from "@/components/fumadocs/img";
+import tree from "./threads-frontend-tree.webp";
 
-This guide builds `forum.comment` from the Forum plugin. Each comment belongs to a `forum.topic`, may answer another comment, and lives in its topic's forum.
+The `thread` option turns a content type into replies that answer each other under one record, like comments under a forum topic. The server keeps the tree valid and returns it a page at a time; your page draws it. This guide follows the Forum plugin's comments: the content type first, then the comment section in `plugins/forum/src/pages/`.
 
-## Before you begin
-
-You need the root content type with a [public API](/docs/content-engine/public-api), here `forum.topic`. For members to post comments, read [Public write](/docs/content-engine/public-write) first.
+You need the root content type, here `forum.topic`, with a [public API](/docs/content-engine/public-api) and a page. For members to reply, read [Public write](/docs/content-engine/public-write) too.
 
 <Steps>
 
 <Step>
 
-### Define the comment
-
-Create the content type. Four fields do the threading work, and `thread` names two of them:
+### Define the reply
 
 ```ts title="plugins/forum/src/content/comment.ts"
 import { defineContentType, field } from "@vitnode/core/content";
@@ -66,11 +61,11 @@ export const commentContentType = defineContentType({
 
   publication: true,
   visibility: true,
+  reports: { snapshotFields: ["body"] },
 
   publicApi: {
     path: "comments",
     fields: ["id", "slug", "body", "topic", "parent", "publishedAt", "createdAt"],
-    filterableFields: ["topic"],
     people: ["author"],
   },
 
@@ -84,20 +79,16 @@ export const commentContentType = defineContentType({
 });
 ```
 
-- `parent` is a to-one **self relation**: the comment being answered, or `null` for a direct answer to the topic. It must be nullable, because the first comment has nothing to point at.
-- `topic` is the **root**. `container: true` files the comment in the topic's forum, so [publishing policies](/docs/content-engine/container-policies) and container-scoped moderators apply to comments without a container field of their own. A `container: true` relation must be required and to-one.
-- `slug` with `generated: true` gets a random 10-character token on create, such as `k3v9q2m7xa`, because a comment has no title to derive one from.
-- `people: ["author"]` publishes the author as a small profile summary. `publicApi.fields` never exposes a user, so this is a separate opt-in.
-
-`parent` and `topic` must be in `publicApi.fields`, so readers can rebuild the tree, and they cannot be in `update.fields`: a comment is placed when it is written and stays there. Every option and its errors are in the [`thread` reference](/docs/content-engine/reference#thread).
+- `parent` is the reply being answered, or `null` for a direct answer to the topic.
+- `topic` is the **root**. `container: true` puts the comment in the topic's forum, so the forum's [publishing policies](/docs/content-engine/container-policies) and moderators apply to comments too.
+- `slug` with `generated: true` gets a random token such as `k3v9q2m7xa`, because a comment has no title.
+- A comment's place is fixed when it is written. `parent` and `topic` cannot be edited.
 
 </Step>
 
 <Step>
 
-### Create the model
-
-A self relation finds its own table, so `references` lists only the topic:
+### Create the model and migrate
 
 ```ts title="plugins/forum/src/database/comments.ts"
 import { createContentModel } from "@vitnode/core/content/server";
@@ -113,33 +104,23 @@ export const commentContent = createContentModel(commentContentType, {
 export const forum_comments = commentContent.table;
 ```
 
-An entry for `parent` in `references` throws, which is the engine politely saying it has this one covered.
+Add `commentContent` to `buildContentPublicModule` next to the topics, then migrate:
 
-</Step>
-
-<Step>
-
-### Register, build and migrate
-
-Add `commentContent` to `contentTypes` of `buildContentPublicModule` (and the admin module, for an AdminCP screen) next to the topics. Then run this from the workspace root and restart `pnpm dev`:
-
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
 
 ```bash tab="bun"
-bun run build:plugins && bun run db:migrate
+bun run db:migrate
 ```
 
 ```bash tab="pnpm"
-pnpm build:plugins && pnpm db:migrate
+pnpm db:migrate
 ```
 
 ```bash tab="npm"
-npm run build:plugins && npm run db:migrate
+npm run db:migrate
 ```
 
 </Tabs>
-
-The table gets a `parent` column with a foreign key to `forum_comments.id` and a `topic` column pointing at `forum_topics.id`. The Forum plugin also adds `indexes: [{ on: ["topic", "parent", "createdAt"] }]` to the definition, which matches how the thread route reads. See [`indexes`](/docs/content-engine/reference#indexes).
 
 </Step>
 
@@ -147,116 +128,145 @@ The table gets a `parent` column with a foreign key to `forum_comments.id` and a
 
 ### Read the thread
 
-`GET /{path}/thread` returns one page of top-level replies, oldest first, each followed by every public answer below it. Call it with the [fetcher](/docs/dev/fetcher):
+`GET /comments/thread?root={topicId}` returns a page of top-level replies, oldest first, each followed by every public answer below it:
 
 ```ts title="plugins/forum/src/pages/thread-data.ts"
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-
-import { manifest } from "@/manifest.gen";
-
-export const fetchThreadPage = async ({
-  after,
-  topicId,
-}: {
-  after?: string;
-  topicId: number;
-}) => {
-  const res = await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "content/comments",
-    path: "/thread",
-    args: { query: { root: String(topicId), first: 20, ...(after ? { after } : {}) } },
-  });
-  if (res.status === 404) return null;
-  if (res.status !== 200) throw new Error("Loading the comments failed.");
-
-  return await res.json();
-};
+const res = await fetcher({
+  plugin: manifest.id,
+  method: "get",
+  module: "content/comments",
+  path: "/thread",
+  args: { query: { root: String(topicId), first: 20, ...(after ? { after } : {}) } },
+});
 ```
 
-`items` is already flattened depth first, so render it as a list and indent each item by its `depth`. Pass `pageInfo.endCursor` as `after` to load the next page. A `404` means the root record is missing or not public. The Forum plugin's `thread-data.ts` also validates the response with Zod, and `thread.tsx` renders it as a nested list.
+The answer is flat, so a parent always comes before its replies:
 
-</Step>
-
-</Steps>
-
-## What the thread route returns
-
-| Query   | Type     | Default | Description                                         |
-| ------- | -------- | ------- | --------------------------------------------------- |
-| `root`  | `string` |         | The root record's id. Required                      |
-| `first` | `number` | `20`    | Top-level replies per page, from 1 to 50            |
-| `after` | `string` |         | `pageInfo.endCursor` of the previous page           |
-
-```json title="GET /api/@vitnode/forum/content/comments/thread?root=42 (trimmed)"
+```json
 {
   "items": [
-    {
-      "depth": 1,
-      "id": 17,
-      "parentId": null,
-      "removed": false,
-      "record": {
-        "id": 17,
-        "slug": "k3v9q2m7xa",
-        "body": { "type": "doc", "content": [] },
-        "topic": { "id": 42 },
-        "parent": null,
-        "publishedAt": "2026-10-13T09:20:00.000Z",
-        "createdAt": "2026-10-13T09:20:00.000Z",
-        "author": {
-          "id": 3,
-          "name": "Ada",
-          "nameCode": "ada",
-          "avatarColor": "#2563eb",
-          "avatarUrl": null,
-          "role": { "color": null, "prefix": null }
-        }
-      }
-    },
+    { "depth": 1, "id": 17, "parentId": null, "removed": false, "record": { "id": 17, "body": {}, "author": {} } },
     { "depth": 2, "id": 18, "parentId": 17, "removed": true, "record": null },
-    { "depth": 3, "id": 21, "parentId": 18, "removed": false, "record": { "id": 21, "parent": { "id": 18 } } }
+    { "depth": 3, "id": 21, "parentId": 18, "removed": false, "record": { "id": 21 } }
   ],
-  "pageInfo": { "endCursor": "WyIyMDI2LTEwLTEzVDA5OjIwOjAwLjAwMFoiLDE3XQ", "hasNextPage": false, "totalCount": 1 },
+  "pageInfo": { "endCursor": "WyIyMDI2...", "hasNextPage": false, "totalCount": 1 },
   "replyCount": 2,
   "truncated": false
 }
 ```
 
-- **Tombstones.** A reply that is not public, such as a hidden one, is left out. If a public answer sits below it, it comes back as `removed: true` with `record: null`, so the tree keeps its shape. Reply 18 above is one.
-- **Counts.** `totalCount` counts public top-level replies, and `replyCount` counts public replies at any depth.
-- **Limits.** One page carries at most 500 nodes and stops at `maxDepth`. `truncated: true` means some nested replies did not fit.
-- **The root must be public.** A missing, draft or hidden topic answers `404`.
+Warm the first page in the topic page's loader, so comments are in the server-rendered HTML.
 
-`record` has the same shape as a record from the public list, including `people` summaries. A to-one relation such as `topic` or `parent` comes back as `{ id }`, not a bare id. A person is `null` when the account was deleted.
+</Step>
 
-Readers can report a reply like any other record: turn on [`reports`](/docs/dev/moderation/enable-reports#report-items-in-a-list) for the reply type and render a `ReportButton` per reply.
+<Step>
 
-## Placement rules
+### Draw the tree
 
-Every create, and every update that touches `parent` or `topic`, is checked on the server, in the AdminCP too. A broken rule answers `400` with an issue on the field:
+Turn the flat list into a tree in one pass, then render nested `<ol>` lists:
 
-| Rule                                                        | Message                                                                   |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------- |
-| The parent exists                                            | `The reply you are answering does not exist.`                             |
-| The parent is in the same topic                              | `The reply you are answering belongs to another conversation.`            |
-| A reply never answers itself or one of its answers           | `A reply cannot answer itself or one of its answers.`                     |
-| Nothing sits deeper than `maxDepth`                          | `Replies nest at most 6 levels deep. Answer a reply higher up.`           |
-| A reply with answers keeps its topic                         | `This reply has answers. Move the whole conversation instead of one reply.` |
+```tsx title="plugins/forum/src/pages/thread.tsx"
+const buildThreadTree = (items: ThreadNode[]) => {
+  const nodes = new Map<number, ThreadTreeNode>();
+  const roots: ThreadTreeNode[] = [];
+  for (const item of items) {
+    const node = { ...item, children: [] };
+    nodes.set(item.id, node);
+    const parent = item.parentId === null ? undefined : nodes.get(item.parentId);
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  }
 
-On the public routes, the parent must also be public: a hidden or draft parent gets the usual `unavailable` issue.
+  return roots;
+};
 
-Deleting a reply with `onDelete: "set null"` turns its answers into top-level replies. Hiding it with [visibility](/docs/content-engine/content-visibility) keeps them where they are, under a tombstone, which is usually what a forum wants.
+const ThreadNodeView = ({ node }: { node: ThreadTreeNode }) => (
+  <li>
+    {node.record ? (
+      <CommentBody comment={node.record} />
+    ) : (
+      <p className="text-muted-foreground italic">{t("removed")}</p>
+    )}
+    {node.children.length > 0 ? (
+      <ol className="border-l-2 pl-3 md:pl-6">
+        {node.children.map(child => <ThreadNodeView key={child.id} node={child} />)}
+      </ol>
+    ) : null}
+  </li>
+);
+```
+
+**Tombstones.** `removed: true` is a reply readers can't see, such as a hidden one, that still has public answers. Show a short placeholder and keep its children, so the conversation keeps its shape. A hidden reply with no answers is left out.
+
+</Step>
+
+<Step>
+
+### Load more pages
+
+Keep the pages you loaded and pass the last `endCursor` as `after`:
+
+```tsx title="plugins/forum/src/pages/thread.tsx"
+{last.pageInfo.hasNextPage ? (
+  <Button onClick={loadMore} variant="outline">{t("load_more")}</Button>
+) : null}
+{last.truncated ? <p>{t("truncated")}</p> : null}
+```
+
+One answer holds at most 500 replies. `truncated: true` means some deep answers did not fit; say so instead of pretending the thread ends there. `replyCount` counts every public reply, the number for a "5 comments" heading.
+
+</Step>
+
+<Step>
+
+### Reply, edit and report
+
+Ask what the visitor may do with every reply on screen, in one request:
+
+```tsx title="plugins/forum/src/pages/thread.tsx"
+const permissions = useCommentPermissions(
+  items.flatMap(item => (item.record ? [item.id] : [])),
+);
+
+const { canEdit, canReport } = permissions.of(comment.id);
+```
+
+`useCommentPermissions` wraps `useContentPermissions` with the `content/comments` route, like [`useDiscussionPermissions`](/docs/content-engine/reports#ask-who-may-report-what). Then:
+
+- **Reply** posts `{ values: { body, parent: comment.id, topic: topicId } }` with `useContentPublicWrite`, like the [create form](/docs/content-engine/public-write-frontend). Show it to signed-in members while the reply sits above `maxDepth`.
+- **Edit** appears when `canEdit`. It loads `GET /comments/{id}/edit` and saves with `PATCH`, like the [edit form](/docs/content-engine/public-write-edit).
+- **Report** appears when `canReport`, with `contentTarget(manifest.id, commentContentType, comment.id)`. See [Report content](/docs/content-engine/reports).
+
+When the forum's policy holds new comments for a moderator, the post answers `approval.status: "pending"`. Tell the author it is waiting; the comment appears in the thread after approval.
+
+</Step>
+
+</Steps>
+
+## What the server checks
+
+Every reply is placed on the server, in the AdminCP too. A broken rule answers `400` with an issue on the field:
+
+| Rule                                                 | Message                                                         |
+| ---------------------------------------------------- | --------------------------------------------------------------- |
+| The parent exists and is public                      | `The reply you are answering does not exist.`                   |
+| The parent is under the same topic                   | `The reply you are answering belongs to another conversation.`  |
+| A reply never answers itself or one of its answers   | `A reply cannot answer itself or one of its answers.`           |
+| Nothing sits deeper than `maxDepth`                  | `Replies nest at most 6 levels deep. Answer a reply higher up.` |
+
+A missing, draft or hidden topic makes `GET /thread` answer `404`. Every option is in the [`thread` reference](/docs/content-engine/reference#thread).
+
+## Use it in another plugin
+
+The forum's `thread-data.ts`, `thread.tsx` and `comment-composer.tsx` are a reference to copy, not an export. Change the module to `content/` plus your reply type's path, `topic` to your `thread.root` field, and the depth limit to your `maxDepth`. The tree, tombstones, paging and buttons need nothing else.
 
 ## Check the result
 
-Create a topic, then post a comment and an answer to it as a signed-in member:
+Open a topic with replies, such as `/forum/topics/show-us-your-first-content-engine-type`. Replies nest under the one they answer, a hidden reply leaves **This comment was removed.** with its answer still below it, your own replies show **Edit**, and the others show **Report**.
 
-```bash
-curl -X POST http://localhost:3000/api/@vitnode/forum/content/comments \
-  -H "Content-Type: application/json" -b "vitnode_auth=<session>" \
-  -d '{"values":{"topic":42,"parent":17,"body":{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"Same here!"}]}]}}}'
-```
-
-The response has a generated `slug`. `GET /api/@vitnode/forum/content/comments/thread?root=42` now lists comment 17 with the new answer below it at `depth: 2`. Sending a `parent` from another topic answers `400` with an issue on `parent`.
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={tree}
+  alt="A forum comment thread titled 5 comments, with nested replies, Reply, Edit and Report buttons, and a This comment was removed placeholder that keeps its answer"
+/>

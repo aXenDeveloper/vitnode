@@ -13,10 +13,9 @@ type QueryClient = RouteLoadContext["queryClient"];
 /**
  * Boards are AdminCP-managed containers, so they get a record's freshness and
  * are shared across pages: the boards index, the "new discussion" picker and a
- * board page all read the same entries. Discussions are left uncached on
- * purpose - this plugin's members edit them from pages that cannot reach the
- * query client to expire them, and a cached copy would show the old text right
- * after "Your changes are live".
+ * board page all read the same entries. A discussion page and a board's list
+ * read the API directly; the `/discussions` list is cached in
+ * `discussion-list.ts`, and the create and edit pages expire it.
  */
 const exampleQueryKeys = {
   board: (idOrSlug: string) => [manifest.id, "board", idOrSlug] as const,

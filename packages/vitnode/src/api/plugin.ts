@@ -88,6 +88,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
         { permission: "can_edit_alt", dependsOn: ["can_view"] },
         { permission: "can_download", dependsOn: ["can_view"] },
         { permission: "can_delete", dependsOn: ["can_view"] },
+        "can_upload",
       ],
       queue: ["can_view"],
       plugins: [

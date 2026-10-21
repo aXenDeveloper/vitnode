@@ -15,8 +15,10 @@ implementation:
     - Mount the generated routes through the plugin's `buildContentPublicModule`. Write no create or update route by hand, and add no public publish, hide or delete route.
     - Label the generated `can_edit` moderator permission in the plugin's locale, then build and migrate with the project's scripts.
   related:
-    - title: Public write frontend
+    - title: Public create form
       href: /docs/content-engine/public-write-frontend
+    - title: Public edit form
+      href: /docs/content-engine/public-write-edit
     - title: Public write API
       href: /docs/content-engine/public-write-api
     - title: Public API
@@ -24,6 +26,10 @@ implementation:
 ---
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import adminList from "./public-write-admin-list.webp";
+import moderatorPermission from "./public-write-moderator-permission.webp";
 
 `publicWrite` lets any signed-in member create records of a content type, and edit their own, through generated API routes on the public site. Staff keep the full AdminCP. Use it for discussions, reviews, listings or anything else your members write themselves.
 
@@ -97,6 +103,8 @@ export const discussionContentType = defineContentType({
 
 Every option and rule is in the [public write reference](/docs/content-engine/public-write-api#publicwrite-options).
 
+The example plugin's finished definition adds more on top: a `board` [container field](#containers) members pick on create, `people: ["author"]` and search options for the [discussion list](/docs/content-engine/public-lists), and `reports: true` for the [Report button](/docs/content-engine/reports).
+
 </Step>
 
 <Step>
@@ -165,22 +173,22 @@ A content type with `publicWrite.update` gets a `can_edit` **moderator** permiss
 
 <Step>
 
-### Build, migrate and restart
+### Migrate
 
-Run this from the workspace root, then restart `pnpm dev` so the API registers the new routes:
+Run this from the workspace root while `pnpm dev` is running:
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build plugins and migrate">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
 
 ```bash tab="bun"
-bun run build:plugins && bun run db:migrate
+bun run db:migrate
 ```
 
 ```bash tab="pnpm"
-pnpm build:plugins && pnpm db:migrate
+pnpm db:migrate
 ```
 
 ```bash tab="npm"
-npm run build:plugins && npm run db:migrate
+npm run db:migrate
 ```
 
 </Tabs>
@@ -191,9 +199,84 @@ The migration creates `example_discussions` with an `author` column that referen
 
 </Steps>
 
+## Ownership
+
+Every publicly written record has exactly one owner, and only the server sets it. On create, the routes take the user from the session and write it into `ownership.field` after validating the payload. The field can never appear in `create.fields` or `update.fields`, and a payload that sends it gets the `not_writable` issue above.
+
+The owner never changes through the public routes, not even when a moderator edits the record. If the owner's account is deleted, the field becomes empty and nobody owns the record, so only moderators can edit it.
+
+That is why `ownership` is required and not configurable. A client that could choose the owner could write as somebody else or take over their records.
+
+## Permissions
+
+Creating needs a signed-in user and nothing else. Editing is allowed for two kinds of people:
+
+- **The owner**, while `update.own` is `true` (the default) and the record is not [hidden](/docs/content-engine/content-visibility). A record a moderator hid is the moderator's to restore, not the author's to keep editing. Set `update.own: false` to let only moderators edit.
+- **Moderators** who hold the content type's `can_edit` moderator permission, directly or through a role. In a container collection with [publishing policies](/docs/content-engine/container-policies), `can_edit` is [scoped to containers](/docs/dev/moderation/scoped-permissions#container-scoped-permissions), and the policy can also limit how long the owner may edit.
+
+To make someone a discussion moderator:
+
+1. Open **AdminCP → Staff → Moderators** and click **Add Moderator**.
+2. Pick a **Role** or a **User** and click **Add member**. The permission editor opens.
+3. Choose **Restricted**, turn on **Edit discussions** under the example plugin, and click **Save changes**.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={moderatorPermission}
+  alt="The moderator permission editor set to Restricted, with Edit discussions turned on under the example plugin"
+/>
+
+A moderator entry set to **Unrestricted**, and every root role, holds all moderator permissions, including this one.
+
+Being staff is not enough on its own. The admin `can_edit` permission only opens the AdminCP routes, and an AdminCP session never adds powers on the public site. The public routes always act as the user's normal session. Moderators edit with the same forms and routes as members, so you build one edit page instead of two.
+
+## Security
+
+Each layer below holds even if the one before it has a bug:
+
+- **Separate allowlists.** `publicWrite` fields are independent of `publicApi.fields`. A field can be writable without being public, and public without being writable. Server-managed columns (`id`, `status`, `publishedAt`, `version`, `hiddenAt` and friends), the owner field, file, user, group, repeatable and block fields can never be listed. See [writable fields](/docs/content-engine/public-write-api#writable-fields).
+- **Strict schemas.** The request schemas are built from the allowlists alone. An unknown key is a `400`, never silently dropped.
+- **Authentication.** An anonymous request gets `401` before its body is read.
+- **Ownership** is stamped by the server, as described above.
+- **Authorization under a row lock.** An edit reads the record with `SELECT ... FOR UPDATE`, checks the owner or moderator permission, and writes in the same transaction, so the owner that was checked is the owner that is written.
+- **Relation targets.** A relation field is writable only when its target content type has a `publicApi`. On every write, each referenced record must be published and visible, otherwise the request is a `400` with the `unavailable` issue code. Missing, draft and hidden targets get the same answer.
+- **No existence leaks.** `403` is only for records the public can already read. A draft or a hidden record answers `404`, like a record that does not exist.
+- **Rate limit and captcha.** `POST` and `PATCH` requests under `/content/` share a budget of 20 per minute per IP, on top of the write budget every mutation spends. Set `create.captcha: true` to require a [captcha](/docs/dev/captcha) token on every create.
+- **Session and CSRF.** The routes use the same session cookie, CORS and CSRF origin checks as every other VitNode API route, and they accept JSON bodies only.
+
+Tune the write budget with `rateLimiter.contentWrite`. Like every rate limit, it is off when `NODE_ENV=development`:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  rateLimiter: {
+    // [!code ++]
+    contentWrite: { points: 10, duration: 60 },
+  },
+});
+```
+
+## Events, search and revisions
+
+Public writes trigger the same side effects as AdminCP writes, so nothing new needs wiring:
+
+- [Events](/docs/content-engine/events): `created` on create, then `published` when the record goes live, and `updated` with `changedFields` on an edit that changed something. There are no separate public-write events. A record waiting for [approval](/docs/content-engine/approvals) emits `published` or `updated` when a moderator approves it, plus the `content.approval.*` events.
+- [Search](/docs/content-engine/search) is synced after the transaction commits, so a discussion published on create is searchable straight away.
+- On an [editorial](/docs/content-engine/editorial#revisions) content type, each create and edit stores a revision attributed to the signed-in user, and staff can restore it from the AdminCP.
+
+## Containers
+
+A content type organized into [containers](/docs/content-engine/containers), such as discussions in forum boards, lets members pick the container when they create a record. List the `field.container()` in `create.fields`. It cannot be in `update.fields`, so moving a record to another container stays a staff edit. The server resolves the container inside the write's transaction and refuses a missing or foreign one with a `400` on that field.
+
+### Container policies
+
+Whether a new record starts as a draft or goes live is decided on the server, never by the payload. Without container policies, it is `create.status`. When the record's container collection has [publishing policies](/docs/content-engine/container-policies), the container decides instead: who may create, whether new records and edits wait for a moderator, and how long the owner may edit. A new record that waits answers with `status: "draft"`, and every response carries an `approval` object, described in [Approvals](/docs/content-engine/approvals).
+
+Next, build the pages members use: a [create form](/docs/content-engine/public-write-frontend) and an [edit form](/docs/content-engine/public-write-edit) with its Edit button.
+
 ## Check the result
 
-Sign in on the site, copy the value of your `vitnode_auth` cookie from the browser's developer tools, and create a discussion:
+Sign in on the site, copy the value of your `vitnode_auth` cookie from the browser's developer tools, and create a discussion. Against the example plugin itself, whose discussions live in boards, also send `"board": 1` in `values`:
 
 ```bash
 curl -i -X POST http://localhost:3000/api/@vitnode/example/content/discussions \
@@ -260,70 +343,11 @@ Nothing is written, and each problem names its field:
 
 Without the cookie, every write route answers `401` with `"code": "CONTENT_UNAUTHENTICATED"` before it reads the body. Validation failures are `400`, the status every VitNode input error uses, not `422`.
 
-## Ownership
+Members' discussions show up in **AdminCP → Example → Discussions** like any other record, with their author filled in by the server:
 
-Every publicly written record has exactly one owner, and only the server sets it. On create, the routes take the user from the session and write it into `ownership.field` after validating the payload. The field can never appear in `create.fields` or `update.fields`, and a payload that sends it gets the `not_writable` issue above.
-
-The owner never changes through the public routes, not even when a moderator edits the record. If the owner's account is deleted, the field becomes empty and nobody owns the record, so only moderators can edit it.
-
-This is why `ownership` is required and not configurable: if a client could choose the owner, it could write as somebody else or take over their records.
-
-## Permissions
-
-Creating needs a signed-in user and nothing else. Editing is allowed for two kinds of people:
-
-- **The owner**, while `update.own` is `true` (the default) and the record is not [hidden](/docs/content-engine/content-visibility). A record a moderator hid is the moderator's to restore, not the author's to keep editing. Set `update.own: false` to let only moderators edit.
-- **Moderators** who hold the content type's `can_edit` moderator permission, directly or through a role. In a container collection with [publishing policies](/docs/content-engine/container-policies), `can_edit` is [scoped to containers](/docs/dev/moderation/scoped-permissions#container-scoped-permissions), and the policy can also limit how long the owner may edit.
-
-To make someone a discussion moderator:
-
-1. Open **AdminCP → Staff → Moderators** and click **Add Moderator**.
-2. Pick a **Role** or a **User** and click **Add member**. The permission editor opens.
-3. Choose **Restricted**, turn on **Edit discussions** under the example plugin, and click **Save changes**.
-
-A moderator entry set to **Unrestricted**, and every root role, holds all moderator permissions, including this one.
-
-Being staff is not enough on its own. The admin `can_edit` permission only opens the AdminCP routes, and an AdminCP session never adds powers on the public site: the public routes always act as the user's normal session. Moderators edit with the same forms and routes as members, so you build one edit page instead of two.
-
-## Security
-
-Each layer below holds even if the one before it has a bug:
-
-- **Separate allowlists.** `publicWrite` fields are independent of `publicApi.fields`. A field can be writable without being public, and public without being writable. Server-managed columns (`id`, `status`, `publishedAt`, `version`, `hiddenAt` and friends), the owner field, file, user, group, repeatable and block fields can never be listed. See [writable fields](/docs/content-engine/public-write-api#writable-fields).
-- **Strict schemas.** The request schemas are built from the allowlists alone. An unknown key is a `400`, never silently dropped.
-- **Authentication.** An anonymous request gets `401` before its body is read.
-- **Ownership** is stamped by the server, as described above.
-- **Authorization under a row lock.** An edit reads the record with `SELECT ... FOR UPDATE`, checks the owner or moderator permission, and writes in the same transaction, so the owner that was checked is the owner that is written.
-- **Relation targets.** A relation field is writable only when its target content type has a `publicApi`. On every write, each referenced record must be published and visible, otherwise the request is a `400` with the `unavailable` issue code. Missing, draft and hidden targets get the same answer.
-- **No existence leaks.** `403` is only for records the public can already read. A draft or a hidden record answers `404`, like a record that does not exist.
-- **Rate limit and captcha.** `POST` and `PATCH` requests under `/content/` share a budget of 20 per minute per IP, on top of the write budget every mutation spends. Set `create.captcha: true` to require a [captcha](/docs/dev/captcha) token on every create.
-- **Session and CSRF.** The routes use the same session cookie, CORS and CSRF origin checks as every other VitNode API route, and they accept JSON bodies only.
-
-Tune the write budget with `rateLimiter.contentWrite`. Like every rate limit, it is off when `NODE_ENV=development`:
-
-```ts title="apps/api/src/vitnode.api.config.ts"
-export const vitNodeApiConfig = buildApiConfig({
-  rateLimiter: {
-    // [!code ++]
-    contentWrite: { points: 10, duration: 60 },
-  },
-});
-```
-
-## Events, search and revisions
-
-Public writes trigger the same side effects as AdminCP writes, so nothing new needs wiring:
-
-- [Events](/docs/content-engine/events): `created` on create, then `published` when the record goes live, and `updated` with `changedFields` on an edit that changed something. There are no separate public-write events. A record waiting for [approval](/docs/content-engine/approvals) emits `published` or `updated` when a moderator approves it, plus the `content.approval.*` events.
-- [Search](/docs/content-engine/search) is synced after the transaction commits, so a discussion published on create is searchable straight away.
-- On an [editorial](/docs/content-engine/editorial#revisions) content type, each create and edit stores a revision attributed to the signed-in user, and staff can restore it from the AdminCP.
-
-## Containers
-
-A content type organized into [containers](/docs/content-engine/containers), such as discussions in forum boards, lets members pick the container when they create a record: list the `field.container()` in `create.fields`. It cannot be in `update.fields`, so moving a record to another container stays a staff edit. The server resolves the container inside the write's transaction and refuses a missing or foreign one with a `400` on that field.
-
-### Container policies
-
-Whether a new record starts as a draft or goes live is decided on the server, never by the payload. Without container policies, it is `create.status`. When the record's container collection has [publishing policies](/docs/content-engine/container-policies), the container decides instead: who may create, whether new records and edits wait for a moderator, and how long the owner may edit. A new record that waits answers with `status: "draft"`, and every response carries an `approval` object, described in [Approvals](/docs/content-engine/approvals).
-
-Next, build the create and edit pages in [Public write frontend](/docs/content-engine/public-write-frontend).
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={adminList}
+  alt="The AdminCP Discussions list with discussions written by members from the site, showing their board, author Ada Lovelace or Ben Ortiz, and Published status"
+/>

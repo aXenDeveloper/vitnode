@@ -5,7 +5,7 @@ import {
   wsRegistry,
 } from "@/ws/registry";
 
-import { onContentLiveReset } from "./hooks";
+import { onContentLiveFileDeleted, onContentLiveReset } from "./hooks";
 import { createContentLiveServer } from "./server";
 
 const contentLiveServer = createContentLiveServer();
@@ -14,6 +14,7 @@ wsRegistry.onConnectionClose(contentLiveServer.onConnectionClose);
 onRemoteRoomMessage(contentLiveServer.onRemoteRoomMessage);
 onInstanceMessage(contentLiveServer.onInstanceMessage);
 onContentLiveReset(contentLiveServer.onReset);
+onContentLiveFileDeleted(contentLiveServer.onFileDeleted);
 
 export const contentLiveWebSocket = buildWebSocket({
   description:

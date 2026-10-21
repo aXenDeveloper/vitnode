@@ -30,6 +30,7 @@
   "@vitnode/core:files:can_view": "View uploaded files",
   "@vitnode/core:files:can_download": "Download files",
   "@vitnode/core:files:can_delete": "Delete files",
+  "@vitnode/core:files:can_upload": "Upload images in editors",
   "@vitnode/core:ai": "AI",
   "@vitnode/core:ai:can_view": "View AI usage, settings and history",
   "@vitnode/core:ai:can_manage": "Manage AI settings, models, pricing and access",
@@ -282,6 +283,65 @@
           },
           "submit": "Insert audio",
           "hint": "Embed an mp3, wav or ogg file"
+        },
+        "image": {
+          "label": "Image",
+          "hint": "Upload or drop a picture",
+          "title": "Insert image",
+          "desc": "Drop a picture here, pick one from your device, or paste it straight into the editor.",
+          "dropzone": "Drop images here or click to browse",
+          "limits": "PNG, JPEG, WebP, GIF or AVIF, up to {size} each.",
+          "tabs": {
+            "upload": "Upload",
+            "url": "From URL"
+          },
+          "url": {
+            "label": "Image URL",
+            "desc": "Only https:// addresses work.",
+            "https": "Use an address that starts with https://.",
+            "submit": "Insert image"
+          },
+          "uploading": "Uploading image…",
+          "settings": "Image settings",
+          "resize": "Drag to resize",
+          "wrap": {
+            "label": "Image wrap",
+            "none": "Default",
+            "left": "Left wrap",
+            "right": "Right wrap"
+          },
+          "width": {
+            "label": "Width",
+            "value": "{value}%"
+          },
+          "alt": {
+            "label": "ALT text",
+            "desc": "Describe your image"
+          },
+          "replace": "Replace",
+          "remove": "Remove"
+        },
+        "attachment": {
+          "label": "File",
+          "hint": "PDF, Word, PowerPoint or ZIP",
+          "uploading": "Uploading…",
+          "open": "Open {name}"
+        },
+        "uploads": {
+          "errors": {
+            "title": "File not added",
+            "type": "{name} isn't a file type this editor accepts.",
+            "too_large": "{name} is larger than {size}.",
+            "upload": "{name} couldn't be uploaded."
+          },
+          "deleted_file": "File deleted",
+          "deleted_image": "Image deleted",
+          "reuse": {
+            "from": "Reuse from {languages}",
+            "insert": "Insert {name}",
+            "insert_all": "Insert all ({count})",
+            "image": "Image"
+          }
         },
         "table": {
           "label": "Table",
@@ -718,7 +778,34 @@
           }
         }
       },
-      "unsaved_changes": "Unsaved changes"
+      "unsaved_changes": "Unsaved changes",
+      "content_write": {
+        "title": "Couldn't save",
+        "unknown": "Something went wrong on our side. Please try again.",
+        "unauthenticated": "Your session has ended. Sign in again, then try once more.",
+        "forbidden": "You can't change this.",
+        "not_found": "This no longer exists.",
+        "rate_limited": "You're doing that too often. Wait a minute and try again.",
+        "unique": "This is already taken. Try something else.",
+        "issues": {
+          "invalid": "Check this value.",
+          "not_writable": "This can't be changed here.",
+          "unavailable": "This is no longer available. Pick another one.",
+          "moderators_only": "Only moderators can post here.",
+          "edit_window_closed": "The time to edit this has run out."
+        },
+        "conflict": {
+          "title": "Someone else saved in the meantime",
+          "desc": "Nothing was saved and your text is still in the form. Keep your version to save over the other change, or load the latest version and lose your edits.",
+          "desc_reload": "Nothing was saved and your text is still in the form. Copy anything you want to keep, then load the latest version.",
+          "keep": "Keep my version",
+          "reload": "Load latest version",
+          "kept": {
+            "title": "Ready to save your version",
+            "desc": "Save again to replace the other change with yours."
+          }
+        }
+      }
     },
     "profile": {
       "title": "{name} (@{nameCode})",
@@ -1764,11 +1851,18 @@
         "version_conflict": "Someone else saved this while you were editing. Your changes are still here.",
         "unique_conflict": "A record with these values already exists.",
         "not_restorable": "This version cannot be restored: {fields} no longer fit this content type.",
-        "slug_reserved": "That address is reserved: another record used it publicly and it still redirects there. Pick a different one."
+        "slug_reserved": "That address is reserved: another record used it publicly and it still redirects there. Pick a different one.",
+        "missing_fields": "Fill in {fields}, then save again.",
+        "invalid_fields": "Check {fields}, then save again.",
+        "field_in_language": "{field} ({language})"
       },
       "translations": {
         "states": {
           "missing": "Missing"
+        },
+        "incomplete": {
+          "title": "{language} was not saved",
+          "desc": "Fill in {fields} in this language to save it. Everything else was saved."
         },
         "errors": {
           "version_conflict": "Someone else saved this language while you were editing."

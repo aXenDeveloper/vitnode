@@ -6,6 +6,9 @@ icon: ClipboardCheck
 
 import { TypeTable } from "fumadocs-ui/components/type-table";
 
+import { ImgDocs } from "@/components/fumadocs/img";
+import pending from "./approvals-pending-notice.webp";
+
 When a container's [publishing policy](/docs/content-engine/container-policies) says `publish: "approve"` or `edits: "approve"`, a member's post does not go live straight away. The server stores a **submission**, a moderator decides, and only an approval changes what readers see. This page explains what waits where, what the author sees, and what a decision does. The moderator's side is in [Review approvals](/docs/dev/moderation/review-approvals).
 
 ## What waits, and where
@@ -64,7 +67,7 @@ For a proposal, `values` is still the live record and `approval.values` holds wh
 
 `GET /{id}/edit` returns the record's latest submission when it is pending, or rejected and not replaced yet, so the author's edit page can say "waiting for a moderator" or show the reason. The shape is `zodContentApprovalState` from `@vitnode/core/content`.
 
-To list everything an author sent, call the core moderation module. It returns pending, approved and rejected submissions, newest first, for the signed-in member. Pass `pluginId` to keep only your plugin's submissions - the filter runs before the page is cut, so every page is full and `total` counts only yours:
+To list everything an author sent, call the core moderation module. It returns pending, approved and rejected submissions, newest first, for the signed-in member. Pass `pluginId` to keep only your plugin's submissions. The filter runs before the page is cut, so every page is full and `total` counts only yours:
 
 ```ts
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
@@ -84,6 +87,44 @@ export const fetchMySubmissions = async (page: number) => {
 ```
 
 Each item has `kind`, `status`, `title`, `contentTypeId`, `itemId`, the container, `reason` and the dates. A guest gets `401`. The Forum plugin's `pending-page.tsx` renders this list at `/forum/me/pending`.
+
+## Show it on your pages
+
+Readers never see a pending record, so the author needs to hear what happened. Three places cover it, all from the `approval` object:
+
+1. **After posting.** When `record.approval?.status === "pending"`, send the author to the record's edit page instead of its public page, which answers `404` until approval. See [Public create form](/docs/content-engine/public-write-frontend#when-a-post-waits-for-a-moderator).
+2. **On the edit page.** `GET /{id}/edit` returns the pending or rejected submission. Show a notice above the form. The Forum plugin's `topic-edit-page.tsx` does it like this:
+
+```tsx title="plugins/forum/src/pages/topic-edit-page.tsx"
+const ApprovalNotice = ({ approval, status }: { approval: ContentApprovalState | null; status: string }) => {
+  const t = useTranslations("@vitnode/forum.topics.approval");
+
+  if (approval?.status === "rejected") {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>{t("rejected.title")}</AlertTitle>
+        <AlertDescription>
+          {approval.reason ? t("rejected.reason", { reason: approval.reason }) : t("rejected.desc")}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (approval?.status === "pending" && approval.kind === "edit") {
+    return <Alert variant="info"><AlertTitle>{t("pending_edit.title")}</AlertTitle></Alert>;
+  }
+
+  if (status === "draft" && approval?.status === "pending") {
+    return <Alert variant="info"><AlertTitle>{t("pending_create.title")}</AlertTitle></Alert>;
+  }
+
+  return null;
+};
+```
+
+3. **In a "my submissions" list.** `GET /moderation/approvals/mine`, shown above, lists everything the author sent. The forum renders it at `/forum/me/pending`.
+
+For a pending edit, open the form on `approval.values`, the proposal, instead of the live text, so the author keeps editing what they sent.
 
 ## What a decision does
 
@@ -110,3 +151,14 @@ Deleting a record cancels its pending submission, from the AdminCP or anywhere e
 Opening a submission emits `content.approval.submitted`, and a decision emits `content.approval.approved` or `content.approval.rejected`. They carry the submission id, the content type, the record id, the container, the author and, for decisions, the reviewer. The record's own events are not duplicated: a pending create emits `created` but not `published` until it is approved. Payloads are in [Built-in events](/docs/dev/events/built-in-events#content-approval-events).
 
 A listener on `content.approval.rejected` is a good place to tell the author why their post did not make it, gently.
+
+## Check the result
+
+In the AdminCP, set a forum's policy to **Approve** for new topics, as in [Publishing policies](/docs/content-engine/container-policies). Sign in as a member and start a topic there. You land on the topic's edit page with the waiting notice, and the topic stays out of the forum until a moderator approves it in the [ModCP](/docs/dev/moderation/review-approvals).
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={pending}
+  alt="The forum's Edit topic page with an info notice saying the topic is waiting for a moderator, above the title and message fields"
+/>

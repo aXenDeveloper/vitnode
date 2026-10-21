@@ -71,6 +71,27 @@ export const blogPostsQueryOptions = (request: {
     queryKey: blogQueryKeys.posts,
   });
 
+/**
+ * {@link blogPostsQueryOptions} as one signed-in viewer sees the page: with the
+ * hidden articles they may see. Re-reads a list that came from a page rendered
+ * once for everybody.
+ */
+export const blogViewerPostsQueryOptions = ({
+  locale,
+  search,
+  viewerId,
+}: {
+  locale: string;
+  search: BlogListSearch;
+  viewerId: number;
+}) =>
+  contentListQueryOptions({
+    fetch: fetchBlogPosts,
+    locale,
+    queryKey: [...blogQueryKeys.posts, "viewer", viewerId],
+    search,
+  });
+
 const fetchBlogCategories = async (locale: string) => {
   const res = await fetcher({
     plugin: manifest.id,
@@ -101,5 +122,22 @@ export const blogCategoriesQueryOptions = (locale: string) =>
   queryOptions({
     queryFn: async () => await fetchBlogCategories(locale),
     queryKey: blogQueryKeys.categories(locale),
+    staleTime: RECORD_STALE_TIME,
+  });
+
+/**
+ * {@link blogCategoriesQueryOptions} as one signed-in viewer sees them: the
+ * counts include the hidden articles they may see.
+ */
+export const blogViewerCategoriesQueryOptions = ({
+  locale,
+  viewerId,
+}: {
+  locale: string;
+  viewerId: number;
+}) =>
+  queryOptions({
+    queryFn: async () => await fetchBlogCategories(locale),
+    queryKey: [...blogQueryKeys.categories(locale), "viewer", viewerId],
     staleTime: RECORD_STALE_TIME,
   });
