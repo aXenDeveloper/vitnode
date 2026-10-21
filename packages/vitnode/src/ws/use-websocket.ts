@@ -6,6 +6,13 @@ import { useVitNodeWebSocketContext } from "./provider";
 
 export interface UseVitNodeWebSocketReturn<Send> {
   /**
+   * Changes every time the shared connection (re)opens, in every tab, and is
+   * `null` while it is not open. Depend on it to restore server-side state
+   * after a reconnect - rejoin rooms, resubscribe, reload what may have been
+   * missed. The server keeps no state for a closed socket and replays nothing.
+   */
+  connectionId: null | string;
+  /**
    * The current `readyState` of the shared connection (`0` CONNECTING, `1`
    * OPEN, `2` CLOSING, `3` CLOSED).
    */
@@ -20,6 +27,9 @@ export interface UseVitNodeWebSocketReturn<Send> {
  * the tree and throws without it.
  *
  * Messages sent before the connection opens are queued by the provider.
+ * Delivery is best effort: a reconnect - after a network drop, a deploy, or a
+ * serverless host's duration limit - loses rooms and anything pushed meanwhile,
+ * so restore them when `connectionId` changes.
  *
  * @param channel A channel from `createWebSocketChannel`, or a raw socket id.
  * @param options.onMessage Called with each payload the server sends to this
@@ -27,9 +37,13 @@ export interface UseVitNodeWebSocketReturn<Send> {
  *
  * @example
  * ```tsx
- * const { send } = useVitNodeWebSocket(echoChannel, {
+ * const { connectionId, send } = useVitNodeWebSocket(roomChannel, {
  *   onMessage: data => setText(data.text),
  * });
+ *
+ * React.useEffect(() => {
+ *   if (connectionId) send({ room: "lobby", type: "join" });
+ * }, [connectionId, send]);
  * ```
  */
 export function useVitNodeWebSocket<Send = unknown, Receive = unknown>(
@@ -39,6 +53,7 @@ export function useVitNodeWebSocket<Send = unknown, Receive = unknown>(
   },
 ): UseVitNodeWebSocketReturn<Send> {
   const {
+    connectionId,
     readyState,
     send: contextSend,
     subscribe,
@@ -61,5 +76,9 @@ export function useVitNodeWebSocket<Send = unknown, Receive = unknown>(
     [contextSend, id],
   );
 
-  return { readyState, send };
+  return {
+    connectionId: readyState === 1 ? connectionId : null,
+    readyState,
+    send,
+  };
 }

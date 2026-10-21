@@ -6,7 +6,7 @@ icon: Radio
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs"
 
-VitNode provides a unified, multiplexed WebSocket connection at `/api/ws`. Browsers share a single connection across tabs via a Web Lock leader election, authenticated by session cookies.
+VitNode provides a unified, multiplexed WebSocket connection at `/api/ws`. Browsers share a single connection across tabs via a Web Lock leader election, authenticated by session cookies. A single app serves it from the same deployment as the site and the API, Vercel included - see [Set up the endpoint](/docs/dev/websocket/setup).
 
 ## Quick start
 
@@ -158,6 +158,23 @@ c.get("realtime").toRoom(`chat:${roomId}`, chatChannel, {
 
 Each socket in the room receives the payload once, however many of its tabs joined. Put the room or record in the payload so every tab can ignore what is not its own.
 
+### Join again after a reconnect
+
+A new connection starts with no rooms on the server. `useVitNodeWebSocket` returns a `connectionId` that changes every time the shared connection opens, in every tab, so join from an effect that depends on it. `roomsChannel` is `createWebSocketChannel<RoomMessage>({ pluginId: "@acme/chat", module: "rooms", id: "presence" })`, the channel of `roomsSocket` above:
+
+```tsx title="plugins/chat/src/views/chat-room.tsx"
+const [clientId] = React.useState(() => crypto.randomUUID())
+const { connectionId, send } = useVitNodeWebSocket(roomsChannel)
+
+// [!code ++:4]
+React.useEffect(() => {
+  if (!connectionId) return
+  send({ clientId, roomId, type: "join" })
+}, [clientId, connectionId, roomId, send])
+```
+
+[Reconnects and missed messages](/docs/dev/websocket/reconnects) covers reloading what the tab missed while it was away.
+
 ### Clean up when a socket closes
 
 A socket that closes leaves all of its rooms. Use `onConnectionClose` to update your own state, such as an "online now" list:
@@ -194,13 +211,23 @@ Without Redis, all of this works on a single instance with no extra setup: `toRo
 - **Tab Leader Election**: When a user opens multiple tabs, a Web Lock elects one leader tab to hold the socket, distributing messages across tabs via `BroadcastChannel`.
 - **Automatic Reconnect**: A dropped connection retries after about a second, then backs off (with a little jitter) up to 30 seconds, so a restarted server is not stampeded by every open tab.
 - **Offline aware**: When the browser goes offline, the socket closes and stops retrying. It reconnects the moment the network comes back, or when a tab becomes visible again after sleep, without waiting for the backoff.
-- **Heartbeat, both ways**: The bundled API server pings every socket every 30 seconds and closes the ones that stopped answering, so vanished clients do not linger. The browser sends its own ping every 25 seconds and reconnects when no reply arrives within 10 seconds, so a half-dead connection after a Wi-Fi drop never pretends to be online.
-- **No replay**: Messages sent while a socket is down are not queued. A feature that must not miss updates sends its current state when the socket opens, like the notification count does.
+- **Heartbeat, both ways**: The server pings every socket every 30 seconds and closes the ones that stopped answering, so vanished clients do not linger (the standalone API's `ws` server and Nitro's crossws both do). The browser sends its own ping every 25 seconds and reconnects when no reply arrives within 10 seconds, so a half-dead connection after a Wi-Fi drop never pretends to be online.
+- **No replay**: Messages sent while a socket is down are not queued. A feature that must not miss updates reloads its state when the socket opens again - see [Reconnects and missed messages](/docs/dev/websocket/reconnects).
 - **Multiple Instances**: With `REDIS_URL` set, `sendToUser`, `broadcast` and `toRoom` are relayed to every API instance over Redis pub/sub. Without Redis they only reach clients connected to the same instance.
 
 ## Learn More
 
 <Cards>
+  <Card
+    title="Set up the endpoint"
+    description="Serve /api/ws from a single app, Vercel included, or a standalone API"
+    href="/docs/dev/websocket/setup"
+  />
+  <Card
+    title="Reconnects and missed messages"
+    description="Restore rooms and reload state after the socket comes back"
+    href="/docs/dev/websocket/reconnects"
+  />
   <Card
     title="Notifications"
     description="Persistent inbox, unread count, email and digests"

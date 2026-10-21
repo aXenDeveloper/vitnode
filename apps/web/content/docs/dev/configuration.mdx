@@ -344,8 +344,9 @@ the redirect and once for the page.
 ## `vite.config.ts`
 
 One VitNode plugin, which is the environment handling, the dev server's
-dependency pre-bundling, the SSR externals, the Tailwind source list and the
-plugin route generator in the order they have to run:
+dependency pre-bundling, the SSR externals, the Tailwind source list, the
+plugin route generator and Nitro, the server your app runs on, in the order they
+have to run:
 
 ```ts title="apps/web/vite.config.ts"
 import { vitnode } from '@vitnode/core/framework/vite'
@@ -353,7 +354,6 @@ import { vitnode } from '@vitnode/core/framework/vite'
 export default defineConfig({
   plugins: [
     vitnode({ appRoot: import.meta.dirname }),
-    nitro(),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
@@ -361,12 +361,32 @@ export default defineConfig({
 })
 ```
 
+`vitnode()` already adds `nitro()`, so don't add it again. Nitro's own options go
+in `nitro` - a deployment `preset`, `routeRules`, extra `handlers`, anything from
+[Nitro's config](https://nitro.build/config):
+
+```ts title="apps/web/vite.config.ts"
+vitnode({
+  appRoot: import.meta.dirname,
+  nitro: {
+    preset: 'vercel',
+    rollupConfig: { external: [/^@sentry\//] },
+    routeRules: { '/legacy/**': { redirect: '/' } },
+  },
+})
+```
+
+VitNode adds its own Nitro settings on top of yours: the SSR externals in a
+build, the development error page in `vite dev`, and the `/api/ws` route with
+`webSocket: true`. Lists such as `handlers` are merged, so yours and VitNode's
+both run.
+
 The Node server from `pnpm start` sends static files and HTML uncompressed. Put
 a reverse proxy, a CDN or a platform such as Vercel in front of it and let that
 layer compress responses.
 
 Nitro's `compressPublicAssets` can write a `.br` and a `.gz` twin next to every
-built asset instead, but it stays off unless you pass it to `nitro()` yourself.
+built asset instead, but it stays off unless you turn it on in `nitro` yourself.
 It compresses every file in the output at once, and on a 2-core, 8 GB build
 machine that is enough to run out of memory. The twins only help when Nitro
 itself serves the files: behind a CDN they are never read.

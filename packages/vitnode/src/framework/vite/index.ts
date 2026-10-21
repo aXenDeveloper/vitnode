@@ -12,3 +12,4 @@ export type { VitNodeTailwindSourcesOptions } from "./tailwind-sources";
 export { vitNodeTailwindSources } from "./tailwind-sources";
 export type { VitNodeViteOptions } from "./vitnode";
 export { vitnode } from "./vitnode";
+export { vitNodeWebSocket } from "./websocket";

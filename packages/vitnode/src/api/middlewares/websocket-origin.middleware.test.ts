@@ -6,12 +6,13 @@ import { websocketOriginMiddleware } from "./websocket-origin.middleware";
 const upgrade = async (
   origin: string | undefined,
   options?: { origin?: string[] },
+  url = "/ws",
 ): Promise<Response> => {
   const app = new Hono();
   app.get("/ws", websocketOriginMiddleware(options), c => c.text("upgraded"));
 
   return await app.request(
-    "/ws",
+    url,
     origin === undefined ? {} : { headers: { origin } },
   );
 };
@@ -69,6 +70,26 @@ describe("websocketOriginMiddleware", () => {
 
   it("refuses the right host on a different port", async () => {
     const res = await upgrade("https://web.example:8443");
+
+    expect(res.status).toBe(403);
+  });
+
+  it("allows a page on the handshake's own host, as a preview deployment is", async () => {
+    const res = await upgrade(
+      "https://preview-123.example",
+      undefined,
+      "https://preview-123.example/ws",
+    );
+
+    expect(res.status).toBe(200);
+  });
+
+  it("refuses another site even on the handshake's own path", async () => {
+    const res = await upgrade(
+      "https://evil.example",
+      undefined,
+      "https://preview-123.example/ws",
+    );
 
     expect(res.status).toBe(403);
   });

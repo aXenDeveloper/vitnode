@@ -11,6 +11,15 @@ export interface VitNodeEnvOptions {
    * values end up in the client bundle - never list a secret.
    */
   clientEnv?: readonly string[];
+  /**
+   * Whether this app serves `/api/ws` itself - an app that embeds the API.
+   * Mounts VitNode's Nitro WebSocket route and turns on the browser's
+   * WebSocket connection, which an app with an embedded API otherwise skips.
+   * The embedded API still needs its `/ws` handshake route. An app talking to a
+   * separate API (`VITNODE_API_URL`) connects to it regardless. Defaults to
+   * `false`.
+   */
+  webSocket?: boolean;
 }
 
 /**
@@ -19,6 +28,7 @@ export interface VitNodeEnvOptions {
  */
 export const vitNodeEnv = ({
   clientEnv = [],
+  webSocket = false,
 }: VitNodeEnvOptions = {}): Plugin => {
   // De-duplicated, so an app that names one of the package's own keys gets one
   // `define` entry rather than a silently repeated one.
@@ -36,12 +46,13 @@ export const vitNodeEnv = ({
       for (const [key, value] of Object.entries(env)) {
         process.env[key] ??= value;
       }
+      if (webSocket) process.env.VITNODE_EMBEDDED_WEBSOCKET ??= "true";
 
       return {
         environments: {
           client: {
             define: Object.fromEntries(
-              keys.map(key => [
+              [...keys, "VITNODE_EMBEDDED_WEBSOCKET"].map(key => [
                 `process.env.${key}`,
                 // `undefined` when unset rather than nothing at all: the read
                 // has to be replaced either way, or it throws in the browser

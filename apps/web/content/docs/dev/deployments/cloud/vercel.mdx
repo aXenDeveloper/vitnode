@@ -10,9 +10,10 @@ A VitNode app builds with Nitro, and Nitro knows Vercel. Push the repository,
 point a project at it, and the site plus the Hono API mounted at `/api/*` come
 up as one serverless function - no adapter, no `vercel.json`.
 
-Serverless is the catch, not the build. Three things VitNode can do need a
+Serverless is the catch, not the build. Two things VitNode can do need a
 process that is still alive between requests, and Vercel does not have one - and
-nothing there will run your migrations either.
+nothing there will run your migrations either. WebSockets are not one of them:
+they run on Vercel Functions, with a time limit per connection.
 
 ## What works, and what does not
 
@@ -22,7 +23,7 @@ nothing there will run your migrations either.
 | Postgres, [Redis](/docs/dev/advanced/redis), email, AI | ✅ Works       | All reached over the network. Bring managed ones.                           |
 | [S3 / R2](/docs/dev/storage/s3-r2) or Supabase storage | ✅ Works       | Uploads go straight to the bucket.                                          |
 | [Local file storage](/docs/dev/storage/local)          | ❌ Not durable | The adapter writes to `public/uploads` on a filesystem that disappears.     |
-| [WebSockets](/docs/dev/websocket)                      | ❌ Unsupported | The `/ws` upgrade needs a long-lived `serve()` with a WebSocket server.     |
+| [WebSockets](/docs/dev/websocket)                      | ✅ Works       | Nitro serves `/api/ws`. See [WebSockets](#websockets) for the limits.       |
 | [In-process cron](/docs/dev/cron/node-cron)            | ❌ Unsupported | The adapter runs a `*/1 * * * *` timer inside the process.                  |
 | Migrating on deploy                                    | ⚠️ Your job    | Nothing on Vercel runs `db:migrate` for you. See [Migrations](#migrations). |
 
@@ -135,10 +136,34 @@ empty database becomes the **Administrator** - so do it before you tell anybody
 the URL. Then sign in at `/admin` and open **Core → System → Integrations** to
 see which services actually came up.
 
-{/* Image prompt: A screenshot of the VitNode AdminCP Integrations board at /admin/core/system/integrations on a production deployment - nine service cards, Redis and Storage showing "Active" badges, WebSocket and Cron showing "Inactive". Dark theme, 1440x900. */}
+{/* Image prompt: A screenshot of the VitNode AdminCP Integrations board at /admin/core/system/integrations on a production deployment - nine service cards, Redis, Storage and WebSocket showing "Active" badges, Cron showing "Inactive". Dark theme, 1440x900. */}
 
 </Step>
 </Steps>
+
+## WebSockets
+
+A single app serves `/api/ws` from the same deployment as the site, through
+Nitro's Vercel preset - no separate server and no realtime service. Set it up as
+in [Set up the endpoint](/docs/dev/websocket/setup); new single apps already
+are. Vercel runs WebSocket connections on
+[Fluid compute](https://vercel.com/docs/fluid-compute), the default for new
+projects, so check it is enabled on older ones.
+
+Three things behave differently from a server that stays up:
+
+- **Connections end.** Vercel closes a socket when its function reaches the
+  maximum duration. The browser reconnects with backoff, rejoins its rooms and
+  reloads missed state - see
+  [Reconnects and missed messages](/docs/dev/websocket/reconnects). Limits
+  depend on your plan; check Vercel's current
+  [function limits](https://vercel.com/docs/functions/limitations).
+- **Instances differ.** The request that sends a notification and the socket
+  that should receive it often run on different instances of the same
+  deployment. Set `REDIS_URL`, or messages reach only sockets on the sending
+  instance.
+- **Nothing is replayed.** A socket that is reconnecting misses what was sent
+  meanwhile. VitNode's own features reload it from the database; yours should too.
 
 ## Migrations
 
@@ -196,10 +221,9 @@ deployment, and there are exactly two honest ways to do it:
   controls - see [Swagger](/docs/dev/swagger).
 </Callout>
 
-<Callout type="info" title="Need any of the three?">
-  Run the app on a server instead. Long-lived WebSocket connections, an
-  in-process scheduler and local disk are all ordinary there - see
-  [Self-hosted](/docs/dev/deployments/self-hosted).
+<Callout type="info" title="Need either of the two?">
+  Run the app on a server instead. An in-process scheduler and local disk are
+  both ordinary there - see [Self-hosted](/docs/dev/deployments/self-hosted).
 </Callout>
 
 ## Next

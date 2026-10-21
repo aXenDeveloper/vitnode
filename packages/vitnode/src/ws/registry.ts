@@ -1,5 +1,7 @@
 import type { WSContext } from "hono/ws";
 
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import type { CacheClient } from "@/api/lib/cache";
 
 import type { VitNodeWSChannel, VitNodeWSMessage } from "./types";
@@ -156,6 +158,20 @@ export const wsRegistry = {
       }
     });
   },
+  /**
+   * Closes every connection on this instance with `code`, so each client
+   * reconnects and restores its rooms and state. Cleanup runs through each
+   * socket's normal close handling.
+   */
+  closeAll: (code: number, reason: string): void => {
+    for (const ws of [...connections.keys()]) {
+      try {
+        ws.close(code, reason);
+      } catch {
+        wsRegistry.remove(ws);
+      }
+    }
+  },
   /** The rooms one socket is in. */
   roomsOf: (ws: WSContext): string[] => [...(roomsBySocket.get(ws) ?? [])],
   /** Send `{ id, data }` to every socket in `room` on this instance. */
@@ -256,10 +272,26 @@ export const onInstanceMessage = (
 
 export const getRealtimeInstanceId = (): string => instanceId;
 
+type KeepAlive = (task: Promise<unknown>) => void;
+
+// The request a publish happens in, so a serverless runtime keeps the instance
+// alive until Redis has the message instead of freezing it with the response.
+const keepAliveScope = new AsyncLocalStorage<KeepAlive>();
+
+/**
+ * Runs `fn` with `keepAlive` receiving every realtime publish started inside
+ * it, including ones from code that has no request context of its own. The
+ * global middleware passes the request's `waitUntil`. Server-only.
+ */
+export const runWithRealtimeKeepAlive = <T>(
+  keepAlive: KeepAlive,
+  fn: () => T,
+): T => keepAliveScope.run(keepAlive, fn);
+
 const publish = (message: Omit<RealtimePubSubMessage, "origin">): void => {
   if (!publisher) return;
 
-  void publisher
+  const task = publisher
     .publish(
       REALTIME_PUBSUB_CHANNEL,
       JSON.stringify({ ...message, origin: instanceId }),
@@ -268,6 +300,57 @@ const publish = (message: Omit<RealtimePubSubMessage, "origin">): void => {
       // Other instances miss this message, but the local clients were already
       // served directly, so realtime keeps working on this instance.
     });
+  keepAliveScope.getStore()?.(task);
+};
+
+type PubSubState = "connecting" | "down" | "ready";
+
+let pubSubState: PubSubState = "connecting";
+const readyWaiters = new Set<() => void>();
+
+const setPubSubState = (state: PubSubState): void => {
+  pubSubState = state;
+  if (state !== "ready") return;
+  readyWaiters.forEach(resolve => resolve());
+  readyWaiters.clear();
+};
+
+/**
+ * Pub/Sub has no replay, so a socket that stayed open while this instance was
+ * unsubscribed may have missed messages. Closing it makes the client reconnect
+ * and run its normal restore: rejoin rooms and reload durable state.
+ */
+const resyncLocalConnections = (): void => {
+  // oxlint-disable-next-line no-console
+  console.warn(
+    "[VitNode] Realtime pub/sub resubscribed after a Redis outage; reconnecting local WebSocket clients so they reload missed state.",
+  );
+  wsRegistry.closeAll(1012, "Realtime resync");
+};
+
+/**
+ * Resolves `true` once this instance can be reached by every other instance:
+ * subscribed to the Redis channel, or running without Redis at all (local
+ * delivery only). Resolves `false` when that does not happen within
+ * `timeoutMs` - the WebSocket handshake answers `503` then, and the client
+ * retries with backoff. Server-only.
+ */
+export const waitForRealtimePubSub = async (
+  timeoutMs = 5000,
+): Promise<boolean> => {
+  if (!publisher || pubSubState === "ready") return true;
+
+  return new Promise<boolean>(resolve => {
+    const done = () => {
+      clearTimeout(timer);
+      resolve(true);
+    };
+    const timer = setTimeout(() => {
+      readyWaiters.delete(done);
+      resolve(false);
+    }, timeoutMs);
+    readyWaiters.add(done);
+  });
 };
 
 export const initRealtimePubSub = (client: CacheClient | null): void => {
@@ -279,40 +362,81 @@ export const initRealtimePubSub = (client: CacheClient | null): void => {
   // A connection in subscribe mode can't run other commands, so use a
   // dedicated duplicate for receiving. `duplicate()` returns a disconnected
   // client, hence the explicit `connect()`; node-redis restores the
-  // subscription itself after every reconnect, so this only runs once.
+  // subscription itself after every reconnect, so it is only made once.
   const subscriber = client.duplicate();
+  let subscribed = false;
+  let subscribing = false;
+
+  const onMessage = (raw: string): void => {
+    try {
+      const message = JSON.parse(raw) as RealtimePubSubMessage;
+      // Skip our own echo - the publisher already delivered locally.
+      if (message.origin === instanceId) return;
+      if (message.type === "instance") {
+        const { data, id: topic, origin } = message;
+        instanceListeners.forEach(listener => {
+          listener({ data, origin, topic });
+        });
+
+        return;
+      }
+      if (message.type === "room" && typeof message.room === "string") {
+        const { data, id, room } = message;
+        roomListeners.forEach(listener => listener(room, id, data));
+      }
+      deliverLocally(message);
+    } catch {
+      // Ignore malformed payloads.
+    }
+  };
+
+  // Until this succeeds the instance is not ready: WebSocket handshakes wait
+  // for it, so no socket is accepted that other instances cannot reach. A
+  // failed attempt is retried on the next `ready`.
+  const subscribe = (): void => {
+    if (subscribed || subscribing) return;
+    subscribing = true;
+    subscriber
+      .subscribe(REALTIME_PUBSUB_CHANNEL, onMessage)
+      .then(() => {
+        subscribed = true;
+        setPubSubState("ready");
+      })
+      .catch(() => {
+        // Realtime stays single-instance; local clients still get their messages.
+      })
+      .finally(() => {
+        subscribing = false;
+      });
+  };
+
   subscriber.on("error", () => {
     // Connection errors are non-fatal; local delivery still works.
+  });
+  // node-redis resubscribes before it emits `ready` again, so a `ready` after a
+  // drop means messages flow again - but the ones sent meanwhile are gone.
+  subscriber.on("reconnecting", () => {
+    if (subscribed) setPubSubState("down");
+  });
+  subscriber.on("end", () => {
+    if (subscribed) setPubSubState("down");
+  });
+  subscriber.on("ready", () => {
+    if (!subscribed) {
+      subscribe();
+
+      return;
+    }
+    if (pubSubState !== "down") return;
+    setPubSubState("ready");
+    resyncLocalConnections();
   });
 
   void subscriber
     .connect()
-    .then(async () =>
-      subscriber.subscribe(REALTIME_PUBSUB_CHANNEL, raw => {
-        try {
-          const message = JSON.parse(raw) as RealtimePubSubMessage;
-          // Skip our own echo - the publisher already delivered locally.
-          if (message.origin === instanceId) return;
-          if (message.type === "instance") {
-            const { data, id: topic, origin } = message;
-            instanceListeners.forEach(listener => {
-              listener({ data, origin, topic });
-            });
-
-            return;
-          }
-          if (message.type === "room" && typeof message.room === "string") {
-            const { data, id, room } = message;
-            roomListeners.forEach(listener => listener(room, id, data));
-          }
-          deliverLocally(message);
-        } catch {
-          // Ignore malformed payloads.
-        }
-      }),
-    )
+    .then(subscribe)
     .catch(() => {
-      // Realtime stays single-instance; local clients still get their messages.
+      // The reconnect strategy keeps retrying; `ready` subscribes then.
     });
 };
 
@@ -325,8 +449,11 @@ export const publishToInstances = (topic: string, data: unknown): void => {
  * `c.get("realtime")` in API handlers.
  *
  * Delivery is best effort and fire-and-forget: clients that are not connected
- * miss the message. Without Redis (`REDIS_URL`) only clients connected to the
- * current instance receive it; with Redis it is relayed to every instance.
+ * miss the message, and nothing is replayed after a reconnect - keep durable
+ * state in the database and let clients reload it when they reconnect. Without
+ * Redis (`REDIS_URL`) only clients connected to the current instance receive
+ * it; with Redis it is relayed to every instance, and the publish is kept
+ * alive past the HTTP response with the request's `waitUntil`.
  */
 export interface VitNodeRealtime {
   /** Push a payload to every open connection. */

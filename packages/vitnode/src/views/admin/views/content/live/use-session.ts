@@ -220,16 +220,19 @@ export const useContentLiveSession = ({
     }
   };
 
-  const { readyState, send } = useVitNodeWebSocket(contentLiveChannel, {
-    onMessage,
-  });
+  const { connectionId, readyState, send } = useVitNodeWebSocket(
+    contentLiveChannel,
+    { onMessage },
+  );
   const readyStateRef = React.useRef(readyState);
   React.useEffect(() => {
     readyStateRef.current = readyState;
   }, [readyState]);
 
+  // Every new connection starts with no rooms on the server - a reconnect, a
+  // new leader tab or a serverless duration limit - so each one joins again.
   React.useEffect(() => {
-    if (readyState !== 1) return;
+    if (connectionId === null) return;
 
     joiningRef.current = true;
     send({ clientId, locale: languageRef.current, room, type: "join" });
@@ -238,7 +241,7 @@ export const useContentLiveSession = ({
       joiningRef.current = false;
       setJoined(false);
     };
-  }, [clientId, readyState, room, send]);
+  }, [clientId, connectionId, room, send]);
 
   React.useEffect(() => {
     const leave = () => {

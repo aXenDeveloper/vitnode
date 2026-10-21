@@ -1,7 +1,10 @@
 import '@tanstack/react-start/server-only'
 import { OpenAPIHono } from '@hono/zod-openapi'
 import { VitNodeAPI } from '@vitnode/core/api/config'
+import { websocketOriginMiddleware } from '@vitnode/core/api/middlewares/websocket-origin.middleware'
 import { configureInProcessApi } from '@vitnode/core/lib/fetcher/in-process-api.server'
+import { upgradeWebSocket } from '@vitnode/core/ws/crossws.server'
+import { handleVitNodeWebSocket } from '@vitnode/core/ws/handle'
 
 import { createApiBridge } from '@/server/api-bridge'
 import { vitNodeApiConfig } from '@/vitnode.api.config'
@@ -13,6 +16,16 @@ const createVitNodeApi = () => {
   const app = new OpenAPIHono().basePath('/api')
 
   VitNodeAPI({ app, vitNodeApiConfig })
+
+  // The handshake half of `/api/ws`: Nitro's route (`./websocket.ts`) sends
+  // each upgrade through here, so it passes the Origin check and the API's
+  // middleware before the socket opens. A handshake is a cookie-authenticated
+  // GET that neither CSRF nor the same-origin policy covers - see the middleware.
+  app.get(
+    '/ws',
+    websocketOriginMiddleware(),
+    upgradeWebSocket(handleVitNodeWebSocket()),
+  )
 
   return app
 }

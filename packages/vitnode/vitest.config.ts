@@ -26,7 +26,9 @@ const ISOLATED = [
   "src/tanstack/admin/content/slots.test.ts",
   "src/tanstack/admin/transport.test.ts",
   "src/tanstack/auth/transport.test.ts",
+  "src/ws/crossws.server.test.ts",
   "src/ws/pubsub-lifetime.test.ts",
+  "src/ws/realtime-readiness.test.ts",
 ];
 
 // Real builds, watchers and child processes. `pnpm test` still runs them;

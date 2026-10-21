@@ -4,7 +4,6 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 import viteReact from '@vitejs/plugin-react'
 import { prerenderRoutes, vitnode } from '@vitnode/core/framework/vite'
 import { fumadocsMdx } from 'fumadocs-mdx/vite'
-import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 
 import { docsPrerenderPaths } from './src/docs/prerender.ts'
@@ -18,17 +17,20 @@ const config = defineConfig({
   },
   server: { strictPort: true },
   plugins: [
-    vitnode({ appRoot: import.meta.dirname }),
+    vitnode({
+      appRoot: import.meta.dirname,
+      nitro: {
+        prerender: {
+          routes: prerenderRoutes({
+            i18n: vitNodeConfig.i18n,
+            paths: [...PRERENDERED_PATHS, ...docsPrerenderPaths()],
+          }),
+        },
+      },
+      webSocket: true,
+    }),
     fumadocsMdx({ index: false }),
     devtools(),
-    nitro({
-      prerender: {
-        routes: prerenderRoutes({
-          i18n: vitNodeConfig.i18n,
-          paths: [...PRERENDERED_PATHS, ...docsPrerenderPaths()],
-        }),
-      },
-    }),
     tailwindcss(),
     tanstackStart(),
     viteReact(),
