@@ -175,13 +175,15 @@ const finish = (
  * Liveness is the runtime's job: crossws pings and drops silent sockets, and
  * the client sends its own `vitnode_ping`.
  *
- * Import this module dynamically in the Nitro route, after the warmup: a
+ * `vitnode({ webSocket: true })` from `@vitnode/core/framework/vite` already
+ * mounts a Nitro route at `/api/ws` that does this; write your own only for a
+ * different route. Import this module dynamically there, after the warmup: a
  * static import bundles all of `@vitnode/core` into Nitro's entry, where it
  * starts before the app has configured it.
  *
  * @example
  * ```ts
- * // src/server/websocket.ts, mounted at `/api/ws` in the Nitro config
+ * // a custom Nitro route, registered through `vitnode({ nitro: { handlers } })`
  * import { defineWebSocketHandler } from "nitro";
  * import { fetchViteEnv } from "nitro/vite/runtime";
  *

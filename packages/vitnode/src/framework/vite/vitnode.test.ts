@@ -5,15 +5,19 @@ import { vitnode } from "./vitnode";
 const names = (plugins: { name: string }[]) => plugins.map(({ name }) => name);
 
 describe("the composed plugin", () => {
-  it("returns all six, in the order they have to run", () => {
-    expect(names(vitnode({ appRoot: "/app" }))).toEqual([
+  it("returns VitNode's seven in the order they have to run, then Nitro", () => {
+    const plugins = names(vitnode({ appRoot: "/app" }));
+
+    expect(plugins.slice(0, 7)).toEqual([
       "vitnode:env",
       "vitnode:optimize-deps",
       "vitnode:ssr-externals",
       "vitnode:tailwind-sources",
       "vitnode:plugin-routes",
       "vitnode:dev-error",
+      "vitnode:websocket",
     ]);
+    expect(plugins.slice(7)).toContain("nitro:main");
   });
 
   it("needs nothing but the app root", () => {

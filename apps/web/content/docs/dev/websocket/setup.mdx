@@ -17,69 +17,25 @@ The browser upgrades `/api/ws`. Nitro owns that route, so the upgrade never reac
 
 ### Enable WebSockets in the Vite config
 
-Turn on Nitro's WebSocket support, mount the route, and tell the browser this app serves its own socket:
+Tell VitNode this app serves its own socket:
 
 ```ts title="vite.config.ts"
 plugins: [
   vitnode({ appRoot: import.meta.dirname, webSocket: true }), // [!code highlight]
   devtools(),
-  nitro({
-    // [!code ++:7]
-    features: { websocket: true },
-    handlers: [
-      {
-        handler: `${import.meta.dirname}/src/server/websocket.ts`,
-        route: "/api/ws",
-      },
-    ],
-  }),
   tailwindcss(),
   tanstackStart(),
   viteReact(),
 ],
 ```
 
-Without `webSocket: true` the browser never opens a socket in an app that embeds the API.
+That one flag turns on Nitro's WebSocket support, mounts VitNode's Nitro route at `/api/ws` and lets the browser open the socket. Without it the browser never connects in an app that embeds the API.
 
-</Step>
-<Step>
+The route ships with `@vitnode/core`, so there is no file to copy. It runs in Nitro's bundle, loads your server bundle on the first upgrade a fresh instance gets, and hands every handshake to the API your server bundle registered with `configureInProcessApi`. If that bundle cannot load, the handshake gets `503` and the client retries.
 
-### Create the Nitro route
-
-```ts title="src/server/websocket.ts"
-import { defineWebSocketHandler } from "nitro"
-import { fetchViteEnv } from "nitro/vite/runtime"
-
-const warmup = async (request: Request) => fetchViteEnv("ssr", request)
-
-const loadHooks = async (url: string) => {
-  await warmup(new Request(url))
-  const { createVitNodeWebSocketHooks } =
-    await import("@vitnode/core/ws/crossws.server")
-
-  return createVitNodeWebSocketHooks({ warmup })
-}
-
-let hooks: ReturnType<typeof loadHooks> | undefined
-
-export default defineWebSocketHandler(async (event) => {
-  hooks ??= loadHooks(event.req.url)
-  try {
-    return await hooks
-  } catch (error) {
-    hooks = undefined
-    console.error("[VitNode] The WebSocket route could not load:", error)
-
-    // Refuse rather than accept a socket nothing would answer; the client retries.
-    return {
-      upgrade: () =>
-        new Response("WebSocket is unavailable.", { status: 503 }),
-    }
-  }
-})
-```
-
-The route runs in Nitro's bundle and reaches the API your server bundle registered with `configureInProcessApi`. `warmup` loads that bundle, and the API with it, when a WebSocket upgrade is the first request a fresh instance gets. Keep the `import()` of `@vitnode/core` dynamic and after the warmup: a static import puts all of core into Nitro's entry, where it starts before your app has configured it.
+<Callout type="warn">
+Older single apps mounted their own `src/server/websocket.ts` through `nitro({ handlers })`. Delete that file and the `nitro()` call when you switch to `webSocket: true`, or two handlers fight over `/api/ws`.
+</Callout>
 
 </Step>
 <Step>

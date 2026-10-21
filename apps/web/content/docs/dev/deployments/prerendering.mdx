@@ -30,11 +30,10 @@ A route with a parameter, such as `/solutions/$slug`, is never found on its own.
 
 ### Hand the list to Nitro
 
-Pass the paths through `prerenderRoutes` from `@vitnode/core/framework/vite` and give the result to the `prerender.routes` option of `nitro()`:
+Pass the paths through `prerenderRoutes` from `@vitnode/core/framework/vite` and give the result to Nitro's `prerender.routes`, through the `nitro` option of `vitnode()`:
 
 ```ts title="vite.config.ts"
 import { prerenderRoutes, vitnode } from '@vitnode/core/framework/vite' // [!code highlight]
-import { nitro } from 'nitro/vite'
 import { defineConfig } from 'vite'
 
 import { PRERENDERED_PATHS } from './src/prerender.ts' // [!code highlight]
@@ -42,14 +41,16 @@ import { vitNodeConfig } from './src/vitnode.config.ts' // [!code highlight]
 
 export default defineConfig({
   plugins: [
-    vitnode({ appRoot: import.meta.dirname }),
-    nitro({
-      // [!code highlight:6]
-      prerender: {
-        routes: prerenderRoutes({
-          i18n: vitNodeConfig.i18n,
-          paths: PRERENDERED_PATHS,
-        }),
+    vitnode({
+      appRoot: import.meta.dirname,
+      // [!code highlight:8]
+      nitro: {
+        prerender: {
+          routes: prerenderRoutes({
+            i18n: vitNodeConfig.i18n,
+            paths: PRERENDERED_PATHS,
+          }),
+        },
       },
     }),
     // tailwindcss(), tanstackStart(), viteReact() as before

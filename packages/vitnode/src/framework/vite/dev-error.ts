@@ -32,7 +32,7 @@ const withNitroDevError = (): UserConfig => {
     },
   };
 
-  return config as UserConfig;
+  return config;
 };
 
 /**

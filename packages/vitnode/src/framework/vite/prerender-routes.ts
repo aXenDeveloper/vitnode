@@ -25,15 +25,19 @@ export class PrerenderDomainsError extends Error {
 /**
  * Expands canonical paths into the public URL of each enabled locale -
  * prefixes and translated `routePaths` included - for Nitro's
- * `prerender.routes`. Duplicates are removed.
+ * `prerender.routes`, passed through the `nitro` option of `vitnode()`.
+ * Duplicates are removed.
  *
  * @throws {@link PrerenderDomainsError} when `i18n.domains` is set.
  *
  * @example
  * ```ts
- * nitro({
- *   prerender: {
- *     routes: prerenderRoutes({ i18n: vitNodeConfig.i18n, paths: ["/", "/about"] }),
+ * vitnode({
+ *   appRoot: import.meta.dirname,
+ *   nitro: {
+ *     prerender: {
+ *       routes: prerenderRoutes({ i18n: vitNodeConfig.i18n, paths: ["/", "/about"] }),
+ *     },
  *   },
  * });
  * ```

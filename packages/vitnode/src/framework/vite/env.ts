@@ -12,11 +12,12 @@ export interface VitNodeEnvOptions {
    */
   clientEnv?: readonly string[];
   /**
-   * Whether this app serves `/api/ws` itself - an app that embeds the API and
-   * mounts the Nitro WebSocket route (`@vitnode/core/ws/crossws.server`). Turns
-   * on the browser's WebSocket connection, which an app with an embedded API
-   * otherwise skips. An app talking to a separate API (`VITNODE_API_URL`)
-   * connects to it regardless. Defaults to `false`.
+   * Whether this app serves `/api/ws` itself - an app that embeds the API.
+   * Mounts VitNode's Nitro WebSocket route and turns on the browser's
+   * WebSocket connection, which an app with an embedded API otherwise skips.
+   * The embedded API still needs its `/ws` handshake route. An app talking to a
+   * separate API (`VITNODE_API_URL`) connects to it regardless. Defaults to
+   * `false`.
    */
   webSocket?: boolean;
 }
