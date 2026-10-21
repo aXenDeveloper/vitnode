@@ -48,7 +48,7 @@ The `max-age` is short on purpose. VitNode checks access on every request it rec
 
 Images are drawn by the Node.js build of `@vercel/og` inside the API process: `node` and `node-server` Nitro presets, `vitnode start`, and a standalone API on Node. No Vercel account or hosting is needed. On Vercel the API runs as a Node function, which works the same way.
 
-- **Pinned version.** VitNode pins `@vercel/og` to `1.0.1`. Versions `1.0.2` and `1.0.3` crash when imported as an ES module on Node 22 (`Dynamic require of "fs" is not supported`).
+- **Pinned version.** VitNode pins `@vercel/og` to `1.0.1`. Versions `1.0.2` and `1.0.3` crash when imported as an ES module, on every supported Node version (22, 24 and 26), with `Dynamic require of "fs" is not supported`.
 - **Edge and Workers are not supported.** Core needs Node APIs (`sharp`, Postgres), so the API cannot run there anyway.
 - **`sharp` is required.** Covers and logos are converted with it, because Satori draws neither WebP nor AVIF, the formats VitNode stores uploads in. Without `sharp`, images are drawn without them.
 - **Outbound requests.** Remote logos and covers are downloaded over `https` only, never from private addresses. Characters no configured font covers, and emoji, are downloaded by `@vercel/og` from Google Fonts or a CDN while drawing.
