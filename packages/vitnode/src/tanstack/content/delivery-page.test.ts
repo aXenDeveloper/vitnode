@@ -140,4 +140,54 @@ describe("contentDeliveryPageHead", () => {
       ),
     ).toStrictEqual({ title: "Hello" });
   });
+  const OG_IMAGE = {
+    alt: "Witaj świecie",
+    height: 630,
+    type: "image/png",
+    url: "https://example.com/api/@vitnode/blog/content/posts/delivery/og-image/7?locale=pl&v=abc",
+    width: 1200,
+  };
+
+  it("forwards the Open Graph text and the generated image", () => {
+    const head = contentDeliveryPageHead(
+      metadata({
+        ogImage: OG_IMAGE,
+        openGraph: { description: "<p>Na Facebooka.</p>", title: "Udostępnij" },
+      }),
+    );
+
+    expect(head.openGraph).toStrictEqual({
+      description: "Na Facebooka.",
+      image: OG_IMAGE,
+      title: "Udostępnij",
+      type: "article",
+    });
+  });
+
+  it("falls back to the page title and description, also for the image alt", () => {
+    const head = contentDeliveryPageHead(
+      metadata({ ogImage: { ...OG_IMAGE, alt: "" }, openGraph: null }),
+    );
+
+    expect(head.openGraph).toStrictEqual({
+      description: "Pierwszy wpis.",
+      image: { ...OG_IMAGE, alt: "Witaj świecie" },
+      title: "Witaj świecie",
+      type: "article",
+    });
+  });
+
+  it("emits no image when the type generates none", () => {
+    const head = contentDeliveryPageHead(
+      metadata({
+        ogImage: null,
+        openGraph: { description: null, title: "Udostępnij" },
+      }),
+    );
+
+    expect(head.openGraph).not.toHaveProperty("image");
+    expect(
+      contentDeliveryPageHead(metadata({ ogImage: null })),
+    ).not.toHaveProperty("openGraph");
+  });
 });

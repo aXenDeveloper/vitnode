@@ -1,8 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildConfig } from "@/vitnode.config";
 
-import { createRouteHead, pageHead, routeHead } from "./index";
+import {
+  absoluteImageUrl,
+  createRouteHead,
+  generatedOgImage,
+  pageHead,
+  routeHead,
+} from "./index";
 
 const METADATA = { shortTitle: "VitNode", title: "VitNode Community" };
 
@@ -128,6 +134,94 @@ describe("routeHead openGraph", () => {
         },
       }),
     ).toEqual([]);
+  });
+});
+
+describe("routeHead openGraph image", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("emits the generated image with its size, type and alt, and a large Twitter card", () => {
+    const meta = head({
+      openGraph: {
+        image: generatedOgImage({
+          alt: "Hello world",
+          url: "https://cdn.example/og/42.png",
+        }),
+      },
+    });
+
+    expect(meta).toEqual([
+      { content: "https://cdn.example/og/42.png", property: "og:image" },
+      { content: "1200", property: "og:image:width" },
+      { content: "630", property: "og:image:height" },
+      { content: "image/png", property: "og:image:type" },
+      { content: "Hello world", property: "og:image:alt" },
+      { content: "summary_large_image", name: "twitter:card" },
+      { content: "https://cdn.example/og/42.png", name: "twitter:image" },
+      { content: "Hello world", name: "twitter:image:alt" },
+    ]);
+  });
+
+  it("resolves a root-relative image against the public site origin", () => {
+    vi.stubEnv("VITNODE_WEB_URL", "https://community.example");
+
+    const meta = head({
+      openGraph: { image: { url: "/api/@vitnode/blog/og-image/42?v=abc" } },
+    });
+
+    expect(byProperty(meta, "og:image")).toEqual({
+      content: "https://community.example/api/@vitnode/blog/og-image/42?v=abc",
+      property: "og:image",
+    });
+    expect(byName(meta, "twitter:image")).toMatchObject({
+      content: "https://community.example/api/@vitnode/blog/og-image/42?v=abc",
+    });
+  });
+
+  it("omits a size that is not a positive integer and a blank alt", () => {
+    const meta = head({
+      openGraph: {
+        image: {
+          alt: "  ",
+          height: 1.5,
+          url: "https://cdn.example/a.png",
+          width: 0,
+        },
+      },
+    });
+
+    expect(meta).toEqual([
+      { content: "https://cdn.example/a.png", property: "og:image" },
+      { content: "summary_large_image", name: "twitter:card" },
+      { content: "https://cdn.example/a.png", name: "twitter:image" },
+    ]);
+  });
+
+  it.each([
+    ["a script URL", "javascript:alert(1)"],
+    ["a data URI", "data:image/png;base64,AAAA"],
+    ["a protocol-relative URL", "//evil.example/a.png"],
+    ["a relative path", "og/a.png"],
+  ])("emits no image or Twitter tag for %s", (_label, url) => {
+    const meta = head({ openGraph: { image: { url }, title: "Hello" } });
+
+    expect(meta).toEqual([{ content: "Hello", property: "og:title" }]);
+  });
+});
+
+describe("absoluteImageUrl", () => {
+  it.each([
+    ["https://cdn.example/a.png", "https://cdn.example/a.png"],
+    ["http://cdn.example/a.png", "http://cdn.example/a.png"],
+    ["/api/og/1", "https://site.example/api/og/1"],
+    ["//evil.example/a.png", undefined],
+    ["/\\evil.example/a.png", undefined],
+    ["ftp://files.example/a.png", undefined],
+    ["not a url", undefined],
+  ])("turns %j into %j", (url, expected) => {
+    expect(absoluteImageUrl(url, "https://site.example")).toBe(expected);
   });
 });
 

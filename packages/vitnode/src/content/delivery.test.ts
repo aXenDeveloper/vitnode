@@ -488,6 +488,84 @@ describe("delivery definition validation", () => {
   });
 });
 
+describe("delivery.seo.ogImage validation", () => {
+  const ogFields = {
+    ...fields,
+    cover: field.file({ maxBytes: 1024 }),
+    gallery: field.file({ maxBytes: 1024, multiple: true }),
+    privateCover: field.file({ maxBytes: 1024 }),
+  };
+
+  const withOgImage = (seo: Record<string, unknown>, id = "delivery.og") =>
+    defineContentType({
+      ...base,
+      id,
+      delivery: { seo: seo as never },
+      fields: ogFields,
+      publicApi: {
+        fields: ["id", "title", "slug", "excerpt", "cover", "gallery"],
+        path: "articles",
+      },
+      tableName: "delivery_og",
+    });
+
+  it.each([
+    [
+      "a cover and a template",
+      { coverField: "cover", template: "spotlight" },
+      { coverField: "cover", template: "spotlight" },
+    ],
+    ["true", true, { coverField: null, template: null }],
+  ])("resolves %s", (_label, ogImage, expected) => {
+    expect(
+      withOgImage({ ogImage, titleField: "title" }).delivery.seo.ogImage,
+    ).toStrictEqual(expected);
+  });
+
+  it("accepts an Open Graph title instead of a page title", () => {
+    expect(
+      withOgImage({ ogImage: true, openGraph: { titleField: "title" } })
+        .delivery.seo.ogImage,
+    ).not.toBeNull();
+  });
+
+  it("stays off when not asked for", () => {
+    expect(
+      withOgImage({ ogImage: false, titleField: "title" }).delivery.seo.ogImage,
+    ).toBeNull();
+  });
+
+  it.each([
+    [
+      "a multi-file cover",
+      { coverField: "gallery" },
+      /not a single-file field/,
+    ],
+    [
+      "a cover that is not a file",
+      { coverField: "title" },
+      /not a single-file field/,
+    ],
+    ["an unknown cover", { coverField: "nope" }, /not a single-file field/],
+    [
+      "a cover the public API withholds",
+      { coverField: "privateCover" },
+      /not in publicApi.fields/,
+    ],
+    ["a malformed template id", { template: "Bad Id" }, /template ids are/],
+  ])("refuses %s", (_label, ogImage, message) => {
+    expect(() => withOgImage({ ogImage, titleField: "title" })).toThrow(
+      message,
+    );
+  });
+
+  it("refuses an image without a title to draw", () => {
+    expect(() =>
+      withOgImage({ descriptionField: "excerpt", ogImage: true }),
+    ).toThrow(/needs `titleField` or `openGraph.titleField`/);
+  });
+});
+
 const localizedType = defineContentType({
   ...base,
   id: "delivery.localized",

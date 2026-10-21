@@ -1,12 +1,13 @@
 import type { Context } from "hono";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 
 import { core_content_slug_history } from "../../database/content";
 import { core_languages } from "../../database/languages";
+import { resolveOgImagesConfig } from "../../og-image/config";
 import { defineContentType } from "../define";
 import { field } from "../fields";
 import { createContentDeliveryService } from "./delivery-service";
@@ -138,6 +139,7 @@ const buildDatabase = (rowsFor: (table: unknown) => QueryRows): unknown => {
 const buildService = ({
   byId = {},
   bySlug = {},
+  core = { i18n: { locales: [] } },
   definition,
   history = [],
   languages = [
@@ -147,6 +149,7 @@ const buildService = ({
 }: {
   byId?: Record<number, PublicRow[]>;
   bySlug?: Record<string, { itemId: number; locale?: string }>;
+  core?: Record<string, unknown>;
   definition: AnyContentTypeDefinition;
   history?: HistoryRow[];
   languages?: { code: string; id: number }[];
@@ -223,7 +226,7 @@ const buildService = ({
   const c = {
     get: (key: string) => {
       if (key === "db") return database;
-      if (key === "core") return { i18n: { locales: [] } };
+      if (key === "core") return core;
 
       return undefined;
     },
@@ -586,6 +589,99 @@ describe("findById", () => {
       alternates: [],
       hreflang: { languages: {} },
     });
+  });
+});
+
+describe("findById ogImage", () => {
+  const ogLocalizedType = defineContentType({
+    id: "delivery.og-localized",
+    delivery: {
+      seo: {
+        fallbackTitleField: "title",
+        ogImage: true,
+        titleField: "seo.title",
+      },
+    },
+    fields: {
+      seo: field.group({
+        fields: { title: field.text({ nullable: true }) },
+        localized: true,
+        nullable: true,
+      }),
+      slug: field.slug({ localized: true, source: "title" }),
+      title: field.text({ localized: true, required: true }),
+    },
+    localization: { defaultLocale: "en", fallback: "default" },
+    publication: true,
+    publicApi: {
+      fields: ["id", "title", "slug", "seo.title"],
+      path: "articles",
+    },
+    tableName: "delivery_og_localized_articles",
+  });
+
+  const OG_CORE = {
+    i18n: { locales: [] },
+    metadata: { title: "VitNode" },
+    ogImages: resolveOgImagesConfig({}),
+  };
+
+  const serviceWith = (
+    title: string,
+    core: Record<string, unknown> = OG_CORE,
+  ) =>
+    buildService({
+      byId: {
+        7: [
+          {
+            locale: "en",
+            values: { id: 7, seo: { title: null }, slug: "hello", title },
+          },
+        ],
+      },
+      core,
+      definition: ogLocalizedType,
+    });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("describes the image of a fallback in the language it was served in", async () => {
+    vi.stubEnv("VITNODE_WEB_URL", "https://site.example");
+    const service = serviceWith("Hello");
+
+    const fallback = (await service.findById(7, { locale: "pl" }))?.ogImage;
+
+    expect(fallback).toMatchObject({
+      alt: "Hello",
+      height: 630,
+      type: "image/png",
+      width: 1200,
+    });
+    expect(fallback?.path).toMatch(
+      /^\/api\/@vitnode\/test\/content\/articles\/delivery\/og-image\/7\?locale=en&v=[\w-]{12}$/,
+    );
+    expect(fallback?.url).toBe(`https://site.example${fallback?.path}`);
+    // One image per served language: the fallback shares the English one.
+    expect(
+      (await service.findById(7, { locale: "en" }))?.ogImage,
+    ).toStrictEqual(fallback);
+  });
+
+  it("changes the URL whenever the image would change", async () => {
+    const before = (await serviceWith("Hello").findById(7))?.ogImage?.path;
+    const after = (await serviceWith("Hello again").findById(7))?.ogImage?.path;
+
+    expect(before).toBeDefined();
+    expect(after).not.toBe(before);
+  });
+
+  it("is null when the API has no ogImages", async () => {
+    expect(
+      (await serviceWith("Hello", { i18n: { locales: [] } }).findById(7))
+        ?.ogImage,
+    ).toBeNull();
   });
 });
 

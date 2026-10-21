@@ -95,3 +95,43 @@ describe("normalizePluginRouteHead alternates", () => {
     expect(normalizePluginRouteHead({ alternates })).toEqual({});
   });
 });
+
+describe("normalizePluginRouteHead openGraph", () => {
+  it("keeps a valid Open Graph block with its image", () => {
+    const openGraph = {
+      description: "A summary",
+      image: {
+        alt: "Hello",
+        height: 630,
+        type: "image/png",
+        url: "/api/@vitnode/blog/og-image/42",
+        width: 1200,
+      },
+      title: "Hello",
+      type: "article",
+    };
+
+    expect(normalizePluginRouteHead({ openGraph })).toEqual({ openGraph });
+  });
+
+  it("drops image fields of the wrong shape but keeps its URL", () => {
+    expect(
+      normalizePluginRouteHead({
+        openGraph: {
+          image: { alt: 1, height: -1, type: "", url: "/og.png", width: 1.5 },
+        },
+      }),
+    ).toEqual({ openGraph: { image: { url: "/og.png" } } });
+  });
+
+  it.each([
+    ["an image without a URL", { image: { alt: "Hello" } }],
+    ["an image that is a string", { image: "/og.png" }],
+    ["an unknown type", { type: "video" }],
+    ["empty text", { description: "", title: "" }],
+  ])("drops Open Graph with only %s", (_label, openGraph) => {
+    expect(normalizePluginRouteHead({ openGraph, title: "Guide" })).toEqual({
+      title: "Guide",
+    });
+  });
+});
