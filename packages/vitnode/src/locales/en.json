@@ -517,6 +517,7 @@
       "optional": "Optional",
       "field_tip": "More information",
       "loading": "Loading...",
+      "navigation_progress": "Loading page…",
       "or": "or",
       "back_home": "Back to home",
       "go_back": "Go back",

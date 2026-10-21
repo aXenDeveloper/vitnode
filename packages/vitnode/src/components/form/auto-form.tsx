@@ -594,9 +594,9 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
 
   const submitButton = (
     <Button
-      disabled={!!captcha && !isReady}
-      isLoading={isSubmitting}
       {...submitButtonProps}
+      disabled={(!!captcha && !isReady) || submitButtonProps?.disabled}
+      isLoading={isSubmitting}
       type="submit"
     >
       {submitButtonProps?.children ?? t("submit")}

@@ -126,6 +126,7 @@ const StatusButton = ({ data, onDone, userId }: ReportContext) => {
   const t = useTranslations("core.moderation");
   const fail = useReportFailure();
   const [dialog, setDialog] = React.useState<Dialogs>(null);
+  const [isRunning, setIsRunning] = React.useState(false);
   const { report } = data;
   const isMine = data.assignee?.id === userId;
 
@@ -218,6 +219,7 @@ const StatusButton = ({ data, onDone, userId }: ReportContext) => {
                 "h-9 w-full gap-1.5 px-3 font-bold tracking-wide uppercase hover:brightness-95",
                 TONE_SURFACE[STATUS_TONE[report.status]],
               )}
+              isLoading={isRunning}
               variant="ghost"
             />
           }
@@ -233,7 +235,12 @@ const StatusButton = ({ data, onDone, userId }: ReportContext) => {
             <DropdownMenuItem
               key={transition.label}
               onClick={async () => {
-                await transition.run();
+                setIsRunning(true);
+                try {
+                  await transition.run();
+                } finally {
+                  setIsRunning(false);
+                }
               }}
             >
               <span className="flex-1">{transition.label}</span>
@@ -369,7 +376,20 @@ const AssigneeField = ({ data, onDone, userId }: ReportContext) => {
     data.assignee?.id !== userId &&
     (assignees.data ?? []).some(user => user.id === userId);
 
+  const [isAssigning, setIsAssigning] = React.useState(false);
+
   const assign = async (assigneeId: null | number) => {
+    if (isAssigning) return;
+
+    setIsAssigning(true);
+    try {
+      await assignTo(assigneeId);
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const assignTo = async (assigneeId: null | number) => {
     const result =
       assigneeId === userId && data.assignee === null
         ? await claimReport({ expectedVersion: report.version, id: report.id })
@@ -407,7 +427,9 @@ const AssigneeField = ({ data, onDone, userId }: ReportContext) => {
           <DropdownMenuTrigger
             render={
               <button
-                className="hover:bg-muted focus-visible:ring-ring/50 -mx-1.5 flex max-w-full items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-none focus-visible:ring-3"
+                aria-busy={isAssigning || undefined}
+                className="hover:bg-muted focus-visible:ring-ring/50 -mx-1.5 flex max-w-full items-center gap-2 rounded-md px-1.5 py-1 text-sm outline-none focus-visible:ring-3 disabled:opacity-50"
+                disabled={isAssigning}
                 type="button"
               />
             }
@@ -447,15 +469,17 @@ const AssigneeField = ({ data, onDone, userId }: ReportContext) => {
         <span className="flex items-center gap-2 py-1">{current}</span>
       )}
       {canTakeIt ? (
-        <button
-          className="text-primary focus-visible:ring-ring/50 ms-8 rounded-sm text-xs font-medium outline-none hover:underline focus-visible:ring-3"
+        <Button
+          className="ms-8 h-auto px-0"
+          isLoading={isAssigning}
           onClick={async () => {
             await assign(userId);
           }}
-          type="button"
+          size="xs"
+          variant="link"
         >
           {t("details.assign_to_me")}
-        </button>
+        </Button>
       ) : null}
     </div>
   );

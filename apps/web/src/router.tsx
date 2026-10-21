@@ -54,9 +54,11 @@ export function getRouter() {
 
   const router = createTanStackRouter({
     context: { queryClient },
+    // The suspense fallback of a route without its own `pendingComponent`.
     defaultPendingComponent: RoutePendingSpinner,
-    defaultPendingMs: 150,
-    defaultPendingMinMs: 200,
+    // Client navigations keep the current page on screen; `NavigationProgress`
+    // (mounted by `VitNodeRootProviders`) is their loading feedback.
+    defaultPendingMs: Infinity,
     defaultPreload: 'intent',
     defaultPreloadDelay: 75,
     defaultPreloadStaleTime: 0,

@@ -1,22 +1,27 @@
 ---
 title: Loading States
-description: Render instant skeleton shapes and pending spinners while TanStack Start routes load data or download chunks.
+description: Show a top progress bar for route navigation, section skeletons for loading content, and button spinners for actions in VitNode.
 icon: LoaderCircle
 ---
 
 import { DatabaseIcon, MapIcon, TriangleAlertIcon } from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-While a route loader executes or a lazy page chunk downloads, VitNode provides instant visual feedback so users never see an unresponsive screen.
+VitNode gives every loading moment one indicator: a top progress bar for route navigation, a skeleton for a section that is still loading, and a spinner inside the button that started an action.
 
-Loading states operate at two distinct layers:
+## Navigation progress bar
 
-1. **Global router transitions** — A non-intrusive spinner rendered when navigating between routes.
-2. **Component-level Suspense** — Purpose-built skeleton shapes matching your layout while asynchronous data streams in.
+During a client-side navigation, a slim bar moves across the top of the viewport while the current page, header, and sidebar stay on screen and usable. `NavigationProgress` from `@vitnode/core/tanstack/pending` draws it, and `VitNodeRootProviders` already mounts it, so an app gets it without extra code.
 
-## Global router pending state
+The bar follows the router's own lifecycle:
 
-TanStack Router displays a pending component during route transitions. VitNode configures this globally in `router.tsx` using `RoutePendingSpinner` with built-in debouncing:
+- It appears only when a navigation lasts longer than 150 ms, so fast navigations never flash.
+- It finishes when the router commits the destination, including an error page, a not-found page, or the target of a redirect.
+- A newer navigation that replaces a pending one keeps the same bar moving instead of restarting it.
+- Preloading on hover, `router.invalidate()`, and TanStack Query refetches never start it.
+- With `prefers-reduced-motion`, it fades in and out at full width instead of moving.
+
+To keep the current page visible, the router never swaps it for a pending component during a navigation:
 
 ```tsx title="apps/web/src/router.tsx"
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
@@ -25,18 +30,20 @@ import { RoutePendingSpinner } from '@vitnode/core/tanstack/pending'
 export function getRouter() {
   return createTanStackRouter({
     routeTree,
-    // [!code ++:3]
     defaultPendingComponent: RoutePendingSpinner,
-    defaultPendingMs: 150,
-    defaultPendingMinMs: 200,
+    // [!code ++]
+    defaultPendingMs: Infinity,
   })
 }
 ```
 
-- `defaultPendingMs: 150` — Prevents visual flickering on fast network responses by waiting 150ms before showing the spinner.
-- `defaultPendingMinMs: 200` — Ensures that once shown, the spinner remains visible for at least 200ms to avoid jarring flashes, without holding a page that is already loaded for long.
+`defaultPendingComponent` still matters: it is the Suspense fallback of a route that has no `pendingComponent` of its own.
 
-{/* Image prompt: Minimal centered loading spinner in a clean dark UI shell with accessible aria-live indicator, 1440x900. */}
+<Callout type="warn" title="Leave pendingMs alone">
+  Setting `pendingMs` on a route brings back the old behavior: the page you are leaving is replaced by a skeleton while the bar is also running. Use a section skeleton instead.
+</Callout>
+
+To show your own UI during a navigation, read the same state the bar uses with `useIsRouteNavigating()`.
 
 ## Component skeletons with Suspense
 
@@ -78,7 +85,7 @@ Import pre-built skeletons directly from `@vitnode/core/tanstack/pending`:
 | `CardsPendingSkeleton` | Responsive 1/2/3 column card grid             | Dashboard widgets, product catalogs     |
 | `FormPendingSkeleton`  | Stacked input placeholders and action buttons | Settings forms, modal dialogs           |
 | `AuthPendingSkeleton`  | Centered authentication card with form inputs | Sign-in, sign-up, password reset        |
-| `RoutePendingSpinner`  | Centered accessible spinner                   | Full-page transition fallbacks          |
+| `RoutePendingSpinner`  | Centered accessible spinner                   | Suspense fallback with no known shape   |
 
 ## Customizing skeleton props
 
@@ -114,6 +121,59 @@ export default AdminNotesPage
 | `withDescription` | `boolean` | `true`      | Whether to display a skeleton subtitle under the heading      |
 | `className`       | `string`  | `undefined` | Additional Tailwind utility classes merged onto the container |
 | `label`           | `string`  | `'Loading'` | Accessible screen-reader label (`aria-label`)                 |
+
+## Keep data on screen during refetches
+
+A background refetch should never blank content that is already loaded. Show a skeleton only for the first load, which is `isPending`, never `isFetching`. For a query keyed on a search term, a filter, or a page, keep the previous result while the next one loads and mark it as busy:
+
+```tsx title="plugins/site-notes/src/views/notes-search.tsx"
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { FeedPendingSkeleton } from '@vitnode/core/tanstack/pending'
+import { cn } from 'cn'
+
+const NotesSearch = ({ search }: { search: string }) => {
+  const query = useQuery({
+    ...notesQueryOptions({ search }),
+    placeholderData: keepPreviousData,
+  })
+
+  if (query.isPending) return <FeedPendingSkeleton withDescription={false} />
+
+  return (
+    <ul
+      aria-busy={query.isFetching}
+      className={cn(query.isPlaceholderData && 'opacity-60')}
+    >
+      {query.data?.map(note => <li key={note.id}>{note.title}</li>)}
+    </ul>
+  )
+}
+```
+
+## Show action progress on the button
+
+Submissions and mutations show their progress on the control that started them. Pass `isLoading` to `Button`: it disables the button, swaps the label for a spinner without changing the width, and sets `aria-busy`. `AutoForm` and `ConfirmAction` already do this for their submit buttons.
+
+```tsx title="plugins/site-notes/src/views/delete-note-button.tsx"
+import { Button } from '@vitnode/core/components/ui/button'
+import { useMutation } from '@tanstack/react-query'
+
+const DeleteNoteButton = ({ id }: { id: number }) => {
+  const mutation = useMutation({ mutationFn: deleteNote })
+
+  return (
+    <Button
+      isLoading={mutation.isPending}
+      onClick={() => mutation.mutate(id)}
+      variant="destructive"
+    >
+      Delete
+    </Button>
+  )
+}
+```
+
+While the action runs, also disable any other control that would conflict with it, such as **Reject** next to a pending **Approve**.
 
 <Cards>
   <Card

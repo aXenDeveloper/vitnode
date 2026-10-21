@@ -34,6 +34,17 @@ import { Activity } from "react";
 - A package may declare `createIsomorphicFn` but never `createServerFn` - uncompiled on the server, its handler silently resolves to `undefined`. Server functions belong to the host app.
 - New admin APIs always require staff permissions.
 
+### Loading feedback
+
+Pick one indicator per piece of pending work, by what is pending:
+
+- **Route navigation → top progress bar.** `NavigationProgress` (`packages/vitnode/src/tanstack/pending/navigation-progress.tsx`) is mounted once by `VitNodeRootProviders` - never render a second one or a page-level spinner for a navigation. It follows the router's lifecycle (`isRouteNavigating` / `useIsRouteNavigating` in `tanstack/pending/navigation-pending.ts`), so redirects, errors, superseded navigations, preloads, `router.invalidate()` and query refetches are already handled; never drive it with timers.
+- **Keep the shell and the current page.** The router runs with `defaultPendingMs: Infinity`: header, sidebar and the page being left stay visible and usable until the destination commits. Don't add `pendingMs` to a route to swap it for a skeleton, and don't blank a breadcrumb or layout while navigating.
+- **Section loading → a local skeleton.** Lists, profiles, cards, widgets and lazy dialogs whose data is not awaited in the loader get a `<Suspense>` (or `isPending`) fallback shaped like the final content - the shapes in `@vitnode/core/tanstack/pending` (`FeedPendingSkeleton`, `TablePendingSkeleton`, `CardsPendingSkeleton`, `FormPendingSkeleton`, `ProfilePendingSkeleton`…) or `Skeleton` from `@vitnode/core/components/ui/skeleton` with the same sizes as the real rows. Scope it to that section; a route's `pendingComponent` is its suspense fallback, not navigation feedback.
+- **Refetches keep the data.** Branch on `isPending` (first load), never `isFetching`, for placeholders. Use `placeholderData: keepPreviousData` for queries keyed on search, filters or pages, and mark the stale view with `aria-busy={isFetching}` and at most a dim (`opacity-60`).
+- **Actions → the control's own loading state.** Submissions and mutations use `<Button isLoading>` (disables the button, keeps its width, sets `aria-busy`); `AutoForm` and `ConfirmAction` already do it. Track pending for every async handler (`isPending`, `useActionState`, or a `try/finally` flag) and disable sibling actions that would conflict, so nothing can be sent twice. No page-level overlay for an action.
+- **Accessibility and motion.** A loading region has `aria-busy` and one sr-only `role="status"` label (`PendingFrame` does both); decorative skeleton blocks are `aria-hidden` (`Skeleton` is by default) and a spinner inside labelled text is `aria-hidden`. Animate only `transform`/`opacity` and respect `prefers-reduced-motion` (`motion-safe:`/`motion-reduce:`).
+
 ### Fetching APIs
 
 - `fetcher` from `@vitnode/core/tanstack/fetcher` is universal - one call, SSR and browser. Never hand-write `createIsomorphicFn().server(...).client(...)` for a fetch.

@@ -330,7 +330,7 @@ For nested trails, deferred crumbs, and AdminCP trails, see the [Breadcrumbs gui
 
 ## Loading states
 
-While a route's loader runs, VitNode displays its `pendingComponent`:
+A route's `pendingComponent` is the skeleton shown while its page suspends, for example on a client-only route or a query the loader does not await. Client navigations keep the current page on screen with a top progress bar instead.
 
 ```ts title="plugins/site-notes/src/routes.ts"
 import { definePluginRoutes, lazy, page } from '@vitnode/core/routing'

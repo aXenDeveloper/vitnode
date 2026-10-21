@@ -1,4 +1,9 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQuery,
+} from "@tanstack/react-query";
+import { cn } from "cn";
 import { SearchIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -84,6 +89,7 @@ export const StaffScopeDialogContent = ({
       search: debounced,
     }),
     enabled: mode === "selected",
+    placeholderData: keepPreviousData,
   });
   const initialIds = React.useMemo(
     () => (value?.mode === "selected" ? value.ids : []),
@@ -207,10 +213,19 @@ export const StaffScopeDialogContent = ({
             />
           </div>
 
-          <div className="max-h-72 overflow-y-auto rounded-lg border">
+          <div
+            aria-busy={list.isFetching && !list.isFetchingNextPage}
+            className={cn(
+              "max-h-72 overflow-y-auto rounded-lg border transition-opacity",
+              list.isPlaceholderData && "opacity-60",
+            )}
+          >
             {list.isPending ? (
-              <div className="flex items-center justify-center gap-2 p-4 text-sm">
-                <Spinner />
+              <div
+                className="flex items-center justify-center gap-2 p-4 text-sm"
+                role="status"
+              >
+                <Spinner aria-hidden="true" />
                 {t("loading")}
               </div>
             ) : items.length === 0 ? (
