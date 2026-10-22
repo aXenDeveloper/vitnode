@@ -51,21 +51,20 @@ delivery: {
 
 Every field you name must also be in `publicApi.fields`, because the page shows it to anyone. Leave one out and the definition throws at startup with `... which is not in publicApi.fields`. A field inside a group works (`"seo.title"`). A field inside a repeatable does not, since a page has one title, not a list of them.
 
-Values are trimmed, and an empty one counts as missing, so the fallback kicks in. The blog uses that to describe posts that have no excerpt:
+Values are trimmed, and an empty one counts as missing, so the fallback kicks in. The blog has no summary field, so it describes every post with its content:
 
 ```ts title="plugins/blog/src/content/post.ts"
 delivery: {
   seo: {
     titleField: "title",
-    descriptionField: "excerpt",
-    fallbackDescriptionField: "content",
+    descriptionField: "content",
   },
 },
 ```
 
 `content` is rich text. The Content Engine turns it into plain text, and the page cuts it to 160 characters at a word boundary and adds `…`. No markup ever lands in a meta tag.
 
-The blog plugin's own article editor checks the fields this rule reads in its **SEO** sheet. The sheet belongs to the blog plugin, not to every Content Engine form. Here the post has no excerpt, so the **Excerpt** row is marked as missing, and search results would fall back to the content.
+The blog plugin's own article editor checks the fields this rule reads in its **SEO** sheet. The sheet belongs to the blog plugin, not to every Content Engine form. It shows how the title and the content's first words will look in search results.
 
 <ImgDocs
   withoutBackground

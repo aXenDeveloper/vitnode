@@ -251,6 +251,7 @@ const ModcpReportDetailView = ({
             <Section title={t("sections.snapshot")}>
               <SnapshotPeek
                 author={author ?? snapshotAuthorOf(snapshot)}
+                contentUrl={data.current.url}
                 reportId={report.id}
                 snapshot={snapshot}
                 typeLabel={typeLabel}

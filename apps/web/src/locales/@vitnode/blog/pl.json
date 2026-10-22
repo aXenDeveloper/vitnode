@@ -10,17 +10,12 @@
           "title": {
             "placeholder": "Tytuł artykułu"
           },
-          "excerpt": {
-            "placeholder": "Jedno lub dwa zdania, które zachęcą do kliknięcia.",
-            "hint": "Widoczna na liście wpisów i jako opis w wynikach wyszukiwania."
-          },
           "alt": {
             "placeholder": "Co przedstawia obraz",
             "hint": "Czytany przez czytniki ekranu zamiast obrazu."
           },
           "counter": {
             "title": "Wyniki wyszukiwania pokazują około {max} znaków.",
-            "excerpt": "Wyniki wyszukiwania pokazują około {max} znaków.",
             "coverImageAlt": "Czytniki ekranu czytają około {max} znaków przed pauzą."
           },
           "translate": {
@@ -49,9 +44,7 @@
             }
           },
           "ai": {
-            "write_excerpt": "Napisz z AI",
             "translating": "Tłumaczenie…",
-            "writing": "Pisanie…",
             "done": "Gotowe. Przeczytaj przed zapisaniem.",
             "error": "Zapytanie do AI nie zakończyło się. Spróbuj ponownie za chwilę.",
             "not_configured": "Ta strona nie ma skonfigurowanego modelu AI."
@@ -61,8 +54,6 @@
             "checks": {
               "title": "Tytuł mieści się w wynikach wyszukiwania",
               "title_detail": "{languages}: dłuższy niż {max} znaków.",
-              "excerpt": "Zajawka w każdym języku",
-              "excerpt_detail": "Brakuje w: {languages}.",
               "cover": "Obraz wyróżniający",
               "cover_detail": "Widoczny na liście wpisów i przy udostępnianiu artykułu.",
               "alt": "Tekst alternatywny w każdym języku",
@@ -71,8 +62,7 @@
               "translations_detail": "{language}: {count, plural, one {brakuje # pola} few {brakuje # pól} many {brakuje # pól} other {brakuje # pola}}",
               "outdated": "Tłumaczenia aktualne",
               "outdated_detail": "{languages} zmieniano dawniej niż wersję {source}.",
-              "open": "Otwórz: {language}",
-              "write": "Napisz z AI"
+              "open": "Otwórz: {language}"
             }
           },
           "review": {
@@ -113,7 +103,6 @@
             "needs_work": "Do poprawy",
             "rows": {
               "title": "Tytuł",
-              "excerpt": "Zajawka",
               "url": "URL",
               "cover": "Obraz do udostępniania",
               "alt": "Tekst alternatywny obrazu"
@@ -156,8 +145,7 @@
           "publishedAt": "Opublikowano",
           "status": "Status",
           "title": "Tytuł",
-          "updatedAt": "Zaktualizowano",
-          "excerpt": "Zajawka"
+          "updatedAt": "Zaktualizowano"
         },
         "label": "{count, plural, one {Artykuł} few {Artykuły} many {Artykułów} other {Artykułu}}",
         "title": "Artykuły"
@@ -170,7 +158,13 @@
         "label": "Artykuł ukryty",
         "title": "Ten artykuł jest ukryty",
         "desc": "Widzą go tylko jego autorzy i redaktorzy. Pozostali zobaczą stronę „nie znaleziono”, a artykuł nie pojawia się w wyszukiwarce ani w mapie strony."
-      }
+      },
+      "back": "Wróć do artykułów",
+      "categories": "Kategorie",
+      "by": "Autorzy:",
+      "edited": "Edytowano",
+      "reading_time": "{minutes} min czytania",
+      "on_this_page": "Na tej stronie"
     },
     "list": {
       "title": "Blog",
@@ -225,10 +219,6 @@
       "article_review": {
         "title": "Sprawdź artykuł przed publikacją",
         "description": "Podpowiada, jak poprawić przejrzystość i kompletność przed publikacją."
-      },
-      "excerpt_generate": {
-        "title": "Wygeneruj zajawkę",
-        "description": "Pisze krótką zajawkę artykułu."
       },
       "field_translate": {
         "title": "Przetłumacz pole artykułu",

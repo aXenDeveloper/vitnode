@@ -12,7 +12,6 @@ import { describe, expect, it } from "vitest";
 
 import { ARTICLE_REVIEW_AI_ACTION, blogAiActions } from "@/api/ai/actions";
 
-import { excerptAiAdminRoute } from "./routes/excerpt.route";
 import { translateAiAdminRoute } from "./routes/translate.route";
 
 const EDITOR_ID = 7;
@@ -126,7 +125,6 @@ const createApp = async ({
     await next();
   });
   app.openapi(translateAiAdminRoute.route, translateAiAdminRoute.handler);
-  app.openapi(excerptAiAdminRoute.route, excerptAiAdminRoute.handler);
 
   return { app, ledger, model };
 };
@@ -206,42 +204,6 @@ describe("blog AI admin routes", () => {
     expect(model.doGenerateCalls).toHaveLength(0);
   });
 
-  it("writes an excerpt from the article text", async () => {
-    const { app, model } = await createApp({
-      model: modelAnswering(
-        "One definition per content type and faster lists.",
-      ),
-    });
-
-    const response = await post(app, "/excerpt", {
-      content: {
-        content: [
-          {
-            attrs: { level: 2 },
-            content: [{ text: "Why", type: "text" }],
-            type: "heading",
-          },
-          {
-            content: [{ text: "We rebuilt the AdminCP.", type: "text" }],
-            type: "paragraph",
-          },
-        ],
-        type: "doc",
-      },
-      locale: "en",
-      title: "VitNode 2.0",
-    });
-
-    expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      text: "One definition per content type and faster lists.",
-    });
-    expect(promptOf(model.doGenerateCalls[0])).toContain(
-      "We rebuilt the AdminCP.",
-    );
-    expect(promptOf(model.doGenerateCalls[0])).not.toContain("paragraph");
-  });
-
   it("refuses staff who cannot edit articles", async () => {
     const { app, model } = await createApp({ canEdit: false });
 
@@ -259,15 +221,11 @@ describe("blog AI admin routes", () => {
   it("answers 400 when no AI model is configured", async () => {
     const { app, model } = await createApp({ configured: false });
 
-    const response = await post(app, "/excerpt", {
-      content: {
-        content: [
-          { content: [{ text: "Body", type: "text" }], type: "paragraph" },
-        ],
-        type: "doc",
-      },
-      locale: "en",
-      title: "Title",
+    const response = await post(app, "/translate", {
+      format: "text",
+      from: "en",
+      text: "Hello",
+      to: "pl",
     });
 
     expect(response.status).toBe(400);
@@ -335,10 +293,11 @@ describe("blog AI admin routes", () => {
       }),
     });
 
-    const response = await post(app, "/excerpt", {
-      content: bodyDocument,
-      locale: "en",
-      title: "Title",
+    const response = await post(app, "/translate", {
+      format: "text",
+      from: "en",
+      text: "Hello",
+      to: "pl",
     });
 
     expect(response.status).toBe(429);

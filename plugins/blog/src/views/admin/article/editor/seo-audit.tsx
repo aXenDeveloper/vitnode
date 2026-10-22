@@ -89,7 +89,6 @@ export const SeoAudit = ({
   actionsFor,
   checks,
   cover,
-  excerptField,
   languageName,
   locale,
   onEditAlt,
@@ -99,7 +98,6 @@ export const SeoAudit = ({
   actionsFor: (check: ArticleCheck) => CheckAction[];
   checks: ArticleCheck[];
   cover: ContentFileFieldValue | undefined;
-  excerptField: React.ReactNode;
   languageName: (code: string) => string;
   locale: string;
   onEditAlt: () => void;
@@ -118,7 +116,6 @@ export const SeoAudit = ({
   const coverUrl = coverUrlOf(values.coverImage, cover);
 
   const titleCheck = checkOf("title");
-  const excerptCheck = checkOf("excerpt");
   const coverCheck = checkOf("cover");
   const altCheck = checkOf("alt");
   const translationChecks = checks.filter(
@@ -126,7 +123,6 @@ export const SeoAudit = ({
   );
   const rows = [
     { label: t("rows.title"), ok: titleCheck?.ok ?? true },
-    { label: t("rows.excerpt"), ok: excerptCheck?.ok ?? true },
     { label: t("rows.url"), ok: slug !== "" },
     { label: t("rows.cover"), ok: coverCheck?.ok ?? true },
     { label: t("rows.alt"), ok: altCheck?.ok ?? true },
@@ -168,11 +164,6 @@ export const SeoAudit = ({
             <CharacterCount field="title" value={title} />
           </div>
           {missing(titleCheck)}
-        </AuditRow>
-
-        <AuditRow ok={excerptCheck?.ok ?? true}>
-          <div className="flex flex-col gap-2">{excerptField}</div>
-          {missing(excerptCheck)}
         </AuditRow>
 
         <AuditRow label={t("rows.url")} ok={slug !== ""}>

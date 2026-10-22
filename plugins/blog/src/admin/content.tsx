@@ -6,7 +6,6 @@ import { manifest } from "@/manifest.gen";
 import { BlogArticleEditorField } from "@/views/admin/article/editor-field";
 import {
   ArticleCoverAltField,
-  ArticleExcerptField,
   ArticleSlugField,
   ArticleTitleField,
 } from "@/views/admin/article/editor/fields";
@@ -34,7 +33,6 @@ export const adminContent = {
         content: { component: BlogArticleEditorField, skeleton: "editor" },
         title: { component: ArticleTitleField },
         friendlyUrl: { component: ArticleSlugField },
-        excerpt: { component: ArticleExcerptField, skeleton: "textarea" },
         coverImageAlt: { component: ArticleCoverAltField },
       },
       forms: {

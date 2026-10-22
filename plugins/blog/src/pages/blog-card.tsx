@@ -341,11 +341,6 @@ export const BlogPostTile = ({
             />
             <PostTitleLink className="decoration-white/40" post={post} />
           </h3>
-          {isLead && post.excerpt ? (
-            <p className="hidden max-w-2xl text-sm leading-relaxed text-pretty text-white/75 md:line-clamp-2">
-              {post.excerpt}
-            </p>
-          ) : null}
           <BlogPostByline
             className="text-white/80"
             post={post}
@@ -360,8 +355,8 @@ export const BlogPostTile = ({
 
 /**
  * One article in the `/blog` list: its cover beside up to three categories,
- * the title, the excerpt when it has one, and its authors and date. The whole
- * card is the link; the title is its accessible name.
+ * the title, and its authors and date. The whole card is the link; the title
+ * is its accessible name.
  */
 export const BlogPostCard = ({
   categories,
@@ -402,11 +397,6 @@ export const BlogPostCard = ({
           <PostHiddenIcon className="size-5" post={post} />
           <PostTitleLink className="decoration-foreground/30" post={post} />
         </h3>
-        {post.excerpt ? (
-          <p className="text-muted-foreground line-clamp-2 text-sm leading-relaxed text-pretty">
-            {post.excerpt}
-          </p>
-        ) : null}
         <BlogPostByline
           className="text-muted-foreground mt-auto pt-1"
           post={post}

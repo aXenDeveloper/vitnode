@@ -231,10 +231,10 @@ Core stores it under a **canonical key**, `<pluginId>:<localId>`:
 
 ```text
 @acme/forum:topic.summarize
-@vitnode/blog:excerpt.generate
+@vitnode/blog:article.review
 ```
 
-Two plugins may both have an `excerpt.generate`; their canonical keys differ. The same canonical key twice throws at boot. Settings, history and limits all use the canonical key.
+Two plugins may both have a `topic.summarize`; their canonical keys differ. The same canonical key twice throws at boot. Settings, history and limits all use the canonical key.
 
 `aiActionRef(pluginId, action)` builds the canonical key **and** remembers the action's input and output types. Pass it to `run()` and TypeScript checks `input` and infers `output`. A plain string key also works, but its output is `unknown`.
 
@@ -264,7 +264,7 @@ A blank title or description, or an icon that isn't a kebab-case name, throws at
 ## Input and output
 
 - **`inputSchema`** (Zod) validates the input before anything else happens. Invalid input fails with `AI_INVALID_INPUT`.
-- **`measureInput(input)`** returns the number of characters counted against `maxInputCharacters`. By default every string in the input counts. Override it when only part of the input reaches the prompt. The blog excerpt, for example, counts only the text it extracts from the HTML.
+- **`measureInput(input)`** returns the number of characters counted against `maxInputCharacters`. By default every string in the input counts. Override it when only part of the input reaches the prompt. The blog's article review, for example, counts the title and at most 30,000 characters of the article text.
 - **`output: "text"`** makes the model return text. `parseText(text, input)` turns it into your output, then `outputSchema` checks it. Throw from `parseText()` to reject an answer.
 - **`output: "object"`** makes the model return structured JSON, which `outputSchema` validates. The action must require the `structured-output` capability, and it cannot be streamed.
 

@@ -1,3 +1,4 @@
+import { ExternalLinkIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
@@ -44,30 +45,26 @@ const excerptOf = (fields: ModerationSnapshotField[]): string => {
 
 export const SnapshotPeek = ({
   author,
+  contentUrl,
   reportId,
   snapshot,
   typeLabel,
 }: {
   author: null | Pick<ReportPerson, "name" | "role">;
+  contentUrl: null | string;
   reportId: number;
   snapshot: ModerationReportSnapshot;
   typeLabel: string;
 }) => {
-  const t = useTranslations("core.moderation.modcp.detail.snapshot_card");
+  const t = useTranslations("core.moderation.modcp.detail");
   const [isOpen, setIsOpen] = React.useState(false);
   const excerpt = excerptOf(snapshot.fields);
 
   return (
     <Sheet onOpenChange={setIsOpen} open={isOpen}>
-      <button
-        className="bg-muted/40 ring-foreground/10 hover:bg-muted/70 focus-visible:ring-ring/50 flex w-full flex-col gap-1 rounded-xl p-4 text-start ring-1 transition-colors outline-none focus-visible:ring-3"
-        onClick={() => {
-          setIsOpen(true);
-        }}
-        type="button"
-      >
+      <div className="bg-muted/40 ring-foreground/10 flex w-full flex-col gap-1 rounded-xl p-4 ring-1">
         <span className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-xs">
-          {t.rich("meta", {
+          {t.rich("snapshot_card.meta", {
             author: () =>
               author ? <PersonName className="text-xs" person={author} /> : "-",
             date: () => <DateFormat date={snapshot.capturedAt} />,
@@ -84,15 +81,34 @@ export const SnapshotPeek = ({
             {excerpt}
           </span>
         ) : null}
-        <span className="text-primary mt-1 text-sm font-medium">
-          {t("view")}
-        </span>
-      </button>
+        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm font-medium">
+          <button
+            className="text-primary focus-visible:ring-ring/50 rounded-sm outline-none hover:underline focus-visible:ring-3"
+            onClick={() => {
+              setIsOpen(true);
+            }}
+            type="button"
+          >
+            {t("snapshot_card.view")}
+          </button>
+          {contentUrl ? (
+            <a
+              className="text-primary focus-visible:ring-ring/50 inline-flex items-center gap-1.5 rounded-sm outline-none hover:underline focus-visible:ring-3"
+              href={contentUrl}
+              rel="noopener"
+              target="_blank"
+            >
+              <ExternalLinkIcon aria-hidden className="size-3.5" />
+              {t("current.open")}
+            </a>
+          ) : null}
+        </div>
+      </div>
       <SheetContent className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl">
         <SheetHeader className="border-b">
-          <SheetTitle>{t("sheet_title")}</SheetTitle>
+          <SheetTitle>{t("snapshot_card.sheet_title")}</SheetTitle>
           <SheetDescription>
-            {t("sheet_desc", { id: reportId })}
+            {t("snapshot_card.sheet_desc", { id: reportId })}
           </SheetDescription>
         </SheetHeader>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">

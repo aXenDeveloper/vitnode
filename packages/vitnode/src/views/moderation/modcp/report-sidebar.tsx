@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query";
 import { cn } from "cn";
 import {
   ChevronDownIcon,
-  ExternalLinkIcon,
   EyeIcon,
   EyeOffIcon,
   FlagIcon,
@@ -270,6 +269,8 @@ const ActionsMenu = ({ data, onDone }: ReportContext) => {
     action => action.available && action.allowed,
   );
 
+  if (actions.length === 0) return null;
+
   return (
     <>
       <DropdownMenu>
@@ -280,18 +281,6 @@ const ActionsMenu = ({ data, onDone }: ReportContext) => {
           <ChevronDownIcon aria-hidden />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem
-            disabled={!data.current.url}
-            onClick={() => {
-              if (data.current.url) {
-                window.open(data.current.url, "_blank", "noopener");
-              }
-            }}
-          >
-            <ExternalLinkIcon aria-hidden />
-            {t("current.open")}
-          </DropdownMenuItem>
-          {actions.length > 0 ? <DropdownMenuSeparator /> : null}
           {actions.map(action => (
             <DropdownMenuItem
               key={action.action}

@@ -120,8 +120,7 @@ a page. Drafts, articles scheduled for later and hidden articles never appear.
   story, two beside it and three below. Each tile shows the article's
   categories, title, authors and date on top of its cover.
 - The other articles follow as cards with the cover, up to three categories,
-  the title, the excerpt when there is one, the authors with their avatars and
-  the date. The whole card opens the article at `/blog/article/:slug`.
+  the title, the authors with their avatars and the date. The whole card opens the article at `/blog/article/:slug`.
 - A sidebar lists every category that has articles, with how many each holds.
   Each one opens the category's own page at `/blog/category/:slug`, with its
   articles as cards. On phones the list turns into a row of chips.
@@ -167,6 +166,20 @@ article. Add `/blog` to your app's `/sitemap.xml`
 next to the article entries; the
 [sitemap route](/docs/content-engine/seo#sitemap) lists articles, not the
 index.
+
+### Read an article
+
+An article page puts everything a reader asks first at the top, centered: a
+link back to the articles, the categories, the title, the authors and a line
+with the publish date, when it was last edited and how long it takes to read.
+The "Edited" note only shows up when the article changed more than an hour
+after it went live, so a quick fix right after publishing stays quiet.
+
+The cover and the text share one centered column. When the article has
+headings, an **On this page** list sits in the right margin and follows you as
+you scroll, highlighting every section you are looking at. On phones it folds
+into a box above the cover. Headings get their own link anchors, so you can
+share `/blog/article/building-a-plugin#why-plugins`.
 
 ### Categories and article counts in your own pages
 
@@ -252,21 +265,20 @@ sheet checks what a published article usually needs:
 | Check                            | Passes when                                                 |
 | -------------------------------- | ----------------------------------------------------------- |
 | Title fits search results        | Every started language has a title of 60 characters or less |
-| Excerpt in every language        | Every started language has an excerpt                       |
 | Cover image                      | A cover image is set                                        |
 | URL                              | The language you edit has a friendly URL                    |
 | Cover alt text in every language | Every started language describes the cover                  |
 | Translations complete            | Every language has a title, friendly URL and content        |
 | Translations up to date          | No translation is older than the default language           |
 
-The title, excerpt and alt text fields show a live counter against the
-recommended length: 60, 160 and 125 characters. They are recommendations, not
+The title and alt text fields show a live counter against the
+recommended length: 60 and 125 characters. They are recommendations, not
 limits, so you can still save a longer title.
 
 Each row is green when it is done and says what is missing when it is not, and
 the bar on top counts how many are ready. You can fix most rows right there:
-write the excerpt in its row, press **Edit under the cover** to jump to the alt
-text, or **Open** a language that is missing a translation.
+press **Edit under the cover** to jump to the alt text, or **Open** a language
+that is missing a translation.
 
 ### Publish or unpublish
 
@@ -301,7 +313,6 @@ With AI configured, the editor adds:
 
 - **Translate** on each field, and **Translate missing fields** for a whole
   language. Content keeps its formatting.
-- **Write with AI** on the excerpt, which writes it from the title and content.
 - **AI review** in the header, which opens a sheet with suggestions about
   clarity, completeness, structure and tone. When a suggestion is about the
   wording, **Show fix** shows the current text next to a rewrite, and **Apply**
@@ -322,7 +333,7 @@ editor as one change, so everyone sees it and you can undo it.
 
 Several people can work on one article at once. The header shows who else is
 in it, and a colored outline with a name tag shows who is editing which field. The title,
-slug, excerpt and other plain fields are edited by one person at a time; the
+slug and other plain fields are edited by one person at a time; the
 article body is shared, with everyone's cursor visible. Your changes are
 autosaved to a draft until someone presses **Save changes**. See
 [Live editing and autosave](/docs/content-engine/live-editing) for how it
@@ -330,8 +341,9 @@ works and what it needs on your server.
 
 ### Upgrade an existing blog
 
-Articles have a localized **Excerpt** field. Search results use it as the
-description and fall back to the article content when it is empty. The article
+Articles no longer have an **Excerpt** field. The migration drops the column
+with every excerpt in it, so copy any you want to keep before you run it. Search
+results and the meta description now use the start of the article content. The article
 content is now stored as [rich text](/docs/content-engine/rich-text) JSON
 instead of HTML; the migration keeps the words of existing articles as one
 paragraph, so re-check their formatting.
@@ -346,7 +358,7 @@ afterwards. If you map the article route in `routePaths`, rename the key to
 
 Run your migrations after you upgrade `@vitnode/blog`:
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the blog excerpt">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run the blog migrations">
 
 ```bash tab="bun"
 bun run db:migrate

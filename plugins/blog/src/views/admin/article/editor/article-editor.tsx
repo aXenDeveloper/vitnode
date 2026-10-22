@@ -43,23 +43,14 @@ import { useTranslations } from "use-intl";
 
 import type { CheckAction } from "./readiness-actions";
 
-import {
-  translateArticleContent,
-  translateArticleText,
-  writeArticleExcerpt,
-} from "./ai";
+import { translateArticleContent, translateArticleText } from "./ai";
 import { ArticleAiReview, useArticleReviewAvailable } from "./ai-review";
-import {
-  type ArticleFieldActions,
-  ArticleFieldActionsContext,
-} from "./field-actions";
 import {
   type ArticleCheck,
   articleChecks,
   articleContent,
   type ArticleTextField,
   type ArticleValues,
-  fieldText,
   REQUIRED_TRANSLATED_FIELDS,
   type TranslatedField,
   translatedFieldStatus,
@@ -77,7 +68,6 @@ import { useArticleAi } from "./use-article-ai";
 const AI_TRANSLATED_FIELDS = [
   "title",
   "content",
-  "excerpt",
   "coverImageAlt",
 ] as const satisfies readonly TranslatedField[];
 
@@ -224,35 +214,6 @@ export const ArticleEditor = ({
       field => statusOf(field, to) === "missing",
     );
 
-  const writeExcerpt = async (locale: string) => {
-    const current = valuesRef.current;
-    if (locale !== source && getLangValue(current.excerpt, source).trim()) {
-      await translateField("excerpt", locale);
-
-      return;
-    }
-
-    await ai.run(
-      `excerpt:${locale}`,
-      async () => {
-        setLangValue(
-          "excerpt",
-          locale,
-          await writeArticleExcerpt({
-            content: (fieldText(current, "content", locale)
-              ? articleContent(current, locale)
-              : articleContent(current, source)) ?? { type: "doc" },
-            locale,
-            title:
-              getLangValue(current.title, locale) ||
-              getLangValue(current.title, source),
-          }),
-        );
-      },
-      t("ai.write_excerpt"),
-    );
-  };
-
   const openLanguage = (code: string) => {
     setSheet(null);
     setTarget(code);
@@ -274,19 +235,6 @@ export const ArticleEditor = ({
                   void translateField("coverImageAlt", code);
                 },
               }))
-          : [];
-      case "excerpt":
-        return ai.available
-          ? [
-              {
-                ai: true,
-                label: t("publish.checks.write"),
-                run: () => {
-                  setSheet("seo");
-                  for (const code of check.missing) void writeExcerpt(code);
-                },
-              },
-            ]
           : [];
       case "outdated":
         return check.outdated.map(code => ({
@@ -328,25 +276,6 @@ export const ArticleEditor = ({
   React.useEffect(() => {
     focusLanguage?.(null, fieldLocale);
   }, [fieldLocale, focusLanguage]);
-  const excerptPending = ai.isPending(`excerpt:${fieldLocale}`);
-  const fieldActions: ArticleFieldActions = ai.available
-    ? {
-        excerpt: (
-          <AiButton
-            label={
-              target && getLangValue(values.excerpt, source).trim()
-                ? t("translate.field")
-                : t("ai.write_excerpt")
-            }
-            onClick={() => {
-              void writeExcerpt(fieldLocale);
-            }}
-            pending={excerptPending}
-            pendingLabel={t("ai.writing")}
-          />
-        ),
-      }
-    : {};
 
   const fieldAction = (field: TranslatedField, to: string) => {
     if (field !== "friendlyUrl" && !ai.available) return null;
@@ -399,310 +328,293 @@ export const ArticleEditor = ({
   );
 
   return (
-    <ArticleFieldActionsContext value={fieldActions}>
-      <div className="-m-6 flex min-h-full flex-col">
-        <header className="bg-background/95 supports-backdrop-filter:bg-background/80 sticky top-0 z-30 flex min-h-14 flex-wrap items-center gap-1 border-b px-2 py-2 backdrop-blur sm:px-4">
-          {header ? (
-            <TooltipWithContent text={header.back.label}>
-              <Button
-                className="w-8 px-0"
-                nativeButton={false}
-                render={<Link to={header.back.href} />}
-                size="sm"
-                variant="ghost"
-              >
-                <ArrowLeftIcon aria-hidden />
-                <span className="sr-only">{header.back.label}</span>
-              </Button>
-            </TooltipWithContent>
-          ) : null}
-          <h1 className="sr-only">{header?.title ?? t("heading")}</h1>
-          {translationLanguages.length > 0 ? (
-            target ? (
-              <ActiveTranslation
-                onExit={() => {
-                  setTarget(null);
-                }}
-                sourceName={sourceName}
-                targetName={languageName(target)}
-              />
-            ) : (
-              <TranslateMenu
-                languages={translationLanguages}
-                onPick={openLanguage}
-                sourceName={sourceName}
-              />
-            )
-          ) : null}
+    <div className="-m-6 flex min-h-full flex-col">
+      <header className="bg-background/95 supports-backdrop-filter:bg-background/80 sticky top-0 z-30 flex min-h-14 flex-wrap items-center gap-1 border-b px-2 py-2 backdrop-blur sm:px-4">
+        {header ? (
+          <TooltipWithContent text={header.back.label}>
+            <Button
+              className="w-8 px-0"
+              nativeButton={false}
+              render={<Link to={header.back.href} />}
+              size="sm"
+              variant="ghost"
+            >
+              <ArrowLeftIcon aria-hidden />
+              <span className="sr-only">{header.back.label}</span>
+            </Button>
+          </TooltipWithContent>
+        ) : null}
+        <h1 className="sr-only">{header?.title ?? t("heading")}</h1>
+        {translationLanguages.length > 0 ? (
+          target ? (
+            <ActiveTranslation
+              onExit={() => {
+                setTarget(null);
+              }}
+              sourceName={sourceName}
+              targetName={languageName(target)}
+            />
+          ) : (
+            <TranslateMenu
+              languages={translationLanguages}
+              onPick={openLanguage}
+              sourceName={sourceName}
+            />
+          )
+        ) : null}
+        <Button
+          aria-label={
+            unready > 0
+              ? t("seo.open_issues", { count: unready })
+              : t("seo.open")
+          }
+          onClick={() => {
+            setSheet("seo");
+          }}
+          size="sm"
+          type="button"
+          variant="ghost"
+        >
+          <SearchIcon aria-hidden />
+          <span className="max-sm:sr-only">{t("seo.open")}</span>
+          {unready > 0 ? <Badge variant="warning">{unready}</Badge> : null}
+        </Button>
+        {reviewAvailable ? (
           <Button
-            aria-label={
-              unready > 0
-                ? t("seo.open_issues", { count: unready })
-                : t("seo.open")
-            }
+            aria-label={t("review.open")}
             onClick={() => {
-              setSheet("seo");
+              setSheet("review");
             }}
             size="sm"
             type="button"
             variant="ghost"
           >
-            <SearchIcon aria-hidden />
-            <span className="max-sm:sr-only">{t("seo.open")}</span>
-            {unready > 0 ? <Badge variant="warning">{unready}</Badge> : null}
+            <SparklesIcon aria-hidden />
+            <span className="max-sm:sr-only">{t("review.open")}</span>
           </Button>
-          {reviewAvailable ? (
-            <Button
-              aria-label={t("review.open")}
-              onClick={() => {
-                setSheet("review");
-              }}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              <SparklesIcon aria-hidden />
-              <span className="max-sm:sr-only">{t("review.open")}</span>
-            </Button>
-          ) : null}
-          <div className="ms-auto flex items-center gap-2">
-            <ContentFormPublicationLabel className="me-2" />
-            <ContentLiveStatus />
-            <ContentLivePresence className="max-lg:hidden" max={3} />
-            <ContentFormSaveMenu />
-          </div>
-        </header>
+        ) : null}
+        <div className="ms-auto flex items-center gap-2">
+          <ContentFormPublicationLabel className="me-2" />
+          <ContentLiveStatus />
+          <ContentLivePresence className="max-lg:hidden" max={3} />
+          <ContentFormSaveMenu />
+        </div>
+      </header>
 
-        <div className="px-4 py-8 sm:px-6">
-          <div
-            className={cn(
-              "mx-auto flex w-full min-w-0 flex-col gap-6",
-              !target && "max-w-3xl",
-            )}
-          >
-            <ContentFormHiddenNotice />
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <AutoFormFileDisplayContext value="cover">
-                  <ContentFormField name="coverImage" />
-                </AutoFormFileDisplayContext>
-              </div>
-              {target ? null : (
-                <MultiLangLanguageContext value={source}>
-                  <div className="flex flex-col gap-2">
-                    <ContentFormField name="coverImageAlt" />
-                  </div>
-                </MultiLangLanguageContext>
-              )}
+      <div className="px-4 py-8 sm:px-6">
+        <div
+          className={cn(
+            "mx-auto flex w-full min-w-0 flex-col gap-6",
+            !target && "max-w-3xl",
+          )}
+        >
+          <ContentFormHiddenNotice />
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <AutoFormFileDisplayContext value="cover">
+                <ContentFormField name="coverImage" />
+              </AutoFormFileDisplayContext>
             </div>
-            {target ? (
-              <>
-                {outdated.includes(target) && !dismissed.includes(target) ? (
-                  <OutdatedBanner
-                    action={
-                      <>
-                        {ai.available &&
-                        aiUpdatableFields(target).length > 0 ? (
-                          <AiButton
-                            label={t("translate.update_changed")}
-                            onClick={() => {
-                              void translateFields(
-                                target,
-                                aiUpdatableFields(target),
-                              );
-                            }}
-                            pending={AI_TRANSLATED_FIELDS.some(field =>
-                              ai.isPending(`${field}:${target}`),
-                            )}
-                            pendingLabel={t("ai.translating")}
-                          />
-                        ) : null}
-                        <Button
-                          onClick={() => {
-                            freshness.markReviewed(
-                              target,
-                              freshness.outdatedFields(target),
-                            );
-                            setDismissed(current => [...current, target]);
-                          }}
-                          size="xs"
-                          type="button"
-                          variant="ghost"
-                        >
-                          {t("translate.mark_reviewed")}
-                        </Button>
-                      </>
-                    }
-                    fields={freshness
-                      .outdatedFields(target)
-                      .map(field => t(`translate.fields.${field}`))}
-                    onDismiss={() => {
-                      setDismissed(current => [...current, target]);
-                    }}
-                    sourceName={sourceName}
-                  />
-                ) : null}
-
-                {ai.available && missingFields(target).length > 0 ? (
-                  <div className="flex justify-end">
-                    <AiButton
-                      label={t("translate.missing_fields")}
-                      onClick={() => {
-                        void translateFields(target, missingFields(target));
-                      }}
-                      pending={AI_TRANSLATED_FIELDS.some(field =>
-                        ai.isPending(`${field}:${target}`),
-                      )}
-                      pendingLabel={t("ai.translating")}
-                    />
-                  </div>
-                ) : null}
-
-                <MultiLangLanguageContext value={target}>
-                  <PairRow
-                    action={fieldAction("coverImageAlt", target)}
-                    source={
-                      <p className="pt-7 text-sm leading-relaxed" lang={source}>
-                        {getLangValue(values.coverImageAlt, source) ||
-                          t("translate.empty_source", { language: sourceName })}
-                      </p>
-                    }
-                    sourceName={sourceName}
-                    status={statusOf("coverImageAlt", target)}
-                    targetName={languageName(target)}
-                  >
-                    <ContentFormField name="coverImageAlt" />
-                  </PairRow>
-                  <PairRow
-                    action={fieldAction("title", target)}
-                    source={
-                      <p
-                        className="text-2xl leading-tight font-bold tracking-tight text-balance"
-                        lang={source}
-                      >
-                        {getLangValue(values.title, source) ||
-                          t("translate.empty_source", { language: sourceName })}
-                      </p>
-                    }
-                    sourceName={sourceName}
-                    status={statusOf("title", target)}
-                    targetName={languageName(target)}
-                  >
-                    <ContentFormField name="title" />
-                  </PairRow>
-                  <PairRow
-                    action={fieldAction("friendlyUrl", target)}
-                    source={
-                      <p className="truncate text-sm" lang={source}>
-                        /blog/{getLangValue(values.friendlyUrl, source)}
-                      </p>
-                    }
-                    sourceName={sourceName}
-                    status={statusOf("friendlyUrl", target)}
-                    targetName={languageName(target)}
-                  >
-                    <ContentFormField name="friendlyUrl" />
-                  </PairRow>
-                </MultiLangLanguageContext>
-
-                {sharedFields}
-
-                <MultiLangLanguageContext value={target}>
-                  <PairRow
-                    action={fieldAction("content", target)}
-                    source={
-                      <div className="pt-16" lang={source}>
-                        <RichTextContent
-                          content={articleContent(values, source)}
-                        />
-                      </div>
-                    }
-                    sourceName={sourceName}
-                    status={statusOf("content", target)}
-                    targetName={languageName(target)}
-                  >
-                    {contentField}
-                  </PairRow>
-                </MultiLangLanguageContext>
-              </>
-            ) : (
+            {target ? null : (
               <MultiLangLanguageContext value={source}>
                 <div className="flex flex-col gap-2">
-                  <ContentFormField name="title" />
-                  <ContentFormField name="friendlyUrl" />
+                  <ContentFormField name="coverImageAlt" />
                 </div>
-                {sharedFields}
-                {contentField}
               </MultiLangLanguageContext>
             )}
           </div>
-        </div>
+          {target ? (
+            <>
+              {outdated.includes(target) && !dismissed.includes(target) ? (
+                <OutdatedBanner
+                  action={
+                    <>
+                      {ai.available && aiUpdatableFields(target).length > 0 ? (
+                        <AiButton
+                          label={t("translate.update_changed")}
+                          onClick={() => {
+                            void translateFields(
+                              target,
+                              aiUpdatableFields(target),
+                            );
+                          }}
+                          pending={AI_TRANSLATED_FIELDS.some(field =>
+                            ai.isPending(`${field}:${target}`),
+                          )}
+                          pendingLabel={t("ai.translating")}
+                        />
+                      ) : null}
+                      <Button
+                        onClick={() => {
+                          freshness.markReviewed(
+                            target,
+                            freshness.outdatedFields(target),
+                          );
+                          setDismissed(current => [...current, target]);
+                        }}
+                        size="xs"
+                        type="button"
+                        variant="ghost"
+                      >
+                        {t("translate.mark_reviewed")}
+                      </Button>
+                    </>
+                  }
+                  fields={freshness
+                    .outdatedFields(target)
+                    .map(field => t(`translate.fields.${field}`))}
+                  onDismiss={() => {
+                    setDismissed(current => [...current, target]);
+                  }}
+                  sourceName={sourceName}
+                />
+              ) : null}
 
+              {ai.available && missingFields(target).length > 0 ? (
+                <div className="flex justify-end">
+                  <AiButton
+                    label={t("translate.missing_fields")}
+                    onClick={() => {
+                      void translateFields(target, missingFields(target));
+                    }}
+                    pending={AI_TRANSLATED_FIELDS.some(field =>
+                      ai.isPending(`${field}:${target}`),
+                    )}
+                    pendingLabel={t("ai.translating")}
+                  />
+                </div>
+              ) : null}
+
+              <MultiLangLanguageContext value={target}>
+                <PairRow
+                  action={fieldAction("coverImageAlt", target)}
+                  source={
+                    <p className="pt-7 text-sm leading-relaxed" lang={source}>
+                      {getLangValue(values.coverImageAlt, source) ||
+                        t("translate.empty_source", { language: sourceName })}
+                    </p>
+                  }
+                  sourceName={sourceName}
+                  status={statusOf("coverImageAlt", target)}
+                  targetName={languageName(target)}
+                >
+                  <ContentFormField name="coverImageAlt" />
+                </PairRow>
+                <PairRow
+                  action={fieldAction("title", target)}
+                  source={
+                    <p
+                      className="text-2xl leading-tight font-bold tracking-tight text-balance"
+                      lang={source}
+                    >
+                      {getLangValue(values.title, source) ||
+                        t("translate.empty_source", { language: sourceName })}
+                    </p>
+                  }
+                  sourceName={sourceName}
+                  status={statusOf("title", target)}
+                  targetName={languageName(target)}
+                >
+                  <ContentFormField name="title" />
+                </PairRow>
+                <PairRow
+                  action={fieldAction("friendlyUrl", target)}
+                  source={
+                    <p className="truncate text-sm" lang={source}>
+                      /blog/{getLangValue(values.friendlyUrl, source)}
+                    </p>
+                  }
+                  sourceName={sourceName}
+                  status={statusOf("friendlyUrl", target)}
+                  targetName={languageName(target)}
+                >
+                  <ContentFormField name="friendlyUrl" />
+                </PairRow>
+              </MultiLangLanguageContext>
+
+              {sharedFields}
+
+              <MultiLangLanguageContext value={target}>
+                <PairRow
+                  action={fieldAction("content", target)}
+                  source={
+                    <div className="pt-16" lang={source}>
+                      <RichTextContent
+                        content={articleContent(values, source)}
+                      />
+                    </div>
+                  }
+                  sourceName={sourceName}
+                  status={statusOf("content", target)}
+                  targetName={languageName(target)}
+                >
+                  {contentField}
+                </PairRow>
+              </MultiLangLanguageContext>
+            </>
+          ) : (
+            <MultiLangLanguageContext value={source}>
+              <div className="flex flex-col gap-2">
+                <ContentFormField name="title" />
+                <ContentFormField name="friendlyUrl" />
+              </div>
+              {sharedFields}
+              {contentField}
+            </MultiLangLanguageContext>
+          )}
+        </div>
+      </div>
+
+      <Sheet
+        onOpenChange={open => {
+          if (!open) setSheet(null);
+        }}
+        open={sheet === "seo"}
+      >
+        <SheetContent className="w-full sm:max-w-md" keepMounted>
+          <SheetHeader>
+            <SheetTitle>{t("seo.title")}</SheetTitle>
+            <SheetDescription>{t("seo.desc")}</SheetDescription>
+          </SheetHeader>
+          <div className="overflow-y-auto px-4 pb-6">
+            <SeoAudit
+              actionsFor={actionsFor}
+              checks={checks}
+              cover={files?.coverImage}
+              languageName={languageName}
+              locale={fieldLocale}
+              onEditAlt={editAlt}
+              sourceName={sourceName}
+              values={values}
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {reviewAvailable ? (
         <Sheet
           onOpenChange={open => {
             if (!open) setSheet(null);
           }}
-          open={sheet === "seo"}
+          open={sheet === "review"}
         >
           <SheetContent className="w-full sm:max-w-md" keepMounted>
             <SheetHeader>
-              <SheetTitle>{t("seo.title")}</SheetTitle>
-              <SheetDescription>{t("seo.desc")}</SheetDescription>
+              <SheetTitle>{t("review.title")}</SheetTitle>
             </SheetHeader>
             <div className="overflow-y-auto px-4 pb-6">
-              <SeoAudit
-                actionsFor={actionsFor}
-                checks={checks}
-                cover={files?.coverImage}
-                excerptField={
-                  <MultiLangLanguageContext value={fieldLocale}>
-                    {target && getLangValue(values.excerpt, source).trim() ? (
-                      <p
-                        className="bg-muted text-muted-foreground rounded-md px-2.5 py-2 text-sm leading-relaxed"
-                        lang={source}
-                      >
-                        {getLangValue(values.excerpt, source)}
-                      </p>
-                    ) : null}
-                    <ContentFormField name="excerpt" />
-                  </MultiLangLanguageContext>
-                }
-                languageName={languageName}
+              <ArticleAiReview
+                content={articleContent(values, fieldLocale)}
                 locale={fieldLocale}
-                onEditAlt={editAlt}
-                sourceName={sourceName}
-                values={values}
+                onContentChange={next => {
+                  setContent(fieldLocale, next);
+                }}
+                title={getLangValue(values.title, fieldLocale)}
               />
             </div>
           </SheetContent>
         </Sheet>
-
-        {reviewAvailable ? (
-          <Sheet
-            onOpenChange={open => {
-              if (!open) setSheet(null);
-            }}
-            open={sheet === "review"}
-          >
-            <SheetContent className="w-full sm:max-w-md" keepMounted>
-              <SheetHeader>
-                <SheetTitle>{t("review.title")}</SheetTitle>
-              </SheetHeader>
-              <div className="overflow-y-auto px-4 pb-6">
-                <ArticleAiReview
-                  content={articleContent(values, fieldLocale)}
-                  excerpt={getLangValue(values.excerpt, fieldLocale)}
-                  locale={fieldLocale}
-                  onContentChange={next => {
-                    setContent(fieldLocale, next);
-                  }}
-                  title={getLangValue(values.title, fieldLocale)}
-                />
-              </div>
-            </SheetContent>
-          </Sheet>
-        ) : null}
-      </div>
-    </ArticleFieldActionsContext>
+      ) : null}
+    </div>
   );
 };

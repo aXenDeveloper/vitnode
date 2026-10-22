@@ -9,12 +9,7 @@ import {
 } from "@vitnode/core/content/rich-text";
 import { z } from "zod";
 
-import {
-  buildExcerptPrompt,
-  buildTranslatePrompt,
-  excerptSource,
-  unquote,
-} from "@/api/lib/ai-writing";
+import { buildTranslatePrompt, unquote } from "@/api/lib/ai-writing";
 import { manifest } from "@/manifest.gen";
 
 const zodLocale = z.string().min(2).max(16);
@@ -40,12 +35,6 @@ const translateSource = (input: TranslateAiInput) =>
   input.format === "richText"
     ? { format: "html" as const, text: richTextToHtml(input.document) }
     : { format: "text" as const, text: input.text };
-
-export const zodExcerptAiSchema = z.object({
-  content: createRichTextDocumentSchema({ required: true }),
-  locale: zodLocale,
-  title: z.string().trim().min(1).max(255),
-});
 
 const canEditPosts = async ({
   c,
@@ -91,34 +80,6 @@ const translateFieldAiAction = defineAiAction({
   requiredCapabilities: ["text"],
 });
 
-const excerptAiAction = defineAiAction({
-  authorize: canEditPosts,
-  buildPrompt: (input, { instructions }) =>
-    buildExcerptPrompt(
-      { ...input, content: richTextToPlainText(input.content) },
-      instructions,
-    ),
-  defaults: {
-    maxInputCharacters: 12_500,
-    maxOutputTokens: 300,
-    timeoutMs: 30_000,
-  },
-  description: "ai_actions.@vitnode/blog.excerpt_generate.description",
-  icon: "text-quote",
-  id: "excerpt.generate",
-  title: "ai_actions.@vitnode/blog.excerpt_generate.title",
-  inputSchema: zodExcerptAiSchema,
-  measureInput: input =>
-    input.title.length +
-    excerptSource(richTextToPlainText(input.content)).length,
-  output: "text",
-  outputSchema: z.string().min(1).max(300),
-  parseText: text => unquote(text),
-  permission: { defaultGranted: true, key: "excerpt" },
-  promptVersion: 1,
-  requiredCapabilities: ["text"],
-});
-
 const ARTICLE_REVIEW_AREAS = [
   "clarity",
   "completeness",
@@ -148,7 +109,7 @@ const zodArticleReview = z.object({
 const articleReviewAiAction = defineAiAction({
   authorize: canEditPosts,
   buildPrompt: (input, { instructions }) => ({
-    prompt: `Title: ${input.title}\n\nExcerpt: ${input.excerpt?.trim() ? input.excerpt : "(none)"}\n\nArticle:\n${richTextToPlainText(input.content).slice(0, 30_000)}`,
+    prompt: `Title: ${input.title}\n\nArticle:\n${richTextToPlainText(input.content).slice(0, 30_000)}`,
     system: [
       "You review a blog article draft before it is published and suggest improvements an editor can act on.",
       "Focus on clarity, completeness (missing context, undefined terms, an unclear conclusion), structure and tone.",
@@ -170,26 +131,20 @@ const articleReviewAiAction = defineAiAction({
   title: "ai_actions.@vitnode/blog.article_review.title",
   inputSchema: z.object({
     content: createRichTextDocumentSchema({ required: true }),
-    excerpt: z.string().max(1_000).optional(),
     locale: zodLocale,
     title: z.string().trim().min(1).max(255),
   }),
   measureInput: input =>
     input.title.length +
-    (input.excerpt?.length ?? 0) +
     Math.min(richTextToPlainText(input.content).length, 30_000),
   output: "object",
   outputSchema: zodArticleReview,
   permission: { defaultGranted: true, key: "review" },
-  promptVersion: 2,
+  promptVersion: 3,
   requiredCapabilities: ["text", "structured-output"],
 });
 
-export const blogAiActions = [
-  translateFieldAiAction,
-  excerptAiAction,
-  articleReviewAiAction,
-];
+export const blogAiActions = [translateFieldAiAction, articleReviewAiAction];
 
 export const TRANSLATE_FIELD_AI_ACTION = aiActionRef(
   manifest.id,
@@ -199,4 +154,3 @@ export const ARTICLE_REVIEW_AI_ACTION = aiActionRef(
   manifest.id,
   articleReviewAiAction,
 );
-export const EXCERPT_AI_ACTION = aiActionRef(manifest.id, excerptAiAction);

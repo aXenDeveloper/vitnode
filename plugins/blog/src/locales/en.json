@@ -16,8 +16,7 @@
           "coverImageAlt": "Cover image alt text",
           "status": "Status",
           "publishedAt": "Published",
-          "updatedAt": "Updated",
-          "excerpt": "Excerpt"
+          "updatedAt": "Updated"
         }
       },
       "category": {
@@ -42,10 +41,6 @@
           "title": {
             "placeholder": "Article title"
           },
-          "excerpt": {
-            "placeholder": "One or two sentences that make someone click.",
-            "hint": "Shown on the blog list and as the search result description."
-          },
           "alt": {
             "placeholder": "What the image shows",
             "hint": "Read aloud by screen readers instead of the image.",
@@ -53,7 +48,6 @@
           },
           "counter": {
             "title": "Search results show about {max} characters.",
-            "excerpt": "Search results show about {max} characters.",
             "coverImageAlt": "Screen readers read about {max} characters before pausing."
           },
           "translate": {
@@ -86,15 +80,12 @@
             "fields": {
               "title": "title",
               "content": "content",
-              "excerpt": "excerpt",
               "coverImageAlt": "image ALT text",
               "friendlyUrl": "URL"
             }
           },
           "ai": {
-            "write_excerpt": "Write with AI",
             "translating": "Translating…",
-            "writing": "Writing…",
             "done": "Done. Read it through before you save.",
             "error": "The AI request did not finish. Try again in a moment.",
             "not_configured": "No AI model is configured for this site."
@@ -104,8 +95,6 @@
             "checks": {
               "title": "Title fits search results",
               "title_detail": "{languages}: longer than {max} characters.",
-              "excerpt": "Excerpt in every language",
-              "excerpt_detail": "Missing in {languages}.",
               "cover": "Cover image",
               "cover_detail": "Shown on the blog list and when the article is shared.",
               "alt": "Cover alt text in every language",
@@ -114,8 +103,7 @@
               "translations_detail": "{language}: {count, plural, one {# field} other {# fields}} missing",
               "outdated": "Translations up to date",
               "outdated_detail": "{languages} changed less recently than {source}.",
-              "open": "Open {language}",
-              "write": "Write with AI"
+              "open": "Open {language}"
             }
           },
           "review": {
@@ -156,7 +144,6 @@
             "needs_work": "Needs work",
             "rows": {
               "title": "Title",
-              "excerpt": "Excerpt",
               "url": "URL",
               "cover": "Social image",
               "alt": "Image alt text"
@@ -217,7 +204,13 @@
         "title": "This article is hidden",
         "desc": "Only its authors, editors and moderators can see it. Everyone else gets a page not found, and it stays out of search and the sitemap."
       },
-      "report_type": "article"
+      "report_type": "article",
+      "back": "Back to articles",
+      "categories": "Categories",
+      "by": "By",
+      "edited": "Edited",
+      "reading_time": "{minutes} min read",
+      "on_this_page": "On this page"
     }
   },
   "@vitnode/blog:posts": "Articles",
@@ -241,10 +234,6 @@
       "article_review": {
         "title": "Review article before publishing",
         "description": "Suggests clarity and completeness improvements before publishing."
-      },
-      "excerpt_generate": {
-        "title": "Generate excerpt",
-        "description": "Writes a short excerpt for an article."
       },
       "field_translate": {
         "title": "Translate article field",
