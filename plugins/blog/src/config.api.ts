@@ -24,8 +24,8 @@ import { manifest } from "@/manifest.gen";
  *   article count) the `/blog` sidebar and article labels read. Categories
  *   have no `publicApi`, so this is their only public route.
  *
- * The blog's AI actions (field translation, excerpt and article review) are
- * registered here too.
+ * The blog's AI actions (field translation and article review) are registered
+ * here too.
  *
  * @example
  * ```ts

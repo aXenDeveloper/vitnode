@@ -126,7 +126,7 @@ import { richTextToPlainText } from "@vitnode/core/content";
 const words = richTextToPlainText(post.content).split(/\s+/).length;
 ```
 
-The Content Engine already uses them. Site search indexes the words of a rich text field listed in `search.contentFields`. A rich text field named in `delivery.seo.descriptionField` or `fallbackDescriptionField` becomes a plain text description, which is how the blog fills its meta description from `content` when an article has no excerpt. The revision history compares documents as text.
+The Content Engine already uses them. Site search indexes the words of a rich text field listed in `search.contentFields`. A rich text field named in `delivery.seo.descriptionField` or `fallbackDescriptionField` becomes a plain text description, which is how the blog fills its meta description from `content`. The revision history compares documents as text.
 
 ## Use the editor in your own form
 

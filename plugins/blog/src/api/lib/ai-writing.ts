@@ -4,9 +4,6 @@ import { languageName } from "@vitnode/core/api/lib/ai/language-name";
 
 export type AiTextFormat = "html" | "text";
 
-export const EXCERPT_RECOMMENDED_LENGTH = 160;
-const EXCERPT_SOURCE_CHARACTERS = 12_000;
-
 export const unquote = (text: string) =>
   text
     .trim()
@@ -38,28 +35,4 @@ export const buildTranslatePrompt = (
     instructions,
   ),
   prompt: text,
-});
-
-export const excerptSource = (plainText: string) =>
-  plainText.slice(0, EXCERPT_SOURCE_CHARACTERS);
-
-export const buildExcerptPrompt = (
-  {
-    content,
-    locale,
-    title,
-  }: { content: string; locale: string; title: string },
-  instructions: null | string = null,
-): AiPrompt => ({
-  system: withInstructions(
-    [
-      "You write the excerpt of a blog article: one or two sentences shown on the blog list and as the search result description.",
-      `Write it in ${languageName(locale)}.`,
-      `Keep it under ${EXCERPT_RECOMMENDED_LENGTH} characters.`,
-      "Make it specific to the article, never generic, and do not start with the title.",
-      "Answer with the excerpt only, without quotes, notes or explanations.",
-    ],
-    instructions,
-  ),
-  prompt: `Title: ${title}\n\nArticle:\n${excerptSource(content)}`,
 });

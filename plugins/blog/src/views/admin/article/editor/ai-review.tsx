@@ -179,13 +179,11 @@ const SuggestionCard = ({
 
 export const ArticleAiReview = ({
   content,
-  excerpt,
   locale,
   onContentChange,
   title,
 }: {
   content: null | RichTextDocument;
-  excerpt: string;
   locale: string;
   onContentChange: (document: RichTextDocument) => void;
   title: string;
@@ -203,7 +201,7 @@ export const ArticleAiReview = ({
     try {
       const { output } = await requestAiAssist({
         action: ARTICLE_REVIEW_ACTION,
-        input: { content, excerpt: excerpt || undefined, locale, title },
+        input: { content, locale, title },
       });
       if (isReview(output)) {
         setReview(output);

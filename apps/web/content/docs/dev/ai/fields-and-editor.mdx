@@ -8,16 +8,15 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 Give a Content Engine `text` or `textarea` field an `ai` option and the AdminCP form shows an **AI** button next to it. The button runs a registered [AI action](/docs/dev/ai/actions) with the other fields as input, shows the suggestion for review, and writes nothing until the editor accepts it.
 
-```ts title="plugins/blog/src/content/post.ts"
+```ts title="plugins/example/src/content/article.ts"
 excerpt: field.textarea({
   ai: {
-    action: '@vitnode/blog:excerpt.generate',
+    action: '@vitnode/example:article.excerpt',
     mode: 'suggestion',
-    sourceFields: ['title', 'content'],
+    sourceFields: ['title', 'code'],
   },
-  localized: true,
+  maxLength: 500,
   nullable: true,
-  maxLength: 300,
 }),
 ```
 

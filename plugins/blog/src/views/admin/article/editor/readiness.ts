@@ -11,7 +11,6 @@ export const TRANSLATED_FIELDS = [
   "title",
   "friendlyUrl",
   "content",
-  "excerpt",
   "coverImageAlt",
 ] as const;
 
@@ -25,7 +24,6 @@ export const REQUIRED_TRANSLATED_FIELDS = [
 
 export const RECOMMENDED_LENGTH = {
   coverImageAlt: 125,
-  excerpt: 160,
   title: 60,
 } as const;
 
@@ -84,7 +82,6 @@ const startedLocales = (
 export type ArticleCheck =
   | { id: "alt"; missing: string[]; ok: boolean }
   | { id: "cover"; ok: boolean }
-  | { id: "excerpt"; missing: string[]; ok: boolean }
   | { id: "outdated"; ok: boolean; outdated: string[] }
   | { id: "title"; ok: boolean; tooLong: string[] }
   | { id: "translations"; missing: Record<string, number>; ok: boolean };
@@ -104,9 +101,6 @@ export const articleChecks = ({
   const tooLong = started.filter(
     locale =>
       fieldText(values, "title", locale).length > RECOMMENDED_LENGTH.title,
-  );
-  const missingExcerpt = started.filter(
-    locale => !hasFieldText(values, "excerpt", locale),
   );
   const hasCover =
     values.coverImage !== null && values.coverImage !== undefined;
@@ -129,7 +123,6 @@ export const articleChecks = ({
 
   return [
     { id: "title", ok: tooLong.length === 0, tooLong },
-    { id: "excerpt", missing: missingExcerpt, ok: missingExcerpt.length === 0 },
     { id: "cover", ok: hasCover },
     { id: "alt", missing: missingAlt, ok: missingAlt.length === 0 },
     {

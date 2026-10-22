@@ -6,7 +6,7 @@ import { blogCategoryContentType } from "./category";
  * The blog article (`blog.post`, table `blog_posts`) - the blog's reference
  * for a fully featured content type.
  *
- * - Localized title, slug, body, excerpt and cover alt text, falling back to
+ * - Localized title, slug, body and cover alt text, falling back to
  *   the `en` translation when a locale has none of its own. Categories,
  *   authors and the cover image are shared across languages.
  * - Draft/publish lifecycle with scheduling, revisions (20 kept per article),
@@ -74,16 +74,6 @@ export const blogPostContentType = defineContentType({
       source: "title",
     }),
     content: field.richText({ localized: true, required: true }),
-    excerpt: field.textarea({
-      ai: {
-        action: "@vitnode/blog:excerpt.generate",
-        mode: "suggestion",
-        sourceFields: ["title", "content"],
-      },
-      localized: true,
-      nullable: true,
-      maxLength: 300,
-    }),
 
     coverImage: field.file({
       maxBytes: 5 * 1024 * 1024,
@@ -108,7 +98,6 @@ export const blogPostContentType = defineContentType({
       "title",
       "friendlyUrl",
       "content",
-      "excerpt",
       "categoryId",
       // A file crosses the public boundary as the normalised descriptor - `{ id,
       // name, url, mimeType, size, width, height }` - and never as the
@@ -118,6 +107,7 @@ export const blogPostContentType = defineContentType({
       "coverImage",
       "coverImageAlt",
       "publishedAt",
+      "updatedAt",
     ],
     // What a card on `/blog` needs. The rich-text body is left to the detail
     // route, so a page of 12 articles never selects 12 full documents.
@@ -125,7 +115,6 @@ export const blogPostContentType = defineContentType({
       "id",
       "title",
       "friendlyUrl",
-      "excerpt",
       "categoryId",
       "coverImage",
       "coverImageAlt",
@@ -154,8 +143,7 @@ export const blogPostContentType = defineContentType({
     redirects: true,
     seo: {
       titleField: "title",
-      descriptionField: "excerpt",
-      fallbackDescriptionField: "content",
+      descriptionField: "content",
     },
     sitemap: { changeFrequency: "weekly", priority: 0.7 },
     hreflang: { xDefault: "defaultLocale" },

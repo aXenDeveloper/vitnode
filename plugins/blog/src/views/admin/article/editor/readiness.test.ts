@@ -31,7 +31,6 @@ const values: ArticleValues = {
   }),
   coverImage: 12,
   coverImageAlt: lang({ en: "A dashboard" }),
-  excerpt: lang({ en: "Short summary" }),
   friendlyUrl: lang({ en: "hello-world", pl: "witaj-swiecie" }),
   title: lang({
     en: "VitNode 2.0: rebuilding the AdminCP for teams that publish every day",
@@ -80,8 +79,8 @@ describe("translatedFieldStatus", () => {
   it("has nothing to translate when the source is empty too", () => {
     expect(
       translatedFieldStatus(
-        { ...values, excerpt: lang({ en: "" }) },
-        "excerpt",
+        { ...values, coverImageAlt: lang({ en: "" }) },
+        "coverImageAlt",
         { source: "en", target: "pl" },
       ),
     ).toBe("unavailable");
@@ -105,8 +104,7 @@ describe("articleChecks", () => {
     expect(check("title")).toEqual({ id: "title", ok: false, tooLong: ["en"] });
   });
 
-  it("asks for an excerpt and alt text only in started languages", () => {
-    expect(check("excerpt").missing).toEqual(["pl"]);
+  it("asks for alt text only in started languages", () => {
     expect(check("alt").missing).toEqual(["pl"]);
   });
 

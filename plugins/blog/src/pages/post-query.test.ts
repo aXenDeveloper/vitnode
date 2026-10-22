@@ -9,12 +9,12 @@ const ITEM: BlogPostAnswer["item"] = {
   content: { content: [], type: "doc" },
   coverImage: null,
   coverImageAlt: null,
-  excerpt: null,
   friendlyUrl: "hello",
   id: 1,
   locale: "en",
   publishedAt: "2026-01-01T00:00:00.000Z",
   title: "Hello",
+  updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
 const content = (hidden: boolean): BlogPostAnswer["resolution"] => ({

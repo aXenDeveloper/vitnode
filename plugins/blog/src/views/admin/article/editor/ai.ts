@@ -2,10 +2,6 @@ import type { EditorEmojiSection } from "@vitnode/core/components/editor-provide
 import type { RichTextDocument } from "@vitnode/core/content/rich-text";
 
 import { richTextDocumentFromHtml } from "@vitnode/core/components/tiptap/rich-text-json";
-import {
-  AiRequestError,
-  requestAiAssist,
-} from "@vitnode/core/lib/ai/assist-client";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 import { manifest } from "@/manifest.gen";
@@ -62,27 +58,4 @@ export const translateArticleContent = async ({
   const { text } = await response.json();
 
   return richTextDocumentFromHtml(text, { customEmojis });
-};
-
-export const writeArticleExcerpt = async (input: {
-  content: RichTextDocument;
-  locale: string;
-  title: string;
-}): Promise<string> => {
-  try {
-    const { output } = await requestAiAssist({
-      action: `${manifest.id}:excerpt.generate`,
-      input,
-    });
-    if (typeof output !== "string") throw new ArticleAiError(502);
-
-    return output;
-  } catch (error) {
-    if (error instanceof AiRequestError) {
-      throw new ArticleAiError(
-        error.code === "AI_NOT_CONFIGURED" ? 400 : error.status,
-      );
-    }
-    throw error;
-  }
 };

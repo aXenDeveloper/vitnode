@@ -63,7 +63,6 @@ const renderReview = (content: RichTextDocument) => {
     >
       <ArticleAiReview
         content={content}
-        excerpt=""
         locale="en"
         onContentChange={onContentChange}
         title="Title"

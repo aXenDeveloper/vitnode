@@ -48,8 +48,6 @@ export const useCheckDetail = ({
         return t("checks.alt_detail", { languages: list(check.missing) });
       case "cover":
         return t("checks.cover_detail");
-      case "excerpt":
-        return t("checks.excerpt_detail", { languages: list(check.missing) });
       case "outdated":
         return t("checks.outdated_detail", {
           languages: list(check.outdated),

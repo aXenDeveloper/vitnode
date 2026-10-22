@@ -14,7 +14,6 @@ import {
 import { cn } from "cn";
 import { useTranslations } from "use-intl";
 
-import { useArticleFieldAction } from "./field-actions";
 import { RECOMMENDED_LENGTH } from "./readiness";
 
 const fieldClassName =
@@ -112,50 +111,8 @@ export const ArticleSlugField = ({ field }: ItemAutoFormComponentProps) => {
   );
 };
 
-export const ArticleExcerptField = ({ field }: ItemAutoFormComponentProps) => {
-  const t = useTranslations("@vitnode/blog");
-  const labelRight = useArticleFieldAction("excerpt");
-  const { currentValue, selected, setValue } = useMultiLangField(
-    field as MultiLangFieldProps["field"],
-  );
-
-  return (
-    <>
-      <AutoFormLabel isOptional labelRight={labelRight}>
-        {t("content.post.fields.excerpt")}
-      </AutoFormLabel>
-      <FormControl>
-        <textarea
-          className={cn(
-            fieldClassName,
-            "field-sizing-content min-h-20 resize-none py-2 leading-relaxed",
-          )}
-          lang={selected}
-          maxLength={300}
-          name={field.name}
-          onBlur={field.onBlur}
-          onChange={event => {
-            setValue(event.target.value);
-          }}
-          placeholder={t("admin.article.editor.excerpt.placeholder")}
-          rows={3}
-          value={currentValue}
-        />
-      </FormControl>
-      <div className="flex items-start justify-between gap-3">
-        <p className="text-muted-foreground text-xs leading-relaxed text-pretty">
-          {t("admin.article.editor.excerpt.hint")}
-        </p>
-        <CharacterCount field="excerpt" value={currentValue} />
-      </div>
-      <FormMessage />
-    </>
-  );
-};
-
 export const ArticleCoverAltField = ({ field }: ItemAutoFormComponentProps) => {
   const t = useTranslations("@vitnode/blog");
-  const labelRight = useArticleFieldAction("coverImageAlt");
   const {
     canSelect,
     currentValue,
@@ -175,7 +132,6 @@ export const ArticleCoverAltField = ({ field }: ItemAutoFormComponentProps) => {
         canSelect={canSelect}
         isOptional
         label={t("content.post.fields.coverImageAlt")}
-        labelRight={labelRight}
         languages={languages}
         onSelect={setSelected}
         selected={selected}
