@@ -12,7 +12,7 @@ import type {
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { DateFormat } from "@/components/date-format";
-import { RoleFormatContent } from "@/components/role-format-content";
+import { RoleFormat } from "@/components/role-format";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { ContentDataTable } from "@/components/table/content";
 import { Badge } from "@/components/ui/badge";
@@ -132,7 +132,7 @@ export const StaffTableContent = ({
           accessorKey: "role",
           cell: ({ row }) =>
             row.role ? (
-              <RoleFormatContent role={row.role} />
+              <RoleFormat role={row.role} />
             ) : (
               <span className="text-muted-foreground">—</span>
             ),

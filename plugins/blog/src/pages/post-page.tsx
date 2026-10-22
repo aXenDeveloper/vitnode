@@ -162,7 +162,8 @@ const PostAuthors = ({ authors }: { authors: BlogPostItem["authorId"] }) => {
         {format.list(
           authors.map(author => (
             <UserFormat
-              className="text-foreground inline"
+              className="text-foreground align-bottom"
+              format
               key={author.id}
               link
               title={author.name}
@@ -328,7 +329,7 @@ const BlogPostPage = ({
           ) : null}
 
           {hasToc ? (
-            <details className="group bg-card rounded-lg border lg:hidden">
+            <details className="group bg-card text-card-foreground rounded-lg border lg:hidden">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-4 text-sm font-medium [&::-webkit-details-marker]:hidden">
                 <span className="flex items-center gap-2">
                   <TextAlignStartIcon

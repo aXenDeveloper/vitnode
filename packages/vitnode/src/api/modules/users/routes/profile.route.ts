@@ -3,7 +3,7 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@/api/builders";
 import { resolveUserRoles, userRoleSchema } from "@/api/lib/resolve-user-roles";
 import { UserModel } from "@/api/models/user";
-import { displayNameOf } from "@/lib/user-personal-information";
+import { publicFullNameOf } from "@/lib/user-personal-information";
 
 export const profileRoute = buildRoute({
   route: {
@@ -60,12 +60,9 @@ export const profileRoute = buildRoute({
     return c.json(
       {
         id: user.id,
-        name: displayNameOf({
-          ...user,
-          showRealName:
-            c.get("core").personalInformationFields.showRealName &&
-            user.showRealName,
-        }),
+        name:
+          publicFullNameOf(user, c.get("core").personalInformationFields) ??
+          user.name,
         nameCode: user.nameCode,
         headline: c.get("core").personalInformationFields.headline
           ? user.headline

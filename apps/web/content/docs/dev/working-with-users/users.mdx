@@ -168,6 +168,13 @@ returns the answer as `name`, so a real name the user has not published never
 leaves the API. When the switch is on but neither half is set, the nickname is
 used, so turning it on early cannot leave a profile with an empty heading.
 
+People in content, such as a blog post's authors, carry the same answer as
+`fullName`: the real name when it is published, `null` otherwise.
+[`UserFormat`](/docs/ui/user-format) shows it in place of the nickname. To
+publish a real name from your own route, use `publicFullNameOf` from
+`@vitnode/core/lib/user-personal-information` and never send `firstName` or
+`lastName` to other people.
+
 The AdminCP and search always show `name`, the account's own nickname - staff
 need the identifier the account is filed under.
 

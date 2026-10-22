@@ -9,7 +9,7 @@ import {
 import { useFormatter, useTranslations } from "use-intl";
 
 import { Avatar } from "@/components/avatar";
-import { RoleFormatContent } from "@/components/role-format-content";
+import { RoleFormat } from "@/components/role-format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserCoverImage } from "@/components/user-cover-image";
 
@@ -60,7 +60,7 @@ const SecondaryRoles = ({ roles }: { roles: ProfileRole[] }) => {
             <ul className="flex flex-wrap gap-x-4 gap-y-1">
               {roles.map(role => (
                 <li key={role.id}>
-                  <RoleFormatContent role={role} />
+                  <RoleFormat role={role} />
                 </li>
               ))}
             </ul>
@@ -149,7 +149,7 @@ export const ProfileContent = ({
 
             <ul className="text-muted-foreground flex max-w-full flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-sm sm:justify-start">
               <MetaItem label={t("role")}>
-                <RoleFormatContent role={user.role} />
+                <RoleFormat role={user.role} />
               </MetaItem>
 
               {user.headline ? (

@@ -80,6 +80,26 @@ export const fullNameOf = ({
   return parts.length > 0 ? parts.join(" ") : null;
 };
 
+/**
+ * The real name a member lets everyone see, or `null` when the install turns
+ * "Show my real name" off, the member did not opt in, or the name fields are
+ * disabled. Send this to the browser instead of `firstName` / `lastName`.
+ */
+export const publicFullNameOf = (
+  user: Pick<
+    UserPersonalInformation,
+    "firstName" | "lastName" | "showRealName"
+  >,
+  fields: PersonalInformationFields,
+): null | string => {
+  if (!fields.showRealName || !user.showRealName) return null;
+
+  return fullNameOf({
+    firstName: fields.firstName ? user.firstName : null,
+    lastName: fields.lastName ? user.lastName : null,
+  });
+};
+
 export const displayNameOf = ({
   firstName,
   lastName,

@@ -76,6 +76,8 @@
     "card",
     "item",
     "avatar",
+    "user-format",
+    "role-format",
     "badge",
     "marker",
     "kbd",

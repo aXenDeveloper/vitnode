@@ -8,6 +8,7 @@ import { storageUrlOf } from "@/api/lib/storage-url";
 import { core_files } from "@/database/files";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
+import { publicFullNameOf } from "@/lib/user-personal-information";
 
 export type { ContentPublicPerson } from "@/content/public-person";
 export { zodContentPublicPerson as zodPublicPerson } from "@/content/public-person";
@@ -26,16 +27,21 @@ export const loadPublicPeople = async (
   ];
   if (unique.length === 0) return new Map();
 
+  const fields = c.get("core").personalInformationFields;
+
   const rows = await c
     .get("db")
     .select({
       avatarColor: core_users.avatarColor,
       avatarKey: core_files.key,
+      firstName: core_users.firstName,
       id: core_users.id,
+      lastName: core_users.lastName,
       name: core_users.name,
       nameCode: core_users.nameCode,
       roleColor: core_roles.color,
       rolePrefix: core_roles.prefix,
+      showRealName: core_users.showRealName,
     })
     .from(core_users)
     .leftJoin(core_roles, eq(core_roles.id, core_users.roleId))
@@ -48,6 +54,7 @@ export const loadPublicPeople = async (
       {
         avatarColor: row.avatarColor,
         avatarUrl: storageUrlOf(c, row.avatarKey),
+        fullName: publicFullNameOf(row, fields),
         id: row.id,
         name: row.name,
         nameCode: row.nameCode,

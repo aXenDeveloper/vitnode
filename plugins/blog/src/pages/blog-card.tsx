@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 
 import { Avatar } from "@vitnode/core/components/avatar";
 import { HiddenIcon } from "@vitnode/core/components/hidden-icon";
+import { UserFormat } from "@vitnode/core/components/user-format";
 import { resolveImageAlt } from "@vitnode/core/lib/files/resolve-alt";
 import { getIntlRuntime } from "@vitnode/core/tanstack/i18n";
 import { HrefLink } from "@vitnode/core/tanstack/link";
@@ -117,13 +118,51 @@ const BlogCategoryTags = ({
   );
 };
 
+type BlogPostAuthor = BlogPostCardData["authorId"][number];
+
+const BlogPostAuthors = ({
+  authors,
+  onImage,
+}: {
+  authors: BlogPostAuthor[];
+  onImage: boolean;
+}) => {
+  const t = useTranslations("@vitnode/blog.list");
+  const [first, second] = authors;
+  const authorName = (author: BlogPostAuthor) => (
+    <UserFormat
+      className="max-w-full align-bottom"
+      format={!onImage}
+      user={author}
+    />
+  );
+
+  if (authors.length === 2) {
+    return t.rich("authors_two", {
+      first: () => authorName(first),
+      second: () => authorName(second),
+    });
+  }
+
+  if (authors.length > 2) {
+    return t.rich("authors_many", {
+      count: authors.length - 1,
+      first: () => authorName(first),
+    });
+  }
+
+  return authorName(first);
+};
+
 const BlogPostByline = ({
   className,
+  onImage = false,
   post,
   ringClassName,
   size = 24,
 }: {
   className?: string;
+  onImage?: boolean;
   post: BlogPostCardData;
   ringClassName: string;
   size?: number;
@@ -131,13 +170,6 @@ const BlogPostByline = ({
   const t = useTranslations("@vitnode/blog.list");
   const format = useFormatter();
   const { authorId: authors } = post;
-  const [first, second] = authors;
-  const authorsLabel =
-    authors.length === 2
-      ? t("authors_two", { first: first.name, second: second.name })
-      : authors.length > 2
-        ? t("authors_many", { count: authors.length - 1, first: first.name })
-        : first?.name;
 
   return (
     <div
@@ -167,7 +199,7 @@ const BlogPostByline = ({
             </span>
             <span className="truncate">
               <span className="sr-only">{t("by")} </span>
-              {authorsLabel}
+              <BlogPostAuthors authors={authors} onImage={onImage} />
             </span>
           </span>
           {post.publishedAt ? <span aria-hidden="true">·</span> : null}
@@ -343,6 +375,7 @@ export const BlogPostTile = ({
           </h3>
           <BlogPostByline
             className="text-white/80"
+            onImage
             post={post}
             ringClassName="ring-black/40"
             size={isLead ? 28 : 24}

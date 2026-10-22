@@ -1,6 +1,6 @@
 ---
 title: User
-description: Pick a person in an Auto Form field that stores the user id, or show a member's name with their role color and a link to their profile.
+description: Pick a person in an Auto Form field that stores the user id, with each name in its role color.
 icon: CircleUser
 ---
 
@@ -88,25 +88,6 @@ role's prefix in the AdminCP. In the AdminCP, `searchAdminUsersInBrowser`
 already returns each person's primary role, so its pickers show colored names
 without extra work.
 
-## Show a member's name
-
-<Preview name="user-format" />
-
-`UserFormat` prints a name the way the rest of the site does. `format` adds the
-role color and prefix, and `link` turns the name into a link to the member's
-profile at `/users/<nameCode>`.
-
-```tsx
-import { UserFormat } from '@vitnode/core/components/user-format'
-
-<UserFormat format link user={user} />
-```
-
-`user` is `{ name, nameCode?, role: { color, prefix? } }`. `link` needs a
-`nameCode`; without one, the name renders as plain text. Leave `link` off when
-the name sits inside another link or a button, such as a table row that
-already opens something.
-
 ## Custom search
 
 `search` can call any endpoint: a plugin's own members, fixtures in a test.
@@ -146,5 +127,6 @@ picker route, so editors can pick an author without browsing the member list.
 
 ## See also
 
+- [User Format](/docs/ui/user-format) - show a member's name outside a form.
 - [Roles](/docs/ui/roles) - the same idea for roles, single or multiple.
 - [Combobox](/docs/ui/combobox) - when the options are strings, not people.

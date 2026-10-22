@@ -18,7 +18,7 @@ import type {
   AdminRoleSearch,
 } from "@/views/admin/views/core/users/roles/roles-query";
 
-import { RoleFormatContent } from "@/components/role-format-content";
+import { RoleFormat } from "@/components/role-format";
 import { resolveRoleName } from "@/components/role-name";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -147,7 +147,7 @@ const RolePicker = ({
                             : "opacity-0",
                         )}
                       />
-                      <RoleFormatContent className="truncate" role={role} />
+                      <RoleFormat className="truncate" role={role} />
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -259,7 +259,7 @@ const EditRolesForm = ({
           triggerContent={
             <>
               {primary ? (
-                <RoleFormatContent className="truncate" role={primary} />
+                <RoleFormat className="truncate" role={primary} />
               ) : (
                 <span className="text-muted-foreground">{t("selectRole")}</span>
               )}
@@ -411,7 +411,7 @@ export const UserRolesCardContent = ({
           <span className="text-muted-foreground text-sm">
             {t("primaryRole")}
           </span>
-          <RoleFormatContent role={role} />
+          <RoleFormat role={role} />
         </div>
 
         {secondaryRoles.length > 0 && (
@@ -421,7 +421,7 @@ export const UserRolesCardContent = ({
             </span>
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               {secondaryRoles.map(item => (
-                <RoleFormatContent key={item.id} role={item} />
+                <RoleFormat key={item.id} role={item} />
               ))}
             </div>
           </div>

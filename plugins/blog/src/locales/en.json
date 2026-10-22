@@ -178,8 +178,8 @@
       "article_count": "{count, plural, one {# article} other {# articles}}",
       "more_categories": "{count, plural, one {# more category} other {# more categories}}",
       "by": "By",
-      "authors_two": "{first} & {second}",
-      "authors_many": "{first} +{count}",
+      "authors_two": "<first></first> & <second></second>",
+      "authors_many": "<first></first> +{count}",
       "published": "Published",
       "pagination": "Blog pages",
       "empty": {

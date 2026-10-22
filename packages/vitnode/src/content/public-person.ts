@@ -10,9 +10,15 @@ export interface ContentPublicPerson {
   /** The background of the initials avatar shown without `avatarUrl`. */
   avatarColor: string;
   avatarUrl: null | string;
+  /**
+   * The first and last name, set only when the member turned on "Show my real
+   * name" and the install allows it; `null` otherwise. `UserFormat` shows it
+   * in place of `name`.
+   */
+  fullName?: null | string;
   /** The user id - compare it with the session's user to find the owner. */
   id: number;
-  /** The display name. */
+  /** The nickname. */
   name: string;
   /** The profile URL segment: `/users/{nameCode}`. */
   nameCode: string;
@@ -25,6 +31,7 @@ export interface ContentPublicPerson {
 export const zodContentPublicPerson = z.object({
   avatarColor: z.string(),
   avatarUrl: z.string().nullable(),
+  fullName: z.string().nullable().optional(),
   id: z.number(),
   name: z.string(),
   nameCode: z.string(),

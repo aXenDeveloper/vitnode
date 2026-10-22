@@ -206,7 +206,7 @@ The detail route returns each field in `publicApi.fields` in a shape made for re
 | [Rich text](/docs/content-engine/rich-text) | A ProseMirror document. Validate it with `zodRichTextDocument`          | `RichTextContent` from `@vitnode/core/components/rich-text`                                         |
 | Dates such as `publishedAt`      | An ISO string, or `null`                                                           | `DateFormat` from `@vitnode/core/components/date-format` inside a `<time dateTime>`                 |
 | [Files](/docs/content-engine/plugin-files) | `{ id, url, name, size, mimeType, width?, height?, alts? }`, never the stored file id | An `<img>` with `url`, `width` and `height`; pick the alt text with `resolveImageAlt` from `@vitnode/core/lib/files/resolve-alt` |
-| People from `publicApi.people`   | `{ id, name, nameCode, avatarColor, avatarUrl, role }`, or `null` for a deleted account | `UserFormat` from `@vitnode/core/components/user-format`, `Avatar` from `@vitnode/core/components/avatar` |
+| People from `publicApi.people`   | `{ id, name, fullName, nameCode, avatarColor, avatarUrl, role }`, or `null` for a deleted account | `UserFormat` from `@vitnode/core/components/user-format`, `Avatar` from `@vitnode/core/components/avatar` |
 | To-one relations                 | `{ id }`                                                                            | Load the related record separately when you need more than its id                                   |
 
 ```tsx title="plugins/example/src/pages/discussion-page.tsx"

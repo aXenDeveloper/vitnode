@@ -46,7 +46,7 @@ server.
 ```tsx title="search-roles.tsx"
 import type { FilterOption } from '@vitnode/core/components/table/filters'
 
-import { RoleFormatContent } from '@vitnode/core/components/role-format-content'
+import { RoleFormat } from '@vitnode/core/components/role-format'
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
 
 export const searchRoles = async (search: string): Promise<FilterOption[]> => {
@@ -65,7 +65,7 @@ export const searchRoles = async (search: string): Promise<FilterOption[]> => {
 
   return data.edges.map((role) => ({
     value: String(role.id),
-    label: <RoleFormatContent role={role} />,
+    label: <RoleFormat role={role} />,
     keywords: role.name.map((item) => item.name),
   }))
 }

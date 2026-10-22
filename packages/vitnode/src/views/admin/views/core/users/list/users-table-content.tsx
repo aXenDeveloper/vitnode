@@ -9,7 +9,7 @@ import type { AdminRoleSearch } from "@/views/admin/views/core/users/roles/roles
 
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
-import { RoleFormatContent } from "@/components/role-format-content";
+import { RoleFormat } from "@/components/role-format";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { ContentDataTable } from "@/components/table/content";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -136,7 +136,7 @@ export const UsersAdminTableContent = ({
     async (search: string): Promise<FilterOption[]> =>
       (await searchRoles(search)).map(role => ({
         keywords: role.name.map(item => item.name),
-        label: <RoleFormatContent role={role} />,
+        label: <RoleFormat role={role} />,
         value: String(role.id),
       })),
     [searchRoles],
@@ -186,11 +186,11 @@ export const UsersAdminTableContent = ({
           accessorKey: "roleId",
           cell: ({ row }) => (
             <div className="flex flex-col items-start gap-1">
-              <RoleFormatContent role={row.role} />
+              <RoleFormat role={row.role} />
               {row.secondaryRoles.length > 0 && (
                 <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm">
                   {row.secondaryRoles.slice(0, 3).map(role => (
-                    <RoleFormatContent key={role.id} role={role} />
+                    <RoleFormat key={role.id} role={role} />
                   ))}
                   {row.secondaryRoles.length > 3 && (
                     <span>+{row.secondaryRoles.length - 3}</span>

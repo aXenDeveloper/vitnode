@@ -1,0 +1,99 @@
+---
+title: User Format
+description: Show a member's name in their role color, with the role's icon or emoji in front and an optional link to their profile.
+icon: UserCheck
+---
+
+`UserFormat` prints a member's name the way the rest of the site does. Use it
+anywhere a name shows up: article bylines, tables, comments, notifications.
+
+## Preview
+
+<Preview name="user-format" />
+
+## Usage
+
+```ts
+import { UserFormat } from '@vitnode/core/components/user-format'
+```
+
+```tsx
+<UserFormat format link user={user} />
+```
+
+`format` paints the name in the role's color and puts the role's prefix icon or
+emoji in front. `link` turns the name into a link to the member's profile at
+`/users/<nameCode>`. Without either, you get the plain name.
+
+## Where the user comes from
+
+`user` only needs a name and a role, so most API responses fit as they are:
+
+```ts
+const user = {
+  name: 'Ada Lovelace',
+  nameCode: 'ada',
+  role: { color: '#dc2626', prefix: 'icon:crown' },
+}
+```
+
+`prefix` takes the same `icon:<lucide-name>` or `emoji:<emoji>` value as a
+role's prefix in the AdminCP. A `null` color keeps the surrounding text color.
+
+## Real names
+
+When a member turns on **Show my real name** in their settings, the API adds
+their first and last name as `fullName`, and `UserFormat` shows it instead of
+the nickname. While the switch is off, `fullName` is `null` and the real name
+never reaches the browser, so there is nothing to hide on the client.
+
+```ts
+const user = {
+  fullName: 'Ada Lovelace',
+  name: 'ada92',
+  nameCode: 'ada92',
+  role: { color: '#dc2626', prefix: 'icon:crown' },
+}
+```
+
+People from the [Content Engine](/docs/content-engine/public-pages) already
+carry `fullName`. In your own API route, compute it with `publicFullNameOf` from
+`@vitnode/core/lib/user-personal-information`.
+
+## Links
+
+`link` needs a `nameCode`. Without one, the name renders as plain text.
+
+Leave `link` off when the name sits inside another link or a button, such as a
+table row that already opens something. Nested links are invalid HTML and
+confuse screen readers.
+
+## Names inside a sentence
+
+`UserFormat` is an `inline-flex` row, which keeps the icon centered on the
+name. Don't override it with `inline`, or the icon drops to the text baseline.
+When the name sits in running text, add `align-bottom` so it lines up with the
+words around it:
+
+```tsx
+<p>
+  Written by <UserFormat className="align-bottom" format link user={user} />
+</p>
+```
+
+## Props
+
+| Name        | Type                                                       | Required | Default | Description                                 |
+| ----------- | ---------------------------------------------------------- | -------- | ------- | ------------------------------------------- |
+| `user`      | `{ name, fullName?, nameCode?, role: { color, prefix? } }` | Yes      | -       | The member to show                          |
+| `format`    | `boolean`                                                  | No       | `false` | Adds the role color and prefix              |
+| `link`      | `boolean`                                                  | No       | `false` | Links to `/users/<nameCode>` when it is set |
+| `className` | `string`                                                   | No       | -       | Extra classes on the outer element          |
+
+Other `<span>` props go to the outer `<span>`. With `link`, only `className`,
+`style` and `title` reach the link.
+
+## See also
+
+- [Role Format](/docs/ui/role-format) - the same look for a role on its own.
+- [User](/docs/ui/user) - pick a member in an Auto Form field.

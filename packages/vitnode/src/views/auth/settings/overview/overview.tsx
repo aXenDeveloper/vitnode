@@ -6,7 +6,7 @@ import type { UserImageEditor } from "@/views/profile/images/types";
 import type { ProfileRole } from "@/views/profile/profile-query";
 
 import { Avatar } from "@/components/avatar";
-import { RoleFormatContent } from "@/components/role-format-content";
+import { RoleFormat } from "@/components/role-format";
 import { Badge } from "@/components/ui/badge";
 import {
   Frame,
@@ -84,7 +84,7 @@ export const OverviewSettingsContent = ({
                 <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-sm">
                   <span className="truncate">@{user.nameCode}</span>
                   <span aria-hidden>·</span>
-                  <RoleFormatContent role={user.role} />
+                  <RoleFormat role={user.role} />
                 </p>
                 {personalFields.headline && user.headline ? (
                   <p className="text-foreground text-sm leading-relaxed text-pretty wrap-anywhere">
@@ -144,7 +144,7 @@ export const OverviewSettingsContent = ({
             <OverviewFact
               icon={ShieldIcon}
               label={t("role")}
-              value={<RoleFormatContent role={user.role} />}
+              value={<RoleFormat role={user.role} />}
             />
             {user.secondaryRoles.length === 0 ? null : (
               <OverviewFact
@@ -153,7 +153,7 @@ export const OverviewSettingsContent = ({
                 value={
                   <span className="flex flex-wrap gap-x-3 gap-y-1">
                     {user.secondaryRoles.map(role => (
-                      <RoleFormatContent key={role.id} role={role} />
+                      <RoleFormat key={role.id} role={role} />
                     ))}
                   </span>
                 }

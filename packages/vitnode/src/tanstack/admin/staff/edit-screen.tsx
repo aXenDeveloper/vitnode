@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeftIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import { RoleFormatContent } from "@/components/role-format-content";
+import { RoleFormat } from "@/components/role-format";
 import { buttonVariants } from "@/components/ui/button";
 import { PageTitle } from "@/components/ui/page-title";
 import { EditStaffFormContent } from "@/views/admin/views/core/staff/edit/edit-staff-form-content";
@@ -86,7 +86,7 @@ const StaffEditHeader = ({
         <div className="flex items-center gap-2">
           {t("subject")}
           {subject.role ? (
-            <RoleFormatContent role={subject.role} />
+            <RoleFormat role={subject.role} />
           ) : subject.user ? (
             <StaffUserFormatContent user={subject.user} />
           ) : null}

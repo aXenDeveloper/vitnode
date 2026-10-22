@@ -9,7 +9,10 @@ import { EmojiIcon } from "./ui/emoji-icon";
 export const userProfileHref = (nameCode: string): string =>
   `/users/${encodeURIComponent(nameCode)}`;
 
-/** A user's display name, optionally styled by their role and linked to their profile. */
+/**
+ * A user's name, optionally styled by their role and linked to their profile.
+ * Shows `user.fullName` in place of the nickname when the API sends one.
+ */
 export const UserFormat = ({
   user,
   format,
@@ -23,6 +26,8 @@ export const UserFormat = ({
   /** Links to the profile page; needs `user.nameCode`. */
   link?: boolean;
   user: {
+    /** The real name the member chose to show; the API sends `null` otherwise. */
+    fullName?: null | string;
     name: string;
     nameCode?: string;
     role: {
@@ -43,7 +48,7 @@ export const UserFormat = ({
   const content = (
     <>
       {!!prefix && <EmojiIcon value={prefix} />}
-      <span className="truncate">{user.name}</span>
+      <span className="truncate">{user.fullName ?? user.name}</span>
     </>
   );
 

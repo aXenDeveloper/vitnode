@@ -1,0 +1,75 @@
+---
+title: Role Format
+description: Show a role's name in the reader's language, in the role's color, with its icon or emoji in front.
+icon: Crown
+---
+
+`RoleFormat` prints a role the way the rest of the site does: its color, its
+prefix icon or emoji, and its name in the reader's language. Use it in
+profiles, member tables and filters.
+
+## Preview
+
+<Preview name="role-format" />
+
+## Usage
+
+```ts
+import { RoleFormat } from '@vitnode/core/components/role-format'
+```
+
+```tsx
+<RoleFormat role={role} />
+```
+
+`role` has the same shape the roles API returns, so you can pass a role
+straight from a response:
+
+```ts
+const role = {
+  color: '#16a34a',
+  id: 2,
+  name: [
+    { languageCode: 'en', name: 'Moderator' },
+    { languageCode: 'pl', name: 'Moderator' },
+  ],
+  prefix: 'icon:shield',
+}
+```
+
+## Names per language
+
+`RoleFormat` picks the name for the active locale. When a role has no
+translation for it, the first name in the list shows instead, and a role
+with no names at all shows its id. That way a role added before a new
+language still has a readable label.
+
+## Colors and prefixes
+
+A `null` color keeps the surrounding text color. `prefix` takes the same
+`icon:<lucide-name>` or `emoji:<emoji>` value as a role's prefix in the
+AdminCP. An empty or invalid prefix is skipped.
+
+## Long names
+
+In a narrow table cell or chip, add `truncate` so a long name ends in an
+ellipsis instead of pushing the layout wider:
+
+```tsx
+<RoleFormat className="truncate" role={role} />
+```
+
+## Props
+
+| Name        | Type                                                     | Required | Default | Description                         |
+| ----------- | -------------------------------------------------------- | -------- | ------- | ----------------------------------- |
+| `role`      | `{ id, color, name: { languageCode, name }[], prefix? }` | Yes      | -       | The role to show                    |
+| `className` | `string`                                                 | No       | -       | Extra classes on the outer `<span>` |
+
+Other `<span>` props, such as `style` or `title`, go to the outer `<span>`.
+
+## See also
+
+- [User Format](/docs/ui/user-format) - a member's name in their role's style.
+- [Roles](/docs/ui/roles) - pick one role or many in an Auto Form field.
+- [Data Table filters](/docs/ui/data-table/filters) - role filters with `RoleFormat` labels.

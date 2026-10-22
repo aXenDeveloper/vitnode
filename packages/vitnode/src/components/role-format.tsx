@@ -13,7 +13,7 @@ import { EmojiIcon } from "./ui/emoji-icon";
  * in the role's color, after its emoji or icon prefix. Extra props go to the
  * outer `<span>`.
  */
-export const RoleFormatContent = ({
+export const RoleFormat = ({
   className,
   role,
   style,

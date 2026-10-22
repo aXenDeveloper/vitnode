@@ -16,7 +16,7 @@ import { useLocale, useTranslations } from "use-intl";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
 import { DateFormat } from "@/components/date-format";
-import { RoleFormatContent } from "@/components/role-format-content";
+import { RoleFormat } from "@/components/role-format";
 import { resolveRoleName } from "@/components/role-name";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { ContentDataTable } from "@/components/table/content";
@@ -139,7 +139,7 @@ const MoveRolePicker = ({
         }
       >
         {value ? (
-          <RoleFormatContent className="truncate" role={value} />
+          <RoleFormat className="truncate" role={value} />
         ) : (
           <span className="text-muted-foreground">{tRole("selectRole")}</span>
         )}
@@ -177,7 +177,7 @@ const MoveRolePicker = ({
                             : "border-input",
                         )}
                       />
-                      <RoleFormatContent className="truncate" role={role} />
+                      <RoleFormat className="truncate" role={role} />
                     </CommandItem>
                   ))}
                 </CommandGroup>
@@ -454,7 +454,7 @@ export const RolesAdminTableContent = ({
       columns={[
         {
           accessorKey: "name",
-          cell: ({ row }) => <RoleFormatContent role={row} />,
+          cell: ({ row }) => <RoleFormat role={row} />,
           header: t("role"),
         },
         {
