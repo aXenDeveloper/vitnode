@@ -1,14 +1,18 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
+import { AUTH_CARD_VIEW_TRANSITION_NAME, AuthFrame } from "../auth-card";
+
 export const PasswordResetContent = ({
   children,
 }: {
   children: React.ReactNode;
 }) => (
-  <div className="mx-auto flex max-w-md flex-col justify-center px-4 py-16 md:min-h-[calc(100vh-4rem)]">
-    <Card>{children}</Card>
-  </div>
+  <AuthFrame>
+    <Card style={{ viewTransitionName: AUTH_CARD_VIEW_TRANSITION_NAME }}>
+      {children}
+    </Card>
+  </AuthFrame>
 );
 
 /** Either form's shape while the deployment configuration is still in flight. */

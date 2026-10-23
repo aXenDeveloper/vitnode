@@ -64,6 +64,15 @@ logo in your own layout to join in.
   too.
 </Callout>
 
+## Login and register
+
+Click **Sign up** under the login form. The card doesn't blink out and back:
+it glides to its new size while the old fields fade out and the new ones fade
+in. The card carries the `vitnode-auth-card` name, and
+`@vitnode/core/styles/view-transitions.css` styles it with no extra code on
+your side. The "Last used" badge on a sign-in button fades in on its own once
+the browser knows which method you picked last time.
+
 ## Animate a component with ViewTransition
 
 <Preview name="view-transition-enter-exit" className="*:max-w-full" />

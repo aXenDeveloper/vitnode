@@ -13,7 +13,11 @@ import { useSSOCallback } from "@/views/auth/sso/callback/use-sso-callback";
 
 import { RouteMessages } from "../i18n/route-messages";
 import { ssoSettingsHref } from "../sso-connections/route-search";
-import { useCompleteSsoAction, useLinkSsoAction } from "./actions";
+import {
+  requestPasswordResetAction,
+  useCompleteSsoAction,
+  useLinkSsoAction,
+} from "./actions";
 import { parseSsoCallback } from "./contract";
 import {
   authMethodsOf,
@@ -163,8 +167,10 @@ const SsoSignInCallbackRoute = ({
   return (
     <RouteMessages namespaces={SSO_CALLBACK_NAMESPACES}>
       <SSOCallbackContent
+        captcha={config.captcha}
         errorActions={errorActions}
         onLink={linkSso}
+        onRequestReset={requestPasswordResetAction}
         providerId={providerId}
         providers={ssoProvidersOf(config)}
         showResetPassword={authMethodsOf(config).resetPassword}

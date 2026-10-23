@@ -29,11 +29,13 @@ export const RegisterRouteContent = () => {
         }
         isUnavailable={!methods.signUp}
         sso={
-          <SSOButtonsContent
-            onSelectProvider={startSsoAction}
-            providers={methods.sso}
-            showDivider={methods.password}
-          />
+          methods.sso.length > 0 ? (
+            <SSOButtonsContent
+              layout="stack"
+              onSelectProvider={startSsoAction}
+              providers={methods.sso}
+            />
+          ) : undefined
         }
       />
     </RouteMessages>

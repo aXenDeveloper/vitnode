@@ -6,6 +6,7 @@ export const LOGIN_NAMESPACES = [
   "core.global",
   "core.auth.sign_in",
   "core.auth.sso",
+  "core.auth.reset_password",
 ] as const;
 
 /** The narrowest slice of a route's context these loaders read. */

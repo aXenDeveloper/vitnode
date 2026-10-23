@@ -1756,7 +1756,12 @@
           "subject": "Zresetuj swoje hasło"
         },
         "submit": "Wyślij link resetujący",
-        "title": "Resetowanie hasła"
+        "title": "Resetowanie hasła",
+        "address": {
+          "label": "E-mail",
+          "invalid": "Nieprawidłowy adres e-mail."
+        },
+        "back": "Wróć do logowania"
       },
       "settings": {
         "devices": {
@@ -2257,7 +2262,8 @@
         "unavailable": {
           "desc": "Na tej stronie nie jest teraz włączony żaden sposób logowania. Zajrzyj później.",
           "title": "Logowanie jest niedostępne"
-        }
+        },
+        "last_used": "Ostatnio używane"
       },
       "sign_up": {
         "already_have_account": "Masz już konto? <link>Zaloguj się</link>.",
@@ -2307,6 +2313,7 @@
         }
       },
       "sso": {
+        "heading": "Kontynuuj przez",
         "access_denied": "Odmówiono dostępu do aplikacji lub żądanie wygasło. Spróbuj ponownie.",
         "email_exists": {
           "desc": "Konto z tym adresem e-mail już istnieje. Zaloguj się dotychczasową metodą, aby połączyć konto <provider></provider>.",
@@ -2340,7 +2347,6 @@
           "submit": "Połącz i zaloguj się",
           "title": "Połącz <provider></provider> ze swoim kontem"
         },
-        "or": "Lub kontynuuj przez e-mail",
         "continue_with": "Kontynuuj przez {provider}",
         "connection": {
           "pending": "Kończymy z {provider}…"

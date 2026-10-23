@@ -1,20 +1,17 @@
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
+import { z } from "zod";
 
-import type { AutoFormOnSubmit } from "@/components/form/auto-form";
+import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
 
 import type {
-  PasswordResetFormSchema,
   PasswordResetMutationResult,
   PasswordResetSubmitValues,
 } from "./schema";
 
-import { readRememberedEmail } from "../../remembered-email";
-import {
-  createPasswordResetFormSchema,
-  passwordResetFormOutcome,
-} from "./schema";
+import { rememberEmail } from "../../remembered-email";
+import { passwordResetFormOutcome } from "./schema";
 
 export type { PasswordResetSubmitValues };
 
@@ -22,25 +19,35 @@ export type PasswordResetSubmit = (
   values: PasswordResetSubmitValues,
 ) => Promise<PasswordResetMutationResult>;
 
-export const usePasswordResetForm = ({
+export type PasswordResetStep =
+  | { email: string; kind: "sent" }
+  | { kind: "form" }
+  | { kind: "idle" };
+
+const isEmailAddress = (value: string) => z.email().safeParse(value).success;
+
+export const usePasswordReset = ({
+  captcha,
   onRequestReset,
 }: {
-  onRequestReset: PasswordResetSubmit;
+  captcha?: z.infer<typeof routeMiddlewareSchema>["captcha"];
+  onRequestReset?: PasswordResetSubmit;
 }) => {
-  const t = useTranslations("core.auth.sign_up");
   const tErrors = useTranslations("core.global.errors");
-  const [sentEmail, setSentEmail] = React.useState("");
+  const [step, setStep] = React.useState<PasswordResetStep>({ kind: "idle" });
+  const [isSending, setIsSending] = React.useState(false);
 
-  const formSchema = createPasswordResetFormSchema(
-    { invalidEmail: t("email.invalid") },
-    { defaultEmail: readRememberedEmail() },
-  );
+  const show = (next: PasswordResetStep) => {
+    React.startTransition(() => {
+      setStep(next);
+    });
+  };
 
-  const onSubmit: AutoFormOnSubmit<PasswordResetFormSchema> = async (
-    { email },
-    _form,
-    { captchaToken },
-  ) => {
+  const send = async ({ captchaToken, email }: PasswordResetSubmitValues) => {
+    if (!onRequestReset) {
+      throw new Error("A password reset was started without onRequestReset.");
+    }
+
     const outcome = passwordResetFormOutcome(
       await onRequestReset({ captchaToken, email }),
     );
@@ -53,8 +60,38 @@ export const usePasswordResetForm = ({
       return;
     }
 
-    setSentEmail(email);
+    show({ email, kind: "sent" });
   };
 
-  return { formSchema, onSubmit, sentEmail };
+  const start = async (email: unknown) => {
+    rememberEmail(email);
+    const address = typeof email === "string" ? email.trim() : "";
+
+    if (captcha || !isEmailAddress(address)) {
+      show({ kind: "form" });
+
+      return;
+    }
+
+    setIsSending(true);
+
+    try {
+      await send({ captchaToken: "", email: address });
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  return {
+    back: () => {
+      show({ kind: "idle" });
+    },
+    canRequest: !!onRequestReset,
+    isSending,
+    send,
+    start,
+    step,
+  };
 };
+
+export type PasswordReset = ReturnType<typeof usePasswordReset>;

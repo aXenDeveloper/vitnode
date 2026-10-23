@@ -2,18 +2,13 @@ import { useRouter } from "@tanstack/react-router";
 import { useTranslations } from "use-intl";
 
 import { ChangePasswordFormContent } from "@/views/auth/password-reset/change-password-form/change-password-form-content";
-import { PasswordResetFormContent } from "@/views/auth/password-reset/form/password-reset-form-content";
 import { PasswordResetContent } from "@/views/auth/password-reset/password-reset-content";
 import { ErrorContent } from "@/views/error/error-content";
 
 import type { PasswordResetSearch } from "./recovery";
 
 import { RouteMessages } from "../i18n/route-messages";
-import {
-  changePasswordFromResetAction,
-  requestPasswordResetAction,
-} from "./actions";
-import { useMiddlewareConfigQuery } from "./middleware-config";
+import { changePasswordFromResetAction } from "./actions";
 import { passwordResetMode } from "./recovery";
 import { LOGIN_PATH, parseInternalDestination } from "./redirects";
 
@@ -49,7 +44,6 @@ export const PasswordResetRouteContent = ({
   search,
 }: PasswordResetRouteProps) => {
   const router = useRouter();
-  const { data: config } = useMiddlewareConfigQuery();
   const mode = passwordResetMode(search);
 
   return (
@@ -63,20 +57,7 @@ export const PasswordResetRouteContent = ({
             }}
             onChangePassword={changePasswordFromResetAction}
           />
-        ) : (
-          /*
-            No `onSuccess` and no navigation: an accepted request swaps the
-            card for "check your email" and leaves the visitor there. It says
-            the same thing for an address with an account and one without,
-            because the API answers the same 201 for both - the
-            anti-enumeration behaviour is preserved by there being nothing
-            here that could distinguish them.
-          */
-          <PasswordResetFormContent
-            captcha={config.captcha}
-            onRequestReset={requestPasswordResetAction}
-          />
-        )}
+        ) : null}
       </PasswordResetContent>
     </RouteMessages>
   );
