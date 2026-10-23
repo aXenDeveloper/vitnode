@@ -1,5 +1,6 @@
 import React from "react";
 
+import { AuthFrame } from "../auth-card";
 import { EmailConfirmationView } from "./email-confirmation-view";
 
 const WrapperSignUpContext = React.createContext<{
@@ -20,7 +21,13 @@ export const WrapperSignUp = ({ children }: { children: React.ReactNode }) => {
 
   return (
     <WrapperSignUpContext value={contextValue}>
-      {sendingEmail ? <EmailConfirmationView email={sendingEmail} /> : children}
+      {sendingEmail ? (
+        <AuthFrame>
+          <EmailConfirmationView email={sendingEmail} />
+        </AuthFrame>
+      ) : (
+        children
+      )}
     </WrapperSignUpContext>
   );
 };

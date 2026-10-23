@@ -38,10 +38,12 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
-Restart the API and the widget appears on `/register`, and on
-`/login/reset-password` on a deployment that has an
-[email adapter](/docs/dev/email) to send the link with. The rest of this page is
-how to get those two values.
+Restart the API and the widget appears on `/register`, and - on a deployment
+that has an [email adapter](/docs/dev/email) to send the link with - in the
+**Forgot password?** step on `/login`. With a captcha configured, that step asks
+for the email again next to the widget; without one, **Forgot password?** sends
+the link to the address already typed in the login form. The rest of this page
+is how to get those two values.
 
 <Callout type="warn" title="Do not ship this block without both keys">
 

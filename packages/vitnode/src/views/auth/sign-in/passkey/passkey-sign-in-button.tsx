@@ -6,6 +6,7 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 
+import { LastUsedBadge } from "../../last-used-badge";
 import { usePasskeySupport } from "../../passkeys/webauthn";
 
 export type PasskeySignInFeedback =
@@ -24,9 +25,11 @@ export type PasskeySignInSubmit = () => Promise<
 >;
 
 export const PasskeySignInButton = ({
+  isLastUsed = false,
   onSignIn,
   showDivider = true,
 }: {
+  isLastUsed?: boolean;
   onSignIn: PasskeySignInSubmit;
   showDivider?: boolean;
 }) => {
@@ -36,6 +39,7 @@ export const PasskeySignInButton = ({
   const isSupported = usePasskeySupport();
   const [isPending, setIsPending] = React.useState(false);
   const hintId = React.useId();
+  const lastUsedBadgeId = React.useId();
 
   const showFeedback = (feedback: PasskeySignInFeedback) => {
     if (feedback === "cancelled") {
@@ -81,7 +85,11 @@ export const PasskeySignInButton = ({
       ) : null}
 
       <Button
-        aria-describedby={isSupported ? undefined : hintId}
+        aria-describedby={
+          [!isSupported && hintId, isLastUsed && lastUsedBadgeId]
+            .filter(Boolean)
+            .join(" ") || undefined
+        }
         className="w-full"
         disabled={!isSupported || isPending}
         isLoading={isPending}
@@ -91,6 +99,7 @@ export const PasskeySignInButton = ({
       >
         <KeyRoundIcon aria-hidden="true" />
         {t("action")}
+        {isLastUsed ? <LastUsedBadge id={lastUsedBadgeId} /> : null}
       </Button>
 
       {isSupported ? null : (

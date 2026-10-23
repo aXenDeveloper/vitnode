@@ -6,6 +6,7 @@ import { middlewareConfigQueryOptions } from "./middleware-config";
 export const SSO_CALLBACK_NAMESPACES = [
   "core.global",
   "core.auth.sso",
+  "core.auth.reset_password",
 ] as const;
 
 /**

@@ -118,6 +118,82 @@ html[data-header-search-morph="close"] {
   }
 }
 
+::view-transition-group(vitnode-auth-card) {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+::view-transition-image-pair(vitnode-auth-card) {
+  overflow: clip;
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+    var(--shadow-xs, 0 1px 2px 0 rgb(0 0 0 / 0.05));
+}
+
+::view-transition-old(vitnode-auth-card),
+::view-transition-new(vitnode-auth-card) {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: none;
+  object-position: top center;
+}
+
+@keyframes vitnode-auth-card-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vitnode-auth-card-in {
+  from {
+    opacity: 0;
+  }
+}
+
+::view-transition-old(vitnode-auth-card) {
+  mix-blend-mode: normal;
+  animation: vitnode-auth-card-out 100ms ease-in both;
+}
+
+::view-transition-new(vitnode-auth-card) {
+  mix-blend-mode: normal;
+  animation: vitnode-auth-card-in 200ms cubic-bezier(0.23, 1, 0.32, 1) 80ms both;
+}
+
+:root {
+  --vitnode-auth-step-shift: 12px;
+}
+
+:root[dir="rtl"] {
+  --vitnode-auth-step-shift: -12px;
+}
+
+@keyframes vitnode-auth-step-in {
+  from {
+    opacity: 0;
+    translate: var(--vitnode-auth-step-shift) 0;
+  }
+}
+
+@keyframes vitnode-auth-step-out {
+  to {
+    opacity: 0;
+    translate: calc(var(--vitnode-auth-step-shift) * -1) 0;
+  }
+}
+
+::view-transition-new(.vitnode-auth-step-in) {
+  mix-blend-mode: normal;
+  animation: vitnode-auth-step-in 220ms cubic-bezier(0.23, 1, 0.32, 1) 60ms both;
+}
+
+::view-transition-old(.vitnode-auth-step-out) {
+  mix-blend-mode: normal;
+  animation: vitnode-auth-step-out 120ms ease-in both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-group(*),
   ::view-transition-old(*),

@@ -1,11 +1,16 @@
+import type { z } from "zod";
+
 import { Link } from "@tanstack/react-router";
 import { useTranslations } from "use-intl";
+
+import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorContent } from "@/views/error/error-content";
 
+import type { PasswordResetSubmit } from "../../password-reset/form/use-password-reset-form";
 import type { SSOLinkSubmit } from "../link/sso-link-form-content";
 import type { SSOProvider } from "../providers";
 import type { SSOCallbackState } from "./use-sso-callback";
@@ -14,20 +19,22 @@ import { AUTH_HREF } from "../../auth-link";
 import { SSOLinkFormContent } from "../link/sso-link-form-content";
 
 export const SSOCallbackContent = ({
+  captcha,
   errorActions,
   onLink,
+  onRequestReset,
   providerId,
   providers,
-  resetPasswordHref = AUTH_HREF.resetPassword,
   showResetPassword = false,
   signInHref = AUTH_HREF.signIn,
   state,
 }: {
+  captcha?: z.infer<typeof routeMiddlewareSchema>["captcha"];
   errorActions?: React.ReactNode;
   onLink: SSOLinkSubmit;
+  onRequestReset?: PasswordResetSubmit;
   providerId: string;
   providers: readonly SSOProvider[];
-  resetPasswordHref?: string;
   showResetPassword?: boolean;
   signInHref?: string;
   state: SSOCallbackState;
@@ -68,10 +75,11 @@ export const SSOCallbackContent = ({
             </div>
 
             <SSOLinkFormContent
+              captcha={captcha}
               offer={state.offer}
               onLink={onLink}
+              onRequestReset={onRequestReset}
               providerName={providerName}
-              resetPasswordHref={resetPasswordHref}
               showResetPassword={showResetPassword}
               signInHref={signInHref}
             />

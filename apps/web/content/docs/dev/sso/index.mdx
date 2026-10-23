@@ -27,10 +27,27 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
-A **Continue with Google** button automatically renders on your login and
-registration forms, four-color G included. The built-in adapters ship their own
-marks and colors - Discord and Facebook buttons are filled with their brand
-color - and a custom adapter can [add its own](/docs/dev/sso/icons).
+A **Google** button automatically renders on your login and registration forms,
+four-color G included. The built-in adapters ship their own marks and colors -
+Discord and Facebook buttons are filled with their brand color - and a custom
+adapter can [add its own](/docs/dev/sso/icons).
+
+## On the login page
+
+The provider buttons sit in their own column next to the email form, under one
+**Continue with** heading, so each button only needs the provider's name (screen
+readers still hear "Continue with Google"). On small screens the columns stack:
+providers first, then the form.
+
+- `/login` packs the providers into a two-column grid, so six of them take three
+  rows instead of six. The passkey button goes right below.
+- `/register` stacks them full width, because the sign-up form next to them is
+  taller anyway.
+- The method someone signed in with last - a provider, a passkey or a password -
+  gets a **Last used** badge, and a last-used provider moves to the top of the
+  grid. It's remembered in that browser only after a successful sign-in, so a
+  visitor who gives up halfway through Discord's consent screen won't see it.
+- Only one kind of method enabled? The card shrinks back to a single column.
 
 ---
 
