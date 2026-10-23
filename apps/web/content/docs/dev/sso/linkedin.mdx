@@ -1,0 +1,144 @@
+---
+title: LinkedIn
+description: Add Sign In with LinkedIn using OpenID Connect to VitNode - add the product to a LinkedIn app, register the redirect URL and wire up the adapter.
+icon: Briefcase
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Add a **Continue with LinkedIn** button using LinkedIn's current OpenID Connect product. The adapter asks for `openid profile email` and reads the member from LinkedIn's UserInfo endpoint.
+
+## Before you begin
+
+- A LinkedIn account and a [LinkedIn Page](https://www.linkedin.com/company/setup/new/) for your organization. LinkedIn ties every developer app to a Page.
+
+## Quick start
+
+```bash title=".env"
+LINKEDIN_CLIENT_ID=77abcdefghijkl
+LINKEDIN_CLIENT_SECRET=xxxxxxxxxxxxxxxx
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { LinkedInSSOApiPlugin } from '@vitnode/core/api/adapters/sso/linkedin' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      LinkedInSSOApiPlugin({
+        clientId: process.env.LINKEDIN_CLIENT_ID,
+        clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+## Set up the app
+
+<Steps>
+<Step>
+
+### Create an app
+
+In the [LinkedIn Developer Portal](https://www.linkedin.com/developers/apps), press **Create app**, enter the name and logo people will see, and choose your LinkedIn Page.
+
+</Step>
+
+<Step>
+
+### Add the OpenID Connect product
+
+Open the **Products** tab and request **Sign In with LinkedIn using OpenID Connect**. It is self-serve and is approved immediately. Without it, LinkedIn rejects the `openid`, `profile` and `email` scopes.
+
+</Step>
+
+<Step>
+
+### Add the redirect URL
+
+On the **Auth** tab, under **OAuth 2.0 settings**, add each redirect URL:
+
+| Environment                           | Redirect URL                                 |
+| ------------------------------------- | -------------------------------------------- |
+| Development (`VITNODE_WEB_URL` unset) | `http://localhost:3000/login/sso/linkedin`   |
+| Production                            | `https://your-domain.com/login/sso/linkedin` |
+
+VitNode builds it from `VITNODE_WEB_URL`, so it must match exactly.
+
+</Step>
+
+<Step>
+
+### Copy the credentials
+
+The **Client ID** and **Primary Client Secret** are at the top of the **Auth** tab. Keep them server-side:
+
+```bash title=".env"
+LINKEDIN_CLIENT_ID=77abcdefghijkl # [!code ++]
+LINKEDIN_CLIENT_SECRET=xxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Register the adapter and restart
+
+Add `LinkedInSSOApiPlugin` as in the [quick start](#quick-start) and restart the server:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login`, press **Continue with LinkedIn** and allow access. You return to `/login/sso/linkedin` signed in.
+
+</Step>
+</Steps>
+
+## Scopes and profile fields
+
+| Setting        | Value                                       |
+| -------------- | ------------------------------------------- |
+| Scopes         | `openid profile email`                      |
+| Account ID     | `sub`                                       |
+| Email trusted  | only with `email_verified: true`            |
+| Profile fields | avatar, first name, last name               |
+
+LinkedIn may leave out the email, or mark it unverified. A new member then [confirms an address with a code](/docs/dev/sso/email-confirmation); a returning member still signs in by their LinkedIn ID.
+
+VitNode reads UserInfo with the access token it has just received from LinkedIn's token endpoint over TLS, so it does not decode LinkedIn's ID token. LinkedIn notes that this product does not verify identities, so treat a LinkedIn sign-in like any other social account.
+
+## Troubleshooting
+
+- **"unauthorized_scope_error"** - the **Sign In with LinkedIn using OpenID Connect** product is missing from the **Products** tab.
+- **"The redirect_uri does not match the registered value"** - the URL on the **Auth** tab differs from `{VITNODE_WEB_URL}/login/sso/linkedin`.
+- **The older `r_liteprofile` and `r_emailaddress` scopes** - LinkedIn retired them in 2023. The adapter never requests them.
+
+## Next
+
+<Cards>
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+  <Card title="Connected accounts" description="Import the avatar and name" href="/docs/dev/sso/connected-accounts" />
+</Cards>

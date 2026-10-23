@@ -8,6 +8,7 @@ import type { PasskeySignInSubmit } from "@/views/auth/sign-in/passkey/passkey-s
 import type { SignUpSubmit } from "@/views/auth/sign-up/form/sign-up-form-content";
 import type { SSOSelectProvider } from "@/views/auth/sso/buttons/sso-buttons-content";
 import type { SSOCallbackResult } from "@/views/auth/sso/callback/sso-callback-result";
+import type { SSOEmailCompletionActions } from "@/views/auth/sso/email/sso-email-completion";
 import type { SSOLinkSubmit } from "@/views/auth/sso/link/use-sso-link-form";
 import type {
   ConfirmEmailSubmit,
@@ -15,6 +16,10 @@ import type {
 } from "@/views/auth/verify-email/schema";
 
 import { getPasskeyInBrowser } from "@/views/auth/passkeys/webauthn";
+import {
+  sendSsoEmailCodeInBrowser,
+  verifySsoEmailCodeInBrowser,
+} from "@/views/auth/sso/email/sso-email-mutations";
 
 import type { SsoCallbackInput } from "./contract";
 
@@ -164,6 +169,38 @@ export const useLinkSsoAction = ({
     onSignedIn();
 
     return undefined;
+  };
+};
+
+/**
+ * The email step of an SSO sign-in whose provider shared no verified address:
+ * send a code, then confirm it. A confirmed code that signs the visitor in
+ * crosses the same identity boundary as any other sign-in.
+ */
+export const useSsoEmailCompletionActions = ({
+  onSignedIn,
+  providerId,
+}: {
+  onSignedIn: () => void;
+  providerId: string;
+}): SSOEmailCompletionActions => {
+  const queryClient = useQueryClient();
+
+  return {
+    sendCode: async email =>
+      await sendSsoEmailCodeInBrowser({ email, providerId }),
+    verifyCode: async code => {
+      const result = await verifySsoEmailCodeInBrowser({ code, providerId });
+
+      if (result.ok) {
+        removeAdminIdentityQueries(queryClient);
+        removeUserIdentityQueries(queryClient);
+        await invalidateSession(queryClient);
+        onSignedIn();
+      }
+
+      return result;
+    },
   };
 };
 

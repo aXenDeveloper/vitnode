@@ -19,6 +19,8 @@ export interface SsoCallbackSearch {
   code?: string;
   error?: string;
   state?: string;
+  /** Apple's first-authorization profile, relayed by the `form_post` bridge. */
+  user?: string;
 }
 
 export const normalizeSsoCallbackSearch = (
@@ -27,4 +29,5 @@ export const normalizeSsoCallbackSearch = (
   ...keptString("code", input.code),
   ...keptString("error", input.error),
   ...keptString("state", input.state),
+  ...keptString("user", input.user),
 });

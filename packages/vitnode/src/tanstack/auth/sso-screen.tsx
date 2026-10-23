@@ -13,7 +13,11 @@ import { useSSOCallback } from "@/views/auth/sso/callback/use-sso-callback";
 
 import { RouteMessages } from "../i18n/route-messages";
 import { ssoSettingsHref } from "../sso-connections/route-search";
-import { useCompleteSsoAction, useLinkSsoAction } from "./actions";
+import {
+  useCompleteSsoAction,
+  useLinkSsoAction,
+  useSsoEmailCompletionActions,
+} from "./actions";
 import { parseSsoCallback } from "./contract";
 import {
   authMethodsOf,
@@ -28,7 +32,7 @@ export interface SsoCallbackRouteProps {
   /** The "go back" / "go home" pair a host renders on a dead-end screen. */
   errorActions: React.ReactNode;
   providerId: string;
-  search: { code?: string; error?: string; state?: string };
+  search: { code?: string; error?: string; state?: string; user?: string };
 }
 
 const SsoConnectionCallbackPending = ({
@@ -151,6 +155,10 @@ const SsoSignInCallbackRoute = ({
     );
   };
   const linkSso = useLinkSsoAction({ onSignedIn, providerId });
+  const emailCompletion = useSsoEmailCompletionActions({
+    onSignedIn,
+    providerId,
+  });
 
   const state = useSSOCallback({
     code: parsed.ok ? parsed.params.code : "",
@@ -163,6 +171,7 @@ const SsoSignInCallbackRoute = ({
   return (
     <RouteMessages namespaces={SSO_CALLBACK_NAMESPACES}>
       <SSOCallbackContent
+        emailCompletion={emailCompletion}
         errorActions={errorActions}
         onLink={linkSso}
         providerId={providerId}

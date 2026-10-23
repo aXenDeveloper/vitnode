@@ -1,135 +1,124 @@
 ---
 title: Single Sign-On (SSO)
-description: Enable social authentication with Google, Discord, Facebook, or custom OAuth2 providers in VitNode.
+description: Enable social and OpenID Connect sign-in in VitNode with 15 built-in providers - Apple, Google, Microsoft, GitLab and more - or a custom OAuth2 adapter.
 icon: KeyRound
 ---
 
-VitNode provides built-in OAuth2 single sign-on. Register an adapter in your API configuration, and authentication buttons automatically appear on `/login` and `/register`.
+VitNode signs people in with OAuth 2.0 and OpenID Connect providers. Register an adapter in your API configuration, and its button appears on `/login`, `/register` and **Settings → Connected accounts**.
 
 ## Quick start
 
-Register an SSO adapter in `apps/api/src/vitnode.api.config.ts`:
+Register an SSO adapter in your API config (`apps/api/src/vitnode.api.config.ts`, or `src/vitnode.api.config.ts` in an app that serves its own API):
 
-```ts title="apps/api/src/vitnode.api.config.ts"
-import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google"
-import { buildApiConfig } from "@vitnode/core/vitnode.config"
+```ts title="src/vitnode.api.config.ts"
+import { GoogleSSOApiPlugin } from '@vitnode/core/api/adapters/sso/google'
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   // [!code ++:8]
   authorization: {
     ssoAdapters: [
       GoogleSSOApiPlugin({
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       }),
     ],
   },
 })
 ```
 
-A **Continue with Google** button automatically renders on your login and
-registration forms, four-color G included. The built-in adapters ship their own
-marks and colors - Discord and Facebook buttons are filled with their brand
-color - and a custom adapter can [add its own](/docs/dev/sso/icons).
+A **Continue with Google** button renders on the login and registration forms. Built-in adapters ship their own marks and, where the brand allows it, a filled button color; a custom adapter can [add its own](/docs/dev/sso/icons). With five or more providers, the buttons go in two columns.
 
----
+## Providers
 
-## Supported Providers
+| Provider                                      | Import                                         | Shares a verified email           | Local `http://localhost` |
+| --------------------------------------------- | ---------------------------------------------- | --------------------------------- | ------------------------ |
+| [Apple](/docs/dev/sso/apple)                  | `AppleSSOApiPlugin` from `.../sso/apple`       | Yes (may be a private relay)      | No - HTTPS domain        |
+| [Atlassian](/docs/dev/sso/atlassian)          | `AtlassianSSOApiPlugin` from `.../sso/atlassian` | When `email_verified`           | Yes                      |
+| [Discord](/docs/dev/sso/discord)              | `DiscordSSOApiPlugin` from `.../sso/discord`   | Yes (unverified ones are refused) | Yes                      |
+| [Facebook](/docs/dev/sso/facebook)            | `FacebookSSOApiPlugin` from `.../sso/facebook` | Taken as returned                 | Yes                      |
+| [GitLab](/docs/dev/sso/gitlab)                | `GitLabSSOApiPlugin` from `.../sso/gitlab`     | When `email_verified`             | Yes                      |
+| [Google](/docs/dev/sso/google)                | `GoogleSSOApiPlugin` from `.../sso/google`     | Yes (unverified ones are refused) | Yes                      |
+| [Kick](/docs/dev/sso/kick)                    | `KickSSOApiPlugin` from `.../sso/kick`         | No - code confirmation            | Yes                      |
+| [LinkedIn](/docs/dev/sso/linkedin)            | `LinkedInSSOApiPlugin` from `.../sso/linkedin` | When `email_verified`             | Yes                      |
+| [Microsoft](/docs/dev/sso/microsoft)          | `MicrosoftSSOApiPlugin` from `.../sso/microsoft` | When `xms_edov`                 | Yes                      |
+| [PayPal](/docs/dev/sso/paypal)                | `PayPalSSOApiPlugin` from `.../sso/paypal`     | When confirmed                    | No - HTTPS               |
+| [Reddit](/docs/dev/sso/reddit)                | `RedditSSOApiPlugin` from `.../sso/reddit`     | No - code confirmation            | Yes                      |
+| [Slack](/docs/dev/sso/slack)                  | `SlackSSOApiPlugin` from `.../sso/slack`       | When `email_verified`             | HTTPS tunnel             |
+| [TikTok](/docs/dev/sso/tiktok)                | `TikTokSSOApiPlugin` from `.../sso/tiktok`     | No - code confirmation            | No - HTTPS               |
+| [Twitch](/docs/dev/sso/twitch)                | `TwitchSSOApiPlugin` from `.../sso/twitch`     | When `email_verified`             | Yes                      |
+| [Twitter (X)](/docs/dev/sso/twitter)          | `TwitterSSOApiPlugin` from `.../sso/twitter`   | `confirmed_email`, when shared    | `http://127.0.0.1`       |
 
-<Cards>
-  <Card
-    title="Google"
-    description="Google Cloud Console setup with OpenID email verification"
-    href="/docs/dev/sso/google"
-  />
-  <Card
-    title="Discord"
-    description="Discord Developer Portal with identify and email scopes"
-    href="/docs/dev/sso/discord"
-  />
-  <Card
-    title="Facebook"
-    description="Meta Developers app with Facebook Login"
-    href="/docs/dev/sso/facebook"
-  />
-  <Card
-    title="Custom OAuth2 Adapter"
-    description="Connect GitHub, Apple, or any OAuth2 provider"
-    href="/docs/dev/sso/custom-adapter"
-  />
-  <Card
-    title="Provider Icons and Colors"
-    description="Put a brand mark and color on the login buttons"
-    href="/docs/dev/sso/icons"
-  />
-</Cards>
-
----
+Every import path starts with `@vitnode/core/api/adapters/sso/`. For anything else, write a [custom adapter](/docs/dev/sso/custom-adapter).
 
 ## Callback URLs
 
-When configuring OAuth2 applications in provider developer consoles, use the following redirect URI pattern:
+Register this redirect (callback) URL with the provider:
 
 ```text
-https://your-domain.com/login/sso/{provider_id}
+https://your-domain.com/login/sso/{providerId}
 ```
 
-For example: `https://your-domain.com/login/sso/google`.
+VitNode builds it from `VITNODE_WEB_URL` with `getRedirectUri(providerId)`, for example `https://your-domain.com/login/sso/google`. It must match exactly: same scheme and host, no trailing slash, no locale prefix.
 
----
+Providers that require a public HTTPS URL (Apple, PayPal, TikTok, and in practice Slack) need a tunnel for local work. Point `VITNODE_WEB_URL` (and `VITNODE_API_URL`, when the app serves its own API) at the tunnel's HTTPS address, and open the site there - the sign-in cookie belongs to the host the sign-in started on.
 
-## How Accounts Link
+## How accounts link
 
-When a user signs in via SSO:
-1. **Known Identity**: The provider account was linked before, so the user is signed straight into it.
-2. **Existing Email Match**: An account already uses that address. The visitor is asked for that account's password; once it checks out, the provider identity is linked to the account and they are signed in. From then on that provider signs them straight in (case 1). A social login can never take over an account on its own - the password is what proves ownership.
-3. **New Visitor**: A new user is created with their social display name and email. Avatar and real name stay empty until the member imports them from [Connected accounts](/docs/dev/sso/connected-accounts).
+When the provider sends the visitor back, VitNode checks the state, asks the adapter for the provider account, then:
 
-Signed-in members can also connect more providers, import their avatar and name, and disconnect accounts in **Settings → Connected accounts** - see [Connected Accounts](/docs/dev/sso/connected-accounts).
+1. **Known identity** - the provider account was linked before. The visitor is signed straight in, recognised by the provider's stable account ID. The email does not matter here, and an address stored earlier is kept even when the provider omits it this time.
+2. **Trusted email, existing account** - an account already uses that address. The visitor is asked for that account's password; once it checks out, the provider account is linked and they are signed in. A social login never takes over an account on its own.
+3. **Trusted email, new visitor** - a new account is created with the provider's display name and `emailVerified: true`, and linked.
+4. **No trusted email** - the provider shared no address, or one it has not verified. The visitor [confirms an address with a code](/docs/dev/sso/email-confirmation) first, then continues as in case 2 or 3.
+
+An email is **trusted** when the adapter returns it without `emailVerified: false`. Each provider guide says which provider flag decides it.
+
+Signed-in members can also connect more providers, import their avatar and name, and disconnect accounts in **Settings → Connected accounts** - see [Connected accounts](/docs/dev/sso/connected-accounts).
 
 ### SSO confirms the email
 
-A provider only hands VitNode an address it has verified itself (the built-in
-adapters refuse anything else), so a social sign-in doubles as email
-confirmation:
+A trusted provider email doubles as email confirmation:
 
-- a **new visitor** starts out with `emailVerified: true`, even when an email
-  adapter is configured and password sign-ups would have to confirm first;
-- a **known identity** or a **freshly linked** account whose address is still
-  unconfirmed is marked confirmed - provided the address the provider returned
-  is the one on the account. An account whose email was changed since the link
-  was made is left alone.
+- a **new visitor** starts out with `emailVerified: true`, even when an email adapter is configured and password sign-ups would have to confirm first;
+- a **known identity** or a **freshly linked** account whose address is still unconfirmed is marked confirmed - provided the trusted address the provider returned is the one on the account. An account whose email was changed since the link was made is left alone.
+
+An untrusted address never confirms anything.
 
 ### Linking an existing account
 
-The callback answers `409` with a short-lived, signed **link offer** - the
-account's email, whether it has a password, and a token good for ten minutes.
-The login page turns that into a "Connect *Provider* to your account" form: the
-email is shown read-only, the visitor types their password, and
-`POST /users/sso/{providerId}/link` verifies both before it writes the
-`core_users_sso` row and mints a session. The token carries the provider account
-id, so nothing about *which* identity gets linked is taken from the browser.
+The callback answers `409` with a short-lived, signed **link offer** - the account's email, whether it has a password, and a token good for ten minutes. The login page turns that into a "Connect *Provider* to your account" form: the email is shown read-only, the visitor types their password, and `POST /users/sso/{providerId}/link` verifies both before it writes the `core_users_sso` row and mints a session. The token carries the provider account ID, so nothing about *which* identity gets linked is taken from the browser.
 
-An account created by another provider has no password to confirm with. When an
-email adapter is configured the form offers **Set a password** (the ordinary
-reset flow) and asks them to try the provider again afterwards; without one it
-points back to the login page.
+An account created by another provider has no password to confirm with. When an email adapter is configured the form offers **Set a password** (the ordinary reset flow) and asks them to try the provider again afterwards; without one it points back to the login page.
 
 Every successful link emits [`user.sso.linked`](/docs/dev/events/built-in-events).
 
 The address the provider returns is matched in its canonical form, so a Google account that reports `jan.kowalski@gmail.com` finds the member who registered as `jankowalski@gmail.com` instead of quietly becoming a second account. See [One Mailbox, One Account](/docs/dev/advanced/auth#one-mailbox-one-account).
 
-## Learn More
+## The sign-in round trip
+
+Pressing a provider button calls `POST /users/sso/{providerId}`. VitNode stores a **sign-in attempt** in `core_sso_attempts`: hashes of a random `state` and of a browser-binding secret, plus a PKCE verifier and an OpenID Connect nonce. The browser gets only the binding secret, in an HttpOnly `SameSite=Lax` cookie.
+
+The callback consumes the attempt once. It is refused with `400` when it is unknown, older than ten minutes, already used, started in another browser, or started for another provider. The adapter then receives the PKCE verifier and nonce for the token exchange and ID-token checks; neither ever reaches the browser.
+
+Apple returns with a cross-site `POST`. VitNode's Start middleware turns it into a same-URL `GET` so the attempt is checked like any other - see [Apple](/docs/dev/sso/apple#how-apples-callback-works).
+
+## Learn more
 
 <Cards>
+  <Card
+    title="Email confirmation"
+    description="Providers without a verified email"
+    href="/docs/dev/sso/email-confirmation"
+  />
+  <Card
+    title="Custom SSO adapter"
+    description="Implement SSOApiPlugin for other providers"
+    href="/docs/dev/sso/custom-adapter"
+  />
   <Card
     title="Users"
     description="Session cookies and user model structure"
     href="/docs/dev/working-with-users/users"
-  />
-  <Card
-    title="Custom SSO Adapter"
-    description="Implement SSOApiPlugin for other providers"
-    href="/docs/dev/sso/custom-adapter"
   />
 </Cards>

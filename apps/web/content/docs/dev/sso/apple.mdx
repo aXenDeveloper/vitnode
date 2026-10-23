@@ -1,0 +1,188 @@
+---
+title: Apple
+description: Add Sign in with Apple to VitNode - create a Services ID and key, register the HTTPS return URL and wire up the Apple SSO adapter.
+icon: Apple
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Add a **Continue with Apple** button to `/login` and `/register`. Visitors can share their real email or a private relay address, and both work with VitNode.
+
+## Before you begin
+
+- A paid [Apple Developer Program](https://developer.apple.com/programs/) membership. Free accounts cannot create Sign in with Apple keys.
+- A public **HTTPS domain** for the site. Apple rejects `http://`, IP addresses and `localhost` return URLs, so local development needs a tunnel (see [Develop locally](#develop-locally)).
+
+## Quick start
+
+With a Services ID, Team ID, Key ID and `.p8` key in hand:
+
+```bash title=".env"
+APPLE_CLIENT_ID=com.example.forum.web
+APPLE_TEAM_ID=A1B2C3D4E5
+APPLE_KEY_ID=F6G7H8I9J0
+APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIGT...\n-----END PRIVATE KEY-----"
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { AppleSSOApiPlugin } from '@vitnode/core/api/adapters/sso/apple' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:10]
+  authorization: {
+    ssoAdapters: [
+      AppleSSOApiPlugin({
+        clientId: process.env.APPLE_CLIENT_ID,
+        teamId: process.env.APPLE_TEAM_ID,
+        keyId: process.env.APPLE_KEY_ID,
+        privateKey: process.env.APPLE_PRIVATE_KEY,
+      }),
+    ],
+  },
+})
+```
+
+## Set up Sign in with Apple
+
+<Steps>
+<Step>
+
+### Create an App ID
+
+In [Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list), add an **App IDs** identifier (type **App**), give it a bundle ID such as `com.example.forum`, and tick **Sign in with Apple** under capabilities. This is the primary App ID the web sign-in groups under.
+
+</Step>
+
+<Step>
+
+### Create a Services ID
+
+Add another identifier, this time of type **Services IDs**. Its identifier, for example `com.example.forum.web`, is the **client ID** VitNode sends to Apple. The description is what visitors see on Apple's consent screen.
+
+</Step>
+
+<Step>
+
+### Register the domain and return URL
+
+Open the new Services ID, tick **Sign in with Apple** and press **Configure**. Choose the primary App ID, then add:
+
+| Field       | Value                                     |
+| ----------- | ----------------------------------------- |
+| Domains     | `your-domain.com`                         |
+| Return URLs | `https://your-domain.com/login/sso/apple` |
+
+VitNode builds the return URL from `VITNODE_WEB_URL` as `{VITNODE_WEB_URL}/login/sso/apple`, so they must match exactly - scheme, host, no trailing slash.
+
+{/* Image prompt: The Apple Developer "Web Authentication Configuration" dialog for a Services ID, with a primary App ID selected, "your-domain.com" in Domains and Subdomains and "https://your-domain.com/login/sso/apple" in Return URLs, light theme, 1100x600. */}
+
+</Step>
+
+<Step>
+
+### Create a key
+
+Under **Keys**, add a key, tick **Sign in with Apple**, configure it with the same primary App ID and register it. Download the `.p8` file - Apple lets you download it **once** - and note the 10-character **Key ID**. Your **Team ID** is in the top-right corner of the developer account.
+
+</Step>
+
+<Step>
+
+### Set the environment variables
+
+Keep these server-side - never add them to `clientEnv`. Paste the `.p8` contents with `\n` for line breaks; VitNode turns them back into newlines.
+
+```bash title=".env"
+APPLE_CLIENT_ID=com.example.forum.web # [!code ++]
+APPLE_TEAM_ID=A1B2C3D4E5 # [!code ++]
+APPLE_KEY_ID=F6G7H8I9J0 # [!code ++]
+APPLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIGT...\n-----END PRIVATE KEY-----" # [!code ++]
+VITNODE_WEB_URL=https://your-domain.com
+```
+
+Apple's token endpoint wants a **client secret**: a short ES256 JWT signed with the key. `AppleSSOApiPlugin` creates it for you, keeps it for 24 hours and renews it before it expires, so there is no secret to rotate by hand.
+
+</Step>
+
+<Step>
+
+### Register the adapter
+
+Add `AppleSSOApiPlugin` to `authorization.ssoAdapters` as in the [quick start](#quick-start), then restart the server so the return URL is rebuilt:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login` on your HTTPS domain and press **Continue with Apple**. Apple asks whether to share or hide the email, then returns to `/login/sso/apple` and you land signed in.
+
+</Step>
+</Steps>
+
+## How Apple's callback works
+
+Because VitNode asks for the name and email, Apple returns with a **cross-site POST** (`response_mode=form_post`), and browsers do not send VitNode's `SameSite=Lax` sign-in cookie with it. VitNode's request middleware (part of `createVitNodeStart`) answers that POST with a `303` redirect to the same URL as a normal `GET`, which carries the cookie. Nothing is relaxed: the state is still checked against the browser that started the sign-in. Only `code`, `state`, `error` and the name from Apple's `user` field are forwarded.
+
+Apple sends the name only on the **first** authorization. VitNode uses it as the new account's display name (or "Apple user" when it is hidden). A later [import from Connected accounts](/docs/dev/sso/connected-accounts) finds no name, because Apple does not send it again.
+
+## Develop locally
+
+Apple will not redirect to `localhost`. Expose the dev server through an HTTPS tunnel (for example Cloudflare Tunnel or ngrok) and use that host everywhere:
+
+```bash title=".env"
+VITNODE_WEB_URL=https://forum-dev.example.com
+VITNODE_API_URL=https://forum-dev.example.com
+```
+
+Add `forum-dev.example.com` to the Services ID's domains and `https://forum-dev.example.com/login/sso/apple` to its return URLs.
+
+## Scopes and profile fields
+
+| Setting        | Value                                                         |
+| -------------- | ------------------------------------------------------------- |
+| Scopes         | `name email`                                                  |
+| Account ID     | ID token `sub` (stable per developer team)                    |
+| Email trusted  | when the ID token says `email_verified: true`                 |
+| Profile fields | first name, last name (sent on the first authorization only)  |
+| ID token       | RS256 signature, issuer, audience, expiry and nonce validated |
+
+Private relay addresses (`...@privaterelay.appleid.com`) are real, verified inboxes. To email them, register your sending domain under **Sign in with Apple for Email Communication** in the developer account.
+
+## Troubleshooting
+
+<Callout type="warn" title="invalid_client">
+  The Services ID, Team ID, Key ID or key do not belong together. Check that the
+  key has Sign in with Apple enabled for the same primary App ID as the Services
+  ID, and that `APPLE_CLIENT_ID` is the Services ID - not the App ID.
+</Callout>
+
+- **"Invalid redirect_uri" on Apple's page** - the return URL is not listed on the Services ID, or `VITNODE_WEB_URL` differs from it.
+- **The callback page says the request expired** - the sign-in started on another host than it returned to (for example `localhost` vs. the tunnel), so the browser had no matching cookie.
+- **A missing variable** - the button still renders, and pressing it fails with `Missing Apple ...` in the server log.
+
+## Next
+
+<Cards>
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+  <Card title="Connected accounts" description="Let members connect Apple from Settings" href="/docs/dev/sso/connected-accounts" />
+</Cards>

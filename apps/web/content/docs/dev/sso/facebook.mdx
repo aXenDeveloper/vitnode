@@ -282,14 +282,10 @@ counts as no avatar.
   toast is an environment problem, not a dashboard problem.
 </Callout>
 
-<Callout
-  type="warn"
-  title="An email that already has a password account is a dead end"
->
-  If someone registered with the same address using the password form, the
-  callback answers `409` and offers them the login page instead. There is no
-  link-an-existing-account screen yet - see [how the callback handles
-  accounts](/docs/dev/sso#what-the-callback-does-with-the-account).
+<Callout title="An email that already has an account">
+  If someone registered with the same address - with a password or another
+  provider - the callback asks for that account's password and then links the
+  two. See [how accounts link](/docs/dev/sso#how-accounts-link).
 </Callout>
 
 ## Next

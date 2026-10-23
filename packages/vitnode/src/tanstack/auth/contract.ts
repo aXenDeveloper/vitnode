@@ -41,6 +41,8 @@ export const ssoCallbackInputSchema = z.object({
   code: z.string().min(1).max(2048),
   providerId: providerIdSchema,
   state: z.string().min(1).max(2048),
+  /** The profile a `form_post` provider (Apple) sent on a first authorization. */
+  user: z.string().max(2048).optional(),
 });
 
 export type SsoCallbackInput = z.infer<typeof ssoCallbackInputSchema>;
@@ -103,12 +105,22 @@ export const ssoLinkOfferSchema = z.object({
 export type SsoLinkOffer = z.infer<typeof ssoLinkOfferSchema>;
 
 export type CompleteSsoResult =
+  | { email: null | string; ok: false; reason: "email_required" }
   | { offer?: SsoLinkOffer; ok: false; reason: "email_exists" }
   | {
       ok: false;
-      reason: "invalid_state" | "server_error" | "unknown_provider";
+      reason:
+        | "email_unavailable"
+        | "invalid_state"
+        | "server_error"
+        | "unknown_provider";
     }
   | { ok: true };
+
+const emailRequiredSchema = z.object({
+  email: z.string().max(320).nullable(),
+  emailRequired: z.literal(true),
+});
 
 export const ssoLinkInputSchema = z.object({
   password: z.string().min(1).max(1024),
@@ -242,8 +254,18 @@ export const completeSsoResultFromStatus = (
   body?: unknown,
 ): CompleteSsoResult => {
   if (status === 200) return { ok: true };
+  if (status === 202) {
+    const parsed = emailRequiredSchema.safeParse(body);
+
+    return {
+      email: parsed.success ? parsed.data.email : null,
+      ok: false,
+      reason: "email_required",
+    };
+  }
   if (status === 400) return { ok: false, reason: "invalid_state" };
   if (status === 404) return { ok: false, reason: "unknown_provider" };
+  if (status === 422) return { ok: false, reason: "email_unavailable" };
   if (status === 409) {
     const offer = ssoLinkOfferSchema.safeParse(body);
 
@@ -276,6 +298,7 @@ const ssoCallbackQuerySchema = z.object({
   code: z.string().optional(),
   error: z.string().optional(),
   state: z.string().optional(),
+  user: z.string().optional(),
 });
 
 /** `URLSearchParams` and a plain search object, as one shape to validate. */
@@ -290,7 +313,9 @@ export const parseSsoCallback = ({
   query: unknown;
 }): ParsedSsoCallback => {
   const parsedQuery = ssoCallbackQuerySchema.safeParse(asQueryRecord(query));
-  const { code, error, state } = parsedQuery.success ? parsedQuery.data : {};
+  const { code, error, state, user } = parsedQuery.success
+    ? parsedQuery.data
+    : {};
 
   if (error !== undefined && error !== "") {
     return {
@@ -299,7 +324,12 @@ export const parseSsoCallback = ({
     };
   }
 
-  const params = ssoCallbackInputSchema.safeParse({ code, providerId, state });
+  const params = ssoCallbackInputSchema.safeParse({
+    code,
+    providerId,
+    state,
+    ...(user ? { user } : {}),
+  });
   if (!params.success) return { ok: false, reason: "invalid_callback" };
 
   return { ok: true, params: params.data };

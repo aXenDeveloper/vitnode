@@ -1,10 +1,19 @@
 import type { SSOLinkOffer } from "../link/schema";
 
-export type SSOCallbackFailure = "email_exists" | "unknown";
+export type SSOCallbackFailure =
+  | "email_exists"
+  | "email_required"
+  | "email_unavailable"
+  | "unknown";
 
 export type SSOCallbackResult =
   | undefined
-  | { failure?: SSOCallbackFailure; offer?: SSOLinkOffer };
+  | {
+      /** The provider's unverified address, offered as a starting point when `failure` is `email_required`. */
+      emailSuggestion?: null | string;
+      failure?: SSOCallbackFailure;
+      offer?: SSOLinkOffer;
+    };
 
 export const ssoCallbackResultFromStatus = (
   status: number,

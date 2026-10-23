@@ -1,16 +1,29 @@
 {
   "title": "Single Sign-On (SSO)",
-  "description": "OAuth2 sign-in with Google, Discord, Facebook or your own adapter",
+  "description": "OAuth and OpenID Connect sign-in with 15 built-in providers or your own adapter",
   "icon": "KeyRound",
   "pages": [
     "index",
+    "email-confirmation",
     "icons",
     "connected-accounts",
     "using-connected-accounts",
     "---Providers---",
-    "google",
+    "apple",
+    "atlassian",
     "discord",
     "facebook",
+    "gitlab",
+    "google",
+    "kick",
+    "linkedin",
+    "microsoft",
+    "paypal",
+    "reddit",
+    "slack",
+    "tiktok",
+    "twitch",
+    "twitter",
     "custom-adapter"
   ]
 }

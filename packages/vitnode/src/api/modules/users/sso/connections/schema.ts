@@ -17,6 +17,7 @@ const ERROR_CODES = [
   "provider_already_connected",
   "provider_error",
   "provider_not_found",
+  "reauthentication_required",
 ] as const satisfies readonly SsoConnectionErrorCode[];
 
 export const zodSsoConnectionErrorSchema = z.object({
@@ -35,6 +36,9 @@ const errorResponse = (description: string) => ({
 export const SSO_CONNECTION_ERROR_RESPONSES = {
   400: errorResponse("The request or its state was rejected"),
   401: { description: "Not signed in" },
+  403: errorResponse(
+    "Connecting a new account needs a recent sign-in - sign in again first",
+  ),
   404: errorResponse("The provider, connection or import is unknown"),
   409: errorResponse("The request conflicts with the account's connections"),
   502: errorResponse("The provider did not answer as expected"),

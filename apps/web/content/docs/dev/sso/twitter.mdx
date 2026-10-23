@@ -1,0 +1,170 @@
+---
+title: Twitter (X)
+description: Add X (formerly Twitter) sign-in to VitNode with OAuth 2.0 and PKCE - set up user authentication, request the confirmed email and wire up the adapter.
+icon: AtSign
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Add a **Continue with X** button using X's OAuth 2.0 authorization code flow with PKCE. The provider id stays `twitter`, so the callback is `/login/sso/twitter`.
+
+## Before you begin
+
+- An [X developer account](https://developer.x.com/) with a Project and App. Reading the signed-in account (`GET /2/users/me`) is a billed API call on X's current plans, so check the access your account has.
+
+## Quick start
+
+```bash title=".env"
+TWITTER_CLIENT_ID=AbCdEfGhIjKlMnOpQrStUvWxYz
+TWITTER_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { TwitterSSOApiPlugin } from '@vitnode/core/api/adapters/sso/twitter' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      TwitterSSOApiPlugin({
+        clientId: process.env.TWITTER_CLIENT_ID,
+        clientSecret: process.env.TWITTER_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+## Set up the app
+
+<Steps>
+<Step>
+
+### Open user authentication settings
+
+In the [X developer portal](https://developer.x.com/en/portal/dashboard), open your App inside a Project and press **Set up** (or **Edit**) under **User authentication settings**.
+
+</Step>
+
+<Step>
+
+### Choose a confidential web app
+
+Set:
+
+- **App permissions**: **Read**. Turn on **Request email from users** to receive the confirmed email.
+- **Type of App**: **Web App, Automated App or Bot** (a confidential client - VitNode keeps the secret on the server).
+- **Website URL**: your site.
+
+</Step>
+
+<Step>
+
+### Add the callback URI
+
+Add each callback URI. X matches them exactly, including a trailing slash:
+
+| Environment | Callback URI                                 |
+| ----------- | -------------------------------------------- |
+| Development | `http://127.0.0.1:3000/login/sso/twitter`    |
+| Production  | `https://your-domain.com/login/sso/twitter`  |
+
+X documents `127.0.0.1` rather than `localhost` for local work. Set `VITNODE_WEB_URL=http://127.0.0.1:3000` and open the site at that address, because VitNode builds the URI as `{VITNODE_WEB_URL}/login/sso/twitter` and the sign-in cookie belongs to the host you started on.
+
+</Step>
+
+<Step>
+
+### Copy the OAuth 2.0 credentials
+
+After saving, copy the **OAuth 2.0 Client ID and Client Secret** - not the API key and secret, which belong to OAuth 1.0a:
+
+```bash title=".env"
+TWITTER_CLIENT_ID=AbCdEfGhIjKlMnOpQrStUvWxYz # [!code ++]
+TWITTER_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Register the adapter and restart
+
+Add `TwitterSSOApiPlugin` as in the [quick start](#quick-start) and restart the server:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login`, press **Continue with X** and **Authorize app**. You return to `/login/sso/twitter` signed in, or are asked to confirm an email when X shares none.
+
+</Step>
+</Steps>
+
+## Email access
+
+With **Request email from users** on, the adapter requests the `users.email` scope and reads `confirmed_email`, which X only returns for a confirmed address. Some accounts (for example phone-only ones) have none.
+
+If your app cannot request email, X rejects the `users.email` scope. Turn it off in the adapter, and new members [confirm an address with a code](/docs/dev/sso/email-confirmation) instead:
+
+```ts title="src/vitnode.api.config.ts"
+TwitterSSOApiPlugin({
+  clientId: process.env.TWITTER_CLIENT_ID,
+  clientSecret: process.env.TWITTER_CLIENT_SECRET,
+  requestEmail: false, // [!code ++]
+}),
+```
+
+## Options
+
+| Name           | Type                  | Required | Default | Description                                         |
+| -------------- | --------------------- | -------- | ------- | --------------------------------------------------- |
+| `clientId`     | `string \| undefined` | Yes      | -       | OAuth 2.0 Client ID                                 |
+| `clientSecret` | `string \| undefined` | Yes      | -       | OAuth 2.0 Client Secret                             |
+| `requestEmail` | `boolean`             | No       | `true`  | Request `users.email` and the confirmed email       |
+
+## Scopes and profile fields
+
+| Setting        | Value                                                           |
+| -------------- | --------------------------------------------------------------- |
+| Scopes         | `tweet.read users.read users.email` (`users.email` optional)    |
+| PKCE           | `S256` (required by X)                                          |
+| Token auth     | HTTP Basic with the client ID and secret                        |
+| Account ID     | `data.id`                                                       |
+| Email trusted  | `confirmed_email`, when present                                 |
+| Profile fields | avatar                                                          |
+
+`tweet.read` is required by X to read the signed-in account, even though VitNode reads no posts.
+
+## Troubleshooting
+
+- **"Something went wrong - You weren't able to give access to the App"** - the callback URI differs from `{VITNODE_WEB_URL}/login/sso/twitter`, or `users.email` is requested while email access is off.
+- **"unauthorized_client"** - the app type is a public client (Native App or Single page App), or you used the OAuth 1.0a keys.
+- **A provider error after authorizing** - `GET /2/users/me` was refused; check your API access and plan in the developer portal.
+
+## Next
+
+<Cards>
+  <Card title="Email confirmation" description="When X shares no email" href="/docs/dev/sso/email-confirmation" />
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+</Cards>

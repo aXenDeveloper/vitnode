@@ -1,0 +1,106 @@
+---
+title: Email confirmation
+description: How VitNode signs people in with providers that share no verified email - Reddit, TikTok, Kick and others - by confirming an address with a six-digit code.
+icon: MailCheck
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+
+import emailStep from './email-confirmation/email-step.webp'
+import codeStep from './email-confirmation/code-step.webp'
+
+Some providers never share an email address (Reddit, TikTok), share one without saying whether it is verified (Kick), or share one that is not always trustworthy (Microsoft, X without email access). VitNode still signs these people in: a returning member is recognised by their provider account, and a new visitor confirms an address of their own with a six-digit code before any account exists.
+
+## When VitNode trusts a provider email
+
+An adapter's `fetchUser` returns `email` and `emailVerified`. VitNode treats the address as **trusted** only when it is present and `emailVerified` is not `false`. Each built-in adapter sets `emailVerified` from the provider's own flag - for example `email_verified`, Microsoft's `xms_edov` or PayPal's `confirmed` - and the provider guides list which one.
+
+A trusted email can create an account, match an existing account (which then needs its password before linking) and confirm an unconfirmed account. An untrusted email does none of these. It is only offered to the visitor as a suggestion they can confirm.
+
+## What the visitor sees
+
+<Steps>
+<Step>
+
+### The provider sign-in finishes
+
+The visitor signs in at the provider and lands on `/login/sso/{providerId}`. VitNode validates the round trip and asks the provider who they are.
+
+</Step>
+
+<Step>
+
+### Returning members go straight in
+
+If this provider account was linked before, the visitor is signed in. The email does not matter here, and an address stored earlier is kept even when the provider leaves it out this time.
+
+</Step>
+
+<Step>
+
+### New visitors enter an email
+
+Otherwise the page shows **Confirm your email**. The visitor types an address (pre-filled with the provider's unverified one, if there was any) and presses **Send code**. VitNode emails a six-digit code and answers the same way whether or not the address has an account.
+
+<ImgDocs
+  src={emailStep}
+  alt="The Confirm your email card after a Reddit sign-in, with an Email field and a Send code button"
+/>
+
+</Step>
+
+<Step>
+
+### The code decides what happens
+
+The visitor enters the code from the email. **Send a new code** and **Use a different email** are there if it does not arrive.
+
+<ImgDocs
+  src={codeStep}
+  alt="The same card asking for the 6-digit code sent to member@example.com, with Confirm and continue, Send a new code and Use a different email"
+/>
+
+Then one of two things happens:
+
+- **The address is new** - VitNode creates the account with `emailVerified: true`, links the provider account and signs the visitor in.
+- **The address belongs to an account** - the page shows **Connect _Provider_ to your account** and asks for that account's password, exactly like a provider email that matches an account.
+
+</Step>
+</Steps>
+
+## Security rules
+
+- The pending sign-in lives on the server, in `core_sso_pending`, for 30 minutes. The browser holds only a random token in an HttpOnly cookie. Provider tokens are never stored, and nothing sensitive goes into the URL.
+- A code works for 10 minutes and allows five guesses. A new code replaces the old one. The visitor can ask for one every 30 seconds, up to five times.
+- The code must be entered in the browser that started the sign-in. Someone who types your address on their own device cannot finish with a code that only you received.
+- The pending sign-in is consumed once. A second confirmation with the same code fails.
+- VitNode never makes up an address from a username, never marks a provider email verified just because OAuth succeeded, and never links accounts by an unverified email.
+
+## Requirements
+
+Confirmation needs an [email adapter](/docs/dev/email). Without one, VitNode cannot send the code: a new visitor from such a provider sees **We need a verified email**, and the callback answers `422 { "error": "email_unavailable" }`. Returning members are not affected.
+
+## API
+
+| Method | Path                                          | Body                | Answers                                                                                                   |
+| ------ | --------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/users/sso/{providerId}/callback`            | -                   | `202 { emailRequired: true, email }` when a code is needed                                               |
+| `POST` | `/users/sso/pending/{providerId}/email`       | `{ email }`         | `201`, `400 invalid_pending`, `429 too_many_codes`                                                        |
+| `POST` | `/users/sso/pending/{providerId}/verify`      | `{ code }`          | `200 { id }` signed in, `409` link offer, `400 invalid_code`, `code_expired` or `invalid_pending`         |
+
+The code email uses the `core.auth.sso_email_code.email` translations, so it follows the visitor's language.
+
+## Related
+
+<Cards>
+  <Card
+    title="How SSO accounts link"
+    description="Returning members, matching emails and new visitors"
+    href="/docs/dev/sso#how-accounts-link"
+  />
+  <Card
+    title="Custom adapter"
+    description="Report email trust from your own provider"
+    href="/docs/dev/sso/custom-adapter"
+  />
+</Cards>

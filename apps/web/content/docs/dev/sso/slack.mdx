@@ -1,0 +1,152 @@
+---
+title: Slack
+description: Add Sign in with Slack to VitNode using OpenID Connect - create a Slack app without a bot, register the redirect URL and optionally restrict sign-in to one workspace.
+icon: Hash
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Add a **Continue with Slack** button using Sign in with Slack (OpenID Connect). No bot is installed and no workspace data is read - VitNode only learns who the person is and which workspace they signed in from.
+
+## Quick start
+
+```bash title=".env"
+SLACK_CLIENT_ID=1234567890.1234567890123
+SLACK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+# Optional: only members of this workspace may sign in
+SLACK_TEAM_ID=T0123ABCD
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { SlackSSOApiPlugin } from '@vitnode/core/api/adapters/sso/slack' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:9]
+  authorization: {
+    ssoAdapters: [
+      SlackSSOApiPlugin({
+        clientId: process.env.SLACK_CLIENT_ID,
+        clientSecret: process.env.SLACK_CLIENT_SECRET,
+        teamId: process.env.SLACK_TEAM_ID,
+      }),
+    ],
+  },
+})
+```
+
+## Set up the app
+
+<Steps>
+<Step>
+
+### Create a Slack app
+
+Open [api.slack.com/apps](https://api.slack.com/apps), press **Create New App → From scratch**, name it and pick a development workspace.
+
+</Step>
+
+<Step>
+
+### Add the redirect URL
+
+Open **OAuth & Permissions**, press **Add New Redirect URL** under **Redirect URLs** and save:
+
+| Environment | Redirect URL                              |
+| ----------- | ----------------------------------------- |
+| Production  | `https://your-domain.com/login/sso/slack` |
+| Development | `https://forum-dev.example.com/login/sso/slack` (an HTTPS tunnel) |
+
+Slack expects HTTPS redirect URLs, so develop through a tunnel and set `VITNODE_WEB_URL` to its address. VitNode builds the URL as `{VITNODE_WEB_URL}/login/sso/slack`.
+
+</Step>
+
+<Step>
+
+### Add the OpenID scopes
+
+Still on **OAuth & Permissions**, under **User Token Scopes**, add `openid`, `profile` and `email`. Leave **Bot Token Scopes** empty - Sign in with Slack does not install a bot.
+
+</Step>
+
+<Step>
+
+### Copy the credentials
+
+Open **Basic Information → App Credentials** and copy the **Client ID** and **Client Secret** into server-side variables:
+
+```bash title=".env"
+SLACK_CLIENT_ID=1234567890.1234567890123 # [!code ++]
+SLACK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Register the adapter and restart
+
+Add `SlackSSOApiPlugin` as in the [quick start](#quick-start) and restart the server:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login`, press **Continue with Slack**, choose the workspace and allow. You return to `/login/sso/slack` signed in.
+
+</Step>
+</Steps>
+
+## Restrict sign-in to one workspace
+
+Set `teamId` to the workspace ID (starts with `T`, or `E` for an Enterprise organization; it is in the workspace URL `app.slack.com/client/T0123ABCD`). VitNode then:
+
+1. sends `team=T0123ABCD` so Slack preselects the workspace, and
+2. checks the `https://slack.com/team_id` claim of the validated ID token and answers `403` for any other workspace.
+
+The second check is what makes the restriction real: anyone can edit the authorize URL, but nobody can change the signed token.
+
+To let people outside your workspace sign in, turn on **Manage Distribution → Activate Public Distribution** for the app.
+
+## Scopes and profile fields
+
+| Setting        | Value                                                          |
+| -------------- | -------------------------------------------------------------- |
+| Scopes         | `openid profile email` (user scopes)                           |
+| ID token       | RS256 signature, issuer `https://slack.com`, audience, expiry, nonce |
+| Account ID     | `{team_id}:{user_id}` - Slack user IDs are per workspace        |
+| Email trusted  | only with `email_verified: true`                               |
+| Profile fields | avatar, first name, last name                                  |
+
+## Troubleshooting
+
+- **"redirect_uri did not match any configured URIs"** - add `{VITNODE_WEB_URL}/login/sso/slack` under **OAuth & Permissions**.
+- **Slack asks to install a bot** - the app has **Bot Token Scopes**. Remove them; sign-in needs only the user scopes above.
+- **403 after signing in** - the person signed in from a workspace other than `teamId`.
+- **Only your workspace can sign in** - public distribution is off.
+
+## Next
+
+<Cards>
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+  <Card title="Connected accounts" description="Import the avatar and name" href="/docs/dev/sso/connected-accounts" />
+</Cards>

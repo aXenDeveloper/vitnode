@@ -26,6 +26,16 @@
           "help": "If you're having trouble with the button above, copy and paste the URL below into your web browser:",
           "expire_time": "This link will expire on {date}"
         }
+      },
+      "sso_email_code": {
+        "email": {
+          "subject": "Your sign-in code: {code}",
+          "title": "Confirm your email address",
+          "intro": "Someone signed in with {provider} and asked to use this address. Enter this code on the sign-in page to confirm it's yours:",
+          "expire_time": "The code expires in {minutes, plural, one {# minute} other {# minutes}}.",
+          "no_action": "If you didn't sign in with {provider}, ignore this email - without the code nobody can use your address.",
+          "security_note": "For your security, this request was made from IP address: {ip}"
+        }
       }
     },
     "notifications": {

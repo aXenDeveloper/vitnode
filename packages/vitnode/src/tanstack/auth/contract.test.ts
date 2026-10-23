@@ -159,10 +159,29 @@ describe("SSO callback results", () => {
     [400, "invalid_state"],
     [404, "unknown_provider"],
     [409, "email_exists"],
+    [422, "email_unavailable"],
     [429, "server_error"],
     [500, "server_error"],
   ] as const)("reads %i as %s", (status, reason) => {
     expect(completeSsoResultFromStatus(status)).toEqual({ ok: false, reason });
+  });
+
+  it("reads 202 as an email to confirm, keeping only a well-formed suggestion", () => {
+    expect(
+      completeSsoResultFromStatus(202, {
+        email: "alice@example.test",
+        emailRequired: true,
+      }),
+    ).toEqual({
+      email: "alice@example.test",
+      ok: false,
+      reason: "email_required",
+    });
+    expect(completeSsoResultFromStatus(202, { email: 42 })).toEqual({
+      email: null,
+      ok: false,
+      reason: "email_required",
+    });
   });
 });
 

@@ -34,6 +34,7 @@ export type StartSsoConnectionFailure =
   | "nothing_to_sync"
   | "provider_already_connected"
   | "provider_not_found"
+  | "reauthentication_required"
   | "server_error";
 
 export type StartSsoConnectionResult =
@@ -52,6 +53,7 @@ const START_FAILURES: readonly StartSsoConnectionFailure[] = [
   "nothing_to_sync",
   "provider_already_connected",
   "provider_not_found",
+  "reauthentication_required",
 ];
 
 export const startSsoConnectionInBrowser: StartSsoConnection = async ({
@@ -114,15 +116,20 @@ export const completeSsoConnectionInBrowser = async ({
   code,
   providerId,
   state,
+  user,
 }: {
   code: string;
   providerId: string;
   state: string;
+  user?: string;
 }): Promise<CompleteSsoConnectionResult> => {
   try {
     const response = await fetcherClient({
       plugin: manifest.id,
-      args: { body: { code, state }, params: providerParam(providerId) },
+      args: {
+        body: { code, state, ...(user ? { user } : {}) },
+        params: providerParam(providerId),
+      },
       method: "post",
       module: "users/sso/connections",
       options: CREDENTIALS,

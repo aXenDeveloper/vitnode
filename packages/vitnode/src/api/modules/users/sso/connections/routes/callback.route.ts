@@ -15,6 +15,7 @@ import {
 export const zodSsoConnectionCallbackSchema = z.object({
   code: z.string().min(1).max(4096),
   state: z.string().min(16).max(256),
+  user: z.string().max(2048).optional(),
 });
 
 export const ssoConnectionCallbackRoute = buildRoute({
@@ -52,12 +53,13 @@ export const ssoConnectionCallbackRoute = buildRoute({
   handler: async c => {
     const user = requireSignedInUser(c.get("user"));
     const { providerId } = c.req.valid("param");
-    const { code, state } = c.req.valid("json");
+    const { code, state, user: providerUser } = c.req.valid("json");
 
     try {
       return c.json(
         await new SsoConnectionModel(c).callback({
           code,
+          params: providerUser === undefined ? {} : { user: providerUser },
           providerId,
           state,
           user,

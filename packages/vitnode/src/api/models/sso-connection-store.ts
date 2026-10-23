@@ -39,9 +39,13 @@ export interface SsoProfileValues {
 }
 
 export interface SsoOperationRecord {
+  /** The PKCE verifier of the provider round trip this operation started. */
+  codeVerifier?: null | string;
   expiresAt: Date;
   fields: SsoProfileField[];
   intent: SsoOperationIntent;
+  /** The OpenID Connect nonce of that round trip. */
+  nonce?: null | string;
   preview: null | SsoProfileValues;
   providerAccountId: null | string;
   providerId: string;
@@ -149,9 +153,11 @@ type Db = Context["var"]["db"];
 const toOperation = (
   row: typeof core_users_sso_operations.$inferSelect,
 ): SsoOperationRecord => ({
+  codeVerifier: row.codeVerifier,
   expiresAt: row.expiresAt,
   fields: row.fields,
   intent: row.intent,
+  nonce: row.nonce,
   preview: row.preview,
   providerAccountId: row.providerAccountId,
   providerId: row.providerId,
@@ -418,9 +424,17 @@ export const drizzleSsoConnectionStore = (db: Db): SsoConnectionStore => ({
     providerUsername,
     userId,
   }) => {
+    // A provider that leaves the email or username out this time has not
+    // taken it back - keep what the connection already shows.
+    const changes = {
+      ...(providerEmail === null ? {} : { providerEmail }),
+      ...(providerUsername === null ? {} : { providerUsername }),
+    };
+    if (Object.keys(changes).length === 0) return;
+
     await db
       .update(core_users_sso)
-      .set({ providerEmail, providerUsername })
+      .set(changes)
       .where(
         and(
           eq(core_users_sso.userId, userId),

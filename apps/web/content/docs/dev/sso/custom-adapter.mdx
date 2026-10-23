@@ -6,7 +6,7 @@ icon: Puzzle
 
 import { TypeTable } from "fumadocs-ui/components/type-table"
 
-VitNode includes built-in SSO adapters for Google, Discord, and Facebook. You can connect any other OAuth2 provider (e.g. GitHub, Apple, Slack) by implementing the `SSOApiPlugin` interface. State cookie generation, user session linking, and login buttons are handled automatically.
+VitNode includes [15 built-in SSO adapters](/docs/dev/sso#providers), from Apple to Twitter (X). You can connect any other OAuth 2.0 or OpenID Connect provider (for example GitHub, Bitbucket or Zoom) by implementing the `SSOApiPlugin` interface. The sign-in attempt (state, PKCE verifier, nonce), account linking, email confirmation and login buttons are handled by VitNode.
 
 ## Quick start: GitHub SSO Adapter
 
@@ -67,12 +67,14 @@ export const GitHubSSOApiPlugin = ({
       const emailRes = await fetch("https://api.github.com/user/emails", { headers })
       const emails: Array<{ email: string; primary: boolean; verified: boolean }> =
         await emailRes.json()
-      const primaryEmail = emails.find((e) => e.primary && e.verified)?.email
-      if (!primaryEmail) throw new Error("GitHub account has no verified email")
+      const primary = emails.find((e) => e.primary)
 
       return {
         id: String(user.id),
-        email: primaryEmail,
+        email: primary?.email ?? null,
+        // An unverified (or missing) address sends a new visitor through
+        // email confirmation instead of being trusted.
+        emailVerified: primary?.verified === true,
         username: user.login,
         avatarUrl: user.avatar_url,
       }
@@ -131,19 +133,19 @@ A **GitHub** login button automatically renders on `/login` and `/register`, and
       type: "string",
     },
     getUrl: {
-      description: "Returns the provider authorization redirect URL.",
+      description: "Returns the provider authorization URL. Pass state through unchanged; send codeChallenge (S256) and nonce when the provider supports PKCE and OpenID Connect.",
       required: true,
-      type: "({ state: string }) => string",
+      type: "(request: { state: string; codeChallenge: string; codeChallengeMethod: 'S256'; nonce: string }) => string",
     },
     fetchToken: {
-      description: "Exchanges code for access_token.",
+      description: "Exchanges the code for tokens. The context carries the attempt's PKCE verifier, nonce and any extra callback parameters (such as Apple's user). Extra token fields, like id_token, are kept for fetchUser.",
       required: true,
-      type: "(code: string) => Promise<{ access_token: string; token_type: string }>",
+      type: "(code: string, context: SSOCallbackContext) => Promise<SSOTokenResponse>",
     },
     fetchUser: {
-      description: "Fetches the user profile: id, email, username, and optionally emailVerified, avatarUrl, firstName and lastName. VitNode keys accounts on the email, so set emailVerified: false (or throw) for an address the provider has not confirmed - VitNode then refuses the sign-in with a 400 instead of creating, linking or verifying an account with it. Set it to true when the provider confirms the address. The built-in adapters only ever return confirmed addresses.",
+      description: "Returns the provider account: a stable id, and optionally email, emailVerified, username, avatarUrl, firstName and lastName. Validate the ID token here when the provider issues one. An email counts as trusted unless emailVerified is false: return emailVerified: false (or email: null) when the provider has not confirmed the address, and VitNode asks a new visitor to confirm one with a code instead. A returning member is always recognised by id.",
       required: true,
-      type: "(token: TokenResponse) => Promise<SSOProviderUser>",
+      type: "(token: SSOTokenResponse, context: SSOCallbackContext) => Promise<SSOProviderUser>",
     },
     profileFields: {
       description: "Which profile fields the provider can supply for Connected accounts: 'avatar', 'firstName', 'lastName'. Leave it out and nothing is ever imported from this adapter.",
@@ -152,6 +154,36 @@ A **GitHub** login button automatically renders on `/login` and `/register`, and
     },
   }}
 />
+
+Adapters written for older versions, with `getUrl({ state })`, `fetchToken(code)` and `fetchUser(token)`, still work: the extra arguments are simply ignored.
+
+## PKCE, ID tokens and provider calls
+
+`@vitnode/core/api/lib/sso-protocol` has the small helpers the built-in adapters use. All of them are server-only:
+
+| Helper                     | Use it to                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------- |
+| `requestSsoProviderJson`   | Call a provider endpoint with a 10-second timeout and validate the JSON with a Zod schema (`502` otherwise) |
+| `formPost`, `basicClientAuth`, `bearerAuth` | Build a form-encoded token request, HTTP Basic client auth or a bearer header        |
+| `verifySsoIdToken`         | Validate an ID token with `jose`: signature, algorithm, `iss`, `aud`, `exp`/`iat` and `nonce`      |
+| `remoteJwks`               | Fetch and cache the provider's signing keys                                                      |
+
+```ts title="apps/api/src/utils/sso/acme.ts"
+import { remoteJwks, verifySsoIdToken } from '@vitnode/core/api/lib/sso-protocol'
+
+// inside the adapter
+fetchUser: async ({ id_token }, { nonce }) => {
+  const claims = await verifySsoIdToken({
+    audience: clientId,
+    idToken: id_token,
+    issuer: 'https://id.acme.example',
+    keys: remoteJwks('https://id.acme.example/.well-known/jwks.json'),
+    nonce,
+  })
+
+  return { id: String(claims.sub), email: null }
+},
+```
 
 See [Provider Icons and Colors](/docs/dev/sso/icons) for the accepted `icon` and `brandColor` formats, and for registering a React component instead.
 

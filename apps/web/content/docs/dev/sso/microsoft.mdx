@@ -1,0 +1,175 @@
+---
+title: Microsoft
+description: Add Microsoft sign-in to VitNode for work, school and personal Microsoft accounts - register an Entra app, pick the tenant and enforce who may sign in.
+icon: Building2
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Add a **Continue with Microsoft** button for Microsoft Entra ID (work and school) and personal Microsoft accounts. The adapter uses OpenID Connect with PKCE, validates the ID token and enforces the tenant you choose on every sign-in.
+
+## Quick start
+
+```bash title=".env"
+MICROSOFT_CLIENT_ID=00000000-1111-2222-3333-444444444444
+MICROSOFT_CLIENT_SECRET=xxxxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { MicrosoftSSOApiPlugin } from '@vitnode/core/api/adapters/sso/microsoft' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:9]
+  authorization: {
+    ssoAdapters: [
+      MicrosoftSSOApiPlugin({
+        clientId: process.env.MICROSOFT_CLIENT_ID,
+        clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+        tenant: 'common',
+      }),
+    ],
+  },
+})
+```
+
+## Register the application
+
+<Steps>
+<Step>
+
+### Create an app registration
+
+In the [Microsoft Entra admin center](https://entra.microsoft.com/), open **Identity → Applications → App registrations** and press **New registration**.
+
+</Step>
+
+<Step>
+
+### Choose who can sign in
+
+Pick the **Supported account types** and use the matching `tenant` value:
+
+| Supported account types                                    | `tenant`        |
+| ---------------------------------------------------------- | --------------- |
+| Accounts in any organizational directory and personal accounts | `common`        |
+| Accounts in any organizational directory                   | `organizations` |
+| Personal Microsoft accounts only                           | `consumers`     |
+| Accounts in this organizational directory only             | your tenant ID  |
+
+</Step>
+
+<Step>
+
+### Add the redirect URI
+
+Under **Redirect URI**, choose the **Web** platform and enter the URI, then press **Register**. Add more under **Authentication** later.
+
+| Environment                           | Redirect URI                                  |
+| ------------------------------------- | --------------------------------------------- |
+| Development (`VITNODE_WEB_URL` unset) | `http://localhost:3000/login/sso/microsoft`   |
+| Production                            | `https://your-domain.com/login/sso/microsoft` |
+
+Microsoft allows plain `http://` only for `localhost`.
+
+</Step>
+
+<Step>
+
+### Create a client secret
+
+Copy the **Application (client) ID** from **Overview**. Open **Certificates & secrets → Client secrets → New client secret**, and copy its **Value** - not the Secret ID. Microsoft shows the value once, and it expires on the date you pick.
+
+```bash title=".env"
+MICROSOFT_CLIENT_ID=00000000-1111-2222-3333-444444444444 # [!code ++]
+MICROSOFT_CLIENT_SECRET=xxxxx~xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Register the adapter and restart
+
+Add `MicrosoftSSOApiPlugin` with your `tenant`, as in the [quick start](#quick-start), and restart the server:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login`, press **Continue with Microsoft**, sign in and accept. You return to `/login/sso/microsoft` signed in, or are asked to [confirm an email](/docs/dev/sso/email-confirmation).
+
+</Step>
+</Steps>
+
+## Tenant restrictions are enforced
+
+The tenant in the authorize URL is only a hint to Microsoft. VitNode checks the validated ID token instead: its issuer must be `https://login.microsoftonline.com/{tid}/v2.0` for the token's own `tid`, and that `tid` must fit `tenant`:
+
+- `organizations` refuses personal accounts (tenant `9188040d-6c67-4c5b-b112-36a304b66dad`).
+- `consumers` accepts only personal accounts.
+- A tenant ID accepts only that tenant.
+
+To allow a few partner organizations on a multi-tenant app, add `allowedTenantIds`. Any other tenant gets a `403`:
+
+```ts title="src/vitnode.api.config.ts"
+MicrosoftSSOApiPlugin({
+  clientId: process.env.MICROSOFT_CLIENT_ID,
+  clientSecret: process.env.MICROSOFT_CLIENT_SECRET,
+  tenant: 'organizations',
+  allowedTenantIds: ['11111111-2222-3333-4444-555555555555'], // [!code ++]
+}),
+```
+
+`tenant` must be `common`, `organizations`, `consumers` or a tenant ID (GUID); a domain such as `contoso.com` is refused at startup because it cannot be compared with `tid`.
+
+## Email and account ID
+
+Microsoft's `email` claim can change and is often not verified, so VitNode trusts it only when Microsoft adds `xms_edov: true` (the email's domain owner is verified). To receive it, open **Token configuration → Add optional claim → ID** and add `email` and `xms_edov`. Without it, new members confirm an address with a code.
+
+The account is stored as `{tid}:{oid}`, as Microsoft recommends, so the same person in two tenants is two accounts.
+
+## Scopes and profile fields
+
+| Setting        | Value                                                |
+| -------------- | ---------------------------------------------------- |
+| Scopes         | `openid profile email`                               |
+| PKCE           | `S256`                                               |
+| Account ID     | `{tid}:{oid}`                                        |
+| Email trusted  | only with `xms_edov: true`                           |
+| Profile fields | first name, last name                                |
+
+The profile photo would need Microsoft Graph's `User.Read` permission, so the adapter does not offer the avatar.
+
+## Troubleshooting
+
+- **AADSTS50011, redirect URI mismatch** - add `{VITNODE_WEB_URL}/login/sso/microsoft` under **Authentication** on the **Web** platform.
+- **AADSTS7000215, invalid client secret** - you copied the Secret ID, or the secret expired.
+- **AADSTS50020 or a 403 after signing in** - the account's tenant does not fit `tenant` or `allowedTenantIds`.
+- **"Need admin approval"** - the organization blocks user consent; an administrator can grant consent for the tenant.
+
+## Next
+
+<Cards>
+  <Card title="Email confirmation" description="When Microsoft's email is not trusted" href="/docs/dev/sso/email-confirmation" />
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+</Cards>
