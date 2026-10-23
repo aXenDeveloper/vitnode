@@ -34,7 +34,7 @@ Added to the content type's `permissionModule` in the **moderator** catalog, unl
 
 Content actions also need `can_manage_reports`, because they are recorded in the report.
 
-[Public write](/docs/content-engine/public-write-api#moderator-permission) adds `can_edit` to the same module. In a container collection with [publishing policies](/docs/content-engine/container-policies), `can_edit` and `can_approve` are scoped by the collection's family, whose id is the container definition id and whose resources are container ids and `"{id}:tree"` subtrees. See [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions). Generated entries merge with the report permissions; only a module the plugin declares itself in `permissionStaff.moderator` is left as declared.
+[Write API](/docs/content-engine/public-write-api#moderator-permission) adds `can_edit` to the same module. In a container collection with [publishing policies](/docs/content-engine/container-policies), `can_edit` and `can_approve` are scoped by the collection's family, whose id is the container definition id and whose resources are container ids and `"{id}:tree"` subtrees. See [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions). Generated entries merge with the report permissions; only a module the plugin declares itself in `permissionStaff.moderator` is left as declared.
 
 ## Scoped grants
 

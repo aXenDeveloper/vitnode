@@ -1,0 +1,59 @@
+---
+title: Previews
+description: Share a VitNode Content Engine draft with someone who has no AdminCP account through a signed, expiring preview link, and load the draft in your page.
+icon: Eye
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import previewLink from "./editorial-preview-link.webp";
+
+A preview link lets a reviewer read a draft without signing in. It needs [`editorial`](/docs/content-engine/editorial) and a [public API](/docs/content-engine/public-api), and a page that knows how to load the draft. The examples use `example.article` from the example plugin.
+
+## Turn on previews
+
+Add `preview` to the `editorial` block. `expiresInMinutes` defaults to 15 and accepts 1 to 1440:
+
+```ts title="plugins/example/src/content/article.ts"
+editorial: {
+  revisions: { retention: 20 },
+  preview: { expiresInMinutes: 30 }, // [!code ++]
+},
+```
+
+`preview` changes no columns. Leaving out `publicApi` is a type error, and the definition throws when it loads.
+
+## Create and open a link
+
+A preview link lets a reviewer read a draft without signing in. In the AdminCP, open **More actions** and choose **Preview**. Creating a link needs `can_view`.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={previewLink}
+  alt="Preview link dialog with a signed link to the Spring menu launches Monday article, a copy button, an Open button and an Expires in 30 minutes note"
+/>
+
+The link is HMAC-signed, expires after `expiresInMinutes` (15 by default, 1 to 1440) and cannot be revoked early, so treat it like a password. It is pinned to the last saved version, so it shows what **Save** committed, not unsaved [live editing](/docs/content-engine/live-editing) drafts.
+
+The link points to the first of these that exists:
+
+1. `preview.pathTemplate`, such as `/preview/articles/{token}`, with exactly one `{token}`.
+2. The record's own page with `?preview=<token>`, when the type has [delivery](/docs/content-engine/public-pages).
+3. The public API route `GET /api/@vitnode/example/content/articles/preview/{token}`.
+
+Every page still has to load the draft from that API route. A page built from [Content page](/docs/content-engine/public-pages) does not read `?preview=` on its own, so the example's link opens a 404 until you check for it in your loader:
+
+```ts title="Read a preview in a page loader"
+const preview = await fetcher({
+  plugin: "@vitnode/example",
+  method: "get",
+  module: "content/articles",
+  path: "/preview/{token}",
+  args: { params: { token: encodeURIComponent(token) } },
+});
+```
+
+The route returns the record's public fields, and the same `404` for a forged, expired or unknown token. It sends `Cache-Control: private, no-store` and `X-Robots-Tag: noindex, nofollow`, so the draft stays out of caches and search results.
+
+Links are built from `VITNODE_WEB_URL` and `VITNODE_API_URL`. When either is not an absolute URL, the API logs a warning at startup and the **Preview** button answers `503`.
+

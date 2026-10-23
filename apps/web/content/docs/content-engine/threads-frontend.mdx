@@ -1,188 +1,74 @@
 ---
-title: Threaded replies on the frontend
-description: Build a Content Engine comment section that reads the thread, renders the reply tree with tombstones and pages, and lets members reply, edit and report, with fetcher, useContentPublicWrite, useContentPermissions and ReportButton.
+title: Replies
+description: Let VitNode Content Engine comments answer each other - raise thread.maxDepth, build the reply tree, keep removed comments as placeholders, and handle pagination, truncation and the depth limit.
 icon: MessagesSquare
 implementation:
-  objective: Show threaded replies under a record and let members reply, edit and report them from the public site.
+  objective: Turn flat comments into threaded replies on an existing comment section.
   decisions:
-    - Which reply type? Offer content types in the project with the `thread` option and a `publicApi`; if none has it, point to the Threaded replies guide.
-    - Which page shows the replies? Offer the public page of the type named by `thread.root`.
-    - Who can reply? Signed-in members (needs `publicWrite.create`), or nobody from the site (read-only thread).
+    - How deep can replies nest? From 1 (flat) to 32 levels; recommend 4 to 6.
   constraints:
-    - 'Read with `GET /{publicApi.path}/thread` through `fetcher`, keep loaded pages in one infinite query, and render `removed: true` items as tombstones.'
-    - Create and edit replies inside `useContentPublicWrite().submit`; the server checks the parent, the root and `maxDepth`.
-    - Show Edit and Report from one `useContentPermissions` call for every loaded reply with a record.
+    - 'Raise `thread.maxDepth` and build the tree from `parentId`; render `removed: true` items as placeholders that keep their replies.'
+    - Send `parent` with each reply; the server checks the parent and the depth.
   related:
-    - title: Threaded replies
+    - title: Comments
       href: /docs/content-engine/threads
-    - title: Viewer permissions
-      href: /docs/content-engine/public-permissions
-    - title: useContentPublicWrite reference
-      href: /docs/content-engine/public-write-form-api
+    - title: Permissions API
+      href: /docs/content-engine/public-permissions-api
+    - title: thread reference
+      href: /docs/content-engine/reference#thread
 ---
+
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
 
 import { ImgDocs } from "@/components/fumadocs/img";
 import tree from "./threads-frontend-tree.webp";
 
-This guide builds the comment section under a forum topic: read the thread, draw the tree, reply, edit, report, and refresh after every write. It needs a reply type with the [`thread` option](/docs/content-engine/threads) and `publicWrite`. The server keeps the tree valid; the page only draws it and sends writes.
+Replies let a comment answer another comment, so a conversation can branch. The thread route already returns each top-level comment followed by every answer below it; this page draws that as a tree, adds **Reply**, and keeps the shape when a comment in the middle is removed.
 
-## What is yours and what core provides
-
-Core gives you the routes and the building blocks. The comment section itself is plugin code that you copy and adapt; there is no core comments component.
-
-| From core | Import |
-| --- | --- |
-| Typed calls to the thread, write and permissions routes | `fetcher` from `@vitnode/core/tanstack/fetcher` |
-| Saving with field errors, refusals and version conflicts | `useContentPublicWrite` from `@vitnode/core/tanstack/content` |
-| Edit and Report availability | `useContentPermissions` from `@vitnode/core/tanstack/content` |
-| The report dialog | `ReportButton` from `@vitnode/core/tanstack/moderation`, `contentTarget` from `@vitnode/core/content` |
-| Rendering the body | `RichTextContent` from `@vitnode/core/components/rich-text` |
-
-These names belong to the Forum plugin. Replace them with your own:
-
-| Forum value | What it is | Where it comes from |
-| --- | --- | --- |
-| `manifest.id` (`@vitnode/forum`) | Plugin id in every `fetcher` call | `@/manifest.gen` |
-| `content/comments` | The reply type's module: `content/` + `publicApi.path` | `commentContentType.publicApi.path` |
-| `commentContentType` | Reply content type, for `contentTarget` | `@/content/comment` |
-| `topic` | The root field, `thread.root` | Sent as `values.topic` and as `root` in the thread query |
-| `parent` | The parent field, `thread.parent` | Sent as `values.parent`; `null` for a direct answer |
-| `body` | The rich text field the form edits | `publicWrite.create.fields` and `update.fields` |
-| `FORUM_COMMENT_MAX_DEPTH` (6) | `thread.maxDepth`, to hide **Reply** at the deepest level | `@/content/comment` |
-| `@vitnode/forum.comments` | Translation namespace | `src/locales/en.json` |
-
-## Read the thread
-
-`GET /comments/thread?root={topicId}&first=20&after={cursor}` returns a page of top-level replies, oldest first, each followed by every public answer below it. `first` is 1 to 50 top-level replies, and a page holds at most 500 replies in total:
-
-```json title="200"
-{
-  "items": [
-    { "depth": 1, "id": 17, "parentId": null, "removed": false, "record": { "id": 17, "body": {}, "author": {} } },
-    { "depth": 2, "id": 18, "parentId": 17, "removed": true, "record": null },
-    { "depth": 3, "id": 21, "parentId": 18, "removed": false, "record": { "id": 21 } }
-  ],
-  "pageInfo": { "endCursor": "WyIyMDI2...", "hasNextPage": true, "totalCount": 60 },
-  "replyCount": 65,
-  "truncated": false
-}
-```
-
-| Field | Meaning |
-| --- | --- |
-| `items` | Flat and depth first: a parent always comes before its answers |
-| `removed` | `true` for a tombstone: a reply readers cannot see, such as a hidden one, kept because public answers sit below it. `record` is `null` |
-| `pageInfo.totalCount` | Public top-level replies |
-| `replyCount` | Every public reply in the thread, for a "65 comments" heading |
-| `truncated` | Some deep answers did not fit in the 500-reply budget of this page |
-
-A missing, draft or hidden topic answers `404`.
+This continues the comment section from [Comments](/docs/content-engine/threads), where every comment is top level.
 
 <Steps>
 
 <Step>
 
-### Create the query
+### Raise the depth
 
-The thread route types `record` loosely, so the query parses it with Zod once, from the fields in `publicApi.fields` and `people`. All loaded pages live in one infinite query, so a refetch reloads every page in order:
+Edit `src/content/comment.ts`. Put the depth in one exported constant, because the section uses it too:
 
-```ts title="src/pages/thread-data.ts"
-import { infiniteQueryOptions } from "@tanstack/react-query";
-import {
-  zodContentPublicPerson,
-  zodRichTextDocument,
-} from "@vitnode/core/content";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { z } from "zod";
+```ts title="plugins/newsroom/src/content/comment.ts"
+/** How deep replies nest. The reply form hides **Reply** at this depth. */
+export const COMMENT_MAX_DEPTH = 4;
 
-import { manifest } from "@/manifest.gen";
-
-/** Top-level comments per page. The route accepts 1 to 50. */
-const THREAD_PAGE_SIZE = 20;
-
-/**
- * One reply as `publicApi.fields` and `people` project it. The thread route
- * types `record` loosely, so parse it once here.
- */
-const zodComment = z.object({
-  author: zodContentPublicPerson.nullable().catch(null),
-  body: zodRichTextDocument,
-  createdAt: z.string(),
-  id: z.number(),
-  publishedAt: z.string().nullable(),
-  slug: z.string(),
+export const commentContentType = defineContentType({
+  // ...the same fields and options as before
+  thread: { parent: "parent", root: "article", maxDepth: COMMENT_MAX_DEPTH }, // [!code highlight]
 });
+```
 
-const zodThreadPage = z.object({
-  items: z.array(
-    z.object({
-      depth: z.number(),
-      id: z.number(),
-      parentId: z.number().nullable(),
-      record: zodComment.nullable(),
-      removed: z.boolean(),
-    }),
-  ),
-  pageInfo: z.object({
-    endCursor: z.string().nullable(),
-    hasNextPage: z.boolean(),
-    totalCount: z.number(),
-  }),
-  replyCount: z.number(),
-  truncated: z.boolean(),
-});
+A reply to a comment at depth 4 is refused, so nothing nests deeper than four levels. `maxDepth` changes no columns, so there is nothing to migrate.
 
-export type ThreadPage = z.infer<typeof zodThreadPage>;
+</Step>
 
-const fetchThreadPage = async (topicId: number, after?: string) => {
-  const res = await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "content/comments",
-    path: "/thread",
-    args: {
-      query: {
-        root: String(topicId),
-        first: THREAD_PAGE_SIZE,
-        ...(after ? { after } : {}),
-      },
-    },
-  });
-  if (res.status !== 200) throw new Error("Loading the comments failed.");
+<Step>
 
-  return zodThreadPage.parse(await res.json());
-};
+### Build the tree
 
-export type ThreadItem = ThreadPage["items"][number];
+The thread route still answers with a flat list, depth first, so a parent always comes before its replies. Add a tree builder to the end of `src/pages/comment-data.ts`:
 
-export type ThreadComment = NonNullable<ThreadItem["record"]>;
-
-export const threadQueryKey = (topicId: number) =>
-  [manifest.id, "thread", topicId] as const;
-
-/** Every loaded page under one key, so a refetch reloads them all in order. */
-export const threadQueryOptions = (topicId: number) =>
-  infiniteQueryOptions({
-    getNextPageParam: (last: ThreadPage) =>
-      last.pageInfo.hasNextPage
-        ? (last.pageInfo.endCursor ?? undefined)
-        : undefined,
-    initialPageParam: undefined as string | undefined,
-    queryFn: async ({ pageParam }) => await fetchThreadPage(topicId, pageParam),
-    queryKey: threadQueryKey(topicId),
-  });
-
-export interface ThreadNode extends ThreadItem {
-  children: ThreadNode[];
+```ts title="plugins/newsroom/src/pages/comment-data.ts"
+export interface CommentNode extends CommentItem {
+  children: CommentNode[];
 }
 
 /** The flat, depth-first answer as a tree: a parent always comes before its replies. */
-export const buildThreadTree = (items: readonly ThreadItem[]): ThreadNode[] => {
-  const nodes = new Map<number, ThreadNode>();
-  const roots: ThreadNode[] = [];
+export const buildCommentTree = (
+  items: readonly CommentItem[],
+): CommentNode[] => {
+  const nodes = new Map<number, CommentNode>();
+  const roots: CommentNode[] = [];
 
   for (const item of items) {
-    const node: ThreadNode = { ...item, children: [] };
+    const node: CommentNode = { ...item, children: [] };
     nodes.set(item.id, node);
     const parent =
       item.parentId === null ? undefined : nodes.get(item.parentId);
@@ -194,347 +80,101 @@ export const buildThreadTree = (items: readonly ThreadItem[]): ThreadNode[] => {
 };
 ```
 
-`buildThreadTree` turns the flat list into a tree in one pass. Because a parent always comes first, every reply finds its parent in the map.
+One pass is enough: every reply finds its parent in the map, because the parent came first.
 
 </Step>
 
 <Step>
 
-### Warm it in the page loader
+### Render the tree
 
-Fetch the first page in the loader of the topic page, so the comments are in the server-rendered HTML. Leave out `LOADER_DATA_QUERY_META`: the query is sent with the page and the component reads it from the cache.
+Edit `src/pages/comment-section.tsx`. First import the new pieces:
 
-```tsx title="Excerpt: plugins/forum/src/pages/topic-page.tsx"
-import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx"
+import type { ArticleComment, CommentNode } from "./comment-data";
 
-import { CommentThread } from "./comment-thread";
-import { threadQueryOptions } from "./thread-data";
+import { COMMENT_MAX_DEPTH } from "@/content/comment";
 
-export const route = defineRoute({
-  load: async ({ context, params }) => {
-    const topic = await loadTopic(context.queryClient, params.slug);
-    await context.queryClient.infiniteQuery(threadQueryOptions(topic.id));
-
-    return { topic };
-  },
-});
-
-// In the page component, below the topic:
-<CommentThread topicId={topic.id} topicSlug={topic.slug} />;
+import {
+  buildCommentTree,
+  commentsQueryKey,
+  commentsQueryOptions,
+} from "./comment-data";
 ```
 
-Add the translation namespace to the page's route, next to the topic's own:
+Add a `CommentBranch` above `CommentSection`. It renders one comment and, indented below it, its replies:
 
-```ts title="Excerpt: plugins/forum/src/routes.ts"
-page("/forum/topics/:slug", {
-  component: lazy(() => import("./pages/topic-page")),
-  messages: ["@vitnode/forum.topics", "@vitnode/forum.comments"],
-}),
-```
-
-`loadTopic` stands for the read your topic page already does. The thread is the same for every reader, so the page can stay in a shared cache. Everything that depends on the visitor, the buttons and the composer, is decided in the browser.
-
-</Step>
-
-<Step>
-
-### Write the composer
-
-One form creates a top-level reply, answers another reply or edits one. `useContentPublicWrite` shows field errors and refusals, and in edit mode the version-conflict alert:
-
-```tsx title="src/pages/comment-composer.tsx"
-import {
-  AutoForm,
-  type AutoFormOnSubmit,
-  AutoFormSubmitButton,
-} from "@vitnode/core/components/form/auto-form";
-import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
-import { Button } from "@vitnode/core/components/ui/button";
-import {
-  emptyRichTextDocument,
-  isRichTextEmpty,
-  type RichTextDocument,
-  zodRichTextDocument,
-} from "@vitnode/core/content";
-import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { useTranslations } from "use-intl";
-import { z } from "zod";
-
-import { manifest } from "@/manifest.gen";
-
-export type CommentComposerProps = {
-  label: string;
-  onCancel?: () => void;
-  /** Called after a save, with whether it waits for a moderator. */
-  onDone: (outcome: { edited: boolean; pending: boolean }) => void;
-} & (
-  | {
-      body: RichTextDocument;
-      commentId: number;
-      mode: "edit";
-      version: number;
-    }
-  | { mode: "create"; parentId: null | number; topicId: number }
-);
-
-const createSchema = (body: RichTextDocument, required: string) =>
-  z.object({
-    body: zodRichTextDocument
-      .refine(doc => !isRichTextEmpty(doc), required)
-      .default(body),
-  });
-
-type CommentSchema = ReturnType<typeof createSchema>;
-
-const fetchEditableComment = async (id: number) =>
-  await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "content/comments",
-    path: "/{id}/edit",
-    args: { params: { id } },
-  });
-
-const CommentComposer = (props: CommentComposerProps) => {
-  const t = useTranslations("@vitnode/forum.comments");
-  const write = useContentPublicWrite({
-    fields: ["body"],
-    ...(props.mode === "edit"
-      ? {
-          latestVersion: async () => {
-            const res = await fetchEditableComment(props.commentId);
-
-            return res.status === 200 ? (await res.json()).version : null;
-          },
-          version: props.version,
-        }
-      : {}),
-  });
-
-  const onSubmit: AutoFormOnSubmit<CommentSchema> = async ({ body }, form) => {
-    if (props.mode === "edit") {
-      const updated = await write.submit(
-        form,
-        async expectedVersion =>
-          await fetcher({
-            plugin: manifest.id,
-            method: "patch",
-            module: "content/comments",
-            path: "/{id}",
-            args: {
-              params: { id: props.commentId },
-              // Always set in edit mode, where `version` is passed.
-              body: {
-                values: { body },
-                expectedVersion: expectedVersion ?? props.version,
-              },
-            },
-          }),
-      );
-      if (updated) {
-        props.onDone({
-          edited: true,
-          pending: updated.approval?.status === "pending",
-        });
-      }
-
-      return;
-    }
-
-    const created = await write.submit(
-      form,
-      async () =>
-        await fetcher({
-          plugin: manifest.id,
-          method: "post",
-          module: "content/comments",
-          path: "/",
-          args: {
-            body: {
-              values: { body, parent: props.parentId, topic: props.topicId },
-            },
-          },
-        }),
-    );
-    if (!created) return;
-
-    props.onDone({
-      edited: false,
-      pending: created.approval?.status === "pending",
-    });
-  };
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx"
+const CommentBranch = ({
+  actions,
+  node,
+}: {
+  actions: CommentActions;
+  node: CommentNode;
+}) => {
+  const t = useTranslations("newsroom.comments");
 
   return (
-    <div className="flex flex-col gap-3">
-      {write.conflict}
-      <AutoForm
-        aria-label={props.label}
-        className="flex flex-col gap-3"
-        fields={[
-          {
-            id: "body",
-            component: fieldProps => (
-              <AutoFormEditor
-                {...fieldProps}
-                format="json"
-                label={props.label}
-              />
-            ),
-          },
-        ]}
-        formSchema={createSchema(
-          props.mode === "edit" ? props.body : emptyRichTextDocument(),
-          t("form.body.required"),
-        )}
-        layout={fields => <>{fields.body}</>}
-        onSubmit={onSubmit}
-      >
-        <div className="flex flex-wrap items-center gap-2">
-          <AutoFormSubmitButton>
-            {props.mode === "edit" ? t("form.save") : t("form.submit")}
-          </AutoFormSubmitButton>
-          {props.onCancel ? (
-            <Button onClick={props.onCancel} type="button" variant="ghost">
-              {t("form.cancel")}
-            </Button>
-          ) : null}
-        </div>
-      </AutoForm>
-    </div>
+    <li className="flex flex-col gap-3">
+      {node.record ? (
+        <Comment actions={actions} comment={node.record} depth={node.depth} />
+      ) : (
+        // A tombstone: hidden, but it still has public replies below it.
+        <p className="text-muted-foreground text-sm italic">{t("removed")}</p>
+      )}
+      {node.children.length > 0 ? (
+        <ol className="flex flex-col gap-4 border-l-2 pl-3 md:pl-6">
+          {node.children.map(child => (
+            <CommentBranch actions={actions} key={child.id} node={child} />
+          ))}
+        </ol>
+      ) : null}
+    </li>
   );
 };
-
-export default CommentComposer;
 ```
 
-- **A reply** posts `{ values: { body, parent, topic } }`. `parent: null` answers the topic itself.
-- **An edit** sends only `body`, because `parent` and `topic` cannot change after a reply is written. It passes `version` and `latestVersion`, so a conflict keeps the member's text; see [the conflict alert](/docs/content-engine/public-write-form-api#the-conflict-alert).
-- **A broken placement**, such as answering a reply that was just hidden, comes back as an issue on `parent` and shows as a toast, because `parent` is not a form field.
-- `onDone` reports whether the reply waits for a moderator, so the thread can say so.
+**Removed comments.** `removed: true`, with `record: null`, is a comment readers may not see, such as a hidden one, that still has public replies. The branch shows a short placeholder and keeps the children, so the conversation keeps its shape. A hidden comment without public replies is not in the answer at all.
+
+In `CommentSection`, build the tree from the loaded items:
+
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx"
+  const items = useMemo(() => pages.flatMap(page => page.items), [pages]);
+  const tree = useMemo(() => buildCommentTree(items), [items]);
+```
+
+and render it in place of the flat list, followed by a note when a page was cut short:
+
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx"
+      {tree.length === 0 ? (
+        <p className="text-muted-foreground leading-relaxed">{t("empty")}</p>
+      ) : (
+        <ol aria-busy={comments.isFetching} className="flex flex-col gap-6">
+          {tree.map(node => (
+            <CommentBranch actions={actions} key={node.id} node={node} />
+          ))}
+        </ol>
+      )}
+
+      {pages.some(page => page.truncated) ? (
+        <p className="text-muted-foreground text-sm">{t("truncated")}</p>
+      ) : null}
+```
 
 </Step>
 
 <Step>
 
-### Render the tree, pages and actions
+### Add the Reply button
 
-The section reads the cached pages, draws the tree and wires the buttons:
+Each comment now needs more than its own data: whether the visitor may reply, the permissions of every comment and the save handler. Replace the `Comment` component, so it takes them as one `actions` object, and shows **Reply** with a composer that sends `parent`:
 
-```tsx title="src/pages/comment-thread.tsx"
-import type { ContentPermissions } from "@vitnode/core/tanstack/content";
-
-import {
-  useQueryClient,
-  useSuspenseInfiniteQuery,
-} from "@tanstack/react-query";
-import { RichTextContent } from "@vitnode/core/components/rich-text";
-import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
-import { Skeleton } from "@vitnode/core/components/ui/skeleton";
-import {
-  contentTarget,
-  type RichTextDocument,
-  zodRichTextDocument,
-} from "@vitnode/core/content";
-import { useSessionQuery } from "@vitnode/core/tanstack/auth";
-import { useContentPermissions } from "@vitnode/core/tanstack/content";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { HrefLink } from "@vitnode/core/tanstack/link";
-import { ReportButton } from "@vitnode/core/tanstack/moderation";
-import { lazy, Suspense, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { useTranslations } from "use-intl";
-import { z } from "zod";
-
-import { commentContentType, FORUM_COMMENT_MAX_DEPTH } from "@/content/comment";
-import { manifest } from "@/manifest.gen";
-
-import type { CommentComposerProps } from "./comment-composer";
-import type { ThreadComment, ThreadNode } from "./thread-data";
-
-import {
-  buildThreadTree,
-  threadQueryKey,
-  threadQueryOptions,
-} from "./thread-data";
-
-const CommentComposer = lazy(
-  async () => await import("./comment-composer"),
-);
-
-const Composer = (props: CommentComposerProps) => (
-  <Suspense fallback={<Skeleton className="h-40 w-full rounded-lg" />}>
-    <CommentComposer {...props} />
-  </Suspense>
-);
-
-const useCommentPermissions = (ids: readonly number[]) =>
-  useContentPermissions({
-    ids,
-    queryKey: [manifest.id, "comments"],
-    fetch: async request => {
-      const res = await fetcher({
-        plugin: manifest.id,
-        method: "get",
-        module: "content/comments",
-        path: "/permissions",
-        args: { query: { ids: request.join(",") } },
-      });
-      if (res.status !== 200) throw new Error("Loading permissions failed.");
-
-      return await res.json();
-    },
-  });
-
-const zodProposal = z
-  .object({ body: zodRichTextDocument.optional() })
-  .catch({});
-
-/** Opens an edit on the latest text the author wrote, a pending proposal included. */
-const useOpenEditor = () => {
-  const t = useTranslations("core.global.content_write");
-
-  return async (commentId: number) => {
-    const res = await fetcher({
-      plugin: manifest.id,
-      method: "get",
-      module: "content/comments",
-      path: "/{id}/edit",
-      args: { params: { id: commentId } },
-    });
-    if (res.status !== 200) {
-      const reason =
-        res.status === 401
-          ? "unauthenticated"
-          : res.status === 403
-            ? "forbidden"
-            : res.status === 404
-              ? "not_found"
-              : "unknown";
-      toast.error(t("title"), { description: t(reason) });
-
-      return null;
-    }
-
-    const record = await res.json();
-    const { approval } = record;
-    const proposed =
-      approval?.status === "pending" && approval.kind === "edit"
-        ? zodProposal.parse(approval.values ?? {})
-        : {};
-
-    return {
-      body: proposed.body ?? record.values.body,
-      version: record.version,
-    };
-  };
-};
-
-interface ThreadActions {
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx"
+interface CommentActions {
+  articleId: number;
   canReply: boolean;
-  onSaved: (outcome: { edited: boolean; pending: boolean }) => Promise<void>;
-  permissionsOf: (id: number) => ContentPermissions;
-  topicId: number;
+  onSaved: CommentComposerProps["onDone"];
+  permissionsOf: ReturnType<typeof useCommentPermissions>["of"];
 }
 
 const Comment = ({
@@ -542,30 +182,26 @@ const Comment = ({
   comment,
   depth,
 }: {
-  actions: ThreadActions;
-  comment: ThreadComment;
+  actions: CommentActions;
+  comment: ArticleComment;
   depth: number;
 }) => {
-  const t = useTranslations("@vitnode/forum.comments");
+  const t = useTranslations("newsroom.comments");
   const openEditor = useOpenEditor();
+  const { canEdit } = actions.permissionsOf(comment.id);
   const [replying, setReplying] = useState(false);
-  const [editing, setEditing] = useState<null | {
-    body: RichTextDocument;
-    version: number;
-  }>(null);
+  const [editing, setEditing] = useState<null | RichTextDocument>(null);
   const [isOpening, setIsOpening] = useState(false);
-  const { canEdit, canReport } = actions.permissionsOf(comment.id);
-  const authorId = `comment-${comment.id}-author`;
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm font-medium" id={authorId}>
+      <p className="text-sm font-medium">
         {comment.author?.name ?? t("someone")}
       </p>
 
       {editing ? (
         <Composer
-          body={editing.body}
+          body={editing}
           commentId={comment.id}
           label={t("form.edit_label")}
           mode="edit"
@@ -576,7 +212,6 @@ const Comment = ({
             setEditing(null);
             await actions.onSaved(outcome);
           }}
-          version={editing.version}
         />
       ) : (
         <RichTextContent
@@ -587,7 +222,7 @@ const Comment = ({
 
       {editing ? null : (
         <div className="flex flex-wrap items-center gap-1">
-          {actions.canReply && depth < FORUM_COMMENT_MAX_DEPTH ? (
+          {actions.canReply && depth < COMMENT_MAX_DEPTH ? (
             <Button
               aria-expanded={replying}
               onClick={() => {
@@ -616,22 +251,12 @@ const Comment = ({
               {t("edit")}
             </Button>
           ) : null}
-          {canReport ? (
-            <ReportButton
-              describedBy={authorId}
-              target={contentTarget(
-                manifest.id,
-                commentContentType,
-                comment.id,
-              )}
-              typeLabel={t("report_type")}
-            />
-          ) : null}
         </div>
       )}
 
       {replying ? (
         <Composer
+          articleId={actions.articleId}
           label={t("form.answer_label", {
             name: comment.author?.name ?? t("someone"),
           })}
@@ -644,33 +269,266 @@ const Comment = ({
             await actions.onSaved(outcome);
           }}
           parentId={comment.id}
-          topicId={actions.topicId}
+        />
+      ) : null}
+    </div>
+  );
+};
+```
+
+Build `actions` in `CommentSection`, after `onSaved`:
+
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx"
+  const actions: CommentActions = {
+    articleId,
+    canReply: Boolean(session.data?.user),
+    onSaved,
+    permissionsOf: permissions.of,
+  };
+```
+
+- **Reply** shows for signed-in members while the comment sits above `COMMENT_MAX_DEPTH`. The server refuses deeper replies anyway.
+- The reply composer posts `parent: comment.id`. `CommentComposer` already sends `parent`, so it needs no change.
+- `onSaved` still invalidates the whole thread query, so a new reply appears in place under its parent.
+
+</Step>
+
+<Step>
+
+### Add the labels
+
+Add these keys to `newsroom.comments` in `src/locales/en.json`:
+
+```json title="plugins/newsroom/src/locales/en.json"
+{
+  "newsroom": {
+    "comments": {
+      "reply": "Reply",
+      "removed": "This comment was removed.",
+      "truncated": "This conversation is long, so some deeper replies are not shown.",
+      "form": { "answer_label": "Reply to {name}" }
+    }
+  }
+}
+```
+
+</Step>
+
+</Steps>
+
+<Accordions>
+<Accordion title="The complete src/pages/comment-section.tsx">
+
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx"
+import {
+  useQueryClient,
+  useSuspenseInfiniteQuery,
+} from "@tanstack/react-query";
+import { RichTextContent } from "@vitnode/core/components/rich-text";
+import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
+import { Skeleton } from "@vitnode/core/components/ui/skeleton";
+import {
+  type RichTextDocument,
+  zodRichTextDocument,
+} from "@vitnode/core/content";
+import { useSessionQuery } from "@vitnode/core/tanstack/auth";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { useTranslations } from "use-intl";
+import { z } from "zod";
+
+import { COMMENT_MAX_DEPTH } from "@/content/comment";
+import { manifest } from "@/manifest.gen";
+
+import type { CommentComposerProps } from "./comment-composer";
+import type { ArticleComment, CommentNode } from "./comment-data";
+
+import {
+  buildCommentTree,
+  commentsQueryKey,
+  commentsQueryOptions,
+} from "./comment-data";
+import { useCommentPermissions } from "./comment-permissions";
+
+// The editor is heavy and most readers never write, so it loads on demand.
+const CommentComposer = lazy(async () => await import("./comment-composer"));
+
+const Composer = (props: CommentComposerProps) => (
+  <Suspense fallback={<Skeleton className="h-40 w-full rounded-lg" />}>
+    <CommentComposer {...props} />
+  </Suspense>
+);
+
+const zodProposal = z
+  .object({ body: zodRichTextDocument.optional() })
+  .catch({});
+
+/** Loads the latest text of a comment before editing it. */
+const useOpenEditor = () => {
+  const t = useTranslations("core.global.content_write");
+
+  return async (commentId: number): Promise<null | RichTextDocument> => {
+    const res = await fetcher({
+      plugin: manifest.id,
+      method: "get",
+      module: "content/comments",
+      path: "/{id}/edit",
+      args: { params: { id: commentId } },
+    });
+    if (res.status !== 200) {
+      const reason =
+        res.status === 401
+          ? "unauthenticated"
+          : res.status === 403
+            ? "forbidden"
+            : res.status === 404
+              ? "not_found"
+              : "unknown";
+      toast.error(t("title"), { description: t(reason) });
+
+      return null;
+    }
+
+    const record = await res.json();
+    const { approval } = record;
+    // A pending edit opens on the proposal, not on the live text.
+    const proposed =
+      approval?.status === "pending" && approval.kind === "edit"
+        ? zodProposal.parse(approval.values ?? {})
+        : {};
+
+    return proposed.body ?? record.values.body;
+  };
+};
+
+interface CommentActions {
+  articleId: number;
+  canReply: boolean;
+  onSaved: CommentComposerProps["onDone"];
+  permissionsOf: ReturnType<typeof useCommentPermissions>["of"];
+}
+
+const Comment = ({
+  actions,
+  comment,
+  depth,
+}: {
+  actions: CommentActions;
+  comment: ArticleComment;
+  depth: number;
+}) => {
+  const t = useTranslations("newsroom.comments");
+  const openEditor = useOpenEditor();
+  const { canEdit } = actions.permissionsOf(comment.id);
+  const [replying, setReplying] = useState(false);
+  const [editing, setEditing] = useState<null | RichTextDocument>(null);
+  const [isOpening, setIsOpening] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm font-medium">
+        {comment.author?.name ?? t("someone")}
+      </p>
+
+      {editing ? (
+        <Composer
+          body={editing}
+          commentId={comment.id}
+          label={t("form.edit_label")}
+          mode="edit"
+          onCancel={() => {
+            setEditing(null);
+          }}
+          onDone={async outcome => {
+            setEditing(null);
+            await actions.onSaved(outcome);
+          }}
+        />
+      ) : (
+        <RichTextContent
+          className="leading-relaxed text-pretty"
+          content={comment.body}
+        />
+      )}
+
+      {editing ? null : (
+        <div className="flex flex-wrap items-center gap-1">
+          {actions.canReply && depth < COMMENT_MAX_DEPTH ? (
+            <Button
+              aria-expanded={replying}
+              onClick={() => {
+                setReplying(!replying);
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              {t("reply")}
+            </Button>
+          ) : null}
+          {canEdit ? (
+            <Button
+              isLoading={isOpening}
+              onClick={async () => {
+                setIsOpening(true);
+                try {
+                  setEditing(await openEditor(comment.id));
+                } finally {
+                  setIsOpening(false);
+                }
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              {t("edit")}
+            </Button>
+          ) : null}
+        </div>
+      )}
+
+      {replying ? (
+        <Composer
+          articleId={actions.articleId}
+          label={t("form.answer_label", {
+            name: comment.author?.name ?? t("someone"),
+          })}
+          mode="create"
+          onCancel={() => {
+            setReplying(false);
+          }}
+          onDone={async outcome => {
+            setReplying(false);
+            await actions.onSaved(outcome);
+          }}
+          parentId={comment.id}
         />
       ) : null}
     </div>
   );
 };
 
-const ThreadBranch = ({
+const CommentBranch = ({
   actions,
   node,
 }: {
-  actions: ThreadActions;
-  node: ThreadNode;
+  actions: CommentActions;
+  node: CommentNode;
 }) => {
-  const t = useTranslations("@vitnode/forum.comments");
+  const t = useTranslations("newsroom.comments");
 
   return (
     <li className="flex flex-col gap-3">
       {node.record ? (
         <Comment actions={actions} comment={node.record} depth={node.depth} />
       ) : (
+        // A tombstone: hidden, but it still has public replies below it.
         <p className="text-muted-foreground text-sm italic">{t("removed")}</p>
       )}
       {node.children.length > 0 ? (
         <ol className="flex flex-col gap-4 border-l-2 pl-3 md:pl-6">
           {node.children.map(child => (
-            <ThreadBranch actions={actions} key={child.id} node={child} />
+            <CommentBranch actions={actions} key={child.id} node={child} />
           ))}
         </ol>
       ) : null}
@@ -678,33 +536,29 @@ const ThreadBranch = ({
   );
 };
 
-export const CommentThread = ({
-  topicId,
-  topicSlug,
+export const CommentSection = ({
+  articleId,
+  articleSlug,
 }: {
-  topicId: number;
-  topicSlug: string;
+  articleId: number;
+  articleSlug: string;
 }) => {
-  const t = useTranslations("@vitnode/forum.comments");
+  const t = useTranslations("newsroom.comments");
   const queryClient = useQueryClient();
   const session = useSessionQuery();
   const [composerKey, setComposerKey] = useState(0);
-  const thread = useSuspenseInfiniteQuery(threadQueryOptions(topicId));
+  const comments = useSuspenseInfiniteQuery(commentsQueryOptions(articleId));
 
-  const pages = thread.data.pages;
+  const { pages } = comments.data;
   const items = useMemo(() => pages.flatMap(page => page.items), [pages]);
-  const tree = useMemo(() => buildThreadTree(items), [items]);
+  const tree = useMemo(() => buildCommentTree(items), [items]);
   const permissions = useCommentPermissions(
     items.flatMap(item => (item.record ? [item.id] : [])),
   );
-  const isSignedIn = Boolean(session.data?.user);
 
-  const onSaved = async ({
+  const onSaved: CommentComposerProps["onDone"] = async ({
     edited,
     pending,
-  }: {
-    edited: boolean;
-    pending: boolean;
   }) => {
     if (pending) {
       toast.info(t("pending.title"), { description: t("pending.desc") });
@@ -712,16 +566,17 @@ export const CommentThread = ({
       const key = edited ? "edited" : "created";
       toast.success(t(`${key}.title`), { description: t(`${key}.desc`) });
     }
-    // Refetches every loaded page in order, so new replies and the counts
-    // appear without losing the pages the reader opened.
-    await queryClient.invalidateQueries({ queryKey: threadQueryKey(topicId) });
+    // Refetches every loaded page in order, with the new count.
+    await queryClient.invalidateQueries({
+      queryKey: commentsQueryKey(articleId),
+    });
   };
 
-  const actions: ThreadActions = {
-    canReply: isSignedIn,
+  const actions: CommentActions = {
+    articleId,
+    canReply: Boolean(session.data?.user),
     onSaved,
     permissionsOf: permissions.of,
-    topicId,
   };
 
   return (
@@ -731,13 +586,11 @@ export const CommentThread = ({
       </h2>
 
       {tree.length === 0 ? (
-        <p className="text-muted-foreground leading-relaxed">
-          {t("empty.title")}
-        </p>
+        <p className="text-muted-foreground leading-relaxed">{t("empty")}</p>
       ) : (
-        <ol aria-busy={thread.isFetching} className="flex flex-col gap-6">
+        <ol aria-busy={comments.isFetching} className="flex flex-col gap-6">
           {tree.map(node => (
-            <ThreadBranch actions={actions} key={node.id} node={node} />
+            <CommentBranch actions={actions} key={node.id} node={node} />
           ))}
         </ol>
       )}
@@ -746,13 +599,13 @@ export const CommentThread = ({
         <p className="text-muted-foreground text-sm">{t("truncated")}</p>
       ) : null}
 
-      {thread.hasNextPage ? (
+      {comments.hasNextPage ? (
         <Button
           className="self-start"
-          disabled={thread.isFetching}
-          isLoading={thread.isFetchingNextPage}
+          disabled={comments.isFetching}
+          isLoading={comments.isFetchingNextPage}
           onClick={async () => {
-            const next = await thread.fetchNextPage();
+            const next = await comments.fetchNextPage();
             if (next.isError) {
               toast.error(t("load_failed.title"), {
                 description: t("load_failed.desc"),
@@ -765,121 +618,95 @@ export const CommentThread = ({
         </Button>
       ) : null}
 
-      <div className="flex flex-col gap-3 rounded-xl border p-4">
-        <h3 className="font-semibold text-balance">{t("compose.title")}</h3>
-        {isSignedIn ? (
-          <Composer
-            // A new key gives the next comment a fresh, empty editor.
-            key={composerKey}
-            label={t("form.body_label")}
-            mode="create"
-            onDone={async outcome => {
-              setComposerKey(composerKey + 1);
-              await onSaved(outcome);
-            }}
-            parentId={null}
-            topicId={topicId}
-          />
-        ) : (
-          <HrefLink
-            className={buttonVariants({
-              className: "self-start",
-              variant: "outline",
-            })}
-            href={`/login?returnTo=${encodeURIComponent(`/forum/topics/${topicSlug}`)}`}
-          >
-            {t("compose.sign_in")}
-          </HrefLink>
-        )}
-      </div>
+      {session.data?.user ? (
+        <Composer
+          articleId={articleId}
+          // A new key gives the next comment a fresh, empty editor.
+          key={composerKey}
+          label={t("form.label")}
+          mode="create"
+          onDone={async outcome => {
+            setComposerKey(composerKey + 1);
+            await onSaved(outcome);
+          }}
+          parentId={null}
+        />
+      ) : (
+        <HrefLink
+          className={buttonVariants({
+            className: "self-start",
+            variant: "outline",
+          })}
+          href={`/login?returnTo=${encodeURIComponent(`/news/${articleSlug}`)}`}
+        >
+          {t("sign_in")}
+        </HrefLink>
+      )}
     </section>
   );
 };
 ```
 
-How the pieces fit:
-
-- **Tombstones.** `ThreadBranch` renders a short "This comment was removed." for `record: null` and keeps its children, so the conversation keeps its shape. A hidden reply with no public answers never arrives.
-- **Pages.** **Load more comments** calls `fetchNextPage` with the last `endCursor`. The button shows its own spinner while the page loads and is disabled during any fetch, so a double click never loads a page twice. The list keeps showing while it refetches, marked with `aria-busy`.
-- **Truncated pages.** When any page says `truncated`, the section says some deeper replies are not shown instead of pretending the thread ends there.
-- **Permissions.** One `useContentPermissions` call covers every loaded reply that has a record. The hook splits more than 50 ids into batches, so a long thread works; see [Viewer permissions](/docs/content-engine/public-permissions#batches).
-- **Reply** shows for signed-in members while the reply sits above `maxDepth`. The server refuses deeper replies anyway, with the message in [What the server checks](/docs/content-engine/threads#what-the-server-checks).
-- **Edit** shows when `canEdit`. `useOpenEditor` loads `GET /comments/{id}/edit` first, so the form opens on the latest version, or on the pending proposal in `approval.values`. The button shows a spinner while it loads.
-- **Report** shows when `canReport`, with `describedBy` pointing at the author, so a screen reader hears whose reply it reports.
-
-</Step>
-
-<Step>
-
-### Refresh after a write
-
-`onSaved` picks the message, then invalidates the thread query. TanStack Query refetches every loaded page from the first, so a new answer shows up in place, an edit shows its new text, and the heading's `replyCount` is current. The member keeps every page they opened.
-
-- **A new top-level reply** lands at the end of the thread, because replies are oldest first. While pages remain, **Load more comments** reaches it.
-- **A reply that waits for a moderator** answers `approval.status: "pending"`. The section says so with a toast, and the reply appears in the thread once it is approved.
-- **Other screens** that show counts, such as a topic list with "12 comments", have their own queries. Invalidate them too; the Forum plugin's `invalidateForumComments` does this for its lists and stats.
-
-</Step>
-
-</Steps>
-
-## Add the labels
-
-```json title="plugins/forum/src/locales/en.json"
-{
-  "@vitnode/forum": {
-    "comments": {
-      "title": "{count, plural, =0 {Comments} one {# comment} other {# comments}}",
-      "empty": { "title": "No comments yet" },
-      "truncated": "This thread is very long, so some deeper comments are not shown here.",
-      "load_more": "Load more comments",
-      "load_failed": {
-        "title": "Could not load comments",
-        "desc": "Please check your connection and try again."
-      },
-      "compose": { "title": "Join the conversation", "sign_in": "Sign in to comment" },
-      "form": {
-        "body_label": "Your comment",
-        "edit_label": "Edit your comment",
-        "answer_label": "Reply to {name}",
-        "submit": "Post comment",
-        "save": "Save",
-        "cancel": "Cancel",
-        "body": { "required": "Write a comment first." }
-      },
-      "pending": {
-        "title": "Your comment is waiting for a moderator",
-        "desc": "It will appear in the thread once it is approved."
-      },
-      "created": { "title": "Comment posted", "desc": "Your comment is in the thread." },
-      "edited": { "title": "Comment saved", "desc": "Your changes are live." },
-      "reply": "Reply",
-      "edit": "Edit",
-      "report_type": "comment",
-      "someone": "this comment",
-      "removed": "This comment was removed."
-    }
-  }
-}
-```
-
-The error toasts of `useContentPublicWrite`, and the ones `useOpenEditor` reads from `core.global.content_write`, come from core and need no labels.
+</Accordion>
+</Accordions>
 
 ## Check the result
 
-Open a topic with replies, such as `/forum/topics/show-us-your-first-content-engine-type`, signed in as a member:
+Open `/news/welcome-to-the-newsroom` as a member with a comment from another member below it:
 
-1. Replies nest under the one they answer. A hidden reply leaves **This comment was removed.** with its answer still below it.
-2. Your own replies show **Edit**; other members' replies show **Report**. Click **Load more comments** until more than 50 replies are on screen: every reply still has its button.
-3. Click **Reply** under a comment, write something and click **Post comment**. **Comment posted** appears, your answer shows under that comment, and the heading count goes up by one.
-4. Click **Edit** on your answer, change it and click **Save**. **Comment saved** appears with the new text in place.
-5. Sign out. **Reply** and **Edit** disappear, **Report** stays, and the composer offers **Sign in to comment**.
+1. Click **Reply** under it, write an answer and click **Post comment**. The answer shows indented under the comment.
+2. Reply to the answer, and to that answer. At depth 4, **Reply** is gone.
+3. In **AdminCP → Newsroom → Comments**, hide a comment that has answers. Its place shows **This comment was removed.**, with its answers still below it.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={tree}
-  alt="A forum comment thread titled 65 comments, with nested replies, Reply, Edit and Report buttons, and a This comment was removed placeholder that keeps its answer"
+  alt="A comment section titled 4 comments, with nested replies, Reply and Edit buttons, and a This comment was removed placeholder that keeps its answer"
 />
 
-The Forum plugin's own section in `plugins/forum/src/pages/thread.tsx` follows the same flow and adds collapsible branches, permalinks and preloading of the editor on hover.
+The thread route shows the same shape. After hiding comment 3:
+
+```bash
+curl "http://localhost:3000/api/newsroom/content/comments/thread?root=1"
+```
+
+```json title="200 (trimmed)"
+{
+  "items": [
+    { "depth": 1, "id": 1, "parentId": null, "removed": false, "record": { "id": 1 } },
+    { "depth": 1, "id": 2, "parentId": null, "removed": false, "record": { "id": 2 } },
+    { "depth": 2, "id": 3, "parentId": 2, "removed": true, "record": null },
+    { "depth": 3, "id": 4, "parentId": 3, "removed": false, "record": { "id": 4 } },
+    { "depth": 4, "id": 5, "parentId": 4, "removed": false, "record": { "id": 5 } }
+  ],
+  "pageInfo": { "endCursor": "WyIyMDI2LTEwLTIzIDE5OjExOjIyLjAwMTIxOSIsMl0", "hasNextPage": false, "totalCount": 2 },
+  "replyCount": 4,
+  "truncated": false
+}
+```
+
+`totalCount` counts top-level comments; `replyCount` counts every public comment, so the heading reads **4 comments**. A reply to comment 5 answers:
+
+```json title="400"
+{
+  "code": "CONTENT_INVALID_INPUT",
+  "contentTypeId": "newsroom.comment",
+  "issues": [
+    {
+      "code": "unavailable",
+      "field": "parent",
+      "message": "Replies nest at most 4 levels deep. Answer a reply higher up."
+    }
+  ]
+}
+```
+
+## Pages and long conversations
+
+- **Pages are top-level comments.** `first` counts top-level comments, and each comes with every reply below it. **Load more comments** adds the next ones; replies never split across pages.
+- **Truncated pages.** One page holds at most 500 comments in total. When deep replies do not fit, `truncated` is `true` and the section says so instead of pretending the conversation ends there.
+- **New top-level comments** land at the end, because comments are oldest first. While pages remain, **Load more comments** reaches them.
+- **Permissions** are still one hook call for every loaded comment. It splits more than 50 ids into batches, so a long thread keeps its **Edit** buttons.
+
+The server keeps the tree valid on every write, in the AdminCP too: the parent must exist, be public and belong to the same article; a comment never answers itself or one of its own answers; and nothing nests deeper than `maxDepth`. The Forum plugin's `plugins/forum/src/pages/thread.tsx` builds the same thread with collapsible branches and permalinks.

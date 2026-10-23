@@ -165,7 +165,7 @@ What `fields` accepts:
 
 `people` is the explicit opt-in for a user. Each named field comes back under its own name as `{ id, name, nameCode, avatarColor, avatarUrl, role: { color, prefix } }`, or `null` when nobody is set or the account was deleted. A `multiple: true` field comes back as a list of those summaries in the order it stores them, skipping deleted accounts - handy for co-authors. The summaries for a whole page are loaded in one query. `people` refuses a field that is not a `field.user()`, a localized user field, and a name listed twice.
 
-`listFields` keeps a public list light: leave a long `body` or a gallery to the detail route, and the list neither selects nor loads them. The list route's OpenAPI schema and the `ContentPublicListRow` type carry exactly these fields, so a field you left out is a compile error rather than a surprise `undefined`. `people` and, on a localized content type, `locale` are always included. [Public lists](/docs/content-engine/public-lists) shows `listFields` on the blog.
+`listFields` keeps a public list light: leave a long `body` or a gallery to the detail route, and the list neither selects nor loads them. The list route's OpenAPI schema and the `ContentPublicListRow` type carry exactly these fields, so a field you left out is a compile error rather than a surprise `undefined`. `people` and, on a localized content type, `locale` are always included. [Content list](/docs/content-engine/public-lists) shows `listFields` on the blog.
 
 `searchableFields`, `filterableFields` and `orderableFields` must all be in `fields`. Repeatable leaves fit none of them. `orderableFields` also refuses file fields, to-many relations and localized fields.
 
@@ -181,7 +181,7 @@ publicApi: {
 
 ## `publicWrite`
 
-Adds create and edit routes for signed-in users beside the `publicApi` routes, with an owner stamped by the server and a `can_edit` moderator permission. Guide: [Public write](/docs/content-engine/public-write). Every option, route and error: [Public write API](/docs/content-engine/public-write-api).
+Adds create and edit routes for signed-in users beside the `publicApi` routes, with an owner stamped by the server and a `can_edit` moderator permission. Guide: [Member writing](/docs/content-engine/public-write). Every option, route and error: [Write API](/docs/content-engine/public-write-api).
 
 ```ts title="plugins/example/src/content/discussion.ts"
 publicWrite: {
@@ -195,7 +195,7 @@ A [container field](/docs/content-engine/fields#container), such as `board`, may
 
 ## `delivery`
 
-Gives each published record a public page: canonical URL, SEO metadata, redirects from old slugs and a sitemap. Guides: [Public pages](/docs/content-engine/public-pages) and [SEO](/docs/content-engine/seo).
+Gives each published record a public page: canonical URL, SEO metadata, redirects from old slugs and a sitemap. Guides: [Content page](/docs/content-engine/public-pages) and [SEO](/docs/content-engine/seo).
 
 | Name                             | Type                                                                                          | Default                   | Description                                                                                                           |
 | -------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------------- |
@@ -230,12 +230,12 @@ delivery: {
 
 ## `editorial`
 
-Adds a `version` column, revision history and the `can_restore` permission. [`liveEditing`](#liveediting) builds on it. Guide: [Revisions, previews and scheduling](/docs/content-engine/editorial).
+Adds a `version` column, revision history and the `can_restore` permission. [`liveEditing`](#liveediting) builds on it. Guides: [Revisions](/docs/content-engine/editorial), [Previews](/docs/content-engine/editorial-previews) and [Scheduling](/docs/content-engine/editorial-scheduling).
 
 | Name                       | Type                                           | Default | Description                                                                                                             |
 | -------------------------- | ---------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `revisions.retention`      | `number`                                       | `50`    | Newest revisions kept per record. A whole number from 1 to 500                                                          |
-| `preview`                  | `true` \| `{ expiresInMinutes, pathTemplate }` | off     | Signed [preview links](/docs/content-engine/editorial#preview-links) for drafts                                         |
+| `preview`                  | `true` \| `{ expiresInMinutes, pathTemplate }` | off     | Signed [preview links](/docs/content-engine/editorial-previews) for drafts                                         |
 | `preview.expiresInMinutes` | `number`                                       | `15`    | Link lifetime. A whole number from 1 to 1440                                                                            |
 | `preview.pathTemplate`     | `string`                                       |         | Your own preview URL. Starts with `/`, contains `{token}` exactly once and no other placeholder, at most 512 characters |
 | `scheduling`               | `boolean`                                      | off     | Publish or unpublish at a chosen time                                                                                   |
@@ -294,7 +294,7 @@ search: {
 
 ## `visibility`
 
-`visibility: true` adds the nullable `hiddenAt` and `hiddenBy` columns, the `can_hide` permission, the `POST /{id}/hide` and `POST /{id}/unhide` staff routes and a **Visibility** filter in the AdminCP list. A hidden record is left out of every public read while it keeps its `status` and `publishedAt`. It has no other options. Guide: [Hide content](/docs/content-engine/content-visibility).
+`visibility: true` adds the nullable `hiddenAt` and `hiddenBy` columns, the `can_hide` permission, the `POST /{id}/hide` and `POST /{id}/unhide` staff routes and a **Visibility** filter in the AdminCP list. A hidden record is left out of every public read while it keeps its `status` and `publishedAt`. It has no other options. Guide: [Visibility](/docs/content-engine/content-visibility).
 
 ```ts title="plugins/blog/src/content/post.ts"
 publication: true,
@@ -312,7 +312,7 @@ reports: true,
 
 ## `thread`
 
-Makes records of one content type answer each other under a root record, like forum comments under a topic. It adds the public `GET /{path}/thread` route and checks every placement on the server. Guide: [Threaded replies](/docs/content-engine/threads).
+Makes records of one content type answer each other under a root record, like forum comments under a topic. It adds the public `GET /{path}/thread` route and checks every placement on the server. Guide: [Comments](/docs/content-engine/threads).
 
 ```ts title="plugins/forum/src/content/comment.ts"
 thread: { parent: "parent", root: "topic", maxDepth: 6 },
@@ -339,7 +339,7 @@ Both fields must be in `publicApi.fields` and neither may be in `publicWrite.upd
 
 ## `duplication`
 
-Adds a **Duplicate** action and the `POST /{id}/duplicate` staff route, which copy a record and its translations into a new draft. Pass `true`, or an object to change the title suffix. Guide: [Duplicate content](/docs/content-engine/duplicate-content).
+Adds a **Duplicate** action and the `POST /{id}/duplicate` staff route, which copy a record and its translations into a new draft. Pass `true`, or an object to change the title suffix. Guide: [Duplication](/docs/content-engine/duplicate-content).
 
 | Name          | Type      | Default                                        | Description                                                                             |
 | ------------- | --------- | ---------------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -351,7 +351,7 @@ duplication: true,
 
 ## `idStrategy`
 
-The type of the primary key. Every foreign key, junction column and translation `itemId` that points at the record takes the same type. Guide: [Record ID strategies](/docs/content-engine/id-strategy).
+The type of the primary key. Every foreign key, junction column and translation `itemId` that points at the record takes the same type. Guide: [Record IDs](/docs/content-engine/id-strategy).
 
 | Value                | Postgres key                              | In JSON            |
 | -------------------- | ----------------------------------------- | ------------------ |

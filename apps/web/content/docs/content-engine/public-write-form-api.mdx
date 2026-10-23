@@ -1,10 +1,10 @@
 ---
-title: useContentPublicWrite reference
+title: Form helpers
 description: Reference for useContentPublicWrite, the VitNode hook that sends a public Content Engine create or edit from an AutoForm and shows field errors, refusals and version conflicts.
 icon: SquareFunction
 ---
 
-`useContentPublicWrite` from `@vitnode/core/tanstack/content` sends one public create or edit and handles every answer that is not a success. Your `onSubmit` only deals with the record it gets back. For a guided setup, follow [Public create form](/docs/content-engine/public-write-frontend) or [Public edit form](/docs/content-engine/public-write-edit).
+`useContentPublicWrite` from `@vitnode/core/tanstack/content` sends one public create or edit and handles every answer that is not a success. Your `onSubmit` only deals with the record it gets back. For a guided setup, follow [Create form](/docs/content-engine/public-write-frontend) or [Edit form](/docs/content-engine/public-write-edit).
 
 ## Signature
 
@@ -55,7 +55,7 @@ After a successful write, the hook stores the record's new `version`, so the nex
 | `409 CONTENT_VERSION_CONFLICT` | The `conflict` alert; the form keeps every value | `null` |
 | A network error or any other status | "Something went wrong on our side." | `null` |
 
-Issue codes map to messages: `not_writable`, `unavailable`, `edit_window_closed` and `moderators_only` have their own; every other code, such as Zod's `too_small`, shows "Check this value." The codes are listed in [Public write API](/docs/content-engine/public-write-api#codes).
+Issue codes map to messages: `not_writable`, `unavailable`, `edit_window_closed` and `moderators_only` have their own; every other code, such as Zod's `too_small`, shows "Check this value." The codes are listed in [Write API](/docs/content-engine/public-write-api#codes).
 
 ## The conflict alert
 
@@ -119,4 +119,4 @@ const onSubmit: AutoFormOnSubmit<TopicFormSchema> = async (values, form) => {
 };
 ```
 
-The complete page, with loading, approvals and invalidation, is in [Public edit form](/docs/content-engine/public-write-edit).
+The complete page, with loading, approvals and invalidation, is in [Edit form](/docs/content-engine/public-write-edit).

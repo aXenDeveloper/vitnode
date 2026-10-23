@@ -1,0 +1,45 @@
+---
+title: Scheduling
+description: Publish or unpublish a VitNode Content Engine record at a chosen time with editorial scheduling, the AdminCP Schedule dialog and the process-queue cron job.
+icon: CalendarClock
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import schedule from "./editorial-schedule.webp";
+
+Scheduling publishes or unpublishes a record at a chosen time. It needs [`editorial`](/docs/content-engine/editorial) and [drafts & publishing](/docs/content-engine/publication), and a running cron job. The examples use `example.article` from the example plugin.
+
+## Turn on scheduling
+
+Add `scheduling` to the `editorial` block:
+
+```ts title="plugins/example/src/content/article.ts"
+editorial: {
+  revisions: { retention: 20 },
+  scheduling: true, // [!code ++]
+},
+```
+
+`scheduling` changes no columns. Leaving out `publication` is a type error, and the definition throws when it loads.
+
+## Book a schedule
+
+Open **More actions**, choose **Schedule**, pick **Publish** or **Unpublish** and a time, then press **Schedule it**. Booking or cancelling a schedule needs `can_publish`.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={schedule}
+  alt="Schedule this Article dialog with a pending Publish on Oct 12, 7:00 AM booked by Anna Kowalska, a Cancel link and the form for another schedule"
+/>
+
+A schedule is a queued task, drained by the `process-queue` [cron job](/docs/dev/cron) once a minute. If nothing triggers your cron endpoint, schedules are saved but never fire. When the install has no cron adapter at all, the dialog says so with a **No scheduler is running** warning. When a schedule fires, it publishes whatever the record says at that moment, not what it said when you booked it.
+
+A few rules keep schedules sane:
+
+- A time up to two minutes in the past is accepted. Anything older fails with `CONTENT_SCHEDULE_IN_PAST`.
+- An unpublish cannot come before a pending publish (`CONTENT_SCHEDULE_ORDER`).
+- Booking emits `content.example.article.scheduled` and cancelling emits `schedule_cancelled`. When the time comes, the usual `published` or `unpublished` event carries the `scheduleId`.
+- A scheduled publish of a [hidden](/docs/content-engine/content-visibility) record leaves it hidden, so it stays off the public site until someone unhides it.
+
+If a separate front end caches pages, [Notify a separate front end](/docs/content-engine/caching#notify-a-separate-front-end) tells it about the change.

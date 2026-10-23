@@ -1,57 +1,67 @@
 ---
-title: Public create form
-description: Build a page where members create Content Engine records with one AutoForm, one fetcher call and useContentPublicWrite, which shows server errors for you.
+title: Create form
+description: Build a page where members write VitNode Content Engine records with AutoForm and useContentPublicWrite, which shows server errors in the form, and send new records to the right page.
 icon: TextCursorInput
 implementation:
   objective: Add a public page where signed-in members create records of an existing content type.
   decisions:
-    - Which items do members create? Offer content types from the project's plugins that have `publicWrite.create`; if none has it, point to the Public write guide.
+    - Which items do members create? Offer content types from the project's plugins that have `publicWrite.create`; if none has it, point to the Member writing guide.
     - Where does the form live? Recommend a `/new` URL next to the items' own pages.
-    - Where does the member land after posting? The new record's page, or its edit page while it waits for approval.
   constraints:
     - Send `POST /` of `content/{publicApi.path}` through `fetcher` inside `useContentPublicWrite().submit`, with only the fields in `publicWrite.create.fields`.
     - Build the form with `AutoForm` and keep labels in the plugin's locale files.
-    - Treat `approval.status === "pending"` as waiting for a moderator, not as published.
+    - Check `status` and `approval` before opening the record's public page, which answers 404 until the record is published.
   related:
-    - title: Public edit form
+    - title: Edit form
       href: /docs/content-engine/public-write-edit
-    - title: Public write
-      href: /docs/content-engine/public-write
-    - title: useContentPublicWrite reference
+    - title: Form helpers
       href: /docs/content-engine/public-write-form-api
+    - title: Write API
+      href: /docs/content-engine/public-write-api
 ---
 
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
 import { ImgDocs } from "@/components/fumadocs/img";
-import createForm from "./public-write-create-form.webp";
+import createTaken from "./public-write-create-form.webp";
 
-This guide builds `/discussions/new`, where members start a discussion. It takes one form and one request. When the server says no, `useContentPublicWrite` from core deals with it: field errors land under their fields, and the rest become translated toasts.
+This page builds `/news/new`, where signed-in members write an article. It takes one form and one request: `useContentPublicWrite` from core sends it and shows every refusal, so the page only decides what happens after a successful save.
 
-You need a content type with [public write](/docs/content-engine/public-write) turned on.
+This continues the article from [Member writing](/docs/content-engine/public-write), which turned on `publicWrite` with `title` and `body` in `create.fields`.
 
 <Steps>
 
 <Step>
 
-### Add the route
+### Add TanStack Query to the plugin
 
-```ts title="plugins/example/src/routes.ts"
-page("/discussions/new", {
-  component: lazy(() => import("./pages/discussion-new-page")),
-  messages: ["@vitnode/example.discussions"],
-  requires: "authenticated",
-}),
+The page refreshes cached lists with `useQueryClient`, so the plugin needs `@tanstack/react-query` as a dependency. Run this from the workspace root:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Add TanStack Query">
+
+```bash tab="bun"
+bun add @tanstack/react-query --cwd plugins/newsroom
 ```
 
-`requires: "authenticated"` sends guests to the sign-in page and brings them back afterwards. `messages` loads the labels below.
+```bash tab="pnpm"
+pnpm --filter newsroom add @tanstack/react-query
+```
+
+```bash tab="npm"
+npm install @tanstack/react-query --workspace newsroom
+```
+
+</Tabs>
 
 </Step>
 
 <Step>
 
-### Write the page
+### Write the form
 
-```tsx title="src/pages/discussion-new-page.tsx"
-import { useQueryClient } from "@tanstack/react-query";
+Create `src/pages/article-form.tsx`. The [edit form](/docs/content-engine/public-write-edit) reuses it:
+
+```tsx title="plugins/newsroom/src/pages/article-form.tsx"
 import {
   AutoForm,
   type AutoFormOnSubmit,
@@ -59,86 +69,188 @@ import {
 import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
 import { AutoFormInput } from "@vitnode/core/components/form/fields/input";
 import {
-  emptyRichTextDocument,
   isRichTextEmpty,
+  type RichTextDocument,
   zodRichTextDocument,
 } from "@vitnode/core/content";
-import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { useHrefNavigate } from "@vitnode/core/tanstack/link";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import { manifest } from "@/manifest.gen";
+/** The fields the form renders, so server errors on them show in place. */
+export const ARTICLE_FORM_FIELDS = ["title", "body"] as const;
 
-import { invalidateDiscussionLists } from "./discussion-list";
+export interface ArticleFormValues {
+  body: RichTextDocument;
+  title: string;
+}
 
-const formSchema = z.object({
-  title: z.string().trim().min(3).max(200).default(""),
-  body: zodRichTextDocument
-    .refine(doc => !isRichTextEmpty(doc))
-    .default(emptyRichTextDocument()),
-});
-
-const DiscussionNewPage = () => {
-  const t = useTranslations("@vitnode/example.discussions");
-  const navigate = useHrefNavigate();
-  const queryClient = useQueryClient();
-  const write = useContentPublicWrite({
-    fields: ["title", "body"],
-    uniqueField: "title",
+const createArticleFormSchema = (defaults: ArticleFormValues) =>
+  z.object({
+    title: z.string().trim().min(3).max(200).default(defaults.title),
+    body: zodRichTextDocument
+      .refine(doc => !isRichTextEmpty(doc))
+      .default(defaults.body),
   });
 
-  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (values, form) => {
-    const record = await write.submit(form, async () =>
-      await fetcher({
-        plugin: manifest.id,
-        method: "post",
-        module: "content/discussions",
-        path: "/",
-        args: { body: { values } },
-      }),
-    );
-    if (!record) return;
+export type ArticleFormSchema = ReturnType<typeof createArticleFormSchema>;
 
-    await invalidateDiscussionLists(queryClient);
-    await navigate(`/discussions/${record.slug}?created=true`);
-  };
+export const ArticleForm = ({
+  defaultValues,
+  onSubmit,
+  submitLabel,
+}: {
+  defaultValues: ArticleFormValues;
+  onSubmit: AutoFormOnSubmit<ArticleFormSchema>;
+  submitLabel: string;
+}) => {
+  const t = useTranslations("newsroom.articles.form");
 
   return (
     <AutoForm
       fields={[
         {
           id: "title",
-          component: props => <AutoFormInput {...props} label={t("form.title.label")} />,
+          component: props => <AutoFormInput {...props} label={t("title")} />,
         },
         {
           id: "body",
           component: props => (
-            <AutoFormEditor {...props} format="json" label={t("form.body.label")} />
+            <AutoFormEditor {...props} format="json" label={t("body")} />
           ),
         },
       ]}
-      formSchema={formSchema}
+      formSchema={createArticleFormSchema(defaultValues)}
       onSubmit={onSubmit}
-      submitButtonProps={{ children: t("new.submit") }}
+      submitButtonProps={{ children: submitLabel, className: "self-start" }}
     />
   );
 };
-
-export default DiscussionNewPage;
 ```
 
-That is the whole page. Here is what each part does:
+The schema checks the values in the browser first, with the same limits as the definition, so members see mistakes before anything is sent. `format="json"` makes the editor produce the document a [rich text field](/docs/content-engine/rich-text) stores. `AutoForm` disables the submit button while `onSubmit` runs, so a double click never posts twice.
 
-- **`formSchema`** checks the values in the browser first. Copy the server's limits, such as `minLength: 3`, so members see mistakes before they submit.
-- **`write.submit`** sends the request and returns the new record, or `null` when the server said no. It already showed the reason: a server issue on `title` appears under the title, a taken title too (`uniqueField`), and anything else, such as an expired session, is a toast. You write no error handling. Every case is in the [`useContentPublicWrite` reference](/docs/content-engine/public-write-form-api#how-answers-are-handled).
-- **The owner** is set by the server. `values` never includes the author.
-- **Double posts** cannot happen, because `AutoForm` disables the button while `onSubmit` runs.
-- **`invalidateDiscussionLists`** refreshes the cached [discussion list](/docs/content-engine/public-lists), so the new discussion shows up there at once.
-- **`format="json"`** makes the editor produce the document a [rich text field](/docs/content-engine/rich-text) stores.
+</Step>
 
-This page fits the discussion type from [Public write](/docs/content-engine/public-write#define-the-content-type). The example plugin's own discussions also live in boards, so its page in `plugins/example/src/pages/` adds a board select and sends `board` in `values`; any [container field](/docs/content-engine/containers) in `create.fields` works the same way.
+<Step>
+
+### Write the page
+
+Create `src/pages/article-new-page.tsx`:
+
+```tsx title="plugins/newsroom/src/pages/article-new-page.tsx"
+import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
+
+import { useQueryClient } from "@tanstack/react-query";
+import { emptyRichTextDocument } from "@vitnode/core/content";
+import { definePluginRoute } from "@vitnode/core/routing";
+import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { useHrefNavigate } from "@vitnode/core/tanstack/link";
+import { toast } from "sonner";
+import { useTranslations } from "use-intl";
+
+import { manifest } from "@/manifest.gen";
+
+import {
+  ARTICLE_FORM_FIELDS,
+  ArticleForm,
+  type ArticleFormSchema,
+} from "./article-form";
+
+export const route = definePluginRoute({
+  head: ({ t }) => ({
+    robots: "noindex, nofollow",
+    title: t("newsroom.articles.new.title"),
+  }),
+});
+
+const ArticleNewPage = () => {
+  const t = useTranslations("newsroom.articles.new");
+  const navigate = useHrefNavigate();
+  const queryClient = useQueryClient();
+  const write = useContentPublicWrite({
+    fields: ARTICLE_FORM_FIELDS,
+    uniqueField: "title",
+  });
+
+  const onSubmit: AutoFormOnSubmit<ArticleFormSchema> = async (
+    values,
+    form,
+  ) => {
+    const record = await write.submit(
+      form,
+      async () =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "post",
+          module: "content/news",
+          path: "/",
+          args: { body: { values } },
+        }),
+    );
+    if (!record) return;
+
+    await queryClient.invalidateQueries({
+      queryKey: [manifest.id, "articles"],
+    });
+
+    // Not public yet: its page would answer 404, so open the edit page.
+    if (
+      record.status !== "published" ||
+      record.approval?.status === "pending"
+    ) {
+      toast.info(t("draft.title"), { description: t("draft.desc") });
+      await navigate(`/news/${record.id}/edit`);
+
+      return;
+    }
+
+    toast.success(t("success.title"), { description: t("success.desc") });
+    await navigate(`/news/${record.slug}`);
+  };
+
+  return (
+    <div className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
+      <h1 className="text-3xl font-semibold tracking-tight text-balance">
+        {t("title")}
+      </h1>
+      <ArticleForm
+        defaultValues={{ body: emptyRichTextDocument(), title: "" }}
+        onSubmit={onSubmit}
+        submitLabel={t("submit")}
+      />
+    </div>
+  );
+};
+
+export default ArticleNewPage;
+```
+
+- **`write.submit`** sends the request and returns the new record, or `null` after showing why the server said no: an issue on a field appears under it, a taken title appears under **Title** (`uniqueField`), and anything else, such as an expired session, is a toast. The [Form helpers](/docs/content-engine/public-write-form-api#how-answers-are-handled) reference lists every case.
+- **The owner** is set by the server; `values` never includes `author`.
+- **`invalidateQueries`** expires the cached [article list](/docs/content-engine/public-lists), whose query key starts with `[manifest.id, "articles"]`, so the new article shows there at once.
+- **Before navigating**, the page checks whether the article is public. With `create.status: "draft"`, or in a container that [holds new posts for approval](/docs/content-engine/approvals), the record is not live yet and its public page answers `404`, so the author goes to its edit page instead.
+
+</Step>
+
+<Step>
+
+### Add the route
+
+Edit `src/routes.ts` and add the page before `/news/:slug`. This is an excerpt:
+
+```ts title="plugins/newsroom/src/routes.ts"
+  // [!code ++:5]
+  page("/news/new", {
+    component: lazy(() => import("./pages/article-new-page")),
+    messages: ["newsroom.articles"],
+    requires: "authenticated",
+  }),
+
+  page("/news/:slug", {
+```
+
+`requires: "authenticated"` sends guests to the sign-in page and brings them back afterwards. The static `/news/new` wins over `/news/:slug`, so an article whose slug is `new` would be hidden behind the form; pick another URL, such as `/news/write/article`, if that can happen in your app.
 
 </Step>
 
@@ -146,14 +258,18 @@ This page fits the discussion type from [Public write](/docs/content-engine/publ
 
 ### Add the labels
 
-```json title="plugins/example/src/locales/en.json"
+Add these keys under `newsroom.articles` in `src/locales/en.json`:
+
+```json title="plugins/newsroom/src/locales/en.json"
 {
-  "@vitnode/example": {
-    "discussions": {
-      "new": { "submit": "Post discussion" },
-      "form": {
-        "title": { "label": "Title" },
-        "body": { "label": "Message" }
+  "newsroom": {
+    "articles": {
+      "form": { "title": "Title", "body": "Article" },
+      "new": {
+        "title": "Write an article",
+        "submit": "Publish article",
+        "success": { "title": "Article published", "desc": "Readers can see it now." },
+        "draft": { "title": "Article saved", "desc": "It is not public yet." }
       }
     }
   }
@@ -166,33 +282,35 @@ Error messages come from core and follow the reader's language, so the plugin ne
 
 </Steps>
 
-## When a post waits for a moderator
+## Check the result
 
-In a container with [publishing policies](/docs/content-engine/container-policies) that ask for approval, a create still succeeds but the record is not public yet. `record.approval?.status` is `"pending"` and its page answers `404`. Send the author somewhere that says so:
+Sign in as a member and open `http://localhost:3000/news/new`:
 
-```ts
-if (record.approval?.status === "pending") {
-  await navigate(`/discussions/${record.id}/edit`);
+1. Click **Publish article** with an empty form. Both fields show an error, and nothing is sent.
+2. Enter the title `Welcome to the newsroom`, which an article already has, and a message. **This is already taken. Try something else.** appears under **Title**, and your text stays.
+3. Change the title and click **Publish article**. **Article published** appears, you land on `/news/{slug}`, and the article tops `/news`.
+4. Open `/news/new` signed out. You are sent to the sign-in page.
 
-  return;
-}
-```
-
-The edit page shows the waiting notice, as [Approvals](/docs/content-engine/approvals#show-it-on-your-pages) explains.
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={createTaken}
+  alt="The Write an article form with the title Welcome to the newsroom, the error This is already taken. Try something else. under it, and a message in the Article editor"
+/>
 
 ## Captcha
 
-With `create.captcha: true`, pass the captcha config to the form and forward the token it hands to `onSubmit`:
+With `create.captcha: true` in `publicWrite`, every create needs a [captcha](/docs/dev/captcha) token. Give `ArticleForm` a `captcha` prop that it passes on to `AutoForm`, then forward the token `AutoForm` hands to `onSubmit`:
 
 ```tsx
 const { data: config } = useMiddlewareConfigQuery(); // from @vitnode/core/tanstack/auth
 
-const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (values, form, { captchaToken }) => {
+const onSubmit: AutoFormOnSubmit<ArticleFormSchema> = async (values, form, { captchaToken }) => {
   const record = await write.submit(form, async () =>
     await fetcher({
       plugin: manifest.id,
       method: "post",
-      module: "content/discussions",
+      module: "content/news",
       path: "/",
       captchaToken,
       args: { body: { values } },
@@ -200,20 +318,8 @@ const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (values, form, { cap
   );
 };
 
-<AutoForm captcha={config?.captcha} /* ... */ />;
+// In ArticleForm: <AutoForm captcha={captcha} ... />
+<ArticleForm captcha={config?.captcha} /* ...the other props */ />;
 ```
 
-## Check the result
-
-Sign in as a member and open `/discussions/new`:
-
-1. Leave the message empty and submit. The form says so without sending anything.
-2. Use the title of an existing discussion. **This is already taken** appears under the title.
-3. Write a new title and a message, then click **Post discussion**. You land on the new discussion, and it tops `/discussions`.
-
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={createForm}
-  alt="The Start a discussion form with a board, a title and an empty Message editor outlined in red under an error"
-/>
+Next, let authors fix their articles with an [Edit form](/docs/content-engine/public-write-edit).

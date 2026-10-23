@@ -1,10 +1,10 @@
 ---
-title: Public write API
+title: Write API
 description: Reference for Content Engine publicWrite, with options and defaults, writable fields, generated create and edit routes, request and response bodies, status and error codes, createContentPublicWriteService and definition errors.
 icon: FileJson
 ---
 
-This page lists everything `publicWrite` accepts and everything its routes answer. For a guided setup, follow [Public write](/docs/content-engine/public-write). Examples use `example.discussion` from the example plugin, whose write routes live at `/api/@vitnode/example/content/discussions`.
+This page lists everything `publicWrite` accepts and everything its routes answer. For a guided setup, follow [Member writing](/docs/content-engine/public-write). Examples use `example.discussion` from the example plugin, whose write routes live at `/api/@vitnode/example/content/discussions`.
 
 ## `publicWrite` options
 
@@ -57,7 +57,7 @@ They never accept:
 
 A `relation` is writable only when its target content type has a `publicApi`. On each request, every referenced record must also be published and not hidden.
 
-A `container` is writable in `create.fields` only. A member picks the container once, when they create the record; moving it later is a staff edit, so an author cannot drop their record into a container they could not post in. On each create, the server reads the container back inside the write's transaction and checks that it belongs to the field's collection. A missing or foreign container answers `400` with an `unavailable` issue on that field. See [Containers on the frontend](/docs/content-engine/container-frontend#let-members-pick-a-board).
+A `container` is writable in `create.fields` only. A member picks the container once, when they create the record; moving it later is a staff edit, so an author cannot drop their record into a container they could not post in. On each create, the server reads the container back inside the write's transaction and checks that it belongs to the field's collection. A missing or foreign container answers `400` with an `unavailable` issue on that field. See [Container pages](/docs/content-engine/container-frontend#let-members-pick-a-board).
 
 ### Moderator permission
 
@@ -67,7 +67,7 @@ When the content type lives in a container collection with [publishing policies]
 
 ## Generated routes
 
-The routes live in the public module, under `/api/{pluginId}/content/{publicApi.path}`, next to the [public read routes](/docs/content-engine/public-api#the-routes). Only the ones `publicWrite` enables are mounted, and the [fetcher](/docs/dev/fetcher) types them the same way: a `post` to a content type without `create` is a compile error.
+The routes live in the public module, under `/api/{pluginId}/content/{publicApi.path}`, next to the [public read routes](/docs/content-engine/public-api). Only the ones `publicWrite` enables are mounted, and the [fetcher](/docs/dev/fetcher) types them the same way: a `post` to a content type without `create` is a compile error.
 
 | Method and path  | Enabled by | Body                          | Success                                                                    |
 | ---------------- | ---------- | ----------------------------- | -------------------------------------------------------------------------- |
@@ -78,7 +78,7 @@ The routes live in the public module, under `/api/{pluginId}/content/{publicApi.
 
 `GET /{id}/edit` and `PATCH /{id}` answer only for the owner and for moderators. There is no public delete, publish or hide route.
 
-`GET /permissions` takes up to 50 comma-separated ids and answers for guests too. `canEdit` follows the same rules as `PATCH`; `canReport` is `true` for a public record, with `reports` on, that the visitor did not write. A record the visitor can neither read nor edit is left out of `items`, so the route never confirms a draft exists. [Viewer permissions](/docs/content-engine/public-permissions) has the full contract.
+`GET /permissions` takes up to 50 comma-separated ids and answers for guests too. `canEdit` follows the same rules as `PATCH`; `canReport` is `true` for a public record, with `reports` on, that the visitor did not write. A record the visitor can neither read nor edit is left out of `items`, so the route never confirms a draft exists. [Permissions](/docs/content-engine/public-permissions) has the full contract.
 
 A request passes these checks in order: the rate limit, the captcha (create only), the session, the body, then for an edit the owner or moderator check and the relation targets, all before anything is written.
 
@@ -307,7 +307,7 @@ const rejection = parseContentPublicWriteRejection(
 From `@vitnode/core/tanstack/content`, for pages in the browser:
 
 - [`useContentPublicWrite`](/docs/content-engine/public-write-form-api) sends a create or edit from an `AutoForm` and shows field errors, refusals and version conflicts.
-- [`useContentPermissions`](/docs/content-engine/public-permissions#usecontentpermissions-reference) reads `GET /permissions` for any number of records, in batches of 50.
+- [`useContentPermissions`](/docs/content-engine/public-permissions-api#usecontentpermissions) reads `GET /permissions` for any number of records, in batches of 50.
 
 ## Server API
 

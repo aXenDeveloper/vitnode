@@ -76,7 +76,7 @@ Resolution only works when the plugin id equals the npm package name and the pac
 }
 ```
 
-Tables are the exception. Drizzle Kit reads `node_modules/<pluginId>/dist/src/database/*.js` directly for every plugin in the API config. Export each table from those files, or it never reaches a migration. [Database](/docs/content-engine/database#export-every-table) shows a model with several tables.
+Tables are the exception. Drizzle Kit reads `node_modules/<pluginId>/dist/src/database/*.js` directly for every plugin in the API config. Export each table from those files, or it never reaches a migration. [Migrations](/docs/content-engine/database#export-every-table) shows a model with several tables.
 
 ## Keep `config.tsx` small
 

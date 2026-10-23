@@ -1,70 +1,55 @@
 ---
-title: Viewer permissions
-description: Show Edit and Report buttons only to visitors who may use them, with the Content Engine GET /permissions route and the useContentPermissions hook, on one record or a whole list.
+title: Permissions
+description: Show Edit and other actions only to visitors who may use them with useContentPermissions, while the VitNode Content Engine authorizes every write on the server. Explains staff, moderator and member permissions.
 icon: KeyRound
+implementation:
+  objective: Show action buttons, such as Edit, only to visitors the Content Engine allows.
+  decisions:
+    - Which items get the buttons? Offer content types with `publicWrite.update` or `reports`.
+    - Which pages show them? Offer the record pages and lists that render those items.
+  constraints:
+    - Ask `GET /{publicApi.path}/permissions` through `useContentPermissions`; never compare author ids or roles in the browser.
+    - Pass every id on screen to one hook call.
+  related:
+    - title: Permissions API
+      href: /docs/content-engine/public-permissions-api
+    - title: Reports
+      href: /docs/content-engine/reports
+    - title: Edit form
+      href: /docs/content-engine/public-write-edit
 ---
 
-`GET /{publicApi.path}/permissions` tells a page what the current visitor may do with each record on screen: `canEdit` and `canReport`. `useContentPermissions` from `@vitnode/core/tanstack/content` asks it from the browser, so a page never compares author ids or guesses moderator rights. The examples use the Forum plugin's topics and comments.
+import { ImgDocs } from "@/components/fumadocs/img";
+import editLink from "./public-permissions-edit-link.webp";
 
-## When the route exists
+A page should show **Edit** only to people who may edit. `useContentPermissions` asks the Content Engine what the current visitor may do with the records on screen, so the page never compares author ids or guesses who is a moderator. The server still checks every write itself.
 
-The Content Engine mounts `GET /permissions` next to the [public read routes](/docs/content-engine/public-api#the-routes) when the content type has [`publicWrite.update`](/docs/content-engine/public-write) or [`reports`](/docs/content-engine/reports). Without either, there is nothing to answer and the [fetcher](/docs/dev/fetcher) refuses the path at compile time.
+This continues the article from [Edit form](/docs/content-engine/public-write-edit): authors can edit at `/news/:id/edit`, but nothing links there yet.
 
-```http title="Request"
-GET /api/@vitnode/forum/content/comments/permissions?ids=12,13,14
-Cookie: vitnode_auth=<session>
-```
+<Steps>
 
-```json title="200"
-{
-  "items": [
-    { "id": 12, "canEdit": true, "canReport": false },
-    { "id": 14, "canEdit": false, "canReport": true }
-  ]
-}
-```
+<Step>
 
-| Part | Rule |
-| --- | --- |
-| `ids` | Comma-separated record ids, for example `12,13,14`. Duplicates collapse, and a value that is not a valid id for the content type's [ID strategy](/docs/content-engine/id-strategy) is ignored |
-| Limit | At most 50 distinct ids (`CONTENT_PUBLIC_MAX_PAGE_SIZE`). More answers `400` with `{ "error": "Ask for at most 50 ids." }` |
-| `items` | One entry per record the visitor may see, in the order asked |
-| Caching | `Cache-Control: private, no-store`. The answer depends on who asks, so no shared cache ever stores it |
+### Ask the Content Engine
 
-## What the flags mean
+Create `src/pages/article-permissions.ts`. It wraps `useContentPermissions` with the typed `fetcher` call for your articles:
 
-| Flag | `true` when | Guests |
-| --- | --- | --- |
-| `canEdit` | `GET /{id}/edit` and `PATCH /{id}` would accept this visitor: a moderator with `can_edit` in the record's container, or the owner while the record is not hidden, `update.own` is on and the container's `authorEdit` policy still allows it | Always `false` |
-| `canReport` | The content type has `reports`, the record is public, and the visitor did not write it | `true` on public records. The report dialog asks them to sign in |
-
-A record is **left out of `items`** when the visitor can neither read it publicly nor edit it: a missing id, someone else's draft, or a hidden record for anyone but a moderator with `can_edit`. The route answers the same way for all of them, so it never confirms that a draft exists. Your own draft comes back with `canEdit: true` and `canReport: false`.
-
-The flags answer "should this button show?", not "why not?". They carry no denial reason. When an edit is refused, the write route says why, such as `edit_window_closed`; see [Public write API](/docs/content-engine/public-write-api#rejection).
-
-<Callout type="warn" title="A flag is a snapshot">
-  The answer is what the server decided when the page asked. An edit window can close, or a moderator can lose `can_edit`, while the page stays open. Every write is authorized again on the server, so a stale `true` only means the save is refused with a message.
-</Callout>
-
-## Ask from a page
-
-Wrap the hook once per content type, with the `fetcher` call written inline so the route and its response stay typed:
-
-```ts title="plugins/forum/src/pages/forum-permissions.ts"
+```ts title="plugins/newsroom/src/pages/article-permissions.ts"
 import { useContentPermissions } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 import { manifest } from "@/manifest.gen";
 
-export const useCommentPermissions = (ids: readonly number[]) =>
+/** What the visitor may do with each article on screen: `canEdit`, `canReport`. */
+export const useArticlePermissions = (ids: readonly number[]) =>
   useContentPermissions({
     ids,
-    queryKey: [manifest.id, "comments"],
+    queryKey: [manifest.id, "articles"],
     fetch: async request => {
       const res = await fetcher({
         plugin: manifest.id,
         method: "get",
-        module: "content/comments",
+        module: "content/news",
         path: "/permissions",
         args: { query: { ids: request.join(",") } },
       });
@@ -75,80 +60,99 @@ export const useCommentPermissions = (ids: readonly number[]) =>
   });
 ```
 
-**On a detail page**, pass the one id and read its flags:
+The route, `GET /api/newsroom/content/news/permissions`, exists because the article has `publicWrite.update`. `queryKey` starts with the article list's prefix, so refreshing the list refreshes the answers too.
 
-```tsx title="Excerpt: plugins/forum/src/pages/topic-page.tsx"
-const { canEdit, canReport } = useTopicPermissions([topic.id]).of(topic.id);
+</Step>
+
+<Step>
+
+### Show the Edit link
+
+Edit `src/pages/article-page.tsx`. Add an `ArticleActions` component above `ArticlePage`, and render it in the article's header. These are excerpts:
+
+```tsx title="plugins/newsroom/src/pages/article-page.tsx"
+import { buttonVariants } from "@vitnode/core/components/ui/button";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { useTranslations } from "use-intl";
+
+import { useArticlePermissions } from "./article-permissions";
+
+/** Asked in the browser, so the cached page stays the same for everyone. */
+const ArticleActions = ({ id }: { id: number }) => {
+  const t = useTranslations("newsroom.articles");
+  const { canEdit } = useArticlePermissions([id]).of(id);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {canEdit ? (
+        <HrefLink
+          className={buttonVariants({ size: "sm", variant: "outline" })}
+          href={`/news/${id}/edit`}
+        >
+          {t("edit_link")}
+        </HrefLink>
+      ) : null}
+    </div>
+  );
+};
 ```
 
-**On a list or a thread**, pass every id on screen at once and read each row with `of(id)`. Pass only ids that have a record, so a [tombstone](/docs/content-engine/threads-frontend#render-the-tree-pages-and-actions) is not asked about:
-
-```tsx title="Excerpt: plugins/forum/src/pages/thread.tsx"
-const permissions = useCommentPermissions(
-  items.flatMap(item => (item.record ? [item.id] : [])),
-);
-
-const { canEdit, canReport } = permissions.of(comment.id);
+```tsx title="plugins/newsroom/src/pages/article-page.tsx"
+    <header className="flex flex-col gap-2">
+      {/* title and date as before */}
+      <ArticleActions id={item.id} />
+    </header>
 ```
 
-## `useContentPermissions` reference
+Add `"edit_link": "Edit"` under `newsroom.articles` in `src/locales/en.json`.
 
-```ts
-const permissions = useContentPermissions({ fetch, ids, queryKey });
-```
+`of(id)` reads all `false` until the answer arrives, so the link appears a moment after the page, and never for someone who may not use it.
 
-| Name | Type | Required | Description |
-| --- | --- | --- | --- |
-| `ids` | `readonly (number \| string)[]` | Yes | The records on screen, any number and in any order |
-| `fetch` | `(ids) => Promise<{ items }>` | Yes | Calls `GET /permissions` with `ids.join(",")`. Receives at most 50 ids per call. Throw on anything but `200` |
-| `queryKey` | `QueryKey` | Yes | The content type's query prefix, such as `[manifest.id, "comments"]` |
+</Step>
 
-| Returns | Type | Behavior |
-| --- | --- | --- |
-| `of(id)` | `(id) => { canEdit, canReport }` | The record's flags. All `false` until known, for a record left out of `items` and for a record in a failed batch. Stable until an answer changes, so memoized rows can receive it |
-| `isPending` | `boolean` | `true` while the session or any batch still waits for its first answer. `false` for an empty `ids` list |
-| `isError` | `boolean` | `true` when at least one batch failed. Its records read as all `false`; the others keep their answers |
-
-`useContentPermissions` runs in the browser. Shared, cached HTML never contains a visitor's buttons: they appear after the session is known.
-
-### Batches
-
-The hook removes duplicate ids and sends the rest in batches of 50, the route's limit, with at most three requests in flight. Each batch is its own query, cut from `ids` in the order you pass them and sorted inside, so:
-
-- A thread with 120 comments on screen makes three requests instead of one refused one.
-- **Load more** that appends ids keeps every full batch before it, and its cached answer, untouched.
-- The same records in the same order always produce the same query keys.
-
-Hide a button while its record's flags are unknown, rather than showing a page-wide spinner. A failed batch hides its buttons and nothing else, so the page stays usable.
-
-### Cache keys and invalidation
-
-Every batch is stored under `[...queryKey, "permissions", { ids, userId }]`. The user id makes the answer personal: signing in or out moves to new keys, so one visitor never sees another's buttons, even on a page served from a shared cache.
-
-The Content Engine's public reads are the same for everybody and can be cached on a CDN; the permissions route is per visitor and is never cached outside the tab. Keep the two in separate queries, as the hook does, and never put flags into a shared response.
-
-VitNode's query client does not refetch on mount or window focus, so an answer lives until it is invalidated, the network reconnects or the tab reloads. Refresh it after anything that can change it:
-
-```ts
-await queryClient.invalidateQueries({
-  queryKey: [manifest.id, "comments", "permissions"],
-});
-```
-
-- **After a write**, new records get their own batch automatically, because their ids are new. Invalidate when a write changes who may edit, such as a moderator hiding a record.
-- **After a role or policy change** in the same tab, such as a member becoming a moderator, invalidate the prefix or reload.
-- Invalidating the plain prefix, `[manifest.id, "comments"]`, refreshes the permissions together with every other query under it.
+</Steps>
 
 ## Check the result
 
-Open a topic with replies, such as `/forum/topics/show-us-your-first-content-engine-type`, signed in as a member:
+1. Sign in as the member who wrote an article and open it. **Edit** shows below the date and opens the edit form.
+2. Open it as another member. There is no **Edit**.
+3. Open an article staff wrote in the AdminCP. Its `author` is empty, so only a moderator sees **Edit**.
 
-1. Your own comments show **Edit**; other members' comments show **Report**.
-2. Open the browser's network panel and click **Load more comments** until more than 50 comments are on screen. Every `/permissions` request carries at most 50 ids, and every loaded comment has its button.
-3. Sign out. **Edit** disappears and **Report** stays on every public comment.
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={editLink}
+  alt="An article page viewed by its author, with the title, the date and an Edit button below it"
+/>
 
-## Related
+## The server still decides
 
-- [Public edit form](/docs/content-engine/public-write-edit) uses `canEdit` for the Edit link.
-- [Report content](/docs/content-engine/reports) uses `canReport` for the Report button.
-- [Threaded replies on the frontend](/docs/content-engine/threads-frontend) asks for every reply on screen.
+The answer is a hint for the interface, not a lock. Every write route checks the session, the owner and the moderator permissions again, so a stale **Edit**, for example after an edit window closed, only leads to a refusal message. The flags also carry no reason; the write route says why when it refuses.
+
+Keep the answer out of anything shared. Article pages are the same for every reader and can be cached; the permissions request is personal, never cached outside the tab, and keyed by the signed-in user.
+
+## Staff, moderators and members
+
+Three kinds of permission meet on a content type:
+
+| Who | Where they act | Granted in | Example |
+| --- | --- | --- | --- |
+| **Staff** | The AdminCP and its `/admin/` routes | **AdminCP → Staff → Administrators** | `newsroom:article:can_edit` edits any article in the AdminCP |
+| **Moderators** | The public site, the ModCP | **AdminCP → Staff → Moderators** | The moderator `can_edit` edits any article from the site |
+| **Members** | The public site | Ownership, set by the server | The author edits their own article |
+
+`canEdit` combines the last two: the owner while the rules allow it, or a moderator with `can_edit`. An AdminCP session never adds powers on the public site. Moderators edit with the same forms as members, so one edit page serves both.
+
+## Lists and threads
+
+On a page with many records, pass every id on screen to one hook call and read each row with `of(id)`. The hook splits more than 50 ids into batches, so a long thread works too:
+
+```tsx
+const permissions = useArticlePermissions(
+  articles?.edges.map(article => article.id) ?? [],
+);
+
+permissions.of(article.id).canEdit;
+```
+
+[Permissions API](/docs/content-engine/public-permissions-api) has the route's contract, every option and return value of the hook, and when to invalidate it. Next, let readers flag a problem with [Reports](/docs/content-engine/reports).

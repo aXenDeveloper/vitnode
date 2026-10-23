@@ -1,109 +1,180 @@
 ---
-title: Threaded replies
-description: Add nested replies, such as comments under a forum topic, with the VitNode Content Engine thread option, from the content type to a comment section with replying, editing, tombstones and reporting.
+title: Comments
+description: Add comments under a VitNode Content Engine record with a comment content type and the thread option, then read, post and edit them on the record's page with fetcher, useContentPublicWrite and useContentPermissions.
 icon: MessagesSquare
 implementation:
-  objective: Add threaded replies, such as comments, under an existing content type and show them on its page.
+  objective: Let signed-in members comment under the records of an existing content type, on its public page.
   decisions:
-    - Which plugin owns the replies? Offer plugins in the project that define Content Engine content types.
-    - Which items get replies? Offer content types from the chosen plugin with a public API and a public page.
-    - Who writes replies? Signed-in members from the public site (uses Public write), or only staff in the AdminCP.
-    - How deep can replies nest? From 1 (a flat list) to 32 levels; recommend 6.
+    - Which items get comments? Offer content types from the project's plugins that have a public API and a public page.
+    - Should moderators be able to hide a comment? That adds `visibility`.
   constraints:
-    - Use the content type `thread` option. Do not build a separate comments table, tree query or placement checks.
-    - 'The root relation is required, to-one and `container: true`; `parent` is a nullable to-one self relation. Both belong in `publicApi.fields` and neither in `publicWrite.update.fields`.'
-    - 'Build the comment section with the Threaded replies on the frontend guide: read `GET /{publicApi.path}/thread` through `fetcher`, render tombstones (`removed: true`) and show Edit and Report from `useContentPermissions`.'
+    - Define the comments as their own content type with the `thread` option, a required relation to the commented record as `root`, and a nullable self relation as `parent`.
+    - Read them with `GET /{publicApi.path}/thread`, write with `useContentPublicWrite`, and show Edit from `useContentPermissions`.
   related:
-    - title: Threaded replies on the frontend
+    - title: Replies
       href: /docs/content-engine/threads-frontend
-    - title: Public write
+    - title: Member writing
       href: /docs/content-engine/public-write
-    - title: Report content
-      href: /docs/content-engine/reports
-    - title: Thread reference
+    - title: thread reference
       href: /docs/content-engine/reference#thread
 ---
 
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-The `thread` option turns a content type into replies that answer each other under one record, like comments under a forum topic. The server keeps the tree valid and returns it a page at a time; your page draws it. This guide sets up the Forum plugin's comments on the server. [Threaded replies on the frontend](/docs/content-engine/threads-frontend) then builds the comment section.
+import { ImgDocs } from "@/components/fumadocs/img";
+import section from "./threads-comments.webp";
 
-You need the root content type, here `forum.topic`, with a [public API](/docs/content-engine/public-api) and a page. For members to reply, read [Public write](/docs/content-engine/public-write) too.
+Comments are records of their own: a comment content type that points at the article it answers. The `thread` option gives that type a route that returns an article's comments a page at a time, and the server checks where every comment may go. This page adds flat comments under each article; [Replies](/docs/content-engine/threads-frontend) then lets comments answer each other.
+
+This continues the article page from [Reports](/docs/content-engine/reports). It uses `@tanstack/react-query`, added in [Create form](/docs/content-engine/public-write-frontend#add-tanstack-query-to-the-plugin).
 
 <Steps>
 
 <Step>
 
-### Define the reply
+### Define the comment type
 
-```ts title="plugins/forum/src/content/comment.ts"
+Create `src/content/comment.ts`. This is the complete file:
+
+```ts title="plugins/newsroom/src/content/comment.ts"
 import { defineContentType, field } from "@vitnode/core/content";
 
-import { topicContentType } from "@/content/topic";
+import { articleContentType } from "@/content/article";
 
 export const commentContentType = defineContentType({
-  id: "forum.comment",
-  tableName: "forum_comments",
+  id: "newsroom.comment",
+  tableName: "newsroom_comments",
 
   fields: {
     slug: field.slug({ generated: true }),
     body: field.richText({ required: true }),
     author: field.user(),
-    topic: field.relation({
-      target: () => topicContentType,
+    article: field.relation({
+      target: () => articleContentType,
       required: true,
-      container: true,
       onDelete: "cascade",
     }),
-    parent: field.relation({ self: true, nullable: true, onDelete: "set null" }),
+    parent: field.relation({
+      self: true,
+      nullable: true,
+      onDelete: "set null",
+    }),
   },
 
   publication: true,
   visibility: true,
-  reports: { snapshotFields: ["body"] },
 
   publicApi: {
     path: "comments",
-    fields: ["id", "slug", "body", "topic", "parent", "publishedAt", "createdAt"],
+    fields: ["id", "slug", "body", "article", "parent", "publishedAt"],
     people: ["author"],
   },
 
   publicWrite: {
     ownership: { field: "author" },
-    create: { fields: ["body", "topic", "parent"], status: "published" },
+    create: { fields: ["body", "article", "parent"], status: "published" },
     update: { fields: ["body"] },
   },
 
-  thread: { parent: "parent", root: "topic", maxDepth: 6 },
+  thread: { parent: "parent", root: "article", maxDepth: 1 },
+
+  admin: { path: "newsroom/comments", titleField: "slug" },
 });
 ```
 
-- `parent` is the reply being answered, or `null` for a direct answer to the topic.
-- `topic` is the **root**. `container: true` puts the comment in the topic's forum, so the forum's [publishing policies](/docs/content-engine/container-policies) and moderators apply to comments too.
-- `slug` with `generated: true` gets a random token such as `k3v9q2m7xa`, because a comment has no title.
-- A comment's place is fixed when it is written. `parent` and `topic` cannot be edited.
+- **`article`** is the comment's **root**: the record it belongs to. It must be a required relation to another content type. `onDelete: "cascade"` removes the comments with their article.
+- **`parent`** is the comment being answered, or `null`. `thread` requires it even for flat comments; `maxDepth: 1` keeps every comment top level for now.
+- **`slug`** with `generated: true` gets a random token, because a comment has no title. The public API needs exactly one slug.
+- **`publicWrite`** lets members post `body` under an `article`. A comment's place is fixed when it is written, so `parent` and `article` are never in `update.fields`.
+- **`visibility`** lets moderators hide a comment, and **`admin`** gives staff a list of comments in the AdminCP.
 
 </Step>
 
 <Step>
 
-### Create the model and migrate
+### Create the model and register it
 
-```ts title="plugins/forum/src/database/comments.ts"
+Create `src/database/comments.ts`. `references` points the `article` relation at the articles table:
+
+```ts title="plugins/newsroom/src/database/comments.ts"
 import { createContentModel } from "@vitnode/core/content/server";
 
 import { commentContentType } from "@/content/comment";
 
-import { forum_topics } from "./topics";
+import { newsroom_articles } from "./articles";
 
 export const commentContent = createContentModel(commentContentType, {
-  references: { topic: () => forum_topics.id },
+  references: { article: () => newsroom_articles.id },
 });
 
-export const forum_comments = commentContent.table;
+export const newsroom_comments = commentContent.table;
 ```
 
-Add `commentContent` to `buildContentPublicModule` next to the topics, then migrate:
+Add `commentContent` next to `articleContent` in two places. In `src/config.api.ts`:
+
+```ts title="plugins/newsroom/src/config.api.ts"
+import { commentContent } from "@/database/comments"; // [!code ++]
+
+buildContentPublicModule({
+  contentTypes: [articleContent, commentContent], // [!code highlight]
+}),
+```
+
+In `src/api/modules/admin/admin.module.ts`, and the AdminCP link in `src/admin/nav.tsx`:
+
+```ts title="plugins/newsroom/src/api/modules/admin/admin.module.ts"
+buildContentAdminModule({ contentTypes: [articleContent, commentContent] }),
+```
+
+```tsx title="plugins/newsroom/src/admin/nav.tsx"
+import { MessageSquareIcon, NewspaperIcon } from "lucide-react";
+
+import { commentContentType } from "@/content/comment";
+
+contentTypes: [
+  { definition: articleContentType, icon: <NewspaperIcon /> },
+  { definition: commentContentType, icon: <MessageSquareIcon /> }, // [!code ++]
+],
+```
+
+</Step>
+
+<Step>
+
+### Label and migrate
+
+Add the comment type's labels to `src/locales/en.json`, next to `article` under `newsroom.content`, and its permission labels at the top level:
+
+```json title="plugins/newsroom/src/locales/en.json"
+{
+  "newsroom": {
+    "content": {
+      "comment": {
+        "label": "{count, plural, one {Comment} other {Comments}}",
+        "title": "Comments",
+        "desc": "What readers say under the articles.",
+        "fields": {
+          "slug": "Link",
+          "body": "Comment",
+          "author": "Author",
+          "article": "Article",
+          "parent": "Answers"
+        }
+      }
+    }
+  },
+  "newsroom:comment": "Comments",
+  "newsroom:comment:can_view": "View comments",
+  "newsroom:comment:can_create": "Create comments",
+  "newsroom:comment:can_edit": "Edit comments",
+  "newsroom:comment:can_delete": "Delete comments",
+  "newsroom:comment:can_publish": "Publish and unpublish comments",
+  "newsroom:comment:can_hide": "Hide and unhide comments"
+}
+```
+
+Then migrate from the workspace root:
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
 
@@ -121,29 +192,799 @@ npm run db:migrate
 
 </Tabs>
 
+The migration creates `newsroom_comments` with a foreign key to `newsroom_articles`. The thread route now answers:
+
+```bash
+curl "http://localhost:3000/api/newsroom/content/comments/thread?root=1"
+```
+
+```json title="200"
+{ "items": [], "pageInfo": { "endCursor": null, "hasNextPage": false, "totalCount": 0 }, "replyCount": 0, "truncated": false }
+```
+
+</Step>
+
+<Step>
+
+### Read the comments
+
+Create `src/pages/comment-data.ts`. All loaded pages of one article's comments live in one infinite query, so refreshing it reloads every page in order:
+
+```ts title="plugins/newsroom/src/pages/comment-data.ts"
+import { infiniteQueryOptions } from "@tanstack/react-query";
+import {
+  zodContentPublicPerson,
+  zodRichTextDocument,
+} from "@vitnode/core/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { z } from "zod";
+
+import { manifest } from "@/manifest.gen";
+
+/** Top-level comments per page. The thread route accepts 1 to 50. */
+const COMMENTS_PAGE_SIZE = 20;
+
+/** One comment as `publicApi.fields` and `people` return it. */
+const zodComment = z.object({
+  author: zodContentPublicPerson.nullable().catch(null),
+  body: zodRichTextDocument,
+  id: z.number(),
+  publishedAt: z.string().nullable(),
+});
+
+const zodCommentPage = z.object({
+  items: z.array(
+    z.object({
+      depth: z.number(),
+      id: z.number(),
+      parentId: z.number().nullable(),
+      record: zodComment.nullable(),
+      removed: z.boolean(),
+    }),
+  ),
+  pageInfo: z.object({
+    endCursor: z.string().nullable(),
+    hasNextPage: z.boolean(),
+    totalCount: z.number(),
+  }),
+  replyCount: z.number(),
+  truncated: z.boolean(),
+});
+
+export type CommentPage = z.infer<typeof zodCommentPage>;
+
+export type CommentItem = CommentPage["items"][number];
+
+export type ArticleComment = NonNullable<CommentItem["record"]>;
+
+const fetchCommentPage = async (articleId: number, after?: string) => {
+  const res = await fetcher({
+    plugin: manifest.id,
+    method: "get",
+    module: "content/comments",
+    path: "/thread",
+    args: {
+      query: {
+        root: String(articleId),
+        first: COMMENTS_PAGE_SIZE,
+        ...(after ? { after } : {}),
+      },
+    },
+  });
+  if (res.status !== 200) throw new Error("Loading the comments failed.");
+
+  // The thread route types `record` loosely, so parse it once here.
+  return zodCommentPage.parse(await res.json());
+};
+
+export const commentsQueryKey = (articleId: number) =>
+  [manifest.id, "comments", articleId] as const;
+
+/** Every loaded page under one key, so a refetch reloads them all in order. */
+export const commentsQueryOptions = (articleId: number) =>
+  infiniteQueryOptions({
+    getNextPageParam: (last: CommentPage) =>
+      last.pageInfo.hasNextPage
+        ? (last.pageInfo.endCursor ?? undefined)
+        : undefined,
+    initialPageParam: undefined as string | undefined,
+    queryFn: async ({ pageParam }) =>
+      await fetchCommentPage(articleId, pageParam),
+    queryKey: commentsQueryKey(articleId),
+  });
+```
+
+- `GET /comments/thread?root={articleId}` returns up to `first` top-level comments, oldest first. `endCursor` asks for the next page.
+- `items` is flat: each comment has `depth`, `parentId` and `record`. With `maxDepth: 1`, every item is top level.
+- The thread route types `record` loosely, so `zodCommentPage` checks the fields `publicApi` returns once, here. `author` comes from `people` as a small public profile, or `null` for a deleted account.
+- `replyCount` counts every public comment, for the "2 comments" heading.
+
+</Step>
+
+<Step>
+
+### Ask who may edit
+
+Create `src/pages/comment-permissions.ts`, like the article's in [Permissions](/docs/content-engine/public-permissions):
+
+```ts title="plugins/newsroom/src/pages/comment-permissions.ts"
+import { useContentPermissions } from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+
+import { manifest } from "@/manifest.gen";
+
+/** What the visitor may do with each comment on screen: `canEdit`, `canReport`. */
+export const useCommentPermissions = (ids: readonly number[]) =>
+  useContentPermissions({
+    ids,
+    queryKey: [manifest.id, "comments"],
+    fetch: async request => {
+      const res = await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "content/comments",
+        path: "/permissions",
+        args: { query: { ids: request.join(",") } },
+      });
+      if (res.status !== 200) throw new Error("Loading permissions failed.");
+
+      return await res.json();
+    },
+  });
+```
+
+</Step>
+
+<Step>
+
+### Write the composer
+
+Create `src/pages/comment-composer.tsx`. One form posts a new comment or saves an edit:
+
+```tsx title="plugins/newsroom/src/pages/comment-composer.tsx"
+import {
+  AutoForm,
+  type AutoFormOnSubmit,
+  AutoFormSubmitButton,
+} from "@vitnode/core/components/form/auto-form";
+import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
+import { Button } from "@vitnode/core/components/ui/button";
+import {
+  emptyRichTextDocument,
+  isRichTextEmpty,
+  type RichTextDocument,
+  zodRichTextDocument,
+} from "@vitnode/core/content";
+import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { useTranslations } from "use-intl";
+import { z } from "zod";
+
+import { manifest } from "@/manifest.gen";
+
+export type CommentComposerProps = {
+  label: string;
+  onCancel?: () => void;
+  /** Called after a save, with whether it waits for a moderator. */
+  onDone: (outcome: { edited: boolean; pending: boolean }) => Promise<void>;
+} & (
+  | { articleId: number; mode: "create"; parentId: null | number }
+  | { body: RichTextDocument; commentId: number; mode: "edit" }
+);
+
+const createSchema = (body: RichTextDocument, required: string) =>
+  z.object({
+    body: zodRichTextDocument
+      .refine(doc => !isRichTextEmpty(doc), required)
+      .default(body),
+  });
+
+type CommentSchema = ReturnType<typeof createSchema>;
+
+const CommentComposer = (props: CommentComposerProps) => {
+  const t = useTranslations("newsroom.comments.form");
+  const write = useContentPublicWrite({ fields: ["body"] });
+
+  const onSubmit: AutoFormOnSubmit<CommentSchema> = async ({ body }, form) => {
+    const saved =
+      props.mode === "edit"
+        ? await write.submit(
+            form,
+            async () =>
+              await fetcher({
+                plugin: manifest.id,
+                method: "patch",
+                module: "content/comments",
+                path: "/{id}",
+                args: {
+                  params: { id: props.commentId },
+                  body: { values: { body } },
+                },
+              }),
+          )
+        : await write.submit(
+            form,
+            async () =>
+              await fetcher({
+                plugin: manifest.id,
+                method: "post",
+                module: "content/comments",
+                path: "/",
+                args: {
+                  body: {
+                    values: {
+                      article: props.articleId,
+                      body,
+                      parent: props.parentId,
+                    },
+                  },
+                },
+              }),
+          );
+    if (!saved) return;
+
+    await props.onDone({
+      edited: props.mode === "edit",
+      pending: saved.approval?.status === "pending",
+    });
+  };
+
+  return (
+    <AutoForm
+      aria-label={props.label}
+      className="flex flex-col gap-3"
+      fields={[
+        {
+          id: "body",
+          component: fieldProps => (
+            <AutoFormEditor {...fieldProps} format="json" label={props.label} />
+          ),
+        },
+      ]}
+      formSchema={createSchema(
+        props.mode === "edit" ? props.body : emptyRichTextDocument(),
+        t("required"),
+      )}
+      layout={fields => <>{fields.body}</>}
+      onSubmit={onSubmit}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <AutoFormSubmitButton>
+          {props.mode === "edit" ? t("save") : t("submit")}
+        </AutoFormSubmitButton>
+        {props.onCancel ? (
+          <Button onClick={props.onCancel} type="button" variant="ghost">
+            {t("cancel")}
+          </Button>
+        ) : null}
+      </div>
+    </AutoForm>
+  );
+};
+
+export default CommentComposer;
+```
+
+- **A new comment** posts `{ values: { article, body, parent } }`; `parent: null` answers the article itself. The server fills `author`.
+- **An edit** sends only `body`, to `PATCH /{id}`.
+- `useContentPublicWrite` shows refusals, such as an expired session, as toasts. `onDone` reports whether the comment waits for a moderator.
+- The file has a default export because the section loads it with `lazy`: the editor is heavy, and most readers never write.
+
+</Step>
+
+<Step>
+
+### Render the comments
+
+Create `src/pages/comment-section.tsx`:
+
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx"
+import {
+  useQueryClient,
+  useSuspenseInfiniteQuery,
+} from "@tanstack/react-query";
+import { RichTextContent } from "@vitnode/core/components/rich-text";
+import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
+import { Skeleton } from "@vitnode/core/components/ui/skeleton";
+import {
+  type RichTextDocument,
+  zodRichTextDocument,
+} from "@vitnode/core/content";
+import { useSessionQuery } from "@vitnode/core/tanstack/auth";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { useTranslations } from "use-intl";
+import { z } from "zod";
+
+import { manifest } from "@/manifest.gen";
+
+import type { CommentComposerProps } from "./comment-composer";
+import type { ArticleComment } from "./comment-data";
+
+import { commentsQueryKey, commentsQueryOptions } from "./comment-data";
+import { useCommentPermissions } from "./comment-permissions";
+
+// The editor is heavy and most readers never write, so it loads on demand.
+const CommentComposer = lazy(async () => await import("./comment-composer"));
+
+const Composer = (props: CommentComposerProps) => (
+  <Suspense fallback={<Skeleton className="h-40 w-full rounded-lg" />}>
+    <CommentComposer {...props} />
+  </Suspense>
+);
+
+const zodProposal = z
+  .object({ body: zodRichTextDocument.optional() })
+  .catch({});
+
+/** Loads the latest text of a comment before editing it. */
+const useOpenEditor = () => {
+  const t = useTranslations("core.global.content_write");
+
+  return async (commentId: number): Promise<null | RichTextDocument> => {
+    const res = await fetcher({
+      plugin: manifest.id,
+      method: "get",
+      module: "content/comments",
+      path: "/{id}/edit",
+      args: { params: { id: commentId } },
+    });
+    if (res.status !== 200) {
+      const reason =
+        res.status === 401
+          ? "unauthenticated"
+          : res.status === 403
+            ? "forbidden"
+            : res.status === 404
+              ? "not_found"
+              : "unknown";
+      toast.error(t("title"), { description: t(reason) });
+
+      return null;
+    }
+
+    const record = await res.json();
+    const { approval } = record;
+    // A pending edit opens on the proposal, not on the live text.
+    const proposed =
+      approval?.status === "pending" && approval.kind === "edit"
+        ? zodProposal.parse(approval.values ?? {})
+        : {};
+
+    return proposed.body ?? record.values.body;
+  };
+};
+
+const Comment = ({
+  canEdit,
+  comment,
+  onSaved,
+}: {
+  canEdit: boolean;
+  comment: ArticleComment;
+  onSaved: CommentComposerProps["onDone"];
+}) => {
+  const t = useTranslations("newsroom.comments");
+  const openEditor = useOpenEditor();
+  const [editing, setEditing] = useState<null | RichTextDocument>(null);
+  const [isOpening, setIsOpening] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm font-medium">
+        {comment.author?.name ?? t("someone")}
+      </p>
+
+      {editing ? (
+        <Composer
+          body={editing}
+          commentId={comment.id}
+          label={t("form.edit_label")}
+          mode="edit"
+          onCancel={() => {
+            setEditing(null);
+          }}
+          onDone={async outcome => {
+            setEditing(null);
+            await onSaved(outcome);
+          }}
+        />
+      ) : (
+        <RichTextContent
+          className="leading-relaxed text-pretty"
+          content={comment.body}
+        />
+      )}
+
+      {canEdit && !editing ? (
+        <Button
+          className="self-start"
+          isLoading={isOpening}
+          onClick={async () => {
+            setIsOpening(true);
+            try {
+              setEditing(await openEditor(comment.id));
+            } finally {
+              setIsOpening(false);
+            }
+          }}
+          size="sm"
+          variant="ghost"
+        >
+          {t("edit")}
+        </Button>
+      ) : null}
+    </div>
+  );
+};
+
+export const CommentSection = ({
+  articleId,
+  articleSlug,
+}: {
+  articleId: number;
+  articleSlug: string;
+}) => {
+  const t = useTranslations("newsroom.comments");
+  const queryClient = useQueryClient();
+  const session = useSessionQuery();
+  const [composerKey, setComposerKey] = useState(0);
+  const comments = useSuspenseInfiniteQuery(commentsQueryOptions(articleId));
+
+  const { pages } = comments.data;
+  const items = useMemo(() => pages.flatMap(page => page.items), [pages]);
+  const permissions = useCommentPermissions(
+    items.flatMap(item => (item.record ? [item.id] : [])),
+  );
+
+  const onSaved: CommentComposerProps["onDone"] = async ({
+    edited,
+    pending,
+  }) => {
+    if (pending) {
+      toast.info(t("pending.title"), { description: t("pending.desc") });
+    } else {
+      const key = edited ? "edited" : "created";
+      toast.success(t(`${key}.title`), { description: t(`${key}.desc`) });
+    }
+    // Refetches every loaded page in order, with the new count.
+    await queryClient.invalidateQueries({
+      queryKey: commentsQueryKey(articleId),
+    });
+  };
+
+  return (
+    <section aria-labelledby="comments-title" className="flex flex-col gap-6">
+      <h2 className="text-xl font-semibold text-balance" id="comments-title">
+        {t("title", { count: pages[0]?.replyCount ?? 0 })}
+      </h2>
+
+      {items.length === 0 ? (
+        <p className="text-muted-foreground leading-relaxed">{t("empty")}</p>
+      ) : (
+        <ol aria-busy={comments.isFetching} className="flex flex-col gap-6">
+          {items.map(item =>
+            item.record ? (
+              <li key={item.id}>
+                <Comment
+                  canEdit={permissions.of(item.id).canEdit}
+                  comment={item.record}
+                  onSaved={onSaved}
+                />
+              </li>
+            ) : null,
+          )}
+        </ol>
+      )}
+
+      {comments.hasNextPage ? (
+        <Button
+          className="self-start"
+          disabled={comments.isFetching}
+          isLoading={comments.isFetchingNextPage}
+          onClick={async () => {
+            const next = await comments.fetchNextPage();
+            if (next.isError) {
+              toast.error(t("load_failed.title"), {
+                description: t("load_failed.desc"),
+              });
+            }
+          }}
+          variant="outline"
+        >
+          {t("load_more")}
+        </Button>
+      ) : null}
+
+      {session.data?.user ? (
+        <Composer
+          articleId={articleId}
+          // A new key gives the next comment a fresh, empty editor.
+          key={composerKey}
+          label={t("form.label")}
+          mode="create"
+          onDone={async outcome => {
+            setComposerKey(composerKey + 1);
+            await onSaved(outcome);
+          }}
+          parentId={null}
+        />
+      ) : (
+        <HrefLink
+          className={buttonVariants({
+            className: "self-start",
+            variant: "outline",
+          })}
+          href={`/login?returnTo=${encodeURIComponent(`/news/${articleSlug}`)}`}
+        >
+          {t("sign_in")}
+        </HrefLink>
+      )}
+    </section>
+  );
+};
+```
+
+- **`useSuspenseInfiniteQuery`** reads the pages the article's loader warms in the next step, so the comments are in the server-rendered HTML.
+- **Permissions** are asked once for every loaded comment that has a record.
+- **Edit** loads `GET /comments/{id}/edit` first, so the form opens on the latest text, or on a pending proposal in `approval.values`. The button shows a spinner while it loads.
+- **Load more comments** calls `fetchNextPage` with the last cursor. It shows its own spinner and is disabled during any fetch, so a double click never loads a page twice.
+- **`onSaved`** picks the toast and invalidates the article's comment query. TanStack Query refetches every loaded page from the first, so a new or edited comment and the heading's count update together. A new key gives the composer a fresh, empty editor.
+- **Guests** see a sign-in link instead of the composer.
+
+</Step>
+
+<Step>
+
+### Show them below the article
+
+Edit `src/pages/article-page.tsx`. Switch the route to `defineRoute`, whose loader gets the query client, warm the first page of comments, and render the section after the body. These are excerpts:
+
+```tsx title="plugins/newsroom/src/pages/article-page.tsx"
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
+
+import { commentsQueryOptions } from "./comment-data";
+import { CommentSection } from "./comment-section";
+
+export const route = defineRoute({
+  load: async ({ context, params }) => {
+    const page = await loadArticle(params.slug);
+    // The first page of comments arrives with the article's HTML.
+    await context.queryClient.infiniteQuery(commentsQueryOptions(page.item.id));
+
+    return page;
+  },
+
+  head: ({ loaderData }) =>
+    contentDeliveryPageHead(loaderData?.metadata, {
+      title: loaderData?.item.title,
+    }),
+});
+```
+
+```tsx title="plugins/newsroom/src/pages/article-page.tsx"
+    <RichTextContent
+      className="leading-relaxed text-pretty"
+      content={item.body}
+    />
+
+    <CommentSection articleId={item.id} articleSlug={item.slug} /> {/* [!code ++] */}
+  </article>
+```
+
+Add `slug: z.string()` to `zodArticle`, and the comment labels to the article page's route in `src/routes.ts`:
+
+```ts title="plugins/newsroom/src/routes.ts"
+  page("/news/:slug", {
+    component: lazy(() => import("./pages/article-page")),
+    messages: ["newsroom.articles", "newsroom.comments"], // [!code highlight]
+  }),
+```
+
+<Accordions>
+<Accordion title="The complete src/pages/article-page.tsx">
+
+```tsx title="plugins/newsroom/src/pages/article-page.tsx"
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
+import { DateFormat } from "@vitnode/core/components/date-format";
+import { RichTextContent } from "@vitnode/core/components/rich-text";
+import { buttonVariants } from "@vitnode/core/components/ui/button";
+import { contentTarget, zodRichTextDocument } from "@vitnode/core/content";
+import {
+  contentDeliveryPage,
+  contentDeliveryPageHead,
+} from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { ReportButton } from "@vitnode/core/tanstack/moderation";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
+import { useTranslations } from "use-intl";
+import { z } from "zod";
+
+import { articleContentType } from "@/content/article";
+import { manifest } from "@/manifest.gen";
+
+import { useArticlePermissions } from "./article-permissions";
+import { commentsQueryOptions } from "./comment-data";
+import { CommentSection } from "./comment-section";
+
+const zodArticle = z.object({
+  body: zodRichTextDocument,
+  id: z.number(),
+  publishedAt: z.string().nullable(),
+  slug: z.string(),
+  title: z.string(),
+});
+
+const loadArticle = async (slug: string) => {
+  const [resolution, detail] = await Promise.all([
+    fetcher({
+      plugin: manifest.id,
+      method: "get",
+      module: "content/news",
+      path: "/delivery/resolve/{slug}",
+      args: { params: { slug: encodeURIComponent(slug) } },
+    }),
+    fetcher({
+      plugin: manifest.id,
+      method: "get",
+      module: "content/news",
+      path: "/{slug}",
+      args: { params: { slug: encodeURIComponent(slug) } },
+    }),
+  ]);
+
+  if (resolution.status !== 200) {
+    throw new Error(
+      `Resolving the article "${slug}" answered ${resolution.status}.`,
+    );
+  }
+
+  return contentDeliveryPage({
+    item: detail.status === 200 ? zodArticle.parse(await detail.json()) : null,
+    resolution: await resolution.json(),
+  });
+};
+
+type ArticlePageData = Awaited<ReturnType<typeof loadArticle>>;
+
+export const route = defineRoute({
+  load: async ({ context, params }) => {
+    const page = await loadArticle(params.slug);
+    // The first page of comments arrives with the article's HTML.
+    await context.queryClient.infiniteQuery(commentsQueryOptions(page.item.id));
+
+    return page;
+  },
+
+  head: ({ loaderData }) =>
+    contentDeliveryPageHead(loaderData?.metadata, {
+      title: loaderData?.item.title,
+    }),
+});
+
+/** Asked in the browser, so the cached page stays the same for everyone. */
+const ArticleActions = ({ id, title }: { id: number; title: string }) => {
+  const t = useTranslations("newsroom.articles");
+  const { canEdit, canReport } = useArticlePermissions([id]).of(id);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {canEdit ? (
+        <HrefLink
+          className={buttonVariants({ size: "sm", variant: "outline" })}
+          href={`/news/${id}/edit`}
+        >
+          {t("edit_link")}
+        </HrefLink>
+      ) : null}
+      {canReport ? (
+        <ReportButton
+          preview={{ title }}
+          target={contentTarget(manifest.id, articleContentType, id)}
+          typeLabel={t("report_type")}
+        />
+      ) : null}
+    </div>
+  );
+};
+
+const ArticlePage = ({
+  loaderData: { item },
+}: PluginRoutePageProps<ArticlePageData>) => (
+  <article className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
+    <header className="flex flex-col gap-2">
+      <h1 className="text-3xl font-semibold tracking-tight text-balance">
+        {item.title}
+      </h1>
+      {item.publishedAt ? (
+        <span className="text-muted-foreground text-sm">
+          <DateFormat date={item.publishedAt} />
+        </span>
+      ) : null}
+      <ArticleActions id={item.id} title={item.title} />
+    </header>
+
+    <RichTextContent
+      className="leading-relaxed text-pretty"
+      content={item.body}
+    />
+
+    <CommentSection articleId={item.id} articleSlug={item.slug} />
+  </article>
+);
+
+export default ArticlePage;
+```
+
+</Accordion>
+</Accordions>
+
+</Step>
+
+<Step>
+
+### Add the labels
+
+Add a `comments` group under `newsroom` in `src/locales/en.json`:
+
+```json title="plugins/newsroom/src/locales/en.json"
+{
+  "newsroom": {
+    "comments": {
+      "title": "{count, plural, =0 {Comments} one {# comment} other {# comments}}",
+      "empty": "No comments yet. Be the first.",
+      "load_more": "Load more comments",
+      "load_failed": { "title": "Could not load comments", "desc": "Check your connection and try again." },
+      "sign_in": "Sign in to comment",
+      "form": {
+        "label": "Your comment",
+        "edit_label": "Edit your comment",
+        "submit": "Post comment",
+        "save": "Save",
+        "cancel": "Cancel",
+        "required": "Write a comment first."
+      },
+      "created": { "title": "Comment posted", "desc": "Your comment is below the article." },
+      "edited": { "title": "Comment saved", "desc": "Your changes are live." },
+      "pending": { "title": "Your comment is waiting for a moderator", "desc": "It appears once it is approved." },
+      "edit": "Edit",
+      "someone": "Deleted user"
+    }
+  }
+}
+```
+
+The error toasts come from core and need no labels.
+
 </Step>
 
 </Steps>
 
-## What the server checks
-
-Every reply is placed on the server, in the AdminCP too. A broken rule answers `400` with an issue on the field:
-
-| Rule                                                 | Message                                                         |
-| ---------------------------------------------------- | --------------------------------------------------------------- |
-| The parent exists and is public                      | `The reply you are answering does not exist.`                   |
-| The parent is under the same topic                   | `The reply you are answering belongs to another conversation.`  |
-| A reply never answers itself or one of its answers   | `A reply cannot answer itself or one of its answers.`           |
-| Nothing sits deeper than `maxDepth`                  | `Replies nest at most 6 levels deep. Answer a reply higher up.` |
-
-A missing, draft or hidden topic makes `GET /thread` answer `404`. Every option is in the [`thread` reference](/docs/content-engine/reference#thread).
-
 ## Check the result
 
-Read the thread of a topic with replies, such as `forum.topic` 1:
+Open `/news/welcome-to-the-newsroom`:
 
-```bash
-curl "http://localhost:3000/api/@vitnode/forum/content/comments/thread?root=1"
-```
+1. Signed out, the section shows **No comments yet** and **Sign in to comment**.
+2. Sign in as a member, write a comment and click **Post comment**. **Comment posted** appears, the comment shows with your name, the heading reads **1 comment**, and the editor is empty again.
+3. Sign in as another member and comment too. Each member sees **Edit** only on their own comment. Click it, change the text and click **Save**: **Comment saved** appears with the new text in place.
 
-The answer lists the replies depth first with `depth` and `parentId`, and `replyCount` counts every public reply. Answering a reply at depth 6 answers `400` with **Replies nest at most 6 levels deep**. Next, draw it: [Threaded replies on the frontend](/docs/content-engine/threads-frontend).
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={section}
+  alt="Two comments under an article, by Ada Lovelace and Grace Hopper, with an Edit button on Grace's own comment and an empty Your comment editor below"
+/>
+
+## Authentication and approval
+
+- **Signed out.** `POST /comments` answers `401`; the section never offers the composer to guests.
+- **Approval.** `create.status: "published"` makes comments live at once. With `"draft"`, or when the article's container holds new posts for [approval](/docs/content-engine/approvals), the response has `approval.status: "pending"` and the comment appears after a moderator approves it. The section's toast already says so.
+- **Placement.** The server checks every comment's `article` and `parent`: the article must be public, the parent must belong to the same article, and nothing may nest deeper than `maxDepth`. A broken rule answers `400` with an issue on `parent`, which the composer shows as a toast.
+- **Hidden articles.** A comment is only as public as its article. Once the article is unpublished or hidden, its comments drop out of the thread and their own routes answer `404`.
+
+Next, let members answer each other: [Replies](/docs/content-engine/threads-frontend).
