@@ -110,10 +110,10 @@ Every successful response is the same record shape:
 | ------------- | -------------------------- | -------------------------------------------------------------------------------------- |
 | `id`          | `number` or `string`       | A string for the `uuid` and `bigint` [ID strategies](/docs/content-engine/id-strategy) |
 | `slug`        | `string` \| `null`         | The value of the `publicApi` slug field, the key of `GET /{slug}`                      |
-| `status`      | `"draft"` \| `"published"` |                                                                                        |
+| `status`      | `"draft"` \| `"published"` | Only `"published"` is public. A draft may or may not wait for a moderator; check `approval` |
 | `publishedAt` | ISO date string \| `null`  |                                                                                        |
-| `version`     | `number`                   | Editorial content types only. Send it back as `expectedVersion`                        |
-| `approval`    | object \| `null`           | The record's pending submission, or a rejection nothing replaced yet. See [Approvals](/docs/content-engine/approvals#what-the-author-sees) |
+| `version`     | `number`                   | Editorial content types only. Send it back as `expectedVersion`; without `editorial`, `expectedVersion` is refused with `400` |
+| `approval`    | object \| `null`           | The record's pending submission, or a rejection nothing replaced yet. Always `null` outside a container with policies, also for drafts. See [Drafts and approval](/docs/content-engine/approvals#drafts-and-approval) |
 | `values`      | object                     | Every field in `create.fields` or `update.fields`, `null` when empty. Nothing else     |
 
 ```json title="200"

@@ -25,6 +25,19 @@ The server decides from the effective policy of the record's container. The clie
 
 A proposal is validated like a normal edit before it is stored, so a moderator never reviews something that could not be saved.
 
+## Drafts and approval
+
+A draft and a pending submission are different states. Check both `status` and `approval` in every write response:
+
+| State | `status` | `approval` | Readers see it |
+| --- | --- | --- | --- |
+| **Published** | `"published"` | `null` | Yes |
+| **Draft, nothing submitted** | `"draft"` | `null` | No, and no moderator is asked |
+| **Pending approval** | `"draft"` for a new record, `"published"` for a pending edit | `{ status: "pending", ... }` | No, until a moderator approves |
+| **Rejected** | unchanged | `{ status: "rejected", reason, ... }` | Only what was already published |
+
+A submission only opens for a record filed in a container whose definition has `policies`, either through its own `field.container()` or a `field.relation({ container: true })` to a record that has one. In that case `publicWrite.create.status: "draft"` is the fallback for `publish: "approve"`. Without a container, `create.status: "draft"` stores a plain draft with `approval: null`: it stays private until staff publish it in the AdminCP, and nobody is told to review it.
+
 Some people skip the queue. A moderator holding `can_approve` in the container publishes and edits their own posts immediately, and so does a root role. A moderator editing through `can_edit` always applies the edit at once, even to someone else's record. Those permissions are [scoped to containers](/docs/dev/moderation/scoped-permissions#container-scoped-permissions).
 
 AdminCP staff work outside this flow: their edits apply directly, as always.
@@ -93,38 +106,8 @@ Each item has `kind`, `status`, `title`, `contentTypeId`, `itemId`, the containe
 Readers never see a pending record, so the author needs to hear what happened. Three places cover it, all from the `approval` object:
 
 1. **After posting.** When `record.approval?.status === "pending"`, send the author to the record's edit page instead of its public page, which answers `404` until approval. See [Create form](/docs/content-engine/public-write-frontend#write-the-page).
-2. **On the edit page.** `GET /{id}/edit` returns the pending or rejected submission. Show a notice above the form. The Forum plugin's `topic-edit-page.tsx` does it like this:
-
-```tsx title="plugins/forum/src/pages/topic-edit-page.tsx"
-const ApprovalNotice = ({ approval, status }: { approval: ContentApprovalState | null; status: string }) => {
-  const t = useTranslations("@vitnode/forum.topics.approval");
-
-  if (approval?.status === "rejected") {
-    return (
-      <Alert variant="destructive">
-        <AlertTitle>{t("rejected.title")}</AlertTitle>
-        <AlertDescription>
-          {approval.reason ? t("rejected.reason", { reason: approval.reason }) : t("rejected.desc")}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (approval?.status === "pending" && approval.kind === "edit") {
-    return <Alert variant="info"><AlertTitle>{t("pending_edit.title")}</AlertTitle></Alert>;
-  }
-
-  if (status === "draft" && approval?.status === "pending") {
-    return <Alert variant="info"><AlertTitle>{t("pending_create.title")}</AlertTitle></Alert>;
-  }
-
-  return null;
-};
-```
-
+2. **On the edit page.** `GET /{id}/edit` returns the pending or rejected submission. Open the form on the proposal and show a notice above it; [Approval notices](/docs/content-engine/approval-notices) builds this on the Forum plugin's edit page.
 3. **In a "my submissions" list.** `GET /moderation/approvals/mine`, shown above, lists everything the author sent. The forum renders it at `/forum/me/pending`.
-
-For a pending edit, open the form on `approval.values`, the proposal, instead of the live text, so the author keeps editing what they sent.
 
 ## What a decision does
 

@@ -10,7 +10,7 @@ implementation:
   constraints:
     - Send `POST /` of `content/{publicApi.path}` through `fetcher` inside `useContentPublicWrite().submit`, with only the fields in `publicWrite.create.fields`.
     - Build the form with `AutoForm` and keep labels in the plugin's locale files.
-    - Check `status` and `approval` before opening the record's public page, which answers 404 until the record is published.
+    - Check `approval.status` and `status` before opening the record's public page, which answers 404 until the record is published, and say "draft" and "waiting for approval" with different messages.
   related:
     - title: Edit form
       href: /docs/content-engine/public-write-edit
@@ -194,11 +194,16 @@ const ArticleNewPage = () => {
       queryKey: [manifest.id, "articles"],
     });
 
-    // Not public yet: its page would answer 404, so open the edit page.
-    if (
-      record.status !== "published" ||
-      record.approval?.status === "pending"
-    ) {
+    // Waits for a moderator. Its public page answers 404 until approval.
+    if (record.approval?.status === "pending") {
+      toast.info(t("pending.title"), { description: t("pending.desc") });
+      await navigate(`/news/${record.id}/edit`);
+
+      return;
+    }
+
+    // A draft nobody has to review. It stays private, so open its edit page.
+    if (record.status !== "published") {
       toast.info(t("draft.title"), { description: t("draft.desc") });
       await navigate(`/news/${record.id}/edit`);
 
@@ -229,7 +234,15 @@ export default ArticleNewPage;
 - **`write.submit`** sends the request and returns the new record, or `null` after showing why the server said no: an issue on a field appears under it, a taken title appears under **Title** (`uniqueField`), and anything else, such as an expired session, is a toast. The [Form helpers](/docs/content-engine/public-write-form-api#how-answers-are-handled) reference lists every case.
 - **The owner** is set by the server; `values` never includes `author`.
 - **`invalidateQueries`** expires the cached [article list](/docs/content-engine/public-lists), whose query key starts with `[manifest.id, "articles"]`, so the new article shows there at once.
-- **Before navigating**, the page checks whether the article is public. With `create.status: "draft"`, or in a container that [holds new posts for approval](/docs/content-engine/approvals), the record is not live yet and its public page answers `404`, so the author goes to its edit page instead.
+- **Before navigating**, the page reads two fields of the answer, because a new article can end in three states. Only a published one has a public page; the other two answer `404` there, so the author goes to the edit page with a message that says what happened:
+
+  | `status` | `approval` | What the author hears |
+  | --- | --- | --- |
+  | `"published"` | `null` | **Article published**, on the article's page |
+  | `"draft"` | `null` | **Draft saved**: it is private and nobody was asked to review it |
+  | `"draft"` | `{ status: "pending" }` | **Sent for approval**: a moderator reviews it first |
+
+  Newsroom articles use `create.status: "published"` and have no container, so members always get the first row. `create.status: "draft"` gives the second. The third only happens for a content type filed in a container whose [publishing rules](/docs/content-engine/container-policies) hold new posts for approval; see [Drafts and approval](/docs/content-engine/approvals#drafts-and-approval).
 
 </Step>
 
@@ -269,7 +282,14 @@ Add these keys under `newsroom.articles` in `src/locales/en.json`:
         "title": "Write an article",
         "submit": "Publish article",
         "success": { "title": "Article published", "desc": "Readers can see it now." },
-        "draft": { "title": "Article saved", "desc": "It is not public yet." }
+        "draft": {
+          "title": "Draft saved",
+          "desc": "It is not public yet, so only you and the site's staff can see it."
+        },
+        "pending": {
+          "title": "Sent for approval",
+          "desc": "A moderator reviews it before readers can see it."
+        }
       }
     }
   }
@@ -290,6 +310,7 @@ Sign in as a member and open `http://localhost:3000/news/new`:
 2. Enter the title `Welcome to the newsroom`, which an article already has, and a message. **This is already taken. Try something else.** appears under **Title**, and your text stays.
 3. Change the title and click **Publish article**. **Article published** appears, you land on `/news/{slug}`, and the article tops `/news`.
 4. Open `/news/new` signed out. You are sent to the sign-in page.
+5. Optional: set `create.status` to `"draft"` in `src/content/article.ts` and post again. **Draft saved** appears, you land on the edit page, and the article is missing from `/news` until staff publish it. Set it back to `"published"` afterwards.
 
 <ImgDocs
   withoutBackground

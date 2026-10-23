@@ -1,0 +1,253 @@
+---
+title: Approval notices
+description: Extend a VitNode Content Engine edit page so authors see pending and rejected submissions - open the form on the proposed values, show a notice from the approval field, and pick the right message after a save that waits for a moderator.
+icon: Hourglass
+implementation:
+  objective: Show authors on an edit page whether their change waits for a moderator or was declined.
+  decisions:
+    - Which edit page? Offer edit pages of content types filed in a container whose definition has `policies`; without one, nothing ever waits and this guide does not apply.
+  constraints:
+    - Read `approval` from `GET /{id}/edit` and from every `PATCH /{id}` answer; never infer it from `status` alone.
+    - Open a pending edit on `approval.values`, parsed with Zod, and fall back to `values` for every field it lacks.
+  related:
+    - title: Approvals
+      href: /docs/content-engine/approvals
+    - title: Publishing rules
+      href: /docs/content-engine/container-policies
+    - title: Edit form
+      href: /docs/content-engine/public-write-edit
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import pending from "./public-write-edit-pending.webp";
+import rejected from "./approval-notices-rejected.webp";
+
+When a container's [publishing rules](/docs/content-engine/container-policies) hold edits for a moderator, a successful save does not mean the change is live. This guide adds what an author needs on the edit page: the form opens on their pending proposal, a notice says what is waiting or why it was declined, and the toast after a save tells the truth.
+
+The example is the Forum plugin's edit page, `plugins/forum/src/pages/topic-edit-page.tsx`, which already does all of this. Its code below is excerpts from that file.
+
+## Before you begin
+
+Approval only exists for records filed in a container whose definition has `policies`. Check that your content type has all three:
+
+- **A container with policies.** The forum's `forumContainers` in `plugins/forum/src/content/forums.ts` sets `policies: { defaults: { ... } }`.
+- **A record filed in it.** `forum.topic` has `forum: field.container({ definition: forumContainers, required: true })`. A comment can inherit its topic's forum with `field.relation({ target: () => topicContentType, container: true })`.
+- **A rule that waits.** In the AdminCP, open `/admin/containers/forum/forums`, choose **Publishing** in a forum's row menu, set **Edits to published posts** to **Wait for approval** for topics and choose **Save rules**.
+
+You also need an edit page that loads `GET /{id}/edit` and saves with `useContentPublicWrite`, like the [Edit form](/docs/content-engine/public-write-edit), and a member who is not a moderator in that forum.
+
+The newsroom tutorial's articles are not filed in a container, so `approval` is always `null` for them. A content type without a container keeps its drafts as plain drafts, even with `create.status: "draft"`; see [Drafts and approval](/docs/content-engine/approvals#drafts-and-approval).
+
+## Three kinds of values
+
+With approval on, an edit page handles three different things. Keep them apart, or the author will think a change is live when it is not:
+
+| What | Where it comes from | Readers see it |
+| --- | --- | --- |
+| **Live values** | `record.values` from `GET /{id}/edit` and `PATCH /{id}` | Yes |
+| **Proposed values** | `record.approval.values`, when `approval.status` is `"pending"` and `approval.kind` is `"edit"` | No, until a moderator approves |
+| **A save that waits** | `PATCH /{id}` answers `200` with `approval.status: "pending"`; `values` is still the live record | No |
+
+<Steps>
+
+<Step>
+
+### Open the form on the proposal
+
+When the author reopens a page whose edit is pending, the form should show what they sent, not the live text. `approval.values` is untyped, so parse the fields the form knows and fall back to the live value for the rest:
+
+```tsx title="plugins/forum/src/pages/topic-edit-page.tsx (excerpt)"
+const zodProposedValues = z
+  .object({
+    body: zodRichTextDocument.optional(),
+    title: z.string().optional(),
+  })
+  .catch({});
+
+const formValuesOf = (record: EditableTopic): TopicFormValues => {
+  const { approval } = record;
+  const proposed =
+    approval?.status === "pending" && approval.kind === "edit"
+      ? zodProposedValues.parse(approval.values ?? {})
+      : {};
+
+  return {
+    body: proposed.body ?? record.values.body,
+    title: proposed.title ?? record.values.title,
+  };
+};
+```
+
+Use `formValuesOf(record)` wherever the basic edit form used `record.values` for its defaults.
+
+</Step>
+
+<Step>
+
+### Show a notice above the form
+
+`approval` is `null` when nothing waits. Otherwise it is a pending submission, or a rejected one nothing has replaced yet. Render one notice for each case:
+
+```tsx title="plugins/forum/src/pages/topic-edit-page.tsx (excerpt)"
+const ApprovalNotice = ({
+  approval,
+  status,
+  submitted,
+}: {
+  approval: null | Pick<ContentApprovalState, "kind" | "reason" | "status">;
+  status: EditableTopic["status"];
+  submitted: boolean;
+}) => {
+  const t = useTranslations("@vitnode/forum.topics.approval");
+
+  if (approval?.status === "rejected") {
+    return (
+      <Alert icon={<XCircleIcon />} variant="destructive">
+        <AlertTitle>{t("rejected.title")}</AlertTitle>
+        <AlertDescription>
+          {approval.reason
+            ? t("rejected.reason", { reason: approval.reason })
+            : t("rejected.desc")}
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (approval?.status === "pending" && approval.kind === "edit") {
+    return (
+      <Alert icon={<HourglassIcon />} variant="info">
+        <AlertTitle>{t("pending_edit.title")}</AlertTitle>
+        <AlertDescription>{t("pending_edit.desc")}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (
+    submitted ||
+    (status === "draft" &&
+      approval?.status === "pending" &&
+      approval.kind === "create")
+  ) {
+    return (
+      <Alert icon={<HourglassIcon />} variant="info">
+        <AlertTitle>{t("pending_create.title")}</AlertTitle>
+        <AlertDescription>{t("pending_create.desc")}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  return null;
+};
+```
+
+- **Rejected** shows the moderator's reason when there is one. The author can edit and save again, which opens a new submission.
+- **Pending edit** says readers still see the published version.
+- **Pending create** covers a new topic that waits. `submitted` is `true` when the create page sent the author here with `?submitted=1`, so the notice shows before the edit route answers.
+- A draft with `approval: null` gets no notice: nothing waits for a moderator, and the page must not say so.
+
+</Step>
+
+<Step>
+
+### Keep the answer's state after a save
+
+`PATCH /{id}` answers with the record's `approval`, `slug` and `status`. Keep them in state, so the notice and the **View topic** link follow every save, and pick the toast from `approval`:
+
+```tsx title="plugins/forum/src/pages/topic-edit-page.tsx (excerpt)"
+const [current, setCurrent] = useState({
+  approval: record.approval,
+  slug: record.slug,
+  status: record.status,
+});
+const [defaults, setDefaults] = useState(() => formValuesOf(record));
+
+// In onSubmit, after `const updated = await write.submit(...)`:
+if (!updated) return;
+
+setCurrent({
+  approval: updated.approval,
+  slug: updated.slug,
+  status: updated.status,
+});
+setDefaults(values);
+form.reset(values);
+await invalidateForumTopics(queryClient);
+
+if (updated.approval?.status === "pending") {
+  toast.info(t("edit.pending.title"), { description: t("edit.pending.desc") });
+} else {
+  toast.success(t("edit.success.title"), {
+    description: t("edit.success.desc", { title: values.title }),
+  });
+}
+```
+
+Render `<ApprovalNotice approval={current.approval} status={current.status} submitted={submitted} />` above `{write.conflict}` and the form. A proposal is checked against the record's `version` like any edit, so the conflict alert keeps working.
+
+</Step>
+
+<Step>
+
+### Add the labels
+
+The forum keeps the notice labels under `topics.approval` and the toast under `topics.edit` in `plugins/forum/src/locales/en.json`:
+
+```json title="plugins/forum/src/locales/en.json (excerpt)"
+{
+  "@vitnode/forum": {
+    "topics": {
+      "approval": {
+        "rejected": {
+          "title": "A moderator declined this",
+          "desc": "Your submission was not approved. You can edit it and send it again.",
+          "reason": "Reason: {reason}"
+        },
+        "pending_edit": {
+          "title": "Your changes are waiting for approval",
+          "desc": "Readers still see the published version. You are looking at your proposed changes."
+        },
+        "pending_create": {
+          "title": "Waiting for a moderator",
+          "desc": "Your topic goes live as soon as a moderator approves it. You can still polish it here."
+        }
+      },
+      "edit": {
+        "pending": {
+          "title": "Sent for approval",
+          "desc": "A moderator will review your changes. Readers see the published version until then."
+        },
+        "success": { "title": "Topic saved", "desc": "\"{title}\" is up to date." }
+      }
+    }
+  }
+}
+```
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Sign in as a member who wrote a published topic in the forum that waits for edits, and open `/forum/topics/{id}/edit`.
+
+1. Change the title and click **Save changes**. **Sent for approval** appears, the notice says your changes wait, and the form keeps your new title. The topic's public page still shows the old title.
+2. Reload the edit page. The form opens on your proposal, not on the live title.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={pending}
+  alt="The Forum plugin's Edit topic page with the notice Your changes are waiting for approval above the form, which shows the proposed title, and a Sent for approval toast"
+/>
+
+3. As a moderator with `can_approve` in that forum, reject the submission with a reason in the [ModCP](/docs/dev/moderation/review-approvals). Reload the author's edit page: the notice shows the reason, and the form shows the live text again.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={rejected}
+  alt="The Forum plugin's Edit topic page with the notice A moderator declined this and the reason Please keep the title about the whole editor, not only the toolbar, above the title and message fields"
+/>
+
+Approving instead applies the proposal: the public page shows the new title, and `approval` is `null` again.

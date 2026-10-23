@@ -1,6 +1,6 @@
 ---
 title: Reports
-description: Let readers report a VitNode Content Engine record to moderators with the reports option and ReportButton, then find the report in the ModCP and open the reported content.
+description: Let readers report a VitNode Content Engine record to moderators with the reports option, useContentPermissions and ReportButton, then find the report in the ModCP and open the reported content.
 icon: Flag
 implementation:
   objective: Let readers report records of an existing content type to moderators.
@@ -28,7 +28,9 @@ import report from "./reports-modcp-report.webp";
 
 `reports` adds a **Report** button to your content. A reader picks a reason, and the report lands in the moderators' queue with a copy of what they saw. This page adds it to the newsroom's articles and follows one report to the ModCP.
 
-This continues the article page from [Permissions](/docs/content-engine/public-permissions), which already asks `useArticlePermissions` for `canEdit`. You need a second member account to report someone else's article.
+## Before you begin
+
+You need a content type with a [public API](/docs/content-engine/public-api) and a public record page, such as the article page from [Content page](/docs/content-engine/public-pages). Members do not have to write articles: staff-written articles can be reported too. To report, sign in with a member account; to read the report, use an account with moderator permissions, such as a root administrator.
 
 <Steps>
 
@@ -36,15 +38,56 @@ This continues the article page from [Permissions](/docs/content-engine/public-p
 
 ### Turn on reports
 
-Edit `src/content/article.ts`:
+Edit `src/content/article.ts` and add `reports` after `publicApi`. This is an excerpt:
 
 ```ts title="plugins/newsroom/src/content/article.ts"
-  editorial: true,
+  publicApi: {
+    path: "news",
+    fields: ["id", "title", "slug", "body", "publishedAt"],
+  },
 
   reports: true, // [!code ++]
 ```
 
-Reports live in core tables, so there is nothing to migrate. The article type gets the moderator permissions `can_view_reports` and `can_manage_reports`, and its permissions route starts answering `canReport`.
+Reports live in core tables, so there is nothing to migrate. The article type gets the moderator permissions `can_view_reports` and `can_manage_reports`, and a new public route, `GET /api/newsroom/content/news/permissions`, starts answering `canReport`.
+
+</Step>
+
+<Step>
+
+### Ask whether the visitor may report
+
+The button should only show where a report would be accepted, and that depends on who is looking. Create `src/pages/article-permissions.ts`. This is the complete file:
+
+```ts title="plugins/newsroom/src/pages/article-permissions.ts"
+import { useContentPermissions } from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+
+import { manifest } from "@/manifest.gen";
+
+/** What the visitor may do with each article on screen: `canEdit`, `canReport`. */
+export const useArticlePermissions = (ids: readonly number[]) =>
+  useContentPermissions({
+    ids,
+    queryKey: [manifest.id, "articles"],
+    fetch: async request => {
+      const res = await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "content/news",
+        path: "/permissions",
+        args: { query: { ids: request.join(",") } },
+      });
+      if (res.status !== 200) throw new Error("Loading permissions failed.");
+
+      return await res.json();
+    },
+  });
+```
+
+If you followed [Permissions](/docs/content-engine/public-permissions), this file already exists; reuse it. The same route answers both `canEdit` and `canReport`.
+
+`canReport` is `true` for a public article the visitor did not write, guests included; the dialog asks a guest to sign in. An article staff wrote in the AdminCP has no author, so every reader may report it.
 
 </Step>
 
@@ -52,29 +95,24 @@ Reports live in core tables, so there is nothing to migrate. The article type ge
 
 ### Add the Report button
 
-Edit `ArticleActions` in `src/pages/article-page.tsx`. It now needs the article's title for the dialog's preview; pass `title={item.title}` where the header renders it. This is the updated component with its new imports:
+Edit `src/pages/article-page.tsx`. Add `contentTarget` to the existing `@vitnode/core/content` import, the other imports, and an `ArticleActions` component above `ArticlePage`. These are excerpts:
 
 ```tsx title="plugins/newsroom/src/pages/article-page.tsx"
-import { contentTarget } from "@vitnode/core/content";
+import { contentTarget, zodRichTextDocument } from "@vitnode/core/content"; // [!code highlight]
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
+import { useTranslations } from "use-intl";
 
 import { articleContentType } from "@/content/article";
 
+import { useArticlePermissions } from "./article-permissions";
+
+/** Asked in the browser, so the cached page stays the same for everyone. */
 const ArticleActions = ({ id, title }: { id: number; title: string }) => {
   const t = useTranslations("newsroom.articles");
-  const { canEdit, canReport } = useArticlePermissions([id]).of(id);
+  const { canReport } = useArticlePermissions([id]).of(id);
 
   return (
     <div className="flex flex-wrap gap-2">
-      {canEdit ? (
-        <HrefLink
-          className={buttonVariants({ size: "sm", variant: "outline" })}
-          href={`/news/${id}/edit`}
-        >
-          {t("edit_link")}
-        </HrefLink>
-      ) : null}
-      {/* [!code ++:7] */}
       {canReport ? (
         <ReportButton
           preview={{ title }}
@@ -87,17 +125,46 @@ const ArticleActions = ({ id, title }: { id: number; title: string }) => {
 };
 ```
 
-- `canReport` is `true` for a public article the visitor did not write, guests included; the dialog asks a guest to sign in.
-- `contentTarget` names the record from the content type, so the type id always matches what the API registered.
-- `typeLabel` finishes the dialog title, "What's wrong with this article?". Add `"report_type": "article"` under `newsroom.articles` in `src/locales/en.json`.
+Then render it at the end of the article's `<header>`, below the date:
 
-The button loads its own messages, and its form only when the dialog opens.
+```tsx title="plugins/newsroom/src/pages/article-page.tsx"
+      <header className="flex flex-col gap-2">
+        {/* title and date as before */}
+        <ArticleActions id={item.id} title={item.title} /> {/* [!code ++] */}
+      </header>
+```
+
+- `contentTarget` names the record from the content type, so the type id always matches what the API registered.
+- `preview` shows the article's title in the dialog, and `typeLabel` finishes its title, "What's wrong with this article?".
+- The button loads its own messages, and its form only when the dialog opens.
+
+If `ArticleActions` already exists from [Permissions](/docs/content-engine/public-permissions), add the `canReport` branch next to its **Edit** link, read both flags with `const { canEdit, canReport } = useArticlePermissions([id]).of(id)`, and pass `title={item.title}` where the header renders it.
 
 </Step>
 
 <Step>
 
-### Make sure someone moderates
+### Add the label
+
+Add `report_type` under `newsroom.articles` in `src/locales/en.json`:
+
+```json title="plugins/newsroom/src/locales/en.json"
+{
+  "newsroom": {
+    "articles": {
+      "report_type": "article"
+    }
+  }
+}
+```
+
+The dialog's own labels, such as the reasons, come from core.
+
+</Step>
+
+<Step>
+
+### Grant the moderator permissions
 
 A report needs a moderator with `can_view_reports` for articles to be seen, and `can_manage_reports` to be handled. A root administrator holds every moderator permission. For anyone else, open **AdminCP → Staff → Moderators**, add the user or role, and turn on the Newsroom report permissions, as [Configure moderators](/docs/dev/moderation/configure-moderators) shows.
 
@@ -107,13 +174,13 @@ A report needs a moderator with `can_view_reports` for articles to be seen, and 
 
 ## Check the result
 
-Sign in as a member and open an article someone else wrote. **Report** shows below the date; your own articles show **Edit** instead:
+Sign in as a member and open `/news/welcome-to-the-newsroom`, which staff wrote. **Report** shows below the date:
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={detail}
-  alt="An article page viewed by another member, with a Report button below the date"
+  alt="The Welcome to the newsroom article page viewed by a signed-in member, with a Report button below the date"
 />
 
 Click **Report**, pick **Spam**, add details and click **Send report**:
@@ -129,16 +196,16 @@ Now sign in as the moderator and open `/modcp/reports`. The report is in the que
   withoutBackground
   className="*:max-w-full"
   src={queue}
-  alt="The ModCP Reports queue with two new Spam reports about articles, Our community garden and Five tips from a community member"
+  alt="The ModCP Reports queue with three new Spam reports about articles, the newest about Welcome to the newsroom"
 />
 
-Open it. The report shows the reason, the reporter's details and a snapshot of the article as it was when reported. **Open current content** links to `/news/{slug}`, the live article:
+Open it. The report shows the reason, the reporter's details and a snapshot of the article as it was when reported; a staff-written article shows no author. **Open current content** links to `/news/welcome-to-the-newsroom`, the live article:
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={report}
-  alt="ModCP report #2 about the article Our community garden by Ada Lovelace, with the Spam reason, Grace Hopper's description, the article snapshot and an Open current content link"
+  alt="ModCP report #3 about the article Welcome to the newsroom, with the Spam reason, Grace Hopper's description, the article snapshot without an author and an Open current content link"
 />
 
 [Process reports](/docs/dev/moderation/process-reports) covers assigning, resolving and hiding.

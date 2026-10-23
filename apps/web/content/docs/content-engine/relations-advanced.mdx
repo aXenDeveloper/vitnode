@@ -1,0 +1,211 @@
+---
+title: Advanced fields
+description: Store to-many relations, grouped fields and repeatable rows in real VitNode Content Engine tables, link records across id strategies, and write those values through the API.
+icon: Network
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import advancedPage from "./relations-advanced-article-page.webp";
+import manyPicker from "./relations-many-picker.webp";
+
+[Relations](/docs/content-engine/relations) links one record to one other record. This page covers the shapes that need more than one column: lists of links, groups of fields and repeatable rows. Each one still lands in real Postgres tables, not a JSON blob.
+
+The examples are excerpts of `example.advanced-article` in the example plugin, `plugins/example/src/content/advanced-article.ts`, which uses all of them. Its targets, `example.category` and `example.tag`, live next to it.
+
+## Link to many records
+
+Add `multiple: true` to a relation. The advanced article has a set of categories, an ordered list of tags, and an ordered "read next" list that points back at articles:
+
+```ts title="plugins/example/src/content/advanced-article.ts (excerpt)"
+categories: field.relation({
+  multiple: true,
+  onDelete: "restrict",
+  target: () => categoryContentType,
+}),
+tags: field.relation({
+  multiple: true,
+  ordered: true,
+  target: () => tagContentType,
+}),
+relatedArticles: field.relation({
+  multiple: true,
+  onDelete: "cascade",
+  ordered: true,
+  self: true,
+}),
+```
+
+- `ordered: true` keeps the order editors arrange. Without it, the set is stored in ascending id order, so `[9, 2]` and `[2, 9]` are the same value.
+- On a to-many relation, `onDelete: "cascade"` drops the link when the target is deleted, and `"restrict"` refuses the delete.
+- A to-many relation cannot be `required` or `nullable`; use `min: 1` to demand at least one target.
+
+Each to-many field gets a junction table with `itemId`, `relatedItemId`, `position` and `createdAt`. Give every one except the `self: true` relation a `references` entry, and export every junction table, or Drizzle Kit leaves it out of the migration:
+
+```ts title="plugins/example/src/database/advanced-articles.ts (excerpt)"
+export const advancedArticleContent = createContentModel(
+  advancedArticleContentType,
+  {
+    references: {
+      categories: () => example_categories.id,
+      tags: () => example_tags.id,
+    },
+  },
+);
+
+export const example_advanced_articles = advancedArticleContent.table;
+export const example_advanced_articles_categories =
+  advancedArticleContent.advancedTables.junctions.categories;
+export const example_advanced_articles_tags =
+  advancedArticleContent.advancedTables.junctions.tags;
+export const example_advanced_articles_related_articles =
+  advancedArticleContent.advancedTables.junctions.relatedArticles;
+```
+
+In the AdminCP form, a to-many relation shows each target as a chip you can remove. This is the blog plugin's **Categories** field:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={manyPicker}
+  alt="Categories field with two chips, Kitchen notes and green, each with a remove button"
+/>
+
+## Group related fields
+
+`field.group` keeps fields that belong together under one key:
+
+```ts title="plugins/example/src/content/advanced-article.ts (excerpt)"
+syndication: field.group({
+  fields: {
+    indexable: field.boolean({ defaultValue: true }),
+    noIndex: field.boolean({ defaultValue: false }),
+    priority: field.number({ integer: true, min: 0, max: 10, defaultValue: 5 }),
+  },
+}),
+```
+
+A group adds one column per leaf to the main table: `syndicationIndexable`, `syndicationNoIndex` and `syndicationPriority`. The API reads and writes it as `{ syndication: { indexable, noIndex, priority } }`, and other options refer to a leaf by path, such as `indexes: [{ on: ["syndication.priority"] }]`. Leaves can be `text`, `textarea`, `number`, `boolean`, `enum` or `dateTime` fields. An optional group needs leaves that are nullable or have a default. In the AdminCP, a group renders as a fieldset with its leaf controls.
+
+## Add repeatable rows
+
+`field.repeatable` stores an ordered list of small rows, such as FAQ entries:
+
+```ts title="plugins/example/src/content/advanced-article.ts (excerpt)"
+faq: field.repeatable({
+  max: 20,
+  fields: {
+    question: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    answer: field.textarea({ required: true }),
+  },
+}),
+```
+
+The rows go to a child table, `example_advanced_articles_faq`, with `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per leaf. Deleting the article deletes its rows. Export the child table too:
+
+```ts title="plugins/example/src/database/advanced-articles.ts (excerpt)"
+export const example_advanced_articles_faq =
+  advancedArticleContent.advancedTables.repeatables.faq;
+```
+
+In the AdminCP, a repeatable is a list of rows with move up, move down and remove buttons, plus an **Add** button.
+
+After adding any of these fields, build and migrate as in [Relations](/docs/content-engine/relations#build-and-migrate). The migration creates one table per junction and repeatable field.
+
+## Relations across id strategies
+
+A relation can point at a content type with a different [`idStrategy`](/docs/content-engine/id-strategy). The foreign key always takes the type of the key it references. The example plugin's `example.event` uses `bigint` and links to `uuid` tags and `serial` categories:
+
+```ts title="plugins/example/src/content/event.ts (excerpt)"
+import type { ContentRelationTarget } from "@vitnode/core/content";
+
+import { categoryContentType } from "./category";
+import { tagContentType } from "./tag";
+
+fields: {
+  primaryTag: field.relation({
+    nullable: true,
+    onDelete: "set null",
+    target: (): ContentRelationTarget<"uuid"> => tagContentType,
+  }),
+  category: field.relation({
+    nullable: true,
+    onDelete: "set null",
+    target: () => categoryContentType,
+  }),
+  tags: field.relation({ multiple: true, ordered: true, target: () => tagContentType }),
+  relatedEvents: field.relation({ multiple: true, onDelete: "cascade", self: true }),
+},
+```
+
+| Field           | Column or junction table                                            |
+| --------------- | ------------------------------------------------------------------- |
+| `primaryTag`    | `uuid` column referencing `example_tags.id`                         |
+| `category`      | `integer` column referencing `example_categories.id`                |
+| `tags`          | `example_events_tags` with `itemId bigint` and `relatedItemId uuid` |
+| `relatedEvents` | `example_events_related_events` with both columns `bigint`          |
+
+`field.relation()` reads the target's strategy from `target`, so the API takes and returns tag ids as strings and category ids as numbers. When two content type modules import each other, TypeScript cannot infer a type through the cycle and falls back to serial. Annotate the thunk with `ContentRelationTarget<"uuid">` or `ContentRelationTarget<"bigint">`, as `primaryTag` does. At runtime, a `references` entry whose column type disagrees with the target's strategy throws and names the field.
+
+## Write related values
+
+A relation takes ids. A to-many relation and a repeatable take the whole list, which replaces what the record had:
+
+```json
+{
+  "categories": [2, 4],
+  "syndication": { "priority": 7 },
+  "faq": [
+    {
+      "id": 1,
+      "question": "Can I freeze the batter?",
+      "answer": "Yes, for up to a month."
+    },
+    { "question": "Do I need buttermilk?", "answer": "No, regular milk works." }
+  ]
+}
+```
+
+A repeatable row with an `id` updates that row, a row without one is created, and rows you leave out are deleted. The API refuses an `id` that belongs to another record with `CONTENT_REPEATABLE_UNKNOWN_CHILD`. To change one link or one row without sending the list, use the [content service](/docs/content-engine/services): `relations.categories.add()`, `.remove()`, `.set()`, `.reorder()` and `.get()`, or `repeatable.faq.create()`, `.update()`, `.delete()`, `.reorder()`, `.set()` and `.list()`.
+
+## Check the result
+
+The example plugin gives the advanced article API routes but no AdminCP screen, so check it through the API while `pnpm dev` runs. For a published advanced article with the slug `weekend-pancakes`, the public API returns the related values like this:
+
+```bash
+curl "http://localhost:3000/api/@vitnode/example/content/advanced-articles/weekend-pancakes?locale=en"
+```
+
+```json title="200 (excerpt)"
+{
+  "id": 1,
+  "title": "Weekend pancakes",
+  "slug": "weekend-pancakes",
+  "categories": [2, 4],
+  "syndication": { "priority": 7, "noIndex": false },
+  "faq": [
+    {
+      "id": 1,
+      "question": "Can I freeze the batter?",
+      "answer": "Yes, for up to a month."
+    },
+    {
+      "id": 2,
+      "question": "Do I need buttermilk?",
+      "answer": "No, regular milk works."
+    }
+  ],
+  "publishedAt": "2026-10-10T10:57:42.767Z",
+  "locale": "en"
+}
+```
+
+A to-many relation comes back as a list of ids, and a single relation as `{ "id": 2 }`. Only the leaves listed in `publicApi.fields`, such as `"faq.question"`, are public. The example plugin's page at `/advanced-articles/weekend-pancakes` renders the FAQ rows:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={advancedPage}
+  alt="Public Weekend pancakes article page with a Frequently asked questions section listing two questions and their answers"
+/>
+
+Every option of these helpers is in the [Fields](/docs/content-engine/fields#relation) reference.

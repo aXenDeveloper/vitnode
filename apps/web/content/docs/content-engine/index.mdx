@@ -20,6 +20,8 @@ The beginner tutorial builds one small newsroom, step by step, with an article t
 4. [Content list](/docs/content-engine/public-lists): show the articles at `/news`, a page at a time.
 5. [Content page](/docs/content-engine/public-pages): give every article its own page at `/news/:slug`.
 
+After that, [Embedded list](/docs/content-engine/public-lists-embed) puts the newest articles under each one, and every guide below builds on the same article.
+
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
@@ -44,14 +46,15 @@ The page helpers come from `@vitnode/core/tanstack/content`, and every request g
 
 ## Add a feature
 
-Each guide starts from a content type you already have and ends with something you can try:
+Each guide starts from a content type you already have, says what it needs at the top, and ends with something you can try. [Reports](/docs/content-engine/reports) and [Relations](/docs/content-engine/relations), for example, only need the beginner path; comments also need [Member writing](/docs/content-engine/public-write).
 
 | Area | Guides |
 | --- | --- |
+| Public content | [Embedded list](/docs/content-engine/public-lists-embed) |
 | Member content | [Member writing](/docs/content-engine/public-write), [Create form](/docs/content-engine/public-write-frontend), [Edit form](/docs/content-engine/public-write-edit), [Permissions](/docs/content-engine/public-permissions) |
-| Interactions | [Reports](/docs/content-engine/reports), [Comments](/docs/content-engine/threads), [Replies](/docs/content-engine/threads-frontend) |
-| Organization | [Relations](/docs/content-engine/relations), [Containers](/docs/content-engine/containers), [Container pages](/docs/content-engine/container-frontend) |
-| Moderation | [Approvals](/docs/content-engine/approvals), [Publishing rules](/docs/content-engine/container-policies), [Visibility](/docs/content-engine/content-visibility) |
+| Interactions | [Reports](/docs/content-engine/reports), [Comments](/docs/content-engine/threads), [Comment editing](/docs/content-engine/threads-editing), [Replies](/docs/content-engine/threads-frontend) |
+| Organization | [Relations](/docs/content-engine/relations), [Advanced fields](/docs/content-engine/relations-advanced), [Containers](/docs/content-engine/containers), [Container pages](/docs/content-engine/container-frontend) |
+| Moderation | [Approvals](/docs/content-engine/approvals), [Approval notices](/docs/content-engine/approval-notices), [Publishing rules](/docs/content-engine/container-policies), [Visibility](/docs/content-engine/content-visibility) |
 | Content features | [Rich text](/docs/content-engine/rich-text), [Translations](/docs/content-engine/localization), [Search](/docs/content-engine/search), [SEO](/docs/content-engine/seo) |
 | Editorial | [Revisions](/docs/content-engine/editorial), [Previews](/docs/content-engine/editorial-previews), [Scheduling](/docs/content-engine/editorial-scheduling), [Live editing](/docs/content-engine/live-editing), [Duplication](/docs/content-engine/duplicate-content) |
 | Customization | [AdminCP](/docs/content-engine/admincp), [Services](/docs/content-engine/services), [Events](/docs/content-engine/events) |

@@ -1,127 +1,246 @@
 ---
 title: Embedded list
-description: Show a VitNode Content Engine public list inside any page or component, with your own item layout, using contentListQueryOptions and ContentListResults.
+description: Show a few VitNode Content Engine records inside another page, such as a Latest articles box under each article, by reusing the list's query options with useQuery and ContentListResults, server-rendered.
 icon: PanelsTopLeft
+implementation:
+  objective: Show the newest records of a content list inside another page, rendered on the server.
+  decisions:
+    - Which list feeds the box? Offer list query options built with `contentListQueryOptions`; if none exist, point to the Content list guide.
+    - Which page shows it, and how many items? Recommend 3 to 5 from the first page of the list.
+  constraints:
+    - Reuse the list's query options with `useQuery` and render them with `ContentListResults`; do not write a second fetch.
+    - Warm the same options in the host route's loader with `queryClient.query`, without `LOADER_DATA_QUERY_META`, and catch its failure.
+  related:
+    - title: Content list
+      href: /docs/content-engine/public-lists
+    - title: List API
+      href: /docs/content-engine/public-lists-api
 ---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
 import { ImgDocs } from "@/components/fumadocs/img";
 import latest from "./public-lists-embed-latest.webp";
 
-A list does not need its own route. The same query options that feed `/discussions` can fill a "Latest discussions" box on a home page, a sidebar or another page, rendered however that page needs. This guide adds the five newest discussions to the example plugin's `/boards` page, reusing the query from [Content list](/docs/content-engine/public-lists).
+A list does not need its own route. The query options behind `/news` can also fill a small box on another page. This guide adds a **Latest articles** box under every article, with the five newest other articles, in the server-rendered HTML.
 
-## Before you begin
-
-You need list query options built with `contentListQueryOptions`, such as `discussionsQueryOptions` in `plugins/example/src/pages/discussion-list.ts`.
+This continues [Content page](/docs/content-engine/public-pages). It reuses `articlesQueryOptions` from `src/pages/article-list.ts`, written in [Content list](/docs/content-engine/public-lists), and changes `src/pages/article-page.tsx`.
 
 <Steps>
 
 <Step>
 
-### Render the list with your own items
+### Add TanStack Query to the plugin
 
-Call the query options with `useQuery` and hand the rows to `ContentListResults`. `renderItem` receives each row exactly as the query returned it:
+The box reads the list with `useQuery`, so the plugin needs `@tanstack/react-query` as a dependency. Run this from the workspace root:
 
-```tsx title="plugins/example/src/pages/latest-discussions.tsx"
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Add TanStack Query">
+
+```bash tab="bun"
+bun add @tanstack/react-query --cwd plugins/newsroom
+```
+
+```bash tab="pnpm"
+pnpm --filter newsroom add @tanstack/react-query
+```
+
+```bash tab="npm"
+npm install @tanstack/react-query --workspace newsroom
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Write the box
+
+Create `src/pages/latest-articles.tsx`. This is the complete file:
+
+```tsx title="plugins/newsroom/src/pages/latest-articles.tsx"
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@vitnode/core/components/ui/skeleton";
 import { ContentListResults } from "@vitnode/core/tanstack/content";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import { useLocale, useTranslations } from "use-intl";
 
-import { discussionsQueryOptions } from "./discussion-list";
-import { discussionHref } from "./discussion-search";
+import { articlesQueryOptions } from "./article-list";
 
-export const LatestDiscussions = () => {
-  const t = useTranslations("@vitnode/example.boards.latest");
+/** How many articles the box shows, out of the first page of `/news`. */
+const LATEST_COUNT = 5;
+
+/** The newest published articles, without the one being read. */
+export const LatestArticles = ({ currentId }: { currentId?: number }) => {
+  const t = useTranslations("newsroom.articles.latest");
   const locale = useLocale();
   const { data, isError, isFetching } = useQuery(
-    discussionsQueryOptions({ locale, search: {} }),
+    articlesQueryOptions({ locale, search: {} }),
   );
+  const items = data?.edges
+    .filter(article => article.id !== currentId)
+    .slice(0, LATEST_COUNT);
 
   return (
-    <section aria-labelledby="latest-discussions" className="flex flex-col gap-3">
-      <h2 className="text-xl font-semibold" id="latest-discussions">
-        {t("title")}
-      </h2>
+    <section aria-labelledby="latest-articles" className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-xl font-semibold text-balance" id="latest-articles">
+          {t("title")}
+        </h2>
+        <HrefLink className="text-sm font-medium hover:underline" href="/news">
+          {t("all")}
+        </HrefLink>
+      </div>
+
       <ContentListResults
         className="flex flex-col divide-y rounded-lg border"
         empty={<p className="text-muted-foreground text-sm">{t("empty")}</p>}
         error={<p className="text-muted-foreground text-sm">{t("error")}</p>}
-        getKey={discussion => discussion.id}
+        getKey={article => article.id}
         isError={isError}
         isFetching={isFetching}
         isFiltered={false}
         itemClassName="px-4 py-3"
-        items={data?.edges.slice(0, 5)}
+        items={items}
         label={t("title")}
-        loading={<p className="text-muted-foreground text-sm">{t("loading")}</p>}
-        noResults={null}
-        renderItem={discussion =>
-          discussion.slug === null ? (
-            <span className="font-medium">{discussion.title}</span>
-          ) : (
-            <HrefLink
-              className="font-medium hover:underline"
-              href={discussionHref(discussion.slug)}
-            >
-              {discussion.title}
-            </HrefLink>
-          )
+        loading={
+          <div
+            aria-busy="true"
+            className="flex flex-col gap-3 rounded-lg border p-4"
+          >
+            <span className="sr-only" role="status">
+              {t("loading")}
+            </span>
+            {[0, 1, 2].map(key => (
+              <Skeleton className="h-5 w-2/3" key={key} />
+            ))}
+          </div>
         }
+        noResults={null}
+        renderItem={article => (
+          <HrefLink
+            className="font-medium hover:underline"
+            href={`/news/${article.slug}`}
+          >
+            {article.title}
+          </HrefLink>
+        )}
       />
     </section>
   );
 };
 ```
 
-An empty `search` is the plain list, newest first. The box never filters, so `isFiltered` is `false` and `noResults` is never shown. The labels live under `@vitnode/example.boards.latest`, a namespace the `/boards` route already loads.
+- **`articlesQueryOptions({ locale, search: {} })`** is the plain list: the first page of `/news`, the ten newest articles. The box needs no second request, no new route parameter and no second invalidation.
+- **Five of ten.** The box drops the article being read and keeps five, so it stays full while the list has at least six articles.
+- **`ContentListResults`** picks the state: `loading` until the first answer, `error` when it failed, `empty` when nothing else is published. `isFiltered` is `false` because the box never filters, so `noResults` never shows. The skeleton is hidden from screen readers, which hear the `role="status"` label instead.
 
 </Step>
 
 <Step>
 
-### Render it on the server too
+### Render it under the article
 
-`useQuery` does not fetch during SSR, so on its own the box starts as `loading`. To send it with the HTML, warm the same options in the host route's loader. Leave out `LOADER_DATA_QUERY_META`, so the query is dehydrated and `useQuery` finds it in the browser:
+Edit `src/pages/article-page.tsx`. Import the box and render it after the `<article>`, in a wrapper that keeps the page's width. This is an excerpt:
 
-```tsx title="plugins/example/src/pages/boards-page.tsx"
-const loadBoards = async (
-  queryClient: RouteLoadContext["queryClient"],
-  locale: string,
-) => {
-  const [boards] = await Promise.all([
-    queryClient.query(boardsQueryOptions()),
-    // [!code ++:3]
-    queryClient
-      .query(discussionsQueryOptions({ locale, search: {} }))
-      .catch(() => null),
-  ]);
+```tsx title="plugins/newsroom/src/pages/article-page.tsx"
+import { LatestArticles } from "./latest-articles"; // [!code ++]
 
-  return { tree: contentContainerTree(boards) };
-};
+const ArticlePage = ({
+  loaderData: { item },
+}: PluginRoutePageProps<ArticlePageData>) => (
+  <div className="container mx-auto flex max-w-3xl flex-col gap-10 px-4 py-8">
+    <article className="flex flex-col gap-6">
+      {/* the header and RichTextContent, as before */}
+    </article>
 
-export const route = defineRoute<BoardsPageData>({
-  load: async ({ context }) =>
-    await loadBoards(context.queryClient, context.locale), // [!code highlight]
+    <LatestArticles currentId={item.id} /> {/* [!code ++] */}
+  </div>
+);
+```
+
+The container classes move from `<article>` to the wrapper. The box sits outside `<article>` because it is not part of the article.
+
+</Step>
+
+<Step>
+
+### Warm the query on the server
+
+`useQuery` does not fetch during server rendering, so on its own the box arrives as a skeleton and loads in the browser. To send it with the HTML, warm the same options in the page's loader. That needs the query client, which `defineRoute` from `@vitnode/core/tanstack/plugin-routes` passes to `load`. Replace the route in `src/pages/article-page.tsx`; this is an excerpt:
+
+```tsx title="plugins/newsroom/src/pages/article-page.tsx"
+import type { PluginRoutePageProps } from "@vitnode/core/routing"; // [!code highlight]
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes"; // [!code ++]
+
+import { articlesQueryOptions } from "./article-list"; // [!code ++]
+
+export const route = defineRoute({
+  load: async ({ context, params }) => {
+    const page = await loadArticle(params.slug);
+    // A failure leaves the box to retry in the browser instead of
+    // breaking the article.
+    await context.queryClient
+      .query(articlesQueryOptions({ locale: context.locale, search: {} }))
+      .catch(() => null);
+
+    return page;
+  },
+
+  head: ({ loaderData }) =>
+    contentDeliveryPageHead(loaderData?.metadata, {
+      title: loaderData?.item.title,
+    }),
 });
 ```
 
-Then render `<LatestDiscussions />` anywhere in the page. Both calls build the key `["@vitnode/example", "discussions", { locale }]`, the same one the first page of `/discussions` uses, so they share one cache entry. `invalidateDiscussionLists` refreshes the box together with the list after a member posts.
+`definePluginRoute` is no longer imported from `@vitnode/core/routing`; only the `PluginRoutePageProps` type is. The `/news` loader passes `LOADER_DATA_QUERY_META`, which keeps its query out of the HTML because the page reads it from loader data. This loader leaves it out on purpose: the query is sent with the page, so `useQuery` finds it in the browser without a request. Both build the same query key, so moving from `/news` to an article reuses the cached list too.
+
+</Step>
+
+<Step>
+
+### Add the labels
+
+Add a `latest` group under `newsroom.articles` in `src/locales/en.json`. The article page already loads the `newsroom.articles` messages:
+
+```json title="plugins/newsroom/src/locales/en.json"
+{
+  "newsroom": {
+    "articles": {
+      "latest": {
+        "title": "Latest articles",
+        "all": "All news",
+        "empty": "No other articles yet.",
+        "error": "The latest articles could not be loaded.",
+        "loading": "Loading the latest articles"
+      }
+    }
+  }
+}
+```
 
 </Step>
 
 </Steps>
 
-## Use a different list shape
-
-`/discussions` shows ten rows a page, newest first. For a box that needs a different page size, sort or filter set, declare a second list with [`defineContentList`](/docs/content-engine/public-lists-api#definecontentlist) and its own query options. Keep the same `queryKey` prefix, `[manifest.id, "discussions"]`, so one invalidation still covers both.
-
 ## Check the result
 
-Open `http://localhost:3000/boards` and view the page source. The discussion titles are in the HTML. Start a discussion from **Start a discussion**, then come back to `/boards`, and it sits at the top of the box.
+Open `http://localhost:3000/news/welcome-to-the-newsroom`. Below the article, **Latest articles** lists the five newest other articles, with **All news** linking to `/news`:
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={latest}
-  alt="A Latest discussions box with an All discussions link and the five newest discussion titles in a bordered list"
+  alt="A Latest articles box with an All news link and five other article titles, from Our community garden to Office hours on Thursday, in a bordered list"
 />
+
+- **View the page source.** The five titles are in the HTML, so the box needs no request after the page loads.
+- **Open another article.** The box leaves that article out and shows the next one instead.
+- **Publish an article in the AdminCP** and reload an article page. The new article tops the box. Pages that write articles, such as the [Create form](/docs/content-engine/public-write-frontend), invalidate `[manifest.id, "articles"]`, which refreshes the box together with `/news`.
+
+## Use a different list shape
+
+Reusing the first page of `/news` keeps one request and one cache entry, but it also means the box follows that list's sort and size. For a box that needs its own page size, sort or filter, such as the three newest articles in one category, declare a second list with [`defineContentList`](/docs/content-engine/public-lists-api#definecontentlist) and its own query options. Keep the `queryKey` prefix `[manifest.id, "articles"]`, so one invalidation still refreshes both.
+
+Next, let members write articles too: [Member writing](/docs/content-engine/public-write). To let readers flag an article first, [Reports](/docs/content-engine/reports) works from here as well.
