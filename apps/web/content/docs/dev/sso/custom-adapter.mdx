@@ -141,7 +141,7 @@ A **GitHub** login button automatically renders on `/login` and `/register`, and
       type: "(code: string) => Promise<{ access_token: string; token_type: string }>",
     },
     fetchUser: {
-      description: "Fetches the user profile: id, email, username, and optionally avatarUrl, firstName and lastName. Return only an email the provider has verified - VitNode treats it as confirmed and will mark a matching unconfirmed account verified. The built-in adapters reject unverified addresses with a 400.",
+      description: "Fetches the user profile: id, email, username, and optionally emailVerified, avatarUrl, firstName and lastName. VitNode keys accounts on the email, so set emailVerified: false (or throw) for an address the provider has not confirmed - VitNode then refuses the sign-in with a 400 instead of creating, linking or verifying an account with it. Set it to true when the provider confirms the address. The built-in adapters only ever return confirmed addresses.",
       required: true,
       type: "(token: TokenResponse) => Promise<SSOProviderUser>",
     },

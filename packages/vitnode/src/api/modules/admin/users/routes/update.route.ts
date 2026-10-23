@@ -3,6 +3,7 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
 import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
+import { revokeAccountRecoveryTokens } from "@/api/lib/recovery-tokens";
 import { invalidateStaffPermissionsForUser } from "@/api/lib/staff-permission-cache";
 import { matchesEmail } from "@/api/lib/user-email-lookup";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
@@ -340,6 +341,10 @@ export const updateUserAdminRoute = buildRoute({
           email: core_users.email,
           nameCode: core_users.nameCode,
         });
+
+      if (values.email !== undefined) {
+        await revokeAccountRecoveryTokens(c, user.id);
+      }
 
       await new SsoConnectionModel(c).clearSourcesAfterManualEdit({
         fields: (["firstName", "lastName"] as const).filter(

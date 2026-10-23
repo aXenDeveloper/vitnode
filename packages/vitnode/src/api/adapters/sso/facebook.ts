@@ -145,6 +145,7 @@ export const FacebookSSOApiPlugin = ({
         avatarUrl:
           picture?.is_silhouette === false ? (picture.url ?? null) : null,
         email: userData.email,
+        emailVerified: true,
         firstName: userData.first_name ?? null,
         id: userData.id,
         lastName: userData.last_name ?? null,

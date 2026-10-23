@@ -277,7 +277,7 @@ A few rules differ from the member's own settings:
 - **Setting a password signs the member out everywhere**, AdminCP sessions included.
 - **Sync now isn't offered.** It needs the member to sign in with the provider themselves.
 
-Every write needs `users:can_edit`, plus `users:can_edit_admin` when the target is staff. Reads need `users:can_view`.
+Every write needs `users:can_edit`, plus `users:can_edit_admin` when the target is staff. A staff target must also sit within your own access: you need every admin and moderator permission they hold, and only a root administrator can edit a root or unrestricted account. So nobody can reset the password of, or demote, someone above them. Reads need `users:can_view`.
 
 | Method   | Path                                                                | Does                                                 |
 | :------- | :------------------------------------------------------------------ | :--------------------------------------------------- |

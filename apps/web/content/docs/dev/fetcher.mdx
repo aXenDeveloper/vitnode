@@ -284,7 +284,9 @@ via `configureInProcessApi` from
 request straight to it - no HTTP round trip, no trip through your proxy or
 CDN, same cookies, headers and signed visitor IP. Set `VITNODE_API_URL` to a
 different origin, or pass `origin` on a call, and the request goes over the
-network as before.
+network as before. Without `VITNODE_API_URL` and without an in-process API,
+that network call goes to `VITNODE_WEB_URL` - never to the incoming request's
+`Host`, which a visitor controls.
 
 ## Browser-only requests with fetcherClient
 

@@ -464,8 +464,9 @@ const SIMPLE_MARKS: Readonly<Record<string, string>> = {
 export const richTextMarkElement = (
   mark: RichTextMark,
 ): null | RichTextElement => {
-  const simple = SIMPLE_MARKS[mark.type];
-  if (simple !== undefined) return { children: [RICH_TEXT_SLOT], tag: simple };
+  if (Object.hasOwn(SIMPLE_MARKS, mark.type)) {
+    return { children: [RICH_TEXT_SLOT], tag: SIMPLE_MARKS[mark.type] };
+  }
 
   if (mark.type === "link") {
     const href = sanitizeRichTextHref(mark.attrs?.href);

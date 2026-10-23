@@ -134,7 +134,7 @@ describe("POST /stream", () => {
     expect(ledger.spentPoints(USER_ID)).toBe(20_000_000_000_000n);
   });
 
-  it("cancels the provider call and charges nothing when the client goes away", async () => {
+  it("cancels the provider call and charges the text already sent when the client goes away", async () => {
     const { app, ledger } = createApp(
       streamingModel(["One", " two", " three", " four"]),
     );
@@ -145,7 +145,7 @@ describe("POST /stream", () => {
     await reader?.cancel("closed the panel");
 
     await expect.poll(() => ledger.runs[0]?.status).toBe("canceled");
-    expect(ledger.spentPoints(USER_ID)).toBe(0n);
+    expect(ledger.spentPoints(USER_ID)).toBeGreaterThan(0n);
   });
 
   it("refuses before streaming when the editor permission is not granted", async () => {

@@ -3,7 +3,6 @@ import {
   getRequest,
   getRequestHeaders,
   getRequestIP,
-  getRequestUrl,
   setCookie,
 } from "@tanstack/react-start/server";
 import { config } from "dotenv";
@@ -39,19 +38,18 @@ import { recordPageCacheApiResponse } from "@/page-cache/render-context.server";
 config({ quiet: true });
 
 /**
- * The origin server-side API calls go to: `VITNODE_API_URL` when set (a
- * separate API server), otherwise the origin of the request being handled.
+ * The origin server-side API calls go to over the network: `VITNODE_API_URL`
+ * when set (a separate API server), otherwise the web app's own origin,
+ * `VITNODE_WEB_URL`. Never the incoming request's `Host` - a visitor chooses
+ * it, and the call carries their cookies, so it would let anyone point the
+ * server's requests at a host of their choosing.
  */
 export const resolveApiOrigin = (): string => {
   // Through `CONFIG` rather than the variable directly, so the empty-value
   // throw stays in one place - see the `??` note there.
   if (process.env.VITNODE_API_URL !== undefined) return CONFIG.api.origin;
 
-  try {
-    return getRequestUrl().origin;
-  } catch {
-    return CONFIG.api.origin;
-  }
+  return CONFIG.web.origin;
 };
 
 // This app serves its own API at its web origin, so a `VITNODE_API_URL` naming

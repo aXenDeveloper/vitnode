@@ -213,6 +213,7 @@ Without Redis, all of this works on a single instance with no extra setup: `toRo
 - **Offline aware**: When the browser goes offline, the socket closes and stops retrying. It reconnects the moment the network comes back, or when a tab becomes visible again after sleep, without waiting for the backoff.
 - **Heartbeat, both ways**: The server pings every socket every 30 seconds and closes the ones that stopped answering, so vanished clients do not linger (the standalone API's `ws` server and Nitro's crossws both do). The browser sends its own ping every 25 seconds and reconnects when no reply arrives within 10 seconds, so a half-dead connection after a Wi-Fi drop never pretends to be online.
 - **No replay**: Messages sent while a socket is down are not queued. A feature that must not miss updates reloads its state when the socket opens again - see [Reconnects and missed messages](/docs/dev/websocket/reconnects).
+- **Closed on revoke**: A socket is tied to the session and device that opened it. Revoking sessions (signing out a device, changing or resetting a password, an admin revoke) closes those sockets on every instance through `closeUserConnections`, so a revoked device stops receiving the user's pushes.
 - **Multiple Instances**: With `REDIS_URL` set, `sendToUser`, `broadcast` and `toRoom` are relayed to every API instance over Redis pub/sub. Without Redis they only reach clients connected to the same instance.
 
 ## Learn More

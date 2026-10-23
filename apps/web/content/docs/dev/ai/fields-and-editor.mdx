@@ -241,7 +241,7 @@ Quick Ask is the **Quick Ask (AI)** button in the Tiptap rich text editor toolba
 How it behaves:
 
 - **Bounded context.** It sends the selection (up to 8,000 characters) and up to 1,500 characters before and after it. It never sends the whole document.
-- **Streamed and previewed.** The answer streams into a preview. **Stop** cancels it; a canceled run charges the member no points.
+- **Streamed and previewed.** The answer streams into a preview. **Stop** cancels it; stopping before any text arrives charges the member nothing, while stopping after text has streamed in counts as a run.
 - **Cost shown first.** With a selection, the panel shows the reservation bound, not a price: _"One request costs at most N AI points - usually much less."_
 - **Plain text only.** The answer becomes paragraphs and hard breaks. It is never parsed as HTML, so it cannot inject markup, links or scripts.
 - **Stale selection.** If the selected text changed while the answer was written, **Replace selection** is disabled; **Insert below** still works.

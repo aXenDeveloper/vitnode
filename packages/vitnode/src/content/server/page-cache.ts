@@ -8,6 +8,7 @@ import type { AnyContentTypeDefinition } from "../types";
 
 import { invalidatePageCacheTags } from "../../page-cache/store.server";
 import { contentPublicItemTag, contentPublicListTag } from "../cache";
+import { contentDependentDefinitions } from "./parent-visibility";
 import { bumpContentPublicGeneration } from "./public-cache";
 import { isContentBaseRowPublic } from "./visibility";
 
@@ -175,15 +176,21 @@ export const invalidateContentPages = async (
   // The API's own cached public reads go with the pages, on the same rule. This
   // runs from `emitContentEvent`, after the write committed - a bump before the
   // commit would let a reader store the old row under the new generation.
+  const dependents = contentDependentDefinitions(c, definition);
   const [result, generation] = await Promise.all([
     invalidatePageCacheTags(
       [
         ...contentRecordPageCacheTags(definition, recordIdOf(payload)),
         ...contentListPageCacheTags(definition),
+        ...dependents.flatMap(dependent => contentListPageCacheTags(dependent)),
       ],
       { mode },
     ),
-    bumpContentPublicGeneration(c, definition.id).then(
+    Promise.all(
+      [definition, ...dependents].map(
+        async target => await bumpContentPublicGeneration(c, target.id),
+      ),
+    ).then(
       () => null,
       (error: unknown) => error,
     ),

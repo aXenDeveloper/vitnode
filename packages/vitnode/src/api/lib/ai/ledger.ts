@@ -107,6 +107,7 @@ export interface AiSettlement {
   delivered: boolean;
   errorCode: null | string;
   finishedAt: Date;
+  outputSent?: boolean;
   status: "canceled" | "failed" | "succeeded" | "uncertain";
 }
 

@@ -107,6 +107,12 @@ const renderElement = (
   return React.createElement(element.tag, props, ...children);
 };
 
+const ownEntry = <T,>(
+  record: Readonly<Record<string, T>> | undefined,
+  key: string,
+): T | undefined =>
+  record && Object.hasOwn(record, key) ? record[key] : undefined;
+
 const renderText = (
   node: RichTextNode,
   key: number,
@@ -115,7 +121,7 @@ const renderText = (
   let content: React.ReactNode = typeof node.text === "string" ? node.text : "";
 
   for (const mark of [...(node.marks ?? [])].reverse()) {
-    const Override = context.marks?.[mark.type];
+    const Override = ownEntry(context.marks, mark.type);
     if (Override) {
       content = (
         <Override mark={mark} node={node}>
@@ -147,7 +153,7 @@ const renderNode = (
       )
     : null;
 
-  const Override = context.nodes?.[node.type];
+  const Override = ownEntry(context.nodes, node.type);
   if (Override) {
     return (
       <Override key={key} node={node}>

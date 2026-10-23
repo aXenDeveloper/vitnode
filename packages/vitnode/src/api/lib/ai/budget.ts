@@ -129,16 +129,20 @@ export const settlementCharge = ({
   chargedUsd,
   delivered,
   deliveredUsd,
+  outputSent = false,
   unit,
 }: {
   chargedUsd: Decimal;
   delivered: boolean;
   deliveredUsd: Decimal;
+  outputSent?: boolean;
   unit: AiBudgetUnit;
 }): Decimal => {
   if (unit === "usd") return chargedUsd;
-  if (!delivered) return 0n;
-  if (unit === "points") return usdToPoints(deliveredUsd);
+  if (!delivered && !outputSent) return 0n;
+  if (unit === "points") {
+    return usdToPoints(delivered ? deliveredUsd : chargedUsd);
+  }
 
   return decimalFromInteger(1);
 };

@@ -66,6 +66,7 @@ const buildApp = () => {
   const app = new Hono<EnvVitNode>().basePath("/api");
   app.use("*", async (c, next) => {
     c.set("core", {
+      authorization: { deviceCookieName: "vitnode_device" },
       webSockets: [roomsSocket],
     } as unknown as EnvVariablesVitNode["core"]);
     c.set("db", db as unknown as EnvVariablesVitNode["db"]);

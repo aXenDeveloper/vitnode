@@ -40,6 +40,7 @@ describe("the Google adapter", () => {
     expect(await google.fetchUser(TOKEN)).toEqual({
       avatarUrl: "https://lh3.googleusercontent.com/a/photo=s96-c",
       email: "alice@gmail.test",
+      emailVerified: true,
       firstName: "Alice",
       id: "123",
       lastName: "Smith",
@@ -80,6 +81,7 @@ describe("the Discord adapter", () => {
       avatarUrl:
         "https://cdn.discordapp.com/avatars/80351110224678912/a_1269e74af4df7417b13759eae50c83dc.png?size=512",
       email: "alice@discord.test",
+      emailVerified: true,
       id: "80351110224678912",
       username: "alice",
     });
@@ -121,6 +123,7 @@ describe("the Facebook adapter", () => {
     expect(await facebook.fetchUser(TOKEN)).toEqual({
       avatarUrl: "https://platform-lookaside.fbsbx.com/photo.jpg",
       email: "alice@facebook.test",
+      emailVerified: true,
       firstName: "Alice",
       id: "10",
       lastName: "Smith",

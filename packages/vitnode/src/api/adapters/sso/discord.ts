@@ -143,6 +143,7 @@ export const DiscordSSOApiPlugin = ({
       return {
         avatarUrl: discordAvatarUrl(data),
         email: data.email,
+        emailVerified: true,
         id: data.id,
         username: data.username,
       };

@@ -90,10 +90,15 @@ interface EffectsErrorWrite {
 const harness = ({
   event = eventDelivered,
   origins = { [WEB]: 200 },
+  live = {
+    ...payload().row,
+    publishedAt: new Date("2026-08-05T12:00:00.000Z"),
+  },
   registered = true,
   searchError,
 }: {
   event?: typeof eventDelivered | typeof eventFailed;
+  live?: null | Record<string, unknown>;
   origins?: Record<string, number>;
   registered?: boolean;
   searchError?: Error;
@@ -129,7 +134,17 @@ const harness = ({
   const store: Record<string, unknown> = {
     core: {
       contentModels: registered
-        ? [{ model: { definition }, pluginId: PLUGIN_ID }]
+        ? [
+            {
+              model: {
+                definition,
+                service: () => ({
+                  findRowById: async () => Promise.resolve(live),
+                }),
+              },
+              pluginId: PLUGIN_ID,
+            },
+          ]
         : [],
       contentRevalidateOrigins: Object.keys(origins),
       cronSecret: "test-secret",

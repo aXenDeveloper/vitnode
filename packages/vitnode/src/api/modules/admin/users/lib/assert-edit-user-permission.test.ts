@@ -301,12 +301,71 @@ describe("assertCanEditAdminTarget", () => {
           TARGET_ID,
         ),
       ).rejects.toMatchObject({ status: 403 });
-      await expect(
-        assertCanEditAdminTarget(
-          await contextFor(world, ELEVATED_ADMIN),
-          TARGET_ID,
-        ),
-      ).resolves.toBeUndefined();
+    },
+  );
+
+  const ceilingCases: [string, World, Caller, boolean][] = [
+    [
+      "a zero-permission admin, for an elevated admin",
+      { admin: [{ userId: TARGET_ID }] },
+      ELEVATED_ADMIN,
+      true,
+    ],
+    [
+      "a root target, for an elevated admin",
+      { secondaryRoleIds: [ROOT_ROLE] },
+      ELEVATED_ADMIN,
+      false,
+    ],
+    [
+      "a root target, for root",
+      { secondaryRoleIds: [ROOT_ROLE] },
+      ROOT_CALLER,
+      true,
+    ],
+    [
+      "an unrestricted admin, for an elevated admin",
+      { admin: [{ unrestricted: true, userId: TARGET_ID }] },
+      ELEVATED_ADMIN,
+      false,
+    ],
+    [
+      "an admin holding a permission the caller lacks",
+      { admin: [{ permissions: [CAN_MANAGE_PLUGINS], userId: TARGET_ID }] },
+      ELEVATED_ADMIN,
+      false,
+    ],
+    [
+      "an admin whose permissions the caller holds",
+      { admin: [{ permissions: [CAN_MANAGE_PLUGINS], userId: TARGET_ID }] },
+      { admin: [CAN_EDIT, CAN_EDIT_ADMIN, CAN_MANAGE_PLUGINS] },
+      true,
+    ],
+    [
+      "a moderator holding a permission the caller lacks",
+      { moderator: [{ permissions: [CAN_DELETE_POSTS], userId: TARGET_ID }] },
+      ELEVATED_ADMIN,
+      false,
+    ],
+    [
+      "a moderator whose permissions the caller holds",
+      { moderator: [{ permissions: [CAN_DELETE_POSTS], userId: TARGET_ID }] },
+      { ...ELEVATED_ADMIN, moderator: [CAN_DELETE_POSTS] },
+      true,
+    ],
+  ];
+
+  it.each(ceilingCases)(
+    "keeps the edit within the caller's ceiling: %s",
+    async (_label, world, caller, allowed) => {
+      const result = assertCanEditAdminTarget(
+        await contextFor(world, caller),
+        TARGET_ID,
+      );
+
+      await (allowed
+        ? expect(result).resolves.toBeUndefined()
+        : expect(result).rejects.toMatchObject({ status: 403 }));
     },
   );
 

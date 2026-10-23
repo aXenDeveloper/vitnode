@@ -779,6 +779,7 @@ export class AiRunner {
     ) => {
       if (finished) return;
       finished = true;
+      const outputSent = !delivered && text.length > 0;
       signal?.removeEventListener("abort", forward);
       if (callId !== null) {
         await this.ledger.finishCall(callId, {
@@ -790,6 +791,7 @@ export class AiRunner {
       const settled = await this.settle(runId, {
         delivered,
         errorCode,
+        outputSent,
         status: delivered
           ? "succeeded"
           : errorCode === "AI_CANCELED"

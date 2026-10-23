@@ -16,6 +16,7 @@ import { core_content_submissions } from "@/database/content-submissions";
 import { core_files } from "@/database/files";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
+import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
 import { createTestCache } from "@/tests/cache";
 import {
   testPolicyBoardContainers,
@@ -253,6 +254,7 @@ export const createPolicyWorld = async ({
       ],
       moderation: { scopes: [], targets: [] },
       permissionStaff: [],
+      personalInformationFields: resolvePersonalInformationFields(),
     } as unknown as Context["var"]["core"]);
     await next();
   });

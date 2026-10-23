@@ -38,6 +38,13 @@ export interface SSOProviderUser {
   avatarUrl?: null | string;
   /** The account's email. Matched against existing VitNode accounts on first sign-in. */
   email: string;
+  /**
+   * Whether the provider confirmed the user owns `email`. Core keys accounts on
+   * the email, so `false` refuses the sign-in (`400`) instead of creating,
+   * linking or verifying an account with it. Leave it unset only when the
+   * provider never returns an unconfirmed address.
+   */
+  emailVerified?: boolean;
   firstName?: null | string;
   /** The provider's stable account id, stored to recognise the account next time. */
   id: string;
@@ -64,7 +71,11 @@ export interface SSOApiPlugin {
   fetchToken: (
     code: string,
   ) => Promise<{ access_token: string; token_type: string }>;
-  /** Reads the provider account with the token. Throw an `HTTPException` (e.g. `400` for an unverified email) to refuse it. */
+  /**
+   * Reads the provider account with the token. Report an address the provider
+   * has not confirmed with `emailVerified: false` (or throw an `HTTPException`
+   * yourself) - an unconfirmed email must never reach core as a trusted one.
+   */
   fetchUser: (args: {
     access_token: string;
     token_type: string;
@@ -174,6 +185,9 @@ export class SSOModel {
 
     const ssoToken = await provider.fetchToken(code);
     const userFromProvider = await provider.fetchUser(ssoToken);
+    if (userFromProvider.emailVerified === false) {
+      throw new HTTPException(400, { message: "Email not verified" });
+    }
     const userFromSSO = {
       email: normalizeEmailAddress(userFromProvider.email),
       id: userFromProvider.id,

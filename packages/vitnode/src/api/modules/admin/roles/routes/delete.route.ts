@@ -9,7 +9,10 @@ import { core_languages_words } from "@/database/languages";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
 
-import { assertCanManageAdminRole } from "../lib/assert-manage-admin-role";
+import {
+  assertCanManageAdminRole,
+  assertCanRemoveRoleStaffEntries,
+} from "../lib/assert-manage-admin-role";
 
 export const deleteRoleAdminRoute = buildRoute({
   adminStaffPermission: { module: "roles", permission: "can_delete" },
@@ -94,6 +97,7 @@ export const deleteRoleAdminRoute = buildRoute({
       roleId,
       permission: "can_delete_admin",
     });
+    await assertCanRemoveRoleStaffEntries(c, roleId);
 
     // Members point at their primary role through a NOT NULL, RESTRICT foreign
     // key, so anyone in this role has to be moved elsewhere first. Secondary

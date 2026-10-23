@@ -315,6 +315,7 @@ export class MemoryAiLedger implements AiLedger {
         chargedUsd,
         deliveredUsd,
         delivered: settlement.delivered,
+        outputSent: settlement.outputSent,
         unit: hold.unit,
       });
       if (hold.unit === "points") chargedPoints = charge;

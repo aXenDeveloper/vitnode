@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 
 import { core_admin_sessions } from "@/database/admins";
 import { core_sessions } from "@/database/sessions";
+import { realtime } from "@/ws/registry";
 
 import { adminSessionCacheKey, sessionCacheKey } from "./session-cache";
 
@@ -116,6 +117,7 @@ export const revokeSessions = async (
   ]);
 
   await deleteSessionCacheKeys(c, { adminSessions, sessions });
+  realtime.closeUserConnections(scope.userId, scope.deviceId ?? null);
   await c.get("events").emit("user.sessions.revoked", {
     deviceId: scope.deviceId ?? null,
     sessions: sessions.length + adminSessions.length,

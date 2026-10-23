@@ -811,7 +811,7 @@ export const ssoIdentityOf = (
   adapter: Pick<SSOApiPlugin, "profileFields">,
   user: Awaited<ReturnType<SSOApiPlugin["fetchUser"]>>,
 ): SsoProviderIdentity => {
-  const email = boundedText(user.email);
+  const email = user.emailVerified === false ? null : boundedText(user.email);
 
   return {
     email: email ? normalizeEmailAddress(email) : null,
