@@ -10,6 +10,7 @@ const connections = new Map<WSContext, null | number>();
 // Reverse indexes, so per-user sends and closing a socket touch only what
 // belongs to that user/socket instead of scanning every connection or room.
 const connectionsByUser = new Map<number, Set<WSContext>>();
+const deviceBySocket = new Map<WSContext, number>();
 const roomsBySocket = new Map<WSContext, Set<string>>();
 
 const rooms = new Map<string, Map<WSContext, Set<string>>>();
@@ -61,11 +62,20 @@ const unindexUser = (ws: WSContext, userId: null | number | undefined) => {
  * Redis) use `c.get("realtime")`. A socket whose send fails is removed.
  */
 export const wsRegistry = {
-  /** Tracks a new connection and the signed-in user who owns it (`null` for a guest). */
-  add: (ws: WSContext, userId: null | number): void => {
+  /**
+   * Tracks a new connection and the signed-in user who owns it (`null` for a
+   * guest), with the device of the session that authenticated it.
+   */
+  add: (
+    ws: WSContext,
+    userId: null | number,
+    deviceId: null | number = null,
+  ): void => {
     unindexUser(ws, connections.get(ws));
     connections.set(ws, userId);
+    deviceBySocket.delete(ws);
     if (userId === null) return;
+    if (deviceId !== null) deviceBySocket.set(ws, deviceId);
 
     const sockets = connectionsByUser.get(userId) ?? new Set<WSContext>();
     connectionsByUser.set(userId, sockets);
@@ -131,6 +141,7 @@ export const wsRegistry = {
   remove: (ws: WSContext): void => {
     unindexUser(ws, connections.get(ws));
     connections.delete(ws);
+    deviceBySocket.delete(ws);
 
     const joined = roomsBySocket.get(ws);
     roomsBySocket.delete(ws);
@@ -172,6 +183,34 @@ export const wsRegistry = {
       }
     }
   },
+  /**
+   * Closes a user's connections on this instance - only those authenticated
+   * from `deviceId` when given, else all of them. Used when their sessions are
+   * revoked: the socket kept the identity of the session that opened it, so it
+   * must not outlive that session. The client reconnects as whoever it now is.
+   */
+  closeUser: (
+    userId: number,
+    deviceId: null | number,
+    code: number,
+    reason: string,
+  ): void => {
+    for (const ws of [...(connectionsByUser.get(userId) ?? [])]) {
+      const socketDevice = deviceBySocket.get(ws);
+      if (
+        deviceId !== null &&
+        socketDevice !== undefined &&
+        socketDevice !== deviceId
+      ) {
+        continue;
+      }
+      try {
+        ws.close(code, reason);
+      } catch {
+        wsRegistry.remove(ws);
+      }
+    }
+  },
   /** The rooms one socket is in. */
   roomsOf: (ws: WSContext): string[] => [...(roomsBySocket.get(ws) ?? [])],
   /** Send `{ id, data }` to every socket in `room` on this instance. */
@@ -189,6 +228,9 @@ export const wsRegistry = {
 };
 
 const REALTIME_PUBSUB_CHANNEL = "vitnode:ws";
+
+const SESSION_REVOKED_CLOSE_CODE = 1008;
+const SESSION_REVOKED_CLOSE_REASON = "Session revoked";
 
 /**
  * Unique per process. Tagged onto every published message so the instance that
@@ -209,7 +251,13 @@ interface RealtimePubSubMessage {
   id: string;
   origin: string;
   room?: string;
-  type: "broadcast" | "instance" | "room" | "sendToUser" | "sendToUsers";
+  type:
+    | "broadcast"
+    | "closeUser"
+    | "instance"
+    | "room"
+    | "sendToUser"
+    | "sendToUsers";
   userId?: number;
 }
 
@@ -235,6 +283,17 @@ const deliverLocally = (message: RealtimePubSubMessage): void => {
     }
   } else if (message.type === "room" && typeof message.room === "string") {
     wsRegistry.toRoom(message.room, message.id, message.data);
+  } else if (
+    message.type === "closeUser" &&
+    typeof message.userId === "number"
+  ) {
+    const deviceId = typeof message.data === "number" ? message.data : null;
+    wsRegistry.closeUser(
+      message.userId,
+      deviceId,
+      SESSION_REVOKED_CLOSE_CODE,
+      SESSION_REVOKED_CLOSE_REASON,
+    );
   }
 };
 
@@ -462,6 +521,14 @@ export interface VitNodeRealtime {
     data: Receive,
   ) => void;
   /**
+   * Close a user's open connections on every instance - only the ones opened
+   * from `deviceId` when given. Core calls it whenever sessions are revoked
+   * (sign-out of a device, password change or reset, admin revoke), so a socket
+   * never keeps receiving a user's pushes after the session that opened it is
+   * gone. Clients reconnect with whatever session they still have.
+   */
+  closeUserConnections: (userId: number, deviceId?: null | number) => void;
+  /**
    * Push a payload only to the connections of a single user, across all of
    * their browsers/devices. Use for per-user data such as notifications.
    */
@@ -491,6 +558,15 @@ export const realtime: VitNodeRealtime = {
   broadcast: (channel, data) => {
     wsRegistry.broadcast(channel.id, data);
     publish({ data, id: channel.id, type: "broadcast" });
+  },
+  closeUserConnections: (userId, deviceId = null) => {
+    wsRegistry.closeUser(
+      userId,
+      deviceId,
+      SESSION_REVOKED_CLOSE_CODE,
+      SESSION_REVOKED_CLOSE_REASON,
+    );
+    publish({ data: deviceId, id: "closeUser", type: "closeUser", userId });
   },
   sendToUser: (userId, channel, data) => {
     wsRegistry.sendToUser(userId, channel.id, data);

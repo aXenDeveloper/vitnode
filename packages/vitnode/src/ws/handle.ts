@@ -7,6 +7,7 @@ import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type { NotificationStateMessage } from "@/lib/notifications/types";
 import type { VitNodeWSMessage } from "@/ws/types";
 
+import { DeviceModel } from "@/api/models/device";
 import { getNotificationState } from "@/api/models/notifications/inbox";
 import { notificationsStateChannel } from "@/ws/notifications";
 import {
@@ -102,11 +103,15 @@ export function handleVitNodeWebSocket(
     // Authenticated from the session cookie sent with the upgrade request, so
     // the server can target this connection's user (e.g. for notifications).
     const userId = c.get("user")?.id ?? null;
+    const deviceId =
+      userId === null
+        ? null
+        : ((await new DeviceModel(c).getExistingDeviceId())?.id ?? null);
 
     return {
       onOpen: (event, ws) => {
         // Track the connection so the server can push messages to it.
-        wsRegistry.add(ws, userId);
+        wsRegistry.add(ws, userId, deviceId);
         if (userId !== null) {
           sendNotificationState(c, ws, userId).catch((error: unknown) => {
             // oxlint-disable-next-line no-console

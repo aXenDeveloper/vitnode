@@ -678,25 +678,34 @@ describe("AiRunner.stream", () => {
     expect(ledger.runs[0].status).toBe("succeeded");
   });
 
-  it("charges no points when the reader cancels, and still records the run", async () => {
-    const { ledger, runner } = setup({
-      models: [
-        textModel(streaming(["Hello", " there", " friend"]), {
-          capabilities: ["text", "streaming"],
-        }),
-      ],
-    });
+  it.each([
+    ["before any text arrived", 0, false],
+    ["after text reached the reader", 1, true],
+  ])(
+    "records a run the reader cancels %s, charging points only for text it got",
+    async (_label, reads, charged) => {
+      const { ledger, runner } = setup({
+        models: [
+          textModel(streaming(["Hello", " there", " friend"]), {
+            capabilities: ["text", "streaming"],
+          }),
+        ],
+      });
 
-    const { result, textStream } = await runner.stream({
-      action: SUMMARY,
-      input: { text: "x" },
-    });
-    const reader = textStream.getReader();
-    await reader.read();
-    await reader.cancel("user closed the panel");
+      const { result, textStream } = await runner.stream({
+        action: SUMMARY,
+        input: { text: "x" },
+      });
+      const reader = textStream.getReader();
+      for (let index = 0; index < reads; index++) await reader.read();
+      await reader.cancel("user closed the panel");
 
-    expect(await codeOf(result)).toBe("AI_CANCELED");
-    expect(ledger.runs[0]).toMatchObject({ settled: true, status: "canceled" });
-    expect(ledger.spentPoints(7)).toBe(0n);
-  });
+      expect(await codeOf(result)).toBe("AI_CANCELED");
+      expect(ledger.runs[0]).toMatchObject({
+        settled: true,
+        status: "canceled",
+      });
+      expect(ledger.spentPoints(7) > 0n).toBe(charged);
+    },
+  );
 });

@@ -130,6 +130,7 @@ export const GoogleSSOApiPlugin = ({
       return {
         avatarUrl: data.picture ?? null,
         email: data.email,
+        emailVerified: true,
         firstName: data.given_name ?? null,
         id: data.id,
         lastName: data.family_name ?? null,

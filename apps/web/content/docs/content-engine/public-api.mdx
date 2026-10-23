@@ -124,7 +124,7 @@ All routes live under `/api/{pluginId}/content/{publicApi.path}`.
 | `GET /thread?root={id}`      | Nested replies under a record. With [`thread`](/docs/content-engine/threads)                  |
 | `POST /`, `PATCH /{id}`      | Create and edit from the site. With [`publicWrite`](/docs/content-engine/public-write)        |
 
-Each record comes back with exactly the listed fields. Dates are ISO strings, a relation is `{ id }`, a container field is the container's id, and a file is `{ id, name, url, mimeType, size, width, height }`. A draft, a record scheduled for later, a hidden record and a typo all answer the same `404`. The list adds the hidden records a signed-in author, editor or moderator may see, marked `hidden: true`.
+Each record comes back with exactly the listed fields. Dates are ISO strings, a relation is `{ id }`, a container field is the container's id, and a file is `{ id, name, url, mimeType, size, width, height }`. A draft, a record scheduled for later, a hidden record and a typo all answer the same `404`. A record that belongs to a parent - its thread root, or its search context relation - is only as public as that parent: once the topic is hidden or unpublished, its comments drop out of the list and their detail answers `404` too. The list adds the hidden records a signed-in author, editor or moderator may see, marked `hidden: true`.
 
 The list accepts `first` (up to 50), `page` or `cursor`, `search`, `orderBy`, `order` and one parameter per filterable field. [Public lists](/docs/content-engine/public-lists) turns it into a page with search, filters and pagination.
 

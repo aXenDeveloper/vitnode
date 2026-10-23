@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { Avatar } from "@vitnode/core/components/avatar";
 import { HiddenIcon } from "@vitnode/core/components/hidden-icon";
@@ -126,7 +126,7 @@ const BlogPostAuthors = ({
 }: {
   authors: BlogPostAuthor[];
   onImage: boolean;
-}) => {
+}): ReactNode => {
   const t = useTranslations("@vitnode/blog.list");
   const [first, second] = authors;
   const authorName = (author: BlogPostAuthor) => (

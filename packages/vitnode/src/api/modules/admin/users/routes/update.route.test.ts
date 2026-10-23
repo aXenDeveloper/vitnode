@@ -177,15 +177,29 @@ describe("PATCH /admin/users/{id} - staff targets", () => {
     },
   );
 
-  it.each<TargetShape>(["root via a secondary role", "moderator"])(
-    "changes the email of a target who is %s with users:can_edit_admin",
-    async target => {
-      const h = await harness({ editor: [CAN_EDIT, CAN_EDIT_ADMIN], target });
+  it("changes the email of a moderator within reach with users:can_edit_admin", async () => {
+    const h = await harness({
+      editor: [CAN_EDIT, CAN_EDIT_ADMIN],
+      target: "moderator",
+    });
 
-      const response = await h.patch(TARGET_ID, NEW_EMAIL);
+    const response = await h.patch(TARGET_ID, NEW_EMAIL);
 
-      expect(response.status).toBe(200);
-      expect(h.userRow(TARGET_ID)?.email).toBe(NEW_EMAIL.email);
+    expect(response.status).toBe(200);
+    expect(h.userRow(TARGET_ID)?.email).toBe(NEW_EMAIL.email);
+  });
+
+  it.each<
+    [string, PermissionsStaffArgs[] | typeof ROOT_STAFF_PERMISSIONS, number]
+  >([
+    ["refuses a non-root admin", [CAN_EDIT, CAN_EDIT_ADMIN], 403],
+    ["lets root", ROOT_STAFF_PERMISSIONS, 200],
+  ])(
+    "%s changing the email of a root target",
+    async (_label, editor, status) => {
+      const h = await harness({ editor, target: "root via a secondary role" });
+
+      expect((await h.patch(TARGET_ID, NEW_EMAIL)).status).toBe(status);
     },
   );
 

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
 import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
+import { revokeAccountRecoveryTokens } from "@/api/lib/recovery-tokens";
 import { PasswordModel } from "@/api/models/password";
 import { revokeSessions } from "@/api/models/session-revoke";
 import { USER_PASSWORD_MAX_LENGTH } from "@/api/modules/users/credential-limits";
@@ -93,6 +94,7 @@ export const setPasswordUserAdminRoute = buildRoute({
       .where(eq(core_users.id, user.id));
     await c.get("events").emit("user.password.updated", { userId: user.id });
 
+    await revokeAccountRecoveryTokens(c, user.id);
     await revokeSessions(c, { userId: user.id });
 
     return c.json({ ok: true as const }, 200);

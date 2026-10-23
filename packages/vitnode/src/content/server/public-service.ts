@@ -39,6 +39,7 @@ import {
   contentPublicListCondition,
   flagHiddenContentRows,
 } from "./hidden-list";
+import { createContentParentVisibility } from "./parent-visibility";
 import {
   createContentPublicRowHydrator,
   isContentPublicPeopleList,
@@ -425,6 +426,12 @@ export const createContentPublicService = <
   // here - it is what turns the erased column map into the two columns the
   // predicate needs.
   const published = publicationColumns(definition, columns);
+  const parent = createContentParentVisibility(c, definition, columns);
+  const withParent = <TSelection extends object>(selection: TSelection) =>
+    parent ? { ...selection, ...parent.selection } : selection;
+  const keepVisible = async <TRow extends Record<string, unknown>>(
+    rows: TRow[],
+  ): Promise<TRow[]> => (parent ? await parent.visible(rows) : rows);
   const primaryCursor = columns.id as PaginationCursorColumn;
   const searchColumns = publicApi.searchableFields.map(name => columns[name]);
   const orderable = publicOrderableColumns(definition);
@@ -462,12 +469,14 @@ export const createContentPublicService = <
     const { hydrate, project, selection } = options.select
       ? reader(contentPublicSelectProjection(definition, options.select))
       : detail;
-    const [row] = await c
-      .get("db")
-      .select(selection)
-      .from(table)
-      .where(and(contentPublicReadCondition(published, options), condition))
-      .limit(1);
+    const [row] = await keepVisible(
+      await c
+        .get("db")
+        .select(withParent(selection))
+        .from(table)
+        .where(and(contentPublicReadCondition(published, options), condition))
+        .limit(1),
+    );
 
     if (!row) return null;
 
@@ -486,13 +495,18 @@ export const createContentPublicService = <
     findManyByIds: async ids => {
       if (ids.length === 0) return [];
 
-      const rows = await c
-        .get("db")
-        .select(detail.selection)
-        .from(table)
-        .where(
-          and(publishedCondition(published), inArray(primaryCursor, [...ids])),
-        );
+      const rows = await keepVisible(
+        await c
+          .get("db")
+          .select(withParent(detail.selection))
+          .from(table)
+          .where(
+            and(
+              publishedCondition(published),
+              inArray(primaryCursor, [...ids]),
+            ),
+          ),
+      );
 
       return (await detail.hydrate(rows)).map(detail.project);
     },
@@ -548,7 +562,7 @@ export const createContentPublicService = <
             // The cursor value is projected by this statement and stripped from
             // the row before `project` ever sees it, so the public allowlist is
             // unchanged: it is pagination's own column, not a field.
-            .select({ ...list.selection, ...cursorSelection })
+            .select({ ...withParent(list.selection), ...cursorSelection })
             .from(table)
             .where(where)
             .orderBy(order)
@@ -560,7 +574,9 @@ export const createContentPublicService = <
             .offset(offset),
       });
 
-      const edges = (await list.hydrate(data.edges)).map(list.project);
+      const edges = (await list.hydrate(await keepVisible(data.edges))).map(
+        list.project,
+      );
 
       return {
         edges: hidden

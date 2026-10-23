@@ -99,10 +99,13 @@ const reviveDates = (
   return revived;
 };
 
+const rowVersion = (row: Record<string, unknown>): number =>
+  typeof row.version === "number" ? row.version : 1;
+
 export interface ContentScheduleEffectsOutcome {
   /** Why this run failed, when it did. Also written to the schedule row. */
   error?: string;
-  status: "delivered" | "unregistered";
+  status: "delivered" | "superseded" | "unregistered";
 }
 
 export const runContentScheduleEffects = async (
@@ -143,6 +146,21 @@ export const runContentScheduleEffects = async (
   }
 
   const isPublic = isContentRowPublic(row);
+
+  const live = await entry.model.service(c).findRowById(itemId);
+  if (
+    !live ||
+    rowVersion(live) !== payload.version ||
+    isContentRowPublic(live) !== isPublic
+  ) {
+    await recordContentScheduleEffectsError(
+      c.get("db"),
+      payload.scheduleId,
+      null,
+    );
+
+    return { status: "superseded" };
+  }
 
   const outcome: ContentEditorialOutcome<AnyContentTypeDefinition> = {
     changed: true,

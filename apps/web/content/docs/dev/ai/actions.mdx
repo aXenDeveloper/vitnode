@@ -492,7 +492,7 @@ handler: async (c) => {
 }
 ```
 
-The stream also returns `result`, a promise that resolves to the validated output once the stream ends, and rejects with an `AiError` if the full text is invalid. A stream makes one attempt on the primary model, with no retries and no fallback. If the reader cancels, the run settles as `canceled` and the user is not charged.
+The stream also returns `result`, a promise that resolves to the validated output once the stream ends, and rejects with an `AiError` if the full text is invalid. A stream makes one attempt on the primary model, with no retries and no fallback. If the reader cancels, the run settles as `canceled`. The user is charged nothing if no text had reached them yet; once text was sent, their points and daily count are charged as for a delivered run.
 
 ## Error codes
 

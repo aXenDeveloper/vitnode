@@ -15,9 +15,11 @@ import {
   resolveStaffPermissions,
 } from "@/api/lib/check-staff-permission";
 import { hasStaffPermission } from "@/api/lib/staff-permission";
+import { staffGrantsWithinCeiling } from "@/api/modules/admin/staff/lib/scoped-grants";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
+import { core_users } from "@/database/users";
 import { manifest } from "@/manifest";
 
 const STAFF_TYPES: PermissionStaffType[] = ["admin", "moderator"];
@@ -44,6 +46,50 @@ const assertCanEditAdmin = async (c: Context): Promise<void> => {
   });
 };
 
+const loadTargetUser = async (c: Context, userId: number) => {
+  const [target] = await c
+    .get("db")
+    .select({ id: core_users.id, roleId: core_users.roleId })
+    .from(core_users)
+    .where(eq(core_users.id, userId))
+    .limit(1);
+  if (!target) throw new HTTPException(404, { message: "User not found" });
+
+  return target;
+};
+
+const assertTargetWithinCallerCeiling = async (
+  c: Context,
+  userId: number,
+  staffTypes: PermissionStaffType[],
+): Promise<void> => {
+  const caller = c.get("admin")?.user;
+  if (!caller) throw forbidden();
+
+  const callerAdmin = await resolveStaffPermissions(c, {
+    type: "admin",
+    user: caller,
+  });
+  if (callerAdmin.root) return;
+
+  const target = await loadTargetUser(c, userId);
+  for (const type of staffTypes) {
+    const [held, targetSet] = await Promise.all([
+      type === "admin"
+        ? callerAdmin
+        : resolveStaffPermissions(c, { type, user: caller }),
+      resolveStaffPermissions(c, { type, user: target }),
+    ]);
+
+    if (
+      targetSet.root ||
+      !staffGrantsWithinCeiling(targetSet.permissions, held.permissions)
+    ) {
+      throw forbidden();
+    }
+  }
+};
+
 export const assertCanEditAdminTarget = async (
   c: Context,
   userId: number,
@@ -51,9 +97,11 @@ export const assertCanEditAdminTarget = async (
   const staffByType = await Promise.all(
     STAFF_TYPES.map(async type => await isStaff(c, { type, userId })),
   );
-  if (!staffByType.some(Boolean)) return;
+  const staffTypes = STAFF_TYPES.filter((_, index) => staffByType[index]);
+  if (staffTypes.length === 0) return;
 
   await assertCanEditAdmin(c);
+  await assertTargetWithinCallerCeiling(c, userId, staffTypes);
 };
 
 const loadRoleStaffGrants = async (

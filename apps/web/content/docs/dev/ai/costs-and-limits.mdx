@@ -271,10 +271,11 @@ How it stays correct with many API instances:
 | Retry: a lost attempt, then a valid answer | Full reservation (unknown)        | Only the answering call, +1 run    |
 | Provider returned an error                 | Real cost (usually $0)            | Nothing                            |
 | Invalid output (empty, failed validation)  | Real cost, since tokens were used | Nothing                            |
-| Timeout or canceled                        | Full reservation (unknown)        | Nothing                            |
+| Timeout or canceled, before any text was sent | Full reservation (unknown)     | Nothing                            |
+| Stream canceled or failed after text was sent | Full reservation (unknown)     | Full reservation in points, +1 run |
 | Process died mid-call (lease expired)      | Full reservation (unknown)        | Nothing                            |
 
-**A user is charged only when a valid result is delivered.** When the provider fails, times out, or the answer is unusable, the site pays for whatever the provider may have billed. Reconciliation can correct an unknown charge later.
+**A user is charged only when they received output** - a valid result, or streamed text they read before canceling. Otherwise stopping a stream once the answer arrived would be a free run. When the provider fails, times out, or the answer is unusable, the site pays for whatever the provider may have billed. Reconciliation can correct an unknown charge later.
 
 Runs whose process died stay `running` until their lease expires, which takes `timeoutMs` per possible attempt plus one minute. The `ai-maintenance` cron (every 10 minutes) then settles them as `uncertain`. The same cron reconciles costs and prunes history, so the host must run VitNode's cron. See [Cron](/docs/dev/cron).
 

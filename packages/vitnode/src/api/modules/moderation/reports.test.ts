@@ -16,6 +16,7 @@ import {
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
 import { MODERATION_LIMITS } from "@/lib/moderation/const";
+import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
 import { createTestCache } from "@/tests/cache";
 import { createMemoryDb } from "@/tests/memory-db";
 import {
@@ -194,6 +195,7 @@ const harness = async () => {
         targets: [{ definition: target, pluginId: FORUM }],
       },
       permissionStaff: [],
+      personalInformationFields: resolvePersonalInformationFields(),
     } as unknown as Context["var"]["core"]);
     await next();
   });
