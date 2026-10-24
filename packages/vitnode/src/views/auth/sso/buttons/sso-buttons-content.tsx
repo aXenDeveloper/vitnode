@@ -4,7 +4,6 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 
 import type { SSOProvider } from "../providers";
 
@@ -127,13 +126,3 @@ export const SSOButtonsContent = ({
     </div>
   );
 };
-
-export const SSOButtonsSkeleton = () => (
-  <div className="flex flex-col gap-3">
-    <Skeleton className="h-5 w-24" />
-    <div className="grid grid-cols-2 gap-2">
-      <Skeleton className="h-10 w-full" />
-      <Skeleton className="h-10 w-full" />
-    </div>
-  </div>
-);

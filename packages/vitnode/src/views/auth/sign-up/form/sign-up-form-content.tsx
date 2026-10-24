@@ -13,7 +13,6 @@ import {
 import { AutoFormCheckbox } from "@/components/form/fields/checkbox";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { InputGroupAddon } from "@/components/ui/input-group";
-import { Skeleton } from "@/components/ui/skeleton";
 import { removeSpecialCharacters } from "@/lib/special-characters";
 
 import { PasswordInput } from "../components/password-input";
@@ -135,22 +134,3 @@ export const SignUpFormContent = ({
     />
   );
 };
-
-/** The form's shape while the deployment configuration is still in flight. */
-export const SignUpFormSkeleton = () => (
-  <div className="space-y-8">
-    {[0, 1, 2].map(field => (
-      <div className="space-y-2" key={field}>
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-9 w-full" />
-      </div>
-    ))}
-
-    <div className="flex gap-2">
-      <Skeleton className="size-4 shrink-0" />
-      <Skeleton className="h-4 w-48" />
-    </div>
-
-    <Skeleton className="h-9 w-full" />
-  </div>
-);

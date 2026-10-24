@@ -42,6 +42,10 @@ import { ADMIN_USERS_NAMESPACES } from "./tanstack/admin/users/route";
 import { normalizeUsersRouteSearch } from "./tanstack/admin/users/route-search";
 import { LOGIN_NAMESPACES } from "./tanstack/auth/login-route";
 import {
+  LoginPendingSkeleton,
+  RegisterPendingSkeleton,
+} from "./tanstack/auth/pending";
+import {
   normalizePasswordResetSearch,
   PASSWORD_RESET_BASE_NAMESPACES,
 } from "./tanstack/auth/recovery";
@@ -121,7 +125,7 @@ export const routes = defineRoutes([
   page("/login", {
     component: lazy(() => import("./pages/login/index")),
     messages: LOGIN_NAMESPACES,
-    pendingComponent: AuthPendingSkeleton,
+    pendingComponent: LoginPendingSkeleton,
     requires: "guest",
     search: normalizeLoginSearch,
   }),
@@ -129,7 +133,7 @@ export const routes = defineRoutes([
   page("/register", {
     component: lazy(() => import("./pages/register")),
     messages: REGISTER_NAMESPACES,
-    pendingComponent: AuthPendingSkeleton,
+    pendingComponent: RegisterPendingSkeleton,
     requires: "guest",
   }),
 

@@ -14,7 +14,6 @@ import { MotionFeatures } from "@/components/motion-features";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useFormApi } from "@/components/ui/form";
 import { InputGroupAddon } from "@/components/ui/input-group";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   REVEAL_EXIT_TRANSITION,
   REVEAL_HIDDEN,
@@ -178,20 +177,3 @@ export const SignInFormContent = ({
     </AuthStep>
   );
 };
-
-/** The form's shape while the deployment configuration is still in flight. */
-export const SignInFormSkeleton = () => (
-  <div className="space-y-8">
-    <div className="space-y-2">
-      <Skeleton className="h-4 w-24" />
-      <Skeleton className="h-9 w-full" />
-    </div>
-
-    <div className="space-y-2">
-      <Skeleton className="h-4 w-24" />
-      <Skeleton className="h-9 w-full" />
-    </div>
-
-    <Skeleton className="h-9 w-full" />
-  </div>
-);
