@@ -31,7 +31,7 @@ A relation stores another record's id in a real foreign key column. This guide a
 
 ## Before you begin
 
-You need the `newsroom.article` type from [First content type](/docs/content-engine/create-a-content-type), with its plugin in `plugins/newsroom/`. Any later guide's additions can stay; this one only adds files and one field.
+You need the `newsroom.article` type from [First content type](/docs/content-engine/create-a-content-type), with its plugin in `plugins/newsroom/`, and an AdminCP account. Nothing else is required: the steps and the check below work in the AdminCP alone. If you followed later guides, keep their additions; this guide only adds files, one field and one list column.
 
 <Steps>
 
@@ -147,12 +147,16 @@ import { categoryContentType } from "@/content/category"; // [!code ++]
 - **`nullable: true`** lets the column start empty. Your articles already exist and have no category, so a `required` relation could not be added to the table.
 - **`onDelete: "set null"`** clears the link when a category is deleted. `"restrict"` refuses to delete a category that still has articles, and `"cascade"` deletes them with it.
 
-To see the category in the AdminCP list and the public API, add `"category"` to `admin.list.columns` and to `publicApi.fields`, if the article has them:
+Then show the category in the AdminCP list: add `"category"` to `admin.list.columns`, in the same file. This is an excerpt; keep any other columns you added, such as `"status"`:
 
 ```ts title="plugins/newsroom/src/content/article.ts"
-  publicApi: {
-    path: "news",
-    fields: ["id", "title", "slug", "body", "category", "publishedAt"], // [!code highlight]
+  admin: {
+    path: "newsroom/articles",
+    titleField: "title",
+    list: {
+      columns: ["title", "slug", "category", "updatedAt"], // [!code highlight]
+      orderableFields: ["title"],
+    },
   },
 ```
 
@@ -266,23 +270,39 @@ Open **AdminCP → Newsroom → Categories**, click **Create Category**, enter `
   alt="Create Category dialog with the name Announcements and an empty optional Slug input"
 />
 
-Open **Newsroom → Articles** and edit `Welcome to the newsroom`. The dialog now ends with a **Category** picker; choose **Announcements** and click **Save changes**:
+Open **Newsroom → Articles** and click the pencil on `Welcome to the newsroom`. The dialog now ends with a **Category** picker; choose **Announcements** and click **Save changes**:
 
 <ImgDocs
   src={categoryField}
-  alt="The bottom of the Edit Article dialog: an optional Category picker set to Announcements, above Cancel, Convert to draft and Save changes"
+  alt="The bottom of the Edit Article dialog: an optional Category picker set to Announcements, above Cancel and Save changes"
 />
 
-The list shows the category, and the other articles show a dash:
+The list shows the category's name in the new column, and the other articles show a dash:
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={articlesList}
-  alt="Newsroom Articles list with Status, Title, Category and Updated columns; Welcome to the newsroom is in Announcements and the other articles have no category"
+  alt="Newsroom Articles list with Title, Slug, Category and Updated columns; Welcome to the newsroom is in Announcements and the other articles have no category"
 />
 
-The public API returns the link as an object with the category's id:
+Now delete the category: in **Newsroom → Categories**, click the trash button in the `Announcements` row and confirm with **Yes, delete it**. Back in **Newsroom → Articles**, `Welcome to the newsroom` shows a dash again. The article stays; only its `category` became `null`, because the relation says `onDelete: "set null"`.
+
+## Optional: read the category through the public API
+
+This part needs the article's public API from [Public API](/docs/content-engine/public-api), which builds on [Drafts & publishing](/docs/content-engine/publication), and a published article with a category. Assign a category again if you deleted it above.
+
+Add `"category"` to `publicApi.fields` in `src/content/article.ts`. Change only that list, and keep every other option you configured, such as `listFields`, `searchableFields` and `orderableFields`:
+
+```ts title="plugins/newsroom/src/content/article.ts"
+  publicApi: {
+    path: "news",
+    fields: ["id", "title", "slug", "body", "category", "publishedAt"], // [!code highlight]
+    // listFields, searchableFields, orderableFields and the rest stay as they are
+  },
+```
+
+`listFields` decides what the list route returns; add `"category"` there too only if list rows need it. Then request the article:
 
 ```bash
 curl "http://localhost:3000/api/newsroom/content/news/welcome-to-the-newsroom"
@@ -298,10 +318,10 @@ curl "http://localhost:3000/api/newsroom/content/news/welcome-to-the-newsroom"
 }
 ```
 
-Delete the category and the article's `category` becomes `null`, because of `onDelete: "set null"`.
+A relation exposes only the related record's id, here the category's. The category's name is not part of the article's public answer. The AdminCP can show it because its staff list route adds a `labels` object with the names, and staff routes are not public.
 
 ## Go further
 
-- **Show the category name to readers.** The article only stores the id. Give the category its own [public API](/docs/content-engine/public-api) and read it, or render categories as [containers](/docs/content-engine/containers), which bring their own pages and filters.
+- **Show the category name to readers.** Give the category type `publication: true` and its own [public API](/docs/content-engine/public-api), then read the category by id or list categories next to the articles. Or model categories as [containers](/docs/content-engine/containers), which bring their own pages and filters.
 - **Let members choose a category.** Add `category` to `publicWrite.create.fields`. Members may only link to records readers can see, so the category type then needs `publication: true` and its own `publicApi`; without them, the write route stops with an error that names the field.
 - **Many categories, grouped fields, repeatable rows and mixed id types.** See [Advanced fields](/docs/content-engine/relations-advanced).

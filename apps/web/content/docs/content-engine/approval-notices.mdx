@@ -9,6 +9,7 @@ implementation:
   constraints:
     - Read `approval` from `GET /{id}/edit` and from every `PATCH /{id}` answer; never infer it from `status` alone.
     - Open a pending edit on `approval.values`, parsed with Zod, and fall back to `values` for every field it lacks.
+    - Derive notices from `approval` only; never from a URL parameter or from `status` alone.
   related:
     - title: Approvals
       href: /docs/content-engine/approvals
@@ -24,7 +25,7 @@ import rejected from "./approval-notices-rejected.webp";
 
 When a container's [publishing rules](/docs/content-engine/container-policies) hold edits for a moderator, a successful save does not mean the change is live. This guide adds what an author needs on the edit page: the form opens on their pending proposal, a notice says what is waiting or why it was declined, and the toast after a save tells the truth.
 
-The example is the Forum plugin's edit page, `plugins/forum/src/pages/topic-edit-page.tsx`, which already does all of this. Its code below is excerpts from that file.
+The example is the Forum plugin's edit page, `plugins/forum/src/pages/topic-edit-page.tsx`. The code below follows that file, with one deliberate difference: the notice reads only the server's `approval`, as [Why the notice ignores ?submitted=1](#why-the-notice-ignores-submitted1) explains.
 
 ## Before you begin
 
@@ -34,7 +35,10 @@ Approval only exists for records filed in a container whose definition has `poli
 - **A record filed in it.** `forum.topic` has `forum: field.container({ definition: forumContainers, required: true })`. A comment can inherit its topic's forum with `field.relation({ target: () => topicContentType, container: true })`.
 - **A rule that waits.** In the AdminCP, open `/admin/containers/forum/forums`, choose **Publishing** in a forum's row menu, set **Edits to published posts** to **Wait for approval** for topics and choose **Save rules**.
 
-You also need an edit page that loads `GET /{id}/edit` and saves with `useContentPublicWrite`, like the [Edit form](/docs/content-engine/public-write-edit), and a member who is not a moderator in that forum.
+You also need an edit page that loads `GET /{id}/edit` and saves with `useContentPublicWrite`, like the [Edit form](/docs/content-engine/public-write-edit), and a member who is not a moderator in that forum. The excerpts use two names from such a page:
+
+- **`EditableTopic`** is the record type the loader returns, `Extract<TopicEditData, { state: "ready" }>["record"]`, declared like `EditableArticle` in [Load the editable values](/docs/content-engine/public-write-edit#load-the-editable-values).
+- **`TopicFormValues`** is the values type of the shared form, exported from `plugins/forum/src/pages/topic-form.tsx` like `ArticleFormValues` from the article form.
 
 The newsroom tutorial's articles are not filed in a container, so `approval` is always `null` for them. A content type without a container keeps its drafts as plain drafts, even with `create.status: "draft"`; see [Drafts and approval](/docs/content-engine/approvals#drafts-and-approval).
 
@@ -57,6 +61,11 @@ With approval on, an edit page handles three different things. Keep them apart, 
 When the author reopens a page whose edit is pending, the form should show what they sent, not the live text. `approval.values` is untyped, so parse the fields the form knows and fall back to the live value for the rest:
 
 ```tsx title="plugins/forum/src/pages/topic-edit-page.tsx (excerpt)"
+import { zodRichTextDocument } from "@vitnode/core/content";
+import { z } from "zod";
+
+import type { TopicFormValues } from "./topic-form";
+
 const zodProposedValues = z
   .object({
     body: zodRichTextDocument.optional(),
@@ -84,19 +93,27 @@ Use `formValuesOf(record)` wherever the basic edit form used `record.values` for
 
 <Step>
 
-### Show a notice above the form
+### Show a notice from the server's answer
 
-`approval` is `null` when nothing waits. Otherwise it is a pending submission, or a rejected one nothing has replaced yet. Render one notice for each case:
+`approval` is `null` when nothing waits. Otherwise it is a pending submission, or a rejected one nothing has replaced yet. The notice reads that object and nothing else:
 
 ```tsx title="plugins/forum/src/pages/topic-edit-page.tsx (excerpt)"
+import type { ContentApprovalState } from "@vitnode/core/content";
+
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@vitnode/core/components/ui/alert";
+import { HourglassIcon, XCircleIcon } from "lucide-react";
+import { useTranslations } from "use-intl";
+
+/** Reads only the server's answer: a URL or a draft status never adds a notice. */
 const ApprovalNotice = ({
   approval,
-  status,
-  submitted,
 }: {
+  /** Only what the notice reads, so the edit route's JSON answer fits as is. */
   approval: null | Pick<ContentApprovalState, "kind" | "reason" | "status">;
-  status: EditableTopic["status"];
-  submitted: boolean;
 }) => {
   const t = useTranslations("@vitnode/forum.topics.approval");
 
@@ -113,25 +130,13 @@ const ApprovalNotice = ({
     );
   }
 
-  if (approval?.status === "pending" && approval.kind === "edit") {
-    return (
-      <Alert icon={<HourglassIcon />} variant="info">
-        <AlertTitle>{t("pending_edit.title")}</AlertTitle>
-        <AlertDescription>{t("pending_edit.desc")}</AlertDescription>
-      </Alert>
-    );
-  }
+  if (approval?.status === "pending") {
+    const key = approval.kind === "edit" ? "pending_edit" : "pending_create";
 
-  if (
-    submitted ||
-    (status === "draft" &&
-      approval?.status === "pending" &&
-      approval.kind === "create")
-  ) {
     return (
       <Alert icon={<HourglassIcon />} variant="info">
-        <AlertTitle>{t("pending_create.title")}</AlertTitle>
-        <AlertDescription>{t("pending_create.desc")}</AlertDescription>
+        <AlertTitle>{t(`${key}.title`)}</AlertTitle>
+        <AlertDescription>{t(`${key}.desc`)}</AlertDescription>
       </Alert>
     );
   }
@@ -141,9 +146,10 @@ const ApprovalNotice = ({
 ```
 
 - **Rejected** shows the moderator's reason when there is one. The author can edit and save again, which opens a new submission.
-- **Pending edit** says readers still see the published version.
-- **Pending create** covers a new topic that waits. `submitted` is `true` when the create page sent the author here with `?submitted=1`, so the notice shows before the edit route answers.
-- A draft with `approval: null` gets no notice: nothing waits for a moderator, and the page must not say so.
+- **Pending edit** says readers still see the published version. **Pending create** covers a new topic that waits for its first approval.
+- **Nothing else.** A draft with `approval: null` gets no notice, because nothing waits for a moderator.
+
+The route's loader awaits `GET /{id}/edit` before the page renders, so the notice is in the first render; there is no moment where the page has to guess.
 
 </Step>
 
@@ -154,6 +160,14 @@ const ApprovalNotice = ({
 `PATCH /{id}` answers with the record's `approval`, `slug` and `status`. Keep them in state, so the notice and the **View topic** link follow every save, and pick the toast from `approval`:
 
 ```tsx title="plugins/forum/src/pages/topic-edit-page.tsx (excerpt)"
+import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
+
+import { invalidateForumTopics } from "./forum-queries";
+
+// Inside the form component, next to `useContentPublicWrite`:
+const queryClient = useQueryClient();
 const [current, setCurrent] = useState({
   approval: record.approval,
   slug: record.slug,
@@ -182,7 +196,7 @@ if (updated.approval?.status === "pending") {
 }
 ```
 
-Render `<ApprovalNotice approval={current.approval} status={current.status} submitted={submitted} />` above `{write.conflict}` and the form. A proposal is checked against the record's `version` like any edit, so the conflict alert keeps working.
+Render `<ApprovalNotice approval={current.approval} />` above `{write.conflict}` and the form. `invalidateForumTopics` refreshes the forum's cached topic lists; in your plugin, invalidate your own list's query key, as the [Edit form](/docs/content-engine/public-write-edit#update-the-form-and-the-cached-lists) does. A proposal is checked against the record's `version` like any edit, so the conflict alert keeps working.
 
 </Step>
 
@@ -250,4 +264,11 @@ Sign in as a member who wrote a published topic in the forum that waits for edit
   alt="The Forum plugin's Edit topic page with the notice A moderator declined this and the reason Please keep the title about the whole editor, not only the toolbar, above the title and message fields"
 />
 
-Approving instead applies the proposal: the public page shows the new title, and `approval` is `null` again.
+4. Save another change and approve it instead. Reload: there is no notice, the form shows the new title, and so does the public page.
+5. Add `?submitted=1` to the edit URL, or open a topic that staff unpublished in the AdminCP, which is a draft with `approval: null`. Neither shows a notice.
+
+## Why the notice ignores ?submitted=1
+
+The Forum's own file also takes a `submitted` flag. Its create page sends the author to `/forum/topics/{id}/edit?submitted=1` when a new topic waits for approval or has no slug, `topicEditSearch` in `plugins/forum/src/pages/forum-links.ts` turns `true`, `"true"`, `1` or `"1"` into `{ submitted: true }`, and the page passes it to its notice, which then shows **Waiting for a moderator**.
+
+Do not copy that part. The edit route already returns `approval: { status: "pending", kind: "create" }` for a topic that waits, so the flag adds nothing, and a URL cannot know the server's state: a bookmarked, shared or hand-typed `?submitted=1` would show the notice on a topic with nothing pending. Read the notice from `approval` alone, as above.

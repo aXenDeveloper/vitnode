@@ -29,7 +29,27 @@ Comments are records of their own: a comment content type that points at the art
 
 ## Before you begin
 
-You need the newsroom article page from [Content page](/docs/content-engine/public-pages), and articles with `author` and `publicWrite` from [Member writing](/docs/content-engine/public-write), so members can sign in and write. The plugin also needs `@tanstack/react-query`; [Embedded list](/docs/content-engine/public-lists-embed#add-tanstack-query-to-the-plugin) and [Create form](/docs/content-engine/public-write-frontend#add-tanstack-query-to-the-plugin) add it.
+You need:
+
+- **The article type with its public API and public page**, from the beginner path up to [Content page](/docs/content-engine/public-pages). The article itself needs no `author` and no `publicWrite`: staff can keep writing every article in the AdminCP. The comment type below has its own `author` field and its own `publicWrite`, which is what lets members comment.
+- **Member accounts.** Signing in is part of every VitNode app; it does not depend on members writing articles.
+- **`@tanstack/react-query` in the plugin.** Skip this if [Embedded list](/docs/content-engine/public-lists-embed#add-tanstack-query-to-the-plugin) or [Create form](/docs/content-engine/public-write-frontend#add-tanstack-query-to-the-plugin) already added it; otherwise run this from the workspace root:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Add TanStack Query">
+
+```bash tab="bun"
+bun add @tanstack/react-query --cwd plugins/newsroom
+```
+
+```bash tab="pnpm"
+pnpm --filter newsroom add @tanstack/react-query
+```
+
+```bash tab="npm"
+npm install @tanstack/react-query --workspace newsroom
+```
+
+</Tabs>
 
 <Steps>
 
@@ -415,7 +435,7 @@ export default CommentComposer;
 
 - **The request** posts `{ values: { article, body, parent } }`; `parent: null` answers the article itself. The server fills `author` from the session.
 - **`write.submit`** returns the stored comment, or `null` after showing why the server said no, such as an expired session.
-- **The outcome** reads both `approval` and `status`. A comment waiting for a moderator is also a draft, so `approval` is checked first. Only `"published"` means the comment is in the public thread.
+- **The outcome** reads both `approval` and `status`. A comment waiting for a moderator is also a draft, so `approval` is checked first.
 - The file has a default export because the section loads it with `lazy`: the editor is heavy, and most readers never write.
 
 </Step>
@@ -598,7 +618,7 @@ export const CommentSection = ({
 
 - **`useInfiniteQuery`** reads the pages the article's loader warms in the next step, so the comments are in the server-rendered HTML. When that warm-up failed, it loads them in the browser.
 - **One state at a time.** `isPending` shows a skeleton with one screen reader label, an error with no comments shows **Try again**, an empty thread says so, and anything else is the list. A failed refetch keeps the comments already on screen.
-- **`onPosted`** is honest about the outcome. **Comment posted** only appears for a published comment, and only then is the thread refreshed: TanStack Query refetches every loaded page from the first, so the new comment and the heading's count update together. A draft or pending comment gets its own message and leaves the thread as it is, because readers cannot see it.
+- **`onPosted`** refreshes the thread only for a published comment: TanStack Query refetches every loaded page from the first, so the new comment and the heading's count update together. Drafts and pending comments only get their message; see [What a new comment can become](#what-a-new-comment-can-become).
 - **Load more comments** calls `fetchNextPage` with the last cursor. It is disabled during any fetch, so a double click never loads a page twice.
 - **Guests** see a sign-in link that brings them back to the article.
 
@@ -704,12 +724,13 @@ The error toasts of `useContentPublicWrite` come from core and need no labels.
 
 ## Check the result
 
-Open an article with no comments yet, such as `/news/our-community-garden`:
+Open `/news/welcome-to-the-newsroom`, the article staff created in [First content type](/docs/content-engine/create-a-content-type) and published in [Drafts & publishing](/docs/content-engine/publication):
 
 1. Signed out, the section shows **No comments yet** and **Sign in to comment**.
 2. Sign in as a member, write a comment and click **Post comment**. **Comment posted** appears, the comment shows with your name, the heading reads **1 comment**, and the editor is empty again.
 3. Sign in as another member and comment too. The heading reads **2 comments**.
-4. Optional: set `create.status` to `"draft"` in `src/content/comment.ts` and post again. **Comment saved as a draft** appears, and the list and the count stay as they were, because a draft is not public. Set it back to `"published"` afterwards.
+
+Optional: set `create.status` to `"draft"` in `src/content/comment.ts` and post again. **Comment saved as a draft** appears, and the list and the count stay as they were, because a draft is not public. Set it back to `"published"` afterwards.
 
 <ImgDocs
   withoutBackground
