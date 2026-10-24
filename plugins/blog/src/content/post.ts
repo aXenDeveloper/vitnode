@@ -13,7 +13,8 @@ import { blogCategoryContentType } from "./category";
  *   30-minute preview links and live editing in the AdminCP.
  * - Duplication, hiding (visibility) and user reports for moderation.
  * - A public API at `content/blog`, site search, and delivery with SEO
- *   metadata, sitemap and hreflang entries and redirects from retired slugs.
+ *   metadata, a generated Open Graph image, sitemap and hreflang entries and
+ *   redirects from retired slugs.
  * - At least one category; a category that still has articles cannot be
  *   deleted.
  *
@@ -144,6 +145,12 @@ export const blogPostContentType = defineContentType({
     seo: {
       titleField: "title",
       descriptionField: "content",
+      // A generated 1200 x 630 card per article and language, drawn from the
+      // same title and description, with the cover when the article has one.
+      // Needs `ogImages` in the API config; without it nothing is generated.
+      openGraph: {
+        image: { coverField: "coverImage", altField: "coverImageAlt" },
+      },
     },
     sitemap: { changeFrequency: "weekly", priority: 0.7 },
     hreflang: { xDefault: "defaultLocale" },

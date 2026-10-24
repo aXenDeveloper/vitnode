@@ -1,0 +1,38 @@
+---
+title: Preview Open Graph images in the AdminCP
+description: Try every registered VitNode Open Graph image template with temporary text, language and cover in AdminCP → SEO → OG Images.
+icon: Eye
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import preview from "./admincp-og-images-preview.webp";
+
+**AdminCP → SEO → OG Images** renders a card with any template registered in [`ogImages.templates`](/docs/dev/og-images/templates), using text and a cover you type in. It runs the same generator as public pages, so what you see is what a crawler gets. Nothing you enter is saved, and templates and branding stay in `vitnode.api.config.ts`.
+
+<ImgDocs
+  withoutBackground
+  src={preview}
+  alt="AdminCP OG Images page: a form with Template VitNode (default), Language Polski, a Polish title and description and a picked sunset-cover.jpg, and a Preview card showing the rendered image with the cover on the right"
+/>
+
+## Render a preview
+
+1. Open **AdminCP → SEO → OG Images**. The page renders a sample card with the default template right away.
+2. Pick a **Template**. The configured default is marked `(default)`.
+3. Pick a **Language** when the site has more than one. It sets the card's `lang`, which a template may use to pick wording or fonts.
+4. Change the **Title** and **Description**.
+5. Optionally choose a **Cover image**: JPEG, PNG, WebP or AVIF up to 5 MB. The file stays in your browser and is sent only with the preview request. It is not uploaded to storage.
+6. Select **Refresh preview**. While the card renders, the button shows a spinner and the old image dims.
+
+If the API refuses the input, the error is shown above the image. With no `ogImages` block in the API config, the page explains how to turn images on instead of showing the form.
+
+## Who can open it
+
+The page needs the **SEO → Preview Open Graph images** permission (`seo` / `can_view` of `@vitnode/core`). Root roles have it already; grant it to other administrators in **AdminCP → Staff → Administrators**. Both API routes behind the page check it:
+
+| Route                                                 | Answers                                                              |
+| ----------------------------------------------------- | -------------------------------------------------------------------- |
+| `GET /api/@vitnode/core/admin/seo/og-images`          | Template ids, labels and versions, languages and the image size      |
+| `POST /api/@vitnode/core/admin/seo/og-images/preview` | The PNG, as `multipart/form-data` in, `Cache-Control: private, no-store` out |
+
+Without an AdminCP session or the permission, both answer `403`. Template code, fonts and logo bytes never leave the server.

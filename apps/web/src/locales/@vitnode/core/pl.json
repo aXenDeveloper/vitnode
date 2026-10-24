@@ -39,6 +39,8 @@
   "@vitnode/core:roles:can_edit": "Edytowanie ról",
   "@vitnode/core:roles:can_edit_admin": "Edytowanie ról z uprawnieniami administratora",
   "@vitnode/core:roles:can_view": "Wyświetlanie listy ról",
+  "@vitnode/core:seo": "SEO",
+  "@vitnode/core:seo:can_view": "Podgląd obrazów Open Graph",
   "@vitnode/core:staff_admins": "Zespół: Administratorzy",
   "@vitnode/core:staff_admins:can_create": "Tworzenie administratorów",
   "@vitnode/core:staff_admins:can_delete": "Usuwanie administratorów",
@@ -514,6 +516,10 @@
           "cron": "Zadania cron",
           "queue": "Zadania w kolejce",
           "search": "Indeks wyszukiwania"
+        },
+        "seo": {
+          "title": "SEO",
+          "og_images": "Obrazy OG"
         }
       },
       "search": {
@@ -1722,6 +1728,39 @@
             "title": "Korekty kosztu",
             "change": "{from} → {to}"
           }
+        }
+      }
+    },
+    "seo": {
+      "og_images": {
+        "title": "Obrazy OG",
+        "desc": "Podejrzyj karty, które pokazują Twoje strony, gdy ktoś udostępnia link w mediach społecznościowych i komunikatorach.",
+        "config_note": "Szablony, czcionki, kolory i logo ustawia się w <code>ogImages</code> w pliku <code>vitnode.api.config.ts</code>. Nic na tej stronie nie jest zapisywane - pola służą tylko do podglądu.",
+        "docs_link": "Jak działają obrazy OG",
+        "disabled": {
+          "title": "Obrazy OG są wyłączone",
+          "desc": "Dodaj <code>ogImages: {}</code> do <code>buildApiConfig</code> w pliku <code>vitnode.api.config.ts</code> i uruchom serwer ponownie, aby je włączyć."
+        },
+        "form": {
+          "template": "Szablon",
+          "template_default": "{label} (domyślny)",
+          "locale": "Język",
+          "title": "Tytuł",
+          "description": "Opis",
+          "cover": "Obraz okładki",
+          "cover_desc": "Opcjonalnie. Wybierany z Twojego urządzenia i wysyłany tylko do wygenerowania tego podglądu.",
+          "refresh": "Odśwież podgląd"
+        },
+        "sample": {
+          "title": "Witaj w naszej społeczności: co nowego w tym tygodniu",
+          "description": "Nowe artykuły, nadchodzące wydarzenia i najlepsze dyskusje w jednym miejscu."
+        },
+        "preview": {
+          "title": "Podgląd",
+          "alt": "Podgląd obrazu Open Graph: {title}",
+          "loading": "Generowanie podglądu...",
+          "error": "Nie udało się wygenerować podglądu.",
+          "size": "{width} × {height} PNG, wygenerowany tym samym generatorem co Twoje publiczne strony"
         }
       }
     }

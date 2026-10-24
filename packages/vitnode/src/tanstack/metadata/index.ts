@@ -1,5 +1,7 @@
 import type { VitNodeMetadata } from "@/lib/metadata";
+import type { OgImageDescriptor } from "@/og-image";
 
+import { CONFIG } from "@/lib/config";
 import { formatPageTitle } from "@/lib/metadata";
 import { getVitNodeConfig } from "@/vitnode.config";
 
@@ -30,6 +32,14 @@ export type RouteOpenGraphType = "article" | "website";
 export interface RouteOpenGraph {
   /** The `<meta property="og:description">`. */
   description?: string;
+
+  /**
+   * The image a link preview shows. Emits `og:image` (with its size, type and
+   * alt text when given) and a `summary_large_image` Twitter card. A
+   * root-relative URL is made absolute with the public site origin
+   * (`VITNODE_WEB_URL`); anything but `http(s)` is dropped.
+   */
+  image?: OgImageDescriptor;
 
   /** The `<meta property="og:title">`, used as is - no site-name suffix. */
   title?: string;
@@ -75,6 +85,56 @@ const alternateLinksOf = (
 ): RouteHeadLink[] =>
   alternates && locale ? localeAlternateLinks({ alternates, locale }) : [];
 
+/**
+ * `url` as an absolute `http(s)` URL - root-relative ones resolved against
+ * `origin` - or `undefined` for anything a crawler could not fetch.
+ */
+export const absoluteOgImageUrl = (
+  url: string,
+  origin: () => string | URL = () => CONFIG.web,
+): string | undefined => {
+  if (url.startsWith("//")) return undefined;
+
+  try {
+    const resolved = url.startsWith("/")
+      ? new URL(url, origin())
+      : new URL(url);
+
+    return resolved.protocol === "https:" || resolved.protocol === "http:"
+      ? resolved.href
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const isPositiveInteger = (value: number | undefined): value is number =>
+  value !== undefined && Number.isInteger(value) && value > 0;
+
+const imageMeta = (image: OgImageDescriptor | undefined): RouteHeadMeta[] => {
+  if (!image) return [];
+
+  const url = absoluteOgImageUrl(image.url);
+  if (url === undefined) return [];
+
+  const alt = image.alt?.trim();
+
+  return [
+    { content: url, property: "og:image" },
+    ...(image.type ? [{ content: image.type, property: "og:image:type" }] : []),
+    ...(isPositiveInteger(image.width)
+      ? [{ content: String(image.width), property: "og:image:width" }]
+      : []),
+    ...(isPositiveInteger(image.height)
+      ? [{ content: String(image.height), property: "og:image:height" }]
+      : []),
+    ...(alt ? [{ content: alt, property: "og:image:alt" }] : []),
+    { content: "summary_large_image", name: "twitter:card" },
+    { content: url, name: "twitter:image" },
+    ...(alt ? [{ content: alt, name: "twitter:image:alt" }] : []),
+  ];
+};
+
 const routeMeta = (
   metadata: VitNodeMetadata,
   {
@@ -103,6 +163,7 @@ const routeMeta = (
   ...(openGraph?.type
     ? [{ content: openGraph.type, property: "og:type" }]
     : []),
+  ...imageMeta(openGraph?.image),
 ];
 
 /** {@link pageHead} with explicit site metadata, for code that runs before the config is registered. */
@@ -133,9 +194,10 @@ export const createRouteHead =
 
 /**
  * A route's `head` from translated page data: title (suffixed with the site
- * name from `buildConfig({ metadata })`), description, robots, Open Graph and
- * locale alternates. Universal; use it in a route's `head`, written after
- * `loader` so `loaderData` is typed.
+ * name from `buildConfig({ metadata })`), description, robots, Open Graph
+ * (with an optional `og:image` and Twitter card) and locale alternates.
+ * Universal; use it in a route's `head`, written after `loader` so
+ * `loaderData` is typed. Fields left unset emit nothing.
  *
  * @throws When the VitNode config has not been registered with `buildConfig`.
  *
@@ -148,6 +210,16 @@ export const createRouteHead =
  *     title: loaderData?.title,
  *     description: loaderData?.description,
  *     robots: loaderData ? "index, follow" : "noindex, nofollow",
+ *     openGraph: loaderData && {
+ *       title: loaderData.title,
+ *       image: {
+ *         url: `/api/@acme/shop/products/${loaderData.id}/og-image`,
+ *         width: 1200,
+ *         height: 630,
+ *         type: "image/png",
+ *         alt: loaderData.title,
+ *       },
+ *     },
  *   }),
  * ```
  */

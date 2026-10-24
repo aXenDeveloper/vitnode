@@ -32,6 +32,7 @@ const harness = () => {
     alternates: vi.fn(),
     findById: vi.fn(),
     history: vi.fn(),
+    ogImageSource: vi.fn(),
     resolvePath: vi.fn(),
     resolveSlug: vi.fn(),
     sitemap: vi.fn(),

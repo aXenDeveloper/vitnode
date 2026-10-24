@@ -52,6 +52,7 @@
     "zod": "^4.x.x"
   },
   "devDependencies": {
+    "@fontsource/inter": "^5.3.0",
     "@hono/zod-openapi": "^1.6.3",
     "@hono/zod-validator": "^0.9.1",
     "@react-email/ui": "^6.11.1",
@@ -126,6 +127,16 @@
       "import": "./dist/src/content/rich-text/index.js",
       "types": "./dist/src/content/rich-text/index.d.ts",
       "default": "./dist/src/content/rich-text/index.js"
+    },
+    "./og-image": {
+      "import": "./dist/src/og-image/index.js",
+      "types": "./dist/src/og-image/index.d.ts",
+      "default": "./dist/src/og-image/index.js"
+    },
+    "./og-image/server": {
+      "import": "./dist/src/og-image/server/index.js",
+      "types": "./dist/src/og-image/server/index.d.ts",
+      "default": "./dist/src/og-image/server/index.js"
     },
     "./components/rich-text": {
       "import": "./dist/src/components/rich-text/index.js",
@@ -274,6 +285,7 @@
     "@tiptap/starter-kit": "^3.31.4",
     "@tiptap/suggestion": "^3.31.4",
     "@tiptap/y-tiptap": "^3.0.9",
+    "@vercel/og": "0.11.1",
     "ai": "^7.0.134",
     "class-variance-authority": "^0.7.1",
     "cmdk": "^1.1.1",

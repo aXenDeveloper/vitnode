@@ -128,6 +128,67 @@ describe("contentDeliveryPageHead", () => {
     expect(head.description?.endsWith("…")).toBe(true);
   });
 
+  it("forwards the Open Graph text and the generated image", () => {
+    const head = contentDeliveryPageHead(
+      metadata({
+        ogImage: {
+          alt: "Okładka",
+          height: 630,
+          type: "image/png",
+          url: "https://api.example.com/og/7.png?v=abc",
+          width: 1200,
+        },
+        openGraph: { description: "<p>Opis.</p>", title: "Witaj!" },
+      }),
+    );
+
+    expect(head.openGraph).toStrictEqual({
+      description: "Opis.",
+      image: {
+        alt: "Okładka",
+        height: 630,
+        type: "image/png",
+        url: "https://api.example.com/og/7.png?v=abc",
+        width: 1200,
+      },
+      title: "Witaj!",
+      type: "article",
+    });
+  });
+
+  it("falls back to the page's title and description for an image without Open Graph text", () => {
+    const head = contentDeliveryPageHead(
+      metadata({
+        ogImage: {
+          alt: null,
+          height: 630,
+          type: "image/png",
+          url: "https://api.example.com/og/7.png",
+          width: 1200,
+        },
+        openGraph: null,
+      }),
+    );
+
+    expect(head.openGraph).toStrictEqual({
+      description: "Pierwszy wpis.",
+      image: {
+        height: 630,
+        type: "image/png",
+        url: "https://api.example.com/og/7.png",
+        width: 1200,
+      },
+      title: "Witaj świecie",
+      type: "article",
+    });
+  });
+
+  it("declares no Open Graph without Open Graph text or an image", () => {
+    expect(
+      contentDeliveryPageHead(metadata({ ogImage: null, openGraph: null })),
+    ).not.toHaveProperty("openGraph");
+  });
+
   it("leaves the alternates of a single-language type to the host", () => {
     expect(
       contentDeliveryPageHead(

@@ -146,6 +146,8 @@ export const vitNodeApiConfig = buildApiConfig({
   //   points: 20, // 20 requests
   //   duration: 60, // per 60 seconds
   // },
+  // Generated Open Graph images with the built-in template and fonts.
+  ogImages: {},
   metadata: {
     title: "VitNode API",
     shortTitle: "VitNode",

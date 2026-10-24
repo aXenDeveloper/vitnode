@@ -1,0 +1,56 @@
+---
+title: Open Graph image caching and runtimes
+description: How VitNode caches generated Open Graph images, when they are rendered again, which HTTP headers they carry and where the generator runs.
+icon: Zap
+---
+
+A card is rendered the first time someone requests its URL, then served from a cache until anything drawn on it changes. This page explains what decides "changed", what stays safe when content goes private, and where the generator runs.
+
+## When a card is rendered again
+
+Every cached card is stored under a key built from everything that shapes it:
+
+- the plugin, content type and record id (or your route's `identity`);
+- the locale the content was actually served in, after any fallback;
+- the title, description, canonical URL, the cover's stored object and its alt text;
+- the template id and its `version`;
+- the install's branding: site name, logo, theme, font names and `ogImages.version`.
+
+Values are read from the database on every request, so editing a title, swapping a cover, renaming the site or bumping a template's `version` produces a new key and a fresh render. There is nothing to purge by hand. Old entries are never served again and expire on their own.
+
+The `v` query parameter on Content Engine image URLs is a short fingerprint of the same values. It only makes crawlers that cache by URL fetch the new card. The route ignores it.
+
+## Private content stays private
+
+The Content Engine image route reads the record as an anonymous visitor before it answers, on every request, including when the card is already cached. A draft, an unpublished or deleted record, a [hidden](/docs/content-engine/content-visibility) record or a record whose parent is not public answers `404`, even for an admin who could open the page itself. The same rule applies to the delivery metadata: a hidden record's page carries no `og:image`.
+
+<Callout type="warn">
+  Public images are sent with `Cache-Control: public, max-age=300`. A CDN or a social network may keep a copy for those five minutes, or longer under its own rules, and no check in VitNode can reach a copy that has already left the server. Unpublish before you share a link if timing matters.
+</Callout>
+
+Responses also carry an `ETag`, so a crawler that already has the card gets `304 Not Modified`, and `x-vitnode-og-cache: hit` or `miss`. AdminCP previews use `private, no-store` and are never cached.
+
+## Where cards are stored
+
+| Store              | Used when          | Behavior                                                                                       |
+| ------------------ | ------------------ | ---------------------------------------------------------------------------------------------- |
+| Process memory     | Always             | Up to 32 MB of PNGs per process, least recently used dropped first                              |
+| Redis              | `REDIS_URL` is set | Shared by every instance, as base64 under the `og-image:` system key, for up to 7 days          |
+
+Without Redis each instance renders and keeps its own copies, which is fine for one server. With several instances, set `REDIS_URL` so a card is rendered once.
+
+Requests for the same card that arrive together in one process share one render, and a process renders at most two cards at a time so a burst of first requests cannot starve other requests. Two instances may still render the same new card once each.
+
+When a cover or logo cannot be loaded (a timeout, a missing file), the card is rendered without it and not cached, so the next request tries again.
+
+## Runtimes
+
+The generator runs inside the API, on Node.js 22 or newer, wherever your VitNode API runs: `vitnode start`, a Docker image or any Node.js host. It needs no Vercel account and no Vercel hosting.
+
+- VitNode pins `@vercel/og` 0.11. The 1.0 Node build crashes outside a CommonJS-shimmed bundle (`Dynamic require of "fs" is not supported`).
+- `@vercel/og` reads its WebAssembly renderer and fallback font from its own package folder, so it must stay in `node_modules` rather than being inlined into a single-file bundle. A `vitnode build` output keeps it there.
+- Rendering takes roughly 50-300 ms of CPU per card, plus the first request's one-off font and WebAssembly load.
+- The bundled Inter fonts ship inside `@vitnode/core` as a lazily loaded module, so no font file has to be copied next to the server bundle.
+- Covers and logos are resized with `sharp`. When `sharp` cannot load (a missing native build), PNG, JPEG, WebP and SVG images up to 4 MB are drawn as they are, and others, such as AVIF covers, are skipped with a warning in the server log.
+- Edge runtimes are not supported: the generator uses Node.js APIs and the Node build of `@vercel/og`.
+- Emoji and scripts outside the configured fonts are downloaded from a CDN while rendering. See [Use your own fonts](/docs/dev/og-images/templates#use-your-own-fonts).

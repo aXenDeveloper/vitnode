@@ -1,8 +1,10 @@
+import type { OgImageDescriptor } from "@/og-image";
 import type { PluginRouteHead, PluginRouteRobots } from "@/routing";
 
 import type {
   LocaleAlternates,
   RouteHeadOptions,
+  RouteOpenGraph,
   RouteRobots,
 } from "../metadata";
 
@@ -19,6 +21,47 @@ const isRobots = (value: unknown): value is RouteRobots =>
 
 const asText = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;
+
+const asDimension = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : undefined;
+
+const asImage = (value: unknown): OgImageDescriptor | undefined => {
+  if (typeof value !== "object" || value === null) return undefined;
+
+  const { alt, height, type, url, width } = value as Record<string, unknown>;
+  const href = asText(url);
+  if (href === undefined) return undefined;
+
+  const image: OgImageDescriptor = { url: href };
+  const altText = asText(alt);
+  const mimeType = asText(type);
+  const imageWidth = asDimension(width);
+  const imageHeight = asDimension(height);
+  if (altText !== undefined) image.alt = altText;
+  if (mimeType !== undefined) image.type = mimeType;
+  if (imageWidth !== undefined) image.width = imageWidth;
+  if (imageHeight !== undefined) image.height = imageHeight;
+
+  return image;
+};
+
+const asOpenGraph = (value: unknown): RouteOpenGraph | undefined => {
+  if (typeof value !== "object" || value === null) return undefined;
+
+  const { description, image, title, type } = value as Record<string, unknown>;
+  const openGraph: RouteOpenGraph = {};
+  const ogDescription = asText(description);
+  const ogImage = asImage(image);
+  const ogTitle = asText(title);
+  if (ogDescription !== undefined) openGraph.description = ogDescription;
+  if (ogImage !== undefined) openGraph.image = ogImage;
+  if (ogTitle !== undefined) openGraph.title = ogTitle;
+  if (type === "article" || type === "website") openGraph.type = type;
+
+  return Object.keys(openGraph).length > 0 ? openGraph : undefined;
+};
 
 const asAlternates = (value: unknown): LocaleAlternates | undefined => {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -38,16 +81,18 @@ export const normalizePluginRouteHead = (
 ): RouteHeadOptions => {
   if (typeof declared !== "object" || declared === null) return {};
 
-  const { alternates, description, robots, title } =
+  const { alternates, description, openGraph, robots, title } =
     declared as PluginRouteHead;
   const head: RouteHeadOptions = {};
 
   const pageTitle = asText(title);
   const pageDescription = asText(description);
   const pageAlternates = asAlternates(alternates);
+  const pageOpenGraph = asOpenGraph(openGraph);
 
   if (pageAlternates !== undefined) head.alternates = pageAlternates;
   if (pageDescription !== undefined) head.description = pageDescription;
+  if (pageOpenGraph !== undefined) head.openGraph = pageOpenGraph;
   if (isRobots(robots)) head.robots = robots;
   if (pageTitle !== undefined) head.title = pageTitle;
 

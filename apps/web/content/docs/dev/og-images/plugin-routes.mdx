@@ -1,0 +1,112 @@
+---
+title: Open Graph images for your own pages
+description: Serve a generated og:image from a VitNode plugin's Hono route with ogImageResponse, and point a page at it with pageHead.
+icon: Route
+---
+
+A page that is not a Content Engine record can use the same generator. Your plugin adds one Hono route that loads the page's data, checks that it is public and hands it to `ogImageResponse`. The page then puts that route's URL in its `head`. No content type is needed.
+
+The route renders only data your server read itself. There is deliberately no route that turns query-string text into an image, because anyone could then put any words on a card with your logo.
+
+This guide uses an `@acme/shop` plugin with a `products` module. Turn images on with [`ogImages`](/docs/dev/og-images#turn-them-on) first.
+
+<Steps>
+<Step>
+
+### Add the image route
+
+Create a route in the plugin's API module. Load the product, answer `404` unless anyone may see it, and pass the trusted values to `ogImageResponse`:
+
+```ts title="plugins/shop/src/api/modules/products/routes/og-image.route.ts"
+import { z } from "@hono/zod-openapi";
+import { ogImageResponse } from "@vitnode/core/og-image/server";
+
+import { buildRoute } from "@/api/builders";
+
+import { findPublicProduct } from "../lib/find-public-product";
+
+export const productOgImageRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/{id}/og-image",
+    request: { params: z.object({ id: z.coerce.number().int().positive() }) },
+    responses: {
+      200: {
+        content: { "image/png": { schema: z.string().openapi({ format: "binary", type: "string" }) } },
+        description: "The product's link preview",
+      },
+      404: { description: "No public product" },
+    },
+  },
+  handler: async c => {
+    // Every request, cached image or not: a product can be unpublished at any time.
+    const product = await findPublicProduct(c, c.req.valid("param").id);
+    if (!product) return c.json({ error: "Not found" }, 404);
+
+    return await ogImageResponse(c, {
+      title: product.name,
+      description: product.summary,
+      cover: product.imageId ? { fileId: product.imageId, alt: product.name } : null,
+      url: `https://shop.example.com/products/${product.slug}`,
+      identity: ["product", product.id],
+    });
+  },
+});
+```
+
+Add `productOgImageRoute` to the module's `routes`. `findPublicProduct` is your own query; it must ignore who is asking, because the image is cached and served to everyone.
+
+</Step>
+<Step>
+
+### Point the page at it
+
+In the page route's `head`, pass the image to `pageHead`. A root-relative URL is made absolute with `VITNODE_WEB_URL`, because crawlers ignore relative image URLs:
+
+```ts title="plugins/shop/src/pages/product-page.tsx"
+head: ({ loaderData }) =>
+  pageHead({
+    title: loaderData?.name,
+    description: loaderData?.summary,
+    openGraph: loaderData && {
+      title: loaderData.name,
+      type: "website",
+      image: {
+        url: `/api/@acme/shop/products/${loaderData.id}/og-image`,
+        width: 1200,
+        height: 630,
+        type: "image/png",
+        alt: loaderData.name,
+      },
+    },
+  }),
+```
+
+The loader only builds the URL. The PNG is rendered when a crawler requests it, not when the page loads. A plugin page declared with `definePluginRoute` returns the same `openGraph` object from its `head`.
+
+</Step>
+</Steps>
+
+## What `ogImageResponse` accepts
+
+| Name          | Type                         | Required | Description                                                                                         |
+| ------------- | ---------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `title`       | `string`                     | Yes      | 1-300 characters after trimming                                                                     |
+| `description` | `string \| null`             | No       | Up to 1000 characters                                                                               |
+| `cover`       | `{ fileId }`, `{ url }` or `{ bytes }` | No | `fileId` is a `core_files` id read through the storage adapter. `url` must be public `https`. Up to 10 MB |
+| `locale`      | `string`                     | No       | Defaults to the API's default locale                                                                |
+| `url`         | `string \| null`             | No       | The page's canonical URL; the built-in template prints its host                                     |
+| `template`    | `string \| null`             | No       | A registered template id. Defaults to `ogImages.defaultTemplate`                                    |
+| `identity`    | `(string \| number)[]`       | No       | Extra parts of the cache key, for data the other fields do not capture                             |
+
+The second argument takes `{ cacheControl }`. Pass `OG_IMAGE_PRIVATE_CACHE_CONTROL` for anything that is not public.
+
+It answers `200 image/png` with an `ETag`, `304` when the client already has that image, `400` for a title or description outside the limits, and `404` while `ogImages` is off. An unknown `template` throws, because it is a configuration mistake. Use `generateOgImage` instead when you need the PNG bytes rather than a response.
+
+## Check the result
+
+```bash
+curl -sI http://localhost:3000/api/@acme/shop/products/1/og-image
+```
+
+The answer is `200` with `content-type: image/png`, `cache-control: public, max-age=300` and `x-vitnode-og-cache: miss`. Run it again and the header says `hit`.

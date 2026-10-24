@@ -3,6 +3,7 @@ import {
   FlagIcon,
   FolderTreeIcon,
   LayoutDashboardIcon,
+  SearchCheckIcon,
   ServerIcon,
   ShieldUserIcon,
   SparklesIcon,
@@ -162,6 +163,8 @@ const core = (
 
 export const ADMIN_PLUGINS_HREF = "/admin/core/system/plugins";
 
+export const ADMIN_OG_IMAGES_HREF = "/admin/core/seo/og-images";
+
 /** Core's own group, before the permission filter. */
 const coreNavGroup = (): AdminNavGroupDeclaration => ({
   id: "core",
@@ -242,6 +245,18 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           title: key("admin.global.nav.moderation.report_reasons"),
           href: "/admin/core/moderation/report-reasons",
           permission: core("report_reasons"),
+        },
+      ],
+    },
+    {
+      href: "/admin/core/seo",
+      title: key("admin.global.nav.seo.title"),
+      icon: <SearchCheckIcon />,
+      items: [
+        {
+          title: key("admin.global.nav.seo.og_images"),
+          href: ADMIN_OG_IMAGES_HREF,
+          permission: core("seo"),
         },
       ],
     },

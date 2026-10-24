@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import type {
   ContentDeliveryAlternate,
   ContentDeliveryHreflang,
+  ContentDeliveryOgImageSource,
   ContentDeliveryRobots,
   ContentDeliverySeo,
 } from "../delivery";
@@ -11,12 +12,16 @@ import type { ContentSitemapEntry } from "../sitemap";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDeliverySitemapPage } from "./delivery-sitemap";
 import type { ContentModel } from "./model";
+import type { ContentDeliveryOgImage } from "./og-image";
 import type { ContentSlugHistoryEntry } from "./slug-history-model";
 
+import { CONFIG } from "../../lib/config";
 import { CONTENT_DELIVERY_REDIRECT_STATUS } from "../const";
 import {
   contentDeliveryHreflang,
   contentDeliveryInternalPath,
+  contentDeliveryOgImageFields,
+  contentDeliveryOgImageSource,
   contentDeliveryOpenGraph,
   contentDeliveryPublicUrl,
   contentDeliveryRobots,
@@ -33,6 +38,7 @@ import { readContentDeliverySitemapPage } from "./delivery-sitemap";
 import { findViewableHiddenBySlug } from "./hidden-access";
 import { findContentLanguage, listContentLanguages } from "./language-resolver";
 import { contentLocaleRouting } from "./locale-routing";
+import { contentDeliveryOgImage } from "./og-image";
 import { createContentSlugHistoryModel } from "./slug-history-model";
 
 export interface ContentDeliveryMetadata {
@@ -51,6 +57,11 @@ export interface ContentDeliveryMetadata {
   itemId: ContentId | null;
   /** The language this response is actually in. */
   locale: null | string;
+  /**
+   * The generated `og:image`. `null` unless `delivery.seo.openGraph.image` is
+   * set, the install has `ogImages`, and the record is public.
+   */
+  ogImage: ContentDeliveryOgImage | null;
   /** `null` unless `delivery.seo.openGraph` is configured. */
   openGraph: ContentDeliverySeo | null;
   /** What was asked for, normalized. `null` for a nonlocalized content type. */
@@ -82,6 +93,14 @@ export interface ContentDeliverySitemapArgs {
   locale?: string;
 }
 
+/** What a record's generated card is drawn from, read as an anonymous visitor. */
+export interface ContentDeliveryOgImageRead {
+  canonicalUrl: null | string;
+  /** The language actually served, after any fallback. */
+  locale: null | string;
+  source: ContentDeliveryOgImageSource;
+}
+
 export interface ContentDeliveryService {
   alternates: (itemId: ContentId) => Promise<ContentDeliveryAlternate[]>;
   /** Delivery metadata by identifier, honouring the content type's fallback. */
@@ -94,6 +113,16 @@ export interface ContentDeliveryService {
     itemId: ContentId,
     options?: { locale?: string },
   ) => Promise<ContentSlugHistoryEntry[]>;
+
+  /**
+   * The card source of one record, or `null` unless it is published, visible
+   * and readable by anyone - never a hidden record, whoever asks. Honours the
+   * content type's locale fallback.
+   */
+  ogImageSource: (
+    itemId: ContentId,
+    options?: { locale?: string },
+  ) => Promise<ContentDeliveryOgImageRead | null>;
 
   resolvePath: (
     path: string,
@@ -170,6 +199,7 @@ export const createContentDeliveryService = <
     seo.openGraph?.titleField ?? null,
     seo.openGraph?.descriptionField ?? null,
     seo.noIndexField,
+    ...contentDeliveryOgImageFields(definition),
   ].filter((name): name is string => name !== null);
 
   const slugHistory = createContentSlugHistoryModel({
@@ -238,6 +268,16 @@ export const createContentDeliveryService = <
         !contentLocalesMatch(requestedLocale, locale),
       itemId,
       locale,
+      ogImage: hidden
+        ? null
+        : contentDeliveryOgImage({
+            config: c.get("core")?.ogImages ?? null,
+            definition,
+            itemId,
+            locale,
+            pluginId,
+            source: contentDeliveryOgImageSource(definition, row),
+          }),
       openGraph: contentDeliveryOpenGraph(definition, row),
       requestedLocale,
       hidden,
@@ -455,6 +495,46 @@ export const createContentDeliveryService = <
       });
 
       return await currentHistoryPaths(entries);
+    },
+
+    ogImageSource: async (itemId, { locale } = {}) => {
+      // The public read, never `hidden: true`: what a card shows is decided by
+      // what an anonymous visitor may read, not by who requested it.
+      const row = await buildPublic(c).findById(
+        itemId as ContentIdOf<TDefinition>,
+        { locale, select: metadataSelect },
+      );
+      if (!row) return null;
+
+      const values = row as Record<string, unknown>;
+      const source = contentDeliveryOgImageSource(definition, values);
+      if (!source) return null;
+
+      const slug = slugOf(definition, values);
+      const served = localeOf(definition, values);
+      const canonical =
+        slug === null
+          ? null
+          : contentDeliveryPublicUrl({
+              definition,
+              locale: served,
+              routing,
+              slug,
+            });
+
+      return {
+        canonicalUrl:
+          canonical === null
+            ? null
+            : canonical.origin === undefined
+              ? contentDeliveryUrl({
+                  origin: CONFIG.web.origin,
+                  path: canonical.pathname,
+                })
+              : contentPublicHref(canonical),
+        locale: served,
+        source,
+      };
     },
 
     resolvePath: async (path, { host, origin } = {}) => {

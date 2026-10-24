@@ -35,6 +35,7 @@
     "search-external",
     "search-elasticsearch",
     "storage",
+    "og-images",
     "email",
     "captcha",
     "sso",

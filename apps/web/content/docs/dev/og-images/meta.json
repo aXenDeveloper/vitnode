@@ -1,0 +1,6 @@
+{
+  "title": "Open Graph images",
+  "description": "Generated og:image cards for Content Engine records and your own pages",
+  "icon": "Image",
+  "pages": ["index", "templates", "plugin-routes", "admincp-preview", "caching"]
+}
