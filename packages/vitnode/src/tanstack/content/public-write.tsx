@@ -59,22 +59,36 @@ const versionOf = (record: unknown): number | undefined => {
  *
  * - `400`: each issue on a field in `fields` shows under that field; anything
  *   else, and every other refusal (`401`, `403`, `404`, `429`), is one toast.
- *   Messages come from core and follow the reader's language.
- * - `409 CONTENT_UNIQUE_CONFLICT` shows under `uniqueField`.
+ *   Messages come from `core.global.content_write` and follow the reader's
+ *   language.
+ * - `409 CONTENT_UNIQUE_CONFLICT` shows under `uniqueField`, or as a toast.
  * - `409 CONTENT_VERSION_CONFLICT` shows `conflict`: an alert that keeps the
- *   form as it is and offers "Keep my version" and "Load latest version".
+ *   form as it is and offers "Keep my version" (with `latestVersion`) and
+ *   "Load latest version", which reloads the page and drops unsaved input.
  *
  * For an edit, pass `version` and `latestVersion`, and send `expectedVersion`
  * from the `request` argument: the hook keeps it current after every save and
- * after "Keep my version". Browser-only.
+ * after "Keep my version". `version` is read once, so remount the form (with a
+ * `key`) for another record.
+ *
+ * On success it only returns the record. Success messages, a pending
+ * `approval`, `form.reset`, cache invalidation and navigation stay with the
+ * caller. Browser-only.
  *
  * @example
  * ```tsx
+ * import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
+ *
  * import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
+ * import { fetcher } from "@vitnode/core/tanstack/fetcher";
  *
  * const write = useContentPublicWrite({
  *   fields: ["title", "body"],
- *   latestVersion: async () => (await loadEditable(id))?.version ?? null,
+ *   latestVersion: async () => {
+ *     const res = await fetchEditable(record.id); // GET /{id}/edit
+ *
+ *     return res.status === 200 ? (await res.json()).version : null;
+ *   },
  *   uniqueField: "title",
  *   version: record.version,
  * });
@@ -86,10 +100,13 @@ const versionOf = (record: unknown): number | undefined => {
  *       method: "patch",
  *       module: "content/discussions",
  *       path: "/{id}",
- *       args: { params: { id }, body: { values, expectedVersion } },
+ *       args: { params: { id: record.id }, body: { values, expectedVersion } },
  *     }),
  *   );
- *   if (updated) toast.success(t("saved"));
+ *   if (!updated) return;
+ *
+ *   form.reset(values);
+ *   toast.success(t(updated.approval?.status === "pending" ? "pending" : "saved"));
  * };
  *
  * <>{write.conflict}<AutoForm onSubmit={onSubmit} ... /></>;
@@ -112,7 +129,7 @@ export const useContentPublicWrite = <
   latestVersion?: () => Promise<null | number>;
   /** Where "already taken" shows on a unique conflict, e.g. the slug's source field. */
   uniqueField?: string;
-  /** The version the form opened with. Leave it out for a create. */
+  /** The version the form opened with, read on the first render. Leave it out for a create. */
   version?: TVersion;
 }) => {
   const t = useTranslations("core.global.content_write");
@@ -246,7 +263,10 @@ export const useContentPublicWrite = <
   return {
     /** The version-conflict alert, or `null`. Render it above the form. */
     conflict,
-    /** Sends a write through `request` and returns the record on success, `null` otherwise. */
+    /**
+     * Sends a write through `request` - given the current `expectedVersion` -
+     * and returns the record on a `2xx`, or `null` after showing why not.
+     */
     submit,
   };
 };

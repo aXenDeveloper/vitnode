@@ -15,7 +15,7 @@ implementation:
     - Every indexed field except `authorField` must be in `publicApi.fields`.
     - Records saved before the change need a Reindex in Debug Panel → Search. Own code that writes records must use the editorial service with `contentEditorialEffects` to keep the index current.
   related:
-    - title: Public pages
+    - title: Content page
       href: /docs/content-engine/public-pages
     - title: Search
       href: /docs/dev/search
@@ -33,7 +33,7 @@ Add a `search` block to a content type and its published records show up on the 
 
 The content type needs [publication and a public API](/docs/content-engine/public-api), because a search result is a link to a public page and its text has to be public already. Without them, the definition throws when it loads: ``search needs `publication: true`.`` or ``search needs `publicApi: { path, fields }`.``
 
-It also needs a page that serves the result URL. [Public pages](/docs/content-engine/public-pages) shows how to add one.
+It also needs a page that serves the result URL. [Content page](/docs/content-engine/public-pages) shows how to add one.
 
 <Steps>
 

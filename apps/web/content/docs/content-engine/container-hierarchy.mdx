@@ -1,5 +1,5 @@
 ---
-title: Container hierarchy
+title: Container tree
 description: How Content Engine containers nest, order, move and delete, how concurrent edits stay consistent, and how to read and change a container tree from your own API routes with createContentContainerService.
 icon: ListTree
 ---
@@ -167,4 +167,4 @@ export const boardMovedListener = buildEventListener({
 
 Every write also expires the [page cache](/docs/content-engine/caching) entries that read the collection, including pages that list content filtered by one of its containers, so a renamed board shows its new name without a manual purge.
 
-Next, build pages on top of the tree in [Containers on the frontend](/docs/content-engine/container-frontend).
+Next, build pages on top of the tree in [Container pages](/docs/content-engine/container-frontend).

@@ -1,5 +1,5 @@
 ---
-title: Containers on the frontend
+title: Container pages
 description: Read Content Engine containers with the typed fetcher, render a nested board tree, list the records of a container and its subcontainers with includeDescendants, and let members create content inside a container through publicWrite.
 icon: AppWindow
 ---
@@ -27,7 +27,7 @@ Each item is `{ id, parentId, name, slug, position, depth, metadata }`, where `m
 
 ### Add the routes
 
-Register the two board pages in `src/routes.ts`, and give the create page a `search` parser so it can read `?board=`. A `pendingComponent` is drawn while the loader runs, so import it directly rather than through `lazy()`:
+Register the two board pages in `src/routes.ts`, and give the create page a `search` parser so it can read `?board=`. A `pendingComponent` is the fallback while a page suspends, not a navigation screen: navigations keep the current page and show the top progress bar. It can render before the page's chunk arrives, so import it directly rather than through `lazy()`:
 
 ```ts title="plugins/example/src/routes.ts"
 // [!code ++:4]

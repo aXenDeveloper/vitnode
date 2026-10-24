@@ -39,6 +39,11 @@
   --tw-prose-body: oklch(0.373 0.003 264);
 }
 
+/* Long paths and file names in inline code would otherwise widen the page on phones. */
+.prose :not(pre) > code {
+  overflow-wrap: anywhere;
+}
+
 @keyframes vt-enter {
   from {
     opacity: 0;

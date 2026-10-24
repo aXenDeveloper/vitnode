@@ -1,5 +1,5 @@
 ---
-title: Hide content
+title: Visibility
 description: Take a published VitNode Content Engine record off the public site, search and sitemap without unpublishing it, then bring it back with the same URL and publish date.
 icon: EyeOff
 ---
@@ -123,7 +123,7 @@ A record is public only when it is published, its `publishedAt` is not in the fu
 - The public API list leaves it out for everybody but the [people who can still see it](#who-can-still-see-it), and its detail route answers `404`, in every language, including a language that falls back to the default one.
 - Its [page](/docs/content-engine/public-pages) answers `404`, and so do its old slugs instead of redirecting.
 - The [sitemap](/docs/content-engine/seo#sitemap) and other pages' `hreflang` alternates leave it out, and [site search](/docs/content-engine/search) marks its document private.
-- Signed [preview links](/docs/content-engine/editorial#preview-links) still work, and the AdminCP still shows it.
+- Signed [preview links](/docs/content-engine/editorial-previews) still work, and the AdminCP still shows it.
 
 ## Who can still see it
 
@@ -195,7 +195,7 @@ const hidden = detail.headers.get(CONTENT_HIDDEN_HEADER) === "true";
 ) : null}
 ```
 
-[`useContentPermissions`](/docs/content-engine/reports#ask-who-may-report-what) already answers `canReport: false` for a hidden record, and `canEdit: false` for its author, so the page needs no extra checks for its buttons. A moderator can still edit it.
+[`useContentPermissions`](/docs/content-engine/public-permissions) already answers `canReport: false` for a hidden record, and `canEdit: false` for its author, so the page needs no extra checks for its buttons. A moderator can still edit it.
 
 ## Delete, hide, unpublish or reject
 

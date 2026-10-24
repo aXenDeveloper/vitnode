@@ -1,5 +1,5 @@
 ---
-title: Record ID strategies
+title: Record IDs
 description: Key VitNode Content Engine records by serial integers, UUIDs or bigint, and see how those ids look in Postgres, JSON, URLs, relations and your own code.
 icon: KeyRound
 ---
@@ -78,8 +78,8 @@ Each record has exactly one spelling, so one record is never cached or indexed u
 
 Every Content Engine feature works with all three strategies: the public API, the AdminCP lists, editors, pickers and edit links, [public pages](/docs/content-engine/public-pages) and sitemaps, previews, schedules, revisions, [live editing](/docs/content-engine/live-editing), events, search, pagination cursors, [duplicate](/docs/content-engine/duplicate-content) and [hide](/docs/content-engine/content-visibility).
 
-- **Relations** use the key type of the record they point at. A bigint event that links to uuid tags gets a `uuid` foreign key and a `bigint`-to-`uuid` junction table. See [Relations across id strategies](/docs/content-engine/relations#relations-across-id-strategies).
-- **Shared core tables** that hold records of any content type, such as revisions, schedules, slug history, live editing drafts and the search index, store the id as text in a `varchar(64)` `itemId` column. See [Database](/docs/content-engine/database#ids-and-shared-tables).
+- **Relations** use the key type of the record they point at. A bigint event that links to uuid tags gets a `uuid` foreign key and a `bigint`-to-`uuid` junction table. See [Relations across id strategies](/docs/content-engine/relations-advanced#relations-across-id-strategies).
+- **Shared core tables** that hold records of any content type, such as revisions, schedules, slug history, live editing drafts and the search index, store the id as text in a `varchar(64)` `itemId` column. See [Migrations](/docs/content-engine/database#ids-and-shared-tables).
 - **Events** type `contentId` by strategy: `number` for serial, `string` for uuid and bigint.
 - **Sitemaps** page through records in key order. For a uuid content type that order is lexical, not creation order, and every record still appears once.
 - **Repeatable rows** keep their own `serial` ids, whatever the owner uses. User and file references stay integers.

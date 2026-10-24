@@ -1,0 +1,122 @@
+---
+title: Form helpers
+description: Reference for useContentPublicWrite, the VitNode hook that sends a public Content Engine create or edit from an AutoForm and shows field errors, refusals and version conflicts.
+icon: SquareFunction
+---
+
+`useContentPublicWrite` from `@vitnode/core/tanstack/content` sends one public create or edit and handles every answer that is not a success. Your `onSubmit` only deals with the record it gets back. For a guided setup, follow [Create form](/docs/content-engine/public-write-frontend) or [Edit form](/docs/content-engine/public-write-edit).
+
+## Signature
+
+```tsx
+import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
+
+const write = useContentPublicWrite({ fields, latestVersion, uniqueField, version });
+
+const record = await write.submit(form, async expectedVersion => await fetcher(/* ... */));
+
+<>{write.conflict}<AutoForm /* ... */ /></>;
+```
+
+## Options
+
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `fields` | `readonly string[]` | Yes | | The form's field names. A server issue on one of them shows under that field; an issue on any other field becomes a toast |
+| `uniqueField` | `string` | No | | Where "This is already taken" shows on `409 CONTENT_UNIQUE_CONFLICT`, such as `title` when the slug is derived from it. Without it, the message is a toast |
+| `version` | `number` | No | | The record's `version` when the edit form opened. Leave it out for a create. Read once, on the first render |
+| `latestVersion` | `() => Promise<number \| null>` | No | | Reads the record's current `version`, usually from `GET /{id}/edit`. Enables **Keep my version** on a conflict. Return `null` when it cannot be read |
+
+## Return value
+
+| Name | Type | Behavior |
+| --- | --- | --- |
+| `submit(form, request)` | `Promise<record \| null>` | Calls `request`, then returns the parsed record on a `2xx` and `null` on anything else, after showing the reason |
+| `conflict` | `ReactNode` | The version-conflict alert while a conflict is open, otherwise `null`. Render it above the form |
+
+### `submit`
+
+- **`form`** is the form API `AutoForm` passes as the second argument of `onSubmit`. The hook uses it to set field errors.
+- **`request`** receives `expectedVersion` and returns the typed `fetcher` response. For an edit, put `expectedVersion` in the body; for a create, ignore the argument.
+- The returned record is typed from the response, so `record.slug`, `record.values` and `record.approval` need no annotation.
+
+After a successful write, the hook stores the record's new `version`, so the next save sends it without reloading the page, and clears an open conflict.
+
+## How answers are handled
+
+| Answer | What the member sees | `submit` returns |
+| --- | --- | --- |
+| `200` or `201` | Nothing; showing success is up to you | The record |
+| `400` with issues on fields in `fields` | Each message under its field | `null` |
+| `400` with any other issue, or none | One toast with the first message | `null` |
+| `401`, `403`, `404`, `429` | One toast: session ended, "You can't change this.", "This no longer exists.", "You're doing that too often." | `null` |
+| `403` with `edit_window_closed` or `moderators_only` | One toast naming that reason | `null` |
+| `409 CONTENT_UNIQUE_CONFLICT` | "This is already taken" under `uniqueField`, or a toast | `null` |
+| `409 CONTENT_VERSION_CONFLICT` | The `conflict` alert; the form keeps every value | `null` |
+| A network error or any other status | "Something went wrong on our side." | `null` |
+
+Issue codes map to messages: `not_writable`, `unavailable`, `edit_window_closed` and `moderators_only` have their own; every other code, such as Zod's `too_small`, shows "Check this value." The codes are listed in [Write API](/docs/content-engine/public-write-api#codes).
+
+## The conflict alert
+
+`409 CONTENT_VERSION_CONFLICT` means someone saved the record after the form opened. Nothing was written, and the form keeps what the member typed. The alert offers:
+
+- **Keep my version**, shown only with `latestVersion`. It reads the current version, stores it and closes the alert with a toast. The member's next save replaces the other change. If `latestVersion` returns `null` or throws, a toast says so and the alert stays.
+- **Load latest version** reloads the page. Anything not saved is lost, and the alert says so.
+
+## What stays your job
+
+The hook never decides what a success means. After `submit` returns a record:
+
+- **Say what happened.** Show a success toast, or a "waiting for approval" message when `record.approval?.status === "pending"`, because then readers still see the old content. See [Approvals](/docs/content-engine/approvals#what-the-author-sees).
+- **Keep the form in step.** Call `form.reset(values)` so the form is no longer dirty, and pass the saved values as the form's defaults on the next render, or `AutoForm` puts the old defaults back. For a pending edit, `record.values` is still the live record and the proposal is in `record.approval.values`.
+- **Invalidate** the queries that show the record, such as its list or thread.
+- **Navigate** if the page should change, for example to the new record after a create.
+
+The hook also does not stop double submits: `AutoForm` disables its submit button while `onSubmit` runs.
+
+## Requirements and limits
+
+- **Browser-only.** It uses `use-intl`, `sonner` toasts and `window.location`. VitNode's root providers mount all three.
+- **Messages** come from `core.global.content_write`, which the root route always loads, so they follow the reader's language and the plugin needs no labels for errors.
+- **One record per hook.** `version` is read on the first render. When the same component switches to another record, remount it with a `key`, such as the record id.
+- **One field error per issue.** Messages are generic ("Check this value."). To show your own text for a field rule, validate it in the form schema first, so the request never leaves the browser.
+
+## Example
+
+```tsx title="Excerpt: an edit form"
+import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
+
+import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+
+const write = useContentPublicWrite({
+  fields: ["title", "body"],
+  latestVersion: async () => {
+    const res = await fetchEditableTopic(record.id);
+
+    return res.status === 200 ? (await res.json()).version : null;
+  },
+  uniqueField: "title",
+  version: record.version,
+});
+
+const onSubmit: AutoFormOnSubmit<TopicFormSchema> = async (values, form) => {
+  const updated = await write.submit(
+    form,
+    async expectedVersion =>
+      await fetcher({
+        plugin: manifest.id,
+        method: "patch",
+        module: "content/topics",
+        path: "/{id}",
+        args: { params: { id: record.id }, body: { values, expectedVersion } },
+      }),
+  );
+  if (!updated) return;
+
+  form.reset(values);
+};
+```
+
+The complete page, with loading, approvals and invalidation, is in [Edit form](/docs/content-engine/public-write-edit).

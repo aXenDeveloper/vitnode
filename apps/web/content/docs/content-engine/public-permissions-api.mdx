@@ -1,0 +1,96 @@
+---
+title: Permissions API
+description: Reference for the VitNode Content Engine GET /permissions route and the useContentPermissions hook - ids, limits, the canEdit and canReport flags, omitted records, batching, cache keys and invalidation.
+icon: KeyRound
+---
+
+This page is the contract behind [Permissions](/docs/content-engine/public-permissions): what `GET /{publicApi.path}/permissions` accepts and answers, and how `useContentPermissions` from `@vitnode/core/tanstack/content` asks it. Examples use the tutorial's articles, at `/api/newsroom/content/news`.
+
+## When the route exists
+
+The Content Engine mounts `GET /permissions` next to the [public read routes](/docs/content-engine/public-api) when the content type has [`publicWrite.update`](/docs/content-engine/public-write) or [`reports`](/docs/content-engine/reports). Without either, there is nothing to answer and the [fetcher](/docs/dev/fetcher) refuses the path at compile time.
+
+```http title="Request"
+GET /api/newsroom/content/news/permissions?ids=1,2,15
+Cookie: vitnode_auth=<session>
+```
+
+```json title="200"
+{
+  "items": [
+    { "id": 1, "canEdit": false, "canReport": true },
+    { "id": 15, "canEdit": true, "canReport": false }
+  ]
+}
+```
+
+| Part | Rule |
+| --- | --- |
+| `ids` | Comma-separated record ids, for example `12,13,14`. Duplicates collapse, and a value that is not a valid id for the content type's [ID strategy](/docs/content-engine/id-strategy) is ignored |
+| Limit | At most 50 distinct ids (`CONTENT_PUBLIC_MAX_PAGE_SIZE`). More answers `400` with `{ "error": "Ask for at most 50 ids." }` |
+| `items` | One entry per record the visitor may see, in the order asked |
+| Caching | `Cache-Control: private, no-store`. The answer depends on who asks, so no shared cache ever stores it |
+
+## What the flags mean
+
+| Flag | `true` when | Guests |
+| --- | --- | --- |
+| `canEdit` | `GET /{id}/edit` and `PATCH /{id}` would accept this visitor: a moderator with `can_edit` in the record's container, or the owner while the record is not hidden, `update.own` is on and the container's `authorEdit` policy still allows it | Always `false` |
+| `canReport` | The content type has `reports`, the record is public, and the visitor did not write it | `true` on public records. The report dialog asks them to sign in |
+
+A record is **left out of `items`** when the visitor can neither read it publicly nor edit it: a missing id, someone else's draft, or a hidden record for anyone but a moderator with `can_edit`. The route answers the same way for all of them, so it never confirms that a draft exists. Your own draft comes back with `canEdit: true` and `canReport: false`.
+
+The flags answer "should this button show?", not "why not?". They carry no denial reason. When an edit is refused, the write route says why, such as `edit_window_closed`; see [Write API](/docs/content-engine/public-write-api#rejection).
+
+<Callout type="warn" title="A flag is a snapshot">
+  The answer is what the server decided when the page asked. An edit window can close, or a moderator can lose `can_edit`, while the page stays open. Every write is authorized again on the server, so a stale `true` only means the save is refused with a message.
+</Callout>
+
+## `useContentPermissions`
+
+```ts
+const permissions = useContentPermissions({ fetch, ids, queryKey });
+```
+
+| Name | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ids` | `readonly (number \| string)[]` | Yes | The records on screen, any number and in any order |
+| `fetch` | `(ids) => Promise<{ items }>` | Yes | Calls `GET /permissions` with `ids.join(",")`. Receives at most 50 ids per call. Throw on anything but `200` |
+| `queryKey` | `QueryKey` | Yes | The content type's query prefix, such as `[manifest.id, "comments"]` |
+
+| Returns | Type | Behavior |
+| --- | --- | --- |
+| `of(id)` | `(id) => { canEdit, canReport }` | The record's flags. All `false` until known, for a record left out of `items` and for a record in a failed batch. Stable until an answer changes, so memoized rows can receive it |
+| `isPending` | `boolean` | `true` while the session or any batch still waits for its first answer. `false` for an empty `ids` list |
+| `isError` | `boolean` | `true` when at least one batch failed. Its records read as all `false`; the others keep their answers |
+
+`useContentPermissions` runs in the browser. Shared, cached HTML never contains a visitor's buttons: they appear after the session is known.
+
+### Batches
+
+The hook removes duplicate ids and sends the rest in batches of 50, the route's limit, with at most three requests in flight. Each batch is its own query, cut from `ids` in the order you pass them and sorted inside, so:
+
+- A thread with 120 comments on screen makes three requests instead of one refused one.
+- **Load more** that appends ids keeps every full batch before it, and its cached answer, untouched.
+- The same records in the same order always produce the same query keys.
+
+Hide a button while its record's flags are unknown, rather than showing a page-wide spinner. A failed batch hides its buttons and nothing else, so the page stays usable.
+
+### Cache keys and invalidation
+
+Every batch is stored under `[...queryKey, "permissions", { ids, userId }]`. The user id makes the answer personal: signing in or out moves to new keys, so one visitor never sees another's buttons, even on a page served from a shared cache.
+
+The Content Engine's public reads are the same for everybody and can be cached on a CDN; the permissions route is per visitor and is never cached outside the tab. Keep the two in separate queries, as the hook does, and never put flags into a shared response.
+
+VitNode's query client does not refetch on mount or window focus, so an answer lives until it is invalidated, the network reconnects or the tab reloads. Refresh it after anything that can change it:
+
+```ts
+await queryClient.invalidateQueries({
+  queryKey: [manifest.id, "comments", "permissions"],
+});
+```
+
+- **After a write**, new records get their own batch automatically, because their ids are new. Invalidate when a write changes who may edit, such as a moderator hiding a record.
+- **After a role or policy change** in the same tab, such as a member becoming a moderator, invalidate the prefix or reload.
+- Invalidating the plain prefix, `[manifest.id, "comments"]`, refreshes the permissions together with every other query under it.
+

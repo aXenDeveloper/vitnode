@@ -442,6 +442,40 @@ describe("buildFormSchemaFromSpec", () => {
     expect(result.success).toBe(true);
   });
 
+  it("opens a required rich text field on an empty paragraph, still refused as empty", () => {
+    // `{}` is what a create form started from before - the editor cannot open
+    // it and the "is empty" rule can never accept it, so the save never fired.
+    const richSchema = buildFormSchemaFromSpec(
+      buildContentFormSpec({
+        definition: defineContentType({
+          id: "test.rich",
+          tableName: "test_rich",
+          fields: {
+            title: field.text({ required: true }),
+            body: field.richText({ required: true }),
+            notes: field.richText({ nullable: true }),
+          },
+          admin: {
+            titleField: "title",
+            form: { fields: ["title", "body", "notes"] },
+          },
+        }),
+        labelEnum,
+        labelField,
+        pluginId: "@vitnode/example",
+      }),
+    );
+    const json = z.toJSONSchema(richSchema, { io: "input" });
+
+    expect(json.properties?.body).toMatchObject({
+      default: { content: [{ type: "paragraph" }], type: "doc" },
+    });
+    expect(json.properties?.notes).not.toHaveProperty("default");
+    expect(richSchema.safeParse({ title: "Hello" }).error?.issues).toEqual([
+      expect.objectContaining({ message: "Body is empty.", path: ["body"] }),
+    ]);
+  });
+
   it("accepts null only for nullable fields", () => {
     expect(
       schema.safeParse({ category: REF, excerpt: null, title: "Hello" })

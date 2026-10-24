@@ -65,19 +65,8 @@ export const topicNewHref = (forum?: number): string =>
     ? `${FORUM_HREF}/create/topic`
     : `${FORUM_HREF}/create/topic?forum=${forum}`;
 
-export interface TopicEditSearch {
-  submitted?: true;
-}
-
-export const topicEditSearch = (
-  input: Record<string, unknown>,
-): TopicEditSearch => (isTrue(input.submitted) ? { submitted: true } : {});
-
-export const topicEditHref = (
-  id: number | string,
-  { submitted }: TopicEditSearch = {},
-): string =>
-  `${FORUM_HREF}/topics/${encodeURIComponent(String(id))}/edit${submitted ? "?submitted=1" : ""}`;
+export const topicEditHref = (id: number | string): string =>
+  `${FORUM_HREF}/topics/${encodeURIComponent(String(id))}/edit`;
 
 export interface PendingSearch {
   page?: number;
