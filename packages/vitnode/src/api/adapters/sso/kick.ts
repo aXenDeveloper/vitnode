@@ -41,7 +41,7 @@ const usersSchema = z.object({
  * under `VITNODE_WEB_URL`.
  *
  * Kick does not say whether an account's email is verified, so VitNode never
- * trusts it: a new member confirms an address with a code first, and a
+ * trusts it: a new member confirms an address by email link first, and a
  * returning member signs in by their Kick user ID. Supplies the avatar for
  * profile sync.
  *
@@ -77,7 +77,7 @@ export const KickSSOApiPlugin = ({
   const redirectUri = getRedirectUri(id);
 
   return {
-    brandColor: "#53FC19",
+    brandColor: "#0B0E0F",
     icon: KICK_ICON,
     id,
     name: "Kick",

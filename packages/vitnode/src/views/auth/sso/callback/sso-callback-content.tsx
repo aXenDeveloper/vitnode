@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,6 @@ import { Spinner } from "@/components/ui/spinner";
 import { ErrorContent } from "@/views/error/error-content";
 
 import type { SSOEmailCompletionActions } from "../email/sso-email-completion";
-import type { SSOLinkOffer } from "../link/schema";
 import type { SSOLinkSubmit } from "../link/sso-link-form-content";
 import type { SSOProvider } from "../providers";
 import type { SSOCallbackState } from "./use-sso-callback";
@@ -24,21 +22,24 @@ const SSOCallbackCard = ({
   title,
 }: {
   children: React.ReactNode;
-  description: React.ReactNode;
+  description?: React.ReactNode;
   footer?: React.ReactNode;
-  title: React.ReactNode;
+  /** Leave out when the content brings its own heading. */
+  title?: React.ReactNode;
 }) => (
   <div className="mx-auto flex max-w-md flex-col justify-center px-4 py-16 md:min-h-[calc(100vh-4rem)]">
     <Card className="bg-muted gap-0 p-0">
       <div className="bg-card rounded-xl p-6">
-        <div className="mb-10 flex flex-col gap-2 text-center">
-          <h1 className="text-2xl leading-none font-semibold tracking-tight text-balance">
-            {title}
-          </h1>
-          <CardDescription className="text-pretty">
-            {description}
-          </CardDescription>
-        </div>
+        {title ? (
+          <div className="mb-10 flex flex-col gap-2 text-center">
+            <h1 className="text-2xl leading-none font-semibold tracking-tight text-balance">
+              {title}
+            </h1>
+            <CardDescription className="text-pretty">
+              {description}
+            </CardDescription>
+          </div>
+        ) : null}
 
         {children}
       </div>
@@ -61,7 +62,7 @@ export const SSOCallbackContent = ({
   resetPasswordHref = AUTH_HREF.resetPassword,
   showResetPassword = false,
   signInHref = AUTH_HREF.signIn,
-  state: callbackState,
+  state,
 }: {
   /** The calls behind the email step, for providers that share no verified address. */
   emailCompletion?: SSOEmailCompletionActions;
@@ -76,14 +77,6 @@ export const SSOCallbackContent = ({
 }) => {
   const t = useTranslations("core.auth.sso");
   const tGlobal = useTranslations("core.global");
-  // A confirmed address can turn out to belong to an account: the email step
-  // then hands over the same link offer a provider email would have produced.
-  const [completionOffer, setCompletionOffer] = useState<null | SSOLinkOffer>(
-    null,
-  );
-  const state: SSOCallbackState = completionOffer
-    ? { kind: "email_exists", offer: completionOffer }
-    : callbackState;
   const provider = providers.find(one => one.id === providerId);
   // The provider's display name, falling back to the id in the URL: a callback
   // can arrive for an adapter that was removed from the deployment, and "you
@@ -131,9 +124,6 @@ export const SSOCallbackContent = ({
   if (state.kind === "email_required" && emailCompletion) {
     return (
       <SSOCallbackCard
-        description={t.rich("email_completion.desc", {
-          provider: providerName,
-        })}
         footer={t.rich("link.other_account", {
           link: text => (
             <Link className="text-primary font-semibold" to={signInHref}>
@@ -141,16 +131,41 @@ export const SSOCallbackContent = ({
             </Link>
           ),
         })}
-        title={t("email_completion.title")}
       >
         <SSOEmailCompletion
           actions={emailCompletion}
           emailSuggestion={state.emailSuggestion}
-          onLinkRequired={setCompletionOffer}
           providerName={providerName}
           signInHref={signInHref}
         />
       </SSOCallbackCard>
+    );
+  }
+
+  if (
+    state.kind === "confirm_other_browser" ||
+    state.kind === "confirm_invalid"
+  ) {
+    const key =
+      state.kind === "confirm_other_browser" ? "other_browser" : "invalid";
+
+    return (
+      <ErrorContent
+        actions={
+          <Button
+            nativeButton={false}
+            render={<Link to={signInHref} />}
+            size="lg"
+          >
+            {t("email_completion.start_again")}
+          </Button>
+        }
+        code={400}
+        description={t.rich(`email_confirm.${key}.desc`, {
+          provider: providerName,
+        })}
+        title={t(`email_confirm.${key}.title`)}
+      />
     );
   }
 

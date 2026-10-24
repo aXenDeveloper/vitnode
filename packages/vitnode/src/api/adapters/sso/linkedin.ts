@@ -37,7 +37,7 @@ const userInfoSchema = z.object({
  * under `VITNODE_WEB_URL`.
  *
  * The email is trusted only with `email_verified: true`; without one a new
- * member confirms an address in VitNode with a code. Supplies the avatar,
+ * member confirms an address in VitNode by email link. Supplies the avatar,
  * first and last name for profile sync.
  *
  * Server-only.

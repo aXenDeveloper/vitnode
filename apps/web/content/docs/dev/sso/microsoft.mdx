@@ -144,7 +144,7 @@ MicrosoftSSOApiPlugin({
 
 ## Email and account ID
 
-Microsoft's `email` claim can change and is often not verified, so VitNode trusts it only when Microsoft adds `xms_edov: true` (the email's domain owner is verified). To receive it, open **Token configuration → Add optional claim → ID** and add `email` and `xms_edov`. Without it, new members confirm an address with a code.
+Microsoft's `email` claim can change and is often not verified, so VitNode trusts it only when Microsoft adds `xms_edov: true` (the email's domain owner is verified). To receive it, open **Token configuration → Add optional claim → ID** and add `email` and `xms_edov`. Without it, new members confirm an address by email.
 
 The account is stored as `{tid}:{oid}`, as Microsoft recommends, so the same person in two tenants is two accounts.
 

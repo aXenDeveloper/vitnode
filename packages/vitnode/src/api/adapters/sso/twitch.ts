@@ -51,7 +51,7 @@ const userInfoSchema = z.object({
  * `VITNODE_WEB_URL`.
  *
  * Twitch shares the email only once the account has verified it; without one
- * a new member confirms an address in VitNode with a code. Supplies the avatar
+ * a new member confirms an address in VitNode by email link. Supplies the avatar
  * for profile sync.
  *
  * Server-only.

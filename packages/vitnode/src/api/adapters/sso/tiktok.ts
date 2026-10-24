@@ -38,7 +38,7 @@ const userSchema = z.object({
  *
  * TikTok calls the client ID a "Client Key". The account id is the `open_id`,
  * unique to your app. TikTok never shares an email address, so a new member
- * confirms one in VitNode with a code. Supplies the avatar for profile sync.
+ * confirms one in VitNode by email link. Supplies the avatar for profile sync.
  *
  * Server-only.
  *

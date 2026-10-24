@@ -143,7 +143,7 @@ A **GitHub** login button automatically renders on `/login` and `/register`, and
       type: "(code: string, context: SSOCallbackContext) => Promise<SSOTokenResponse>",
     },
     fetchUser: {
-      description: "Returns the provider account: a stable id, and optionally email, emailVerified, username, avatarUrl, firstName and lastName. Validate the ID token here when the provider issues one. An email counts as trusted unless emailVerified is false: return emailVerified: false (or email: null) when the provider has not confirmed the address, and VitNode asks a new visitor to confirm one with a code instead. A returning member is always recognised by id.",
+      description: "Returns the provider account: a stable id, and optionally email, emailVerified, username, avatarUrl, firstName and lastName. Validate the ID token here when the provider issues one. An email counts as trusted unless emailVerified is false: return emailVerified: false (or email: null) when the provider has not confirmed the address, and VitNode asks a new visitor to confirm one by email instead. A returning member is always recognised by id.",
       required: true,
       type: "(token: SSOTokenResponse, context: SSOCallbackContext) => Promise<SSOProviderUser>",
     },

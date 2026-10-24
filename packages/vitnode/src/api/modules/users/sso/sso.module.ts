@@ -5,8 +5,8 @@ import { callbackRoute } from "./routes/callback.route";
 import { createUrlRoute } from "./routes/create-url.route";
 import { linkRoute } from "./routes/link.route";
 import {
+  ssoPendingConfirmRoute,
   ssoPendingEmailRoute,
-  ssoPendingVerifyRoute,
 } from "./routes/pending.route";
 
 export const ssoUserModule = buildModule({
@@ -16,7 +16,7 @@ export const ssoUserModule = buildModule({
     createUrlRoute,
     linkRoute,
     ssoPendingEmailRoute,
-    ssoPendingVerifyRoute,
+    ssoPendingConfirmRoute,
   ],
   modules: [ssoConnectionsModule],
 });

@@ -130,7 +130,6 @@ export const GitLabSSOApiPlugin = ({
     base === GITLAB_COM_ISSUER ? null : base.replace(/^https?:\/\//, "");
 
   return {
-    brandColor: "#FC6D26",
     icon: GITLAB_ICON,
     id,
     name,

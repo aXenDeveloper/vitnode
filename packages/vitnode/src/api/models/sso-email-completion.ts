@@ -1,13 +1,13 @@
 import type { Context } from "hono";
 
 import { HTTPException } from "hono/http-exception";
-import crypto from "node:crypto";
 import { createTranslator } from "use-intl";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
-import { hashSsoSecret, timingSafeEqualText } from "@/api/lib/sso-protocol";
-import SsoEmailCodeTemplate from "@/emails/sso-email-code";
+import { hashSsoSecret, randomSsoSecret } from "@/api/lib/sso-protocol";
+import SsoConfirmEmailTemplate from "@/emails/sso-confirm-email";
+import { CONFIG } from "@/lib/config";
 import { normalizeEmailAddress } from "@/lib/email-canonical";
 
 import type { SSOCallbackOutcome } from "./sso";
@@ -15,28 +15,24 @@ import type { SSOCallbackOutcome } from "./sso";
 import { SSOModel } from "./sso";
 import { SsoConnectionModel } from "./sso-connection";
 
-export const SSO_EMAIL_CODE_TTL_MS = 10 * 60_000;
-export const SSO_EMAIL_CODE_MAX_ATTEMPTS = 5;
-export const SSO_EMAIL_CODE_MAX_SENDS = 5;
-export const SSO_EMAIL_CODE_COOLDOWN_MS = 30_000;
+/** How long a confirmation link works. The pending sign-in lives as long. */
+export const SSO_EMAIL_LINK_TTL_MS = 30 * 60_000;
+export const SSO_EMAIL_LINK_MAX_SENDS = 5;
+export const SSO_EMAIL_LINK_COOLDOWN_MS = 30_000;
 
 export type SsoEmailCompletionError =
-  | "code_expired"
-  | "invalid_code"
+  | "invalid_link"
   | "invalid_pending"
-  | "too_many_codes";
+  | "too_many_emails";
 
 const failure = (status: 400 | 429, error: SsoEmailCompletionError) =>
   new HTTPException(status, { message: error });
 
-const codeHashOf = (tokenHash: string, code: string) =>
-  hashSsoSecret(`${tokenHash}:${code}`);
-
 /**
  * The last step for a provider identity that brought no trustworthy email:
- * the visitor names an address, proves it with an emailed six-digit code in
- * the same browser, and only then is an account created - or the existing
- * account's password asked for before linking. Server-only.
+ * the visitor names an address, opens the link emailed to it in the same
+ * browser, and only then is an account created - or the existing account's
+ * password asked for before linking. Server-only.
  */
 export class SsoEmailCompletionModel {
   constructor(c: Context<EnvVitNode>) {
@@ -55,106 +51,43 @@ export class SsoEmailCompletionModel {
   }
 
   /**
-   * Emails a fresh code to `email` for this browser's pending identity. Says
-   * nothing about whether the address has an account.
+   * Checks the link from the email against this browser's pending identity
+   * and consumes it once: signs in the member it is linked to by now, signs
+   * up a new member with the confirmed address, or returns the link offer for
+   * the account that already owns it.
    *
-   * @throws `HTTPException(400)` without a live pending identity for
-   * `providerId`, `429` past five codes or within 30 seconds of the last one.
+   * @throws `HTTPException(400)` with `invalid_pending` when this browser has
+   * no pending sign-in (another browser, or expired), and `invalid_link` for
+   * an expired, replaced or already used link.
    */
-  async sendCode({
-    email,
+  async confirm({
     providerId,
+    token,
   }: {
-    email: string;
     providerId: string;
-  }): Promise<void> {
-    const provider = this.c
-      .get("core")
-      .authorization.ssoAdapters.find(one => one.id === providerId);
-    const tokenHash = this.pendingTokenHash();
-    const now = new Date();
-    const pending = await this.sso.flowStore.findPending({ now, tokenHash });
-    if (!(pending && provider && pending.providerId === providerId)) {
-      throw failure(400, "invalid_pending");
-    }
-
-    const address = normalizeEmailAddress(email);
-    const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, "0");
-    const stored = await this.sso.flowStore.setPendingCode({
-      codeExpiresAt: new Date(now.getTime() + SSO_EMAIL_CODE_TTL_MS),
-      codeHash: codeHashOf(tokenHash, code),
-      cooldownMs: SSO_EMAIL_CODE_COOLDOWN_MS,
-      email: address,
-      maxSends: SSO_EMAIL_CODE_MAX_SENDS,
-      now,
-      tokenHash,
-    });
-    if (!stored) throw failure(429, "too_many_codes");
-
-    await this.c.get("email").send({
-      content: props =>
-        SsoEmailCodeTemplate({
-          ...props,
-          code,
-          expiryMinutes: SSO_EMAIL_CODE_TTL_MS / 60_000,
-          provider: provider.name,
-          userIpAddress: this.c.get("ipAddress"),
-        }),
-      locale: this.c.get("i18n").resolveLocale(),
-      subject: ({ i18n }) =>
-        createTranslator(i18n)("core.auth.sso_email_code.email.subject", {
-          code,
-        }),
-      to: address,
-    });
-  }
-
-  /**
-   * Checks the code and, when it matches, consumes the pending identity once:
-   * signs in the member it is linked to by now, signs up a new member with the
-   * confirmed address, or returns the link offer for the account that already
-   * owns it.
-   *
-   * @throws `HTTPException(400)` for a wrong, expired or spent code, or with
-   * no pending identity.
-   */
-  async verifyCode({
-    code,
-    providerId,
-  }: {
-    code: string;
-    providerId: string;
+    token: string;
   }): Promise<
     Extract<SSOCallbackOutcome, { kind: "link_required" | "signed_in" }>
   > {
     const tokenHash = this.pendingTokenHash();
     const now = new Date();
-    const counted = await this.sso.flowStore.countCodeAttempt({
-      maxAttempts: SSO_EMAIL_CODE_MAX_ATTEMPTS,
+    const pending = await this.sso.flowStore.consumeConfirmed({
+      confirmHash: hashSsoSecret(token),
       now,
       tokenHash,
     });
-    if (!counted?.codeHash || !counted.email) {
-      throw failure(400, "code_expired");
-    }
-    if (counted.providerId !== providerId) {
-      throw failure(400, "invalid_pending");
-    }
-    if (!timingSafeEqualText(counted.codeHash, codeHashOf(tokenHash, code))) {
-      throw failure(400, "invalid_code");
+    if (!pending) {
+      const waiting = await this.sso.flowStore.findPending({ now, tokenHash });
+      throw failure(400, waiting ? "invalid_link" : "invalid_pending");
     }
 
-    const pending = await this.sso.flowStore.consumePending({
-      now,
-      tokenHash,
-    });
     this.sso.clearPendingCookie();
-    if (!pending?.email) throw failure(400, "code_expired");
-
     const provider = this.c
       .get("core")
       .authorization.ssoAdapters.find(one => one.id === providerId);
-    if (!provider) throw new HTTPException(404);
+    if (!(provider && pending.providerId === providerId && pending.email)) {
+      throw failure(400, "invalid_pending");
+    }
 
     const identity = {
       email: null,
@@ -183,6 +116,66 @@ export class SsoEmailCompletionModel {
       identity,
       provider,
       providerEmail: null,
+    });
+  }
+
+  /**
+   * Emails a fresh confirmation link to `email` for this browser's pending
+   * identity, replacing any earlier link. Says nothing about whether the
+   * address has an account.
+   *
+   * @throws `HTTPException(400)` without a live pending identity for
+   * `providerId`, `429` past five emails or within 30 seconds of the last one.
+   */
+  async sendLink({
+    email,
+    providerId,
+  }: {
+    email: string;
+    providerId: string;
+  }): Promise<void> {
+    const provider = this.c
+      .get("core")
+      .authorization.ssoAdapters.find(one => one.id === providerId);
+    const tokenHash = this.pendingTokenHash();
+    const now = new Date();
+    const pending = await this.sso.flowStore.findPending({ now, tokenHash });
+    if (!(pending && provider && pending.providerId === providerId)) {
+      throw failure(400, "invalid_pending");
+    }
+
+    const address = normalizeEmailAddress(email);
+    const token = randomSsoSecret();
+    const expiresAt = new Date(now.getTime() + SSO_EMAIL_LINK_TTL_MS);
+    const stored = await this.sso.flowStore.setPendingConfirmation({
+      confirmHash: hashSsoSecret(token),
+      cooldownMs: SSO_EMAIL_LINK_COOLDOWN_MS,
+      email: address,
+      expiresAt,
+      maxSends: SSO_EMAIL_LINK_MAX_SENDS,
+      now,
+      tokenHash,
+    });
+    if (!stored) throw failure(429, "too_many_emails");
+
+    this.sso.refreshPendingCookie(expiresAt);
+    const confirmUrl = new URL(
+      `login/sso/${providerId}?confirm=${encodeURIComponent(token)}`,
+      CONFIG.web.href,
+    );
+
+    await this.c.get("email").send({
+      content: props =>
+        SsoConfirmEmailTemplate({
+          ...props,
+          confirmUrl: confirmUrl.href,
+          expiryDate: expiresAt,
+          userIpAddress: this.c.get("ipAddress"),
+        }),
+      locale: this.c.get("i18n").resolveLocale(),
+      subject: ({ i18n }) =>
+        createTranslator(i18n)("core.auth.sso_confirm_email.email.subject"),
+      to: address,
     });
   }
 }

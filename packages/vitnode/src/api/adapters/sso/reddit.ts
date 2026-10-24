@@ -36,7 +36,7 @@ const unescapeUrl = (value: null | string | undefined): null | string =>
  * token, and redirects back to `login/sso/reddit` under `VITNODE_WEB_URL`.
  *
  * Reddit never shares an email address, so a new member confirms one in
- * VitNode with a code, and a returning member signs in by their Reddit
+ * VitNode by email link, and a returning member signs in by their Reddit
  * account ID. Supplies the avatar for profile sync.
  *
  * Server-only.
@@ -82,7 +82,6 @@ export const RedditSSOApiPlugin = ({
     `web:${requireSsoOption(clientId, "Reddit", "client ID")}:1.0 (by VitNode)`;
 
   return {
-    brandColor: "#FF4500",
     icon: REDDIT_ICON,
     id,
     name: "Reddit",

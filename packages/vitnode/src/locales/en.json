@@ -950,28 +950,24 @@
         },
         "email_completion": {
           "title": "Confirm your email",
-          "desc": "<provider></provider> didn't share a verified email address. Tell us which one to use and we'll send it a code.",
+          "desc": "<provider></provider> didn't share a verified email address. Tell us which one to use and we'll send it a confirmation link.",
           "email": {
             "label": "Email",
-            "desc": "We'll send a 6-digit code here. Nothing is created until you confirm it.",
+            "desc": "Nothing is created until you open the link we send.",
             "invalid": "Please enter a valid email address.",
-            "submit": "Send code"
+            "submit": "Send confirmation link"
           },
-          "code": {
-            "label": "Code",
-            "sent": "We sent a 6-digit code to <email></email>. Enter it below - it works for ten minutes.",
-            "invalid": "Enter the 6 digits from the email.",
-            "submit": "Confirm and continue",
-            "resend": "Send a new code",
-            "resent": "A new code is on its way.",
+          "sent": {
+            "title": "Check your email",
+            "desc": "We sent a confirmation link to <email></email>. Open it in this browser to finish signing in - it works for 30 minutes.",
+            "resend": "Send a new link",
+            "resent": "A new link is on its way.",
             "change_email": "Use a different email"
           },
           "errors": {
-            "invalid_code": "That code doesn't match. Check the email and try again.",
-            "code_expired": "This code has expired or was tried too many times. Send a new one.",
-            "too_many_codes": {
+            "too_many_emails": {
               "title": "Slow down a little",
-              "desc": "Wait half a minute before asking for another code - and check your spam folder in the meantime."
+              "desc": "Wait half a minute before asking for another link - and check your spam folder in the meantime."
             },
             "invalid_pending": {
               "title": "This sign-in has expired",
@@ -982,7 +978,17 @@
         },
         "email_unavailable": {
           "title": "We need a verified email",
-          "desc": "<provider></provider> didn't share a verified email address, and this site can't send one a confirmation code right now. Try another way to sign in."
+          "desc": "<provider></provider> didn't share a verified email address, and this site can't send a confirmation link right now. Try another way to sign in."
+        },
+        "email_confirm": {
+          "other_browser": {
+            "title": "Open the link where you signed in",
+            "desc": "This link only works in the browser where you started signing in with <provider></provider>, and only for 30 minutes. Open it there, or sign in again to get a new one."
+          },
+          "invalid": {
+            "title": "This link doesn't work anymore",
+            "desc": "It has expired, was already used, or a newer link was sent. Sign in with <provider></provider> again to get a fresh one."
+          }
         }
       },
       "sign_up": {

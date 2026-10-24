@@ -17,8 +17,9 @@ import type {
 
 import { getPasskeyInBrowser } from "@/views/auth/passkeys/webauthn";
 import {
-  sendSsoEmailCodeInBrowser,
-  verifySsoEmailCodeInBrowser,
+  confirmSsoEmailInBrowser,
+  sendSsoEmailLinkInBrowser,
+  type SSOConfirmEmailResult,
 } from "@/views/auth/sso/email/sso-email-mutations";
 
 import type { SsoCallbackInput } from "./contract";
@@ -174,33 +175,32 @@ export const useLinkSsoAction = ({
 
 /**
  * The email step of an SSO sign-in whose provider shared no verified address:
- * send a code, then confirm it. A confirmed code that signs the visitor in
+ * email a confirmation link to the address the visitor types.
+ */
+export const ssoEmailCompletionActions = (
+  providerId: string,
+): SSOEmailCompletionActions => ({
+  sendLink: async email =>
+    await sendSsoEmailLinkInBrowser({ email, providerId }),
+});
+
+/**
+ * Confirms an emailed SSO link. A confirmation that signs the visitor in
  * crosses the same identity boundary as any other sign-in.
  */
-export const useSsoEmailCompletionActions = ({
-  onSignedIn,
-  providerId,
-}: {
-  onSignedIn: () => void;
-  providerId: string;
-}): SSOEmailCompletionActions => {
+export const useConfirmSsoEmailAction = (providerId: string) => {
   const queryClient = useQueryClient();
 
-  return {
-    sendCode: async email =>
-      await sendSsoEmailCodeInBrowser({ email, providerId }),
-    verifyCode: async code => {
-      const result = await verifySsoEmailCodeInBrowser({ code, providerId });
+  return async (token: string): Promise<SSOConfirmEmailResult> => {
+    const result = await confirmSsoEmailInBrowser({ providerId, token });
 
-      if (result.ok) {
-        removeAdminIdentityQueries(queryClient);
-        removeUserIdentityQueries(queryClient);
-        await invalidateSession(queryClient);
-        onSignedIn();
-      }
+    if (result.ok) {
+      removeAdminIdentityQueries(queryClient);
+      removeUserIdentityQueries(queryClient);
+      await invalidateSession(queryClient);
+    }
 
-      return result;
-    },
+    return result;
   };
 };
 

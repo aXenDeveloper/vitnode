@@ -8,12 +8,7 @@ import { SsoEmailCompletionModel } from "@/api/models/sso-email-completion";
 import { USER_EMAIL_MAX_LENGTH } from "../../credential-limits";
 
 const zodPendingError = z.object({
-  error: z.enum([
-    "code_expired",
-    "invalid_code",
-    "invalid_pending",
-    "too_many_codes",
-  ]),
+  error: z.enum(["invalid_link", "invalid_pending", "too_many_emails"]),
 });
 
 const pendingFailure = (error: unknown) => {
@@ -48,7 +43,7 @@ export const ssoPendingEmailRoute = buildRoute({
   route: {
     method: "post",
     description:
-      "Email a six-digit code to the address the visitor wants to use, for the provider identity this browser is completing. Answers the same whether or not the address has an account.",
+      "Email a confirmation link to the address the visitor wants to use, for the provider identity this browser is completing. The link only works in this browser. Answers the same whether or not the address has an account.",
     path: "/pending/{providerId}/email",
     request: {
       params: providerParams,
@@ -58,14 +53,14 @@ export const ssoPendingEmailRoute = buildRoute({
       },
     },
     responses: {
-      201: { description: "Code sent" },
+      201: { description: "Link sent" },
       400: {
         content: { "application/json": { schema: zodPendingError } },
         description: "No live pending sign-in in this browser",
       },
       429: {
         content: { "application/json": { schema: zodPendingError } },
-        description: "Too many codes, or the last one was sent moments ago",
+        description: "Too many emails, or the last one was sent moments ago",
       },
     },
   },
@@ -74,7 +69,7 @@ export const ssoPendingEmailRoute = buildRoute({
     const { email } = c.req.valid("json");
 
     try {
-      await new SsoEmailCompletionModel(c).sendCode({ email, providerId });
+      await new SsoEmailCompletionModel(c).sendLink({ email, providerId });
     } catch (error) {
       const { error: code, status } = pendingFailure(error);
 
@@ -87,25 +82,25 @@ export const ssoPendingEmailRoute = buildRoute({
   },
 });
 
-export const zodSsoPendingVerifySchema = z.object({
-  code: z
+export const zodSsoPendingConfirmSchema = z.object({
+  token: z
     .string()
-    .regex(/^\d{6}$/)
-    .openapi({ example: "123456" }),
+    .regex(/^[\w-]{43,128}$/)
+    .openapi({ example: "Zm9vYmFyYmF6cXV4cXV1eHF1dXhxdXV4cXV1eHF1dXg" }),
 });
 
-export const ssoPendingVerifyRoute = buildRoute({
+export const ssoPendingConfirmRoute = buildRoute({
   route: {
     method: "post",
     description:
-      "Confirm the emailed code. Works once: signs up a new member with the confirmed address, or - when it belongs to an account - answers with the link offer that account's password unlocks.",
-    path: "/pending/{providerId}/verify",
+      "Confirm the address with the token from the emailed link, in the browser that started the sign-in. Works once: signs up a new member with the confirmed address, or - when it belongs to an account - answers with the link offer that account's password unlocks.",
+    path: "/pending/{providerId}/confirm",
     request: {
       params: providerParams,
       body: {
         required: true,
         content: {
-          "application/json": { schema: zodSsoPendingVerifySchema },
+          "application/json": { schema: zodSsoPendingConfirmSchema },
         },
       },
     },
@@ -118,7 +113,8 @@ export const ssoPendingVerifyRoute = buildRoute({
       },
       400: {
         content: { "application/json": { schema: zodPendingError } },
-        description: "Wrong, expired or spent code, or no pending sign-in",
+        description:
+          "`invalid_pending`: no pending sign-in in this browser (another browser, or expired). `invalid_link`: the link expired, was replaced or was already used",
       },
       409: {
         content: {
@@ -137,13 +133,13 @@ export const ssoPendingVerifyRoute = buildRoute({
   },
   handler: async c => {
     const { providerId } = c.req.valid("param");
-    const { code } = c.req.valid("json");
+    const { token } = c.req.valid("json");
 
-    let outcome: Awaited<ReturnType<SsoEmailCompletionModel["verifyCode"]>>;
+    let outcome: Awaited<ReturnType<SsoEmailCompletionModel["confirm"]>>;
     try {
-      outcome = await new SsoEmailCompletionModel(c).verifyCode({
-        code,
+      outcome = await new SsoEmailCompletionModel(c).confirm({
         providerId,
+        token,
       });
     } catch (error) {
       return c.json({ error: pendingFailure(error).error }, 400);

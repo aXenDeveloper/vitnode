@@ -6,13 +6,13 @@ icon: Music
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-Add a **Continue with TikTok** button using TikTok's Login Kit for Web. The adapter asks only for `user.info.basic`. TikTok never shares an email address, so new members confirm one with a code.
+Add a **Continue with TikTok** button using TikTok's Login Kit for Web. The adapter asks only for `user.info.basic`. TikTok never shares an email address, so new members confirm one by email.
 
 ## Before you begin
 
 - A [TikTok for Developers](https://developers.tiktok.com/) account.
 - A public **HTTPS** redirect URI. TikTok does not accept `http://` or `localhost` for web apps, so develop through a tunnel (see [Develop locally](#develop-locally)).
-- An [email adapter](/docs/dev/email), to send the [confirmation code](/docs/dev/sso/email-confirmation).
+- An [email adapter](/docs/dev/email), to send the [confirmation link](/docs/dev/sso/email-confirmation).
 
 ## Quick start
 
@@ -116,7 +116,7 @@ npm run dev
 
 ### Check the result
 
-Open `/login` on your HTTPS domain, press **Continue with TikTok** and authorize. The first time, VitNode asks for an email and the code sent to it; afterwards the same TikTok account signs straight in.
+Open `/login` on your HTTPS domain, press **Continue with TikTok** and authorize. The first time, VitNode asks for an email and sends a confirmation link - open it in the same browser; afterwards the same TikTok account signs straight in.
 
 </Step>
 </Steps>
@@ -142,7 +142,7 @@ VITNODE_API_URL=https://forum-dev.example.com
 | -------------- | ------------------------------------------------------------- |
 | Scopes         | `user.info.basic`                                             |
 | Account ID     | `open_id` (unique to your app)                                |
-| Email          | never shared - [confirmed with a code](/docs/dev/sso/email-confirmation) |
+| Email          | never shared - [confirmed by email](/docs/dev/sso/email-confirmation) |
 | Profile fields | avatar                                                        |
 
 The display name becomes the new account's name. TikTok's avatar links are signed and expire, so import the avatar from [Connected accounts](/docs/dev/sso/connected-accounts) soon after connecting.

@@ -36,7 +36,7 @@ const meSchema = z.object({
  *
  * The email is trusted only with `email_verified: true`; Atlassian may also
  * hide it under the person's privacy settings, and a new member then confirms
- * an address in VitNode with a code. Supplies the avatar for profile sync.
+ * an address in VitNode by email link. Supplies the avatar for profile sync.
  *
  * Server-only.
  *

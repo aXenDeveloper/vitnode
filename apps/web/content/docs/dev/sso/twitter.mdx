@@ -125,7 +125,7 @@ Open `/login`, press **Continue with X** and **Authorize app**. You return to `/
 
 With **Request email from users** on, the adapter requests the `users.email` scope and reads `confirmed_email`, which X only returns for a confirmed address. Some accounts (for example phone-only ones) have none.
 
-If your app cannot request email, X rejects the `users.email` scope. Turn it off in the adapter, and new members [confirm an address with a code](/docs/dev/sso/email-confirmation) instead:
+If your app cannot request email, X rejects the `users.email` scope. Turn it off in the adapter, and new members [confirm an address by email](/docs/dev/sso/email-confirmation) instead:
 
 ```ts title="src/vitnode.api.config.ts"
 TwitterSSOApiPlugin({

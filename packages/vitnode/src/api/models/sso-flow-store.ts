@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { and, eq, gt, isNotNull, isNull, lt, lte, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, lt, lte, or, sql } from "drizzle-orm";
 
 import { core_sso_attempts, core_sso_pending } from "@/database/users";
 
@@ -16,11 +16,10 @@ export interface SsoAttemptRecord {
 }
 
 export interface SsoPendingRecord {
-  codeAttempts: number;
-  codeExpiresAt: Date | null;
-  codeHash: null | string;
-  codeSends: number;
-  codeSentAt: Date | null;
+  confirmExpiresAt: Date | null;
+  confirmHash: null | string;
+  confirmSends: number;
+  confirmSentAt: Date | null;
   email: null | string;
   expiresAt: Date;
   profile: null | SsoProfileValues;
@@ -32,18 +31,17 @@ export interface SsoPendingRecord {
 
 /**
  * Server-side state of a sign-in round trip and of an identity waiting for a
- * confirmed email. Every `consume*`/`take*` is a single atomic delete, so a
- * record works once even under concurrent requests.
+ * confirmed email. Every `consume*` is a single atomic delete, so a record
+ * works once even under concurrent requests.
  */
 export interface SsoFlowStore {
   consumeAttempt: (stateHash: string) => Promise<null | SsoAttemptRecord>;
-  consumePending: (args: {
-    now: Date;
-    tokenHash: string;
-  }) => Promise<null | SsoPendingRecord>;
-  /** Counts one code guess, if the code is live and `maxAttempts` is not spent. */
-  countCodeAttempt: (args: {
-    maxAttempts: number;
+  /**
+   * Consumes this browser's pending identity, but only with the live
+   * confirmation link most recently emailed for it.
+   */
+  consumeConfirmed: (args: {
+    confirmHash: string;
     now: Date;
     tokenHash: string;
   }) => Promise<null | SsoPendingRecord>;
@@ -55,21 +53,24 @@ export interface SsoFlowStore {
   savePending: (
     record: Omit<
       SsoPendingRecord,
-      | "codeAttempts"
-      | "codeExpiresAt"
-      | "codeHash"
-      | "codeSends"
-      | "codeSentAt"
+      | "confirmExpiresAt"
+      | "confirmHash"
+      | "confirmSends"
+      | "confirmSentAt"
       | "email"
     >,
     now: Date,
   ) => Promise<void>;
-  /** Stores a fresh code for `email`, unless the send cap or cooldown says no. */
-  setPendingCode: (args: {
-    codeExpiresAt: Date;
-    codeHash: string;
+  /**
+   * Stores a fresh confirmation link for `email` (replacing any earlier one)
+   * and keeps the pending identity alive as long as the link, unless the send
+   * cap or cooldown says no.
+   */
+  setPendingConfirmation: (args: {
+    confirmHash: string;
     cooldownMs: number;
     email: string;
+    expiresAt: Date;
     maxSends: number;
     now: Date;
     tokenHash: string;
@@ -81,11 +82,10 @@ type Db = Context["var"]["db"];
 const toPending = (
   row: typeof core_sso_pending.$inferSelect,
 ): SsoPendingRecord => ({
-  codeAttempts: row.codeAttempts,
-  codeExpiresAt: row.codeExpiresAt,
-  codeHash: row.codeHash,
-  codeSends: row.codeSends,
-  codeSentAt: row.codeSentAt,
+  confirmExpiresAt: row.confirmExpiresAt,
+  confirmHash: row.confirmHash,
+  confirmSends: row.confirmSends,
+  confirmSentAt: row.confirmSentAt,
   email: row.email,
   expiresAt: row.expiresAt,
   profile: row.profile ?? null,
@@ -114,31 +114,15 @@ export const drizzleSsoFlowStore = (db: Db): SsoFlowStore => ({
       : null;
   },
 
-  consumePending: async ({ now, tokenHash }) => {
+  consumeConfirmed: async ({ confirmHash, now, tokenHash }) => {
     const [row] = await db
       .delete(core_sso_pending)
       .where(
         and(
           eq(core_sso_pending.tokenHash, tokenHash),
+          eq(core_sso_pending.confirmHash, confirmHash),
+          gt(core_sso_pending.confirmExpiresAt, now),
           gt(core_sso_pending.expiresAt, now),
-        ),
-      )
-      .returning();
-
-    return row ? toPending(row) : null;
-  },
-
-  countCodeAttempt: async ({ maxAttempts, now, tokenHash }) => {
-    const [row] = await db
-      .update(core_sso_pending)
-      .set({ codeAttempts: sql`${core_sso_pending.codeAttempts} + 1` })
-      .where(
-        and(
-          eq(core_sso_pending.tokenHash, tokenHash),
-          gt(core_sso_pending.expiresAt, now),
-          isNotNull(core_sso_pending.codeHash),
-          gt(core_sso_pending.codeExpiresAt, now),
-          lt(core_sso_pending.codeAttempts, maxAttempts),
         ),
       )
       .returning();
@@ -175,11 +159,11 @@ export const drizzleSsoFlowStore = (db: Db): SsoFlowStore => ({
     await db.insert(core_sso_pending).values(record);
   },
 
-  setPendingCode: async ({
-    codeExpiresAt,
-    codeHash,
+  setPendingConfirmation: async ({
+    confirmHash,
     cooldownMs,
     email,
+    expiresAt,
     maxSends,
     now,
     tokenHash,
@@ -188,21 +172,21 @@ export const drizzleSsoFlowStore = (db: Db): SsoFlowStore => ({
     const updated = await db
       .update(core_sso_pending)
       .set({
-        codeAttempts: 0,
-        codeExpiresAt,
-        codeHash,
-        codeSends: sql`${core_sso_pending.codeSends} + 1`,
-        codeSentAt: now,
+        confirmExpiresAt: expiresAt,
+        confirmHash,
+        confirmSends: sql`${core_sso_pending.confirmSends} + 1`,
+        confirmSentAt: now,
         email,
+        expiresAt,
       })
       .where(
         and(
           eq(core_sso_pending.tokenHash, tokenHash),
           gt(core_sso_pending.expiresAt, now),
-          lt(core_sso_pending.codeSends, maxSends),
+          lt(core_sso_pending.confirmSends, maxSends),
           or(
-            isNull(core_sso_pending.codeSentAt),
-            lte(core_sso_pending.codeSentAt, cooledDown),
+            isNull(core_sso_pending.confirmSentAt),
+            lte(core_sso_pending.confirmSentAt, cooledDown),
           ),
         ),
       )

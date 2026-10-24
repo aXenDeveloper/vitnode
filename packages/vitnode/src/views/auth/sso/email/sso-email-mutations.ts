@@ -5,25 +5,16 @@ import type { SSOLinkOffer } from "../link/schema";
 
 const CREDENTIALS = { credentials: "include" } as const;
 
-export type SSOEmailCodeFailure =
-  | "invalid_pending"
-  | "server_error"
-  | "too_many_codes";
-
-export type SSOSendEmailCodeResult =
-  | { failure: SSOEmailCodeFailure; ok: false }
-  | { ok: true };
-
-export type SSOVerifyEmailCodeResult =
-  | { failure: "link_required"; offer: SSOLinkOffer; ok: false }
+export type SSOSendEmailLinkResult =
   | {
-      failure:
-        | "code_expired"
-        | "invalid_code"
-        | "invalid_pending"
-        | "server_error";
+      failure: "invalid_pending" | "server_error" | "too_many_emails";
       ok: false;
     }
+  | { ok: true };
+
+export type SSOConfirmEmailResult =
+  | { failure: "invalid_link" | "invalid_pending" | "server_error"; ok: false }
+  | { failure: "link_required"; offer: SSOLinkOffer; ok: false }
   | { ok: true };
 
 const errorOf = async (response: Response): Promise<string | undefined> => {
@@ -41,14 +32,14 @@ const errorOf = async (response: Response): Promise<string | undefined> => {
   }
 };
 
-/** Asks the API to email a code to `email` for this browser's pending sign-in. Browser-only. */
-export const sendSsoEmailCodeInBrowser = async ({
+/** Asks the API to email a confirmation link to `email` for this browser's pending sign-in. Browser-only. */
+export const sendSsoEmailLinkInBrowser = async ({
   email,
   providerId,
 }: {
   email: string;
   providerId: string;
-}): Promise<SSOSendEmailCodeResult> => {
+}): Promise<SSOSendEmailLinkResult> => {
   try {
     const response = await fetcherClient({
       plugin: manifest.id,
@@ -62,7 +53,7 @@ export const sendSsoEmailCodeInBrowser = async ({
     if (response.status === 201) return { ok: true };
 
     const error = await errorOf(response);
-    if (error === "invalid_pending" || error === "too_many_codes") {
+    if (error === "invalid_pending" || error === "too_many_emails") {
       return { failure: error, ok: false };
     }
 
@@ -72,22 +63,22 @@ export const sendSsoEmailCodeInBrowser = async ({
   }
 };
 
-/** Confirms the emailed code; signs in, or hands back the link offer. Browser-only. */
-export const verifySsoEmailCodeInBrowser = async ({
-  code,
+/** Confirms the address with the token from the emailed link; signs in, or hands back the link offer. Browser-only. */
+export const confirmSsoEmailInBrowser = async ({
   providerId,
+  token,
 }: {
-  code: string;
   providerId: string;
-}): Promise<SSOVerifyEmailCodeResult> => {
+  token: string;
+}): Promise<SSOConfirmEmailResult> => {
   try {
     const response = await fetcherClient({
       plugin: manifest.id,
-      args: { body: { code }, params: { providerId } },
+      args: { body: { token }, params: { providerId } },
       method: "post",
       module: "users/sso",
       options: CREDENTIALS,
-      path: "/pending/{providerId}/verify",
+      path: "/pending/{providerId}/confirm",
     });
 
     if (response.status === 200) return { ok: true };
@@ -99,11 +90,7 @@ export const verifySsoEmailCodeInBrowser = async ({
     }
 
     const error = await errorOf(response);
-    if (
-      error === "code_expired" ||
-      error === "invalid_code" ||
-      error === "invalid_pending"
-    ) {
+    if (error === "invalid_link" || error === "invalid_pending") {
       return { failure: error, ok: false };
     }
 

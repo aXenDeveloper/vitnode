@@ -43,7 +43,7 @@ export const callbackRoute = buildRoute({
           },
         },
         description:
-          "The provider shared no verified email. The visitor confirms one with a code (`/pending/{providerId}/email`); `email` is the provider's unverified suggestion, if any",
+          "The provider shared no verified email. The visitor confirms one through an emailed link (`/pending/{providerId}/email`); `email` is the provider's unverified suggestion, if any",
       },
       400: {
         description:

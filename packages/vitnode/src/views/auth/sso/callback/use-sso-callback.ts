@@ -5,8 +5,16 @@ import type { SSOCallbackResult } from "./sso-callback-result";
 
 export type SSOCallbackState =
   | { emailSuggestion: null | string; kind: "email_required" }
-  | { kind: "access_denied" | "email_unavailable" | "error" | "pending" }
-  | { kind: "email_exists"; offer: null | SSOLinkOffer };
+  | { kind: "email_exists"; offer: null | SSOLinkOffer }
+  | {
+      kind:
+        | "access_denied"
+        | "confirm_invalid"
+        | "confirm_other_browser"
+        | "email_unavailable"
+        | "error"
+        | "pending";
+    };
 
 export const useSSOCallback = ({
   code,

@@ -11,7 +11,7 @@ Add a **Continue with Kick** button for streamers and viewers. Kick requires OAu
 ## Before you begin
 
 - A Kick account with **two-factor authentication** turned on. Kick will not let you create an app without it.
-- An [email adapter](/docs/dev/email). Kick does not say whether an account's email is verified, so every new member [confirms an address with a code](/docs/dev/sso/email-confirmation).
+- An [email adapter](/docs/dev/email). Kick does not say whether an account's email is verified, so every new member [confirms an address by email](/docs/dev/sso/email-confirmation).
 
 ## Quick start
 
@@ -105,7 +105,7 @@ npm run dev
 
 ### Check the result
 
-Open `/login`, press **Continue with Kick** and allow access. The first time, VitNode asks for an email and a code; afterwards the same Kick account signs straight in.
+Open `/login`, press **Continue with Kick** and allow access. The first time, VitNode asks for an email and sends a confirmation link - open it in the same browser; afterwards the same Kick account signs straight in.
 
 </Step>
 </Steps>
@@ -125,7 +125,7 @@ Kick's email, when present, only pre-fills the confirmation form.
 ## Troubleshooting
 
 - **Kick shows an invalid redirect error** - the redirect URL differs from `{VITNODE_WEB_URL}/login/sso/kick`, or uses `127.0.0.1`.
-- **New visitors see "We need a verified email"** - no email adapter is configured, so VitNode cannot send the code.
+- **New visitors see "We need a verified email"** - no email adapter is configured, so VitNode cannot send the confirmation link.
 - **"Create new" is missing in Settings → Developer** - turn on two-factor authentication first.
 
 ## Next

@@ -39,13 +39,13 @@ A **Continue with Google** button renders on the login and registration forms. B
 | [Facebook](/docs/dev/sso/facebook)            | `FacebookSSOApiPlugin` from `.../sso/facebook` | Taken as returned                 | Yes                      |
 | [GitLab](/docs/dev/sso/gitlab)                | `GitLabSSOApiPlugin` from `.../sso/gitlab`     | When `email_verified`             | Yes                      |
 | [Google](/docs/dev/sso/google)                | `GoogleSSOApiPlugin` from `.../sso/google`     | Yes (unverified ones are refused) | Yes                      |
-| [Kick](/docs/dev/sso/kick)                    | `KickSSOApiPlugin` from `.../sso/kick`         | No - code confirmation            | Yes                      |
+| [Kick](/docs/dev/sso/kick)                    | `KickSSOApiPlugin` from `.../sso/kick`         | No - email confirmation            | Yes                      |
 | [LinkedIn](/docs/dev/sso/linkedin)            | `LinkedInSSOApiPlugin` from `.../sso/linkedin` | When `email_verified`             | Yes                      |
 | [Microsoft](/docs/dev/sso/microsoft)          | `MicrosoftSSOApiPlugin` from `.../sso/microsoft` | When `xms_edov`                 | Yes                      |
 | [PayPal](/docs/dev/sso/paypal)                | `PayPalSSOApiPlugin` from `.../sso/paypal`     | When confirmed                    | No - HTTPS               |
-| [Reddit](/docs/dev/sso/reddit)                | `RedditSSOApiPlugin` from `.../sso/reddit`     | No - code confirmation            | Yes                      |
+| [Reddit](/docs/dev/sso/reddit)                | `RedditSSOApiPlugin` from `.../sso/reddit`     | No - email confirmation            | Yes                      |
 | [Slack](/docs/dev/sso/slack)                  | `SlackSSOApiPlugin` from `.../sso/slack`       | When `email_verified`             | HTTPS tunnel             |
-| [TikTok](/docs/dev/sso/tiktok)                | `TikTokSSOApiPlugin` from `.../sso/tiktok`     | No - code confirmation            | No - HTTPS               |
+| [TikTok](/docs/dev/sso/tiktok)                | `TikTokSSOApiPlugin` from `.../sso/tiktok`     | No - email confirmation            | No - HTTPS               |
 | [Twitch](/docs/dev/sso/twitch)                | `TwitchSSOApiPlugin` from `.../sso/twitch`     | When `email_verified`             | Yes                      |
 | [Twitter (X)](/docs/dev/sso/twitter)          | `TwitterSSOApiPlugin` from `.../sso/twitter`   | `confirmed_email`, when shared    | `http://127.0.0.1`       |
 
@@ -70,7 +70,7 @@ When the provider sends the visitor back, VitNode checks the state, asks the ada
 1. **Known identity** - the provider account was linked before. The visitor is signed straight in, recognised by the provider's stable account ID. The email does not matter here, and an address stored earlier is kept even when the provider omits it this time.
 2. **Trusted email, existing account** - an account already uses that address. The visitor is asked for that account's password; once it checks out, the provider account is linked and they are signed in. A social login never takes over an account on its own.
 3. **Trusted email, new visitor** - a new account is created with the provider's display name and `emailVerified: true`, and linked.
-4. **No trusted email** - the provider shared no address, or one it has not verified. The visitor [confirms an address with a code](/docs/dev/sso/email-confirmation) first, then continues as in case 2 or 3.
+4. **No trusted email** - the provider shared no address, or one it has not verified. The visitor [confirms an address by email](/docs/dev/sso/email-confirmation) first, then continues as in case 2 or 3.
 
 An email is **trusted** when the adapter returns it without `emailVerified: false`. Each provider guide says which provider flag decides it.
 

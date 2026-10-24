@@ -235,21 +235,16 @@ const harness = ({
       method: "POST",
     });
 
-  /** The code inside the last email: its subject template is `{code}`. */
-  const lastCode = () => {
+  /** The confirmation link inside the last email. */
+  const lastLink = () => {
     const args = send.mock.lastCall?.[0] as {
-      subject: (props: unknown) => string;
+      content: (props: unknown) => { props: { actionUrl: string } };
+      to: string;
     };
 
-    return args.subject({
-      i18n: {
-        locale: "en",
-        messages: {
-          core: { auth: { sso_email_code: { email: { subject: "{code}" } } } },
-        },
-      },
-    });
+    return new URL(args.content({}).props.actionUrl);
   };
+  const lastToken = () => lastLink().searchParams.get("confirm") ?? "";
 
   return {
     afterSignIn,
@@ -263,7 +258,8 @@ const harness = ({
     google,
     inserts,
     jar,
-    lastCode,
+    lastLink,
+    lastToken,
     postJson,
     request,
     requests,
@@ -593,7 +589,7 @@ describe("confirming an email for a provider that shared none", () => {
     return h;
   };
 
-  it("emails a six-digit code to the typed address, and only there", async () => {
+  it("emails a confirmation link for this provider to the typed address", async () => {
     const h = await pendingHarness();
 
     const response = await h.postJson("/pending/google/email", {
@@ -604,9 +600,14 @@ describe("confirming an email for a provider that shared none", () => {
     expect(h.send).toHaveBeenCalledWith(
       expect.objectContaining({ locale: "en", to: "alice@mail.test" }),
     );
-    expect(h.lastCode()).toMatch(/^\d{6}$/);
-    expect(await response.text()).not.toContain(h.lastCode());
-    expect(h.flow.pending()[0]?.codeHash).not.toContain(h.lastCode());
+    const link = h.lastLink();
+    expect(`${link.origin}${link.pathname}`).toBe(
+      "http://localhost:3000/login/sso/google",
+    );
+    expect(h.lastToken()).toMatch(/^[\w-]{43}$/);
+    expect(await response.text()).toBe("");
+    // Only a hash of the link's token is kept.
+    expect(JSON.stringify(h.flow.pending())).not.toContain(h.lastToken());
   });
 
   it("needs the pending sign-in of this browser and this provider", async () => {
@@ -629,9 +630,9 @@ describe("confirming an email for a provider that shared none", () => {
   it("creates a verified account with the confirmed address, once", async () => {
     const h = await pendingHarness();
     await h.postJson("/pending/google/email", { email: "alice@mail.test" });
-    const code = h.lastCode();
+    const token = h.lastToken();
 
-    const response = await h.postJson("/pending/google/verify", { code });
+    const response = await h.postJson("/pending/google/confirm", { token });
 
     expect(response.status).toBe(200);
     expect(h.createAccount).toHaveBeenCalledWith({
@@ -648,9 +649,23 @@ describe("confirming an email for a provider that shared none", () => {
     ]);
     expect(h.createSession).toHaveBeenCalledWith(100);
     expect(h.flow.pending()).toEqual([]);
-    expect((await h.postJson("/pending/google/verify", { code })).status).toBe(
-      400,
-    );
+    const replay = await h.postJson("/pending/google/confirm", { token });
+    expect(replay.status).toBe(400);
+  });
+
+  it("works only in the browser that started the sign-in", async () => {
+    const h = await pendingHarness();
+    await h.postJson("/pending/google/email", { email: "alice@mail.test" });
+    h.jar.delete("vitnode_auth--sso-pending");
+
+    const response = await h.postJson("/pending/google/confirm", {
+      token: h.lastToken(),
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_pending" });
+    expect(h.createAccount).not.toHaveBeenCalled();
+    expect(h.createSession).not.toHaveBeenCalled();
   });
 
   it("asks for the existing account's password when the confirmed address has one", async () => {
@@ -664,8 +679,8 @@ describe("confirming an email for a provider that shared none", () => {
     ]);
     await h.postJson("/pending/google/email", { email: "alice@mail.test" });
 
-    const response = await h.postJson("/pending/google/verify", {
-      code: h.lastCode(),
+    const response = await h.postJson("/pending/google/confirm", {
+      token: h.lastToken(),
     });
     const body = (await response.json()) as { linkToken: string };
 
@@ -687,53 +702,47 @@ describe("confirming an email for a provider that shared none", () => {
     expect(h.createSession).not.toHaveBeenCalled();
   });
 
-  it("refuses a wrong code, and any code after five wrong ones", async () => {
+  it("refuses a made-up token, and keeps the sign-in waiting for the real link", async () => {
     const h = await pendingHarness();
     await h.postJson("/pending/google/email", { email: "alice@mail.test" });
-    const code = h.lastCode();
-    const wrong = code === "000000" ? "000001" : "000000";
 
-    const first = await h.postJson("/pending/google/verify", { code: wrong });
-    expect(first.status).toBe(400);
-    expect(await first.json()).toEqual({ error: "invalid_code" });
-    for (let attempt = 0; attempt < 4; attempt++) {
-      await h.postJson("/pending/google/verify", { code: wrong });
-    }
+    const forged = await h.postJson("/pending/google/confirm", {
+      token: "a".repeat(43),
+    });
 
-    const late = await h.postJson("/pending/google/verify", { code });
+    expect(forged.status).toBe(400);
+    expect(await forged.json()).toEqual({ error: "invalid_link" });
+    expect(
+      (await h.postJson("/pending/google/confirm", { token: h.lastToken() }))
+        .status,
+    ).toBe(200);
+  });
+
+  it("lets the link expire after thirty minutes", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const h = await pendingHarness();
+    await h.postJson("/pending/google/email", { email: "alice@mail.test" });
+
+    vi.setSystemTime(Date.now() + 30 * 60_000 + 1);
+    const late = await h.postJson("/pending/google/confirm", {
+      token: h.lastToken(),
+    });
+
     expect(late.status).toBe(400);
-    expect(await late.json()).toEqual({ error: "code_expired" });
     expect(h.createAccount).not.toHaveBeenCalled();
   });
 
-  it("lets a code expire after ten minutes, and the whole sign-in after thirty", async () => {
+  it("spaces out new links and replaces the previous one", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     const h = await pendingHarness();
     await h.postJson("/pending/google/email", { email: "alice@mail.test" });
-
-    vi.setSystemTime(Date.now() + 10 * 60_000 + 1);
-    const late = await h.postJson("/pending/google/verify", {
-      code: h.lastCode(),
-    });
-    expect(await late.json()).toEqual({ error: "code_expired" });
-
-    vi.setSystemTime(Date.now() + 20 * 60_000);
-    const gone = await h.postJson("/pending/google/email", {
-      email: "alice@mail.test",
-    });
-    expect(await gone.json()).toEqual({ error: "invalid_pending" });
-  });
-
-  it("spaces out new codes and replaces the previous one", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    const h = await pendingHarness();
-    await h.postJson("/pending/google/email", { email: "alice@mail.test" });
-    const first = h.lastCode();
+    const first = h.lastToken();
 
     const tooSoon = await h.postJson("/pending/google/email", {
       email: "alice@mail.test",
     });
     expect(tooSoon.status).toBe(429);
+    expect(await tooSoon.json()).toEqual({ error: "too_many_emails" });
 
     vi.setSystemTime(Date.now() + 30_000);
     expect(
@@ -741,9 +750,11 @@ describe("confirming an email for a provider that shared none", () => {
         .status,
     ).toBe(201);
 
-    if (first !== h.lastCode()) {
-      const stale = await h.postJson("/pending/google/verify", { code: first });
-      expect(await stale.json()).toEqual({ error: "invalid_code" });
-    }
+    const stale = await h.postJson("/pending/google/confirm", { token: first });
+    expect(await stale.json()).toEqual({ error: "invalid_link" });
+    expect(
+      (await h.postJson("/pending/google/confirm", { token: h.lastToken() }))
+        .status,
+    ).toBe(200);
   });
 });

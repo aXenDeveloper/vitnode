@@ -220,9 +220,10 @@ export const core_sso_attempts = camelCase.table.withRLS(
 
 /**
  * A provider identity that authenticated but brought no trustworthy email.
- * Waits, server-side, for the visitor to prove an address with a code before
- * an account is created or linked. Single use; the browser holds only the
- * token whose hash is `tokenHash`, in an HttpOnly cookie.
+ * Waits, server-side, for the visitor to open the confirmation link emailed
+ * to the address they chose, before an account is created or linked. Single
+ * use; the browser holds only the token whose hash is `tokenHash`, in an
+ * HttpOnly cookie, and the email holds the one hashed as `confirmHash`.
  */
 export const core_sso_pending = camelCase.table.withRLS(
   "core_sso_pending",
@@ -238,11 +239,10 @@ export const core_sso_pending = camelCase.table.withRLS(
       lastName: null | string;
     }>(),
     email: t.varchar({ length: 255 }),
-    codeHash: t.varchar({ length: 64 }),
-    codeExpiresAt: t.timestamp(),
-    codeAttempts: t.integer().notNull().default(0),
-    codeSends: t.integer().notNull().default(0),
-    codeSentAt: t.timestamp(),
+    confirmHash: t.varchar({ length: 64 }),
+    confirmExpiresAt: t.timestamp(),
+    confirmSends: t.integer().notNull().default(0),
+    confirmSentAt: t.timestamp(),
     createdAt: t.timestamp().notNull().defaultNow(),
     expiresAt: t.timestamp().notNull(),
   }),

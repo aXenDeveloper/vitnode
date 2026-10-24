@@ -59,7 +59,7 @@ export interface SSOProviderUser {
   /**
    * Whether the provider confirmed the user owns `email`. `false` means core
    * never trusts the address: a returning member still signs in by `id`, and a
-   * new one confirms an address of their own with a code. Leave it unset only
+   * new one confirms an address of their own by email link. Leave it unset only
    * when the provider never returns an unconfirmed address.
    */
   emailVerified?: boolean;
@@ -123,7 +123,7 @@ export interface SSOCallbackContext {
  * and `fetchUser`. A known identity signs in by its `id`, whatever the email
  * says. An unknown one with a trusted email signs up, or - when that email
  * belongs to an account - links after that account's password. An unknown one
- * without a trusted email confirms an address with an emailed code first.
+ * without a trusted email confirms an address through an emailed link first.
  *
  * Server-only.
  */
@@ -429,7 +429,7 @@ export class SSOModel {
 
   /**
    * Creates a member whose email is already proven - by the provider, or by
-   * the emailed code. `409` when the name or the address is taken.
+   * the emailed link. `409` when the name or the address is taken.
    */
   async createAccount({
     email,
@@ -637,9 +637,19 @@ export class SSOModel {
     return { userId: user.id };
   }
 
+  /** Keeps this browser's pending-sign-in cookie alive until `expiresAt`. */
+  refreshPendingCookie(expiresAt: Date): void {
+    const token = this.pendingToken;
+    if (token) {
+      setAuthCookie(this.c, this.cookieName("pending"), token, {
+        expires: expiresAt,
+      });
+    }
+  }
+
   /**
    * The new identity's next step once core holds an email it trusts - from
-   * the provider, or confirmed with a code: a fresh account, or the existing
+   * the provider, or confirmed by email link: a fresh account, or the existing
    * account's password before linking.
    */
   async signUpOrOfferLink({

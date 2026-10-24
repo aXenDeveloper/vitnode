@@ -126,7 +126,7 @@ Open `/login`, press **Continue with LinkedIn** and allow access. You return to 
 | Email trusted  | only with `email_verified: true`            |
 | Profile fields | avatar, first name, last name               |
 
-LinkedIn may leave out the email, or mark it unverified. A new member then [confirms an address with a code](/docs/dev/sso/email-confirmation); a returning member still signs in by their LinkedIn ID.
+LinkedIn may leave out the email, or mark it unverified. A new member then [confirms an address by email](/docs/dev/sso/email-confirmation); a returning member still signs in by their LinkedIn ID.
 
 VitNode reads UserInfo with the access token it has just received from LinkedIn's token endpoint over TLS, so it does not decode LinkedIn's ID token. LinkedIn notes that this product does not verify identities, so treat a LinkedIn sign-in like any other social account.
 

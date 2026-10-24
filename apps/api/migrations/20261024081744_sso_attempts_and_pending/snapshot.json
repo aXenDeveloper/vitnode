@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "1e7f3624-6147-49b3-9b8c-e8a36101edce",
+  "id": "85aa9b68-ca5c-4068-a502-025b9071236c",
   "prevIds": [
     "0c989133-91e8-46c3-86d3-f9b7ac8ec7a3"
   ],
@@ -7894,7 +7894,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "codeHash",
+      "name": "confirmHash",
       "entityType": "columns",
       "schema": "public",
       "table": "core_sso_pending"
@@ -7907,7 +7907,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "codeExpiresAt",
+      "name": "confirmExpiresAt",
       "entityType": "columns",
       "schema": "public",
       "table": "core_sso_pending"
@@ -7920,20 +7920,7 @@
       "default": "0",
       "generated": null,
       "identity": null,
-      "name": "codeAttempts",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "core_sso_pending"
-    },
-    {
-      "type": "integer",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "0",
-      "generated": null,
-      "identity": null,
-      "name": "codeSends",
+      "name": "confirmSends",
       "entityType": "columns",
       "schema": "public",
       "table": "core_sso_pending"
@@ -7946,7 +7933,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "codeSentAt",
+      "name": "confirmSentAt",
       "entityType": "columns",
       "schema": "public",
       "table": "core_sso_pending"

@@ -18,11 +18,10 @@ CREATE TABLE "core_sso_pending" (
 	"providerUsername" varchar(255),
 	"profile" jsonb,
 	"email" varchar(255),
-	"codeHash" varchar(64),
-	"codeExpiresAt" timestamp,
-	"codeAttempts" integer DEFAULT 0 NOT NULL,
-	"codeSends" integer DEFAULT 0 NOT NULL,
-	"codeSentAt" timestamp,
+	"confirmHash" varchar(64),
+	"confirmExpiresAt" timestamp,
+	"confirmSends" integer DEFAULT 0 NOT NULL,
+	"confirmSentAt" timestamp,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"expiresAt" timestamp NOT NULL
 );

@@ -16,28 +16,19 @@ export const createMemorySsoFlowStore = () => {
 
       return await Promise.resolve(found);
     },
-    consumePending: async ({ now, tokenHash }) => {
+    consumeConfirmed: async ({ confirmHash, now, tokenHash }) => {
       const found =
         pending.find(
-          one => one.tokenHash === tokenHash && one.expiresAt > now,
+          one =>
+            one.tokenHash === tokenHash &&
+            one.confirmHash === confirmHash &&
+            one.confirmExpiresAt !== null &&
+            one.confirmExpiresAt > now &&
+            one.expiresAt > now,
         ) ?? null;
-      pending = pending.filter(one => one.tokenHash !== tokenHash);
+      pending = pending.filter(one => one !== found);
 
       return await Promise.resolve(found);
-    },
-    countCodeAttempt: async ({ maxAttempts, now, tokenHash }) => {
-      const found = pending.find(
-        one =>
-          one.tokenHash === tokenHash &&
-          one.expiresAt > now &&
-          one.codeHash !== null &&
-          one.codeExpiresAt !== null &&
-          one.codeExpiresAt > now &&
-          one.codeAttempts < maxAttempts,
-      );
-      if (found) found.codeAttempts += 1;
-
-      return await Promise.resolve(found ? { ...found } : null);
     },
     findPending: async ({ now, tokenHash }) =>
       await Promise.resolve(
@@ -54,21 +45,20 @@ export const createMemorySsoFlowStore = () => {
         ...pending.filter(one => one.expiresAt > now),
         {
           ...record,
-          codeAttempts: 0,
-          codeExpiresAt: null,
-          codeHash: null,
-          codeSends: 0,
-          codeSentAt: null,
+          confirmExpiresAt: null,
+          confirmHash: null,
+          confirmSends: 0,
+          confirmSentAt: null,
           email: null,
         },
       ];
       await Promise.resolve();
     },
-    setPendingCode: async ({
-      codeExpiresAt,
-      codeHash,
+    setPendingConfirmation: async ({
+      confirmHash,
       cooldownMs,
       email,
+      expiresAt,
       maxSends,
       now,
       tokenHash,
@@ -77,18 +67,18 @@ export const createMemorySsoFlowStore = () => {
         one =>
           one.tokenHash === tokenHash &&
           one.expiresAt > now &&
-          one.codeSends < maxSends &&
-          (one.codeSentAt === null ||
-            one.codeSentAt.getTime() <= now.getTime() - cooldownMs),
+          one.confirmSends < maxSends &&
+          (one.confirmSentAt === null ||
+            one.confirmSentAt.getTime() <= now.getTime() - cooldownMs),
       );
       if (found) {
         Object.assign(found, {
-          codeAttempts: 0,
-          codeExpiresAt,
-          codeHash,
-          codeSends: found.codeSends + 1,
-          codeSentAt: now,
+          confirmExpiresAt: expiresAt,
+          confirmHash,
+          confirmSends: found.confirmSends + 1,
+          confirmSentAt: now,
           email,
+          expiresAt,
         });
       }
 

@@ -89,7 +89,7 @@ export const microsoftTenantAllowed = ({
  * The account id is `{tid}:{oid}`, as Microsoft recommends. Microsoft's
  * `email` claim is mutable and often unverified, so it is trusted only with
  * `xms_edov: true` (domain owner verified); otherwise a new member confirms an
- * address in VitNode with a code. Supplies first and last name for profile
+ * address in VitNode by email link. Supplies first and last name for profile
  * sync - the photo would need Microsoft Graph's `User.Read`, which this
  * adapter does not request.
  *

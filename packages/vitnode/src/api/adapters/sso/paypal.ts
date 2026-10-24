@@ -80,7 +80,7 @@ const emailOf = (
  * `environment` is required: sandbox and live have separate apps,
  * credentials and endpoints. The primary email is trusted only when PayPal
  * marks it confirmed; otherwise a new member confirms an address in VitNode
- * with a code. Supplies first and last name for profile sync.
+ * by email link. Supplies first and last name for profile sync.
  *
  * Server-only.
  *

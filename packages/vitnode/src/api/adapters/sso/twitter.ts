@@ -38,7 +38,7 @@ const userSchema = z.object({
  *
  * The email arrives only when the X app has "Request email from users"
  * switched on and the account has a confirmed address; without one a new
- * member confirms an email in VitNode with a code. Supplies the avatar for
+ * member confirms an email in VitNode by email link. Supplies the avatar for
  * profile sync. The provider id stays `twitter`.
  *
  * Server-only.

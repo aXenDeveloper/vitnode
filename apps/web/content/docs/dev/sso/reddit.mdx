@@ -1,16 +1,16 @@
 ---
 title: Reddit
-description: Add Reddit sign-in to VitNode - create a Reddit web app, register the redirect URI, set a User-Agent and confirm new members' email with a code.
+description: Add Reddit sign-in to VitNode - create a Reddit web app, register the redirect URI, set a User-Agent and confirm new members' email by link.
 icon: MessageCircle
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-Add a **Continue with Reddit** button that asks only for the `identity` scope - no posting, voting or moderation. Reddit never shares an email address, so new members confirm one with a code.
+Add a **Continue with Reddit** button that asks only for the `identity` scope - no posting, voting or moderation. Reddit never shares an email address, so new members confirm one by email.
 
 ## Before you begin
 
-- An [email adapter](/docs/dev/email). Without one, VitNode cannot send the confirmation code and new Reddit visitors cannot register.
+- An [email adapter](/docs/dev/email). Without one, VitNode cannot send the confirmation link and new Reddit visitors cannot register.
 
 ## Quick start
 
@@ -109,7 +109,7 @@ npm run dev
 
 ### Check the result
 
-Open `/login`, press **Continue with Reddit** and press **Allow**. The first time, VitNode asks for an email and the code sent to it. Next time, the same Reddit account signs straight in.
+Open `/login`, press **Continue with Reddit** and press **Allow**. The first time, VitNode asks for an email and sends a confirmation link - open it in the same browser. Next time, the same Reddit account signs straight in.
 
 </Step>
 </Steps>
@@ -121,7 +121,7 @@ Open `/login`, press **Continue with Reddit** and press **Allow**. The first tim
 | Scopes         | `identity`, with `duration=temporary` (no refresh token) |
 | Token auth     | HTTP Basic, with the User-Agent                          |
 | Account ID     | `id` (Reddit's base-36 account ID, not the username)     |
-| Email          | never shared - [confirmed with a code](/docs/dev/sso/email-confirmation) |
+| Email          | never shared - [confirmed by email](/docs/dev/sso/email-confirmation) |
 | Profile fields | avatar                                                   |
 
 The username becomes the new account's display name. A renamed or deleted Reddit username does not change the stored account ID.

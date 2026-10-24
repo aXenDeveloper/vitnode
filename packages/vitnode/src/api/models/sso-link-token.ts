@@ -17,7 +17,7 @@ const zodSsoLinkTokenPayload = z.object({
 });
 
 export interface SsoLinkOffer {
-  /** The address the visitor proved they own - from the provider, or confirmed with a code. */
+  /** The address the visitor proved they own - from the provider, or confirmed by email link. */
   email: string;
   providerAccountId: string;
   /** The address the provider itself shared, stored on the connection. `null` when it shared none. Defaults to `email`. */
