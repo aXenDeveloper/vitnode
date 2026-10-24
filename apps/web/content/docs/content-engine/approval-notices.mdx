@@ -25,7 +25,7 @@ import rejected from "./approval-notices-rejected.webp";
 
 When a container's [publishing rules](/docs/content-engine/container-policies) hold edits for a moderator, a successful save does not mean the change is live. This guide adds what an author needs on the edit page: the form opens on their pending proposal, a notice says what is waiting or why it was declined, and the toast after a save tells the truth.
 
-The example is the Forum plugin's edit page, `plugins/forum/src/pages/topic-edit-page.tsx`. The code below follows that file, with one deliberate difference: the notice reads only the server's `approval`, as [Why the notice ignores ?submitted=1](#why-the-notice-ignores-submitted1) explains.
+The example is the Forum plugin's edit page, `plugins/forum/src/pages/topic-edit-page.tsx`. The code below is excerpts from that file.
 
 ## Before you begin
 
@@ -105,10 +105,13 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@vitnode/core/components/ui/alert";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { HourglassIcon, XCircleIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-/** Reads only the server's answer: a URL or a draft status never adds a notice. */
+import { FORUM_PENDING_HREF } from "./forum-links";
+
+/** Reads only the server's `approval`: neither the URL nor a draft status adds a notice. */
 const ApprovalNotice = ({
   approval,
 }: {
@@ -130,13 +133,25 @@ const ApprovalNotice = ({
     );
   }
 
-  if (approval?.status === "pending") {
-    const key = approval.kind === "edit" ? "pending_edit" : "pending_create";
-
+  if (approval?.status === "pending" && approval.kind === "edit") {
     return (
       <Alert icon={<HourglassIcon />} variant="info">
-        <AlertTitle>{t(`${key}.title`)}</AlertTitle>
-        <AlertDescription>{t(`${key}.desc`)}</AlertDescription>
+        <AlertTitle>{t("pending_edit.title")}</AlertTitle>
+        <AlertDescription>{t("pending_edit.desc")}</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (approval?.status === "pending" && approval.kind === "create") {
+    return (
+      <Alert icon={<HourglassIcon />} variant="info">
+        <AlertTitle>{t("pending_create.title")}</AlertTitle>
+        <AlertDescription>
+          {t("pending_create.desc")}{" "}
+          <HrefLink className="font-medium underline" href={FORUM_PENDING_HREF}>
+            {t("pending_create.link")}
+          </HrefLink>
+        </AlertDescription>
       </Alert>
     );
   }
@@ -146,10 +161,11 @@ const ApprovalNotice = ({
 ```
 
 - **Rejected** shows the moderator's reason when there is one. The author can edit and save again, which opens a new submission.
-- **Pending edit** says readers still see the published version. **Pending create** covers a new topic that waits for its first approval.
-- **Nothing else.** A draft with `approval: null` gets no notice, because nothing waits for a moderator.
+- **Pending edit** needs `status: "pending"` and `kind: "edit"`, and says readers still see the published version.
+- **Pending create** needs `status: "pending"` and `kind: "create"`: a new topic waiting for its first approval. It links to the author's list of posts awaiting approval, `/forum/me/pending`.
+- **Nothing else.** `approval: null` renders no notice, also for a draft: a draft is not a submission, so the notice never looks at `status`, and it never reads the URL.
 
-The route's loader awaits `GET /{id}/edit` before the page renders, so the notice is in the first render; there is no moment where the page has to guess.
+The approval state comes from the server: the route's loader awaits `GET /{id}/edit`, whose answer carries `approval`, before the page renders, and every save replaces it with the one `PATCH /{id}` returns.
 
 </Step>
 
@@ -222,7 +238,8 @@ The forum keeps the notice labels under `topics.approval` and the toast under `t
         },
         "pending_create": {
           "title": "Waiting for a moderator",
-          "desc": "Your topic goes live as soon as a moderator approves it. You can still polish it here."
+          "desc": "Your topic goes live as soon as a moderator approves it. You can still polish it here.",
+          "link": "See all your posts awaiting approval."
         }
       },
       "edit": {
@@ -265,10 +282,4 @@ Sign in as a member who wrote a published topic in the forum that waits for edit
 />
 
 4. Save another change and approve it instead. Reload: there is no notice, the form shows the new title, and so does the public page.
-5. Add `?submitted=1` to the edit URL, or open a topic that staff unpublished in the AdminCP, which is a draft with `approval: null`. Neither shows a notice.
-
-## Why the notice ignores ?submitted=1
-
-The Forum's own file also takes a `submitted` flag. Its create page sends the author to `/forum/topics/{id}/edit?submitted=1` when a new topic waits for approval or has no slug, `topicEditSearch` in `plugins/forum/src/pages/forum-links.ts` turns `true`, `"true"`, `1` or `"1"` into `{ submitted: true }`, and the page passes it to its notice, which then shows **Waiting for a moderator**.
-
-Do not copy that part. The edit route already returns `approval: { status: "pending", kind: "create" }` for a topic that waits, so the flag adds nothing, and a URL cannot know the server's state: a bookmarked, shared or hand-typed `?submitted=1` would show the notice on a topic with nothing pending. Read the notice from `approval` alone, as above.
+5. Open a topic with nothing pending, then one that staff unpublished in the AdminCP, which is a draft with `approval: null`. Neither shows a notice, also with `?submitted=1` added to the URL: older Forum links carried that flag, and the edit page now ignores it.

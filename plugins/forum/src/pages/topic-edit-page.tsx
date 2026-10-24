@@ -35,7 +35,6 @@ import { z } from "zod";
 
 import { manifest } from "@/manifest.gen";
 
-import type { TopicEditSearch } from "./forum-links";
 import type { TopicFormValues } from "./topic-form";
 
 import {
@@ -109,7 +108,7 @@ const TopicEditBreadcrumb = () => {
   return <span>{t("title")}</span>;
 };
 
-export const route = definePluginRoute<TopicEditData, TopicEditSearch>({
+export const route = definePluginRoute<TopicEditData>({
   load: async ({ params }) => await loadEditableTopic(params.id),
 
   head: ({ t }) => ({
@@ -134,15 +133,12 @@ const formValuesOf = (record: EditableTopic): TopicFormValues => {
   };
 };
 
+/** Reads only the server's `approval`: neither the URL nor a draft status adds a notice. */
 const ApprovalNotice = ({
   approval,
-  status,
-  submitted,
 }: {
   /** Only what the notice reads, so the edit route's JSON answer fits as is. */
   approval: null | Pick<ContentApprovalState, "kind" | "reason" | "status">;
-  status: EditableTopic["status"];
-  submitted: boolean;
 }) => {
   const t = useTranslations("@vitnode/forum.topics.approval");
 
@@ -168,12 +164,7 @@ const ApprovalNotice = ({
     );
   }
 
-  if (
-    submitted ||
-    (status === "draft" &&
-      approval?.status === "pending" &&
-      approval.kind === "create")
-  ) {
+  if (approval?.status === "pending" && approval.kind === "create") {
     return (
       <Alert icon={<HourglassIcon />} variant="info">
         <AlertTitle>{t("pending_create.title")}</AlertTitle>
@@ -190,13 +181,7 @@ const ApprovalNotice = ({
   return null;
 };
 
-const TopicEditForm = ({
-  record,
-  submitted,
-}: {
-  record: EditableTopic;
-  submitted: boolean;
-}) => {
+const TopicEditForm = ({ record }: { record: EditableTopic }) => {
   const t = useTranslations("@vitnode/forum.topics");
   const queryClient = useQueryClient();
   const [current, setCurrent] = useState({
@@ -257,11 +242,7 @@ const TopicEditForm = ({
 
   return (
     <>
-      <ApprovalNotice
-        approval={current.approval}
-        status={current.status}
-        submitted={submitted}
-      />
+      <ApprovalNotice approval={current.approval} />
 
       {write.conflict}
 
@@ -289,8 +270,7 @@ const TopicEditForm = ({
 const TopicEditPage = ({
   loaderData,
   params,
-  search,
-}: PluginRoutePageProps<TopicEditData, TopicEditSearch>) => {
+}: PluginRoutePageProps<TopicEditData>) => {
   const t = useTranslations("@vitnode/forum.topics");
 
   if (loaderData.state === "unauthenticated") {
@@ -346,11 +326,7 @@ const TopicEditPage = ({
 
   return (
     <ForumShell description={t("edit.desc")} title={t("edit.title")}>
-      <TopicEditForm
-        key={params.id}
-        record={loaderData.record}
-        submitted={search.submitted === true}
-      />
+      <TopicEditForm key={params.id} record={loaderData.record} />
     </ForumShell>
   );
 };
