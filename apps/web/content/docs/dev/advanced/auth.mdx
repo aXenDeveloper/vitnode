@@ -162,7 +162,7 @@ With passwords off:
 
 - `/login` hides the email + password form and **Forgot password?**. It keeps [SSO](/docs/dev/sso) buttons and **Sign in with a passkey** - if neither is configured, members see a "Signing in is unavailable" notice.
 - `/register` hides the sign-up form. New accounts can still come in through SSO; with no SSO provider, the page says registration is unavailable and the "Sign up" link on `/login` goes away.
-- `/login/reset-password` answers "not found".
+- `/login/reset-password` (the page a reset email links to) answers "not found".
 - The API refuses `POST /users/sign_in` (for members), `/users/sign_up`, `/users/reset-password`, `/users/change-password` and password-based SSO linking with `403`.
 - A stored password no longer counts as a way into the account, so members can't remove their last [passkey](/docs/dev/passkeys) unless they have another passkey or a linked SSO provider.
 

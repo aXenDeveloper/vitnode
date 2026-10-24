@@ -1,7 +1,11 @@
+import type { z } from "zod";
+
 import { Link } from "@tanstack/react-router";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { useTranslations } from "use-intl";
+
+import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
 
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormInput } from "@/components/form/fields/input";
@@ -15,6 +19,15 @@ import { SHAKE_KEYFRAMES, SHAKE_TRANSITION } from "@/lib/motion";
 import type { SSOLinkOffer } from "./schema";
 
 import { AUTH_HREF } from "../../auth-link";
+import { AuthStep } from "../../auth-step";
+import {
+  PasswordResetSteps,
+  PasswordResetTrigger,
+} from "../../password-reset/form/password-reset-steps";
+import {
+  type PasswordResetSubmit,
+  usePasswordReset,
+} from "../../password-reset/form/use-password-reset-form";
 import { type SSOLinkSubmit, useSSOLinkForm } from "./use-sso-link-form";
 
 export type { SSOLinkSubmit };
@@ -22,27 +35,35 @@ export type { SSOLinkSubmit };
 const EMAIL_FIELD_ID = "sso-link-email";
 
 export const SSOLinkFormContent = ({
+  captcha,
   offer,
   onLink,
+  onRequestReset,
   providerName,
-  resetPasswordHref = AUTH_HREF.resetPassword,
   showResetPassword = false,
   signInHref = AUTH_HREF.signIn,
 }: {
+  captcha?: z.infer<typeof routeMiddlewareSchema>["captcha"];
   offer: SSOLinkOffer;
   onLink: SSOLinkSubmit;
+  onRequestReset?: PasswordResetSubmit;
   providerName: () => React.ReactNode;
-  resetPasswordHref?: string;
   showResetPassword?: boolean;
   signInHref?: string;
 }) => {
   const t = useTranslations("core.auth.sso.link");
   const shouldReduceMotion = useReducedMotion();
   const { error, formSchema, onSubmit } = useSSOLinkForm({ offer, onLink });
+  const reset = usePasswordReset({ captcha, onRequestReset });
+  const canReset = showResetPassword && reset.canRequest;
+
+  if (reset.step.kind !== "idle") {
+    return <PasswordResetSteps captcha={captcha} reset={reset} />;
+  }
 
   return (
     <MotionFeatures>
-      <div className="flex flex-col gap-6">
+      <AuthStep key="link">
         {error && (
           <m.div
             animate={shouldReduceMotion ? undefined : SHAKE_KEYFRAMES}
@@ -70,13 +91,15 @@ export const SSOLinkFormContent = ({
                     autoFocus
                     label={t("password.label")}
                     labelRight={
-                      showResetPassword ? (
-                        <Link
-                          className="text-primary hover:underline"
-                          to={resetPasswordHref}
+                      canReset ? (
+                        <PasswordResetTrigger
+                          isSending={reset.isSending}
+                          onClick={() => {
+                            void reset.start(offer.email);
+                          }}
                         >
                           {t("password.reset")}
-                        </Link>
+                        </PasswordResetTrigger>
                       ) : undefined
                     }
                     type="password"
@@ -98,20 +121,29 @@ export const SSOLinkFormContent = ({
               {t.rich("no_password.desc", { provider: providerName })}
             </p>
 
-            <Button
-              className="w-full"
-              nativeButton={false}
-              render={
-                <Link to={showResetPassword ? resetPasswordHref : signInHref} />
-              }
-            >
-              {showResetPassword
-                ? t("no_password.set_password")
-                : t("no_password.sign_in")}
-            </Button>
+            {canReset ? (
+              <Button
+                className="w-full"
+                isLoading={reset.isSending}
+                onClick={() => {
+                  void reset.start(offer.email);
+                }}
+                type="button"
+              >
+                {t("no_password.set_password")}
+              </Button>
+            ) : (
+              <Button
+                className="w-full"
+                nativeButton={false}
+                render={<Link to={signInHref} />}
+              >
+                {t("no_password.sign_in")}
+              </Button>
+            )}
           </div>
         )}
-      </div>
+      </AuthStep>
     </MotionFeatures>
   );
 };

@@ -910,7 +910,7 @@
     },
     "auth": {
       "sso": {
-        "or": "Or continue with email",
+        "heading": "Continue with",
         "continue_with": "Continue with {provider}",
         "access_denied": "You have denied access to the application or the request has expired. Please try again.",
         "email_exists": {
@@ -1061,7 +1061,8 @@
         "unavailable": {
           "title": "Signing in is unavailable",
           "desc": "This site has no sign-in method switched on right now. Please check back later."
-        }
+        },
+        "last_used": "Last used"
       },
       "reset_password": {
         "title": "Reset Password",
@@ -1071,7 +1072,12 @@
           "title": "Check your email",
           "desc": "We've sent a password reset link to your email address:",
           "check_spam": "If you don't see the email in your inbox, please check your spam folder."
-        }
+        },
+        "address": {
+          "label": "Email",
+          "invalid": "Invalid email address."
+        },
+        "back": "Back to login"
       },
       "change_password": {
         "title": "Change Password",

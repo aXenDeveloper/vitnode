@@ -1,3 +1,7 @@
+import {
+  ssoProviderOfMethod,
+  useLastSignInMethod,
+} from "@/views/auth/last-sign-in-method";
 import { SignInFormContent } from "@/views/auth/sign-in/form/sign-in-form-content";
 import { PasskeySignInButton } from "@/views/auth/sign-in/passkey/passkey-sign-in-button";
 import { SignInContent } from "@/views/auth/sign-in/sign-in-content";
@@ -5,6 +9,7 @@ import { SSOButtonsContent } from "@/views/auth/sso/buttons/sso-buttons-content"
 
 import { RouteMessages } from "../i18n/route-messages";
 import {
+  requestPasswordResetAction,
   startSsoAction,
   usePasskeySignInAction,
   useSignInAction,
@@ -25,6 +30,7 @@ export interface LoginRouteProps {
 export const LoginRouteContent = ({ returnTo }: LoginRouteProps) => {
   const { data: config } = useMiddlewareConfigQuery();
   const methods = authMethodsOf(config);
+  const lastMethod = useLastSignInMethod();
   const signIn = useSignInAction({
     destination: () => postAuthDestination(returnTo),
   });
@@ -38,6 +44,8 @@ export const LoginRouteContent = ({ returnTo }: LoginRouteProps) => {
         form={
           methods.password ? (
             <SignInFormContent
+              captcha={config.captcha}
+              onRequestReset={requestPasswordResetAction}
               onSignIn={signIn}
               showResetPassword={methods.resetPassword}
             />
@@ -47,18 +55,21 @@ export const LoginRouteContent = ({ returnTo }: LoginRouteProps) => {
         passkey={
           methods.passkey ? (
             <PasskeySignInButton
+              isLastUsed={lastMethod === "passkey"}
               onSignIn={passkeySignIn}
-              showDivider={methods.password || methods.sso.length > 0}
+              showDivider={false}
             />
           ) : undefined
         }
         showSignUp={methods.signUp}
         sso={
-          <SSOButtonsContent
-            onSelectProvider={startSsoAction}
-            providers={methods.sso}
-            showDivider={methods.password}
-          />
+          methods.sso.length > 0 ? (
+            <SSOButtonsContent
+              lastUsedProviderId={ssoProviderOfMethod(lastMethod)}
+              onSelectProvider={startSsoAction}
+              providers={methods.sso}
+            />
+          ) : undefined
         }
       />
     </RouteMessages>

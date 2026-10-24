@@ -1,4 +1,4 @@
-import { notFound } from "@tanstack/react-router";
+import { notFound, redirect } from "@tanstack/react-router";
 
 import type { PluginRoutePageProps } from "@/routing";
 import type { PasswordResetSearch } from "@/tanstack/auth/recovery";
@@ -15,6 +15,7 @@ import {
   PasswordRecoveryNotFound,
   PasswordResetRouteContent,
 } from "@/tanstack/auth/recovery-screen";
+import { LOGIN_PATH } from "@/tanstack/auth/redirects";
 import { ErrorActions } from "@/tanstack/layout/error-actions";
 import { defineRoute } from "@/tanstack/plugin-routes";
 
@@ -47,10 +48,12 @@ export const route = defineRoute<PasswordResetRouteData, PasswordResetSearch>({
     // oxlint-disable-next-line typescript/only-throw-error
     if (availability === "disabled") throw notFound();
 
-    return await loadPasswordResetRoute({
-      ...context,
-      mode: passwordResetMode(search).mode,
-    });
+    const { mode } = passwordResetMode(search);
+
+    // oxlint-disable-next-line typescript/only-throw-error
+    if (mode === "request") throw redirect({ replace: true, to: LOGIN_PATH });
+
+    return await loadPasswordResetRoute({ ...context, mode });
   },
   head: ({ t }) => ({ title: t("core.auth.reset_password.title") }),
 

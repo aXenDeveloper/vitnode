@@ -1,13 +1,13 @@
 import { cn } from "cn";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 
 import type { SSOProvider } from "../providers";
 
+import { LastUsedBadge } from "../../last-used-badge";
 import { ssoBrandColors } from "../brand";
 import { SSOProviderIcon } from "./sso-provider-icon";
 
@@ -31,21 +31,33 @@ const brandStyle = (brandColor: string | undefined) => {
 };
 
 export const SSOButtonsContent = ({
+  lastUsedProviderId,
+  layout = "grid",
   onSelectProvider,
   providers,
-  showDivider = true,
 }: {
+  lastUsedProviderId?: string;
+  layout?: "grid" | "stack";
   onSelectProvider: SSOSelectProvider;
   providers: readonly SSOProvider[];
-  showDivider?: boolean;
 }) => {
   const t = useTranslations("core.auth.sso");
   const tErrors = useTranslations("core.global.errors");
   const [pendingId, setPendingId] = useState<null | string>(null);
+  const headingId = useId();
+  const lastUsedBadgeId = useId();
 
   if (!providers.length) {
     return null;
   }
+
+  const lastUsed = providers.find(
+    provider => provider.id === lastUsedProviderId,
+  );
+  const ordered = lastUsed
+    ? [lastUsed, ...providers.filter(provider => provider !== lastUsed)]
+    : providers;
+  const hasUnpairedLast = (ordered.length - (lastUsed ? 1 : 0)) % 2 === 1;
 
   const failToStart = () => {
     setPendingId(null);
@@ -66,48 +78,51 @@ export const SSOButtonsContent = ({
   };
 
   return (
-    <>
-      <div className="flex flex-col gap-3">
-        {providers.map(provider => (
-          <Button
-            className={cn(
-              "h-10 w-full [&_img]:size-4.5 [&_svg]:size-4.5 [&>span]:size-4.5",
-              provider.brandColor && BRAND_FILL,
-            )}
-            disabled={pendingId !== null && pendingId !== provider.id}
-            isLoading={pendingId === provider.id}
-            key={provider.id}
-            onClick={async () => selectProvider(provider.id)}
-            style={brandStyle(provider.brandColor)}
-            variant={provider.brandColor ? "default" : "outline"}
-          >
-            <SSOProviderIcon provider={provider} />
-            {t("continue_with", { provider: provider.name })}
-          </Button>
-        ))}
+    <div
+      aria-labelledby={headingId}
+      className="flex flex-col gap-3"
+      role="group"
+    >
+      <h2 className="text-muted-foreground text-sm font-medium" id={headingId}>
+        {t("heading")}
+      </h2>
+
+      <div
+        className={cn(
+          "grid grid-cols-2 gap-2",
+          layout === "stack" && "md:grid-cols-1 md:gap-3",
+        )}
+      >
+        {ordered.map((provider, index) => {
+          const isLastUsed = provider === lastUsed;
+
+          return (
+            <Button
+              aria-describedby={isLastUsed ? lastUsedBadgeId : undefined}
+              aria-label={t("continue_with", { provider: provider.name })}
+              className={cn(
+                "h-10 w-full min-w-0 [&_img]:size-4.5 [&_svg]:size-4.5",
+                (isLastUsed ||
+                  (hasUnpairedLast && index === ordered.length - 1)) &&
+                  "col-span-2",
+                layout === "stack" && "md:col-span-1 md:h-11",
+                isLastUsed && "h-11",
+                provider.brandColor && BRAND_FILL,
+              )}
+              disabled={pendingId !== null && pendingId !== provider.id}
+              isLoading={pendingId === provider.id}
+              key={provider.id}
+              onClick={async () => selectProvider(provider.id)}
+              style={brandStyle(provider.brandColor)}
+              variant={provider.brandColor ? "default" : "outline"}
+            >
+              <SSOProviderIcon provider={provider} />
+              <span className="truncate">{provider.name}</span>
+              {isLastUsed ? <LastUsedBadge id={lastUsedBadgeId} /> : null}
+            </Button>
+          );
+        })}
       </div>
-
-      {showDivider ? (
-        <div className="relative my-6">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-
-          <div className="relative flex justify-center text-xs">
-            <span className="bg-card text-muted-foreground px-4">
-              {t("or")}
-            </span>
-          </div>
-        </div>
-      ) : null}
-    </>
+    </div>
   );
 };
-
-/** The row's shape while the deployment configuration is still in flight. */
-export const SSOButtonsSkeleton = () => (
-  <div className="mb-6 flex flex-col gap-3">
-    <Skeleton className="h-10 w-full" />
-    <Skeleton className="h-10 w-full" />
-  </div>
-);

@@ -2,7 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 
 import type { ChangePasswordSubmit } from "@/views/auth/password-reset/change-password-form/change-password-form-content";
-import type { PasswordResetSubmit } from "@/views/auth/password-reset/form/password-reset-form-content";
+import type { PasswordResetSubmit } from "@/views/auth/password-reset/form/use-password-reset-form";
 import type { SignInSubmit } from "@/views/auth/sign-in/form/sign-in-form-content";
 import type { PasskeySignInSubmit } from "@/views/auth/sign-in/passkey/passkey-sign-in-button";
 import type { SignUpSubmit } from "@/views/auth/sign-up/form/sign-up-form-content";
@@ -14,6 +14,10 @@ import type {
   ResendVerificationSubmit,
 } from "@/views/auth/verify-email/schema";
 
+import {
+  rememberSignInMethod,
+  ssoSignInMethod,
+} from "@/views/auth/last-sign-in-method";
 import { getPasskeyInBrowser } from "@/views/auth/passkeys/webauthn";
 
 import type { SsoCallbackInput } from "./contract";
@@ -54,6 +58,7 @@ export const useSignInAction = ({
 
     if (!result.ok) return signInFormResult(result);
 
+    rememberSignInMethod("password");
     // Somebody has just identified themselves, and it may not be whoever this
     // browser held data for. Dropping it costs nothing when there is none -
     // which is the usual case on the public login page - and forces every
@@ -97,6 +102,8 @@ export const usePasskeySignInAction = ({
       return result.reason === "access_denied" ? "rejected" : result.reason;
     }
 
+    rememberSignInMethod("passkey");
+
     removeAdminIdentityQueries(queryClient);
     removeUserIdentityQueries(queryClient);
 
@@ -126,6 +133,7 @@ export const useCompleteSsoAction = (params: null | SsoCallbackInput) => {
     const result = await authTransport().completeSso(params);
 
     if (result.ok) {
+      rememberSignInMethod(ssoSignInMethod(params.providerId));
       // The same identity boundary the password sign-in above crosses, reached
       // by a different door: a provider has just told this application who the
       // visitor is. Whatever the tab was holding - the AdminCP's privileged
@@ -157,6 +165,8 @@ export const useLinkSsoAction = ({
     });
 
     if (!result.ok) return ssoLinkFormResult(result);
+
+    rememberSignInMethod(ssoSignInMethod(providerId));
 
     removeAdminIdentityQueries(queryClient);
     removeUserIdentityQueries(queryClient);

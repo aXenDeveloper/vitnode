@@ -14,9 +14,9 @@ const SHARED = {
   ),
   errorScreen: join(here, "../error/error-content.tsx"),
   passwordResetCard: join(here, "password-reset/password-reset-content.tsx"),
-  passwordResetForm: join(
+  passwordResetSteps: join(
     here,
-    "password-reset/form/password-reset-form-content.tsx",
+    "password-reset/form/password-reset-steps.tsx",
   ),
   recoveryLink: join(here, "password-reset/recovery-link.ts"),
   settingsNav: join(here, "settings/nav-content.tsx"),
