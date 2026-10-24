@@ -104,8 +104,8 @@ export const prepareOgImageAsset = async (
 
   const sharp = await loadSharp();
   if (!sharp) {
-    // `@vercel/og` renders without sharp too, so a missing native build only
-    // costs the resize: formats the renderer reads go in as they are.
+    // The card renders without sharp too, so a missing native build only
+    // costs the resize: formats resvg draws go in as they are.
     const passthrough = passThroughAsset(bytes, { alt, svg, type });
     if (passthrough) return passthrough;
 
@@ -170,8 +170,9 @@ const svgDimensions = (
 };
 
 /**
- * The image as it is, for when `sharp` cannot be loaded: PNG, JPEG, WebP and
- * SVG up to 4 MB, which the renderer decodes itself. `null` for anything else.
+ * The image as it is, for when `sharp` cannot be loaded: PNG, JPEG and SVG up
+ * to 4 MB, which resvg decodes itself. `null` for anything else - resvg draws
+ * no WebP or AVIF, and an image it cannot draw would leave an empty box.
  */
 const passThroughAsset = (
   bytes: Uint8Array,
@@ -182,9 +183,7 @@ const passThroughAsset = (
   const mimeType = svg ? "image/svg+xml" : type;
   const dimensions = svg
     ? svgDimensions(bytes)
-    : mimeType === "image/jpeg" ||
-        mimeType === "image/png" ||
-        mimeType === "image/webp"
+    : mimeType === "image/jpeg" || mimeType === "image/png"
       ? imageDimensions(bytes, mimeType)
       : null;
   if (!mimeType || !dimensions) return null;

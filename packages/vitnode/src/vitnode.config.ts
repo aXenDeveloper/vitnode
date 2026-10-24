@@ -241,7 +241,8 @@ export interface VitNodeApiConfig {
    */
   notifications?: Partial<NotificationWorkerSettings>;
   /**
-   * Generated Open Graph images (1200 × 630 PNG, rendered with `@vercel/og`).
+   * Generated Open Graph images (1200 × 630 PNG, laid out with Satori and
+   * rasterized with resvg).
    * Off without it; `ogImages: {}` turns them on with the built-in template
    * and the bundled fonts. Content types opt in with
    * `delivery.seo.openGraph.image`, and plugins call `ogImageResponse` from

@@ -1,5 +1,5 @@
 /**
- * Server-only Open Graph image generation, built on `@vercel/og`: the config
+ * Server-only Open Graph image generation, built on Satori and resvg: the config
  * types for `buildApiConfig({ ogImages })`, the built-in template and the
  * generator plugins call from their own Hono routes.
  */
@@ -24,12 +24,14 @@ export {
   defaultOgImageTemplateEntry,
 } from "./default-template";
 export { OG_IMAGE_DEFAULT_FONT_FAMILY } from "./fonts";
+export type { LoadedOgImageFont } from "./fonts";
 export type { OgImageRequest, OgImageResult } from "./generate";
 export {
   generateOgImage,
   OgImageInputError,
   OgImagesDisabledError,
 } from "./generate";
+export { renderOgImagePng } from "./render";
 export {
   OG_IMAGE_PRIVATE_CACHE_CONTROL,
   OG_IMAGE_PUBLIC_CACHE_CONTROL,

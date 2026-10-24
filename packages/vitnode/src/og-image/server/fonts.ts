@@ -3,7 +3,7 @@ import type { OgImageBinarySource, OgImageFont } from "./types";
 /** The `fontFamily` stack the bundled fonts answer to. */
 export const OG_IMAGE_DEFAULT_FONT_FAMILY = "Inter, 'Inter Latin Ext'";
 
-/** What `@vercel/og` takes: bytes, already loaded. */
+/** What Satori takes: bytes, already loaded. */
 export interface LoadedOgImageFont {
   data: ArrayBuffer;
   name: string;

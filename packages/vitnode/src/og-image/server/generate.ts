@@ -19,6 +19,7 @@ import { describeOgCover } from "./assets";
 import { readOgImageCache, writeOgImageCache } from "./cache";
 import { selectOgImageTemplate } from "./config";
 import { loadOgImageFonts } from "./fonts";
+import { renderOgImagePng } from "./render";
 
 /**
  * What a card is made of. Every value is trusted page data the server read
@@ -109,22 +110,14 @@ export const requireOgImagesConfig = (c: Context): ResolvedOgImagesConfig => {
 };
 
 const toPng = async (
+  config: ResolvedOgImagesConfig,
   template: OgImageTemplate,
   input: OgImageTemplateInput,
   fonts: Awaited<ReturnType<typeof loadOgImageFonts>>,
-): Promise<Uint8Array> => {
-  // Loaded on first use: the Node build of `@vercel/og` reads its WASM and
-  // fallback font from disk when imported, which no other request should pay.
-  const { ImageResponse } = await import("@vercel/og");
-  const element = await template.render(input);
-  const response = new ImageResponse(element, {
-    fonts,
-    height: OG_IMAGE_HEIGHT,
-    width: OG_IMAGE_WIDTH,
+): Promise<Uint8Array> =>
+  await renderOgImagePng(await template.render(input), fonts, {
+    loadAdditionalAsset: config.loadAdditionalAsset,
   });
-
-  return new Uint8Array(await response.arrayBuffer());
-};
 
 /**
  * At most two cards render at once per process: a render is a few hundred
@@ -244,6 +237,7 @@ export const generateOgImage = async (
     ]);
 
     const png = await toPng(
+      config,
       template,
       {
         cover: coverAsset ?? null,

@@ -103,7 +103,7 @@ A content type picks it with `delivery.seo.openGraph.image.template: "minimal"`,
 
 ## Styling rules
 
-`@vercel/og` renders with [Satori](https://github.com/vercel/satori), which supports a subset of CSS:
+Templates are laid out by [Satori](https://github.com/vercel/satori), which supports a subset of CSS:
 
 - Use inline `style` objects. `className`, Tailwind classes and CSS files do nothing.
 - Layout is flexbox only. A `<div>` with more than one child needs `display: "flex"`; there is no grid.
@@ -130,5 +130,35 @@ ogImages: {
 - TTF, OTF and WOFF work. WOFF2 and variable fonts do not.
 - Each font is loaded once per process, on the first render.
 - Satori uses one file per name and weight. When a font is split into subsets, give each subset its own `name` and list them all in `fontFamily`, like the bundled `"Inter, 'Inter Latin Ext'"`.
-- Characters no font covers, such as emoji or Chinese, are fetched from a CDN by `@vercel/og` at render time. Ship a font for every script your titles use if the server has no outbound network.
+- Characters no font covers, such as emoji or Chinese, are drawn as a "no glyph" box. See below.
 - Bump `ogImages.version` after replacing a font file under the same name.
+
+## Emoji and other scripts
+
+Rendering never touches the network on its own. To draw emoji, or a script your fonts do not cover, pass Satori's `loadAdditionalAsset` hook. It receives a language code (`"emoji"`, or a script such as `"ja-JP"`) and the text that needs it, and returns an SVG `data:` URI for an emoji or a list of fonts for a script:
+
+```ts title="src/vitnode.api.config.ts"
+import { readFile } from "node:fs/promises";
+
+const twemoji = (emoji: string) =>
+  [...emoji]
+    .map(char => char.codePointAt(0)?.toString(16))
+    .filter(code => code !== "fe0f")
+    .join("-");
+
+ogImages: {
+  loadAdditionalAsset: async (code, segment) => {
+    if (code === "emoji") {
+      // Twemoji SVGs copied into the app, so no request leaves the server.
+      const svg = await readFile(`./og/emoji/${twemoji(segment)}.svg`);
+
+      return `data:image/svg+xml;base64,${svg.toString("base64")}`;
+    }
+
+    return [];
+  },
+},
+```
+
+The hook runs inside every render that needs it, so keep it fast, and bump `ogImages.version` when you change what it returns. If it fetches from a CDN, that request happens while the card renders.
+

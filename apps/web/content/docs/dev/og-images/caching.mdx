@@ -47,10 +47,9 @@ When a cover or logo cannot be loaded (a timeout, a missing file), the card is r
 
 The generator runs inside the API, on Node.js 22 or newer, wherever your VitNode API runs: `vitnode start`, a Docker image or any Node.js host. It needs no Vercel account and no Vercel hosting.
 
-- VitNode pins `@vercel/og` 0.11. The 1.0 Node build crashes outside a CommonJS-shimmed bundle (`Dynamic require of "fs" is not supported`).
-- `@vercel/og` reads its WebAssembly renderer and fallback font from its own package folder, so it must stay in `node_modules` rather than being inlined into a single-file bundle. A `vitnode build` output keeps it there.
-- Rendering takes roughly 50-300 ms of CPU per card, plus the first request's one-off font and WebAssembly load.
+- Cards are laid out with [Satori](https://github.com/vercel/satori) and rasterized with [`@resvg/resvg-js`](https://github.com/thx/resvg-js), a native module with prebuilt binaries for Linux (glibc and musl), macOS and Windows. Nitro's tracer copies it into the build output on its own. When no resvg binary exists for the platform, VitNode rasterizes with `sharp` instead.
+- Rendering takes roughly 60-250 ms of CPU per card, plus a one-off load of Satori and the fonts on the first request.
 - The bundled Inter fonts ship inside `@vitnode/core` as a lazily loaded module, so no font file has to be copied next to the server bundle.
-- Covers and logos are resized with `sharp`. When `sharp` cannot load (a missing native build), PNG, JPEG, WebP and SVG images up to 4 MB are drawn as they are, and others, such as AVIF covers, are skipped with a warning in the server log.
-- Edge runtimes are not supported: the generator uses Node.js APIs and the Node build of `@vercel/og`.
-- Emoji and scripts outside the configured fonts are downloaded from a CDN while rendering. See [Use your own fonts](/docs/dev/og-images/templates#use-your-own-fonts).
+- Covers and logos are resized and converted to JPEG or PNG with `sharp`, because resvg cannot draw WebP or AVIF. When `sharp` cannot load (a missing native build), PNG, JPEG and SVG images up to 4 MB are drawn as they are, and others, such as WebP covers, are skipped with a warning in the server log.
+- Edge runtimes are not supported: the generator uses Node.js APIs and native modules.
+- Nothing is downloaded while rendering. Emoji and scripts the fonts do not cover show as boxes unless you add [`loadAdditionalAsset`](/docs/dev/og-images/templates#emoji-and-other-scripts).

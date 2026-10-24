@@ -36,6 +36,7 @@ export interface ResolvedOgImagesConfig {
   configIdentity: string;
   defaultTemplate: string;
   fonts: OgImageFont[] | undefined;
+  loadAdditionalAsset: OgImagesConfig["loadAdditionalAsset"];
   logo: DescribedOgImageAsset | null;
   siteName: string;
   templates: ReadonlyMap<string, OgImageTemplate>;
@@ -134,6 +135,7 @@ export const resolveOgImagesConfig = (
       .slice(0, 16),
     defaultTemplate,
     fonts: config.fonts,
+    loadAdditionalAsset: config.loadAdditionalAsset,
     logo,
     siteName,
     templates,

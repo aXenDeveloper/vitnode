@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import type { SatoriOptions } from "satori";
 
 /** Raw bytes, or a function that loads them once, on first use. */
 export type OgImageBinarySource =
@@ -117,6 +118,14 @@ export interface OgImagesConfig {
    * Extended - Polish included). Set `theme.fontFamily` to match.
    */
   fonts?: OgImageFont[];
+  /**
+   * Supplies characters the fonts lack, called by Satori while rendering:
+   * return an SVG `data:` URI when `languageCode` is `"emoji"`, or extra fonts
+   * for a script such as `"ja-JP"`. Unset, rendering never touches the
+   * network and a missing character is drawn as a "no glyph" box. Bump
+   * `version` after changing it.
+   */
+  loadAdditionalAsset?: SatoriOptions["loadAdditionalAsset"];
   /**
    * Templates by id (`a-z`, `0-9`, `-`, `_`). Defaults to
    * `{ default: defaultOgImageTemplate }`; when set, it is the whole list, so
