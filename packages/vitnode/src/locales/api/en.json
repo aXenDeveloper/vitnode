@@ -26,6 +26,19 @@
           "help": "If you're having trouble with the button above, copy and paste the URL below into your web browser:",
           "expire_time": "This link will expire on {date}"
         }
+      },
+      "sso_confirm_email": {
+        "email": {
+          "subject": "Confirm your email to finish signing in",
+          "greeting": "Hello {name}!",
+          "intro": "Someone signed in with an account that didn't share a verified email address, and asked to use this one. Confirm it's yours to finish signing in.",
+          "button": "Confirm email and sign in",
+          "instructions": "Open the link in the same browser where you started signing in - it won't work anywhere else.",
+          "no_action": "If this wasn't you, ignore this email. Nobody can use your address without this link.",
+          "security_note": "For your security, this request was made from IP address: {ip}",
+          "help": "If you're having trouble with the button above, copy and paste the URL below into the same browser:",
+          "expire_time": "This link will expire on {date}"
+        }
       }
     },
     "notifications": {

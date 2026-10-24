@@ -1,0 +1,164 @@
+---
+title: PayPal
+description: Add Log in with PayPal to VitNode - enable it on a PayPal REST app, pick sandbox or live, register the HTTPS return URL and wire up the adapter.
+icon: Wallet
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Add a **Continue with PayPal** button that signs people in with their PayPal account. This is **authentication only**: VitNode takes no payments, sees no balances and needs no payment permissions. To accept payments, use a payments integration separately.
+
+## Before you begin
+
+- A [PayPal developer account](https://developer.paypal.com/).
+- A public **HTTPS** return URL. PayPal does not accept `localhost`, so local testing needs a tunnel (see [Develop locally](#develop-locally)).
+
+## Quick start
+
+```bash title=".env"
+PAYPAL_CLIENT_ID=AYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+PAYPAL_CLIENT_SECRET=EKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { PayPalSSOApiPlugin } from '@vitnode/core/api/adapters/sso/paypal' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:9]
+  authorization: {
+    ssoAdapters: [
+      PayPalSSOApiPlugin({
+        clientId: process.env.PAYPAL_CLIENT_ID,
+        clientSecret: process.env.PAYPAL_CLIENT_SECRET,
+        environment: 'sandbox',
+      }),
+    ],
+  },
+})
+```
+
+## Sandbox or live
+
+`environment` has no default, on purpose. Sandbox and live are separate apps with separate credentials, accounts and endpoints:
+
+| `environment` | Sign-in page             | API                                | Who can sign in              |
+| ------------- | ------------------------ | ---------------------------------- | ---------------------------- |
+| `'sandbox'`   | `www.sandbox.paypal.com` | `https://api-m.sandbox.paypal.com` | sandbox test accounts only   |
+| `'live'`      | `www.paypal.com`         | `https://api-m.paypal.com`         | real PayPal accounts         |
+
+Sandbox credentials fail against live, and the other way round. A common pattern is `environment: process.env.PAYPAL_ENVIRONMENT === 'live' ? 'live' : 'sandbox'`.
+
+## Set up Log in with PayPal
+
+<Steps>
+<Step>
+
+### Create a REST app
+
+In the [PayPal Developer Dashboard](https://developer.paypal.com/dashboard/applications/sandbox), choose **Sandbox** or **Live** at the top, open **Apps & Credentials** and press **Create App** (type **Merchant**).
+
+</Step>
+
+<Step>
+
+### Enable Log in with PayPal
+
+Open the app, scroll to **Features** (or **Other features**) and tick **Log in with PayPal**, then open **Advanced Settings**.
+
+</Step>
+
+<Step>
+
+### Add the return URL and user information
+
+In **Advanced Settings**:
+
+- **Return URL**: `https://your-domain.com/login/sso/paypal`. VitNode builds it from `VITNODE_WEB_URL`, so it must match exactly.
+- **Information requested from customers**: tick **Full name** and **Email**. Nothing else is needed.
+- Add the **Privacy policy URL** and **User agreement URL** PayPal asks for, then save.
+
+</Step>
+
+<Step>
+
+### Copy the credentials
+
+The app page shows the **Client ID** and **Secret** for the environment you chose. Keep them server-side:
+
+```bash title=".env"
+PAYPAL_CLIENT_ID=AYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+PAYPAL_CLIENT_SECRET=EKxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Register the adapter and restart
+
+Add `PayPalSSOApiPlugin` with the matching `environment`, as in the [quick start](#quick-start), and restart the server:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Check the result
+
+For sandbox, create a personal test account under **Testing tools → Sandbox accounts**. Open `/login` on your HTTPS domain, press **Continue with PayPal**, sign in with the test account and agree. You return to `/login/sso/paypal` signed in.
+
+</Step>
+</Steps>
+
+## Go live
+
+Repeat the setup with **Live** selected, switch the variables to the live credentials and set `environment: 'live'`. PayPal reviews the requested customer information when you save a live app, which can take some time; sign-in shows an error until it is approved.
+
+## Develop locally
+
+Use an HTTPS tunnel (for example Cloudflare Tunnel or ngrok), add its return URL to the sandbox app, and point VitNode at it:
+
+```bash title=".env"
+VITNODE_WEB_URL=https://forum-dev.example.com
+VITNODE_API_URL=https://forum-dev.example.com
+```
+
+## Scopes and profile fields
+
+| Setting        | Value                                                  |
+| -------------- | ------------------------------------------------------ |
+| Scopes         | `openid email profile`                                 |
+| Token auth     | HTTP Basic with the client ID and secret               |
+| Account ID     | `user_id`                                              |
+| Email trusted  | the primary email, when PayPal marks it `confirmed`    |
+| Profile fields | first name, last name                                  |
+
+## Troubleshooting
+
+- **"invalid_client"** - sandbox credentials with `environment: 'live'`, or the other way round.
+- **PayPal shows "We're sorry, things don't appear to be working"** - the return URL in **Advanced Settings** differs from `{VITNODE_WEB_URL}/login/sso/paypal`, or is not HTTPS.
+- **Signed in, but asked to confirm an email** - **Email** is not ticked under the requested information, or the PayPal account's email is unconfirmed. See [Email confirmation](/docs/dev/sso/email-confirmation).
+
+## Next
+
+<Cards>
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+  <Card title="Email confirmation" description="When PayPal shares no confirmed email" href="/docs/dev/sso/email-confirmation" />
+</Cards>

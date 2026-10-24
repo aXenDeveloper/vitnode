@@ -25,7 +25,11 @@ const operations = createAuthOperations({
       plugin: manifest.id,
       args: {
         params: { providerId: data.providerId },
-        query: { code: data.code, state: data.state },
+        query: {
+          code: data.code,
+          state: data.state,
+          ...(data.user ? { user: data.user } : {}),
+        },
       },
       method: "get",
       module: "users/sso",

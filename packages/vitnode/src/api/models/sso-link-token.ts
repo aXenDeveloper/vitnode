@@ -11,13 +11,17 @@ const zodSsoLinkTokenPayload = z.object({
   e: z.string().min(3),
   exp: z.number().int().positive(),
   p: z.string().min(1),
+  pe: z.string().nullable().optional(),
   s: z.string().min(1),
   u: z.number().int().positive(),
 });
 
 export interface SsoLinkOffer {
+  /** The address the visitor proved they own - from the provider, or confirmed by email link. */
   email: string;
   providerAccountId: string;
+  /** The address the provider itself shared, stored on the connection. `null` when it shared none. Defaults to `email`. */
+  providerEmail?: null | string;
   providerId: string;
   userId: number;
 }
@@ -40,6 +44,10 @@ export const createSsoLinkToken = ({
       e: offer.email,
       exp: Math.floor(expiresAt.getTime() / 1000),
       p: offer.providerId,
+      ...(offer.providerEmail === undefined ||
+      offer.providerEmail === offer.email
+        ? {}
+        : { pe: offer.providerEmail }),
       s: offer.providerAccountId,
       u: offer.userId,
     }),
@@ -66,6 +74,7 @@ export const verifySsoLinkToken = ({
   return {
     email: payload.e,
     providerAccountId: payload.s,
+    providerEmail: payload.pe === undefined ? payload.e : payload.pe,
     providerId: payload.p,
     userId: payload.u,
   };

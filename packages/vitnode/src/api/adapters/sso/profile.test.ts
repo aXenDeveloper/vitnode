@@ -10,6 +10,8 @@ const credentials = { clientId: "client", clientSecret: "secret" };
 
 const TOKEN = { access_token: "token", token_type: "Bearer" };
 
+const CONTEXT = { codeVerifier: "verifier", nonce: "nonce", params: {} };
+
 const answer = (body: unknown) => {
   const fetch = vi.fn(async (_input: unknown) =>
     Promise.resolve(new Response(JSON.stringify(body), { status: 200 })),
@@ -37,7 +39,7 @@ describe("the Google adapter", () => {
       verified_email: true,
     });
 
-    expect(await google.fetchUser(TOKEN)).toEqual({
+    expect(await google.fetchUser(TOKEN, CONTEXT)).toEqual({
       avatarUrl: "https://lh3.googleusercontent.com/a/photo=s96-c",
       email: "alice@gmail.test",
       emailVerified: true,
@@ -56,7 +58,7 @@ describe("the Google adapter", () => {
       verified_email: true,
     });
 
-    expect(await google.fetchUser(TOKEN)).toMatchObject({
+    expect(await google.fetchUser(TOKEN, CONTEXT)).toMatchObject({
       avatarUrl: null,
       firstName: null,
       lastName: null,
@@ -77,7 +79,7 @@ describe("the Discord adapter", () => {
       verified: true,
     });
 
-    expect(await discord.fetchUser(TOKEN)).toEqual({
+    expect(await discord.fetchUser(TOKEN, CONTEXT)).toEqual({
       avatarUrl:
         "https://cdn.discordapp.com/avatars/80351110224678912/a_1269e74af4df7417b13759eae50c83dc.png?size=512",
       email: "alice@discord.test",
@@ -97,7 +99,7 @@ describe("the Discord adapter", () => {
         verified: true,
       });
 
-      expect((await discord.fetchUser(TOKEN)).avatarUrl).toBeNull();
+      expect((await discord.fetchUser(TOKEN, CONTEXT)).avatarUrl).toBeNull();
     }
   });
 });
@@ -120,7 +122,7 @@ describe("the Facebook adapter", () => {
       },
     });
 
-    expect(await facebook.fetchUser(TOKEN)).toEqual({
+    expect(await facebook.fetchUser(TOKEN, CONTEXT)).toEqual({
       avatarUrl: "https://platform-lookaside.fbsbx.com/photo.jpg",
       email: "alice@facebook.test",
       emailVerified: true,
@@ -145,7 +147,7 @@ describe("the Facebook adapter", () => {
       picture: { data: { is_silhouette: true, url: "https://x.test/s.jpg" } },
     });
 
-    expect(await facebook.fetchUser(TOKEN)).toMatchObject({
+    expect(await facebook.fetchUser(TOKEN, CONTEXT)).toMatchObject({
       avatarUrl: null,
       firstName: null,
       lastName: null,

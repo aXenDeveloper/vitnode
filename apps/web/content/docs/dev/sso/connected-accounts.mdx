@@ -1,6 +1,6 @@
 ---
 title: Connected Accounts
-description: Let members connect Google, Discord, Facebook or custom SSO accounts from Settings, import their avatar and name, and keep them in sync on sign-in.
+description: Let members connect any configured SSO provider from Settings, import their avatar and name, and keep them in sync on sign-in.
 icon: Link
 ---
 
@@ -20,15 +20,17 @@ Only the avatar, first name and last name are ever imported. Email, username, di
 
 ## How connecting works
 
-1. The member selects **Connect**. `POST /users/sso/connections/{providerId}/authorize` stores a short-lived, single-use **state** bound to that member, that provider and the `link` intent - only its SHA-256 hash is kept, in `core_users_sso_operations`.
+1. The member selects **Connect**. `POST /users/sso/connections/{providerId}/authorize` checks that this browser signed in within the **last hour** - otherwise it answers `403 reauthentication_required` and the member is asked to sign in again. It then stores a short-lived, single-use **state** bound to that member, that provider and the `link` intent, together with the round trip's PKCE verifier and nonce. Only the state's SHA-256 hash is kept, in `core_users_sso_operations`.
 2. The browser goes to the provider and comes back to the usual callback, `/login/sso/{providerId}`. That page recognises a settings state and calls the authenticated `POST /users/sso/connections/{providerId}/callback` instead of the public sign-in.
 3. The state is spent the moment it is looked up - even a failed attempt burns it - and it must still be fresh (ten minutes), for the same provider, the same intent and the **currently signed-in member**. Anything else is a `400 invalid_state`.
-4. The provider account is linked to the member. Accounts are never merged by email.
+4. The provider account is linked to the member by its stable account ID. Accounts are never merged by email, so a provider that shares no email (Reddit, TikTok) or an unverified one connects just the same.
 5. The member lands back on `/settings/sso` with a toast.
 
 A provider account already linked to someone else answers `409 account_taken`. A member can have **one account per provider**; a second one answers `409 provider_already_connected`. Both rules are unique constraints on `core_users_sso`, so two racing requests can't sneak past them.
 
 Connecting never creates a session - public or AdminCP - and never changes the profile.
+
+The recent sign-in rule means a stolen session cookie alone cannot add a sign-in method the thief controls. Import and sync round trips are not affected: they only read from an account that is already connected.
 
 <Callout type="info">
   The public sign-in and the login-time "Connect *Provider* to your account"

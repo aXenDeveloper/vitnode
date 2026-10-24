@@ -122,6 +122,25 @@ export const vitNodeApiConfig = buildApiConfig({
         clientId: process.env.FACEBOOK_CLIENT_ID,
         clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
       }),
+      // More built-in providers, opt-in: import the factory from
+      // `@vitnode/core/api/adapters/sso/{providerId}`, uncomment its line and
+      // set its variables in `.env`. A button without credentials still shows
+      // up and fails on click, so only add the ones you configure. Apple,
+      // PayPal and TikTok need a public HTTPS `VITNODE_WEB_URL`.
+      // See https://vitnode.com/docs/dev/sso
+      //
+      // AppleSSOApiPlugin({ clientId: process.env.APPLE_CLIENT_ID, teamId: process.env.APPLE_TEAM_ID, keyId: process.env.APPLE_KEY_ID, privateKey: process.env.APPLE_PRIVATE_KEY }),
+      // AtlassianSSOApiPlugin({ clientId: process.env.ATLASSIAN_CLIENT_ID, clientSecret: process.env.ATLASSIAN_CLIENT_SECRET }),
+      // GitLabSSOApiPlugin({ clientId: process.env.GITLAB_CLIENT_ID, clientSecret: process.env.GITLAB_CLIENT_SECRET }),
+      // KickSSOApiPlugin({ clientId: process.env.KICK_CLIENT_ID, clientSecret: process.env.KICK_CLIENT_SECRET }),
+      // LinkedInSSOApiPlugin({ clientId: process.env.LINKEDIN_CLIENT_ID, clientSecret: process.env.LINKEDIN_CLIENT_SECRET }),
+      // MicrosoftSSOApiPlugin({ clientId: process.env.MICROSOFT_CLIENT_ID, clientSecret: process.env.MICROSOFT_CLIENT_SECRET, tenant: "common" }),
+      // PayPalSSOApiPlugin({ clientId: process.env.PAYPAL_CLIENT_ID, clientSecret: process.env.PAYPAL_CLIENT_SECRET, environment: "sandbox" }),
+      // RedditSSOApiPlugin({ clientId: process.env.REDDIT_CLIENT_ID, clientSecret: process.env.REDDIT_CLIENT_SECRET, userAgent: process.env.REDDIT_USER_AGENT }),
+      // SlackSSOApiPlugin({ clientId: process.env.SLACK_CLIENT_ID, clientSecret: process.env.SLACK_CLIENT_SECRET, teamId: process.env.SLACK_TEAM_ID }),
+      // TikTokSSOApiPlugin({ clientKey: process.env.TIKTOK_CLIENT_KEY, clientSecret: process.env.TIKTOK_CLIENT_SECRET }),
+      // TwitchSSOApiPlugin({ clientId: process.env.TWITCH_CLIENT_ID, clientSecret: process.env.TWITCH_CLIENT_SECRET }),
+      // TwitterSSOApiPlugin({ clientId: process.env.TWITTER_CLIENT_ID, clientSecret: process.env.TWITTER_CLIENT_SECRET }),
     ],
   },
   // Bot protection on the routes that declare `withCaptcha` - register, log in,

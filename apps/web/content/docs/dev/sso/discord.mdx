@@ -6,7 +6,7 @@ icon: MessagesSquare
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-Discord is the quickest of the three to set up: no consent screen review, no app
+Discord is one of the quickest providers to set up: no consent screen review, no app
 modes, no verification. Create an application, add one redirect URL, copy two
 values.
 
@@ -195,7 +195,7 @@ permissions.
 | Profile URL   | `https://discord.com/api/users/@me`    |
 | Scopes        | `identify email`                       |
 | Provider id   | `discord`                              |
-| Fields read   | `id`, `email`, `username`, `avatar`    |
+| Fields read   | `id`, `email`, `verified`, `username`, `avatar` |
 
 Both scopes are required: `identify` for the id and username, `email` for the
 address the account is created with.
@@ -216,11 +216,10 @@ avatar is offered.
   generic error screen.
 </Callout>
 
-<Callout type="warn" title="Discord's email verification flag is not checked">
-  Unlike the Google adapter, which rejects an unverified address, this one takes
-  Discord's `email` at face value and never reads Discord's `verified` field. If
-  you need that guarantee, copy the adapter into your own project and add the
-  check - see [Custom adapter](/docs/dev/sso/custom-adapter).
+<Callout type="warn" title="Unverified Discord emails are refused">
+  The adapter reads Discord's `verified` field and answers `400` when it is
+  `false`, so a Discord account with an unconfirmed address cannot sign in until
+  it confirms the address in Discord. The visitor sees the generic error screen.
 </Callout>
 
 <Callout type="warn" title="A missing key fails on click, not on boot">

@@ -163,8 +163,11 @@ export const createAuthOperations = <TSession>(
 
     if (!response) return { ok: false, reason: "server_error" };
 
-    if (response.status === 409) {
-      return completeSsoResultFromStatus(409, await readJson(response));
+    if (response.status === 409 || response.status === 202) {
+      return completeSsoResultFromStatus(
+        response.status,
+        await readJson(response),
+      );
     }
 
     return completeSsoResultFromStatus(response.status);

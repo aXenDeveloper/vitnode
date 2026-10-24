@@ -6,14 +6,55 @@ import { Card, CardDescription } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorContent } from "@/views/error/error-content";
 
+import type { SSOEmailCompletionActions } from "../email/sso-email-completion";
 import type { SSOLinkSubmit } from "../link/sso-link-form-content";
 import type { SSOProvider } from "../providers";
 import type { SSOCallbackState } from "./use-sso-callback";
 
 import { AUTH_HREF } from "../../auth-link";
+import { SSOEmailCompletion } from "../email/sso-email-completion";
 import { SSOLinkFormContent } from "../link/sso-link-form-content";
 
+const SSOCallbackCard = ({
+  children,
+  description,
+  footer,
+  title,
+}: {
+  children: React.ReactNode;
+  description?: React.ReactNode;
+  footer?: React.ReactNode;
+  /** Leave out when the content brings its own heading. */
+  title?: React.ReactNode;
+}) => (
+  <div className="mx-auto flex max-w-md flex-col justify-center px-4 py-16 md:min-h-[calc(100vh-4rem)]">
+    <Card className="bg-muted gap-0 p-0">
+      <div className="bg-card rounded-xl p-6">
+        {title ? (
+          <div className="mb-10 flex flex-col gap-2 text-center">
+            <h1 className="text-2xl leading-none font-semibold tracking-tight text-balance">
+              {title}
+            </h1>
+            <CardDescription className="text-pretty">
+              {description}
+            </CardDescription>
+          </div>
+        ) : null}
+
+        {children}
+      </div>
+
+      {footer ? (
+        <div className="text-accent-foreground p-6 text-center text-sm">
+          {footer}
+        </div>
+      ) : null}
+    </Card>
+  </div>
+);
+
 export const SSOCallbackContent = ({
+  emailCompletion,
   errorActions,
   onLink,
   providerId,
@@ -23,6 +64,8 @@ export const SSOCallbackContent = ({
   signInHref = AUTH_HREF.signIn,
   state,
 }: {
+  /** The calls behind the email step, for providers that share no verified address. */
+  emailCompletion?: SSOEmailCompletionActions;
   errorActions?: React.ReactNode;
   onLink: SSOLinkSubmit;
   providerId: string;
@@ -55,39 +98,87 @@ export const SSOCallbackContent = ({
 
   if (state.kind === "email_exists" && state.offer) {
     return (
-      <div className="mx-auto flex max-w-md flex-col justify-center px-4 py-16 md:min-h-[calc(100vh-4rem)]">
-        <Card className="bg-muted gap-0 p-0">
-          <div className="bg-card rounded-xl p-6">
-            <div className="mb-10 flex flex-col gap-2 text-center">
-              <h1 className="text-2xl leading-none font-semibold tracking-tight text-balance">
-                {t.rich("link.title", { provider: providerName })}
-              </h1>
-              <CardDescription className="text-pretty">
-                {t.rich("link.desc", { provider: providerName })}
-              </CardDescription>
-            </div>
+      <SSOCallbackCard
+        description={t.rich("link.desc", { provider: providerName })}
+        footer={t.rich("link.other_account", {
+          link: text => (
+            <Link className="text-primary font-semibold" to={signInHref}>
+              {text}
+            </Link>
+          ),
+        })}
+        title={t.rich("link.title", { provider: providerName })}
+      >
+        <SSOLinkFormContent
+          offer={state.offer}
+          onLink={onLink}
+          providerName={providerName}
+          resetPasswordHref={resetPasswordHref}
+          showResetPassword={showResetPassword}
+          signInHref={signInHref}
+        />
+      </SSOCallbackCard>
+    );
+  }
 
-            <SSOLinkFormContent
-              offer={state.offer}
-              onLink={onLink}
-              providerName={providerName}
-              resetPasswordHref={resetPasswordHref}
-              showResetPassword={showResetPassword}
-              signInHref={signInHref}
-            />
-          </div>
+  if (state.kind === "email_required" && emailCompletion) {
+    return (
+      <SSOCallbackCard
+        footer={t.rich("link.other_account", {
+          link: text => (
+            <Link className="text-primary font-semibold" to={signInHref}>
+              {text}
+            </Link>
+          ),
+        })}
+      >
+        <SSOEmailCompletion
+          actions={emailCompletion}
+          emailSuggestion={state.emailSuggestion}
+          providerName={providerName}
+          signInHref={signInHref}
+        />
+      </SSOCallbackCard>
+    );
+  }
 
-          <div className="text-accent-foreground p-6 text-center text-sm">
-            {t.rich("link.other_account", {
-              link: text => (
-                <Link className="text-primary font-semibold" to={signInHref}>
-                  {text}
-                </Link>
-              ),
-            })}
-          </div>
-        </Card>
-      </div>
+  if (
+    state.kind === "confirm_other_browser" ||
+    state.kind === "confirm_invalid"
+  ) {
+    const key =
+      state.kind === "confirm_other_browser" ? "other_browser" : "invalid";
+
+    return (
+      <ErrorContent
+        actions={
+          <Button
+            nativeButton={false}
+            render={<Link to={signInHref} />}
+            size="lg"
+          >
+            {t("email_completion.start_again")}
+          </Button>
+        }
+        code={400}
+        description={t.rich(`email_confirm.${key}.desc`, {
+          provider: providerName,
+        })}
+        title={t(`email_confirm.${key}.title`)}
+      />
+    );
+  }
+
+  if (state.kind === "email_unavailable" || state.kind === "email_required") {
+    return (
+      <ErrorContent
+        actions={errorActions}
+        code={400}
+        description={t.rich("email_unavailable.desc", {
+          provider: providerName,
+        })}
+        title={t("email_unavailable.title")}
+      />
     );
   }
 

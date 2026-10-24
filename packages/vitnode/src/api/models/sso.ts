@@ -3,7 +3,6 @@ import type { Context } from "hono";
 import { and, eq } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
-import crypto from "node:crypto";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type { SsoProfileField } from "@/lib/sso-profile";
@@ -14,77 +13,143 @@ import { isPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { ensureServerSecret } from "@/api/lib/server-secret";
 import { ssoConfirmsEmail } from "@/api/lib/sso-email-confirmation";
 import {
+  hashSsoSecret,
+  pkceChallengeS256,
+  randomSsoSecret,
+  timingSafeEqualText,
+} from "@/api/lib/sso-protocol";
+import {
   emailAliases,
   matchesEmail,
   pickAccountForEmail,
 } from "@/api/lib/user-email-lookup";
 import { core_users, core_users_sso } from "@/database/users";
 import { CONFIG } from "@/lib/config";
-import { normalizeEmailAddress } from "@/lib/email-canonical";
 import { removeSpecialCharacters } from "@/lib/special-characters";
 
+import type { SsoFlowStore } from "./sso-flow-store";
+
+import { isEmailVerificationRequired } from "./email-verification";
 import { PasswordModel } from "./password";
-import { SsoConnectionModel, ssoIdentityOf } from "./sso-connection";
+import {
+  SsoConnectionModel,
+  ssoIdentityOf,
+  type SsoProviderIdentity,
+} from "./sso-connection";
+import { drizzleSsoFlowStore } from "./sso-flow-store";
 import {
   createSsoLinkToken,
   SSO_LINK_SECRET_NAME,
+  type SsoLinkOffer,
   verifySsoLinkToken,
 } from "./sso-link-token";
 import { UserModel } from "./user";
 
 /** The account an SSO provider returned, as an adapter's `fetchUser` maps it. */
 export interface SSOProviderUser {
-  /** Profile picture URL, for profile sync. */
+  /** Profile picture URL (HTTPS), for profile sync. `null` when the provider has none. */
   avatarUrl?: null | string;
-  /** The account's email. Matched against existing VitNode accounts on first sign-in. */
-  email: string;
   /**
-   * Whether the provider confirmed the user owns `email`. Core keys accounts on
-   * the email, so `false` refuses the sign-in (`400`) instead of creating,
-   * linking or verifying an account with it. Leave it unset only when the
-   * provider never returns an unconfirmed address.
+   * The account's email, or `null` when the provider shares none. Only an
+   * address core can trust (see `emailVerified`) is matched against existing
+   * accounts or stored as verified; anything else sends a new visitor through
+   * email confirmation instead.
+   */
+  email?: null | string;
+  /**
+   * Whether the provider confirmed the user owns `email`. `false` means core
+   * never trusts the address: a returning member still signs in by `id`, and a
+   * new one confirms an address of their own by email link. Leave it unset only
+   * when the provider never returns an unconfirmed address.
    */
   emailVerified?: boolean;
   firstName?: null | string;
-  /** The provider's stable account id, stored to recognise the account next time. */
+  /** The provider's stable account id, stored to recognise the account next time. Up to 255 characters. */
   id: string;
   lastName?: null | string;
-  /** Becomes the new user's name (special characters removed) on sign-up. */
-  username: string;
+  /** Becomes the new user's name (special characters removed) on sign-up. A generic name is used when `null`. */
+  username?: null | string;
 }
 
 /**
- * An SSO (OAuth) provider adapter, listed in the API config's
+ * What a provider's token endpoint answered. Adapters may keep any extra
+ * field they need later in `fetchUser` (an `id_token`, TikTok's `open_id`...).
+ */
+export interface SSOTokenResponse {
+  [field: string]: unknown;
+  access_token: string;
+  /** The OpenID Connect ID token, when the provider issued one. */
+  id_token?: string;
+  token_type: string;
+}
+
+/** What core hands `getUrl` for one sign-in attempt. */
+export interface SSOAuthorizationRequest {
+  /** The PKCE `S256` challenge of {@link SSOCallbackContext.codeVerifier}. Send it when the provider supports PKCE. */
+  codeChallenge: string;
+  codeChallengeMethod: "S256";
+  /** A fresh OpenID Connect nonce. Send it when the provider echoes it in the ID token. */
+  nonce: string;
+  /** Pass through unchanged. */
+  state: string;
+}
+
+/**
+ * The attempt's secrets, given back to `fetchToken` and `fetchUser`. They are
+ * stored server-side between the two legs and never reach the browser.
+ */
+export interface SSOCallbackContext {
+  /** The PKCE verifier matching the challenge `getUrl` received. */
+  codeVerifier: string;
+  /** The nonce `getUrl` received; check it against the ID token's `nonce`. */
+  nonce: string;
+  /**
+   * Extra parameters the provider sent to the callback besides `code` and
+   * `state` - Apple's `user` field on a first authorization, for instance.
+   * Untrusted input: validate before use.
+   */
+  params: Readonly<Record<string, string>>;
+}
+
+/**
+ * An SSO (OAuth / OpenID Connect) provider adapter, listed in the API config's
  * `authorization.ssoAdapters`. Core's built-in adapters live in
  * `@vitnode/core/api/adapters/sso/*`; a custom provider implements this shape.
  *
- * Sign-in flow: `getUrl` sends the browser to the provider, which redirects to
- * {@link getRedirectUri} with a `code`; core verifies the `state` cookie, then
- * calls `fetchToken` and `fetchUser`. An unknown account signs up, a known one
- * signs in, and an email that matches an existing account asks for that
- * account's password before linking. Server-only.
+ * Sign-in flow: `getUrl` sends the browser to the provider with a state,
+ * PKCE challenge and nonce that core stores server-side, single use, for ten
+ * minutes, bound to the browser and the provider. The provider redirects to
+ * {@link getRedirectUri}; core consumes the attempt, then calls `fetchToken`
+ * and `fetchUser`. A known identity signs in by its `id`, whatever the email
+ * says. An unknown one with a trusted email signs up, or - when that email
+ * belongs to an account - links after that account's password. An unknown one
+ * without a trusted email confirms an address through an emailed link first.
+ *
+ * Server-only.
  */
 export interface SSOApiPlugin {
   /** The sign-in button's background color, e.g. `"#5865f2"`; the text color is picked for contrast. */
   brandColor?: string;
-  /** Exchanges the authorization code for an access token. Throw an `HTTPException` to fail the sign-in. */
+  /** Exchanges the authorization code for tokens. Throw an `HTTPException` to fail the sign-in. */
   fetchToken: (
     code: string,
-  ) => Promise<{ access_token: string; token_type: string }>;
+    context: SSOCallbackContext,
+  ) => Promise<SSOTokenResponse>;
   /**
-   * Reads the provider account with the token. Report an address the provider
-   * has not confirmed with `emailVerified: false` (or throw an `HTTPException`
-   * yourself) - an unconfirmed email must never reach core as a trusted one.
+   * Reads the provider account with the tokens. Validate an ID token here when
+   * the provider issues one. Report an address the provider has not confirmed
+   * with `emailVerified: false` - an unconfirmed email must never reach core
+   * as a trusted one.
    */
-  fetchUser: (args: {
-    access_token: string;
-    token_type: string;
-  }) => Promise<SSOProviderUser>;
+  fetchUser: (
+    token: SSOTokenResponse,
+    context: SSOCallbackContext,
+  ) => Promise<SSOProviderUser>;
   /** The provider's authorization URL. Must pass `state` through unchanged and use {@link getRedirectUri} as the redirect URI. */
-  getUrl: (props: { state: string }) => string;
+  getUrl: (request: SSOAuthorizationRequest) => string;
   /** The button's icon, as SVG markup. */
   icon?: string;
-  /** Unique provider id, used in URLs (`login/sso/{id}`) and to store linked accounts. */
+  /** Unique provider id, used in URLs (`login/sso/{id}`) and to store linked accounts. Letters, digits, `_` and `-`. */
   id: string;
   /** The provider's display name, e.g. `"Google"`. */
   name: string;
@@ -93,12 +158,14 @@ export interface SSOApiPlugin {
 }
 
 export type SSOCallbackOutcome =
+  | { email: null | string; kind: "email_required" }
   | {
       email: string;
       hasPassword: boolean;
       kind: "link_required";
       linkToken: string;
     }
+  | { kind: "email_unavailable" }
   | { kind: "signed_in"; userId: number };
 
 /**
@@ -109,6 +176,26 @@ export type SSOCallbackOutcome =
 export const getRedirectUri = (code: string) =>
   new URL(`${CONFIG.web.href}login/sso/${code}`).toString();
 
+/** How long a sign-in round trip may take, provider screens included. */
+export const SSO_ATTEMPT_TTL_MS = 10 * 60_000;
+
+/** How long an identity may wait for its email to be confirmed. */
+export const SSO_PENDING_TTL_MS = 30 * 60_000;
+
+const NAME_MAX_LENGTH = 32;
+
+const COOKIE_SECRET = /^[\w-]{43,128}$/;
+
+/**
+ * Hands the identity of an attempt on: a provider account the visitor just
+ * proved they own, plus how far core may trust its email.
+ */
+interface VerifiedIdentity {
+  identity: SsoProviderIdentity;
+  trustedEmail: null | string;
+  untrustedEmail: null | string;
+}
+
 export class SSOModel {
   constructor(c: Context<EnvVitNode>) {
     this.c = c;
@@ -118,197 +205,313 @@ export class SSOModel {
   private readonly c: Context<EnvVitNode>;
   private readonly plugins: SSOApiPlugin[];
 
-  private readonly signUpUser = async ({
-    providerId,
-    user,
-    c,
-  }: {
-    c: Context;
-    providerId: string;
-    user: {
-      email: string;
-      id: string;
-      username: string;
-    };
-  }) => {
-    const data = await new UserModel().signUp(
-      {
-        email: user.email,
-        emailVerified: true,
-        name: removeSpecialCharacters(user.username, false),
-        newsletter: false,
-        hashedPassword: undefined,
-      },
-      c,
-    );
-    await c
-      .get("db")
-      .insert(core_users_sso)
-      .values({
-        userId: data.id,
-        providerId: providerId,
-        providerAccountId: user.id,
-        providerEmail: user.email,
-        providerUsername: user.username.slice(0, 255),
-      });
-
-    return { userId: data.id };
-  };
+  private cookieName(suffix: "binding" | "pending"): string {
+    return `${this.c.get("core").authorization.cookieName}--sso-${suffix}`;
+  }
 
   private async linkSecret(): Promise<string> {
     return await ensureServerSecret(this.c.get("db"), SSO_LINK_SECRET_NAME);
   }
 
-  private async mintLinkToken(offer: {
-    email: string;
-    providerAccountId: string;
-    providerId: string;
-    userId: number;
-  }): Promise<string> {
+  private async mintLinkToken(offer: SsoLinkOffer): Promise<string> {
     return createSsoLinkToken({ offer, secret: await this.linkSecret() }).token;
   }
 
-  async callback({
+  private provider(providerId: string): SSOApiPlugin {
+    const provider = this.plugins.find(p => p.id === providerId);
+    if (!provider) throw new HTTPException(404);
+
+    return provider;
+  }
+
+  private readCookieSecret(suffix: "binding" | "pending"): null | string {
+    const value = getCookie(this.c, this.cookieName(suffix));
+
+    return value && COOKIE_SECRET.test(value) ? value : null;
+  }
+
+  /**
+   * Signs up a new member for a provider identity, linked to it. The name is
+   * the provider's username, or "{Provider} user", with a short suffix when
+   * another member already holds it.
+   */
+  private async signUpLinked({
+    email,
+    identity,
+    provider,
+  }: {
+    email: string;
+    identity: SsoProviderIdentity;
+    provider: SSOApiPlugin;
+  }): Promise<number> {
+    const base = removeSpecialCharacters(
+      identity.username ?? `${provider.name} user`,
+      false,
+    )
+      .slice(0, NAME_MAX_LENGTH)
+      .trim();
+    const fallback = base.length >= 3 ? base : `${provider.name} user`;
+
+    for (let attempt = 0; ; attempt++) {
+      const name =
+        attempt === 0
+          ? fallback
+          : `${fallback.slice(0, NAME_MAX_LENGTH - 5).trim()} ${randomDigits(4)}`;
+
+      try {
+        const userId = await this.createAccount({ email, name });
+        await this.c.get("db").insert(core_users_sso).values({
+          providerAccountId: identity.id,
+          providerEmail: identity.email,
+          providerId: provider.id,
+          providerUsername: identity.username,
+          userId,
+        });
+
+        return userId;
+      } catch (error) {
+        const nameTaken =
+          error instanceof HTTPException &&
+          error.status === 409 &&
+          error.message === "Name already exists";
+        if (!nameTaken || attempt >= 3) throw error;
+      }
+    }
+  }
+
+  private async verifyIdentity({
     code,
+    params,
     providerId,
     state,
   }: {
     code: string;
+    params: Readonly<Record<string, string>>;
+    providerId: string;
+    state: string;
+  }): Promise<VerifiedIdentity & { provider: SSOApiPlugin }> {
+    const attempt = await this.consumeAttempt({ providerId, state });
+    const provider = this.provider(providerId);
+    const context = {
+      codeVerifier: attempt.codeVerifier,
+      nonce: attempt.nonce,
+      params,
+    };
+
+    const token = await provider.fetchToken(code, context);
+    const user = await provider.fetchUser(token, context);
+    const identity = ssoIdentityOf(provider, user);
+    if (!identity.id) {
+      throw new HTTPException(502, { message: "Invalid provider account" });
+    }
+
+    return {
+      identity,
+      provider,
+      trustedEmail: identity.email,
+      untrustedEmail:
+        identity.email ??
+        (typeof user.email === "string" ? user.email.slice(0, 255) : null),
+    };
+  }
+
+  /**
+   * Finishes a provider round trip: sign in, sign up, ask to link, or ask for
+   * an email. Throws `400` for a state that is unknown, expired, already used,
+   * from another browser or for another provider.
+   */
+  async callback({
+    code,
+    params = {},
+    providerId,
+    state,
+  }: {
+    code: string;
+    params?: Readonly<Record<string, string>>;
     providerId: string;
     state: string;
   }): Promise<SSOCallbackOutcome> {
-    await this.verifyState(state);
-    const provider = this.plugins.find(p => p.id === providerId);
-    if (!provider) {
-      throw new HTTPException(404);
-    }
+    const { identity, provider, trustedEmail, untrustedEmail } =
+      await this.verifyIdentity({ code, params, providerId, state });
 
-    const ssoToken = await provider.fetchToken(code);
-    const userFromProvider = await provider.fetchUser(ssoToken);
-    if (userFromProvider.emailVerified === false) {
-      throw new HTTPException(400, { message: "Email not verified" });
-    }
-    const userFromSSO = {
-      email: normalizeEmailAddress(userFromProvider.email),
-      id: userFromProvider.id,
-      username: userFromProvider.username,
-    };
-
-    const outcome = await this.c.get("db").transaction(async tx => {
-      const [dataSSOFromDb] = await tx
-        .select({
-          userId: core_users_sso.userId,
-          email: core_users.email,
-          emailVerified: core_users.emailVerified,
-        })
-        .from(core_users_sso)
-        .innerJoin(core_users, eq(core_users.id, core_users_sso.userId))
-        .where(
-          and(
-            eq(core_users_sso.providerId, providerId),
-            eq(core_users_sso.providerAccountId, userFromSSO.id),
-          ),
-        )
-        .limit(1);
-
-      if (!dataSSOFromDb) {
-        const accountsWithEmail = await tx
-          .select({
-            id: core_users.id,
-            email: core_users.email,
-            password: core_users.password,
-          })
-          .from(core_users)
-          .where(matchesEmail(userFromSSO.email))
-          .limit(2);
-        const userWithEmail = pickAccountForEmail(
-          accountsWithEmail,
-          userFromSSO.email,
-        );
-
-        if (!userWithEmail) {
-          const signUpUser = await this.signUpUser({
-            providerId,
-            user: userFromSSO,
-            c: this.c,
-          });
-
-          return { kind: "signed_in", userId: signUpUser.userId } as const;
-        }
-
-        return {
-          email: userWithEmail.email,
-          hasPassword:
-            isPasswordSignInEnabled(this.c) && userWithEmail.password !== null,
-          kind: "link_required" as const,
-          linkToken: await this.mintLinkToken({
-            email: userFromSSO.email,
-            providerAccountId: userFromSSO.id,
-            providerId,
-            userId: userWithEmail.id,
-          }),
-        };
-      }
-
+    const linked = await this.findLinkedUser(providerId, identity.id);
+    if (linked) {
       if (
+        trustedEmail &&
         ssoConfirmsEmail({
-          accountEmail: dataSSOFromDb.email,
-          emailVerified: dataSSOFromDb.emailVerified,
-          providerEmail: userFromSSO.email,
+          accountEmail: linked.email,
+          emailVerified: linked.emailVerified,
+          providerEmail: trustedEmail,
         })
       ) {
-        await tx
+        await this.c
+          .get("db")
           .update(core_users)
           .set({ emailVerified: true })
-          .where(eq(core_users.id, dataSSOFromDb.userId));
+          .where(eq(core_users.id, linked.userId));
       }
 
-      return { kind: "returning", userId: dataSSOFromDb.userId } as const;
-    });
-
-    if (outcome.kind === "returning") {
       await new SsoConnectionModel(this.c).afterSignIn({
-        identity: ssoIdentityOf(provider, userFromProvider),
+        identity,
         providerId,
-        userId: outcome.userId,
+        userId: linked.userId,
       });
 
-      return { kind: "signed_in", userId: outcome.userId };
+      return { kind: "signed_in", userId: linked.userId };
     }
 
-    return outcome;
-  }
-
-  async encryptState() {
-    const state = crypto.randomBytes(8).toString("hex");
-    const encryptedState = await new Promise<string>((resolve, reject) => {
-      const salt = crypto.randomBytes(4).toString("hex");
-
-      crypto.scrypt(state, salt, 16, (err, derivedKey) => {
-        if (err) reject(err);
-
-        resolve(`${salt}:${derivedKey.toString("hex")}`);
+    if (trustedEmail) {
+      return await this.signUpOrOfferLink({
+        email: trustedEmail,
+        identity,
+        provider,
       });
+    }
+
+    if (!isEmailVerificationRequired(this.c)) {
+      return { kind: "email_unavailable" };
+    }
+
+    const token = randomSsoSecret();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + SSO_PENDING_TTL_MS);
+    await this.flowStore.savePending(
+      {
+        expiresAt,
+        profile: identity.profile,
+        providerAccountId: identity.id,
+        providerId,
+        providerUsername: identity.username,
+        tokenHash: hashSsoSecret(token),
+      },
+      now,
+    );
+    setAuthCookie(this.c, this.cookieName("pending"), token, {
+      expires: expiresAt,
     });
 
-    // No `expires`: the state is only good for the round trip to the provider
-    // and back, so it should not outlive the browser session.
-    setAuthCookie(
+    return { email: untrustedEmail, kind: "email_required" };
+  }
+
+  clearPendingCookie(): void {
+    deleteAuthCookie(this.c, this.cookieName("pending"));
+  }
+
+  /**
+   * Consumes the attempt `state` names - once - and checks it belongs to this
+   * browser and this provider and has not expired.
+   *
+   * @throws `HTTPException(400)` otherwise.
+   */
+  async consumeAttempt({
+    providerId,
+    state,
+  }: {
+    providerId: string;
+    state: string;
+  }): Promise<{ codeVerifier: string; nonce: string }> {
+    const invalid = () => new HTTPException(400, { message: "Invalid state" });
+    const binding = this.readCookieSecret("binding");
+    if (!binding || state.length > 256) throw invalid();
+
+    const attempt = await this.flowStore.consumeAttempt(hashSsoSecret(state));
+    if (
+      !attempt ||
+      attempt.expiresAt.getTime() <= Date.now() ||
+      attempt.providerId !== providerId ||
+      !timingSafeEqualText(attempt.bindingHash, hashSsoSecret(binding))
+    ) {
+      throw invalid();
+    }
+
+    return { codeVerifier: attempt.codeVerifier, nonce: attempt.nonce };
+  }
+
+  /**
+   * Creates a member whose email is already proven - by the provider, or by
+   * the emailed link. `409` when the name or the address is taken.
+   */
+  async createAccount({
+    email,
+    name,
+  }: {
+    email: string;
+    name: string;
+  }): Promise<number> {
+    const user = await new UserModel().signUp(
+      {
+        email,
+        emailVerified: true,
+        hashedPassword: undefined,
+        name,
+        newsletter: false,
+      },
       this.c,
-      `${this.c.get("core").authorization.cookieName}--state-sso`,
-      encryptedState,
     );
 
-    return state;
+    return user.id;
   }
 
-  async getUrl(providerId: string) {
-    const provider = this.plugins.find(p => p.id === providerId);
-    if (!provider) {
-      throw new HTTPException(404);
-    }
+  /** The member already linked to this provider account, if any. */
+  async findLinkedUser(
+    providerId: string,
+    providerAccountId: string,
+  ): Promise<null | { email: string; emailVerified: boolean; userId: number }> {
+    const [row] = await this.c
+      .get("db")
+      .select({
+        email: core_users.email,
+        emailVerified: core_users.emailVerified,
+        userId: core_users_sso.userId,
+      })
+      .from(core_users_sso)
+      .innerJoin(core_users, eq(core_users.id, core_users_sso.userId))
+      .where(
+        and(
+          eq(core_users_sso.providerId, providerId),
+          eq(core_users_sso.providerAccountId, providerAccountId),
+        ),
+      )
+      .limit(1);
 
-    return provider.getUrl({ state: await this.encryptState() });
+    return row ?? null;
+  }
+
+  /**
+   * Starts a sign-in: stores a single-use attempt (state, PKCE verifier,
+   * nonce) bound to this browser through an HttpOnly cookie, and returns the
+   * provider URL.
+   */
+  async getUrl(providerId: string) {
+    const provider = this.provider(providerId);
+    const binding = this.readCookieSecret("binding") ?? randomSsoSecret();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + SSO_ATTEMPT_TTL_MS);
+    const state = randomSsoSecret();
+    const codeVerifier = randomSsoSecret(48);
+    const nonce = randomSsoSecret();
+
+    await this.flowStore.saveAttempt(
+      {
+        bindingHash: hashSsoSecret(binding),
+        codeVerifier,
+        expiresAt,
+        nonce,
+        providerId,
+        stateHash: hashSsoSecret(state),
+      },
+      now,
+    );
+    setAuthCookie(this.c, this.cookieName("binding"), binding, {
+      expires: expiresAt,
+    });
+
+    return provider.getUrl({
+      codeChallenge: pkceChallengeS256(codeVerifier),
+      codeChallengeMethod: "S256",
+      nonce,
+      state,
+    });
   }
 
   async link({
@@ -398,7 +601,7 @@ export class SSOModel {
             userId: user.id,
             providerId,
             providerAccountId: offer.providerAccountId,
-            providerEmail: offer.email,
+            providerEmail: offer.providerEmail ?? null,
           });
         }
 
@@ -434,35 +637,83 @@ export class SSOModel {
     return { userId: user.id };
   }
 
-  async verifyState(state: string) {
-    const storedState = getCookie(
-      this.c,
-      `${this.c.get("core").authorization.cookieName}--state-sso`,
-    );
-    if (!storedState) {
-      throw new HTTPException(400, {
-        message: "Invalid state",
+  /** Keeps this browser's pending-sign-in cookie alive until `expiresAt`. */
+  refreshPendingCookie(expiresAt: Date): void {
+    const token = this.pendingToken;
+    if (token) {
+      setAuthCookie(this.c, this.cookieName("pending"), token, {
+        expires: expiresAt,
       });
     }
+  }
 
-    const isValid = await new Promise<boolean>((resolve, reject) => {
-      const [salt, storedHash] = storedState.split(":");
+  /**
+   * The new identity's next step once core holds an email it trusts - from
+   * the provider, or confirmed by email link: a fresh account, or the existing
+   * account's password before linking.
+   */
+  async signUpOrOfferLink({
+    email,
+    identity,
+    provider,
+    providerEmail = email,
+  }: {
+    email: string;
+    identity: SsoProviderIdentity;
+    provider: SSOApiPlugin;
+    /** The address to record as the provider's own; `null` when the provider shared none. */
+    providerEmail?: null | string;
+  }): Promise<
+    Extract<SSOCallbackOutcome, { kind: "link_required" | "signed_in" }>
+  > {
+    const accountsWithEmail = await this.c
+      .get("db")
+      .select({
+        email: core_users.email,
+        id: core_users.id,
+        password: core_users.password,
+      })
+      .from(core_users)
+      .where(matchesEmail(email))
+      .limit(2);
+    const existing = pickAccountForEmail(accountsWithEmail, email);
 
-      crypto.scrypt(state, salt, 16, (err, derivedKey) => {
-        if (err) reject(err);
-        resolve(storedHash === derivedKey.toString("hex"));
+    if (!existing) {
+      const userId = await this.signUpLinked({
+        email,
+        identity: { ...identity, email: providerEmail },
+        provider,
       });
-    });
 
-    if (!isValid) {
-      throw new HTTPException(400, {
-        message: "Invalid state",
-      });
+      return { kind: "signed_in", userId };
     }
 
-    deleteAuthCookie(
-      this.c,
-      `${this.c.get("core").authorization.cookieName}--state-sso`,
-    );
+    return {
+      email: existing.email,
+      hasPassword:
+        isPasswordSignInEnabled(this.c) && existing.password !== null,
+      kind: "link_required",
+      linkToken: await this.mintLinkToken({
+        email,
+        providerAccountId: identity.id,
+        providerEmail,
+        providerId: provider.id,
+        userId: existing.id,
+      }),
+    };
+  }
+
+  get flowStore(): SsoFlowStore {
+    return drizzleSsoFlowStore(this.c.get("db"));
+  }
+
+  /** The pending identity this browser's cookie names, if it is still live. */
+  get pendingToken(): null | string {
+    return this.readCookieSecret("pending");
   }
 }
+
+const randomDigits = (length: number): string =>
+  Array.from(crypto.getRandomValues(new Uint8Array(length)), byte =>
+    (byte % 10).toString(),
+  ).join("");

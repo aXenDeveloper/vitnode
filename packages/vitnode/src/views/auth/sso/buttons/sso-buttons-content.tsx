@@ -15,6 +15,10 @@ export type SSOStartResult = undefined | { message?: string };
 
 export type SSOSelectProvider = (providerId: string) => Promise<SSOStartResult>;
 
+// Past this many buttons a single column pushes the email form off screen, so
+// they go in two columns with the bare provider name on each button.
+const COMPACT_FROM = 5;
+
 const BRAND_FILL =
   "border-transparent bg-(--sso-brand) text-(--sso-brand-foreground) hover:bg-(--sso-brand-hover)";
 
@@ -65,13 +69,22 @@ export const SSOButtonsContent = ({
     }
   };
 
+  const compact = providers.length >= COMPACT_FROM;
+
   return (
     <>
-      <div className="flex flex-col gap-3">
+      <div
+        className={cn("grid gap-3", compact ? "grid-cols-2" : "grid-cols-1")}
+      >
         {providers.map(provider => (
           <Button
+            aria-label={
+              compact
+                ? t("continue_with", { provider: provider.name })
+                : undefined
+            }
             className={cn(
-              "h-10 w-full [&_img]:size-4.5 [&_svg]:size-4.5 [&>span]:size-4.5",
+              "h-10 w-full min-w-0 [&_img]:size-4.5 [&_svg]:size-4.5 [&>span[aria-hidden]]:size-4.5",
               provider.brandColor && BRAND_FILL,
             )}
             disabled={pendingId !== null && pendingId !== provider.id}
@@ -82,7 +95,11 @@ export const SSOButtonsContent = ({
             variant={provider.brandColor ? "default" : "outline"}
           >
             <SSOProviderIcon provider={provider} />
-            {t("continue_with", { provider: provider.name })}
+            <span className="truncate">
+              {compact
+                ? provider.name
+                : t("continue_with", { provider: provider.name })}
+            </span>
           </Button>
         ))}
       </div>

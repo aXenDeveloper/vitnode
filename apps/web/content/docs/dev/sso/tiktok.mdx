@@ -1,0 +1,161 @@
+---
+title: TikTok
+description: Add TikTok sign-in to VitNode with Login Kit for Web - create a TikTok app, register the HTTPS redirect URI, test in sandbox and confirm new members' email.
+icon: Music
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Add a **Continue with TikTok** button using TikTok's Login Kit for Web. The adapter asks only for `user.info.basic`. TikTok never shares an email address, so new members confirm one by email.
+
+## Before you begin
+
+- A [TikTok for Developers](https://developers.tiktok.com/) account.
+- A public **HTTPS** redirect URI. TikTok does not accept `http://` or `localhost` for web apps, so develop through a tunnel (see [Develop locally](#develop-locally)).
+- An [email adapter](/docs/dev/email), to send the [confirmation link](/docs/dev/sso/email-confirmation).
+
+## Quick start
+
+TikTok calls the client ID a **Client Key**, and so does the adapter.
+
+```bash title=".env"
+TIKTOK_CLIENT_KEY=awxxxxxxxxxxxxxx
+TIKTOK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { TikTokSSOApiPlugin } from '@vitnode/core/api/adapters/sso/tiktok' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      TikTokSSOApiPlugin({
+        clientKey: process.env.TIKTOK_CLIENT_KEY,
+        clientSecret: process.env.TIKTOK_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+## Set up the app
+
+<Steps>
+<Step>
+
+### Create an app
+
+In the [TikTok developer portal](https://developers.tiktok.com/apps/), press **Connect an app** (or **Create app**), choose an organization or individual owner, and fill in the app name, icon, category, description, terms of service and privacy policy URLs.
+
+</Step>
+
+<Step>
+
+### Add Login Kit and the redirect URI
+
+Under **Products**, add **Login Kit**. In its settings, choose **Web** and add the redirect URI:
+
+| Environment | Redirect URI                                     |
+| ----------- | ------------------------------------------------ |
+| Production  | `https://your-domain.com/login/sso/tiktok`       |
+| Development | `https://forum-dev.example.com/login/sso/tiktok` |
+
+TikTok needs an absolute, static HTTPS URL with no query string. VitNode builds it as `{VITNODE_WEB_URL}/login/sso/tiktok`, so they must match exactly.
+
+</Step>
+
+<Step>
+
+### Check the scope
+
+Under **Scopes**, `user.info.basic` is added with Login Kit. It is all VitNode needs; leave out `user.info.profile`, `video.list` and the rest.
+
+</Step>
+
+<Step>
+
+### Copy the credentials
+
+Copy the **Client Key** and **Client Secret** from the app's credentials into server-side variables:
+
+```bash title=".env"
+TIKTOK_CLIENT_KEY=awxxxxxxxxxxxxxx # [!code ++]
+TIKTOK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Register the adapter and restart
+
+Add `TikTokSSOApiPlugin` as in the [quick start](#quick-start) and restart the server:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login` on your HTTPS domain, press **Continue with TikTok** and authorize. The first time, VitNode asks for an email and sends a confirmation link - open it in the same browser; afterwards the same TikTok account signs straight in.
+
+</Step>
+</Steps>
+
+## Test in sandbox, then submit for review
+
+A new app cannot be used by the public until TikTok approves it. To test before that, create a **Sandbox** for the app in the developer portal and add up to ten **target users** - only those TikTok accounts can sign in, and the sandbox has its own Client Key and Secret.
+
+When it works, switch the variables to the production credentials and **Submit for review**. TikTok checks the app details, the website and the requested scopes.
+
+## Develop locally
+
+Run the dev server behind an HTTPS tunnel (for example Cloudflare Tunnel or ngrok), add that URL to Login Kit, and set:
+
+```bash title=".env"
+VITNODE_WEB_URL=https://forum-dev.example.com
+VITNODE_API_URL=https://forum-dev.example.com
+```
+
+## Scopes and profile fields
+
+| Setting        | Value                                                         |
+| -------------- | ------------------------------------------------------------- |
+| Scopes         | `user.info.basic`                                             |
+| Account ID     | `open_id` (unique to your app)                                |
+| Email          | never shared - [confirmed by email](/docs/dev/sso/email-confirmation) |
+| Profile fields | avatar                                                        |
+
+The display name becomes the new account's name. TikTok's avatar links are signed and expire, so import the avatar from [Connected accounts](/docs/dev/sso/connected-accounts) soon after connecting.
+
+## Troubleshooting
+
+- **"redirect_uri" error on TikTok's page** - the URI in Login Kit differs from `{VITNODE_WEB_URL}/login/sso/tiktok`, or it is not HTTPS.
+- **"client_key" error** - you used the sandbox key with production credentials, or the other way round.
+- **Only some accounts can sign in** - the app is still in sandbox; add them as target users or submit the app for review.
+
+## Next
+
+<Cards>
+  <Card title="Email confirmation" description="How new TikTok members confirm an address" href="/docs/dev/sso/email-confirmation" />
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+</Cards>

@@ -1,0 +1,136 @@
+---
+title: Kick
+description: Add Kick sign-in to VitNode - create a Kick developer app, register the redirect URL and wire up the Kick SSO adapter with PKCE.
+icon: Zap
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+Add a **Continue with Kick** button for streamers and viewers. Kick requires OAuth 2.1 with PKCE, which the adapter handles for you, and asks only for `user:read`.
+
+## Before you begin
+
+- A Kick account with **two-factor authentication** turned on. Kick will not let you create an app without it.
+- An [email adapter](/docs/dev/email). Kick does not say whether an account's email is verified, so every new member [confirms an address by email](/docs/dev/sso/email-confirmation).
+
+## Quick start
+
+```bash title=".env"
+KICK_CLIENT_ID=01ABCDEFGHJKMNPQRSTVWXYZ
+KICK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+```ts title="src/vitnode.api.config.ts"
+import { KickSSOApiPlugin } from '@vitnode/core/api/adapters/sso/kick' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  plugins: [],
+  // [!code ++:8]
+  authorization: {
+    ssoAdapters: [
+      KickSSOApiPlugin({
+        clientId: process.env.KICK_CLIENT_ID,
+        clientSecret: process.env.KICK_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+## Set up the app
+
+<Steps>
+<Step>
+
+### Create a developer app
+
+On kick.com open **Settings → Developer** and press **Create new**. Give the app the name people will see when they authorize it.
+
+</Step>
+
+<Step>
+
+### Add the redirect URL and scope
+
+Enter the redirect URL and tick only **Read user information** (`user:read`):
+
+| Environment                           | Redirect URL                             |
+| ------------------------------------- | ---------------------------------------- |
+| Development (`VITNODE_WEB_URL` unset) | `http://localhost:3000/login/sso/kick`   |
+| Production                            | `https://your-domain.com/login/sso/kick` |
+
+VitNode builds it from `VITNODE_WEB_URL`, so it must match exactly. Use `localhost`, not `127.0.0.1` - Kick rewrites `127.0.0.1` in redirect URLs to `localhost`, which then no longer matches.
+
+</Step>
+
+<Step>
+
+### Copy the credentials
+
+Copy the **Client ID** and **Client Secret** into server-side variables:
+
+```bash title=".env"
+KICK_CLIENT_ID=01ABCDEFGHJKMNPQRSTVWXYZ # [!code ++]
+KICK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Register the adapter and restart
+
+Add `KickSSOApiPlugin` as in the [quick start](#quick-start) and restart the server:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
+
+```bash tab="bun"
+bun dev
+```
+
+```bash tab="pnpm"
+pnpm dev
+```
+
+```bash tab="npm"
+npm run dev
+```
+
+</Tabs>
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login`, press **Continue with Kick** and allow access. The first time, VitNode asks for an email and sends a confirmation link - open it in the same browser; afterwards the same Kick account signs straight in.
+
+</Step>
+</Steps>
+
+## Scopes and profile fields
+
+| Setting        | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Scopes         | `user:read`                                              |
+| PKCE           | `S256` (required by Kick)                                |
+| Account ID     | `user_id`                                                |
+| Email trusted  | never - Kick has no verification flag                    |
+| Profile fields | avatar                                                   |
+
+Kick's email, when present, only pre-fills the confirmation form.
+
+## Troubleshooting
+
+- **Kick shows an invalid redirect error** - the redirect URL differs from `{VITNODE_WEB_URL}/login/sso/kick`, or uses `127.0.0.1`.
+- **New visitors see "We need a verified email"** - no email adapter is configured, so VitNode cannot send the confirmation link.
+- **"Create new" is missing in Settings → Developer** - turn on two-factor authentication first.
+
+## Next
+
+<Cards>
+  <Card title="Email confirmation" description="How new Kick members confirm an address" href="/docs/dev/sso/email-confirmation" />
+  <Card title="Twitch" description="Another streaming provider" href="/docs/dev/sso/twitch" />
+</Cards>
