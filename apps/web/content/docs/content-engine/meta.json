@@ -23,6 +23,7 @@
     "threads",
     "threads-editing",
     "threads-frontend",
+    "notifications",
     "---Organization---",
     "relations",
     "relations-advanced",
@@ -61,6 +62,7 @@
     "public-lists-api",
     "public-write-api",
     "public-write-form-api",
+    "notifications-api",
     "public-permissions-api",
     "container-policies-api",
     "live-editing-api"
