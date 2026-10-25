@@ -1,106 +1,150 @@
 ---
 title: Search
-description: Add case-insensitive search to one paginated plugin table with withPagination and the shared table UI.
+description: Add case-insensitive search to one paginated plugin table with withPagination and the shared ContentDataTable search input.
 icon: Search
 ---
 
-`withPagination` includes built-in multi-column search filtering. When `search` columns are specified, incoming `?search=` query parameters automatically apply case-insensitive `ILIKE` clauses across the chosen columns.
+`withPagination` can filter a list by a search term. List the text columns in its `search` option, and a `?search=` query parameter keeps only rows where any of those columns contains the term, ignoring case. In this guide the paged notes route of the `site-notes` plugin gets a search parameter, and an AdminCP-style table gets a search box.
 
-<Callout type="info" title="Site-Wide Search">
-  For site-wide search across multiple collections and models, see [Search &
-  Discovery](/docs/dev/search).
+<Callout type="info" title="Site-wide search">
+  This page filters one table. For search across content types, with an index
+  and ranking, see [Search](/docs/dev/search).
 </Callout>
 
-## Quick start
+## Before you begin
 
-`ContentDataTable` is VitNode's reusable table UI: it renders rows, toolbar,
-search, sorting, and pagination. It does not fetch data. See [Data
-Table](/docs/ui/data-table) for the navigation provider it needs around it.
+- The paged notes route `GET /api/site-notes/notes/paged` from [Pagination](/docs/dev/database/pagination).
 
 <Steps>
 <Step>
 
 ### Accept `search` in the route query
 
-Extend `zodPaginationQuery` to accept the optional search string:
+`zodPaginationQuery` has no `search` key, so extend it in the route's `request`:
 
-```ts title="plugins/reactions/src/api/modules/reactions/routes/get.route.ts"
-import { z } from "@hono/zod-openapi"
-import { zodPaginationQuery } from "@vitnode/core/api/lib/with-pagination"
-
+```ts title="plugins/site-notes/src/api/modules/notes/paged.route.ts (excerpt)"
 request: {
   query: zodPaginationQuery.extend({
-    search: z.string().optional(), // [!code ++]
+    search: z.string().max(100).optional(), // [!code ++]
   }),
-}
+},
 ```
 
 </Step>
 <Step>
 
-### Supply searchable columns
+### List the searchable columns
 
-List the columns to filter in the `search` array:
+Pass the columns in `search`. Keep everything else from the pagination route, including `offset`:
 
-```ts title="plugins/reactions/src/api/modules/reactions/routes/get.route.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/paged.route.ts (excerpt)"
 const data = await withPagination({
   c,
-  params: { query },
-  table: reactions,
-  primaryCursor: reactions.id,
-  // [!code ++:1]
-  search: [reactions.emoji, reactions.description], // Filters across both columns
-  query: async ({ cursorSelection, limit, where, orderBy }) =>
+  params: { query: c.req.valid('query') },
+  table: site_notes,
+  primaryCursor: site_notes.id,
+  orderBy: { column: site_notes.createdAt, order: 'desc' },
+  search: [site_notes.title, site_notes.body], // [!code ++]
+  query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
     await c
       .get('db')
-      .select({ ...getColumns(reactions), ...cursorSelection })
-      .from(reactions)
+      .select({
+        ...cursorSelection,
+        id: site_notes.id,
+        title: site_notes.title,
+        body: site_notes.body,
+      })
+      .from(site_notes)
       .where(where)
       .orderBy(orderBy)
-      .limit(limit),
+      .limit(limit)
+      .offset(offset),
 })
 ```
 
+The search condition arrives in `where`, so pass it to Drizzle unchanged. `totalCount` counts only the matching rows.
+
 </Step>
 <Step>
 
-### Show the table search input
+### Show the search input in a table
 
-Enable the shared table UI after its route loader returns `{ edges, pageInfo }`:
+`ContentDataTable` renders rows, a toolbar, sorting and the pager, but never fetches. With `search` set it shows a search box that writes `?search=` to the URL; the page's loader then fetches the matching rows. The table reads and writes the URL through a `DataTableNavigationProvider`:
 
-```tsx title="src/views/reactions-table.tsx"
-<ContentDataTable
-  id="reactions-table"
-  columns={columns}
-  edges={data.edges}
-  pageInfo={data.pageInfo}
-  order={{ defaultOrder: { column: 'emoji', order: 'asc' } }}
-  search // [!code ++]
-  searchPlaceholder="Search reactions..." // [!code ++]
-/>
+```tsx title="plugins/site-notes/src/pages/browse-page.tsx (excerpt)"
+import type { ColumnDef } from '@vitnode/core/components/table/data-table-content'
+import type { DataTableNavigation } from '@vitnode/core/components/table/navigation'
+
+import { ContentDataTable } from '@vitnode/core/components/table/content'
+import { DataTableNavigationProvider } from '@vitnode/core/components/table/navigation'
+import { useMemo } from 'react'
+
+type Note = BrowseData['edges'][number]
+
+const columns: ColumnDef<Note>[] = [
+  { accessorKey: 'title', header: 'Title' },
+  { accessorKey: 'body', header: 'Body' },
+]
+
+const BrowsePage = ({
+  loaderData,
+  navigate,
+  search,
+}: PluginRoutePageProps<BrowseData, BrowseSearch>) => {
+  const navigation = useMemo<DataTableNavigation>(
+    () => ({
+      searchParams: new URLSearchParams(search),
+      navigate: async nextSearch => {
+        await navigate({
+          resetScroll: false,
+          search: Object.fromEntries(new URLSearchParams(nextSearch)),
+        })
+      },
+    }),
+    [navigate, search],
+  )
+
+  return (
+    <DataTableNavigationProvider value={navigation}>
+      <ContentDataTable
+        id="site-notes-table"
+        columns={columns}
+        edges={loaderData.edges}
+        pageInfo={loaderData.pageInfo}
+        order={{ defaultOrder: { column: 'id', order: 'desc' } }}
+        search // [!code ++]
+        searchPlaceholder="Search notes..." // [!code ++]
+      />
+    </DataTableNavigationProvider>
+  )
+}
 ```
 
-The table automatically updates the `?search=` query parameter as the user types with debouncing.
+`BrowseData`, `BrowseSearch` and the loader come from the page in [Pagination](/docs/dev/database/pagination#create-the-page). Make `parseSearch` keep `search` as well as `cursor`, and pass both to the route: `args: { query: search }`.
 
 </Step>
 </Steps>
 
-## Learn More
+## Check the result
+
+Open `/site-notes/browse` and type at least three letters of a note's title into the search box. Half a second after you stop typing, the URL gets `?search=...` and the table shows only the matching notes. Clear the box and every note comes back.
+
+## Related
 
 <Cards>
   <Card
     title="Pagination"
-    description="Cursor pagination mechanics with withPagination"
+    description="Cursor and numbered pages with withPagination"
     href="/docs/dev/database/pagination"
   />
   <Card
     title="Data table"
-    description="Render searchable and sortable data tables"
+    description="Columns, sorting, filters and the rest of the table UI"
     href="/docs/ui/data-table"
   />
   <Card
-    title="Site-Wide Search"
-    description="Global search engine across all content types"
+    title="Site-wide search"
+    description="Search across content types with an index"
     href="/docs/dev/search"
   />
 </Cards>

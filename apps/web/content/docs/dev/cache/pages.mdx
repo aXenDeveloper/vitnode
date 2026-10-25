@@ -1,5 +1,5 @@
 ---
-title: Cache server-rendered pages
+title: Cache pages
 description: Reuse a public page's server-rendered HTML for every visitor with a route cache policy, and invalidate it automatically when Content Engine content changes.
 icon: FileClock
 ---
@@ -8,7 +8,11 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 The page cache stores the complete HTML a public page renders and sends the same copy to the next visitors. Use it for pages that look the same for everyone, such as a blog article, when they still have to be rendered on the server because their content lives in the database.
 
-A route is never cached unless it asks to be. This guide caches the blog plugin's article page, `/blog/article/:slug`.
+A route is never cached unless it asks to be. This guide walks through the policy on the blog plugin's article page, `/blog/article/:slug`, and applies the same steps to a route of your own.
+
+## Before you begin
+
+- The `@vitnode/blog` plugin installed, with at least one published article. The check below uses the slug `hello-world`; use one of your own articles' slugs.
 
 <Steps>
 <Step>
@@ -30,6 +34,8 @@ export const routes = definePluginRoutes([
 ```
 
 `maxAge: 300` keeps a rendered article fresh for 5 minutes. `staleWhileRevalidate: 60` adds one more minute in which a visitor may still get the previous copy while a fresh one renders in the background. [How cached pages stay fresh](/docs/dev/cache/pages-invalidation#ttl-and-stale-while-revalidate) walks through the timeline.
+
+The blog plugin already ships this policy on `/blog/article/:slug`, `/blog` and `/blog/category/:slug`, so with the blog there is nothing to add. Write the same `cache` on a public page of your own plugin.
 
 `index()` routes accept the same option. A layout, an AdminCP page and a route with `requires` cannot be cached, and the build fails if one declares a policy.
 
@@ -115,7 +121,7 @@ The build's route summary shows the policy that each route actually got. See [Bu
 
 ## Check the result
 
-Request a published article twice and look at the `x-vitnode-cache` header:
+Request a published article twice and look at the `x-vitnode-cache` header. Replace `hello-world` with your article's slug:
 
 ```bash
 curl -s -o /dev/null -D - http://localhost:3000/blog/article/hello-world | grep -i 'x-vitnode-cache\|cache-control'

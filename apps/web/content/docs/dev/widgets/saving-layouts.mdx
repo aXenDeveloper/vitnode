@@ -1,0 +1,112 @@
+---
+title: Saving layouts
+description: How VitNode reads, permission-checks, validates and stores an editable page's widget layout, covering the GET and PUT /pages/layout routes, the core_page_layouts table, limits, refusals and per-zone conflict detection.
+icon: Database
+---
+
+Core owns the storage of every [editable page](/docs/dev/widgets/editable-pages): two routes, one table and the checks around them. `PageWidgets` and `createContentEditorAdapter` call them for you; this page is the reference for what they accept, store and refuse, for debugging or for a [custom loader](/docs/dev/widgets/custom-loader).
+
+## The two routes
+
+Both are addressed by page id, never by your plugin:
+
+```http
+GET  /api/@vitnode/core/pages/layout?pageId=newsroom:settings   public
+PUT  /api/@vitnode/core/pages/layout                            the page's moderator permission
+```
+
+With `fetcher`, that is `plugin: "@vitnode/core", module: "pages", path: "/layout"`.
+
+```ts
+interface EditablePageLayoutPayload {
+  pageId: string
+  updatedAt: string | null // null: nothing saved yet, these are the defaults
+  zones: Record<string, ContentNode[]>
+}
+
+interface EditablePageSavePayload {
+  pageId: string
+  zones: Record<string, ContentNode[]> // only the zones that changed
+  expectedZones: Record<string, ContentNode[]> // what each of them held when editing began
+}
+```
+
+Both types are exported from `@vitnode/core/content/editor`.
+
+**`GET`** answers with the **effective** layout. For each declared zone, that is the saved widgets if somebody saved it, otherwise the zone's `default`. A page nobody has saved answers `200` with the defaults and `updatedAt: null`. A page id nobody registered answers `404`.
+
+**`PUT`** takes `{ pageId, zones, expectedZones }` and answers with the same payload shape, holding the saved zones only. Which zones exist and what each accepts comes from the registered page, never from the request body.
+
+## Who may save
+
+`PUT` checks the page's `permission` as a **moderator** permission, on every request, whatever the browser showed. A moderator permission is used because it is read from the signed-in member, which a public page has; an AdminCP permission only exists inside the AdminCP. A root role passes.
+
+`?edit=true` in a URL only asks for edit mode. The editor opens only when the permission agrees, and the save checks the permission again.
+
+The page asks "may I edit?" through `GET /api/@vitnode/core/users/permissions`, which answers `{ root, permissions }` for the signed-in member and `{ "root": false, "permissions": [] }` for a visitor.
+
+## How a layout is stored
+
+In core's `core_page_layouts` table, one row per page:
+
+```text
+core_page_layouts
+  pageId     varchar    primary key
+  zones      jsonb      not null default '{}'
+  createdAt  timestamp
+  updatedAt  timestamp
+```
+
+The row holds **overrides only**, just the zones somebody saved. Defaults live in code, in `defineEditablePage`.
+
+- A page nobody has saved has no row, which is what `updatedAt: null` means.
+- Saving a zone back to exactly its default drops its override; when no overrides are left, the row is deleted.
+- A saved zone the page no longer declares is ignored, not deleted. Put the zone back and its widgets return.
+
+Nothing here is a content type: no publishing, revisions, search or AdminCP screen.
+
+## Limits
+
+| Limit                         | Value                                | Counts                                                                                            |
+| :---------------------------- | :----------------------------------- | :------------------------------------------------------------------------------------------------ |
+| A zone's `max` / `min`        | `200` if `max` is left out; no `min` | **Widgets.** A widget inside an [area](/docs/dev/widgets/layout-areas) counts; the area does not. |
+| `CONTENT_BLOCKS_ABSOLUTE_MAX` | `1000`                               | **Entries at the zone's top level**, widgets and areas alike. Nothing can raise it.               |
+| `AREA_CHILDREN_DEFAULT_MAX`   | `50`                                 | **Widgets in one area.**                                                                          |
+
+All three constants are exported from `@vitnode/core/widgets`. `defineEditablePage` itself refuses a zone whose `min` is above its `max`.
+
+## Two moderators, one page
+
+`expectedZones` turns "last save wins" into "the save that knew what it was replacing wins". Before writing, the server compares each submitted zone's `expectedZones` entry with what that zone holds now, inside the same transaction as the write:
+
+| Situation                       | Result                                                                                          |
+| :------------------------------ | :---------------------------------------------------------------------------------------------- |
+| Two people, **different zones** | Both saves land. Each save writes only the zones it names and leaves the rest as it found them. |
+| Two people, **the same zone**   | The second save answers `409`, naming the zones that moved, and **nothing** is written.         |
+
+The editor shows **Somebody else saved this page first** and keeps every change, so the moderator can reload and redo it on top of the new layout. Nothing locks and nothing polls.
+
+## When a save is refused
+
+| Refused                            | Status                                                                           |
+| :--------------------------------- | :------------------------------------------------------------------------------- |
+| A page id nobody registered        | `400`                                                                            |
+| The permission is not held         | `403`                                                                            |
+| No zones at all                    | `400`                                                                            |
+| A zone without its `expectedZones` | `400`, since without a baseline the server cannot tell an edit from an overwrite |
+| A zone the page does not declare   | `400`, listing the zones it does                                                 |
+| A widget the zone does not allow   | `400`, also inside an area                                                       |
+| Too many or too few widgets        | `400`, from the zone's `max` and `min`                                           |
+| A zone somebody else changed first | `409`, naming the zones. Nothing is written, not even the other zones            |
+| The stored layout cannot be read   | `500`. A failed read is never answered with defaults                             |
+
+Every refusal names its reason in `message`. In the browser, the editor adds its own guard. A zone holding content it cannot read keeps **Save** disabled until somebody removes it; see [Visual editor](/docs/dev/widgets/visual-editor#when-the-editor-refuses-to-save).
+
+## The event
+
+A save that changed something emits [`core.page-layout.updated`](/docs/dev/events/built-in-events#page-layout-events) with `{ pageId, changedZones }`, after the write. A save that changed nothing stores nothing, keeps `updatedAt` and emits nothing, but still answers `200`.
+
+## Related
+
+- [Editable pages](/docs/dev/widgets/editable-pages): declare and render a page.
+- [Restrict widgets](/docs/dev/widgets/restrict-widgets): the allowlist each zone checks.

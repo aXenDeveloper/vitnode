@@ -1,12 +1,12 @@
 ---
-title: Authorization & Sessions
+title: Auth and sessions
 description: How VitNode manages public and admin sessions, HttpOnly cookies, device fingerprinting, and session expiration.
 icon: Cookie
 ---
 
 import { TypeTable } from "fumadocs-ui/components/type-table"
 
-VitNode implements two isolated sessions: a **public session** for the community site and a separate **admin session** for the AdminCP. Both use opaque random tokens stored as SHA-256 hashes in PostgreSQL.
+VitNode keeps two separate sessions: a **public session** for the community site and an **admin session** for the AdminCP. Both use random tokens kept in `HttpOnly` cookies and stored only as SHA-256 hashes in PostgreSQL. Read this page to change how long sessions last, share them across subdomains, or switch password sign-in off.
 
 ## Quick start
 
@@ -27,21 +27,21 @@ export const vitNodeApiConfig = buildApiConfig({
 
 ---
 
-## The Two-Session Model
+## The two-session model
 
-| Session Type | Cookie Name | Default Lifetime | Storage Table | Purpose |
+| Session | Cookie name | Default lifetime | Table | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| **Public Session** | `vitnode_auth` | 90 days | `core_sessions` | Frontend member authentication |
-| **Admin Session** | `vitnode_auth_admin` | 1 hour of inactivity | `core_admin_sessions` | High-privilege AdminCP access |
-| **Known Device** | `vitnode_device` | 1 year | `core_sessions_known_devices` | Device authorization tracking |
+| **Public session** | `vitnode_auth` | 90 days | `core_sessions` | Frontend member authentication |
+| **Admin session** | `vitnode_auth_admin` | 1 hour of inactivity | `core_admin_sessions` | High-privilege AdminCP access |
+| **Known device** | `vitnode_device` | 1 year | `core_sessions_known_devices` | Device authorization tracking |
 
-<Callout type="info" title="Session Isolation">
+<Callout type="info" title="Sessions are isolated">
   Signing out of the AdminCP does not terminate the user's public session, and vice versa. An administrator compromised in a public context cannot access the AdminCP without re-authenticating with staff credentials - a password or a user-verified passkey, checked against live staff access. Neither a public session nor social SSO ever becomes an AdminCP session.
 </Callout>
 
 ---
 
-## AdminCP Session Timeout
+## AdminCP session timeout
 
 The AdminCP is the keys to the kingdom, so its session is deliberately short-lived. Staff are asked to sign in again when:
 
@@ -55,17 +55,17 @@ The AdminCP is the keys to the kingdom, so its session is deliberately short-liv
 
 ---
 
-## Security Guarantees
+## Security guarantees
 
-- **SHA-256 Token Storage**: The raw token is stored only in the user's `HttpOnly` cookie. The database stores only its cryptographic hash. Sign-in, SSO and passkey answers carry the user id only - page scripts never see the token.
-- **Device Pinning**: Tokens are bound to a verified device ID. Tokens copied to another device without the matching device cookie are rejected.
-- **Fast 60-Second Caching**: Active sessions are cached in Redis for up to 60 seconds, eliminating database query overhead on repeated requests.
-- **Confirmed Email Addresses**: With an email adapter, members confirm their address before their first sign-in. See [Email Verification](/docs/dev/working-with-users/email-verification).
-- **Canonical Email Identity**: Addresses are stored in their canonical form, so Gmail dot, `googlemail.com` and `+tag` variants cannot become a second account. See [One Mailbox, One Account](#one-mailbox-one-account).
+- **Hashed tokens.** The raw token is stored only in the user's `HttpOnly` cookie. The database stores only its cryptographic hash. Sign-in, SSO and passkey answers carry the user id only, so page scripts never see the token.
+- **Device pinning.** Tokens are bound to a verified device ID. Tokens copied to another device without the matching device cookie are rejected.
+- **Short session cache.** An active session is cached for up to 60 seconds with [Redis](/docs/dev/advanced/redis), or up to 15 seconds in the API process without it, so repeated requests skip the database. The in-process cache is per instance, so run Redis when you run more than one API instance.
+- **Confirmed email addresses.** With an email adapter, members confirm their address before their first sign-in. See [Email verification](/docs/dev/working-with-users/email-verification).
+- **One account per mailbox.** Addresses are stored in their canonical form, so Gmail dot, `googlemail.com` and `+tag` variants cannot become a second account. See [One mailbox, one account](#one-mailbox-one-account).
 
 ---
 
-## One Mailbox, One Account
+## One mailbox, one account
 
 `jankowalski@gmail.com` and `jan.kowalski@gmail.com` look like two addresses. Gmail ignores the dots, so they are one mailbox - and a site that treats them as two lets the same person hold two accounts, dodge a ban, or farm their own referral link.
 
@@ -105,7 +105,7 @@ The rules are per-provider, because they are only true per-provider:
   ```
 </Callout>
 
-## `authorization` Options Reference
+## `authorization` options
 
 <TypeTable
   type={{
@@ -120,16 +120,37 @@ The rules are per-provider, because they are only true per-provider:
       type: "number",
     },
     cookieSecure: {
-      default: "true (in production)",
-      description: "Require HTTPS for session cookies.",
+      default: "true",
+      description: "Sets Secure on the auth cookies, so browsers send them over HTTPS only (localhost counts as secure). Turn it off only for plain-HTTP development on another host.",
       type: "boolean",
     },
+    cookieName: {
+      default: '"vitnode_auth"',
+      description: "Name of the public session cookie.",
+      type: "string",
+    },
+    adminCookieName: {
+      default: '"vitnode_auth_admin"',
+      description: "Name of the AdminCP session cookie.",
+      type: "string",
+    },
+    deviceCookieName: {
+      default: '"vitnode_device"',
+      description: "Name of the known-device cookie that sessions are pinned to.",
+      type: "string",
+    },
+    deviceCookieExpires: {
+      default: "1 year",
+      description: "How long a device is remembered, in milliseconds.",
+      type: "number",
+    },
     cookieDomain: {
-      description: "Domain attribute for cross-subdomain cookie sharing.",
+      description: "Domain attribute of the auth cookies, to share a session across subdomains. Unset means host-only cookies, which is right for most installs.",
       type: "string",
     },
     ssoAdapters: {
-      description: "Array of configured OAuth2 single sign-on adapters.",
+      default: "[]",
+      description: "Single sign-on adapters. See /docs/dev/sso.",
       type: "SSOApiPlugin[]",
     },
     password: {
@@ -170,19 +191,19 @@ With passwords off:
   The AdminCP sign-in at `/admin` keeps its email + password form, so switching member passwords off never locks your staff out. With passkeys enabled, staff can also use [AdminCP passkey sign-in](/docs/dev/passkeys/admincp). Signing out works exactly as before.
 </Callout>
 
-Password hashes already in the database are left alone, so switching `enabled` back to `true` restores password sign-in for everyone who had one.
+Password hashes already in the database are left alone, so setting `password` back to `true` restores password sign-in for everyone who had one.
 
-## Learn More
+## Related
 
 <Cards>
   <Card
-    title="Users"
-    description="Access user context on Hono routes and React components"
+    title="Current user"
+    description="Read the signed-in user in Hono routes and React components"
     href="/docs/dev/working-with-users/users"
   />
   <Card
-    title="Staff Permissions"
-    description="Granular permission gates for administrators"
+    title="Permissions"
+    description="Permission checks for administrators and moderators"
     href="/docs/dev/working-with-users/staff-permissions"
   />
 </Cards>

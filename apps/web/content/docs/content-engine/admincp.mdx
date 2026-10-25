@@ -12,15 +12,15 @@ import rowActions from "./admincp-row-actions.webp";
 
 Every content type registered in the plugin's `src/admin/content.tsx` gets an AdminCP list and a create and edit form without any UI code. Most changes are options in the definition's `admin` block. For anything the options cannot express, you swap one cell, one field or the whole form layout for your own component.
 
-This page uses the example plugin's `example.article`. Its screen lives at `/admin/content/example/articles`.
+This page uses the newsroom plugin's `newsroom.story`. Its screen lives at `/admin/content/newsroom/stories`.
 
 ## Choose list columns, search and sorting
 
 `admin.list` drives the list:
 
-```ts title="plugins/example/src/content/article.ts"
+```ts title="plugins/newsroom/src/content/story.ts"
 admin: {
-  path: "example/articles",
+  path: "newsroom/stories",
   titleField: "title",
   list: {
     columns: [
@@ -46,7 +46,7 @@ admin: {
   withoutBackground
   className="*:max-w-full"
   src={articleList}
-  alt="The Articles list in the AdminCP with Status, Title, Slug, Reference code, Category, Author, Animation, Published at and Updated columns and a search box"
+  alt="The newsroom Stories list in the AdminCP with Status, Title, Slug, Reference code, Category, Author, Animation, Published at and Updated columns, a search box and a Status filter"
 />
 
 | Option             | What it does                                                                                                                                                                                                                                        |
@@ -70,7 +70,7 @@ Every mistake here, such as an unknown field or a gallery in `columns`, throws a
 | `titleField`       | First shared text or textarea field | Names a record in toasts, dialogs and relation pickers. `null` means the type has no title.                      |
 | `colorField`       | none                                | A shared field with a color, shown as a swatch next to the title. The blog's categories use it.                  |
 | `navigation`       | `true`                              | Set it to `false` to keep the screen but drop its sidebar link.                                                  |
-| `permissionModule` | The id without the plugin part      | Staff permission module name, for example `article` for `example.article`.                                       |
+| `permissionModule` | The id without the plugin part      | Staff permission module name, for example `story` for `newsroom.story`.                                          |
 
 ## Bulk actions
 
@@ -111,12 +111,12 @@ By default the form shows every field except `field.blocks()`, one after another
   withoutBackground
   className="*:max-w-full"
   src={createDialog}
-  alt="The Create Article dialog with Title, Slug, Reference code, Excerpt and Views fields"
+  alt="The Create Story dialog with Title, Slug, Reference code, Excerpt and Views fields"
 />
 
-To pick and order fields, set `admin.form.fields`. To group them into titled cards, use `admin.form.sections` instead:
+To pick and order fields, set `admin.form.fields`. To group them into titled cards, use `admin.form.sections` instead. For the newsroom's stories, that could look like this:
 
-```ts title="plugins/example/src/content/article.ts"
+```ts title="Example: story form sections"
 admin: {
   form: {
     sections: [
@@ -134,13 +134,13 @@ admin: {
 
 The heading and an optional description come from the plugin's locale file, at `content.<entity>.form.<name>`. Without a message, the heading is the humanized name ("Main").
 
-```json title="plugins/example/src/locales/en.json"
+```json title="Example: section headings in en.json"
 {
-  "@vitnode/example": {
+  "newsroom": {
     "content": {
-      "article": {
+      "story": {
         "form": {
-          "main": { "title": "Article", "desc": "What readers see first." },
+          "main": { "title": "Story", "desc": "What readers see first." },
           "media": { "title": "Media" }
         }
       }
@@ -235,7 +235,7 @@ Add `skeleton` when the component is bigger than its field kind suggests, so the
 
 For a layout the options cannot express, such as a main column with a sidebar, pass `forms.layout` to `contentTypeAdmin`. A custom layout is used only in page mode, so set `create.mode` and `edit.mode` to `"page"` first.
 
-```tsx title="plugins/example/src/views/admin/article/form-layout.tsx"
+```tsx title="Example: a story form layout"
 import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
 
 import {
@@ -252,7 +252,7 @@ import {
 
 const SIDEBAR_FIELDS = ["category", "author", "featured", "noIndex"];
 
-export const ArticleFormLayout = ({ mode }: ContentFormLayoutProps) => (
+export const StoryFormLayout = ({ mode }: ContentFormLayoutProps) => (
   <>
     <ContentFormHeader>
       <ContentFormActions />
@@ -276,10 +276,11 @@ export const ArticleFormLayout = ({ mode }: ContentFormLayoutProps) => (
 );
 ```
 
-```tsx title="plugins/example/src/admin/content.tsx"
+```tsx title="Example: register the layout in src/admin/content.tsx"
 contentTypeAdmin({
-  ...exampleArticleNav,
-  forms: { layout: ArticleFormLayout }, // [!code ++]
+  definition: storyContentType,
+  icon: <NotebookPenIcon />,
+  forms: { layout: StoryFormLayout }, // [!code ++]
 }),
 ```
 
@@ -398,6 +399,6 @@ A few things that keep it smooth:
 
 ## Check the result
 
-Save the definition and open **AdminCP → Example → Articles**. `pnpm dev` reloads both the screens and the API, which validates sorting and form input against the same definition.
+Save the definition and open **AdminCP → Newsroom → Stories**. `pnpm dev` reloads both the screens and the API, which validates sorting and form input against the same definition.
 
 Next, give the screens the permissions they need in [Production checklist](/docs/content-engine/production), or read every option in the [reference](/docs/content-engine/reference).

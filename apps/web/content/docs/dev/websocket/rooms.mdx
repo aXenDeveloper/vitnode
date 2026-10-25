@@ -1,0 +1,210 @@
+---
+title: Rooms
+description: Send VitNode WebSocket messages only to the browser tabs that joined a room, such as one chat thread, with wsRegistry.join and c.get("realtime").toRoom().
+icon: Users
+---
+
+A room is a named group of browser tabs, such as everyone looking at one chat thread or editing one record. Send a message to a room and only its members get it, on every API instance. A room is any string your feature picks, for example `chat:42`. This guide adds rooms to the fictional `@acme/chat` plugin from [WebSocket](/docs/dev/websocket).
+
+## Before you begin
+
+- The `/api/ws` endpoint, from [Set up the endpoint](/docs/dev/websocket/setup).
+- The `chatChannel` from [Define a channel](/docs/dev/websocket#define-a-channel), which carries the chat messages to the browser.
+- A top-level API module for the server socket. Here it is `rooms`, built with `buildModule` from your plugin's `@/api/builders`.
+
+<Steps>
+<Step>
+
+### Handle join and leave on the server
+
+All tabs of a browser share one socket, so a socket joins a room on behalf of a tab. Each tab sends its own random `clientId` with every message, and the server joins or leaves with it. Create a server socket with `buildWebSocket`:
+
+```ts title="plugins/acme-chat/src/api/modules/rooms/rooms.socket.ts"
+import { buildWebSocket } from "@vitnode/core/api/lib/websocket"
+import { wsRegistry } from "@vitnode/core/ws/registry"
+
+export interface RoomMessage {
+  clientId: string
+  roomId: string
+  type: "join" | "leave"
+}
+
+export const roomsSocket = buildWebSocket<RoomMessage>({
+  id: "presence",
+  onMessage: ({ data, ws }) => {
+    const room = `chat:${data.roomId}`
+
+    if (data.type === "join") {
+      wsRegistry.join(ws, room, data.clientId)
+    } else {
+      wsRegistry.leave(ws, room, data.clientId)
+    }
+  },
+})
+```
+
+Check who may join (the session on `c`, a permission) before calling `join`, because a room is only as private as that check. The socket stays in the room until its last tab leaves, so a closed tab never cuts off the others.
+
+</Step>
+<Step>
+
+### Register the socket on its module
+
+```ts title="plugins/acme-chat/src/api/modules/rooms/rooms.module.ts"
+import { buildModule } from "@/api/builders"
+
+import { roomsSocket } from "./rooms.socket"
+
+export const roomsModule = buildModule({
+  name: "rooms",
+  webSockets: [roomsSocket],
+})
+```
+
+Pass `roomsModule` to `buildApiPlugin({ modules })`. Only top-level modules are read. The socket's public id is `{pluginId}_{module}_{id}`, here `@acme/chat_rooms_presence`.
+
+</Step>
+<Step>
+
+### Share the channel with the browser
+
+Next to `chatChannel`, add a channel with the same plugin, module and id as the socket. Its first type parameter is what the browser sends:
+
+```ts title="plugins/acme-chat/src/ws/chat.channel.ts"
+import { createWebSocketChannel } from "@vitnode/core/ws/types"
+
+import type { RoomMessage } from "../api/modules/rooms/rooms.socket"
+
+export const roomsChannel = createWebSocketChannel<RoomMessage>({
+  pluginId: "@acme/chat",
+  module: "rooms",
+  id: "presence",
+})
+```
+
+A type-only import keeps the server file out of the browser bundle.
+
+</Step>
+<Step>
+
+### Join from the tab, again after every reconnect
+
+A new connection starts with no rooms on the server. `useVitNodeWebSocket` returns a `connectionId` that changes every time the shared connection opens, in every tab, so join from an effect that depends on it:
+
+```tsx title="plugins/acme-chat/src/views/chat-room.tsx"
+import { useVitNodeWebSocket } from "@vitnode/core/ws/use-websocket"
+import { useEffect, useState } from "react"
+
+import { chatChannel, roomsChannel } from "../ws/chat.channel"
+
+export const ChatRoom = ({ roomId }: { roomId: string }) => {
+  const [clientId] = useState(() => crypto.randomUUID())
+  const [messages, setMessages] = useState<string[]>([])
+  const { connectionId, send } = useVitNodeWebSocket(roomsChannel)
+
+  useVitNodeWebSocket(chatChannel, {
+    onMessage: payload => {
+      if (payload.roomId === roomId) {
+        setMessages(prev => [...prev, payload.message])
+      }
+    },
+  })
+
+  useEffect(() => {
+    if (!connectionId) return
+    send({ clientId, roomId, type: "join" })
+
+    return () => {
+      send({ clientId, roomId, type: "leave" })
+    }
+  }, [clientId, connectionId, roomId, send])
+
+  return (
+    <ul>
+      {messages.map((message, i) => (
+        <li key={i}>{message}</li>
+      ))}
+    </ul>
+  )
+}
+```
+
+[Reconnects and missed messages](/docs/dev/websocket/reconnects) covers reloading what the tab missed while it was away.
+
+</Step>
+<Step>
+
+### Send to the room
+
+From any API handler, for example the route that saves a chat message:
+
+```ts
+c.get("realtime").toRoom(`chat:${roomId}`, chatChannel, {
+  roomId,
+  message: "Hello!",
+  senderId: user.id,
+})
+```
+
+Each socket in the room receives the payload once, however many of its tabs joined. Put the room or record in the payload so every tab can ignore what is not its own.
+
+</Step>
+</Steps>
+
+## Check the result
+
+Open the chat room page for room `42` in two browsers, and room `7` in a third. Send a message to room `42`. The first two show it right away, and the third shows nothing. Close one tab of a browser that has two tabs on room `42`, send again, and its other tab still gets the message.
+
+## Clean up when a socket closes
+
+A socket that closes leaves all of its rooms. Use `wsRegistry.onConnectionClose` to update your own state, such as an "online now" list. Register the listener once, at module load:
+
+```ts title="plugins/acme-chat/src/api/modules/rooms/presence.ts"
+import { wsRegistry } from "@vitnode/core/ws/registry"
+
+const online = new Map<string, Set<string>>()
+
+wsRegistry.onConnectionClose((ws, left) => {
+  for (const { memberId, room } of left) {
+    online.get(room)?.delete(memberId)
+  }
+})
+```
+
+`left` holds every `{ memberId, room }` the socket was in.
+
+## Inspect rooms
+
+| Method | Returns | Behavior |
+| --- | --- | --- |
+| `wsRegistry.join(ws, room, memberId)` | `boolean` | Adds the member on this socket; `true` when it was not there yet |
+| `wsRegistry.leave(ws, room, memberId)` | `boolean` | Removes the member; `true` when it was there |
+| `wsRegistry.membersOf(room)` | `{ memberId, ws }[]` | The room's members on this instance |
+| `wsRegistry.roomsOf(ws)` | `string[]` | The rooms of one socket |
+| `wsRegistry.onConnectionClose(listener)` | unsubscribe function | Calls `listener(ws, left)` when a socket closes |
+
+All `wsRegistry` methods act on the current instance only.
+
+## Rooms on several instances
+
+With `REDIS_URL` set, `toRoom` also publishes the message over Redis, and every other instance delivers it to its own members. Room membership itself stays local to each instance.
+
+When an instance keeps per-room state in memory, it can follow the other instances with helpers from `@vitnode/core/ws/registry`:
+
+```ts
+import {
+  onInstanceMessage,
+  onRemoteRoomMessage,
+  publishToInstances,
+} from "@vitnode/core/ws/registry"
+```
+
+- `onRemoteRoomMessage((room, id, data) => ...)` sees room messages from other instances before they reach local sockets. A collaborative document uses it to apply the same edit to its own copy.
+- `publishToInstances(topic, data)` and `onInstanceMessage(({ topic, data, origin }) => ...)` exchange data between instances that never reaches a socket, such as each instance's list of members. Republish it periodically and let entries from a silent instance expire, so a crashed instance leaves no ghosts.
+
+Both listeners return a function that removes them. Without Redis, all of this works on a single instance with no extra setup. `toRoom` delivers locally, and instance messages go nowhere.
+
+## Related
+
+- [Reconnects and missed messages](/docs/dev/websocket/reconnects)
+- [WebSocket](/docs/dev/websocket)

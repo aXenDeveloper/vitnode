@@ -1,209 +1,141 @@
 ---
-title: API Modules
-description: Add a typed Hono API module to a VitNode plugin, register it once, and keep endpoint ownership with the feature.
+title: API modules
+description: Add a notes module to the site-notes VitNode plugin, register it in config.api.ts, and call its typed endpoint through the host API.
 icon: Box
 ---
 
-import { NetworkIcon, RouteIcon, ShieldCheckIcon } from 'lucide-react'
+An API module groups a plugin's Hono routes under one URL segment. In this lesson you add a `notes` module to `site-notes` whose endpoint returns two sample notes. A later lesson swaps the sample data for a database table.
 
-Start with [a plugin](/docs/dev/plugins/create), not a host endpoint. A module
-groups the plugin's Hono routes under one URL prefix and gives OpenAPI a tidy
-place to describe them.
+## Before you begin
 
-<Callout type="info" title="A generated plugin already has one">
-  `create-vitnode-app --plugin` writes a `hello` module, its `config.api.ts` and
-  a page that calls it. Read on for what each piece does—then rename them, or add
-  a second module beside them.
-</Callout>
-
-{/* Image prompt: Dark-theme API ownership diagram. A Site notes plugin contains a Hono route, notes module, and config.api file; the app API configuration composes the plugin once. Show resulting GET endpoint, 1600x900. */}
+- The `site-notes` plugin from [Create plugin](/docs/dev/plugins/create), with `pnpm dev` running at the workspace root. `dev` rebuilds the plugin every time you save.
 
 <Steps>
-  <Step>
 
-### Define one plugin endpoint
+<Step>
 
-Route and module files import their builders from the plugin's own
-`src/api/builders.ts`, which binds them to the generated `manifest`. That is
-where the plugin id comes from, so no route or module spells it:
+### Describe a note
 
-```ts title="plugins/site-notes/src/api/builders.ts"
-import { bindApiPlugin } from '@vitnode/core/api/lib/bind-api-plugin'
+Create `src/api/modules/notes/notes.schema.ts`. The schema is the response shape, and OpenAPI documents it too:
 
-import { manifest } from '@/manifest.gen'
+```ts title="plugins/site-notes/src/api/modules/notes/notes.schema.ts"
+import { z } from "@hono/zod-openapi";
 
-export const { buildModule, buildRoute } = bindApiPlugin(manifest)
+export const zodNote = z.object({
+  id: z.number(),
+  title: z.string(),
+  body: z.string(),
+});
 ```
 
-```ts title="plugins/site-notes/src/api/modules/notes/list.route.ts"
-import { z } from '@hono/zod-openapi'
+Then create the sample data the endpoint returns for now:
 
-import { buildRoute } from '@/api/builders'
+```ts title="plugins/site-notes/src/api/modules/notes/sample-notes.ts"
+/** Placeholder notes until the Database lesson stores real ones. */
+export const sampleNotes = [
+  { id: 1, title: "Welcome to site notes", body: "Short updates for everyone on the site." },
+  { id: 2, title: "Office closed on Friday", body: "We are back on Monday at 9:00." },
+];
+```
+
+</Step>
+
+<Step>
+
+### Create the list route
+
+Create `src/api/modules/notes/list.route.ts`. `buildRoute` comes from the plugin's own `src/api/builders.ts`, which the generator wrote, so the route is tied to `site-notes` without naming it:
+
+```ts title="plugins/site-notes/src/api/modules/notes/list.route.ts"
+import { z } from "@hono/zod-openapi";
+
+import { buildRoute } from "@/api/builders";
+
+import { zodNote } from "./notes.schema";
+import { sampleNotes } from "./sample-notes";
 
 export const listNotesRoute = buildRoute({
   route: {
-    method: 'get',
-    path: '/',
+    method: "get",
+    path: "/",
     responses: {
-      // [!code ++:7]
       200: {
-        content: {
-          'application/json': {
-            schema: z.object({ notes: z.array(z.string()) }),
-          },
-        },
-        description: 'Published site notes.',
+        content: { "application/json": { schema: z.array(zodNote) } },
+        description: "Every note, newest first.",
       },
     },
   },
-  handler: (c) => c.json({ notes: ['Hello plugin'] }),
-})
+  handler: c => c.json(sampleNotes, 200),
+});
 ```
 
-  </Step>
-  <Step>
+The `responses` schema is a contract. `c.json()` only accepts a body and status that match it.
 
-### Group it and export the plugin API
+</Step>
+
+<Step>
+
+### Group it in a module
+
+Create `src/api/modules/notes/notes.module.ts`. The module's `name` is the URL segment:
 
 ```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts"
-import { buildModule } from '@/api/builders'
+import { buildModule } from "@/api/builders";
 
-import { listNotesRoute } from './list.route'
+import { listNotesRoute } from "./list.route";
 
 export const notesModule = buildModule({
-  name: 'notes',
-  routes: [listNotesRoute], // [!code ++]
-})
+  name: "notes",
+  routes: [listNotesRoute],
+});
 ```
 
-```ts title="plugins/site-notes/src/config.api.ts"
-import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+</Step>
 
-import { notesModule } from './api/modules/notes/notes.module'
-import { manifest } from './manifest.gen'
+<Step>
+
+### Register the module
+
+Open `src/config.api.ts` and add `notesModule` next to the generated `helloModule`. This is an excerpt; keep the rest of the file, including the `VitNodeApiPlugin` type at the bottom:
+
+```ts title="plugins/site-notes/src/config.api.ts"
+import { helloModule } from "./api/modules/hello/hello.module";
+import { notesModule } from "./api/modules/notes/notes.module"; // [!code ++]
 
 export const siteNotesApiPlugin = () =>
   buildApiPlugin({
     manifest,
-    modules: [notesModule], // [!code ++]
-  })
+    modules: [helloModule], // [!code --]
+    modules: [helloModule, notesModule], // [!code ++]
+  });
 ```
 
-This file, and not `config.tsx`: the API config reaches your handlers, database
-and secrets, while `config.tsx` is read by the browser build. A module
-registered in the wrong one is shipped to every visitor.
+The generator already added a `siteNotesApiPlugin()` call to the app's `vitnode.api.config.ts`. Every module you list here is served under `/api/site-notes/`, so nothing changes in the app.
 
-`buildApiPlugin` keeps everything it was given as a literal type - the plugin
-id, the tuple of modules, and every module nested inside them. That type is
-what the [fetcher](/docs/dev/fetcher) infers routes from, so a route you add
-here is callable, and checked, the moment you save.
+</Step>
 
-  </Step>
-  <Step>
-
-### Export the type an application registers
-
-Your pages call the endpoint through the universal fetcher, and the fetcher
-looks the plugin up in the API plugin registry. Export one reduced type beside
-your factory - `create-vitnode-app --plugin` writes this for you:
-
-```ts title="plugins/site-notes/src/config.api.ts"
-import type { ApiPluginContract } from '@vitnode/core/api/lib/plugin'
-
-import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
-
-export const siteNotesApiPlugin = () =>
-  buildApiPlugin({ manifest, modules: [notesModule] })
-
-// [!code ++:3]
-export type VitNodeApiPlugin = ApiPluginContract<
-  ReturnType<typeof siteNotesApiPlugin>
->
-```
-
-`ApiPluginContract` keeps the four things a call needs - the literal plugin id,
-every module path you serve, your module tree and your route definitions - and
-drops everything else. Your Hono application, content models, event listeners,
-queue tasks, WebSockets, search indexers and messages are runtime concerns, so
-an app that installs your plugin never resolves them to type-check a call.
-
-`import type` is the whole point: the factory is never executed here, so none of
-the Hono, database or secret code behind it is ever reached by a browser build.
-
-<Callout type="warn" title="A plugin never registers itself">
-  Your package augments nothing. The app that installs you writes the entry into
-  its own generated `src/api-registry.gen.ts`, from the plugins it configured. A
-  package that registered itself would put its routes into the registry of every
-  project that merely installed it.
-
-  To type-check your own pages before any app has installed the plugin, the
-  scaffold writes `test-fixtures/api-registry.d.ts` - the same entry an app
-  generates, kept outside `src` and out of the published package.
-</Callout>
-
-  </Step>
-  <Step>
-
-### Compose it in the app API config
-
-The app decides which installed plugins are active. Add the factory to the Hono
-config that serves your app (`apps/web` for a single app, or `apps/api` when it
-is separate):
-
-```ts title="apps/web/src/vitnode.api.config.ts"
-import { siteNotesApiPlugin } from '@acme/site-notes/config.api' // [!code ++]
-
-export const vitNodeApiConfig = buildApiConfig({
-  plugins: [siteNotesApiPlugin()], // [!code ++]
-})
-```
-
-The endpoint is now `GET /api/@acme/site-notes/notes`. OpenAPI picks it up too;
-one less hand-written map to maintain. This is the one place `siteNotesApiPlugin()`
-is ever called - everywhere else it is a type.
-
-  </Step>
-  <Step>
-
-### Call it
-
-```ts title="plugins/site-notes/src/features/notes/notes-query.ts"
-import { fetcher } from '@vitnode/core/tanstack/fetcher'
-
-const response = await fetcher({
-  plugin: '@acme/site-notes', // [!code ++]
-  method: 'get',
-  module: 'notes',
-  path: '/',
-})
-
-const { notes } = await response.json()
-```
-
-Nothing but the plugin id crosses into the browser bundle. `module`, `path`,
-`method` and the response are inferred from the module tree registered above,
-and a typo in any of them is a compile error.
-
-  </Step>
 </Steps>
 
-<Cards>
-  <Card
-    icon={<RouteIcon />}
-    title="Validate inputs"
-    description="Use Zod schemas for params, queries, request bodies, and typed responses."
-    href="/docs/dev/plugins/api/routes"
-  />
-  <Card
-    icon={<ShieldCheckIcon />}
-    title="Protect staff APIs"
-    description="Require a staff permission before an AdminCP action reaches its handler."
-    href="/docs/dev/working-with-users/staff-permissions"
-  />
-  <Card
-    icon={<NetworkIcon />}
-    title="Call the API"
-    description="Use VitNode's typed fetcher from a plugin-owned page or component."
-    href="/docs/dev/fetcher"
-  />
-</Cards>
+## Check the result
+
+```bash
+curl http://localhost:3000/api/site-notes/notes
+```
+
+```json
+[
+  { "id": 1, "title": "Welcome to site notes", "body": "Short updates for everyone on the site." },
+  { "id": 2, "title": "Office closed on Friday", "body": "We are back on Monday at 9:00." }
+]
+```
+
+The endpoint also appears in the app's API reference; see [Swagger](/docs/dev/swagger).
+
+## How the fetcher knows your routes
+
+Pages call plugin APIs through the [fetcher](/docs/dev/fetcher), which infers `module`, `path`, the arguments and the response from a registry of plugin types. You never edit that registry by hand:
+
+- **In the plugin**, every `vitnode build` and `vitnode dev` (both run by `pnpm dev`) writes `types/api-registry.gen.d.ts`. It registers only this plugin, as a type import of `VitNodeApiPlugin` from `src/config.api.ts`, so the plugin's own pages type-check before any app installs it. The plugin's `tsconfig.json` includes `types/`, `.npmignore` keeps the folder out of the published package, and you commit it like `src/manifest.gen.ts`.
+- **In the app**, `vitnode dev` and `vitnode build` write `src/api-registry.gen.ts` from the plugins the app configured. That file, not the plugin's, decides what the app's pages can call.
+
+The `VitNodeApiPlugin` type at the bottom of `config.api.ts` is the link between the two. It keeps the plugin id, module paths and route definitions and drops the Hono app, database and listener code, so a type-only import never pulls server code into a browser build. The generator writes it; keep it when you edit the file.

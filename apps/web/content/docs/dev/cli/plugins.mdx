@@ -1,5 +1,5 @@
 ---
-title: List and validate plugins
+title: Plugin commands
 description: List the plugins a VitNode app uses with vitnode plugin list, and check them with vitnode plugin validate before a build or in CI.
 icon: Puzzle
 ---
@@ -8,25 +8,26 @@ icon: Puzzle
 
 To create a plugin, use the generator, which also registers, installs and builds it. See [Create a plugin](/docs/dev/plugins/create).
 
+Run both commands through your package manager inside an app or plugin folder, for example `cd apps/web && pnpm vitnode plugin list`. The workspace root does not depend on `@vitnode/core`, so `vitnode` is not found there.
+
 ## List plugins
 
-Run it from your app, or from anywhere in its workspace:
-
 ```bash
-vitnode plugin list
+pnpm vitnode plugin list
 ```
 
 ```txt
 ◆ VitNode
   Plugins
 
-  Plugin                         Version           Source
-  ───────────────────────────────────────────────────────────
-  @vitnode/blog                  2.0.0-canary.13   workspace
-  @acme/search                   1.1.2             package
-  @acme/forum (not configured)   0.1.0             workspace
+  Plugin           Version           Source
+  ────────────────────────────────────────────
+  @vitnode/blog    2.0.0-canary.13   workspace
+  @vitnode/forum   2.0.0-canary.13   workspace
+  newsroom         0.1.0             workspace
+  site-notes       0.1.0             workspace
 
-  2 plugins configured in this app
+  4 plugins configured in this app
 ```
 
 The list comes from your app's `vitnode.config.ts`, read by the same loader the app's build uses.
@@ -43,27 +44,27 @@ The list comes from your app's `vitnode.config.ts`, read by the same loader the 
 ## Validate plugins
 
 ```bash
-vitnode plugin validate        # every plugin, or the one you are in
-vitnode plugin validate blog   # one plugin, by id, package name or folder
+pnpm vitnode plugin validate              # every plugin, or the one you are in
+pnpm vitnode plugin validate site-notes   # one plugin, by id, package name or folder
 ```
 
 ```txt
 ◆ VitNode
   Validate plugins
 
-  @vitnode/blog  plugins/blog
-  ✓ Package  2.0.0-canary.13
+  site-notes  ../../plugins/site-notes
+  ✓ Package  0.1.0
   ✓ Plugin definition
   ✓ API definition
   ✓ Routes  3 routes
   ✓ Translations  en
   ✓ AdminCP navigation
-  ✓ Database schema  6 tables
+  ✓ Database schema  1 table
 
   ✓ 1 plugin valid
 ```
 
-Validation reads the plugin's build output, the `dist` files your app imports, so build the plugin first. Each check runs only when the plugin has that part:
+Validation reads the plugin's build output, the `dist` files your app imports, so build the plugin first (its `build:plugins` script, or `pnpm build:plugins` at the workspace root). Each check runs only when the plugin has that part:
 
 | Check              | Fails when                                                                                                                 |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------- |
@@ -82,16 +83,16 @@ A failure says what is wrong and where:
 
 ```txt
   ✖ AdminCP navigation
-      AdminCP navigation item /admin/blog requires the permission posts.can_manage,
-      but @acme/blog does not register it in buildApiPlugin({ permissionStaff: { admin } }).
+      AdminCP navigation item /admin/site-notes requires the permission notes.can_create,
+      but site-notes does not register it in buildApiPlugin({ permissionStaff: { admin } }).
       dist/src/admin/nav.js
 
-✖ 1 plugin failed validation: @acme/blog
+✖ 1 plugin failed validation: site-notes
 ```
 
 `vitnode plugin validate` exits with code `1` when any plugin is invalid, so it can gate a CI job. An unknown plugin name exits with code `2` and lists the plugins it knows.
 
-## Next steps
+## Related
 
 <Cards>
   <Card

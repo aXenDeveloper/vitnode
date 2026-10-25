@@ -1,80 +1,81 @@
 ---
 title: Roles
-description: Manage user roles, primary and secondary group memberships, role colors, and default seeded groups.
+description: How VitNode roles group users for coloured name badges, upload and profile allowances, and staff permissions, with the seeded default roles and primary and secondary roles.
 icon: UsersRound
 ---
 
-In VitNode, a role groups users together for display styles (e.g. colored username badges) and staff permission grants.
+import { ImgDocs } from "@/components/fumadocs/img";
+import rolesList from "./roles-list.webp";
 
-## Quick start
+A role groups users. It decides how their name looks (colour and prefix), what they may upload and edit on their profile, and, through [staff permissions](/docs/dev/working-with-users/staff-permissions), whether they are administrators or moderators.
 
-Resolve a user's complete set of role IDs (primary + secondary) on the API:
+## Read a user's roles in an API route
+
+`getUserRoleIds` returns every role id a user holds, primary and secondary, without duplicates. It reads the database on each call:
 
 ```ts
-import { getUserRoleIds } from '@vitnode/core/api/lib/check-staff-permission'
+import { getUserRoleIds } from "@vitnode/core/api/lib/check-staff-permission";
 
-const user = c.get('user')
-// [!code ++:1]
-const roleIds = user ? await getUserRoleIds(c, user) : []
+// inside a route handler, where `c` is the Hono context
+const user = c.get("user");
+const roleIds = user ? await getUserRoleIds(c, user) : [];
 ```
 
----
+## Seeded roles
 
-## Seeded Default Roles
+A fresh install gets four protected roles:
 
-VitNode automatically seeds four protected system roles upon installation:
+| Role              | Flags     | Default colour               | Staff access                                          |
+| :---------------- | :-------- | :--------------------------- | :---------------------------------------------------- |
+| **Guest**         | `guest`   | None                         | None (applies to visitors who are not signed in)      |
+| **Member**        | `default` | None                         | None (the role new accounts get)                      |
+| **Moderator**     | None      | Green (`hsl(122, 80%, 45%)`) | Unrestricted moderator                                |
+| **Administrator** | `root`    | Red (`hsl(0, 100%, 50%)`)    | Unrestricted administrator and moderator (`root`)     |
 
-| Role              | Flags     | Default Color                | Staff Privileges                                 |
-| :---------------- | :-------- | :--------------------------- | :----------------------------------------------- |
-| **Guest**         | `guest`   | None                         | None (applies to unauthenticated visitors)       |
-| **Member**        | `default` | None                         | Standard registered member role                  |
-| **Moderator**     | None      | Green (`hsl(122, 80%, 45%)`) | Unrestricted moderation staff                    |
-| **Administrator** | `root`    | Red (`hsl(0, 100%, 50%)`)    | Unrestricted administrative staff (`root: true`) |
-
-<Callout type="info" title="First Account is Root">
-  The first user to register during site initialization is automatically
-  assigned the Administrator role.
+<Callout type="info" title="The first account is the administrator">
+  The first user to register gets the Administrator role.
 </Callout>
 
----
+## Role fields
 
-## Role Model Attributes
+`core_roles` holds:
 
-`core_roles` defines group styling and properties:
+- `color`: a CSS colour (`#ff0000`, `hsl(210, 100%, 50%)`) applied to members' names across the UI.
+- `prefix`: an emoji or a Lucide icon shown before the role name and every member's name. Stored as `emoji:🚀` or `icon:rocket`; the [Emoji & Icon Picker](/docs/ui/emoji-icon-picker) covers the format and the components that read it.
+- `root`: when `true`, members pass every staff permission check.
+- `default`: the role new members get.
+- `guest`: the role used for visitors who are not signed in.
 
-- `color`: CSS color string (e.g. `#ff0000`, `hsl(210, 100%, 50%)`) applied to member usernames across the UI.
-- `prefix`: An emoji or a Lucide icon rendered in front of the role name and in front of every member's username. Stored as `emoji:🚀` or `icon:rocket` - see the [Emoji & Icon Picker](/docs/ui/emoji-icon-picker) for the codec and the components that read it.
-- `root`: When `true`, user bypasses all staff permission checks.
-- `default`: The role automatically assigned to newly registered members.
-- `guest`: Reserved for unauthenticated requests.
+Roles also carry allowances: file uploads on the **Content** tab, and personal information plus avatar and cover limits on the **Profile** tab. [Profile fields](/docs/dev/working-with-users/profile-fields#who-may-edit) and [Avatars and covers](/docs/dev/working-with-users/avatars#role-settings) explain how several roles combine.
 
----
+## Primary and secondary roles
 
-## Primary vs Secondary Roles
+Every user has exactly one **primary role** (`core_users.roleId`) and any number of **secondary roles** (`core_users_secondary_roles`). VitNode combines staff permissions across all of them. Staff change both in the **Roles** card on the user's AdminCP page ([Manage users](/docs/dev/working-with-users/admin-users)).
 
-Every user has exactly one **primary role** (stored in `core_users.roleId`). Users may additionally hold multiple **secondary roles** (stored in `core_users_secondary_roles`), inheriting combined staff permissions across all assigned groups.
+## Manage roles in the AdminCP
 
----
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={rolesList}
+  alt="The AdminCP Roles page: a search field and Create role button above a table of the Administrator, Moderator, Member and Guest roles with their colours, number of users, last update and an edit button"
+/>
 
-## AdminCP Role Management
+Roles live at **AdminCP → Core → Users → Roles** (`/admin/core/users/roles`). The table shows each **Role**, its **Number of users** and when it was last updated. **Create role** and the edit button open a dialog with **General**, **Content** and **Profile** tabs, plus **Artificial intelligence (AI)** when AI is configured. **General** holds the **Name**, the **Color** that tints member names, and the **Prefix**.
 
-{/* Image prompt: VitNode AdminCP Roles management page at /admin/core/roles. Table showing custom roles with colored name badges, member counts, and action buttons to reorder, edit, or delete roles. Dark theme, 1440x900. */}
+Deleting a role that still has users asks which role to move them to first.
 
-Create, color-code, and organize user groups under **Core → Roles** (`/admin/core/roles`).
-
-The **General** tab of the create/edit dialog carries both display fields: **Color**, which tints member usernames, and **Prefix**, which puts an emoji or an icon in front of them.
-
-## Learn More
+## Related
 
 <Cards>
   <Card
-    title="Staff Permissions"
-    description="Grant granular admin and moderator privileges to roles"
+    title="Permissions"
+    description="Grant admin and moderator permissions to roles"
     href="/docs/dev/working-with-users/staff-permissions"
   />
   <Card
-    title="Users"
-    description="Managing user accounts and session context"
+    title="Current user"
+    description="Read the signed-in user and their role in routes and components"
     href="/docs/dev/working-with-users/users"
   />
 </Cards>

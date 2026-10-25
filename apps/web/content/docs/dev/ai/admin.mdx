@@ -1,5 +1,5 @@
 ---
-title: AdminCP & Account Usage
+title: AI in the AdminCP
 description: Manage AI in the VitNode AdminCP with the global switch, monthly budgets in USD, per-action settings, AI access on roles and users, and history. Members see their AI points at /settings/ai.
 icon: LayoutDashboard
 ---
@@ -26,7 +26,7 @@ Models and their prices are not edited in the AdminCP. They live in `vitnode.api
 
 ## First-time setup
 
-[AI Setup](/docs/dev/ai) covers the models and prices you set in code. Everything after that happens in the AdminCP.
+[AI setup](/docs/dev/ai) covers the models and prices you set in code. Everything after that happens in the AdminCP.
 
 <Steps>
 
@@ -58,7 +58,7 @@ Open **Users → Roles**, edit a role and switch to the **Artificial intelligenc
 
 ### Optionally turn on automatic ALT text
 
-In the same **Settings** sheet, under **ALT text**, switch on **Write ALT text automatically**. You need a vision model (`image-input`) with pricing and a running cron. See [Automatic Image ALT Text](/docs/dev/ai/automatic-alt).
+In the same **Settings** sheet, under **ALT text**, switch on **Write ALT text automatically**. You need a vision model (`image-input`) with pricing and a running cron. See [Image alt text](/docs/dev/ai/automatic-alt).
 
 </Step>
 
@@ -100,7 +100,7 @@ Switch **AI features** off and the rest of the sheet hides, because none of it a
 
 Budgets and allowances are calendar months in the **site's time zone** (the default language's). The settings sheet shows which one.
 
-Budgets are in **USD**, because that is what providers bill. Members are charged in **AI points**. [Costs, Points & Budgets](/docs/dev/ai/costs-and-limits) explains the conversion and what happens on failure.
+Budgets are in **USD**, because that is what providers bill. Members are charged in **AI points**. [Costs and budgets](/docs/dev/ai/costs-and-limits) explains the conversion and what happens on failure.
 
 ## Actions
 
@@ -233,21 +233,23 @@ Every screen is backed by an API route under `@vitnode/core`. Use them with [`fe
 | `GET /ai/usage`                               | signed in        | The member's own allowance, notices and features    |
 | `GET /ai/history?action=&limit=`              | signed in        | The member's own runs, optionally for one feature   |
 
+[Custom UI](/docs/dev/ai/custom-ui#built-in-run-routes) and [Streaming](/docs/dev/ai/streaming#built-in-stream-routes) list the routes that run actions (`/admin/ai/assist*`, `/ai/run`, `/ai/stream`, `/ai/estimate`, `/ai/available` and the feedback routes). [Translations](/docs/dev/ai/translations#track-outdated-translations) covers `/admin/ai/translation-sources`.
+
 ## Learn more
 
 <Cards>
   <Card
-    title="Costs, Points & Budgets"
+    title="Costs and budgets"
     description="How runs are priced, reserved and charged"
     href="/docs/dev/ai/costs-and-limits"
   />
   <Card
-    title="Automatic Image ALT Text"
+    title="Image alt text"
     description="Background ALT text in every site language"
     href="/docs/dev/ai/automatic-alt"
   />
   <Card
-    title="AI Actions"
+    title="AI actions"
     description="Define the features that appear on the Actions page"
     href="/docs/dev/ai/actions"
   />

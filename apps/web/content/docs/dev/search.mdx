@@ -1,5 +1,5 @@
 ---
-title: Search & Discovery
+title: Search
 description: Enable site-wide full-text search across plugin content with Postgres or Elasticsearch ranking engines.
 icon: Search
 ---
@@ -20,7 +20,7 @@ VitNode includes a unified site-wide search and discovery engine. Searchable rec
 
 ### Index when a record changes
 
-Index or update an item from any Hono route handler via `c.get("search")`:
+Call `c.get("search").index()` in the route handler that writes the record, right after the database write succeeds, so the index never points at a row that was rolled back. Calling it again for the same `itemType` and `itemId` updates the document:
 
 ```ts
 // [!code ++:10]
@@ -35,6 +35,8 @@ await c.get('search').index({
   createdAt: article.createdAt,
 })
 ```
+
+`article` is the row your handler just saved. Inside a plugin route the document belongs to that plugin automatically. From a cron job or queue task, which run in Core's request, pass `pluginId: manifest.id` so your plugin owns the document.
 
 </Step>
 <Step>
@@ -107,7 +109,7 @@ export const recipesApiPlugin = () =>
 </Step>
 </Steps>
 
-## Pluggable Search Engines
+## Search engines
 
 VitNode supports two search engines:
 
@@ -217,7 +219,7 @@ Once `domains` is configured, every result URL is absolute, so a click always op
 The rules:
 
 - It starts with `/` and holds exactly one `{slug}`. No other placeholder, empty segment, `..` or whitespace.
-- A page route has to serve it (`{slug}` read as `:slug`). If a plugin exports its content types from `src/content.ts` and none does, `dev` and `build` stop with `content-url-without-page`. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).
+- A page route has to serve it (`{slug}` read as `:slug`). If a plugin exports its content types from `src/content.ts` and none does, `dev` and `build` stop with `content-url-without-page`. See [Content URLs need a page](/docs/dev/i18n/localized-urls-advanced#content-urls-need-a-page).
 - `{locale}` is no longer needed. A legacy leading `/{locale}/` (like `/{locale}/blog/article/{slug}`) is still accepted and stripped.
 - `{locale}` anywhere else fails with: `search.pathTemplate "..." places "{locale}" somewhere other than the start of the path. The language is no longer part of the template: i18n.localePrefix, i18n.domains and i18n.routePaths now place it. Remove "{locale}" (recommended), or keep it only as the first segment ("/{locale}/...").`
 - A content type that isn't localized can't use `{locale}` at all.
@@ -249,7 +251,7 @@ A rebuild is a queued job, so it only runs once [cron](/docs/dev/cron) is runnin
 
 ---
 
-## Search Document Reference
+## Search document reference
 
 <TypeTable
   type={{
@@ -258,6 +260,11 @@ A rebuild is a queued job, so it only runs once [cron](/docs/dev/cron) is runnin
         "Unique collection identifier (e.g. 'article', 'wiki_page').",
       required: true,
       type: 'string',
+    },
+    createdAt: {
+      description: 'When the record was created. Sorts timelines and powers the date filter.',
+      required: true,
+      type: 'Date',
     },
     itemId: {
       description:
@@ -302,10 +309,38 @@ A rebuild is a queued job, so it only runs once [cron](/docs/dev/cron) is runnin
       type: 'boolean',
       default: 'false',
     },
+    languageCode: {
+      description:
+        'The language of this document. Multi-language content indexes one document per language; with `itemType` and `itemId` it identifies the document.',
+      type: 'string',
+      default: "''",
+    },
+    containerType: {
+      description:
+        'The kind of container holding the item, such as a forum. Used with `containerId` to group items.',
+      type: 'string',
+    },
+    containerId: {
+      description: 'The id of the container holding the item.',
+      type: 'number',
+    },
+    metadata: {
+      description: 'Extra data returned with the hit.',
+      type: 'Record<string, unknown>',
+    },
+    pluginId: {
+      description:
+        "The plugin that owns the document. Defaults to the current request's plugin; set it from cron jobs and queue tasks. A rebuild indexer fills it in for you.",
+      type: 'string',
+    },
+    updatedAt: {
+      description: 'When the record last changed.',
+      type: 'Date',
+    },
   }}
 />
 
-## Learn More
+## Learn more
 
 <Cards>
   <Card
@@ -314,7 +349,7 @@ A rebuild is a queued job, so it only runs once [cron](/docs/dev/cron) is runnin
     href="/docs/dev/database/search"
   />
   <Card
-    title="Suggestions"
+    title="Search suggestions"
     description="Header search dialog, popular content and popularity signals"
     href="/docs/dev/search-suggestions"
   />

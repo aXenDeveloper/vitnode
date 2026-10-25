@@ -27,10 +27,10 @@ export const packageMessages: Record<string, LocaleMessagesMap> = {
   '@vitnode/blog': {
     en: async () => await import('@vitnode/blog/locales/en.json'),
   },
-  '@vitnode/example': {
-    en: async () => await import('@vitnode/example/locales/en.json'),
-  },
   '@vitnode/forum': {
     en: async () => await import('@vitnode/forum/locales/en.json'),
+  },
+  'newsroom': {
+    en: async () => await import('newsroom/locales/en.json'),
   },
 }

@@ -1,0 +1,702 @@
+---
+title: Replies
+description: Let VitNode Content Engine comments answer each other. Raise thread.maxDepth, build the reply tree from the flat thread, add Reply with the parent id, keep removed comments as placeholders, and handle pagination, truncation and the depth limit.
+icon: MessagesSquare
+implementation:
+  objective: Turn flat comments into threaded replies on an existing comment section.
+  decisions:
+    - How deep can replies nest? From 1 (flat) to 32 levels; recommend 4 to 6.
+  constraints:
+    - 'Raise `thread.maxDepth` and build the tree from `parentId`; render `removed: true` items as placeholders that keep their replies.'
+    - Send `parent` with each reply; the server checks the parent and the depth.
+  related:
+    - title: Comments
+      href: /docs/content-engine/threads
+    - title: Comment editing
+      href: /docs/content-engine/threads-editing
+    - title: thread reference
+      href: /docs/content-engine/reference#thread
+---
+
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import tree from "./threads-frontend-tree.webp";
+
+Replies let a comment answer another comment, so a conversation can branch. The thread route already returns each top-level comment followed by every answer below it; this page draws that as a tree, adds **Reply**, and keeps the shape when a comment in the middle is removed.
+
+This continues the flat comment section from [Comments](/docs/content-engine/threads), with **Edit** from [Comment editing](/docs/content-engine/threads-editing). If you skipped editing, render `CommentBody` where this page renders `CommentItem`, and leave `onEdited` and `permissions` out.
+
+<Steps>
+
+<Step>
+
+### Raise the depth
+
+Edit `src/content/comment.ts`. Export the limit, so the section can hide **Reply** where the server would refuse it. These are excerpts:
+
+```ts title="plugins/newsroom/src/content/comment.ts"
+/** How deep replies nest. The section hides **Reply** at this depth. */ // [!code ++:2]
+export const COMMENT_MAX_DEPTH = 4;
+
+  thread: { parent: "parent", root: "article", maxDepth: COMMENT_MAX_DEPTH }, // [!code highlight]
+```
+
+`maxDepth` only changes what the server accepts, so there is nothing to migrate. Depth 1 is a top-level comment; with `4`, a reply to a reply to a reply is the deepest.
+
+</Step>
+
+<Step>
+
+### Build the tree
+
+Add a tree builder to the end of `src/pages/comment-data.ts`. This is an excerpt:
+
+```ts title="plugins/newsroom/src/pages/comment-data.ts"
+export interface CommentNode extends CommentItem {
+  children: CommentNode[];
+}
+
+/** The flat, depth-first answer as a tree: a parent always comes before its replies. */
+export const buildCommentTree = (
+  items: readonly CommentItem[],
+): CommentNode[] => {
+  const nodes = new Map<number, CommentNode>();
+  const roots: CommentNode[] = [];
+
+  for (const item of items) {
+    const node: CommentNode = { ...item, children: [] };
+    nodes.set(item.id, node);
+    const parent =
+      item.parentId === null ? undefined : nodes.get(item.parentId);
+    if (parent) parent.children.push(node);
+    else roots.push(node);
+  }
+
+  return roots;
+};
+```
+
+The thread route returns comments depth-first, so every reply comes after its parent. One pass with a `Map` is enough. If a reply's parent were ever missing from the page, the reply would fall back to the top level instead of disappearing.
+
+</Step>
+
+<Step>
+
+### Render a branch with Reply
+
+Edit `src/pages/comment-section.tsx`. Import the limit and the tree, then add `CommentBranch` above `CommentSection`. These are excerpts:
+
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx (excerpt)"
+import { COMMENT_MAX_DEPTH } from "@/content/comment"; // [!code ++]
+
+import type { ArticleComment, CommentNode } from "./comment-data"; // [!code highlight]
+
+import {
+  buildCommentTree, // [!code ++]
+  commentsQueryKey,
+  commentsQueryOptions,
+} from "./comment-data";
+```
+
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx (excerpt)"
+/** What every comment in the tree needs from the section. */
+interface CommentThread {
+  articleId: number;
+  canReply: boolean;
+  onEdited: CommentEditorProps["onSaved"];
+  onPosted: CommentComposerProps["onPosted"];
+  permissions: ReturnType<typeof useCommentPermissions>;
+}
+
+/** A comment with its Reply form, followed by every answer below it. */
+const CommentBranch = ({
+  node,
+  thread,
+}: {
+  node: CommentNode;
+  thread: CommentThread;
+}) => {
+  const t = useTranslations("newsroom.comments");
+  const [replying, setReplying] = useState(false);
+
+  return (
+    <li className="flex flex-col gap-3">
+      {node.record ? (
+        <>
+          <CommentItem
+            canEdit={thread.permissions.of(node.id).canEdit}
+            comment={node.record}
+            onSaved={thread.onEdited}
+          />
+          {thread.canReply && node.depth < COMMENT_MAX_DEPTH ? (
+            <Button
+              aria-expanded={replying}
+              className="self-start"
+              onClick={() => {
+                setReplying(!replying);
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              {t("reply")}
+            </Button>
+          ) : null}
+          {replying ? (
+            <div className="flex flex-col gap-2">
+              <Composer
+                articleId={thread.articleId}
+                label={t("form.reply_label", {
+                  name: node.record.author?.name ?? t("someone"),
+                })}
+                onPosted={async outcome => {
+                  setReplying(false);
+                  await thread.onPosted(outcome);
+                }}
+                parentId={node.id}
+              />
+              <Button
+                className="self-start"
+                onClick={() => {
+                  setReplying(false);
+                }}
+                size="sm"
+                variant="ghost"
+              >
+                {t("form.cancel")}
+              </Button>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        // Hidden, but its public answers still need a parent to hang from.
+        <p className="text-muted-foreground text-sm italic">{t("removed")}</p>
+      )}
+
+      {node.children.length > 0 ? (
+        <ol className="flex flex-col gap-4 border-l-2 pl-3 md:pl-6">
+          {node.children.map(child => (
+            <CommentBranch key={child.id} node={child} thread={thread} />
+          ))}
+        </ol>
+      ) : null}
+    </li>
+  );
+};
+```
+
+- **Reply** opens a composer for that comment with `parentId={node.id}`, the same composer that posts top-level comments. `aria-expanded` tells screen readers whether the form is open, and **Cancel** closes it.
+- **Reply is hidden at `COMMENT_MAX_DEPTH`**, where the server would answer `400`. It is also hidden for guests.
+- **Removed comments.** A hidden comment that still has public answers comes back as `removed: true` with `record: null`. It renders as **This comment was removed.**, keeps its answers below it, and offers no **Reply** or **Edit**.
+- **Answers** are a nested `<ol>` with a left border, indented less on phones.
+
+</Step>
+
+<Step>
+
+### Render the tree in the section
+
+In `CommentSection`, build the tree, collect what each branch needs, render the branches instead of the flat list, and say when a page was cut short. These are excerpts:
+
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx (excerpt)"
+  const tree = useMemo(() => buildCommentTree(items), [items]); // [!code ++]
+
+  // [!code ++:7]
+  const thread: CommentThread = {
+    articleId,
+    canReply: Boolean(session.data?.user),
+    onEdited,
+    onPosted,
+    permissions,
+  };
+```
+
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx (excerpt)"
+        <ol aria-busy={comments.isFetching} className="flex flex-col gap-6">
+          {/* [!code ++:3] */}
+          {tree.map(node => (
+            <CommentBranch key={node.id} node={node} thread={thread} />
+          ))}
+        </ol>
+      )}
+
+      {/* [!code ++:3] */}
+      {pages?.some(page => page.truncated) ? (
+        <p className="text-muted-foreground text-sm">{t("truncated")}</p>
+      ) : null}
+```
+
+A posted reply goes through the same `onPosted` as a top-level comment. A published reply refreshes the thread, and a draft or pending one only shows its message. The top-level composer keeps its text, because only its own `onPosted` resets its key.
+
+</Step>
+
+<Step>
+
+### Add the labels
+
+Add these keys to the `comments` group in `src/locales/en.json`. `form.cancel` is the same key [Comment editing](/docs/content-engine/threads-editing) added:
+
+```json title="plugins/newsroom/src/locales/en.json"
+{
+  "newsroom": {
+    "comments": {
+      "form": { "reply_label": "Reply to {name}", "cancel": "Cancel" },
+      "reply": "Reply",
+      "removed": "This comment was removed.",
+      "truncated": "This conversation is long, so some deeper replies are not shown."
+    }
+  }
+}
+```
+
+</Step>
+
+</Steps>
+
+<Accordions>
+<Accordion title="The complete src/pages/comment-section.tsx">
+
+```tsx title="plugins/newsroom/src/pages/comment-section.tsx"
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { RichTextContent } from "@vitnode/core/components/rich-text";
+import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
+import { Skeleton } from "@vitnode/core/components/ui/skeleton";
+import { type RichTextDocument } from "@vitnode/core/content";
+import { useSessionQuery } from "@vitnode/core/tanstack/auth";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { lazy, Suspense, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { useTranslations } from "use-intl";
+
+import { COMMENT_MAX_DEPTH } from "@/content/comment";
+import { manifest } from "@/manifest.gen";
+
+import type { CommentComposerProps, CommentOutcome } from "./comment-composer";
+import type { ArticleComment, CommentNode } from "./comment-data";
+import type { CommentEditorProps } from "./comment-editor";
+
+import {
+  buildCommentTree,
+  commentsQueryKey,
+  commentsQueryOptions,
+} from "./comment-data";
+import { useCommentPermissions } from "./comment-permissions";
+
+// The editor is heavy and most readers never write, so it loads on demand.
+const CommentComposer = lazy(async () => await import("./comment-composer"));
+const CommentEditor = lazy(async () => await import("./comment-editor"));
+
+const Composer = (props: CommentComposerProps) => (
+  <Suspense fallback={<Skeleton className="h-40 w-full rounded-lg" />}>
+    <CommentComposer {...props} />
+  </Suspense>
+);
+
+/** Who wrote a comment, and what they said. */
+const CommentBody = ({ comment }: { comment: ArticleComment }) => {
+  const t = useTranslations("newsroom.comments");
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p className="text-sm font-medium">
+        {comment.author?.name ?? t("someone")}
+      </p>
+      <RichTextContent
+        className="leading-relaxed text-pretty"
+        content={comment.body}
+      />
+    </div>
+  );
+};
+
+/** A comment, with Edit for the visitors who may use it. */
+const CommentItem = ({
+  canEdit,
+  comment,
+  onSaved,
+}: {
+  canEdit: boolean;
+  comment: ArticleComment;
+  onSaved: CommentEditorProps["onSaved"];
+}) => {
+  const t = useTranslations("newsroom.comments");
+  const tWrite = useTranslations("core.global.content_write");
+  const [editing, setEditing] = useState<null | RichTextDocument>(null);
+  const [isOpening, setIsOpening] = useState(false);
+
+  // Opens the editor on the comment's latest text, not on the cached copy.
+  const openEditor = async () => {
+    setIsOpening(true);
+    try {
+      const res = await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "content/comments",
+        path: "/{id}/edit",
+        args: { params: { id: comment.id } },
+      });
+      if (res.status !== 200) {
+        const reason =
+          res.status === 401
+            ? "unauthenticated"
+            : res.status === 403
+              ? "forbidden"
+              : res.status === 404
+                ? "not_found"
+                : "unknown";
+        toast.error(tWrite("title"), { description: tWrite(reason) });
+
+        return;
+      }
+
+      setEditing((await res.json()).values.body);
+    } finally {
+      setIsOpening(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">
+          {comment.author?.name ?? t("someone")}
+        </p>
+        <Suspense fallback={<Skeleton className="h-40 w-full rounded-lg" />}>
+          <CommentEditor
+            body={editing}
+            commentId={comment.id}
+            label={t("form.edit_label")}
+            onCancel={() => {
+              setEditing(null);
+            }}
+            onSaved={async pending => {
+              setEditing(null);
+              await onSaved(pending);
+            }}
+          />
+        </Suspense>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <CommentBody comment={comment} />
+      {canEdit ? (
+        <Button
+          className="self-start"
+          isLoading={isOpening}
+          onClick={openEditor}
+          size="sm"
+          variant="ghost"
+        >
+          {t("edit")}
+        </Button>
+      ) : null}
+    </div>
+  );
+};
+
+/** What every comment in the tree needs from the section. */
+interface CommentThread {
+  articleId: number;
+  canReply: boolean;
+  onEdited: CommentEditorProps["onSaved"];
+  onPosted: CommentComposerProps["onPosted"];
+  permissions: ReturnType<typeof useCommentPermissions>;
+}
+
+/** A comment with its Reply form, followed by every answer below it. */
+const CommentBranch = ({
+  node,
+  thread,
+}: {
+  node: CommentNode;
+  thread: CommentThread;
+}) => {
+  const t = useTranslations("newsroom.comments");
+  const [replying, setReplying] = useState(false);
+
+  return (
+    <li className="flex flex-col gap-3">
+      {node.record ? (
+        <>
+          <CommentItem
+            canEdit={thread.permissions.of(node.id).canEdit}
+            comment={node.record}
+            onSaved={thread.onEdited}
+          />
+          {thread.canReply && node.depth < COMMENT_MAX_DEPTH ? (
+            <Button
+              aria-expanded={replying}
+              className="self-start"
+              onClick={() => {
+                setReplying(!replying);
+              }}
+              size="sm"
+              variant="ghost"
+            >
+              {t("reply")}
+            </Button>
+          ) : null}
+          {replying ? (
+            <div className="flex flex-col gap-2">
+              <Composer
+                articleId={thread.articleId}
+                label={t("form.reply_label", {
+                  name: node.record.author?.name ?? t("someone"),
+                })}
+                onPosted={async outcome => {
+                  setReplying(false);
+                  await thread.onPosted(outcome);
+                }}
+                parentId={node.id}
+              />
+              <Button
+                className="self-start"
+                onClick={() => {
+                  setReplying(false);
+                }}
+                size="sm"
+                variant="ghost"
+              >
+                {t("form.cancel")}
+              </Button>
+            </div>
+          ) : null}
+        </>
+      ) : (
+        // Hidden, but its public answers still need a parent to hang from.
+        <p className="text-muted-foreground text-sm italic">{t("removed")}</p>
+      )}
+
+      {node.children.length > 0 ? (
+        <ol className="flex flex-col gap-4 border-l-2 pl-3 md:pl-6">
+          {node.children.map(child => (
+            <CommentBranch key={child.id} node={child} thread={thread} />
+          ))}
+        </ol>
+      ) : null}
+    </li>
+  );
+};
+
+export const CommentSection = ({
+  articleId,
+  articleSlug,
+}: {
+  articleId: number;
+  articleSlug: string;
+}) => {
+  const t = useTranslations("newsroom.comments");
+  const queryClient = useQueryClient();
+  const session = useSessionQuery();
+  const [composerKey, setComposerKey] = useState(0);
+  const comments = useInfiniteQuery(commentsQueryOptions(articleId));
+
+  const pages = comments.data?.pages;
+  const items = useMemo(
+    () => pages?.flatMap(page => page.items) ?? [],
+    [pages],
+  );
+  const tree = useMemo(() => buildCommentTree(items), [items]);
+  // One request for every comment on screen, batched by the hook.
+  const permissions = useCommentPermissions(
+    items.flatMap(item => (item.record ? [item.id] : [])),
+  );
+
+  const onPosted = async (outcome: CommentOutcome) => {
+    if (outcome !== "published") {
+      // Not in the public thread, so there is nothing to refresh.
+      toast.info(t(`${outcome}.title`), { description: t(`${outcome}.desc`) });
+
+      return;
+    }
+
+    toast.success(t("created.title"), { description: t("created.desc") });
+    // Refetches every loaded page in order, with the new count.
+    await queryClient.invalidateQueries({
+      queryKey: commentsQueryKey(articleId),
+    });
+  };
+
+  const onEdited = async (pending: boolean) => {
+    if (pending) {
+      toast.info(t("edit_pending.title"), {
+        description: t("edit_pending.desc"),
+      });
+    } else {
+      toast.success(t("edited.title"), { description: t("edited.desc") });
+    }
+    await queryClient.invalidateQueries({
+      queryKey: commentsQueryKey(articleId),
+    });
+  };
+
+  const thread: CommentThread = {
+    articleId,
+    canReply: Boolean(session.data?.user),
+    onEdited,
+    onPosted,
+    permissions,
+  };
+
+  return (
+    <section aria-labelledby="comments-title" className="flex flex-col gap-6">
+      <h2 className="text-xl font-semibold text-balance" id="comments-title">
+        {t("title", { count: pages?.[0]?.replyCount ?? 0 })}
+      </h2>
+
+      {comments.isPending ? (
+        <div aria-busy="true" className="flex flex-col gap-4">
+          <span className="sr-only" role="status">
+            {t("loading")}
+          </span>
+          {[0, 1].map(key => (
+            <div className="flex flex-col gap-2" key={key}>
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-full" />
+            </div>
+          ))}
+        </div>
+      ) : comments.isError && items.length === 0 ? (
+        <div className="flex flex-col items-start gap-3">
+          <p className="text-muted-foreground leading-relaxed" role="alert">
+            {t("load_failed.desc")}
+          </p>
+          <Button
+            isLoading={comments.isFetching}
+            onClick={async () => {
+              await comments.refetch();
+            }}
+            variant="outline"
+          >
+            {t("retry")}
+          </Button>
+        </div>
+      ) : items.length === 0 ? (
+        <p className="text-muted-foreground leading-relaxed">{t("empty")}</p>
+      ) : (
+        <ol aria-busy={comments.isFetching} className="flex flex-col gap-6">
+          {tree.map(node => (
+            <CommentBranch key={node.id} node={node} thread={thread} />
+          ))}
+        </ol>
+      )}
+
+      {pages?.some(page => page.truncated) ? (
+        <p className="text-muted-foreground text-sm">{t("truncated")}</p>
+      ) : null}
+
+      {comments.hasNextPage ? (
+        <Button
+          className="self-start"
+          disabled={comments.isFetching}
+          isLoading={comments.isFetchingNextPage}
+          onClick={async () => {
+            const next = await comments.fetchNextPage();
+            if (next.isError) {
+              toast.error(t("load_failed.title"), {
+                description: t("load_failed.desc"),
+              });
+            }
+          }}
+          variant="outline"
+        >
+          {t("load_more")}
+        </Button>
+      ) : null}
+
+      {session.data?.user ? (
+        <Composer
+          articleId={articleId}
+          // A fresh key gives the next comment an empty editor.
+          key={composerKey}
+          label={t("form.label")}
+          onPosted={async outcome => {
+            setComposerKey(key => key + 1);
+            await onPosted(outcome);
+          }}
+          parentId={null}
+        />
+      ) : (
+        <HrefLink
+          className={buttonVariants({
+            className: "self-start",
+            variant: "outline",
+          })}
+          href={`/login?returnTo=${encodeURIComponent(`/news/${articleSlug}`)}`}
+        >
+          {t("sign_in")}
+        </HrefLink>
+      )}
+    </section>
+  );
+};
+```
+
+</Accordion>
+</Accordions>
+
+## Check the result
+
+Open `/news/welcome-to-the-newsroom` as a member with a comment from another member below it:
+
+1. Click **Reply** under it, write an answer and click **Post comment**. The answer shows indented under the comment.
+2. Reply to the answer, and to that answer. At depth 4, **Reply** is gone.
+3. In **AdminCP → Newsroom → Comments**, hide a comment that has answers. Its place shows **This comment was removed.**, with its answers still below it, and it has no **Reply**.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={tree}
+  alt="A comment section titled 5 comments, with a reply indented under Ada Lovelace's comment, Reply and Edit buttons, and a This comment was removed placeholder that keeps its answers below it"
+/>
+
+The thread route shows the same shape, with comment 3 hidden:
+
+```bash
+curl "http://localhost:3000/api/newsroom/content/comments/thread?root=1"
+```
+
+```json title="200 (trimmed)"
+{
+  "items": [
+    { "depth": 1, "id": 1, "parentId": null, "removed": false, "record": { "id": 1 } },
+    { "depth": 2, "id": 10, "parentId": 1, "removed": false, "record": { "id": 10 } },
+    { "depth": 1, "id": 2, "parentId": null, "removed": false, "record": { "id": 2 } },
+    { "depth": 2, "id": 3, "parentId": 2, "removed": true, "record": null },
+    { "depth": 3, "id": 4, "parentId": 3, "removed": false, "record": { "id": 4 } },
+    { "depth": 4, "id": 5, "parentId": 4, "removed": false, "record": { "id": 5 } }
+  ],
+  "pageInfo": { "endCursor": "WyIyMDI2LTEwLTIzIDE5OjExOjIyLjAwMTIxOSIsMl0", "hasNextPage": false, "totalCount": 2 },
+  "replyCount": 5,
+  "truncated": false
+}
+```
+
+`totalCount` counts top-level comments; `replyCount` counts every public comment, so the heading reads **5 comments**. Comment 10 is the reply from step 1, listed right after its parent. A reply to comment 5, at depth 4, answers:
+
+```json title="400"
+{
+  "code": "CONTENT_INVALID_INPUT",
+  "contentTypeId": "newsroom.comment",
+  "issues": [
+    {
+      "code": "unavailable",
+      "field": "parent",
+      "message": "Replies nest at most 4 levels deep. Answer a reply higher up."
+    }
+  ]
+}
+```
+
+## Pages and long conversations
+
+- **Pages are top-level comments.** `first` counts top-level comments, and each comes with every reply below it. **Load more comments** adds the next ones; replies never split across pages.
+- **Truncated pages.** One page holds at most 500 comments in total. When deep replies do not fit, `truncated` is `true` and the section says so instead of pretending the conversation ends there.
+- **New top-level comments** land at the end, because comments are oldest first. While pages remain, **Load more comments** reaches them.
+- **Permissions** are still one hook call for every loaded comment. It splits more than 50 ids into batches, so a long thread keeps its **Edit** buttons.
+
+The server keeps the tree valid on every write, in the AdminCP too: the parent must exist, be public and belong to the same article; a comment never answers itself or one of its own answers; and nothing nests deeper than `maxDepth`. The Forum plugin's `plugins/forum/src/pages/thread.tsx` builds the same thread with collapsible branches and permalinks.

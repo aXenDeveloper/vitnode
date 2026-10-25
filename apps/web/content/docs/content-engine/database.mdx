@@ -1,5 +1,5 @@
 ---
-title: Database
+title: Migrations
 description: The Postgres tables, columns and indexes the VitNode Content Engine generates for a content type, and how to generate, apply and evolve their migrations.
 icon: Database
 ---
@@ -38,31 +38,32 @@ Commit the generated migration together with the content type. Production never 
 
 Drizzle Kit finds tables by reading the exports of `node_modules/<pluginId>/dist/src/database/*.js` for each plugin. A table without an export is left out of the migration, without a warning. A content type with relations, translations and repeatable rows has several tables:
 
-```ts title="plugins/example/src/database/advanced-articles.ts"
+```ts title="plugins/newsroom/src/database/explainers.ts"
 import { createContentModel } from "@vitnode/core/content/server";
 
-import { advancedArticleContentType } from "@/content/advanced-article";
+import { explainerContentType } from "@/content/explainer";
 
-import { example_categories } from "./categories";
+import { newsroom_categories } from "./categories";
+import { newsroom_tags } from "./tags";
 
-export const advancedArticleContent = createContentModel(
-  advancedArticleContentType,
-  {
-    references: {
-      categories: () => example_categories.id,
-    },
+export const explainerContent = createContentModel(explainerContentType, {
+  references: {
+    categories: () => newsroom_categories.id,
+    tags: () => newsroom_tags.id,
   },
-);
+});
 
-export const example_advanced_articles = advancedArticleContent.table;
-export const example_advanced_articles_translations =
-  advancedArticleContent.translationTable;
-export const example_advanced_articles_categories =
-  advancedArticleContent.advancedTables.junctions.categories;
-export const example_advanced_articles_related_articles =
-  advancedArticleContent.advancedTables.junctions.relatedArticles;
-export const example_advanced_articles_faq =
-  advancedArticleContent.advancedTables.repeatables.faq;
+export const newsroom_explainers = explainerContent.table;
+export const newsroom_explainers_translations =
+  explainerContent.translationTable;
+export const newsroom_explainers_categories =
+  explainerContent.advancedTables.junctions.categories;
+export const newsroom_explainers_tags =
+  explainerContent.advancedTables.junctions.tags;
+export const newsroom_explainers_related_explainers =
+  explainerContent.advancedTables.junctions.relatedExplainers;
+export const newsroom_explainers_faq =
+  explainerContent.advancedTables.repeatables.faq;
 ```
 
 | Model member                         | Exists when                                               |
@@ -107,7 +108,7 @@ The primary key is `(itemId, languageId)`, so a record has at most one translati
 
 ### Junction and child tables
 
-Field names become snake_case in table names, so `relatedArticles` on `example_advanced_articles` becomes `example_advanced_articles_related_articles`.
+Field names become snake_case in table names, so `relatedExplainers` on `newsroom_explainers` becomes `newsroom_explainers_related_explainers`.
 
 - A **to-many field** gets `{tableName}_{field}` with `itemId`, `relatedItemId`, `position` and `createdAt`. The primary key is `(itemId, relatedItemId)`, so a record links to each target once.
 - A **repeatable field** gets `{tableName}_{field}` with `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per subfield.
@@ -132,7 +133,7 @@ Core tables that hold records of every content type store the id as text: `core_
 ALTER TABLE "core_content_revisions" ALTER COLUMN "itemId" SET DATA TYPE varchar(64) USING "itemId"::varchar(64);
 ```
 
-Custom SQL that joins these tables to a content table needs a cast, such as `"core_content_revisions"."itemId" = "example_articles"."id"::text`.
+Custom SQL that joins these tables to a content table needs a cast, such as `"core_content_revisions"."itemId" = "newsroom_stories"."id"::text`.
 
 ## Generated indexes
 
@@ -145,9 +146,9 @@ The engine creates these indexes without being asked:
 - On a translations table: `(languageId, status)` with `publication` or `(languageId)` without it, plus a unique `(languageId, slug)` for each localized slug.
 - On a junction table: `relatedItemId`, and a unique `(itemId, position)`. On a repeatable table: a unique `(itemId, position)`.
 
-Generated names follow `{table}_{columns}_idx`, or `_key` for unique ones, such as `example_categories_created_at_idx`. Add your own with the [`indexes`](/docs/content-engine/reference) option. An index on the same columns as a generated one replaces it instead of adding a second one:
+Generated names follow `{table}_{columns}_idx`, or `_key` for unique ones, such as `newsroom_categories_created_at_idx`. Add your own with the [`indexes`](/docs/content-engine/reference) option. An index on the same columns as a generated one replaces it instead of adding a second one:
 
-```ts title="plugins/example/src/content/article.ts"
+```ts title="plugins/newsroom/src/content/story.ts (excerpt)"
 indexes: [{ on: ["status", "createdAt"] }],
 ```
 

@@ -1,16 +1,22 @@
 ---
-title: Self-Hosted Deployment
+title: Self-hosted
 description: Build, migrate, and run VitNode on your own server or Docker container with a reverse proxy.
 icon: Server
 ---
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-VitNode compiles into a standard Node.js server and static assets. The only required dependency is a PostgreSQL database (Redis is optional for caching and multi-instance scaling).
+VitNode compiles into a standard Node.js server and static assets. This guide builds the app on your own server, prepares the database, and keeps it running behind Nginx.
+
+## Before you begin
+
+- Node.js `22.18` or newer in the 22 line, `24.11` or newer in the 24 line, or `26+`.
+- A PostgreSQL database and its connection string. Redis is optional, for shared caching and running more than one instance.
+- The production `.env` described in [Required environment variables](#required-environment-variables).
 
 ## Quick start
 
-Run these 4 commands on your deployment server:
+Run these 4 commands in the app's folder on your server. For a Turborepo project, run them at the repository root. The root scripts run each app's own script.
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Deploy VitNode">
 
@@ -38,19 +44,22 @@ npm start
 </Tabs>
 
 <Callout type="warn" title="Always run db:migrate before start">
-  Production processes do not automatically run migrations at boot. Running
-  `db:migrate` ensures the database schema matches your compiled application
-  before traffic is served.
+  Production processes do not run migrations at boot. Run `db:migrate` after
+  `build` and before `start`, on every deploy.
 </Callout>
+
+`db:migrate` runs `vitnode migrate`, which reads the compiled plugins, generates any missing migrations, applies them and seeds the roles, languages and permissions VitNode needs. That is why it comes after `build`.
+
+The first account that signs up on a fresh database becomes the administrator, so register your own account before you share the URL.
 
 ---
 
-## Required Environment Variables
+## Required environment variables
 
 Configure these in your production `.env` file:
 
 ```bash title=".env"
-# Database (PostgreSQL 15+)
+# Database
 POSTGRES_URL=postgresql://user:password@localhost:5432/vitnode_db
 
 # The origin visitors reach. Email links, SSO callbacks and password-reset
@@ -87,13 +96,23 @@ set it before the build: it is compiled into the browser bundle too.
 VITNODE_API_URL=http://localhost:8000
 ```
 
+In a split deployment, each app runs its own commands from its folder, or both at once from the Turborepo root:
+
+| Step         | `apps/api`                       | `apps/web`        |
+| :----------- | :------------------------------- | :---------------- |
+| Build        | `build`                          | `build`           |
+| Migrate      | `db:migrate` (the API owns the database) | -         |
+| Start        | `start`, port `8000` by default  | `start`, port `3000` by default |
+
+Pass `--port` to `vitnode start` to use another port.
+
 A value set here wins over the request origin, which is why a Single App must
 not carry one - `http://localhost:3000` left over from development would point
 production at the visitor's own machine.
 
 ---
 
-## Reverse Proxy (Nginx Configuration)
+## Reverse proxy (Nginx configuration)
 
 Proxy traffic to VitNode while forwarding client headers, keeping connections to the app open between requests, and upgrading only the requests that ask for a WebSocket:
 
@@ -151,11 +170,11 @@ In a split deployment, `apps/api` gzips its own JSON responses, so the same conf
 
 Hashed files under `/assets/` already leave the app with `Cache-Control: public, max-age=31536000, immutable`, so there is nothing to add for them here.
 
-Keep `proxy_set_header Host $host;`. VitNode picks a [language domain](/docs/dev/i18n/localized-urls#behind-a-proxy) from the `Host` header and deliberately ignores `X-Forwarded-Host`, which any visitor can send.
+Keep `proxy_set_header Host $host;`. VitNode picks a [language domain](/docs/dev/i18n/localized-urls-advanced#behind-a-proxy) from the `Host` header and deliberately ignores `X-Forwarded-Host`, which any visitor can send.
 
 ---
 
-## Running with PM2 (Process Manager)
+## Running with PM2
 
 Keep VitNode running continuously with automatic restarts on crash:
 
@@ -165,8 +184,8 @@ Keep VitNode running continuously with automatic restarts on crash:
 # Install PM2
 bun add -g pm2
 
-# Start both web and API processes
-pm2 start "bun start" --name "vitnode-web"
+# Single app, or a Turborepo root (starts every app)
+pm2 start "bun start" --name "vitnode"
 pm2 save
 pm2 startup
 ```
@@ -175,8 +194,8 @@ pm2 startup
 # Install PM2
 pnpm add -g pm2
 
-# Start both web and API processes
-pm2 start "pnpm start" --name "vitnode-web"
+# Single app, or a Turborepo root (starts every app)
+pm2 start "pnpm start" --name "vitnode"
 pm2 save
 pm2 startup
 ```
@@ -185,15 +204,21 @@ pm2 startup
 # Install PM2
 npm install -g pm2
 
-# Start both web and API processes
-pm2 start "npm start" --name "vitnode-web"
+# Single app, or a Turborepo root (starts every app)
+pm2 start "npm start" --name "vitnode"
 pm2 save
 pm2 startup
 ```
 
 </Tabs>
 
-## Learn More
+For a split deployment without a Turborepo root, start each app from its folder as its own process, for example `pm2 start "pnpm start" --name "vitnode-api" --cwd apps/api` and `pm2 start "pnpm start" --name "vitnode-web" --cwd apps/web`.
+
+## Check the result
+
+`start` prints `Running` with the URL once the server accepts connections. Open your domain, sign in with the administrator account, and open the AdminCP Integrations page at `/admin/core/system/integrations` to see which services the deployment has connected.
+
+## Related
 
 <Cards>
   <Card

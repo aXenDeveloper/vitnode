@@ -1,0 +1,184 @@
+---
+title: Custom loader
+description: Load a VitNode editable page's layout in your own route loader and save it with EditablePage and createContentEditorAdapter, when PageWidgets does not fit your page.
+icon: CodeXml
+---
+
+[`PageWidgets`](/docs/dev/widgets/editable-pages) does the loading, the permission check and the saving for you. Write them yourself when the page needs the layout in its own loader data: a route declared with `definePluginRoute`, whose loader has no query client, or a page that shows the layout's `updatedAt` ("Last rearranged…"). The newsroom plugin's `/newsroom/zones` page is built this way; the snippets below follow `plugins/newsroom/src/pages/zones-page.tsx`, trimmed.
+
+## Before you begin
+
+- A page declared with `defineEditablePage` and registered in `buildApiPlugin` with its moderator permission, as in steps 1 and 2 of [Editable pages](/docs/dev/widgets/editable-pages). Here it is `settingsPage` from `plugins/newsroom/src/content/settings-page.ts`.
+- A widget registry for the zones; see [Where the registry comes from](/docs/dev/widgets/rendering#where-the-registry-comes-from).
+
+<Steps>
+
+<Step>
+
+### Load the layout and the permissions
+
+Read the page's layout and the viewer's moderator permissions in one round trip. Both routes are core's and public:
+
+```tsx title="plugins/newsroom/src/pages/zones-page.tsx (excerpt)"
+import type { EditablePageLayoutPayload } from "@vitnode/core/content/editor";
+
+import { definePluginRoute } from "@vitnode/core/routing";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { holdsPagePermission } from "@vitnode/core/tanstack/widgets";
+import { zodContentNode } from "@vitnode/core/widgets";
+import { z } from "zod";
+
+import { settingsPage } from "@/content/settings-page";
+import { manifest } from "@/manifest.gen";
+
+const zodLayout = z.object({
+  pageId: z.string(),
+  updatedAt: z.string().nullable(),
+  zones: z.record(z.string(), z.array(zodContentNode)),
+});
+
+interface ZonesPageData {
+  canEdit: boolean;
+  layout: EditablePageLayoutPayload;
+}
+
+export const route = definePluginRoute<ZonesPageData>({
+  load: async () => {
+    const [stored, staff] = await Promise.all([
+      fetcher({
+        plugin: "@vitnode/core",
+        method: "get",
+        module: "pages",
+        path: "/layout",
+        args: { query: { pageId: settingsPage.id } },
+      }),
+      fetcher({
+        plugin: "@vitnode/core",
+        method: "get",
+        module: "users",
+        path: "/permissions",
+      }),
+    ]);
+
+    if (!stored.ok) {
+      throw new Error(`Reading this page's layout answered ${stored.status}.`);
+    }
+
+    return {
+      canEdit: staff.ok
+        ? holdsPagePermission(await staff.json(), {
+            ...settingsPage.permission,
+            plugin: manifest.id,
+          })
+        : false,
+      layout: zodLayout.parse(await stored.json()),
+    };
+  },
+});
+```
+
+The `throw` is the important line. "Nothing is stored yet" is a `200` full of the zones' defaults with `updatedAt: null`; "the layout could not be read" must never look like that, or the next **Save** writes defaults over the real layout. `holdsPagePermission` counts a root role as yes. (The newsroom page uses a helper of its own, `mayEditSettingsPage`, for the same check.)
+
+</Step>
+
+<Step>
+
+### Build the save adapter
+
+`createContentEditorAdapter` turns the editor's **Save** into a payload holding only the changed zones and what each held before. You send it to `PUT /pages/layout` and hand back what was stored. This goes in the page component, where `loadedLayout` is the loader's `layout`:
+
+```tsx title="plugins/newsroom/src/pages/zones-page.tsx (excerpt)"
+import {
+  createContentEditorAdapter,
+  EditablePageSaveRefused,
+} from "@vitnode/core/content/editor";
+import { useMemo, useState } from "react";
+
+const [layout, setLayout] = useState(loadedLayout);
+
+const adapter = useMemo(
+  () =>
+    createContentEditorAdapter({
+      page: settingsPage,
+      save: async payload => {
+        const response = await fetcher({
+          plugin: "@vitnode/core",
+          method: "put",
+          module: "pages",
+          path: "/layout",
+          args: { body: payload },
+        });
+
+        if (!response.ok) {
+          throw new EditablePageSaveRefused(`Saving answered ${response.status}.`, {
+            conflict: response.status === 409,
+            pageId: settingsPage.id,
+          });
+        }
+
+        const stored = zodLayout.parse(await response.json());
+
+        setLayout(current => ({
+          ...stored,
+          zones: { ...current.zones, ...stored.zones },
+        }));
+
+        return stored;
+      },
+    }),
+  [],
+);
+```
+
+- **Throw `EditablePageSaveRefused`**, not a plain `Error`. The editor shows its message, and with `conflict: true` shows **Somebody else saved this page first** instead. Every change stays in the editor either way. (The newsroom page passes the API's own error message; `savePageLayout` from `@vitnode/core/tanstack/widgets` does the same request and refusal for you.)
+- **Merge the answer.** `PUT` answers with the saved zones only, so carry the others over. The new `updatedAt` comes with it.
+- **Return what was stored**, so the editor rebases onto the server's copy.
+
+</Step>
+
+<Step>
+
+### Wrap the zones in EditablePage
+
+Render `EditablePage` around the zones, with the layout from state:
+
+```tsx title="plugins/newsroom/src/pages/zones-page.tsx (excerpt)"
+import { EditablePage } from "@vitnode/core/widgets/page";
+import { ContentZone } from "@vitnode/core/widgets/zone";
+
+<EditablePage
+  adapter={adapter}
+  canEdit={canEdit}
+  layout={layout}
+  openEditing={openEditing}
+  page={settingsPage}
+>
+  <ContentZone id="before-profile" registry={blocksRegistry} />
+  <ProfileForm />
+  <ContentZone as="aside" id="sidebar" registry={blocksRegistry} />
+</EditablePage>
+```
+
+| Prop          | Required | Description                                                                                                                  |
+| :------------ | :------- | :--------------------------------------------------------------------------------------------------------------------------- |
+| `page`        | yes      | The definition. It resolves each zone's widgets, allowlist and limits.                                                       |
+| `layout`      | no       | What the loader read. `null` renders every zone's declared default.                                                          |
+| `canEdit`     | no       | `true` mounts the editor runtime and offers **Edit widgets** in the user menu. This is UI only; the save route checks again. |
+| `openEditing` | no       | Open in edit mode on arrival, for an `?edit=true` link. Ignored unless `canEdit`.                                            |
+| `adapter`     | no       | Where **Save** goes.                                                                                                         |
+| `onExit`      | no       | Called by **Finish editing**, after the unsaved-changes prompt.                                                              |
+
+Each `ContentZone` takes its widgets and allowlist from the page, so it needs only an `id`. A layout that belongs to another page id throws, so one page's widgets can never be saved onto another.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Open `/newsroom/zones` signed in as an administrator, choose **Edit widgets**, move a widget in one zone and **Save**. In DevTools, the one `PUT /api/@vitnode/core/pages/layout` request carries only that zone in `zones` and `expectedZones`, and the "Last rearranged" line under the title updates without a reload.
+
+## Related
+
+- [Saving layouts](/docs/dev/widgets/saving-layouts): what the two routes accept, refuse and store.
+- [Custom editor host](/docs/dev/widgets/custom-editor-host): widgets stored somewhere other than core's page layouts.

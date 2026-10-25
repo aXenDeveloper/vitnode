@@ -1,82 +1,140 @@
 ---
-title: Custom Event Adapter
-description: Build a custom event transport adapter to distribute VitNode domain events across multiple instances via message brokers like Redis Streams or RabbitMQ.
+title: Custom adapter
+description: Replace or extend VitNode's in-process event transport with a custom EventsApiPlugin, for example one that runs local listeners and also forwards every event to a Redis stream for other services.
 icon: Puzzle
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+By default, `c.get("events").emit()` runs the matching listeners inside the emitting request, on that instance only. An events adapter decides what `emit()` does instead. This guide builds a **hybrid** adapter. It runs VitNode's listeners exactly as before, then appends each event to a Redis stream that other services can read.
 
-By default, VitNode delivers domain events in-process on the originating machine. By implementing a custom `EventsApiPlugin`, you can forward events to an external message broker (Redis Streams, RabbitMQ, NATS) to fan them out across a distributed cluster.
+<Callout type="warn" title="An adapter replaces the local transport">
+  Only the adapter runs listeners. An adapter that just forwards events
+  somewhere means no `buildEventListener` in any plugin runs again, and the
+  service reading the broker cannot run them either, because a listener needs the
+  request's Hono context. Call `LocalEventsAdapter` first, as below, unless you
+  really mean to move every listener out of VitNode.
+</Callout>
 
-## The `EventsApiPlugin` Interface
+## Before you begin
 
-```ts
-import type { Context } from "hono"
-import type { EventEnvelope, EventEmitResult } from "@vitnode/core/api/models/events"
+- A Redis server, and the `redis` package (node-redis) in the API app's dependencies.
+- The API config of your app, `src/vitnode.api.config.ts`.
 
-export interface EventsApiPlugin {
-  name: string
-  publish: (c: Context, envelope: EventEnvelope) => Promise<EventEmitResult>
-}
-```
+<Steps>
 
----
+<Step>
 
-## Quick start
+### Build the adapter
 
-### 1. Build the Adapter
+Create `src/lib/events/redis-stream-adapter.ts` in the API app:
 
 ```ts title="apps/api/src/lib/events/redis-stream-adapter.ts"
-import type { EventsApiPlugin } from "@vitnode/core/api/models/events"
+import type { EventsApiPlugin } from "@vitnode/core/api/models/events";
+
+import { LocalEventsAdapter } from "@vitnode/core/api/adapters/events/local";
+import { createClient } from "redis";
+
+const redis = createClient({ url: process.env.REDIS_URL });
+
+// node-redis throws "error" events as uncaught exceptions without a listener.
+redis.on("error", () => {});
+void redis.connect().catch(() => {});
+
+const local = LocalEventsAdapter();
 
 export const RedisStreamEventsAdapter = (): EventsApiPlugin => ({
   name: "redis-stream",
-  // [!code ++:13]
+
   publish: async (c, envelope) => {
-    const redis = c.get("redis")
-    if (redis) {
-      await redis.xadd("vitnode:events", "*", "payload", JSON.stringify(envelope))
+    // VitNode's own listeners, unchanged: in this request, one after another.
+    const result = await local.publish(c, envelope);
+
+    try {
+      await redis.xAdd("vitnode:events", "*", { event: JSON.stringify(envelope) });
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err);
+
+      await c.get("log").error(`Forwarding "${envelope.name}" to Redis failed: ${error}`);
+      result.failures.push({
+        error,
+        listener: "redis-stream",
+        module: "adapter",
+        pluginId: envelope.pluginId,
+      });
     }
 
-    return {
-      eventId: envelope.eventId,
-      status: "queued",
-      delivered: 0,
-      failures: [],
-    }
+    return result;
   },
-})
+});
 ```
 
----
+- **The client is yours.** The adapter creates its own Redis connection, once per process. VitNode's cache connection is not available on `c`.
+- **`publish` returns what the local adapter returned.** That is `status: "delivered"`, the listeners that ran and their failures, plus one failure if forwarding failed. `emit()` never throws, so a broker outage costs a log line, not a failed save.
+- **The envelope** holds `eventId`, `name`, `payload`, `pluginId`, `actor` and `emittedAt`, which `JSON.stringify` writes as an ISO string.
 
-### 2. Register in API Configuration
+</Step>
 
-```ts title="apps/api/src/vitnode.api.config.ts"
-import { buildApiConfig } from "@vitnode/core/vitnode.config"
-import { RedisStreamEventsAdapter } from "./lib/events/redis-stream-adapter"
+<Step>
+
+### Register it in the API config
+
+Set `events.adapter` in `buildApiConfig`:
+
+```ts title="apps/api/src/vitnode.api.config.ts (excerpt)"
+import { buildApiConfig } from "@vitnode/core/vitnode.config";
+
+import { RedisStreamEventsAdapter } from "./lib/events/redis-stream-adapter";
 
 export const vitNodeApiConfig = buildApiConfig({
-  // [!code ++:3]
+  // ...plugins, metadata and the rest of your config
   events: {
-    adapter: RedisStreamEventsAdapter(),
+    adapter: RedisStreamEventsAdapter(), // [!code ++]
   },
-})
+});
 ```
 
-All calls to `c.get("events").emit()` will now publish events through your custom adapter.
+Every `emit()` in core and every plugin now goes through the adapter.
 
-## Learn More
+</Step>
 
-<Cards>
-  <Card
-    title="Events Overview"
-    description="Emitting and subscribing to domain events"
-    href="/docs/dev/events"
-  />
-  <Card
-    title="Built-in Events"
-    description="Standard events emitted by core and Content Engine"
-    href="/docs/dev/events/built-in-events"
-  />
-</Cards>
+</Steps>
+
+## Check the result
+
+Restart the API and trigger an event, such as creating a note in the [Events](/docs/dev/events) guide. The listener's log line appears as before, and the stream holds the event:
+
+```bash
+redis-cli XRANGE vitnode:events - +
+```
+
+Each entry has one field, `event`, holding the JSON envelope.
+
+## Reading the stream elsewhere
+
+Whatever reads `vitnode:events`, with `XREAD` or a consumer group, runs its own code: a search indexer, an analytics pipeline, another app. It does not run VitNode listeners and has no Hono context. Work that must happen reliably inside VitNode, with retries, belongs in a [queue task](/docs/dev/advanced/queue) a listener dispatches.
+
+## The interface
+
+```ts
+import type { EventEnvelope, EventEmitResult } from "@vitnode/core/api/models/events";
+import type { Context } from "hono";
+
+interface EventsApiPlugin {
+  /** Shown in logs and returned by c.get("events").name(). */
+  name: string;
+  publish: (c: Context, envelope: EventEnvelope) => Promise<EventEmitResult>;
+}
+```
+
+| `EventEmitResult` | Description                                                                                         |
+| :---------------- | :-------------------------------------------------------------------------------------------------- |
+| `eventId`         | The envelope's id.                                                                                  |
+| `status`          | `"delivered"` when listeners ran before `publish` resolved; `"queued"` when the adapter handed the event off. |
+| `delivered`       | How many listeners succeeded.                                                                       |
+| `failures`        | `{ pluginId, module, listener, error }` for each listener, or the adapter, that failed.            |
+
+`emit()` catches an adapter that throws, logs it, and reports it as one failure with `module: "adapter"`. To run listeners yourself, read them from `c.get("core").events.listeners`, as `LocalEventsAdapter` does.
+
+## Related
+
+- [Events](/docs/dev/events): emit and listen, and how listeners run.
+- [Built-in events](/docs/dev/events/built-in-events): every event core and the Content Engine emit.

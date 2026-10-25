@@ -9,6 +9,9 @@ so the Zod schemas a route declares are its documentation. Nothing is written
 twice and nothing can drift: if the schema changes, the spec changes, and the
 request that no longer matches it is rejected.
 
+Swagger is on in development and **off in production** unless you turn it on
+(see [Swagger in production](#swagger-in-production)).
+
 ## Quick start
 
 Start the dev server and open Swagger UI in a browser:
@@ -24,12 +27,90 @@ same Hono app. The raw document is one path deeper, at `/api/swagger/doc` -
 OpenAPI 3.0.0, titled `VitNode API`, versioned with the `@vitnode/core` release
 you have installed. Point any OpenAPI tool at that URL.
 
-{/* Image prompt: A screenshot of Swagger UI at http://localhost:3000/api/swagger for the VitNode API - the "VitNode API" title bar at the top, and below it collapsed tag groups reading "(Core) - Users", "(Core) - Admin / Users", "(Core) - Admin / Debug" and "(Example) - Content / Articles", with the first group expanded to show a GET and a POST operation. Light theme, 1440x900. */}
+{/* Image prompt: A screenshot of Swagger UI at http://localhost:3000/api/swagger for the VitNode API - the "VitNode API" title bar at the top, and below it collapsed tag groups reading "(Core) - Users", "(Core) - Admin / Users", "(Core) - Admin / Debug" and "(Newsroom) - Content / Stories", with the first group expanded to show a GET and a POST operation. Light theme, 1440x900. */}
 
 Every path reads `/api/{pluginId}/{module}/{route}`, which is why core's session
 endpoint is `/api/@vitnode/core/users/session`. That is not a Swagger
 convention - it is how the app is mounted, and
 [Architecture](/docs/dev/architecture) walks the whole request path.
+
+## Put a plugin route in the spec
+
+There is no extra work. The route, module and plugin files that make a route
+reachable also make it documented. What you control is how good the
+documentation is. The steps below improve the `GET /api/site-notes/notes/{id}`
+route of the `site-notes` plugin.
+
+### Before you begin
+
+- The `site-notes` plugin with its `notes` module, from [API modules](/docs/dev/plugins/api/modules) and [Database](/docs/dev/database).
+
+<Steps>
+<Step>
+
+### Describe the route
+
+In `src/api/modules/notes/show.route.ts`, add a `description` and an `example`
+for the parameter. `description` becomes the operation's summary line, and every
+schema field can carry an `example`. This is the whole difference between a
+spec people use and a spec people ignore:
+
+```ts title="plugins/site-notes/src/api/modules/notes/show.route.ts"
+export const showNoteRoute = buildRoute({
+  route: {
+    method: 'get',
+    path: '/{id}',
+    description: 'Get one note by id', // [!code ++]
+    request: {
+      params: z.object({
+        id: z.coerce.number().int().positive().openapi({ example: 1 }), // [!code ++]
+      }),
+    },
+    // ...responses and handler stay as they are
+```
+
+`.openapi()` comes from the `z` that `@hono/zod-openapi` exports, which the
+route file already imports.
+
+</Step>
+<Step>
+
+### Check the module and the plugin
+
+Nothing to add here, but this is where the group in Swagger UI gets its name.
+The route sits in the `notes` module, and the module sits in the plugin:
+
+```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts"
+export const notesModule = buildModule({
+  name: 'notes',
+  routes: [listNotesRoute, showNoteRoute],
+  // ...
+})
+```
+
+```ts title="plugins/site-notes/src/config.api.ts"
+export const siteNotesApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    modules: [helloModule, notesModule],
+    // ...
+  })
+```
+
+The module `name` is the second half of the group heading, so pick the word you
+want to read in the sidebar.
+
+</Step>
+</Steps>
+
+### Check the result
+
+Let the plugin rebuild, restart the dev server and refresh `/api/swagger`. The
+restart matters, because the API builds the document on its first request and
+serves that copy from then on. The **(Site Notes) - Notes** group lists
+`GET /api/site-notes/notes/{id}` with the summary "Get one note by id" and `1`
+filled in as the example id. "Try it out" sends a real request with your cookies
+attached.
 
 ## Where the spec comes from
 
@@ -43,105 +124,12 @@ produce the document as a side effect:
 | `buildApiPlugin` | Mounts each module under its name and collects the group list for the document.    |
 | `VitNodeAPI`     | Mounts each plugin under its `pluginId` and serves `/swagger` plus `/swagger/doc`. |
 
-## Put a plugin route in the spec
-
-There is no extra work - the same three files that make a route reachable make
-it documented. What you control is how good the documentation is.
-
-<Steps>
-<Step>
-
-### Describe the route as you build it
-
-`description` becomes the operation's summary line, and every schema field can
-carry an `example`. This is the whole difference between a spec people use and a
-spec people ignore:
-
-```ts title="src/api/modules/orders/routes/show.route.ts"
-import { z } from '@hono/zod-openapi'
-
-import { buildRoute } from '@/api/builders'
-
-export const showOrderRoute = buildRoute({
-  route: {
-    method: 'get',
-    path: '/{id}',
-    description: 'Get one order by id', // [!code ++]
-    request: {
-      params: z.object({
-        id: z.string().openapi({ example: '1' }), // [!code ++]
-      }),
-    },
-    responses: {
-      200: {
-        content: {
-          'application/json': {
-            schema: z.object({ id: z.string(), total: z.number() }),
-          },
-        },
-        description: 'The order',
-      },
-    },
-  },
-  handler: async (c) => c.json({ id: '1', total: 42 }),
-})
-```
-
-</Step>
-<Step>
-
-### Register it in a module
-
-```ts title="src/api/modules/orders/orders.module.ts"
-import { buildModule } from '@/api/builders'
-
-import { showOrderRoute } from './routes/show.route'
-
-export const ordersModule = buildModule({
-  name: 'orders', // [!code ++]
-  routes: [showOrderRoute], // [!code ++]
-})
-```
-
-The `name` is the second half of the group heading, so pick the word you want to
-read in the sidebar.
-
-</Step>
-<Step>
-
-### Mount the module in the plugin
-
-```ts title="src/config.api.ts"
-import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
-
-import { ordersModule } from '@/api/modules/orders/orders.module'
-import { manifest } from '@/manifest.gen'
-
-export const shopApiPlugin = () =>
-  buildApiPlugin({
-    manifest,
-    modules: [ordersModule], // [!code ++]
-  })
-```
-
-</Step>
-<Step>
-
-### Reload the UI
-
-Restart the dev server and refresh `/api/swagger`. A new group is at the bottom
-of the list - **(Shop) - Orders** - with `GET /api/@acme/shop/orders/{id}` in
-it, and "Try it out" sends a real request with your cookies attached.
-
-</Step>
-</Steps>
-
 ## Grouping
 
 Swagger has exactly one grouping mechanism - the tag - so the tag carries both
 halves of "where does this endpoint live". The plugin comes from `pluginId` with
-its scope dropped and title-cased, the module from the `name` you gave
-`buildModule`:
+its scope dropped and title-cased (`@vitnode/core` reads `Core`, `site-notes`
+reads `Site Notes`), the module from the `name` you gave `buildModule`:
 
 ```ts
 buildModule({
@@ -175,18 +163,26 @@ Groups appear in the order the plugins declared their modules, with core first.
   the same operation can also show up under a tag you name yourself.
 </Callout>
 
-## Gotchas
+## Swagger in production
 
-<Callout
-  type="warn"
-  title="Swagger has no login, and it is mounted in production"
->
-  `/api/swagger` and `/api/swagger/doc` are registered unconditionally, before
-  the session middleware, and neither checks anything. Anyone who can reach your
-  API can read every route it serves, including the admin ones. Deny both paths
-  at your reverse proxy if that is not what you want - see
-  [Self-hosted](/docs/dev/deployments/self-hosted).
-</Callout>
+VitNode serves `/api/swagger` and `/api/swagger/doc` when `NODE_ENV` is
+`development` and switches them off otherwise. The document names every route,
+parameter and response shape of the install, the admin tree included, and
+neither path checks a session. To publish it in production anyway, turn it on
+in the API config:
+
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  docs: { enabled: true }, // [!code ++]
+})
+```
+
+`docs: { enabled: false }` turns it off in development too. If you enable it on
+a public install, put something in front of both paths, such as an allowlist at
+your reverse proxy. See [Self-hosted](/docs/dev/deployments/self-hosted).
+
+## Gotchas
 
 <Callout type="warn" title="A response with no content widens res.json() to unknown">
   The [fetcher](/docs/dev/fetcher) infers its return type from the same
@@ -204,7 +200,7 @@ Groups appear in the order the plugins declared their modules, with core first.
   rather than a catalogue of what VitNode can do.
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

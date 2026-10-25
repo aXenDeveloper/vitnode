@@ -1,79 +1,73 @@
 ---
 title: Introduction
-description: Declare a content type once in TypeScript and the VitNode Content Engine generates its Postgres table, validation, staff API, permissions and AdminCP screens.
+description: The VitNode Content Engine turns one TypeScript definition into a Postgres table, validation, staff API, permissions, AdminCP screens and optional public routes. Start with the beginner tutorial or add a feature.
 icon: Boxes
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";
-import articlesList from "./index-articles-list.webp";
-import publicForm from "./index-public-form.webp";
-import publicList from "./public-lists-discussions.webp";
-import publicPage from "./reports-discussion-page.webp";
+import articlesList from "./create-a-content-type-articles-list.webp";
+import newsList from "./public-lists-news.webp";
 
-The Content Engine turns one TypeScript definition into structured content for your plugin. You describe the fields of an article or a category, and VitNode generates the database table, Zod validation, staff-only API routes, staff permissions and AdminCP screens. Optional blocks add drafts, a public API, pages with SEO metadata, revisions, scheduling, live editing, translations, search, hiding and duplication.
+The Content Engine turns one TypeScript definition into structured content for your plugin. You describe the fields of a content type, such as an article, and VitNode generates its database table, validation, staff API routes, staff permissions and AdminCP screens. Optional blocks add drafts, a public API, member writing, reports, comments, revisions and more.
 
-This is the whole definition behind the example plugin's **Categories** screen:
+## Start here
 
-```ts title="plugins/example/src/content/category.ts"
-import { defineContentType, field } from "@vitnode/core/content";
+The beginner tutorial builds one small newsroom, step by step, with an article that has a title, a slug and a body. Each page continues the previous one:
 
-export const categoryContentType = defineContentType({
-  id: "example.category",
-  tableName: "example_categories",
-  fields: {
-    name: field.text({ required: true, minLength: 1, maxLength: 100 }),
-  },
-  admin: {
-    path: "example/categories",
-    list: {
-      columns: ["name", "createdAt"],
-      orderableFields: ["name"],
-    },
-  },
-});
-```
+1. [First content type](/docs/content-engine/create-a-content-type): define the article and manage it in the AdminCP.
+2. [Drafts & publishing](/docs/content-engine/publication): keep unfinished articles private until staff publish them.
+3. [Public API](/docs/content-engine/public-api): let anyone read published articles, and only the fields you choose.
+4. [Content list](/docs/content-engine/public-lists): show the articles at `/news`, a page at a time.
+5. [Content page](/docs/content-engine/public-pages): give every article its own page at `/news/:slug`.
 
-Its sibling `example.article` turns on more blocks. Same engine, more fields, a busier list:
+After that, [Embedded list](/docs/content-engine/public-lists-embed) puts the newest articles under each one, and every guide below builds on the same article.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={newsList}
+  alt="The News page from the tutorial, listing published articles with their dates and page links"
+/>
+
+## What is generated and what you write
+
+The Content Engine owns the data and the rules, and your plugin owns every page readers see:
+
+| You build | The Content Engine provides | Your plugin writes |
+| --- | --- | --- |
+| The AdminCP screen | The list, search, sorting, create and edit forms, publish and hide actions | The sidebar link and, optionally, [custom cells or form layouts](/docs/content-engine/admincp) |
+| A list page | The list route, `defineContentList`, `contentListQueryOptions`, `ContentListResults`, `ContentListPagination` | The route, the row layout and the labels |
+| A record page | Slug resolution, `404`s, redirects and metadata through `contentDeliveryPage` | The page component, with `RichTextContent` for rich text |
+| A member form | The write routes, ownership, validation, `useContentPublicWrite` | The fields with `AutoForm`, success messages and navigation |
+| Edit and Report buttons | `canEdit` and `canReport` per visitor, `useContentPermissions`, `ReportButton` | Where the buttons go |
+| Comments | The thread route and its placement rules | The comment section, its composer and its refresh |
+
+The page helpers come from `@vitnode/core/tanstack/content`, and every request goes through the typed [`fetcher`](/docs/dev/fetcher) with `module: "content/<publicApi.path>"`. Public pages are the same for every reader, so they can be cached. The browser asks for anything that depends on the visitor, such as an **Edit** button, and the server checks every write again.
+
+## Add a feature
+
+Each guide starts from a content type you already have, says what it needs at the top, and ends with something you can try. [Reports](/docs/content-engine/reports) and [Relations](/docs/content-engine/relations), for example, only need the beginner path. Comments also need [Member writing](/docs/content-engine/public-write).
+
+| Area | Guides |
+| --- | --- |
+| Public content | [Embedded list](/docs/content-engine/public-lists-embed) |
+| Member content | [Member writing](/docs/content-engine/public-write), [Create form](/docs/content-engine/public-write-frontend), [Edit form](/docs/content-engine/public-write-edit), [Permissions](/docs/content-engine/public-permissions) |
+| Interactions | [Reports](/docs/content-engine/reports), [Comments](/docs/content-engine/threads), [Comment editing](/docs/content-engine/threads-editing), [Replies](/docs/content-engine/threads-frontend) |
+| Organization | [Relations](/docs/content-engine/relations), [Advanced fields](/docs/content-engine/relations-advanced), [Containers](/docs/content-engine/containers), [Container pages](/docs/content-engine/container-frontend) |
+| Moderation | [Approvals](/docs/content-engine/approvals), [Approval notices](/docs/content-engine/approval-notices), [Publishing rules](/docs/content-engine/container-policies), [Visibility](/docs/content-engine/content-visibility) |
+| Content features | [Rich text](/docs/content-engine/rich-text), [Translations](/docs/content-engine/localization), [Search](/docs/content-engine/search), [SEO](/docs/content-engine/seo) |
+| Editorial | [Revisions](/docs/content-engine/editorial), [Previews](/docs/content-engine/editorial-previews), [Scheduling](/docs/content-engine/editorial-scheduling), [Live editing](/docs/content-engine/live-editing), [Duplication](/docs/content-engine/duplicate-content) |
+| Customization | [AdminCP](/docs/content-engine/admincp), [Services](/docs/content-engine/services), [Events](/docs/content-engine/events) |
+| Deployment | [Migrations](/docs/content-engine/database), [Caching](/docs/content-engine/caching), [Production](/docs/content-engine/production) |
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={articlesList}
-  alt="AdminCP Articles list from the example plugin, generated by the Content Engine, with published and draft articles in Status, Title, Slug, Reference code, Category, Author, Published at and Updated columns"
+  alt="The AdminCP Articles screen from the tutorial, generated from the article's definition"
 />
 
-## On the public site
-
-The same definition also drives the public side. Add `publicApi` and the records become readable; a few more options and members write their own. The example plugin's discussions use all of it.
-
-A list with search, filters and pages, from [Public lists](/docs/content-engine/public-lists):
-
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={publicList}
-  alt="The Discussions page with a search field, board and sort selects, and discussions with their author, date and an Edit or Report button"
-/>
-
-A page for each record, from [Public pages](/docs/content-engine/public-pages), with **Report** from [Report content](/docs/content-engine/reports):
-
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={publicPage}
-  alt="A discussion page with its board, author, a Report button and the message"
-/>
-
-And a form members post with, from [Public create form](/docs/content-engine/public-write-frontend):
-
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={publicForm}
-  alt="The Start a discussion form with a board, a title and a message editor"
-/>
-
-## What you get
+## What each option adds
 
 | From the definition | VitNode generates                                                                      |
 | ------------------- | -------------------------------------------------------------------------------------- |
@@ -95,43 +89,8 @@ And a form members post with, from [Public create form](/docs/content-engine/pub
 
 Content types live in code and in your migrations, not in the database. There is no screen for creating a content type at runtime.
 
-## Pick a guide
-
-| You want to                                              | Guide                                                                 |
-| -------------------------------------------------------- | --------------------------------------------------------------------- |
-| Build your first content type, with its AdminCP screen   | [First content type](/docs/content-engine/create-a-content-type)      |
-| Let anyone read published records through an API         | [Public API](/docs/content-engine/public-api)                         |
-| Understand how public reads are cached and refreshed     | [Caching](/docs/content-engine/caching)                               |
-| Give each record its own page with SEO metadata          | [Public pages](/docs/content-engine/public-pages)                     |
-| Keep drafts private until an editor publishes them       | [Publication](/docs/content-engine/publication)                       |
-| Show a list with search, filters and pages               | [Public lists](/docs/content-engine/public-lists)                     |
-| Let members create and edit records from the site        | [Public write](/docs/content-engine/public-write)                     |
-| Let readers report content to moderators                 | [Report content](/docs/content-engine/reports)                        |
-| Control titles, descriptions, noindex and the sitemap    | [SEO](/docs/content-engine/seo)                                       |
-| Make records findable in the site search                 | [Search](/docs/content-engine/search)                                 |
-| Link records, group fields or repeat rows                | [Relations](/docs/content-engine/relations)                           |
-| Organize records into boards, sections or categories     | [Containers](/docs/content-engine/containers)                         |
-| Show a container tree and its content on the site        | [Containers on the frontend](/docs/content-engine/container-frontend) |
-| Decide who posts in each container and what needs review | [Publishing policies](/docs/content-engine/container-policies)        |
-| Let moderators approve new posts and edits first         | [Approvals](/docs/content-engine/approvals)                           |
-| Build nested replies under a topic or a post             | [Threaded replies](/docs/content-engine/threads)                      |
-| Translate content into several languages                 | [Translations](/docs/content-engine/localization)                     |
-| Store and render formatted text                          | [Rich text](/docs/content-engine/rich-text)                           |
-| Keep revisions, share previews or schedule publishing    | [Editorial](/docs/content-engine/editorial)                           |
-| Let several editors work on one record at the same time  | [Live editing](/docs/content-engine/live-editing)                     |
-| Take a record off the public site without unpublishing   | [Hide content](/docs/content-engine/content-visibility)               |
-| Let editors copy a record as a new draft                 | [Duplicate content](/docs/content-engine/duplicate-content)           |
-| Key records by UUID or bigint instead of serial integers | [Record ID strategies](/docs/content-engine/id-strategy)              |
-| Change list columns, form sections or field components   | [AdminCP](/docs/content-engine/admincp)                               |
-| Read and write content from your own API routes          | [Services](/docs/content-engine/services)                             |
-| React to created, updated or published records           | [Events](/docs/content-engine/events)                                 |
-| Understand the generated tables and ship a schema change | [Database](/docs/content-engine/database)                             |
-| Check a content type before it goes live                 | [Production](/docs/content-engine/production)                         |
-
 ## Reference
 
 - [Options](/docs/content-engine/reference): every `defineContentType` option and how the options depend on each other.
 - [Fields](/docs/content-engine/fields): every `field.*` helper with its options, column type and form control.
 - [Plugin files](/docs/content-engine/plugin-files): the files and exports the app and the API read from your plugin.
-- [Live editing API](/docs/content-engine/live-editing-api): the HTTP API and deployment requirements behind live editing.
-- [Publishing policies reference](/docs/content-engine/container-policies-api): policy keys, resolution order, routes and errors.

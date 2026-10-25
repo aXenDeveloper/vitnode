@@ -1,10 +1,15 @@
 ---
-title: Debug unexpected 429 errors
+title: Debug 429 errors
 description: Find which VitNode rate-limit budget a visitor ran out of, using the X-RateLimit-Category header and the API's rate-limit log line, then fix the cause.
 icon: SearchCheck
 ---
 
 When a real visitor sees "Too many requests", find out which [rate-limit budget](/docs/dev/advanced/rate-limiter) refused them before you raise anything. Raising the wrong budget hides the cause and weakens protection you still need.
+
+## Before you begin
+
+- An API running with `NODE_ENV` other than `development`, such as production or a staging copy. In development every budget is skipped, so these steps never show a `429` locally.
+- Access to the API's logs for step 2.
 
 <Steps>
 <Step>

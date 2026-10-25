@@ -1,0 +1,63 @@
+---
+title: Protected routes
+description: Limit a VitNode plugin page to signed-in visitors or to guests with requires, and read the signed-in user in the loader with defineAuthenticatedRoute.
+icon: Lock
+---
+
+Some pages only make sense for one kind of visitor: a note editor needs a signed-in member, a sign-in screen needs a guest. Declare `requires` on the route, and VitNode checks the session before the page chunk downloads and redirects everyone else.
+
+## Declare who may open the page
+
+Add `requires` to the route in `routes.ts`:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/site-notes/my-notes', {
+  component: lazy(() => import('./pages/my-notes-page')),
+  requires: 'authenticated', // [!code ++]
+}),
+```
+
+| `requires`        | Who may open the page          | Everyone else                                                                   |
+| :---------------- | :----------------------------- | :------------------------------------------------------------------------------ |
+| `'authenticated'` | Signed-in visitors             | Guests go to `/login`, with `returnTo` set so they come back after signing in    |
+| `'guest'`         | Visitors who are not signed in | Signed-in visitors go to their `returnTo` destination, or the home page          |
+| `'admin-guest'`   | Visitors without an AdminCP session | Staff with an AdminCP session go into the AdminCP. Meant for an AdminCP sign-in screen |
+
+Declared on a `layout()`, `requires` covers every page inside it. A child that declares a different requirement than its layout fails the build, because no visitor could ever reach it.
+
+## Read the user in the loader
+
+Write the page module with `defineAuthenticatedRoute` from `@vitnode/core/tanstack/plugin-routes`. Its loader context has `auth`, the session the guard already checked, so `auth.user` is never `null`:
+
+```tsx title="plugins/site-notes/src/pages/my-notes-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+
+import { defineAuthenticatedRoute } from '@vitnode/core/tanstack/plugin-routes'
+
+export const route = defineAuthenticatedRoute({
+  load: ({ context }) => ({ userId: context.auth.user.id }),
+})
+
+const MyNotesPage = ({ loaderData }: PluginRoutePageProps<{ userId: number }>) => (
+  <p className="leading-relaxed">Notes for user {loaderData.userId}</p>
+)
+
+export default MyNotesPage
+```
+
+Use `defineAuthenticatedRoute` only on a route that declares `requires: 'authenticated'`, directly or through its layout. The `'guest'` and `'admin-guest'` guards hand the loader no session.
+
+<Callout type="warn" title="The guard is not your API's permission check">
+  `requires` decides which page a visitor sees. Every API route the page calls
+  still checks the session and permissions itself, because anyone can call an
+  API route without opening the page.
+</Callout>
+
+## Limits
+
+- A route with `requires` cannot declare `cache`. Its HTML depends on who asks, so VitNode never reuses it for another visitor. See [Cache pages](/docs/dev/cache/pages).
+- An AdminCP route (`area: 'admin'`) cannot declare `requires`. The AdminCP has its own staff session guard; see [Layouts](/docs/dev/routing/layouts#add-an-admincp-page).
+
+## Check the result
+
+Sign out and open the protected page. You land on `/login` with `returnTo` in the URL. Sign in, and you come back to the page.

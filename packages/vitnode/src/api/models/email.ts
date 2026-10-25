@@ -153,6 +153,7 @@ export class EmailModel {
             url: CONFIG.web.href,
           },
           logo: core.email?.logo,
+          tailwindConfig: core.email?.tailwindConfig,
         },
         user,
       });

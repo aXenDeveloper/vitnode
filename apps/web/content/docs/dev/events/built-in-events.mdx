@@ -1,46 +1,106 @@
 ---
-title: Built-in Events
+title: Built-in events
 description: Reference for every domain event VitNode core, the Content Engine and the blog plugin emit, with its trigger, its payload shape and a listener use case.
 icon: List
 ---
 
-Every event VitNode and its first-party plugins emit today, grouped by domain.
-Listen to any of them from your own plugin with
-[`buildEventListener`](/docs/dev/events) - no import from the emitting plugin is
-needed, because the event map is global.
-
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion'
 import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+This page lists every event VitNode core, the Content Engine and the
+first-party plugins emit, with its name, its payload and exactly when it fires. Use
+it to find the event to listen to. To write your first listener, or to emit
+events of your own, start with [Events](/docs/dev/events); every listener below
+is registered the same way, with no import from the emitting plugin, because
+the event map is global.
+
+| Domain                                               | Names                                       |
+| :--------------------------------------------------- | :------------------------------------------ |
+| [Core](#core-events-vitnodecore)                     | `user.*`, `file.editor.uploaded`, `role.*`  |
+| [Notifications](#notification-events)                | `notifications.*`                           |
+| [Moderation](#moderation-events)                     | `moderation.*`                              |
+| [AI](#ai-events)                                     | `ai.run.*`, `files.alt.updated`             |
+| [Page layouts](#page-layout-events)                  | `core.page-layout.updated`                  |
+| [Content Engine](#content-engine-events)             | `content.<content type id>.<action>`        |
+| [Content containers](#content-container-events)      | `content.container.*`                       |
+| [Content approvals](#content-approval-events)        | `content.approval.*`                        |
+| [Blog](#blog-events-vitnodeblog)                     | `blog.post.*`, `blog.category.*`            |
 
 ## Quick start
 
 Pick a name from the tables below, write a listener for it, and register the
-listener on a top-level module's `events` array:
+listener on a top-level module's `events` array. Slow work, such as sending an
+email, goes to a [queue task](/docs/dev/advanced/queue) your plugin registers:
 
-```ts title="plugins/shop/src/api/lib/events.ts"
+```ts title="plugins/site-notes/src/api/tasks/welcome-member.task.ts"
+import { buildQueueTask } from '@vitnode/core/api/lib/queue'
+import { z } from 'zod'
+
+const zodPayload = z.object({ userId: z.number().int().positive() })
+
+export const welcomeMemberTask = buildQueueTask({
+  name: 'welcome-member',
+  handler: async (c, payload) => {
+    const { userId } = zodPayload.parse(payload)
+
+    await c.get('log').debug(`Welcoming member #${userId}`)
+  },
+})
+```
+
+```ts title="plugins/site-notes/src/api/lib/welcome.listener.ts"
 import { buildEventListener } from '@vitnode/core/api/lib/events'
+
+import { manifest } from '@/manifest.gen'
 
 export const welcomeListener = buildEventListener({
   event: 'user.created', // [!code ++]
-  name: 'send-welcome-email',
+  name: 'queue-welcome-member',
   handler: async (c, payload) => {
     await c.get('queue').dispatch({
-      name: 'send-welcome-email',
-      payload: { userId: payload.userId, email: payload.email },
+      name: 'welcome-member',
+      payload: { userId: payload.userId },
+      pluginId: manifest.id, // [!code ++]
     })
   },
 })
 ```
 
-Nothing else has to change: the payload type comes from the name, and the
-[delivery guarantees](/docs/dev/events#delivery-guarantees) are the same for a
-core event as for one of your own.
+```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts (excerpt)"
+export const notesModule = buildModule({
+  name: 'notes',
+  routes: [listNotesRoute, showNoteRoute],
+  queueTasks: [welcomeMemberTask], // [!code ++]
+  events: [welcomeListener], // [!code ++]
+})
+```
+
+The payload type comes from the event name, and the
+[delivery rules](/docs/dev/events#how-listeners-run) are the same for a core
+event as for one of your own.
+
+## Listener context
+
+A listener runs inside the request that emitted the event and receives **that
+request's** `c`. For `user.created`, that is core's sign-up request, so:
+
+| On `c`             | Belongs to                                                                                      |
+| :----------------- | :---------------------------------------------------------------------------------------------- |
+| `c.get('plugin')`  | The emitting plugin (here `@vitnode/core`), not yours.                                          |
+| `c.get('queue')`   | `dispatch()` defaults to the emitter's plugin. Pass `pluginId: manifest.id` to queue your task, or it fails with "No handler registered". |
+| `c.get('cache')`   | Keys are prefixed with the emitter's plugin id, so they never match keys your own routes wrote. |
+| `c.get('user')`    | Whoever triggered the event, if anyone; the envelope's `actor` says the same.                   |
+
+Content Engine events emitted by core's scheduled-publishing task show the
+split most clearly. `c.get('plugin')` is `@vitnode/core` there too,
+while the envelope's `pluginId` names the content type's owner (see
+[The envelope's owner](#the-envelopes-owner-is-the-content-types-plugin)).
 
 ## Core events (`@vitnode/core`)
 
-Seventeen names, all declared in `VitNodeEvents` in
-`packages/vitnode/src/api/models/events.ts`. Every one of them fires **after**
-the write it describes has committed.
+Nineteen names, all declared in `VitNodeEvents` in
+`packages/vitnode/src/api/models/events.ts`. Every one except `user.deleted`,
+which core never emits, fires **after** the write it describes has committed.
 
 | Event                          | Payload                                   | Fires when                                                                                                               |
 | ------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -97,18 +157,9 @@ AdminCP, and the first sign-in through an [SSO provider](/docs/dev/sso).
 [queue task](/docs/dev/advanced/queue) so it retries), subscribe the address to
 a newsletter audience, or provision plugin-owned data such as a profile row.
 
-```ts title="Example: welcome email listener"
-export const welcomeListener = buildEventListener({
-  event: 'user.created',
-  name: 'send-welcome-email',
-  handler: async (c, payload) => {
-    await c.get('queue').dispatch({
-      name: 'send-welcome-email',
-      payload: { userId: payload.userId, email: payload.email },
-    })
-  },
-})
-```
+The [quick start](#quick-start) is exactly this listener. It queues a task
+the listening plugin registers and passes `pluginId`, so the queue finds the
+task under that plugin rather than under core.
 
 </Accordion>
 <Accordion title="user.updated">
@@ -543,7 +594,7 @@ per-moderator count of resolved reports.
 
 Declared in `VitNodeEvents` in `packages/vitnode/src/api/models/events.ts`.
 The two `ai.run.*` events are emitted by the shared AI runner (see
-[AI Actions](/docs/dev/ai/actions)). They fire **after** the run was settled,
+[AI errors and limits](/docs/dev/ai/errors#react-to-runs-with-events)). They fire **after** the run was settled,
 so its cost and points are already in the history when a listener reads it. A
 failing listener never breaks the run - or the ALT write.
 
@@ -603,15 +654,21 @@ override, which counts as a change and is reported here.
   }}
 />
 
-**A listener would** purge whatever the front end caches for that page. The
-layout is read by page id, so the id in the payload is the whole cache key:
+Core already expires its own cached copy of the layout on every save, so a
+listener does not need to. **A listener would** keep an audit trail of who
+rearranged which page, or queue a task that rebuilds something derived from the
+page:
 
-```ts title="Example: expire a cached page after a layout change"
-export const pageLayoutCacheListener = buildEventListener({
+```ts title="Example: audit-log a layout change"
+export const pageLayoutAuditListener = buildEventListener({
   event: 'core.page-layout.updated',
-  name: 'expire-page-cache',
-  handler: async (c, payload) => {
-    await c.get('cache')?.delete(`page:${payload.pageId}`)
+  name: 'audit-page-layout',
+  handler: async (c, payload, envelope) => {
+    await c
+      .get('log')
+      .debug(
+        `${envelope.actor.type} #${envelope.actor.id ?? '-'} changed ${payload.changedZones.join(', ')} on ${payload.pageId}`,
+      )
   },
 })
 ```
@@ -623,8 +680,10 @@ export const pageLayoutCacheListener = buildEventListener({
 
 Every content type declared with the
 [Content Engine](/docs/content-engine) gets its own event names, built from
-its id: `content.<id>.<action>`. For the example plugin's `example.article`
-that means `content.example.article.created`, and for the blog's `blog.post` it
+its id: `content.<id>.<action>`. This section is the field-by-field reference;
+[Content Engine events](/docs/content-engine/events) has the short action table
+and a subscribe walkthrough. For the newsroom plugin's `newsroom.story`
+that means `content.newsroom.story.created`, and for the blog's `blog.post` it
 means `content.blog.post.created`.
 
 Every payload's `contentId` (and `sourceId` and `duplicatedFromId`) has the
@@ -650,17 +709,17 @@ everything emits nineteen.
 | `visibility`                         | `hidden`, `unhidden`                                                |
 
 The gating is in the types, not just at runtime: `ContentEventsFor` expands to
-literal keys only for the features the definition enables. The example plugin's
-`example.article` declares `editorial`, so
-`content.example.article.restored` type-checks; `example.category` is one text
-field and nothing else, so `content.example.category.restored` is not a key on
+literal keys only for the features the definition enables. The newsroom plugin's
+`newsroom.story` declares `editorial`, so
+`content.newsroom.story.restored` type-checks; `newsroom.category` is a name and
+a slug and nothing else, so `content.newsroom.category.restored` is not a key on
 the map and a listener for it does not compile.
 
 ### Record events
 
 | Event                | Payload                                                                     | Fires when                                                                        |
 | -------------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `created`            | `{ contentId }`                                                             | A record is inserted                                                              |
+| `created`            | `{ contentId, duplicatedFromId? }`                                          | A record is inserted                                                              |
 | `updated`            | `{ contentId, changedFields }`                                              | At least one declared field actually changed                                      |
 | `deleted`            | `{ contentId }`                                                             | A record is deleted                                                               |
 | `published`          | `{ contentId, publishedAt, scheduledBy?, scheduleId? }`                     | A record becomes publicly visible - interactively or when a schedule fires        |
@@ -1061,12 +1120,12 @@ turns a second run into a no-op. See
 `pluginId` on the envelope answers "whose event is this", not "who was running
 at the time". Those come apart the moment something happens on a schedule: core
 owns the queue handler, so `c.get('plugin')` says `@vitnode/core`, while
-`content.example.article.published` belongs to the example plugin as much as it
+`content.newsroom.story.published` belongs to the newsroom plugin as much as it
 ever did.
 
 ```text
 queue task owner    @vitnode/core        ← who runs the handler
-event envelope      @vitnode/example     ← who owns the content type
+event envelope      newsroom             ← who owns the content type
 ```
 
 The engine passes the owner explicitly on every emit, so ownership does not
@@ -1122,8 +1181,8 @@ inspects `failures` and retries the whole delivery when it is non-empty.
 Four names, declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts` and shared by every
 [container collection](/docs/content-engine/containers). Each fires **after**
-the write's transaction has committed. A refused write, such as deleting a board
-that still has discussions, emits nothing, and so does an update that changes
+the write's transaction has committed. A refused write, such as deleting a desk
+that still has letters, emits nothing, and so does an update that changes
 nothing.
 
 | Event                       | Payload                                                                     | Fires when                                                   |
@@ -1144,7 +1203,7 @@ or a delete do not get events of their own.
   type={{
     definitionId: {
       description:
-        'The collection, as `defineContentContainer` declared it, such as `example.boards`. Filter on it, because every collection shares these names.',
+        'The collection, as `defineContentContainer` declared it, such as `newsroom.desks`. Filter on it, because every collection shares these names.',
       type: 'string',
     },
     pluginId: {
@@ -1178,16 +1237,16 @@ or a delete do not get events of their own.
 />
 
 **A listener would** rebuild a navigation menu kept outside VitNode, or post to
-a staff channel when a board is deleted:
+a staff channel when a desk is deleted:
 
-```ts title="Example: announce deleted boards"
-export const boardDeletedListener = buildEventListener({
+```ts title="Example: announce deleted desks"
+export const deskDeletedListener = buildEventListener({
   event: 'content.container.deleted',
-  name: 'announce-deleted-board',
+  name: 'announce-deleted-desk',
   handler: async (c, payload) => {
-    if (payload.definitionId !== 'example.boards') return
+    if (payload.definitionId !== 'newsroom.desks') return
 
-    await c.get('log').warn(`Board ${payload.containerId} was deleted`)
+    await c.get('log').warn(`Desk ${payload.containerId} was deleted`)
   },
 })
 ```
@@ -1272,14 +1331,14 @@ already pending refreshes that submission and emits no approval event.
 **A listener would** notify the author when their topic is approved or
 rejected, or ping a moderators' channel when the queue grows:
 
-```ts title="Example: tell the author about a rejection"
+```ts title="Example: log a rejection"
 export const approvalRejectedListener = buildEventListener({
   event: 'content.approval.rejected',
-  name: 'notify-rejected-author',
+  name: 'log-rejected-submission',
   handler: async (c, payload) => {
     if (payload.authorId === null) return
 
-    await c.get('log').info(
+    await c.get('log').debug(
       `Submission ${payload.submissionId} by user ${payload.authorId} was rejected`,
     )
   },
@@ -1400,9 +1459,9 @@ deleted in the first place.
 <Callout type="warn" title="A content type is only typed once its plugin grafts it">
   Events fire at runtime for every registered content type, but the names appear
   on `VitNodeEvents` only where the owning plugin declares
-  `ContentEventsFor<typeof myContentType>`. The example plugin grafts
-  `example.article` and `example.category` but not its two localized fixtures,
-  so `content.example.localized-article.created` really is emitted and still
+  `ContentEventsFor<typeof myContentType>`. The newsroom plugin grafts
+  `newsroom.story` and `newsroom.category` but not, say, `newsroom.bulletin`,
+  so `content.newsroom.bulletin.created` really is emitted and still
   cannot be given a type-checked listener. If your event name does not
   autocomplete, that declaration is what is missing - see
   [Plugin registration](/docs/content-engine/plugin-files).
@@ -1438,7 +1497,7 @@ on, so none of them is an event. What does reach the bus is the commit: when
 someone presses **Save**, the record emits its usual `updated` (and its
 translations theirs), exactly as it would without live editing.
 
-## Next
+## Related
 
 <Cards>
   <Card

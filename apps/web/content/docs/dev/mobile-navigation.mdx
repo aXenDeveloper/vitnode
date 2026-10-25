@@ -1,8 +1,12 @@
 ---
-title: Mobile Navigation
+title: Mobile navigation
 description: How VitNode's menus behave on phones - a floating bottom bar of up to three links from vitnode.config.ts plus a Menu tab for the rest, and a side drawer behind the user button for the account.
 icon: Smartphone
 ---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import mobileBar from "./mobile-navigation-bar.webp";
+import mobileMenu from "./mobile-navigation-menu.webp";
 
 On a phone, the desktop header's navigation has nowhere to go. So below the
 `sm` breakpoint (640px) VitNode splits it in two: your most-used links move to a
@@ -11,9 +15,14 @@ already knows from native apps - and everything else lives in a **side drawer**
 behind the user button at the top.
 
 Both menus come from the `navigation` option in `src/vitnode.config.ts`. See
-[Main Navigation](/docs/dev/navigation) for the item options.
+[Main navigation](/docs/dev/navigation) for the item options.
 
-{/* Image prompt: A phone-sized light-mode screenshot of a community site. At the bottom floats a white, fully rounded bar with a soft shadow and four equal tabs - "Home", "Discover", "Search" and a hamburger "Menu" tab, with icons above small labels, the active "Search" tab tinted blue on a light gray pill. Top right in the header sits a small round user avatar. Neutral grays, blue accent, 390x844. */}
+<ImgDocs
+  withoutBackground
+  className="*:max-w-sm"
+  src={mobileBar}
+  alt="A VitNode Discover page on a phone, with the bottom bar showing Forum, Discover (active, in blue), Search and Menu tabs"
+/>
 
 ## Two menus, one config
 
@@ -26,7 +35,7 @@ A page can sit in both menus at once - Search in the header _and_ in the bottom
 bar is a perfectly normal choice.
 
 ```ts title="src/vitnode.config.ts"
-import { CompassIcon, MessagesSquareIcon, SearchIcon } from 'lucide-react'
+import { CompassIcon, HouseIcon, SearchIcon } from 'lucide-react'
 
 export const vitNodeConfig = buildConfig({
   // ...
@@ -36,13 +45,17 @@ export const vitNodeConfig = buildConfig({
     ],
     // [!code ++:5]
     mobileBottomBar: [
-      { href: '/forum', icon: MessagesSquareIcon, title: 'app.menu.forum' },
+      { href: '/', icon: HouseIcon, title: 'app.menu.home' },
       { href: '/discover', icon: CompassIcon, title: 'app.menu.discover' },
       { href: '/search', icon: SearchIcon, title: 'app.menu.search' },
     ],
   },
 })
 ```
+
+The `discover` and `search` labels come with a new app. Add `"home": "Home"`
+next to them under `app.menu` in `src/locales/app/en.json`, and in every other
+language's file.
 
 A fourth link stops the app at startup with a `[VitNode navigation]` error, so
 the bar never silently drops one.
@@ -62,6 +75,13 @@ already covers every header link, the Menu tab steps aside.
 An empty bottom bar is not drawn at all. That is the default when
 `navigation.mobileBottomBar` is missing, so phones start with just the header and its
 side drawer until you add a link.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-sm"
+  src={mobileMenu}
+  alt="The Menu tab's drawer open from the bottom over a dimmed page, listing Docs, Plugins, Blog and Community with Discover highlighted under it"
+/>
 
 <Callout type="info" title="Give every link an icon and a short label">
   At 320px each of the four tabs gets about 72px, which fits one word like

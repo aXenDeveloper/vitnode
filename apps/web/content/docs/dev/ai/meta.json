@@ -4,11 +4,20 @@
   "icon": "Sparkles",
   "pages": [
     "index",
+    "---Actions---",
     "actions",
+    "streaming",
+    "errors",
+    "action-options",
+    "---Features---",
+    "fields-and-editor",
+    "custom-ui",
+    "quick-ask",
+    "translations",
+    "automatic-alt",
+    "---Operate---",
     "costs-and-limits",
     "admin",
-    "automatic-alt",
-    "fields-and-editor",
     "usage"
   ]
 }

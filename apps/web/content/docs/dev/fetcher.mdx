@@ -1,103 +1,97 @@
 ---
-title: Data Fetching
-description: Universal type-safe API client, route loaders, cache invalidation, and built-in queries in TanStack Start.
+title: Fetcher
+description: Call VitNode API routes with the universal, type-safe fetcher from @vitnode/core/tanstack/fetcher. Covers arguments, errors, captcha, the plugin API registry, built-in queries and freshness constants.
 icon: ArrowRightLeft
 ---
 
-import {
-  BoxesIcon,
-  ClockIcon,
-  DatabaseIcon,
-  MapIcon,
-  ServerIcon,
-  ShieldCheckIcon,
-} from 'lucide-react'
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { BoxesIcon, DatabaseIcon, MapIcon, ServerIcon } from 'lucide-react'
 
-In TanStack Start, data fetching bridges two execution environments: server-side rendering during SSR and in-app client navigation afterwards.
-
-VitNode's universal `fetcher` from `@vitnode/core/tanstack/fetcher` eliminates duplicate transport logic. During SSR, it relays visitor cookies, IP addresses, and headers to the API; in the browser, it calls `/api/*` directly with `credentials: "include"`. One call, end-to-end type inference, zero drama.
+`fetcher` from `@vitnode/core/tanstack/fetcher` is how app and plugin code calls a VitNode API route. It is universal, so the same call runs during server-side rendering and in the browser. On the server it forwards the visitor's cookies, user agent and IP to the API; in the browser it calls `/api/*` with `credentials: "include"`. TypeScript checks every call against the plugin's routes, so a typo is a compile error.
 
 ## The universal call
 
-Call `fetcher` inline at the call site. The router automatically infers available modules, HTTP methods, arguments, and return types from your plugin's API registry:
+Name the plugin, the module, the path and the method, inline at the call site:
 
-```ts title="plugins/site-notes/src/features/notes/notes-query.ts"
+```ts title="plugins/site-notes/src/pages/notes-query.ts"
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
 
 const response = await fetcher({
-  plugin: '@acme/site-notes',
+  plugin: 'site-notes',
   method: 'get',
   module: 'notes',
   path: '/',
 })
 
 if (response.ok) {
-  const { notes } = await response.json()
+  const notes = await response.json() // { id: number; title: string; body: string }[]
 }
 ```
 
-Four fields identify an endpoint:
+Inside a plugin, write `plugin: manifest.id` with `import { manifest } from '@/manifest.gen'`, so the id is spelled in one place.
 
-| Field    | Description                                                    | Inferred from                        |
-| :------- | :------------------------------------------------------------- | :----------------------------------- |
-| `plugin` | Package name of the target plugin                              | App-configured plugin registry       |
-| `module` | Module path under the plugin (e.g. `'notes'`, `'admin/notes'`) | Plugin's `buildApiPlugin` definition |
-| `path`   | Route path declared inside the module (`'/'`, `'/{id}'`)       | Module's route declarations          |
-| `method` | HTTP method declared for that path (`'get'`, `'post'`, etc.)   | Declared routes for that path        |
+| Field    | Description                                               | Checked against                       |
+| :------- | :-------------------------------------------------------- | :------------------------------------ |
+| `plugin` | The plugin id (`'site-notes'`, `'@vitnode/core'`)         | The app's plugin API registry         |
+| `module` | The module path, any depth (`'notes'`, `'admin/notes'`)   | The plugin's modules                  |
+| `path`   | The route path inside the module (`'/'`, `'/{id}'`)       | The module's routes                   |
+| `method` | The HTTP method declared for that path (`'get'`, `'post'`) | The routes declared for that path     |
 
-## Arguments: body, params, and query
+## Errors and status codes
 
-The `args` object is required whenever a route declares Zod schemas for parameters, queries, or request bodies:
+`fetcher` resolves with the `Response` for every status except `500`, so check `response.ok` or `response.status` before you read the body. It rejects on a `500` (with the response body in the message) and on a network failure. Other `4xx` and `5xx` answers are also logged to the console.
 
-```ts title="plugins/site-notes/src/features/notes/pin-note.ts"
-import { fetcher } from '@vitnode/core/tanstack/fetcher'
+`response.status` is typed as the union of the statuses the route declares, such as `200 | 404`. Narrowing on `status` or `ok` narrows `response.json()` to that status's schema. The body is typed as JSON arrives, so a `z.date()` field is an ISO `string`; convert it with `new Date(value)` when you need a date.
 
-export const pinNote = async (id: string, pinned: boolean) => {
-  const response = await fetcher({
-    plugin: '@acme/site-notes',
-    // [!code ++:4]
-    args: {
-      body: { pinned },
-      params: { id },
-    },
-    method: 'post',
-    module: 'notes',
-    path: '/{id}/pin',
-  })
+Inside a `queryFn` or a `mutationFn`, throw when the response is not what you expect, so TanStack Query reports an error instead of caching a failed answer.
 
-  if (response.status === 404) return null
+## Arguments
 
-  // Narrowed to 200: typed as the pinned Note object
-  return await response.json()
-}
+`args` is required exactly when the route declares a body, path parameters or a query, and each part is typed by the route's Zod schema:
+
+```ts title="plugins/site-notes/src/pages/note-page.tsx"
+const response = await fetcher({
+  plugin: 'site-notes',
+  method: 'get',
+  module: 'notes',
+  path: '/{id}',
+  args: { params: { id: 2 } }, // [!code ++]
+})
+
+if (response.status === 404) return null
+
+return await response.json() // narrowed to 200: one note
 ```
 
-- `params` — Interpolated into path parameters like `/{id}`.
-- `query` — Serialized into the URL query string (e.g. `?search=term&page=1`).
-- `body` — Serialized as JSON.
-- `formData` — Pass `formData` instead of `args.body` for file uploads.
-- `captchaToken` — Pass `captchaToken` for captcha-protected endpoints.
+| Option           | Description                                                                                             |
+| :--------------- | :------------------------------------------------------------------------------------------------------ |
+| `args.params`    | Path parameters, interpolated into `/{id}`.                                                             |
+| `args.query`     | The query string, such as `{ search: 'term' }`.                                                         |
+| `args.body`      | The JSON body.                                                                                          |
+| `formData`       | A `FormData` body for file uploads, sent instead of `args.body`.                                        |
+| `captchaToken`   | A solved captcha token. See [Captcha](#captcha).                                                        |
+| `withPagination` | For cursor-paginated routes, fills `query.first` with `10` and `query.search` with `''` unless set. Only applies when the call passes a `query`. |
+| `options`        | Extra `fetch` options, such as `{ signal }` from an `AbortController`.                                  |
 
-## Type inference & compile checks
+## Captcha
 
-The fetcher validates endpoints through `ApiPluginRegistry`. An invalid method, typo in the path, or missing parameter produces an immediate compile-time error:
+A route built with `withCaptcha: true` refuses a request without a solved captcha. Pass the token as `captchaToken`, next to `args`:
 
 ```ts
-await fetcher({
-  plugin: '@acme/site-notes',
-  // @ts-expect-error Type '"delete"' is not assignable to type '"get"'.
-  method: 'delete',
-  module: 'notes',
-  path: '/',
-})
+const response = await fetcher({
+  plugin: "@vitnode/core",
+  method: "post",
+  module: "users",
+  path: "/sign_up",
+  args: { body: values },
+  captchaToken,
+});
 ```
 
-The response is status-aware: `response.status` is typed as a union of declared HTTP codes (e.g. `200 | 404`). Once you narrow on `response.status`, `response.json()` automatically narrows to that status code's specific schema. The body is typed as the JSON the route sends, the same way Hono types `c.json()`: a `z.date()` field arrives as its ISO `string`, so convert it with `new Date(value)` when you need a date.
+The fetcher sends it in the `x-vitnode-captcha-token` header, from the browser and during SSR alike. An `AutoForm` with captcha turned on hands the solved token to its `onSubmit`; for your own forms, see [Captcha on custom forms](/docs/dev/captcha/custom-adapter).
 
 ## How the registry types your calls
 
-Each plugin exports a lightweight contract type from its `config.api.ts`:
+TypeScript, not the router, knows which routes exist. Each plugin exports a contract type from its `config.api.ts`. The plugin generator already writes it:
 
 ```ts title="plugins/site-notes/src/config.api.ts"
 import type { ApiPluginContract } from '@vitnode/core/api/lib/plugin'
@@ -107,174 +101,92 @@ export type VitNodeApiPlugin = ApiPluginContract<
 >
 ```
 
-`ApiPluginContract` strips away runtime internals (Hono handlers, database connections, and background workers) and extracts only what the compiler needs: the plugin ID, module paths, route endpoints, methods, and Zod schemas.
+`ApiPluginContract` keeps only what the compiler needs: the plugin id, the module tree, and each route's method, path and schemas. Hono handlers, database code and secrets stay out.
 
-When you run `vite dev` or `vite build`, the `vitnode:plugin-routes` plugin automatically updates your app's `src/api-registry.gen.ts`:
+Every `vitnode dev` and `vitnode build` rewrites your app's `src/api-registry.gen.ts` with one entry per configured plugin that has an API:
 
 ```ts title="apps/web/src/api-registry.gen.ts"
-import type { VitNodeApiPlugin as ApiPlugin0 } from '@acme/site-notes/config.api'
+import type { VitNodeApiPlugin as ApiPlugin0 } from 'site-notes/config.api'
 
 declare module '@vitnode/core/lib/fetcher/registry' {
   interface ApiPluginRegistry {
-    '@acme/site-notes': ApiPlugin0
+    'site-notes': ApiPlugin0
   }
 }
-
-export type { ApiPluginRegistry } from '@vitnode/core/lib/fetcher/registry'
 ```
 
 <Callout type="warn" title="Types only, never a value">
-  All imports in the registry use `import type`. This guarantees that
-  server-side code, database credentials, and internal handlers never leak into
-  the browser bundle. The actual API factory executes exclusively in
-  `vitnode.api.config.ts`.
+  The registry uses `import type` only, so server code never reaches the browser
+  bundle. The API factory itself runs only in `vitnode.api.config.ts`.
 </Callout>
 
-## Loading data in plugin routes
+An invalid call fails to compile at the wrong property:
 
-Plugin routes load data using `defineRoute({ load })` from `@vitnode/core/tanstack/plugin-routes`. The loader runs during SSR and client navigation, handing typed `loaderData` to the page component. Its context includes `queryClient`; the framework-neutral `definePluginRoute` from `@vitnode/core/routing` only receives `locale`:
-
-```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
-import type { PluginRoutePageProps } from '@vitnode/core/routing'
-import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
-import { notesQuery } from '../features/notes/notes-query'
-
-interface Note {
-  id: string
-  title: string
-}
-
-// [!code ++:8]
-export const route = defineRoute({
-  load: async ({ context }) => {
-    return await context.queryClient.query({
-      ...notesQuery(),
-      staleTime: 'static',
-    })
-  },
+```ts
+await fetcher({
+  plugin: 'site-notes',
+  // @ts-expect-error The notes module declares no DELETE on "/".
+  method: 'delete',
+  module: 'notes',
+  path: '/',
 })
-
-const NotesPage = ({ loaderData }: PluginRoutePageProps<Note[]>) => {
-  return (
-    <div className="container mx-auto flex max-w-3xl flex-col gap-4 p-4">
-      {loaderData.map((note) => (
-        <h2
-          key={note.id}
-          className="text-xl font-semibold tracking-tight text-balance"
-        >
-          {note.title}
-        </h2>
-      ))}
-    </div>
-  )
-}
-
-export default NotesPage
 ```
 
-`staleTime: "static"` makes the loader reuse an entry that is already cached instead of fetching again on every navigation. The entry refreshes when a mutation invalidates it, as shown below. See [Cache app data](/docs/dev/cache/app) for the full pattern.
+## Load data and invalidate it
 
-## Mutations & cache invalidation
+In a route loader, call the fetcher through TanStack Query, so the page, a hover preload and later navigations share one cached request. After a write, invalidate the query and show a toast. Both patterns have their own guides:
 
-After creating, editing, or deleting records, call `queryClient.invalidateQueries` to refetch fresh data, then display a `sonner` toast notification:
+- [Add a route](/docs/dev/routing/first-route): a page whose loader fetches one note.
+- [Cache app data](/docs/dev/cache/app): warm a query in the loader, read it in the page, and invalidate it after a write.
 
-```tsx title="plugins/site-notes/src/features/notes/use-create-note.ts"
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetcher } from '@vitnode/core/tanstack/fetcher'
-import { toast } from 'sonner'
-import { notesQueryKey } from './notes-query'
+## Built-in queries
 
-export const useCreateNote = () => {
-  const queryClient = useQueryClient()
+Core ships three hooks for application state:
 
-  return useMutation({
-    mutationFn: async (title: string) => {
-      const response = await fetcher({
-        plugin: '@acme/site-notes',
-        args: { body: { title } },
-        method: 'post',
-        module: 'notes',
-        path: '/',
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to create note.')
-      }
-
-      return await response.json()
-    },
-    onSuccess: async () => {
-      // Invalidate cache and trigger sonner toast
-      await queryClient.invalidateQueries({ queryKey: notesQueryKey })
-      toast.success('Note created successfully!')
-    },
-  })
-}
-```
-
-## Built-in system queries
-
-Core provides three pre-warmed query hooks for common application state:
-
-| Hook                         | Import                         | Suspends | Description                                    |
-| :--------------------------- | :----------------------------- | :------- | :--------------------------------------------- |
-| `useSessionQuery()`          | `@vitnode/core/tanstack/auth`  | No       | Signed-in visitor session, or `null`           |
-| `useAdminSessionQuery()`     | `@vitnode/core/tanstack/admin` | Yes      | AdminCP staff identity and permissions         |
-| `useMiddlewareConfigQuery()` | `@vitnode/core/tanstack/auth`  | Yes      | Public deployment configuration before sign-in |
+| Hook                         | Import                         | Suspends | Returns                                                         |
+| :--------------------------- | :----------------------------- | :------- | :-------------------------------------------------------------- |
+| `useSessionQuery()`          | `@vitnode/core/tanstack/auth`  | No       | `{ data, isError, isPending }`; `data.user` is `null` for a guest |
+| `useAdminSessionQuery()`     | `@vitnode/core/tanstack/admin` | Yes      | The AdminCP staff session and permissions                       |
+| `useMiddlewareConfigQuery()` | `@vitnode/core/tanstack/auth`  | Yes      | The deployment's public configuration, readable before sign-in  |
 
 ### Deployment configuration
 
-`useMiddlewareConfigQuery()` reads public server capabilities without requiring an active session, allowing login and registration screens to adapt dynamically:
+`useMiddlewareConfigQuery()` lets sign-in and registration screens adapt to the deployment:
 
-```tsx title="plugins/site-notes/src/pages/login-page.tsx"
+```tsx title="plugins/site-notes/src/views/sign-in-hint.tsx"
 import { useMiddlewareConfigQuery } from '@vitnode/core/tanstack/auth'
 
-const LoginPage = () => {
+export const SignInHint = () => {
   const { data: config } = useMiddlewareConfigQuery()
 
-  return (
-    <div className="container mx-auto max-w-md p-4">
-      {config.captcha ? <p>Captcha enabled</p> : null}
-      {config.sso?.length ? <p>Social sign-in available</p> : null}
-    </div>
-  )
+  return config.sso.length > 0 ? <p>Social sign-in is available.</p> : null
 }
-
-export default LoginPage
 ```
 
-- `sso` — Enabled social login providers.
-- `isEmail` — Whether an email adapter is configured (required for password reset).
-- `captcha` — Public site key and provider type (`recaptcha` or `cloudflare`).
-- `ai.models` — Configured AI models in the deployment.
-- `isKnown` — `false` if the API was unreachable (`UNKNOWN_MIDDLEWARE_CONFIG`), ensuring login forms still render.
+| Field       | Description                                                                                         |
+| :---------- | :-------------------------------------------------------------------------------------------------- |
+| `sso`       | Enabled social sign-in providers.                                                                   |
+| `password`  | Whether password sign-in is enabled.                                                                |
+| `passkeys`  | Whether passkey sign-in is enabled.                                                                 |
+| `isEmail`   | Whether an email adapter is configured, which password reset needs.                                 |
+| `captcha`   | The public site key and provider, `'cloudflare_turnstile'` or `'recaptcha_v3'`, when captcha is on. |
+| `ai.models` | The AI models configured in the deployment.                                                         |
+| `isKnown`   | `false` when the API could not be read. The other fields then hold safe defaults (password sign-in only). |
 
 ## Freshness constants
 
-VitNode provides standard stale times in `@vitnode/core/lib/query-freshness`:
+`@vitnode/core/lib/query-freshness` exports two `staleTime` values for your own queries:
 
-| Constant            | Duration   | Recommended use case                                      |
-| :------------------ | :--------- | :-------------------------------------------------------- |
-| `RECORD_STALE_TIME` | 30 seconds | Fast-changing feeds, dynamic user activity, announcements |
-| `STATIC_STALE_TIME` | 5 minutes  | Site configuration, navigation menus, role permissions    |
+| Constant                 | Value      | Use it for                                                                    |
+| :----------------------- | :--------- | :---------------------------------------------------------------------------- |
+| `OPERATIONAL_STALE_TIME` | 15 seconds | Data that changes from minute to minute, such as counters and queues          |
+| `RECORD_STALE_TIME`      | 60 seconds | Records people read more often than they change, such as content and containers |
 
-## Universal vs. server-only fetcher
+For records, invalidate the query after a write instead of shortening the stale time.
 
-`fetcher` from `@vitnode/core/tanstack/fetcher` is the universal client. For operations that run exclusively on the server (server functions, cron tasks, or external secrets), use `@vitnode/core/tanstack/fetcher/server`:
+## Server-only fetcher
 
-| Feature                            | Universal (`fetcher`) | Server-only (`fetcher/server`) | Description                                          |
-| :--------------------------------- | :-------------------: | :----------------------------: | :--------------------------------------------------- |
-| Standard queries & mutations       |           ✓           |               ✓                | End-to-end typed requests                            |
-| `args`, `formData`, `captchaToken` |           ✓           |               ✓                | Request parameter serialization                      |
-| `allowSaveCookies`                 |                       |               ✓                | Relays API `Set-Cookie` headers back to the browser  |
-| `additionalHeaders`                |                       |               ✓                | Forwards internal credentials or custom headers      |
-| `origin`                           |                       |               ✓                | Directs requests to an alternative upstream API host |
-
-<Callout type="warn" title="Keep server code out of browser bundles">
-  Import from `@vitnode/core/tanstack/fetcher/server` only inside `*.server.ts`
-  files or `createServerFn` handlers. Value imports of backend factories or
-  server fetchers should never reach client bundles.
-</Callout>
+`@vitnode/core/tanstack/fetcher/server` exports a fetcher with the same call shape plus three options a browser must never have: `allowSaveCookies`, `additionalHeaders` and `origin`. Use it only in `*.server.ts` files and server functions. [Server functions](/docs/dev/server-functions) explains when you need it.
 
 ### SSR skips the network when the API lives next door
 
@@ -288,67 +200,66 @@ network as before. Without `VITNODE_API_URL` and without an in-process API,
 that network call goes to `VITNODE_WEB_URL` - never to the incoming request's
 `Host`, which a visitor controls.
 
-## Browser-only requests with fetcherClient
+## Browser-only code with `fetcherClient`
 
-For client code that **never** executes on the server—such as browser event listeners, interactive dialogs, or framework-neutral utilities—call `fetcherClient` from `@vitnode/core/lib/fetcher-client`:
+Code that never runs on a server, such as a framework-neutral browser utility, can call `fetcherClient` from `@vitnode/core/lib/fetcher-client`. It takes the same call and infers the same types, sends `credentials: "include"`, and reports a `429` as a `vitnode:rate-limit` window event:
 
-```ts title="plugins/site-notes/src/features/notes/client-actions.ts"
+```ts title="plugins/site-notes/src/lib/count-notes.ts"
 import { fetcherClient } from '@vitnode/core/lib/fetcher-client'
 
-export const deleteNote = async (id: string) => {
+export const countNotes = async () => {
   const response = await fetcherClient({
-    plugin: '@acme/site-notes',
-    args: { params: { id } },
-    method: 'delete',
+    plugin: 'site-notes',
+    method: 'get',
     module: 'notes',
-    path: '/{id}',
+    path: '/',
   })
 
-  return response.ok
+  return response.ok ? (await response.json()).length : 0
 }
 ```
 
-`fetcherClient` shares the exact same call signature and type inference as the universal `fetcher`, but is built exclusively for the browser with `credentials: "include"` and automatic rate-limiting notifications.
+Everything that renders on the server, including shared `views/*` modules, uses `fetcher`.
 
 ## Content Engine routes
 
-Public routes created via [Content Engine](/docs/content-engine) (`publicApi`) are automatically typed under `module: "content/<path>"`:
+A content type's public routes (`publicApi`) are typed under `module: 'content/<publicApi.path>'`. The blog plugin's `publicApi.path` is `blog`:
 
 ```ts
 const response = await fetcher({
   plugin: '@vitnode/blog',
-  args: { params: { slug: 'welcome' } },
   method: 'get',
-  module: 'content/posts',
+  module: 'content/blog',
   path: '/{slug}',
+  args: { params: { slug: 'welcome' }, query: { locale: 'en' } },
 })
 ```
 
-For generated AdminCP content modules where schemas are dynamic, use `rawFetcher` from `@vitnode/core/tanstack/fetcher` instead. See [Content Engine](/docs/content-engine) for defining content types, schema modeling, and generating CRUD APIs.
+Generated AdminCP content modules have no type to infer from, so they use `rawFetcher` from `@vitnode/core/tanstack/fetcher`. See [Content Engine](/docs/content-engine).
 
 <Cards>
   <Card
-    icon={<BoxesIcon />}
-    title="Content Engine"
-    description="Define content types, schemas, and typed public endpoints."
-    href="/docs/content-engine"
-  />
-  <Card
     icon={<MapIcon />}
-    title="Plugin Routes"
-    description="Define route trees, lazy pages, loaders, and breadcrumbs."
+    title="Routing"
+    description="Declare plugin pages and their loaders."
     href="/docs/dev/routing"
-  />
-  <Card
-    icon={<ServerIcon />}
-    title="Server Functions"
-    description="Implement server-only workflows, cookie relays, and background jobs."
-    href="/docs/dev/server-functions"
   />
   <Card
     icon={<DatabaseIcon />}
     title="Cache"
-    description="Learn frontend query cache and Redis domain caching."
+    description="Cache in the app, in the API and as rendered HTML."
     href="/docs/dev/cache"
+  />
+  <Card
+    icon={<ServerIcon />}
+    title="Server functions"
+    description="Cookie relays and other server-only calls."
+    href="/docs/dev/server-functions"
+  />
+  <Card
+    icon={<BoxesIcon />}
+    title="Content Engine"
+    description="Content types with typed public routes."
+    href="/docs/content-engine"
   />
 </Cards>

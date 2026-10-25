@@ -1,5 +1,5 @@
 ---
-title: Suggestions
+title: Search suggestions
 description: Show as-you-type search suggestions and popular content in the header search dialog, and count views, clicks and comments towards popularity.
 icon: TextSearch
 ---
@@ -13,7 +13,7 @@ Before you type, it shows what's popular. After two characters, it shows matchin
 
 <ImgDocs
   src={searchDialog}
-  alt="Search bar open over the page with an empty Search field and a Popular right now list: a forum topic with its forum name and excerpt, followed by articles and comments, each with a thumbnail or type icon and its date on the right, and keyboard hints at the bottom"
+  alt="Search bar open over the page with an empty Search field and a Popular right now list: a forum topic with its forum name and excerpt, followed by four newsroom stories and explainers, each with a type icon and its date on the right, and keyboard hints at the bottom"
 />
 
 ## How the dialog works
@@ -91,13 +91,13 @@ curl "http://localhost:3000/api/@vitnode/core/search/suggest?search=hel&lang=en"
   "items": [
     {
       "id": 105,
-      "itemType": "example.article",
+      "itemType": "newsroom.story",
       "itemId": "3",
       "title": "Hello Content Engine",
-      "url": "/articles/hello-content-engine",
+      "url": "/stories/hello-content-engine",
       "context": null,
       "createdAt": "2026-10-10T10:55:34.335Z",
-      "excerpt": "Hello Content Engine A first article from the example plugin, served by the public API and rendered on its own page.",
+      "excerpt": "Hello Content Engine A first story from the newsroom plugin, served by the public API and rendered on its own page.",
       "image": null
     }
   ]

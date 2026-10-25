@@ -1,8 +1,10 @@
 ---
-title: Show a plugin in the AdminCP catalog
+title: Catalog listing
 description: Give your plugin a title and a Lucide icon so AdminCP → System → Plugins lists it with the version that is actually installed.
 icon: Puzzle
 ---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 import { ImgDocs } from '@/components/fumadocs/img'
 
@@ -20,90 +22,108 @@ The catalog reports what is installed. It also shows available updates and secur
 
 ## Add your plugin to the catalog
 
+The steps use the `site-notes` plugin from [Create a plugin](/docs/dev/plugins/create). A generated plugin is already listed with the puzzle icon and the placeholder description "A VitNode plugin." These steps make the entry its own.
+
 <Steps>
   <Step>
 
 ### Describe the plugin in package.json
 
-Make sure your `package.json` has a `description` next to its `name` and `version`:
+The generator writes `"description": "A VitNode plugin."`. Replace it with a sentence about your plugin, next to its `name` and `version`:
 
 ```json title="plugins/site-notes/package.json"
 {
-  "name": "@acme/site-notes",
-  "version": "1.2.0",
-  "description": "Pin short notes to any page of your community."
+  "name": "site-notes",
+  "version": "0.1.0",
+  "description": "Pin short notes to any page of your community." // [!code highlight]
 }
 ```
+
+The `name` is the plugin id. Keep it as the generator wrote it, because the id also names the API path, the translation namespace and the imports in your app's config files.
 
   </Step>
   <Step>
 
 ### Set the title and icon
 
-Create `src/plugin-info.ts` with the title and a [Lucide icon](https://lucide.dev/icons) name:
+Plugins created with the generator already have `src/plugin-info.ts`, with the `puzzle` icon. Change the icon to any [Lucide icon](https://lucide.dev/icons) name, and the title if you like:
 
-```ts title="src/plugin-info.ts"
+```ts title="plugins/site-notes/src/plugin-info.ts"
 import type { PluginInfo } from '@vitnode/core/lib/plugin-manifest'
 
 export const pluginInfo: PluginInfo = {
   title: 'Site Notes',
-  icon: 'sticky-note',
+  icon: 'sticky-note', // [!code highlight]
 }
 ```
-
-Plugins created with the generator already have this file, with the `puzzle` icon.
 
   </Step>
   <Step>
 
-### Register the generated manifest
+### Check that the manifest is registered
 
-`vitnode build` writes `src/manifest.gen.ts`. It holds the `name`, `version`, `description`, `author` and `license` from `package.json` and imports the title and icon from `src/plugin-info.ts`. It is also the single source of the plugin id (`manifest.id`), so nothing else spells the id by hand. Pass it to both registrations:
+`vitnode build` writes `src/manifest.gen.ts`. It holds the `name`, `version`, `description`, `author` and `license` from `package.json` and imports the title and icon from `src/plugin-info.ts`. It is also the single source of the plugin id (`manifest.id`), so nothing else spells the id by hand.
 
-```tsx title="src/config.tsx"
-import { buildPlugin } from '@vitnode/core/lib/plugin'
+A generated plugin already passes `manifest` to both factories, so there is nothing to change. In `src/config.tsx` it sits next to the plugin's routes and translations:
 
-import { manifest } from './manifest.gen'
-import { routes } from './routes'
-
+```tsx title="plugins/site-notes/src/config.tsx"
 export const siteNotesPlugin = () =>
   buildPlugin({
-    manifest,
+    manifest, // [!code highlight]
+    localeFiles: {
+      en: 'site-notes/locales/en.json',
+    },
+    messages,
     routes,
   })
 ```
 
-```ts title="src/config.api.ts"
-import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+And in `src/config.api.ts`:
 
-import { manifest } from '@/manifest.gen'
-
+```ts title="plugins/site-notes/src/config.api.ts"
 export const siteNotesApiPlugin = () =>
   buildApiPlugin({
-    manifest,
-    modules: [],
+    manifest, // [!code highlight]
+    modules: [helloModule],
   })
 ```
+
+If you rewrite either factory, keep `localeFiles` and `messages`. Without them the plugin loses its translations.
 
   </Step>
   <Step>
 
 ### Build the plugin
 
-Run the build in the plugin's folder, or keep `vitnode dev` running:
+If `pnpm dev` is running at the workspace root, the plugin rebuilds when you save. Otherwise build it from the plugin's folder with its `build:plugins` script (which runs `vitnode build`):
 
-```bash
-vitnode build
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Build the plugin'>
+
+```bash tab="bun"
+cd plugins/site-notes
+bun run build:plugins
 ```
 
-Both commands generate the file before TypeScript and tsdown run. Commit it, like `types/api-registry.gen.d.ts`.
+```bash tab="pnpm"
+cd plugins/site-notes
+pnpm build:plugins
+```
+
+```bash tab="npm"
+cd plugins/site-notes
+npm run build:plugins
+```
+
+</Tabs>
+
+The build regenerates `src/manifest.gen.ts` before TypeScript and tsdown run. Commit it, like `types/api-registry.gen.d.ts`.
 
   </Step>
 </Steps>
 
 ### Check the result
 
-Restart your app, sign in to the AdminCP and open **System → Plugins**. Your plugin shows its icon, title, `@acme/site-notes`, the description and `1.2.0`. Search matches the title, the package ID and the description.
+Restart your app, sign in to the AdminCP and open **System → Plugins**. Your plugin shows the sticky note icon, **Site Notes**, `site-notes`, your description and `0.1.0`. Search matches the title, the package ID and the description.
 
 ## Where each value comes from
 
@@ -151,7 +171,7 @@ A side that reports no version is unknown, not a mismatch.
 
 ## Older plugins
 
-`buildPlugin()` and `buildApiPlugin()` take the plugin id from `manifest`, so an older plugin that still passes `pluginId` needs `src/manifest.gen.ts` first: run `vitnode build` or `vitnode dev` once, then pass `manifest` instead. A plugin without `src/plugin-info.ts` gets its ID as the title and the default icon. Add it when convenient.
+`buildPlugin()` and `buildApiPlugin()` take the plugin id from `manifest`, so an older plugin that still passes `pluginId` needs `src/manifest.gen.ts` first. Run its `build:plugins` or `dev` script once, then pass `manifest` instead. A plugin without `src/plugin-info.ts` gets its ID as the title and the default icon. Add it when convenient.
 
 A frontend inventory entry carrying the manifest of another package throws at startup: the API checks that `manifest.id` equals the entry's `id`.
 

@@ -4,22 +4,30 @@ description: Solve a captcha challenge in a form you built yourself - the useCap
 icon: SquarePen
 ---
 
+import { File, Files, Folder } from 'fumadocs-ui/components/files'
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
 `AutoForm` handles captcha for you, and most of the time that is the end of it.
 When you are rendering the form yourself - a hand-built `<form>`, a wizard, a
 component that is not an `AutoForm` at all - `useCaptcha` is the same three
 values `AutoForm` uses internally.
 
 There is no captcha _adapter_ to write: the two providers live in core, and
-`type` is a closed union. What this page is about is the client half.
+`type` is a closed union. This page is about the client half. The example is
+the `site-notes` contact form from the [Captcha overview](/docs/dev/captcha),
+rebuilt without `AutoForm`.
 
-import { File, Files, Folder } from 'fumadocs-ui/components/files'
-import { TypeTable } from 'fumadocs-ui/components/type-table'
+## Before you begin
+
+- A captcha provider configured in the API config ([Captcha](/docs/dev/captcha#1-configure-a-provider)).
+- A route with `withCaptcha: true`, such as `POST /api/site-notes/contact` from [Gate your own route](/docs/dev/captcha#2-gate-your-own-route).
+- The form renders inside a VitNode app, under `VitNodeRootProviders` (see the gotchas below).
 
 ## Quick start
 
 Three values, and a `<div>` for the widget to land in.
 
-```tsx title="plugins/contact/src/views/contact/contact-form.tsx"
+```tsx title="plugins/site-notes/src/pages/contact-form.tsx"
 import type React from 'react'
 
 import { useCaptcha } from '@vitnode/core/hooks/use-captcha' // [!code ++]
@@ -109,19 +117,21 @@ building it.
 
 ### Gate the route
 
-Nothing on the client makes a route require a token - `withCaptcha: true` on the
-route does, in a [plugin](/docs/dev/plugins/create) exactly as in core.
+Nothing on the client makes a route require a token. `withCaptcha: true` on the
+route does, in a [plugin](/docs/dev/plugins/create) exactly as in core. This is
+the route from the overview, trimmed to the relevant part:
 
-```ts title="plugins/my-plugin/src/api/modules/contact/routes/create.route.ts"
-export const createContactRoute = buildRoute({
+```ts title="plugins/site-notes/src/api/modules/contact/send.route.ts"
+import { buildRoute } from '@/api/builders'
+
+export const sendContactRoute = buildRoute({
   route: {
+    withCaptcha: true, // [!code ++]
     method: 'post',
     path: '/',
-    description: 'Send a message to the site owner',
-    withCaptcha: true, // [!code ++]
-    // ...
+    // request.body and responses as in the overview
   },
-  handler: async (c) => c.text('Message sent', 201),
+  handler: async (c) => c.body(null, 201),
 })
 ```
 
@@ -133,12 +143,12 @@ export const createContactRoute = buildRoute({
 The site key is public. A plugin page can read it with the shared TanStack Query
 definition before rendering its form:
 
-```tsx title="plugins/contact/src/pages/contact-page.tsx"
+```tsx title="plugins/site-notes/src/pages/contact-page.tsx"
 import { useMiddlewareConfigQuery } from '@vitnode/core/tanstack/auth'
 
-import { ContactForm } from '../views/contact-form'
+import { ContactForm } from './contact-form'
 
-export const ContactScreen = () => {
+export const ContactPage = () => {
   const { data: config } = useMiddlewareConfigQuery()
 
   return <ContactForm captcha={config.captcha} />
@@ -171,8 +181,10 @@ change.
 and the server one, and it spells the `x-vitnode-captcha-token` header for you. An
 empty string sends no header at all.
 
-```ts title="src/site/contact/send-message.ts"
+```ts title="plugins/site-notes/src/pages/send-message.ts"
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+import { manifest } from '@/manifest.gen'
 
 export const sendMessage = async ({
   captchaToken,
@@ -182,7 +194,7 @@ export const sendMessage = async ({
   message: string
 }) =>
   await fetcher({
-    plugin: '@vitnode/my-plugin',
+    plugin: manifest.id,
     method: 'post',
     module: 'contact',
     path: '/',
@@ -199,7 +211,7 @@ export const sendMessage = async ({
 Call the route with no token. It answers `400` before your handler runs:
 
 ```bash
-curl -i -X POST 'http://localhost:3000/api/@vitnode/my-plugin/contact' \
+curl -i -X POST 'http://localhost:3000/api/site-notes/contact' \
   -H 'Content-Type: application/json' \
   -d '{"message":"Hello from curl"}'
 ```
@@ -223,12 +235,12 @@ A minimal captcha-gated feature is four files, and only one of them knows the
 hook exists.
 
 <Files>
-  <Folder defaultOpen name="plugins/contact/src">
-    <Folder defaultOpen name="routes">
-      <File name="contact-page.tsx" />
+  <Folder defaultOpen name="plugins/site-notes/src">
+    <Folder defaultOpen name="api/modules/contact">
+      <File name="send.route.ts" />
     </Folder>
-    <Folder defaultOpen name="views/contact">
-      <File name="contact-screen.tsx" />
+    <Folder defaultOpen name="pages">
+      <File name="contact-page.tsx" />
       <File name="contact-form.tsx" />
       <File name="send-message.ts" />
     </Folder>
@@ -266,7 +278,7 @@ hook exists.
   that knows whether the token was any good.
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

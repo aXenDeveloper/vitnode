@@ -51,7 +51,7 @@ import { fetchNote } from '../features/notes/fetch-note'
 
 const noteQuery = (slug: string) =>
   queryOptions({
-    queryKey: ['@acme/site-notes', 'note', { slug }],
+    queryKey: ['site-notes', 'note', { slug }],
     queryFn: async () => await fetchNote(slug),
     staleTime: 60_000, // [!code ++]
     meta: LOADER_DATA_QUERY_META, // [!code ++]
@@ -123,7 +123,7 @@ const ExportLink = () => (
 
 Keep it on for ordinary reading pages. One cached preload makes the click feel instant and costs nothing on the second hover.
 
-## Next
+## Related
 
 <Cards>
   <Card

@@ -1,5 +1,5 @@
 ---
-title: Limit who sees a notification
+title: Limit access
 description: Hide VitNode notifications from members who cannot see the content, with a batched access check on the notification type and remove() when content is deleted.
 icon: ShieldCheck
 ---
@@ -14,9 +14,9 @@ This guide continues the `forum.topic_reply` type from [Publish notifications](/
 
 ### Add the access check
 
-Add `access` to the type. It receives a batch of candidate user ids and returns the ones that may see the notification:
+Add `access` to the type. It receives a batch of candidate user ids and returns the ones that may see the notification. `forum_topic_members` stands for your plugin's own membership table, with a `topicId` and a `userId` column:
 
-```ts title="plugins/forum/src/api/lib/notifications.ts"
+```ts title="plugins/acme-forum/src/api/lib/notifications.ts"
 import { buildNotificationType } from '@vitnode/core/api/lib/notifications/registry'
 import { and, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
@@ -54,7 +54,7 @@ Answer the whole batch with one query. A batch holds up to 500 ids by default, s
 
 When a topic is deleted, take its notifications out of every inbox. Call `remove()` in the route that deletes the topic:
 
-```ts title="plugins/forum/src/api/modules/topics/routes/delete.route.ts"
+```ts title="plugins/acme-forum/src/api/modules/topics/routes/delete.route.ts"
 await c.get('notifications').remove({
   subject: { type: 'forum.topic', id: topic.id },
 })
@@ -62,7 +62,7 @@ await c.get('notifications').remove({
 
 `remove()` matches the `subject` you passed to `publish()`, lowers the unread counts in the same transaction and returns how many items it deleted. To remove only some members, for example after kicking them from a private topic, add `type` and `userIds`:
 
-```ts title="plugins/forum/src/api/modules/topics/routes/kick.route.ts"
+```ts title="plugins/acme-forum/src/api/modules/topics/routes/kick.route.ts"
 await c.get('notifications').remove({
   subject: { type: 'forum.topic', id: topic.id },
   type: 'forum.topic_reply',

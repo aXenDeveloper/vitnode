@@ -128,13 +128,24 @@ when the href matches the current URL exactly, query and hash included.
 To navigate from code after a form is saved, use `useHrefNavigate`:
 
 ```tsx title="plugins/catalog/src/pages/catalog-new-page.tsx"
+import { Button } from '@vitnode/core/components/ui/button'
 import { useHrefNavigate } from '@vitnode/core/tanstack/link'
 
-const navigate = useHrefNavigate()
+export const OpenItemButton = ({ slug }: { slug: string }) => {
+  const navigate = useHrefNavigate()
 
-// after a successful save:
-await navigate(`/catalog/${encodeURIComponent(item.slug)}`)
+  return (
+    <Button
+      onClick={() => void navigate(`/catalog/${encodeURIComponent(slug)}`)}
+      type="button"
+    >
+      Open item
+    </Button>
+  )
+}
 ```
+
+Call the returned `navigate` from an event handler, such as a form's `onSubmit` after a successful save. Pass `{ replace: true }` to replace the current history entry instead of adding one.
 
 Invalidate the queries the save changed before you navigate, so the next page's
 loader reads fresh data. For filters, sorting and pagination on the page already
@@ -145,12 +156,12 @@ being viewed, use the page's own `navigate` prop shown above.
   work with any host, which saves future hosts from router spaghetti.
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card
     title="Routing"
-    description="How a URL gets claimed, by your app or by a plugin"
+    description="How a plugin claims a URL, and which guide covers each routing task"
     href="/docs/dev/routing"
   />
   <Card

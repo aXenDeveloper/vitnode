@@ -49,9 +49,10 @@ asked for.
 
 ## The per-plugin prefix rule
 
-**Every top-level key a plugin ships is the plugin's own id.** A key outside it
-collides with core and with every other plugin, so VitNode ignores it rather than
-letting two packages fight over one path.
+**Keep everything a plugin ships under the plugin's own id.** VitNode merges
+every package's locale file into one tree and does not filter keys, so a
+top-level key outside your id shares one path with core and every other plugin,
+and whichever package loads last wins.
 
 ```json title="plugins/my-plugin/src/locales/en.json"
 {
@@ -66,7 +67,14 @@ Scoped ids work exactly the same way - `@vitnode/blog` is one path segment even
 though it contains a slash, so `@vitnode/blog.admin` is a legal two-segment
 namespace.
 
-<Callout title="Permission labels are the one exception" type="info">
+Two kinds of top-level keys are expected outside your id, because core looks
+them up by a fixed name:
+
+- **AI action labels** live under `ai_actions.<pluginId>.*`, for example
+  `ai_actions.@vitnode/core.alt_generate.title`.
+- **Staff permission labels**, described below.
+
+<Callout title="Permission labels are flat keys" type="info">
   A staff permission's label is a **flat top-level key**, not a branch:
   `@vitnode/blog:posts:can_view`. There is nothing to slice a namespace out of,
   so the AdminCP asks for those keys as if they were namespaces and has to chunk
@@ -171,7 +179,7 @@ import { MAX_NAMESPACES } from '@vitnode/core/tanstack/i18n'
   `, which only exists once the provider has.
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

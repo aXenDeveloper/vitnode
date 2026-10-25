@@ -1,5 +1,5 @@
 ---
-title: Prerender Static Pages
+title: Prerendering
 description: Render marketing pages once during the build and serve them as static HTML files, in every language your app speaks.
 icon: FileCode
 ---
@@ -17,13 +17,13 @@ Pages that change per visitor - settings, anything behind a sign-in, a feed of n
 
 ### List the pages
 
-Create a module with the paths to prerender. Write each path once, without a locale prefix:
+Create a module that lists the pages to prerender. Write each path once, without a locale prefix. This site prerenders its home, pricing and solutions pages:
 
 ```ts title="src/prerender.ts"
 export const PRERENDERED_PATHS = ['/', '/pricing', '/solutions']
 ```
 
-A route with a parameter, such as `/solutions/$slug`, is never found on its own. List every value you want as a file: `/solutions/help-center`.
+A route with a parameter, such as the file route `/solutions/$slug` (TanStack's spelling of `/solutions/:slug`), is never found on its own. List every value you want as a file: `/solutions/help-center`.
 
 </Step>
 <Step>

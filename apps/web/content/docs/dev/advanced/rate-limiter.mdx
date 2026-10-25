@@ -1,5 +1,5 @@
 ---
-title: Rate Limiter
+title: Rate limiter
 description: How VitNode splits API rate limits into read, write, sign-in and content-write budgets under a global safety cap, with Redis-shared counters and 429 responses that carry Retry-After.
 icon: ShieldAlert
 ---
@@ -17,7 +17,7 @@ Every request spends points from the budgets that apply to it, in this order, an
 | Safety cap     | Every request, including `OPTIONS` preflights                            | 1000 / 60 s    | `rateLimiter.safety`       |
 | Read           | `GET` and `HEAD`                                                         | 300 / 60 s     | `rateLimiter.read`         |
 | Write          | `POST`, `PUT`, `PATCH`, `DELETE` and any other method                    | 60 / 60 s      | `rateLimiter.write`        |
-| Sign-in        | `POST` to the sign-in, sign-up, password and passkey routes, plus write  | 10 / 60 s      | `rateLimiter.auth`         |
+| Sign-in        | `POST` to the sign-in, sign-up, password, email verification and passkey routes, plus write | 10 / 60 s | `rateLimiter.auth` |
 | Content writes | `POST` and `PATCH` under a plugin's `/content/`, outside `/admin/`, plus write | 20 / 60 s | `rateLimiter.contentWrite` |
 
 So a sign-in spends the safety cap, the write budget and the sign-in budget. A `GET` spends only the safety cap and the read budget. Each budget is spent at most once per request.

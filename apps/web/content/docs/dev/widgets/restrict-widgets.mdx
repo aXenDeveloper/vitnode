@@ -1,0 +1,96 @@
+---
+title: Restrict widgets
+description: Limit which widgets a VitNode blocks() field, content zone or editable page zone accepts with one allowlist format, share the list between them, and know which check runs on save.
+icon: ListFilter
+---
+
+Every place widgets go takes the same allowlist. Write it on a [`blocks()` field](/docs/dev/widgets/blocks-field), on an [editable page](/docs/dev/widgets/editable-pages) zone or on a [content zone](/docs/dev/widgets/content-zones), and the editor only offers what fits. Where you write it decides whether the API enforces it.
+
+## The list format
+
+An allowlist is `"*"` or an array mixing exact ids and plugin wildcards:
+
+```ts
+'*' // every installed widget
+['core:*', 'newsroom:*'] // every widget of two plugins
+['core:hero', 'newsroom:callout'] // exactly these two
+```
+
+A plugin wildcard is the useful middle. Installing another plugin does not silently widen what a page may contain, while a new widget in a plugin you already trust appears automatically. An [Area](/docs/dev/widgets/layout-areas) needs no entry; the widgets inside it are checked against the same list.
+
+## Where it is enforced
+
+| Written on                 | As                                | Checked                                          | On refusal                                        |
+| :------------------------- | :-------------------------------- | :----------------------------------------------- | :------------------------------------------------ |
+| A `blocks()` field         | `field.blocks({ allowed })`       | By the API, on every create and update           | `400`, nothing stored                             |
+| An editable page zone      | `allowed` in `defineEditablePage` | By the API, on every save to `PUT /pages/layout` | `400`, nothing stored                             |
+| A standalone `ContentZone` | `allowedBlocks`                   | Only while rendering, per its `validate` mode    | The widget is skipped (by default in development) |
+
+In the visual editor, all three behave the same. **Add widget** on a zone lists only what the zone accepts, and a zone turns red and refuses a widget dragged onto it that it does not accept. Only the first two are also checked on the server. A [custom editor host](/docs/dev/widgets/custom-editor-host) that saves a standalone zone must check the list in its own save route.
+
+## On a blocks() field
+
+```ts title="plugins/newsroom/src/content/page.ts (excerpt)"
+content: field.blocks({
+  allowed: PAGE_BLOCKS_ALLOWED,
+  max: 50,
+}),
+```
+
+The default is `"*"`. A write holding a widget the field does not allow answers `400` with `Block "core:cta" is not allowed in this field.`, and nothing is stored.
+
+## On an editable page
+
+Each zone declares its list once, in `defineEditablePage`, and every `ContentZone` with that id inherits it:
+
+```ts title="plugins/newsroom/src/content/settings-page.ts (excerpt)"
+zones: {
+  'before-profile': { allowed: PAGE_BLOCKS_ALLOWED, max: 20 },
+  sidebar: { allowed: PAGE_SIDEBAR_BLOCKS_ALLOWED, max: 20 },
+},
+```
+
+The server reads the list from the registered page, never from the request, so no request can sneak a widget into a zone that refuses it. Props on the page's `ContentZone` can narrow the declaration but never widen it:
+
+| At the call site | Effect                                                                                                                             |
+| :--------------- | :--------------------------------------------------------------------------------------------------------------------------------- |
+| `allowedBlocks`  | **Only narrows.** It is intersected with the page's list, so `"*"` cannot re-open a restricted zone. An empty intersection throws. |
+| `min` / `max`    | **Only tighten.** The higher `min` and the lower `max` win. A `min` above the `max` throws where you wrote it.                     |
+| `blocks`         | **Overrides the source.** The array you pass is what renders, for a zone whose widgets come from somewhere else.                   |
+
+## On a zone
+
+A standalone `ContentZone` describes what belongs in a place; it does not guard storage. While rendering, its `validate` mode decides what happens to a stored widget the list does not allow:
+
+| `validate`                  | A widget the zone does not allow                                      |
+| :-------------------------- | :-------------------------------------------------------------------- |
+| `"never"`                   | renders                                                               |
+| `"development"` _(default)_ | is skipped with a dashed notice in development, renders in production |
+| `"always"`                  | is skipped everywhere                                                 |
+
+Use `"always"` on a page that renders widgets the API never checked, such as a live import. See [Validation](/docs/dev/widgets/rendering#validation) for the rest of what the renderer checks.
+
+## Share one list
+
+When a field and the page that renders it should accept the same widgets, put the list in a module of its own and import it from both. The newsroom plugin keeps its lists in `src/content/page-blocks.ts`:
+
+```ts title="plugins/newsroom/src/content/page-blocks.ts"
+export const PAGE_BLOCKS_ALLOWED = [
+  'core:*',
+  'newsroom:callout',
+  'newsroom:features',
+] as const
+
+export const PAGE_SIDEBAR_BLOCKS_ALLOWED = ['core:text'] as const
+```
+
+`page.ts` passes `PAGE_BLOCKS_ALLOWED` to the field, and `pages/site-page.tsx` passes the same constant to its zone as `allowedBlocks`. Import the array, not the content type. A page that imports a content type definition pulls the whole schema builder into its bundle to read one list.
+
+## Check the result
+
+Sign in as an administrator, open `/newsroom/zones` and choose **Edit widgets** from the user menu. **Add widget** on the sidebar zone lists only **Text**, because the sidebar allows `core:text` alone; drag the callout from another zone onto the sidebar and the sidebar turns red and refuses it.
+
+## Related
+
+- [Editable pages](/docs/dev/widgets/editable-pages): declare a page's zones and their lists.
+- [Saving layouts](/docs/dev/widgets/saving-layouts#when-a-save-is-refused): every refusal a layout save can answer.

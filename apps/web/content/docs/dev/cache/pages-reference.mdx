@@ -78,9 +78,10 @@ import { setPageCacheTags } from '@vitnode/core/api/lib/page-cache'
 setPageCacheTags(c, ['events:list'])
 ```
 
-```ts title="after the write commits"
+```ts title="plugins/events/src/api/modules/events/routes/update.route.ts"
 import { invalidatePageCacheTags } from '@vitnode/core/api/lib/page-cache'
 
+// in the handler, after the write commits
 const result = await invalidatePageCacheTags(['events:list'], { mode: 'soft' })
 if (result.status === 'failed') {
   await c.get('log').error('Cached event pages could not be invalidated.')

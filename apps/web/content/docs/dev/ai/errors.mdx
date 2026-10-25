@@ -1,0 +1,189 @@
+---
+title: Errors and limits
+description: Handle VitNode AI action errors. The AiError JSON body, every error code with its status and fix, showing errors in the browser, stopping background jobs when the budget runs out, and listening to ai.run events.
+icon: ShieldAlert
+---
+
+When an AI action is refused or fails, VitNode throws an `AiError` with a stable `code` such as `AI_USER_LIMIT_REACHED`. This page shows how to read that code in a route, in the browser and in a background job, what each code means and how to fix it, and how to react to finished runs with events.
+
+The examples continue the **Summarize topic** action from [AI actions](/docs/dev/ai/actions).
+
+## The error body
+
+A route that calls `c.get("ai").run()` does not need a `try`/`catch`. `AiError` is a Hono `HTTPException`, so an uncaught one becomes a response with the code's status and this JSON body:
+
+```json
+{
+  "code": "AI_USER_LIMIT_REACHED",
+  "message": "You used all your AI points for this period.",
+  "resetsAt": "2026-11-01T00:00:00.000Z",
+  "runId": 42
+}
+```
+
+- `resetsAt` is set for limit and budget errors.
+- `runId` is set when a run was recorded, so you can find it in **Debug Panel → AI logs**.
+- `message` is English, for logs. Key whatever the user sees on `code`.
+
+You can see one without spending anything. Core's member run route refuses a request without a session before it looks at the action:
+
+```bash
+curl -i -X POST http://localhost:3000/api/@vitnode/core/ai/run \
+  -H 'Content-Type: application/json' \
+  -H 'Origin: http://localhost:3000' \
+  -d '{"action":"@vitnode/forum:topic.summarize","input":{}}'
+```
+
+```text
+HTTP/1.1 403
+
+{"code":"AI_UNAUTHORIZED","message":"Sign in to use AI features."}
+```
+
+## Error codes
+
+| Code                     | Status | When                                                                    | What to do                                                          |
+| :----------------------- | :----- | :---------------------------------------------------------------------- | :------------------------------------------------------------------ |
+| `AI_NOT_CONFIGURED`      | 400    | No `ai.models` are configured.                                          | Add a model in [AI setup](/docs/dev/ai).                            |
+| `AI_INVALID_INPUT`       | 400    | The input failed `inputSchema`, or an object action was streamed.       | Send the shape the action's `inputSchema` expects.                  |
+| `AI_INPUT_TOO_LARGE`     | 413    | The input exceeds `maxInputCharacters` or `maxImages`.                  | Send less, or raise the limit on the action.                        |
+| `AI_DISABLED`            | 503    | An admin switched AI off for the whole site.                            | Switch it on in the AI **Settings** sheet.                          |
+| `AI_ACTION_DISABLED`     | 403    | An admin switched this action off.                                      | Switch it on in **Artificial Intelligence (AI) → Actions**.         |
+| `AI_ACTION_UNKNOWN`      | 404    | No installed plugin registers this key.                                 | Check the canonical key and the plugin's `aiActions`.               |
+| `AI_UNAUTHORIZED`        | 403    | Not signed in, no AI permission, `authorize()` refused, or wrong actor. | Sign in, grant the permission on the role, or check `authorize()`. |
+| `AI_MODEL_INCOMPATIBLE`  | 409    | No model has the required capabilities.                                 | Declare the capability on a model, e.g. `streaming` for streams.    |
+| `AI_PRICING_MISSING`     | 409    | The model has no pricing while a budget cap applies.                    | Add `pricing` to the model.                                         |
+| `AI_USER_LIMIT_REACHED`  | 429    | The user's monthly AI points are used up.                               | Wait for `resetsAt`, or give the role more points.                  |
+| `AI_DAILY_LIMIT_REACHED` | 429    | The user reached today's limit for this permission.                     | Wait for `resetsAt`, or raise the daily limit.                      |
+| `AI_RATE_LIMITED`        | 429    | Too many runs started in the last minute.                               | Try again in a minute.                                              |
+| `AI_CONCURRENCY_LIMITED` | 429    | Too many runs in flight.                                                | Wait for a running request to finish.                               |
+| `AI_BUDGET_EXHAUSTED`    | 503    | The site budget (or the system budget) for this month is used up.       | Wait for `resetsAt`, or raise the budget.                           |
+| `AI_DUPLICATE_REQUEST`   | 409    | The `idempotencyKey` was already used.                                  | Send a fresh key for a new run.                                     |
+| `AI_PROVIDER_FAILED`     | 502    | The provider returned an error.                                         | Try again; check the provider key and status.                       |
+| `AI_INVALID_OUTPUT`      | 502    | The answer was empty or failed `parseText()` / `outputSchema`.          | Try again; loosen the schema or tighten the prompt if it repeats.   |
+| `AI_TIMEOUT`             | 504    | The provider took longer than `timeoutMs`.                              | Try again, or raise `timeoutMs`.                                    |
+| `AI_CANCELED`            | 408    | The `signal` aborted the run.                                           | Nothing; the reader stopped it.                                     |
+
+VitNode charges a user only when they received output, meaning a valid result or streamed text that reached them before they stopped it. When the provider fails, times out or answers unusably, the site budget pays whatever the provider billed. [Who pays what](/docs/dev/ai/costs-and-limits#who-pays-what) has the full table.
+
+## Limits that refuse a run
+
+Four of those codes come from limits admins set. Core checks them before it sends anything to a provider, so a refusal costs nothing:
+
+| Limit          | Set in                                                     | Code                     |
+| :------------- | :--------------------------------------------------------- | :----------------------- |
+| Monthly points | Role form → **Artificial intelligence (AI)** tab           | `AI_USER_LIMIT_REACHED`  |
+| Daily count    | Role form, the action's settings or `defaults.dailyLimit`  | `AI_DAILY_LIMIT_REACHED` |
+| Rate and concurrency | AI **Settings** sheet (10 runs a minute and 2 at once per user by default) | `AI_RATE_LIMITED`, `AI_CONCURRENCY_LIMITED` |
+| Site budget    | AI **Settings** sheet → **Monthly site budget**            | `AI_BUDGET_EXHAUSTED`    |
+
+[AI in the AdminCP](/docs/dev/ai/admin#ai-access) shows where each one lives, and [Costs and budgets](/docs/dev/ai/costs-and-limits) explains how points and budgets are counted.
+
+## Show errors in the browser
+
+Core's browser helpers (`requestAiAssist()`, `streamAiAction()`) throw an `AiRequestError`. Read its code with `aiErrorCodeOf()`, which returns `"unknown"` for anything else, and translate it with Core's ready-made messages in `core.global.ai_assist.error`:
+
+```tsx
+import { aiErrorCodeOf } from '@vitnode/core/lib/ai/assist-client'
+import { useTranslations } from 'use-intl'
+
+const tError = useTranslations('core.global.ai_assist.error')
+
+try {
+  // requestAiAssist(...) or streamAiAction(...)
+} catch (caught) {
+  setError(tError(aiErrorCodeOf(caught))) // "You reached today's limit for this AI feature."
+}
+```
+
+`setError` is your component's own state setter. When you call your own route with `fetcher`, read `code` from the JSON body of a non-2xx response instead.
+
+## Handle errors on the server
+
+Import the helpers from `@vitnode/core/api/lib/ai/errors`:
+
+| Export            | What it is                                     |
+| :---------------- | :--------------------------------------------- |
+| `AiError`         | The error class, with `code` and `body`.       |
+| `isAiError(error)` | Whether a caught value is an `AiError`.       |
+| `AI_ERROR_CODES`  | Every code, as an array.                       |
+| `AI_ERROR_STATUS` | The HTTP status of each code.                  |
+
+Catch only the codes you can do something about, and rethrow the rest so the client still gets the right status.
+
+## Run an action in a background job
+
+A background job runs an action as the **system actor** with `c.get("ai").runAsSystem()`. System runs spend the site budget and the optional background jobs budget, never a member's points.
+
+First allow the system to run the action. Keep `user` so the AdminCP route still works:
+
+```ts title="plugins/forum/src/api/ai/actions.ts (excerpt)"
+const summarizeTopicAiAction = defineAiAction({
+  id: 'topic.summarize',
+  actors: ['user', 'system'], // [!code ++]
+  // ...the rest stays the same
+})
+```
+
+Then call it from a cron job and stop when the budget runs out, instead of failing on every topic:
+
+```ts title="plugins/forum/src/api/cron/summarize-topics.cron.ts"
+import { isAiError } from '@vitnode/core/api/lib/ai/errors'
+import { buildCron } from '@vitnode/core/api/lib/cron'
+
+import { SUMMARIZE_TOPIC_AI_ACTION } from '@/api/ai/actions'
+
+export const summarizeTopicsCron = buildCron({
+  name: 'summarize-new-topics',
+  description: 'Summarize new forum topics',
+  schedule: '*/15 * * * *',
+  handler: async (c) => {
+    for (const topic of await loadTopicsWithoutSummary(c)) {
+      try {
+        const { output } = await c.get('ai').runAsSystem({
+          action: SUMMARIZE_TOPIC_AI_ACTION,
+          input: { content: topic.content, title: topic.title },
+          resource: { type: 'forum_topic', id: topic.id },
+        })
+        await saveTopicSummary(c, topic.id, output)
+      } catch (error) {
+        // Out of budget: stop now and try again on the next tick.
+        if (isAiError(error) && error.code === 'AI_BUDGET_EXHAUSTED') return
+        throw error
+      }
+    }
+  },
+})
+```
+
+`loadTopicsWithoutSummary()` and `saveTopicSummary()` stand for your plugin's own queries; the forum has no summary column, so add one where you keep summaries. `resource` links each run in the AI logs to its topic.
+
+Register the job in a top-level module's `cronJobs`, for example the forum's `admin` module: `buildModule({ name: 'admin', cronJobs: [summarizeTopicsCron], ... })`. See [Cron jobs](/docs/dev/cron).
+
+## React to runs with events
+
+Each run that got past the budget reservation emits one event after it settles:
+
+| Event              | Payload                                                  |
+| :----------------- | :------------------------------------------------------- |
+| `ai.run.completed` | `actionKey`, `actorType`, `runId`, `userId`              |
+| `ai.run.failed`    | `actionKey`, `actorType`, `errorCode`, `runId`, `userId` |
+
+`userId` is `null` for system runs. Refusals before the reservation, such as a missing permission or a reached limit, emit nothing. A listener that throws never breaks the run.
+
+```ts title="plugins/forum/src/api/lib/ai-events.ts"
+import { buildEventListener } from '@vitnode/core/api/lib/events'
+
+export const aiFailureListener = buildEventListener({
+  event: 'ai.run.failed',
+  name: 'log-ai-failures',
+  handler: async (c, payload) => {
+    if (!payload.actionKey.startsWith('@vitnode/forum:')) return
+    await c
+      .get('log')
+      .warn(`AI run ${payload.runId} failed: ${payload.errorCode}`)
+  },
+})
+```
+
+Add it to a top-level module's `events` array, for example `buildModule({ name: 'admin', events: [aiFailureListener], ... })`. See [Events](/docs/dev/events) and [Built-in events](/docs/dev/events/built-in-events#ai-events).

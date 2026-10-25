@@ -1,6 +1,6 @@
 ---
-title: AI Usage
-description: Generate text, stream responses, get structured output and create embeddings with the Vercel AI SDK and the VitNode model registry.
+title: Direct SDK calls
+description: Call the Vercel AI SDK directly in VitNode API routes. Resolve a model with c.get("ai").model(), then generate text, stream a response, get structured output with Output.object or create embeddings.
 icon: Bot
 ---
 
@@ -29,61 +29,71 @@ VitNode uses the [Vercel AI SDK](https://ai-sdk.dev). Resolve a model from `c.ge
 
 ## Model resolvers
 
-| Resolver                          | Returned type    | Used by                                        |
-| :-------------------------------- | :--------------- | :--------------------------------------------- |
-| `c.get("ai").model(id?)`          | `LanguageModel`  | `generateText`, `streamText`, `generateObject` |
-| `c.get("ai").embeddingModel(id?)` | `EmbeddingModel` | `embed`, `embedMany`                           |
-| `c.get("ai").imageModel(id?)`     | `ImageModel`     | `generateImage`                                |
+| Resolver                          | Returned type    | Used by                      |
+| :-------------------------------- | :--------------- | :--------------------------- |
+| `c.get("ai").model(id?)`          | `LanguageModel`  | `generateText`, `streamText` |
+| `c.get("ai").embeddingModel(id?)` | `EmbeddingModel` | `embed`, `embedMany`         |
+| `c.get("ai").imageModel(id?)`     | `ImageModel`     | `generateImage`              |
+
+Without an `id`, each resolver returns the first model of its list in the [AI config](/docs/dev/ai). The examples below use the `ai` package that VitNode Core depends on (AI SDK 7).
 
 ---
 
 ## 1. Text generation
 
-Generate text in a Hono API route:
+Generate text in a staff-only API route. This one belongs to the `site-notes` plugin from the [learning path](/docs/dev/working-with-users/staff-permissions); add it to the plugin's admin `notes` module like any other route:
 
-```ts title="plugins/blog/src/api/modules/posts/routes/summarize.route.ts"
+```ts title="plugins/site-notes/src/api/modules/admin/notes/summarize.route.ts"
 import { generateText } from 'ai'
 import { z } from 'zod'
 
 import { buildRoute } from '@/api/builders'
 
 export const summarizeRoute = buildRoute({
+  adminStaffPermission: { module: 'notes', permission: 'can_view' },
   route: {
     method: 'post',
+    description: 'Summarize a text with the default AI model.',
     path: '/summarize',
     request: {
       body: {
+        required: true,
         content: {
-          'application/json': { schema: z.object({ text: z.string().min(1) }) },
+          'application/json': { schema: z.object({ text: z.string().min(1).max(20_000) }) },
         },
       },
     },
     responses: {
-      200: { description: 'Text summary' },
+      200: {
+        content: {
+          'application/json': { schema: z.object({ summary: z.string() }) },
+        },
+        description: 'Text summary',
+      },
     },
   },
   handler: async (c) => {
     const { text } = c.req.valid('json')
 
-    // [!code ++:6]
+    // [!code ++:5]
     const { text: summary } = await generateText({
       model: c.get('ai').model(),
       system: 'You are a concise summary assistant.',
-      prompt: `Summarize the following content:
-
-${text}`,
+      prompt: `Summarize the following content:\n\n${text}`,
     })
 
-    return c.json({ summary })
+    return c.json({ summary }, 200)
   },
 })
 ```
+
+`adminStaffPermission` keeps the route to staff who hold `notes` → `can_view`. Swap in a permission your own plugin declares.
 
 ---
 
 ## 2. Streaming responses
 
-Stream the model's answer to the client as it arrives:
+Stream the model's answer to the client as plain text:
 
 ```ts
 import { streamText } from 'ai'
@@ -92,21 +102,24 @@ handler: async (c) => {
   const result = streamText({
     model: c.get('ai').model(),
     prompt: 'Write an introduction to WebSockets.',
+    abortSignal: c.req.raw.signal,
   })
 
   // [!code ++:1]
-  return result.toDataStreamResponse()
+  return result.toTextStreamResponse()
 }
 ```
 
+For a chat UI built on the AI SDK's `useChat`, return `result.toUIMessageStreamResponse()` instead. To stream a managed action with budgets and history, see [Streaming](/docs/dev/ai/streaming).
+
 ---
 
-## 3. Structured output (`generateObject`)
+## 3. Structured output
 
-Get typed JSON back from the model, shaped by a Zod schema:
+Get typed JSON back from the model by passing an `output` setting to `generateText`. The model must support structured output:
 
 ```ts
-import { generateObject } from 'ai'
+import { generateText, Output } from 'ai'
 import { z } from 'zod'
 
 const postMetadataSchema = z.object({
@@ -115,19 +128,21 @@ const postMetadataSchema = z.object({
   estimatedReadingMinutes: z.number(),
 })
 
-// [!code ++:6]
-const { object } = await generateObject({
+// [!code ++:5]
+const { output } = await generateText({
   model: c.get('ai').model(),
-  schema: postMetadataSchema,
+  output: Output.object({ schema: postMetadataSchema }),
   prompt: 'Generate SEO metadata for an article on Postgres indexing.',
 })
 ```
+
+`output` is typed from the schema. `generateObject` still exists in AI SDK 7 but is deprecated in favour of this form.
 
 ---
 
 ## 4. Generating embeddings
 
-Turn text into a vector embedding for semantic search:
+Turn text into a vector embedding. This needs at least one entry in `ai.embeddingModels`, or `embeddingModel()` throws. See [Multiple models and embeddings](/docs/dev/ai#multiple-models--embeddings).
 
 ```ts
 import { embed } from 'ai'
@@ -143,13 +158,13 @@ const { embedding } = await embed({
 
 <Cards>
   <Card
-    title="AI Setup"
-    description="Configure providers (OpenAI, Anthropic, Ollama) in API config"
+    title="AI setup"
+    description="Configure models, capabilities and pricing in the API config"
     href="/docs/dev/ai"
   />
   <Card
-    title="Search & Discovery"
-    description="Full-text and semantic search across site collections"
-    href="/docs/dev/search"
+    title="AI actions"
+    description="Managed AI features with permissions, budgets and history"
+    href="/docs/dev/ai/actions"
   />
 </Cards>

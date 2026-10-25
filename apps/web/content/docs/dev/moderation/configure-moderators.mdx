@@ -8,7 +8,7 @@ import { ImgDocs } from "@/components/fumadocs/img";
 import scopeEditor from "./moderation-scope-editor.webp";
 import scopeDialog from "./moderation-scope-dialog.webp";
 
-You set up moderators on the same AdminCP screen as every other staff permission. This guide makes a user a moderator who handles blog reports everywhere and example article reports only in some categories.
+You set up moderators on the same AdminCP screen as every other staff permission. This guide makes a user a moderator who handles blog reports everywhere and newsroom story reports only in some categories.
 
 ## Before you begin
 
@@ -38,20 +38,20 @@ A permission that depends on another one stays locked until its dependency is ti
 
 ### Choose where a scoped permission applies
 
-A scoped permission shows its scope under the checkbox: **All resources**, or the number of selected resources. Here the example plugin's **View reports** covers two categories and the management permission covers one:
+A scoped permission shows its scope under the checkbox: **All resources**, or the number of selected resources. Here the newsroom plugin's **View reports** covers two categories and the management permission covers one:
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={scopeEditor}
-  alt="Edit permissions for SectionMod with the example plugin selected and the Articles module open. View reports shows 2 selected and Claim, assign, annotate and resolve reports shows 1 selected, each with a Change button"
+  alt="Edit permissions for Grace Hopper with the Newsroom plugin selected and its Stories module open. View reports shows 2 selected and Claim, assign, annotate and resolve reports shows 1 selected, each with a Change button"
 />
 
 Choose **Change** to open the picker. **All resources** includes resources created later. **Selected resources** lists the family's resources with a search box, loading more on demand:
 
 <ImgDocs
   src={scopeDialog}
-  alt="Where can they View reports dialog with Selected resources chosen, Announcements and Help desk selected, a Search Categories box, and Cancel and Apply buttons"
+  alt="Where can they View reports dialog with Selected resources chosen, Local news and Culture selected, a Search Categories box, and Cancel and Apply buttons"
 />
 
 Tick **Apply to every scoped permission in this module** to copy the same scope to the module's other scoped permissions. Each permission still saves its own scope, so you can narrow one afterwards.
@@ -70,7 +70,7 @@ Choose **Save changes**. The moderator's permissions apply on their next request
 
 ## Check the result
 
-Sign in as the moderator. The user menu now has a **Moderator CP** link to `/modcp/reports`, and the reports board shows blog reports plus example article reports from the two selected categories only. See [Process reports](/docs/dev/moderation/process-reports).
+Sign in as the moderator. The user menu now has a **Moderator CP** link to `/modcp/reports`, and the reports board shows blog reports plus newsroom story reports from the two selected categories only. See [Process reports](/docs/dev/moderation/process-reports).
 
 ## When saving is refused
 

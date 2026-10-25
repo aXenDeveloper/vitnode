@@ -29,13 +29,11 @@ The fan-out task walks the recipients in batches of `fanoutBatchSize`, 500 by de
 - **Large audiences do not block the queue.** One task stops after 20 seconds and queues a new task for the rest.
 - **No deadlocks between writers.** Every inbox write locks the affected members in user id order, so concurrent writers wait for each other instead.
 
-The integration test `fanout.load.integration.test.ts` delivers one notification to 1,000 members with batches of 200, with two workers racing on the same event. It checks that every member gets exactly one item, that `access` runs about once per batch and that the number of queries stays below the number of recipients.
-
 ## Recovery
 
 | Stuck work                                     | Recovered by                                                                |
 | ---------------------------------------------- | --------------------------------------------------------------------------- |
-| Queue task left processing by a stopped worker | The queue worker, after 15 minutes                                          |
+| Queue task left processing by a stopped worker | The queue worker, after 10 minutes (the task's lease, 600 s by default)     |
 | Notification unfinished with no task left      | `notifications-schedule`, after 10 minutes, by queuing a new task           |
 | Email left in `sending`                        | `notifications-schedule`, after 15 minutes, by setting it back to `pending` |
 | Two workers on one notification                | A row lock. The second waits, then continues from the saved progress        |

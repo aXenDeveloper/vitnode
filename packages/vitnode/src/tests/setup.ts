@@ -18,6 +18,8 @@ vi.mock("use-intl", async importOriginal => {
 
   return {
     ...actual,
+    useFormatter: () =>
+      actual.createFormatter({ locale: "en", timeZone: "UTC" }),
     useLocale: () => "en",
     useTranslations,
   };

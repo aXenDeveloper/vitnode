@@ -14,16 +14,18 @@ Live editing lets a team work on the same record at the same time without overwr
 
 Add `liveEditing: true` next to [`editorial`](/docs/content-engine/editorial). Live editing needs `editorial`, because field locks and the shared draft are measured against the record version it adds. Without it, `defineContentType` throws ``liveEditing needs `editorial` ``, and TypeScript flags the option first:
 
-```ts title="plugins/example/src/content/article.ts"
-export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
-  editorial: true,
-  liveEditing: true, // [!code highlight]
-  fields: {
-    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
-    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+```ts title="plugins/newsroom/src/content/story.ts (excerpt)"
+export const storyContentType = defineContentType({
+  id: "newsroom.story",
+  tableName: "newsroom_stories",
+  // ...
+  editorial: {
+    revisions: { retention: 20 },
+    preview: { expiresInMinutes: 30 },
+    scheduling: true,
   },
+  liveEditing: true, // [!code highlight]
+  // ...
 });
 ```
 
@@ -51,7 +53,7 @@ Clicking into a plain field, such as a title, slug or category, takes a lock on 
   withoutBackground
   className="*:max-w-full"
   src={fieldLock}
-  alt="Edit Article dialog as Tom Becker sees it while Anna Kowalska edits the title: a teal outline with an Anna Kowalska name tag around the dimmed Title field, and her avatar with a teal ring in the header"
+  alt="Edit Story dialog as a second editor sees it while Test Admin edits the title: a teal outline with a Test Admin name tag around the dimmed Title field, and the Test Admin avatar with a teal ring in the header"
 />
 
 A lock lasts 60 seconds and renews every 20 seconds while the editor stays in the field. Leaving the field releases it, and so does closing the record. A lock nobody renews, say because a laptop went to sleep, expires on its own.
@@ -62,11 +64,11 @@ About 1.5 seconds after you stop typing in a field you hold, the value is saved 
 
 Changed your mind? **Discard** next to the autosave time throws the draft away after you confirm, and the form goes back to the last saved version. It is a team draft, so everyone editing the record goes back too, and they get a short note saying so.
 
-There is one draft per record and language, shared by the whole team. When you open the record, you see the draft, not only what was last saved. **Save** commits it through the usual [version check](/docs/content-engine/editorial#safe-concurrent-edits) and creates one revision. Autosave itself never creates revisions, emits no events and leaves search and caches alone. [Preview links](/docs/content-engine/editorial#preview-links) also ignore the draft until someone saves.
+There is one draft per record and language, shared by the whole team. When you open the record, you see the draft, not only what was last saved. **Save** commits it through the usual [version check](/docs/content-engine/editorial#safe-concurrent-edits) and creates one revision. Autosave itself never creates revisions, emits no events and leaves search and caches alone. [Preview links](/docs/content-engine/editorial-previews) also ignore the draft until someone saves.
 
 ### Rich text co-editing
 
-Rich text fields are not locked and get no outline. Everyone in the same field and language types into one shared document and sees each other's caret with a name tag, plus a tint over the text they select. Undo only undoes your own changes. The example plugin's article has no rich text field, so this is the blog plugin's article editor:
+Rich text fields are not locked and get no outline. Everyone in the same field and language types into one shared document and sees each other's caret with a name tag, plus a tint over the text they select. Undo only undoes your own changes. The newsroom plugin's story has no rich text field, so this is the blog plugin's article editor:
 
 <ImgDocs
   withoutBackground

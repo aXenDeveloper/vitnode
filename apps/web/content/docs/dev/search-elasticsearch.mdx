@@ -10,6 +10,21 @@ Use Elasticsearch when your site-wide search needs fuzzy matching, custom
 ranking, or a search cluster separate from Postgres. VitNode keeps Postgres as
 the canonical index; this adapter mirrors it, so switching is pleasantly boring.
 
+## Before you begin
+
+- **An Elasticsearch or OpenSearch cluster.** For a local try, start a single-node Elasticsearch in Docker. It has security switched off, so keep it on your machine:
+
+  ```bash
+  docker run -d --name vitnode-elasticsearch -p 9200:9200 \
+    -e discovery.type=single-node -e xpack.security.enabled=false \
+    docker.elastic.co/elasticsearch/elasticsearch:9.1.0
+  ```
+
+  `curl http://localhost:9200` answers with the cluster name and version once it is up.
+- **An AdminCP account with `system:can_manage_search`** (root roles have it) to run the first rebuild.
+
+## Switch to Elasticsearch
+
 <Steps>
 <Step>
 
@@ -79,21 +94,6 @@ collection) needs the **Rebuild and clear the search index** permission
 </Step>
 </Steps>
 
-<Callout type="info" title="Upgrading an existing index">
-  Documents now carry `authorIds` (a list) instead of `authorId`, plus drafts as
-  private documents. If your index was created before that, delete it in
-  Elasticsearch and run **Rebuild index**. VitNode recreates it with the new
-  mapping.
-</Callout>
-
-<Callout type="info" title="Indexes created before uuid and bigint ids">
-  Documents now carry an `itemKey` keyword with the record id as text, so [uuid
-  and bigint](/docs/content-engine/id-strategy) records can be found. VitNode
-  adds the field to an existing index the first time it uses it. Older documents
-  get a value on the next **Rebuild index**; until then, results fall back to
-  the numeric `itemId`, which works for serial ids only.
-</Callout>
-
 <Callout type="info" title="Totals stop at 10,000">
   Elasticsearch counts matches up to 10,000, the same depth you can page to.
   Past that, `totalCount` reads 10,000 and means "at least this many" - nobody
@@ -105,17 +105,39 @@ collection) needs the **Rebuild and clear the search index** permission
   lets you switch providers without losing your map back home.
 </Callout>
 
-## Next
+## Check the result
+
+- **Debug Panel → Search** names `elasticsearch` on the **Engine** card, and the collection counts match what you indexed.
+- A search from the public API returns hits from the cluster:
+
+  ```bash
+  curl "http://localhost:3000/api/@vitnode/core/search?search=hello"
+  ```
+
+## Upgrading an index from an earlier version
+
+Documents now carry `authorIds` (a list) instead of `authorId`, plus drafts as
+private documents. If your index was created before that, delete it in
+Elasticsearch and run **Rebuild index**. VitNode recreates it with the new
+mapping.
+
+Documents now carry an `itemKey` keyword with the record id as text, so search
+can find [uuid and bigint](/docs/content-engine/id-strategy) records. VitNode
+adds the field to an existing index the first time it uses it. Older documents
+get a value on the next **Rebuild index**; until then, results fall back to
+the numeric `itemId`, which works for serial ids only.
+
+## Related
 
 <Cards>
   <Card
-    title="Search & Discovery"
+    title="Search"
     description="Index plugin records and register rebuild indexers."
     href="/docs/dev/search"
   />
   <Card
     title="Content Engine"
     description="Make a content type searchable without hand-writing an indexer."
-    href="/docs/content-engine/public-pages"
+    href="/docs/content-engine/search"
   />
 </Cards>

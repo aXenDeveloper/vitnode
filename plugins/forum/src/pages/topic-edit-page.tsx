@@ -1,16 +1,13 @@
+import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
 import type { ContentApprovalState } from "@vitnode/core/content";
 
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  type AutoFormOnSubmit,
-  setFormFieldError,
-} from "@vitnode/core/components/form/auto-form";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@vitnode/core/components/ui/alert";
-import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
+import { buttonVariants } from "@vitnode/core/components/ui/button";
 import {
   CONTENT_PUBLIC_WRITE_ISSUE_CODES,
   parseContentPublicWriteRejection,
@@ -20,6 +17,7 @@ import {
   definePluginRoute,
   type PluginRoutePageProps,
 } from "@vitnode/core/routing";
+import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import {
@@ -30,17 +28,15 @@ import {
   ShieldAlertIcon,
   XCircleIcon,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { manifest } from "@/manifest.gen";
 
-import type { TopicEditSearch } from "./forum-links";
 import type { TopicFormValues } from "./topic-form";
 
-import { useForumRejection } from "./forum-errors";
 import {
   FORUM_HREF,
   FORUM_PENDING_HREF,
@@ -63,19 +59,23 @@ const zodProposedValues = z
   })
   .catch({});
 
-const loadEditableTopic = async (param: string) => {
-  const id = Number(param);
-  if (!Number.isSafeInteger(id) || id < 1) {
-    return { state: "notFound" as const };
-  }
-
-  const res = await fetcher({
+// Answers only for the author and moderators, drafts and hidden topics included.
+const fetchEditableTopic = async (id: number) =>
+  await fetcher({
     plugin: manifest.id,
     method: "get",
     module: "content/topics",
     path: "/{id}/edit",
     args: { params: { id } },
   });
+
+const loadEditableTopic = async (param: string) => {
+  const id = Number(param);
+  if (!Number.isSafeInteger(id) || id < 1) {
+    return { state: "notFound" as const };
+  }
+
+  const res = await fetchEditableTopic(id);
 
   if (res.status === 200) {
     return { record: await res.json(), state: "ready" as const };
@@ -108,7 +108,7 @@ const TopicEditBreadcrumb = () => {
   return <span>{t("title")}</span>;
 };
 
-export const route = definePluginRoute<TopicEditData, TopicEditSearch>({
+export const route = definePluginRoute<TopicEditData>({
   load: async ({ params }) => await loadEditableTopic(params.id),
 
   head: ({ t }) => ({
@@ -133,15 +133,12 @@ const formValuesOf = (record: EditableTopic): TopicFormValues => {
   };
 };
 
+/** Reads only the server's `approval`: neither the URL nor a draft status adds a notice. */
 const ApprovalNotice = ({
   approval,
-  status,
-  submitted,
 }: {
   /** Only what the notice reads, so the edit route's JSON answer fits as is. */
   approval: null | Pick<ContentApprovalState, "kind" | "reason" | "status">;
-  status: EditableTopic["status"];
-  submitted: boolean;
 }) => {
   const t = useTranslations("@vitnode/forum.topics.approval");
 
@@ -167,12 +164,7 @@ const ApprovalNotice = ({
     );
   }
 
-  if (
-    submitted ||
-    (status === "draft" &&
-      approval?.status === "pending" &&
-      approval.kind === "create")
-  ) {
+  if (approval?.status === "pending" && approval.kind === "create") {
     return (
       <Alert icon={<HourglassIcon />} variant="info">
         <AlertTitle>{t("pending_create.title")}</AlertTitle>
@@ -189,105 +181,73 @@ const ApprovalNotice = ({
   return null;
 };
 
-const TopicEditForm = ({
-  record,
-  submitted,
-}: {
-  record: EditableTopic;
-  submitted: boolean;
-}) => {
+const TopicEditForm = ({ record }: { record: EditableTopic }) => {
   const t = useTranslations("@vitnode/forum.topics");
-  const tErrors = useTranslations("@vitnode/forum.forums.errors");
-  const rejectTopic = useForumRejection(TOPIC_FORM_FIELDS);
   const queryClient = useQueryClient();
-  const versionRef = useRef(record.version);
   const [current, setCurrent] = useState({
     approval: record.approval,
     slug: record.slug,
     status: record.status,
   });
-  const [hasConflict, setHasConflict] = useState(false);
+  // The form's defaults follow every save: AutoForm resets an untouched form
+  // to whatever `defaultValues` it renders with.
+  const [defaults, setDefaults] = useState(() => formValuesOf(record));
+  const write = useContentPublicWrite({
+    fields: TOPIC_FORM_FIELDS,
+    latestVersion: async () => {
+      const res = await fetchEditableTopic(record.id);
+
+      return res.status === 200 ? (await res.json()).version : null;
+    },
+    uniqueField: "title",
+    version: record.version,
+  });
 
   const onSubmit: AutoFormOnSubmit<TopicFormSchema> = async (values, form) => {
-    const res = await fetcher({
-      plugin: manifest.id,
-      method: "patch",
-      module: "content/topics",
-      path: "/{id}",
-      args: {
-        params: { id: record.id },
-        body: { values, expectedVersion: versionRef.current },
-      },
+    const updated = await write.submit(
+      form,
+      async expectedVersion =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "patch",
+          module: "content/topics",
+          path: "/{id}",
+          args: {
+            params: { id: record.id },
+            body: { values, expectedVersion },
+          },
+        }),
+    );
+    if (!updated) return;
+
+    setCurrent({
+      approval: updated.approval,
+      slug: updated.slug,
+      status: updated.status,
     });
+    setDefaults(values);
+    form.reset(values);
+    await invalidateForumTopics(queryClient);
 
-    if (res.status === 200) {
-      const updated = await res.json();
-      await invalidateForumTopics(queryClient);
-      versionRef.current = updated.version;
-      setCurrent({
-        approval: updated.approval,
-        slug: updated.slug,
-        status: updated.status,
+    if (updated.approval?.status === "pending") {
+      toast.info(t("edit.pending.title"), {
+        description: t("edit.pending.desc"),
       });
-      setHasConflict(false);
-      form.reset(values);
-
-      if (updated.approval?.status === "pending") {
-        toast.info(t("edit.pending.title"), {
-          description: t("edit.pending.desc"),
-        });
-      } else {
-        toast.success(t("edit.success.title"), {
-          description: t("edit.success.desc", { title: values.title }),
-        });
-      }
-
-      return;
+    } else {
+      toast.success(t("edit.success.title"), {
+        description: t("edit.success.desc", { title: values.title }),
+      });
     }
-
-    if (res.status === 409) {
-      const conflict = await res.json();
-
-      if (conflict.code === "CONTENT_VERSION_CONFLICT") {
-        setHasConflict(true);
-      } else {
-        setFormFieldError(form, "title", tErrors("unique"));
-      }
-
-      return;
-    }
-
-    await rejectTopic(res, form);
   };
 
   return (
     <>
-      <ApprovalNotice
-        approval={current.approval}
-        status={current.status}
-        submitted={submitted}
-      />
+      <ApprovalNotice approval={current.approval} />
 
-      {hasConflict ? (
-        <Alert variant="warning">
-          <AlertTitle>{t("edit.conflict.title")}</AlertTitle>
-          <AlertDescription>{t("edit.conflict.desc")}</AlertDescription>
-          <div className="flex pt-2">
-            <Button
-              onClick={() => {
-                window.location.reload();
-              }}
-              size="sm"
-              variant="outline"
-            >
-              {t("edit.conflict.reload")}
-            </Button>
-          </div>
-        </Alert>
-      ) : null}
+      {write.conflict}
 
       <TopicForm
-        defaultValues={formValuesOf(record)}
+        defaultValues={defaults}
         onSubmit={onSubmit}
         submitLabel={t("edit.submit")}
       />
@@ -310,8 +270,7 @@ const TopicEditForm = ({
 const TopicEditPage = ({
   loaderData,
   params,
-  search,
-}: PluginRoutePageProps<TopicEditData, TopicEditSearch>) => {
+}: PluginRoutePageProps<TopicEditData>) => {
   const t = useTranslations("@vitnode/forum.topics");
 
   if (loaderData.state === "unauthenticated") {
@@ -367,11 +326,7 @@ const TopicEditPage = ({
 
   return (
     <ForumShell description={t("edit.desc")} title={t("edit.title")}>
-      <TopicEditForm
-        key={params.id}
-        record={loaderData.record}
-        submitted={search.submitted === true}
-      />
+      <TopicEditForm key={params.id} record={loaderData.record} />
     </ForumShell>
   );
 };

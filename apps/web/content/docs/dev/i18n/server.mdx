@@ -1,21 +1,23 @@
 ---
-title: API i18n
+title: API translations
 description: Translate emails and API responses with VitNode's request-scoped API translator.
 icon: Server
 ---
 
-The API gets the same message tree the frontend does, reachable in any route as `c.get("i18n")`.
+The API has its own translator, reachable in any route as `c.get("i18n")`. Use it for output that has no UI to translate it, such as an email. Anything the web app shows, return as an i18n key and let the frontend translate it, so the text follows the visitor's language and a cached response works in every language.
 
 ```ts
 const t = await c.get('i18n').getTranslator()
 
-return c.json({ message: t('core.global.save') })
+const subject = t('welcome.email.subject')
 ```
 
-<Callout title="Nothing is copied" type="info">
-  The API reads locale files straight out of `node_modules`. There is no build
-  step to remember and no `src/locales/` folder to keep in sync - install a
-  plugin and its translations are available on the server immediately.
+<Callout title="Package strings come from the packages" type="info">
+  The API reads each installed package's server strings straight from the
+  package, so a plugin's translations are available as soon as it is
+  installed. Your app's own rewordings and extra languages are the one part you
+  register yourself, as `i18n.messages` in `vitnode.api.config.ts`; see
+  [Overriding strings](/docs/dev/i18n#overriding-strings).
 </Callout>
 
 The server loads a different, smaller set of strings than the frontend. Packages ship two trees - the frontend's UI copy in `src/locales/`, and the server's strings (emails) in `src/locales/api/` - and the API only ever loads the second. An API-only app never pulls in the admin UI's messages.
@@ -159,7 +161,7 @@ export const yourPlugin = () =>
     manifest,
     localeFiles: {
       // [!code ++:2]
-      en: '@acme/your-plugin/locales/en.json',
+      en: 'your-plugin/locales/en.json',
     },
     messages,
   })

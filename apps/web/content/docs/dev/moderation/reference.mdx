@@ -34,15 +34,15 @@ Added to the content type's `permissionModule` in the **moderator** catalog, unl
 
 Content actions also need `can_manage_reports`, because they are recorded in the report.
 
-[Public write](/docs/content-engine/public-write-api#moderator-permission) adds `can_edit` to the same module. In a container collection with [publishing policies](/docs/content-engine/container-policies), `can_edit` and `can_approve` are scoped by the collection's family, whose id is the container definition id and whose resources are container ids and `"{id}:tree"` subtrees. See [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions). Generated entries merge with the report permissions; only a module the plugin declares itself in `permissionStaff.moderator` is left as declared.
+[Write API](/docs/content-engine/public-write-api#moderator-permission) adds `can_edit` to the same module. In a container collection with [publishing policies](/docs/content-engine/container-policies), `can_edit` and `can_approve` are scoped by the collection's family, whose id is the container definition id and whose resources are container ids and `"{id}:tree"` subtrees. See [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions). Generated entries merge with the report permissions; only a module the plugin declares itself in `permissionStaff.moderator` is left as declared.
 
 ## Scoped grants
 
 A stored grant is `{ plugin, module, permission, scope? }`. `scope` is one of:
 
 ```ts
-{ family: "example.category", mode: "all" }
-{ family: "example.category", mode: "selected", ids: ["1", "2"] }
+{ family: "newsroom.category", mode: "all" }
+{ family: "newsroom.category", mode: "selected", ids: ["1", "2"] }
 ```
 
 Declare a scoped permission with `{ permission, dependsOn?, scope: "family.id" }` in `permissionStaff.moderator`. Admin permissions cannot be scoped. Resource ids match `/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/`.

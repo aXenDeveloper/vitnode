@@ -212,7 +212,7 @@ A count only includes articles a reader can open in that language, the same
 ones `/blog` lists. Names stay cached until a category changes, and counts until
 an article is published, edited, hidden or deleted. To put a blog list on
 another page with your own layout, see
-[Add a list to another page](/docs/content-engine/public-lists-embed).
+[Embedded list](/docs/content-engine/public-lists-embed).
 
 ### Article authors
 
@@ -246,7 +246,7 @@ curl "http://localhost:3000/api/@vitnode/blog/content/blog?locale=en&first=1"
 }
 ```
 
-The response is trimmed here. A deleted account simply drops out of the list.
+The response is trimmed here. A deleted account drops out of the list.
 
 ## Write and translate articles
 
@@ -295,8 +295,8 @@ The **More actions** menu of an article in the list has **Hide** and
 sitemap without unpublishing it, and **Unhide** brings it back with the same
 URL and date. It needs the **Hide and unhide articles** permission. Duplicating
 makes a draft copy with every translation, such as "Hello world (Copy)". See
-[Hide content](/docs/content-engine/content-visibility) and
-[Duplicate content](/docs/content-engine/duplicate-content).
+[Visibility](/docs/content-engine/content-visibility) and
+[Duplication](/docs/content-engine/duplicate-content).
 
 ### Translate side by side
 
@@ -384,7 +384,7 @@ together.
   <Card
     icon={<RouteIcon />}
     title="Build your first plugin"
-    description="Create the plugin that will own your site’s public blog route."
+    description="Create the plugin that will own your site's public blog route."
     href="/docs/guides/first-plugin"
   />
   <Card

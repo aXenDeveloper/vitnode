@@ -10,12 +10,13 @@ import formReferences from "./fields-article-form-references.webp";
 
 A field is one property of a content type, such as a title or a view count. You build each one with a helper from `field`, exported by `@vitnode/core/content`. The helper decides three things at once: the Postgres column, the validation of every write and the control in the AdminCP form.
 
-```ts title="plugins/example/src/content/article.ts"
+```ts title="plugins/newsroom/src/content/story.ts (excerpt)"
 import { defineContentType, field } from "@vitnode/core/content";
 
-export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
+export const storyContentType = defineContentType({
+  id: "newsroom.story",
+  tableName: "newsroom_stories",
+
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
     slug: field.slug({ source: "title" }),
@@ -26,13 +27,13 @@ export const articleContentType = defineContentType({
 });
 ```
 
-The example plugin's article form shows most controls. The first half holds the plain values:
+The newsroom plugin's story form shows most controls. The first half holds the plain values:
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={formBasic}
-  alt="Create Article dialog with inputs for Title, Slug and Reference code, an Excerpt textarea with an AI button, a Views number input with minus and plus buttons, and switches for Featured and No index"
+  alt="Create Story dialog with inputs for Title, Slug and Reference code, an Excerpt textarea, a Views number input with minus and plus buttons, and switches for Featured and No index"
 />
 
 The second half holds the references: a user picker, two file dropzones and a relation picker.
@@ -41,7 +42,7 @@ The second half holds the references: a user picker, two file dropzones and a re
   withoutBackground
   className="*:max-w-full"
   src={formReferences}
-  alt="Lower half of the Create Article dialog: an Author select, an Animation dropzone that accepts one GIF up to 10 MB, a Gallery dropzone for up to 8 images and a Category search picker"
+  alt="Lower half of the Create Story dialog: an Author select, an Animation dropzone that accepts one GIF up to 10 MB, a Gallery dropzone for up to 8 images and a Category search picker"
 />
 
 ## Field helpers
@@ -175,7 +176,7 @@ slug: field.slug({ source: "title" }),
 
 A slug has no `required` or `nullable` option. It is required when there is no `source`, and it is never empty. Every value is normalized, so `"Weekend Pancakes!"` becomes `weekend-pancakes`. Slugs are unique across the table, or within each language when localized. The slug is derived only on create, so renaming the title later keeps the old URL. `source` must name a `field.text()`, and a localized slug needs a localized source.
 
-For records without a natural title, such as forum comments, use `field.slug({ generated: true })`. The server mints a random token of lowercase letters and digits, 10 characters or `maxLength` if shorter, such as `k3v9q2m7xa`. A generated slug cannot be `localized` or have a `source`, and it is never [publicly writable](/docs/content-engine/public-write-api#writable-fields). See [Threaded replies](/docs/content-engine/threads).
+For records without a natural title, such as forum comments, use `field.slug({ generated: true })`. The server mints a random token of lowercase letters and digits, 10 characters or `maxLength` if shorter, such as `k3v9q2m7xa`. A generated slug cannot be `localized` or have a `source`, and it is never [publicly writable](/docs/content-engine/public-write-api#writable-fields). See [Comments](/docs/content-engine/threads).
 
 ## User
 
@@ -236,12 +237,12 @@ category: field.relation({ required: true, onDelete: "restrict", target: () => c
 
 A single relation must be `required` or `nullable`. A to-many relation can be neither. A to-one `self: true` relation, such as the reply a reply answers, must be `nullable`, because the first record has nothing to point at.
 
-`container: true` files the record in the container of the record it points at, such as a comment in its topic's forum. The server always reads that container from the related row, so a client cannot claim another one, and [publishing policies](/docs/content-engine/container-policies) and container-scoped moderators apply as if the record had its own `field.container()`. A content type takes its container from one field only: one `field.container()` or one `container: true` relation. The target must have a `field.container()`, or the API stops at boot with ``Field "x" is `container: true`, but its target ... is not filed in a container.`` The column has the type of the target's key: `integer`, `uuid` or `bigint`, depending on its [`idStrategy`](/docs/content-engine/id-strategy). [Relations](/docs/content-engine/relations) shows the model wiring and the junction tables.
+`container: true` files the record in the container of the record it points at, such as a comment in its topic's forum. The server always reads that container from the related row, so a client cannot claim another one, and [publishing policies](/docs/content-engine/container-policies) and container-scoped moderators apply as if the record had its own `field.container()`. A content type takes its container from one field only: one `field.container()` or one `container: true` relation. The target must have a `field.container()`, or the API stops at boot with ``Field "x" is `container: true`, but its target ... is not filed in a container.`` The column has the type of the target's key: `integer`, `uuid` or `bigint`, depending on its [`idStrategy`](/docs/content-engine/id-strategy). [Relations](/docs/content-engine/relations) shows the model wiring, and [Advanced fields](/docs/content-engine/relations-advanced) the junction tables.
 
 ## Container
 
 ```ts
-board: field.container({ definition: boardContainers, required: true }),
+desk: field.container({ definition: deskContainers, required: true }),
 ```
 
 | Name          | Type                              | Required | Default | Description                                                        |
@@ -250,11 +251,11 @@ board: field.container({ definition: boardContainers, required: true }),
 | `required`    | `boolean`                         | No       | `false` | Every record needs a container. Without it, a record may have none |
 | `description` | `string`                          | No       |         | Text or an i18n key shown under the picker in the AdminCP          |
 
-`field.container()` files a record into one container of a [container collection](/docs/content-engine/containers), such as a discussion into a forum board. `nullable` is always the opposite of `required`, so there is no `nullable` option, no default and no `localized`. A content type can have at most one container field, and its collection must be registered with `buildContentAdminModule({ containers })`.
+`field.container()` files a record into one container of a [container collection](/docs/content-engine/containers), such as a letter into a newsroom desk. `nullable` is always the opposite of `required`, so there is no `nullable` option, no default and no `localized`. A content type can have at most one container field, and you must register its collection with `buildContentAdminModule({ containers })`.
 
 The column is an `ON DELETE RESTRICT` foreign key with an index on the field (plus `publishedAt` when `publication` is on), so a container that still holds records cannot be deleted. Every write checks that the id belongs to the field's collection and answers `400` with `CONTAINER_NOT_FOUND` or `CONTAINER_DEFINITION_MISMATCH` otherwise.
 
-The public API returns the container as its id. In `publicApi.filterableFields`, it filters a list with `?board=4`, and `includeDescendants=true` widens that to the whole subtree. In `publicWrite`, it may be listed in `create.fields` but not in `update.fields`. [Containers on the frontend](/docs/content-engine/container-frontend) shows both.
+The public API returns the container as its id. In `publicApi.filterableFields`, it filters a list with `?desk=4`, and `includeDescendants=true` widens that to the whole subtree. In `publicWrite`, it may be listed in `create.fields` but not in `update.fields`. [Container pages](/docs/content-engine/container-frontend) shows both.
 
 ## Group
 
@@ -298,7 +299,7 @@ Rows live in a child table. A repeatable is always shared between languages.
 ## Blocks
 
 ```ts
-content: field.blocks({ allowed: ["core:*", "example:callout", "example:features"], max: 50 }),
+content: field.blocks({ allowed: ["core:*", "newsroom:callout", "newsroom:features"], max: 50 }),
 ```
 
 | Name          | Type                | Required | Default | Description                                    |
@@ -318,7 +319,7 @@ content: field.blocks({ allowed: ["core:*", "example:callout", "example:features
 ```ts
 excerpt: field.textarea({
   ai: {
-    action: "@vitnode/example:article.excerpt",
+    action: "newsroom:story.excerpt",
     mode: "suggestion",
     sourceFields: ["title", "code"],
   },
@@ -333,7 +334,7 @@ excerpt: field.textarea({
 | `mode`         | `"suggestion"`            | Yes      |         | The only supported mode. The editor reviews the text before it is used |
 | `sourceFields` | `string[]`                | Yes      |         | Other fields of this content type sent to the action as input          |
 
-[AI in fields and the editor](/docs/dev/ai/fields-and-editor) shows how to write the action.
+[Field suggestions](/docs/dev/ai/fields-and-editor) shows how to write the action.
 
 ## Searching and sorting
 

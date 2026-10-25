@@ -1,0 +1,101 @@
+---
+title: URL parameters
+description: Read dynamic segments, catch-all paths and typed search parameters in VitNode plugin routes, and update the query string with the page's navigate prop.
+icon: Brackets
+---
+
+A plugin route reads three parts of the URL: dynamic segments such as `:id`, a catch-all tail with `*`, and the query string. All three reach the loader and the page as props, typed where you declare a type.
+
+## Dynamic segments
+
+Write `:name` for a segment that varies. The value arrives as a string in `params`, in `load`, `head`, `breadcrumb` and the page:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/site-notes/notes/:id', {
+  component: lazy(() => import('./pages/note-page')),
+}),
+```
+
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+
+const NotePage = ({ params }: PluginRoutePageProps) => <h1>Note {params.id}</h1>
+
+export default NotePage
+```
+
+`params.id` is always a string. Convert and validate it before you use it, and throw `notFound()` from `@tanstack/react-router` for a value that cannot match a record. [Add a route](/docs/dev/routing/first-route) shows the full loader.
+
+## Catch-all paths
+
+A trailing `*` matches every remaining segment, so one page can own a whole subtree. It must be the last segment, and only a `page()` may end in one:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/site-notes/files/*', {
+  component: lazy(() => import('./pages/files-page')),
+}),
+```
+
+The matched tail arrives as `params._splat`. For `/site-notes/files/2026/october`, it is `2026/october`:
+
+```tsx title="plugins/site-notes/src/pages/files-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+
+const FilesPage = ({ params }: PluginRoutePageProps) => {
+  const segments = (params._splat ?? '').split('/').filter(Boolean)
+
+  return <p className="leading-relaxed">{segments.join(' / ')}</p>
+}
+
+export default FilesPage
+```
+
+## Search parameters
+
+Declare `search` on the route in `routes.ts` to parse the query string. The router runs it while it matches the URL, before the page chunk loads, and its return type becomes the page's `search` prop:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/site-notes/notes', {
+  component: lazy(() => import('./pages/notes-page')),
+  // [!code ++:3]
+  search: (input: Record<string, unknown>) => ({
+    page: Number(input.page) || 1,
+  }),
+}),
+```
+
+The page reads `search` and changes it with `navigate`, which stays on the same path:
+
+```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+
+import { Button } from '@vitnode/core/components/ui/button'
+
+interface NotesSearch {
+  page: number
+}
+
+const NotesPage = ({ navigate, search }: PluginRoutePageProps<undefined, NotesSearch>) => (
+  <Button
+    onClick={() => void navigate({ search: { page: search.page + 1 } })}
+    type="button"
+  >
+    Page {search.page + 1}
+  </Button>
+)
+
+export default NotesPage
+```
+
+Pass `resetScroll: false` to `navigate` to keep the scroll position, for example when a filter changes. The loader also receives `search`, so it can fetch the right page. Key the query on the search values and use `placeholderData: keepPreviousData` so the current page stays on screen while the next loads; see [Loading states](/docs/dev/routing/loading#keep-data-on-screen-during-refetches).
+
+A layout cannot declare `search`, because it has no URL of its own.
+
+### `parseSearch` in the page module
+
+A page module's `route` can declare `parseSearch` instead. It runs inside the loader, after the page chunk has loaded, and only when `routes.ts` declares no `search`. Prefer `search` in `routes.ts`, which parses the URL before the page chunk downloads.
+
+## Related
+
+- [Navigation](/docs/dev/routing/navigation): link to a page with parameters and a query string.
+- [Route module](/docs/dev/routing/route-module): every argument `load` and `head` receive.

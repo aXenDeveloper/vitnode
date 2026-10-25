@@ -1,5 +1,5 @@
 ---
-title: Passkeys (WebAuthn)
+title: Passkeys
 description: Let members sign in with Face ID, Touch ID, Windows Hello or a security key. Configure the RP ID and origins, run the migration, and learn how the WebAuthn ceremonies work in VitNode.
 icon: FingerprintPattern
 ---
@@ -137,17 +137,16 @@ Every ceremony is two requests: **options** (the server issues a challenge) and 
 | `PATCH`  | `/{id}`             | the passkey's owner | Renames it                                                                                     |
 | `DELETE` | `/{id}`             | the passkey's owner | Removes it - refused with `409 last_recovery_method` if it's the account's last way in         |
 
-From the frontend, call them with the typed fetcher - `module: "users/passkeys"` - like any other core route:
+From the frontend, call them with the universal [fetcher](/docs/dev/fetcher) and `module: "users/passkeys"`, like any other core route:
 
 ```ts
-import { fetcherClient } from "@vitnode/core/lib/fetcher-client"
+import { fetcher } from "@vitnode/core/tanstack/fetcher"
 
-const res = await fetcherClient({
+const res = await fetcher({
   plugin: "@vitnode/core",
   method: "get",
   module: "users/passkeys",
   path: "/",
-  options: { credentials: "include" },
 })
 ```
 

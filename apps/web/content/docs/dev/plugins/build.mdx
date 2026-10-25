@@ -1,5 +1,5 @@
 ---
-title: Build and watch a plugin
+title: Build and watch
 description: How vitnode build compiles a plugin package with tsdown, how vitnode dev watches it, and what ends up in dist.
 icon: Hammer
 ---
@@ -7,6 +7,8 @@ icon: Hammer
 import { File, Files, Folder } from 'fumadocs-ui/components/files'
 
 `vitnode build` turns a plugin's `src` folder into `dist/src`: one JavaScript file, one declaration file (`.d.ts`) and one declaration map per module. `vitnode dev` does the same in watch mode, so an app using the plugin reloads as you save. There is no build config to write. VitNode owns it, and every plugin and adapter package is built the same way.
+
+A generated plugin calls both commands from its `package.json` scripts: `build:plugins` runs `vitnode build` and `dev` runs `vitnode dev`. At the workspace root, `pnpm build:plugins` builds every plugin through Turborepo, and the root `dev` builds them before it starts the apps.
 
 ## What tsdown does
 
@@ -72,7 +74,9 @@ Two TypeScript jobs run side by side, and both must pass:
 | tsdown         | Writes the `.d.ts` files and their maps with the TypeScript compiler           |
 | `tsc --noEmit` | Type checks the whole package with `tsconfig.build.json` and fails on an error |
 
-Declarations are written from every file `tsconfig.build.json` includes. That matters for files nothing imports, such as `global.d.ts` and the generated `types/api-registry.gen.d.ts`: they are what lets `fetcher({ plugin: "@acme/site-notes", ... })` infer its response, and that inferred type lands in your `.d.ts` files.
+tsdown writes declarations for every file `tsconfig.build.json` includes. That matters for files nothing imports, such as `global.d.ts` and the generated `types/api-registry.gen.d.ts`. They are what lets `fetcher({ plugin: "site-notes", ... })` infer its response, and that inferred type lands in your `.d.ts` files.
+
+`types/api-registry.gen.d.ts` registers the plugin's own API with the fetcher. `vitnode build` and `vitnode dev` write it before compiling, but only when the plugin has a `src/config.api.ts`. The template `.npmignore` keeps `/types` out of the published package; commit it like `src/manifest.gen.ts` so the plugin type-checks right after a checkout.
 
 You don't need `isolatedDeclarations` or explicit return types. Inferred types come out the same as `tsc` would write them.
 
@@ -116,7 +120,7 @@ VitNode uses different builds for different things. This page is about the first
 
 | Build          | Who runs it                        | Tool                                                        |
 | -------------- | ---------------------------------- | ----------------------------------------------------------- |
-| Plugin package | `vitnode build` in a plugin        | tsdown in unbundle mode, plus `tsc --noEmit`                |
+| Plugin package | `vitnode build` in a plugin (its `build:plugins` script) | tsdown in unbundle mode, plus `tsc --noEmit`                |
 | VitNode CLI    | `pnpm build:scripts` in `@vitnode/core` | tsdown with `packages/vitnode/tsdown.config.ts`, into `dist/scripts` |
 | App            | `vitnode build` in an app          | Vite and TanStack Start, unchanged                          |
 
@@ -129,14 +133,9 @@ VitNode uses different builds for different things. This page is about the first
 - Each JavaScript rebuild renders every module of the package again and writes only the changed ones. That takes under 100 ms for a typical plugin and about 2 seconds for the roughly 1,600 modules of `@vitnode/core`.
 - A re-export-only `index.ts` may get no `.d.ts.map`, so "Go to definition" stops at its `.d.ts` first.
 
-## Next steps
+## Related
 
 <Cards>
-  <Card
-    title="Migrate a plugin from SWC"
-    description="Move an existing plugin from SWC and tsc-alias to tsdown"
-    href="/docs/dev/plugins/migrate-to-tsdown"
-  />
   <Card
     title="Plugin CLI"
     description="List and validate plugins"

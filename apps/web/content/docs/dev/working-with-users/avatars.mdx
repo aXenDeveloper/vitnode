@@ -1,0 +1,45 @@
+---
+title: Avatars and covers
+description: Where VitNode members and staff upload or remove avatar and cover images, how role settings cap them, and the image upload routes and events.
+icon: CircleUserRound
+---
+
+Every member can have an uploaded avatar and a profile cover. Without one, VitNode draws a letter avatar or a colour gradient. This page covers where people edit the images, the role settings that allow and cap them, and the routes behind the upload dialog.
+
+## Where images are edited
+
+- On the **profile page** (`/users/[nameCode]`), the owner sees a camera button on the cover and on the avatar. It opens one dialog that uploads and removes. With a picture already set, two radio buttons choose between the two actions and the confirm button reads **Upload** or **Delete** to match; with nothing set yet, the dialog goes straight to the file picker.
+- On **Settings → Overview** (`/settings`), only the avatar and its camera button appear. The cover stays on the profile page.
+- In the **AdminCP** (`/admin/core/users/[id]`), staff holding `users:can_edit`, plus `users:can_edit_admin` when the target is staff, get the same two buttons and the same dialog. Staff can set an image even when the user's own roles do not allow it; the role's size cap still applies.
+
+## Role settings
+
+Each role sets these on its **Profile** tab at **AdminCP → Core → Users → Roles**:
+
+| Setting                  | Column              | Default |
+| :----------------------- | :------------------ | :------ |
+| Allow avatar upload      | `allowUploadAvatar` | `true`  |
+| Maximum avatar size (kB) | `maxAvatarSize`     | `2048`  |
+| Allow cover image upload | `allowUploadCover`  | `true`  |
+| Maximum cover size (kB)  | `maxCoverSize`      | `5120`  |
+
+A user with several roles may upload as soon as one role allows it, and gets the largest cap among the roles that allow it. The dialog shows the cap before you pick a file, and the server checks it again.
+
+## API
+
+| Method   | Path                                                | Who                                                              |
+| :------- | :-------------------------------------------------- | :--------------------------------------------------------------- |
+| `GET`    | `/api/@vitnode/core/users/images/policy`            | Signed-in user: what they may upload, and the caps in bytes      |
+| `POST`   | `/api/@vitnode/core/users/images/{kind}`            | Signed-in user: multipart `file`, `kind` is `avatar` or `cover`  |
+| `DELETE` | `/api/@vitnode/core/users/images/{kind}`            | Signed-in user                                                   |
+| `POST`   | `/api/@vitnode/core/admin/users/{id}/images/{kind}` | Staff with `users:can_edit`                                      |
+| `DELETE` | `/api/@vitnode/core/admin/users/{id}/images/{kind}` | Staff with `users:can_edit`                                      |
+
+Accepted types are JPEG, PNG and WebP. The browser crops an avatar to `512×512` and a cover to `1800×600` and sends WebP where it can encode it, so uploads usually land far under the cap. A refused file answers `400` with an `{ error }` message meant for the person who picked it, and a role that does not allow the image answers `403`.
+
+Both writes emit [`user.avatar.updated` or `user.cover.updated`](/docs/dev/events/built-in-events) with the new `core_files` id, or `null` when the image was removed.
+
+## Related
+
+- [Current user](/docs/dev/working-with-users/users) covers `avatarUrl` and `coverUrl` on every user payload.
+- [Storage](/docs/dev/storage) explains where VitNode keeps the uploaded files.

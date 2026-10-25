@@ -1,161 +1,126 @@
 ---
-title: Create a Plugin
-description: Scaffold a VitNode plugin, register its package in your host app, and serve its first TanStack Start page.
+title: Create plugin
+description: Generate the site-notes VitNode plugin with create-vitnode-app, see where it was registered, and open its first page and API endpoint.
 icon: PackagePlus
 ---
 
-import {
-  BoxIcon,
-  DatabaseIcon,
-  LayoutDashboardIcon,
-  RouteIcon,
-} from 'lucide-react'
-import { File, Files, Folder } from 'fumadocs-ui/components/files'
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { File, Files, Folder } from "fumadocs-ui/components/files";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-A plugin is the starting point for a VitNode feature. It keeps routes, API
-modules, data, translations, and AdminCP extensions together in one installable
-package. Nice boundaries; fewer archaeological digs later.
+import { ImgDocs } from "@/components/fumadocs/img";
+import generatedPage from "./create-generated-page.webp";
 
-<Callout type="warn" title="Plugins need a workspace">
-  Run the generator from a repository with `turbo.json`. When creating an app,
-  turn on Turborepo first; a plain single-folder app has nowhere for
-  `plugins/*`.
-</Callout>
+A plugin is where a VitNode feature lives. Its pages, API, database tables, translations and AdminCP screens ship together as one package. In this lesson you generate `site-notes`, a small plugin for short announcements, and open the page and endpoint it starts with. The rest of the beginner path grows this same plugin.
+
+## Before you begin
+
+- A running app from [Setup](/docs/dev/setup), created **with Turborepo** (or as a Monorepo App). The plugin generator refuses to run without a `turbo.json` at the workspace root.
 
 <Steps>
-  <Step>
 
-### Generate the package
+<Step>
 
-Run this at the workspace root and enter a package name such as
-`@acme/site-notes` when prompted:
+### Generate the plugin
+
+From the workspace root, run the generator with `--plugin` and the name `site-notes`:
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Create a VitNode plugin">
 
 ```bash tab="bun"
-bun create vitnode-app@canary --plugin
+bun create vitnode-app@canary site-notes --plugin
 ```
 
 ```bash tab="pnpm"
-pnpm create vitnode-app@canary --plugin
+pnpm create vitnode-app@canary site-notes --plugin
 ```
 
 ```bash tab="npm"
-npm create vitnode-app@canary -- --plugin
+npm create vitnode-app@canary site-notes -- --plugin
 ```
 
 </Tabs>
 
-  </Step>
-  <Step>
+Answer **Yes** to "Install dependencies?". The generator then installs and builds the plugin and reloads a running `dev` server. If you answered **No**, run `pnpm install` (or your manager's install), then restart `pnpm dev`.
 
-### Run/Restart it and visit the route
+The name becomes the package name, the **plugin id**, the first page's URL and the root key of its translations. Use a plain name. The generator drops a scope such as `@acme/site-notes` and refuses names core already serves, such as `admin`, `api` or `users`.
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start the plugin in development">
+</Step>
 
-```bash tab="bun"
-bun dev
+<Step>
+
+### See what the generator changed
+
+The generator printed one line per file it registered the plugin in:
+
+```txt
+  + Registered in apps/web/src/vitnode.api.config.ts
+  + Registered in apps/web/src/vitnode.config.ts
 ```
 
-```bash tab="pnpm"
-pnpm dev
-```
+`siteNotesPlugin()` is now in the `plugins` array of `vitnode.config.ts` (pages, translations, AdminCP navigation) and `siteNotesApiPlugin()` in `vitnode.api.config.ts` (API routes, permissions, background work). The app's `package.json` gained `"site-notes": "workspace:*"`. A Monorepo App gets the same lines for `apps/api`.
 
-```bash tab="npm"
-npm run dev
-```
-
-</Tabs>
-
-  </Step>
-  <Step>
-
-### Check the generated page
-
-Visit the route printed in the console, such as `http://localhost:3000/site-notes`. You should see a page with a title and a link to the plugin's README.
-
-import { ImgDocs } from '@/components/fumadocs/img'
-import generatedPageImage from './generated-page-image.png'
-
-<ImgDocs
-  src={generatedPageImage}
-  alt="Generated plugin page with title and link to README"
-/>
-
-  </Step>
-</Steps>
-
-## What gets generated
+The new package, with the files the next lessons change:
 
 <Files>
-  <Folder name="plugins" defaultOpen>
-    <Folder name="site-notes" defaultOpen>
-      <Folder name="src" defaultOpen>
-        <Folder name="api">
-          <Folder name="modules/hello">
-            <File name="hello.module.ts" />
-            <File name="hello.module.test.ts" />
-            <File name="hello.route.ts" />
-          </Folder>
-          <File name="builders.ts" />
+  <Folder name="plugins/site-notes" defaultOpen>
+    <Folder name="src" defaultOpen>
+      <Folder name="api" defaultOpen>
+        <File name="builders.ts" />
+        <Folder name="modules/hello" defaultOpen>
+          <File name="hello.module.ts" />
+          <File name="hello.route.ts" />
+          <File name="hello.module.test.ts" />
         </Folder>
-        <Folder name="locales">
-          <File name="en.json" />
-          <File name="index.ts" />
-        </Folder>
-        <Folder name="pages">
-          <File name="home-page.tsx" />
-        </Folder>
-        <File name="config.api.ts" />
-        <File name="config.tsx" />
-        <File name="plugin-info.ts" />
-        <File name="routes.ts" />
       </Folder>
-      <File name="package.json" />
-      <File name="README.md" />
-      <File name="vitest.config.ts" />
+      <Folder name="locales" defaultOpen>
+        <File name="en.json" />
+      </Folder>
+      <Folder name="pages" defaultOpen>
+        <File name="home-page.tsx" />
+      </Folder>
+      <File name="config.api.ts" />
+      <File name="config.tsx" />
+      <File name="routes.ts" />
+      <File name="manifest.gen.ts" />
     </Folder>
+    <Folder name="types">
+      <File name="api-registry.gen.d.ts" />
+    </Folder>
+    <File name="package.json" />
   </Folder>
 </Files>
 
-One page at `/site-notes` whose loader calls the plugin's own `hello` endpoint, its strings, and a Vitest test for the endpoint (`pnpm test` in the plugin). `src/plugin-info.ts` sets the plugin's title and Lucide icon for [the AdminCP plugin catalog](/docs/dev/plugins/catalog), and `src/api/builders.ts` binds `buildModule` and `buildRoute` to the plugin's generated `manifest`, so API files never spell the plugin id. The generator also registers the plugin in your apps' `vitnode.config.ts` and `vitnode.api.config.ts`, installs it and builds it.
+- `src/config.api.ts` declares the API half; `src/config.tsx` and `src/routes.ts` the front-end half.
+- `src/api/builders.ts` binds `buildModule` and `buildRoute` to the plugin, so API files never spell its id.
+- Every build writes `src/manifest.gen.ts` and `types/api-registry.gen.d.ts`. Commit them; the second one is what types the plugin's own API calls (see [API modules](/docs/dev/plugins/api/modules#how-the-fetcher-knows-your-routes)).
 
-The plugin name must be a valid npm name and must not be one of core's routes: `admin`, `api`, `core`, `discover`, `files`, `login`, `notifications`, `register`, `search`, `users` or `vitnode`.
+</Step>
 
-Check the result the way your app will load it:
+</Steps>
+
+## Check the result
+
+Open `http://localhost:3000/site-notes`. The page says **Hello from your plugin**, and its card reads **Your plugin's API answered: Hello from site-notes!**. That text came from the plugin's API, which you can also call directly:
 
 ```bash
-vitnode plugin validate site-notes
+curl http://localhost:3000/api/site-notes/hello
 ```
 
-See [Plugin CLI](/docs/dev/cli/plugins) for what validation checks.
+```json
+{ "message": "Hello from site-notes!" }
+```
 
-## Add the next capability
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={generatedPage}
+  alt="The generated Hello from your plugin page at /site-notes, with a card reading Your plugin's API answered: Hello from site-notes!"
+/>
 
-<Cards>
-  <Card
-    icon={<RouteIcon />}
-    title="Plugin routes"
-    description="Add nested layouts, dynamic URLs, loaders, metadata, and guards."
-    href="/docs/dev/routing"
-  />
-  <Card
-    icon={<BoxIcon />}
-    title="API modules"
-    description="Add another endpoint beside the generated one, with Zod-validated inputs."
-    href="/docs/dev/plugins/api/modules"
-  />
-  <Card
-    icon={<DatabaseIcon />}
-    title="Database models"
-    description="Put Drizzle models and migrations beside the feature that owns them."
-    href="/docs/dev/database"
-  />
-  <Card
-    icon={<LayoutDashboardIcon />}
-    title="Admin Control Panel"
-    description="Ship staff screens, navigation, permissions, and dashboard widgets."
-    href="/docs/dev/plugins/admin"
-  />
-</Cards>
+To check the plugin the way the app loads it, run the validator from the app folder:
+
+```bash title="apps/web"
+pnpm vitnode plugin validate site-notes
+```
+
+It ends with `1 plugin valid`. See [Plugin commands](/docs/dev/cli/plugins) for everything it checks.

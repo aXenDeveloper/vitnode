@@ -1,10 +1,10 @@
 ---
-title: Single Sign-On (SSO)
-description: Enable social authentication with Google, Discord, Facebook, or custom OAuth2 providers in VitNode.
+title: SSO
+description: Add single sign-on to VitNode with Google, Discord, Facebook or a custom OAuth2 adapter, and learn how SSO sign-ins find, link or create accounts.
 icon: KeyRound
 ---
 
-VitNode provides built-in OAuth2 single sign-on. Register an adapter in your API configuration, and authentication buttons automatically appear on `/login` and `/register`.
+VitNode has built-in OAuth2 single sign-on (SSO). Register an adapter in your API configuration, and a sign-in button for that provider appears on `/login` and `/register`. This page covers registering an adapter, the callback URL to give the provider, and how an SSO sign-in finds, links or creates an account.
 
 ## Quick start
 
@@ -19,8 +19,8 @@ export const vitNodeApiConfig = buildApiConfig({
   authorization: {
     ssoAdapters: [
       GoogleSSOApiPlugin({
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        clientId: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       }),
     ],
   },
@@ -28,8 +28,9 @@ export const vitNodeApiConfig = buildApiConfig({
 ```
 
 A **Google** button automatically renders on your login and registration forms,
-four-color G included. The built-in adapters ship their own marks and colors -
-Discord and Facebook buttons are filled with their brand color - and a custom
+four-color G included. [Google](/docs/dev/sso/google) shows where the client ID
+and secret come from. The built-in adapters ship their own marks and colors, and
+the Discord and Facebook buttons are filled with their brand color. A custom
 adapter can [add its own](/docs/dev/sso/icons).
 
 ## On the login page
@@ -51,7 +52,7 @@ providers first, then the form.
 
 ---
 
-## Supported Providers
+## Supported providers
 
 <Cards>
   <Card
@@ -70,12 +71,12 @@ providers first, then the form.
     href="/docs/dev/sso/facebook"
   />
   <Card
-    title="Custom OAuth2 Adapter"
+    title="Custom adapter"
     description="Connect GitHub, Apple, or any OAuth2 provider"
     href="/docs/dev/sso/custom-adapter"
   />
   <Card
-    title="Provider Icons and Colors"
+    title="Provider icons"
     description="Put a brand mark and color on the login buttons"
     href="/docs/dev/sso/icons"
   />
@@ -91,18 +92,35 @@ When configuring OAuth2 applications in provider developer consoles, use the fol
 https://your-domain.com/login/sso/{provider_id}
 ```
 
-For example: `https://your-domain.com/login/sso/google`.
+For example: `https://your-domain.com/login/sso/google`. The domain is your
+`VITNODE_WEB_URL`.
+
+## The round trip
+
+1. The sign-in button asks the API for the provider's authorization URL. The API
+   creates a random `state` value, stores a salted hash of it in the
+   `vitnode_auth--state-sso` cookie (named after `authorization.cookieName`),
+   and sends the browser to the provider with the plain value.
+2. The provider redirects back to `/login/sso/{provider_id}` with a `code` and
+   the `state`.
+3. The API checks `state` against the cookie and deletes the cookie. A missing
+   or different value answers `400 Invalid state`, so a callback link someone
+   else started cannot sign you in.
+4. The adapter exchanges the `code` for a token, reads the provider account, and
+   VitNode signs in, links or creates the account as described below.
+
+The state cookie has no expiry date, so it never outlives the browser session.
 
 ---
 
-## How Accounts Link
+## How accounts link
 
 When a user signs in via SSO:
-1. **Known Identity**: The provider account was linked before, so the user is signed straight into it.
-2. **Existing Email Match**: An account already uses that address. The visitor is asked for that account's password; once it checks out, the provider identity is linked to the account and they are signed in. From then on that provider signs them straight in (case 1). A social login can never take over an account on its own - the password is what proves ownership.
-3. **New Visitor**: A new user is created with their social display name and email. Avatar and real name stay empty until the member imports them from [Connected accounts](/docs/dev/sso/connected-accounts).
+1. **Known identity.** The provider account was linked before, so the user is signed straight into it.
+2. **Existing email match.** An account already uses that address. The visitor is asked for that account's password; once it checks out, the provider identity is linked to the account and they are signed in. From then on that provider signs them straight in (case 1). A social login can never take over an account on its own, because the password is what proves ownership.
+3. **New visitor.** A new user is created with their social display name and email. Avatar and real name stay empty until the member imports them from [Connected accounts](/docs/dev/sso/connected-accounts).
 
-Signed-in members can also connect more providers, import their avatar and name, and disconnect accounts in **Settings → Connected accounts** - see [Connected Accounts](/docs/dev/sso/connected-accounts).
+Signed-in members can also connect more providers, import their avatar and name, and disconnect accounts in **Settings → Connected accounts**. See [Connected accounts](/docs/dev/sso/connected-accounts).
 
 ### SSO confirms the email
 
@@ -134,18 +152,18 @@ points back to the login page.
 
 Every successful link emits [`user.sso.linked`](/docs/dev/events/built-in-events).
 
-The address the provider returns is matched in its canonical form, so a Google account that reports `jan.kowalski@gmail.com` finds the member who registered as `jankowalski@gmail.com` instead of quietly becoming a second account. See [One Mailbox, One Account](/docs/dev/advanced/auth#one-mailbox-one-account).
+The address the provider returns is matched in its canonical form, so a Google account that reports `jan.kowalski@gmail.com` finds the member who registered as `jankowalski@gmail.com` instead of quietly becoming a second account. See [One mailbox, one account](/docs/dev/advanced/auth#one-mailbox-one-account).
 
-## Learn More
+## Related
 
 <Cards>
   <Card
-    title="Users"
-    description="Session cookies and user model structure"
+    title="Current user"
+    description="Read the signed-in user and the user record"
     href="/docs/dev/working-with-users/users"
   />
   <Card
-    title="Custom SSO Adapter"
+    title="Custom adapter"
     description="Implement SSOApiPlugin for other providers"
     href="/docs/dev/sso/custom-adapter"
   />

@@ -1,14 +1,16 @@
 ---
-title: Run in development
+title: Development server
 description: Start a VitNode app, API app or plugin package in development with vitnode dev, including database setup, ports, hosts and keyboard shortcuts.
 icon: Play
 ---
 
-`vitnode dev` starts whatever the current folder is: an app gets a Vite dev server, an API app gets a watching Node or Bun process, and a plugin package gets tsdown and the type checker in watch mode. Run it from the project's folder.
+`vitnode dev` starts whatever the current folder is: an app gets a Vite dev server, an API app gets a watching Node or Bun process, and a plugin package gets tsdown and the type checker in watch mode. Run it from the project's folder, usually through the `dev` script:
 
 ```bash
-vitnode dev
+pnpm dev
 ```
+
+In a Turborepo workspace, `pnpm dev` at the root builds every plugin, prepares the database (`db:prepare`) and then starts each app's and plugin's own `dev` script, so one command starts everything.
 
 ## Start an app
 
@@ -91,13 +93,14 @@ Otherwise it runs on Node with `tsx watch`.
 
 ## Develop a plugin package
 
-In a plugin package, `vitnode dev` regenerates the plugin's API registry, then watches `src` with tsdown and runs `tsc` in watch mode to report type errors. Apps that use the plugin import its `dist` folder, so they reload as you save.
+In a plugin package, `vitnode dev` regenerates the plugin's API registry (`types/api-registry.gen.d.ts`, when the plugin has a `src/config.api.ts`) and its manifest (`src/manifest.gen.ts`), then watches `src` with tsdown and runs `tsc` in watch mode to report type errors. Apps that use the plugin import its `dist` folder, so they reload as you save.
 
 ```txt
 ◆ VitNode
-  Plugin development - @acme/blog
+  Plugin development - site-notes
 
   ✓ API registry generated
+  ✓ Plugin manifest generated
   ● Watching sources - apps using this plugin reload as dist/ changes
 
 tsdown js    Rebuilt in 71ms.
@@ -108,7 +111,7 @@ The JavaScript (`tsdown js`) is rebuilt within milliseconds of a save. Declarati
 
 [Build and watch a plugin](/docs/dev/plugins/build) covers added and deleted files, assets and what your app sees while a rebuild is written.
 
-## Next steps
+## Related
 
 <Cards>
   <Card

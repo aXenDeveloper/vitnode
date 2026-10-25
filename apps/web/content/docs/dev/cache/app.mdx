@@ -6,7 +6,12 @@ icon: AppWindow
 
 The app cache in VitNode is TanStack Query. A plugin route's loader fills a query entry during SSR or navigation, the page reads that same entry without another request, and a write invalidates it so the next read is fresh.
 
-This guide builds a notes list for an `@acme/site-notes` plugin with a `notes` API module. How the API call itself works is covered in [Data fetching](/docs/dev/fetcher).
+This guide moves the `site-notes` list page onto the query cache. How the API call itself works is covered in [Fetcher](/docs/dev/fetcher).
+
+## Before you begin
+
+- The `/site-notes/notes` page from [Plugin page](/docs/dev/plugins/page). Its route is already declared in `src/routes.ts`.
+- For the last step, the AdminCP form and its `POST /api/site-notes/admin/notes` route from [AdminCP pages](/docs/dev/plugins/admin).
 
 <Steps>
 <Step>
@@ -15,31 +20,32 @@ This guide builds a notes list for an `@acme/site-notes` plugin with a `notes` A
 
 Create one `queryOptions` helper for the list. The loader, the page and the mutation all use it, so they always agree on the key.
 
-```ts title="plugins/site-notes/src/features/notes/notes-query.ts"
+```ts title="plugins/site-notes/src/pages/notes-query.ts"
 import { queryOptions } from '@tanstack/react-query'
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
 
-export const notesQueryKey = ['@acme/site-notes', 'notes'] as const
+import { manifest } from '@/manifest.gen'
 
-export const notesQuery = () =>
+export const NOTES_QUERY_KEY = [manifest.id, 'notes'] as const
+
+export const notesQueryOptions = () =>
   queryOptions({
-    queryKey: notesQueryKey,
+    queryKey: NOTES_QUERY_KEY,
     queryFn: async () => {
       const response = await fetcher({
-        plugin: '@acme/site-notes',
+        plugin: manifest.id,
         method: 'get',
         module: 'notes',
         path: '/',
       })
-
-      if (response.status !== 200) {
-        throw new Error(`Loading notes answered ${response.status}.`)
-      }
+      if (!response.ok) throw new Error('Could not load notes.')
 
       return await response.json()
     },
   })
 ```
+
+If you followed [AdminCP pages](/docs/dev/plugins/admin), this file already exists.
 
 Start every key with your plugin ID. `invalidateQueries` matches keys by prefix, so a generic first segment such as `'notes'` would let one plugin invalidate another plugin's data.
 
@@ -48,29 +54,36 @@ Start every key with your plugin ID. `invalidateQueries` matches keys by prefix,
 
 ### Warm the query in the route loader
 
-Create the page with `defineRoute` from `@vitnode/core/tanstack/plugin-routes`. Its loader context includes `queryClient`. The framework-neutral `definePluginRoute` from `@vitnode/core/routing` only receives `locale`.
+Replace the loader in `src/pages/notes-page.tsx` with `defineRoute` from `@vitnode/core/tanstack/plugin-routes`. Its loader context includes `queryClient`; the framework-neutral `definePluginRoute` from `@vitnode/core/routing` only receives `locale`.
 
 ```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
 import { useSuspenseQuery } from '@tanstack/react-query'
 import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
+import { useTranslations } from 'use-intl'
 
-import { notesQuery } from '../features/notes/notes-query'
+import { notesQueryOptions } from './notes-query'
 
 export const route = defineRoute({
   load: async ({ context }) => {
-    await context.queryClient.query({ ...notesQuery(), staleTime: 'static' }) // [!code ++]
+    await context.queryClient.query({ ...notesQueryOptions(), staleTime: 'static' }) // [!code ++]
   },
 })
 
 const NotesPage = () => {
-  const { data: notes } = useSuspenseQuery(notesQuery())
+  const t = useTranslations('site-notes.notes')
+  const { data: notes } = useSuspenseQuery(notesQueryOptions())
 
   return (
-    <ul className="flex flex-col gap-2">
-      {notes.map((note) => (
-        <li key={note.id}>{note.title}</li>
-      ))}
-    </ul>
+    <main className="container mx-auto flex max-w-2xl flex-col gap-6 p-4">
+      <h1 className="text-2xl font-semibold tracking-tight text-balance">{t('title')}</h1>
+      <ul className="flex flex-col gap-3">
+        {notes.map(note => (
+          <li className="bg-card rounded-lg border p-4" key={note.id}>
+            {note.title}
+          </li>
+        ))}
+      </ul>
+    </main>
   )
 }
 
@@ -88,24 +101,26 @@ The router also runs this loader when a visitor rests on a link to the page, and
 
 VitNode's query client does not refetch when a component mounts or the tab regains focus. A cached list stays as it is until your code invalidates it, so invalidate it in every mutation that changes notes:
 
-```ts title="plugins/site-notes/src/features/notes/use-create-note.ts"
+```ts title="plugins/site-notes/src/pages/use-create-note.ts"
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
 import { toast } from 'sonner'
 
-import { notesQueryKey } from './notes-query'
+import { manifest } from '@/manifest.gen'
+
+import { NOTES_QUERY_KEY } from './notes-query'
 
 export const useCreateNote = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (title: string) => {
+    mutationFn: async (values: { title: string; body: string }) => {
       const response = await fetcher({
-        plugin: '@acme/site-notes',
+        plugin: manifest.id,
         method: 'post',
-        module: 'notes',
+        module: 'admin/notes',
         path: '/',
-        args: { body: { title } },
+        args: { body: values },
       })
 
       if (response.status !== 201) {
@@ -113,7 +128,7 @@ export const useCreateNote = () => {
       }
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: notesQueryKey }) // [!code ++]
+      await queryClient.invalidateQueries({ queryKey: NOTES_QUERY_KEY }) // [!code ++]
       toast.success('Note created', {
         description: 'It now appears in the notes list.',
       })
@@ -121,6 +136,8 @@ export const useCreateNote = () => {
   })
 }
 ```
+
+The AdminCP form from [AdminCP pages](/docs/dev/plugins/admin) does the same in its `onSubmit`.
 
 Invalidate the narrowest key that covers everything the write could change. For a list with paging or sorting, that is the list's root key: the changed row may have moved to a different page.
 
@@ -135,8 +152,8 @@ Invalidate the narrowest key that covers everything the write could change. For 
 
 ## Check the result
 
-1. Open the notes page with the browser's Network tab open. The list renders without a browser request for notes, because the loader filled the cache during SSR.
+1. Open `http://localhost:3000/site-notes/notes` with the browser's Network tab open. The list renders without a browser request for notes, because the loader filled the cache during SSR.
 2. Navigate to another page and back with a link. No new request for notes is sent.
-3. Create a note. You see one `POST` request, then one `GET` request that refetches the list, and the new note appears.
+3. Create a note in the AdminCP, then open the notes page in the same tab. The new note is there, because the write invalidated the cached list.
 
 To cache the database work behind the `notes` endpoint as well, continue with [Cache API data](/docs/dev/cache/api).

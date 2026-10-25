@@ -4,7 +4,7 @@ description: Reference for Content Engine live editing, covering deployment requ
 icon: Cable
 ---
 
-The AdminCP drives [live editing](/docs/content-engine/live-editing) for you. This page is for the cases where you need the details: deploying it, calling its routes from your own code, or building a form layout that shows who is editing. Examples use `example.article`, whose staff API lives at `/api/@vitnode/example/admin/content/article`.
+The AdminCP drives [live editing](/docs/content-engine/live-editing) for you. This page is for the cases where you need the details: deploying it, calling its routes from your own code, or building a form layout that shows who is editing. Examples use `newsroom.story`, whose staff API lives at `/api/newsroom/admin/content/story`.
 
 ## Deployment requirements
 
@@ -40,7 +40,7 @@ The routes live under the content type's staff API module. Every route needs an 
 Taking a lock on the excerpt:
 
 ```http title="Request"
-POST /api/@vitnode/example/admin/content/article/2/locks
+POST /api/newsroom/admin/content/story/2/locks
 Content-Type: application/json
 
 { "field": "excerpt", "locale": null, "action": "acquire" }
@@ -73,7 +73,7 @@ When someone else asks for the same field, the `409` names the holder:
 
 Reading the draft returns the shared fields and one draft per language:
 
-```json title="GET /api/@vitnode/example/admin/content/article/2/draft"
+```json title="GET /api/newsroom/admin/content/story/2/draft"
 {
   "shared": {
     "baseVersion": 3,
@@ -127,14 +127,14 @@ The daily `content-editorial-cleanup` [cron job](/docs/dev/cron) removes expired
 
 A plugin that replaces the edit form with [its own layout](/docs/content-engine/admincp) still gets locks and outlines on every field it renders with `ContentFormField`. The rest of the live UI comes from `@vitnode/core/content/admin-form`:
 
-```tsx title="plugins/example/src/views/admin/article-layout.tsx"
+```tsx title="story-form-layout.tsx"
 import {
   ContentFormField,
   ContentLivePresence,
   ContentLiveStatus,
 } from "@vitnode/core/content/admin-form";
 
-export const ArticleFormLayout = () => (
+export const StoryFormLayout = () => (
   <div className="flex flex-col gap-6">
     <header className="flex items-center justify-between gap-4">
       <ContentLiveStatus />
@@ -146,7 +146,7 @@ export const ArticleFormLayout = () => (
 );
 ```
 
-Register it with `forms: { layout: ArticleFormLayout }` in the type's `contentTypeAdmin(...)` entry, the way the blog plugin registers `BlogArticleFormLayout`.
+Register it with `forms: { layout: StoryFormLayout }` in the type's `contentTypeAdmin(...)` entry, the way the blog plugin registers `BlogArticleFormLayout`.
 
 | Export                        | What it gives you                                                                                                                                                                |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

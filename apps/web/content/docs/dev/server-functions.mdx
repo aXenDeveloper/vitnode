@@ -1,5 +1,5 @@
 ---
-title: Server Functions & Isomorphic Fetching
+title: Server functions
 description: When to reach for the universal fetcher, the server fetcher, or a TanStack Start server function in VitNode.
 icon: ServerCog
 ---
@@ -8,7 +8,7 @@ VitNode keeps backend business logic in Hono API routes. The frontend's only job
 is to call them - and for that, one universal fetcher covers SSR and browser
 navigation at once.
 
-## Decision Matrix
+## Pick the tool
 
 | Goal                           | Recommended tool                                | Rationale                                                                                     |
 | :----------------------------- | :---------------------------------------------- | :-------------------------------------------------------------------------------------------- |
@@ -56,12 +56,22 @@ export const fetchDevices = async () => {
 ```
 
 ```tsx title="plugins/devices/src/pages/devices-page.tsx"
-import { definePluginRoute } from '@vitnode/core/routing'
+import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
 
-export const route = definePluginRoute({
-  load: async () => await fetchDevices(), // [!code ++]
+import { fetchDevices } from '../lib/fetch-devices'
+
+export const route = defineRoute({
+  // [!code ++:5]
+  load: async ({ context }) =>
+    await context.queryClient.query({
+      queryKey: ['devices', 'list'],
+      queryFn: fetchDevices,
+      staleTime: 'static',
+    }),
 })
 ```
+
+Loading through `context.queryClient` lets a hover preload and the click share one request; see [Preloading](/docs/dev/routing/preloading).
 
 The initial render forwards the visitor's cookie, user-agent and IP through the
 request-aware transport; later navigations are a direct same-origin `fetch` to
@@ -120,7 +130,7 @@ Keep code that imports `@vitnode/core/tanstack/fetcher/server` in a
 rejects these three options at compile time, so a call that needs one cannot
 end up in a shared module by accident.
 
-## Learn More
+## Related
 
 <Cards>
   <Card
@@ -129,8 +139,8 @@ end up in a shared module by accident.
     href="/docs/dev/fetcher"
   />
   <Card
-    title="Plugin Routes"
-    description="Declare routes, lazy components, and loaders"
+    title="Routing"
+    description="Declare plugin pages and their loaders"
     href="/docs/dev/routing"
   />
 </Cards>

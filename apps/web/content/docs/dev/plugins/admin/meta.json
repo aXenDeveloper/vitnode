@@ -1,6 +1,9 @@
 {
-  "title": "Admin Control Panel",
+  "title": "AdminCP",
   "description": "Add plugin-owned AdminCP pages, navigation, permissions and dashboard widgets",
   "icon": "LayoutDashboard",
-  "pages": ["index", "dashboard-widgets"]
+  "pages": [
+    "index",
+    "dashboard-widgets"
+  ]
 }

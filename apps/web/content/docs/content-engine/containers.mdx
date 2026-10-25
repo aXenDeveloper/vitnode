@@ -15,11 +15,11 @@ implementation:
     - Register the definition with the admin and public content modules and in the plugin's `adminNav` and `adminContent` containers, as the guide shows.
     - A required container on a table that already has rows needs the generated migration edited to create and assign a default before `SET NOT NULL`.
   related:
-    - title: Containers on the frontend
+    - title: Container pages
       href: /docs/content-engine/container-frontend
-    - title: Publishing policies
+    - title: Publishing rules
       href: /docs/content-engine/container-policies
-    - title: Container hierarchy
+    - title: Container tree
       href: /docs/content-engine/container-hierarchy
 ---
 
@@ -27,7 +27,7 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
 A container is a place a record lives in: one forum board, one blog section, one knowledge-base category. You declare a **collection** of containers once in code, admins build its tree in the AdminCP, and each record of a content type points at exactly one container through `field.container()`.
 
-This guide follows the example plugin: a `example.boards` collection, and discussions (`example.discussion`) filed into it.
+This guide follows the newsroom plugin, with a `newsroom.desks` collection and letters to the editor (`newsroom.letter`) filed into it.
 
 ## Containers or a content type?
 
@@ -41,13 +41,13 @@ A category could also be a content type with a [relation](/docs/content-engine/r
 | Fields              | A few scalars (`text`, `textarea`, `number`, `boolean`, `enum`)           | Every field kind                                |
 | Drafts, revisions   | No. A container exists or it does not                                     | Optional `publication`, `editorial` and friends |
 | Linked from records | `field.container()`, at most one per content type                         | `field.relation()`, as many as you need         |
-| Public filter       | `?board=4`, and `includeDescendants=true` for a whole subtree             | `?category=4`, exact match only                 |
+| Public filter       | `?desk=4`, and `includeDescendants=true` for a whole subtree              | `?category=4`, exact match only                 |
 
 A record belongs to one container. For anything else it points at, such as tags, keep using relations.
 
 ## Add a container collection
 
-You need a content type to file into containers, like `example.discussion` from [Public write](/docs/content-engine/public-write#enable-public-writing).
+You need a content type to file into containers, like `newsroom.letter` from [Member writing](/docs/content-engine/public-write#add-an-owner-versions-and-the-write-options).
 
 <Steps>
 
@@ -55,13 +55,13 @@ You need a content type to file into containers, like `example.discussion` from 
 
 ### Define the collection
 
-Create `src/content/boards.ts`. The definition describes the collection; each board is a row an admin creates later:
+Create `src/content/desks.ts`. The definition describes the collection, and each desk is a row an admin creates later:
 
-```ts title="plugins/example/src/content/boards.ts"
+```ts title="plugins/newsroom/src/content/desks.ts"
 import { defineContentContainer, field } from "@vitnode/core/content";
 
-export const boardContainers = defineContentContainer({
-  id: "example.boards",
+export const deskContainers = defineContentContainer({
+  id: "newsroom.desks",
 
   fields: {
     description: field.textarea({ maxLength: 500, nullable: true }),
@@ -74,11 +74,11 @@ export const boardContainers = defineContentContainer({
   ordering: { mode: "manual" },
 
   publicApi: {
-    path: "boards",
+    path: "desks",
     fields: ["description", "color", "icon"],
   },
 
-  admin: { path: "example/boards" },
+  admin: { path: "newsroom/desks" },
 });
 ```
 
@@ -92,9 +92,9 @@ Every container already has `id`, `parentId`, `name`, `slug`, `position` and `de
 | `ordering`  | `{ mode?: "manual" \| "alphabetical" }`     | No       | `{ mode: "manual" }`             | How siblings are sorted. See [Hierarchy and ordering](/docs/content-engine/container-hierarchy) |
 | `publicApi` | `{ path: string; fields?: string[] }`       | No       | off                              | Read-only public routes at `/api/{pluginId}/content/{path}`                                     |
 | `admin`     | `{ path?; permissionModule?; navigation? }` | No       | see below                        | The AdminCP screen and its staff permissions                                                    |
-| `policies`  | `{ defaults?; contentTypes? }` \| `false`  | No       | off                              | Per-container publishing rules. See [Publishing policies](/docs/content-engine/container-policies) |
+| `policies`  | `{ defaults?; contentTypes? }` \| `false`  | No       | off                              | Per-container publishing rules. See [Publishing rules](/docs/content-engine/container-policies) |
 
-`admin.path` defaults to the id with dots turned into slashes (`example/boards`), so the screen opens at `/admin/containers/example/boards`. `admin.permissionModule` defaults to the snake-cased id (`example_boards`), and `admin.navigation: false` hides the sidebar entry.
+`admin.path` defaults to the id with dots turned into slashes (`newsroom/desks`), so the screen opens at `/admin/containers/newsroom/desks`. `admin.permissionModule` defaults to the snake-cased id (`newsroom_desks`), and `admin.navigation: false` hides the sidebar entry.
 
 </Step>
 
@@ -104,38 +104,38 @@ Every container already has `id`, `parentId`, `name`, `slug`, `position` and `de
 
 Add one `field.container()` to the content type. List it in `publicApi.fields` to return it, in `filterableFields` to filter by it, and in `publicWrite.create.fields` to let members pick it:
 
-```ts title="plugins/example/src/content/discussion.ts"
-import { boardContainers } from "@/content/boards"; // [!code ++]
+```ts title="plugins/newsroom/src/content/letter.ts (excerpt)"
+import { deskContainers } from "@/content/desks"; // [!code ++]
 
-export const discussionContentType = defineContentType({
-  id: "example.discussion",
-  tableName: "example_discussions",
+export const letterContentType = defineContentType({
+  id: "newsroom.letter",
+  tableName: "newsroom_letters",
 
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
     slug: field.slug({ source: "title" }),
     body: field.richText({ required: true }),
     author: field.user(),
-    board: field.container({ definition: boardContainers, required: true }), // [!code ++]
+    desk: field.container({ definition: deskContainers, required: true }), // [!code ++]
   },
 
   publicApi: {
-    path: "discussions",
-    fields: ["id", "title", "slug", "body", "board", "publishedAt"], // [!code highlight]
-    filterableFields: ["board"], // [!code ++]
+    path: "letters",
+    fields: ["id", "title", "slug", "body", "desk", "publishedAt"], // [!code highlight]
+    filterableFields: ["desk"], // [!code ++]
   },
 
   publicWrite: {
     ownership: { field: "author" },
-    create: { fields: ["title", "body", "board"], status: "published" }, // [!code highlight]
+    create: { fields: ["title", "body", "desk"], status: "published" }, // [!code highlight]
     update: { fields: ["title", "body"] },
   },
 });
 ```
 
-The column is an `integer` foreign key to `core_content_containers.id` with `ON DELETE RESTRICT`, plus an index on `(board, publishedAt)`. Every write checks that the id belongs to `example.boards`, not just that it exists. All options are in [Fields](/docs/content-engine/fields#container).
+The column is an `integer` foreign key to `core_content_containers.id` with `ON DELETE RESTRICT`, plus an index on `(desk, publishedAt)`. Every write checks that the id belongs to `newsroom.desks`, not just that it exists. All options are in [Fields](/docs/content-engine/fields#container).
 
-A content type can also live in the container of a record it points at, such as a reply in its topic's board, with a required `field.relation({ target, container: true })` instead of a `field.container()`. See [Threaded replies](/docs/content-engine/threads).
+A content type can also live in the container of a record it points at, such as a reply in its topic's forum, with a required `field.relation({ target, container: true })` instead of a `field.container()`. See [Comments](/docs/content-engine/threads).
 
 </Step>
 
@@ -143,21 +143,21 @@ A content type can also live in the container of a record it points at, such as 
 
 ### Register the collection on the API
 
-Pass the definition to both content modules. The admin module adds the staff routes and the `example_boards` permissions; the public module adds the read routes:
+Pass the definition to both content modules. The admin module adds the staff routes and the `newsroom_desks` permissions, and the public module adds the read routes. The newsroom registers more content types than shown here:
 
-```ts title="plugins/example/src/api/modules/admin/admin.module.ts"
-import { boardContainers } from "@/content/boards"; // [!code ++]
+```ts title="plugins/newsroom/src/api/modules/admin/admin.module.ts (excerpt)"
+import { deskContainers } from "@/content/desks"; // [!code ++]
 
 buildContentAdminModule({
-  containers: [boardContainers], // [!code ++]
-  contentTypes: [articleContent, discussionContent],
+  containers: [deskContainers], // [!code ++]
+  contentTypes: [storyContent, letterContent],
 }),
 ```
 
-```ts title="plugins/example/src/config.api.ts"
+```ts title="plugins/newsroom/src/config.api.ts (excerpt)"
 buildContentPublicModule({
-  containers: [boardContainers], // [!code ++]
-  contentTypes: [articleContent, discussionContent],
+  containers: [deskContainers], // [!code ++]
+  contentTypes: [storyContent, letterContent],
 }),
 ```
 
@@ -171,30 +171,25 @@ A content type whose `field.container()` names a collection no plugin registers 
 
 Add the collection to `containers` in both AdminCP files, next to your content types. `icon` is optional and defaults to a folder icon:
 
-```tsx title="plugins/example/src/admin/nav.tsx"
-import { FolderTreeIcon } from "lucide-react"; // [!code ++]
+```tsx title="plugins/newsroom/src/admin/nav.tsx (excerpt)"
+import { FolderTreeIcon, MailIcon, NotebookPenIcon } from "lucide-react"; // [!code highlight]
 
-import { boardContainers } from "@/content/boards"; // [!code ++]
-
-// [!code ++:4]
-export const exampleBoardsNav = {
-  definition: boardContainers,
-  icon: <FolderTreeIcon />,
-};
+import { deskContainers } from "@/content/desks"; // [!code ++]
 
 export const adminNav = {
   pluginId: manifest.id,
-  containers: [exampleBoardsNav], // [!code ++]
-  contentTypes: [exampleArticleNav, exampleDiscussionNav],
+  containers: [{ definition: deskContainers, icon: <FolderTreeIcon /> }], // [!code ++]
+  contentTypes: [
+    { definition: storyContentType, icon: <NotebookPenIcon /> },
+    { definition: letterContentType, icon: <MailIcon /> },
+  ],
 } satisfies AdminNavPluginSource;
 ```
 
-```tsx title="plugins/example/src/admin/content.tsx"
-export const adminContent = {
-  pluginId: manifest.id,
-  containers: [exampleBoardsNav], // [!code ++]
-  contentTypes: [exampleArticleNav, exampleDiscussionNav],
-} satisfies ContentFrontendPluginSource;
+The newsroom's AdminCP sources hold nothing server-only, so its `admin/content.tsx` reuses the same object:
+
+```tsx title="plugins/newsroom/src/admin/content.tsx"
+export { adminNav as adminContent } from "./nav";
 ```
 
 [Plugin files](/docs/content-engine/plugin-files) explains why the two files are separate.
@@ -207,14 +202,14 @@ export const adminContent = {
 
 The AdminCP reads the collection's names from `{pluginId}.containers.{entity}`, where the entity is the id without its plugin prefix. The permission labels follow the permission module:
 
-```json title="plugins/example/src/locales/en.json"
+```json title="plugins/newsroom/src/locales/en.json (excerpt)"
 {
-  "@vitnode/example": {
+  "newsroom": {
     "containers": {
-      "boards": {
-        "label": "{count, plural, one {Board} other {Boards}}",
-        "title": "Boards",
-        "desc": "The board tree members file their discussions into.",
+      "desks": {
+        "label": "{count, plural, one {Desk} other {Desks}}",
+        "title": "Desks",
+        "desc": "The desks readers send their letters to. Drag to reorder or nest desks.",
         "fields": {
           "description": "Description",
           "color": "Color",
@@ -224,18 +219,18 @@ The AdminCP reads the collection's names from `{pluginId}.containers.{entity}`, 
       }
     },
     "content": {
-      "discussion": { "fields": { "board": "Board" } }
+      "letter": { "fields": { "desk": "Desk" } }
     }
   },
-  "@vitnode/example:example_boards": "Boards",
-  "@vitnode/example:example_boards:can_view": "View boards",
-  "@vitnode/example:example_boards:can_create": "Create boards",
-  "@vitnode/example:example_boards:can_edit": "Edit and move boards",
-  "@vitnode/example:example_boards:can_delete": "Delete boards"
+  "newsroom:newsroom_desks": "Desks",
+  "newsroom:newsroom_desks:can_view": "View desks",
+  "newsroom:newsroom_desks:can_create": "Create desks",
+  "newsroom:newsroom_desks:can_edit": "Edit and move desks",
+  "newsroom:newsroom_desks:can_delete": "Delete desks"
 }
 ```
 
-Without labels, the screen falls back to a name derived from the id, such as "Boards".
+Without labels, the screen falls back to a name derived from the id, such as "Desks".
 
 </Step>
 
@@ -261,13 +256,13 @@ npm run db:migrate
 
 </Tabs>
 
-The collection itself needs no table: every definition shares `core_content_containers`. The migration only adds the `board` column to `example_discussions`.
+The collection itself needs no table, because every definition shares `core_content_containers`. The migration only adds the `desk` column to `newsroom_letters`.
 
 <Callout type="warn" title="Existing records need a container">
   A required container field becomes a `NOT NULL` column. If the table already
   has rows, edit the generated migration to create a container and assign it
-  before the `SET NOT NULL`, as the example's migration does with a "General"
-  board. [Database](/docs/content-engine/database) covers editing migrations.
+  before the `SET NOT NULL`. [Migrations](/docs/content-engine/database) covers
+  editing migrations.
 </Callout>
 
 </Step>
@@ -276,23 +271,23 @@ The collection itself needs no table: every definition shares `core_content_cont
 
 ## Manage containers in the AdminCP
 
-Open **AdminCP → Example → Boards** (`/admin/containers/example/boards`). Staff need the collection's `can_view` permission to see it, and `can_create`, `can_edit` or `can_delete` for each action.
+Open **AdminCP → Newsroom → Desks** (`/admin/containers/newsroom/desks`). Staff need the collection's `can_view` permission to see it, and `can_create`, `can_edit` or `can_delete` for each action.
 
-- **The tree** shows every board with its children nested below it. Drag a board to reorder it among its siblings or to drop it inside another board.
+- **The tree** shows every desk with its children nested below it. Drag a desk to reorder it among its siblings or to drop it inside another desk.
 - **Create and edit** open a sheet with the name, the slug and the collection's own fields. A container created without a slug gets one derived from its name.
 - **The move menu** on each row does the same as dragging from the keyboard: **Move up**, **Move down**, **Move to top level** and **Move inside…**.
-- **Delete** works only on an empty board. A board with child boards or with discussions is refused with a message that says which one, and nothing changes.
+- **Delete** works only on an empty desk. A desk with child desks or with letters is refused with a message that says which one, and nothing changes.
 
-In a content type's generated form, a container field becomes a **picker** that lists the collection's tree, so staff can file a discussion into a board or move it to another one.
+In a content type's generated form, a container field becomes a **picker** that lists the collection's tree, so staff can file a letter into a desk or move it to another one.
 
-A drag that breaks a rule, such as nesting a board deeper than `maxDepth` or dropping it inside its own child, is refused the same way. [Hierarchy and ordering](/docs/content-engine/container-hierarchy) lists every rule.
+A drag that breaks a rule, such as nesting a desk deeper than `maxDepth` or dropping it inside its own child, is refused the same way. [Hierarchy and ordering](/docs/content-engine/container-hierarchy) lists every rule.
 
 ## Check the result
 
-Create a "Frontend" board with a "React" board inside it, then read the public tree:
+Create a "Politics" desk with an "Elections" desk inside it, then read the public tree:
 
 ```bash
-curl http://localhost:3000/api/@vitnode/example/content/boards
+curl http://localhost:3000/api/newsroom/content/desks
 ```
 
 ```json
@@ -301,12 +296,12 @@ curl http://localhost:3000/api/@vitnode/example/content/boards
     {
       "id": 1,
       "parentId": null,
-      "name": "Frontend",
-      "slug": "frontend",
+      "name": "Politics",
+      "slug": "politics",
       "position": 0,
       "depth": 1,
       "metadata": {
-        "description": "Everything in the browser",
+        "description": "Parliament, parties and policy",
         "color": "#2563eb",
         "icon": null
       }
@@ -314,8 +309,8 @@ curl http://localhost:3000/api/@vitnode/example/content/boards
     {
       "id": 2,
       "parentId": 1,
-      "name": "React",
-      "slug": "react",
+      "name": "Elections",
+      "slug": "elections",
       "position": 0,
       "depth": 2,
       "metadata": { "description": null, "color": null, "icon": null }
@@ -324,7 +319,7 @@ curl http://localhost:3000/api/@vitnode/example/content/boards
 }
 ```
 
-Items come in tree order: each parent, then its subtree. `metadata` holds only `publicApi.fields`, and a value nobody set is `null`. [Containers on the frontend](/docs/content-engine/container-frontend) turns this into pages.
+Items come in tree order: each parent, then its subtree. `metadata` holds only `publicApi.fields`, and a value nobody set is `null`. [Container pages](/docs/content-engine/container-frontend) turns this into pages.
 
 ## Definition errors
 
@@ -344,10 +339,10 @@ Items come in tree order: each parent, then its subtree. `metadata` holds only `
 | `field.container()` pointing at an unregistered collection                 | `Field "x" uses the container collection "y", which no plugin registers.`      |
 | A container field in `publicWrite.update.fields`                           | `publicWrite.update.fields includes the container field "x".`                  |
 
-## What's next
+## Related
 
 - [Hierarchy and ordering](/docs/content-engine/container-hierarchy): depth, moves, safe deletion and the server-side service.
-- [Containers on the frontend](/docs/content-engine/container-frontend): a board tree, a board page and a create form with a board picker.
-- [Publishing policies](/docs/content-engine/container-policies): who may post in each board, whether posts wait for [approval](/docs/content-engine/approvals), and how long authors may edit.
+- [Container pages](/docs/content-engine/container-frontend): a desk tree, a desk page and a create form with a desk picker.
+- [Publishing rules](/docs/content-engine/container-policies): who may post in each desk, whether posts wait for [approval](/docs/content-engine/approvals), and how long authors may edit.
 
-Read permissions per container, such as boards hidden from guests, are not available yet. Today every reader sees every container in the public tree.
+Read permissions per container, such as desks hidden from guests, are not available yet. Today every reader sees every container in the public tree.

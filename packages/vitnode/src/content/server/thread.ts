@@ -5,7 +5,7 @@ import type {
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, asc, count, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 
 import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
@@ -173,24 +173,35 @@ export interface ContentThreadPage<TRecord> {
 
 export const CONTENT_THREAD_MAX_NODES = 500;
 
-const encodeCursor = (createdAt: Date, id: ContentId): string =>
-  Buffer.from(JSON.stringify([createdAt.toISOString(), id])).toString(
-    "base64url",
-  );
+/**
+ * Where a page ends. `createdAt` is the column's own `::text`: Postgres keeps
+ * microseconds and a `Date` only milliseconds, so a cursor built from a `Date`
+ * sorts before its own row and the next page would repeat it.
+ */
+interface ThreadPosition {
+  createdAt: string;
+  id: ContentId;
+}
 
-const decodeCursor = (
-  cursor: string | undefined,
-): null | { createdAt: Date; id: ContentId } => {
+/** A `timestamp::text` or an ISO string - anything else never reaches the cast. */
+const TIMESTAMP_TEXT =
+  /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/;
+
+const encodeCursor = ({ createdAt, id }: ThreadPosition): string =>
+  Buffer.from(JSON.stringify([createdAt, id])).toString("base64url");
+
+const decodeCursor = (cursor: string | undefined): null | ThreadPosition => {
   if (!cursor) return null;
   try {
     const [createdAt, id] = JSON.parse(
       Buffer.from(cursor, "base64url").toString("utf8"),
     ) as [unknown, unknown];
-    const date = typeof createdAt === "string" ? new Date(createdAt) : null;
-    if (!date || Number.isNaN(date.getTime())) return null;
+    if (typeof createdAt !== "string" || !TIMESTAMP_TEXT.test(createdAt)) {
+      return null;
+    }
     if (typeof id !== "number" && typeof id !== "string") return null;
 
-    return { createdAt: date, id };
+    return { createdAt, id };
   } catch {
     return null;
   }
@@ -198,6 +209,7 @@ const decodeCursor = (
 
 interface NodeRow extends Record<string, unknown> {
   createdAt: Date;
+  createdAtText: string;
   hiddenAt?: Date | null;
   id: ContentId;
   parent: ContentId | null;
@@ -242,6 +254,7 @@ export const readContentThread = async <
 
   const nodeSelection = {
     createdAt: columns.createdAt,
+    createdAtText: sql<string>`${columns.createdAt}::text`,
     id: columns.id,
     parent: parentColumn,
     publishedAt: columns.publishedAt,
@@ -250,16 +263,17 @@ export const readContentThread = async <
   };
 
   const topLevel = and(eq(rootColumn, root), isNull(parentColumn));
-  const after_ = (position: null | { createdAt: Date; id: ContentId }) =>
-    position
-      ? or(
-          gt(columns.createdAt, position.createdAt),
-          and(
-            eq(columns.createdAt, position.createdAt),
-            gt(columns.id, position.id),
-          ),
-        )
-      : undefined;
+  const after_ = (position: null | ThreadPosition) => {
+    if (!position) return undefined;
+    // Cast back to the column's own type, so Postgres parses it at the
+    // precision it stored.
+    const createdAt = sql`${position.createdAt}::${sql.raw(columns.createdAt.getSQLType())}`;
+
+    return or(
+      gt(columns.createdAt, createdAt),
+      and(eq(columns.createdAt, createdAt), gt(columns.id, position.id)),
+    );
+  };
 
   /**
    * A top-level reply that is not public earns a place on the page only when
@@ -301,7 +315,7 @@ export const readContentThread = async <
 
       const last = batch.at(-1);
       if (!last || batch.length <= first) break;
-      position = { createdAt: last.createdAt, id: last.id };
+      position = { createdAt: last.createdAtText, id: last.id };
     }
 
     return collected;
@@ -397,7 +411,9 @@ export const readContentThread = async <
   return {
     items,
     pageInfo: {
-      endCursor: last ? encodeCursor(last.createdAt, last.id) : null,
+      endCursor: last
+        ? encodeCursor({ createdAt: last.createdAtText, id: last.id })
+        : null,
       hasNextPage,
       totalCount: topTotal?.value ?? 0,
     },

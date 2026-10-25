@@ -1,0 +1,116 @@
+---
+title: Layouts
+description: Wrap several VitNode plugin pages in a shared layout with layout() and index(), choose the main, blank or admin area, and mount a page in the AdminCP.
+icon: LayoutTemplate
+---
+
+A layout wraps a group of pages in a shared frame, such as a heading or a side menu that stays on screen while the visitor moves between them. An area picks the app shell a top-level route renders in: the public layout, nothing at all, or the AdminCP.
+
+## Share a frame with `layout()`
+
+`layout()` takes a path, a component and `children`. Every child path is relative to the layout, and `index()` is the page at the layout's own URL. This tree puts the notes list and the note page from [Add a route](/docs/dev/routing/first-route) under one frame:
+
+```ts title="plugins/site-notes/src/routes.ts"
+import {
+  definePluginRoutes,
+  index,
+  layout,
+  lazy,
+  page,
+} from '@vitnode/core/routing'
+
+export const routes = definePluginRoutes([
+  layout('/site-notes/notes', {
+    component: lazy(() => import('./pages/notes-layout')),
+    messages: ['site-notes.notes'],
+    children: [
+      index({
+        component: lazy(() => import('./pages/notes-page')),
+      }),
+      page(':id', {
+        component: lazy(() => import('./pages/note-page')),
+      }),
+    ],
+  }),
+])
+```
+
+| Declaration                         | URL                       | Renders                                   |
+| :---------------------------------- | :------------------------ | :---------------------------------------- |
+| `layout('/site-notes/notes', ...)`  | none of its own           | The frame around its children             |
+| `index(...)`                        | `/site-notes/notes`       | The page at the layout's URL              |
+| `page(':id', ...)`                  | `/site-notes/notes/:id`   | A child page inside the frame             |
+
+The layout component renders its page through `children`:
+
+```tsx title="plugins/site-notes/src/pages/notes-layout.tsx"
+import { useTranslations } from 'use-intl'
+
+const NotesLayout = ({ children }: { children: React.ReactNode }) => {
+  const t = useTranslations('site-notes.notes')
+
+  return (
+    <div className="container mx-auto flex max-w-2xl flex-col gap-6 p-4">
+      <p className="text-muted-foreground text-sm">{t('title')}</p>
+      {children}
+    </div>
+  )
+}
+
+export default NotesLayout
+```
+
+A child inherits the layout's `messages`, `requires` and `preload`, so declare them once on the layout. A layout module can export a `route` too, for example a breadcrumb that every child page shares.
+
+### Rules the build checks
+
+The build stops with a message that names the route when a tree breaks one of these:
+
+- A child path is relative: `':id'`, not `'/site-notes/notes/:id'`. A top-level path starts with `/`.
+- `index()` only appears inside a layout's `children`.
+- A layout needs at least one child, because it claims no URL of its own.
+- A layout cannot declare `cache` or `search`. Put them on the page that has the URL.
+- A layout path cannot end in `*`, because nothing inside a catch-all could be reached. Use a `page()` for that.
+- Only a top-level route declares `area`. Children render in their layout's area.
+
+## Pick an area
+
+`area` chooses the shell a top-level page or layout renders in:
+
+| `area`             | Renders inside                                                    |
+| :----------------- | :---------------------------------------------------------------- |
+| `'main'` (default) | The public layout: header, breadcrumbs, navigation, footer        |
+| `'blank'`          | Only the app root: document, theme, providers and translations    |
+| `'admin'`          | The AdminCP shell: sidebar, AdminCP breadcrumbs, staff session    |
+
+Use `'blank'` for a page that stands on its own, such as an embed, a print view or a kiosk screen:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/site-notes/embed', {
+  area: 'blank', // [!code ++]
+  component: lazy(() => import('./pages/notes-embed-page')),
+}),
+```
+
+A blank page has no header and no breadcrumb trail, so give it its own way back if a visitor can reach it from the site.
+
+## Add an AdminCP page
+
+`area: 'admin'` mounts the page in the AdminCP, behind the staff session guard. Use a path under `/admin`:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/admin/site-notes', {
+  area: 'admin', // [!code ++]
+  component: lazy(() => import('./pages/admin-notes-page')),
+  messages: ['site-notes.admin.notes'],
+}),
+```
+
+An AdminCP route cannot declare `requires`. The AdminCP has its own session, and the build rejects the field. To limit the page to staff with a permission, check the permission inside the page. Write the page module with `defineAdminRoute` when its loader needs `context.adminAccess`, the resolved AdminCP session.
+
+[AdminCP pages](/docs/dev/plugins/admin) builds a complete AdminCP screen with a sidebar link, a permission check and a form.
+
+## Related
+
+- [Route module](/docs/dev/routing/route-module): what a layout or page module can export.
+- [Breadcrumbs](/docs/dev/routing/breadcrumbs): a crumb for a layout and its pages.

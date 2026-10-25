@@ -12,7 +12,7 @@ The **Moderator CP** at `/modcp/reports` is where moderators work through report
 
 ## Before you begin
 
-You need a moderator entry with `can_view_reports` for the content type, and `can_manage_reports` to change anything. Hiding needs `can_hide`. See [Configure moderators](/docs/dev/moderation/configure-moderators).
+You need a moderator entry with `can_view_reports` for the content type, and `can_manage_reports` to change anything. Hiding and restoring content needs `can_hide` (which depends on `can_view_hidden`) plus `can_manage_reports`, because the action is recorded in the report. See [Configure moderators](/docs/dev/moderation/configure-moderators).
 
 <Steps>
 

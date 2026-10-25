@@ -1,121 +1,382 @@
 ---
-title: Email Templates
-description: Build responsive, localized email templates with React Email and VitNode default layouts.
+title: Templates
+description: Build a translated VitNode email template with React Email and DefaultTemplateEmail, send it from a plugin route to the signed-in admin, and preview it in the browser.
 icon: LayoutTemplate
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { TypeTable } from "fumadocs-ui/components/type-table";
 
-VitNode renders email templates using [React Email](https://react.email). Templates are standard React components transformed into cross-client compatible HTML tables with localized text and inline styles.
+import { ImgDocs } from "@/components/fumadocs/img";
+import preview from "./templates-new-note-preview.webp";
 
-## Quick start
+An email template is a React component that VitNode renders to HTML and plain text with [React Email](https://react.email). In this guide the `site-notes` plugin gets a **New note** email, translated into the recipient's language, sent from an admin route and previewed in the browser.
 
-### 1. Build the Template Component
+## Before you begin
 
-Wrap template content inside `DefaultTemplateEmail`:
+- **An email adapter.** Set `email.adapter` in your `vitnode.api.config.ts`, for example [Resend](/docs/dev/email/resend) or [Nodemailer](/docs/dev/email/nodemailer). Without one, sending fails with `500`.
+- The `site-notes` plugin with its `site_notes` table and the **Create notes** permission, from the beginner path up to [Permissions](/docs/dev/working-with-users/staff-permissions). Any plugin with an admin route works the same way.
 
-```tsx title="plugins/blog/src/emails/welcome-email.tsx"
+<Steps>
+
+<Step>
+
+### Add the email strings
+
+The API renders emails, so it reads a plugin's server messages, not its frontend `src/locales/en.json`. Create `src/locales/api/en.json`:
+
+```json title="plugins/site-notes/src/locales/api/en.json"
+{
+  "site-notes": {
+    "email": {
+      "new_note": {
+        "subject": "New note: {title}",
+        "greeting": "Hello {name}!",
+        "intro": "A new note was posted on the site.",
+        "button": "Read all notes"
+      }
+    }
+  }
+}
+```
+
+Then a loader per locale in `src/locales/api/index.ts`:
+
+```ts title="plugins/site-notes/src/locales/api/index.ts"
+import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
+
+const messages: LocaleMessagesMap = {
+  en: async () => await import("./en.json", { with: { type: "json" } }),
+};
+
+export default messages;
+```
+
+Register it as `messages` in `src/config.api.ts`:
+
+```ts title="plugins/site-notes/src/config.api.ts"
+import apiMessages from "./locales/api"; // [!code ++]
+
+export const siteNotesApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    messages: apiMessages, // [!code ++]
+    modules: [helloModule, notesModule, adminModule],
+    // ...
+  });
+```
+
+</Step>
+
+<Step>
+
+### Create the template
+
+Create `src/emails/new-note.tsx`:
+
+```tsx title="plugins/site-notes/src/emails/new-note.tsx"
 import DefaultTemplateEmail, {
   type DefaultTemplateEmailProps,
-} from "@vitnode/core/emails/default-template"
-import { Button, Section, Text } from "react-email"
+} from "@vitnode/core/emails/default-template";
+import { EmailButton } from "@vitnode/core/emails/ui/button";
+import { Heading, Section, Text } from "react-email";
+import { createTranslator } from "use-intl";
 
-interface WelcomeEmailProps extends DefaultTemplateEmailProps {
-  loginUrl?: string
+interface NewNoteEmailProps extends DefaultTemplateEmailProps {
+  note: { body: string; title: string };
 }
 
-export default function WelcomeEmail({
-  user,
-  loginUrl = "https://example.com/login",
-  ...props
-}: WelcomeEmailProps) {
+export default function NewNoteEmail({ note, user, ...props }: NewNoteEmailProps) {
+  const t = createTranslator({ ...props.i18n, namespace: "site-notes.email.new_note" });
+  const notesUrl = new URL("/site-notes/notes", props.templateProps.metadata.url).href;
+
   return (
-    // [!code ++:13]
-    <DefaultTemplateEmail user={user} {...props}>
-      <Section className="p-4 text-center">
-        <Text className="text-xl font-bold">Welcome, {user.name}!</Text>
-        <Text className="text-muted-foreground">
-          We are thrilled to have you in the community.
-        </Text>
-        <Button href={loginUrl} className="bg-primary text-primary-foreground px-4 py-2 rounded-md">
-          Visit Your Account
-        </Button>
+    <DefaultTemplateEmail {...props} user={user}>
+      <Section className="bg-card text-card-foreground rounded-lg p-6">
+        <Text>{t("greeting", { name: user?.name ?? "" })}</Text>
+        <Text className="text-muted-foreground">{t("intro")}</Text>
+        <Heading as="h2">{note.title}</Heading>
+        <Text>{note.body}</Text>
+        <EmailButton href={notesUrl}>{t("button")}</EmailButton>
       </Section>
     </DefaultTemplateEmail>
-  )
+  );
 }
 ```
 
----
+- **`DefaultTemplateEmailProps`** is what VitNode passes to every template: `i18n` (the recipient's `locale` and `messages`), `templateProps` (site title and URL, logo, preview text) and `user` when the email goes to a user. Your own props, here `note`, come on top.
+- **`createTranslator`** from `use-intl` translates with those messages. Hooks such as `useTranslations` do not work, because the email is rendered on the server, outside any React provider.
+- **`DefaultTemplateEmail`** adds the logo, the footer link and the [colour tokens](#colour-tokens) that `EmailButton` and the classes above use.
+- **Links must be absolute.** Build them from `templateProps.metadata.url`, the site's address.
 
-### 2. Send the Email
+</Step>
 
-Send or queue the email from any Hono route or task:
+<Step>
 
-```ts
-import WelcomeEmail from "@/emails/welcome-email"
+### Send it from a route
 
-// [!code ++:6]
-await c.get("email").send({
-  user: { email: user.email, name: user.name },
-  subject: "Welcome to VitNode!",
-  content: WelcomeEmail,
-})
+Create `src/api/modules/admin/notes/email.route.tsx`. The `.tsx` extension lets the handler render the template with JSX:
+
+```tsx title="plugins/site-notes/src/api/modules/admin/notes/email.route.tsx"
+import { z } from "@hono/zod-openapi";
+import { eq } from "drizzle-orm";
+import { createTranslator } from "use-intl";
+
+import { buildRoute } from "@/api/builders";
+import { site_notes } from "@/database/notes";
+import NewNoteEmail from "@/emails/new-note";
+
+export const emailNoteRoute = buildRoute({
+  adminStaffPermission: { module: "notes", permission: "can_create" },
+  route: {
+    method: "post",
+    path: "/{id}/email",
+    request: {
+      params: z.object({ id: z.coerce.number().int().positive() }),
+    },
+    responses: {
+      202: {
+        content: { "application/json": { schema: z.object({ queued: z.literal(true) }) } },
+        description: "The email is rendered and queued for delivery.",
+      },
+      404: { description: "No note has this id." },
+    },
+  },
+  handler: async c => {
+    const { id } = c.req.valid("param");
+    const admin = c.get("admin");
+    const [note] = await c
+      .get("db")
+      .select({ title: site_notes.title, body: site_notes.body })
+      .from(site_notes)
+      .where(eq(site_notes.id, id));
+    if (!note || !admin) return c.body(null, 404);
+
+    await c.get("email").send({
+      user: admin.user,
+      subject: ({ i18n }) =>
+        createTranslator({ ...i18n, namespace: "site-notes.email.new_note" })("subject", {
+          title: note.title,
+        }),
+      content: props => <NewNoteEmail {...props} note={note} />,
+    });
+
+    return c.json({ queued: true as const }, 202);
+  },
+});
 ```
 
-`send()` handles locale resolution, renders the JSX to HTML, and pushes the delivery to the mail transport.
+Add `emailNoteRoute` to the `routes` of `adminNotesModule` in `src/api/modules/admin/notes/notes.module.ts`.
 
----
+- **`user`** sends to a user in their own language. It needs `id`, `email` and `language`; `c.get("admin").user` has them, and so does a row from `core_users`.
+- **`subject`** is a string, or a function that translates it with the recipient's messages.
+- **`content`** receives the template props and returns the email. Spread them into your template and add your own.
+- **`send()` resolves to nothing.** The route answers `202` with `queued: true`, never "sent", because at this point the email is still waiting for delivery.
 
-## Preview Templates Locally
+</Step>
 
-Preview emails in your browser during development using the React Email preview server:
+</Steps>
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start email dev server">
+## Check the result
+
+1. Add a temporary button that emails you note `2` with `fetcher`. Create `src/pages/check-email-note.tsx`:
+
+   ```tsx title="plugins/site-notes/src/pages/check-email-note.tsx"
+   import { Button } from "@vitnode/core/components/ui/button";
+   import { fetcher } from "@vitnode/core/tanstack/fetcher";
+   import { useState } from "react";
+
+   import { manifest } from "@/manifest.gen";
+
+   export const CheckEmailNote = () => {
+     const [status, setStatus] = useState<number>();
+     const [isPending, setIsPending] = useState(false);
+
+     const onClick = async () => {
+       setIsPending(true);
+       try {
+         const response = await fetcher({
+           plugin: manifest.id,
+           method: "post",
+           module: "admin/notes",
+           path: "/{id}/email",
+           args: { params: { id: 2 } },
+         });
+         setStatus(response.status);
+       } finally {
+         setIsPending(false);
+       }
+     };
+
+     return (
+       <div className="flex items-center gap-3">
+         <Button isLoading={isPending} onClick={onClick}>
+           Email me note 2
+         </Button>
+         {status ? <output>{status}</output> : null}
+       </div>
+     );
+   };
+   ```
+
+   Render `<CheckEmailNote />` in `src/pages/notes-page.tsx`, sign in to the AdminCP in the same browser, open `/site-notes/notes` and press the button. The status reads `202`. Remove the button when you are done.
+
+2. The email arrives at your admin account's address with the subject **New note: Office closed on Friday**. If it does not, check the adapter's settings and **Debug Panel → Queue** (`/admin/core/debug/queue`). A **failed** `send-email` task from `@vitnode/core` shows the provider's error in **Last error**.
+
+A note id that does not exist returns `404`, and a request without the **Create notes** permission returns `403`.
+
+## Queued or immediate
+
+`send()` renders the email during the request, then stores it as a `send-email` task in the [queue](/docs/dev/advanced/queue). Right after the response is sent, VitNode tries to deliver it, so a password reset does not wait for the next cron run. If that attempt fails, the queue retries the task, up to three attempts.
+
+`build()` followed by `deliver()` skips the queue and waits for the provider during the request. Use it only when the route must know the outcome, because a failure is then the route's problem:
+
+```ts
+const email = await c.get("email").build(args); // the same args as send()
+const { id } = await c.get("email").deliver(email); // the provider's message id, when it reports one
+```
+
+Neither is proof that the message reached an inbox. A provider accepting an email is not the recipient reading it.
+
+## Send to an address
+
+For someone without an account, pass `to` and the `locale` to render in, instead of `user`:
+
+```ts
+await c.get("email").send({
+  to: "guest@example.com",
+  locale: "en",
+  subject: "Your invitation",
+  content: props => <InvitationEmail {...props} />,
+});
+```
+
+`user` is then `undefined` in the template, which is why `NewNoteEmail` reads `user?.name`.
+
+## Preview templates
+
+React Email's preview server renders the files of a folder in the browser, with hot reload. Add a script to the plugin's `package.json`, where `react-email` is already a dependency. Pick a port your app does not use:
+
+```json title="plugins/site-notes/package.json"
+{
+  "scripts": {
+    "dev:email": "email dev --dir src/emails --port 3001"
+  }
+}
+```
+
+Generated apps already have a `dev:email` script for their own `src/emails`. Run it from the plugin's folder:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Preview emails">
 
 ```bash tab="bun"
-bun run email dev
+bun run dev:email
 ```
 
 ```bash tab="pnpm"
-pnpm exec email dev
+pnpm dev:email
 ```
 
 ```bash tab="npm"
-npx email dev
+npm run dev:email
 ```
 
 </Tabs>
 
-Visit `http://localhost:3001` to view your email rendered live with hot reloading.
+Open `http://localhost:3001` and choose **new-note**. The preview has no request and no recipient, so give the template `PreviewProps` with sample data and the messages it translates, at the end of `new-note.tsx`:
 
----
-
-## Localization in Emails
-
-Email templates receive the recipient's preferred locale automatically:
-
-```tsx
-export default function OrderEmail({ i18n, ...props }: DefaultTemplateEmailProps) {
-  return (
-    <DefaultTemplateEmail i18n={i18n} {...props}>
-      <Text>{i18n.t("order.confirmed")}</Text>
-    </DefaultTemplateEmail>
-  )
-}
+```tsx title="plugins/site-notes/src/emails/new-note.tsx"
+NewNoteEmail.PreviewProps = {
+  ...DefaultTemplateEmail.PreviewProps,
+  note: { title: "Office closed on Friday", body: "We are back on Monday at 9:00." },
+  user: { id: 1, email: "ada@example.com", language: "en", name: "Ada Lovelace" },
+  i18n: {
+    locale: "en",
+    messages: {
+      "site-notes": {
+        email: {
+          new_note: {
+            subject: "New note: {title}",
+            greeting: "Hello {name}!",
+            intro: "A new note was posted on the site.",
+            button: "Read all notes",
+          },
+        },
+      },
+    },
+  },
+} satisfies NewNoteEmailProps;
 ```
 
-## Learn More
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={preview}
+  alt="React Email preview of the New note email: VitNode logo, a white card greeting Ada Lovelace with the note Office closed on Friday and a blue Read all notes button, and the footer"
+/>
 
-<Cards>
-  <Card
-    title="Email Service"
-    description="Configuring SMTP, Resend, and delivery adapters"
-    href="/docs/dev/email"
-  />
-  <Card
-    title="Custom Email Adapter"
-    description="Implement custom email delivery providers"
-    href="/docs/dev/email/custom-adapter"
-  />
-</Cards>
+## Colour tokens
+
+`DefaultTemplateEmail` wraps your content in React Email's `<Tailwind>` with these colours, so classes such as `bg-primary` or `text-muted-foreground` work inside it:
+
+| Token | Default | Token | Default |
+| --- | --- | --- | --- |
+| `background` | `#edf2f8` | `foreground` | `#0e1216` |
+| `card` | `#ffffff` | `card-foreground` | `#171b1f` |
+| `popover` | `#ffffff` | `popover-foreground` | `#171b1f` |
+| `primary` | `#3160c0` | `primary-foreground` | `#fafafa` |
+| `secondary` | `#f4f9ff` | `secondary-foreground` | `#1e2226` |
+| `muted` | `#eaeff5` | `muted-foreground` | `#686c72` |
+| `accent` | `#e0e5eb` | `accent-foreground` | `#1e2226` |
+| `destructive` | `#de3b3f` | `warn` | `#906600` |
+| `border` | `#d9dfe4` | `input` | `#d9dfe4` |
+| `ring` | `#5aa3ec` | | |
+
+Override them for every email with `email.tailwindConfig` in `vitnode.api.config.ts`:
+
+```ts title="apps/web/src/vitnode.api.config.ts"
+email: {
+  adapter: /* your adapter */,
+  tailwindConfig: {
+    theme: { extend: { colors: { primary: "#0f766e" } } },
+  },
+},
+```
+
+A template that builds its own `<Html>` instead of using `DefaultTemplateEmail` has none of these tokens, and `EmailButton` or `EmailCard` inside it loses its colours.
+
+## `send()` options
+
+<TypeTable
+  type={{
+    content: {
+      description: "Returns the email's React tree from the template props. Ignored when `html` is given.",
+      type: "(props: DefaultTemplateEmailProps) => ReactNode",
+    },
+    subject: {
+      description: "The subject, or a function translating it with the recipient's locale and messages.",
+      required: true,
+      type: "string | ({ i18n }) => string",
+    },
+    user: {
+      description: "Send to this user, in their language. Needs `id`, `email` and `language`.",
+      type: "{ id: number; email: string; language: string; name?: string }",
+    },
+    to: {
+      description: "Send to this address instead of a user. Requires `locale`.",
+      type: "string",
+    },
+    locale: {
+      description: "The language to render in when sending with `to`.",
+      type: "string",
+    },
+    replyTo: { description: "The Reply-To address.", type: "string" },
+    html: { description: "Ready-made HTML, sent as is instead of rendering `content`.", type: "string" },
+  }}
+/>
+
+## Related
+
+- [Email components](/docs/dev/email/components/button): `EmailButton` and `EmailCard`.
+- [Notification emails](/docs/dev/notifications/email-and-digests): emails for VitNode notifications, including digests.
+- [Custom email adapter](/docs/dev/email/custom-adapter): deliver through your own provider.

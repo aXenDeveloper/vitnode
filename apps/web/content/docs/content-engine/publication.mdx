@@ -1,5 +1,5 @@
 ---
-title: Publication
+title: Drafts & publishing
 description: Give a VitNode Content Engine content type drafts and a Publish button with the publication option, so nothing reaches readers until an editor publishes it.
 icon: Send
 implementation:
@@ -13,8 +13,8 @@ implementation:
   related:
     - title: Public API
       href: /docs/content-engine/public-api
-    - title: Editorial
-      href: /docs/content-engine/editorial
+    - title: Scheduling
+      href: /docs/content-engine/editorial-scheduling
 ---
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
@@ -23,39 +23,64 @@ import { ImgDocs } from "@/components/fumadocs/img";
 import publishConfirm from "./public-api-publish-confirm.webp";
 import publishRow from "./public-api-publish-row.webp";
 
-`publication` gives every record two states: **Draft** and **Published**. Drafts stay private, and only staff with the publish permission can make a record public. Turn it on before anything else on the public side, because the [public API](/docs/content-engine/public-api) only ever returns published records.
+`publication` gives every record two states, **Draft** and **Published**. Drafts stay private, and only staff with the publish permission make a record public. Turn it on before anything reaches readers, because the [public API](/docs/content-engine/public-api) only ever returns published records.
+
+This continues the `newsroom.article` type from [First content type](/docs/content-engine/create-a-content-type).
 
 <Steps>
 
 <Step>
 
-### Turn it on
+### Turn on publication
 
-Add one line to the definition:
+Edit `src/content/article.ts`. Add `publication` and show the state in the list:
 
-```ts title="plugins/example/src/content/article.ts"
+```ts title="plugins/newsroom/src/content/article.ts"
 export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
+  id: "newsroom.article",
+  tableName: "newsroom_articles",
+
   fields: {
-    title: field.text({ required: true }),
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
     slug: field.slug({ source: "title" }),
+    body: field.richText({ required: true }),
   },
+
   publication: true, // [!code ++]
+
+  admin: {
+    path: "newsroom/articles",
+    titleField: "title",
+    list: {
+      columns: ["status", "title", "slug", "updatedAt"], // [!code highlight]
+      orderableFields: ["title"],
+    },
+  },
 });
 ```
 
-This adds a `status` column (`draft` or `published`), a `publishedAt` date, a `can_publish` permission and **Publish** and **Unpublish** buttons in the AdminCP.
+This adds a `status` column (`draft` or `published`), a `publishedAt` date, a `can_publish` staff permission, and **Publish** and **Unpublish** actions in the AdminCP.
 
 </Step>
 
 <Step>
 
-### Name the permission
+### Label the new permission and column
 
-```json title="plugins/example/src/locales/en.json"
+Add two keys to `src/locales/en.json`. This excerpt shows only the new keys, in their place:
+
+```json title="plugins/newsroom/src/locales/en.json"
 {
-  "@vitnode/example:article:can_publish": "Publish and unpublish articles"
+  "newsroom": {
+    "content": {
+      "article": {
+        "fields": {
+          "status": "Status"
+        }
+      }
+    }
+  },
+  "newsroom:article:can_publish": "Publish and unpublish articles"
 }
 ```
 
@@ -65,7 +90,7 @@ This adds a `status` column (`draft` or `published`), a `publishedAt` date, a `c
 
 ### Migrate
 
-Run this from the workspace root while `pnpm dev` is running:
+Run this from the workspace root while `pnpm dev` is running, or after `pnpm build:plugins`:
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
 
@@ -83,38 +108,46 @@ npm run db:migrate
 
 </Tabs>
 
-Existing rows become drafts. `pnpm dev` picks up the new option by itself.
+The migration adds `status`, with `draft` as its default, and `publishedAt`. Both articles you already created are now drafts.
 
 </Step>
 
-</Steps>
+<Step>
 
-## What a reader sees
+### Publish an article
 
-| The record is              | The public API answers            |
-| -------------------------- | --------------------------------- |
-| A draft                    | `404`, like a slug that never existed |
-| Published with a future `publishedAt` | `404` until that moment   |
-| Published                  | The record                        |
-
-The API never says whether a draft exists. To publish later on a schedule, or to share a draft with someone before it goes live, add [`editorial`](/docs/content-engine/editorial).
-
-## Check the result
-
-Open **AdminCP → Example → Articles**. New articles show a **Draft** badge. Click the paper plane **Publish** button at the end of a row:
+Open **AdminCP → Newsroom → Articles**. Both rows show **Draft**. Click the paper plane button in the `Welcome to the newsroom` row:
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={publishRow}
-  alt="Articles list with Hello Content Engine marked Draft and the Publish tooltip over the paper plane button in its row"
+  alt="Newsroom Articles list with two Draft articles and the Publish tooltip over the paper plane button"
 />
 
-Confirm with **Yes, publish it**, and the badge turns into **Published**. The create dialog also gets **Save as draft** and **Publish** buttons, and [bulk actions](/docs/content-engine/admincp#bulk-actions) publish many rows at once.
+Confirm with **Yes, publish it**:
 
 <ImgDocs
-  withoutBackground
-  className="*:max-w-full"
   src={publishConfirm}
-  alt="Publish Article dialog asking to publish Hello Content Engine, with Cancel and Yes, publish it buttons"
+  alt="Publish Article dialog asking to publish Welcome to the newsroom, with Cancel and Yes, publish it"
 />
+
+Leave `Release notes for October` as a draft. The next tutorial checks that readers cannot see it.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+The list shows **Published** for one article and **Draft** for the other, and a **Status** filter appears above it. The create dialog now has **Save as draft** and **Publish** buttons, and [bulk actions](/docs/content-engine/admincp#bulk-actions) publish many rows at once.
+
+| The record is | Readers get |
+| --- | --- |
+| A draft | Nothing. The public API answers `404`, the same as a slug that never existed |
+| Published with a future `publishedAt` | `404` until that moment |
+| Published | The record |
+
+To publish on a schedule, or share a draft before it goes live, see [Scheduling](/docs/content-engine/editorial-scheduling) and [Previews](/docs/content-engine/editorial-previews).
+
+Next, let readers fetch published articles with the [Public API](/docs/content-engine/public-api).

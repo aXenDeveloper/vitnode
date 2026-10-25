@@ -1,5 +1,5 @@
 ---
-title: Node CRON
+title: node-cron
 description: Tick VitNode's cron jobs from an in-process scheduler with the @vitnode/node-cron adapter - one package, one line of config.
 icon: Timer
 ---
@@ -10,11 +10,17 @@ API process and posts to the cron endpoint once a minute. No external service, n
 scheduler dashboard, nothing to keep in sync - which is exactly why it only works
 where your API is a long-lived process.
 
-| Cloud (serverless) | Self-hosted  | Links                                                                                                                                       |
-| ------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| ❌ Not supported   | ✅ Supported | [npm](https://www.npmjs.com/package/@vitnode/node-cron) · [source](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/node-cron) |
+| Cloud (serverless) | Self-hosted | Links                                                                                                                                       |
+| ------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Not supported      | Supported   | [npm](https://www.npmjs.com/package/@vitnode/node-cron) · [source](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/node-cron) |
 
-## Quick start
+## Before you begin
+
+- An API that runs as a long-lived Node process: a self-hosted server, a container or your dev machine.
+- `VITNODE_API_URL` set to the address the API answers on, if that is not `http://localhost:3000`. The tick is a request to that address.
+- A random `CRON_SECRET` on production servers. In development the built-in default works.
+
+## Set up the adapter
 
 <Steps>
 <Step>
@@ -89,21 +95,18 @@ npm run dev
 </Tabs>
 
 </Step>
-<Step>
-
-### Verify the first tick
-
-Open **Debug Panel → Cron & queue** (`/admin/core/debug/cron`) and watch the
-`clean` row - core's hourly session cleanup, which every installation has.
-Within a minute of the restart its **Time** column stops saying _Last Never_ and
-the next run fills in.
-
-Nothing else needs to happen for the clock to be proven: `process-queue` runs
-every minute, so its last run should never be more than a minute old while the
-adapter is alive.
-
-</Step>
 </Steps>
+
+## Check the result
+
+Open **Debug Panel → Cron & queue** (`/admin/core/debug/cron`) and find the
+`process-queue` row. Core schedules it every minute, so within a minute of the
+restart its **Time** column shows a last run, and that last run never gets more
+than a minute old while the adapter is alive. The scheduler card above the
+table turns green: **All jobs on schedule**.
+
+If the last run stays empty, read the server console for a
+`[VitNode] Cron tick failed` line, then see the gotchas below.
 
 ## What the adapter actually does
 
@@ -147,7 +150,7 @@ Three consequences worth writing down:
 | ----------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | it needs a URL                                        | the origin comes from `VITNODE_API_URL`, falling back to `http://localhost:3000`       |
 | the API must be able to reach itself over the network | a tick dies where that origin is wrong, unreachable, or fronted by an auth proxy       |
-| the request is authenticated like any other           | an unset `CRON_SECRET` means both sides use the well-known default, and the tick works |
+| the request is authenticated like any other           | an unset `CRON_SECRET` falls back to a built-in default, which works in development and is refused with `403` everywhere else |
 
 ## Gotchas
 
@@ -163,22 +166,29 @@ Three consequences worth writing down:
   saying _Last Never_ forever.
 </Callout>
 
-<Callout type="warn" title="A rejected tick leaves no trace">
-  `handleCronJobs()` awaits the `fetch` and then discards the response, and a
-  `403` is answered by middleware rather than by the route: the CSRF check runs
-  before the logger even exists, and a mismatched secret raises an
-  `HTTPException` that the API's error handler returns without logging. So the
-  failure you are most likely to hit writes nothing to the console and nothing
-  to the [Debug Panel](/docs/dev/debugging/logging). The last run in the
-  **Time** column of **Debug Panel → Cron & queue** is the health check.
+<Callout type="warn" title="A rejected tick shows up in the console only">
+  When the endpoint answers with anything but a `2xx`, or cannot be reached,
+  `handleCronJobs()` prints `[VitNode] Cron tick failed: <status> <body>` to the
+  server console, for example `403 Invalid cron authorization`. The
+  [Debug Panel log](/docs/dev/debugging/logging) gets nothing, because the
+  request is refused before any route runs. Watch the console, and the last run
+  in the **Time** column of **Debug Panel → Cron & queue**.
+</Callout>
+
+<Callout type="warn" title="Production refuses the default secret">
+  Outside development, an unset `CRON_SECRET`, the built-in default and the
+  placeholders `changeme`, `secret` and `your-secure-cron-secret-key` (the value
+  in `apps/api/.env.example`) are all refused with `403`. Every tick fails, and
+  no job runs, the queue included. Set a random value on the server.
 </Callout>
 
 <Callout type="warn" title="Every instance runs its own timer">
   The adapter schedules per process, so four instances send four ticks a minute.
-  That is safe - the endpoint runs only what is due - but it does not
-  de-duplicate the work, so two ticks can start the same job at once. Write
-  [idempotent handlers](/docs/dev/cron#jobs-must-be-idempotent), or move the
-  clock to a single [external scheduler](/docs/dev/cron/rest-api).
+  That is safe, because the endpoint runs only what is due and each due run is
+  claimed by one tick. A slow job can still overlap its next run, though, and a
+  failed one is retried. Write [idempotent
+  handlers](/docs/dev/cron#jobs-must-be-idempotent), or move the clock to a
+  single [external scheduler](/docs/dev/cron/rest-api).
 </Callout>
 
 <Callout type="warn" title="Serverless has nowhere to keep the timer">
@@ -188,7 +198,7 @@ Three consequences worth writing down:
   endpoint](/docs/dev/cron/rest-api) there.
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

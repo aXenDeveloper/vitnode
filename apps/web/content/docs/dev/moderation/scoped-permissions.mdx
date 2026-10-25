@@ -4,7 +4,7 @@ description: Limit VitNode moderator permissions to selected resources, such as 
 icon: ListChecks
 ---
 
-A scoped moderator permission applies to every resource of a **scope family**, or only to the resources an administrator picks. "View reports in every section" and "hide topics only in section B" are two grants of scoped permissions. This guide uses the example plugin, whose article reports are scoped by category.
+A scoped moderator permission applies to every resource of a **scope family**, or only to the resources an administrator picks. "View reports in every section" and "hide topics only in section B" are two grants of scoped permissions. This guide uses the newsroom plugin, whose story reports are scoped by category.
 
 ## Before you begin
 
@@ -18,29 +18,30 @@ Scopes build on [staff permissions](/docs/dev/working-with-users/staff-permissio
 
 A scope family tells the AdminCP which resources exist. Create it on the server with `defineModerationScope`:
 
-```ts title="plugins/example/src/api/lib/moderation.ts"
+```ts title="plugins/newsroom/src/api/lib/moderation.ts"
 import { defineModerationScope } from "@vitnode/core/api/moderation";
 import { and, asc, gt, ilike, inArray } from "drizzle-orm";
 
-import { example_categories } from "@/database/categories";
+import { newsroom_categories } from "@/database/categories";
 
-export const exampleCategoryScope = defineModerationScope({
-  id: "example.category",
-  label: "@vitnode/example.moderation.category.label",
-  description: "@vitnode/example.moderation.category.desc",
+export const categoryModerationScope = defineModerationScope({
+  id: "newsroom.category",
+  label: "newsroom.moderation.category.label",
+  description: "newsroom.moderation.category.desc",
   list: async (c, { cursor, limit, search }) => {
     const rows = await c
       .get("db")
-      .select({ id: example_categories.id, name: example_categories.name })
-      .from(example_categories)
+      .select({ id: newsroom_categories.id, name: newsroom_categories.name })
+      .from(newsroom_categories)
       .where(
         and(
-          cursor ? gt(example_categories.id, Number(cursor)) : undefined,
-          search ? ilike(example_categories.name, `%${search}%`) : undefined,
+          cursor ? gt(newsroom_categories.id, Number(cursor)) : undefined,
+          search ? ilike(newsroom_categories.name, `%${search}%`) : undefined,
         ),
       )
-      .orderBy(asc(example_categories.id))
+      .orderBy(asc(newsroom_categories.id))
       .limit(limit + 1);
+
     const page = rows.slice(0, limit);
 
     return {
@@ -54,9 +55,9 @@ export const exampleCategoryScope = defineModerationScope({
 
     const rows = await c
       .get("db")
-      .select({ id: example_categories.id, name: example_categories.name })
-      .from(example_categories)
-      .where(inArray(example_categories.id, numeric));
+      .select({ id: newsroom_categories.id, name: newsroom_categories.name })
+      .from(newsroom_categories)
+      .where(inArray(newsroom_categories.id, numeric));
 
     return rows.map(row => ({ id: String(row.id), label: row.name }));
   },
@@ -73,21 +74,21 @@ export const exampleCategoryScope = defineModerationScope({
 
 Pass the family to `buildApiPlugin`, and translate its label:
 
-```ts title="plugins/example/src/config.api.ts"
+```ts title="plugins/newsroom/src/config.api.ts"
 buildApiPlugin({
   manifest,
-  moderation: { scopes: [exampleCategoryScope] }, // [!code ++]
+  moderation: { scopes: [categoryModerationScope] }, // [!code ++]
   modules: [/* ... */],
 });
 ```
 
-```json title="plugins/example/src/locales/en.json"
+```json title="plugins/newsroom/src/locales/en.json"
 {
-  "@vitnode/example": {
+  "newsroom": {
     "moderation": {
       "category": {
         "label": "Categories",
-        "desc": "Limit this permission to articles in some categories."
+        "desc": "Limit this permission to stories in some categories."
       }
     }
   }
@@ -104,14 +105,14 @@ Family ids are global. Two plugins registering the same id, or a permission nami
 
 On the server-side model, name the base-table column that holds the resource id:
 
-```ts title="plugins/example/src/database/articles.ts"
-export const articleContent = createContentModel(articleContentType, {
-  references: { category: () => example_categories.id },
-  moderationScope: { column: "category", family: "example.category" }, // [!code ++]
+```ts title="plugins/newsroom/src/database/stories.ts (excerpt)"
+export const storyContent = createContentModel(storyContentType, {
+  references: { category: () => newsroom_categories.id },
+  moderationScope: { column: "category", family: "newsroom.category" }, // [!code ++]
 });
 ```
 
-The report permissions of `example.article` are now scoped by `example.category`. The server reads the column itself, so a client can never claim a record is in another category. The definition in `content/article.ts` stays browser-safe, without callbacks.
+The report permissions of `newsroom.story` are now scoped by `newsroom.category`. The server reads the column itself, so a client can never claim a record is in another category. The definition in `content/story.ts` stays browser-safe, without callbacks.
 
 </Step>
 
@@ -119,7 +120,7 @@ The report permissions of `example.article` are now scoped by `example.category`
 
 ## Check the result
 
-Save the file while `pnpm dev` runs. Open **AdminCP → Staff → Moderators**, edit a moderator and select the example plugin. **View reports** and **Claim, assign, annotate and resolve reports** now show a scope under the checkbox, and **Change** opens the category picker. See [Configure moderators](/docs/dev/moderation/configure-moderators).
+Save the file while `pnpm dev` runs. Open **AdminCP → Staff → Moderators**, edit a moderator and select the **Newsroom** plugin. **View reports** and **Claim, assign, annotate and resolve reports** now show a scope under the checkbox, and **Change** opens the category picker. See [Configure moderators](/docs/dev/moderation/configure-moderators).
 
 ## Container-scoped permissions
 
@@ -178,12 +179,15 @@ When a plugin later makes an existing permission scoped, grants saved before tha
 Pass the resource when you check a scoped permission:
 
 ```ts
+import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+
+// inside a route handler, where `c` is the Hono context
 const allowed = await checkStaffPermission(c, {
   type: "moderator",
-  plugin: "@vitnode/example",
-  module: "article",
+  plugin: "newsroom",
+  module: "story",
   permission: "can_view_reports",
-  resource: { family: "example.category", id: "2" },
+  resource: { family: "newsroom.category", id: "2" },
 });
 ```
 

@@ -1,5 +1,5 @@
 ---
-title: Use the CLI in CI
+title: CLI in CI
 description: Validate plugins, build with readable logs and apply migrations with the VitNode CLI in GitHub Actions, Docker and other pipelines.
 icon: Workflow
 ---
@@ -12,7 +12,7 @@ vitnode build --plain
 vitnode db migrate --yes
 ```
 
-Run each command in your app's folder, so the CLI finds the app's config.
+Run each command in your app's folder, so the CLI finds the app's config. The examples below assume a Turborepo workspace from `create-vitnode-app`, where the app package is named `web` and the root has a `build:plugins` script. In a monorepo app, the database belongs to the `api` package, so run migrations with `--filter api`. A single app without Turborepo has no plugins to build, so run the commands in the project root without `--filter`.
 
 ## GitHub Actions
 
@@ -44,11 +44,11 @@ To compare bundle sizes between runs, cache `node_modules/.cache/vitnode`. That 
 ## Migrate during deployment
 
 ```bash
-POSTGRES_URL=postgresql://... vitnode db migrate --yes
-vitnode start
+POSTGRES_URL=postgresql://... pnpm --filter web exec vitnode db migrate --yes
+pnpm --filter web start
 ```
 
-Run migrations once per deployment, before the new version starts. `--yes` is required, because the CLI never waits for an answer without an interactive terminal. If two instances start at once, the second waits for the first instead of racing it.
+Use `--filter api` for the migration in a monorepo app, whose API owns the database. Run migrations once per deployment, before the new version starts. `--yes` is required, because the CLI never waits for an answer without an interactive terminal. If two instances start at once, the second waits for the first instead of racing it.
 
 ## What changes in a pipeline
 
@@ -69,7 +69,7 @@ VitNode - Production build
 
 Size warnings never fail a build. [Output and exit codes](/docs/dev/cli/output) lists every exit code and how colors are chosen.
 
-## Next steps
+## Related
 
 <Cards>
   <Card

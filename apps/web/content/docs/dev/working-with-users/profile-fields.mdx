@@ -1,0 +1,82 @@
+---
+title: Profile fields
+description: How VitNode members set their personal information and time zone, which name the public sees, what the profile header shows, and how roles and the API config limit editing.
+icon: IdCard
+---
+
+Members fill in a few optional profile fields themselves: first name, last name, phone, headline, the **Show my real name** switch and a time zone. This page covers where they edit them, the routes behind that, which name other people see, and the two controls you have. Role settings decide _who_ may edit, and the API config decides _which fields exist_.
+
+## Personal information
+
+Members set `firstName`, `lastName`, `phone` and `headline` at **Settings → Overview** (`/settings`). The **Profile** card lists them read-only; **Edit profile** opens one sheet with every field, the **Show my real name** switch and the time zone, saved together with **Save changes**. Every field is optional and stored as `null` when cleared. The session payload carries them, so anything that already reads the session can show them without another request.
+
+| Method  | Path                                 | Who                                        |
+| :------ | :----------------------------------- | :----------------------------------------- |
+| `GET`   | `/api/@vitnode/core/users/me/policy` | The signed-in user: which fields may they edit? |
+| `PATCH` | `/api/@vitnode/core/users/me`        | The signed-in user, on their own row       |
+
+The `PATCH` body takes any subset of `{ firstName, lastName, phone, headline, showRealName }`. A field left out stays as it is, and a text field sent as `""` or whitespace is cleared. Saving clears the user's cached session and emits [`user.updated`](/docs/dev/events/built-in-events).
+
+`phone` is the one field with a format: digits plus `+`, spaces, `-`, `(` and `)`, up to 32 characters. The form and the route both reject anything else. It is **not** on the public profile; only the account's own session carries it.
+
+## Time zone
+
+`timeZone` sits under **Region** in the same **Edit profile** sheet. It takes any IANA name, like `Europe/Warsaw`, and **Use this device's time zone** fills it from the browser (it still waits for **Save changes**). `null` means "follow my language", then UTC. Notification digests go out in this time zone, and `c.get("user")?.timeZone` is there for anything else that needs local time.
+
+| Method | Path                                    | Who                                  |
+| :----- | :-------------------------------------- | :----------------------------------- |
+| `PUT`  | `/api/@vitnode/core/users/me/time-zone` | The signed-in user, on their own row |
+
+The body is `{ timeZone: string | null }`. An unknown name answers `400`. Saving clears the cached session and emits [`user.updated`](/docs/dev/events/built-in-events).
+
+## Which name the public sees
+
+`showRealName` decides whether a profile is headed by the nickname (`name`) or by `firstName lastName`. The public profile route resolves this **on the server** and returns the result as `name`, so a real name the user has not published never leaves the API. When the switch is on but both halves are empty, the profile falls back to the nickname.
+
+People shown in content, such as a post's authors, carry the same answer as `fullName`, which is the real name when it is published and `null` otherwise. [`UserFormat`](/docs/ui/user-format) shows it in place of the nickname. To publish a real name from your own route, use `publicFullNameOf` from `@vitnode/core/lib/user-personal-information`, and never send `firstName` or `lastName` to other people.
+
+The AdminCP and search always show `name`, because staff need the name the account is filed under.
+
+## What the profile header shows
+
+{/* Image prompt: VitNode public profile header at /users/aXen. Wide cover image with a rounded-square avatar overlapping its bottom-left corner, the display name and @nameCode beside it, and a single row of muted meta items with small icons - a briefcase for the headline, a shield for the primary role, a calendar for the join date - with an "Edit profile" outline button at the far right. Light theme, 1440x400. */}
+
+`GET /api/@vitnode/core/users/profile/{nameCode}` returns everything the header needs: `id`, `name` (already resolved), `nameCode`, `headline`, `avatarUrl`, `coverUrl`, `avatarColor`, `createdAt`, the primary `role` and any `secondaryRoles`. The header shows the headline, the role and the join date as one row with an icon each, stacked under the avatar on a phone.
+
+With `users.personalInformation.headline` set to `false` (see [below](#turn-fields-off-for-the-whole-install)), the route returns `headline: null` for everyone, so turning the field off removes it from public profiles without touching what members wrote.
+
+The **Edit profile** button is the header's action slot and shows only on the account's own profile. A host that renders `ProfileContent` itself can pass any `action`: a follow button, a message link, or nothing.
+
+## Who may edit
+
+Each role has **Allow editing personal information** on its **Profile** tab at **AdminCP → Core → Users → Roles** (`allowEditPersonalInfo`, default `true`). A user may edit only when **every** role they hold allows it; one role that switches it off locks the fields.
+
+That is the opposite of the [image allowances](/docs/dev/working-with-users/avatars#role-settings), which any single role can grant. Since this setting defaults to `true`, "any role grants" would let every other role a member holds quietly undo an administrator who switched it off on one role.
+
+A locked member's **Edit profile** sheet shows only the time zone, which everyone may change, and `PATCH /users/me` answers `403` whatever the UI showed. Staff can still edit locked fields from [the AdminCP](/docs/dev/working-with-users/admin-users).
+
+## Turn fields off for the whole install
+
+Every field is on unless you set it to `false` under `users.personalInformation` in the API config:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  users: {
+    personalInformation: {
+      phone: false,
+      headline: false,
+      showRealName: false,
+    },
+  },
+});
+```
+
+The keys are `firstName`, `lastName`, `phone`, `headline` and `showRealName`. A field switched off disappears from the settings card and its form, and `PATCH /users/me` refuses to write it even when a request sends it, so a stale browser tab cannot get around the switch.
+
+Switching a field off never deletes data. The column keeps what members had set, and turning it back on restores it. With `showRealName` off, every profile is headed by the nickname. With **every** field off there is nothing left to edit, so the **Edit profile** button disappears too.
+
+## Related
+
+- [Current user](/docs/dev/working-with-users/users) shows the full user record and how to read it.
+- [Avatars and covers](/docs/dev/working-with-users/avatars) covers the profile images.

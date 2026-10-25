@@ -1,28 +1,28 @@
 ---
-title: Getting Started
-description: Create a VitNode app, prepare Postgres, start TanStack Start, and sign in to AdminCP in five small steps.
+title: Setup
+description: Create a VitNode app with create-vitnode-app, start PostgreSQL, run the development server and sign in to the AdminCP as the first administrator.
 icon: Rocket
 ---
 
-import {
-  BookOpenIcon,
-  PackagePlusIcon,
-  ServerIcon,
-  SettingsIcon,
-} from 'lucide-react'
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-You need Node.js 22.18+ (or 24.11+, or 26+), Postgres (or Docker), and your
-favorite package manager.
-Choose a workspace with Turborepo if you will create plugins; plugins are the
-home for product work, not an optional side quest.
+This page takes you from an empty folder to a running VitNode app, with you signed in to the AdminCP as its administrator. It is the first lesson of the beginner path; the next one creates a plugin inside this app.
+
+## Before you begin
+
+- **Node.js** `22.18` or newer in the 22 line, `24.11` or newer in the 24 line, or `26` and later. The generator and every generated package refuse older versions.
+- **A package manager:** pnpm, bun or npm.
+- **PostgreSQL.** The easiest local option is Docker, which the generator can configure for you. Your own PostgreSQL server works too.
 
 <Steps>
-  <Step>
+
+<Step>
 
 ### Scaffold the app
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Create VitNode app">
+Run the generator from the folder that should contain your project:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Create a VitNode app">
 
 ```bash tab="bun"
 bun create vitnode-app@canary
@@ -38,16 +38,74 @@ npm create vitnode-app@canary
 
 </Tabs>
 
-Pick **Single App** for TanStack Start plus Hono at `/api`. Turn on
-**Turborepo** if you intend to use `--plugin`; it gives the generator a
-workspace root and a place for `plugins/*`.
+It asks for a project name (default `my-vitnode`), then these questions. The recommended answers set you up for the rest of the beginner path:
 
-  </Step>
-  <Step>
+| Question              | Recommended                                 | Why                                                                                                                                           |
+| --------------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Package manager       | the one you use                             | The generator offers only the managers you have installed.                                                                                    |
+| App type              | **Single App**                              | One TanStack Start app with the Hono API mounted at `/api`. **Monorepo App** splits web and API into two apps; **Only API** has no front end. |
+| Use Turborepo?        | **Yes**                                     | Required to create plugins. A Monorepo App always gets it, so the generator skips the question.                                               |
+| Oxlint & Oxfmt?       | your choice                                 | Adds lint and format scripts.                                                                                                                 |
+| Docker container?     | **Yes**, unless you run PostgreSQL yourself | Adds `docker-compose.yml` with PostgreSQL 17 and Redis on `127.0.0.1`.                                                                        |
+| Git repository?       | your choice                                 |                                                                                                                                               |
+| Install dependencies? | **Yes**                                     | Installs packages and generates the first migrations.                                                                                         |
 
-### Start the database
+With Turborepo, the app lives in `apps/web` (plus `apps/api` for a Monorepo App) and your plugins will go in `plugins/`. Without it, the app sits at the project root and you cannot create plugins later.
 
-If you selected Docker, start Postgres and Redis locally:
+</Step>
+
+<Step>
+
+### Open the project
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Open the project">
+
+```bash tab="bun"
+cd my-vitnode
+```
+
+```bash tab="pnpm"
+cd my-vitnode
+```
+
+```bash tab="npm"
+cd my-vitnode
+```
+
+</Tabs>
+
+Run every command in this lesson, and in the lessons after it, from this folder. If you answered **No** to "Install dependencies?", install them now with `bun install`, `pnpm install` or `npm install`.
+
+</Step>
+
+<Step>
+
+### Configure the environment
+
+The app reads its settings from `.env`. A Monorepo App already has `apps/web/.env`; a Single App ships only `.env.example`. Copy it next to itself:
+
+```bash title="Single App with Turborepo"
+cp apps/web/.env.example apps/web/.env
+```
+
+For a Monorepo App / Single API:
+
+```bash title="Monorepo App / Single API"
+cp apps/api/.env.example apps/api/.env
+```
+
+The defaults match the Docker services:
+
+- PostgreSQL at `postgresql://root:root@localhost:5432/vitnode`. Using your own PostgreSQL? Change `POSTGRES_URL` to its connection string.
+- Redis at `redis://localhost:6379` with the password `root`. Redis is optional. Delete `REDIS_URL` to run without it, and VitNode falls back to an in-process cache.
+
+</Step>
+
+<Step>
+
+### Start PostgreSQL
+
+With Docker, start the database and Redis in the background:
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start local services">
 
@@ -65,16 +123,18 @@ npm run docker:dev
 
 </Tabs>
 
-  </Step>
- 
-  <Step>
+Without Docker, make sure the server in `POSTGRES_URL` is running and the database exists.
 
-### Start VitNode
+</Step>
+
+<Step>
+
+### Start the development server
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Start the development server">
 
 ```bash tab="bun"
-bun dev
+bun run dev
 ```
 
 ```bash tab="pnpm"
@@ -87,36 +147,32 @@ npm run dev
 
 </Tabs>
 
-Open `http://localhost:3000`.
+Before the server starts, `dev` builds your plugins, generates any pending migrations, applies them and seeds the default roles. You never run migrations by hand on this path. When it is ready, it prints the addresses:
 
-  </Step>
+```txt
+  Web       http://localhost:3000
+  AdminCP   http://localhost:3000/admin
+  API       http://localhost:3000/api
+```
+
+</Step>
+
+<Step>
+
+### Create the administrator account
+
+VitNode has no installer. The **first account that registers becomes the administrator**. It gets the root Administrator role and a verified email. Every later account is a regular member.
+
+Open `http://localhost:3000/register` and create your account. Then open `http://localhost:3000/admin` and sign in with the same email and password. The AdminCP has its own sign-in, separate from the site's.
+
+</Step>
+
 </Steps>
 
-## Keep going
+## Check the result
 
-<Cards>
-  <Card
-    icon={<SettingsIcon />}
-    title="Configuration"
-    description="Locales, plugins, request middleware, and what a browser may hold."
-    href="/docs/dev/configuration"
-  />
-  <Card
-    icon={<PackagePlusIcon />}
-    title="Create a plugin"
-    description="Scaffold, register, and visit an installable feature package."
-    href="/docs/dev/plugins/create"
-  />
-  <Card
-    icon={<ServerIcon />}
-    title="Deployments"
-    description="Move your TanStack Start and Hono app to production."
-    href="/docs/dev/deployments/self-hosted"
-  />
-  <Card
-    icon={<BookOpenIcon />}
-    title="First plugin tutorial"
-    description="Follow a compact example that adds a real plugin page."
-    href="/docs/guides/first-plugin"
-  />
-</Cards>
+- `http://localhost:3000` shows the public site, and the header has your avatar.
+- `http://localhost:3000/admin` shows the AdminCP dashboard after you sign in.
+- **Staff → Administrators** in the AdminCP lists the **Administrator** role as unrestricted.
+
+If `dev` stops with a database error, PostgreSQL is not reachable at `POSTGRES_URL`. Check that the containers are up (`docker ps`) or that your own server accepts the connection.

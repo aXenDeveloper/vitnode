@@ -6,9 +6,13 @@ icon: ChevronsRight
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-VitNode pages with cursors by default. Cursors keep page boundaries stable even while records are created or deleted, and they cost the same whether you are on page 2 or page 20,000.
+`withPagination` turns a Drizzle select into a paged list route that returns `{ edges, pageInfo }`. It pages with cursors by default. Cursors keep page boundaries stable even while records are created or deleted, and they cost the same whether you are on page 2 or page 20,000.
 
-When a list needs numbered pages — 1, 2, 3 … 38, the kind admin tables show — the same route also accepts `?page=`. You do not have to choose up front: one route serves both.
+When a list needs numbered pages, the 1, 2, 3 … 38 kind that admin tables show, the same route also accepts `?page=`. You do not have to choose up front, because one route serves both. In this guide the `site-notes` plugin gets a paged notes route and a page that steps through it.
+
+## Before you begin
+
+- The `site-notes` plugin with its `site_notes` table, `notes` module and `zodNote` schema from the beginner path up to [Database](/docs/dev/database). Any table with a unique integer, bigint or UUID id works the same way.
 
 ## Quick start
 
@@ -17,48 +21,69 @@ When a list needs numbered pages — 1, 2, 3 … 38, the kind admin tables show 
 
 ### Add a paginated API route
 
-Use `withPagination` from `@vitnode/core/api/lib/with-pagination`:
+Create `src/api/modules/notes/paged.route.ts`. Validate the query with `zodPaginationQuery`, describe the response with `zodPaginationPageInfo`, and let `withPagination` build the page:
 
-```ts title="plugins/blog/src/api/modules/posts/routes/get.route.ts"
-import { getColumns } from 'drizzle-orm'
+```ts title="plugins/site-notes/src/api/modules/notes/paged.route.ts"
+import { z } from '@hono/zod-openapi'
 import {
   withPagination,
+  zodPaginationPageInfo,
   zodPaginationQuery,
 } from '@vitnode/core/api/lib/with-pagination'
-import { blog_posts } from '@/database/posts'
 
-export const getPostsRoute = buildRoute({
+import { buildRoute } from '@/api/builders'
+import { site_notes } from '@/database/notes'
+
+import { zodNote } from './notes.schema'
+
+export const pagedNotesRoute = buildRoute({
   route: {
     method: 'get',
-    path: '/',
-    request: {
-      query: zodPaginationQuery,
+    path: '/paged',
+    request: { query: zodPaginationQuery },
+    responses: {
+      200: {
+        content: {
+          'application/json': {
+            schema: z.object({
+              edges: z.array(zodNote),
+              pageInfo: zodPaginationPageInfo,
+            }),
+          },
+        },
+        description: 'One page of notes, newest first.',
+      },
     },
   },
-  handler: async (c) => {
+  handler: async c => {
     const data = await withPagination({
       c,
       params: { query: c.req.valid('query') },
-      primaryCursor: blog_posts.id,
-      table: blog_posts,
-      orderBy: { column: blog_posts.createdAt, order: 'desc' },
+      primaryCursor: site_notes.id,
+      table: site_notes,
+      orderBy: { column: site_notes.createdAt, order: 'desc' },
       query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
         await c
           .get('db')
-          .select({ ...getColumns(blog_posts), ...cursorSelection })
-          .from(blog_posts)
+          .select({
+            ...cursorSelection,
+            id: site_notes.id,
+            title: site_notes.title,
+            body: site_notes.body,
+          })
+          .from(site_notes)
           .where(where)
           .orderBy(orderBy)
           .limit(limit)
           .offset(offset),
     })
 
-    return c.json(data)
+    return c.json(data, 200)
   },
 })
 ```
 
-The route automatically accepts `?cursor=...&first=10` (cursor walk) or `?page=3&first=10` (numbered page), and returns `{ edges, pageInfo }`.
+Add `pagedNotesRoute` to the `routes` of `notesModule`, **before** `showNoteRoute` (`routes: [listNotesRoute, pagedNotesRoute, showNoteRoute]`). Routes match in the order they are listed, so after `/{id}` the path `/paged` would be read as an id and answer `400`. The route now answers `GET /api/site-notes/notes/paged`, accepts `?first=10&cursor=...` (cursor walk) or `?page=3&first=10` (numbered page), and returns `{ edges, pageInfo }`. The page size defaults to 50 and is capped at 100.
 
 <Callout type="warn">
   Always spread `offset` into the statement. Without it, `?page=` silently
@@ -84,15 +109,25 @@ Rule of thumb: **numbered pages for admin tables**, where people want page 7 and
 
 Both modes need an index on the ordered tuple, and neither is fast without one:
 
-```ts title="plugins/blog/src/database/posts.ts"
-index('blog_posts_created_at_id_idx').on(t.createdAt, t.id)
+```ts title="plugins/site-notes/src/database/notes.ts"
+import { camelCase, index } from 'drizzle-orm/pg-core'
+
+export const site_notes = camelCase.table.withRLS(
+  'site_notes',
+  t => ({
+    // columns unchanged
+  }),
+  t => [index('site_notes_created_at_id_idx').on(t.createdAt, t.id)], // [!code ++]
+)
 ```
 
-The cursor predicate is emitted as a row comparison — `(createdAt, id) < ($1, $2)` — precisely so Postgres can seek straight to the boundary on that index. Measured on a million rows, the seek reaches the hundred-thousandth row in 0.19ms. Without the index, the same query scans and sorts the whole table on every page.
+Generate and apply a migration afterwards, as in [Database](/docs/dev/database).
+
+`withPagination` emits the cursor predicate as a row comparison, `(createdAt, id) < ($1, $2)`, so Postgres can seek straight to the boundary on that index. Without the index, the same query scans and sorts the whole table on every page.
 
 ---
 
-## `withPagination` Options
+## `withPagination` options
 
 <TypeTable
   type={{
@@ -103,12 +138,12 @@ The cursor predicate is emitted as a row comparison — `(createdAt, id) < ($1, 
     },
     params: {
       description:
-        'Validated query parameters: { query: { cursor, first, last, page, search } }.',
+        'Validated query parameters: { query: { cursor?, first?, last?, page?, search? } }, all strings. search is read only when the search option is set.',
       required: true,
       type: 'object',
     },
     table: {
-      description: 'Drizzle table being paged (used for total count).',
+      description: 'Drizzle table being paged, used for totalCount.',
       required: true,
       type: 'PgTable',
     },
@@ -136,7 +171,7 @@ The cursor predicate is emitted as a row comparison — `(createdAt, id) < ($1, 
     },
     search: {
       description:
-        'Array of text columns to match against ?search= with ILIKE.',
+        'Text columns matched against params.query.search, case-insensitive. Add search to the query schema yourself.',
       required: false,
       type: 'PgColumn[]',
     },
@@ -175,17 +210,18 @@ request.
 
 ---
 
-## Response Structure (`pageInfo`)
+## Response (`pageInfo`)
 
 ```json
 {
   "edges": [
-    { "id": 1, "title": "First post", "createdAt": "2026-01-01T00:00:00.000Z" }
+    { "id": 12, "title": "Welcome", "body": "Our first note." }
   ],
   "pageInfo": {
     "totalCount": 120,
     "totalPages": 12,
     "currentPage": 1,
+    "pageSize": 10,
     "count": 10,
     "hasNextPage": true,
     "hasPreviousPage": false,
@@ -210,6 +246,7 @@ request.
         'The page being shown, clamped onto the last one if you ask past the end. Null whenever the walk is by cursor.',
       type: 'number | null',
     },
+    pageSize: { description: 'The page size used: first or last, 50 by default.', type: 'number' },
     count: { description: 'Number of rows in current page.', type: 'number' },
     hasNextPage: {
       description: 'True if another page exists forward.',
@@ -232,101 +269,143 @@ request.
 
 ---
 
-## Frontend Integration
+## Step through pages in the browser
 
 <Steps>
 <Step>
 
-### Move through results from a plugin page
+### Create the page
 
-Plugin routes normalize their own query string with `parseSearch`, then receive
-the typed `search`, `loaderData`, and same-page `navigate` function. That is all
-a list needs—no host route file required.
+A plugin page parses its own query string with `parseSearch`, loads data with `load`, and receives the typed `search`, `loaderData` and a same-page `navigate` function. The loader calls the route with `fetcher`, passing the cursor as a query parameter:
 
-```tsx title="plugins/blog/src/pages/posts-page.tsx"
+```tsx title="plugins/site-notes/src/pages/browse-page.tsx"
 import type { PluginRoutePageProps } from '@vitnode/core/routing'
-import { definePluginRoute } from '@vitnode/core/routing'
 
-interface PostsSearch {
+import { definePluginRoute } from '@vitnode/core/routing'
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+import { manifest } from '@/manifest.gen'
+
+interface BrowseSearch {
   cursor?: string
-  first: number
 }
 
-// [!code ++:11]
-export const route = definePluginRoute({
-  parseSearch: (input) => {
-    const search = input as Record<string, unknown>
-    const first = Number(search.first)
+const loadPage = async (search: BrowseSearch) => {
+  const response = await fetcher({
+    plugin: manifest.id,
+    method: 'get',
+    module: 'notes',
+    path: '/paged',
+    args: { query: { first: '10', cursor: search.cursor } },
+  })
+  if (!response.ok) throw new Error('Could not load notes.')
 
-    return {
-      cursor: typeof search.cursor === 'string' ? search.cursor : undefined,
-      first: Number.isInteger(first) && first > 0 ? first : 10,
-    }
+  return await response.json()
+}
+
+type BrowseData = Awaited<ReturnType<typeof loadPage>>
+
+export const route = definePluginRoute<BrowseData, BrowseSearch>({
+  parseSearch: input => {
+    const { cursor } = input as Record<string, unknown>
+
+    return { cursor: typeof cursor === 'string' ? cursor : undefined }
   },
-  load: async ({ search }) => await fetchPosts(search),
+  load: async ({ search }) => await loadPage(search),
 })
 
-const PostsPage = ({
+const BrowsePage = ({
   loaderData,
   navigate,
   search,
-}: PluginRoutePageProps<
-  Awaited<ReturnType<typeof fetchPosts>>,
-  PostsSearch
->) => (
-  <button
-    disabled={!loaderData.pageInfo.hasNextPage}
-    onClick={() =>
-      void navigate({
-        resetScroll: false,
-        search: {
-          ...search,
-          cursor: loaderData.pageInfo.endCursor ?? undefined, // [!code ++]
-        },
-      })
-    }
-    type="button"
-  >
-    Next page
-  </button>
+}: PluginRoutePageProps<BrowseData, BrowseSearch>) => (
+  <main className="container mx-auto flex max-w-2xl flex-col gap-4 p-4">
+    <ul className="flex flex-col gap-2">
+      {loaderData.edges.map(note => (
+        <li key={note.id}>{note.title}</li>
+      ))}
+    </ul>
+    <button
+      disabled={!loaderData.pageInfo.hasNextPage}
+      onClick={() =>
+        void navigate({
+          resetScroll: false,
+          search: { ...search, cursor: loaderData.pageInfo.endCursor ?? undefined }, // [!code ++]
+        })
+      }
+      type="button"
+    >
+      Next page
+    </button>
+  </main>
 )
 
-export default PostsPage
+export default BrowsePage
+```
+
+</Step>
+<Step>
+
+### Register the page
+
+Add the page to the plugin's `src/routes.ts`:
+
+```ts title="plugins/site-notes/src/routes.ts"
+page('/site-notes/browse', {
+  component: lazy(() => import('./pages/browse-page')),
+}),
 ```
 
 </Step>
 </Steps>
 
-## Custom Filtering and Search
+### Check the result
 
-To add search and custom filters, pass the parameters into `withPagination`:
+Open `/site-notes/browse`. The page lists up to 10 notes, newest first. With more than 10 notes, **Next page** adds `?cursor=...` to the URL and shows the next 10; on the last page the button is disabled.
 
-```ts title="plugins/blog/src/api/modules/posts/routes/get.route.ts"
-import { eq } from 'drizzle-orm'
+## Search and custom filters
 
+`withPagination` filters with `search` (text columns matched case-insensitively against `?search=`) and `where` (any extra condition). Neither is in `zodPaginationQuery`, so extend the query schema with the parameters your route accepts:
+
+```ts title="plugins/site-notes/src/api/modules/notes/paged.route.ts (excerpt)"
+import { gte } from 'drizzle-orm'
+
+// in route.request
+query: zodPaginationQuery.extend({
+  search: z.string().max(100).optional(), // [!code ++]
+  since: z.iso.datetime().optional(), // [!code ++]
+}),
+
+// in the handler
+const query = c.req.valid('query')
 const data = await withPagination({
   c,
-  params: { query: c.req.valid('query') },
-  table: blog_posts,
-  primaryCursor: blog_posts.id,
-  orderBy: { column: blog_posts.createdAt, order: 'desc' },
-  // [!code ++:3]
-  search: [blog_posts.title, blog_posts.content],
-  where: categoryId ? eq(blog_posts.categoryId, categoryId) : undefined,
-  query: async ({ cursorSelection, limit, where, orderBy }) =>
+  params: { query },
+  table: site_notes,
+  primaryCursor: site_notes.id,
+  orderBy: { column: site_notes.createdAt, order: 'desc' },
+  search: [site_notes.title, site_notes.body], // [!code ++]
+  where: query.since ? gte(site_notes.createdAt, new Date(query.since)) : undefined, // [!code ++]
+  query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
     await c
       .get('db')
-      .select({ ...getColumns(blog_posts), ...cursorSelection })
-      .from(blog_posts)
+      .select({
+        ...cursorSelection,
+        id: site_notes.id,
+        title: site_notes.title,
+        body: site_notes.body,
+      })
+      .from(site_notes)
       .where(where)
       .orderBy(orderBy)
-      .limit(limit),
+      .limit(limit)
+      .offset(offset),
 })
 ```
 
----
+`GET /api/site-notes/notes/paged?search=welcome` now returns only notes whose title or body contains "welcome". `totalCount` counts the filtered rows.
 
-## Best Practices
+## Best practices
 
 <Callout type="info" title="Opaque cursors">
   Cursors encode the specific column ordering. If the user changes sort order or
@@ -340,7 +419,7 @@ const data = await withPagination({
   methods without rebuilding them.
 </Callout>
 
-## Learn More
+## Related
 
 <Cards>
   <Card

@@ -4,14 +4,19 @@
   "icon": "Blocks",
   "pages": [
     "index",
+    "end-to-end",
     "defining-a-block",
     "blocks-field",
     "rendering",
     "content-zones",
-    "visual-editor",
+    "several-zones",
+    "restrict-widgets",
     "editable-pages",
+    "custom-loader",
+    "saving-layouts",
+    "visual-editor",
     "block-variants",
     "layout-areas",
-    "end-to-end"
+    "custom-editor-host"
   ]
 }

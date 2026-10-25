@@ -1,102 +1,199 @@
 ---
-title: Public edit form
-description: Let authors and moderators edit Content Engine records from the site with an Edit button from canEdit, a form loaded from GET /{id}/edit, and useContentPublicWrite for versions, conflicts and errors.
+title: Edit form
+description: Build a VitNode Content Engine edit page for authors and moderators that loads the editable record, handles sign-in and refusals, saves with the expected version through useContentPublicWrite and keeps the member's input on a version conflict.
 icon: FilePen
 implementation:
   objective: Let authors and moderators edit existing records from the public site.
   decisions:
-    - Which items can be edited? Offer content types from the project's plugins that have `publicWrite.update`; if none has it, point to the Public write guide.
-    - Where do the Edit button and the edit page go? Offer the pages that show the chosen items; recommend `/{items}/:id/edit` for the form.
+    - Which items can be edited? Offer content types from the project's plugins that have `publicWrite.update`; if none has it, point to the Member writing guide.
+    - Where does the edit page go? Offer the pages that show the chosen items; recommend `/{items}/:id/edit`.
   constraints:
-    - Show Edit only when `useContentPermissions` answers `canEdit`; never decide it from the author or the session.
-    - Load the form with `GET /{id}/edit` and save with `PATCH /{id}` inside `useContentPublicWrite().submit`, passing `version` so conflicts are caught.
-    - Show pending proposals from `approval` instead of claiming the edit is live.
+    - Load the form with `GET /{id}/edit`, keep 401, 403, 404 and unexpected failures apart, and save with `PATCH /{id}` inside `useContentPublicWrite().submit`, passing `version`.
+    - After a save, move the form's defaults to the saved values, reset it and invalidate the cached lists.
+    - When the content type is filed in a container with publishing rules, also follow the Approval notices guide.
   related:
-    - title: Public create form
-      href: /docs/content-engine/public-write-frontend
-    - title: Report content
-      href: /docs/content-engine/reports
-    - title: Approvals
-      href: /docs/content-engine/approvals
+    - title: Form helpers
+      href: /docs/content-engine/public-write-form-api
+    - title: Permissions
+      href: /docs/content-engine/public-permissions
+    - title: Approval notices
+      href: /docs/content-engine/approval-notices
 ---
+
+import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
 
 import { ImgDocs } from "@/components/fumadocs/img";
 import conflict from "./public-write-edit-conflict.webp";
-import forbidden from "./public-write-edit-forbidden.webp";
+import editForm from "./public-write-edit-form.webp";
 
-This guide adds an **Edit** button to each discussion and the page behind it. The Content Engine decides who may edit; your page asks it and shows the button. Saving catches the case where someone else saved first, without losing what the member typed.
+This page builds `/news/:id/edit`, where an article's author, or a moderator, changes it. The page loads what may be edited, saves with the version it opened, and keeps the member's text when someone else saved first.
 
-You need [public write](/docs/content-engine/public-write) with `update`, and the create form from [Public create form](/docs/content-engine/public-write-frontend).
+This continues the [Create form](/docs/content-engine/public-write-frontend). It reuses `ArticleForm` from `src/pages/article-form.tsx`, and needs `editorial: true` from [Member writing](/docs/content-engine/public-write), which gives every article a `version`. All the code goes into one new file, `src/pages/article-edit-page.tsx`; the steps build it in order, and [the complete file](#the-complete-file) is at the end.
 
 <Steps>
 
 <Step>
 
-### Show the Edit button
+### Register the edit route
 
-`useContentPermissions` answers `canEdit` for every record on screen in one request. It is `true` for the owner while the rules allow it and for moderators with the edit permission; you never compare user ids yourself:
+Edit `src/routes.ts` and add the page. This is an excerpt:
 
-```tsx title="plugins/example/src/pages/discussion-page.tsx"
-const { canEdit } = useDiscussionPermissions([item.id]).of(item.id);
-
-{canEdit ? (
-  <HrefLink className={buttonVariants({ variant: "outline" })} href={`/discussions/${item.id}/edit`}>
-    {t("edit")}
-  </HrefLink>
-) : null}
+```ts title="plugins/newsroom/src/routes.ts"
+  // [!code ++:4]
+  page("/news/:id/edit", {
+    component: lazy(() => import("./pages/article-edit-page")),
+    messages: ["newsroom.articles"],
+  }),
 ```
 
-`useDiscussionPermissions` is a five-line wrapper with the typed `fetcher` call, shown in [Report content](/docs/content-engine/reports#ask-who-may-report-what). On a list, pass every row's id at once.
+There is no `requires: "authenticated"`. The page shows its own sign-in prompt, because it must tell "not signed in" apart from "not yours". During a navigation the current page stays on screen with the top progress bar until the loader finishes.
 
 </Step>
 
 <Step>
 
-### Load the record
+### Load the editable values
 
-`GET /{id}/edit` answers for the people who may edit, drafts included. Turn every other answer into a page state:
+Create `src/pages/article-edit-page.tsx` and start it with the loader. `GET /{id}/edit` answers only for the author and moderators, drafts included:
 
-```tsx title="plugins/example/src/pages/discussion-edit-page.tsx"
-const fetchEditable = async (id: number) =>
+```tsx title="plugins/newsroom/src/pages/article-edit-page.tsx (excerpt)"
+// Answers only for the author and moderators, drafts included.
+const fetchEditableArticle = async (id: number) =>
   await fetcher({
     plugin: manifest.id,
     method: "get",
-    module: "content/discussions",
+    module: "content/news",
     path: "/{id}/edit",
     args: { params: { id } },
   });
 
-export const route = definePluginRoute({
-  load: async ({ params }) => {
-    const res = await fetchEditable(Number(params.id));
-    if (res.status === 200) return { record: await res.json(), state: "ready" as const };
-    if (res.status === 401) return { state: "signIn" as const };
-    if (res.status === 403) return { state: "forbidden" as const };
-
+const loadEditableArticle = async (param: string) => {
+  const id = Number(param);
+  if (!Number.isSafeInteger(id) || id < 1)
     return { state: "notFound" as const };
-  },
+
+  const res = await fetchEditableArticle(id);
+  if (res.status === 200) {
+    return { record: await res.json(), state: "ready" as const };
+  }
+  if (res.status === 401) return { id, state: "unauthenticated" as const };
+  if (res.status === 403) return { state: "forbidden" as const };
+  if (res.status === 404) return { state: "notFound" as const };
+
+  // A server failure is not "not found": let the app's error page show it.
+  throw new Error(`Loading article ${id} for editing failed.`);
+};
+
+type ArticleEditData = Awaited<ReturnType<typeof loadEditableArticle>>;
+
+type EditableArticle = Extract<ArticleEditData, { state: "ready" }>["record"];
+
+export const route = definePluginRoute({
+  load: async ({ params }) => await loadEditableArticle(params.id),
+
+  head: ({ t }) => ({
+    robots: "noindex, nofollow",
+    title: t("newsroom.articles.edit.title"),
+  }),
 });
 ```
 
-- `401`: the visitor is signed out. Show a sign-in link.
-- `403`: they can read the record but not edit it.
-- `404`: it does not exist, or it is a draft or hidden record that is not theirs. The page never confirms it exists.
+The record has `values` (the editable fields), `version`, `status` and `slug`. TypeScript infers its type from the route, so `EditableArticle` needs no hand-written interface.
 
 </Step>
 
 <Step>
 
-### Save with the version
+### Handle each answer
 
-Pass the record's `version` to `useContentPublicWrite`. It sends the right `expectedVersion` with every save and keeps it current afterwards:
+At the end of the file, the page component turns each loader state into a screen:
 
-```tsx title="plugins/example/src/pages/discussion-edit-page.tsx"
-const DiscussionEditForm = ({ record }: { record: EditableDiscussion }) => {
-  const t = useTranslations("@vitnode/example.discussions");
+```tsx title="plugins/newsroom/src/pages/article-edit-page.tsx (excerpt)"
+const ArticleEditPage = ({
+  loaderData,
+  params,
+}: PluginRoutePageProps<ArticleEditData>) => {
+  const t = useTranslations("newsroom.articles");
+
+  if (loaderData.state === "unauthenticated") {
+    return (
+      <div className="container mx-auto flex max-w-3xl flex-col gap-4 px-4 py-8">
+        <h1 className="text-2xl font-semibold text-balance">
+          {t("state.unauthenticated.title")}
+        </h1>
+        <HrefLink
+          className={buttonVariants({ className: "self-start" })}
+          href={`/login?returnTo=${encodeURIComponent(`/news/${loaderData.id}/edit`)}`}
+        >
+          {t("state.unauthenticated.action")}
+        </HrefLink>
+      </div>
+    );
+  }
+
+  if (loaderData.state !== "ready") {
+    const key = loaderData.state === "forbidden" ? "forbidden" : "not_found";
+
+    return (
+      <div className="container mx-auto flex max-w-3xl flex-col gap-2 px-4 py-8">
+        <h1 className="text-2xl font-semibold text-balance">
+          {t(`state.${key}.title`)}
+        </h1>
+        <p className="text-muted-foreground leading-relaxed">
+          {t(`state.${key}.desc`)}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
+      <h1 className="text-3xl font-semibold tracking-tight text-balance">
+        {t("edit.title")}
+      </h1>
+      <ArticleEditForm key={params.id} record={loaderData.record} />
+    </div>
+  );
+};
+
+export default ArticleEditPage;
+```
+
+| Answer | Screen |
+| --- | --- |
+| `401` | The visitor is signed out. The page shows a sign-in link that comes back here |
+| `403` | They can read the article but may not edit it |
+| `404` | It does not exist, or it is a draft or hidden article that is not theirs. The page never confirms that it exists |
+| Anything else | The loader throws, so a server failure shows the app's error page instead of "not found" |
+
+`key={params.id}` remounts the form for another article, because the form reads `version` once.
+
+</Step>
+
+<Step>
+
+### Render the shared form
+
+Between the loader and the page component goes `ArticleEditForm`. It fills `ArticleForm` with the saved values and sets up `useContentPublicWrite` with the article's `version`. Its `onSubmit` comes in the next step:
+
+```tsx title="plugins/newsroom/src/pages/article-edit-page.tsx (excerpt)"
+const ArticleEditForm = ({ record }: { record: EditableArticle }) => {
+  const t = useTranslations("newsroom.articles.edit");
+  const queryClient = useQueryClient();
+  const [current, setCurrent] = useState({
+    slug: record.slug,
+    status: record.status,
+  });
+  // AutoForm resets an untouched form to the defaults it renders with, so the
+  // defaults follow every save.
+  const [defaults, setDefaults] = useState({
+    body: record.values.body,
+    title: record.values.title,
+  });
   const write = useContentPublicWrite({
-    fields: ["title", "body"],
+    fields: ARTICLE_FORM_FIELDS,
     latestVersion: async () => {
-      const res = await fetchEditable(record.id);
+      const res = await fetchEditableArticle(record.id);
 
       return res.status === 200 ? (await res.json()).version : null;
     },
@@ -104,72 +201,369 @@ const DiscussionEditForm = ({ record }: { record: EditableDiscussion }) => {
     version: record.version,
   });
 
-  const onSubmit: AutoFormOnSubmit<DiscussionFormSchema> = async (values, form) => {
-    const updated = await write.submit(form, async expectedVersion =>
-      await fetcher({
-        plugin: manifest.id,
-        method: "patch",
-        module: "content/discussions",
-        path: "/{id}",
-        args: { params: { id: record.id }, body: { values, expectedVersion } },
-      }),
-    );
-    if (!updated) return;
-
-    form.reset(values);
-    toast.success(t("edit.success.title"));
-  };
+  // onSubmit, from the next step
 
   return (
     <>
       {write.conflict}
-      <DiscussionForm defaultValues={record.values} onSubmit={onSubmit} submitLabel={t("edit.submit")} />
+      <ArticleForm
+        defaultValues={defaults}
+        onSubmit={onSubmit}
+        submitLabel={t("submit")}
+      />
+      {current.status === "published" && current.slug !== null ? (
+        <HrefLink
+          className={buttonVariants({
+            className: "self-start",
+            variant: "link",
+          })}
+          href={`/news/${current.slug}`}
+        >
+          {t("view")}
+        </HrefLink>
+      ) : null}
     </>
   );
 };
 ```
 
-- `record.values` holds exactly the editable fields, so it fills the form as is.
-- `PATCH` changes only the fields you send.
-- **When someone else saved first**, nothing is written and `write.conflict` shows an alert above the form. The member's text stays. **Keep my version** uses `latestVersion` so the next save replaces the other change; **Load latest version** reloads the page.
-- Field errors, an expired session and a refusal show the same way as on the create form.
+**View article** links to the public page only while the article is published, because a draft's page answers `404`.
+
+</Step>
+
+<Step>
+
+### Save with the expected version
+
+Add `onSubmit` inside `ArticleEditForm`, where the comment says. `write.submit` sends `PATCH /{id}` with the version the form holds:
+
+```tsx title="plugins/newsroom/src/pages/article-edit-page.tsx (excerpt)"
+  const onSubmit: AutoFormOnSubmit<ArticleFormSchema> = async (
+    values,
+    form,
+  ) => {
+    const updated = await write.submit(
+      form,
+      async expectedVersion =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "patch",
+          module: "content/news",
+          path: "/{id}",
+          args: {
+            params: { id: record.id },
+            body: { values, expectedVersion },
+          },
+        }),
+    );
+    if (!updated) return;
+
+    // the next step continues here
+  };
+```
+
+- **`expectedVersion`** is the `version` the form opened with. After a successful save, `useContentPublicWrite` stores the new version itself, so the next save sends that one.
+- **`write.submit`** returns the record, or `null` after showing the reason: a field error under its field, a taken title under **Title**, or a toast for the rest, such as an expired session.
+
+</Step>
+
+<Step>
+
+### Update the form and the cached lists
+
+Replace the comment at the end of `onSubmit` with what happens after a successful save:
+
+```tsx title="plugins/newsroom/src/pages/article-edit-page.tsx (excerpt)"
+    setCurrent({ slug: updated.slug, status: updated.status });
+    setDefaults(values);
+    form.reset(values);
+    await queryClient.invalidateQueries({
+      queryKey: [manifest.id, "articles"],
+    });
+
+    toast.success(t("success.title"), {
+      description: t("success.desc", { title: values.title }),
+    });
+```
+
+- **`setDefaults(values)` and `form.reset(values)`** make the saved text the form's new starting point, so the form is no longer dirty. `defaults` lives in state because `AutoForm` resets an untouched form to the `defaultValues` it renders with; without `setDefaults`, the old text would come back after a successful save.
+- **`setCurrent`** keeps `slug` and `status` from the answer, so **View article** follows the latest state.
+- **`invalidateQueries`** expires the cached [article list](/docs/content-engine/public-lists), whose query key starts with `[manifest.id, "articles"]`, so `/news` shows the new title.
+
+</Step>
+
+<Step>
+
+### Handle version conflicts
+
+There is nothing extra to write. `write.conflict`, rendered above the form, is the conflict alert. When someone else saved after the form opened, `PATCH /{id}` answers `409 CONTENT_VERSION_CONFLICT`, writes nothing, and the alert appears while the form keeps every character the member typed:
+
+- **Keep my version** reads the current version with `latestVersion`. The next **Save changes** replaces the other change.
+- **Load latest version** reloads the page and drops the unsaved text.
+
+</Step>
+
+<Step>
+
+### Add the labels
+
+Add these keys under `newsroom.articles` in `src/locales/en.json`:
+
+```json title="plugins/newsroom/src/locales/en.json"
+{
+  "newsroom": {
+    "articles": {
+      "edit": {
+        "title": "Edit article",
+        "submit": "Save changes",
+        "view": "View article",
+        "success": { "title": "Article saved", "desc": "\"{title}\" is up to date." }
+      },
+      "state": {
+        "unauthenticated": { "title": "Sign in to edit", "action": "Sign in" },
+        "forbidden": {
+          "title": "You can't edit this article",
+          "desc": "Only its author and moderators can edit it."
+        },
+        "not_found": {
+          "title": "Article not found",
+          "desc": "It does not exist, or you cannot see it."
+        }
+      }
+    }
+  }
+}
+```
 
 </Step>
 
 </Steps>
 
-## Edits that wait for a moderator
+## The complete file
 
-In a container whose [publishing policy](/docs/content-engine/container-policies) says `edits: "approve"`, an author's save of a published record succeeds, but readers still see the old text. `updated.approval?.status` is `"pending"` and `updated.values` is the live record. Say so instead of "Changes saved", and open the form on the proposal next time:
+<Accordions>
+<Accordion title="src/pages/article-edit-page.tsx">
 
-```ts
-const proposed =
-  record.approval?.status === "pending" && record.approval.kind === "edit"
-    ? record.approval.values
-    : null;
+```tsx title="plugins/newsroom/src/pages/article-edit-page.tsx"
+import type { AutoFormOnSubmit } from "@vitnode/core/components/form/auto-form";
+
+import { useQueryClient } from "@tanstack/react-query";
+import { buttonVariants } from "@vitnode/core/components/ui/button";
+import {
+  definePluginRoute,
+  type PluginRoutePageProps,
+} from "@vitnode/core/routing";
+import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useTranslations } from "use-intl";
+
+import { manifest } from "@/manifest.gen";
+
+import {
+  ARTICLE_FORM_FIELDS,
+  ArticleForm,
+  type ArticleFormSchema,
+} from "./article-form";
+
+// Answers only for the author and moderators, drafts included.
+const fetchEditableArticle = async (id: number) =>
+  await fetcher({
+    plugin: manifest.id,
+    method: "get",
+    module: "content/news",
+    path: "/{id}/edit",
+    args: { params: { id } },
+  });
+
+const loadEditableArticle = async (param: string) => {
+  const id = Number(param);
+  if (!Number.isSafeInteger(id) || id < 1)
+    return { state: "notFound" as const };
+
+  const res = await fetchEditableArticle(id);
+  if (res.status === 200) {
+    return { record: await res.json(), state: "ready" as const };
+  }
+  if (res.status === 401) return { id, state: "unauthenticated" as const };
+  if (res.status === 403) return { state: "forbidden" as const };
+  if (res.status === 404) return { state: "notFound" as const };
+
+  // A server failure is not "not found": let the app's error page show it.
+  throw new Error(`Loading article ${id} for editing failed.`);
+};
+
+type ArticleEditData = Awaited<ReturnType<typeof loadEditableArticle>>;
+
+type EditableArticle = Extract<ArticleEditData, { state: "ready" }>["record"];
+
+export const route = definePluginRoute({
+  load: async ({ params }) => await loadEditableArticle(params.id),
+
+  head: ({ t }) => ({
+    robots: "noindex, nofollow",
+    title: t("newsroom.articles.edit.title"),
+  }),
+});
+
+const ArticleEditForm = ({ record }: { record: EditableArticle }) => {
+  const t = useTranslations("newsroom.articles.edit");
+  const queryClient = useQueryClient();
+  const [current, setCurrent] = useState({
+    slug: record.slug,
+    status: record.status,
+  });
+  // AutoForm resets an untouched form to the defaults it renders with, so the
+  // defaults follow every save.
+  const [defaults, setDefaults] = useState({
+    body: record.values.body,
+    title: record.values.title,
+  });
+  const write = useContentPublicWrite({
+    fields: ARTICLE_FORM_FIELDS,
+    latestVersion: async () => {
+      const res = await fetchEditableArticle(record.id);
+
+      return res.status === 200 ? (await res.json()).version : null;
+    },
+    uniqueField: "title",
+    version: record.version,
+  });
+
+  const onSubmit: AutoFormOnSubmit<ArticleFormSchema> = async (
+    values,
+    form,
+  ) => {
+    const updated = await write.submit(
+      form,
+      async expectedVersion =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "patch",
+          module: "content/news",
+          path: "/{id}",
+          args: {
+            params: { id: record.id },
+            body: { values, expectedVersion },
+          },
+        }),
+    );
+    if (!updated) return;
+
+    setCurrent({ slug: updated.slug, status: updated.status });
+    setDefaults(values);
+    form.reset(values);
+    await queryClient.invalidateQueries({
+      queryKey: [manifest.id, "articles"],
+    });
+
+    toast.success(t("success.title"), {
+      description: t("success.desc", { title: values.title }),
+    });
+  };
+
+  return (
+    <>
+      {write.conflict}
+      <ArticleForm
+        defaultValues={defaults}
+        onSubmit={onSubmit}
+        submitLabel={t("submit")}
+      />
+      {current.status === "published" && current.slug !== null ? (
+        <HrefLink
+          className={buttonVariants({
+            className: "self-start",
+            variant: "link",
+          })}
+          href={`/news/${current.slug}`}
+        >
+          {t("view")}
+        </HrefLink>
+      ) : null}
+    </>
+  );
+};
+
+const ArticleEditPage = ({
+  loaderData,
+  params,
+}: PluginRoutePageProps<ArticleEditData>) => {
+  const t = useTranslations("newsroom.articles");
+
+  if (loaderData.state === "unauthenticated") {
+    return (
+      <div className="container mx-auto flex max-w-3xl flex-col gap-4 px-4 py-8">
+        <h1 className="text-2xl font-semibold text-balance">
+          {t("state.unauthenticated.title")}
+        </h1>
+        <HrefLink
+          className={buttonVariants({ className: "self-start" })}
+          href={`/login?returnTo=${encodeURIComponent(`/news/${loaderData.id}/edit`)}`}
+        >
+          {t("state.unauthenticated.action")}
+        </HrefLink>
+      </div>
+    );
+  }
+
+  if (loaderData.state !== "ready") {
+    const key = loaderData.state === "forbidden" ? "forbidden" : "not_found";
+
+    return (
+      <div className="container mx-auto flex max-w-3xl flex-col gap-2 px-4 py-8">
+        <h1 className="text-2xl font-semibold text-balance">
+          {t(`state.${key}.title`)}
+        </h1>
+        <p className="text-muted-foreground leading-relaxed">
+          {t(`state.${key}.desc`)}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
+      <h1 className="text-3xl font-semibold tracking-tight text-balance">
+        {t("edit.title")}
+      </h1>
+      <ArticleEditForm key={params.id} record={loaderData.record} />
+    </div>
+  );
+};
+
+export default ArticleEditPage;
 ```
 
-[Approvals](/docs/content-engine/approvals#show-it-on-your-pages) shows the notice the forum renders.
+</Accordion>
+</Accordions>
 
 ## Check the result
 
-Sign in as the author of a discussion:
-
-1. Its page shows **Edit**. Other members see **Report** instead.
-2. Change the title and click **Save changes**. A **Changes saved** toast appears.
-3. Save the same discussion in a second tab, then save in the first. **Someone else saved in the meantime** appears and your text stays. Click **Keep my version**, then save again.
-4. Open the edit URL as another member. The page says they can't edit it.
+Sign in as the member who wrote an article in the [Create form](/docs/content-engine/public-write-frontend), and open `/news/{id}/edit` with its id. [Permissions](/docs/content-engine/public-permissions) adds an **Edit** link to the article page next.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
-  src={forbidden}
-  alt="The edit page for another member's discussion, saying You can't edit this discussion"
+  src={editForm}
+  alt="The Edit article page with the article's title and body in the form, a Save changes button and a View article link"
 />
+
+1. Change the title and click **Save changes**. **Article saved** appears and the form keeps the new title. The slug stays the same, so links keep working, and `/news` shows the new title.
+2. Open the same edit page in a second tab and save a change there. Then save in the first tab. **Someone else saved in the meantime** appears and your text stays. Click **Keep my version**, then **Save changes**.
+3. Open the edit URL as another member, and you get **You can't edit this article**. Signed out, you get **Sign in to edit**, even for an id that does not exist, because the server checks the session first. Signed in, an id that does not exist shows **Article not found**.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={conflict}
-  alt="The Edit discussion page with the warning Someone else saved in the meantime, the buttons Keep my version and Load latest version, and the member's text still in the form"
+  alt="The Edit article page with the warning Someone else saved in the meantime, the buttons Keep my version and Load latest version, and the member's text still in the form"
 />
+
+## When edits wait for a moderator
+
+Newsroom articles are not filed in a container, so a `200` from `PATCH /{id}` always means the change is live. A content type filed in a container whose [publishing rules](/docs/content-engine/container-policies) hold edits for approval answers `200` with `approval.status: "pending"` instead, and the live record stays as it was. [Approval notices](/docs/content-engine/approval-notices) adds the pieces such a page needs.
+
+Next, show the **Edit** link only to the people who may use it with [Permissions](/docs/content-engine/public-permissions).

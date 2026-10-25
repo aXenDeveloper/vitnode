@@ -1,0 +1,112 @@
+---
+title: Route module
+description: "Reference for a VitNode plugin page module: defineRoute, defineAuthenticatedRoute, defineAdminRoute and definePluginRoute, the load and head arguments, translated metadata, and the page props."
+icon: FileCode
+---
+
+A page module is the file a route's `lazy(() => import(...))` points at. It default-exports the page component and may export a `route` object with the page's loader, metadata, breadcrumb and not-found screen. This page lists what that object accepts. For a walkthrough, see [Add a route](/docs/dev/routing/first-route).
+
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+import type { PluginRoutePageProps } from '@vitnode/core/routing'
+
+import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
+
+export const route = defineRoute({
+  load: async ({ params }) => ({ id: params.id }),
+  head: ({ loaderData }) => ({ title: `Note ${loaderData?.id ?? ''}` }),
+})
+
+const NotePage = ({ loaderData }: PluginRoutePageProps<{ id: string }>) => (
+  <h1>Note {loaderData.id}</h1>
+)
+
+export default NotePage
+```
+
+## Pick a helper
+
+All four helpers return the object unchanged. They exist to type `load`'s `context` by what the route earned in `routes.ts`.
+
+| Helper                     | Import                                  | `load` context                             | Use it for                                   |
+| :------------------------- | :-------------------------------------- | :----------------------------------------- | :------------------------------------------- |
+| `defineRoute`              | `@vitnode/core/tanstack/plugin-routes`  | `locale`, `queryClient`                    | Most pages                                   |
+| `defineAuthenticatedRoute` | `@vitnode/core/tanstack/plugin-routes`  | `locale`, `queryClient`, `auth`            | A route declared with `requires`             |
+| `defineAdminRoute`         | `@vitnode/core/tanstack/plugin-routes`  | `locale`, `queryClient`, `adminAccess`     | A route with `area: 'admin'`                 |
+| `definePluginRoute`        | `@vitnode/core/routing`                 | `locale`                                   | Code that must not depend on TanStack        |
+
+- **`queryClient`** is the app's TanStack Query client. Warm the page's data with `context.queryClient.query({ ...options, staleTime: 'static' })`, so a preload and the click that follows share one request. See [Cache app data](/docs/dev/cache/app).
+- **`auth`** is the signed-in visitor's session, already checked by the `requires` guard, so `context.auth.user` is never `null`. See [Protected routes](/docs/dev/routing/protected-routes).
+- **`adminAccess`** is the AdminCP session state resolved by the AdminCP shell.
+
+A route that did not declare `requires` or `area: 'admin'` cannot ask for `auth` or `adminAccess`. The field is a type error rather than `undefined` at runtime.
+
+`definePluginRoute` works too, but a loader without `queryClient` fetches directly, and the router runs it again on every hover preload. Prefer `defineRoute` in a VitNode app.
+
+## Options
+
+| Name          | Type                                                    | Description                                                                                                  |
+| :------------ | :------------------------------------------------------ | :----------------------------------------------------------------------------------------------------------- |
+| `load`        | `(args) => TData \| Promise<TData>`                     | Runs before the page renders, on the server for the first visit and in the browser after. Its result is `loaderData`. |
+| `head`        | `(args) => PluginRouteHead`                             | Builds the page's `<title>` and meta tags. Runs after `load`.                                                |
+| `breadcrumb`  | component, `{ group }`, `false` or `null`               | The page's crumb in the breadcrumb trail. See [Breadcrumbs](/docs/dev/routing/breadcrumbs).                  |
+| `notFound`    | `React.ComponentType`                                   | Rendered when `load` throws `notFound()`. Omit it to use the app's 404 page.                                 |
+| `parseSearch` | `(input: unknown) => TSearch`                           | Parses the query string inside the loader, when `routes.ts` declares no `search`. See [URL parameters](/docs/dev/routing/url-parameters#search-parameters). |
+
+<Callout type="warn" title="Declare load above head">
+  TypeScript infers `loaderData` in `head` and `breadcrumb` from `load`'s return
+  type, and it reads the object's members in order. With `head` written first,
+  `loaderData` is not typed.
+</Callout>
+
+### `load` arguments
+
+| Name      | Type                               | Description                                                              |
+| :-------- | :--------------------------------- | :----------------------------------------------------------------------- |
+| `params`  | `Readonly<Record<string, string>>` | The route's dynamic segments, e.g. `{ id: '2' }`. Always strings.        |
+| `search`  | `TSearch`                          | The parsed query string, or `{}` when the route parses none.             |
+| `context` | depends on the helper              | See [Pick a helper](#pick-a-helper).                                     |
+| `t`       | `(key, values?) => string`         | Translates a key from the route's `messages`. See [Translated metadata](#translated-metadata). |
+
+Throw `notFound()` or `redirect()` from `@tanstack/react-router` to answer with a 404 or a redirect instead of the page.
+
+### `head` arguments and result
+
+`head` receives `loaderData` (possibly `undefined`), `params`, `search` and `t`, and returns:
+
+| Name          | Type                                                        | Description                                                                                   |
+| :------------ | :---------------------------------------------------------- | :-------------------------------------------------------------------------------------------- |
+| `title`       | `string`                                                    | The page's own title, already translated. VitNode suffixes it with the site name from `buildConfig({ metadata })`.                        |
+| `description` | `string`                                                    | The `<meta name="description">`.                                                              |
+| `robots`      | `'index, follow' \| 'noindex, follow' \| 'noindex, nofollow'` | What a crawler may do. `noindex, follow` keeps a filtered list out of the index while its links still count. |
+| `alternates`  | `Record<string, string>`                                    | Internal paths of the page in each language, for canonical and `hreflang` links. See [Advanced localized URLs](/docs/dev/i18n/localized-urls-advanced#hreflang-and-canonical-links). |
+
+Return only these fields. VitNode turns them into the full set of tags with the app's site metadata.
+
+## Translated metadata
+
+`head` and `load` run outside the React tree, so `useTranslations` cannot reach them. Both receive `t` instead, a translator over the namespaces the route declared in `messages`. Keys are full dotted paths, namespace included:
+
+```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
+export const route = defineRoute({
+  head: ({ t }) => ({
+    title: t('site-notes.notes.title'),
+  }),
+})
+```
+
+A component scopes itself once with `useTranslations('site-notes.notes')` and then calls `t('title')`. In `head` there is no component to scope, so you spell out the whole key. Placeholders work as they do in a component. Pass the values as the second argument, `t(key, { name: 'Ada' })`.
+
+The namespaces have already loaded by the time `head` runs, so translating metadata costs no extra request. Calling `t` on a route that declares no `messages` throws and names the namespace to add, so a raw key never ends up in a `<title>`.
+
+## Page props
+
+The default export receives `PluginRoutePageProps<TData, TSearch>`:
+
+| Prop         | Type                                                       | Description                                                       |
+| :----------- | :--------------------------------------------------------- | :---------------------------------------------------------------- |
+| `loaderData` | `TData`                                                    | What `load` returned; `undefined` without a loader.               |
+| `params`     | `Readonly<Record<string, string>>`                         | The route's dynamic segments.                                     |
+| `search`     | `TSearch`                                                  | The parsed query string.                                          |
+| `navigate`   | `(options: { search: TSearch; resetScroll?: boolean }) => Promise<void>` | Navigates to the same page with new search parameters. |
+
+A layout's default export receives the same props plus `children`. See [Layouts](/docs/dev/routing/layouts).

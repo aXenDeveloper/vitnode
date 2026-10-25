@@ -1,373 +1,138 @@
 ---
-title: Users & Sessions
-description: Access signed-in user context in Hono API handlers, route loaders, and React components.
+title: Current user
+description: Read the signed-in VitNode user in Hono API handlers, React components and AdminCP screens, and see which fields the user record carries.
 icon: UserRound
 ---
 
-import { TypeTable } from 'fumadocs-ui/components/type-table'
+VitNode resolves the session cookie before your code runs, so the signed-in user is one call away on the server and in React. Use this page when a route or a component needs to know who is asking, or whether anybody is signed in at all.
 
-Every incoming request in VitNode resolves the session cookie prior to route execution. The current user profile is accessible on both server handlers and frontend components.
+## In an API route
 
-## Quick start
+`c.get("user")` returns the signed-in user, or `null` for a guest. This route answers `401` for guests and returns a few fields for everybody else:
 
-### 1. In Hono API Routes
+```ts title="plugins/site-notes/src/api/modules/hello/me.route.ts"
+import { z } from "@hono/zod-openapi";
+import { HTTPException } from "hono/http-exception";
 
-Access the authenticated user via `c.get("user")`:
+import { buildRoute } from "@/api/builders";
 
-```ts title="plugins/blog/src/api/modules/posts/routes/create.route.ts"
-import { HTTPException } from 'hono/http-exception'
-
-handler: async (c) => {
-  // [!code ++:4]
-  const user = c.get('user')
-  if (!user) {
-    throw new HTTPException(401, { message: 'Unauthorized' })
-  }
-
-  const newPost = await createPost({ authorId: user.id })
-  return c.json(newPost)
-}
-```
-
----
-
-### 2. In Frontend Components
-
-Consume the user session via TanStack Query:
-
-```tsx title="src/components/user-greeting.tsx"
-import { useSessionQuery } from '@vitnode/core/tanstack/auth'
-
-export const UserGreeting = () => {
-  // [!code ++:2]
-  const { data } = useSessionQuery()
-  const user = data?.user
-
-  if (!user) return <span>Welcome, guest!</span>
-
-  return <span>Welcome back, {user.name}!</span>
-}
-```
-
-`useSessionQuery()` wraps `useQuery(sessionQueryOptions())`, so it never
-suspends: `data` is `undefined` on the very first render of a page that did not
-warm it in a loader. Routes that want the session ready before paint call
-`ensureAuthState(queryClient)` in their loader.
-
----
-
-### 3. In the AdminCP
-
-The AdminCP session is a **second cookie**, and a second query. `isAdmin` on the
-public session means "may be offered the AdminCP", not "is inside it" - so an
-admin screen never answers an admin question with the public session.
-
-```tsx title="plugins/blog/src/admin/current-admin.tsx"
-import { useAdminSessionQuery } from '@vitnode/core/tanstack/admin'
-
-export const CurrentAdmin = () => {
-  // [!code ++:1]
-  const { data } = useAdminSessionQuery()
-
-  if (data.status !== 'granted') return null
-
-  return <span>Signed in as {data.session.user.name}</span>
-}
-```
-
-`useAdminSessionQuery()` wraps `useSuspenseQuery(adminSessionQueryOptions())`,
-so `data` is always there and the screen suspends instead of rendering an empty
-state. The AdminCP layout warms it, which is why every screen below it reads a
-cache hit. Two shorthands sit on top of it:
-
-| Hook               | Returns                                                          |
-| :----------------- | :--------------------------------------------------------------- |
-| `useAdminAccess()` | The whole access state - `granted`, or the reason it was refused |
-| `useAdminUser()`   | The signed-in administrator, or `null` when access is refused    |
-
----
-
-## User Model (`core_users`)
-
-The canonical user table contains:
-
-| Column          | Type           | Description                                           |
-| :-------------- | :------------- | :---------------------------------------------------- |
-| `id`            | `serial`       | Unique permanent identifier                           |
-| `name`          | `varchar(255)` | Display name                                          |
-| `nameCode`      | `varchar(255)` | URL-safe slug for profile URLs (`/users/[nameCode]`)  |
-| `email`         | `varchar(255)` | Unique account login email                            |
-| `firstName`     | `varchar(128)` | Given name, set by the user (nullable)                |
-| `lastName`      | `varchar(128)` | Family name, set by the user (nullable)               |
-| `phone`         | `varchar(32)`  | Contact number, their own (nullable)                  |
-| `headline`      | `varchar(100)` | One line about the user, their own (nullable)         |
-| `showRealName`  | `boolean`      | Show the real name publicly instead of `name`         |
-| `roleId`        | `integer`      | Primary role ID (FK to `core_roles`)                  |
-| `avatarColor`   | `varchar(6)`   | Hex color for letter avatars                          |
-| `avatarId`      | `integer`      | Uploaded avatar, a `core_files` row (nullable)        |
-| `coverId`       | `integer`      | Uploaded profile cover, a `core_files` row (nullable) |
-| `language`      | `varchar(32)`  | Preferred UI locale (defaults to `en`)                |
-| `timeZone`      | `varchar(64)`  | IANA time zone, set by the user (nullable)            |
-| `emailVerified` | `boolean`      | Verification status                                   |
-
-Every user payload the API hands out - the session, the public profile, the
-AdminCP list and detail, search hit authors - carries the two images resolved
-to URLs as `avatarUrl` and `coverUrl`. Both are `null` until something is
-uploaded, and the `Avatar` component falls back to the letter avatar on its own -
-drawn from the first character of `nameCode`, never of the displayed name, so a
-member who changes which name their profile shows keeps the same face in every
-list they appear in.
-
-### Personal information
-
-`firstName`, `lastName`, `phone` and `headline` are the user's own to set, at **Settings →
-Overview** (`/settings`). The Profile card lists them read-only; **Edit profile**
-opens one sheet with every field, the **Show my real name** switch and the time
-zone, so changing three things takes one save instead of three. Every field is
-optional, stored as `null` rather than an empty string when cleared, and the
-session payload carries them so anything already reading the session can show
-them without a second request.
-
-| Method  | Path                                 | Who                                  |
-| :------ | :----------------------------------- | :----------------------------------- |
-| `GET`   | `/api/@vitnode/core/users/me/policy` | The signed-in user - may they edit?  |
-| `PATCH` | `/api/@vitnode/core/users/me`        | The signed-in user, on their own row |
-
-The body takes any subset of
-`{ firstName, lastName, phone, headline, showRealName }` -
-a field left out is left alone, and a text field sent as `""` or whitespace is
-cleared. Writing invalidates the user's cached session and emits
-[`user.updated`](/docs/dev/events/built-in-events).
-
-`phone` is the one field with a shape: digits and the punctuation international
-numbers are written with (`+`, spaces, `-`, `(` and `)`), up to 32 characters.
-Anything else is rejected by the form and by the route. It is **not** on the
-public profile payload - only the account's own session carries it.
-
-### Time zone
-
-`timeZone` sits under **Region** in the same **Edit profile** sheet. It takes any
-IANA name, like `Europe/Warsaw`, and **Use this device's time zone** fills the
-field from the browser in one click - it still waits for **Save changes**. `null` means "follow my language", then UTC.
-Notification digests go out in this time zone, and the session carries it, so
-`c.get("user")?.timeZone` is there for anything else that wants local time.
-
-| Method | Path                                    | Who                                  |
-| :----- | :-------------------------------------- | :----------------------------------- |
-| `PUT`  | `/api/@vitnode/core/users/me/time-zone` | The signed-in user, on their own row |
-
-The body is `{ timeZone: string | null }`. An unknown name answers `400`.
-Saving invalidates the cached session and emits
-[`user.updated`](/docs/dev/events/built-in-events).
-
-### Which name the public sees
-
-`showRealName` decides whether a profile is headed by the nickname (`name`) or by
-`firstName lastName`. The public profile route resolves it **server-side** and
-returns the answer as `name`, so a real name the user has not published never
-leaves the API. When the switch is on but neither half is set, the nickname is
-used, so turning it on early cannot leave a profile with an empty heading.
-
-People in content, such as a blog post's authors, carry the same answer as
-`fullName`: the real name when it is published, `null` otherwise.
-[`UserFormat`](/docs/ui/user-format) shows it in place of the nickname. To
-publish a real name from your own route, use `publicFullNameOf` from
-`@vitnode/core/lib/user-personal-information` and never send `firstName` or
-`lastName` to other people.
-
-The AdminCP and search always show `name`, the account's own nickname - staff
-need the identifier the account is filed under.
-
-### What the profile header shows
-
-{/* Image prompt: VitNode public profile header at /users/aXen. Wide cover image with a rounded-square avatar overlapping its bottom-left corner, the display name and @nameCode beside it, and a single row of muted meta items with small icons - a briefcase for the headline, a shield for the primary role, a calendar for the join date - with an "Edit profile" outline button at the far right. Light theme, 1440x400. */}
-
-`GET /api/@vitnode/core/users/profile/{nameCode}` answers with the header's whole
-payload: `name` (already resolved), `nameCode`, `headline`, `avatarUrl`,
-`coverUrl`, `avatarColor`, `createdAt`, the primary `role` and any
-`secondaryRoles`. The header draws the headline, the role and the join date as
-one row of meta items, each with its own icon, and stacks them centred under the
-avatar on a phone.
-
-`headline` follows the install switch: with `users.personalInformation.headline`
-set to `false` the route returns `null` for everyone, so turning the field off
-takes it off public profiles too, without touching what members had written.
-
-The **Edit profile** button is the header's action slot. It is rendered only for
-the account's own profile; a host that renders `ProfileContent` itself can pass
-any `action` it likes - a follow button, a "message" link, nothing at all.
-
-### Who may edit it
-
-Each role has **Allow editing personal information** on its **Profile** tab
-(`allowEditPersonalInfo`, default `true`). A user may edit only when **every**
-role they hold allows it - one role that switches it off is enough to lock the
-card.
-
-That is the opposite of the image allowances, which grant on _any_ role, and
-deliberately so: this column defaults to `true`, so under "any role grants" an
-administrator who switched it off on one role would find it silently re-granted
-by every other role the member happens to hold, and the setting would almost
-never take effect.
-
-The **Edit profile** sheet then shows only the time zone, which every member may
-change, and `PATCH /users/me` answers `403` regardless of what the UI showed.
-
-### Turning fields off for the whole install
-
-Roles decide _who_ may edit. The API config decides _which fields exist at all_.
-Every field is on unless you set it to `false` in `vitnode.api.config.ts`:
-
-```ts title="vitnode.api.config.ts"
-export const vitNodeApiConfig = buildApiConfig({
-  // ...
-  users: {
-    personalInformation: {
-      phone: false,
-      headline: false,
-      showRealName: false,
+export const meRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/me",
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({ id: z.number(), name: z.string() }),
+          },
+        },
+        description: "The signed-in user.",
+      },
+      401: { description: "Nobody is signed in." },
     },
   },
-})
+  handler: c => {
+    const user = c.get("user");
+    if (!user) {
+      throw new HTTPException(401, { message: "Unauthorized" });
+    }
+
+    return c.json({ id: user.id, name: user.name }, 200);
+  },
+});
 ```
 
-The keys are `firstName`, `lastName`, `phone`, `headline` and `showRealName`. A
-field switched off disappears from the settings card and from its form, and
-`PATCH /users/me` refuses to write it even if a caller sends it anyway - so a
-stale browser tab or a hand-rolled request cannot get around it.
+Add `meRoute` to the `hello` module's `routes` array, and the route answers at `GET /api/site-notes/hello/me`. [API routes](/docs/dev/plugins/api/routes) shows how a route joins a module. The user object carries the columns in [the user record](#the-user-record) below, with the avatar and cover already resolved to `avatarUrl` and `coverUrl`.
 
-Switching a field off never deletes anything: the column keeps whatever members
-had already set, so turning it back on restores their values. With
-`showRealName` off, every profile is headed by the nickname again, whatever
-individual members had chosen. With **every** field off there is nothing left to
-edit, so the **Edit** button disappears too.
+## In a React component
 
----
+`useSessionQuery()` from `@vitnode/core/tanstack/auth` returns the session. `data.user` is `null` for a guest:
 
-## AdminCP User Management
+```tsx title="plugins/site-notes/src/pages/user-greeting.tsx"
+import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 
-{/* Image prompt: VitNode AdminCP User management screen at /admin/core/users. Data table listing registered accounts with columns for Avatar, Name, Email, Primary Role badge, Status, and action dropdowns (Edit, Ban, Delete). Dark theme, 1440x900. */}
+export const UserGreeting = () => {
+  const { data } = useSessionQuery();
+  const user = data?.user;
 
-Administrators can view, edit, ban, and assign roles to users at **Core → Users** (`/admin/core/users`).
+  if (!user) return <span>Welcome, guest!</span>;
 
----
+  return <span>Welcome back, {user.name}!</span>;
+};
+```
 
-### Edit a user
+`useSessionQuery()` never suspends, so `data` is `undefined` on the first render of a page that did not load the session in its loader. A route that needs the session before paint calls `ensureAuthState(queryClient)` (same import) in its `loader`.
 
-{/* Image prompt: VitNode AdminCP user page at /admin/core/users/1. Left column: profile card with cover, round avatar, name, @handle, Staff and Verified badges, then Personal information, Preferences, Roles, Connected accounts and Devices cards. Right column: segmented tabs Activity, Notifications, Password & passkeys above a vertical activity timeline. Dark theme, 1440x1000. */}
+## In the AdminCP
 
-Open a user at `/admin/core/users/[id]`. Everything the member can change in their own `/settings` is editable here too.
+The AdminCP session is a **second cookie** with its own query. `isAdmin` on the public session means "may be offered the AdminCP", not "is signed in to it", so an admin screen always reads the admin session:
 
-| Area                     | What staff can change                                                                                   |
-| :----------------------- | :------------------------------------------------------------------------------------------------------ |
-| Profile card             | Display name, name code, email, avatar, cover, and **Mark email as verified**                           |
-| Personal information     | First name, last name, headline, phone, birthday, **Show real name**                                    |
-| Preferences              | Language, time zone (or automatic), newsletter                                                          |
-| Roles                    | Primary role and secondary roles                                                                        |
-| Connected accounts       | Disconnect an SSO account, choose where the avatar and name come from, turn **Sync on sign-in** on/off |
-| Devices                  | Sign out one device, or every device at once                                                            |
-| **Notifications** tab    | In-app, push and email (with frequency) per notification type                                           |
-| **Password & passkeys** tab | Set a new password, rename or delete passkeys                                                        |
+```tsx title="plugins/site-notes/src/admin/current-admin.tsx"
+import { useAdminSessionQuery } from "@vitnode/core/tanstack/admin";
 
-A few rules differ from the member's own settings:
+export const CurrentAdmin = () => {
+  const { data } = useAdminSessionQuery();
 
-- **Staff can edit locked fields.** The role's **Allow editing personal information** and the install's `users.personalInformation` switches limit members, not staff.
-- **Notification locks still apply.** Mandatory types, and types the notification settings stop members from changing, are read-only here too, because delivery ignores stored choices for them.
-- **The last sign-in method can't be removed.** Disconnecting the only SSO account or deleting the only passkey answers `409`.
-- **Setting a password signs the member out everywhere**, AdminCP sessions included.
-- **Sync now isn't offered.** It needs the member to sign in with the provider themselves.
+  if (data.status !== "granted") return null;
 
-Every write needs `users:can_edit`, plus `users:can_edit_admin` when the target is staff. A staff target must also sit within your own access: you need every admin and moderator permission they hold, and only a root administrator can edit a root or unrestricted account. So nobody can reset the password of, or demote, someone above them. Reads need `users:can_view`.
+  return <span>Signed in as {data.session.user.name}</span>;
+};
+```
 
-| Method   | Path                                                                | Does                                                 |
-| :------- | :------------------------------------------------------------------ | :--------------------------------------------------- |
-| `PATCH`  | `/api/@vitnode/core/admin/users/{id}`                               | Account, personal information and preferences        |
-| `PUT`    | `/api/@vitnode/core/admin/users/{id}/password`                      | Sets a new password and revokes every session        |
-| `GET`    | `/api/@vitnode/core/admin/users/{id}/devices`                       | Devices with an active session                       |
-| `DELETE` | `/api/@vitnode/core/admin/users/{id}/devices/{publicId}`            | Signs one device out                                 |
-| `DELETE` | `/api/@vitnode/core/admin/users/{id}/devices`                       | Signs every device out                               |
-| `GET`    | `/api/@vitnode/core/admin/users/{id}/passkeys`                      | Passkeys                                             |
-| `PATCH`  | `/api/@vitnode/core/admin/users/{id}/passkeys/{passkeyId}`          | Renames a passkey                                    |
-| `DELETE` | `/api/@vitnode/core/admin/users/{id}/passkeys/{passkeyId}`          | Deletes a passkey                                    |
-| `GET`    | `/api/@vitnode/core/admin/users/{id}/sso`                           | Connected accounts, sign-in summary, profile sources |
-| `DELETE` | `/api/@vitnode/core/admin/users/{id}/sso/{providerId}`              | Disconnects an account                               |
-| `PUT`    | `/api/@vitnode/core/admin/users/{id}/sso/preferences`               | Profile sources and sync on sign-in                  |
-| `GET`    | `/api/@vitnode/core/admin/users/{id}/notification-preferences`      | Notification preferences per type                    |
-| `PUT`    | `/api/@vitnode/core/admin/users/{id}/notification-preferences`      | Changes notification preferences                     |
+`useAdminSessionQuery()` suspends instead of returning `undefined`, and the AdminCP layout loads it, so every screen below the layout reads it from the cache. Two shorter hooks from the same import sit on top of it:
 
-The `PATCH` body takes any of `email`, `name`, `nameCode`, `roleId`, `secondaryRoleIds`, `firstName`, `lastName`, `headline`, `phone`, `showRealName`, `birthday` (`YYYY-MM-DD` or `null`), `language`, `timeZone` (`null` for automatic) and `newsletter`. At least one field is required.
+| Hook               | Returns                                                         |
+| :----------------- | :-------------------------------------------------------------- |
+| `useAdminAccess()` | The whole access state: `granted`, or why access was refused    |
+| `useAdminUser()`   | The signed-in administrator, or `null` when access is refused   |
 
----
+[Auth and sessions](/docs/dev/advanced/auth) explains why there are two sessions and how long each lasts.
 
-### Where it happens
+## The user record
 
-- **Profile page** (`/users/[nameCode]`): the owner sees a camera button on the
-  cover and on the avatar. It opens one dialog that both uploads and removes:
-  with a picture already set, a pair of radio buttons chooses between them and
-  the confirm button reads **Upload** or **Delete** to match; with nothing set
-  yet, the dialog goes straight to the picker.
-- **Settings overview** (`/settings`): the avatar and its camera button only,
-  beside the name, code name, role and email the account carries, above the
-  personal information the user sets for themselves. The cover is
-  edited on the profile page.
-- **AdminCP** (`/admin/core/users/[id]`): the same two buttons and the same
-  dialog, for anybody holding `users:can_edit` - plus `users:can_edit_admin`
-  when the target is an administrator. Staff can always set an image, even when
-  the user's own roles cannot; the role's size cap still applies.
+Users live in the `core_users` table. These are the fields `c.get("user")` and the session carry:
 
-### Role settings
+| Column          | Type           | Description                                            |
+| :-------------- | :------------- | :----------------------------------------------------- |
+| `id`            | `serial`       | Permanent identifier                                   |
+| `name`          | `varchar(255)` | Display name (the nickname)                            |
+| `nameCode`      | `varchar(255)` | URL-safe handle for the profile URL `/users/[nameCode]` |
+| `email`         | `varchar(255)` | Unique sign-in email                                   |
+| `emailVerified` | `boolean`      | Whether the email is confirmed                         |
+| `firstName`     | `varchar(128)` | Given name, set by the user (nullable)                 |
+| `lastName`      | `varchar(128)` | Family name, set by the user (nullable)                |
+| `phone`         | `varchar(32)`  | Contact number (nullable)                              |
+| `headline`      | `varchar(100)` | One line about the user (nullable)                     |
+| `showRealName`  | `boolean`      | Show the real name publicly instead of `name`          |
+| `birthday`      | `timestamp`    | Birthday, edited in the AdminCP (nullable)             |
+| `newsletter`    | `boolean`      | Newsletter opt-in                                      |
+| `roleId`        | `integer`      | Primary role (foreign key to `core_roles`)             |
+| `avatarColor`   | `varchar(6)`   | Hex colour for the letter avatar                       |
+| `avatarId`      | `integer`      | Uploaded avatar, a `core_files` row (nullable)         |
+| `coverId`       | `integer`      | Uploaded profile cover, a `core_files` row (nullable)  |
+| `language`      | `varchar(32)`  | Preferred UI locale (defaults to `en`)                 |
+| `timeZone`      | `varchar(64)`  | IANA time zone (nullable)                              |
+| `createdAt`     | `timestamp`    | When the account was created                           |
 
-Each role decides, on its **Profile** tab at **Core → Users → Roles**:
+Every user payload the API hands out (the session, the public profile, the AdminCP list and detail, search hit authors) carries the two images as URLs, `avatarUrl` and `coverUrl`, instead of the file ids. Both are `null` until someone uploads an image. The `Avatar` component then draws a letter avatar from the first character of `nameCode`, never of the displayed name, so a member who switches to showing their real name keeps the same face everywhere.
 
-| Setting                            | Column                  | Default |
-| :--------------------------------- | :---------------------- | :------ |
-| Allow editing personal information | `allowEditPersonalInfo` | `true`  |
-| Allow avatar upload                | `allowUploadAvatar`     | `true`  |
-| Maximum avatar size (kB)           | `maxAvatarSize`         | `2048`  |
-| Allow cover image upload           | `allowUploadCover`      | `true`  |
-| Maximum cover size (kB)            | `maxCoverSize`          | `5120`  |
-
-A user with several roles is allowed as soon as **one** of them allows the
-image, and gets the **most generous** cap among those roles. The cap is shown in
-the dialog before a file is picked, and checked again on the server.
-
-### API
-
-| Method   | Path                                                | Who                                                              |
-| :------- | :-------------------------------------------------- | :--------------------------------------------------------------- |
-| `GET`    | `/api/@vitnode/core/users/images/policy`            | Signed-in user - what they may upload, and the caps in bytes     |
-| `POST`   | `/api/@vitnode/core/users/images/{kind}`            | Signed-in user - multipart `file`, `kind` is `avatar` or `cover` |
-| `DELETE` | `/api/@vitnode/core/users/images/{kind}`            | Signed-in user                                                   |
-| `POST`   | `/api/@vitnode/core/admin/users/{id}/images/{kind}` | Staff with `users:can_edit`                                      |
-| `DELETE` | `/api/@vitnode/core/admin/users/{id}/images/{kind}` | Staff with `users:can_edit`                                      |
-
-Accepted types are JPEG, PNG and WebP. The browser crops to `512×512` for an
-avatar and `1800×600` for a cover and sends WebP where the browser can encode
-it, so uploads are usually far under the cap. A refused upload answers `400`
-with `{ error }` written for the person who picked the file, and a role that
-does not allow the image answers `403`.
-
-Both writes emit an event -
-[`user.avatar.updated` and `user.cover.updated`](/docs/dev/events/built-in-events)
-
-- with the new `core_files` id, or `null` when the image was removed.
-
-## Learn More
+## Related
 
 <Cards>
   <Card
-    title="Roles"
-    description="Configure permissions, color badges, and user groups"
-    href="/docs/dev/working-with-users/roles"
+    title="Profile fields"
+    description="Personal information, time zone, real names and who may edit them"
+    href="/docs/dev/working-with-users/profile-fields"
   />
   <Card
-    title="Staff Permissions"
-    description="Grant administrative and moderation privileges"
-    href="/docs/dev/working-with-users/staff-permissions"
+    title="Avatars and covers"
+    description="Profile images, the role caps and the upload routes"
+    href="/docs/dev/working-with-users/avatars"
   />
   <Card
-    title="SSO"
-    description="Configure social login providers"
-    href="/docs/dev/sso"
+    title="Manage users"
+    description="Find, create and edit accounts in the AdminCP"
+    href="/docs/dev/working-with-users/admin-users"
   />
 </Cards>

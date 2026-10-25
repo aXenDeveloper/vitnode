@@ -92,6 +92,8 @@ Pick one indicator per piece of pending work, by what is pending:
 - Document every new feature. Keep it simple, SEO-friendly, and understandable at any skill level.
 - Friendly and lightly funny tone - don't overdo it.
 - Skip big comments; code is self-documenting.
+- Docs call the VitNode API with `fetcher` (`rawFetcher` for generated Content Engine admin routes), never raw `fetch` or a browser-console snippet. A check that needs a request with no UI yet uses a small temporary component with a button.
+- Never end a page with a "Next step" (or "Next", "What's next") section; the sidebar and page footer link the following page. Use `## Related` for links worth following.
 - Developer-facing APIs in feature code (exports of `@vitnode/core` and plugins that app or plugin authors call) need concise English JSDoc on the original declaration:
   - Say what it is for, plus constraints, side effects, runtime (server-only, browser-only or universal) and `@throws` only when they are real and non-obvious.
   - Document configuration properties one by one, including non-obvious defaults and constraints.

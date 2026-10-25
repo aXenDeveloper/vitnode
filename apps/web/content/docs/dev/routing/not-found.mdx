@@ -1,146 +1,115 @@
 ---
-title: Errors & Not Found
-description: Handle 404 Not Found, 500 Server Errors, and route exceptions with localized layouts, action buttons, and loader boundaries.
+title: Errors and 404
+description: Answer 404 from a VitNode route loader with notFound(), and configure the app's localized 404 and 500 pages, their action buttons and the development error overlay.
 icon: TriangleAlert
 ---
 
-import { DatabaseIcon, LoaderCircleIcon, MapIcon } from 'lucide-react'
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+VitNode ships localized error screens that render inside your app's layout, so a visitor who hits a missing page or a crash keeps the header, the navigation and the theme. Plugins signal the problem from their loaders; the app decides how it looks.
 
-In TanStack Start, error handling and missing routes are configured through route boundaries rather than static files. VitNode provides built-in, localized error layouts (`NotFound`, `Error500Page`, and `ErrorActions`) mounted directly inside your application shell—keeping navigation, headers, and themes intact when errors occur.
+## Answer 404 from a loader
 
-## 404 Not Found
+When the record a URL asks for does not exist, throw `notFound()` from `@tanstack/react-router` in `load`:
 
-### Throwing 404 in loaders
-
-When a requested resource (such as a note slug or user ID) is not found in the database, throw `notFound()` from `@tanstack/react-router` inside `load`:
-
-```tsx title="plugins/site-notes/src/pages/note-page-slug.tsx"
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
 import { notFound } from '@tanstack/react-router'
-import { definePluginRoute } from '@vitnode/core/routing'
 
-export const route = definePluginRoute({
-  load: async ({ params }) => {
-    const note = await fetchNote(params.slug)
+const loadNote = async (queryClient: QueryClient, idParam: string) => {
+  // ... read the note through the query cache, as in Add a route
+  if (!note) throw notFound() // [!code ++]
 
-    // [!code ++:3]
-    if (!note) {
-      throw notFound()
-    }
+  return note
+}
+```
 
-    return note
-  },
+The loader stops, the page renders the not-found screen, and the server answers with a `404` status, so search engines drop the URL. [Add a route](/docs/dev/routing/first-route) builds this page in full.
+
+To show something other than the app's 404 page for one route, give its page module a `notFound` component:
+
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+const NoteNotFound = () => (
+  <p className="container mx-auto p-4 leading-relaxed">This note does not exist.</p>
+)
+
+export const route = defineRoute({
+  load: async ({ context, params }) =>
+    await loadNote(context.queryClient, params.id),
+  notFound: NoteNotFound, // [!code ++]
 })
 ```
 
-When thrown, TanStack Router catches the signal and halts page execution, rendering the nearest `notFoundComponent`.
+`notFound` loads with the page module, so it costs unvisited routes nothing. Without one, the route falls back to the router's `defaultNotFoundComponent`.
 
-### Unmatched URLs keep the main shell
+A URL that matches no route at all gets the same default 404 page. It still renders inside the main layout, because the main shell route matches every public URL.
 
-When a visitor navigates to a non-existent URL, the main shell (`_main.tsx`) is
-still matched, so the route is caught **inside** it.
+{/* Image prompt: The VitNode 404 page inside the main site layout, with the header, a 404 heading, a localized description and the Go back and Back to home buttons. Dark theme, 1440x900. */}
 
-This ensures visitors never hit a blank, unstyled screen: they retain the main site header, navigation bar, and theme switcher, while search crawlers receive a real HTTP `404` status code:
+## Configure the app's error pages
 
-```tsx title="apps/web/src/router.tsx"
-const routeTree = withVitNodeRoutes(
-  fileRouteTree,
-  pluginRouteSpecs(pluginRouteSources),
-  {
-    mountUnder: {
-      admin: adminShellRoute,
-      blank: fileRouteTree,
-      main: mainShellRoute,
-    },
-  },
-)
-```
-
-{/* Image prompt: VitNode 404 error page displayed inside the main site layout with header, 404 heading, localized description, and "Go back" / "Back to home" action buttons in dark theme, 1440x900. */}
-
-## 500 Server & runtime errors
-
-When an unhandled exception or database failure occurs during SSR or client navigation, the router activates its `errorComponent`.
-
-VitNode configures the global error boundary in `apps/web/src/router.tsx` using `Error500Page`:
+The app sets both screens once, in `getRouter` in `src/router.tsx`. A new app already contains this:
 
 ```tsx title="apps/web/src/router.tsx"
 import { createRouter as createTanStackRouter } from '@tanstack/react-router'
 import {
-  Error500Page,
   ErrorActions,
   NotFound,
+  RouteErrorPage,
 } from '@vitnode/core/tanstack/layout'
 
 export function getRouter() {
-  return createTanStackRouter({
-    routeTree,
-    // [!code ++:2]
+  const router = createTanStackRouter({
+    // ...
     defaultNotFoundComponent: () => <NotFound actions={<ErrorActions />} />,
-    defaultErrorComponent: () => <Error500Page actions={<ErrorActions />} />,
+    defaultErrorComponent: ({ error }) => (
+      <RouteErrorPage actions={<ErrorActions />} error={error} />
+    ),
   })
+
+  return router
 }
 ```
 
-`Error500Page` automatically renders localized strings from `core.global.errors.500`, keeping the error message friendly and clear while preserving layout structure.
+| Component        | Import                          | Shows                                                                                       |
+| :--------------- | :------------------------------ | :------------------------------------------------------------------------------------------ |
+| `NotFound`       | `@vitnode/core/tanstack/layout` | The localized 404 page                                                                      |
+| `RouteErrorPage` | `@vitnode/core/tanstack/layout` | `Error500Page`, plus an overlay with the error's details in development only                |
+| `Error500Page`   | `@vitnode/core/tanstack/layout` | The localized 500 page alone, with the strings from `core.global.errors.500`                |
+| `ErrorActions`   | `@vitnode/core/tanstack/layout` | A **Go back** button and a **Back to home** link                                            |
 
-{/* Image prompt: VitNode 500 internal server error page with large 500 status code, friendly error title, description, and recovery buttons in dark theme, 1440x900. */}
+Keep `RouteErrorPage` as the error component. Passing `Error500Page` directly works too, but you lose the development overlay that shows what went wrong.
 
-## Error action buttons
+{/* Image prompt: The VitNode 500 page with the status code, a friendly title and description, and the recovery buttons. Dark theme, 1440x900. */}
 
-The `<ErrorActions />` component renders two primary recovery buttons:
+## Change the action buttons
 
-1. **Go Back** (`router.history.back()`) — Takes the user to their previously viewed screen.
-2. **Back to Home** (`/`) — Returns to the application homepage using locale-aware navigation.
+`actions` takes any elements. To add a link next to the default buttons, render both:
 
-You can also pass custom action elements into the `actions` prop of `NotFound` or `Error500Page`:
-
-```tsx title="apps/web/src/routes/__root.tsx"
+```tsx title="apps/web/src/router.tsx"
+import { buttonVariants } from '@vitnode/core/components/ui/button'
 import { ErrorActions, NotFound } from '@vitnode/core/tanstack/layout'
+import { HrefLink } from '@vitnode/core/tanstack/link'
 
-export const Route = createRootRouteWithContext<RootRouterContext>()({
-  // [!code ++:1]
-  notFoundComponent: () => <NotFound actions={<ErrorActions />} />,
-  component: RootComponent,
-})
+// in createTanStackRouter({ ... })
+defaultNotFoundComponent: () => (
+  <NotFound
+    actions={
+      <>
+        <ErrorActions />
+        {/* [!code ++:3] */}
+        <HrefLink className={buttonVariants({ size: 'lg', variant: 'outline' })} href="/site-notes/notes">
+          Browse notes
+        </HrefLink>
+      </>
+    }
+  />
+),
 ```
 
-## Standard error codes
-
-VitNode provides `ErrorContent` to render standardized error presentations across public and administrative pages:
-
-| Status code | Name                  | Common cause                                             | Handled by              |
-| :---------- | :-------------------- | :------------------------------------------------------- | :---------------------- |
-| `400`       | Bad Request           | Malformed request parameters or invalid form payloads    | `ErrorContent`          |
-| `403`       | Forbidden             | Insufficient permissions or unauthorized staff action    | Staff auth guards       |
-| `404`       | Not Found             | Route does not exist or loader threw `notFound()`        | `NotFound`              |
-| `409`       | Conflict              | Resource already exists or version mismatch              | API mutation handlers   |
-| `429`       | Too Many Requests     | Rate limits exceeded on public or API endpoints          | Rate limiter middleware |
-| `500`       | Internal Server Error | Uncaught server exception or database connectivity issue | `Error500Page`          |
-
-<Callout type="info" title="Centralized error boundaries">
-  Keep root error fallbacks in your host application (`apps/web`). Individual
-  plugins should throw `notFound()` or errors from their loaders and let the
-  centralized, localized layouts handle presentation.
+<Callout type="info" title="Keep error pages in the app">
+  Plugins throw `notFound()` or let errors surface from their loaders. The app
+  owns the screens, so every plugin's errors look the same.
 </Callout>
 
-<Cards>
-  <Card
-    icon={<LoaderCircleIcon />}
-    title="Loading States"
-    description="Render instant skeletons and spinners during route transitions."
-    href="/docs/dev/routing/loading"
-  />
-  <Card
-    icon={<MapIcon />}
-    title="Plugin Routes"
-    description="Declare URLs, lazy page components, metadata, and breadcrumbs."
-    href="/docs/dev/routing"
-  />
-  <Card
-    icon={<DatabaseIcon />}
-    title="Data Fetching"
-    description="Server and client data loading with universal fetchers."
-    href="/docs/dev/fetcher"
-  />
-</Cards>
+## Related
+
+- [Loading states](/docs/dev/routing/loading): what the visitor sees while a page loads.
+- [Route module](/docs/dev/routing/route-module): `load`, `notFound` and the other module options.

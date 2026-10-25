@@ -206,15 +206,20 @@ Ask the API what it thinks it supports:
 
 ```bash
 curl http://localhost:3000/api/@vitnode/core/middleware
-# {"isEmail":false,"sso":[{"id":"google","name":"Google"}]}
 ```
 
-Then open `/login` and press **Google**. You should be sent to Google's consent
+The `sso` array in the response now lists the provider. Here it is abridged, with the SVG icon cut short:
+
+```json
+{ "sso": [{ "id": "google", "name": "Google", "icon": "<svg ...>" }] }
+```
+
+Then open `/login` and press the **Google** button under **Continue with**. You should be sent to Google's consent
 screen, bounced back to `/login/sso/google?code=...&state=...`, and land on the
 front page signed in. Your account now has a row in `core_users_sso` with
 `providerId` `google`.
 
-{/* Image prompt: The VitNode /login page with the email and password fields above a divider reading "Or continue With" and an outline button labelled Google beneath it, light theme, 900x850. */}
+{/* Image prompt: The VitNode /login page split in two columns - left a "Continue with" heading over a neutral "Google" button with the four-colour G, right the email and password form, a vertical "or" divider between them, light theme, 900x600. */}
 
 </Step>
 
@@ -271,17 +276,13 @@ account without one simply has nothing to import for that field.
   console.
 </Callout>
 
-<Callout
-  type="warn"
-  title="An email that already has a password account is a dead end"
->
-  If someone registered with the same address using the password form, the
-  callback answers `409` and offers them the login page instead. There is no
-  link-an-existing-account screen yet - see [how the callback handles
-  accounts](/docs/dev/sso#what-the-callback-does-with-the-account).
+<Callout type="info" title="An email that already has an account">
+  If someone already registered with the same address, Google sign-in asks for
+  that account's password once and then links the two. See [Linking an existing
+  account](/docs/dev/sso#how-accounts-link).
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

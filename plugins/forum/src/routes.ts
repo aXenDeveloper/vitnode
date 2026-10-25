@@ -8,7 +8,6 @@ import {
 import {
   forumSearch,
   pendingSearch,
-  topicEditSearch,
   topicNewSearch,
   topicSearch,
 } from "./pages/forum-links";
@@ -59,7 +58,6 @@ export const routes = definePluginRoutes([
     component: lazy(() => import("./pages/topic-edit-page")),
     messages: ["@vitnode/forum.forums", "@vitnode/forum.topics"],
     pendingComponent: FormPendingSkeleton,
-    search: topicEditSearch,
   }),
 
   page("/forum/topics/:slug", {

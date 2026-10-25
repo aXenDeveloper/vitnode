@@ -12,15 +12,15 @@ VitNode caches in three places. The app keeps API responses in TanStack Query, s
 | --------------------------------------------------------------- | -------------------------- | -------------------------------------------- |
 | Render SSR data without refetching it, and skip repeat requests | App cache (TanStack Query) | [Cache app data](/docs/dev/cache/app)        |
 | Stop running the same slow database query for every visitor     | API cache (Redis)          | [Cache API data](/docs/dev/cache/api)        |
-| Look up `remember`, `delete`, `flush` and the other methods     | API cache (Redis)          | [Cache reference](/docs/dev/cache/reference) |
+| Look up `remember`, `delete`, `flush` and the other methods     | API cache (Redis)          | [API cache reference](/docs/dev/cache/reference) |
 | Render a public page once and send that HTML to every visitor   | Page cache                 | [Cache server-rendered pages](/docs/dev/cache/pages) |
 
-Most features use both. The API caches the expensive part once, and each visitor's app keeps its own copy of the response.
+Most features use both. The API caches the expensive part once, and each visitor's app keeps its own copy of the response. [How it differs from other caches](/docs/dev/cache/pages-invalidation#how-it-differs-from-other-caches) compares all three layers side by side.
 
 <Callout type="info" title="The fetcher never caches">
   [`fetcher()`](/docs/dev/fetcher) forwards the visitor's cookies, so a stored
   response could be one visitor's data served to another. That is why caching
-  lives in the two layers above and not in the fetcher.
+  lives in the layers above and not in the fetcher.
 </Callout>
 
 Content Engine public reads are not cached on the server. To cache them in your app or a separate front end, see [Content Engine caching](/docs/content-engine/caching).

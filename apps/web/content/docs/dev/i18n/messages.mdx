@@ -1,5 +1,5 @@
 ---
-title: Messages & ICU Syntax
+title: Messages
 description: Format strings with ICU message syntax in VitNode, including variables, pluralization, rich text tags, and select rules.
 icon: MessageSquare
 ---
@@ -8,7 +8,7 @@ VitNode localizes strings using standard ICU MessageFormat, parsed and rendered 
 
 ## Quick start
 
-### 1. Define Message Strings
+### 1. Define the strings
 
 ```json title="plugins/blog/src/locales/en.json"
 {
@@ -22,11 +22,11 @@ VitNode localizes strings using standard ICU MessageFormat, parsed and rendered 
 
 ---
 
-### 2. Render in React Components
+### 2. Render them in a component
 
 ```tsx title="plugins/blog/src/views/blog-header.tsx"
 import { useTranslations } from "use-intl"
-import { Link } from "@tanstack/react-router"
+import { HrefLink } from "@vitnode/core/tanstack/link"
 
 export const BlogHeader = ({ count, name }: { count: number; name: string }) => {
   const t = useTranslations("@vitnode/blog")
@@ -39,7 +39,7 @@ export const BlogHeader = ({ count, name }: { count: number; name: string }) => 
       {/* Rich text with custom tags */}
       <small className="text-muted-foreground">
         {t.rich("terms_notice", {
-          link: (chunks) => <Link to="/terms" className="underline">{chunks}</Link>,
+          link: (chunks) => <HrefLink className="underline" href="/terms">{chunks}</HrefLink>,
         })}
       </small>
     </header>
@@ -49,9 +49,9 @@ export const BlogHeader = ({ count, name }: { count: number; name: string }) => 
 
 ---
 
-## ICU Syntax Reference
+## ICU syntax
 
-### 1. Variables & Numbers
+### Variables and numbers
 
 ```json
 {
@@ -60,7 +60,7 @@ export const BlogHeader = ({ count, name }: { count: number; name: string }) => 
 }
 ```
 
-### 2. Cardinal Pluralization
+### Plurals
 
 ```json
 {
@@ -68,7 +68,7 @@ export const BlogHeader = ({ count, name }: { count: number; name: string }) => 
 }
 ```
 
-### 3. Select / Enums
+### Select
 
 ```json
 {
@@ -78,18 +78,18 @@ export const BlogHeader = ({ count, name }: { count: number; name: string }) => 
 
 ---
 
-## Where Message Files Live
+## Where message files live
 
 | Folder | Audience | Purpose |
 | :--- | :--- | :--- |
 | `src/locales/{locale}.json` | **Frontend** | Browser UI, page text, and AdminCP navigation |
-| `src/locales/api/{locale}.json` | **API Server** | Transactional emails and backend validation errors |
+| `src/locales/api/{locale}.json` | **API Server** | Emails and other output with no UI. API responses return i18n keys, which the frontend translates |
 
-## Learn More
+## Related
 
 <Cards>
   <Card
-    title="Translating Pages"
+    title="Translate pages"
     description="Route namespace loading and useTranslations hook"
     href="/docs/dev/i18n/pages"
   />

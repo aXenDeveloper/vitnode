@@ -5,6 +5,7 @@ import type { ZodError } from "zod";
 import { createRoute as createRouteHono } from "@hono/zod-openapi";
 
 import type { EnvVitNode } from "../middlewares/global.middleware";
+import type { PermissionStaffType } from "./permission-staff";
 
 import { captchaMiddleware } from "../middlewares/captcha.middleware";
 import { pluginMiddleware } from "../middlewares/plugin.middleware";
@@ -21,7 +22,7 @@ export type RouteValidationHook = (
   c: Context,
 ) => Promise<Response | undefined> | Response | undefined;
 
-/** The admin staff permission a route requires. */
+/** The staff permission a route requires. */
 export interface AdminStaffPermission {
   /** The permission module, e.g. `posts`. */
   module: string;
@@ -31,7 +32,26 @@ export interface AdminStaffPermission {
   plugin?: string;
 }
 
+/** The moderator staff permission a route requires. */
+export type ModeratorStaffPermission = AdminStaffPermission;
+
 const staffPermissionGuards = new WeakSet<MiddlewareHandler>();
+
+const staffPermissionGuard =
+  (
+    type: PermissionStaffType,
+    { plugin, module, permission }: AdminStaffPermission,
+    pluginId: string,
+  ): MiddlewareHandler =>
+  async (c, next) => {
+    await assertStaffPermission(c, {
+      type,
+      plugin: plugin ?? pluginId,
+      module,
+      permission,
+    });
+    await next();
+  };
 
 interface MountedRoute {
   handler: unknown;
@@ -97,6 +117,14 @@ export interface BuildRouteOptions<
   /** The Hono handler, typed from `route`: `c.req.valid(...)` and `c.json(...)` follow its schemas. */
   handler: RouteHandler<R & { path: P }, EnvVitNode>;
   hook?: RouteValidationHook;
+  /**
+   * Requires a signed-in member who is a moderator with this staff permission;
+   * anyone else gets `403`. Checked against the member's site session, so use
+   * it on public routes, not under `/admin/`. A grant scoped to selected
+   * resources does not pass: check those in the handler with
+   * `assertStaffPermission` and a `resource`.
+   */
+  moderatorStaffPermission?: ModeratorStaffPermission;
   route: R;
 }
 
@@ -105,8 +133,9 @@ export interface BuildRouteOptions<
  * `bindApiPlugin`, which supplies `pluginId`.
  *
  * The route is tagged with its plugin for OpenAPI and runs behind middleware
- * that sets `c.get("plugin")`, then the staff-permission guard and the captcha
- * check when requested, then the route's own `middleware`.
+ * that sets `c.get("plugin")`, then the admin and moderator staff-permission
+ * guards and the captcha check when requested, then the route's own
+ * `middleware`.
  *
  * @example
  * ```ts
@@ -141,6 +170,7 @@ export const buildRoute = <
   hook,
   pluginId,
   adminStaffPermission,
+  moderatorStaffPermission,
 }: BuildRouteOptions<P, R> & {
   pluginId: Plugin;
 }): Route<Plugin, R & { path: P }> => {
@@ -149,18 +179,15 @@ export const buildRoute = <
   const middleware: MiddlewareHandler[] = [pluginMiddleware(pluginId)];
 
   if (adminStaffPermission) {
-    const { plugin, module, permission } = adminStaffPermission;
-    const guard: MiddlewareHandler = async (c, next) => {
-      await assertStaffPermission(c, {
-        type: "admin",
-        plugin: plugin ?? pluginId,
-        module,
-        permission,
-      });
-      await next();
-    };
+    const guard = staffPermissionGuard("admin", adminStaffPermission, pluginId);
     staffPermissionGuards.add(guard);
     middleware.push(guard);
+  }
+
+  if (moderatorStaffPermission) {
+    middleware.push(
+      staffPermissionGuard("moderator", moderatorStaffPermission, pluginId),
+    );
   }
 
   if (route.withCaptcha) {

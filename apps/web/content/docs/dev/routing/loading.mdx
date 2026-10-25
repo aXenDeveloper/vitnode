@@ -1,5 +1,5 @@
 ---
-title: Loading States
+title: Loading states
 description: Show a top progress bar for route navigation, section skeletons for loading content, and button spinners for actions in VitNode.
 icon: LoaderCircle
 ---
@@ -85,16 +85,22 @@ Import pre-built skeletons directly from `@vitnode/core/tanstack/pending`:
 | `CardsPendingSkeleton` | Responsive 1/2/3 column card grid             | Dashboard widgets, product catalogs     |
 | `FormPendingSkeleton`  | Stacked input placeholders and action buttons | Settings forms, modal dialogs           |
 | `AuthPendingSkeleton`  | Centered authentication card with form inputs | Sign-in, sign-up, password reset        |
+| `ProfilePendingSkeleton` | Cover, avatar, name and side cards          | Member profiles                         |
+| `DiscoverPendingSkeleton` | Heading and a timeline of results          | Discover-style activity pages           |
+| `SearchPendingSkeleton` | Search box, filter column and results        | Search pages                            |
+| `BreadcrumbPendingSkeleton` | Two short crumb placeholders             | A breadcrumb that is still loading      |
+| `RoutePendingSkeleton` | Heading and text blocks                       | A page with no closer shape             |
 | `RoutePendingSpinner`  | Centered accessible spinner                   | Suspense fallback with no known shape   |
 
 ## Customizing skeleton props
 
-All skeleton shapes accept props from `RoutePendingSkeletonProps` to adapt to your layout:
+The table, feed, cards, form, auth and route skeletons accept every prop of `RoutePendingSkeletonProps`. The profile, discover, search and breadcrumb skeletons accept only `className` and `label`.
 
 ```tsx title="plugins/site-notes/src/pages/notes-admin-page.tsx"
 import { TablePendingSkeleton } from '@vitnode/core/tanstack/pending'
 import { Suspense } from 'react'
 
+// `AdminNotesTable` is your table, which suspends while its query loads.
 const AdminNotesPage = () => {
   return (
     <Suspense
@@ -117,10 +123,10 @@ export default AdminNotesPage
 
 | Prop              | Type      | Default     | Description                                                   |
 | :---------------- | :-------- | :---------- | :------------------------------------------------------------ |
-| `rows`            | `number`  | `3` to `6`  | Number of skeleton items, rows, or cards to display           |
+| `rows`            | `number`  | per shape (`2` to `6`) | Number of skeleton items, rows, or cards to display |
 | `withDescription` | `boolean` | `true`      | Whether to display a skeleton subtitle under the heading      |
 | `className`       | `string`  | `undefined` | Additional Tailwind utility classes merged onto the container |
-| `label`           | `string`  | `'Loading'` | Accessible screen-reader label (`aria-label`)                 |
+| `label`           | `string`  | `'Loading'` | Screen-reader status text, rendered as a visually hidden `role="status"` element. Pass a translated string |
 
 ## Keep data on screen during refetches
 
@@ -131,6 +137,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { FeedPendingSkeleton } from '@vitnode/core/tanstack/pending'
 import { cn } from 'cn'
 
+// `notesQueryOptions` is your own query helper, keyed on the search term.
 const NotesSearch = ({ search }: { search: string }) => {
   const query = useQuery({
     ...notesQueryOptions({ search }),
@@ -158,6 +165,8 @@ Submissions and mutations show their progress on the control that started them. 
 import { Button } from '@vitnode/core/components/ui/button'
 import { useMutation } from '@tanstack/react-query'
 
+// `deleteNote` is your own API call. In a real handler, also invalidate the
+// notes query and show a toast in `onSuccess`.
 const DeleteNoteButton = ({ id }: { id: number }) => {
   const mutation = useMutation({ mutationFn: deleteNote })
 
@@ -178,19 +187,19 @@ While the action runs, also disable any other control that would conflict with i
 <Cards>
   <Card
     icon={<DatabaseIcon />}
-    title="Data Fetching"
+    title="Fetcher"
     description="Learn universal fetchers, cache invalidation, and background mutations."
     href="/docs/dev/fetcher"
   />
   <Card
     icon={<MapIcon />}
-    title="Plugin Routes"
+    title="Routing"
     description="Declare routes, lazy page components, metadata, and breadcrumbs."
     href="/docs/dev/routing"
   />
   <Card
     icon={<TriangleAlertIcon />}
-    title="Errors & Not Found"
+    title="Errors and 404"
     description="Handle 404, 500, and error boundaries in routes."
     href="/docs/dev/routing/not-found"
   />

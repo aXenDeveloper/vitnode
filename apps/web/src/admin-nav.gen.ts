@@ -18,14 +18,14 @@ import type { AdminNavPluginSource } from '@vitnode/core/lib/plugin'
 import { adminNavBundle } from '@vitnode/core/tanstack/admin'
 
 import { adminNav as adminNav0 } from '@vitnode/blog/admin/nav'
-import { adminNav as adminNav1 } from '@vitnode/example/admin/nav'
-import { adminNav as adminNav2 } from '@vitnode/forum/admin/nav'
+import { adminNav as adminNav1 } from '@vitnode/forum/admin/nav'
+import { adminNav as adminNav2 } from 'newsroom/admin/nav'
 
 
 export const pluginAdminNav = [
   adminNav0, // @vitnode/blog
-  adminNav1, // @vitnode/example
-  adminNav2, // @vitnode/forum
+  adminNav1, // @vitnode/forum
+  adminNav2, // newsroom
 ] satisfies AdminNavPluginSource[]
 
 export const adminNav = adminNavBundle({ plugins: pluginAdminNav })

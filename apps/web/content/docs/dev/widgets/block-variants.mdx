@@ -1,5 +1,5 @@
 ---
-title: Widget Variants
+title: Variants
 description: A variant is how one widget instance looks, stored beside its data instead of inside it - declare a few with defineWidget and the editor grows a picker for free.
 icon: Shapes
 ---
@@ -22,17 +22,24 @@ Keep those three apart and every screen that touches a widget stays honest. Mix 
 
 Two optional keys on `defineWidget`:
 
-```tsx title="plugins/example/src/widgets/features.tsx"
+```tsx title="plugins/newsroom/src/widgets/features.tsx (excerpt)"
 export const featuresWidget = defineWidget({
   component: Features,
   defaultVariant: 'grid',
+  description:
+    'Up to three features, told the same way in three different shapes.',
   fields: featuresFields,
+  icon: SparklesIcon,
   id: 'features',
   name: 'Features',
   variants: [
-    { id: 'grid', label: 'Grid', description: 'Cards side by side.' },
-    { id: 'list', label: 'List', description: 'One per row.' },
-    { id: 'compact', label: 'Compact', description: 'A dense summary.' },
+    { description: 'Cards side by side.', id: 'grid', label: 'Grid' },
+    {
+      description: 'One per row, with room to explain.',
+      id: 'list',
+      label: 'List',
+    },
+    { description: 'A dense summary.', id: 'compact', label: 'Compact' },
   ],
 })
 ```
@@ -68,7 +75,7 @@ A variant is one more key on the instance, beside `data` and never in it:
 ```json
 {
   "id": "01JC4Z8N9WQKX7R2M5T6V3B8HD",
-  "type": "example:features",
+  "type": "newsroom:features",
   "variant": "list",
   "data": {
     "heading": "One block, three shapes",
@@ -80,7 +87,7 @@ A variant is one more key on the instance, beside `data` and never in it:
 That placement is the whole feature. Because `variant` is a sibling of `data`:
 
 - switching it never touches, re-validates or re-saves the content,
-- the block's schema stays the schema of its **content**, so a search indexer reading `data` never trips over a styling token,
+- the widget's fields describe only its **content**, never a styling token,
 - and a block that drops a variant later does not need a data migration to get rid of it.
 
 ## How a variant resolves

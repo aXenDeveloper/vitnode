@@ -1,0 +1,76 @@
+---
+title: Several zones
+description: Put several content zones on one VitNode page, around application UI such as a form, with unique zone ids, page-local names on editable pages and per-zone saving.
+icon: Rows3
+---
+
+A page can hold any number of [content zones](/docs/dev/widgets/content-zones). Each has its own id, its own widgets and its own rules, and the editor saves each one separately. The usual reason for several is application UI in the middle: a notice above a form, a sidebar beside it, nothing inside it.
+
+## Before you begin
+
+- A page that renders [one content zone](/docs/dev/widgets/content-zones#render-a-zone).
+
+## Put zones around application UI
+
+Place a zone wherever widgets may go, and keep your own components between them. Here `zones` is what your loader returned, one list of widgets per zone:
+
+```tsx
+<div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+  <div className="flex flex-1 flex-col gap-6">
+    <ContentZone id="before-profile" blocks={zones.beforeProfile} registry={blocksRegistry} />
+
+    <ProfileForm />
+
+    <ContentZone id="after-profile" blocks={zones.afterProfile} registry={blocksRegistry} />
+  </div>
+
+  <ContentZone
+    as="aside"
+    className="border-border w-full rounded-lg border p-4 lg:w-64"
+    id="sidebar"
+    blocks={zones.sidebar}
+    registry={blocksRegistry}
+  />
+</div>
+```
+
+`ProfileForm` is application code, with its own validation and tests. Nobody can drag a widget into it, and in edit mode it gets no overlay, so its inputs keep working and keep their state.
+
+On an [editable page](/docs/dev/widgets/editable-pages), leave `blocks` out. The page hands every zone its widgets, its allowlist and its limits.
+
+## Give every zone its own id
+
+A zone id names one place, so two zones on one page cannot share it. View mode renders both lists, but edit mode refuses as soon as both are on the page:
+
+```tsx
+<ContentZone id="main" />
+<ProfileForm />
+<ContentZone id="main" />
+// BlockError: Two `<ContentZone id="main" />` outlets are on the page at the same time…
+```
+
+The editor stores and saves widgets by zone id, so with two it could not tell which place a widget belongs to. Moving a zone to another element, or re-rendering it under another branch, is fine. Need the same widgets in two places? Use two ids, such as `main` and `main-aside`, and decide what goes in each.
+
+## Choose the ids
+
+| Zone                                | Id                                                                                        |
+| :---------------------------------- | :---------------------------------------------------------------------------------------- |
+| A standalone zone                   | Any valid id. A `scope:` prefix, such as `homepage:hero`, keeps screens apart.            |
+| A zone declared by an editable page | Page-local, such as `sidebar`. The page id (`newsroom:settings`) already namespaces them. |
+
+Either way, the id is permanent, because a saved layout addresses the zone by it.
+
+## How the editor treats several zones
+
+- **Each zone saves on its own.** A save carries only the zones that changed, so two moderators who edit different zones of one page both succeed. See [Saving layouts](/docs/dev/widgets/saving-layouts#two-moderators-one-page).
+- **Each zone keeps its own allowlist.** A widget dragged onto a zone that does not accept it is refused there. See [Restrict widgets](/docs/dev/widgets/restrict-widgets).
+- **A zone that leaves the page leaves the editor.** A zone hidden behind a tab while somebody edits drops out of the editor; what is stored for it stays stored.
+
+## Check the result
+
+Open `/newsroom/zones` from the newsroom plugin. Four zones sit around a profile form: `before-profile` with three widgets and no wrapper, `after-profile` with two layout areas and a call to action, `sidebar` in an `<aside>`, and `before-footer`, which is empty and renders nothing. In the page source, only the sidebar carries a `data-vitnode-zone` attribute.
+
+## Related
+
+- [Editable pages](/docs/dev/widgets/editable-pages): declare these zones once and let moderators arrange them.
+- [Layout areas](/docs/dev/widgets/layout-areas): widgets side by side inside one zone.

@@ -9,7 +9,7 @@ import { ImgDocs } from "@/components/fumadocs/img";
 import languageSelector from "./localization-language-selector.webp";
 import publicPagePl from "./localization-public-page-pl.webp";
 
-Localization stores chosen fields once per language, while every other field stays shared. An article's title and body get a Polish version, but whether it is featured stays one value. Translated values live in a second table, `{tableName}_translations`, with one row per record and language. This guide uses `example.localized-article` from the example plugin.
+Localization stores chosen fields once per language, while every other field stays shared. A bulletin's title and body get a Polish version, but whether it is featured stays one value. Translated values live in a second table, `{tableName}_translations`, with one row per record and language. This guide uses `newsroom.bulletin` from the newsroom plugin.
 
 ## Before you begin
 
@@ -23,16 +23,17 @@ The languages come from your app's `i18n.locales` in `vitnode.config.ts` (see [L
 
 Add a `localization` block and set `localized: true` on each field that changes per language:
 
-```ts title="plugins/example/src/content/localized-article.ts"
-export const localizedArticleContentType = defineContentType({
-  id: "example.localized-article",
-  tableName: "example_localized_articles",
+```ts title="plugins/newsroom/src/content/bulletin.ts (excerpt)"
+export const bulletinContentType = defineContentType({
+  id: "newsroom.bulletin",
+  tableName: "newsroom_bulletins",
   // [!code ++:4]
   localization: {
     defaultLocale: "en",
     fallback: "default",
   },
   publication: true,
+  // ...
   fields: {
     // [!code highlight:8]
     title: field.text({
@@ -56,14 +57,11 @@ export const localizedArticleContentType = defineContentType({
 
 ### Export the translations table
 
-```ts title="plugins/example/src/database/localized-articles.ts"
-export const localizedArticleContent = createContentModel(
-  localizedArticleContentType,
-);
+```ts title="plugins/newsroom/src/database/bulletins.ts (excerpt)"
+export const bulletinContent = createContentModel(bulletinContentType);
 
-export const example_localized_articles = localizedArticleContent.table;
-export const example_localized_articles_translations = // [!code ++:2]
-  localizedArticleContent.translationTable;
+export const newsroom_bulletins = bulletinContent.table;
+export const newsroom_bulletins_translations = bulletinContent.translationTable; // [!code ++]
 ```
 
 Drizzle Kit only sees exported tables, so without this line the migration has no translations table.
@@ -90,7 +88,7 @@ npm run db:migrate
 
 </Tabs>
 
-The localized columns move to `example_localized_articles_translations`, keyed by `(itemId, languageId)`. That table has its own `version`, `createdAt` and `updatedAt`, plus `status` and `publishedAt` when the type has publication.
+The localized columns move to `newsroom_bulletins_translations`, keyed by `(itemId, languageId)`. That table has its own `version`, `createdAt` and `updatedAt`, plus `status` and `publishedAt` when the type has publication.
 
 <Callout type="warn">
   The migration does not copy existing values into the translations table. If
@@ -134,8 +132,8 @@ When the server refuses a value anyway, nothing is saved. The save answers `400`
 With publication, each language has its own status. Publishing the record publishes its languages too, and you can then unpublish one language alone. A translation is public only when both the record and that translation are published, and the record is not [hidden](/docs/content-engine/content-visibility). With `editorial`, each language also keeps its own revisions and preview links.
 
 <Callout>
-  The example plugin registers `example.localized-article` on the API only, so
-  it has no AdminCP screen. Add it to the plugin's `adminContent` and `adminNav`
+  The newsroom plugin registers `newsroom.bulletin` on the API only, so it has
+  no AdminCP screen. Add it to the plugin's `adminContent` and `adminNav`
   content types to get the generated form shown above.
 </Callout>
 
@@ -148,7 +146,7 @@ The public API serves one language per request, chosen in this order:
 3. Otherwise `defaultLocale`.
 
 ```bash
-curl -i "http://localhost:3000/api/@vitnode/example/content/localized-articles/witaj-content-engine?locale=pl"
+curl -i "http://localhost:3000/api/newsroom/content/bulletins/witaj-content-engine?locale=pl"
 ```
 
 ```http
@@ -160,13 +158,13 @@ content-language: pl
 
 The `locale` property says which language the body is in. When the requested translation is missing or unpublished, `fallback: "default"` serves the default language instead, so `"locale"` becomes `"en"`. With `fallback: "none"` (the default), the API returns `404`.
 
-In a page loader, pass the route's locale through. This is the example plugin's localized article page:
+In a page loader, pass the route's locale through. This is the newsroom plugin's bulletin page:
 
-```ts title="plugins/example/src/pages/localized-article-page.tsx"
+```ts title="plugins/newsroom/src/pages/bulletin-page.tsx (excerpt)"
 const detail = await fetcher({
   plugin: manifest.id,
   method: "get",
-  module: "content/localized-articles",
+  module: "content/bulletins",
   path: "/{slug}",
   args: {
     params: { slug: encodeURIComponent(slug) },
@@ -175,16 +173,16 @@ const detail = await fetcher({
 });
 ```
 
-Opening `/pl/localized-articles/witaj-content-engine` renders the Polish translation:
+Opening `/pl/bulletins/witaj-content-engine` renders the Polish translation:
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={publicPagePl}
-  alt="Public article page titled Witaj Content Engine with the body Jeden rekord, dwa języki"
+  alt="Public page titled Witaj Content Engine with the body Jeden rekord, dwa języki"
 />
 
-Each translation can have its own slug and URL; [Public pages](/docs/content-engine/public-pages) covers localized URLs and `hreflang`.
+Each translation can have its own slug and URL. [Content page](/docs/content-engine/public-pages) covers localized URLs and `hreflang`.
 
 ## Translation routes
 
@@ -199,7 +197,7 @@ Each translation can have its own slug and URL; [Public pages](/docs/content-eng
 | `POST /{id}/translations/{locale}/preview`                  | A preview link for one language. Needs editorial preview     |
 | `POST /localized`, `PUT /{id}/localized`                    | Saves shared fields and several languages in one transaction |
 
-Each translation write emits an event such as `content.example.localized-article.translation_created` or `translation_published`; see [Events](/docs/content-engine/events).
+Each translation write emits an event such as `content.newsroom.bulletin.translation_created` or `translation_published`, listed in [Events](/docs/content-engine/events).
 
 ## Options
 

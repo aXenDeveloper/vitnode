@@ -1,105 +1,60 @@
 ---
 title: Introduction
-description: Build a TanStack Start and Hono application with VitNode plugins, then deploy and operate it confidently.
+description: Learn VitNode development step by step. Set up an app, build the site-notes plugin with an API, a page, a database table, a permission and an AdminCP screen, then explore the framework.
 icon: Power
 ---
 
-import {
-  BookOpenIcon,
-  PackagePlusIcon,
-  RocketIcon,
-  ServerIcon,
-} from 'lucide-react'
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { BookOpenIcon, LayersIcon, ServerIcon } from "lucide-react";
 
-VitNode is a **TanStack Start** front end, a **Hono** API, Postgres, and an
-AdminCP. Its important rule is pleasantly simple: product features live in
-**plugins**. A plugin owns its pages, APIs, data, translations, and AdminCP
-extensions, so your host app does not become a drawer full of mystery cables.
-
-{/* Image prompt: Clean dark-theme architecture diagram. A TanStack Start application and Hono API sit in the center, Postgres below, and three colorful plugin packages connect to routes, API modules, data, and AdminCP. Keep labels large and legible, 1600x900. */}
+VitNode is a **TanStack Start** front end, a **Hono** API, PostgreSQL and an AdminCP. Product features live in **plugins**. A plugin owns its pages, API, tables, translations and AdminCP screens, so the app itself stays small.
 
 <Callout type="info" title="Canary documentation">
   These pages follow VitNode 2.0 on the `canary` branch. It moves quickly; when
   code and prose disagree, trust the code and send the prose a friendly PR.
 </Callout>
 
-## Start with a running app
+## Learn by building one plugin
 
-<Cards>
-  <Card
-    icon={<RocketIcon />}
-    title="Get an app running"
-    description="Scaffold VitNode, migrate Postgres, and enter AdminCP."
-    href="/docs/dev/setup"
-  />
-  <Card
-    icon={<PackagePlusIcon />}
-    title="Create a plugin"
-    description="Make the package that will own your first feature."
-    href="/docs/dev/plugins/create"
-  />
-  <Card
-    icon={<ServerIcon />}
-    title="Deploy VitNode"
-    description="Build, migrate, and run your app on a server or container."
-    href="/docs/dev/deployments/self-hosted"
-  />
-</Cards>
+The **Learn** lessons build one small plugin, `site-notes`, which publishes short notes on your site. Each lesson starts from the previous one and says which files change and how to check the result.
 
-## Create an app
+| # | Lesson | What `site-notes` can do afterwards |
+| --- | --- | --- |
+| 1 | [Setup](/docs/dev/setup) | A VitNode app runs locally, with you as its administrator. |
+| 2 | [Create plugin](/docs/dev/plugins/create) | The generated plugin shows a page at `/site-notes`. |
+| 3 | [API modules](/docs/dev/plugins/api/modules) | `GET /api/site-notes/notes` returns sample notes. |
+| 4 | [API routes](/docs/dev/plugins/api/routes) | `GET /api/site-notes/notes/{id}` validates its parameter and answers `404` for a missing note. |
+| 5 | [Plugin page](/docs/dev/plugins/page) | `/site-notes/notes` lists the notes, loaded before the page renders. |
+| 6 | [Database](/docs/dev/database) | Notes live in a `site_notes` PostgreSQL table. |
+| 7 | [Permissions](/docs/dev/working-with-users/staff-permissions) | Only administrators with **Create notes** can add a note. |
+| 8 | [AdminCP page](/docs/dev/plugins/admin) | Staff create notes from a **Notes** screen in the AdminCP. |
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Create a VitNode app">
+The same plugin then continues in [Events](/docs/dev/events), [Queue](/docs/dev/advanced/queue), [Email templates](/docs/dev/email/templates) and [Storage](/docs/dev/storage).
 
-```bash tab="bun"
-bun create vitnode-app@canary
-```
-
-```bash tab="pnpm"
-pnpm create vitnode-app@canary
-```
-
-```bash tab="npm"
-npm create vitnode-app@canary
-```
-
-</Tabs>
-
-Choose **Single App** for one TanStack Start app with Hono at `/api`, or a
-monorepo when web and API deploy separately. If you plan to create plugins,
-enable **Turborepo** during setup: the generator needs a workspace root.
-
-## The five-minute path
-
-1. Start Postgres (Docker is the low-drama local choice).
-2. Run `db:migrate` to create core tables and your first administrator.
-3. Run `dev`, then visit `http://localhost:3000/admin`.
-4. Create a plugin for your first product page, API endpoint, content type, or
-   dashboard widget.
-
-Every command above is expanded in [Getting started](/docs/dev/setup). From
-there, [Build your first plugin](/docs/guides/first-plugin) gives you a real
-route to visit—not just a philosophical plugin.
+<Callout title="Want tables, APIs and AdminCP screens generated for you?">
+  The [Content Engine](/docs/content-engine) builds all of them from one
+  content type definition. Choose it for editorial content such as articles or
+  events; choose the lessons above to learn how a plugin works by hand.
+</Callout>
 
 ## Find the right reference
 
 <Cards>
   <Card
-    icon={<PackagePlusIcon />}
-    title="Plugin routes"
-    description="Claim public or AdminCP URLs without adding host route files."
+    icon={<LayersIcon />}
+    title="Architecture"
+    description="How the app, the API and plugins fit together."
+    href="/docs/dev/architecture"
+  />
+  <Card
+    icon={<BookOpenIcon />}
+    title="Routing"
+    description="Public and AdminCP pages owned by a plugin."
     href="/docs/dev/routing"
   />
   <Card
     icon={<ServerIcon />}
-    title="Admin Control Panel"
-    description="Add plugin-owned screens, navigation, permissions, and widgets."
-    href="/docs/dev/plugins/admin"
-  />
-  <Card
-    icon={<BookOpenIcon />}
-    title="Content Engine"
-    description="Define content once and receive data, API, and AdminCP tools."
-    href="/docs/content-engine"
+    title="Deploy"
+    description="Build, migrate and run VitNode on your own server."
+    href="/docs/dev/deployments/self-hosted"
   />
 </Cards>

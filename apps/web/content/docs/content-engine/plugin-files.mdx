@@ -25,24 +25,38 @@ VitNode reads a plugin's content types from several small files instead of one b
 
 A content type with an AdminCP screen needs an entry in both `admin/nav` and `admin/content`. The first adds the sidebar link, the second the screen behind it. They are separate files so the sidebar stays small on every AdminCP page, while form and editor code loads only with the screen.
 
-Without custom cells, fields or layouts, `admin/content` can re-export the nav list:
+Without custom cells, fields or layouts, `admin/content` can re-export the nav list, as the newsroom plugin does:
 
-```tsx title="src/admin/content.tsx"
+```tsx title="plugins/newsroom/src/admin/content.tsx"
 export { adminNav as adminContent } from "./nav";
 ```
 
-Once you customize a screen, build `adminContent` on its own and reuse the nav entries, as the example plugin does:
+Once you customize a screen, build `adminContent` on its own and reuse the nav entries, as the blog plugin does:
 
-```tsx title="plugins/example/src/admin/content.tsx"
+```tsx title="plugins/blog/src/admin/content.tsx (excerpt)"
 import type { ContentFrontendPluginSource } from "@vitnode/core/lib/plugin";
 
-import { manifest } from "@/manifest.gen";
+import { contentTypeAdmin } from "@vitnode/core/lib/plugin";
 
-import { exampleArticleNav, exampleCategoryNav, examplePageNav } from "./nav";
+import { manifest } from "@/manifest.gen";
+import { BlogCategoryColorCell } from "@/views/admin/category/color-cell";
+import { BlogCategoryColorField } from "@/views/admin/category/color-field";
+
+import { blogCategoryNav } from "./nav";
 
 export const adminContent = {
   pluginId: manifest.id,
-  contentTypes: [exampleArticleNav, exampleCategoryNav, examplePageNav],
+  contentTypes: [
+    contentTypeAdmin({
+      ...blogCategoryNav,
+      fields: {
+        color: { component: BlogCategoryColorField },
+      },
+      columns: {
+        color: { cell: BlogCategoryColorCell },
+      },
+    }),
+  ],
 } satisfies ContentFrontendPluginSource;
 ```
 
@@ -62,9 +76,9 @@ This happens each time `vite dev` or `vite build` starts, and the dev server reg
 
 Resolution only works when the plugin id equals the npm package name and the package exports its `dist` folder. A generated plugin already has the right `exports`:
 
-```json title="plugins/example/package.json"
+```json title="plugins/newsroom/package.json"
 {
-  "name": "@vitnode/example",
+  "name": "newsroom",
   "exports": {
     "./locales/*.json": "./src/locales/*.json",
     "./*": {
@@ -76,24 +90,24 @@ Resolution only works when the plugin id equals the npm package name and the pac
 }
 ```
 
-Tables are the exception. Drizzle Kit reads `node_modules/<pluginId>/dist/src/database/*.js` directly for every plugin in the API config. Export each table from those files, or it never reaches a migration. [Database](/docs/content-engine/database#export-every-table) shows a model with several tables.
+Tables are the exception. Drizzle Kit reads `node_modules/<pluginId>/dist/src/database/*.js` directly for every plugin in the API config. Export each table from those files, or it never reaches a migration. [Migrations](/docs/content-engine/database#export-every-table) shows a model with several tables.
 
 ## Keep `config.tsx` small
 
 `config.tsx` is bundled with the document shell of every public page:
 
-```tsx title="plugins/example/src/config.tsx"
+```tsx title="plugins/newsroom/src/config.tsx"
 import { buildPlugin } from "@vitnode/core/lib/plugin";
 
 import messages from "./locales";
 import { manifest } from "./manifest.gen";
 import { routes } from "./routes";
 
-export const examplePlugin = () =>
+export const newsroomPlugin = () =>
   buildPlugin({
     manifest,
     localeFiles: {
-      en: "@vitnode/example/locales/en.json",
+      en: "newsroom/locales/en.json",
     },
     messages,
     routes,
@@ -106,25 +120,35 @@ Do not import `admin/nav` or `admin/content` here. The app loads `admin/nav` wit
 
 ## `content.ts` and public URLs
 
-A content type with `delivery` or `search` publishes URLs. List every such content type in `src/content.ts`. The example plugin lists all of its types, which is allowed:
+A content type with `delivery` or `search` publishes URLs. List every such content type in `src/content.ts`. The newsroom plugin lists all of its types, which is allowed:
 
-```ts title="plugins/example/src/content.ts"
-import { advancedArticleContentType } from "@/content/advanced-article";
+```ts title="plugins/newsroom/src/content.ts"
 import { articleContentType } from "@/content/article";
+import { bulletinContentType } from "@/content/bulletin";
 import { categoryContentType } from "@/content/category";
-import { localizedArticleContentType } from "@/content/localized-article";
+import { commentContentType } from "@/content/comment";
+import { eventContentType } from "@/content/event";
+import { explainerContentType } from "@/content/explainer";
+import { letterContentType } from "@/content/letter";
 import { pageContentType } from "@/content/page";
+import { storyContentType } from "@/content/story";
+import { tagContentType } from "@/content/tag";
 
 export const contentTypes = [
   articleContentType,
-  advancedArticleContentType,
-  localizedArticleContentType,
   categoryContentType,
+  commentContentType,
+  storyContentType,
+  explainerContentType,
+  bulletinContentType,
+  tagContentType,
+  eventContentType,
   pageContentType,
+  letterContentType,
 ];
 ```
 
-Keep the module browser-safe: it imports definitions only, never `src/database`. The web build checks that one of your pages serves each URL, and the API refuses to start when a plugin publishes URLs that this module does not declare. See [Content URLs need a page](/docs/dev/i18n/localized-urls#content-urls-need-a-page).
+Keep the module browser-safe. It imports definitions only, never `src/database`. The web build checks that one of your pages serves each URL, and the API refuses to start when a plugin publishes URLs that this module does not declare. See [Content URLs need a page](/docs/dev/i18n/localized-urls-advanced#content-urls-need-a-page).
 
 ## Errors
 

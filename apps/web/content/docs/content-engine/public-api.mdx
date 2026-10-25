@@ -7,25 +7,21 @@ implementation:
   decisions:
     - Which items become public? Offer content types from the project's plugins that have `publication` but no `publicApi`.
     - Which fields can readers see? Offer the type's fields; user fields are never public, and the type needs exactly one slug field.
-    - What can readers search, sort and filter by? Offer its text fields for search, and its other fields for sorting and filtering.
   constraints:
     - Set `publicApi` on the content type and register the model in the plugin's `buildContentPublicModule`.
     - Read the routes with `fetcher` and `module` set to `content/{publicApi.path}`.
   related:
-    - title: Public lists
+    - title: Content list
       href: /docs/content-engine/public-lists
-    - title: Public pages
+    - title: Content page
       href: /docs/content-engine/public-pages
     - title: publicApi reference
       href: /docs/content-engine/reference#publicapi
 ---
 
-import { ImgDocs } from "@/components/fumadocs/img";
-import listPage from "./public-lists-discussions.webp";
+`publicApi` gives a content type read-only routes anyone can call: a list and a single record. They return only published records, and only the fields you name. Your pages read these routes; nothing about a content type is public until you add them.
 
-`publicApi` gives a content type read-only routes that anyone can call: one for a list and one for a single record. Only published records come back, and only the fields you name. Your pages read these routes; nothing is public until you add them.
-
-You need [publication](/docs/content-engine/publication) first, so drafts can never leak.
+This continues the article from [Drafts & publishing](/docs/content-engine/publication): one published article, `Welcome to the newsroom`, and one draft, `Release notes for October`.
 
 <Steps>
 
@@ -33,61 +29,111 @@ You need [publication](/docs/content-engine/publication) first, so drafts can ne
 
 ### Choose the public fields
 
-Add `publicApi` with a URL `path` and the `fields` readers may see:
+Edit `src/content/article.ts` and add `publicApi` after `publication`:
 
-```ts title="plugins/example/src/content/discussion.ts"
-export const discussionContentType = defineContentType({
-  id: "example.discussion",
-  // ...
+```ts title="plugins/newsroom/src/content/article.ts"
   publication: true,
+
   // [!code ++:4]
   publicApi: {
-    path: "discussions",
-    fields: ["id", "title", "slug", "body", "board", "publishedAt"],
+    path: "news",
+    fields: ["id", "title", "slug", "body", "publishedAt"],
   },
-});
 ```
 
-- `fields` has no wildcard. A field you add to the content type later stays private until you list it.
-- Exactly one slug field must be in the list, because the detail route finds records by it.
-- User fields never appear here. To show an author, add `people: ["author"]`, which returns a small public profile instead.
-
-Search, sorting, filters and lighter list rows are a few more options, covered in [Public lists](/docs/content-engine/public-lists#choose-what-the-list-can-read).
+- `path` becomes part of the URL, `/api/newsroom/content/news`, and the module name your pages use, `content/news`. Pick one no other plugin in the app uses, because [content pages](/docs/content-engine/public-pages) turn it into a site-wide URL.
+- `fields` has no wildcard. A field you add later stays private until you list it here.
+- Exactly one slug field must be listed, because the single-record route finds records by it.
 
 </Step>
 
 <Step>
 
-### Register the routes
+### Register the public routes
 
-Add the model to `buildContentPublicModule` in the plugin's API config:
+Edit `src/config.api.ts` and add the model to `buildContentPublicModule`. This is an excerpt:
 
-```ts title="plugins/example/src/config.api.ts"
-import { discussionContent } from "@/database/discussions";
+```ts title="plugins/newsroom/src/config.api.ts"
+import { buildContentPublicModule } from "@/api/builders"; // [!code ++]
+import { articleContent } from "@/database/articles"; // [!code ++]
+import { manifest } from "@/manifest.gen";
 
-export const exampleApiPlugin = () =>
+import { adminModule } from "./api/modules/admin/admin.module";
+import { helloModule } from "./api/modules/hello/hello.module";
+
+export const newsroomApiPlugin = () =>
   buildApiPlugin({
     manifest,
     modules: [
-      // [!code ++:3]
-      buildContentPublicModule({
-        contentTypes: [discussionContent],
-      }),
+      helloModule,
+      adminModule,
+      buildContentPublicModule({ contentTypes: [articleContent] }), // [!code ++]
     ],
   });
 ```
 
-`pnpm dev` serves the new routes as soon as you save. `publicApi` adds no columns, so there is nothing to migrate.
+`publicApi` adds no columns, so there is nothing to migrate. `pnpm dev` serves the routes as soon as it rebuilds.
 
 </Step>
 
-<Step>
+</Steps>
 
-### Read it from a page
+## Check the result
 
-Call the routes with the [fetcher](/docs/dev/fetcher). The module is `content/` plus `path`, and the route, its query and the response are all typed:
+Call the list route while `pnpm dev` runs:
 
-```ts title="plugins/example/src/pages/discussion-page.tsx"
+```bash
+curl "http://localhost:3000/api/newsroom/content/news"
+```
+
+```json title="200"
+{
+  "edges": [
+    {
+      "id": 1,
+      "title": "Welcome to the newsroom",
+      "slug": "welcome-to-the-newsroom",
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "attrs": { "textAlign": null },
+            "content": [{ "type": "text", "text": "This is our first article. Staff write and edit it in the AdminCP." }]
+          }
+        ]
+      },
+      "publishedAt": "2026-10-23T18:57:51.156Z"
+    }
+  ],
+  "pageInfo": {
+    "totalCount": 1,
+    "totalPages": 1,
+    "currentPage": null,
+    "pageSize": 25,
+    "count": 1,
+    "hasNextPage": false,
+    "hasPreviousPage": false,
+    "endCursor": "eyJjb2x1bW4iOiJwdWJsaXNoZWRBdCIs...",
+    "startCursor": "eyJjb2x1bW4iOiJwdWJsaXNoZWRBdCIs..."
+  }
+}
+```
+
+Only the published article is in `edges`, with exactly the five listed fields. Now ask for each article by slug:
+
+```bash
+curl -i "http://localhost:3000/api/newsroom/content/news/welcome-to-the-newsroom"
+curl -i "http://localhost:3000/api/newsroom/content/news/release-notes-for-october"
+```
+
+The first answers `200` with the same record. The draft answers `404` with `Article not found.`, the same answer as a slug that never existed, so the API never reveals that a draft exists.
+
+## Read it from a page
+
+Pages call these routes with the [fetcher](/docs/dev/fetcher). The module is `content/` plus `path`; the route, its parameters and its response are typed from your definition:
+
+```ts
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 import { manifest } from "@/manifest.gen";
@@ -95,68 +141,12 @@ import { manifest } from "@/manifest.gen";
 const res = await fetcher({
   plugin: manifest.id,
   method: "get",
-  module: "content/discussions",
+  module: "content/news",
   path: "/{slug}",
   args: { params: { slug: encodeURIComponent(slug) } },
 });
-
-if (res.status === 200) {
-  const discussion = await res.json(); // { id, title, slug, body, board, publishedAt }
-}
 ```
 
-A field you did not list, or a module that does not exist, is a compile error.
+A field you did not list, or a module that does not exist, is a compile error. The list route also takes `first` (up to 50), `page` or `cursor`, `search`, `orderBy` and `order`; [List API](/docs/content-engine/public-lists-api) has every parameter, and [Search](/docs/content-engine/public-lists#add-search) shows which options turn them on.
 
-</Step>
-
-</Steps>
-
-## The routes
-
-All routes live under `/api/{pluginId}/content/{publicApi.path}`.
-
-| Route                        | Returns                                                                                       |
-| ---------------------------- | --------------------------------------------------------------------------------------------- |
-| `GET /`                      | Published records, a page at a time: `{ edges, pageInfo }`                                     |
-| `GET /{slug}`                | One published record, or `404`                                                                |
-| `GET /permissions?ids=1,2`   | What the visitor may do with each record: `canEdit`, `canReport`. With `publicWrite` or `reports` |
-| `/delivery/...`              | Page URLs, SEO data and sitemap entries. With [`delivery`](/docs/content-engine/public-pages)  |
-| `GET /thread?root={id}`      | Nested replies under a record. With [`thread`](/docs/content-engine/threads)                  |
-| `POST /`, `PATCH /{id}`      | Create and edit from the site. With [`publicWrite`](/docs/content-engine/public-write)        |
-
-Each record comes back with exactly the listed fields. Dates are ISO strings, a relation is `{ id }`, a container field is the container's id, and a file is `{ id, name, url, mimeType, size, width, height }`. A draft, a record scheduled for later, a hidden record and a typo all answer the same `404`. A record that belongs to a parent - its thread root, or its search context relation - is only as public as that parent: once the topic is hidden or unpublished, its comments drop out of the list and their detail answers `404` too. The list adds the hidden records a signed-in author, editor or moderator may see, marked `hidden: true`.
-
-The list accepts `first` (up to 50), `page` or `cursor`, `search`, `orderBy`, `order` and one parameter per filterable field. [Public lists](/docs/content-engine/public-lists) turns it into a page with search, filters and pagination.
-
-## Check the result
-
-Call the list route while `pnpm dev` runs:
-
-```bash
-curl "http://localhost:3000/api/@vitnode/example/content/discussions?first=1"
-```
-
-```json title="Response (trimmed)"
-{
-  "edges": [
-    {
-      "id": 13,
-      "title": "Show the author on list rows",
-      "slug": "show-the-author-on-list-rows",
-      "board": 3,
-      "publishedAt": "2026-10-20T16:04:32.879Z",
-      "author": { "id": 2, "name": "Ada Lovelace", "nameCode": "Ada-Lovelace" }
-    }
-  ],
-  "pageInfo": { "totalCount": 12, "totalPages": 12, "hasNextPage": true }
-}
-```
-
-Pages turn these responses into what readers see. The example plugin's `/discussions` page, from [Public lists](/docs/content-engine/public-lists), shows the same records:
-
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={listPage}
-  alt="The Discussions page listing the records the public API returns, with their author and date"
-/>
+Next, show the articles on the site with a [Content list](/docs/content-engine/public-lists).

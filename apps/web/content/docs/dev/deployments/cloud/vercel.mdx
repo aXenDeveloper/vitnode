@@ -54,7 +54,7 @@ export const vitNodeApiConfig = buildApiConfig({
 Most pooled strings run in transaction mode (the Supabase pooler on port
 `6543`, PgBouncer with `pool_mode = transaction`). Those need `prepare: false`
 in the same object, or queries start failing with `prepared statement "..." does
-not exist`. The [Connection pool](/docs/dev/database#connection-pool) section
+not exist`. The [Connection pool](/docs/dev/database/connection-pool) page
 has the details and a sizing rule.
 
 </Step>
@@ -92,8 +92,8 @@ Import the Git repository in Vercel. Three settings matter:
 | Setting             | Value                                                                      |
 | ------------------- | -------------------------------------------------------------------------- |
 | **Root Directory**  | The app folder - `apps/web` for a monorepo, the repository root otherwise. |
-| **Build Command**   | Your `build` script. For a Single App that is `vite build`.                |
-| **Node.js Version** | 22 or newer.                                                               |
+| **Build Command**   | Your `build` script. In a generated app that is `vitnode build`.           |
+| **Node.js Version** | 22.18 or newer, or 24.11 or newer.                                         |
 
 Leave the output directory alone. Nitro reads `VERCEL` from the build
 environment, resolves its `vercel` preset without being told to, and writes
@@ -226,7 +226,7 @@ deployment, and there are exactly two honest ways to do it:
   both ordinary there - see [Self-hosted](/docs/dev/deployments/self-hosted).
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

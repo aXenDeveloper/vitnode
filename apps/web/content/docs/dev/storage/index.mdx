@@ -1,160 +1,292 @@
 ---
 title: Storage
-description: Upload, serve, and delete files in VitNode with pluggable storage adapters - local disk, AWS S3, Cloudflare R2, or Supabase Storage.
+description: Upload images in a VitNode plugin route with c.get("storage"). Validate the file, read its public URL and dimensions, and delete it again, on local disk, S3, R2 or Supabase.
 icon: HardDrive
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+`c.get("storage")` stores uploaded files through the adapter you configure, records each one in the `core_files` table and gives you back its public URL. In this guide the `site-notes` plugin gets an admin endpoint that uploads an image for a note, and another that deletes it.
 
-VitNode provides an integrated storage layer accessible via `c.get("storage")`. It handles file validation, automatic WebP image optimization, database indexing in `core_files`, and persistent storage across multiple backends.
+## Before you begin
 
-## Quick start
+- **A storage adapter.** Set `storage.adapter` in your `vitnode.api.config.ts`: [Local disk](/docs/dev/storage/local) for development, or [S3 / R2](/docs/dev/storage/s3-r2) or [Supabase](/docs/dev/storage/supabase) in production. Without one, uploads fail with `500`.
+- The `site-notes` plugin with the **Create notes** permission, from the beginner path up to [Permissions](/docs/dev/working-with-users/staff-permissions). Any plugin with an admin route works the same way.
 
-### 1. Register a Storage Adapter
+<Steps>
 
-In `apps/api/src/vitnode.api.config.ts`, configure the local disk adapter:
+<Step>
 
-```ts title="apps/api/src/vitnode.api.config.ts"
-import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local"
-import { buildApiConfig } from "@vitnode/core/vitnode.config"
+### Create the upload route
 
-export const vitNodeApiConfig = buildApiConfig({
-  storage: {
-    adapter: LocalStorageAdapter(), // [!code ++]
-  },
-})
-```
+Create `src/api/modules/admin/notes/upload-image.route.ts`:
 
-### 2. Upload Files in an API Route
+```ts title="plugins/site-notes/src/api/modules/admin/notes/upload-image.route.ts"
+import { z } from "@hono/zod-openapi";
 
-Handle uploads in a Hono route using `c.get("storage").upload()`:
+import { buildRoute } from "@/api/builders";
 
-```ts title="plugins/blog/src/api/modules/posts/routes/upload-cover.route.ts"
-import { z } from "@hono/zod-openapi"
-
-import { buildRoute } from "@/api/builders"
-
-export const uploadCoverRoute = buildRoute({
+export const uploadNoteImageRoute = buildRoute({
+  adminStaffPermission: { module: "notes", permission: "can_create" },
   route: {
     method: "post",
-    path: "/cover",
+    path: "/images",
     request: {
       body: {
+        required: true,
         content: {
           "multipart/form-data": {
             schema: z.object({
-              file: z.instanceof(File),
+              file: z.instanceof(File).openapi({ type: "string", format: "binary" }),
             }),
           },
         },
       },
     },
-  },
-  handler: async (c) => {
-    const { file } = await c.req.parseBody()
-
-    // [!code ++:7]
-    const uploaded = await c.get("storage").upload({
-      file: file as File,
-      folder: "covers",
-      maxBytes: 5 * 1024 * 1024, // 5 MB
-      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
-    })
-
-    return c.json(uploaded)
-  },
-})
-```
-
-`upload()` saves the file, creates a record in `core_files`, and returns `{ id, url, width, height, size }`.
-
----
-
-## Supported Storage Adapters
-
-<Cards>
-  <Card
-    title="Local Disk"
-    description="Stores files in public/uploads for local development"
-    href="/docs/dev/storage/local"
-  />
-  <Card
-    title="AWS S3 / Cloudflare R2"
-    description="Scalable object storage via @vitnode/s3"
-    href="/docs/dev/storage/s3-r2"
-  />
-  <Card
-    title="Supabase Storage"
-    description="Native Supabase bucket storage"
-    href="/docs/dev/storage/supabase"
-  />
-  <Card
-    title="Custom Storage Adapter"
-    description="Implement your own storage backend"
-    href="/docs/dev/storage/custom-adapter"
-  />
-</Cards>
-
----
-
-## Image Optimization
-
-Turn on `storage.image` and VitNode re-encodes JPEG, PNG, AVIF, TIFF and WebP uploads with [sharp](https://sharp.pixelplumbing.com/), converts them to WebP, and records their pixel dimensions:
-
-```ts title="apps/api/src/vitnode.api.config.ts"
-export const vitNodeApiConfig = buildApiConfig({
-  storage: {
-    adapter: LocalStorageAdapter(),
-    // [!code ++:5]
-    image: {
-      quality: 85, // 1-100, defaults to 85
-      webp: true, // set to false to keep the original format
-      maxPixels: 40_000_000, // width x height, defaults to 40 million
+    responses: {
+      201: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              id: z.number(),
+              url: z.string(),
+              width: z.number().nullable(),
+              height: z.number().nullable(),
+            }),
+          },
+        },
+        description: "The stored image.",
+      },
     },
   },
-})
+  handler: async c => {
+    const { file } = c.req.valid("form");
+    const image = await c.get("storage").upload({
+      file,
+      folder: "site-notes",
+      maxBytes: 2 * 1024 * 1024,
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
+    });
+
+    return c.json(
+      {
+        id: image.id,
+        url: image.url,
+        width: image.dimensions?.width ?? null,
+        height: image.dimensions?.height ?? null,
+      },
+      201,
+    );
+  },
+});
 ```
 
-`maxPixels` is your guard against image bombs - a tiny PNG that claims to be 16383x16383 pixels and unpacks into gigabytes of memory. Anything over the limit is refused with a `400` before a single pixel is decoded. The default fits an 8K photo with room to spare, so most installs never need to touch it.
+- **`adminStaffPermission`** keeps uploads to administrators with **Create notes**. An upload route without a guard lets any visitor fill your bucket.
+- **`c.req.valid("form")`** reads the file the route's schema validated. A request without a file never reaches the handler.
+- **`maxBytes` and `allowedMimeTypes`** refuse a file that is too large or of another type with `400`. VitNode also reads the first bytes of every image, so an HTML page renamed `cat.png` is refused too.
+- **`folder`** groups the plugin's uploads in the bucket. See [Storage keys](#storage-keys).
 
-### What gets checked on every upload
+</Step>
 
-Whether or not `storage.image` is set, an upload declared as JPEG, PNG, WebP, GIF, AVIF or TIFF must actually _be_ that format. The type a client sends is just a claim (a browser guesses it from the file name), so VitNode reads the file's first bytes and refuses a mismatch - say, an HTML page named `cat.gif` - with a `400`. SVG and non-image files have no fixed signature and are not affected; limit them with `allowedMimeTypes`.
+<Step>
 
----
+### Create the delete route
 
-## Deleting Files
+Create `src/api/modules/admin/notes/delete-image.route.ts`. It deletes by the file's **id**, the number `upload()` returned:
 
-Remove files and clean up storage using `delete()`:
+```ts title="plugins/site-notes/src/api/modules/admin/notes/delete-image.route.ts"
+import { z } from "@hono/zod-openapi";
 
-```ts
-await c.get("storage").delete({ fileId: 42 })
+import { buildRoute } from "@/api/builders";
+
+export const deleteNoteImageRoute = buildRoute({
+  adminStaffPermission: { module: "notes", permission: "can_create" },
+  route: {
+    method: "delete",
+    path: "/images/{id}",
+    request: {
+      params: z.object({ id: z.coerce.number().int().positive() }),
+    },
+    responses: {
+      204: { description: "The image and its file record are gone." },
+      404: { description: "No file has this id." },
+      409: { description: "Content still uses the file." },
+    },
+  },
+  handler: async c => {
+    const { id } = c.req.valid("param");
+    await c.get("storage").deleteFile(id);
+
+    return c.body(null, 204);
+  },
+});
 ```
 
-This removes the file from the configured storage bucket and deletes its row from `core_files`.
+Add both routes to the `routes` of `adminNotesModule` in `src/api/modules/admin/notes/notes.module.ts`.
 
----
+</Step>
 
-## Verifying in AdminCP
+</Steps>
 
-{/* Image prompt: VitNode AdminCP System -> Integrations screen at /admin/core/system/integrations. Storage integration card shows "Active" with a "Test file storage" button and modal demonstrating test file upload. Dark theme, 1440x900. */}
+## Check the result
 
-Test your storage adapter anytime in the AdminCP:
-1. Navigate to **System → Integrations** (`/admin/core/system/integrations`).
-2. On the **Storage** card, click **Test Storage** to verify bucket credentials and upload capabilities.
-3. Inspect uploaded files anytime under **System → Files** (`/admin/core/system/files`).
+Add a temporary component that uploads a picked image with `fetcher`, shows it, and deletes it again. Create `src/pages/check-note-image.tsx`:
 
-## Learn More
+```tsx title="plugins/site-notes/src/pages/check-note-image.tsx"
+import { Button } from "@vitnode/core/components/ui/button";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { useState } from "react";
+
+import { manifest } from "@/manifest.gen";
+
+export const CheckNoteImage = () => {
+  const [image, setImage] = useState<{ id: number; url: string }>();
+  const [status, setStatus] = useState<number>();
+  const [isPending, setIsPending] = useState(false);
+
+  const upload = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    setIsPending(true);
+    try {
+      const response = await fetcher({
+        plugin: manifest.id,
+        method: "post",
+        module: "admin/notes",
+        path: "/images",
+        formData,
+      });
+      setStatus(response.status);
+      if (response.status === 201) setImage(await response.json());
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  const remove = async (id: number) => {
+    setIsPending(true);
+    try {
+      const response = await fetcher({
+        plugin: manifest.id,
+        method: "delete",
+        module: "admin/notes",
+        path: "/images/{id}",
+        args: { params: { id } },
+      });
+      setStatus(response.status);
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <input
+        accept="image/*"
+        aria-label="Image to upload"
+        disabled={isPending}
+        onChange={event => {
+          const file = event.target.files?.[0];
+          if (file) void upload(file);
+        }}
+        type="file"
+      />
+      {status ? <output>{status}</output> : null}
+      {image ? (
+        <>
+          <img alt="Uploaded test" className="max-w-xs rounded-md" src={image.url} />
+          <Button isLoading={isPending} onClick={() => remove(image.id)} variant="destructive">
+            Delete it
+          </Button>
+        </>
+      ) : null}
+    </div>
+  );
+};
+```
+
+`formData` replaces `args` for a multipart route. `fetcher` sends it as the body and lets the browser set the boundary.
+
+Render `<CheckNoteImage />` in `src/pages/notes-page.tsx`, sign in to the AdminCP in the same browser and open `/site-notes/notes`:
+
+1. Pick a PNG. The status reads `201` and the image appears, served from a URL such as `http://localhost:3000/api/uploads/2026/10/site-notes/cf8e….webp`.
+2. Press **Delete it**. The status reads `204`, and reloading the image URL now answers `404`.
+3. Sign out of the AdminCP and pick the image again. The status reads `403`. A PDF answers `400`.
+
+The upload's `width` and `height` are only filled in when [image processing](#image-processing) is on; otherwise they are `null`. The `.webp` extension comes from the same setting. Remove `CheckNoteImage` when you are done.
+
+## What `upload()` returns
+
+| Field | What it is |
+| --- | --- |
+| `id` | The `core_files` row. Store this in your own tables, and pass it to `deleteFile()`. |
+| `key` | Where the adapter stored the bytes, such as `2026/10/site-notes/cf8e….webp`. |
+| `url` | The public URL of those bytes, for `<img src>`. |
+| `name` | The file name, changed to `.webp` when the image was converted. |
+| `mimeType` | The stored type, after any conversion. |
+| `size` | Bytes stored, after any processing. |
+| `dimensions` | `{ width, height }`, or `null` when image processing did not read the file. |
+
+Save the `id`, not the URL. The adapter builds the URL from the key, so it changes if you move to another bucket or domain.
+
+## Deleting files
+
+| Call | What it removes |
+| --- | --- |
+| `deleteFile(id)` | The `core_files` row and the stored bytes. Use this for anything `upload()` created. |
+| `delete(key)` | Only the bytes in the bucket. The row stays, pointing at nothing. Meant for adapter-level cleanup. |
+
+`deleteFile()` protects files that are still in use:
+
+- **Unused** files, such as the one above, are deleted.
+- Files **referenced by content**, such as a Content Engine file field, are refused with `409` and `{ code: "FILE_IN_USE", content: true }`. Remove the file from that content first.
+- Files **pinned only by old content revisions** are refused with `409`, `content: false` and the number of `revisions`. `deleteFile(id, { force: true })` releases those pins and deletes the file.
+- A member's avatar or cover that uses the file is cleared.
+- An id that does not exist returns `404`. Pass `ownerId` to delete only if that user uploaded the file.
+
+VitNode never deletes unused uploads by itself. When your plugin stops needing a file, for example because a note was deleted, call `deleteFile()`.
+
+## Storage keys
+
+Every upload is stored under a key built from the date, your `folder` and a random name:
+
+```
+{year}/{month}/{folder}/{uuid}{extension}
+2026/10/site-notes/cf8e90c3-49a4-4e21-abb5-27990e6459a3.webp
+```
+
+- `folder` may be nested, such as `site-notes/covers`. Each segment starts with a letter or digit and holds only letters, digits, `-` and `_`. Anything else, including `..`, throws.
+- The extension follows the stored type, not the uploaded name, so a converted image ends in `.webp`.
+- The adapter turns the key into the public URL. With the local adapter that is `{baseUrl}/api/uploads/{key}`.
+
+## Image processing
+
+With `storage.image` set, VitNode re-encodes JPEG, PNG, AVIF, TIFF and WebP uploads with [sharp](https://sharp.pixelplumbing.com/), converts them to WebP and records their dimensions:
+
+```ts title="vitnode.api.config.ts"
+storage: {
+  adapter: LocalStorageAdapter(),
+  // [!code ++:5]
+  image: {
+    quality: 85, // 1-100, defaults to 85
+    webp: true, // false keeps the original format
+    maxPixels: 40_000_000, // width x height, defaults to 40 million
+  },
+},
+```
+
+Without `image`, files are stored exactly as uploaded and `dimensions` is `null`. GIF and SVG are never converted, to keep animation and vectors, and an image wider or taller than 16,383 px keeps its format because WebP cannot hold it.
+
+`maxPixels` guards against image bombs, tiny files that claim huge dimensions and would unpack into gigabytes of memory. VitNode refuses such a file with `400` before decoding it. The type check from the upload route runs whether or not `image` is set.
+
+## Test your adapter
+
+In the AdminCP, open **System → Integrations** (`/admin/core/system/integrations`), choose **Test storage** on the **Storage** card and upload an image. It is stored under the `admin-storage-test` folder and shown back to you, which proves both the upload and the public URL work. Every uploaded file is listed under **System → Files** (`/admin/core/system/files`).
+
+## Adapters
 
 <Cards>
-  <Card
-    title="Content Engine Fields"
-    description="Use field.file() in Content Engine models"
-    href="/docs/content-engine/fields"
-  />
-  <Card
-    title="Self-Hosted Deployment"
-    description="Configure production storage mounts and S3 buckets"
-    href="/docs/dev/deployments/self-hosted"
-  />
+  <Card title="Local disk" description="Files in public/uploads, for development and single servers" href="/docs/dev/storage/local" />
+  <Card title="S3 and R2" description="AWS S3, Cloudflare R2 and other S3-compatible buckets" href="/docs/dev/storage/s3-r2" />
+  <Card title="Supabase" description="Supabase Storage buckets" href="/docs/dev/storage/supabase" />
+  <Card title="Custom adapter" description="Store files anywhere else" href="/docs/dev/storage/custom-adapter" />
 </Cards>
