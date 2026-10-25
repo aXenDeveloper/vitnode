@@ -305,8 +305,8 @@ export const processContentNotificationIntent = async (
     return { reason: "stale_decision", status: "skipped" };
   }
 
-  const config = rules[0].config;
-  const rootDefinition = config.root;
+  const rootDefinition =
+    rules.find(entry => entry.config.root)?.config.root ?? null;
   const rootKey =
     definition.thread.enabled && rootDefinition
       ? keyOf(content[definition.thread.rootField])
