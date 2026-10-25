@@ -1,5 +1,6 @@
 import { blogApiPlugin } from '@vitnode/blog/config.api'
 import { coreRelations } from '@vitnode/core/database/relations'
+import { defaultOgImageTemplateEntry } from '@vitnode/core/og-image/server'
 import { buildApiConfig } from '@vitnode/core/vitnode.config'
 import { exampleApiPlugin } from '@vitnode/example/config.api'
 import { forumApiPlugin } from '@vitnode/forum/config.api'
@@ -7,8 +8,10 @@ import { SupabaseStorageAdapter } from '@vitnode/supabase-storage'
 import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 
+import logoSvg from '../public/logo_vitnode_icon.svg?raw'
 import { contentModules } from './content-modules.gen'
 import { appMessages } from './locales/app'
+import { minimalOgImageTemplate } from './og/minimal-template'
 import { frontendPlugins } from './plugin-inventory.gen'
 import { vitNodeConfig } from './vitnode.config'
 
@@ -55,6 +58,23 @@ export const vitNodeApiConfig = buildApiConfig({
     connection: POSTGRES_URL,
     relations: coreRelations,
   }),
+  /**
+   * Generated 1200 x 630 link preview images. The blog turns them on for its
+   * articles with `delivery.seo.openGraph.image`; AdminCP -> SEO -> OG Images
+   * previews every template registered here.
+   */
+  ogImages: {
+    defaultTemplate: 'default',
+    templates: {
+      default: defaultOgImageTemplateEntry,
+      minimal: {
+        label: 'Minimal',
+        render: minimalOgImageTemplate,
+        version: '1',
+      },
+    },
+    branding: { logo: new TextEncoder().encode(logoSvg) },
+  },
   redis: process.env.REDIS_URL
     ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
     : undefined,

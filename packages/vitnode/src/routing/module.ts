@@ -8,10 +8,31 @@ export type PluginRouteRobots =
   | "noindex, follow"
   | "noindex, nofollow";
 
+/** A link preview image: absolute or root-relative `http(s)` URL plus its facts. */
+export interface PluginRouteOgImage {
+  alt?: string;
+  height?: number;
+  type?: string;
+  url: string;
+  width?: number;
+}
+
+/** What a page shows in a link preview (`og:*` and a Twitter card). */
+export interface PluginRouteOpenGraph {
+  description?: string;
+  image?: PluginRouteOgImage;
+  /** Used as is, with no site-name suffix. */
+  title?: string;
+  type?: "article" | "website";
+}
+
 export interface PluginRouteHead {
   alternates?: Readonly<Record<string, string>>;
   /** The `<meta name="description">`, when the page has one. */
   description?: string;
+
+  /** Open Graph tags, including a generated image. */
+  openGraph?: PluginRouteOpenGraph;
 
   robots?: PluginRouteRobots;
   /** The page's own title, already translated. */

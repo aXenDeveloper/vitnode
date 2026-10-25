@@ -5,6 +5,7 @@ export const DOCS_URLS = {
     "https://vitnode.com/docs/content-engine/editorial#preview-links",
   cron: "https://vitnode.com/docs/dev/cron",
   email: "https://vitnode.com/docs/dev/email",
+  ogImages: "https://vitnode.com/docs/dev/og-images",
   queue: "https://vitnode.com/docs/dev/advanced/queue",
   redis: "https://vitnode.com/docs/dev/advanced/redis",
   storage: "https://vitnode.com/docs/dev/storage",

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildConfig } from "@/vitnode.config";
 
@@ -127,6 +127,73 @@ describe("routeHead openGraph", () => {
           type: undefined,
         },
       }),
+    ).toEqual([]);
+  });
+});
+
+describe("routeHead openGraph image", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const IMAGE = {
+    alt: "Cover of Hello world",
+    height: 630,
+    type: "image/png",
+    url: "https://cdn.example.com/og/hello.png",
+    width: 1200,
+  };
+
+  it("emits og:image with its size, type and alt, plus a large Twitter card", () => {
+    expect(head({ openGraph: { image: IMAGE } })).toEqual([
+      { content: IMAGE.url, property: "og:image" },
+      { content: "image/png", property: "og:image:type" },
+      { content: "1200", property: "og:image:width" },
+      { content: "630", property: "og:image:height" },
+      { content: "Cover of Hello world", property: "og:image:alt" },
+      { content: "summary_large_image", name: "twitter:card" },
+      { content: IMAGE.url, name: "twitter:image" },
+      { content: "Cover of Hello world", name: "twitter:image:alt" },
+    ]);
+  });
+
+  it("resolves a root-relative URL against the public web origin", () => {
+    vi.stubEnv("VITNODE_WEB_URL", "https://forum.example.com");
+
+    const meta = head({ openGraph: { image: { url: "/api/og/42.png?v=1" } } });
+
+    expect(byProperty(meta, "og:image")).toEqual({
+      content: "https://forum.example.com/api/og/42.png?v=1",
+      property: "og:image",
+    });
+    expect(byName(meta, "twitter:image")).toEqual({
+      content: "https://forum.example.com/api/og/42.png?v=1",
+      name: "twitter:image",
+    });
+  });
+
+  it.each([
+    "//evil.example.com/og.png",
+    "javascript:alert(1)",
+    "data:image/png;base64,AAAA",
+    "ftp://files.example.com/og.png",
+    "not a url",
+  ])("drops an image a crawler could not fetch: %s", url => {
+    expect(head({ openGraph: { image: { url } } })).toEqual([]);
+  });
+
+  it("emits no image or Twitter tags for a page without an image", () => {
+    const meta = head({
+      openGraph: { title: "Routes", type: "article" },
+      title: "Routes",
+    });
+
+    expect(
+      meta.filter(
+        tag =>
+          ("property" in tag && tag.property.startsWith("og:image")) ||
+          ("name" in tag && tag.name.startsWith("twitter:")),
+      ),
     ).toEqual([]);
   });
 });

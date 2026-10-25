@@ -9,6 +9,9 @@ import type { ContentModel } from "./model";
 
 import { setPageCacheTags } from "../../api/lib/page-cache";
 import { buildRoute } from "../../api/lib/route";
+import { OG_IMAGE_MIME_TYPE } from "../../og-image";
+import { ogImageResponse } from "../../og-image/server/response";
+import { truncateOgText } from "../../og-image/server/text";
 import { contentTypeName } from "../admin/labels";
 import {
   CONTENT_DELIVERY_REDIRECT_STATUS,
@@ -20,6 +23,7 @@ import { ContentDeliveryNotEnabled } from "../errors";
 import { contentIdParamSchema, contentIdSchema } from "../ids";
 import { resolveContentPublicLocale } from "../locale";
 import { listContentLanguages } from "./language-resolver";
+import { hasContentOgImage } from "./og-image";
 import { contentRecordPageCacheTags } from "./page-cache";
 import { contentIdentifier } from "./route-helpers";
 
@@ -61,13 +65,18 @@ export const buildContentDeliveryRoutes = <
       }
     : {};
 
-  const localeFor = async (c: Context) => {
+  const localeFor = async (
+    c: Context,
+    { negotiate = true }: { negotiate?: boolean } = {},
+  ) => {
     if (!localized) return { locale: undefined, source: "default" as const };
 
     const languages = await listContentLanguages(c);
 
     return resolveContentPublicLocale({
-      acceptLanguage: c.req.header("accept-language"),
+      // An image URL names its language, and shared caches key it by URL
+      // alone, so it never follows the visitor's `Accept-Language`.
+      acceptLanguage: negotiate ? c.req.header("accept-language") : undefined,
       available: languages
         .filter(language => language.isEnabled)
         .map(language => language.locale),
@@ -102,6 +111,15 @@ export const buildContentDeliveryRoutes = <
     // type whose allowlist withholds `id` reports none rather than inventing one.
     itemId: itemIdSchema.nullable(),
     locale: z.string().nullable(),
+    ogImage: z
+      .object({
+        alt: z.string().nullable(),
+        height: z.number().int(),
+        type: z.string(),
+        url: z.string(),
+        width: z.number().int(),
+      })
+      .nullable(),
     openGraph: zodSeo.nullable(),
     requestedLocale: z.string().nullable(),
     hidden: z.boolean(),
@@ -273,10 +291,86 @@ export const buildContentDeliveryRoutes = <
     },
   });
 
+  const ogImage = buildRoute({
+    pluginId,
+    route: {
+      method: "get",
+      path: "/delivery/og-image/{id}",
+      description: `The generated Open Graph image (1200 x 630 PNG) of one public ${name}`,
+      request: {
+        params: z.object({
+          id: serial
+            ? z.coerce.number().int().positive()
+            : contentIdSchema(definition.idStrategy),
+        }),
+        query: z.object({
+          ...localeQuery,
+          // A cache buster for crawlers. Never read: the record is checked
+          // again on every request, whatever version the URL claims.
+          v: z.string().max(64).optional(),
+        }),
+      },
+      responses: {
+        200: {
+          content: {
+            [OG_IMAGE_MIME_TYPE]: {
+              schema: z.string().openapi({ format: "binary", type: "string" }),
+            },
+          },
+          description: "The image",
+        },
+        304: { description: "Unchanged since the `If-None-Match` ETag" },
+        404: {
+          content: {
+            "application/json": { schema: z.object({ error: z.string() }) },
+          },
+          description: `No public ${name}, or Open Graph images are off`,
+        },
+      },
+    },
+    handler: async c => {
+      const config = c.get("core").ogImages;
+      const missing = () =>
+        c.json({ error: `${name} not found.` }, 404, {
+          "Cache-Control": "no-store",
+        });
+      if (!config) return missing();
+
+      const resolved = await localeFor(c, { negotiate: false });
+      if (!resolved) return missing();
+
+      // Every request, cached image or not: a record that was public when its
+      // card was rendered may have been unpublished, hidden or deleted since.
+      const read = await service(c).ogImageSource(
+        contentIdentifier(c, definition),
+        { locale: resolved.locale },
+      );
+      if (!read) return missing();
+
+      const { source } = read;
+
+      return await ogImageResponse(c, {
+        cover: source.cover
+          ? { alt: source.alt, fileId: source.cover.id }
+          : null,
+        description:
+          source.description === null
+            ? null
+            : truncateOgText(source.description, 300),
+        identity: [pluginId, definition.id, c.req.param("id")],
+        locale: read.locale ?? undefined,
+        template: source.template,
+        title: truncateOgText(source.title ?? config.siteName, 200),
+        url: read.canonicalUrl,
+      });
+    },
+  });
+
   return [
     resolve,
     item,
     ...(definition.delivery.sitemap.enabled ? [sitemap] : []),
+    ...(hasContentOgImage(definition) ? [ogImage] : []),
   ];
 };
 

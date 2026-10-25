@@ -1,0 +1,164 @@
+---
+title: Custom Open Graph templates
+description: Write your own VitNode Open Graph image template as a .tsx file, register it in ogImages.templates, and load your own fonts.
+icon: Palette
+---
+
+A template is a function that turns the card's data into JSX. Write it in its own `.tsx` file, register it in `ogImages.templates`, and every place that renders an image can pick it by id. The AdminCP [preview page](/docs/dev/og-images/admincp-preview) lists it straight away.
+
+<Steps>
+<Step>
+
+### Write the template
+
+Create a `.tsx` file next to your API config. It receives an `OgImageTemplateInput` and returns JSX with inline `style` objects:
+
+```tsx title="src/og/minimal-template.tsx"
+import type { OgImageTemplateInput } from "@vitnode/core/og-image/server";
+
+import { truncateOgText } from "@vitnode/core/og-image/server";
+
+export const minimalOgImageTemplate = ({
+  height,
+  locale,
+  siteName,
+  theme,
+  title,
+  width,
+}: OgImageTemplateInput) => (
+  <div
+    lang={locale}
+    style={{
+      alignItems: "center",
+      backgroundColor: "#ffffff",
+      color: "#0f172a",
+      display: "flex",
+      flexDirection: "column",
+      fontFamily: theme.fontFamily,
+      gap: 32,
+      height,
+      justifyContent: "center",
+      padding: 96,
+      width,
+    }}
+  >
+    <div style={{ display: "block", fontSize: 72, fontWeight: 700, lineClamp: 3, textAlign: "center" }}>
+      {truncateOgText(title, 90)}
+    </div>
+    <div style={{ color: theme.accentColor, display: "flex", fontSize: 32 }}>
+      {siteName}
+    </div>
+  </div>
+);
+```
+
+`truncateOgText` cuts text at a word boundary and adds `…`, so the same title always wraps the same way.
+
+</Step>
+<Step>
+
+### Register it
+
+Import the file in `vitnode.api.config.ts`. Setting `templates` replaces the default list, so add the built-in template too if you still want it:
+
+```ts title="src/vitnode.api.config.ts"
+import { defaultOgImageTemplateEntry } from "@vitnode/core/og-image/server";
+
+import { minimalOgImageTemplate } from "./og/minimal-template";
+
+ogImages: {
+  defaultTemplate: "default",
+  templates: {
+    default: defaultOgImageTemplateEntry,
+    minimal: { label: "Minimal", render: minimalOgImageTemplate, version: "1" },
+  },
+},
+```
+
+`version` is part of every cached image's key. Bump it whenever you change the template's output, and old cards are rendered again on their next request. `label` is the name shown in the AdminCP.
+
+</Step>
+<Step>
+
+### Use it
+
+A content type picks it with `delivery.seo.openGraph.image.template: "minimal"`, and your own route with `ogImageResponse(c, { template: "minimal", ... })`. Leave it out to use `defaultTemplate`.
+
+</Step>
+</Steps>
+
+## What a template receives
+
+| Field         | Type                           | Notes                                                                            |
+| ------------- | ------------------------------ | -------------------------------------------------------------------------------- |
+| `title`       | `string`                       | Plain text, trimmed, never empty                                                 |
+| `description` | `string \| null`               | Plain text                                                                       |
+| `siteName`    | `string`                       | `branding.siteName` or the API's `metadata` title                                |
+| `logo`        | `OgImageTemplateAsset \| null` | `{ src, width, height, alt }`, `src` is always a `data:` URI                     |
+| `cover`       | `OgImageTemplateAsset \| null` | The page's cover, resized to fit the card                                        |
+| `locale`      | `string`                       | The language the content was actually served in, after any fallback              |
+| `url`         | `string \| null`               | The page's canonical URL, when the caller knows it                               |
+| `theme`       | `OgImageTheme`                 | Colors and `fontFamily` from `ogImages.theme`                                    |
+| `width`, `height` | `number`                   | Always `1200` and `630`                                                          |
+
+## Styling rules
+
+Templates are laid out by [Satori](https://github.com/vercel/satori), which supports a subset of CSS:
+
+- Use inline `style` objects. `className`, Tailwind classes and CSS files do nothing.
+- Layout is flexbox only. A `<div>` with more than one child needs `display: "flex"`; there is no grid.
+- Don't render app components or use hooks. A template runs on the server once per image, outside React's tree.
+- Use `<img>` only with the `src` values from the input, which are already `data:` URIs. A remote URL would be fetched by the renderer without VitNode's size and address checks.
+- `lineClamp` works on an element with `display: "block"`.
+
+## Use your own fonts
+
+The bundled fonts are Inter regular and bold in two subsets, `Inter` (Latin) and `Inter Latin Ext` (Polish, Czech, Turkish and other European Latin letters). To use another font, list its files and set the font stack:
+
+```ts title="src/vitnode.api.config.ts"
+import { readFile } from "node:fs/promises";
+
+ogImages: {
+  fonts: [
+    { name: "Lora", weight: 400, data: async () => await readFile("./fonts/Lora-Regular.ttf") },
+    { name: "Lora", weight: 700, data: async () => await readFile("./fonts/Lora-Bold.ttf") },
+  ],
+  theme: { fontFamily: "Lora" },
+},
+```
+
+- TTF, OTF and WOFF work. WOFF2 and variable fonts do not.
+- Each font is loaded once per process, on the first render.
+- Satori uses one file per name and weight. When a font is split into subsets, give each subset its own `name` and list them all in `fontFamily`, like the bundled `"Inter, 'Inter Latin Ext'"`.
+- Characters no font covers, such as emoji or Chinese, are drawn as a "no glyph" box. See below.
+- Bump `ogImages.version` after replacing a font file under the same name.
+
+## Emoji and other scripts
+
+Rendering never touches the network on its own. To draw emoji, or a script your fonts do not cover, pass Satori's `loadAdditionalAsset` hook. It receives a language code (`"emoji"`, or a script such as `"ja-JP"`) and the text that needs it, and returns an SVG `data:` URI for an emoji or a list of fonts for a script:
+
+```ts title="src/vitnode.api.config.ts"
+import { readFile } from "node:fs/promises";
+
+const twemoji = (emoji: string) =>
+  [...emoji]
+    .map(char => char.codePointAt(0)?.toString(16))
+    .filter(code => code !== "fe0f")
+    .join("-");
+
+ogImages: {
+  loadAdditionalAsset: async (code, segment) => {
+    if (code === "emoji") {
+      // Twemoji SVGs copied into the app, so no request leaves the server.
+      const svg = await readFile(`./og/emoji/${twemoji(segment)}.svg`);
+
+      return `data:image/svg+xml;base64,${svg.toString("base64")}`;
+    }
+
+    return [];
+  },
+},
+```
+
+The hook runs inside every render that needs it, so keep it fast, and bump `ogImages.version` when you change what it returns. If it fetches from a CDN, that request happens while the card renders.
+

@@ -1,6 +1,6 @@
 ---
 title: SEO
-description: Set the page title, meta description, noindex, hreflang alternates and sitemap entries of VitNode Content Engine record pages with delivery.seo and delivery.sitemap.
+description: Set the page title, meta description, Open Graph tags and image, noindex, hreflang alternates and sitemap entries of VitNode Content Engine record pages with delivery.seo and delivery.sitemap.
 icon: SearchCheck
 ---
 
@@ -83,11 +83,48 @@ The page's `head` calls `contentDeliveryPageHead` with the resolve route's answe
 | `<meta name="description">`                 | Yes, at most 160 characters                 |
 | `<meta name="robots">`                      | Only for a no-index record                  |
 | `<link rel="canonical">` and `hreflang` links | Only for a localized content type         |
-| `og:title`, `og:description`                | No                                          |
+| `og:title`, `og:description`, `og:type`     | When `openGraph` is set                     |
+| `og:image` and a large Twitter card         | When `openGraph.image` is set, see [below](#generate-an-open-graph-image) |
 
-<Callout type="warn">
-  The resolve route returns `openGraph` and `canonicalPath` for every record, but nothing turns them into tags yet. A nonlocalized type such as `example.article` gets no canonical link, and no content type gets Open Graph tags. A plugin page cannot add them either, because its `head` only accepts `title`, `description`, `robots` and `alternates`. Keep `openGraph` in your definition so the data is ready, and read it from the resolve route if you render pages outside VitNode.
-</Callout>
+A nonlocalized type such as `example.article` gets no canonical link. The resolve route also returns `canonicalPath` if you render pages outside VitNode.
+
+## Generate an Open Graph image
+
+`openGraph.image` gives every public record a generated 1200 x 630 link preview, drawn from the same title and description the page already uses, so nothing is declared twice. Turn images on for the install first with [`ogImages`](/docs/dev/og-images#turn-them-on). The blog adds its cover and its alt text:
+
+```ts title="plugins/blog/src/content/post.ts"
+delivery: {
+  seo: {
+    titleField: "title",
+    descriptionField: "content",
+    openGraph: {
+      image: { coverField: "coverImage", altField: "coverImageAlt" },
+    },
+  },
+},
+```
+
+| Option       | Default                    | Notes                                                                                     |
+| ------------ | -------------------------- | ----------------------------------------------------------------------------------------- |
+| `template`   | `ogImages.defaultTemplate` | A registered template id; an unknown one stops the API at startup                         |
+| `coverField` | none                       | A shared single `field.file()` in `publicApi.fields`. Records without a file get no cover |
+| `altField`   | the Open Graph title       | A text field read as `og:image:alt`                                                       |
+
+`image: true` uses the defaults. The card's title and description are `openGraph.titleField` and `openGraph.descriptionField`, each falling back to the SEO field.
+
+The resolve route then carries an `ogImage` with an absolute URL, and `contentDeliveryPageHead` turns it into `og:image`, `og:image:width`, `og:image:height`, `og:image:type`, `og:image:alt`, `twitter:card` (`summary_large_image`) and `twitter:image`. The page only builds the URL; the PNG is rendered when a crawler requests it:
+
+```json
+"ogImage": {
+  "alt": "Sunset over green hills",
+  "height": 630,
+  "type": "image/png",
+  "url": "http://localhost:3000/api/@vitnode/blog/content/blog/delivery/og-image/1?locale=en&v=BrN2_Scrxmyn",
+  "width": 1200
+}
+```
+
+The image route reads the record again as an anonymous visitor on every request, in the language it was published in, after any [fallback](/docs/content-engine/localization). A draft, a hidden or an unpublished record answers `404`, even when its card is already cached. [Caching and runtimes](/docs/dev/og-images/caching) explains when a card is rendered again.
 
 ## Hide a record from search engines
 

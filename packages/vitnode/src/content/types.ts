@@ -1617,19 +1617,43 @@ export type ContentDeliveryNoIndexField<
 >;
 
 /**
+ * A generated `og:image` for every public record: a 1200 × 630 PNG rendered
+ * from the record's Open Graph title and description (falling back to the SEO
+ * ones) by a template registered in `buildApiConfig({ ogImages })`.
+ */
+export interface ContentDeliveryOpenGraphImageConfig<
+  TTitle extends string = string,
+> {
+  /**
+   * A text field read as the image's alt text, e.g. the cover's caption.
+   * Defaults to the Open Graph title.
+   */
+  altField?: TTitle;
+  /**
+   * A shared single `field.file()` in `publicApi.fields` drawn on the card,
+   * such as a cover image. Records without one get the card without it.
+   */
+  coverField?: string;
+  /** A registered template id. Defaults to `ogImages.defaultTemplate`. */
+  template?: string;
+}
+
+/**
  * Optional Open Graph projection, on top of the SEO one.
  *
  * Separate fields rather than a flag, because the two audiences differ: a
  * `<title>` competes in a search result and an `og:title` competes in a chat
  * preview, and an author who wants them identical simply names the same field
- * twice. There is deliberately no `imageField` - see
- * `apps/web/content/docs/dev/content-engine/content-delivery-limitations.mdx`.
+ * twice. `image` adds a generated card built from the same values, so nothing
+ * is declared twice.
  */
 export interface ContentDeliveryOpenGraphConfig<
   TTitle extends string = string,
   TDescription extends string = string,
 > {
   descriptionField?: TDescription;
+  /** Generate an `og:image` per record. `true` is the same as `{}`. */
+  image?: boolean | ContentDeliveryOpenGraphImageConfig<TTitle>;
   titleField?: TTitle;
 }
 
@@ -1752,6 +1776,12 @@ export interface ResolvedContentDeliverySeoConfig {
   noIndexField: null | string;
   openGraph: null | {
     descriptionField: null | string;
+    image: null | {
+      altField: null | string;
+      coverField: null | string;
+      /** `null` means the install's `ogImages.defaultTemplate`. */
+      template: null | string;
+    };
     titleField: null | string;
   };
   titleField: null | string;

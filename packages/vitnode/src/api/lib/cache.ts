@@ -314,4 +314,12 @@ export class CacheModel {
       return { configured: true, connected: false };
     }
   }
+
+  /**
+   * Whether Redis backs this cache, so an entry written here is read by every
+   * instance. `false` for the in-process fallback and for no store at all.
+   */
+  get isShared(): boolean {
+    return this.client !== null;
+  }
 }

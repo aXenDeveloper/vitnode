@@ -1,0 +1,101 @@
+---
+title: Open Graph images
+description: Generate 1200 x 630 link preview images (og:image) for VitNode pages with Satori, configured once in vitnode.api.config.ts.
+icon: Image
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import defaultCover from "./og-image-default-cover.webp";
+import defaultPolish from "./og-image-default-polish.webp";
+
+When someone shares a link on a social network or in a chat, the preview shows the page's `og:image`. VitNode can draw that image for you: a 1200 x 630 PNG with the page title, description, site name, logo and an optional cover, laid out on the server with [Satori](https://github.com/vercel/satori) and drawn with [`@napi-rs/image`](https://image.napi.rs) the first time a crawler asks for it.
+
+Everything about the images lives in the API config. The AdminCP only [previews them](/docs/dev/og-images/admincp-preview).
+
+## Turn them on
+
+Add `ogImages` to `buildApiConfig`. An empty object is enough: you get the built-in template, the bundled Inter font and your site title as the site name.
+
+```ts title="src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  ogImages: {}, // [!code ++]
+});
+```
+
+Restart the server. Without `ogImages`, no image route answers and no page gets an `og:image`.
+
+## The built-in template
+
+The built-in template puts the logo and site name at the top, the title large in the middle, the description under it and the page's host at the bottom. When the page has a cover image, it fills the right side of the card.
+
+<ImgDocs
+  withoutBackground
+  src={defaultCover}
+  alt="Generated card with a blue accent bar, the VitNode logo and name, the title Spring menu launches Monday, a two-line description, example.com at the bottom and a landscape cover filling the right side"
+/>
+
+Missing parts leave their space out: no cover gives a full-width card, no description skips that line, no logo shows only the site name. Long titles get a smaller font and are cut at a word boundary with `…`, so the layout never overflows. Polish and other Latin Extended letters render in both weights:
+
+<ImgDocs
+  withoutBackground
+  src={defaultPolish}
+  alt="Generated card without a cover, titled Zażółć gęślą jaźń: łódzkie źródła ćwiczeń, with a Polish description"
+/>
+
+## Configure branding
+
+Set the logo, the colors and the site name next to the templates:
+
+```ts title="src/vitnode.api.config.ts"
+import logoSvg from "../public/logo.svg?raw";
+
+ogImages: {
+  branding: {
+    siteName: "Acme Community",
+    logo: new TextEncoder().encode(logoSvg),
+  },
+  theme: { accentColor: "#16a34a" },
+},
+```
+
+| Name                    | Type                                         | Default                                     | Description                                                                                       |
+| ----------------------- | -------------------------------------------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `defaultTemplate`       | `string`                                     | `"default"`                                 | Template used when nothing names one. Must be a key of `templates`                                |
+| `templates`             | `Record<string, OgImageTemplate>`            | `{ default: defaultOgImageTemplateEntry }`  | Every template, see [Custom templates](/docs/dev/og-images/templates)                              |
+| `fonts`                 | `OgImageFont[]`                              | Inter 400 and 700, Latin and Latin Extended | Replaces the bundled fonts, see [Fonts](/docs/dev/og-images/templates#use-your-own-fonts)         |
+| `branding.siteName`     | `string`                                     | `metadata.shortTitle ?? metadata.title`     | Name printed on the card                                                                          |
+| `branding.logo`         | `Uint8Array`, `ArrayBuffer`, loader or `https` URL | none                                  | PNG, JPEG, WebP, AVIF or SVG; a URL must point at PNG, JPEG or WebP. A URL is fetched once, with SSRF checks, an 8 second timeout and a 10 MB cap |
+| `theme`                 | `Partial<OgImageTheme>`                      | dark background, blue accent                | `backgroundColor`, `foregroundColor`, `mutedColor`, `accentColor`, `fontFamily`                   |
+| `loadAdditionalAsset`   | Satori's hook                                | none                                        | Supplies emoji or fonts for characters the fonts lack, see [Emoji and other scripts](/docs/dev/og-images/templates#emoji-and-other-scripts) |
+| `version`               | `string`                                     | none                                        | Bump it to re-render every cached image, for example after replacing a font file                  |
+
+The API checks the block at startup and refuses to boot with a template id that is not `a-z`, `0-9`, `-` or `_`, a template without `render` or `version`, or a `defaultTemplate` that is not registered.
+
+## Use the images
+
+| Page                             | How it gets an image                                                                              |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| A Content Engine record page     | Set `delivery.seo.openGraph.image`, see [SEO](/docs/content-engine/seo#generate-an-open-graph-image) |
+| Your own page or plugin endpoint | Call `ogImageResponse` in a Hono route, see [Images for your own pages](/docs/dev/og-images/plugin-routes) |
+
+## Check the result
+
+The blog plugin turns images on for its articles. Print the Open Graph tags of one article:
+
+```bash
+curl -s http://localhost:3000/blog/article/spring-menu | grep -oE '<meta [^>]*(og:image|twitter:)[^>]*>'
+```
+
+```html
+<meta content="http://localhost:3000/api/@vitnode/blog/content/blog/delivery/og-image/1?locale=en&amp;v=BrN2_Scrxmyn" property="og:image"/>
+<meta content="image/png" property="og:image:type"/>
+<meta content="1200" property="og:image:width"/>
+<meta content="630" property="og:image:height"/>
+<meta content="Sunset over green hills" property="og:image:alt"/>
+<meta content="summary_large_image" name="twitter:card"/>
+<meta content="http://localhost:3000/api/@vitnode/blog/content/blog/delivery/og-image/1?locale=en&amp;v=BrN2_Scrxmyn" name="twitter:image"/>
+<meta content="Sunset over green hills" name="twitter:image:alt"/>
+```
+
+Open the `og:image` URL in a browser to see the card. [Caching and runtimes](/docs/dev/og-images/caching) explains when it is rendered again.

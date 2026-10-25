@@ -29,6 +29,7 @@ import type { BuildPluginReturn } from "./lib/plugin";
 import type { FrontendPluginInventory } from "./lib/plugin-manifest";
 import type { UpdateChannel } from "./lib/updates/manifest";
 import type { PersonalInformationFieldsConfig } from "./lib/user-personal-information";
+import type { OgImagesConfig } from "./og-image/server/types";
 import type { PageCacheConfig } from "./page-cache/config";
 
 import { assertNavigationConfig } from "./lib/navigation";
@@ -239,6 +240,30 @@ export interface VitNodeApiConfig {
    * `retentionDays` 90.
    */
   notifications?: Partial<NotificationWorkerSettings>;
+  /**
+   * Generated Open Graph images (1200 × 630 PNG, laid out with Satori and
+   * rasterized with resvg).
+   * Off without it; `ogImages: {}` turns them on with the built-in template
+   * and the bundled fonts. Content types opt in with
+   * `delivery.seo.openGraph.image`, and plugins call `ogImageResponse` from
+   * `@vitnode/core/og-image/server` in their own routes.
+   *
+   * @example
+   * ```ts
+   * import { defaultOgImageTemplateEntry } from "@vitnode/core/og-image/server";
+   *
+   * import { productTemplate } from "./og/product-template";
+   *
+   * ogImages: {
+   *   defaultTemplate: "default",
+   *   templates: {
+   *     default: defaultOgImageTemplateEntry,
+   *     product: { version: "1", render: productTemplate },
+   *   },
+   * },
+   * ```
+   */
+  ogImages?: OgImagesConfig;
   /**
    * For an API that runs in its own process, next to a web app that caches
    * pages in Redis (`vitNodeConfig.pageCache.storage: "redis"`). Content

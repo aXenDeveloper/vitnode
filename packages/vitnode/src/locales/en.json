@@ -46,6 +46,8 @@
   "@vitnode/core:cron": "Cron Jobs",
   "@vitnode/core:cron:can_view": "View cron jobs",
   "@vitnode/core:cron:can_run": "Run cron jobs",
+  "@vitnode/core:seo": "SEO",
+  "@vitnode/core:seo:can_view": "Preview Open Graph images",
   "@vitnode/core:report_reasons": "Report reasons",
   "@vitnode/core:report_reasons:can_view": "View report reasons",
   "@vitnode/core:report_reasons:can_create": "Create report reasons",
@@ -2869,6 +2871,10 @@
           "cron": "Cron jobs",
           "queue": "Queue tasks",
           "search": "Search index"
+        },
+        "seo": {
+          "title": "SEO",
+          "og_images": "OG Images"
         }
       },
       "search": {
@@ -4566,6 +4572,39 @@
             "title": "Cost corrections",
             "change": "{from} → {to}"
           }
+        }
+      }
+    },
+    "seo": {
+      "og_images": {
+        "title": "OG Images",
+        "desc": "Preview the cards your pages show when someone shares a link on social networks and in chats.",
+        "config_note": "Templates, fonts, colors and the logo are set in <code>ogImages</code> in <code>vitnode.api.config.ts</code>. Nothing on this page is saved - the fields only feed the preview.",
+        "docs_link": "How OG images work",
+        "disabled": {
+          "title": "OG images are off",
+          "desc": "Add <code>ogImages: {}</code> to <code>buildApiConfig</code> in <code>vitnode.api.config.ts</code> and restart the server to turn them on."
+        },
+        "form": {
+          "template": "Template",
+          "template_default": "{label} (default)",
+          "locale": "Language",
+          "title": "Title",
+          "description": "Description",
+          "cover": "Cover image",
+          "cover_desc": "Optional. Picked from your device and sent only to render this preview.",
+          "refresh": "Refresh preview"
+        },
+        "sample": {
+          "title": "Welcome to our community: what's new this week",
+          "description": "Fresh articles, upcoming events and the best discussions, all in one place."
+        },
+        "preview": {
+          "title": "Preview",
+          "alt": "Open Graph image preview: {title}",
+          "loading": "Rendering the preview...",
+          "error": "The preview could not be rendered.",
+          "size": "{width} × {height} PNG, rendered by the same generator as your public pages"
         }
       }
     }

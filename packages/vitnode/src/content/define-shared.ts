@@ -88,6 +88,7 @@ const CONTENT_OPTION_PATHS: readonly (readonly string[])[] = [
   ["admin", "navigation"],
   ["delivery"],
   ["delivery", "redirects"],
+  ["delivery", "seo", "openGraph", "image"],
   ["delivery", "sitemap"],
   ["duplication"],
   ["editorial"],

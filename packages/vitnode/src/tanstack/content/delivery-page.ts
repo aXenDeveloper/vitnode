@@ -19,6 +19,19 @@ export interface ContentDeliveryPageMetadata {
   canonicalInternalPath: null | string;
   /** The locale the content was resolved in, which may be a fallback locale. */
   locale: null | string;
+  /**
+   * The generated `og:image` (`delivery.seo.openGraph.image`), with an absolute
+   * URL. Rendering happens only when a crawler fetches it.
+   */
+  ogImage?: null | {
+    alt: null | string;
+    height: number;
+    type: string;
+    url: string;
+    width: number;
+  };
+  /** Open Graph text; `null` unless `delivery.seo.openGraph` is configured. */
+  openGraph?: null | { description: null | string; title: null | string };
   robots: null | { follow: boolean; index: boolean };
   /** SEO overrides; `description` may contain HTML. */
   seo: { description: null | string; title: null | string };
@@ -114,6 +127,36 @@ const metaDescription = (value: null | string): string | undefined => {
   return `${(lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
 };
 
+const openGraphOf = (
+  metadata: ContentDeliveryPageMetadata,
+  pageTitle: string | undefined,
+  description: string | undefined,
+): PluginRouteHead["openGraph"] => {
+  const { ogImage, openGraph } = metadata;
+  if (!openGraph && !ogImage) return undefined;
+
+  const ogTitle = openGraph?.title ?? pageTitle;
+  const ogDescription =
+    metaDescription(openGraph?.description ?? null) ?? description;
+
+  return {
+    ...(ogTitle === undefined ? {} : { title: ogTitle }),
+    ...(ogDescription === undefined ? {} : { description: ogDescription }),
+    type: "article",
+    ...(ogImage
+      ? {
+          image: {
+            ...(ogImage.alt ? { alt: ogImage.alt } : {}),
+            height: ogImage.height,
+            type: ogImage.type,
+            url: ogImage.url,
+            width: ogImage.width,
+          },
+        }
+      : {}),
+  };
+};
+
 const internalAlternates = (
   metadata: ContentDeliveryPageMetadata,
 ): Record<string, string> | undefined => {
@@ -137,7 +180,10 @@ const internalAlternates = (
  * A plugin route's `head` for a delivered content page: the SEO title (or
  * `title` as fallback), a plain-text description cut to 160 characters, the
  * locale alternates, and `noindex, nofollow` when the page must not be
- * indexed. Returns just `title` while there is no metadata yet.
+ * indexed. With `delivery.seo.openGraph` it adds `og:title`,
+ * `og:description` and `og:type` `article`, plus the generated `og:image`
+ * and a large Twitter card when `openGraph.image` is on. Returns just `title`
+ * while there is no metadata yet.
  */
 export const contentDeliveryPageHead = (
   metadata: ContentDeliveryPageMetadata | undefined,
@@ -154,6 +200,9 @@ export const contentDeliveryPageHead = (
   if (description !== undefined) head.description = description;
   if (alternates !== undefined) head.alternates = alternates;
   if (metadata.robots?.index === false) head.robots = "noindex, nofollow";
+
+  const openGraph = openGraphOf(metadata, pageTitle, description);
+  if (openGraph !== undefined) head.openGraph = openGraph;
 
   return head;
 };

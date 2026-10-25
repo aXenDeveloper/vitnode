@@ -34,6 +34,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/admin/core/debug/services' },
   { path: '/admin/core/debug/vitnode' },
   { path: '/admin/core/moderation/report-reasons' },
+  { path: '/admin/core/seo/og-images' },
   { path: '/admin/core/staff/admins' },
   { path: '/admin/core/staff/moderators' },
   { path: '/admin/core/system/files' },

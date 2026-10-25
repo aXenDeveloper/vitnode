@@ -1,7 +1,9 @@
+import type { ContentFileDescriptor } from "./files";
 import type { ContentLocaleRouting, ContentPublicUrl } from "./public-url";
 import type {
   AnyContentTypeDefinition,
   ContentDeliveryConfig,
+  ContentDeliveryOpenGraphImageConfig,
   ContentDeliverySitemapConfig,
   ContentFieldDescriptor,
   ContentFieldMap,
@@ -11,6 +13,7 @@ import type {
   ResolvedContentPublicApiConfig,
 } from "./types";
 
+import { isOgImageTemplateId } from "../og-image";
 import { parseRoutePath } from "../routing/path";
 import {
   CONTENT_DELIVERY_DESCRIPTION_KINDS,
@@ -139,6 +142,46 @@ const assertSeoField = ({
         { contentTypeId: id },
       );
     }
+  }
+};
+
+const assertOgCoverField = ({
+  exposed,
+  fields,
+  id,
+  name,
+}: {
+  exposed: ReadonlySet<string>;
+  fields: ContentFieldMap;
+  id: string;
+  name: string;
+}): void => {
+  const target = resolveSeoTarget(fields, name);
+  if (!target) {
+    throw new ContentEngineError(
+      `delivery.seo.openGraph.image.coverField references unknown field "${name}".`,
+      { contentTypeId: id },
+    );
+  }
+
+  const { descriptor } = target;
+  if (
+    target.container !== "row" ||
+    descriptor.kind !== "file" ||
+    descriptor.multiple ||
+    descriptor.localized === true
+  ) {
+    throw new ContentEngineError(
+      `delivery.seo.openGraph.image.coverField names "${name}", which is not a shared single \`field.file()\` on the record itself. A card shows one cover.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!exposed.has(name)) {
+    throw new ContentEngineError(
+      `delivery.seo.openGraph.image.coverField names "${name}", which is not in publicApi.fields. The card is public, so its cover has to be public already.`,
+      { contentTypeId: id },
+    );
   }
 };
 
@@ -410,6 +453,33 @@ export const resolveContentDelivery = ({
     });
   }
 
+  const ogImage = contentOptionConfig<ContentDeliveryOpenGraphImageConfig>(
+    seo.openGraph?.image,
+  );
+  if (ogImage?.altField !== undefined) {
+    assertSeoField({
+      exposed,
+      fields,
+      id,
+      kinds: titleKinds,
+      label: "delivery.seo.openGraph.image.altField",
+      localizedFields,
+      name: ogImage.altField,
+    });
+  }
+  if (ogImage?.coverField !== undefined) {
+    assertOgCoverField({ exposed, fields, id, name: ogImage.coverField });
+  }
+  if (
+    ogImage?.template !== undefined &&
+    !isOgImageTemplateId(ogImage.template)
+  ) {
+    throw new ContentEngineError(
+      `delivery.seo.openGraph.image.template is "${String(ogImage.template)}", which is not a template id (a-z, 0-9, "-" and "_").`,
+      { contentTypeId: id },
+    );
+  }
+
   // A fallback with no primary is a configuration that reads as if it does
   // something and does nothing: the primary is what is consulted first, so
   // naming only the fallback means the fallback is never reached.
@@ -445,6 +515,14 @@ export const resolveContentDelivery = ({
           ? null
           : {
               descriptionField: seo.openGraph.descriptionField ?? null,
+              image:
+                ogImage === null
+                  ? null
+                  : {
+                      altField: ogImage.altField ?? null,
+                      coverField: ogImage.coverField ?? null,
+                      template: ogImage.template ?? null,
+                    },
               titleField: seo.openGraph.titleField ?? null,
             },
       titleField: seo.titleField ?? null,
@@ -685,6 +763,60 @@ export const contentDeliveryOpenGraph = (
       base.description,
     title: readSeoText(row, seo.openGraph.titleField, null) ?? base.title,
   };
+};
+
+/** What a generated Open Graph image of one record is drawn from. */
+export interface ContentDeliveryOgImageSource {
+  /** The image's alt text: `image.altField`, else the card's title. */
+  alt: null | string;
+  cover: ContentFileDescriptor | null;
+  description: null | string;
+  /** `null` uses the install's default template. */
+  template: null | string;
+  title: null | string;
+}
+
+const isFileDescriptor = (value: unknown): value is ContentFileDescriptor =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as { id?: unknown }).id === "number" &&
+  typeof (value as { url?: unknown }).url === "string";
+
+/**
+ * The values a generated `og:image` is drawn from: the Open Graph title and
+ * description (each falling back to the SEO one), the cover file and the alt
+ * text. `null` unless `delivery.seo.openGraph.image` is configured.
+ */
+export const contentDeliveryOgImageSource = (
+  definition: AnyContentTypeDefinition,
+  row: Record<string, unknown>,
+): ContentDeliveryOgImageSource | null => {
+  const image = definition.delivery.seo.openGraph?.image;
+  if (!image) return null;
+
+  const text = contentDeliveryOpenGraph(definition, row);
+  const cover =
+    image.coverField === null ? null : readContentPath(row, image.coverField);
+
+  return {
+    alt: readSeoText(row, image.altField, null) ?? text?.title ?? null,
+    cover: isFileDescriptor(cover) ? cover : null,
+    description: text?.description ?? null,
+    template: image.template,
+    title: text?.title ?? null,
+  };
+};
+
+/** The public fields {@link contentDeliveryOgImageSource} reads, beyond the SEO ones. */
+export const contentDeliveryOgImageFields = (
+  definition: AnyContentTypeDefinition,
+): string[] => {
+  const image = definition.delivery.seo.openGraph?.image;
+  if (!image) return [];
+
+  return [image.coverField, image.altField].filter(
+    (name): name is string => name !== null,
+  );
 };
 
 /**
