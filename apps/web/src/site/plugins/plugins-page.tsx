@@ -42,7 +42,7 @@ interface OfficialPlugin {
 const OFFICIAL_PLUGINS: OfficialPlugin[] = [
   {
     description:
-      'Articles and categories built entirely on the Content Engine: drafts, revisions and scheduled publishing, signed preview links, multiple authors, cover images and a translation for every field. It ships the content types, the AdminCP screens and a public API. The public pages are yours to design, and the example plugin shows how.',
+      'Articles and categories built entirely on the Content Engine: drafts, revisions and scheduled publishing, signed preview links, multiple authors, cover images and a translation for every field. It ships the content types, the AdminCP screens and a public API. The public pages are yours to design, and the newsroom plugin shows how.',
     highlights: [
       'Articles, categories and multiple authors',
       'Drafts, 20 revisions and scheduled publishing',
@@ -59,16 +59,16 @@ const OFFICIAL_PLUGINS: OfficialPlugin[] = [
   },
   {
     description:
-      'A small plugin that exists to be read. It ships public pages with loaders and a searchable browse page, an AdminCP page with navigation, four content types including a localized one, a typed Hono API module and event listeners, all wired the way the docs describe. Copy it, rename it, ship it.',
+      'The plugin the Content Engine docs build step by step, then keep growing. It ships articles with comments and member writing, stories with files and scheduling, localized bulletins, uuid tags and bigint events, a desk tree for letters to the editor, block pages and widget zones, an AdminCP page and a typed Hono API module, all wired the way the docs describe. Copy it, rename it, ship it.',
     highlights: [
-      'Public pages with loaders and a browse page with search',
-      'A typed Hono API module and event listeners',
-      'Four content types, including a localized one',
-      'An AdminCP page and navigation entry',
+      'Articles, comments and member writing from the tutorial',
+      'Localized content, relations and every id strategy',
+      'Containers, moderation scopes and widget zones',
+      'An AdminCP page, an AI action and event listeners',
     ],
     Icon: FlaskConical,
-    name: 'Example',
-    pkg: '@vitnode/example',
+    name: 'Newsroom',
+    pkg: 'newsroom',
     screen: 'integrations',
     status: 'reference',
   },
@@ -157,7 +157,7 @@ export const PluginsPage = () => (
         id="official-title"
         title="One you can install. One you should read."
       >
-        The blog ships today, and the example plugin is the friendliest way to
+        The blog ships today, and the newsroom plugin is the friendliest way to
         learn how a plugin is put together.
       </SectionHeading>
 

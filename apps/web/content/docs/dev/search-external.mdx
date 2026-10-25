@@ -136,7 +136,7 @@ import { RootProvider } from "fumadocs-ui/provider/tanstack";
 
 `variant="bar"` turns the floating header card into a flat, full-width bar that sits flush on the docs layout, and `--fd-banner-height` tells Fumadocs how tall it is, so its sidebar and page fit underneath. Need a button before the logo, like a sidebar toggle? Pass it as `leading`. Load the header's data in the docs route too, with `loadMainShell(context)` in its `loader`.
 
-Got a layout with its own search button? `SearchDialog` from `@vitnode/core/tanstack/search` is the header dialog without its trigger. Give it `open`, `onOpenChange` and the same `firstSourceId`.
+Got a layout without the VitNode header? Render `HeaderSearch` from `@vitnode/core/tanstack/search` on its own. It is the header's search button together with its dialog and <kbd>⌘</kbd> <kbd>K</kbd> shortcut. Pass `firstSourceId={docsSearchSource.id}` to put your source's group first. Core exports no dialog without its trigger.
 
 ## Check the result
 

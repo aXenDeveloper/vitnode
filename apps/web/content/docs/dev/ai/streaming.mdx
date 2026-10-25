@@ -1,0 +1,183 @@
+---
+title: Streaming
+description: Stream a VitNode AI action's text to the browser as the model writes it, with streamAiAction() and the built-in stream routes or c.get("ai").stream() in your own route, and learn what a stopped stream costs.
+icon: Radio
+---
+
+A streamed AI action shows its text while the model is still writing, so a long answer feels quick and the reader can stop it early. This page streams the **Summarize topic** action from [AI actions](/docs/dev/ai/actions) into an AdminCP component, without writing a new API route.
+
+Only `output: "text"` actions stream. An object action fails with `AI_INVALID_INPUT` when streamed.
+
+## Before you begin
+
+- **The Summarize topic action** registered in the forum plugin, from [AI actions](/docs/dev/ai/actions). You don't need the route you built there.
+- **A model with the `streaming` capability.** A streamed run adds `streaming` to the action's `requiredCapabilities`, so only models that declare it can answer. See [Model capabilities](/docs/dev/ai#model-capabilities).
+
+## Stream an action into a component
+
+<Steps>
+
+<Step>
+
+### Declare a streaming model
+
+Make sure at least one model in your API config lists `streaming`:
+
+```ts title="apps/api/src/vitnode.api.config.ts (excerpt)"
+ai: {
+  models: [
+    {
+      id: 'default',
+      name: 'GPT-4o Mini',
+      model: openai('gpt-4o-mini'),
+      capabilities: ['text', 'structured-output', 'streaming'], // [!code highlight]
+    },
+  ],
+},
+```
+
+Without one, a streamed run fails with `AI_MODEL_INCOMPATIBLE` before Core sends anything to a provider.
+
+</Step>
+
+<Step>
+
+### Call streamAiAction() from the component
+
+`streamAiAction()` posts to Core's generic stream route, which runs any registered user action, and calls `onDelta` with each piece of text. Add a component like this to an AdminCP page of your plugin:
+
+```tsx title="plugins/forum/src/views/admin/summarize-topic.tsx"
+import { Button } from '@vitnode/core/components/ui/button'
+import { aiErrorCodeOf } from '@vitnode/core/lib/ai/assist-client'
+import {
+  aiAssistScope,
+  streamAiAction,
+} from '@vitnode/core/lib/ai/stream-client'
+import React from 'react'
+
+export const SummarizeTopic = ({
+  content,
+  title,
+}: {
+  content: string
+  title: string
+}) => {
+  const [summary, setSummary] = React.useState('')
+  const [error, setError] = React.useState<null | string>(null)
+  const [pending, setPending] = React.useState(false)
+  const controller = React.useRef<AbortController | null>(null)
+
+  const onSummarize = async () => {
+    controller.current = new AbortController()
+    setSummary('')
+    setError(null)
+    setPending(true)
+    try {
+      await streamAiAction({
+        action: '@vitnode/forum:topic.summarize',
+        input: { content, title },
+        onDelta: (delta) => setSummary((text) => text + delta),
+        scope: aiAssistScope(), // "admin" on /admin pages, otherwise "user"
+        signal: controller.current.signal,
+      })
+    } catch (caught) {
+      setError(aiErrorCodeOf(caught)) // e.g. "AI_USER_LIMIT_REACHED"
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex gap-2">
+        <Button isLoading={pending} onClick={onSummarize}>
+          Summarize
+        </Button>
+        <Button
+          disabled={!pending}
+          onClick={() => controller.current?.abort()}
+          variant="outline"
+        >
+          Stop
+        </Button>
+      </div>
+      <p aria-live="polite" className="leading-relaxed">
+        {summary}
+      </p>
+      {error && <p role="alert">{error}</p>}
+    </div>
+  )
+}
+```
+
+`streamAiAction()` resolves to `{ runId, chargedPoints, costKnown }` once the stream ends. It throws an `AiRequestError` for a refusal before the stream starts and for a failure inside it; `aiErrorCodeOf()` reads its code. To show a translated message instead of the code, translate it with the `core.global.ai_assist.error` messages, as the blog's review panel does.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Open the AdminCP page with the component and click **Summarize**. The summary appears piece by piece under the buttons. **Debug Panel → AI logs** shows a `@vitnode/forum:topic.summarize` run with status `succeeded`.
+
+Click **Summarize** again and then **Stop** while text is arriving. The text stops, and the AI logs show the run as `canceled`.
+
+## Stream from your own route
+
+When the stream needs server-side work first, such as loading the topic from the database, call `c.get("ai").stream()` in your own route. It takes the same options as `run()`:
+
+```ts title="plugins/forum/src/api/modules/admin/ai/routes/summarize-stream.route.ts (handler excerpt)"
+handler: async (c) => {
+  const { textStream } = await c.get('ai').stream({
+    action: SUMMARIZE_TOPIC_AI_ACTION,
+    input: c.req.valid('json'),
+    signal: c.req.raw.signal, // stop paying when the reader leaves
+  })
+
+  return new Response(textStream.pipeThrough(new TextEncoderStream()), {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+  })
+}
+```
+
+`stream()` resolves to `{ textStream, result, runId }`:
+
+- `textStream` is a `ReadableStream<string>` of text deltas.
+- `result` resolves to `{ output, runId, usage }` once the stream ends, the same shape `run()` returns, and rejects with an `AiError` if the full text fails `parseText()` or `outputSchema`.
+
+Core checks permissions, limits and budgets before `stream()` resolves, so a refusal is an ordinary JSON error response. To answer in the same NDJSON format as Core's routes, return `aiNdjsonStream(c, request)` with `AI_NDJSON_HEADERS`, both from `@vitnode/core/api/lib/ai/stream-response`.
+
+## Built-in stream routes
+
+`streamAiAction()` and `estimateAiAction()` call these Core routes. Their body is `{ action, input, idempotencyKey?, resource?, sourceFingerprint? }`, the same as the [run routes](/docs/dev/ai/custom-ui#built-in-run-routes).
+
+| Route                            | Session     | Answers                     |
+| :------------------------------- | :---------- | :-------------------------- |
+| `POST /admin/ai/assist/stream`   | AdminCP     | NDJSON text, then a summary |
+| `POST /admin/ai/assist/estimate` | AdminCP     | `{ maxPoints, maxUsd }`     |
+| `POST /ai/stream`                | Site member | NDJSON text, then a summary |
+| `POST /ai/estimate`              | Site member | `{ maxPoints, maxUsd }`     |
+
+The stream routes answer `application/x-ndjson`, one JSON object per line:
+
+```text
+{"t":"A tighter "}
+{"t":"version of the paragraph."}
+{"done":{"runId":812,"chargedPoints":"0.42","costKnown":true,"modelId":"default"}}
+```
+
+A failure after the stream started arrives as a last line `{"e":{"code":"AI_TIMEOUT","message":"…"}}`.
+
+`/estimate` answers the most the run could cost, or `null` when no pricing bounds it. In the browser, `estimateAiAction({ action, input, scope })` resolves to `maxPoints` as a string, or `null`.
+
+## What a stopped stream costs
+
+A stream makes one attempt on the primary model, with no retries and no fallback model. When the reader stops it, the run settles as `canceled`:
+
+- If no text had reached the reader yet, they pay nothing.
+- If some text had arrived, Core charges their points and daily count as for a delivered run.
+
+## Related
+
+- [Quick Ask](/docs/dev/ai/quick-ask) is the rich text editor feature built on these routes.
+- [AI errors and limits](/docs/dev/ai/errors) lists every error code a stream can end with.

@@ -1,5 +1,5 @@
 ---
-title: Cache reference
+title: API cache reference
 description: Every method on c.get("cache") in VitNode API routes - signatures, return values, TTLs, key prefixes, serialization and behavior without Redis.
 icon: List
 ---
@@ -29,7 +29,7 @@ icon: List
 | `get`, `set`, `has`, `remember`, `delete`, `flush` | `vitnode:cache:{pluginId}:{key}`      |
 | `acquireLock`, `releaseLock`                       | `vitnode:cache:__system__:lock:{key}` |
 
-The plugin ID comes from the route that handles the request. Lock keys are not prefixed with it, so include your plugin ID in a lock key, for example `@acme/site-notes:rebuild-stats`.
+The plugin ID comes from the route that handles the request. Lock keys are not prefixed with it, so include your plugin ID in a lock key, for example `site-notes:rebuild-stats`.
 
 ## Serialization
 

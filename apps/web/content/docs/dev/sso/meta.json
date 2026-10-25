@@ -1,5 +1,5 @@
 {
-  "title": "Single Sign-On (SSO)",
+  "title": "SSO",
   "description": "OAuth2 sign-in with Google, Discord, Facebook or your own adapter",
   "icon": "KeyRound",
   "pages": [

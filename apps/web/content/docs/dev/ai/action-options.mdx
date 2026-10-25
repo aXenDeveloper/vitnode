@@ -1,0 +1,322 @@
+---
+title: Action options
+description: Reference for defineAiAction in VitNode. Every AI action field, default and limit, the options of c.get("ai").run(), runAsSystem() and stream(), the run result, and the order of checks during a run.
+icon: ListChecks
+---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+This page lists everything an AI action can declare and everything a run accepts and returns. Use it when you change an action you already built; to build your first one, follow [AI actions](/docs/dev/ai/actions). The examples continue that page's `@vitnode/forum` **Summarize topic** action.
+
+```ts
+import { defineAiAction } from '@vitnode/core/api/lib/ai/action'
+import { aiActionRef } from '@vitnode/core/api/lib/ai/registry'
+```
+
+`defineAiAction(definition)` validates the definition when the module loads and fills in defaults. Anything invalid throws an `AiActionDefinitionError` at boot. Register the result in `buildApiPlugin({ aiActions: [...] })`.
+
+## Definition fields
+
+<TypeTable
+  type={{
+    id: {
+      description:
+        'Local id, unique in the plugin, made of lowercase dot-separated words such as `topic.summarize`.',
+      type: 'string',
+      required: true,
+    },
+    title: {
+      description: 'Message key of a short name.',
+      type: 'string',
+      required: true,
+    },
+    description: {
+      description: 'Message key of one sentence on what the action does.',
+      type: 'string',
+      required: true,
+    },
+    icon: {
+      description:
+        'A Lucide icon name in kebab case, e.g. `languages`. Without one, the AdminCP shows a sparkles icon.',
+      type: 'string',
+    },
+    promptVersion: {
+      description:
+        'Whole number of 1 or more, stored with every run. Bump it when the prompt changes meaningfully.',
+      type: 'number',
+      required: true,
+    },
+    permission: {
+      description:
+        'The AI permission admins grant per role. A string means `{ key, defaultGranted: false }`.',
+      type: 'string | { key: string; defaultGranted: boolean }',
+      required: true,
+    },
+    requiredCapabilities: {
+      description:
+        'Model capabilities the action needs. At least one, normally `text`.',
+      type: "('text' | 'image-input' | 'structured-output' | 'streaming')[]",
+      required: true,
+    },
+    actors: {
+      description: 'Who may run it.',
+      type: "('user' | 'system')[]",
+      default: "['user']",
+    },
+    authorize: {
+      description:
+        'Checks access to the content the input refers to. Required when `actors` includes `user`.',
+      type: '({ c, input, resource, userId }) => boolean | Promise<boolean>',
+    },
+    defaults: {
+      description: 'Limits for each run. See Defaults and limits.',
+      type: 'AiActionDefaults',
+      required: true,
+    },
+    inputSchema: {
+      description: 'Zod schema that validates the input before anything else.',
+      type: 'z.ZodType',
+      required: true,
+    },
+    measureInput: {
+      description:
+        'Characters counted against `maxInputCharacters`. By default every string in the input counts.',
+      type: '(input) => number',
+    },
+    output: {
+      description: 'Plain text or a structured object.',
+      type: "'text' | 'object'",
+      required: true,
+    },
+    parseText: {
+      description:
+        'Text actions only: turns the model text into the value `outputSchema` checks. Throw to reject the answer.',
+      type: '(text, input) => unknown',
+    },
+    outputSchema: {
+      description: 'Zod schema that validates the answer.',
+      type: 'z.ZodType',
+      required: true,
+    },
+    buildPrompt: {
+      description:
+        'Builds the prompt from the validated input. Returns `{ prompt, system? }` or `{ messages, system? }`.',
+      type: '(input, { instructions }) => AiPrompt',
+      required: true,
+    },
+  }}
+/>
+
+## Ids and canonical keys
+
+Core stores an action under its **canonical key**, `<pluginId>:<id>`:
+
+```text
+@vitnode/forum:topic.summarize
+@vitnode/blog:article.review
+```
+
+Two plugins may both have a `topic.summarize`, because their canonical keys differ. The same canonical key twice throws at boot. Settings, history, limits and field `ai` options all use the canonical key.
+
+`aiActionRef(pluginId, action)` returns the canonical key typed with the action's input and output. Pass it to `run()` and TypeScript checks `input` and infers `output`. A plain string key also works, but its output is `unknown`.
+
+## Title, description and icon
+
+Every action appears on **Artificial Intelligence (AI) → Actions**, on the role form's **Artificial intelligence (AI)** tab and on the member's AI usage page. `title` and `description` are message keys such as `ai_actions.@vitnode/forum.topic_summarize.title`. The API returns them untranslated and each page translates them, falling back to the default language. Keep them in your plugin's `src/locales/en.json` under `ai_actions` → your plugin id, and translate them like any other [plugin message](/docs/dev/i18n/messages).
+
+A value that is not a message key is shown as written and never translated, which is handy while prototyping. A blank title or description, or an icon that is not a kebab-case name, throws at boot.
+
+## Prompt and instructions
+
+`buildPrompt(input, { instructions })` returns either `{ prompt, system? }` or `{ messages, system? }`, the same prompt shapes the AI SDK takes. `instructions` is extra guidance an admin set for this action in the AdminCP, or `null`. Append it to the system prompt:
+
+```ts
+buildPrompt: (input, { instructions }) => ({
+  system: ['Summarize the forum topic in two plain sentences.', instructions]
+    .filter(Boolean)
+    .join('\n'),
+  prompt: `${input.title}\n\n${input.content}`,
+}),
+```
+
+`promptVersion` is stored with every run, so the AI logs show which prompt produced which result.
+
+## Input and output
+
+- **`inputSchema`** validates the input first. Invalid input fails with `AI_INVALID_INPUT`.
+- **`measureInput(input)`** returns the characters counted against `maxInputCharacters`. Override it when only part of the input reaches the prompt. The blog's article review counts the title and at most 30,000 characters of the article.
+- **`output: "text"`**: the model returns text, `parseText(text, input)` turns it into your value, then `outputSchema` checks it.
+- **`output: "object"`**: the model returns JSON through the AI SDK's `Output.object`, and `outputSchema` validates it. The action must require `structured-output`, and it cannot be streamed.
+
+An empty answer, a `parseText()` that throws or a schema mismatch fails with `AI_INVALID_OUTPUT`, and the user is not charged.
+
+```ts title="plugins/forum/src/api/ai/actions.ts (excerpt)"
+const topicTitleIdeasAiAction = defineAiAction({
+  id: 'topic.title-ideas',
+  title: 'ai_actions.@vitnode/forum.topic_title_ideas.title',
+  description: 'ai_actions.@vitnode/forum.topic_title_ideas.description',
+  promptVersion: 1,
+  permission: { key: 'summarize', defaultGranted: true },
+  requiredCapabilities: ['text', 'structured-output'],
+  defaults: { maxInputCharacters: 20_000, maxOutputTokens: 200, timeoutMs: 30_000 },
+  inputSchema: z.object({ content: z.string().min(1) }),
+  output: 'object',
+  outputSchema: z.object({ titles: z.array(z.string().max(120)).max(3) }),
+  buildPrompt: (input) => ({
+    system: 'Suggest up to three short titles for this forum topic.',
+    prompt: input.content,
+  }),
+  authorize: async ({ c }) =>
+    await checkStaffPermission(c, {
+      type: 'admin',
+      plugin: manifest.id,
+      module: topicContentType.permissionModule,
+      permission: 'can_view',
+    }),
+})
+```
+
+It sits next to **Summarize topic** and reuses that file's imports. Both actions use the `summarize` permission, so they share one role switch and one daily counter. Actions that share a key must declare the same `defaultGranted`, or boot fails.
+
+### Images
+
+For a vision action, require `image-input` and pass the image bytes as a `file` part. Read them server-side, for example with `c.get("storage").readBytes(key, maxBytes)`, so no private file has to be made public for the provider:
+
+```ts
+buildPrompt: (input) => ({
+  messages: [
+    {
+      role: 'user',
+      content: [
+        { type: 'text', text: 'Describe this image in one sentence.' },
+        { type: 'file', data: input.image, mediaType: input.mediaType },
+      ],
+    },
+  ],
+}),
+```
+
+`maxImages` defaults to `1` for these actions and bounds how many images one run may send. Only models that declare `image-input` run them. See [Model capabilities](/docs/dev/ai#model-capabilities).
+
+## Permissions and authorize()
+
+Every action names a **permission**, which admins grant per role on the **Artificial intelligence (AI)** tab of the role form:
+
+```ts
+permission: 'summarize' // same as { key: 'summarize', defaultGranted: false }
+permission: { key: 'summarize', defaultGranted: true }
+```
+
+`defaultGranted` applies while no role has a setting for the key. The stored permission is `<pluginId>:<key>`, for example `@vitnode/forum:summarize`.
+
+`authorize()` is required for actions users can run. The AI permission says "this role may use AI summaries"; `authorize()` says "this user may read this topic". Both must pass, or the run fails with `AI_UNAUTHORIZED`. It receives `{ c, input, resource, userId }`, where `resource` is the optional `{ type, id }` the caller passed to `run()`.
+
+## Actors
+
+`actors` decides who may run an action. The server picks the actor; a request never does.
+
+| Actor    | Runs with                   | Charged to                                     |
+| :------- | :-------------------------- | :--------------------------------------------- |
+| `user`   | `c.get("ai").run()`         | The site budget and the user's AI points       |
+| `system` | `c.get("ai").runAsSystem()` | The site budget and the optional system budget |
+
+`run()` uses the signed-in AdminCP user first, then the site user, and fails with `AI_UNAUTHORIZED` when there is neither. A `system`-only action (`actors: ['system']`) needs no `authorize()`. Call `runAsSystem()` only from trusted server code such as cron jobs, queue tasks and event listeners; [Run an action in a background job](/docs/dev/ai/errors#run-an-action-in-a-background-job) shows one.
+
+## Defaults and limits
+
+`defaults` sets an action's limits. Admins can override most of them per action on **Artificial Intelligence (AI) → Actions**. A value outside its range throws at boot.
+
+| Field                | Required | Default                          | Range           |
+| :------------------- | :------- | :------------------------------- | :-------------- |
+| `maxInputCharacters` | Yes      | -                                | 1 – 1,000,000   |
+| `maxOutputTokens`    | Yes      | -                                | 1 – 200,000     |
+| `timeoutMs`          | Yes      | -                                | 1,000 – 600,000 |
+| `maxRetries`         | No       | `0`                              | 0 – 3           |
+| `maxSteps`           | No       | `1`                              | 1 – 10          |
+| `maxImages`          | No       | `1` with `image-input`, else `0` | 0 – 10          |
+| `dailyLimit`         | No       | `null` (no limit)                | 0 – 100,000     |
+
+- `timeoutMs` applies to each attempt.
+- `maxRetries` is extra attempts on the same model after a failed provider call.
+- `maxSteps` is model round trips inside one attempt (tool loops). Each step is billed as its own call.
+- `dailyLimit` counts runs per user per day for the action's permission key. A role's daily limit wins over the admin's action setting, which wins over this default.
+- Admins cannot change `maxImages`, because it bounds the budget reserved for images.
+
+Admins can also switch an action off, assign it a model and a fallback model, and add `instructions`.
+
+## Run options
+
+`c.get("ai").run()`, `runAsSystem()`, `stream()` and `estimate()` take the same request:
+
+<TypeTable
+  type={{
+    action: {
+      description: 'Canonical key, ideally from aiActionRef().',
+      type: 'TypedAiActionKey | string',
+      required: true,
+    },
+    input: {
+      description: "Validated against the action's inputSchema.",
+      type: 'Input',
+      required: true,
+    },
+    resource: {
+      description:
+        'The content the input came from. Passed to authorize() and stored with the run.',
+      type: '{ type: string; id: string | number | null }',
+    },
+    idempotencyKey: {
+      description:
+        'A key the same actor can submit only once. A repeat fails with AI_DUPLICATE_REQUEST and the earlier runId, even if the earlier run failed.',
+      type: 'string',
+    },
+    signal: {
+      description: 'Aborts the provider call, e.g. c.req.raw.signal.',
+      type: 'AbortSignal',
+    },
+    sourceFingerprint: {
+      description:
+        'Fingerprint of the source content, stored to spot stale results later.',
+      type: 'string',
+    },
+  }}
+/>
+
+## Run result
+
+| Method                  | Returns                                         |
+| :---------------------- | :---------------------------------------------- |
+| `run()`, `runAsSystem()` | `Promise<{ output, runId, usage }>`             |
+| `stream()`              | `Promise<{ textStream, result, runId }>`. See [Streaming](/docs/dev/ai/streaming). |
+| `estimate()`            | `Promise<{ maxPoints, maxUsd }>`, the most the run could cost as decimal strings, or `null` without pricing |
+
+```ts
+{
+  output: Output,          // validated by outputSchema
+  runId: number,
+  usage: {
+    chargedPoints: string, // points charged to the user, full precision; "0" for system runs
+    costKnown: boolean,
+    modelId: string,       // the configured model that answered
+  },
+}
+```
+
+`usage` is safe to send to the browser. It never contains prices or provider details.
+
+## What happens during a run
+
+1. `run()`, `stream()` and `estimate()` find the signed-in user (`AI_UNAUTHORIZED` without one).
+2. Find the action (`AI_ACTION_UNKNOWN`), check the actor, validate `input` (`AI_INVALID_INPUT`).
+3. Check that `ai.models` is not empty (`AI_NOT_CONFIGURED`), then the global AI switch and the action's switch.
+4. For users: check the role permission, then `authorize()`.
+5. Measure the input against `maxInputCharacters`.
+6. Pick the model: the admin's choice, or the first configured model with every required capability. `stream()` also requires `streaming`. Resolve the optional fallback, skipping an incompatible one.
+7. Build the prompt and count its images against `maxImages`.
+8. **Reserve** budget for the worst case and check rate and concurrency limits, in one short database transaction.
+9. Call the provider outside any transaction. Retry up to `maxRetries` times, then try the fallback model once.
+10. Validate the output.
+11. **Settle**: charge the real cost and release the rest of the reservation.
+12. Emit `ai.run.completed` or `ai.run.failed`.
+
+A canceled run stops at once. An invalid answer is not retried on the same model, but the fallback model still gets one try. Nothing before step 8 costs anything. [Costs and budgets](/docs/dev/ai/costs-and-limits) explains steps 8 and 11.

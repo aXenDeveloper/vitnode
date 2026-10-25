@@ -1,0 +1,540 @@
+{
+  "newsroom": {
+    "home": {
+      "api": "Your plugin's API answered:",
+      "desc": "This page ships inside the plugin and is served by the app that installed it.",
+      "title": "Hello from your plugin"
+    },
+    "title": "Newsroom",
+    "content": {
+      "article": {
+        "label": "{count, plural, one {Article} other {Articles}}",
+        "title": "Articles",
+        "desc": "News and updates for your community.",
+        "fields": {
+          "title": "Title",
+          "slug": "Slug",
+          "body": "Body",
+          "updatedAt": "Updated",
+          "status": "Status",
+          "author": "Author",
+          "category": "Category"
+        }
+      },
+      "category": {
+        "label": "{count, plural, one {Category} other {Categories}}",
+        "title": "Categories",
+        "desc": "Sections that group the articles.",
+        "fields": {
+          "name": "Name",
+          "slug": "Slug",
+          "updatedAt": "Updated",
+          "createdAt": "Created"
+        }
+      },
+      "comment": {
+        "label": "{count, plural, one {Comment} other {Comments}}",
+        "title": "Comments",
+        "desc": "What readers say under the articles.",
+        "fields": {
+          "slug": "Link",
+          "body": "Comment",
+          "author": "Author",
+          "article": "Article",
+          "parent": "Answers"
+        }
+      },
+      "story": {
+        "label": "{count, plural, one {Story} other {Stories}}",
+        "title": "Stories",
+        "desc": "Reported stories with files, scheduling, live editing and SEO.",
+        "fields": {
+          "title": "Title",
+          "code": "Reference code",
+          "excerpt": "Excerpt",
+          "views": "Views",
+          "featured": "Featured",
+          "animation": "Animation",
+          "author": "Author",
+          "category": "Category",
+          "updatedAt": "Updated"
+        }
+      },
+      "tag": {
+        "label": "{count, plural, one {Tag} other {Tags}}",
+        "title": "Tags",
+        "desc": "Keyed by uuid, so their ids give nothing away.",
+        "fields": {
+          "name": "Name",
+          "slug": "Slug",
+          "category": "Category",
+          "relatedTags": "Related tags",
+          "updatedAt": "Updated"
+        }
+      },
+      "event": {
+        "label": "{count, plural, one {Event} other {Events}}",
+        "title": "Events",
+        "desc": "Keyed by bigint. Ids too large for a JavaScript number arrive as exact strings.",
+        "fields": {
+          "title": "Title",
+          "slug": "Slug",
+          "body": "Description",
+          "primaryTag": "Main tag",
+          "category": "Category",
+          "tags": "Tags",
+          "relatedEvents": "Related events",
+          "sessions": "Sessions",
+          "gallery": "Gallery",
+          "updatedAt": "Updated"
+        }
+      },
+      "letter": {
+        "label": "{count, plural, one {Letter} other {Letters}}",
+        "title": "Letters",
+        "desc": "Letters to the editor, written and edited by signed-in members.",
+        "fields": {
+          "title": "Title",
+          "slug": "Slug",
+          "body": "Letter",
+          "author": "Author",
+          "publishedAt": "Published",
+          "updatedAt": "Updated",
+          "desk": "Desk"
+        }
+      },
+      "page": {
+        "label": "{count, plural, one {Page} other {Pages}}",
+        "title": "Pages",
+        "desc": "Pages built from blocks.",
+        "fields": {
+          "title": "Title",
+          "slug": "Slug",
+          "content": "Content"
+        }
+      }
+    },
+    "articles": {
+      "title": "News",
+      "desc": "The latest articles from our team.",
+      "empty": "No articles yet. Check back soon.",
+      "error": "The articles could not be loaded. Try again in a moment.",
+      "pagination": "Article pages",
+      "form": {
+        "title": "Title",
+        "body": "Article"
+      },
+      "new": {
+        "title": "Write an article",
+        "submit": "Publish article",
+        "success": {
+          "title": "Article published",
+          "desc": "Readers can see it now."
+        },
+        "draft": {
+          "title": "Draft saved",
+          "desc": "It is not public yet, so only you and the site's staff can see it."
+        },
+        "pending": {
+          "title": "Sent for approval",
+          "desc": "A moderator reviews it before readers can see it."
+        }
+      },
+      "edit": {
+        "title": "Edit article",
+        "submit": "Save changes",
+        "view": "View article",
+        "success": {
+          "title": "Article saved",
+          "desc": "\"{title}\" is up to date."
+        }
+      },
+      "state": {
+        "unauthenticated": {
+          "title": "Sign in to edit",
+          "action": "Sign in"
+        },
+        "forbidden": {
+          "title": "You can't edit this article",
+          "desc": "Only its author and moderators can edit it."
+        },
+        "not_found": {
+          "title": "Article not found",
+          "desc": "It does not exist, or you cannot see it."
+        }
+      },
+      "edit_link": "Edit",
+      "report_type": "article",
+      "search_label": "Search articles",
+      "sort_label": "Sort articles",
+      "sort": {
+        "newest": "Newest first",
+        "oldest": "Oldest first",
+        "title": "Title A–Z"
+      },
+      "no_results": "No articles match your search.",
+      "latest": {
+        "title": "Latest articles",
+        "all": "All news",
+        "empty": "No other articles yet.",
+        "error": "The latest articles could not be loaded.",
+        "loading": "Loading the latest articles"
+      }
+    },
+    "comments": {
+      "title": "{count, plural, =0 {Comments} one {# comment} other {# comments}}",
+      "empty": "No comments yet. Be the first.",
+      "loading": "Loading comments",
+      "retry": "Try again",
+      "load_more": "Load more comments",
+      "load_failed": {
+        "title": "Could not load comments",
+        "desc": "Check your connection and try again."
+      },
+      "sign_in": "Sign in to comment",
+      "form": {
+        "label": "Your comment",
+        "submit": "Post comment",
+        "required": "Write a comment first.",
+        "edit_label": "Edit your comment",
+        "save": "Save",
+        "cancel": "Cancel",
+        "reply_label": "Reply to {name}"
+      },
+      "created": {
+        "title": "Comment posted",
+        "desc": "Your comment is below the article."
+      },
+      "draft": {
+        "title": "Comment saved as a draft",
+        "desc": "It is not public yet, so it does not appear below the article."
+      },
+      "pending": {
+        "title": "Your comment is waiting for a moderator",
+        "desc": "A moderator reviews it before readers can see it."
+      },
+      "someone": "Deleted user",
+      "edit": "Edit",
+      "edited": {
+        "title": "Comment saved",
+        "desc": "Your changes are live."
+      },
+      "edit_pending": {
+        "title": "Your changes are waiting for a moderator",
+        "desc": "Readers see the earlier text until a moderator approves."
+      },
+      "reply": "Reply",
+      "removed": "This comment was removed.",
+      "truncated": "This conversation is long, so some deeper replies are not shown."
+    },
+    "admin": {
+      "nav": {
+        "overview": "Overview"
+      },
+      "overview": {
+        "title": "Newsroom",
+        "desc": "A plugin page inside the AdminCP, shipped by the newsroom plugin and served by the app that installed it.",
+        "points": {
+          "shell": "The sidebar, the breadcrumb and the admin session guard around this page are the AdminCP's - the route declared area: \"admin\" and nothing else.",
+          "path": "The URL is the one the route spells out in full. An area chooses the frame; it never adds a prefix.",
+          "nav": "The sidebar entry that led here is a separate declaration. A plugin page may have no entry, and an entry may point anywhere."
+        },
+        "editor": {
+          "title": "Editor showcase",
+          "desc": "Stored editor HTML rendered with EditorContent - one of everything, so a change to the tiptap extensions or to the .tiptap styles shows up here first."
+        },
+        "form": {
+          "title": "Editor in a form",
+          "desc": "AutoFormEditor inside an AutoForm. Type / for blocks, use + for panels and tables, and press Ctrl or Cmd + Enter to save.",
+          "summary": {
+            "label": "Summary"
+          },
+          "description": {
+            "label": "Description",
+            "desc": "Steps, logs and acceptance criteria. Nothing is stored - this form only shows what the editor sends.",
+            "required": "Describe what happened"
+          },
+          "comment": {
+            "label": "Comment",
+            "placeholder": "Leave a note for the assignee…"
+          },
+          "submit": "Save issue",
+          "success": {
+            "title": "Issue saved",
+            "desc": "{words, plural, one {# word} other {# words}} in the description."
+          }
+        }
+      }
+    },
+    "containers": {
+      "desks": {
+        "label": "{count, plural, one {Desk} other {Desks}}",
+        "title": "Desks",
+        "desc": "The desks readers send their letters to. Drag to reorder or nest desks.",
+        "fields": {
+          "description": "Description",
+          "color": "Color",
+          "icon": "Icon",
+          "locked": "Locked"
+        }
+      }
+    },
+    "guide": {
+      "title": "Plugin routing guide",
+      "desc": "A nested route shipped by the newsroom plugin, served by the app that installed it.",
+      "index": {
+        "intro": "This page and the frame around it are two routes declared in one plugin's routes.ts. Neither was copied into the application - both are lazily imported from the plugin's own build output.",
+        "points": {
+          "nested": "A layout claims no URL; this index page claims the layout's.",
+          "messages": "The layout declares the messages both pages render in, so they are warmed alongside the code.",
+          "breadcrumb": "The breadcrumb above comes from the layout, next to the component that needs it."
+        }
+      },
+      "topic": {
+        "from_index": "You arrived here from the guide index - the route's search contract recognised it, and everything else in the query string was dropped."
+      }
+    },
+    "browse": {
+      "title": "Browse",
+      "desc": "A paginated page whose route declares an eager search schema, so ?page=999 is clamped before anything renders.",
+      "pagination": "Pagination",
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page} of {of}"
+    },
+    "events": {
+      "sessions": "Sessions"
+    },
+    "moderation": {
+      "category": {
+        "label": "Categories",
+        "desc": "Limit this permission to stories in some categories."
+      }
+    },
+    "desks": {
+      "title": "Desks",
+      "desc": "Pick the desk that fits your letter, or write a new one.",
+      "tree": "All desks",
+      "children": "Desks inside",
+      "letters": "Letters",
+      "new_letter": "Write a letter",
+      "pagination": "Letter pages",
+      "newest": "Newest letters",
+      "older": "Older letters",
+      "empty": {
+        "title": "No desks yet",
+        "desc": "An admin has not created any desks. Once they do, they show up here.",
+        "home": "Back to home"
+      },
+      "empty_desk": {
+        "title": "Nothing here yet",
+        "desc": "Be the first to write to this desk."
+      },
+      "not_found": {
+        "title": "Desk not found",
+        "desc": "It may have been removed, or the link is wrong.",
+        "back": "See all desks"
+      },
+      "latest": {
+        "title": "Latest letters",
+        "all": "All letters",
+        "empty": "Nothing posted yet.",
+        "error": "Couldn't load the latest letters.",
+        "loading": "Loading letters..."
+      }
+    },
+    "letters": {
+      "new": {
+        "title": "Write a letter",
+        "desc": "Share a question, a correction or an idea with the newsroom. Everyone can read it as soon as you send it.",
+        "submit": "Send letter",
+        "no_desks": {
+          "title": "No desks yet",
+          "desc": "Letters go to a desk, and an admin has not created one yet. Check back soon.",
+          "action": "Browse desks"
+        }
+      },
+      "edit": {
+        "title": "Edit letter",
+        "desc": "Changes are saved as a new revision, so nothing you replace is lost.",
+        "submit": "Save changes",
+        "view": "View letter",
+        "success": {
+          "title": "Changes saved",
+          "desc": "\"{title}\" now shows your latest edits."
+        }
+      },
+      "detail": {
+        "actions": "Letter actions",
+        "edit": "Edit",
+        "new": "Write a letter",
+        "created": {
+          "title": "Letter sent",
+          "desc": "It is live. Use Edit whenever you want to change it."
+        },
+        "desk": "Desk",
+        "desks": "Desks",
+        "posted_by": "Posted by",
+        "deleted_user": "Deleted user",
+        "report_type": "letter",
+        "hidden": {
+          "title": "This letter is hidden",
+          "desc": "A moderator hid it, so readers can't see it. You can, because you wrote it or moderate this desk."
+        }
+      },
+      "form": {
+        "desk": {
+          "label": "Desk",
+          "desc": "Pick where the letter belongs. You can't move it later.",
+          "placeholder": "Choose a desk",
+          "required": "Pick a desk"
+        },
+        "title": {
+          "label": "Title",
+          "min": "Use at least 3 characters",
+          "max": "Keep it under 200 characters"
+        },
+        "body": {
+          "label": "Letter",
+          "desc": "Type / for headings, lists and more.",
+          "required": "Write your letter"
+        }
+      },
+      "state": {
+        "unauthenticated": {
+          "title": "Sign in to continue",
+          "desc": "You need an account to write or edit a letter.",
+          "action": "Sign in"
+        },
+        "forbidden": {
+          "title": "You can't edit this letter",
+          "desc": "Only its author or a moderator can change it."
+        },
+        "not_found": {
+          "title": "Letter not found",
+          "desc": "It may have been removed, or the link is wrong."
+        },
+        "back": "Write a new letter"
+      },
+      "list": {
+        "title": "Letters",
+        "desc": "Questions, corrections and ideas from readers, newest first.",
+        "new": "Write a letter",
+        "search_label": "Search letters",
+        "search_placeholder": "Search by title",
+        "desk_label": "Desk",
+        "all_desks": "All desks",
+        "sort_label": "Sort by",
+        "sort": {
+          "newest": "Newest",
+          "oldest": "Oldest",
+          "title": "Title (A-Z)"
+        },
+        "pagination": "Letter pages",
+        "deleted_user": "Deleted user",
+        "empty": {
+          "title": "No letters yet",
+          "desc": "Be the first to write to the newsroom."
+        },
+        "no_results": {
+          "title": "No letters match",
+          "desc": "Try another search term or desk.",
+          "clear": "Clear filters"
+        },
+        "error": {
+          "title": "Couldn't load letters",
+          "desc": "Something went wrong on our side. Refresh the page to try again."
+        }
+      }
+    },
+    "stories": {
+      "published": "Published",
+      "faq": "Frequently asked questions"
+    }
+  },
+  "newsroom:article": "Articles",
+  "newsroom:article:can_view": "View articles",
+  "newsroom:article:can_create": "Create articles",
+  "newsroom:article:can_edit": "Edit articles",
+  "newsroom:article:can_delete": "Delete articles",
+  "newsroom:article:can_publish": "Publish and unpublish articles",
+  "newsroom:category": "Categories",
+  "newsroom:category:can_view": "View categories",
+  "newsroom:category:can_create": "Create categories",
+  "newsroom:category:can_edit": "Edit categories",
+  "newsroom:category:can_delete": "Delete categories",
+  "newsroom:comment": "Comments",
+  "newsroom:comment:can_view": "View comments",
+  "newsroom:comment:can_create": "Create comments",
+  "newsroom:comment:can_edit": "Edit comments",
+  "newsroom:comment:can_delete": "Delete comments",
+  "newsroom:comment:can_publish": "Publish and unpublish comments",
+  "newsroom:comment:can_hide": "Hide and unhide comments",
+  "newsroom:story": "Stories",
+  "newsroom:story:can_view": "View stories",
+  "newsroom:story:can_create": "Create stories",
+  "newsroom:story:can_edit": "Edit stories",
+  "newsroom:story:can_delete": "Delete stories",
+  "newsroom:story:can_publish": "Publish and unpublish stories",
+  "newsroom:story:can_restore": "Restore an earlier version of a story",
+  "newsroom:tag": "Tags",
+  "newsroom:tag:can_view": "View tags",
+  "newsroom:tag:can_create": "Create tags",
+  "newsroom:tag:can_edit": "Edit tags",
+  "newsroom:tag:can_delete": "Delete tags",
+  "newsroom:tag:can_publish": "Publish and unpublish tags",
+  "newsroom:tag:can_restore": "Restore an earlier version of a tag",
+  "newsroom:tag:can_hide": "Hide and unhide tags",
+  "newsroom:event": "Events",
+  "newsroom:event:can_view": "View events",
+  "newsroom:event:can_create": "Create events",
+  "newsroom:event:can_edit": "Edit events",
+  "newsroom:event:can_delete": "Delete events",
+  "newsroom:event:can_publish": "Publish and unpublish events",
+  "newsroom:event:can_restore": "Restore an earlier version of an event",
+  "newsroom:event:can_hide": "Hide and unhide events",
+  "newsroom:letter": "Letters",
+  "newsroom:letter:can_view": "View letters",
+  "newsroom:letter:can_create": "Create letters",
+  "newsroom:letter:can_edit": "Edit letters",
+  "newsroom:letter:can_delete": "Delete letters",
+  "newsroom:letter:can_publish": "Publish and unpublish letters",
+  "newsroom:letter:can_restore": "Restore an earlier version of a letter",
+  "newsroom:letter:can_hide": "Hide and unhide letters",
+  "newsroom:newsroom_desks": "Desks",
+  "newsroom:newsroom_desks:can_view": "View desks",
+  "newsroom:newsroom_desks:can_create": "Create desks",
+  "newsroom:newsroom_desks:can_edit": "Edit and move desks",
+  "newsroom:newsroom_desks:can_delete": "Delete desks",
+  "ai_actions": {
+    "newsroom": {
+      "story_excerpt": {
+        "title": "Suggest story teaser",
+        "description": "Suggests a teaser for a newsroom story."
+      }
+    }
+  },
+  "newsroom:article:can_restore": "Restore an earlier version of an article",
+  "newsroom:explainer": "Explainers",
+  "newsroom:explainer:can_view": "View explainers",
+  "newsroom:explainer:can_create": "Create explainers",
+  "newsroom:explainer:can_edit": "Edit explainers",
+  "newsroom:explainer:can_delete": "Delete explainers",
+  "newsroom:explainer:can_publish": "Publish and unpublish explainers",
+  "newsroom:explainer:can_restore": "Restore an earlier version of an explainer",
+  "newsroom:bulletin": "Bulletins",
+  "newsroom:bulletin:can_view": "View bulletins",
+  "newsroom:bulletin:can_create": "Create bulletins",
+  "newsroom:bulletin:can_edit": "Edit bulletins",
+  "newsroom:bulletin:can_delete": "Delete bulletins",
+  "newsroom:bulletin:can_publish": "Publish and unpublish bulletins",
+  "newsroom:bulletin:can_restore": "Restore an earlier version of a bulletin",
+  "newsroom:page": "Pages",
+  "newsroom:page:can_view": "View pages",
+  "newsroom:page:can_create": "Create pages",
+  "newsroom:page:can_edit": "Edit pages",
+  "newsroom:page:can_delete": "Delete pages",
+  "newsroom:page:can_publish": "Publish and unpublish pages",
+  "newsroom:widgets": "Widgets",
+  "newsroom:widgets:can_edit": "Edit page widgets"
+}

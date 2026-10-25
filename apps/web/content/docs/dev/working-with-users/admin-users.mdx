@@ -1,0 +1,83 @@
+---
+title: Manage users
+description: Find, create and edit VitNode member accounts in the AdminCP, the rules that protect staff accounts, and the admin user API routes with their permissions.
+icon: UserCog
+---
+
+The AdminCP user screens let staff find accounts, create one by hand, and change everything a member can change in their own settings, plus a few things only staff can. They live at **AdminCP → Core → Users → User List** (`/admin/core/users`).
+
+## The user list
+
+{/* Image prompt: VitNode AdminCP user list at /admin/core/users. Data table with a search field ("Search users by email or username...") and a Roles filter above it, an "Add User" button at the top right, and columns User (avatar and name), Email, Roles (badges) and Created At, with a pencil "Edit profile" button at the end of each row and a "Verify Email" button on unverified rows. Dark theme, 1440x900. */}
+
+The table shows **User**, **Email**, **Roles** and **Created At**. Search by email or username, or filter by role. Each row has an **Edit profile** button that opens the user, and accounts with an unconfirmed email also get **Verify Email**.
+
+**Add User** opens a dialog that creates an account from a **Username** (3 to 32 characters), an **Email** and a **Password** (at least 8 characters). It needs `users:can_create`.
+
+There is no ban or delete action for accounts.
+
+## Edit a user
+
+{/* Image prompt: VitNode AdminCP user page at /admin/core/users/1. Left column: profile card with cover, round avatar, name, @handle, Staff and Verified badges, then Personal information, Preferences, Roles, Connected accounts and Devices cards. Right column: segmented tabs Activity, Notifications, Password & passkeys above a vertical activity timeline. Dark theme, 1440x1000. */}
+
+Open a user at `/admin/core/users/[id]`. Everything the member can change in their own `/settings` is editable here too:
+
+| Area                        | What staff can change                                                                                  |
+| :-------------------------- | :----------------------------------------------------------------------------------------------------- |
+| Profile card                | Display name, name code, email, [avatar and cover](/docs/dev/working-with-users/avatars), and **Mark email as verified** |
+| Personal information        | First name, last name, headline, phone, birthday, **Show real name**                                   |
+| Preferences                 | Language, time zone (or automatic), newsletter                                                         |
+| Roles                       | Primary role and secondary roles                                                                       |
+| Connected accounts          | Disconnect an SSO account, choose where the avatar and name come from, turn **Sync on sign-in** on or off |
+| Devices                     | Sign out one device, or every device at once                                                           |
+| **Activity** tab            | The account's timeline (read-only)                                                                     |
+| **Notifications** tab       | In-app, push and email (with frequency) per notification type                                          |
+| **Password & passkeys** tab | Set a new password, rename or delete passkeys                                                          |
+
+A few rules differ from the member's own settings:
+
+- **Staff can edit locked fields.** The role's **Allow editing personal information** and the install's `users.personalInformation` switches ([Profile fields](/docs/dev/working-with-users/profile-fields#who-may-edit)) limit members, not staff.
+- **Notification locks still apply.** Mandatory types, and types the notification settings stop members from changing, are read-only here too, because delivery ignores stored choices for them.
+- **The last sign-in method can't be removed.** Disconnecting the only SSO account or deleting the only passkey answers `409`.
+- **Setting a password signs the member out everywhere**, AdminCP sessions included.
+- **Sync now isn't offered.** It needs the member to sign in with the provider themselves.
+
+## Who may do it
+
+Reads need `users:can_view`, creating an account needs `users:can_create`, and every write needs `users:can_edit`, plus `users:can_edit_admin` when the target is staff. A staff target must also sit within your own access. You need every admin and moderator permission they hold, and only a root administrator can edit a root or unrestricted account. So nobody can reset the password of, or demote, someone above them. [Permissions](/docs/dev/working-with-users/staff-permissions) shows how admins grant these.
+
+## API
+
+All routes are under `/api/@vitnode/core/admin/users` and need an AdminCP session.
+
+| Method   | Path                                     | Permission     | Does                                                 |
+| :------- | :--------------------------------------- | :------------- | :--------------------------------------------------- |
+| `GET`    | `/list`                                  | `can_view`     | The user list, with search and role filter           |
+| `POST`   | `/create`                                | `can_create`   | Creates an account from `{ email, name, password }`  |
+| `GET`    | `/{id}`                                  | `can_view`     | One user                                             |
+| `PATCH`  | `/{id}`                                  | `can_edit`     | Account, personal information and preferences        |
+| `GET`    | `/{id}/timeline`                         | `can_view`     | The activity timeline                                |
+| `POST`   | `/{id}/verify-email`                     | `can_edit`     | Marks the email as verified                          |
+| `PUT`    | `/{id}/password`                         | `can_edit`     | Sets a new password and revokes every session        |
+| `GET`    | `/{id}/devices`                          | `can_view`     | Devices with an active session                       |
+| `DELETE` | `/{id}/devices/{publicId}`               | `can_edit`     | Signs one device out                                 |
+| `DELETE` | `/{id}/devices`                          | `can_edit`     | Signs every device out                               |
+| `GET`    | `/{id}/passkeys`                         | `can_view`     | Passkeys                                             |
+| `PATCH`  | `/{id}/passkeys/{passkeyId}`             | `can_edit`     | Renames a passkey                                    |
+| `DELETE` | `/{id}/passkeys/{passkeyId}`             | `can_edit`     | Deletes a passkey                                    |
+| `GET`    | `/{id}/sso`                              | `can_view`     | Connected accounts, sign-in summary, profile sources |
+| `DELETE` | `/{id}/sso/{providerId}`                 | `can_edit`     | Disconnects an account                               |
+| `PUT`    | `/{id}/sso/preferences`                  | `can_edit`     | Profile sources and sync on sign-in                  |
+| `GET`    | `/{id}/notification-preferences`         | `can_view`     | Notification preferences per type                    |
+| `PUT`    | `/{id}/notification-preferences`         | `can_edit`     | Changes notification preferences                     |
+| `POST`   | `/{id}/images/{kind}`                    | `can_edit`     | Uploads an avatar or cover                           |
+| `DELETE` | `/{id}/images/{kind}`                    | `can_edit`     | Removes an avatar or cover                           |
+
+Every `can_edit` route also checks `can_edit_admin` and the access rule above when the target is staff.
+
+The `PATCH /{id}` body takes any of `email`, `name`, `nameCode`, `roleId`, `secondaryRoleIds`, `firstName`, `lastName`, `headline`, `phone`, `showRealName`, `birthday` (`YYYY-MM-DD` or `null`), `language`, `timeZone` (`null` for automatic) and `newsletter`. At least one field is required.
+
+## Related
+
+- [Roles](/docs/dev/working-with-users/roles) explains what the primary and secondary roles do.
+- [Email verification](/docs/dev/working-with-users/email-verification) explains what **Mark email as verified** unlocks.

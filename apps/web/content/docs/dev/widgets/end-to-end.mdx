@@ -1,18 +1,19 @@
 ---
-title: End-to-end Example
-description: Define a block, register it with a plugin, add a blocks() field, write a record, and render it - the whole path in seven steps.
+title: First widget
+description: Build a VitNode widget end to end. Define it, register it for the browser and the API, store it in a blocks() field, publish a record and render it on a public page.
 icon: Route
 implementation:
   objective: Add a custom widget and let editors place it on a content type's public page.
   decisions:
-    - Which plugin defines the widget? Offer plugins in the project, preferring one that already exports a `blocks` module.
+    - Which plugin defines the widget? Offer plugins in the project, preferring one that already exports a `widgets` module.
     - What does the widget show, and what does an editor fill in? Settle the content in user terms, such as a title, a short text and a tone. Widget fields can be text, numbers, yes/no switches, choices, dates or groups of these; images, files, relations, users and repeatable lists are not supported yet.
     - Which items hold widgets? Offer content types from the chosen plugin that could gain a `blocks()` field, or a new content type such as pages if none fits.
     - Where do the widgets render? Offer the public pages that show the chosen items, and which other widgets the area may accept (only this plugin's, core widgets too, or all).
   constraints:
-    - Define the widget with `defineWidget` (`defineBlock` is the same function) and register the same `blocks` module in the browser plugin export and in `buildApiPlugin()`. Write the bare id; the registry adds the namespace.
+    - Define the widget with `defineWidget` and export it from the plugin's `src/widgets.tsx` as a named `blocks` export. Pass the same object to `buildApiPlugin({ blocks })`. Write the bare id; the registry adds the namespace.
     - Store widgets in a `blocks()` field with an explicit `allowed` list, then build and migrate with the project's scripts.
-    - Render with `ContentRenderer` or a named `ContentZone` using the generated `blocksRegistry`. Do not fetch or validate widget data separately.
+    - "Records of a content type with `publication: true` start as drafts. Publish them before reading them from the public API."
+    - Render with `ContentZone` or `ContentRenderer`. In an app, pass the generated `blocksRegistry` from `src/blocks.gen.ts`; in a plugin page, build one with `createBlockRegistry`. Do not fetch or validate widget data separately.
   related:
     - title: Defining a widget
       href: /docs/dev/widgets/defining-a-block
@@ -22,130 +23,153 @@ implementation:
       href: /docs/dev/widgets/content-zones
 ---
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-Everything below is the `@vitnode/example` plugin as it ships, so you can read the finished version in the repository.
+import { ImgDocs } from "@/components/fumadocs/img";
+import sitePage from "./end-to-end-page.webp";
+
+A widget is a small, configurable piece of a page: a callout, a hero, a list of features. Editors place widgets in an ordered list stored on a record, and your page renders that list. This tutorial follows one callout widget through the whole path in the `newsroom` plugin from the Content Engine lessons. The `newsroom` plugin in the VitNode repository holds a finished version, plus a second widget you do not need here.
 
 ```text
-define block → register in plugin → blocks() field → create content → ContentRenderer
+widget → widgets module → API → blocks() field → table → record → publish → public API → page
 ```
+
+## Before you begin
+
+- The `newsroom` plugin from [Create a content type](/docs/content-engine/create-a-content-type) and [Public API](/docs/content-engine/public-api): its `@/api/builders`, an admin content module and a public content module registering `articleContent`, and an `admin/nav.tsx`. Any plugin with the same setup works.
+- `pnpm dev` running, and an AdminCP account with permission to create and publish the content type. The first account has both.
 
 <Steps>
+
 <Step>
 
-## Define the block
+### Define the widget
 
-```tsx title="plugins/example/src/blocks/callout.tsx"
-import type { BlockComponentProps, BlockData } from '@vitnode/core/widgets'
+A widget is a React component plus the fields an editor fills in. Create `src/widgets/callout.tsx`:
 
-import { defineBlock } from '@vitnode/core/widgets'
-import { field } from '@vitnode/core/content'
+```tsx title="plugins/newsroom/src/widgets/callout.tsx"
+import type { WidgetComponentProps, WidgetData } from "@vitnode/core/widgets";
+
+import { field } from "@vitnode/core/content/fields";
+import { defineWidget } from "@vitnode/core/widgets";
+import { InfoIcon } from "lucide-react";
+
 const calloutFields = {
-  body: field.textarea({ required: true, minLength: 1, maxLength: 600 }),
-  title: field.text({ required: true, minLength: 1, maxLength: 120 }),
+  body: field.textarea({ maxLength: 600, minLength: 1, required: true }),
+  title: field.text({ maxLength: 120, minLength: 1, required: true }),
   tone: field.enum({
-    defaultValue: 'info',
-    values: ['info', 'success', 'warning'],
+    defaultValue: "info",
+    values: ["info", "success", "warning"],
   }),
-}
+};
 
-type CalloutData = BlockData<typeof calloutFields>
+type CalloutData = WidgetData<typeof calloutFields>;
 
 const tones: Record<string, string> = {
-  info: 'border-primary/40 bg-primary/5',
-  success: 'border-success/40 bg-success/5',
-  warning: 'border-destructive/40 bg-destructive/5',
-}
+  info: "border-primary/40 bg-primary/5",
+  success: "border-success/40 bg-success/5",
+  warning: "border-destructive/40 bg-destructive/5",
+};
 
-const Callout = ({ data }: BlockComponentProps<CalloutData>) => (
+const Callout = ({ data }: WidgetComponentProps<CalloutData>) => (
   <aside
-    className={`flex flex-col gap-2 rounded-lg border p-4 md:p-6 ${tones[data.tone ?? 'info']}`}
+    className={`flex flex-col gap-2 rounded-lg border p-4 md:p-6 ${tones[data.tone ?? "info"]}`}
   >
-    <h2 className="text-base font-semibold text-balance md:text-lg">
-      {data.title}
-    </h2>
-    <p className="text-sm leading-relaxed text-pretty md:text-base">
-      {data.body}
-    </p>
+    <h2 className="text-base font-semibold text-balance md:text-lg">{data.title}</h2>
+    <p className="text-sm leading-relaxed text-pretty md:text-base">{data.body}</p>
   </aside>
-)
+);
 
-export const calloutBlock = defineBlock({
+export const calloutWidget = defineWidget({
   component: Callout,
-  description: 'A short highlighted note in one of three tones.',
+  description: "A short highlighted note in one of three tones.",
   fields: calloutFields,
-  id: 'callout',
-  name: 'Callout',
-})
+  icon: InfoIcon,
+  id: "callout",
+  name: "Callout",
+});
 ```
 
+- **`fields`** use the same `field.*` builders as content types. They validate what is stored and describe the editor's form.
+- **`WidgetData<typeof calloutFields>`** is the type of `data` the component receives.
+- **`id`** is bare. The registry adds the plugin's namespace, so this widget is stored as `newsroom:callout`.
+- The component only renders `data`. It runs in the browser and during SSR, so keep server-only code, such as database access, out of it.
+
 </Step>
+
 <Step>
 
-## Export the plugin's `blocks` module
+### Export the plugin's widgets
 
-The subpath is the registration. Name the file `src/blocks.tsx` so it resolves as `@vitnode/example/blocks`.
+Create `src/widgets.tsx`, exporting the plugin's widget list as `blocks`:
 
-```tsx title="plugins/example/src/blocks.tsx"
-import type { BlockPluginSource } from '@vitnode/core/widgets'
+```tsx title="plugins/newsroom/src/widgets.tsx"
+import type { WidgetPluginSource } from "@vitnode/core/widgets";
 
-import { manifest } from '@/manifest.gen'
+import { manifest } from "@/manifest.gen";
 
-import { calloutBlock } from './blocks/callout'
+import { calloutWidget } from "./widgets/callout";
 
-export const blocks = {
+export const widgets = {
   pluginId: manifest.id,
-  blocks: [calloutBlock],
-} satisfies BlockPluginSource
+  blocks: [calloutWidget],
+} satisfies WidgetPluginSource;
+
+export const blocks = widgets;
 ```
 
-That is the whole registration for the browser. VitNode's Vite plugin finds the module, writes `src/blocks.gen.ts` in every application that configures the plugin, and the block is available as `example:callout`.
-
-Add `namespace: "acme"` here if the derived one - the last segment of the package name - is not the id you want.
+The file name and the `blocks` export are the registration. VitNode's Vite plugin looks for each configured plugin's `widgets` module (`src/blocks.tsx` in older plugins), imports `blocks` from it and writes `src/blocks.gen.ts` in the app. That file exports `blocksRegistry`, the registry of core's and every plugin's widgets. Add later widgets to the same `blocks` array.
 
 </Step>
+
 <Step>
 
-## Give the API the same list
+### Give the API the same list
 
-The API validates writes, so it needs the definitions too. Pass the **same object**:
+The API validates every write, so it needs the same definitions. Pass the **same object** to `buildApiPlugin` in `src/config.api.ts`:
 
-```ts title="plugins/example/src/config.api.ts"
-import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+```ts title="plugins/newsroom/src/config.api.ts (excerpt)"
+import { widgets } from "./widgets"; // [!code ++]
 
-import { manifest } from '@/manifest.gen'
-
-// [!code ++:2]
-import { blocks } from './blocks'
-
-export const exampleApiPlugin = () =>
+export const newsroomApiPlugin = () =>
   buildApiPlugin({
     manifest,
-    // [!code ++:2]
-    blocks,
-    modules: [adminModule],
-  })
+    blocks: widgets, // [!code ++]
+    // ...
+  });
 ```
 
-Passing a different plugin's module is an error - the API and the browser must namespace a block identically or a stored `type` would resolve to two different things.
+Passing another plugin's object is an error, because the API and the browser must namespace a widget the same way.
 
 </Step>
+
 <Step>
 
-## Add a `blocks()` field to a content type
+### Add a blocks() field to a content type
 
-```ts title="plugins/example/src/content/page.ts"
-import { defineContentType, field } from '@vitnode/core/content'
+Share the list of widgets a page may hold in `src/content/page-blocks.ts`, so the field and the page that renders it agree:
+
+```ts title="plugins/newsroom/src/content/page-blocks.ts"
+export const PAGE_BLOCKS_ALLOWED = ["core:*", "newsroom:callout"] as const;
+```
+
+Then add a `blocks()` field to the content type, here a new `newsroom.page`:
+
+```ts title="plugins/newsroom/src/content/page.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+
+import { PAGE_BLOCKS_ALLOWED } from "./page-blocks";
 
 export const pageContentType = defineContentType({
-  id: 'example.page',
-  tableName: 'example_pages',
+  id: "newsroom.page",
+  tableName: "newsroom_pages",
 
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
-    slug: field.slug({ source: 'title' }),
+    slug: field.slug({ source: "title" }),
+
     content: field.blocks({
-      allowed: ['core:*', 'example:callout'],
+      allowed: PAGE_BLOCKS_ALLOWED,
       max: 50,
     }),
   },
@@ -153,49 +177,158 @@ export const pageContentType = defineContentType({
   publication: true,
 
   publicApi: {
-    path: 'pages',
-    fields: ['title', 'slug', 'content', 'publishedAt'],
+    path: "pages",
+    fields: ["title", "slug", "content", "publishedAt"],
   },
-})
+
+  admin: {
+    titleField: "title",
+    list: {
+      orderableFields: ["title"],
+      searchableFields: ["title"],
+    },
+  },
+});
 ```
 
-```ts title="plugins/example/src/database/pages.ts"
-import { createContentModel } from '@vitnode/core/content/server'
-
-import { pageContentType } from '@/content/page'
-
-export const pageContent = createContentModel(pageContentType)
-
-export const example_pages = pageContent.table
-```
-
-Register `pageContent` in the plugin's admin module and its public module, exactly like any other content type.
+- **`allowed`** is enforced on every write. `core:*` admits core's built-in widgets, such as the `core:hero` this tutorial places above the callout, and `newsroom:callout` admits yours.
+- **`publication: true`** gives records a draft and a published state. New records are drafts.
+- **`publicApi.path`** makes the public route `content/pages`, returning the listed fields.
 
 </Step>
+
 <Step>
 
-## Build and migrate
+### Create the model
+
+Create `src/database/pages.ts`. The model is what the API modules and the migration generator read:
+
+```ts title="plugins/newsroom/src/database/pages.ts"
+import { createContentModel } from "@vitnode/core/content/server";
+
+import { pageContentType } from "@/content/page";
+
+export const pageContent = createContentModel(pageContentType);
+
+export const newsroom_pages = pageContent.table;
+```
+
+The `newsroom_pages` export must stay, since tables reach the migration only as named exports of files in `src/database/`.
+
+</Step>
+
+<Step>
+
+### Register the admin and public modules
+
+Add `pageContent` to the plugin's admin content module, which creates the AdminCP routes (create, update, publish...). Keep the content types you already registered, such as `articleContent`:
+
+```ts title="plugins/newsroom/src/api/modules/admin/admin.module.ts (excerpt)"
+import { pageContent } from "@/database/pages"; // [!code ++]
+
+export const adminModule = buildModule({
+  name: "admin",
+  routes: [],
+  modules: [
+    buildContentAdminModule({
+      contentTypes: [
+        articleContent,
+        pageContent, // [!code ++]
+      ],
+    }),
+  ],
+});
+```
+
+And add it next to `articleContent` in the public content module in `src/config.api.ts`, which creates `GET /api/newsroom/content/pages/{slug}`:
+
+```ts title="plugins/newsroom/src/config.api.ts (excerpt)"
+    modules: [
+      adminModule,
+      buildContentPublicModule({
+        contentTypes: [
+          articleContent,
+          pageContent, // [!code ++]
+        ],
+      }),
+    ],
+```
+
+</Step>
+
+<Step>
+
+### Add the AdminCP screen
+
+Add the content type to `src/admin/nav.tsx`, after the articles entry, and add `LayoutTemplateIcon` to the existing `lucide-react` import, so staff get a **Pages** screen to find, publish and delete records:
+
+```tsx title="plugins/newsroom/src/admin/nav.tsx (excerpt)"
+import { LayoutTemplateIcon, NewspaperIcon } from "lucide-react";
+
+import { pageContentType } from "@/content/page"; // [!code ++]
+
+export const adminNav = {
+  pluginId: manifest.id,
+  contentTypes: [
+    { definition: articleContentType, icon: <NewspaperIcon /> },
+    { definition: pageContentType, icon: <LayoutTemplateIcon /> }, // [!code ++]
+  ],
+};
+```
+
+Then name the content type in `src/locales/en.json`: a `page` entry next to `content.article`, and its permission labels at the root, next to the article ones. Keep the keys you already have:
+
+```json title="plugins/newsroom/src/locales/en.json (excerpt)"
+{
+  "newsroom": {
+    "content": {
+      "page": {
+        "label": "{count, plural, one {Page} other {Pages}}",
+        "title": "Pages",
+        "desc": "Pages built from widgets.",
+        "fields": { "title": "Title", "slug": "Slug", "content": "Content" }
+      }
+    }
+  },
+  "newsroom:page": "Pages",
+  "newsroom:page:can_view": "View pages",
+  "newsroom:page:can_create": "Create pages",
+  "newsroom:page:can_edit": "Edit pages",
+  "newsroom:page:can_delete": "Delete pages",
+  "newsroom:page:can_publish": "Publish and unpublish pages"
+}
+```
+
+The generated form edits `title` and `slug` only. You fill a `blocks()` field through the API, as in the next steps, or through a [visual editor](/docs/dev/widgets/visual-editor) you build for it.
+
+</Step>
+
+<Step>
+
+### Build and migrate
+
+The migration generator reads the plugin's build output, so build the plugin first, then migrate from the workspace root:
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
 
 ```bash tab="bun"
-bun run db:migrate
+bun run build:plugins && bun run db:migrate
 ```
 
 ```bash tab="pnpm"
-pnpm db:migrate
+pnpm build:plugins && pnpm db:migrate
 ```
 
 ```bash tab="npm"
-npm run db:migrate
+npm run build:plugins && npm run db:migrate
 ```
 
 </Tabs>
 
-The generated migration is one table with one JSONB column for the zone:
+The new table stores the widget list in one JSONB column:
 
 ```sql
-CREATE TABLE "example_pages" (
+CREATE TABLE "newsroom_pages" (
 	"id" serial PRIMARY KEY,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL,
@@ -208,91 +341,208 @@ CREATE TABLE "example_pages" (
 ```
 
 </Step>
+
 <Step>
 
-## Create a record with blocks
+### Create a record with widgets
 
-The generated admin route takes the zone as part of the payload. Give every instance its own stable id.
+The content type's admin routes are generated, so there is no route type for `fetcher` to infer. Call them with `rawFetcher`, the untyped twin with the same transport. Add a temporary component that creates a page with two widgets and publishes it. Create `src/pages/check-create-page.tsx`:
 
-The generated admin module has no static type to infer from, so it is reached with `rawFetcher` - the same call the AdminCP itself makes.
+```tsx title="plugins/newsroom/src/pages/check-create-page.tsx"
+import { Button } from "@vitnode/core/components/ui/button";
+import { rawFetcher } from "@vitnode/core/tanstack/fetcher";
+import { useState } from "react";
 
-```ts
-import { createBlockInstance } from '@vitnode/core/widgets'
-import { rawFetcher } from '@vitnode/core/tanstack/fetcher'
+import { manifest } from "@/manifest.gen";
 
-await rawFetcher({
-  method: 'post',
-  module: 'content/page',
-  path: '/',
-  pluginId: '@vitnode/example',
-  prefixPath: '/admin',
-  body: {
-    title: 'Build your community',
-    content: [
-      createBlockInstance('core:hero', {
-        title: 'Build your community',
-        description: 'Everything you need, in one place.',
-      }),
-      createBlockInstance('example:callout', {
-        title: 'Heads up',
-        body: 'Blocks are validated before they are stored.',
-        tone: 'info',
-      }),
-    ],
-  },
-})
+export const CheckCreatePage = () => {
+  const [result, setResult] = useState("");
+  const [isPending, setIsPending] = useState(false);
+
+  const onClick = async () => {
+    setIsPending(true);
+    try {
+      const created = await rawFetcher({
+        pluginId: manifest.id,
+        method: "post",
+        module: "admin/content/page",
+        path: "/",
+        body: {
+          title: "About the newsroom",
+          content: [
+            {
+              id: crypto.randomUUID(),
+              type: "core:hero",
+              data: {
+                title: "Local news, written by neighbours",
+                description: "Stories, events and letters from the people who live here.",
+              },
+            },
+            {
+              id: crypto.randomUUID(),
+              type: "newsroom:callout",
+              data: {
+                title: "Heads up",
+                body: "Widgets are validated before they are stored.",
+                tone: "info",
+              },
+            },
+          ],
+        },
+      });
+      if (!created.ok) {
+        setResult(`Create answered ${created.status}: ${await created.text()}`);
+
+        return;
+      }
+      const page: { id: number; slug: string } = await created.json();
+
+      const published = await rawFetcher({
+        pluginId: manifest.id,
+        method: "post",
+        module: "admin/content/page",
+        path: "/{id}/publish",
+        params: { id: page.id },
+      });
+      setResult(`Page ${page.id} (${page.slug}): publish answered ${published.status}`);
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <Button isLoading={isPending} onClick={onClick}>
+        Create a test page
+      </Button>
+      {result ? <output>{result}</output> : null}
+    </div>
+  );
+};
 ```
 
-`content/page` is the content type's `permissionModule`, derived from the entity half of its id.
+Render `<CheckCreatePage />` on any newsroom page, sign in to the AdminCP in the same browser (the routes need an AdminCP session and the content type's create and publish permissions) and press the button. It shows `Page 2 (about-the-newsroom): publish answered 200`. Remove the component when you are done.
 
-Anything the registry refuses - an unregistered block, one the field does not allow, data that breaks a field, two instances sharing an id - is a 422 naming the index of the block at fault. Nothing half-valid is stored.
+Each widget instance is `{ id, type, data }`. The `id` is any unique string of letters, digits, `-` and `_`, and stays with the widget when it is moved. In server code, `createBlockInstance("newsroom:callout", data)` from `@vitnode/core/widgets` builds one with a fresh id.
+
+The write is all or nothing. A widget the field does not allow, data that breaks a widget's fields or two instances with the same id return `400`, with a message naming the widget's position, and nothing is stored.
+
+The record starts as a draft, and the public API does not serve drafts, which is why the component publishes it. You can also publish it from **Newsroom → Pages** in the AdminCP.
 
 </Step>
+
 <Step>
 
-## Render it
+### Fetch it from the public API
 
-```tsx title="src/site/pages/page-screen.tsx"
-import { ContentRenderer } from '@vitnode/core/widgets/renderer'
-
-import { blocksRegistry } from '@/blocks.gen'
-
-export const PageScreen = ({ page }: { page: PageContent }) => (
-  <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-4 py-10">
-    <h1 className="text-3xl font-semibold text-balance">{page.title}</h1>
-
-    <ContentRenderer blocks={page.content} registry={blocksRegistry} />
-  </main>
-)
-```
-
-Read the record with the generated public route - the zone comes back whole, in stored order:
+The public route is typed from the content type, so `fetcher` infers the response, `content` included:
 
 ```ts
-import { fetcher } from '@vitnode/core/tanstack/fetcher'
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
-const page = await fetcher({
-  plugin: '@vitnode/example',
-  method: 'get',
-  module: 'content/pages',
-  path: '/{slug}',
-  args: { param: { slug } },
-}).then(async (res) => await res.json())
+const response = await fetcher({
+  plugin: "newsroom",
+  method: "get",
+  module: "content/pages",
+  path: "/{slug}",
+  args: { params: { slug: "about-the-newsroom" } },
+});
 ```
 
-That one is fully typed: `pages` is the content type's `publicApi.path`, and the response shape - `content` included - is inferred from the definition.
-
-No extra request is made for the blocks themselves: the definitions came from the plugin configuration when the application started, and nothing re-validates data the write in step 6 already checked.
+`module` is `content/` plus the `publicApi.path`. A draft, or a slug that does not exist, answers `404`. The widgets come back as stored, in order; nothing re-validates them.
 
 </Step>
+
+<Step>
+
+### Render it on a page
+
+Create `src/pages/site-page.tsx`. It loads the record by slug and renders its widgets in a `ContentZone`:
+
+```tsx title="plugins/newsroom/src/pages/site-page.tsx"
+import { definePluginRoute, type PluginRoutePageProps } from "@vitnode/core/routing";
+import { contentPageItem } from "@vitnode/core/tanstack/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { createBlockRegistry } from "@vitnode/core/widgets";
+import { blocks as coreBlocks } from "@vitnode/core/widgets/built-in";
+import { ContentZone } from "@vitnode/core/widgets/zone";
+
+import { PAGE_BLOCKS_ALLOWED } from "@/content/page-blocks";
+import { manifest } from "@/manifest.gen";
+import { widgets } from "@/widgets";
+
+const blocksRegistry = createBlockRegistry([coreBlocks, widgets]);
+
+const loadSitePage = async (slug: string) => {
+  const response = await fetcher({
+    plugin: manifest.id,
+    method: "get",
+    module: "content/pages",
+    path: "/{slug}",
+    args: { params: { slug: encodeURIComponent(slug) } },
+  });
+
+  return contentPageItem(response.ok ? await response.json() : null);
+};
+
+type SitePageData = Awaited<ReturnType<typeof loadSitePage>>;
+
+export const route = definePluginRoute({
+  load: async ({ params }) => await loadSitePage(params.slug),
+
+  head: ({ loaderData }) => ({ title: loaderData?.title }),
+});
+
+const SitePage = ({ loaderData: page }: PluginRoutePageProps<SitePageData>) => (
+  <article className="container mx-auto flex max-w-3xl flex-col gap-8 px-4 py-8 md:py-12">
+    <h1 className="text-foreground text-3xl font-semibold tracking-tight text-balance md:text-4xl">
+      {page.title}
+    </h1>
+
+    <ContentZone
+      allowedBlocks={PAGE_BLOCKS_ALLOWED}
+      blocks={page.content}
+      id="content"
+      registry={blocksRegistry}
+    />
+  </article>
+);
+
+export default SitePage;
+```
+
+Register it in `src/routes.ts`:
+
+```ts title="plugins/newsroom/src/routes.ts"
+  page("/newsroom/pages/:slug", {
+    component: lazy(() => import("./pages/site-page")),
+  }),
+```
+
+- **`contentPageItem`** turns a missing record into the app's 404 page.
+- **The registry.** A plugin page cannot import the app's `src/blocks.gen.ts`, so it builds a registry from core's widgets and its own with `createBlockRegistry`. A page that lives in the app passes the generated `blocksRegistry` instead.
+- **`ContentZone`** renders the widgets and names the place, so a [visual editor](/docs/dev/widgets/visual-editor) can find it later. `ContentRenderer` from `@vitnode/core/widgets/renderer` renders the same list without a name.
+
+</Step>
+
 </Steps>
 
-## Where this goes next
+## Check the result
 
-[Content Zones](/docs/dev/widgets/content-zones) put a name on the place those blocks are rendered, so the step above becomes:
+Open `http://localhost:3000/newsroom/pages/about-the-newsroom`. The page shows the title, the core hero and the callout:
 
-```tsx
-<ContentZone id="main" blocks={page.content} registry={blocksRegistry} />
-```
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={sitePage}
+  alt="The About the newsroom page: the page title, a core hero widget reading Local news, written by neighbours, and a newsroom callout titled Heads up"
+/>
 
-The [Visual Editor](/docs/dev/widgets/visual-editor) and [Editable Pages](/docs/dev/widgets/editable-pages) sit on top of exactly this. Clicking **Edit widgets** turns an interactive editing surface on for an authorized moderator: the block catalogue lists what the zone's allowlist resolves to, drag and drop re-orders widgets in place, and the properties panel edits each widget's fields.
+`/newsroom/pages/does-not-exist` returns the 404 page, and so does a page you unpublish in **Newsroom → Pages**.
+
+## Related
+
+- [Variants](/docs/dev/widgets/block-variants) (optional): give the callout several looks, or add a second widget to the same `blocks` array.
+- [Content zones](/docs/dev/widgets/content-zones): several named zones on one page, and what they render when empty.
+- [Editable pages](/docs/dev/widgets/editable-pages): let moderators place widgets on a page in the browser, with storage and saving handled by core.
+- [Custom editor host](/docs/dev/widgets/custom-editor-host): edit a record's own `blocks()` field, like this page's `content`, in the visual editor. That isn't built in, so you write the adapter and save route.

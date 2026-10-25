@@ -8,58 +8,47 @@ VitNode provides a unified transactional email service accessible via `c.get("em
 
 ## Quick start
 
-<Steps>
-<Step>
+Once an [adapter](#configuring-email-adapters) is configured, any route can email the signed-in member:
 
-### Queue an email from a Hono route
+```ts title="plugins/site-notes/src/api/modules/welcome/send.route.ts"
+import { HTTPException } from "hono/http-exception";
 
-```ts title="plugins/blog/src/api/modules/newsletter/routes/welcome.route.ts"
-import { buildRoute } from '@/api/builders'
+import { buildRoute } from "@/api/builders";
 
 export const sendWelcomeRoute = buildRoute({
   route: {
-    method: 'post',
-    path: '/welcome',
-    responses: { 200: { description: 'Email sent' } },
+    method: "post",
+    path: "/",
+    responses: { 202: { description: "The email is queued." } },
   },
-  handler: async (c) => {
-    const user = c.get('user')
+  handler: async c => {
+    const user = c.get("user");
+    if (!user) throw new HTTPException(401);
 
-    // [!code ++:5]
-    await c.get('email').send({
-      user, // Resolves email address and preferred locale
-      subject: 'Welcome to VitNode!',
-      content: () => 'Thank you for joining our community.',
-    })
+    await c.get("email").send({
+      user, // their address and language
+      subject: "Welcome to VitNode!",
+      content: () => "Thank you for joining our community.",
+    });
 
-    return c.json({ sent: true })
+    return c.body(null, 202);
   },
-})
+});
 ```
 
-`send()` renders the template and queues delivery. It keeps a successful API
-response quick even when the mail provider is having a moody afternoon. The
-queued email is handed to the provider right after the response goes out, so
-a sign-up or password-reset link doesn't wait for the next cron tick; if that
-attempt fails, the queue worker retries it as usual.
+`send()` renders the email during the request and queues it. It is handed to the provider right after the response goes out, so a sign-up link does not wait for the next cron run, and the queue retries it if that attempt fails. Answer `202`, not "sent", because the provider has not seen the email yet when the route returns.
 
-</Step>
-</Steps>
+For a translated email with the standard layout, see [Templates](/docs/dev/email/templates).
 
-<Callout type="info" title="`build()` and `deliver()` do exist">
-  Use `await c.get('email').build(args)` followed by `deliver(email)` only when
-  a route truly needs immediate delivery. `send(args)` is the normal, queued
-  path.
-</Callout>
+## Deliver immediately
 
-`deliver()` takes an optional `idempotencyKey` and returns what the provider
-reported, such as its message id:
+`build()` followed by `deliver()` waits for the provider during the request. Use it only when the route needs the outcome. `deliver()` takes an optional `idempotencyKey` and returns what the provider reported, such as its message id:
 
 ```ts
-const email = await c.get('email').build(args)
-const { id } = await c.get('email').deliver(email, {
+const email = await c.get("email").build(args);
+const { id } = await c.get("email").deliver(email, {
   idempotencyKey: `order-receipt:${order.id}`, // same key on every retry
-})
+});
 ```
 
 Adapters whose provider deduplicates on a key, like Resend, forward it - so a
@@ -69,9 +58,7 @@ use this for every send.
 
 ## Configuring Email Adapters
 
-Configure your delivery transport in `apps/api/src/vitnode.api.config.ts`:
-
-Each provider ships as its own package. Install one, then pass it as `email.adapter` - the sender address belongs to the adapter.
+Set the adapter in the `vitnode.api.config.ts` of the app that serves your API (`apps/web` in a Single App, `apps/api` in a Monorepo App). Each provider ships as its own package. Install one, then pass it as `email.adapter`. The sender address belongs to the adapter.
 
 ### 1. Resend Adapter
 
@@ -114,12 +101,7 @@ export const vitNodeApiConfig = buildApiConfig({
 
 ## Testing Email in AdminCP
 
-{/* Image prompt: VitNode AdminCP System -> Integrations screen at /admin/core/system/integrations. Email card showing status "Configured" with a "Send Test Email" modal containing recipient address input and delivery confirmation toast. Dark theme, 1440x900. */}
-
-Verify email configuration in the AdminCP at **System → Integrations** (`/admin/core/system/integrations`):
-
-- Click **Test Email** on the email card.
-- Enter an email address to dispatch an immediate test delivery.
+Check your configuration in the AdminCP at **System → Integrations** (`/admin/core/system/integrations`). Choose **Test email** on the **Email** card, enter an address and choose **Send test email**. The test goes through the same queue as every other email, so if it does not arrive, look for a failed `send-email` task in **Debug Panel → Queue**, which shows the provider's error. The button needs the **Send test email** staff permission.
 
 ## Learn More
 

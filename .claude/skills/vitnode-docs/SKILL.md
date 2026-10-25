@@ -1,7 +1,6 @@
 ---
 name: vitnode-docs
-description: >
-  Write, update, and review VitNode MDX documentation whenever implementing or documenting VitNode features, APIs, plugins, or AdminCP workflows. Use for tutorials, how-to guides, reference pages, explanations, documentation cleanup, and real UI screenshots. Require concise, focused pages, splitting broad topics into linked MDX files when needed, plain language, working step-by-step examples, supported Fumadocs components, and screenshots rendered through apps/web/src/components/fumadocs/img.tsx.
+description: Write, update, and review VitNode MDX documentation whenever implementing or documenting VitNode features, APIs, plugins, or AdminCP workflows. Use for beginner learning paths, navigation, tutorials, feature recipes, reference pages, documentation cleanup, and real UI screenshots. Require short task-based titles, consistent runnable examples, verified prerequisites, focused pages, plain language, SEO and AI-readable content, supported Fumadocs components, and screenshots rendered through apps/web/src/components/fumadocs/img.tsx.
 ---
 
 # VitNode Docs
@@ -17,18 +16,29 @@ Write documentation that helps the reader complete one concrete task. Explain wh
 - Check available Fumadocs components and the installed version. Prefer existing project wrappers and conventions.
 - Verify API names, imports, paths, defaults, permissions, and supported behavior against current source code. Treat source code as authoritative when existing docs disagree.
 - Document implemented behavior. Label experimental behavior when supported by the project; do not present plans as available features.
+- For follow-up reviews, resolve the requested branch's current commit and compare it with the last reviewed commit. State when no new changes exist. Review the actual diff and affected dependencies; do not infer completion from a commit message or invent new scope to prolong an iteration.
 
 ## 2. Choose the page type
 
 Choose one primary page type and one reader outcome. Plan the page boundaries before drafting; do not write an exhaustive page and shorten it only afterward.
 
-| Type        | Purpose                                   | Structure                                                 |
-| ----------- | ----------------------------------------- | --------------------------------------------------------- |
-| Overview    | Choose a guide within a broad topic       | Purpose → choices → focused guides                        |
-| Tutorial    | Learn by building a small working example | Goal → prerequisites → steps → working result             |
-| How-to      | Complete a specific task                  | Outcome → requirements → steps → verify                   |
-| Reference   | Look up exact behavior                    | Purpose → signature → options/defaults → example → errors |
-| Explanation | Understand a design or tradeoff           | Problem → concrete example → how it works → tradeoffs     |
+| Type | Purpose | Structure |
+| --- | --- | --- |
+| Overview | Choose a guide within a broad topic | Purpose → choices → focused guides |
+| Tutorial | Learn by building a small working example | Goal → prerequisites → steps → working result |
+| How-to | Complete a specific task | Outcome → requirements → steps → verify |
+| Reference | Look up exact behavior | Purpose → signature → options/defaults → example → errors |
+| Explanation | Understand a design or tradeoff | Problem → concrete example → how it works → tradeoffs |
+
+### Design the learning path and navigation
+
+- Keep sidebar titles short, usually one to three words, and distinguish outcomes: `Content list`, `Content page`, `Create form`, `Reports`. Put the fuller learning goal in the description and opening. Avoid overlapping destinations such as `Public frontend` and `Public pages` without a clear difference; put task-to-helper maps in an overview.
+- Keep the beginner sequence uninterrupted. For Content Engine, teach first content type → drafts and publishing → public API → content list → content page. Place embedded lists and optional extensions after the complete baseline; keep API reference separate.
+- Continue one minimal example across consecutive lessons. Reuse the same plugin, type, fields, paths, query keys and demo records. Prefer the existing newsroom article baseline when present; do not force this fixture into unrelated documentation.
+- Build only the capability needed for the current lesson. Introduce basic list rendering before filters, and basic editing with required authorization and version handling before optional approval proposals. Separate comments, comment editing and nested replies when each is an independently useful task.
+- Make feature recipes accessible from their real minimum prerequisites. Reporting needs public content and a page, not member article forms. Comments own their author and write configuration; staff-written articles do not need public writing just to receive comments.
+- Explain generated backend behavior, core frontend helpers, and plugin-owned UI separately. Show the whole path to an observable outcome: for reporting, include configuration, viewer permissions, the button, submission, ModCP and opening the reported content.
+- Preserve existing URLs when shortening titles. Update navigation and related links together. Do not add placeholder pages for unimplemented reactions, following or other planned capabilities.
 
 ### Use the VitNode documentation schema
 
@@ -39,17 +49,17 @@ Follow this self-contained schema. Do not mention external documentation brands 
 1. **Frontmatter:** provide a short, searchable `title` and a one-sentence `description`. Follow the local schema for optional fields. Let the renderer display the title; do not duplicate it as an H1 unless the project requires that.
 2. **Opening:** write one or two sentences stating the outcome and when to use it. Do not add a general essay about the topic.
 3. **Main content:** use the structure for the chosen page type below. Keep headings descriptive and paragraphs short.
-4. **Related link:** add up to three specific links only when they offer a useful next action. Omit a generic conclusion or recap.
+4. **Related link:** add up to three specific links under `## Related` only when they offer a useful next action. Never end a page with a "Next step", "Next" or "What's next" section; the sidebar and the page footer already link the following page. Omit a generic conclusion or recap.
 
 Use these structures in the stated order. Omit conditional sections when they add no value; do not fill empty sections just to satisfy a template.
 
-| Page type   | Main content schema                                                                                                    |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Overview    | Brief purpose → decision table or short list of choices → links to focused guides                                      |
-| Tutorial    | Before you begin (if needed) → Build the example (ordered steps) → Check the result                                    |
-| How-to      | Before you begin (if needed) → task-specific steps → Check the result                                                  |
-| Reference   | Signature or API shape → parameters/options table → return value → minimal usage example → relevant errors/constraints |
-| Explanation | Concrete problem → how it works → practical consequences/tradeoffs → related implementation guide                      |
+| Page type | Main content schema |
+| --- | --- |
+| Overview | Brief purpose → decision table or short list of choices → links to focused guides |
+| Tutorial | Before you begin (if needed) → Build the example (ordered steps) → Check the result |
+| How-to | Before you begin (if needed) → task-specific steps → Check the result |
+| Reference | Signature or API shape → parameters/options table → return value → minimal usage example → relevant errors/constraints |
+| Explanation | Concrete problem → how it works → practical consequences/tradeoffs → related implementation guide |
 
 #### Step schema
 
@@ -65,7 +75,7 @@ Keep the final verification in “Check the result” instead of repeating verif
 #### Code and reference schema
 
 - Give every code block a language and, for file edits, a supported file title.
-- Keep title short.
+- Keep code-block titles concise while retaining enough of the file path to identify the file; state create/edit placement in the step text.
 - Show a complete minimal file when creating one; show a labeled excerpt when changing an existing file. State where an excerpt belongs and link to required setup.
 - Exclude unrelated styling, route metadata, schemas, and error handling from focused excerpts. Preserve code required to reproduce the task safely and correctly.
 - Explain a new concept once, next to its first use. Do not narrate obvious code line by line.
@@ -88,11 +98,11 @@ Keep the final verification in “Check the result” instead of repeating verif
 
 Example split for a page covering both app and API caching (adapt names and paths to the repository):
 
-| Page                | Keep on this page                                                               |
-| ------------------- | ------------------------------------------------------------------------------- |
-| Cache overview      | Which layer to choose; links to the guides                                      |
-| Cache app data      | Query options → loader/component integration → invalidation → verify            |
-| Cache API data      | Redis prerequisite link → remember → delete after a write → verify              |
+| Page | Keep on this page |
+| --- | --- |
+| Cache overview | Which layer to choose; links to the guides |
+| Cache app data | Query options → loader/component integration → invalidation → verify |
+| Cache API data | Redis prerequisite link → remember → delete after a write → verify |
 | Cache API reference | Method signatures, defaults, return values, serialization and fallback behavior |
 
 Keep important user-isolation and invalidation requirements beside the relevant example. Move unrelated Content Engine behavior to its existing guide rather than expanding the cache overview.
@@ -111,7 +121,7 @@ Keep important user-isolation and invalidation requirements beside the relevant 
 - Say each fact once. Do not repeat the same point in the introduction, step text, callout, table, and conclusion.
 - Default to one short paragraph of instruction per step and, only if needed, one short explanation after the code. Do not narrate obvious code line by line.
 - Remove sentences that do not help the reader choose, act, understand a non-obvious constraint, or verify the result. Link to deeper explanations instead of adding them to the main path.
-- Keep prerequisites to missing requirements, not a general setup tutorial. Prefer one relevant next-step link over a generic closing section.
+- Keep prerequisites to missing requirements, not a general setup tutorial. Prefer one relevant related link over a generic closing section.
 
 ### Edit for a natural technical voice
 
@@ -135,7 +145,7 @@ Keep important user-isolation and invalidation requirements beside the relevant 
 - Keep important explanations and constraints in selectable text. Screenshots supplement instructions; they must not be the only source of UI labels or outcomes.
 - Support technical claims with implementation evidence, reproducible examples, or a relevant primary-source link. Add benchmark numbers, expert quotes, author attribution, or dates only when real and useful; do not add them as citation bait.
 - Keep HTML and Markdown exports equivalent in meaning, including all labeled tab alternatives. Do not add hidden bot-only text, prompt instructions for agents, fabricated FAQs, unsupported superlatives, or repetitive summaries to attract citations.
-- For a how-to or tutorial that ends in working code in a reader's plugin or app, consider the optional `implementation` frontmatter behind **Copy implementation prompt**. Follow "Implementation prompts" in `apps/web/content/docs/dev/contribution.mdx`; it is the only place for coding-agent instructions.
+- For a how-to or tutorial that ends in working code in a reader's plugin or app, consider the optional `implementation` frontmatter behind **Copy implementation prompt**. Read "Implementation prompts" in `apps/web/content/docs/dev/contribution.mdx` and follow its current schema; keep coding-agent instructions there rather than in reader-facing prose. Ask only decisions needed for that task, and keep constraints aligned with the verified APIs and prerequisites.
 - Use a short question-and-answer section only for distinct recurring questions that are not already answered. Do not append a generic FAQ to every page.
 - For a requested SEO/AI-readiness audit or visibility review, read `references/seo-review.md`. Do not run a broad crawl, install audit tools, or require competitor research for every MDX edit.
 - Read `references/docs-site.md` for canonical metadata, crawlability, sitemaps, structured data, and AI discovery when site-level work is in scope. Clear content and accessible delivery improve usability; do not promise rankings, indexing, or AI citations.
@@ -152,8 +162,26 @@ For tutorials and how-to guides:
 6. State the observable result of the step when useful.
 7. End with a command, route, or UI action that verifies the complete result.
 8. Add troubleshooting only for realistic errors supported by the implementation.
+9. Call the VitNode API with `fetcher` from `@vitnode/core/tanstack/fetcher` (`rawFetcher` only for generated Content Engine admin routes), never raw `fetch` or a browser-console snippet. When a check needs a request with no UI yet, give a small temporary component with a button that calls `fetcher`, say where to render it, and tell the reader to remove it afterwards.
 
 Keep the complete workflow reproducible; not every code block needs to recreate the application. For a new file, include the imports and setup required to run it. For a targeted change, show a clearly labeled excerpt with its file path and placement, and link to the existing setup or complete example. Do not hide task-critical code behind `...`, assume undefined variables without explaining their source, or reproduce unrelated schemas, route metadata, styling, and error handling just to make an excerpt look standalone. Show a full baseline once, then show only the changes. Introduce dependencies before using them. Match repository package-manager conventions; for reader-facing commands, provide equivalent pnpm/npm/bun variants when supported. Do not invent script names or package-manager equivalence.
+
+### Verify prerequisites and example continuity
+
+- Treat prerequisites as a contract. Every required step and final check must work from exactly that starting state. Mark checks needing publication, a public API, containers or another extension as optional, with their additional setup. An AdminCP-only relations guide must not require a public endpoint to finish.
+- Create every verification record in this guide or a named prerequisite. Do not assume a seeded record, another tutorial's member post, board or account exists without saying how to obtain it.
+- Introduce every local import, helper, type, variable, dependency and translation namespace before use, or link directly to its setup. Do not describe a simplified form as runnable against a richer content type with additional required fields.
+- Show required build commands before migrations that read compiled plugins. Label edits as additions or replacements and preserve earlier configuration, query warm-ups and registered types when extending an existing file.
+- Use focused excerpts for instruction and, when useful, a complete file in a supported accordion or direct source link as optional assembly reference. Keep required instructions visible. Do not repeat the complete file after every step or hide essential setup in an accordion.
+- Match code, request payloads, expected responses and screenshots to the same configuration and stage of the tutorial. Review downstream prerequisites when changing an earlier tutorial's example.
+
+### Document server state truthfully
+
+- Verify publication and moderation states independently. A plain draft can have `approval: null`; enabling draft creation does not itself submit content to moderators. Show the container policy and inherited relation configuration when approval depends on them.
+- Check approval and publication state before choosing a success message or redirect. Only claim a create is public when it is published; send drafts and pending creates to an available author-facing destination. A pending edit leaves the earlier published values visible.
+- Derive approval notices from the server's `approval.status` and `approval.kind`, and open pending edits on proposed values when supported. Never infer moderator review from a draft status or a URL flag such as `submitted`.
+- Keep required correctness in the basic example: authorization, field allowlists, ownership, relevant error states, cache invalidation and form defaults. State whether concurrent writes use versions or last-write-wins; do not promise conflict protection without enabling it.
+- Report a demonstrated implementation/docs mismatch concretely. For a docs-only task, label any intentionally corrected example and track the implementation issue separately; do not silently expand scope into a product feature. Reconcile both descriptions when an authorized implementation fix lands.
 
 For reference pages, include exact types, required fields, defaults, return values, and relevant errors. Avoid forcing a step sequence onto a lookup page. Link to a tutorial instead.
 
@@ -164,7 +192,7 @@ Inspect the local MDX registry and existing pages before choosing imports or syn
 - Use `Steps` / `Step` for ordered workflows, following local heading conventions.
 - Use `Tabs` / `Tab` for equivalent alternatives, such as supported package managers. Keep required steps outside tabs.
 - Use `Callout` only for an easily missed prerequisite, limitation, or behavior that changes the reader's next action. Keep ordinary explanations in prose. Aim for at most two callouts on a short guide; retain more only when necessary for correctness.
-- Use `Cards` / `Card` for related guides or next steps when locally supported.
+- Use `Cards` / `Card` for related guides when locally supported.
 - Use supported file-tree components when a directory structure helps the reader place files.
 - Use supported type tables or Markdown tables for options, types, defaults, and required fields.
 - Use code-fence language labels, file titles, and focused line highlighting in the syntax supported by this project.
@@ -181,6 +209,7 @@ Use components to clarify content. Do not wrap every paragraph in one.
 - Preserve essential instructions in text and rendered HTML. Do not hide required content behind hover, animation, or an interaction that prevents direct reading or copying.
 - When editing docs-site infrastructure or reviewing missing copy/export capabilities, read `references/docs-site.md`. Routine MDX writing should use existing infrastructure and report missing capabilities; do not expand it into a site rebuild.
 
+
 ## 6. Capture real screenshots for UI workflows
 
 Capture screenshots when documenting AdminCP, forms, settings, editors, or other visual workflows where an image helps identify controls or verify a result. Skip images that add nothing to an API or code-only page.
@@ -194,9 +223,9 @@ Capture screenshots when documenting AdminCP, forms, settings, editors, or other
 7. Inspect each saved image. Retake it if labels are unreadable, content is clipped, or the page shows loading/error states unrelated to the guide.
 8. Avoid exposing personal data, tokens, cookies, private URLs, or real user records. Prefer preparing clean demo data before capture.
 9. Save assets in the repository's existing documentation image location. Use descriptive kebab-case names and stable repository paths. Save every new or re-captured screenshot as WebP; keep text sharp and file sizes reasonable.
-   - Capture at a 2x device scale factor. If the tool only writes PNG, capture to PNG, then convert it to WebP and delete the intermediate PNG. Never commit PNG screenshots.
-   - Convert with high quality to keep UI text sharp, for example Pillow lossy `quality=90` with `method=6`. Use lossless WebP when small text blurs. Inspect the WebP after conversion.
-   - When replacing an existing PNG screenshot, change the MDX import from `./name.png` to `./name.webp` and delete the old PNG. Leave no reference to the removed file.
+   - Capture at a 2x device scale factor. If the tool only writes PNG, capture to PNG, convert to WebP and delete the intermediate PNG. Never commit PNG screenshots.
+   - Convert at high quality, for example Pillow lossy `quality=90` with `method=6`. Use lossless WebP when small text blurs. Inspect the converted WebP.
+   - When replacing an existing PNG screenshot, update its MDX import to `.webp` and delete the old PNG. Leave no reference to the removed file.
 10. Place the image beside the step it illustrates. Add useful alt text and a short caption when the state needs explanation. Keep the action and result in text as well.
 
 Never generate, draw, or fabricate an application screenshot. Do not substitute a mockup or claim a screenshot was captured when it was not. If the app, credentials, or capture tools are unavailable, finish the text and report the missing capture and its precise prerequisite. Do not commit broken image references or placeholders as completed screenshots.
@@ -214,20 +243,25 @@ Use `apps/web/src/components/fumadocs/img.tsx` for every documentation screensho
 
 ## 7. Verify and finish
 
-- Walk through the guide in order using its stated prerequisites. Verify commands and code against the implementation; run examples when the environment supports them.
+- Walk through the guide in order using only its stated prerequisites. For independent recipes, skip unrelated lessons deliberately, such as Content page → Reports, Content page → Comments, or First content type → Relations. Prefer a fresh plugin/database state where practical; do not let a fully configured demo conceal missing setup.
+- Verify commands and code against the implementation; run examples when the environment supports them. Check applicable published, plain draft, pending create, pending edit, rejected, unauthorized and missing states. Verify reloads, saved defaults and invalidation when documenting writes.
 - Run the relevant existing MDX, formatting, type, link, or docs-build checks. Inspect package scripts first and avoid unrelated test suites.
 - Preview the changed page. Check headings, table of contents, steps, tabs, code blocks, images, and internal links. Check narrow-screen readability for changed visual content.
 - Verify screenshot assets exist and each referenced source resolves. Update navigation metadata and related links when adding or moving pages.
 - Run a brevity pass: remove repetition and unrelated boilerplate, check the page has one outcome, and split independent workflows or reference material when needed. Preserve required setup and correctness-critical detail; move useful optional detail to a linked page instead of deleting it.
-- Report changed pages, captured screenshots, verification performed, and any unresolved limitation. Distinguish source inspection from checks actually executed.
+- Report changed pages, captured screenshots, verification performed, and any unresolved limitation. Distinguish source inspection, inspected CI results, locally executed checks and browser walkthroughs; a green build does not prove a tutorial was followed successfully.
 
 ## Completion checklist
 
 - [ ] Explain one concrete outcome in simple language without repeated prose.
 - [ ] Split independent workflows/reference material into linked MDX pages when needed; preserve URLs and navigation.
+- [ ] Keep short, distinct sidebar titles and one consistent beginner example; make optional recipes independently reachable.
+- [ ] Complete required steps and checks from only the declared prerequisites, with every helper and demo record accounted for.
+- [ ] Match server publication/approval states in messages, notices, form defaults and navigation.
 - [ ] Match current VitNode code, names, permissions, and UI labels.
 - [ ] Use a clear title/description, direct answer, descriptive links, and sections understandable on their own without keyword stuffing.
 - [ ] Provide complete examples with file paths and expected results.
+- [ ] Call the VitNode API with `fetcher` or `rawFetcher` in every example and check, never raw `fetch`.
 - [ ] Use supported Fumadocs components and valid MDX syntax; check code copying and existing Markdown exports when relevant.
 - [ ] Capture useful real UI screenshots and render them through `img.tsx`.
 - [ ] Verify navigation, links, assets, and the rendered page.

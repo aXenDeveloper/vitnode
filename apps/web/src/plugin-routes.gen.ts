@@ -20,8 +20,8 @@ import type { PluginRouteDeclarationSource } from '@vitnode/core/routing'
 
 import { routes as pluginRoutes0 } from '@vitnode/blog/routes'
 import { routes as pluginRoutes1 } from '@vitnode/core/routes'
-import { routes as pluginRoutes2 } from '@vitnode/example/routes'
-import { routes as pluginRoutes3 } from '@vitnode/forum/routes'
+import { routes as pluginRoutes2 } from '@vitnode/forum/routes'
+import { routes as pluginRoutes3 } from 'newsroom/routes'
 
 
 export const pluginRouteSources = [
@@ -34,11 +34,11 @@ export const pluginRouteSources = [
     routes: pluginRoutes1,
   },
   {
-    pluginId: '@vitnode/example',
+    pluginId: '@vitnode/forum',
     routes: pluginRoutes2,
   },
   {
-    pluginId: '@vitnode/forum',
+    pluginId: 'newsroom',
     routes: pluginRoutes3,
   },
 ] as const satisfies readonly PluginRouteDeclarationSource[]

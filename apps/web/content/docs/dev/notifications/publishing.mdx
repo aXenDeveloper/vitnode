@@ -23,11 +23,13 @@ implementation:
       href: /docs/dev/notifications/email-and-digests
 ---
 
-This guide notifies a topic's author when someone replies to their topic. You declare a notification type once, register it on your API plugin, and publish it from the route that saves the reply. The examples use a forum plugin with the id `@acme/forum`.
+This guide notifies a topic's author when someone replies to their topic. You declare a notification type once, register it on your API plugin, and publish it from the route that saves the reply. The examples use a fictional forum plugin with the id `@acme/forum` in `plugins/acme-forum`, not the `@vitnode/forum` plugin that ships with VitNode.
 
 ## Before you begin
 
-You need a plugin with an API part (`src/config.api.ts`) and a route that writes to the database. See [Create a plugin](/docs/dev/plugins/create) if you do not have one yet.
+- A plugin with an API part (`src/config.api.ts`). See [Create a plugin](/docs/dev/plugins/create) if you do not have one yet.
+- A route that writes to the database. Here it is a reply route that inserts into the plugin's own `forum_replies` table and has already loaded the `topic` (with its `authorId` and `title`). Swap in your own table and route.
+- Two user accounts, so one can act and the other can receive the notification.
 
 <Steps>
 
@@ -37,7 +39,7 @@ You need a plugin with an API part (`src/config.api.ts`) and a route that writes
 
 Create a file for your plugin's notification types:
 
-```ts title="plugins/forum/src/api/lib/notifications.ts"
+```ts title="plugins/acme-forum/src/api/lib/notifications.ts"
 import { buildNotificationType } from '@vitnode/core/api/lib/notifications/registry'
 import { z } from 'zod'
 
@@ -67,7 +69,7 @@ export const topicReplyNotification = buildNotificationType({
 
 The API renders notification text, so the strings belong in your plugin's API messages:
 
-```json title="plugins/forum/src/locales/api/en.json"
+```json title="plugins/acme-forum/src/locales/api/en.json"
 {
   "@acme/forum": {
     "notifications": {
@@ -90,7 +92,7 @@ The API renders notification text, so the strings belong in your plugin's API me
 
 Pass the type and the API messages to `buildApiPlugin()`:
 
-```ts title="plugins/forum/src/config.api.ts"
+```ts title="plugins/acme-forum/src/config.api.ts"
 import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
 
 import { topicReplyNotification } from '@/api/lib/notifications' // [!code ++]
@@ -117,7 +119,11 @@ Core collects the types of every installed plugin when the API starts, so restar
 
 In the handler that saves the reply, publish inside the same transaction:
 
-```ts title="plugins/forum/src/api/modules/topics/routes/reply.route.ts"
+```ts title="plugins/acme-forum/src/api/modules/topics/routes/reply.route.ts (excerpt)"
+import { topicReplyNotification } from '@/api/lib/notifications' // [!code ++]
+import { forum_replies } from '@/database/replies'
+
+// inside the route handler
 await c.get('db').transaction(async (tx) => {
   const [reply] = await tx
     .insert(forum_replies)
@@ -136,7 +142,7 @@ await c.get('db').transaction(async (tx) => {
 })
 ```
 
-`topic`, `user` and `content` come from your existing route. Because of `tx`, the notification is saved together with the reply: a rolled-back reply notifies nobody, and a saved reply always notifies, even if the server stops right after the commit. `subject` names what the notification is about. Core uses it to group notifications and to [remove them later](/docs/dev/notifications/access#remove-notifications-when-content-goes-away).
+`forum_replies` is your plugin's replies table, and `topic`, `user` and `content` come from your existing route. Because of `tx`, the notification is saved together with the reply: a rolled-back reply notifies nobody, and a saved reply always notifies, even if the server stops right after the commit. `subject` names what the notification is about. Core uses it to group notifications and to [remove them later](/docs/dev/notifications/access#remove-notifications-when-content-goes-away).
 
 </Step>
 
@@ -169,7 +175,7 @@ Use a random key only when every call really is a new message, such as an admini
 
 To notify the actor about their own work, set `allowSelf: true`:
 
-```ts title="plugins/forum/src/api/modules/exports/routes/finish.route.ts"
+```ts title="plugins/acme-forum/src/api/modules/exports/routes/finish.route.ts"
 await c.get('notifications').publish({
   type: exportReadyNotification,
   recipients: [user.id],

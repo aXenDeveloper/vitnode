@@ -1,5 +1,5 @@
 ---
-title: Reconnects and missed messages
+title: Reconnects
 description: How VitNode's WebSocket reconnects, why realtime delivery is best effort with no replay, and how to restore rooms and reload state in every tab after a reconnect.
 icon: RefreshCw
 ---
@@ -20,20 +20,23 @@ Treat every realtime message as a hint that something changed, and the database 
 
 ## Restore state when the connection opens
 
-`useVitNodeWebSocket` returns `connectionId`, which changes every time the shared connection opens and is `null` while it is down. All tabs share one socket, held by a leader tab, and every tab - leader or follower - gets the new `connectionId`. Depend on it to rejoin and reload:
+`useVitNodeWebSocket` returns `connectionId`, which changes every time the shared connection opens and is `null` while it is down. All tabs share one socket, held by a leader tab, and every tab, leader or follower, gets the new `connectionId`. Depend on it to rejoin and reload. This extends the `ChatRoom` component from [Rooms](/docs/dev/websocket/rooms), and assumes the room's messages are loaded with TanStack Query under the key `["chat", roomId]`:
 
-```tsx title="plugins/chat/src/views/chat-room.tsx"
-const { connectionId, send } = useVitNodeWebSocket(roomsChannel, {
-  onMessage: (message) => appendMessage(message),
-})
+```tsx title="plugins/acme-chat/src/views/chat-room.tsx (excerpt)"
+import { useQueryClient } from "@tanstack/react-query"
 
-React.useEffect(() => {
+const queryClient = useQueryClient()
+const { connectionId, send } = useVitNodeWebSocket(roomsChannel)
+
+useEffect(() => {
   if (!connectionId) return
 
   send({ clientId, roomId, type: "join" }) // the server forgot the room
   void queryClient.invalidateQueries({ queryKey: ["chat", roomId] }) // reload what was missed
 }, [clientId, connectionId, queryClient, roomId, send])
 ```
+
+New messages keep arriving on `chatChannel` as before; this effect only rejoins and reloads.
 
 Messages sent before the socket is open are queued and sent once it opens, so the join is never lost. Do not resend writes from that effect: a mutation that went over HTTP already happened, and sending it again would do it twice.
 

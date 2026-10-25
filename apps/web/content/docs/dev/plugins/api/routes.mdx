@@ -1,116 +1,102 @@
 ---
-title: API Routes
-description: Validate plugin-owned Hono route inputs and responses with Zod, then protect staff actions with a clear permission.
-icon: Network
+title: API routes
+description: Add a route with a validated path parameter to the site-notes VitNode plugin, answer 404 for a missing note, and see how invalid input is refused.
+icon: Route
 ---
 
-import { BoxIcon, ShieldCheckIcon, ZapIcon } from 'lucide-react'
+Each route declares its inputs and outputs with Zod, and VitNode validates the request before your handler runs. In this lesson you add `GET /api/site-notes/notes/{id}`, which returns one note, refuses an id that is not a positive number, and answers `404` when no note has that id.
 
-Create [the plugin](/docs/dev/plugins/create) and its [API module](/docs/dev/plugins/api/modules)
-first. Then put the endpoint in that module so its validation, permission, and
-OpenAPI record travel together.
+## Before you begin
+
+- The `notes` module from [API modules](/docs/dev/plugins/api/modules), still returning the sample notes in `sample-notes.ts`.
 
 <Steps>
-  <Step>
 
-### Validate input and response
+<Step>
 
-```ts title="plugins/site-notes/src/api/modules/notes/get.route.ts"
-import { z } from '@hono/zod-openapi'
+### Create the route
 
-import { buildRoute } from '@/api/builders'
+Create `src/api/modules/notes/show.route.ts`:
 
-export const getNoteRoute = buildRoute({
+```ts title="plugins/site-notes/src/api/modules/notes/show.route.ts"
+import { z } from "@hono/zod-openapi";
+
+import { buildRoute } from "@/api/builders";
+
+import { zodNote } from "./notes.schema";
+import { sampleNotes } from "./sample-notes";
+
+export const showNoteRoute = buildRoute({
   route: {
-    method: 'get',
-    path: '/{id}',
+    method: "get",
+    path: "/{id}",
     request: {
       params: z.object({ id: z.coerce.number().int().positive() }),
     },
     responses: {
-      // [!code ++:7]
       200: {
-        content: {
-          'application/json': {
-            schema: z.object({ id: z.number(), title: z.string() }),
-          },
-        },
-        description: 'One site note.',
+        content: { "application/json": { schema: zodNote } },
+        description: "The note.",
       },
+      404: { description: "No note has this id." },
     },
   },
-  handler: (c) => {
-    const { id } = c.req.valid('param')
-    return c.json({ id, title: 'Plugin-owned note' })
+  handler: c => {
+    const { id } = c.req.valid("param");
+    const note = sampleNotes.find(item => item.id === id);
+    if (!note) return c.body(null, 404);
+
+    return c.json(note, 200);
   },
-})
+});
 ```
 
-  </Step>
-  <Step>
+- **`path: "/{id}"`** uses OpenAPI's parameter syntax. It is also the `path` a page passes to the fetcher.
+- **`request.params`** validates the URL segment. Path parameters arrive as strings, so `z.coerce.number()` turns `"2"` into `2`, and `.int().positive()` refuses everything else.
+- **`c.req.valid("param")`** returns the parsed, typed value. Read inputs through `c.req.valid()`, never from the raw request.
+- **List every status the handler returns in `responses`.** That is what lets the fetcher type both outcomes for the caller.
 
-### Gate an AdminCP action
+Body and query parameters work the same way, through `request.body` and `request.query`; the [Permissions](/docs/dev/working-with-users/staff-permissions) lesson adds a validated body.
 
-Add `adminStaffPermission` to an action that only staff should call. The API
-still authorizes server-side; a hidden button is merely good manners.
+</Step>
 
-```ts title="plugins/site-notes/src/api/modules/notes/publish.route.ts"
-import { z } from '@hono/zod-openapi'
+<Step>
 
-import { buildRoute } from '@/api/builders'
+### Add it to the module
 
-export const publishNoteRoute = buildRoute({
-  // [!code ++:4]
-  adminStaffPermission: {
-    module: 'site_notes',
-    permission: 'can_publish',
-  },
-  route: {
-    method: 'post',
-    path: '/{id}/publish',
-    responses: {
-      200: {
-        content: {
-          'application/json': {
-            schema: z.object({ published: z.literal(true) }),
-          },
-        },
-        description: 'The note was published.',
-      },
-    },
-  },
-  handler: async (c) => c.json({ published: true }),
-})
+Open `src/api/modules/notes/notes.module.ts` and add the route after the list route. Keep `listNotesRoute`:
+
+```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts"
+import { buildModule } from "@/api/builders";
+
+import { listNotesRoute } from "./list.route";
+import { showNoteRoute } from "./show.route"; // [!code ++]
+
+export const notesModule = buildModule({
+  name: "notes",
+  routes: [listNotesRoute], // [!code --]
+  routes: [listNotesRoute, showNoteRoute], // [!code ++]
+});
 ```
 
-  </Step>
+</Step>
+
 </Steps>
 
-{/* Image prompt: Dark-theme API documentation screenshot. Show an OpenAPI endpoint for a plugin route with path parameter validation, a successful JSON response, and a staff-permission lock badge. 1440x900. */}
+## Check the result
 
-<Callout type="idea" title="One route, one plugin owner">
-  Keep handlers with the feature that owns the data. The host API config only
-  composes plugins; it should not become a surprise sequel to your business
-  logic.
-</Callout>
+Ask for an existing note, a missing one and an invalid id:
 
-<Cards>
-  <Card
-    icon={<BoxIcon />}
-    title="API modules"
-    description="Register a module and its plugin API factory with the Hono application."
-    href="/docs/dev/plugins/api/modules"
-  />
-  <Card
-    icon={<ShieldCheckIcon />}
-    title="Staff permissions"
-    description="Define the permission catalog that gates AdminCP actions."
-    href="/docs/dev/working-with-users/staff-permissions"
-  />
-  <Card
-    icon={<ZapIcon />}
-    title="Typed fetcher"
-    description="Call validated plugin endpoints from the TanStack Start UI."
-    href="/docs/dev/fetcher"
-  />
-</Cards>
+```bash
+curl -i http://localhost:3000/api/site-notes/notes/2
+curl -i http://localhost:3000/api/site-notes/notes/9
+curl -i http://localhost:3000/api/site-notes/notes/abc
+```
+
+| Request | Status | Body |
+| --- | --- | --- |
+| `/notes/2` | `200` | `{ "id": 2, "title": "Office closed on Friday", ... }` |
+| `/notes/9` | `404` | empty |
+| `/notes/abc` | `400` | `{ "success": false, "error": { "name": "ZodError", ... } }` |
+
+The `400` comes from validation, so your handler never ran.

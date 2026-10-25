@@ -8,8 +8,10 @@ Readers report content with a **Report** button, and every report lands in the m
 
 | What readers report                         | Guide                                                                                   |
 | ------------------------------------------- | --------------------------------------------------------------------------------------- |
-| Records of a Content Engine content type    | [Report content](/docs/content-engine/reports): the `reports` option and `ReportButton` |
+| Records of a Content Engine content type    | [Reports](/docs/content-engine/reports): the `reports` option and `ReportButton` |
 | Anything else your plugin stores            | [Custom report targets](/docs/dev/moderation/reference#custom-report-targets) with `defineReportTarget` |
+
+For a content type, the switch is one line, `reports: true` on its definition. The Reports guide then adds the button and follows a report to the ModCP. Turning reports on grants nothing by itself, so nobody sees a report until a moderator holds `can_view_reports`.
 
 Then set up the people who handle the reports:
 

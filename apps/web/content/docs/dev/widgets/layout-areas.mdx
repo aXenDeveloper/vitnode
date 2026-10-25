@@ -1,5 +1,5 @@
 ---
-title: Layout Areas
+title: Layout areas
 description: An Area is a small layout container stored inside a zone - it holds widgets in up to four columns, it is not a widget itself, and it cannot hold another Area.
 icon: Columns3
 ---
@@ -17,7 +17,7 @@ zone
 └─ block            a closing note
 ```
 
-{/* Image prompt: A wireframe of one content zone, top to bottom: a full-width block, then a rounded container labelled "Area · 2 columns" holding two blocks side by side, then another full-width block. A small sidebar on the right shows an "Area" panel with a 1-2-3-4 Columns switch, Alignment and Distribution selects under "LAYOUT", and Gap sliders under "SPACING". Dark UI, blue accents, 1600x900. */}
+{/* Image prompt: A screenshot of the newsroom /newsroom/zones page in edit mode with the two-column area in the after-profile zone selected, showing the Area properties panel: a 1-2-3-4 Columns switch, Alignment and Distribution selects under Layout, and Gap, Space above & below and Space left & right sliders under Spacing. */}
 
 ## The three-way split
 
@@ -27,7 +27,7 @@ This is the idea the whole feature is built on, and it is worth stating plainly:
 | :------------------------------------------------ | :-------------------------------- | :----------------------------------- |
 | **`data`**                                        | One block                         | "Ships on Friday", a heading, a link |
 | **[`variant`](/docs/dev/widgets/block-variants)** | One block instance                | `grid`, `list`, `compact`            |
-| **`Area.layout`**                                 | The relationship _between_ blocks | two columns, medium gap, top-aligned |
+| **`Area.layout`**                                 | The relationship _between_ blocks | two columns, a 16px gap, top-aligned |
 
 A block never describes the block next to it. That is why columns are not a field, and why `Area` exists at all.
 
@@ -41,10 +41,18 @@ An Area sits in the zone's array, beside the blocks, and is told apart by its `k
   {
     "id": "01JC…KP",
     "kind": "area",
-    "layout": { "columns": 2, "gap": "md", "align": "stretch" },
+    "layout": { "columns": 2, "gap": 16, "align": "stretch" },
     "children": [
-      { "id": "01JC…R2", "type": "core:text", "data": { "heading": "Left" } },
-      { "id": "01JC…T7", "type": "core:cta", "data": { "title": "Right" } }
+      {
+        "id": "01JC…R2",
+        "type": "core:text",
+        "data": { "heading": "Left column", "body": "Two widgets, side by side." }
+      },
+      {
+        "id": "01JC…T7",
+        "type": "core:cta",
+        "data": { "title": "Right column", "label": "Read more", "href": "/docs" }
+      }
     ]
   }
 ]
@@ -54,21 +62,25 @@ An Area sits in the zone's array, beside the blocks, and is told apart by its `k
 | :--------- | :------------------------------------------------------------------------------------------------------------------------ |
 | `kind`     | Always `"area"`. It is the only thing that distinguishes an Area from a block, which is why a block may never declare it. |
 | `id`       | The same kind of id a block instance has - stable, unique within the zone, and kept through every move and re-order.      |
-| `layout`   | The tokens below. `columns` is required; the rest have defaults.                                                          |
+| `layout`   | The settings below. `columns` is required; the rest have defaults.                                                        |
 | `children` | Blocks, in rendered order. **Blocks only.**                                                                               |
 
 Array order is rendered order, inside an Area exactly as outside one.
 
-## The layout tokens
+## The layout settings
 
-Four closed sets. Not CSS, not class names - tokens VitNode renders, so a stored layout cannot turn into arbitrary styling smuggled through a content column.
+Closed values and whole pixel numbers, never CSS or class names, so a stored layout cannot smuggle arbitrary styling through a content column. The interface is `BlockAreaLayout` from `@vitnode/core/widgets`:
 
-| Token     | Values                     | Default   | What it does                                                                 |
+| Setting   | Values                     | Default   | What it does                                                                 |
 | :-------- | :------------------------- | :-------- | :--------------------------------------------------------------------------- |
 | `columns` | `1` `2` `3` `4`            | `2`       | How many columns on a wide screen. Always one column on a phone - see below. |
-| `gap`     | `none` `sm` `md` `lg`      | `md`      | The space between children, in both directions.                              |
+| `gap`     | whole pixels, `0`-`100`    | `16`      | The space between children, in both directions.                              |
+| `marginY` | whole pixels, `0`-`100`    | `0`       | Space above and below the area.                                              |
+| `marginX` | whole pixels, `0`-`100`    | `0`       | Space to the left and right of the area.                                     |
 | `align`   | `start` `center` `stretch` | `stretch` | How children line up across a row. `stretch` gives equal-height columns.     |
 | `justify` | `start` `center` `stretch` | `stretch` | How each child sits across its own column. `stretch` fills it.               |
+
+Layouts stored before spacing was measured in pixels used names; `none`, `sm`, `md` and `lg` still read as `0`, `8`, `16` and `32`, and the next save writes the number.
 
 Areas are **mobile-first**: below the `md` breakpoint every Area is one column, whatever `columns` says. Two columns on a 360px screen is not a layout, it is a dare.
 
@@ -78,7 +90,7 @@ This is the part worth reading twice, because it is what keeps Areas cheap:
 
 - There is **no `core:area` block**. Nothing registers it, nothing can be installed to provide it, and `registry.get("core:area")` is `undefined` - on purpose.
 - It needs **no entry in `allowedBlocks`**. A zone that allows `["core:text"]` still accepts an Area holding `core:text`. The allowlist governs blocks, and the children inside an Area are checked against the very same list as blocks at the zone's root.
-- It has **no `data`, no fields and no component of its own**. There is nothing for a properties form to build, which is why the editor shows four selects instead.
+- It has **no `data`, no fields and no component of its own**. There are no widget fields to edit; the editor shows the layout settings instead.
 
 In the editor's block catalogue it therefore lives in its own **Layout** section above the plugin groups, rather than pretending to be somebody's block.
 
@@ -94,16 +106,11 @@ That zone accepts: `core:text` at the root, an Area, and `core:text` inside the 
 
 ## Areas cannot contain Areas
 
-**In Stage 4, an Area's children are blocks. Never another Area.**
+**An Area's children are widgets. Never another Area.**
 
 That is enforced everywhere it can be: the drag-and-drop resolver refuses the drop and says so out loud, the catalogue hides the Layout section while an Area is the insertion target, and the API refuses a nested Area on write. A stored document that somehow contains one is shown as unreadable rather than rendered.
 
-<Callout title="Why one level, when the shape would obviously recurse?">
-  Because every extra level costs more than it looks. Nesting needs depth limits, cycle detection, an answer for what an allowlist means three levels down, a keyboard drag model that can climb out of a container, and a properties panel that can say *which* area you are editing. One level covers "put these two things side by side", which is what people actually ask for, at a fraction of the surface area.
-
-The shape is ready for it - `children` is a list of nodes, and a nested area would be one more node kind in it - so the door is closed, not locked.
-
-</Callout>
+One level covers "put these two things side by side", which is what people ask for; nesting would need depth limits and a much harder drag model.
 
 ## In the editor
 
@@ -130,12 +137,7 @@ contentNodeBlocks(nodes) // every block in the zone, areas flattened away
 
 `contentNodeBlocks` is what you want for anything that cares about blocks and not about arrangement: counting them, indexing their text, checking an allowlist. Rendering is already handled - `ContentRenderer` walks nodes and lays an Area out for you.
 
-<Callout title="A migration you do not have to run">
-  A zone stored before Areas existed is a list of blocks, and a list of blocks
-  is a list of nodes that never nests. Nothing was rewritten, no column changed,
-  and a page that never uses an Area keeps exactly the markup it had - the Area
-  only exists in the DOM when one is stored.
-</Callout>
+A page that never uses an Area keeps exactly the markup it had, because an Area only exists in the DOM when one is stored.
 
 ## When an Area is the wrong answer
 

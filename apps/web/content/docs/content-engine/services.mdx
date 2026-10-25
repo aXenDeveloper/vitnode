@@ -4,31 +4,31 @@ description: Read and write Content Engine records from your own Hono routes, cr
 icon: Server
 ---
 
-The generated routes cover the usual reads and writes. When you need something they don't do, such as "the three newest articles in a category" or "publish a digest every Monday", call a **service** from your own code. It is a typed object you get from the model:
+The generated routes cover the usual reads and writes. When you need something they don't do, such as "the three newest stories in a category" or "publish a digest every Monday", call a **service** from your own code. It is a typed object you get from the model:
 
 ```ts
-const article = await articleContent.service(c).findById(1);
-article?.title; // string, and a typo is a compile error
+const story = await storyContent.service(c).findById(1);
+story?.title; // string, and a typo is a compile error
 ```
 
-`articleContent` is the model from `createContentModel`, and `c` is the Hono context of your route, cron job or queue task.
+`storyContent` is the model from `createContentModel`, and `c` is the Hono context of your route, cron job or queue task.
 
 ## Pick a service
 
 | You want to                                                   | Use                                        | It checks permissions | It emits events and writes history |
 | ------------------------------------------------------------- | ------------------------------------------ | --------------------- | ---------------------------------- |
-| Show content to visitors: published records, public fields    | `articleContent.publicService(c)`          | Only public data      | Read only                          |
-| Read or write anything from a job or a staff route            | `articleContent.service(c)`                | No                    | No                                 |
-| Save a change the way the AdminCP does                        | `articleContent.editorialService(c, opts)` | No                    | Revisions, and events through the effects helpers |
+| Show content to visitors: published records, public fields    | `storyContent.publicService(c)`            | Only public data      | Read only                          |
+| Read or write anything from a job or a staff route            | `storyContent.service(c)`                  | No                    | No                                 |
+| Save a change the way the AdminCP does                        | `storyContent.editorialService(c, opts)`   | No                    | Revisions, and events through the effects helpers |
 
 ## Read published records
 
 `publicService` returns exactly what the [public API](/docs/content-engine/public-api) would, so a custom public route can never leak a draft:
 
-```ts title="plugins/example/src/api/modules/articles/by-category.route.ts"
+```ts title="plugins/newsroom/src/api/modules/stories/by-category.route.ts"
 handler: async c => {
-  const { publicService } = articleContent;
-  if (!publicService) throw new Error("Articles have no public API.");
+  const { publicService } = storyContent;
+  if (!publicService) throw new Error("Stories have no public API.");
 
   const { edges } = await publicService(c).findMany({
     filters: { category: c.req.valid("param").categoryId },
@@ -46,19 +46,19 @@ handler: async c => {
 
 The plain `service` sees every record and checks nothing, which suits a [cron job](/docs/dev/cron):
 
-```ts title="plugins/example/src/api/cron/weekly-digest.cron.ts"
+```ts title="plugins/newsroom/src/api/cron/weekly-digest.cron.ts"
 export const weeklyDigestCron = buildCron({
   name: "weekly-digest",
   schedule: "0 8 * * 1",
   handler: async c => {
-    const service = articleContent.service(c);
-    const article = await service.create({
+    const service = storyContent.service(c);
+    const story = await service.create({
       title: "Weekly digest",
       code: `digest-${Date.now()}`,
       category: 1,
       gallery: [21],
     });
-    await service.publish(article.id);
+    await service.publish(story.id);
   },
 });
 ```
@@ -73,15 +73,15 @@ export const weeklyDigestCron = buildCron({
 
 `editorialService` (with [`editorial`](/docs/content-engine/editorial)) writes a revision and refuses to overwrite a newer save. Run the effects after it, so events, search and URLs follow:
 
-```ts title="plugins/example/src/api/modules/admin/routes/feature.route.ts"
+```ts title="plugins/newsroom/src/api/modules/admin/routes/feature.route.ts"
 import {
   contentEditorialEffects,
   resolveContentActor,
   withHttpErrors,
 } from "@vitnode/core/content/server";
 
-const { editorialService } = articleContent;
-if (!editorialService) throw new Error("Articles have no editorial.");
+const { editorialService } = storyContent;
+if (!editorialService) throw new Error("Stories have no editorial.");
 
 const outcome = await withHttpErrors(
   "update",
@@ -91,12 +91,12 @@ const outcome = await withHttpErrors(
       { featured: true },
       { actor: resolveContentActor(c), expectedVersion },
     ),
-  { contentTypeId: articleContent.definition.id, itemId: id, structured: true },
+  { contentTypeId: storyContent.definition.id, itemId: id, structured: true },
 );
 
 if (outcome) {
-  await contentEditorialEffects(c, articleContent.definition, outcome, {
-    model: articleContent,
+  await contentEditorialEffects(c, storyContent.definition, outcome, {
+    model: storyContent,
     pluginId: manifest.id,
   });
 }
@@ -104,7 +104,7 @@ if (outcome) {
 
 - `expectedVersion` is the version the page loaded. A newer save turns the call into a `409 CONTENT_VERSION_CONFLICT`, which `withHttpErrors` answers for you.
 - `resolveContentActor(c)` names the signed-in user on the revision. A job passes `CONTENT_SYSTEM_ACTOR`.
-- Protect a staff route with `adminStaffPermission: { module: "article", permission: "can_edit" }`.
+- Protect a staff route with `adminStaffPermission: { module: "story", permission: "can_edit" }`.
 
 Hiding and duplicating work the same way, with `hide`, `unhide` and `duplicate` and the `contentVisibilityEffects` and `contentDuplicateEffects` helpers. They exist only when `visibility` or `duplication` is on.
 
@@ -141,4 +141,4 @@ A [localized](/docs/content-engine/localization) content type also has `localize
 
 ### Schemas
 
-`articleContent.schemas` holds the Zod schemas the generated routes use. Reuse them so a custom route accepts and returns the same shapes: `create`, `update`, `updateEnvelope`, `select`, `publicSelect`, `filters`, `publicFilters`, `order`, `params`, `publicParams` and `form`.
+`storyContent.schemas` holds the Zod schemas the generated routes use. Reuse them so a custom route accepts and returns the same shapes: `create`, `update`, `updateEnvelope`, `select`, `publicSelect`, `filters`, `publicFilters`, `order`, `params`, `publicParams` and `form`.

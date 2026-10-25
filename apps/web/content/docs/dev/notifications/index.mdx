@@ -23,7 +23,7 @@ Your plugin decides who might care about something. Core decides who actually re
 | Declares a notification type with `buildNotificationType` | Lists the type on every member's preferences page                      |
 | Passes candidate user ids as `recipients`                 | Drops the actor, deleted users and members who turned the type off     |
 | Answers "who may see this?" in `access`                   | Calls `access` in batches, again before email and when the inbox loads |
-| Returns plain text from `present`                         | Strips markup, drops unsafe links and translates per recipient         |
+| Returns plain text from `present`                         | Shows it as plain text (markup is never rendered), drops unsafe links and translates per recipient |
 | Sends one `idempotencyKey` per real-world event           | Ignores repeats, retries failed work and never delivers twice          |
 
 ## Notification or toast?

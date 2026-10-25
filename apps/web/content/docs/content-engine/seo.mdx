@@ -9,22 +9,44 @@ import blogSeoSheet from "./seo-blog-sheet.webp";
 
 Once a content type has [public pages](/docs/content-engine/public-pages), `delivery.seo` decides which fields fill each page's `<title>`, meta description and `robots` tag, and `delivery.sitemap` lists the pages for crawlers. You name fields; the Content Engine reads them from every published record, so editors never fill in a separate SEO form unless you give them one.
 
-The examples use `example.article` from the example plugin and `blog.post` from the blog plugin, which is localized.
+The examples use `newsroom.story` from the newsroom plugin and `blog.post` from the blog plugin, which is localized.
 
 ## Pick the SEO fields
 
-`example.article` uses its title and excerpt, plus a boolean that hides a record from search engines:
+`newsroom.story` uses its title and excerpt, plus a boolean that hides a record from search engines:
 
-```ts title="plugins/example/src/content/article.ts"
+```ts title="plugins/newsroom/src/content/story.ts (excerpt)"
 fields: {
   title: field.text({ required: true, minLength: 3, maxLength: 200 }),
-  excerpt: field.textarea({ maxLength: 500, nullable: true }),
+  // ...
+  excerpt: field.textarea({
+    ai: {
+      action: "newsroom:story.excerpt",
+      mode: "suggestion",
+      sourceFields: ["title", "code"],
+    },
+    maxLength: 500,
+    nullable: true,
+  }),
+  // ...
   noIndex: field.boolean({ nullable: true }),
+  // ...
 },
 
 publicApi: {
-  path: "articles",
-  fields: ["title", "slug", "excerpt", "noIndex", "publishedAt"],
+  path: "stories",
+  fields: [
+    "title",
+    "slug",
+    "excerpt",
+    "featured",
+    "category",
+    "animation",
+    "gallery",
+    "noIndex",
+    "publishedAt",
+  ],
+  // ...
 },
 
 delivery: {
@@ -86,7 +108,7 @@ The page's `head` calls `contentDeliveryPageHead` with the resolve route's answe
 | `og:title`, `og:description`                | No                                          |
 
 <Callout type="warn">
-  The resolve route returns `openGraph` and `canonicalPath` for every record, but nothing turns them into tags yet. A nonlocalized type such as `example.article` gets no canonical link, and no content type gets Open Graph tags. A plugin page cannot add them either, because its `head` only accepts `title`, `description`, `robots` and `alternates`. Keep `openGraph` in your definition so the data is ready, and read it from the resolve route if you render pages outside VitNode.
+  The resolve route returns `openGraph` and `canonicalPath` for every record, but nothing turns them into tags yet. A nonlocalized type such as `newsroom.story` gets no canonical link, and no content type gets Open Graph tags. A plugin page cannot add them either, because its `head` only accepts `title`, `description`, `robots` and `alternates`. Keep `openGraph` in your definition so the data is ready, and read it from the resolve route if you render pages outside VitNode.
 </Callout>
 
 ## Hide a record from search engines
@@ -96,7 +118,7 @@ The page's `head` calls `contentDeliveryPageHead` with the resolve route's answe
 - the page gets `<meta content="noindex, nofollow" name="robots"/>`;
 - the record leaves the [sitemap](#sitemap).
 
-Only `true` hides a record. `null` and `false` both mean "index it", which is why `example.article` can make the field nullable without emptying its sitemap. The resolve route reports the decision as `"robots": { "follow": true, "index": false }`.
+Only `true` hides a record. `null` and `false` both mean "index it", which is why `newsroom.story` can make the field nullable without emptying its sitemap. The resolve route reports the decision as `"robots": { "follow": true, "index": false }`.
 
 The field must be shared, not localized. A record has one indexing decision, and a per-language value would let the Polish page say `noindex` while the sitemap lists the English one. The definition refuses a localized `noIndexField` for that reason.
 
@@ -130,7 +152,7 @@ delivery: {
 `delivery.sitemap` adds a public route that lists every published URL of the content type, oldest record first. Pass `true` or `{ changeFrequency, priority }`. It needs `publication: true`, since a sitemap lists only what readers can reach.
 
 ```bash
-curl "http://localhost:3000/api/@vitnode/example/content/articles/delivery/sitemap?cursor=1&limit=1"
+curl "http://localhost:3000/api/newsroom/content/stories/delivery/sitemap?cursor=1&limit=1"
 ```
 
 ```json
@@ -141,7 +163,7 @@ curl "http://localhost:3000/api/@vitnode/example/content/articles/delivery/sitem
       "itemId": 3,
       "lastModified": "2026-10-10T11:06:30.518Z",
       "locale": null,
-      "path": "/articles/hello-content-engine",
+      "path": "/stories/hello-content-engine",
       "priority": 0.7
     }
   ],
@@ -182,10 +204,16 @@ import {
   contentSitemapXml,
   isContentSitemapChangeFrequency,
 } from "@vitnode/core/content";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
-const response = await fetch(
-  "http://localhost:3000/api/@vitnode/example/content/articles/delivery/sitemap",
-);
+const response = await fetcher({
+  plugin: "newsroom",
+  method: "get",
+  module: "content/stories",
+  path: "/delivery/sitemap",
+  args: { query: { limit: 1000 } },
+});
+if (!response.ok) throw new Error("Could not load the story sitemap.");
 const { entries } = await response.json();
 
 const xml = contentSitemapXml({
@@ -200,19 +228,19 @@ const xml = contentSitemapXml({
 });
 ```
 
-With the example plugin's two published articles, `xml` is:
+With the newsroom plugin's two published stories, `xml` is:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://example.com/articles/jbbjk-1</loc>
+    <loc>https://example.com/stories/jbbjk-1</loc>
     <lastmod>2026-08-30T09:18:25.398Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
-    <loc>https://example.com/articles/hello-content-engine</loc>
+    <loc>https://example.com/stories/hello-content-engine</loc>
     <lastmod>2026-10-10T11:06:30.518Z</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -224,19 +252,19 @@ With the example plugin's two published articles, `xml` is:
 
 ## Retired slugs
 
-With `delivery.redirects`, an old slug answers a permanent `308` redirect to the record's current URL, so links and search results that still use the old address land on the new page. See [Keep old URLs working](/docs/content-engine/public-pages#keep-old-urls-working).
+With `delivery.redirects`, an old slug answers a permanent `308` redirect to the record's current URL, so links and search results that still use the old address land on the new page. See [Keep old URLs working](/docs/content-engine/public-pages#optional-next-steps).
 
 ## Check the result
 
-Print the SEO tags of an article and of a localized blog post:
+Print the SEO tags of a story and of a localized blog post:
 
 ```bash
-curl -s http://localhost:3000/articles/hello-content-engine | grep -oE '<title>[^<]*</title>|<meta [^>]*name="(description|robots)"[^>]*>|<link [^>]*rel="(canonical|alternate)"[^>]*>'
+curl -s http://localhost:3000/stories/hello-content-engine | grep -oE '<title>[^<]*</title>|<meta [^>]*name="(description|robots)"[^>]*>|<link [^>]*rel="(canonical|alternate)"[^>]*>'
 ```
 
 ```html
 <title>Hello Content Engine - VitNode</title>
-<meta content="A first article from the example plugin, served by the public API and rendered on its own page." name="description"/>
+<meta content="A first story from the newsroom plugin, served by the public API and rendered on its own page." name="description"/>
 ```
 
 Run the same command for `http://localhost:3000/blog/article/english-title` and you get its title, description and the four links from [Localized alternates](#localized-alternates-and-hreflang). The SVG logo's `<title>Logo VitNode</title>` may show up too; it is not page metadata.
@@ -244,7 +272,7 @@ Run the same command for `http://localhost:3000/blog/article/english-title` and 
 Then ask the resolve route what the page was given, `openGraph` and `robots` included:
 
 ```bash
-curl http://localhost:3000/api/@vitnode/example/content/articles/delivery/resolve/hello-content-engine
+curl http://localhost:3000/api/newsroom/content/stories/delivery/resolve/hello-content-engine
 ```
 
-Set `noIndex` on a test article, publish it, and run both commands again. The page gains the `robots` tag, and the [sitemap](#sitemap) route stops listing it.
+Set `noIndex` on a test story, publish it, and run both commands again. The page gains the `robots` tag, and the [sitemap](#sitemap) route stops listing it.

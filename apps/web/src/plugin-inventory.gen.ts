@@ -35,23 +35,6 @@ export const frontendPlugins: FrontendPluginInventory = [
     },
   },
   {
-    id: "@vitnode/example",
-    manifest: {
-      id: "@vitnode/example",
-      title: "Example",
-      icon: "flask-conical",
-      description: "Reference plugin exercising the VitNode Content Engine end to end.",
-      author: {
-        name: "VitNode",
-        email: "contact@vitnode.com",
-        url: "https://vitnode.com",
-      },
-      license: "MIT",
-      version: "2.0.0-canary.13",
-      updates: null,
-    },
-  },
-  {
     id: "@vitnode/forum",
     manifest: {
       id: "@vitnode/forum",
@@ -65,6 +48,19 @@ export const frontendPlugins: FrontendPluginInventory = [
       },
       license: "MIT",
       version: "2.0.0-canary.13",
+      updates: null,
+    },
+  },
+  {
+    id: "newsroom",
+    manifest: {
+      id: "newsroom",
+      title: "Newsroom",
+      icon: "puzzle",
+      description: "Newsroom: the VitNode tutorial plugin, grown into a tour of the Content Engine.",
+      author: null,
+      license: null,
+      version: "0.1.0",
       updates: null,
     },
   },

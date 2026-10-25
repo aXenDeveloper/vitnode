@@ -44,7 +44,7 @@ The browser receives the same `{ unread, revision }` pair from three places:
 
 `unread` is always the absolute count. `revision` increases with every change, and the browser keeps the state with the highest revision, so a slow response never undoes a newer realtime update. Messages are sent only after commit, so a rolled-back change never reaches the browser.
 
-WebSocket messages missed while a tab was offline are not replayed. Instead, the server sends the current count as the first message on every new connection, so a reconnect catches up without an extra request. While the socket is open, the browser never calls `/state`. Without a socket, for example when the API runs inside the web app on the same origin or the connection is down, it reads `/state` every 60 seconds while the tab is visible, and right away when a tab returns after more than 30 seconds in the background.
+WebSocket messages missed while a tab was offline are not replayed. Instead, the server sends the current count as the first message on every new connection, so a reconnect catches up without an extra request. While the socket is open, the browser never calls `/state`. Without a socket, for example in a single app without `webSocket: true` or while the connection is down, it reads `/state` every 60 seconds while the tab is visible, and right away when a tab returns after more than 30 seconds in the background.
 
 When the count changes, open notification lists refresh once per burst: 1 second after the last change and at most 5 seconds after the first.
 

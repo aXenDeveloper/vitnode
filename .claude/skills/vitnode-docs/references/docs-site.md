@@ -40,7 +40,6 @@ Apply these checks to public documentation. Preserve access controls on private 
 - Confirm changed pages through direct HTML/Markdown requests, metadata inspection, link checks, and the existing build. Use available crawl diagnostics when authorized. A successful check does not guarantee retrieval or citation by any service.
 
 Authoritative references for verification, not text to copy into reader-facing docs:
-
 - https://developers.google.com/search/docs/fundamentals/seo-starter-guide
 - https://developers.google.com/search/docs/appearance/ai-features
 - https://developers.openai.com/api/docs/bots

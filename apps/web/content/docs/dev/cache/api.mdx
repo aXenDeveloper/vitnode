@@ -32,7 +32,7 @@ handler: async c => {
 
 `countNotesByAuthor` stands for your existing database query. On a hit, `remember` returns the stored value and skips the query. On a miss, it runs the query, stores the result for five minutes and returns it.
 
-Keys are prefixed with the plugin that owns the route. `notes:stats` is stored as `vitnode:cache:@acme/site-notes:notes:stats`, so it cannot collide with another plugin's key. Values are stored as JSON, so a `Date` comes back as a string.
+Keys are prefixed with the plugin that owns the route. `notes:stats` is stored as `vitnode:cache:site-notes:notes:stats`, so it cannot collide with another plugin's key. Values are stored as JSON, so a `Date` comes back as a string.
 
 </Step>
 <Step>
@@ -69,11 +69,11 @@ The TTL is a safety net, not the invalidation. Without `delete`, visitors see ou
 2. Call the stats route, then list your plugin's keys:
 
    ```bash
-   redis-cli --scan --pattern 'vitnode:cache:@acme/site-notes:*'
+   redis-cli --scan --pattern 'vitnode:cache:site-notes:*'
    ```
 
-   The output includes `vitnode:cache:@acme/site-notes:notes:stats`. Calling the route again within five minutes does not run `countNotesByAuthor`.
+   The output includes `vitnode:cache:site-notes:notes:stats`. Calling the route again within five minutes does not run `countNotesByAuthor`.
 
 3. Create a note and run the same command. The key is gone until the next call to the stats route.
 
-For every method, including `get`, `set`, `flush` and locks, see the [Cache reference](/docs/dev/cache/reference).
+For every method, including `get`, `set`, `flush` and locks, see the [API cache reference](/docs/dev/cache/reference).

@@ -16,6 +16,7 @@ import type {
   AdminStaffRow,
 } from "@/views/admin/views/core/staff/staff-query";
 
+import { deepMerge } from "@/lib/i18n/deep-merge";
 import { adminStaffPermissions } from "@/views/admin/views/core/shared/admin-permissions";
 import {
   buildStaffPermissionGroups,
@@ -51,14 +52,15 @@ export const loadStaffPermissionLabels = async ({
   locale: string;
   queryClient: QueryClient;
 }): Promise<Record<string, unknown>> => {
-  const merged: Record<string, unknown> = {};
+  let merged: Record<string, unknown> = {};
 
   for (const namespaces of chunkStaffLabelKeys(keys, MAX_NAMESPACES)) {
     const intl = await queryClient.query({
       ...intlQueryOptions({ locale, namespaces }),
       staleTime: "static",
     });
-    Object.assign(merged, intl.messages);
+    // Deep: two chunks can each carry part of one plugin's root object.
+    merged = deepMerge(merged, intl.messages);
   }
 
   return merged;

@@ -1,18 +1,18 @@
 ---
-title: Container hierarchy
+title: Container tree
 description: How Content Engine containers nest, order, move and delete, how concurrent edits stay consistent, and how to read and change a container tree from your own API routes with createContentContainerService.
 icon: ListTree
 ---
 
-A container collection is a tree. This page explains the rules every change to that tree follows, whether it comes from the AdminCP or from your own code, and shows how to use the container service on the server. It uses the `example.boards` collection from [Containers](/docs/content-engine/containers).
+A container collection is a tree. This page explains the rules every change to that tree follows, whether it comes from the AdminCP or from your own code, and shows how to use the container service on the server. It uses the newsroom plugin's `newsroom.desks` collection from [Containers](/docs/content-engine/containers).
 
 ## Depth
 
-`depth` is 1 for a root, 2 for its children, and so on. `hierarchy.maxDepth` caps it and counts roots, so the example's `maxDepth: 3` allows **Frontend → React → Hooks** and nothing below **Hooks**.
+`depth` is 1 for a root, 2 for its children, and so on. `hierarchy.maxDepth` caps it and counts roots, so the newsroom's `maxDepth: 3` allows **Politics → Elections → Local** and nothing below **Local**.
 
 - The default is 5, the ceiling is 10.
 - `hierarchy: { enabled: false }` keeps every container at the root: a flat, ordered list. Any `parentId` is refused.
-- A move checks the whole subtree it carries. Moving a board that has children under a deep parent is refused if the deepest child would cross the limit.
+- A move checks the whole subtree it carries. Moving a desk that has children under a deep parent is refused if the deepest child would cross the limit.
 
 ## Ordering
 
@@ -48,15 +48,15 @@ Deleting never cascades. A container is deleted only when it is empty:
 - `hasChildren` (409): it still has child containers. Move or delete them first.
 - `hasContent` (409): a record of any content type that uses this collection still points at it. Move or delete those records first.
 
-The database enforces the same rules. Both `parentId` and every `field.container()` column are foreign keys with `ON DELETE RESTRICT`, so a delete can never orphan a board or a discussion, even if another request slips in between the check and the delete. The remaining siblings are renumbered to close the gap.
+The database enforces the same rules. Both `parentId` and every `field.container()` column are foreign keys with `ON DELETE RESTRICT`, so a delete can never orphan a desk or a letter, even if another request slips in between the check and the delete. The remaining siblings are renumbered to close the gap.
 
 ## Slugs
 
-A slug addresses one container of one collection, so `frontend` can exist once in `example.boards` and once in another collection. A slug you pass is normalized (lowercase ASCII, dashes) and must be free, or the write fails with `slugTaken`. A missing slug is derived from the name, with `-2`, `-3` and so on added until it is free. A slug that normalizes to nothing, such as `"!!!"`, fails with `slugEmpty`.
+A slug addresses one container of one collection, so `politics` can exist once in `newsroom.desks` and once in another collection. A slug you pass is normalized (lowercase ASCII, dashes) and must be free, or the write fails with `slugTaken`. A missing slug is derived from the name, with `-2`, `-3` and so on added until it is free. A slug that normalizes to nothing, such as `"!!!"`, fails with `slugEmpty`.
 
 ## Concurrent edits
 
-Two admins dragging boards at the same moment cannot corrupt the tree. Every write to a collection:
+Two admins dragging desks at the same moment cannot corrupt the tree. Every write to a collection:
 
 1. Takes a transaction-scoped Postgres advisory lock for that collection, so writes to one collection run one after another. Different collections never wait for each other.
 2. Reads the whole tree inside the transaction, so it plans against what the previous write committed.
@@ -66,48 +66,48 @@ A collection holds at most 5,000 containers (`limitReached`, 409). The whole tre
 
 ## Use the service on the server
 
-`createContentContainerService` is the one way to read and change a collection. The AdminCP routes and the public routes both use it, so your code gets the same rules, cache expiry and events. Call it inside any Hono handler with the request context:
+`createContentContainerService` is the one way to read and change a collection. The AdminCP routes and the public routes both use it, so your code gets the same rules, cache expiry and events. Call it inside any Hono handler with the request context. Here is a route you could add to the newsroom plugin. It files a desk under an **Archive** desk and locks it:
 
-```ts title="plugins/example/src/api/modules/boards/archive.route.ts"
+```ts title="src/api/modules/desks/archive.route.ts"
 import { createContentContainerService } from "@vitnode/core/content/server";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
-import { boardContainers } from "@/content/boards";
+import { deskContainers } from "@/content/desks";
 import { manifest } from "@/manifest.gen";
 
-export const archiveBoardRoute = buildRoute({
-  adminStaffPermission: { module: "example_boards", permission: "can_edit" },
+export const archiveDeskRoute = buildRoute({
+  adminStaffPermission: { module: "newsroom_desks", permission: "can_edit" },
   route: {
     method: "post",
     path: "/{id}/archive",
-    description: "Move a board under the Archive board and lock it",
+    description: "Move a desk under the Archive desk and lock it",
     request: { params: z.object({ id: z.coerce.number().int().positive() }) },
     responses: {
-      200: { description: "Board archived" },
-      404: { description: "Board or Archive not found" },
+      200: { description: "Desk archived" },
+      404: { description: "Desk or Archive not found" },
     },
   },
   handler: async c => {
     const { id } = c.req.valid("param");
-    const boards = createContentContainerService(c, {
-      definition: boardContainers,
+    const desks = createContentContainerService(c, {
+      definition: deskContainers,
       pluginId: manifest.id,
     });
 
-    const archive = await boards.findBySlug("archive");
+    const archive = await desks.findBySlug("archive");
     if (!archive) {
       throw new HTTPException(404, {
-        message: "Create an Archive board first.",
+        message: "Create an Archive desk first.",
       });
     }
 
-    const siblings = await boards.children(archive.id);
-    await boards.move(id, { parentId: archive.id, position: siblings.length });
-    await boards.update(id, { metadata: { locked: true } });
+    const siblings = await desks.children(archive.id);
+    await desks.move(id, { parentId: archive.id, position: siblings.length });
+    await desks.update(id, { metadata: { locked: true } });
 
-    return c.json({ message: "Board archived." }, 200);
+    return c.json({ message: "Desk archived." }, 200);
   },
 });
 ```
@@ -128,7 +128,7 @@ Refused writes throw a `ContentContainerError` with `code`, `status` (400, 404 o
 | `delete(id)`         | `Promise<void>`             | Deletes an empty container, as described in [Safe deletion](#safe-deletion)                    |
 | `toPublic(record)`   | `PublicRecord`              | Drops every metadata field not in `publicApi.fields`                                           |
 
-A record is `{ id, parentId, name, slug, position, depth, metadata, createdAt, updatedAt }`, with `metadata` typed from the definition's fields. `ContentContainerRecord<typeof boardContainers>` and `ContentContainerPublicRecord<typeof boardContainers>` from `@vitnode/core/content` name those types.
+A record is `{ id, parentId, name, slug, position, depth, metadata, createdAt, updatedAt }`, with `metadata` typed from the definition's fields. `ContentContainerRecord<typeof deskContainers>` and `ContentContainerPublicRecord<typeof deskContainers>` from `@vitnode/core/content` name those types.
 
 The tree helpers the service uses are pure and browser-safe, exported from `@vitnode/core/content`: `contentContainerTree` nests a list, `orderContentContainers` sorts rows into tree order with their depth, and `contentContainerAncestors` and `contentContainerSubtreeIds` walk it.
 
@@ -143,21 +143,21 @@ Each successful write emits one event after its transaction commits. A write tha
 | `content.container.moved`   | `{ definitionId, pluginId, containerId, parentId, fromParentId, position }` |
 | `content.container.deleted` | `{ definitionId, pluginId, containerId, parentId }`                         |
 
-The names are shared by every collection, so filter on `definitionId`:
+Every collection shares the same names, so filter on `definitionId`. This listener logs desk moves:
 
-```ts title="plugins/example/src/api/lib/events.ts"
+```ts title="src/api/lib/desk-listeners.ts"
 import { buildEventListener } from "@vitnode/core/api/lib/events";
 
-export const boardMovedListener = buildEventListener({
+export const deskMovedListener = buildEventListener({
   event: "content.container.moved",
-  name: "log-board-moves",
+  name: "log-desk-moves",
   handler: async (c, payload) => {
-    if (payload.definitionId !== "example.boards") return;
+    if (payload.definitionId !== "newsroom.desks") return;
 
     await c
       .get("log")
       .debug(
-        `Board ${payload.containerId} moved from ${payload.fromParentId ?? "the root"} to ${payload.parentId ?? "the root"}`,
+        `Desk ${payload.containerId} moved from ${payload.fromParentId ?? "the root"} to ${payload.parentId ?? "the root"}`,
       );
   },
 });
@@ -165,6 +165,6 @@ export const boardMovedListener = buildEventListener({
 
 `changedFields` names `name`, `slug` and the metadata fields whose value actually changed, or `policies` when the container's [publishing policies](/docs/content-engine/container-policies) were saved. A reorder among siblings is a `moved` event with the same `fromParentId` and `parentId`. Register listeners as described in [Events](/docs/dev/events). [Built-in events](/docs/dev/events/built-in-events#content-container-events) has the field-by-field payloads.
 
-Every write also expires the [page cache](/docs/content-engine/caching) entries that read the collection, including pages that list content filtered by one of its containers, so a renamed board shows its new name without a manual purge.
+Every write also expires the [page cache](/docs/content-engine/caching) entries that read the collection, including pages that list content filtered by one of its containers, so a renamed desk shows its new name without a manual purge.
 
-Next, build pages on top of the tree in [Containers on the frontend](/docs/content-engine/container-frontend).
+Next, build pages on top of the tree in [Container pages](/docs/content-engine/container-frontend).

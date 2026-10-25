@@ -43,10 +43,10 @@ pnpm dev
 
 Two files, and the line between them is one question: may a browser hold this?
 
-| File                           | Holds                                                                                                                    |
-| :----------------------------- | :----------------------------------------------------------------------------------------------------------------------- |
-| `src/vitnode.config.ts`        | locales, metadata, theme, `debug`, enabled plugin ids - plain data, read by the browser, the server, and your Vite build |
-| `src/vitnode.server.config.ts` | message loaders - server only                                                                                            |
+| File                           | Holds                                                                                                            |
+| :----------------------------- | :--------------------------------------------------------------------------------------------------------------- |
+| `src/vitnode.config.ts`        | locales, metadata, theme and enabled plugin ids. Plain data, read by the browser, the server and your Vite build |
+| `src/vitnode.server.config.ts` | message loaders. Server only                                                                                     |
 
 Add a language to `i18n.locales` in the shared config; register the files that
 translate it in `src/locales/packages.ts` (a package's own translations) or

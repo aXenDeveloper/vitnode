@@ -1,5 +1,5 @@
 ---
-title: Languages & Localization
+title: Languages
 description: How VitNode merges translations from installed packages, and how to add, translate, and override languages.
 icon: Globe
 ---
@@ -66,9 +66,22 @@ export const vitNodeConfig = buildConfig({
 })
 ```
 
-`timeZone` is explicit on purpose: your app renders on a server, and without one `use-intl` formats dates in whatever zone the server happens to run in - then warns that the client will disagree.
+`timeZone` defaults to `UTC`. Set it to the zone your visitors expect. The server renders dates, so the zone has to be fixed in config rather than taken from wherever the server happens to run.
 
 Because `buildConfig` keeps those codes as literal types, `'de'` is now part of your `Locale` union and a typo in `defaultLocale` is a type error.
+
+### Disabling one
+
+Set `enabled: false` to switch a language off without deleting it:
+
+```ts title="apps/web/src/vitnode.config.ts"
+locales: [
+  { code: 'en', name: 'English' },
+  { code: 'de', name: 'Deutsch', enabled: false }, // [!code highlight]
+],
+```
+
+Its URLs stop routing and answer `404` instead of rendering half-translated pages, and it disappears from the language switcher and from multi-language form fields. Its translations stay in place for when you turn it back on.
 
 ---
 
@@ -104,8 +117,8 @@ export const packageMessages: Record<string, LocaleMessagesMap> = {
   '@vitnode/core': {
     en: async () => await import('@vitnode/core/locales/en.json'),
   },
-  '@acme/blog': {
-    en: async () => await import('@acme/blog/locales/en.json'),
+  'site-notes': {
+    en: async () => await import('site-notes/locales/en.json'),
   },
 }
 ```
@@ -221,7 +234,7 @@ i18n: {
 },
 ```
 
-[Localized URLs](/docs/dev/i18n/localized-urls) covers the rules, domains, redirects and SEO.
+[Localized URLs](/docs/dev/i18n/localized-urls) covers prefixes and translated paths; [Advanced localized URLs](/docs/dev/i18n/localized-urls-advanced) covers domains, redirects and SEO.
 
 ## Learn More
 
@@ -243,7 +256,7 @@ i18n: {
   />
   <Card
     title="API i18n"
-    description="Localize transactional emails and error responses"
+    description="Translate emails and other output with no UI"
     href="/docs/dev/i18n/server"
   />
   <Card

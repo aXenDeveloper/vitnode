@@ -1,21 +1,25 @@
 ---
-title: Defining a Widget
+title: Define a widget
 description: defineWidget takes an id, Content Engine fields and one React component, and infers the widget's data type from the fields.
 icon: SquarePen
 ---
 
+A widget is one `defineWidget` call: a bare id, the fields an editor fills in and the React component that renders them. This page covers each part, the fields a widget may hold and how ids are namespaced. For the whole path to a rendered page, follow [First widget](/docs/dev/widgets/end-to-end).
+
+`defineWidget` and `defineBlock` are the same function, exported from `@vitnode/core/widgets` under both names; the types have both names too (`WidgetData` is `BlockData`).
+
 ## One call
 
-```tsx title="plugins/example/src/widgets/callout.tsx"
+```tsx title="plugins/newsroom/src/widgets/callout.tsx (excerpt)"
 import type { WidgetComponentProps, WidgetData } from '@vitnode/core/widgets'
 
+import { field } from '@vitnode/core/content/fields'
 import { defineWidget } from '@vitnode/core/widgets'
-import { field } from '@vitnode/core/content'
 import { InfoIcon } from 'lucide-react'
 
 const calloutFields = {
-  body: field.textarea({ required: true, minLength: 1, maxLength: 600 }),
-  title: field.text({ required: true, minLength: 1, maxLength: 120 }),
+  body: field.textarea({ maxLength: 600, minLength: 1, required: true }),
+  title: field.text({ maxLength: 120, minLength: 1, required: true }),
   tone: field.enum({
     defaultValue: 'info',
     values: ['info', 'success', 'warning'],
@@ -24,10 +28,22 @@ const calloutFields = {
 
 type CalloutData = WidgetData<typeof calloutFields>
 
+const tones: Record<string, string> = {
+  info: 'border-primary/40 bg-primary/5',
+  success: 'border-success/40 bg-success/5',
+  warning: 'border-destructive/40 bg-destructive/5',
+}
+
 const Callout = ({ data }: WidgetComponentProps<CalloutData>) => (
-  <aside>
-    <h2>{data.title}</h2>
-    <p>{data.body}</p>
+  <aside
+    className={`flex flex-col gap-2 rounded-lg border p-4 md:p-6 ${tones[data.tone ?? 'info']}`}
+  >
+    <h2 className="text-base font-semibold text-balance md:text-lg">
+      {data.title}
+    </h2>
+    <p className="text-sm leading-relaxed text-pretty md:text-base">
+      {data.body}
+    </p>
   </aside>
 )
 
@@ -42,6 +58,27 @@ export const calloutWidget = defineWidget({
 ```
 
 `WidgetData<typeof calloutFields>` is the inferred data type: `title` and `body` are `string`, `tone` is `"info" | "success" | "warning" | undefined` because it has a default. Nothing is written twice.
+
+## Register it
+
+A definition does nothing until the plugin exports it. List it in `src/widgets.tsx`, export that object as **`blocks`** (the name VitNode's Vite plugin imports), and pass the same object to `buildApiPlugin({ blocks })` so the API can validate writes:
+
+```tsx title="plugins/newsroom/src/widgets.tsx"
+import type { WidgetPluginSource } from '@vitnode/core/widgets'
+
+import { manifest } from '@/manifest.gen'
+
+import { calloutWidget } from './widgets/callout'
+
+export const widgets = {
+  pluginId: manifest.id,
+  blocks: [calloutWidget],
+} satisfies WidgetPluginSource
+
+export const blocks = widgets
+```
+
+[First widget](/docs/dev/widgets/end-to-end#give-the-api-the-same-list) shows the `buildApiPlugin` side. A widget missing from either place does not render in the app, or is refused on every write.
 
 ## Give it an icon
 
@@ -95,23 +132,23 @@ export const featuresWidget = defineWidget({
 })
 ```
 
-The chosen variant is stored **beside** the instance's data, never inside it, and the editor grows a picker for it with no further work. See [Block Variants](/docs/dev/widgets/block-variants) for the resolution rules and what happens to a stored variant a block stops offering.
+The chosen variant is stored **beside** the instance's data, never inside it, and the editor grows a picker for it with no further work. See [Variants](/docs/dev/widgets/block-variants) for the resolution rules and what happens to a stored variant a widget stops offering.
 
 ## Ids are namespaced for you
 
 Write `id: "callout"`. The registry prefixes the namespace of the plugin that registered it, derived from the **last segment** of the package name:
 
-| Plugin               | Block id       | Stored as              |
+| Plugin               | Widget id      | Stored as              |
 | :------------------- | :------------- | :--------------------- |
 | `@vitnode/core`      | `hero`         | `core:hero`            |
 | `@vitnode/blog`      | `latest-posts` | `blog:latest-posts`    |
 | `@acme/page-builder` | `pricing`      | `page-builder:pricing` |
 
-Writing the namespace yourself is an error - a block would otherwise be addressable under two names, and content written under the wrong one would be unrenderable.
+Writing the namespace yourself is an error. A widget would otherwise be addressable under two names, and content written under the wrong one would be unrenderable.
 
-Two packages whose names end in the same segment (`@vitnode/blog` and `@acme/blog`) collide. The registry refuses to build and names both; set `namespace` on one of their `blocks` modules to settle it.
+Two packages whose names end in the same segment (`@vitnode/blog` and `@acme/blog`) collide. The registry refuses to build and names both; set `namespace` on one plugin's widgets object (`{ pluginId, namespace: 'acme-blog', blocks: [...] }`) to settle it.
 
-## Which fields a block may hold
+## Which fields a widget may hold
 
 | Kind                                               | Supported | Why                                                                                                                                                 |
 | :------------------------------------------------- | :-------- | :-------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -121,16 +158,17 @@ Two packages whose names end in the same segment (`@vitnode/blog` and `@acme/blo
 | `field.group()`                                    | ✅        | Nested objects are ordinary JSON.                                                                                                                   |
 | `field.file()`, `field.relation()`, `field.user()` | Not yet   | A reference is a row identifier the owning record has to pin against deletion, and a value inside a JSON document has nowhere to put a foreign key. |
 | `field.repeatable()`                               | Not yet   | Its rows are rows on a generated child table, identified by a database id a JSON document does not have.                                            |
-| `field.slug()`                                     | No        | A slug is a record's address, and a block is not addressable on its own.                                                                            |
-| `field.blocks()`                                   | Not yet   | Nested blocks need depth limits, their own allowlist and cycle detection first.                                                                     |
+| `field.richText()`                                 | Not yet   | Not one of the supported kinds yet.                                                                                                                 |
+| `field.slug()`                                     | No        | A slug is a record's address, and a widget is not addressable on its own.                                                                           |
+| `field.container()`                                | No        | A container is where a whole record is filed. A widget is part of a record.                                                                         |
+| `field.blocks()`                                   | Not yet   | Nested widgets need depth limits, their own allowlist and cycle detection first.                                                                    |
 
-Every one of those rules lives in one table, `blockFieldKindRefusal`, and the error a refused field produces quotes the reason from it.
+`defineWidget` throws for a refused field, quoting the reason from `blockFieldKindRefusal`. A widget also needs at least one field.
 
-<Callout title="Media and relations are a limitation of today, not of the model">
-  The serialized shape - `{ id, type, data }`, with `data` holding this field map's values - does not change when these land: a `file` field would store a `core_files.id` exactly as a file *column* does. What is missing is the lifecycle around it. A content column pins its file with `ON DELETE RESTRICT`, which is what makes the Files screen answer 409 instead of leaving a published page pointing at bytes that are gone; a value inside JSONB has no foreign key to carry that.
-
-The intended solution is to extract a widget's references out of its data on write - the field map already says which leaves are references - and pin them in a reference table the same way, so deletion, cleanup and `onDelete` keep working. Until that exists, storing a bare id in JSON would be a foreign key with none of the guarantees of one, which is worse than not supporting it. Put the image on the record for now and let the widget choose how to present it.
-
+<Callout title="Need an image in a widget?">
+  Put the image on the record for now and let the widget choose how to present
+  it. A file id inside widget JSON would have no foreign key protecting it from
+  deletion, which is why `file`, `relation` and `user` fields wait.
 </Callout>
 
 ## Localization
@@ -140,8 +178,10 @@ A widget's **fields** are never `localized: true`. There is no translation row f
 The **zone** is what translates:
 
 ```ts
-content: field.widgets({ localized: true })
+content: field.blocks({ localized: true })
 ```
+
+`field.widgets()` is an alias of `field.blocks()`; both build the same field.
 
 This is document-level localization, not translated field values: each language gets its own widgets, in its own order, and the two need not correspond at all.
 
@@ -150,9 +190,7 @@ en:  Hero  →  Text  →  CTA
 pl:  Hero  →  CTA   →  Gallery
 ```
 
-See [The blocks() field](/docs/dev/widgets/blocks-field#localization).
-
-Editing a widget's text in the [properties panel](/docs/dev/widgets/visual-editor#the-properties-panel) changes nothing about this. What somebody types goes into the `data` of the snapshot the page mounted for the locale it is showing, and it is saved by whoever already owned that locale's zone.
+See [Blocks field](/docs/dev/widgets/blocks-field#localization). Text typed in the [visual editor](/docs/dev/widgets/visual-editor#edit-a-widget) goes into the zone of the language the page is showing.
 
 ## Validating data by hand
 

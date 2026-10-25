@@ -1,26 +1,34 @@
 ---
-title: Record ID strategies
+title: Record IDs
 description: Key VitNode Content Engine records by serial integers, UUIDs or bigint, and see how those ids look in Postgres, JSON, URLs, relations and your own code.
 icon: KeyRound
 ---
 
 `idStrategy` decides the type of a content type's primary key. The default, `"serial"`, is an auto-incrementing integer. `"uuid"` gives random ids that reveal nothing about how many records exist. `"bigint"` gives integers that will not run out. Pick it when you create the content type, because changing it later means a [hand-written data migration](#change-the-strategy-later), and nobody enjoys those.
 
-The example plugin keys its tags by UUID:
+The newsroom plugin keys its tags by UUID:
 
-```ts title="plugins/example/src/content/tag.ts"
+```ts title="plugins/newsroom/src/content/tag.ts (excerpt)"
 export const tagContentType = defineContentType({
-  id: "example.tag",
-  tableName: "example_tags",
+  id: "newsroom.tag",
+  tableName: "newsroom_tags",
   idStrategy: "uuid", // [!code ++]
+
   localization: { defaultLocale: "en", fallback: "default" },
   publication: true,
+  // visibility, duplication and editorial
+
   fields: {
-    name: field.text({ localized: true, required: true, minLength: 1, maxLength: 100 }),
+    name: field.text({
+      localized: true,
+      required: true,
+      minLength: 1,
+      maxLength: 100,
+    }),
     slug: field.slug({ localized: true, source: "name" }),
     // category and relatedTags relations
   },
-  // editorial, visibility, duplication, publicApi and admin
+  // publicApi and admin
 });
 ```
 
@@ -35,19 +43,19 @@ export const tagContentType = defineContentType({
 Choose by what the ids are for:
 
 - **`serial`** suits most content. Ids are short and readable in URLs and logs. The blog's articles and categories use it.
-- **`uuid`** suits content whose ids should not be guessable or countable, or records created in several places that must not collide. The example plugin's `example.tag` uses it.
-- **`bigint`** suits tables that may outgrow two billion rows, such as events or logs. The example plugin's `example.event` uses it.
+- **`uuid`** suits content whose ids should not be guessable or countable, or records created in several places that must not collide. The newsroom plugin's `newsroom.tag` uses it.
+- **`bigint`** suits tables that may outgrow two billion rows, such as events or logs. The newsroom plugin's `newsroom.event` uses it.
 
-Both example types appear in **AdminCP → Example → Tags** and **Events**, and their edit links carry the UUID or the decimal string, such as `/admin/content/example/event/9007199254740994/edit`.
+Both types appear in **AdminCP → Newsroom → Tags** and **Events**, and their edit links carry the UUID or the decimal string, such as `/admin/content/newsroom/event/9007199254740994/edit`.
 
 ### Why bigint ids are strings
 
 A JavaScript number holds integers exactly only up to 2^53 − 1 (`9007199254740991`). A bigint key can be much larger, and a larger id read as a number is silently rounded to a different record: `Number("9007199254740993")` is `9007199254740992`. VitNode never converts a bigint id through `Number`. Drizzle reads the column in `string` mode, and every API, event, cursor and AdminCP URL carries the exact decimal string.
 
-Once the `example_events` id sequence is past 2^53, the public API still returns every id intact:
+Once the `newsroom_events` id sequence is past 2^53, the public API still returns every id intact:
 
 ```bash
-curl "http://localhost:3000/api/@vitnode/example/content/events/big-launch"
+curl "http://localhost:3000/api/newsroom/content/events/big-launch"
 ```
 
 ```json title="Response (trimmed)"
@@ -60,7 +68,7 @@ curl "http://localhost:3000/api/@vitnode/example/content/events/big-launch"
 }
 ```
 
-`primaryTag` and `tags` point at `example.tag` records, so they carry UUIDs. Keep bigint ids as strings in your own code too.
+`primaryTag` and `tags` point at `newsroom.tag` records, so they carry UUIDs. Keep bigint ids as strings in your own code too.
 
 ## Valid ids
 
@@ -78,8 +86,8 @@ Each record has exactly one spelling, so one record is never cached or indexed u
 
 Every Content Engine feature works with all three strategies: the public API, the AdminCP lists, editors, pickers and edit links, [public pages](/docs/content-engine/public-pages) and sitemaps, previews, schedules, revisions, [live editing](/docs/content-engine/live-editing), events, search, pagination cursors, [duplicate](/docs/content-engine/duplicate-content) and [hide](/docs/content-engine/content-visibility).
 
-- **Relations** use the key type of the record they point at. A bigint event that links to uuid tags gets a `uuid` foreign key and a `bigint`-to-`uuid` junction table. See [Relations across id strategies](/docs/content-engine/relations#relations-across-id-strategies).
-- **Shared core tables** that hold records of any content type, such as revisions, schedules, slug history, live editing drafts and the search index, store the id as text in a `varchar(64)` `itemId` column. See [Database](/docs/content-engine/database#ids-and-shared-tables).
+- **Relations** use the key type of the record they point at. A bigint event that links to uuid tags gets a `uuid` foreign key and a `bigint`-to-`uuid` junction table. See [Relations across id strategies](/docs/content-engine/relations-advanced#relations-across-id-strategies).
+- **Shared core tables** that hold records of any content type, such as revisions, schedules, slug history, live editing drafts and the search index, store the id as text in a `varchar(64)` `itemId` column. See [Migrations](/docs/content-engine/database#ids-and-shared-tables).
 - **Events** type `contentId` by strategy: `number` for serial, `string` for uuid and bigint.
 - **Sitemaps** page through records in key order. For a uuid content type that order is lexical, not creation order, and every record still appears once.
 - **Repeatable rows** keep their own `serial` ids, whatever the owner uses. User and file references stay integers.

@@ -1,6 +1,6 @@
 ---
-title: AI Actions
-description: Define managed AI features with defineAiAction, register them in a plugin and run them with c.get("ai").run(). VitNode Core handles permissions, limits, budgets and history.
+title: AI actions
+description: Create your first managed AI action in a VitNode plugin. Define it with defineAiAction, register it, run it with c.get("ai").run() from an AdminCP route and find the run in the AI logs.
 icon: Wand
 implementation:
   objective: Add an AI feature to a plugin through a registered AI action.
@@ -13,46 +13,35 @@ implementation:
   constraints:
     - Define the action with `defineAiAction` and register it in `aiActions` of the plugin's `buildApiPlugin()`.
     - Run it through `aiActionRef` with `c.get("ai").run()`, `runAsSystem()` or `stream()`. Never hard-code a model or call a provider SDK directly.
-    - '`authorize()` checks access to the content the action reads, for example with `checkStaffPermission`.'
+    - '`authorize()` checks access to the content the action reads, for example with `checkStaffPermission` on the content type''s `permissionModule`.'
     - The action's `title` and `description` are message keys in the plugin's locale, not plain text.
+    - Mount the route that runs the action in one of the plugin's modules.
   related:
-    - title: AI in fields and the editor
-      href: /docs/dev/ai/fields-and-editor
-    - title: AI costs and limits
-      href: /docs/dev/ai/costs-and-limits
+    - title: Action options
+      href: /docs/dev/ai/action-options
+    - title: AI errors and limits
+      href: /docs/dev/ai/errors
     - title: AI in the AdminCP
       href: /docs/dev/ai/admin
 ---
 
-import { TypeTable } from 'fumadocs-ui/components/type-table'
+An **AI action** is one AI feature a plugin offers, such as "write an excerpt", "translate a field" or "summarize a topic". Your plugin describes the prompt and the shape of the input and output. VitNode Core runs it. It picks the model, checks permissions, enforces limits, holds budget, calls the provider through the [Vercel AI SDK](https://ai-sdk.dev), validates the answer and records what it cost.
 
-An **AI action** is one AI feature a plugin offers, such as "write an excerpt", "translate a field" or "suggest tags". The plugin describes the prompt and the input and output shapes. VitNode Core runs it: it picks the model, checks permissions, enforces limits, holds budget, calls the provider, validates the answer and records what it cost.
+On this page you add a **Summarize topic** action to the `@vitnode/forum` plugin, run it from an AdminCP route, and find the run in the AI logs.
 
-```ts
-const { output } = await c.get('ai').run({
-  action: EXCERPT_AI_ACTION,
-  input: { title, content, locale },
-})
-```
-
-## Why actions exist
-
-Calling `generateText` with `c.get("ai").model()` works, but every plugin would then need its own answers to the same questions: who may use this, how much can they spend, what happens when the provider times out, and where did the money go?
-
-Actions answer those once, in Core:
-
-- **One place for models.** Admins choose the model, fallback and limits per action in the AdminCP. Plugins never hard-code a model.
-- **One place for limits.** Permissions, daily limits, rate limits and concurrency apply to every action the same way.
-- **One place for accounting.** Every run and every provider call is recorded with tokens and cost, and charged to the right [budget](/docs/dev/ai/costs-and-limits).
-
-<Callout type="info" title="Use actions for anything users can trigger">
-  Direct SDK calls with `c.get("ai").model()` bypass budgets, limits and
-  history. Keep them for internal tooling you fully control.
+<Callout type="info" title="Why not call generateText directly?">
+  `generateText` with `c.get("ai").model()` works, but it skips permissions,
+  budgets, AI points and run history. Use an action for anything people can
+  trigger, and keep [direct SDK calls](/docs/dev/ai/usage) for internal tooling.
 </Callout>
 
-## Create an action
+## Before you begin
 
-This example adds a "summarize topic" button to a forum plugin's AdminCP.
+- **A language model with the `text` capability** in `ai.models` of your API config. See [AI setup](/docs/dev/ai).
+- **The `@vitnode/forum` plugin** in your app. Any plugin with an API part (`src/config.api.ts`) works the same way; swap the plugin id, paths and content type.
+- **An AdminCP account with a root role.** Root roles hold every AI permission and have no point cap. Any other role needs the permission, a monthly points allowance (the default is `0`) and a priced model; [AI in the AdminCP](/docs/dev/ai/admin#first-time-setup) walks through that.
+
+## Build the action
 
 <Steps>
 
@@ -60,20 +49,23 @@ This example adds a "summarize topic" button to a forum plugin's AdminCP.
 
 ### Define the action
 
+Create `src/api/ai/actions.ts` in the forum plugin:
+
 ```ts title="plugins/forum/src/api/ai/actions.ts"
 import { defineAiAction } from '@vitnode/core/api/lib/ai/action'
 import { aiActionRef } from '@vitnode/core/api/lib/ai/registry'
 import { checkStaffPermission } from '@vitnode/core/api/lib/check-staff-permission'
 import { z } from 'zod'
 
+import { topicContentType } from '@/content/topic'
 import { manifest } from '@/manifest.gen'
 
 export const zodSummarizeTopicSchema = z.object({
-  title: z.string().trim().min(1).max(255),
+  title: z.string().trim().min(1).max(200),
   content: z.string().trim().min(1).max(50_000),
 })
 
-export const summarizeTopicAiAction = defineAiAction({
+const summarizeTopicAiAction = defineAiAction({
   id: 'topic.summarize',
   title: 'ai_actions.@vitnode/forum.topic_summarize.title',
   description: 'ai_actions.@vitnode/forum.topic_summarize.description',
@@ -101,7 +93,7 @@ export const summarizeTopicAiAction = defineAiAction({
     await checkStaffPermission(c, {
       type: 'admin',
       plugin: manifest.id,
-      module: 'topics',
+      module: topicContentType.permissionModule,
       permission: 'can_view',
     }),
 })
@@ -114,10 +106,12 @@ export const SUMMARIZE_TOPIC_AI_ACTION = aiActionRef(
 )
 ```
 
-`title` and `description` are message keys. Add their text to the plugin's
-messages in the next step.
+- `id` is local to the plugin. Core stores the action as `@vitnode/forum:topic.summarize`.
+- `permission` is the switch admins flip per role. `defaultGranted: true` keeps it on until a role says otherwise.
+- `authorize()` asks whether this admin may view forum topics. `topicContentType.permissionModule` is `topic`, derived from the type id `forum.topic`.
+- `aiActionRef()` builds the canonical key and carries the input and output types, so `run()` can check them.
 
-`defineAiAction()` validates the definition when the module loads. A bad id, a missing `authorize()` or an out-of-range limit throws an `AiActionDefinitionError` at boot, not in production traffic.
+`defineAiAction()` validates the definition when the module loads, so a bad id or a missing `authorize()` throws at boot instead of in production traffic. Every field is listed in [Action options](/docs/dev/ai/action-options).
 
 </Step>
 
@@ -125,11 +119,9 @@ messages in the next step.
 
 ### Add the title and description
 
-Add the text to the plugin's messages, under the shared `ai_actions` key and
-your plugin id. Every AI page loads `ai_actions` as one namespace, so all
-plugins' action names arrive together.
+`title` and `description` are message keys. Add their text to the plugin's messages under the shared `ai_actions` key and your plugin id. Keep the existing keys in the file:
 
-```json title="plugins/forum/src/locales/en.json"
+```json title="plugins/forum/src/locales/en.json (excerpt)"
 {
   "ai_actions": {
     "@vitnode/forum": {
@@ -142,24 +134,27 @@ plugins' action names arrive together.
 }
 ```
 
+The AdminCP, the role form and the member's AI usage page translate these keys in the reader's language.
+
 </Step>
 
 <Step>
 
-### Register it in the plugin
+### Register the action in the plugin
 
-```ts title="plugins/forum/src/config.api.ts"
-import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+Open `src/config.api.ts` and pass the list to `aiActions`. Leave the existing modules as they are:
 
-import { forumAiActions } from '@/api/ai/actions'
-import { adminModule } from '@/api/modules/admin/admin.module'
-import { manifest } from '@/manifest.gen'
+```ts title="plugins/forum/src/config.api.ts (excerpt)"
+import { forumAiActions } from '@/api/ai/actions' // [!code ++]
 
 export const forumApiPlugin = () =>
   buildApiPlugin({
     manifest,
     aiActions: forumAiActions, // [!code ++]
-    modules: [adminModule],
+    modules: [
+      adminModule,
+      // ...forumModule and the public content module stay unchanged
+    ],
   })
 ```
 
@@ -167,7 +162,9 @@ export const forumApiPlugin = () =>
 
 <Step>
 
-### Run it from a route
+### Run the action from a route
+
+Create an AdminCP route that validates the body and passes it to `c.get("ai").run()`:
 
 ```ts title="plugins/forum/src/api/modules/admin/ai/routes/summarize.route.ts"
 import { z } from 'zod'
@@ -177,9 +174,13 @@ import {
   zodSummarizeTopicSchema,
 } from '@/api/ai/actions'
 import { buildRoute } from '@/api/builders'
+import { topicContentType } from '@/content/topic'
 
 export const summarizeTopicRoute = buildRoute({
-  adminStaffPermission: { module: 'topics', permission: 'can_view' },
+  adminStaffPermission: {
+    module: topicContentType.permissionModule,
+    permission: 'can_view',
+  },
   route: {
     method: 'post',
     description: 'Summarize a forum topic with the configured AI model.',
@@ -197,6 +198,7 @@ export const summarizeTopicRoute = buildRoute({
         },
         description: 'The summary',
       },
+      400: { description: 'No AI model is configured or the input is invalid' },
       403: { description: 'No access to topics or to this AI feature' },
       429: { description: 'A personal AI limit was reached' },
       502: { description: 'The AI provider failed or answered unusably' },
@@ -204,7 +206,6 @@ export const summarizeTopicRoute = buildRoute({
     },
   },
   handler: async (c) => {
-    // [!code ++:4]
     const { output } = await c.get('ai').run({
       action: SUMMARIZE_TOPIC_AI_ACTION,
       input: c.req.valid('json'),
@@ -215,363 +216,126 @@ export const summarizeTopicRoute = buildRoute({
 })
 ```
 
-TypeScript infers `output` as `string` from the action's `outputSchema`. When the run fails, `run()` throws an `AiError` and the route answers with its [error code](#error-codes).
+TypeScript infers `output` as `string` from the action's `outputSchema`. When a run fails, `run()` throws an `AiError` and the route answers with its status and a JSON body. See [AI errors and limits](/docs/dev/ai/errors).
+
+</Step>
+
+<Step>
+
+### Mount the route
+
+Create an `ai` module for the route:
+
+```ts title="plugins/forum/src/api/modules/admin/ai/ai.admin.module.ts"
+import { buildModule } from '@/api/builders'
+
+import { summarizeTopicRoute } from './routes/summarize.route'
+
+export const aiAdminModule = buildModule({
+  name: 'ai',
+  routes: [summarizeTopicRoute],
+})
+```
+
+Then add it to the forum's existing `admin` module:
+
+```ts title="plugins/forum/src/api/modules/admin/admin.module.ts (excerpt)"
+import { aiAdminModule } from './ai/ai.admin.module' // [!code ++]
+
+export const adminModule = buildModule({
+  name: 'admin',
+  routes: [],
+  modules: [
+    aiAdminModule, // [!code ++]
+    buildContentAdminModule({
+      containers: [forumContainers],
+      contentTypes: [topicContent, commentContent],
+    }),
+  ],
+})
+```
+
+The route is now served at `POST /api/@vitnode/forum/admin/ai/summarize`.
 
 </Step>
 
 </Steps>
 
-For a complete, real example, read the `@vitnode/blog` plugin: `plugins/blog/src/api/ai/actions.ts` and its `admin/ai` routes.
-
-## Action ids
-
-An action has a **local id**, unique inside its plugin: lowercase, dot-separated words such as `topic.summarize`.
-
-Core stores it under a **canonical key**, `<pluginId>:<localId>`:
-
-```text
-@acme/forum:topic.summarize
-@vitnode/blog:article.review
-```
-
-Two plugins may both have a `topic.summarize`; their canonical keys differ. The same canonical key twice throws at boot. Settings, history and limits all use the canonical key.
-
-`aiActionRef(pluginId, action)` builds the canonical key **and** remembers the action's input and output types. Pass it to `run()` and TypeScript checks `input` and infers `output`. A plain string key also works, but its output is `unknown`.
-
-## Title, description and icon
-
-Every action appears as a row on **Artificial Intelligence (AI) → Actions**, as a feature on the role form's **Artificial intelligence (AI)** tab and in a member's AI usage. Each of those needs a human name in every language:
-
-- **`title`** (required): the message key of a short name, e.g. `ai_actions.@vitnode/forum.topic_summarize.title` for "Summarize topic".
-- **`description`** (required): the message key of one sentence on what it does.
-- **`icon`** (optional): a [Lucide](https://lucide.dev/icons) icon name in kebab case, e.g. `languages` or `wand-sparkles`. Without one, the row shows a sparkles icon.
-
-The API returns both keys untranslated. The AdminCP and the member's settings translate them into the page's language. A language without the key falls back to the default language's text. Keep the keys in your plugin's `src/locales/en.json` under `ai_actions` → your plugin id, and translate them like any other [plugin message](/docs/dev/i18n/messages).
-
-<Callout type="info" title="Plain text still works">
-  A `title` or `description` that is not a message key is shown as written. That
-  is handy while prototyping, but it never gets translated.
-</Callout>
-
-A blank title or description, or an icon that isn't a kebab-case name, throws at boot.
-
-## Prompt versions and instructions
-
-`promptVersion` is stored with every run. Bump it whenever the prompt changes meaningfully, so the history shows which prompt produced which result.
-
-`buildPrompt(input, { instructions })` returns either `{ prompt, system? }` or `{ messages, system? }`. `instructions` is optional extra guidance an admin set for this action in the AdminCP, or `null`. Append it to the system prompt.
-
-## Input and output
-
-- **`inputSchema`** (Zod) validates the input before anything else happens. Invalid input fails with `AI_INVALID_INPUT`.
-- **`measureInput(input)`** returns the number of characters counted against `maxInputCharacters`. By default every string in the input counts. Override it when only part of the input reaches the prompt. The blog's article review, for example, counts the title and at most 30,000 characters of the article text.
-- **`output: "text"`** makes the model return text. `parseText(text, input)` turns it into your output, then `outputSchema` checks it. Throw from `parseText()` to reject an answer.
-- **`output: "object"`** makes the model return structured JSON, which `outputSchema` validates. The action must require the `structured-output` capability, and it cannot be streamed.
-
-An empty answer, a `parseText()` that throws or a schema mismatch fails with `AI_INVALID_OUTPUT`. The user is not charged for it.
-
-```ts title="An object action"
-export const suggestTagsAiAction = defineAiAction({
-  id: 'topic.tags',
-  title: 'ai_actions.@vitnode/forum.topic_tags.title',
-  description: 'ai_actions.@vitnode/forum.topic_tags.description',
-  promptVersion: 1,
-  permission: 'tags',
-  actors: ['system'],
-  requiredCapabilities: ['text', 'structured-output'],
-  defaults: {
-    maxInputCharacters: 20_000,
-    maxOutputTokens: 200,
-    timeoutMs: 30_000,
-    maxRetries: 1,
-  },
-  inputSchema: z.object({ content: z.string().min(1) }),
-  output: 'object',
-  outputSchema: z.object({ tags: z.array(z.string().max(32)).max(5) }),
-  buildPrompt: (input) => ({
-    system: 'Suggest up to five short, lowercase tags for this forum topic.',
-    prompt: input.content,
-  }),
-})
-
-export const TOPIC_TAGS_AI_ACTION = aiActionRef(
-  manifest.id,
-  suggestTagsAiAction,
-)
-```
-
-`actors: ["system"]` makes this a background-only action, so it needs no `authorize()`. See [Actors](#actors-users-and-the-system).
-
-### Images
-
-For a vision action, require `image-input` and pass the image **bytes** as a `file` part. Read them server-side, for example with `c.get("storage").readBytes(key, maxBytes)`, so no private file ever has to be made public for the provider:
-
-```ts
-buildPrompt: (input) => ({
-  messages: [
-    {
-      role: 'user',
-      content: [
-        { type: 'text', text: 'Describe this image in one sentence.' },
-        { type: 'file', data: input.image, mediaType: input.mediaType },
-      ],
-    },
-  ],
-}),
-```
-
-`maxImages` defaults to `1` for these actions and bounds how many images one run may send. Only models that declare `image-input` are used. See [Model capabilities](/docs/dev/ai#model-capabilities).
-
-## Permissions and authorize()
-
-Every action names a **permission**. Admins grant it per role on the **Artificial intelligence (AI)** tab of the role form. Several actions may share one key. They then share one switch and one daily counter.
-
-```ts
-permission: 'summarize' // same as { key: 'summarize', defaultGranted: false }
-permission: { key: 'summarize', defaultGranted: true }
-```
-
-`defaultGranted` applies while no role has a setting for the key. The canonical permission is `<pluginId>:<key>`. Two actions sharing a key must agree on `defaultGranted`, or boot fails.
-
-`authorize()` is **required** for actions users can run. The AI permission says "this role may use AI summaries". `authorize()` says "this user may read _this_ topic". Both must pass:
-
-```ts
-// canReadTopic() is the forum plugin's own access check
-authorize: async ({ c, input, userId }) =>
-  await canReadTopic(c, { topicId: input.topicId, userId }),
-```
-
-`resource` is the optional `{ type, id }` the caller passed to `run()`. It is also stored with the run, so history can link back to the content.
-
-## Actors: users and the system
-
-`actors` decides who may run an action. The server sets the actor; the request never does.
-
-| Actor    | Runs with                   | Charged to                                     |
-| :------- | :-------------------------- | :--------------------------------------------- |
-| `user`   | `c.get("ai").run()`         | The site budget and the user's AI points       |
-| `system` | `c.get("ai").runAsSystem()` | The site budget and the optional system budget |
-
-The default is `["user"]`. `run()` uses the signed-in AdminCP user first, then the site user. Without one, it fails with `AI_UNAUTHORIZED`.
-
-Use `runAsSystem()` only from trusted server code: cron jobs, queue tasks, event listeners. No route should pass a client's request into it.
-
-```ts title="plugins/forum/src/api/cron/tag-topics.cron.ts"
-import { isAiError } from '@vitnode/core/api/lib/ai/errors'
-import { buildCron } from '@vitnode/core/api/lib/cron'
-
-import { TOPIC_TAGS_AI_ACTION } from '@/api/ai/actions'
-
-export const tagTopicsCron = buildCron({
-  name: 'tag-new-topics',
-  description: 'Suggest tags for new forum topics',
-  schedule: '*/15 * * * *',
-  handler: async (c) => {
-    for (const topic of await loadUntaggedTopics(c)) {
-      try {
-        const { output } = await c.get('ai').runAsSystem({
-          action: TOPIC_TAGS_AI_ACTION,
-          input: { content: topic.content },
-          resource: { type: 'forum_topic', id: topic.id },
-        })
-        await saveTopicTags(c, topic.id, output.tags)
-      } catch (error) {
-        // Out of budget: stop now and try again on the next tick.
-        if (isAiError(error) && error.code === 'AI_BUDGET_EXHAUSTED') return
-        throw error
-      }
-    }
-  },
-})
-```
-
-## Defaults and limits
-
-`defaults` sets an action's limits. Admins can override most of them per action in the AdminCP. Values outside the allowed range throw at boot.
-
-| Field                | Required | Default                          | Range           |
-| :------------------- | :------- | :------------------------------- | :-------------- |
-| `maxInputCharacters` | Yes      | -                                | 1 – 1,000,000   |
-| `maxOutputTokens`    | Yes      | -                                | 1 – 200,000     |
-| `timeoutMs`          | Yes      | -                                | 1,000 – 600,000 |
-| `maxRetries`         | No       | `0`                              | 0 – 3           |
-| `maxSteps`           | No       | `1`                              | 1 – 10          |
-| `maxImages`          | No       | `1` with `image-input`, else `0` | 0 – 10          |
-| `dailyLimit`         | No       | `null` (no limit)                | 0 – 100,000     |
-
-- `timeoutMs` applies to each attempt.
-- `maxRetries` is extra attempts on the same model after a failed provider call.
-- `maxSteps` is model round trips inside one attempt (tool loops). Each step is billed as its own call.
-- `dailyLimit` counts runs per user per day for the action's permission key. A role's daily limit takes precedence over the admin's action setting, which takes precedence over this default.
-- Admins cannot change `maxImages`, because it bounds the budget reserved for images.
-
-Admins can also, per action: switch it off, assign a model, assign a fallback model, and add `instructions`.
-
-## Run options
-
-<TypeTable
-  type={{
-    action: {
-      description: 'Canonical key, ideally from aiActionRef().',
-      type: 'TypedAiActionKey | string',
-      required: true,
-    },
-    input: {
-      description: "Validated against the action's inputSchema.",
-      type: 'Input',
-      required: true,
-    },
-    resource: {
-      description:
-        'The content the input came from. Passed to authorize() and stored with the run.',
-      type: '{ type: string; id: string | number | null }',
-    },
-    idempotencyKey: {
-      description:
-        'A key the same actor can submit only once. A repeat fails with AI_DUPLICATE_REQUEST and the earlier runId, even if the earlier run failed.',
-      type: 'string',
-    },
-    signal: {
-      description: 'Aborts the provider call, e.g. c.req.raw.signal.',
-      type: 'AbortSignal',
-    },
-    sourceFingerprint: {
-      description:
-        'Fingerprint of the source content, stored to spot stale results later.',
-      type: 'string',
-    },
-  }}
-/>
-
-`run()` and `runAsSystem()` resolve to:
-
-```ts
-{
-  output: Output,      // validated by outputSchema
-  runId: number,
-  usage: {
-    chargedPoints: string, // points charged to the user, full precision; "0" for system runs
-    costKnown: boolean,
-    modelId: string,       // the configured model that answered
-  },
-}
-```
-
-You can safely return `usage` to the browser: it never contains prices or provider details.
-
-## What happens during a run
-
-1. Find the action, check the actor, validate `input`.
-2. Check the global AI switch and the action's switch.
-3. For users: check the role permission, then `authorize()`.
-4. Measure the input and the number of images.
-5. Pick the model: the admin's choice, or the first configured model with every required capability. Resolve the optional fallback, skipping an incompatible one.
-6. **Reserve** budget for the worst case and check rate and concurrency limits, in one short database transaction.
-7. Call the provider outside any transaction. Retry up to `maxRetries` times, then try the fallback model once.
-8. Validate the output.
-9. **Settle**: charge the real cost and release the rest of the reservation.
-10. Emit `ai.run.completed` or `ai.run.failed`.
-
-A canceled run stops immediately. An invalid answer is not retried on the same model, but the fallback model still gets one try. Everything before step 6 costs nothing. [Costs, Points & Budgets](/docs/dev/ai/costs-and-limits) explains steps 6 and 9.
-
-## Stream a text action
-
-`c.get("ai").stream()` streams a `text` action for the signed-in user. Object actions cannot be streamed.
-
-```ts
-handler: async (c) => {
-  const { textStream } = await c.get('ai').stream({
-    action: SUMMARIZE_TOPIC_AI_ACTION,
-    input: c.req.valid('json'),
-    signal: c.req.raw.signal, // stop paying when the reader leaves
-  })
-
-  return new Response(textStream.pipeThrough(new TextEncoderStream()), {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-  })
-}
-```
-
-The stream also returns `result`, a promise that resolves to the validated output once the stream ends, and rejects with an `AiError` if the full text is invalid. A stream makes one attempt on the primary model, with no retries and no fallback. If the reader cancels, the run settles as `canceled`. The user is charged nothing if no text had reached them yet; once text was sent, their points and daily count are charged as for a delivered run.
-
-## Error codes
-
-Every refusal and failure is an `AiError` with a stable `code`. Routes answer with this JSON body. Key the browser's messages on `code`, never on the English `message`:
-
-```json
-{
-  "code": "AI_USER_LIMIT_REACHED",
-  "message": "You used all your AI points for this period.",
-  "resetsAt": "2026-11-01T00:00:00.000Z",
-  "runId": 42
-}
-```
-
-`resetsAt` is set for limit and budget errors. `runId` is set when a run was recorded.
-
-| Code                     | Status | When                                                                    |
-| :----------------------- | :----- | :---------------------------------------------------------------------- |
-| `AI_NOT_CONFIGURED`      | 400    | No `ai.models` are configured.                                          |
-| `AI_INVALID_INPUT`       | 400    | The input failed `inputSchema`, or an object action was streamed.       |
-| `AI_INPUT_TOO_LARGE`     | 413    | The input exceeds `maxInputCharacters` or `maxImages`.                  |
-| `AI_DISABLED`            | 503    | An admin switched AI off for the whole site.                            |
-| `AI_ACTION_DISABLED`     | 403    | An admin switched this action off.                                      |
-| `AI_ACTION_UNKNOWN`      | 404    | No installed plugin registers this key.                                 |
-| `AI_UNAUTHORIZED`        | 403    | Not signed in, no AI permission, `authorize()` refused, or wrong actor. |
-| `AI_MODEL_INCOMPATIBLE`  | 409    | No model has the required capabilities.                                 |
-| `AI_PRICING_MISSING`     | 409    | The model has no pricing while a budget cap applies.                    |
-| `AI_USER_LIMIT_REACHED`  | 429    | The user's monthly AI points are used up.                               |
-| `AI_DAILY_LIMIT_REACHED` | 429    | The user reached today's limit for this permission.                     |
-| `AI_RATE_LIMITED`        | 429    | Too many runs started in the last minute.                               |
-| `AI_CONCURRENCY_LIMITED` | 429    | Too many runs in flight.                                                |
-| `AI_BUDGET_EXHAUSTED`    | 503    | The site budget (or the system budget) for this month is used up.       |
-| `AI_DUPLICATE_REQUEST`   | 409    | The `idempotencyKey` was already used.                                  |
-| `AI_PROVIDER_FAILED`     | 502    | The provider returned an error.                                         |
-| `AI_INVALID_OUTPUT`      | 502    | The answer was empty or failed `parseText()` / `outputSchema`.          |
-| `AI_TIMEOUT`             | 504    | The provider took longer than `timeoutMs`.                              |
-| `AI_CANCELED`            | 408    | The `signal` aborted the run.                                           |
-
-Import the helpers from `@vitnode/core/api/lib/ai/errors`: `AiError`, `isAiError()`, `AI_ERROR_CODES` and `AI_ERROR_STATUS`.
-
-## Events
-
-Each run that got past the reservation emits one event after it settles:
-
-| Event              | Payload                                                  |
-| :----------------- | :------------------------------------------------------- |
-| `ai.run.completed` | `actionKey`, `actorType`, `runId`, `userId`              |
-| `ai.run.failed`    | `actionKey`, `actorType`, `errorCode`, `runId`, `userId` |
-
-`userId` is `null` for system runs. Refusals before the reservation, such as a missing permission or a reached limit, emit nothing. A listener that throws never breaks the run.
-
-```ts title="plugins/forum/src/api/lib/ai-events.ts"
-import { buildEventListener } from '@vitnode/core/api/lib/events'
-
-export const aiFailureListener = buildEventListener({
-  event: 'ai.run.failed',
-  name: 'log-ai-failures',
-  handler: async (c, payload) => {
-    if (!payload.actionKey.startsWith('@acme/forum:')) return
-    await c
-      .get('log')
-      .warn(`AI run ${payload.runId} failed: ${payload.errorCode}`)
-  },
-})
-```
-
-See [Events](/docs/dev/events) for registering listeners.
-
-## Learn more
+## Check the result
+
+Start or restart the dev server so the API loads the new action, then sign in to the AdminCP.
+
+1. Open **Artificial Intelligence (AI) → Actions**. A **Summarize topic** row appears with its description and icon. Nothing has been spent yet.
+2. Add a temporary button that calls the route with `fetcher`. Create `src/pages/check-summarize.tsx`:
+
+   ```tsx title="plugins/forum/src/pages/check-summarize.tsx"
+   import { Button } from '@vitnode/core/components/ui/button'
+   import { fetcher } from '@vitnode/core/tanstack/fetcher'
+   import { useState } from 'react'
+
+   import { manifest } from '@/manifest.gen'
+
+   export const CheckSummarize = () => {
+     const [result, setResult] = useState('')
+     const [isPending, setIsPending] = useState(false)
+
+     const onClick = async () => {
+       setIsPending(true)
+       try {
+         const response = await fetcher({
+           plugin: manifest.id,
+           method: 'post',
+           module: 'admin/ai',
+           path: '/summarize',
+           args: {
+             body: {
+               title: 'Parking on Saturday',
+               content:
+                 'The lot is closed on Saturday morning for repainting. Park on Elm Street instead.',
+             },
+           },
+         })
+         setResult(JSON.stringify(await response.json()))
+       } finally {
+         setIsPending(false)
+       }
+     }
+
+     return (
+       <div className="flex flex-col gap-3">
+         <Button isLoading={isPending} onClick={onClick}>
+           Summarize a test topic
+         </Button>
+         {result ? <output className="leading-relaxed">{result}</output> : null}
+       </div>
+     )
+   }
+   ```
+
+   Render `<CheckSummarize />` on a forum page, such as `src/pages/forum-page.tsx`. The browser sends the AdminCP session cookie from every page, so open that page in the browser you signed in with and press the button. It shows `{"text":"…"}` with a two-sentence summary. This call spends real provider tokens. Remove the button when you are done.
+
+3. Open **Debug Panel → AI logs**. The newest row is `@vitnode/forum:topic.summarize` with status `succeeded`, the model that answered, the tokens and the cost.
+
+If the call answers an error instead, the body names it, for example `{ "code": "AI_NOT_CONFIGURED", ... }` when `ai.models` is empty. [AI errors and limits](/docs/dev/ai/errors) lists every code and its fix.
+
+Your own React code calls the route the same way, with `fetcher`. See [Fetcher](/docs/dev/fetcher).
+
+## Related
 
 <Cards>
   <Card
-    title="Costs, Points & Budgets"
-    description="How runs are priced, reserved and charged"
-    href="/docs/dev/ai/costs-and-limits"
+    title="Streaming"
+    description="Show the summary while the model is still writing it"
+    href="/docs/dev/ai/streaming"
   />
   <Card
-    title="AI Setup"
-    description="Configure models, capabilities and pricing"
-    href="/docs/dev/ai"
+    title="Action options"
+    description="Every defineAiAction field, run option and default"
+    href="/docs/dev/ai/action-options"
+  />
+  <Card
+    title="Errors and limits"
+    description="Error codes, background jobs and run events"
+    href="/docs/dev/ai/errors"
   />
 </Cards>

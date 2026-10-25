@@ -1,13 +1,16 @@
 ---
 title: Debugging
-description: Find out what a VitNode app is actually doing - the AdminCP Debug Panel, the system log, the Router and Query devtools, and React Scan.
+description: Find out what a VitNode app is actually doing with the AdminCP Debug Panel, the system log, and the Router and Query devtools.
 icon: Bug
 ---
 
-Four surfaces, each answering a different question. Two of them exist only in
-development - the devtools and React Scan. The other two, the AdminCP Debug
-Panel and the server's own output, are how you see inside a production
-deployment, which is exactly when you need to.
+import { ImgDocs } from "@/components/fumadocs/img";
+import debugPanelOverview from "./debug-panel-overview.webp";
+
+Three places to look, each answering a different question. The devtools exist
+only in development. The other two, the AdminCP Debug Panel and the server's own
+output, show you inside a production deployment, which is where the bug you
+can't reproduce usually lives.
 
 ## Where to look first
 
@@ -16,7 +19,6 @@ deployment, which is exactly when you need to.
 | A request 500s in production                | [Debug Panel](#the-debug-panel) → Log explorer            |
 | A screen shows data that has moved on       | [Query devtools](#devtools-in-development) → find the key |
 | A route loaded the wrong thing              | [Router devtools](#devtools-in-development) → loader data |
-| A page feels slow to type in or scroll      | [React Scan](#react-scan) → count the re-renders          |
 | A service looks configured but does nothing | [Debug Panel](#the-debug-panel) → Services                |
 | A background job never ran                  | [Debug Panel](#the-debug-panel) → Cron & queue, Queue     |
 
@@ -24,24 +26,30 @@ deployment, which is exactly when you need to.
 
 The Debug Panel lives at `/admin/core/debug`. Open it from **Debug Panel** in
 your avatar menu, or type "Debug Panel" into the ⌘K admin search. When something
-needs attention, that menu item shows an amber warning icon - or a red error
-icon if anything is critical - so you know to look before anyone files a bug.
+needs attention, that menu item shows an amber warning icon, and a red error
+icon when something is critical. Either way you see it before anyone files a
+bug.
 
 It works like a settings page: a side menu on the left (a **Section** drawer on
 phones) and one section on the right. Every section has its own URL, such as
 `/admin/core/debug/cron`, so you can bookmark it or paste it to a teammate.
 
-{/* Image prompt: A screenshot of the VitNode AdminCP Debug Panel at /admin/core/debug - a side menu on the left with Overview, a "Systems" group (VitNode, Plugins, Cron & queue, Cache, Search, Services) and a "Diagnostics" group (Log explorer, Queue, AI logs); on the right the Overview section with a list of two rows that need attention, a "Check again" button, and a "Systems" list with a "Clear cache" button. Dark theme, 1440x900. */}
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={debugPanelOverview}
+  alt="Debug Panel Overview in the AdminCP: three things need attention (the scheduler stopped running, 6 cron jobs are overdue, 1 collection is incomplete) above a Systems list with VitNode, Plugins, Cron & queue, Cache, Search and Services, next to the side menu with Log explorer, Queue and AI logs"
+/>
 
 | Section                        | What it shows                                                                                                                                                                                        |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Overview**                   | A red alert when your VitNode version has a security update, everything that needs attention (click a row to jump to its section) with **Check again**, and a **Systems** list with **Clear cache**. |
+| **Overview**                   | A red alert when your VitNode version has a security update, the list of what needs attention (a row opens its section) with **Check again**, and a **Systems** list with **Clear cache**.          |
 | **VitNode** (`/debug/vitnode`)   | The running version, the update channel, the last update check and **Check for updates**. A red panel with the fixed version and release notes when a security update applies.                       |
 | **Plugins** (`/debug/plugins`)   | Every installed plugin with its version, plus a warning when it needs a security update, runs different API and web versions, has an update, or its update source is unreachable.                    |
 | **Cron & queue** (`/debug/cron`) | The scheduler status card and the cron jobs table. See [Cron jobs](/docs/dev/cron#manage-cron-jobs-in-the-debug-panel).                                                                              |
 | **Cache** (`/debug/cache`)       | Whether Redis is connected, unreachable or not configured (in memory), whether realtime works across instances, and **Clear cache**.                                                                 |
 | **Search** (`/debug/search`)     | Index status, the engine, recent sync errors and every collection with **Reindex**. See [Search](/docs/dev/search#manage-the-search-index-in-the-debug-panel).                                       |
-| **Services** (`/debug/services`) | Email, file storage, AI models, captcha and WebSocket - each active or not configured. Active ones have a test button, inactive ones a **Set up** link to the docs.                                  |
+| **Services** (`/debug/services`) | Email, file storage, AI models, captcha and WebSocket, each active or not configured. Active ones have a test button, inactive ones a **Set up** link to the docs.                                    |
 | **Log explorer** (`/debug/logs`) | Every line anything wrote with `c.get('log')`, newest first, sortable by type, plugin or date.                                                                                                       |
 | **Queue** (`/debug/queue`)       | Background tasks with their status, attempts and last error, filterable by status. See [Queue tasks](/docs/dev/advanced/queue).                                                                      |
 | **AI logs** (`/debug/ai`)        | Every AI request: action, status, origin, model, cost and points, with filters.                                                                                                                                                |
@@ -129,41 +137,9 @@ its entries before React renders, and the screen reads the same ones back.
 
 <Callout type="info" title="Server-side requests are not in the panel">
   A loader that runs during SSR runs in the Node process, so its output lands in
-  the terminal running `vite dev` - not in a browser panel. The Query panel
+  the terminal running `vite dev`, not in a browser panel. The Query panel
   shows the entry once it is dehydrated into the page.
 </Callout>
-
-## React Scan
-
-[React Scan](https://react-scan.com/) draws an outline around every component as
-it re-renders, which turns "this page feels heavy" into a number. It is off by
-default; flip `debug` in the [shared config](/docs/dev/configuration):
-
-```ts title="src/vitnode.config.ts"
-export const vitNodeConfig = buildConfig({
-  debug: true, // [!code ++]
-  i18n: {
-    defaultLocale: 'en',
-    locales: [{ code: 'en', name: 'English' }],
-  },
-  metadata: {
-    shortTitle: 'VitNode',
-    title: 'VitNode',
-  },
-  plugins: [],
-  theme: {
-    defaultTheme: 'system',
-  },
-})
-```
-
-The provider loads `react-scan` lazily and only when `debug` is on **and**
-`NODE_ENV` is `development`, so leaving `debug: true` committed cannot leak the
-overlay into production. It is still worth turning back off - the outlines are
-distracting once you have your answer.
-
-Once you have found the culprit, [Performance](/docs/dev/performance) covers
-what to do about it.
 
 ## Where output goes
 
@@ -171,12 +147,12 @@ what to do about it.
 | --------------------- | -------------------------------------------------------------------------------------- |
 | The `core_logs` table | Every `c.get('log')` call, with the request that made it. Read it in the Debug Panel.  |
 | The server's stdout   | The same lines, colour-coded and prefixed `[VitNode] Error (@your/plugin):`.           |
-| The browser console   | Client-side errors, and React Scan's own output.                                       |
+| The browser console   | Client-side errors.                                                                    |
 | The terminal          | Vite's dev-server output, plus anything a loader or server function logged during SSR. |
 
 There is no request logger, and no log-level switch: every level is written
 every time, to both the table and the console. If you want less noise, log less.
-[Logging](/docs/dev/debugging/logging) is the whole surface.
+[Logging](/docs/dev/debugging/logging) covers the whole API.
 
 ## Gotchas
 
@@ -189,23 +165,24 @@ every time, to both the table and the console. If you want less noise, log less.
   installation runs. Log events, not traffic.
 </Callout>
 
-<Callout type="warn" title="Behind a proxy, every log line says the same IP">
-  The IP on a log row - and the rate-limit bucket - is the address of the socket
-  VitNode is talking to, because `X-Forwarded-For` is a header the caller writes
-  and nobody should get to pick their own audit trail. Behind a reverse proxy
-  that socket is the proxy, so every visitor looks like the same one. Put the
-  per-visitor rate limit in the [proxy
-  itself](/docs/dev/deployments/self-hosted), where the address is real.
+<Callout type="warn" title="Behind a proxy, set VITNODE_TRUSTED_PROXY_HOPS">
+  VitNode takes the IP on a log row from the socket it is talking to, and so
+  does the rate limiter, unless you say how many reverse proxies to trust.
+  Without that, every visitor behind a proxy looks like the proxy. Set
+  `VITNODE_TRUSTED_PROXY_HOPS` to the number of proxies in front of the app, and
+  VitNode reads the visitor's address from `X-Forwarded-For`. See
+  [Self-hosted](/docs/dev/deployments/self-hosted) and the [rate
+  limiter](/docs/dev/advanced/rate-limiter).
 </Callout>
 
-<Callout type="info" title="Clear Cache clears the front end, not Redis">
+<Callout type="info" title="Clear cache clears the front end, not Redis">
   The button invalidates the TanStack Query cache and the router's loaders,
   which is the front end's memory of the API. The API's own [Redis-backed
-  cache](/docs/dev/advanced/redis) is expired by the mutations that change the
-  data, not from this screen.
+  cache](/docs/dev/advanced/redis) expires when a mutation changes the data.
+  This screen never touches it.
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

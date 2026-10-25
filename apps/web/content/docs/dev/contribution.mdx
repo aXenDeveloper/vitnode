@@ -1,115 +1,88 @@
 ---
 title: Contributing
-description: Set up the VitNode monorepo locally, run tests and typechecks, and submit pull requests.
+description: Set up the VitNode repository locally with pnpm and Docker, run the same build, lint and test checks as CI, and submit a pull request.
 icon: HeartHandshake
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+Contributions to VitNode are always welcome, whether it's a bug fix, a new feature or a docs fix. This page sets up the VitNode repository on your machine, lists the checks CI runs, and explains the docs conventions.
 
-Contributions to VitNode - whether bug fixes, new features, or documentation improvements - are always welcome!
+## Before you begin
 
-## Quick start
+- **Node.js** `^22.18.0`, `^24.11.0` or `26` and later (the `engines` range in the root `package.json`).
+- **pnpm**. The repository is a pnpm workspace (`packageManager: pnpm@11.9.0`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`), and CI uses pnpm too, so use it rather than bun or npm here. With Corepack, `corepack enable` picks the right version.
+- **Docker**, for the local PostgreSQL and Redis containers. Without Docker, point `POSTGRES_URL` in `apps/api/.env` and `apps/web/.env` at your own database.
 
-Clone the repository, start local containers, and launch the dev server:
+## Set up the repository
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Setup VitNode monorepo">
+<Steps>
+<Step>
 
-```bash tab="bun"
-bun install
-bun run docker:dev
-bun dev
+### Clone and install
+
+```bash
+git clone https://github.com/aXenDeveloper/vitnode.git
+cd vitnode
+pnpm install
 ```
 
-```bash tab="pnpm"
-pnpm install
+</Step>
+<Step>
+
+### Start the database
+
+```bash
 pnpm docker:dev
+```
+
+This starts PostgreSQL and Redis in Docker, using `apps/api/docker-compose.yml`. The apps read their connection settings from `apps/web/.env` and `apps/api/.env`; copy each `.env.example` next to it to `.env` if you do not have them yet.
+
+</Step>
+<Step>
+
+### Start the dev servers
+
+```bash
 pnpm dev
 ```
 
-```bash tab="npm"
-npm install
-npm run docker:dev
-npm run dev
-```
+`dev` builds the CLI scripts and the plugins, then starts every app with Turborepo. Before the web server starts, its `dev` script runs the API package's `db:prepare`, which generates and applies migrations and seeds the initial data.
 
-</Tabs>
+</Step>
+</Steps>
 
-Open `http://localhost:3000` to view the website, AdminCP, and live docs.
+Open `http://localhost:3000` for the website, the AdminCP at `/admin` and the live docs at `/docs`. On a fresh database, the first account you register becomes the administrator.
 
----
+## Repository layout
 
-## Monorepo Layout
+| Directory                    | Role                                                                                          |
+| :--------------------------- | :-------------------------------------------------------------------------------------------- |
+| `packages/vitnode`           | `@vitnode/core`: routing, auth, models, UI primitives and the `vitnode` CLI                   |
+| `packages/create-vitnode-app`| The project and plugin generator (`create-vitnode-app`)                                       |
+| `packages/config`            | `@vitnode/config`, shared TypeScript and lint configuration                                   |
+| `packages/resend`, `packages/nodemailer` | Email adapters                                                                    |
+| `packages/s3`, `packages/supabase-storage` | Storage adapters                                                                |
+| `packages/node-cron`         | In-process cron adapter                                                                       |
+| `packages/elasticsearch`     | Search provider adapter                                                                       |
+| `apps/web`                   | The TanStack Start website, AdminCP and this documentation                                    |
+| `apps/api`                   | The standalone Hono API server                                                                |
+| `plugins/*`                  | First-party plugins (`@vitnode/blog`, `@vitnode/forum`, `newsroom`)                           |
 
-| Directory | Role |
-| :--- | :--- |
-| `packages/vitnode` | `@vitnode/core` package containing routing, auth, models, and UI primitives |
-| `apps/web` | Frontend TanStack Start application and documentation portal |
-| `apps/api` | Standalone Hono REST/RPC API server |
-| `plugins/*` | First-party plugins (`@vitnode/blog`, `@vitnode/example`) |
+## Run the checks
 
----
+Before opening a pull request, run what GitHub Actions runs, from the repository root:
 
-## Local Validation Checks
+| Command                    | What it checks                                                                 |
+| :------------------------- | :----------------------------------------------------------------------------- |
+| `pnpm build:scripts`       | Builds the `vitnode` CLI (`packages/vitnode/dist/scripts`)                     |
+| `pnpm build:plugins`       | Builds every plugin and adapter package with tsdown, with type checking        |
+| `pnpm build`               | Builds every app                                                               |
+| `pnpm lint`                | Runs oxlint in every package and checks formatting with oxfmt                  |
+| `pnpm test`                | Runs every package's tests                                                     |
+| `pnpm test:types`          | Runs the type tests                                                            |
 
-Before opening a pull request, run the same checks that execute in GitHub Actions CI:
+CI runs the build steps in that order, because the apps and tests read the built CLI and plugins. `pnpm lint:fix` fixes formatting and most lint errors for you; run it before you commit.
 
-### 1. Typecheck
-
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Typecheck">
-
-```bash tab="bun"
-bun run typecheck
-```
-
-```bash tab="pnpm"
-pnpm typecheck
-```
-
-```bash tab="npm"
-npm run typecheck
-```
-
-</Tabs>
-
-### 2. Run Tests
-
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run unit tests">
-
-```bash tab="bun"
-bun test
-```
-
-```bash tab="pnpm"
-pnpm test
-```
-
-```bash tab="npm"
-npm test
-```
-
-</Tabs>
-
-### 3. Build All Workspaces
-
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build workspaces">
-
-```bash tab="bun"
-bun run build
-```
-
-```bash tab="pnpm"
-pnpm build
-```
-
-```bash tab="npm"
-npm run build
-```
-
-</Tabs>
-
----
-
-## Docs for AI Agents
+## Docs for AI agents
 
 The documentation portal in `apps/web` speaks Markdown as well as HTML, so agents and LLM tools can read it without scraping:
 
@@ -163,13 +136,14 @@ To check your prompt, run `pnpm dev`, open the guide, and open the preview with 
 
 ---
 
-## Pull Request Guidelines
+## Pull request guidelines
 
-1. **Focused PRs**: Keep changes scoped to a single feature or bug fix.
-2. **Follow Conventions**: Follow repository conventions from `AGENTS.md` (no `any`, arrow function components, semantic tokens).
-3. **Tests**: Add unit tests for non-trivial logic using Vitest.
+1. **Keep it focused.** One feature or bug fix per pull request.
+2. **Follow the conventions** in `AGENTS.md` at the repository root: no `any`, arrow function components, semantic design tokens, i18n keys from APIs.
+3. **Add regression tests once the feature works.** Tests are there to catch regressions, so write them after the feature is done, following the "Testing" section of `AGENTS.md` (what to test, what not to test, and how to mock).
+4. **Document new features** in `apps/web/content/docs`, and run `pnpm lint:fix` before you commit.
 
-## Learn More
+## Related
 
 <Cards>
   <Card

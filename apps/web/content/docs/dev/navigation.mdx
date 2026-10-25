@@ -1,5 +1,5 @@
 ---
-title: Main Navigation
+title: Main navigation
 description: Define the header menu, its dropdowns and the phone bottom bar in vitnode.config.ts, with translated labels and a lucide icon per link.
 icon: PanelTop
 ---
@@ -16,23 +16,28 @@ table, no API call and no AdminCP screen behind them, so the menu renders with
 the page, even on a [prerendered](/docs/dev/deployments/prerendering) one. To
 change it, edit the file and deploy.
 
+A new app already ships two header links, **Discover** and **Search**, with
+their labels in `src/locales/app/en.json`. The steps below group them under a
+**Community** dropdown.
+
 <Steps>
 <Step>
 
 ### Add the labels to your messages
 
 Menu labels are message keys, so they follow the visitor's language like the
-rest of the UI. Put them in your app's locale file, under one namespace such as
-`app.menu`.
+rest of the UI. They live in your app's locale file, under one namespace such
+as `app.menu`. Add a label for the dropdown and a description for one of its
+links:
 
 ```json title="src/locales/app/en.json"
 {
   "app": {
-    // [!code ++:6]
+    // ...
     "menu": {
-      "community": "Community",
+      "community": "Community", // [!code ++]
       "discover": "Discover",
-      "discover_description": "Fresh posts from every corner of the site.",
+      "discover_description": "Fresh posts from every corner of the site.", // [!code ++]
       "search": "Search"
     }
   }
@@ -45,18 +50,17 @@ Add the same keys to every other language's file. For Polish, that is
 </Step>
 <Step>
 
-### Add header links
+### Check the header links
 
-Add a `navigation.header` array to the config. Each item needs an `href` and a
-`title`, which is the full message key.
+The header menu is the `navigation.header` array in the config. Each item needs
+an `href` and a `title`, which is the full message key. A new app has these two:
 
 ```ts title="src/vitnode.config.ts"
 import { buildConfig } from '@vitnode/core/vitnode.config'
-import { CompassIcon, SearchIcon } from 'lucide-react' // [!code ++]
+import { CompassIcon, SearchIcon } from 'lucide-react'
 
 export const vitNodeConfig = buildConfig({
   // ...
-  // [!code ++:6]
   navigation: {
     header: [
       { href: '/discover', icon: CompassIcon, title: 'app.menu.discover' },
@@ -76,7 +80,8 @@ the ones that do not fit move into a **More** dropdown at the end.
 
 Give a header item an `items` array to turn it into a dropdown. The parent
 opens the dropdown on hover and still follows its own `href` when clicked. Each
-child can carry a `description` key, shown under its label.
+child can carry a `description` key, shown under its label. Replace the two
+links with one **Community** item that holds them:
 
 ```ts title="src/vitnode.config.ts"
 import { CompassIcon, MessagesSquareIcon, SearchIcon } from 'lucide-react'
@@ -84,7 +89,7 @@ import { CompassIcon, MessagesSquareIcon, SearchIcon } from 'lucide-react'
 navigation: {
   header: [
     {
-      href: '/forum',
+      href: '/discover',
       icon: MessagesSquareIcon,
       title: 'app.menu.community',
       items: [
@@ -107,6 +112,10 @@ navigation: {
   withoutBackground
 />
 
+The screenshot is the vitnode.com header, whose dropdown holds a **Browse** link
+from another plugin. Yours shows **Discover** with its description and
+**Search** below it.
+
 Dropdowns are one level deep. A child has no `items` of its own, and
 TypeScript says so.
 
@@ -117,7 +126,7 @@ TypeScript says so.
 
 | Name             | Type                            | Required | Default | Description                                                   |
 | :--------------- | :------------------------------ | :------- | :------ | :------------------------------------------------------------ |
-| `href`           | `string`                        | Yes      | -       | A path on this site (`/forum`) or an `https://` address       |
+| `href`           | `string`                        | Yes      | -       | A path on this site (`/discover`) or an `https://` address    |
 | `title`          | `string`                        | Yes      | -       | Message key of the link label, such as `app.menu.discover`    |
 | `description`    | `string`                        | No       | -       | Message key of the text under the label inside a dropdown     |
 | `icon`           | `ComponentType<{ className? }>` | No       | -       | Drawn before the label, for example a `lucide-react` icon     |
@@ -182,7 +191,9 @@ Earlier versions stored the menu in the `core_navigation` table and edited it
 in **AdminCP → System → Navigation**. That screen, its API routes, the
 `navigation` staff permission and the `navigation.*` events are gone, and a
 migration drops the table. Copy your items into `vitnode.config.ts` before you
-run `vitnode migrate`.
+apply the new migrations. The next `dev` applies them in development, and
+[`vitnode db migrate`](/docs/dev/cli/database#apply-migrations) does it in
+production.
 
 Plugins no longer declare menu presets: remove the `navigation` array from
 `buildApiPlugin()` and the `navigation` keys from the plugin's locale files.

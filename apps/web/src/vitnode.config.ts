@@ -1,7 +1,6 @@
 import { blogPlugin } from '@vitnode/blog/config'
 import { LogoVitNodeBrand } from '@vitnode/core/components/logo-vitnode'
 import { buildConfig } from '@vitnode/core/vitnode.config'
-import { examplePlugin } from '@vitnode/example/config'
 import { forumPlugin } from '@vitnode/forum/config'
 import {
   BookOpenIcon,
@@ -12,9 +11,9 @@ import {
   PuzzleIcon,
   SearchIcon,
 } from 'lucide-react'
+import { newsroomPlugin } from 'newsroom/config'
 
 export const vitNodeConfig = buildConfig({
-  debug: false,
   editor: {
     emojis: [
       {
@@ -67,7 +66,7 @@ export const vitNodeConfig = buildConfig({
           },
           {
             description: 'site.menu.browse_description',
-            href: '/example/browse',
+            href: '/newsroom/browse',
             icon: ListIcon,
             title: 'site.menu.browse',
           },
@@ -81,7 +80,7 @@ export const vitNodeConfig = buildConfig({
       { href: '/search', icon: SearchIcon, title: 'site.menu.search' },
     ],
   },
-  plugins: [blogPlugin(), examplePlugin(), forumPlugin()],
+  plugins: [blogPlugin(), forumPlugin(), newsroomPlugin()],
   theme: {
     defaultTheme: 'system',
   },

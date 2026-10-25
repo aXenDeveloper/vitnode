@@ -169,7 +169,12 @@ public middleware route:
 
 ```bash
 curl http://localhost:3000/api/@vitnode/core/middleware
-# {"isEmail":false,"sso":[],"captcha":{"siteKey":"0x4AAAAAAA...","type":"cloudflare_turnstile"}}
+```
+
+The response now has a `captcha` field (abridged):
+
+```json
+{ "captcha": { "siteKey": "0x4AAAAAAA...", "type": "cloudflare_turnstile" } }
 ```
 
 Then open `/register`. A Turnstile widget renders just above the **Register**
@@ -266,7 +271,7 @@ dark mode with no configuration of its own.
   `.env` only takes effect after you restart the dev server.
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

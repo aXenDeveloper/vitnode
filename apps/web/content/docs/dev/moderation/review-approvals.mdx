@@ -4,6 +4,10 @@ description: Approve or reject new content and edits waiting in the VitNode Mode
 icon: ClipboardCheck
 ---
 
+import { ImgDocs } from "@/components/fumadocs/img";
+import approvalsQueue from "./approvals-queue.webp";
+import approvalDetail from "./approval-detail.webp";
+
 When a container's [publishing policy](/docs/content-engine/container-policies) asks for approval, new content and edits from members do not go live straight away. They wait in the **Approvals** queue of the Moderator CP at `/modcp/approvals` until a moderator says yes or no. [Approvals](/docs/content-engine/approvals) explains what is stored meanwhile and what authors see.
 
 ## Before you begin
@@ -18,7 +22,12 @@ You need a moderator entry with `can_approve` for the content type, in a scope t
 
 Choose **Moderator CP** in the user menu, then **Approvals**. The number next to it counts what is still pending.
 
-{/* Image prompt: Moderator CP approvals queue with status tabs (Pending, Approved, Rejected, Replaced, Cancelled), Type and Location filters, and a list of submissions showing the author avatar, a New or Edit badge, the content type, the title, the location and the date */}
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={approvalsQueue}
+  alt="The Moderator CP Approvals queue with Pending, Approved, Rejected, Replaced and Cancelled tabs, Type and Location filters, and two pending new topics by Ada Lovelace in General"
+/>
 
 Each row shows who sent it, whether it is **New** content or an **Edit** of something already live, the content type (a topic or a comment, for example), where it lives and when it arrived.
 
@@ -36,6 +45,13 @@ Tabs, filters and the page number live in the address, so a filtered queue is a 
 Open a row. For **New** content you see every proposed field. For an **Edit** you see **Changes**: each changed field shows **Live now** next to **Proposed**, and the untouched fields are folded away below.
 
 **History** lists earlier submissions for the same content, with their outcomes and reasons. **View live** opens published content in a new tab when its content type has a page address (`search.pathTemplate`).
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={approvalDetail}
+  alt="A pending submission in the Moderator CP: the proposed title and message, its history, Approve and Reject buttons, and details with the author, type, location, kind and status"
+/>
 
 </Step>
 

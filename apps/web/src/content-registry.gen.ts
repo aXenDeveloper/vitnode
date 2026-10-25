@@ -18,14 +18,14 @@ import type { ContentFrontendPluginSource } from '@vitnode/core/lib/plugin'
 import { buildContentFrontendRegistry, setContentFrontendRegistry } from '@vitnode/core/content'
 
 import { adminContent as adminContent0 } from '@vitnode/blog/admin/content'
-import { adminContent as adminContent1 } from '@vitnode/example/admin/content'
-import { adminContent as adminContent2 } from '@vitnode/forum/admin/content'
+import { adminContent as adminContent1 } from '@vitnode/forum/admin/content'
+import { adminContent as adminContent2 } from 'newsroom/admin/content'
 
 
 export const pluginContentTypes = [
   adminContent0, // @vitnode/blog
-  adminContent1, // @vitnode/example
-  adminContent2, // @vitnode/forum
+  adminContent1, // @vitnode/forum
+  adminContent2, // newsroom
 ] satisfies ContentFrontendPluginSource[]
 
 export const contentRegistry = buildContentFrontendRegistry(pluginContentTypes)

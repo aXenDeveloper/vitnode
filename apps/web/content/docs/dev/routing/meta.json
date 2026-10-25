@@ -4,6 +4,11 @@
   "icon": "Route",
   "pages": [
     "index",
+    "first-route",
+    "route-module",
+    "layouts",
+    "url-parameters",
+    "protected-routes",
     "navigation",
     "preloading",
     "breadcrumbs",

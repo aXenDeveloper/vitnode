@@ -4,13 +4,13 @@ description: Every event a Content Engine content type emits, its payload and th
 icon: Radio
 ---
 
-Each content type emits events named `content.<id>.<action>` after a change, such as `content.example.article.published`. Subscribe to them to send a newsletter, sync an external index or purge a CDN, without touching the code that made the change.
+Each content type emits events named `content.<id>.<action>` after a change, such as `content.newsroom.story.published`. Subscribe to them to send a newsletter, sync an external index or purge a CDN, without touching the code that made the change.
 
 Events come from the generated routes, scheduled publishing and [`contentEditorialEffects`](/docs/content-engine/services#save-like-the-admincp). The plain `service(c)` emits nothing. A save that changes nothing emits nothing either.
 
 ## Event reference
 
-Which events exist depends on what the definition enables. `example.category` declares only fields and emits three; `example.article` has publication, editorial with scheduling and delivery, and emits ten.
+Which events exist depends on what the definition enables. `newsroom.category` declares only fields and emits three. `newsroom.story` has publication, editorial with scheduling and delivery, and emits ten.
 
 | Action                      | Payload                                                                                         | Needs                          |
 | --------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------ |
@@ -58,23 +58,23 @@ The listener also receives an envelope with the actor, the time and `pluginId`. 
 
 ### Register the event types
 
-Add the content type to the global event map once per plugin. The listener's event name and payload are then type-checked, and an event the definition does not enable, such as `content.example.category.published`, does not compile.
+Add the content type to the global event map once per plugin. The listener's event name and payload are then type-checked, and an event the definition does not enable, such as `content.newsroom.category.published`, does not compile.
 
-```ts title="plugins/example/src/api/lib/events.ts"
+```ts title="plugins/newsroom/src/api/lib/events.ts"
 import type { ContentEventsFor } from "@vitnode/core/content";
 
-import type { articleContentType } from "@/content/article";
 import type { categoryContentType } from "@/content/category";
+import type { storyContentType } from "@/content/story";
 
 declare module "@vitnode/core/api/models/events" {
   interface VitNodeEvents
     extends
-      ContentEventsFor<typeof articleContentType>,
+      ContentEventsFor<typeof storyContentType>,
       ContentEventsFor<typeof categoryContentType> {}
 }
 ```
 
-The example plugin imports this file from `config.api.ts` with `import "@/api/lib/events";`, so the declaration travels with the API build.
+The newsroom plugin imports this file from `config.api.ts` with `import "@/api/lib/events";`, so the declaration travels with the API build.
 
 </Step>
 <Step>
@@ -83,18 +83,18 @@ The example plugin imports this file from `config.api.ts` with `import "@/api/li
 
 `contentEventName(id, action)` builds the name from the definition, so a renamed content type cannot leave a stale string behind:
 
-```ts title="plugins/example/src/api/lib/listeners.ts"
+```ts title="plugins/newsroom/src/api/lib/listeners.ts"
 import { buildEventListener } from "@vitnode/core/api/lib/events";
 import { contentEventName } from "@vitnode/core/content";
 
-import { articleContentType } from "@/content/article";
+import { storyContentType } from "@/content/story";
 
-export const announceArticleListener = buildEventListener({
-  event: contentEventName(articleContentType.id, "published"),
-  name: "announce-published-article",
-  description: "Logs every article that goes live",
+export const announceStoryListener = buildEventListener({
+  event: contentEventName(storyContentType.id, "published"),
+  name: "announce-published-story",
+  description: "Logs every story that goes live",
   handler: async (c, payload) => {
-    await c.get("log").debug(`Article ${payload.contentId} was published`);
+    await c.get("log").debug(`Story ${payload.contentId} was published`);
   },
 });
 ```
@@ -106,16 +106,28 @@ export const announceArticleListener = buildEventListener({
 
 VitNode collects listeners only from the `events` array of a module passed directly to `buildApiPlugin`. A listener on a nested module is silently ignored.
 
-```ts title="plugins/example/src/api/modules/admin/admin.module.ts"
+```ts title="plugins/newsroom/src/api/modules/admin/admin.module.ts (excerpt)"
 export const adminModule = buildModule({
   name: "admin",
   routes: [],
   modules: [
     buildContentAdminModule({
-      contentTypes: [articleContent],
+      containers: [deskContainers],
+      contentTypes: [
+        articleContent,
+        categoryContent,
+        commentContent,
+        storyContent,
+        explainerContent,
+        bulletinContent,
+        tagContent,
+        eventContent,
+        pageContent,
+        letterContent,
+      ],
     }),
   ],
-  events: [announceArticleListener], // [!code ++]
+  events: [announceStoryListener], // [!code ++]
 });
 ```
 
@@ -126,6 +138,6 @@ The blog plugin does the same with its `blogLegacyEventListeners`, which turn `c
 
 ## Check the result
 
-Save the file, publish an article in **AdminCP → Example → Articles** and look for the debug line in the API terminal. A failing listener does not undo the change. The write has already committed, and the engine logs the failure.
+Save the file, publish a story in **AdminCP → Newsroom → Stories** and look for the debug line in the API terminal. A failing listener does not undo the change. The write has already committed, and the engine logs the failure.
 
 Events from a scheduled publish run in a queue task that retries on failure, so the same `published` event can arrive twice. Make work that must happen once idempotent, for example keyed on `scheduleId`. See [A scheduled event may arrive twice](/docs/dev/events/built-in-events#a-scheduled-event-may-arrive-twice).

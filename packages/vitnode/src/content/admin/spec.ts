@@ -435,12 +435,16 @@ const richTextFormSchema = (spec: ContentFormFieldSpec): z.ZodType => {
   });
 
   return spec.required && !spec.nullable
-    ? doc.refine(
-        value => isRichTextDocument(value) && !isRichTextEmpty(value),
-        {
+    ? doc
+        // Without it a create form starts from `{}`, which the editor cannot
+        // open and the refine below can never accept.
+        .default(() => ({
+          content: [{ type: "paragraph" }],
+          type: "doc" as const,
+        }))
+        .refine(value => isRichTextDocument(value) && !isRichTextEmpty(value), {
           message: `${spec.label} is empty.`,
-        },
-      )
+        })
     : doc;
 };
 

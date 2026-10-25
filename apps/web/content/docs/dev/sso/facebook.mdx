@@ -204,10 +204,15 @@ Ask the API what it thinks it supports:
 
 ```bash
 curl http://localhost:3000/api/@vitnode/core/middleware
-# {"isEmail":false,"sso":[{"id":"facebook","name":"Facebook"}]}
 ```
 
-Then open `/login` and press **Facebook**. You should get Meta's "Continue as
+The `sso` array in the response now lists the provider. Here it is abridged, with the SVG icon cut short:
+
+```json
+{ "sso": [{ "id": "facebook", "name": "Facebook", "icon": "<svg ...>", "brandColor": "#0866FF" }] }
+```
+
+Then open `/login` and press the **Facebook** button under **Continue with**. You should get Meta's "Continue as
 ..." dialog, be bounced back to `/login/sso/facebook?code=...&state=...`, and
 land on the front page signed in. Your account now has a row in `core_users_sso`
 with `providerId` `facebook`.
@@ -282,17 +287,13 @@ counts as no avatar.
   toast is an environment problem, not a dashboard problem.
 </Callout>
 
-<Callout
-  type="warn"
-  title="An email that already has a password account is a dead end"
->
-  If someone registered with the same address using the password form, the
-  callback answers `409` and offers them the login page instead. There is no
-  link-an-existing-account screen yet - see [how the callback handles
-  accounts](/docs/dev/sso#what-the-callback-does-with-the-account).
+<Callout type="info" title="An email that already has an account">
+  If someone already registered with the same address, Facebook sign-in asks for
+  that account's password once and then links the two. See [Linking an existing
+  account](/docs/dev/sso#how-accounts-link).
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

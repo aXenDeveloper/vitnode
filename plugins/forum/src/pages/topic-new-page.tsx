@@ -89,10 +89,12 @@ const TopicNewPage = ({
       const record = await res.json();
       setIsLeaving(true);
       await invalidateForumTopics(queryClient);
+      // Only a published topic has a public page. A pending or draft one
+      // opens its edit page, whose loader reads the approval state.
       await navigate(
-        record.approval?.status === "pending" || record.slug === null
-          ? topicEditHref(record.id, { submitted: true })
-          : topicHref(record.slug, { created: true }),
+        record.status === "published" && record.slug !== null
+          ? topicHref(record.slug, { created: true })
+          : topicEditHref(record.id),
       );
 
       return;

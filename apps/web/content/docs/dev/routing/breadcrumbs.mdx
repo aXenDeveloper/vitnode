@@ -1,173 +1,152 @@
 ---
 title: Breadcrumbs
-description: Contribute one localized crumb per plugin route and let VitNode assemble the trail for public pages and AdminCP screens.
+description: Add localized crumbs to the VitNode breadcrumb trail from plugin routes, layouts, AdminCP pages and the app's own file routes.
 icon: Milestone
 ---
 
-import { DatabaseIcon, LayoutDashboardIcon, MapIcon } from 'lucide-react'
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
-
-VitNode renders breadcrumb trails automatically in both the public site header and the AdminCP shell. **A route joins the trail by declaring a crumb**, and the trail reads parent to child:
+VitNode renders the breadcrumb trail in the public header and in the AdminCP shell. Each route that declares a crumb adds one entry, and the trail reads from parent to child:
 
 ```text
-Home / Notes / Getting Started
+Site notes / Office closed on Friday
 ```
 
-A route declares only what its own crumb should display. VitNode manages the rest: accessible `<nav>` markup, separators, locale-aware links, and `aria-current="page"` semantics. No manual link construction, no duplicated trails, and zero drama.
+A route declares only the label of its own crumb. The shell renders the `<nav>` landmark, the separators, the locale-aware links and `aria-current="page"` on the last crumb.
 
-## Static crumb
+## Add a crumb to a plugin route
 
-Declare a breadcrumb function directly inside `definePluginRoute`. Because it renders within the route's declared namespaces, `useTranslations` works out of the box:
+Set `breadcrumb` in the page module's `route` to a component that returns the label. It renders inside the route's declared `messages`, so `useTranslations` works:
 
-```tsx title="plugins/site-notes/src/pages/notes-layout.tsx"
-import { definePluginRoute } from '@vitnode/core/routing'
+```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
+import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
 import { useTranslations } from 'use-intl'
 
-// [!code ++:7]
-export const route = definePluginRoute({
-  breadcrumb: () => {
-    const t = useTranslations('@acme/site-notes.home')
+const NotesCrumb = () => {
+  const t = useTranslations('site-notes.notes')
 
-    return t('title')
-  },
+  return t('title')
+}
+
+export const route = defineRoute({
+  breadcrumb: NotesCrumb, // [!code ++]
 })
-
-const NotesLayout = ({ children }: { children: React.ReactNode }) => {
-  return (
-    <div className="container mx-auto flex max-w-4xl flex-col gap-6 p-4">
-      <header className="border-b pb-4">
-        <h1 className="text-2xl font-bold tracking-tight text-balance">
-          Notes
-        </h1>
-      </header>
-      <main>{children}</main>
-    </div>
-  )
-}
-
-export default NotesLayout
 ```
 
-{/* Image prompt: Modern web header showing breadcrumb trail Home / Notes with Notes highlighted in dark theme, 1440x900. */}
+{/* Image prompt: The public header of a VitNode app at /site-notes/notes showing the breadcrumb trail with the single crumb Site notes as the current page. Dark theme, 1440x900. */}
 
-## Dynamic crumb from loader
+## Use loader data in a crumb
 
-When a route is dynamic (such as `/notes/:slug`), its breadcrumb can read directly from the route's `loaderData`. This ensures the trail shows human-readable titles instead of raw IDs, without firing a second network request:
+A crumb receives `{ loaderData, params, search }`, the same values the page gets. On a dynamic page, show the record's name instead of its id, without a second request. This extends the note page from [Add a route](/docs/dev/routing/first-route), where `loadNote` and `NotePageData` are defined:
 
-```tsx title="plugins/site-notes/src/pages/note-page-slug.tsx"
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from '@vitnode/core/routing'
-import { useTranslations } from 'use-intl'
-
-interface Note {
-  content: string
-  title: string
-}
-
-export const route = definePluginRoute({
-  load: async ({ params }): Promise<Note> => {
-    return {
-      content: 'Loaded securely from your plugin loader.',
-      title: `Note: ${params.slug}`,
-    }
-  },
-  head: ({ loaderData, params }) => ({
-    title: loaderData?.title ?? params.slug,
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+export const route = defineRoute({
+  load: async ({ context, params }) =>
+    await loadNote(context.queryClient, params.id),
+  head: ({ loaderData }) => ({
+    title: loaderData?.title,
+    description: loaderData?.body,
   }),
-  // [!code ++:5]
-  breadcrumb: ({ loaderData }) => {
-    const t = useTranslations('@acme/site-notes.home')
-
-    return `${t('note')}: ${loaderData.title}`
-  },
+  breadcrumb: ({ loaderData }) => loaderData.title, // [!code ++]
 })
-
-const NotePage = ({ loaderData }: PluginRoutePageProps<Note>) => {
-  return (
-    <article className="container mx-auto flex max-w-3xl flex-col gap-4 p-4">
-      <h2 className="text-3xl font-semibold tracking-tight text-balance">
-        {loaderData.title}
-      </h2>
-      <p className="text-muted-foreground leading-relaxed text-pretty">
-        {loaderData.content}
-      </p>
-    </article>
-  )
-}
-
-export default NotePage
 ```
 
-The inline `breadcrumb` receives `{ loaderData, params, search }`—the exact same typed context passed to `head` and the page component.
+Declare `breadcrumb` after `load`, so TypeScript types `loaderData` from the loader. A crumb sits under every crumb of the routes above it. When the list and the note page are siblings rather than a [layout](/docs/dev/routing/layouts) and its child, the trail shows only the note. Put both under a `layout()` with its own crumb to get `Site notes / Office closed on Friday`.
 
-{/* Image prompt: Header breadcrumb trail showing Home / Notes / Note: getting-started with the final crumb active, 1440x900. */}
+## Leave a route out
 
-## Omitting a route
+A route without `breadcrumb` adds nothing, and the crumbs above it stay. Write `breadcrumb: false` (or `null`) to make that explicit, for example on an `index()` page whose layout already names the screen. The trail then ends at the deepest route that declares a crumb, and that crumb gets `aria-current="page"`.
 
-Silence is the default: a route that declares no `breadcrumb` adds none, and the crumbs above it stay intact. Set `breadcrumb: false` when you want that silence to be deliberate—an `index()` page whose parent layout already names the screen, say:
+## Several crumbs from one route
 
-```tsx title="plugins/site-notes/src/pages/notes-index-page.tsx"
+Some pages know more of the trail than their own label. A forum topic, for example, can list every parent forum from its loader data. Declare a **group** with `routeBreadcrumbGroup` from `@vitnode/core/tanstack/plugin-routes`, and render the items yourself with the breadcrumb components:
+
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+import {
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@vitnode/core/components/ui/breadcrumb'
+import { HrefLink } from '@vitnode/core/tanstack/link'
+import { defineRoute, routeBreadcrumbGroup } from '@vitnode/core/tanstack/plugin-routes'
+
+export const route = defineRoute({
+  load: async ({ context, params }) =>
+    await loadNote(context.queryClient, params.id),
+  breadcrumb: routeBreadcrumbGroup<NotePageData>(({ loaderData }) => (
+    <>
+      <BreadcrumbItem>
+        <BreadcrumbLink render={<HrefLink href="/site-notes/notes" />}>
+          Site notes
+        </BreadcrumbLink>
+      </BreadcrumbItem>
+      <BreadcrumbSeparator />
+      <BreadcrumbItem>
+        <BreadcrumbPage>{loaderData.title}</BreadcrumbPage>
+      </BreadcrumbItem>
+    </>
+  )),
+})
+```
+
+The shell adds the separator before the group. Inside it, you add the separators between your own items and mark the last one with `BreadcrumbPage`. Translate the labels with `useTranslations` in a small component, as in the first example.
+
+<Callout type="warn" title="A single crumb returns only its label">
+  A plain `breadcrumb` component returns text or an inline element, such as an
+  icon with text. Never render `<nav>`, links or separators in it, because the
+  shell already does. Only a group renders `BreadcrumbItem` and friends.
+</Callout>
+
+## AdminCP crumbs
+
+An AdminCP route declares a crumb the same way. To label the crumbs from the AdminCP navigation, so they match the sidebar, use `adminBreadcrumb` from `@vitnode/core/tanstack/admin`. `segments` is the path below `/admin`:
+
+```tsx title="plugins/site-notes/src/pages/admin-notes-page.tsx"
 import { definePluginRoute } from '@vitnode/core/routing'
+import { adminBreadcrumb } from '@vitnode/core/tanstack/admin'
 
-// [!code ++:3]
 export const route = definePluginRoute({
-  breadcrumb: false,
+  breadcrumb: adminBreadcrumb({ segments: ['site-notes'] }), // [!code ++]
 })
-
-const NotesIndexPage = () => {
-  return (
-    <div>
-      <p className="text-muted-foreground leading-relaxed text-pretty">
-        Welcome to Site Notes.
-      </p>
-    </div>
-  )
-}
-
-export default NotesIndexPage
 ```
 
-Both spellings do the same thing. The trail simply ends at the deepest route that does declare a crumb, and that crumb is the one marked `aria-current="page"`.
+Each segment gets the title of the navigation entry whose link matches it, and a segment with no entry gets a readable version of its name. Pass `overrideLastLabel` when the page knows a better name for the last crumb, such as a record's title. The AdminCP does not look labels up on its own, so a route without `breadcrumb` adds no crumb there either.
 
-## Trail behavior
+## Crumbs on the app's own routes
 
-| Declaration             | Behavior in breadcrumb trail                                                |
-| :---------------------- | :-------------------------------------------------------------------------- |
-| `breadcrumb: Component` | Contributes one crumb with access to `loaderData`, `params`, and `search`   |
-| `breadcrumb: false`     | Omitted from trail; parent crumbs remain visible                            |
-| Omitted / `undefined`   | The default: omitted from trail                                             |
-| Intermediate crumbs     | Automatically rendered as locale-aware links to their respective route URLs |
-| Leaf crumb (last item)  | Rendered as text without a link and marked with `aria-current="page"`       |
+A file route in your app declares its crumb as `staticData.breadcrumb`. App routes do not get plugin `messages`, so a crumb that renders strings wraps itself in `RouteMessages` from `@vitnode/core/tanstack/i18n`:
 
-<Callout type="warn" title="Return text or inline elements, not a trail">
-  A breadcrumb component should return text or an inline element (like an icon with text). Never render `<Breadcrumb>`, `<nav>`, links, or separators—the shell creates the landmark and manages links and separators for you.
-</Callout>
+```tsx title="apps/web/src/site/pricing/breadcrumb.tsx"
+import { RouteMessages } from '@vitnode/core/tanstack/i18n'
+import { useTranslations } from 'use-intl'
 
-<Callout type="info" title="AdminCP labels">
-  In the AdminCP, breadcrumbs seamlessly coordinate with the admin navigation
-  declared in `admin/nav.tsx`. When a route matches a sidebar item, its
-  translated label is resolved automatically.
-</Callout>
+const PricingLabel = () => {
+  const t = useTranslations('site.pricing')
 
-<Cards>
-  <Card
-    icon={<MapIcon />}
-    title="Plugin Routes"
-    description="Declare the route tree where layouts, pages, and dynamic segments define crumbs."
-    href="/docs/dev/routing"
-  />
-  <Card
-    icon={<DatabaseIcon />}
-    title="Data Fetching"
-    description="Fetch data in loaders so crumbs and pages receive typed loaderData."
-    href="/docs/dev/fetcher"
-  />
-  <Card
-    icon={<LayoutDashboardIcon />}
-    title="AdminCP Pages"
-    description="Mount plugin screens, navigation links, and permissions in the AdminCP."
-    href="/docs/dev/plugins/admin"
-  />
-</Cards>
+  return t('title')
+}
+
+export const PricingBreadcrumb = () => (
+  <RouteMessages namespaces={['site.pricing']}>
+    <PricingLabel />
+  </RouteMessages>
+)
+```
+
+```tsx title="apps/web/src/routes/_main/pricing.tsx"
+import { createFileRoute } from '@tanstack/react-router'
+
+import { PricingBreadcrumb } from '@/site/pricing/breadcrumb'
+import { PricingPage } from '@/site/pricing/pricing-page'
+
+export const Route = createFileRoute('/_main/pricing')({
+  staticData: { breadcrumb: <PricingBreadcrumb /> }, // [!code ++]
+  component: PricingPage,
+})
+```
+
+`site.pricing` is a namespace from your app's own locale files; see [Your app's own strings](/docs/dev/i18n#your-apps-own-strings).
+
+## Related
+
+- [Layouts](/docs/dev/routing/layouts): one crumb for a layout and all its pages.
+- [AdminCP pages](/docs/dev/plugins/admin): a complete AdminCP screen.

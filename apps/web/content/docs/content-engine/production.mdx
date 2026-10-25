@@ -15,11 +15,11 @@ A content type that works on your machine needs a few more checks before real ed
 - [ ] **Keep `publication` on.** `publicApi` and `search` both refuse to load without it, and new records start as drafts, so nothing is public until someone publishes it.
 - [ ] **Treat search as public.** `search.titleField`, `descriptionField` and `contentFields` must be public fields, and `search.authorField` shows who wrote a record in search results.
 
-The example article lists eight of its own fields plus `publishedAt`. `code`, `views` and `author` stay private, because they are not in the list:
+The newsroom story lists eight of its own fields plus `publishedAt`. `code`, `views` and `author` stay private, because they are not in the list:
 
-```ts title="plugins/example/src/content/article.ts"
+```ts title="plugins/newsroom/src/content/story.ts (excerpt)"
 publicApi: {
-  path: "articles",
+  path: "stories",
   fields: [
     "title",
     "slug",
@@ -31,6 +31,7 @@ publicApi: {
     "noIndex",
     "publishedAt",
   ],
+  // ...
 },
 ```
 
@@ -43,7 +44,7 @@ publicApi: {
 
 - [ ] Commit the migration that `pnpm db:migrate` generated together with the content type.
 - [ ] Run `db:migrate` as a deploy step. Production never migrates on startup.
-- [ ] Read the generated SQL when you change an existing content type. See [Database](/docs/content-engine/database).
+- [ ] Read the generated SQL when you change an existing content type. See [Migrations](/docs/content-engine/database).
 
 ## Configure what editorial features rely on
 
@@ -62,7 +63,7 @@ publicApi: {
   withoutBackground
   className="*:max-w-full"
   src={searchHealth}
-  alt="The AdminCP Search screen with status, engine, indexed items and last indexed cards above a table of indexed collections with coverage bars"
+  alt="The Search section of the AdminCP Debug Panel with status, engine, indexed items and last indexed cards above a table of indexed collections with coverage bars"
 />
 
 For a monitoring probe, core has a staff-only route that reports every content type, its search drift per language and failed scheduled effects. It needs the `can_view` permission of the `system` module:
@@ -79,8 +80,8 @@ curl -b "vitnode_auth_admin=<session>" \
   "effectsHealthy": true,
   "contentTypes": [
     {
-      "contentTypeId": "example.article",
-      "pluginId": "@vitnode/example",
+      "contentTypeId": "newsroom.story",
+      "pluginId": "newsroom",
       "features": {
         "editorial": true,
         "localization": false,
@@ -106,7 +107,7 @@ curl -b "vitnode_auth_admin=<session>" \
 }
 ```
 
-This excerpt shows two indexed documents for one published article, so search is not healthy until the collection is reindexed. `failedEffects` counts scheduled publishes that committed but whose event or search update failed. In your own code, `contentEngineDiagnostics(c)` from `@vitnode/core/content/server` returns the same object.
+This excerpt shows two indexed documents for one published story, so search is not healthy until you reindex the collection. `failedEffects` counts scheduled publishes that committed but whose event or search update failed. In your own code, `contentEngineDiagnostics(c)` from `@vitnode/core/content/server` returns the same object.
 
 ## Know the limits
 

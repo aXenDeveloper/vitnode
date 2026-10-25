@@ -1,51 +1,28 @@
 ---
 title: Redis
-description: Add a shared Redis cache to VitNode for faster session lookups, distributed rate limiting, and multi-instance WebSocket broadcasts.
+description: Connect Redis to VitNode to share the API cache, sessions, rate-limit counters and realtime events across instances, and see what happens without it.
 icon: DatabaseZap
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+[Redis](https://redis.io) is VitNode's shared cache and pub/sub broker. It is optional. On a single API instance VitNode works without it and uses an in-process cache and per-instance counters. Add Redis when you run more than one API instance, deploy to a serverless host, or want cached values to live longer than 15 seconds.
 
-[Redis](https://redis.io) serves as VitNode's shared cache and pub/sub broker across horizontally scaled instances. Redis is optional: without it, VitNode degrades gracefully to in-memory counters and local delivery.
-
-## Quick start
-
-### 1. Configure Environment Variables
-
-```bash title=".env"
-REDIS_URL=redis://localhost:6379 // [!code ++]
-REDIS_PASSWORD=root // [!code ++]
-```
-
-### 2. Connect in API Configuration
-
-```ts title="apps/api/src/vitnode.api.config.ts"
-import { buildApiConfig } from "@vitnode/core/vitnode.config"
-
-export const vitNodeApiConfig = buildApiConfig({
-  // [!code ++:5]
-  redis: process.env.REDIS_URL
-    ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
-    : undefined,
-})
-```
-
----
-
-## What Redis Powers
+## What Redis changes
 
 | Feature | Without Redis | With Redis |
 | :--- | :--- | :--- |
-| **API Domain Cache** | No-op (always executes DB query) | Shared key-value store via `c.get("cache")` |
-| **Rate Limiter** | In-memory counters per instance | Distributed sliding-window across cluster |
-| **WebSocket Realtime** | Single instance only | Cross-instance delivery via Redis Pub/Sub; required on serverless hosts ([details](/docs/dev/websocket/reconnects#delivery-across-instances)) |
-| **Sessions** | Database queries on every request | Instant cache hits with DB fallback |
+| **API cache** (`c.get("cache")`) | In-process memory, TTLs capped at 15 seconds, per instance; a delete on one instance does not reach the others | Shared by every instance, with the TTL you ask for |
+| **Sessions** | Cached in process for up to 15 seconds, then read from the database | Cached in Redis for up to 60 seconds, then read from the database |
+| **Rate limiter** | Counters in memory, per instance | Counters shared by every instance |
+| **WebSocket realtime** | Delivered only to clients on the same instance | Delivered across instances through Redis pub/sub; required on serverless hosts ([details](/docs/dev/websocket/reconnects#delivery-across-instances)) |
 
----
+## Connect Redis
 
-## Local Development (Docker)
+<Steps>
+<Step>
 
-Start a Redis container with Docker Compose:
+### Start a Redis server
+
+For local development, run Redis with Docker Compose. `--requirepass` sets the password used in the next step:
 
 ```yaml title="docker-compose.yml"
 services:
@@ -57,41 +34,78 @@ services:
     command: redis-server --requirepass root
 ```
 
----
+In production, use your host's managed Redis or your own server.
 
-## Using the Cache in API Routes
+</Step>
+<Step>
 
-Use `remember` with a key, a TTL in seconds, and a loader to cache expensive database lookups:
+### Set the environment variables
 
-```ts
-const posts = await c.get("cache").remember(
-  "featured_posts",
-  60,
-  async () => await fetchFeaturedPostsFromDB(),
-)
+Add the connection URL and the password to the API's `.env`. The password is a separate variable, so the URL can stay free of secrets:
+
+```bash title="apps/api/.env"
+REDIS_URL=redis://localhost:6379 # [!code ++]
+REDIS_PASSWORD=root # [!code ++]
 ```
 
-See [Cache API data](/docs/dev/cache/api) for invalidation and the full method list.
+</Step>
+<Step>
 
----
+### Pass them to the API config
 
-## Check Redis in the AdminCP
+The starter apps already contain this. Check that `redis` is set in `vitnode.api.config.ts`:
 
-{/* Image prompt: VitNode AdminCP Debug Panel at /admin/core/debug/cache with the "Cache" section open. Engine "Redis" with a green "Redis connected" status, "Realtime across instances: Yes", and a "Clear cache" button. Dark theme, 1440x900. */}
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/core/vitnode.config";
 
-Open **Debug Panel → Cache** in the AdminCP (`/admin/core/debug/cache`). It shows whether Redis is connected, unreachable or not configured (then the cache lives in memory), and whether realtime events reach every instance. An unreachable Redis also shows up on the Debug Panel's **Overview**.
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:3]
+  redis: process.env.REDIS_URL
+    ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
+    : undefined,
+});
+```
 
-## Learn More
+`redis` accepts any option of node-redis `createClient`. When `REDIS_URL` is unset, `redis` is `undefined` and VitNode uses the in-process fallbacks from the table above. Restart the API after changing `.env`.
+
+</Step>
+</Steps>
+
+## Check the result
+
+{/* Image prompt: VitNode AdminCP Debug Panel at /admin/core/debug/cache with the "Cache" section open. Engine "Redis" with a green "Redis connected" status, "Realtime across instances: Yes", and a "Clear Cache" button. Dark theme, 1440x900. */}
+
+Open **Debug Panel → Cache** in the AdminCP (`/admin/core/debug/cache`). With Redis connected you see **Redis connected** and whether realtime events reach every instance (**Realtime across instances**). Without Redis it says **Redis is not configured, so the cache lives in memory**. An unreachable server shows **Redis is unreachable**, also on the Debug Panel's **Overview**.
+
+## Use the cache in an API route
+
+`c.get("cache")` works the same with or without Redis. `remember` takes a key, a TTL in seconds and a loader, and calls the loader only when the key is missing:
+
+```ts
+import { count } from "drizzle-orm";
+
+import { site_notes } from "@/database/notes";
+
+// inside a route handler, where `c` is the Hono context
+const total = await c.get("cache").remember("notes:total", 60, async () => {
+  const [row] = await c.get("db").select({ value: count() }).from(site_notes);
+  return row.value;
+});
+```
+
+Without Redis the 60-second TTL is capped at 15 seconds. [Cache API data](/docs/dev/cache/api) covers keys, invalidation after a write and the full method list.
+
+## Related
 
 <Cards>
   <Card
-    title="Cache"
-    description="Domain and route caching strategies"
-    href="/docs/dev/cache"
+    title="Cache API data"
+    description="Remember values in API routes and clear them after a write"
+    href="/docs/dev/cache/api"
   />
   <Card
-    title="Rate Limiter"
-    description="Protect endpoints with distributed rate limiting"
+    title="Rate limiter"
+    description="Budgets, defaults and 429 responses"
     href="/docs/dev/advanced/rate-limiter"
   />
 </Cards>

@@ -1,8 +1,12 @@
 ---
-title: Custom Adapter
+title: Custom adapter
 description: Wrap any scheduler in VitNode's one-method CronAdapter interface - a plain setInterval, a cron library, or a platform trigger.
 icon: Puzzle
 ---
+
+import { File, Files, Folder } from 'fumadocs-ui/components/files'
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 A cron adapter is the thinnest interface in VitNode: one method, no return value,
 called once while the API boots. Its whole job is to call `handleCronJobs()` on a
@@ -23,9 +27,7 @@ import { type CronAdapter, handleCronJobs } from '@vitnode/core/api/lib/cron'
 export const IntervalCronAdapter = (): CronAdapter => ({
   schedule() {
     setInterval(() => {
-      handleCronJobs().catch((error: unknown) => {
-        console.error('[cron] tick failed', error)
-      })
+      void handleCronJobs()
     }, 60_000)
   },
 })
@@ -53,7 +55,6 @@ export interface CronAdapter {
 }
 ```
 
-import { TypeTable } from 'fumadocs-ui/components/type-table'
 
 <TypeTable
   type={{
@@ -69,9 +70,11 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 `handleCronJobs()` comes from the same module and takes no arguments. It posts to
 `/api/@vitnode/core/cron` on the origin in `VITNODE_API_URL` (falling back to
 `http://localhost:3000`) with `Content-Type: application/json` and
-`Authorization: Bearer $CRON_SECRET`. It resolves as soon as the response
-arrives and never looks at it, so a `403` or a `500` resolves exactly like a
-`200` - only a network-level failure rejects.
+`Authorization: Bearer $CRON_SECRET`. It never rejects once the URL is valid. A
+non-`2xx` response or a network error is printed to the console as
+`[VitNode] Cron tick failed: <reason>`, so your adapter needs no `catch`. After
+55 seconds it stops waiting for the response, while the API keeps running the
+jobs.
 
 <Callout type="info" title="You do not have to use handleCronJobs">
   It is a convenience, not a contract. An adapter whose scheduler lives outside
@@ -91,7 +94,6 @@ arrives and never looks at it, so a `403` or a `500` resolves exactly like a
 Keep it in your app rather than in a plugin - a cron adapter is a deployment
 decision, and it is registered from the API config, which only the host has.
 
-import { File, Files, Folder } from 'fumadocs-ui/components/files'
 
 <Files>
   <Folder name="src" defaultOpen>
@@ -112,9 +114,14 @@ import { schedule } from 'node-cron'
 export const NodeCronAdapter = (): CronAdapter => {
   return {
     schedule() {
-      schedule('*/1 * * * *', async () => {
-        await handleCronJobs() // [!code highlight]
-      })
+      schedule(
+        '*/1 * * * *',
+        async () => {
+          await handleCronJobs() // [!code highlight]
+        },
+        // Skip a tick while the previous one is still waiting on the API.
+        { noOverlap: true },
+      )
     },
   }
 }
@@ -147,7 +154,6 @@ export const vitNodeApiConfig = buildApiConfig({
 
 `schedule()` runs at boot, so a running process never picks up the change.
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Restart the dev server'>
 
@@ -166,9 +172,11 @@ npm run dev
 </Tabs>
 
 Open **Debug Panel → Cron & queue** (`/admin/core/debug/cron`) and watch the
-`process-queue` row - it is scheduled `* * * * *`, so a healthy adapter keeps its
-last run under a minute old. If the **Time** column keeps saying _Last Never_, your `schedule()` ran but your tick is not landing:
-check the origin, then the secret, then whether the API can reach itself.
+`process-queue` row. It is scheduled `* * * * *`, so a healthy adapter keeps its
+last run under a minute old. If the **Time** column keeps saying _Last Never_,
+your `schedule()` ran but your tick is not landing. The server console then shows
+`[VitNode] Cron tick failed: ...` with the status. Check the origin, then the
+secret, then whether the API can reach itself.
 
 </Step>
 </Steps>
@@ -205,13 +213,14 @@ check the origin, then the secret, then whether the API can reach itself.
   type="warn"
   title="Overlapping ticks are your problem, not the adapter's"
 >
-  Nothing locks a job while it runs. If your scheduler can fire again before the
-  previous tick's handlers have finished, the same handler can be running twice.
+  Each due run is claimed once, but nothing waits for a running job to finish.
+  If your scheduler fires again before a slow handler is done, its next run can
+  start alongside it.
   [The operational rules](/docs/dev/cron#jobs-must-be-idempotent) cover what to
   do about it.
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

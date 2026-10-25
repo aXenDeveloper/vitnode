@@ -1,5 +1,5 @@
 ---
-title: Set up the WebSocket endpoint
+title: Setup
 description: Serve VitNode's /api/ws WebSocket from a single TanStack Start app with Nitro, Vercel included, or from a standalone Node API server.
 icon: Plug
 ---
@@ -74,11 +74,33 @@ const createVitNodeApi = () => {
 
 A separate API server runs on `@hono/node-server` and upgrades with its own helper and a `ws` server. Mount the route after `VitNodeAPI`, and pass the web app's origin when it is not `VITNODE_WEB_URL`:
 
-```ts title="apps/api/src/index.ts"
+```ts title="apps/api/src/index.ts (excerpt)"
 import { serve, upgradeWebSocket } from "@hono/node-server"
 import { websocketOriginMiddleware } from "@vitnode/core/api/middlewares/websocket-origin.middleware"
 import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle"
-import { WebSocketServer } from "ws"
+import { type WebSocket, WebSocketServer } from "ws"
+
+// `app` is your OpenAPIHono app, already passed to VitNodeAPI({ app, ... })
+const webOrigin = process.env.VITNODE_WEB_URL ?? "http://localhost:3000"
+const wss = new WebSocketServer({ noServer: true })
+
+// Ping every 30 s and drop sockets that did not answer the previous ping.
+const awaitingPong = new WeakSet<WebSocket>()
+wss.on("connection", ws => {
+  ws.on("pong", () => awaitingPong.delete(ws))
+})
+const heartbeat = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (awaitingPong.has(ws)) {
+      ws.terminate()
+      continue
+    }
+    awaitingPong.add(ws)
+    ws.ping()
+  }
+}, 30_000)
+heartbeat.unref()
+wss.on("close", () => clearInterval(heartbeat))
 
 app.get(
   "/ws",
@@ -89,9 +111,11 @@ app.get(
 serve({
   fetch: app.fetch,
   port: Number(process.env.PORT ?? 8000),
-  websocket: { server: new WebSocketServer({ noServer: true }) },
+  websocket: { server: wss },
 })
 ```
+
+The `ws` server does not ping on its own. Without the heartbeat, a client that vanished without a close frame (a sleeping laptop, dropped Wi-Fi) stays in the registry forever. The full file is `apps/api/src/index.ts` in the VitNode repository.
 
 A web app pointed at that API with `VITNODE_API_URL` connects to it on its own; it needs no `webSocket` option and no Nitro route.
 
@@ -103,7 +127,7 @@ Both setups apply the same rules before a socket opens:
 - **Session**: the session cookie decides the user. Guests connect too, as `null`; a handler that needs a user checks `c.get("user")` itself, and live editing checks the AdminCP session on every message.
 - **Redis**: with `REDIS_URL` set, the instance answers `503` until it is subscribed to the realtime channel, so it never accepts a socket that other instances cannot reach. The client retries.
 
-A rejected handshake registers nothing. Identity is fixed for the life of a socket: after sign-in or sign-out the client reconnects on its own, but a session revoked from another device keeps its open socket until that socket closes.
+A rejected handshake registers nothing. Identity is fixed for the life of a socket. After sign-in or sign-out the client reconnects on its own. Revoking a session (signing out a device, changing a password, an admin revoke) closes that device's sockets on every instance.
 
 ## Check the result
 

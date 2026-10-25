@@ -4,12 +4,10 @@
   "icon": "Plug",
   "defaultOpen": true,
   "pages": [
-    "create",
     "build",
     "catalog",
-    "api",
     "admin",
-    "migrate-to-tsdown",
+    "!api",
     "..."
   ]
 }

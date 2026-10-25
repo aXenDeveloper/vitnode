@@ -1,137 +1,218 @@
 ---
 title: Relations
-description: Link Content Engine records with field.relation, group related fields with field.group and store repeatable rows with field.repeatable, all in real Postgres tables.
+description: Link one VitNode Content Engine record to another with field.relation and the references map. File each newsroom article under a category, migrate, and pick the category in the AdminCP.
 icon: Network
+implementation:
+  objective: Link the records of an existing content type to records of another content type with a single relation.
+  decisions:
+    - Which items get the link, and what do they point at? Offer the project's content types, and create the target type when it does not exist.
+    - Must every record have a target? Recommend nullable when the table already has rows.
+    - What happens when a target is deleted? Offer `set null`, `restrict` and `cascade`.
+  constraints:
+    - 'Declare the link with `field.relation({ target: () => otherContentType })` and map it in `createContentModel(..., { references })`.'
+    - Export every table from `src/database/*.ts`, register a new type in the plugin's admin module, then build and migrate.
+  related:
+    - title: Advanced fields
+      href: /docs/content-engine/relations-advanced
+    - title: Containers
+      href: /docs/content-engine/containers
+    - title: relation reference
+      href: /docs/content-engine/fields#relation
 ---
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
-import { ImgDocs } from "@/components/fumadocs/img";
-import categoryPicker from "./relations-category-picker.webp";
-import manyPicker from "./relations-many-picker.webp";
-import advancedPage from "./relations-advanced-article-page.webp";
 
-Relations connect one record to others, and two related helpers shape a record's own data. Everything lands in real tables, not a JSON blob: a relation is a foreign key, a to-many relation is a junction table, a group is a set of columns and a repeatable field is a child table. This guide walks through `example.advanced-article` from the example plugin, which uses all four.
+import { ImgDocs } from "@/components/fumadocs/img";
+import articlesList from "./relations-articles-list.webp";
+import categoryField from "./relations-category-field.webp";
+import createCategory from "./relations-create-category.webp";
+
+A relation stores another record's id in a real foreign key column. This guide adds a `newsroom.category` content type and files each article under one category, which staff pick in the AdminCP.
 
 ## Before you begin
 
-You need a working content type to link to, such as `example.category` from [Create a content type](/docs/content-engine/create-a-content-type).
+You need the `newsroom.article` type from [First content type](/docs/content-engine/create-a-content-type), with its plugin in `plugins/newsroom/`, and an AdminCP account. Nothing else is required. The steps and the check below work in the AdminCP alone. If you followed later guides, keep their additions. This guide only adds files, one field and one list column.
 
 <Steps>
 
 <Step>
 
-### Link to one record
+### Define the category type
 
-Point an article at a category with `field.relation`. `target` is a function, so two content types can refer to each other without an import cycle:
+Create `src/content/category.ts`. This is the complete file:
 
-```ts title="plugins/example/src/content/article.ts"
-import { categoryContentType } from "./category";
+```ts title="plugins/newsroom/src/content/category.ts"
+import { defineContentType, field } from "@vitnode/core/content";
 
-fields: {
-  category: field.relation({ // [!code ++:5]
-    required: true,
-    onDelete: "restrict",
-    target: () => categoryContentType,
-  }),
-},
-```
+export const categoryContentType = defineContentType({
+  id: "newsroom.category",
+  tableName: "newsroom_categories",
 
-Then tell `createContentModel` which column the foreign key references:
+  fields: {
+    name: field.text({ required: true, minLength: 2, maxLength: 80 }),
+    slug: field.slug({ source: "name" }),
+  },
 
-```ts title="plugins/example/src/database/articles.ts"
-import { example_categories } from "./categories";
-
-export const articleContent = createContentModel(articleContentType, {
-  references: { category: () => example_categories.id }, // [!code ++]
+  admin: {
+    path: "newsroom/categories",
+    titleField: "name",
+    list: { columns: ["name", "slug", "updatedAt"] },
+  },
 });
 ```
 
-`references` needs one entry per relation field. A missing or extra key is a type error. `field.user()`, `field.file()` and `self: true` relations find their table on their own and need no entry.
+A category is a small content type of its own, managed in the AdminCP. `titleField: "name"` is also what the article's category picker shows.
 
 </Step>
 
 <Step>
 
-### Link to many records
+### Create its model and export the table
 
-Add `multiple: true`. The advanced article has two to-many relations: a set of categories and an ordered "read next" list that points back at articles:
+Create `src/database/categories.ts`. This is the complete file:
 
-```ts title="plugins/example/src/content/advanced-article.ts"
-fields: {
-  categories: field.relation({
-    multiple: true,
-    onDelete: "restrict",
-    target: () => categoryContentType,
-  }),
-  relatedArticles: field.relation({
-    multiple: true,
-    onDelete: "cascade",
-    ordered: true,
-    self: true,
-  }),
-},
+```ts title="plugins/newsroom/src/database/categories.ts"
+import { createContentModel } from "@vitnode/core/content/server";
+
+import { categoryContentType } from "@/content/category";
+
+export const categoryContent = createContentModel(categoryContentType);
+
+export const newsroom_categories = categoryContent.table;
 ```
 
-`ordered: true` keeps the order editors arrange. Without it, the set is stored in ascending id order. `onDelete: "cascade"` on a to-many relation drops the link when the target is deleted, and `"restrict"` refuses the delete. A to-many relation cannot be `required` or `nullable`; use `min: 1` to demand at least one target.
-
-Each to-many field gets a junction table with `itemId`, `relatedItemId`, `position` and `createdAt`. Give `categories` its reference and export both junction tables, or Drizzle Kit leaves them out of the migration:
-
-```ts title="plugins/example/src/database/advanced-articles.ts"
-export const advancedArticleContent = createContentModel(
-  advancedArticleContentType,
-  { references: { categories: () => example_categories.id } },
-);
-
-export const example_advanced_articles = advancedArticleContent.table;
-export const example_advanced_articles_categories = // [!code ++:4]
-  advancedArticleContent.advancedTables.junctions.categories;
-export const example_advanced_articles_related_articles =
-  advancedArticleContent.advancedTables.junctions.relatedArticles;
-```
+The export matters, because migrations find tables through the exports of the plugin's `src/database/*.ts` files.
 
 </Step>
 
 <Step>
 
-### Group related fields
+### Register the category type
 
-`field.group` keeps fields that belong together under one key:
+Add `categoryContent` to the staff API in `src/api/modules/admin/admin.module.ts`. This is an excerpt:
 
-```ts title="plugins/example/src/content/advanced-article.ts"
-syndication: field.group({
+```ts title="plugins/newsroom/src/api/modules/admin/admin.module.ts"
+import { articleContent } from "@/database/articles";
+import { categoryContent } from "@/database/categories"; // [!code ++]
+
+  modules: [
+    buildContentAdminModule({
+      contentTypes: [articleContent, categoryContent], // [!code highlight]
+    }),
+  ],
+```
+
+Then add its link to `contentTypes` in `src/admin/nav.tsx`. This is an excerpt. `src/admin/content.tsx` re-exports the same list, so the screen needs no change:
+
+```tsx title="plugins/newsroom/src/admin/nav.tsx"
+import { FolderIcon, NewspaperIcon } from "lucide-react"; // [!code highlight]
+
+import { categoryContentType } from "@/content/category"; // [!code ++]
+
+  contentTypes: [
+    { definition: articleContentType, icon: <NewspaperIcon /> },
+    { definition: categoryContentType, icon: <FolderIcon /> }, // [!code ++]
+  ],
+```
+
+If you followed later guides, keep the comment type in both lists too.
+
+</Step>
+
+<Step>
+
+### Add the relation to the article
+
+Edit `src/content/article.ts`. Import the category type and add a `category` field. This is an excerpt:
+
+```ts title="plugins/newsroom/src/content/article.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+
+import { categoryContentType } from "@/content/category"; // [!code ++]
+
   fields: {
-    indexable: field.boolean({ defaultValue: true }),
-    noIndex: field.boolean({ defaultValue: false }),
-    priority: field.number({ integer: true, min: 0, max: 10, defaultValue: 5 }),
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    body: field.richText({ required: true }),
+    // [!code ++:5]
+    category: field.relation({
+      target: () => categoryContentType,
+      nullable: true,
+      onDelete: "set null",
+    }),
   },
-}),
 ```
 
-A group adds one column per leaf to the main table: `syndicationIndexable`, `syndicationNoIndex` and `syndicationPriority`. The API reads and writes it as `{ syndication: { indexable, noIndex, priority } }`, and other options refer to a leaf by path, such as `indexes: [{ on: ["syndication.priority"] }]`. Leaves can be `text`, `textarea`, `number`, `boolean`, `enum` or `dateTime` fields. An optional group needs leaves that are nullable or have a default.
+- **`target`** is a function, so two content types can point at each other without an import cycle.
+- **`nullable: true`** lets the column start empty. Your articles already exist and have no category, so you could not add a `required` relation to the table.
+- **`onDelete: "set null"`** clears the link when a category is deleted. `"restrict"` refuses to delete a category that still has articles, and `"cascade"` deletes them with it.
+
+Then show the category in the AdminCP list by adding `"category"` to `admin.list.columns` in the same file. This is an excerpt, so keep any other columns you added, such as `"status"`:
+
+```ts title="plugins/newsroom/src/content/article.ts"
+  admin: {
+    path: "newsroom/articles",
+    titleField: "title",
+    list: {
+      columns: ["title", "slug", "category", "updatedAt"], // [!code highlight]
+      orderableFields: ["title"],
+    },
+  },
+```
 
 </Step>
 
 <Step>
 
-### Add repeatable rows
+### Map the reference
 
-`field.repeatable` stores an ordered list of small rows, such as FAQ entries:
+Edit `src/database/articles.ts`. This is the complete file:
 
-```ts title="plugins/example/src/content/advanced-article.ts"
-faq: field.repeatable({
-  max: 20,
-  fields: {
-    question: field.text({ required: true, minLength: 3, maxLength: 200 }),
-    answer: field.textarea({ required: true }),
-  },
-}),
+```ts title="plugins/newsroom/src/database/articles.ts"
+import { createContentModel } from "@vitnode/core/content/server";
+
+import { articleContentType } from "@/content/article";
+
+import { newsroom_categories } from "./categories";
+
+export const articleContent = createContentModel(articleContentType, {
+  references: { category: () => newsroom_categories.id },
+});
+
+export const newsroom_articles = articleContent.table;
 ```
 
-The rows go to a child table, `example_advanced_articles_faq`, with `id`, `itemId`, `position`, `createdAt`, `updatedAt` and one column per leaf. Deleting the article deletes its rows. Export the child table too:
+The definition names the content type a relation points at, and `references` names the column its foreign key uses. It needs exactly one entry per relation field, so a missing or extra key is a type error. `field.user()`, `field.file()` and `self: true` relations find their table on their own and need no entry.
 
-```ts title="plugins/example/src/database/advanced-articles.ts"
-export const example_advanced_articles_faq =
-  advancedArticleContent.advancedTables.repeatables.faq;
+</Step>
+
+<Step>
+
+### Label the new fields
+
+Add the category's labels and permissions to `src/locales/en.json`, and a `category` label to the article's fields. This excerpt shows only the new keys, in their place:
+
+```json title="plugins/newsroom/src/locales/en.json"
+{
+  "newsroom": {
+    "content": {
+      "article": {
+        "fields": { "category": "Category" }
+      },
+      "category": {
+        "label": "{count, plural, one {Category} other {Categories}}",
+        "title": "Categories",
+        "desc": "Sections that group the articles.",
+        "fields": { "name": "Name", "slug": "Slug", "updatedAt": "Updated" }
+      }
+    }
+  },
+  "newsroom:category": "Categories",
+  "newsroom:category:can_view": "View categories",
+  "newsroom:category:can_create": "Create categories",
+  "newsroom:category:can_edit": "Edit categories",
+  "newsroom:category:can_delete": "Delete categories"
+}
 ```
 
 </Step>
@@ -140,145 +221,107 @@ export const example_advanced_articles_faq =
 
 ### Build and migrate
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
+Run these from the workspace root. While `pnpm dev` runs, `db:migrate` alone is enough:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
 
 ```bash tab="bun"
+bun run build:plugins
 bun run db:migrate
 ```
 
 ```bash tab="pnpm"
+pnpm build:plugins
 pnpm db:migrate
 ```
 
 ```bash tab="npm"
+npm run build:plugins
 npm run db:migrate
 ```
 
 </Tabs>
 
-The generated migration creates one table per junction and repeatable field.
+The migration creates the categories table and gives articles a nullable `category` column with a foreign key and an index:
+
+```sql title="apps/api/migrations/<timestamp>_<name>/migration.sql (excerpt)"
+CREATE TABLE "newsroom_categories" (
+	"id" serial PRIMARY KEY,
+	"createdAt" timestamp DEFAULT now() NOT NULL,
+	"updatedAt" timestamp DEFAULT now() NOT NULL,
+	"name" varchar(80) NOT NULL,
+	"slug" varchar(160) NOT NULL
+);
+ALTER TABLE "newsroom_articles" ADD COLUMN "category" integer;
+CREATE INDEX "newsroom_articles_category_idx" ON "newsroom_articles" ("category");
+ALTER TABLE "newsroom_articles" ADD CONSTRAINT "newsroom_articles_category_newsroom_categories_id_fkey" FOREIGN KEY ("category") REFERENCES "newsroom_categories"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+```
 
 </Step>
 
 </Steps>
 
-## Relations across id strategies
-
-A relation can point at a content type with a different [`idStrategy`](/docs/content-engine/id-strategy). The foreign key always takes the type of the key it references. The example plugin's `example.event` uses `bigint` and links to `uuid` tags and `serial` categories:
-
-```ts title="plugins/example/src/content/event.ts"
-import type { ContentRelationTarget } from "@vitnode/core/content";
-
-import { categoryContentType } from "./category";
-import { tagContentType } from "./tag";
-
-fields: {
-  primaryTag: field.relation({
-    nullable: true,
-    onDelete: "set null",
-    target: (): ContentRelationTarget<"uuid"> => tagContentType,
-  }),
-  category: field.relation({
-    nullable: true,
-    onDelete: "set null",
-    target: () => categoryContentType,
-  }),
-  tags: field.relation({ multiple: true, ordered: true, target: () => tagContentType }),
-  relatedEvents: field.relation({ multiple: true, onDelete: "cascade", self: true }),
-},
-```
-
-| Field           | Column or junction table                                            |
-| --------------- | ------------------------------------------------------------------- |
-| `primaryTag`    | `uuid` column referencing `example_tags.id`                         |
-| `category`      | `integer` column referencing `example_categories.id`                |
-| `tags`          | `example_events_tags` with `itemId bigint` and `relatedItemId uuid` |
-| `relatedEvents` | `example_events_related_events` with both columns `bigint`          |
-
-`field.relation()` reads the target's strategy from `target`, so the API takes and returns tag ids as strings and category ids as numbers. When two content type modules import each other, TypeScript cannot infer a type through the cycle and falls back to serial. Annotate the thunk with `ContentRelationTarget<"uuid">` or `ContentRelationTarget<"bigint">`, as `primaryTag` does. At runtime, a `references` entry whose column type disagrees with the target's strategy throws and names the field.
-
-## Write related values
-
-A relation takes ids. A to-many relation and a repeatable take the whole list, which replaces what the record had:
-
-```json
-{
-  "categories": [2, 4],
-  "syndication": { "priority": 7 },
-  "faq": [
-    {
-      "id": 1,
-      "question": "Can I freeze the batter?",
-      "answer": "Yes, for up to a month."
-    },
-    { "question": "Do I need buttermilk?", "answer": "No, regular milk works." }
-  ]
-}
-```
-
-A repeatable row with an `id` updates that row, a row without one is created, and rows you leave out are deleted. The API refuses an `id` that belongs to another record with `CONTENT_REPEATABLE_UNKNOWN_CHILD`. To change one link or one row without sending the list, use the [content service](/docs/content-engine/services): `relations.categories.add()`, `.remove()`, `.set()`, `.reorder()` and `.get()`, or `repeatable.faq.create()`, `.update()`, `.delete()`, `.reorder()`, `.set()` and `.list()`.
-
 ## Check the result
 
-In the AdminCP form, a single relation is a search picker. This is the article's **Category** field:
+Open **AdminCP → Newsroom → Categories**, click **Create Category**, enter `Announcements` and click **Create**:
+
+<ImgDocs
+  src={createCategory}
+  alt="Create Category dialog with the name Announcements and an empty optional Slug input"
+/>
+
+Open **Newsroom → Articles** and click the pencil on `Welcome to the newsroom`. The dialog now ends with a **Category** picker. Choose **Announcements** and click **Save changes**:
+
+<ImgDocs
+  src={categoryField}
+  alt="The bottom of the Edit Article dialog: an optional Category picker set to Announcements, above Cancel and Save changes"
+/>
+
+The list shows the category's name in the new column, and the other articles show a dash:
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
-  src={categoryPicker}
-  alt="Category search picker open in the Create Article dialog, listing the categories Breakfast, Desserts, Guides, Seasonal menus and Weeknight dinners above the search input"
+  src={articlesList}
+  alt="Newsroom Articles list with Title, Slug, Category and Updated columns; Welcome to the newsroom is in Announcements and the other articles have no category"
 />
 
-A to-many relation shows each target as a chip you can remove. Here is the blog plugin's **Categories** field, a `field.relation({ multiple: true })`:
+Now delete the category. In **Newsroom → Categories**, click the trash button in the `Announcements` row and confirm with **Yes, delete it**. Back in **Newsroom → Articles**, `Welcome to the newsroom` shows a dash again. The article stays, and only its `category` became `null`, because the relation says `onDelete: "set null"`.
 
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={manyPicker}
-  alt="Categories field with two chips, Kitchen notes and green, each with a remove button"
-/>
+## Read the category through the public API
 
-A group renders as a fieldset with its leaf controls, and a repeatable as a list of rows with move up, move down and remove buttons plus an **Add** button. The example plugin gives the advanced article API routes but no AdminCP screen, so test it through the API. Its public API returns the related values like this:
+This optional part needs the article's public API from [Public API](/docs/content-engine/public-api), which builds on [Drafts & publishing](/docs/content-engine/publication), and a published article with a category. Assign a category again if you deleted it above.
 
-```bash
-curl "http://localhost:3000/api/@vitnode/example/content/advanced-articles/weekend-pancakes?locale=en"
+Add `"category"` to `publicApi.fields` in `src/content/article.ts`. Change only that list, and keep every other option you configured, such as `listFields`, `searchableFields` and `orderableFields`:
+
+```ts title="plugins/newsroom/src/content/article.ts"
+  publicApi: {
+    path: "news",
+    fields: ["id", "title", "slug", "body", "category", "publishedAt"], // [!code highlight]
+    // listFields, searchableFields, orderableFields and the rest stay as they are
+  },
 ```
 
-```json
+`listFields` decides what the list route returns. Add `"category"` there too only if list rows need it. Then request the article:
+
+```bash
+curl "http://localhost:3000/api/newsroom/content/news/welcome-to-the-newsroom"
+```
+
+```json title="200 (excerpt)"
 {
   "id": 1,
-  "title": "Weekend pancakes",
-  "slug": "weekend-pancakes",
-  "categories": [2, 4],
-  "seo": {
-    "title": "Fluffy weekend pancakes",
-    "description": "Ready in 20 minutes."
-  },
-  "syndication": { "priority": 7, "noIndex": false },
-  "faq": [
-    {
-      "id": 1,
-      "question": "Can I freeze the batter?",
-      "answer": "Yes, for up to a month."
-    },
-    {
-      "id": 2,
-      "question": "Do I need buttermilk?",
-      "answer": "No, regular milk works."
-    }
-  ],
-  "publishedAt": "2026-10-10T10:57:42.767Z",
-  "locale": "en"
+  "title": "Welcome to the newsroom",
+  "slug": "welcome-to-the-newsroom",
+  "category": { "id": 1 },
+  "publishedAt": "2026-10-23T18:57:51.156Z"
 }
 ```
 
-A to-many relation comes back as a list of ids, and a single relation as `{ "id": 2 }`. Only the leaves listed in `publicApi.fields`, such as `"faq.question"`, are public. The example plugin's page at `/advanced-articles/weekend-pancakes` renders the FAQ rows:
+A relation exposes only the related record's id, here the category's. The category's name is not part of the article's public answer. The AdminCP can show it because its staff list route adds a `labels` object with the names, and staff routes are not public.
 
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={advancedPage}
-  alt="Public Weekend pancakes article page with a Frequently asked questions section listing two questions and their answers"
-/>
+## Go further
 
-Every option of these helpers is in the [Fields](/docs/content-engine/fields#relation) reference.
+- **Show the category name to readers.** Give the category type `publication: true` and its own [public API](/docs/content-engine/public-api), then read the category by id or list categories next to the articles. Or model categories as [containers](/docs/content-engine/containers), which bring their own pages and filters.
+- **Let members choose a category.** Add `category` to `publicWrite.create.fields`. Members may only link to records readers can see, so the category type then needs `publication: true` and its own `publicApi`. Without them, the write route stops with an error that names the field.
+- **Many categories, grouped fields, repeatable rows and mixed id types.** See [Advanced fields](/docs/content-engine/relations-advanced).

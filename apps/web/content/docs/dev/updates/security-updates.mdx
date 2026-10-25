@@ -1,5 +1,5 @@
 ---
-title: Publish a security update
+title: Security updates
 description: Add a security update to an update manifest so VitNode installations running an affected version see a red warning in the AdminCP, with or without a fixed version.
 icon: ShieldAlert
 ---
@@ -45,4 +45,4 @@ If the fix already landed in `2.1.3-canary.2`, say so in the range: `">=2.0.0 <2
 
 A warning means the publisher listed that version. No warning is not proof that a version is secure, and VitNode does not scan your plugins' own dependencies. A patch release without a security update is not shown as a security release.
 
-For VitNode's own packages, security updates are maintained in `security/security-updates.json` in the VitNode repository; see [Official release feed](/docs/dev/updates/official-releases#add-an-security update-to-the-official-feed).
+VitNode keeps the security updates for its own packages in `security/security-updates.json` in the VitNode repository. See [Official release feed](/docs/dev/updates/official-releases#add-a-security-update-to-the-official-feed).

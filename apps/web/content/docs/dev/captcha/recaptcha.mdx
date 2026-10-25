@@ -173,7 +173,12 @@ public middleware route:
 
 ```bash
 curl http://localhost:3000/api/@vitnode/core/middleware
-# {"isEmail":false,"sso":[],"captcha":{"siteKey":"6Lc...","type":"recaptcha_v3"}}
+```
+
+The response now has a `captcha` field (abridged):
+
+```json
+{ "captcha": { "siteKey": "6Lc...", "type": "recaptcha_v3" } }
 ```
 
 Then open `/register`. Google's badge appears in the bottom corner of the page,
@@ -204,11 +209,15 @@ Useful when the console's numbers and your form's behaviour disagree.
 | Threshold        | `0.5`, hardcoded in `captchaMiddleware`                                |
 | Token travels as | the header `x-vitnode-captcha-token`                                   |
 
-The visitor's IP is forwarded as `remoteip`. It is the address of the socket the
-request arrived on, falling back to `127.0.0.1` when the runtime exposes no
-connection info. Proxy headers like `x-forwarded-for` are deliberately ignored -
-the caller writes them - so behind a reverse proxy this is your proxy's address
-and the score reflects your server rather than the person filling the form.
+The visitor's IP is forwarded as `remoteip`. It is the client address VitNode
+resolved for the request, the same one the rate limiter uses: the address your
+web server signed for a server-rendered request, otherwise `X-Forwarded-For`
+read past `VITNODE_TRUSTED_PROXY_HOPS` proxies, otherwise the socket address
+(`127.0.0.1` when the runtime exposes none). Behind a reverse proxy with the
+default of `0` hops, that is the proxy's address, so the score reflects your
+server rather than the person filling the form. [Real visitor
+IPs](/docs/dev/advanced/rate-limiter#real-visitor-ips-for-server-rendered-pages)
+shows how to set it up.
 
 ## Gotchas
 
@@ -241,7 +250,7 @@ and the score reflects your server rather than the person filling the form.
   `.env` only takes effect after you restart the dev server.
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

@@ -18,7 +18,7 @@ Configure an [email adapter](/docs/dev/email). Without one, no type offers email
 
 Add `email: true` and pick the default mode for members who never change it:
 
-```ts title="plugins/forum/src/api/lib/notifications.ts"
+```ts title="plugins/acme-forum/src/api/lib/notifications.ts"
 export const topicReplyNotification = buildNotificationType({
   id: 'forum.topic_reply',
   // other options unchanged
@@ -37,7 +37,7 @@ export const topicReplyNotification = buildNotificationType({
 
 Pass a function instead of `true` when the email needs its own subject or button label:
 
-```ts title="plugins/forum/src/api/lib/notifications.ts"
+```ts title="plugins/acme-forum/src/api/lib/notifications.ts"
 email: ({ data, t }) => ({
   subject: t('@acme/forum.notifications.topic_reply.email_subject', {
     title: data.topicTitle,

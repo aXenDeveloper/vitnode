@@ -25,7 +25,7 @@ export interface StorageApiPlugin {
 
 Return an object of that shape from a factory, set it as `storage.adapter` in
 your API config, and VitNode stores files through it. The
-[working skeleton](#write-one) below is about 60 lines.
+[working skeleton](#write-one) below is short enough to read in one go.
 
 ## The three methods
 
@@ -247,12 +247,12 @@ starting template:
 - [`@vitnode/s3`](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/s3) -
   a lazily created SDK client, a URL built from three rules
 - [`@vitnode/supabase-storage`](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/supabase-storage) -
-  the shortest possible adapter, at under 60 lines
+  the shortest real adapter
 
 Keep `@vitnode/core` a dev dependency (you only import types from it) and ship
 your provider's SDK as a real dependency, the way both of those do.
 
-## Next
+## Related
 
 <Cards>
   <Card

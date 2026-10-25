@@ -1,0 +1,98 @@
+---
+title: Translations
+description: Make AI translations safe in VitNode. Reject rich-text translations that change the HTML structure with assertSameHtmlStructure(), and track which translated fields are outdated with useTranslationFreshness().
+icon: Languages
+---
+
+Two helpers make AI translation of Content Engine fields trustworthy. `assertSameHtmlStructure()` rejects a rich-text translation that changed the markup, and `useTranslationFreshness()` shows which translated fields no longer match their source. The `@vitnode/blog` plugin uses both in its article editor; the examples below are its code.
+
+## Before you begin
+
+- **A text AI action that translates**, registered in your plugin. See [AI actions](/docs/dev/ai/actions). The blog's is `@vitnode/blog:field.translate` in `plugins/blog/src/api/ai/actions.ts`.
+- **A Content Engine content type with localized fields** and a custom AdminCP form built with `@vitnode/core/content/admin-form`, for freshness tracking.
+
+## Keep the rich-text structure
+
+Asking a model to "preserve the HTML" is not a guarantee. Check it in the action's `parseText()` instead. The blog's translate action accepts plain text or a rich-text document, and compares the HTML it sent with the HTML it got back:
+
+```ts title="plugins/blog/src/api/ai/actions.ts (excerpt)"
+import { assertSameHtmlStructure } from '@vitnode/core/api/lib/ai/html-structure'
+import { richTextToHtml } from '@vitnode/core/content/rich-text'
+
+const translateSource = (input: TranslateAiInput) =>
+  input.format === 'richText'
+    ? { format: 'html' as const, text: richTextToHtml(input.document) }
+    : { format: 'text' as const, text: input.text }
+
+// inside defineAiAction({ ... })
+parseText: (text, input) => {
+  if (input.format === 'text') return unquote(text)
+  const translated = text.trim()
+  assertSameHtmlStructure(translateSource(input).text, translated) // [!code highlight]
+
+  return translated
+},
+```
+
+`TranslateAiInput` is the type of the action's `inputSchema`, and `unquote()` is the blog's helper that strips surrounding quotes from a plain-text answer.
+
+`assertSameHtmlStructure(source, translated)` compares every tag in order, with its attributes. Text and the translatable attributes `alt`, `title`, `aria-label` and `placeholder` may change; tags, links and other attributes may not. A difference throws `HtmlStructureError`, so the run fails with `AI_INVALID_OUTPUT` and the editor is not charged.
+
+`htmlStructureDifference(source, translated)` returns the first difference as a string, or `null`, when you want to report it instead of throwing.
+
+## Track outdated translations
+
+For each translated field, VitNode stores a fingerprint of **the source text it was translated from** in `core_ai_translation_sources`. Comparing that fingerprint with the current source shows exactly which fields are outdated, without relying on timestamps.
+
+| Status      | Meaning                                                                   |
+| :---------- | :------------------------------------------------------------------------ |
+| `fresh`     | Translated from the source as it is now.                                  |
+| `edited`    | As above, and a person changed the translation since. Their changes stay. |
+| `outdated`  | The source changed after the translation was made.                        |
+| `untracked` | No record of what it was translated from, so no claim either way.         |
+| `missing`   | Nothing translated yet.                                                   |
+
+Call `useTranslationFreshness()` inside a Content Engine form:
+
+```tsx title="plugins/blog/src/views/admin/article/editor/article-editor.tsx (excerpt)"
+import {
+  useContentForm,
+  useContentFormValues,
+  useTranslationFreshness,
+} from '@vitnode/core/content/admin-form'
+
+const { defaultLocale } = useContentForm()
+const values = useContentFormValues()
+
+const freshness = useTranslationFreshness({
+  contentTypeId, // e.g. 'blog.post'
+  fields: ['title', 'content', 'excerpt'],
+  itemId, // undefined while creating
+  source: defaultLocale ?? 'en',
+  values,
+})
+
+freshness.freshnessOf('pl') // { title: 'fresh', content: 'outdated', excerpt: 'missing' }
+freshness.outdatedFields('pl') // ['content']
+freshness.editedByPerson('pl', 'content') // true when a person changed the AI text
+
+// After placing an AI translation into the form:
+freshness.rememberAiTranslation('pl', 'content')
+// When a person confirms the translations still match the source:
+freshness.markReviewed('pl', freshness.outdatedFields('pl'))
+```
+
+`contentTypeId` and `itemId` are the content type and the item the form edits; the blog's editor receives them as props.
+
+`rememberAiTranslation()` and `markReviewed()` record nothing immediately. The form writes them when it saves, through its `onSaved` hook, so a record always describes text that was actually kept. Your own form code can subscribe the same way: `useContentForm().onSaved?.(async ({ itemId }) => { … })` returns an unsubscribe function.
+
+`GET` and `PUT /admin/ai/translation-sources` in `@vitnode/core` read and write the records. Both require `can_edit` on the content type's own permission module.
+
+## Check the result
+
+In the blog's article editor, translate a field into another language with AI and save. Then change the same field in the default language and save again. The editor lists that language as outdated, and `freshness.outdatedFields()` returns the field.
+
+## Related
+
+- [Custom UI](/docs/dev/ai/custom-ui) runs your translate action from your own form button.
+- [Field suggestions](/docs/dev/ai/fields-and-editor) adds the no-code AI button to a single field.

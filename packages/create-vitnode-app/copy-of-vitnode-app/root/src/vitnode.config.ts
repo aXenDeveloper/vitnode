@@ -2,7 +2,6 @@ import { buildConfig } from "@vitnode/core/vitnode.config";
 import { CompassIcon, SearchIcon } from "lucide-react";
 
 export const vitNodeConfig = buildConfig({
-  debug: false,
   i18n: {
     defaultLocale: "en",
     locales: [{ code: "en", name: "English" }],

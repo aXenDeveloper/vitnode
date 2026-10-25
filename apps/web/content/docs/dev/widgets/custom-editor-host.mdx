@@ -1,0 +1,127 @@
+---
+title: Custom editor host
+description: Open the VitNode visual editor on widgets that live in your own storage, such as a record's blocks() field, with ContentEditorRuntime and a save adapter you write.
+icon: Plug
+---
+
+[Editable pages](/docs/dev/widgets/editable-pages) cover most needs. Core stores the layout, checks permissions and saves. When the widgets live somewhere else, such as a content record's [`blocks()` field](/docs/dev/widgets/blocks-field), you host the editor yourself. You decide when it is open, and you write the adapter that saves.
+
+| Core provides | You provide |
+| --- | --- |
+| The editor, loaded on first use | When editing is allowed, and the button that opens it |
+| The sidebar, drag and drop and properties panel | Loading the widgets in your route |
+| The save payload, with each zone's baseline | A save route that checks permissions and conflicts |
+| Error, conflict and unsaved-changes handling | Updating your page with what was stored |
+
+## Before you begin
+
+- A page that renders its widgets in [content zones](/docs/dev/widgets/content-zones).
+- A route that stores those widgets and checks the editor's permission. The adapter only calls it; the route is what refuses a save.
+
+## Wrap the zones in ContentEditorRuntime
+
+```tsx
+import { ContentEditorRuntime } from "@vitnode/core/widgets/edit";
+import { ContentZone } from "@vitnode/core/widgets/zone";
+import { useState } from "react";
+
+const [editing, setEditing] = useState(false);
+
+<>
+  {canEdit ? <button onClick={() => setEditing(true)}>Edit widgets</button> : null}
+
+  <ContentEditorRuntime adapter={adapter} enabled={editing} onExit={() => setEditing(false)}>
+    <ContentZone id="content" blocks={zones.content} registry={blocksRegistry} />
+  </ContentEditorRuntime>
+</>;
+```
+
+| Prop | | |
+| --- | --- | --- |
+| `enabled` | required | `false` renders the children only. `true` loads and opens the editor. |
+| `children` | required | The page. Every `ContentZone` inside becomes editable. |
+| `adapter` | optional | Where **Save** sends its payload. Without one, Save says there is nowhere to save. |
+| `onExit` | optional | Called by **Finish editing**, after the unsaved-changes prompt. |
+
+The user menu's **Edit widgets** entry exists only for editable pages, so a custom host draws its own button. Hiding the button is only a courtesy. Your save route must check the permission again.
+
+## Write the adapter
+
+The editor never makes a request. **Save** calls your adapter with:
+
+```ts
+import type {
+  VisualEditorAdapter,
+  VisualEditorSaveInput,
+  VisualEditorSaveResult,
+} from "@vitnode/core/editor/adapter";
+```
+
+| `VisualEditorSaveInput` | |
+| --- | --- |
+| `zones` | Every zone on the page, keyed by id, emptied ones included. |
+| `changedZoneIds` | The zones that differ from what loaded. Write only these. |
+| `expectedZones` | For each changed zone, the widgets it started from. Compare with what is stored to refuse a save that would overwrite somebody else's. |
+
+Resolve and the editor marks itself saved. Throw and it keeps every change and shows an error. Throw `{ refusal: "message" }` to show your own message, or `{ refusal, conflict: true }` for the editor's _Somebody else saved this page first_.
+
+An adapter that saves a page record's `content` zone through a route of your own:
+
+```tsx
+import type { VisualEditorAdapter } from "@vitnode/core/editor/adapter";
+
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+
+import { manifest } from "@/manifest.gen";
+
+const adapter: VisualEditorAdapter = {
+  save: async ({ changedZoneIds, expectedZones, zones }) => {
+    if (!changedZoneIds.includes("content")) return;
+
+    // Your route: checks the permission, compares `expected` with what is
+    // stored (409 when it differs) and stores `content`.
+    const response = await fetcher({
+      plugin: manifest.id,
+      method: "put",
+      module: "admin/pages",
+      path: "/{id}/content",
+      args: {
+        params: { id: page.id },
+        body: { content: zones.content, expected: expectedZones.content },
+      },
+    });
+
+    if (!response.ok) {
+      throw {
+        conflict: response.status === 409,
+        refusal: `Saving answered ${response.status}. Nothing was stored.`,
+      };
+    }
+
+    const stored = await response.json();
+    setZones(current => ({ ...current, content: stored.content }));
+
+    return { zones: { content: stored.content } };
+  },
+};
+```
+
+- **Return what you stored.** The API may normalise what it was sent. Returning it lets the editor rebase onto the real stored version, so the next save does not send a stale copy.
+- **Update your page's state** with it, so **Finish editing** shows the saved page without a reload.
+- **Never fill in missing zones with defaults.** Write only `changedZoneIds`; a zone that is not in the payload stays as stored.
+
+## Rules for the host
+
+- **Load before you edit.** If reading the widgets fails, show an error and do not open the editor. An empty zone handed to the editor after a failed read is what the next **Save** writes over the real content.
+- **Changes from outside.** When your page re-renders with new widgets, a zone without unsaved changes adopts them; a zone with unsaved changes keeps them until **Save** or **Discard**.
+- **Context.** In edit mode, widgets render inside the editor's React tree. Context from your app root reaches them; a provider between your page and a `ContentZone` does not.
+- **Widget state restarts.** Entering edit mode re-creates each widget's component, so a playing video or an open accordion inside a widget resets. The rest of the page keeps its state.
+
+## How it stays out of the way
+
+`@vitnode/core/widgets/edit` imports React and nothing else. The editor arrives with a dynamic `import()` the first time `enabled` turns `true`, and a test in `@vitnode/core` fails the build if the editor ever reaches the public bundle. The runtime mounts the editor beside your page, not around it, so opening it never remounts the page.
+
+## Related
+
+- [Visual editor](/docs/dev/widgets/visual-editor): what editors see and can do.
+- [Editable pages](/docs/dev/widgets/editable-pages): `createContentEditorAdapter`, which builds this adapter for core's page layouts.

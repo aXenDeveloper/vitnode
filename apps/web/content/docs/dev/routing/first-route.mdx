@@ -1,0 +1,209 @@
+---
+title: Add a route
+description: Add a dynamic /site-notes/notes/:id page to a VitNode plugin, with a loader that fetches one note, sets the page title, and answers 404 for a missing note.
+icon: FilePlus
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+A plugin page with a URL parameter needs three things: a declaration in `routes.ts`, a loader that reads the parameter, and an answer for a record that does not exist. In this guide you add `/site-notes/notes/:id`, which shows one note, uses its title as the page title, and answers `404` for an unknown id.
+
+## Before you begin
+
+- The `/site-notes/notes` page from [Plugin page](/docs/dev/plugins/page).
+- The `GET /api/site-notes/notes/{id}` route from [API routes](/docs/dev/plugins/api/routes), with `pnpm dev` running.
+
+<Steps>
+
+<Step>
+
+### Add the TanStack packages
+
+The page loads the note through TanStack Query (`queryOptions`, `QueryClient`) and throws `notFound()` from TanStack Router. A generated plugin depends on neither, so add both. Run this in the plugin's folder, `plugins/site-notes`:
+
+<Tabs groupId="package-manager" persist items={['bun', 'pnpm', 'npm']} label="Install the TanStack packages">
+
+```bash tab="bun"
+bun add @tanstack/react-query @tanstack/react-router
+```
+
+```bash tab="pnpm"
+pnpm add @tanstack/react-query @tanstack/react-router
+```
+
+```bash tab="npm"
+npm install @tanstack/react-query @tanstack/react-router
+```
+
+</Tabs>
+
+Both now appear under `dependencies` in `plugins/site-notes/package.json`.
+
+</Step>
+
+<Step>
+
+### Create the page module
+
+Create `src/pages/note-page.tsx`:
+
+```tsx title="plugins/site-notes/src/pages/note-page.tsx"
+import type { QueryClient } from "@tanstack/react-query";
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
+import { queryOptions } from "@tanstack/react-query";
+import { notFound } from "@tanstack/react-router";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { HrefLink } from "@vitnode/core/tanstack/link";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
+import { useTranslations } from "use-intl";
+
+import { manifest } from "@/manifest.gen";
+
+const noteQueryOptions = (id: number) =>
+  queryOptions({
+    queryKey: [manifest.id, "notes", id],
+    queryFn: async () => {
+      const response = await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "notes",
+        path: "/{id}",
+        args: { params: { id } },
+      });
+      if (response.status === 404) return null;
+      if (!response.ok) throw new Error("Could not load the note.");
+
+      return await response.json();
+    },
+  });
+
+const loadNote = async (queryClient: QueryClient, idParam: string) => {
+  const id = Number(idParam);
+  if (!Number.isInteger(id) || id < 1) throw notFound();
+
+  const note = await queryClient.query({
+    ...noteQueryOptions(id),
+    meta: LOADER_DATA_QUERY_META,
+    staleTime: "static",
+  });
+  if (!note) throw notFound();
+
+  return note;
+};
+
+type NotePageData = Awaited<ReturnType<typeof loadNote>>;
+
+export const route = defineRoute({
+  load: async ({ context, params }) =>
+    await loadNote(context.queryClient, params.id),
+  head: ({ loaderData }) => ({
+    title: loaderData?.title,
+    description: loaderData?.body,
+  }),
+});
+
+const NotePage = ({ loaderData: note }: PluginRoutePageProps<NotePageData>) => {
+  const t = useTranslations("site-notes.notes");
+
+  return (
+    <main className="container mx-auto flex max-w-2xl flex-col gap-4 p-4">
+      <HrefLink className="text-muted-foreground text-sm" href="/site-notes/notes">
+        {t("back")}
+      </HrefLink>
+      <h1 className="text-2xl font-semibold tracking-tight text-balance">
+        {note.title}
+      </h1>
+      <p className="leading-relaxed text-pretty">{note.body}</p>
+    </main>
+  );
+};
+
+export default NotePage;
+```
+
+- **`params.id`** is the `:id` segment of the URL, always a string. The API expects a positive number, so the loader converts it and answers `notFound()` for anything else instead of sending a request that would fail validation.
+- **`defineRoute`** gives `load` a `context.queryClient`. Loading through the query cache with `staleTime: "static"` means a hover preload and the click that follows share one request. `LOADER_DATA_QUERY_META` tells the cache not to send the note to the browser a second time, because the loader's result already travels with the HTML. See [Preloading](/docs/dev/routing/preloading).
+- **`throw notFound()`** stops the loader and renders the app's 404 page with a real `404` status. A `404` from the API becomes `null`, so it takes the same path.
+- **`head`** runs after `load`, so it can use the note for the `<title>` and description. Declare `load` above `head`, or TypeScript cannot type `loaderData`.
+
+</Step>
+
+<Step>
+
+### Declare the route
+
+Open `src/routes.ts` and add the page after `/site-notes/notes`:
+
+```ts title="plugins/site-notes/src/routes.ts"
+  page("/site-notes/notes", {
+    component: lazy(() => import("./pages/notes-page")),
+    messages: ["site-notes.notes"],
+  }),
+
+  // [!code ++:4]
+  page("/site-notes/notes/:id", {
+    component: lazy(() => import("./pages/note-page")),
+    messages: ["site-notes.notes"],
+  }),
+```
+
+`:id` marks a dynamic segment. The page reuses the `site-notes.notes` namespace, because its only string sits next to the list's strings.
+
+</Step>
+
+<Step>
+
+### Add the string
+
+Add `back` to the `notes` group in `src/locales/en.json`. Keep the keys you already have:
+
+```json title="plugins/site-notes/src/locales/en.json"
+{
+  "site-notes": {
+    "notes": {
+      "title": "Site notes",
+      "empty": "No notes yet.",
+      "back": "All notes" // [!code ++]
+    }
+  }
+}
+```
+
+</Step>
+
+<Step>
+
+### Link the list to the page
+
+In `src/pages/notes-page.tsx`, import `HrefLink` and wrap each note's title in a link:
+
+```tsx title="plugins/site-notes/src/pages/notes-page.tsx"
+import { HrefLink } from "@vitnode/core/tanstack/link"; // [!code ++]
+
+// inside notes.map(...)
+<h2 className="font-medium text-balance">
+  {/* [!code ++:3] */}
+  <HrefLink className="hover:underline" href={`/site-notes/notes/${note.id}`}>
+    {note.title}
+  </HrefLink>
+</h2>
+```
+
+A plugin page cannot use the router's typed `<Link to>`, because the app's route tree does not know plugin URLs at compile time. [Navigation](/docs/dev/routing/navigation#link-from-a-plugin-page) explains `HrefLink`.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+1. Open `http://localhost:3000/site-notes/notes` and click a note's title. The note opens at `/site-notes/notes/<id>`, and the browser tab shows the note's title.
+2. Click **All notes** to go back to the list.
+3. Open `http://localhost:3000/site-notes/notes/999999` and `http://localhost:3000/site-notes/notes/abc`. Both show the app's not-found page inside the normal header.
+
+## Related
+
+- [Breadcrumbs](/docs/dev/routing/breadcrumbs): show the note's title in the breadcrumb trail.
+- [Route module](/docs/dev/routing/route-module): every option a page module accepts.

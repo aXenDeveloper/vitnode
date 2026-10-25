@@ -2,5 +2,5 @@
   "title": "WebSocket",
   "description": "Push realtime updates over one shared, cookie-authenticated connection",
   "icon": "Radio",
-  "pages": ["index", "setup", "reconnects"]
+  "pages": ["index", "setup", "rooms", "reconnects"]
 }

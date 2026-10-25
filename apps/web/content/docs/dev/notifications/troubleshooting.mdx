@@ -1,5 +1,5 @@
 ---
-title: Troubleshooting notifications
+title: Troubleshooting
 description: Fix common VitNode notification problems. A bell that does not update live, notifications that arrive late or never, missing emails, a wrong unread count and items that are no longer available.
 icon: Wrench
 ---
@@ -15,7 +15,7 @@ Each section below starts from a symptom and lists the checks in the order that 
 
 A publishing request starts delivery right after its response. Everything else is delivered by the queue worker, which your cron adapter runs every minute.
 
-1. **The cron adapter is not calling the queue worker.** In development there is no `CRON_SECRET`, so queued tasks wait until you run them. See [Cron](/docs/dev/cron).
+1. **Nothing runs the queue worker.** No cron adapter or external scheduler is configured, or every tick is refused. In production an unset or placeholder `CRON_SECRET` gets `403`, and the server console shows `[VitNode] Cron tick failed: 403 ...`. **Debug Panel → Cron & queue** (`/admin/core/debug/cron`) shows a red **Scheduler stopped** card once jobs are 15 minutes overdue. See [Cron](/docs/dev/cron#choose-what-ticks-the-clock).
 2. **Notifications are paused.** The AdminCP notifications screen shows a **Notifications are paused** banner. See [Use the Settings sheet](/docs/dev/notifications/admincp#use-the-settings-sheet).
 3. **The delivery task failed.** **Debug Panel → Queue** in the AdminCP (`/admin/core/debug/queue`) lists failed `notifications-fanout` tasks with their last error. Filter by the **Failed** status to find them.
 4. **The member never gets it.** The actor is skipped unless you pass `allowSelf: true`, and members who turned the type off or fail your `access` check get nothing. See [Choose the recipients](/docs/dev/notifications/publishing#choose-the-recipients).

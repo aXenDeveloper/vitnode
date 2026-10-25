@@ -1,5 +1,5 @@
 ---
-title: Automatic Image ALT Text
+title: Image alt text
 description: VitNode can describe uploaded images in the background and translate the ALT text into every site language, under a budget and without overwriting text a person wrote. This page covers how it works, how to render it and how to run its cron.
 icon: Image
 ---
@@ -21,6 +21,8 @@ import { resolveImageAlt } from '@vitnode/core/lib/files/resolve-alt'
   src={item.coverImage.url}
 />
 ```
+
+`item` is the article your page loader returned, and `locale` and `defaultLocale` are the page's current and default languages. See [Render the ALT text](#render-the-alt-text) for the rules `resolveImageAlt()` follows.
 
 ## Turn it on
 
@@ -138,7 +140,7 @@ Each task has a 15-minute lease. A worker that dies mid-task leaves it `processi
 
 The job reads the image **server-side** and sends bytes to the provider, never a URL:
 
-- through the storage adapter's optional `read(key, { maxBytes })` method (the Local adapter has one);
+- through the storage adapter's optional `read(key, { maxBytes })` method (the bundled Local, S3 and Supabase adapters all have one);
 - otherwise by a bounded server-side `fetch()` of the adapter's URL.
 
 Files over 20 MB are skipped. With `sharp` installed, the copy sent to the provider is resized to at most 1024 px and re-encoded as WebP. A private file never has to be made public for the AI provider.
@@ -253,23 +255,23 @@ See [Built-in events](/docs/dev/events/built-in-events#ai-events).
 - **Images only.** The job reads `image/jpeg`, `image/png`, `image/gif` and `image/webp`. It never analyses other files.
 - **Base language is English.** Other languages are translations of the English description.
 - **Legacy `metadata.alt` is not migrated.** An ALT a plugin stored in the free-form `core_files.metadata` column has no language, and VitNode does not guess one. The job treats those images as missing ALT text. Copy such values into `core_files_alt` yourself with `PUT /admin/files/{id}/alt` if you know their language.
-- **Cost.** The **Automatic ALT text** card on **Artificial Intelligence (AI) → Overview** shows images described, translations and the known cost per image and per translation.
+- **Cost.** The job's runs appear in **Debug Panel → AI logs** under **Background jobs**. Filter by the actions `@vitnode/core:media.alt.generate` and `@vitnode/core:media.alt.translate` to see what each image and translation cost.
 
 ## Learn more
 
 <Cards>
   <Card
-    title="AdminCP & Account Usage"
+    title="AI in the AdminCP"
     description="Budgets, settings and the AI overview"
     href="/docs/dev/ai/admin"
   />
   <Card
-    title="Costs, Points & Budgets"
+    title="Costs and budgets"
     description="System budget, reservations and who pays what"
     href="/docs/dev/ai/costs-and-limits"
   />
   <Card
-    title="Background Queues"
+    title="Queue"
     description="Queue tasks, retries and leases"
     href="/docs/dev/advanced/queue"
   />

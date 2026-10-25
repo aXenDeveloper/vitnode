@@ -1,158 +1,309 @@
 ---
-title: Queue Tasks
-description: Run asynchronous background tasks through VitNode's database-backed queue with retries and AdminCP monitoring.
+title: Queue
+description: Run slow work in the background with VitNode's PostgreSQL queue. Define a task, validate its payload, dispatch it from a route, and follow it to completion with retries, delays, leases and deduplication.
 icon: ListOrdered
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+import { TypeTable } from "fumadocs-ui/components/type-table";
 
-Queue tasks handle asynchronous, one-off background work (e.g. sending bulk emails, processing media, or scheduling posts). Tasks are persisted in the `core_queue` table and drained periodically by VitNode's background worker.
+import { ImgDocs } from "@/components/fumadocs/img";
+import queuePanel from "./queue-debug-panel.webp";
 
-## Quick start
+The queue moves work out of the request. A route stores a task in the `core_queue` table and answers at once, and a background worker runs it a little later, retrying it if it fails. In this guide the `site-notes` plugin queues an announcement for a note and you watch the task complete.
 
-### 1. Define a Queue Task
+## Before you begin
 
-```ts title="plugins/blog/src/api/tasks/send-newsletter.task.ts"
-import { buildQueueTask } from "@vitnode/core/api/lib/queue"
+- **A queue processor.** Tasks run only when core's `process-queue` cron job runs, every minute. Configure a [cron adapter](/docs/dev/cron) or an external trigger. During development you can trigger it by hand, as shown in [Check the result](#check-the-result).
+- The `site-notes` plugin with its `site_notes` table and the **Create notes** permission, from the beginner path up to [Permissions](/docs/dev/working-with-users/staff-permissions). Any plugin with a top-level API module and a guarded route works the same way.
 
-export interface NewsletterPayload {
-  postId: number
-}
+<Steps>
 
-export const sendNewsletterTask = buildQueueTask<NewsletterPayload>({
-  name: "send-newsletter",
+<Step>
+
+### Create the task
+
+Create `src/api/tasks/announce-note.task.ts`:
+
+```ts title="plugins/site-notes/src/api/tasks/announce-note.task.ts"
+import { buildQueueTask } from "@vitnode/core/api/lib/queue";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+
+import { site_notes } from "@/database/notes";
+
+const zodPayload = z.object({ noteId: z.number().int().positive() });
+
+export const announceNoteTask = buildQueueTask({
+  name: "announce-note",
+  maxAttempts: 5,
   handler: async (c, payload) => {
-    await c.get("log").info(`Processing newsletter for post #${payload.postId}`)
+    const { noteId } = zodPayload.parse(payload);
+    const [note] = await c
+      .get("db")
+      .select({ title: site_notes.title })
+      .from(site_notes)
+      .where(eq(site_notes.id, noteId));
+
+    // Deleted since it was queued: nothing to announce, and nothing to retry.
+    if (!note) return;
+
+    await c.get("log").debug(`Announced note "${note.title}"`);
   },
-})
+});
 ```
 
----
+- **The payload is stored as JSON**, so the handler receives it as `Record<string, unknown>`. `buildQueueTask` is not generic, so validate the payload yourself, here with Zod. An invalid payload throws, which counts as a failed attempt.
+- **Returning completes the task. Throwing fails the attempt** and schedules a retry.
+- **`name` is unique within the plugin.** Tasks are matched to handlers by plugin id and name.
+- **`c.get("log").debug()`** writes to the console and to the Debug Panel's log explorer.
 
-### 2. Register in an API Module
+</Step>
 
-Attach the task to your module's `queueTasks` list:
+<Step>
 
-```ts title="plugins/blog/src/api/modules/posts/posts.module.ts"
-import { buildModule } from "@/api/builders"
-import { sendNewsletterTask } from "../../tasks/send-newsletter.task"
+### Register it on a top-level module
 
-export const postsModule = buildModule({
-  name: "posts",
-  routes: [createPostRoute],
-  queueTasks: [sendNewsletterTask], // [!code ++]
-})
+Add the task to the `queueTasks` of `notesModule`, which `config.api.ts` passes to `buildApiPlugin` directly:
+
+```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts"
+import { buildModule } from "@/api/builders";
+import { announceNoteTask } from "@/api/tasks/announce-note.task"; // [!code ++]
+
+import { listNotesRoute } from "./list.route";
+import { showNoteRoute } from "./show.route";
+
+export const notesModule = buildModule({
+  name: "notes",
+  routes: [listNotesRoute, showNoteRoute],
+  queueTasks: [announceNoteTask], // [!code ++]
+});
 ```
 
----
+Queue tasks are read only from modules passed to `buildApiPlugin`. Declared on a nested module, such as `admin/notes`, a task is never registered, and its dispatches fail with "No handler registered".
 
-### 3. Dispatch Tasks
+</Step>
 
-Dispatch jobs from any Hono route or service:
+<Step>
+
+### Dispatch it from a route
+
+Create `src/api/modules/admin/notes/announce.route.ts`. It queues the task and returns what `dispatch()` reported:
+
+```ts title="plugins/site-notes/src/api/modules/admin/notes/announce.route.ts"
+import { z } from "@hono/zod-openapi";
+
+import { buildRoute } from "@/api/builders";
+
+export const announceNoteRoute = buildRoute({
+  adminStaffPermission: { module: "notes", permission: "can_create" },
+  route: {
+    method: "post",
+    path: "/{id}/announce",
+    request: {
+      params: z.object({ id: z.coerce.number().int().positive() }),
+    },
+    responses: {
+      202: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              deduplicated: z.boolean(),
+              taskId: z.number().nullable(),
+            }),
+          },
+        },
+        description: "The announcement is queued, or already waiting.",
+      },
+    },
+  },
+  handler: async c => {
+    const { id } = c.req.valid("param");
+    const { deduplicated, id: taskId } = await c.get("queue").dispatch({
+      name: "announce-note",
+      payload: { noteId: id },
+      dedupeKey: `announce-note:${id}`,
+    });
+
+    return c.json({ deduplicated, taskId }, 202);
+  },
+});
+```
+
+Then add `announceNoteRoute` to the `routes` of `adminNotesModule` in `src/api/modules/admin/notes/notes.module.ts`, after `createNoteRoute`.
+
+`dispatch()` only inserts a row and returns `{ deduplicated, id }`. It never runs the handler. The task belongs to the plugin of the route that dispatched it; pass `pluginId` to queue another plugin's task.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+1. Add a temporary button that queues an announcement for note `3` with `fetcher`. Create `src/pages/check-announce-note.tsx`:
+
+   ```tsx title="plugins/site-notes/src/pages/check-announce-note.tsx"
+   import { Button } from "@vitnode/core/components/ui/button";
+   import { fetcher } from "@vitnode/core/tanstack/fetcher";
+   import { useState } from "react";
+
+   import { manifest } from "@/manifest.gen";
+
+   export const CheckAnnounceNote = () => {
+     const [result, setResult] = useState("");
+     const [isPending, setIsPending] = useState(false);
+
+     const onClick = async () => {
+       setIsPending(true);
+       try {
+         const response = await fetcher({
+           plugin: manifest.id,
+           method: "post",
+           module: "admin/notes",
+           path: "/{id}/announce",
+           args: { params: { id: 3 } },
+         });
+         setResult(response.ok ? JSON.stringify(await response.json()) : String(response.status));
+       } finally {
+         setIsPending(false);
+       }
+     };
+
+     return (
+       <div className="flex items-center gap-3">
+         <Button isLoading={isPending} onClick={onClick}>
+           Announce note 3
+         </Button>
+         {result ? <output>{result}</output> : null}
+       </div>
+     );
+   };
+   ```
+
+   Render `<CheckAnnounceNote />` in `src/pages/notes-page.tsx`, sign in to the AdminCP in the same browser, open `/site-notes/notes` and press the button twice. The first press shows `{"deduplicated":false,"taskId":3}`, the second `{"deduplicated":true,"taskId":null}`. The second dispatch is dropped because a task with the same `dedupeKey` is still waiting.
+
+2. Open **Debug Panel → Queue** (`/admin/core/debug/queue`). The `announce-note` task from `site-notes` is **pending**, because nothing has run it yet.
+3. Run the processor. With a cron adapter, wait for the next minute. During development you can trigger cron yourself; `CRON_SECRET` is in your `.env`:
+
+   ```bash
+   curl -X POST http://localhost:3000/api/@vitnode/core/cron \
+     -H "Authorization: Bearer $CRON_SECRET" \
+     -H "Content-Type: application/json"
+   ```
+
+   It answers `Cron jobs processed. Executed N jobs.`
+
+4. Reload **Debug Panel → Queue**. The task is **completed**, with `1/5` attempts. **Debug Panel → Log explorer** has the debug entry `Announced note "New coffee machine"`. It is listed under `@vitnode/core`, because the worker runs outside any plugin's route. Remove `CheckAnnounceNote` when you are done.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={queuePanel}
+  alt="Debug Panel Queue table with two announce-note tasks from site-notes, one Pending with 0/5 attempts and one Completed with 1/5, between core tasks"
+/>
+
+## Run a task later
+
+`availableAt` is the earliest time the task may run. The default is now:
 
 ```ts
-// Dispatch immediately
 await c.get("queue").dispatch({
-  name: "send-newsletter",
-  payload: { postId: 42 },
-})
-
-// Or schedule for future execution
-await c.get("queue").dispatch({
-  name: "send-newsletter",
-  payload: { postId: 42 },
-  executeAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour from now
-  priority: 10, // Higher numbers run first
-})
+  name: "announce-note",
+  payload: { noteId: id },
+  availableAt: new Date(Date.now() + 60 * 60 * 1000), // in an hour
+});
 ```
 
-`dispatch` returns `{ id }` as soon as the task row is written to PostgreSQL.
+The task still waits for the next processor run after that time. `priority` (higher first, default `0`) orders tasks that are due at the same time.
 
----
+## Retries and backoff
 
-## Retries and Error Handling
+A thrown error fails the attempt. Until `maxAttempts` is reached, the task returns to `pending` with an exponential delay. The first retry waits about 10 seconds, and each later one waits twice as long, up to one hour. After the last attempt it is **failed**, with the error in `lastError`.
 
-VitNode tasks automatically retry on failure using exponential backoff:
+`maxAttempts` comes from the dispatch, then the task definition, then `3`. To wait without using an attempt, for example on a rate limit, throw `QueueDeferError` from `@vitnode/core/api/lib/queue`:
 
 ```ts
-export const riskyTask = buildQueueTask({
-  name: "sync-external-api",
-  maxAttempts: 5, // Default is 3
-  handler: async (c, payload) => {
-    // If an error is thrown, the task retries automatically
-  },
-})
+throw new QueueDeferError(new Date(Date.now() + 60_000), "Provider rate limit");
 ```
 
-| Attempt | Delay Before Next Retry |
-| :--- | :--- |
-| 1st failure | ~10 seconds |
-| 2nd failure | ~20 seconds |
-| Each next failure | Doubles, capped at 1 hour |
-| Final failure | Marked as `failed` in `core_queue` |
+A failed task stays failed. Fix the cause and dispatch again.
 
-### How the Worker Drains the Queue
+## Leases and abandoned tasks
 
-Each `process-queue` tick claims 25 tasks at a time and runs up to 5 of them at once, then claims the next 25 - until the queue is empty or about 45 seconds have passed. Handlers share one tick, so make them safe to run side by side. Finished tasks stay in `core_queue` for 7 days; the hourly `clean` job removes older ones in small batches.
+A worker that claims a task holds it for the task's `leaseSeconds`, `600` by default. If the worker dies, or the handler is still running when the lease ends, the task counts as abandoned. It returns to `pending`, or becomes **failed** when it has no attempts left, and another run picks it up.
 
-### Stale Tasks Are Reclaimed
+Keep handlers well inside their lease, or raise `leaseSeconds` on the task. A handler that outlives its lease may run twice at once. For large jobs, save progress and dispatch a follow-up task, as [notification fan-out](/docs/dev/notifications/queue-and-scale) does.
 
-A task still `processing` after 15 minutes (`QUEUE_STALE_PROCESSING_MINUTES`) belonged to a worker that died mid-run. The queue worker puts it back to `pending`, or marks it `failed` if it has used every attempt, so a crash never strands a task forever.
+## Deduplication
 
-<Callout type="warn" title="Keep handlers well under 15 minutes">
-  A handler that runs longer would be reclaimed and run again while it is still going. Long work should save its progress and dispatch a follow-up task instead - the way [notification fan-out](/docs/dev/notifications/queue-and-scale) does.
-</Callout>
+While a task with the same plugin id and `dedupeKey` is **pending** or **processing**, a new dispatch is dropped and returns `{ deduplicated: true, id: null }`. Once the first task completes or fails, the same key can be queued again. Without a `dedupeKey`, every dispatch creates a task.
 
----
+## Enqueue inside a transaction
 
-## Inspect tasks in the Debug Panel
+Pass `tx` to insert the task with the transaction that writes your data, so it is only queued if that write commits:
 
-{/* Image prompt: VitNode AdminCP Debug Panel at /admin/core/debug/queue with the "Queue" section open in the side menu. Table of queue tasks with columns Task, Queue, Status (pending, processing, completed, failed badges), Attempts, Available At, Created At and Last Error, plus a Status filter above it. Dark theme, 1440x900. */}
+```ts
+await c.get("db").transaction(async tx => {
+  const [note] = await tx.insert(site_notes).values(values).returning();
+  await c.get("queue").dispatch({ name: "announce-note", payload: { noteId: note.id }, tx });
+});
+```
 
-Open **Debug Panel → Queue** in the AdminCP (`/admin/core/debug/queue`), or type "Queue tasks" into the ⌘K admin search. The table lists every task with its queue, status, attempts, when it is next available, when it was created and its last error. Filter by status to find the failed ones.
+## How the worker runs
 
-The section is read-only. A failed task stays failed, so fix the cause and dispatch it again from your code. Viewing it needs the `queue → can_view` staff permission.
+Each `process-queue` run claims tasks in batches of 25, runs up to 5 at once, highest `priority` first, and keeps draining for about 45 seconds. Tasks on the `ai` queue are drained by core's AI job instead. Completed and failed tasks stay in `core_queue` for 7 days; the hourly cleanup removes older ones.
 
----
+**Debug Panel → Queue** lists every task with its queue, status, attempts, next run, creation time and last error, filterable by status. It is read-only and needs the `queue → can_view` staff permission.
 
-## `buildQueueTask` Options
+## `buildQueueTask` options
 
 <TypeTable
   type={{
     name: {
-      description: "Unique task name within the plugin.",
+      description: "Unique within the plugin. Dispatches refer to it.",
       required: true,
       type: "string",
     },
     handler: {
-      description: "Async function executed when the task is processed.",
+      description: "Runs once per claimed task. Return to complete it, throw to fail the attempt.",
       required: true,
-      type: "(c: Context, payload: T) => Promise<void>",
+      type: "(c: Context, payload: Record<string, unknown>) => Promise<void> | void",
     },
     maxAttempts: {
       default: "3",
-      description: "Maximum retry attempts before permanently failing.",
+      description: "Attempts before the task is failed, unless the dispatch sets its own.",
       type: "number",
+    },
+    leaseSeconds: {
+      default: "600",
+      description: "How long a worker may hold a claimed task before it counts as abandoned.",
+      type: "number",
+    },
+    description: {
+      description: "A note for developers. Core does not display it.",
+      type: "string",
     },
   }}
 />
 
-## Learn More
+## `dispatch()` options
 
-<Cards>
-  <Card
-    title="Notifications Queue"
-    description="How notification fan-out, email and cleanup run on the queue"
-    href="/docs/dev/notifications/queue-and-scale"
-  />
-  <Card
-    title="Cron Jobs"
-    description="Recurring scheduled tasks and maintenance timers"
-    href="/docs/dev/cron"
-  />
-  <Card
-    title="Events"
-    description="Decouple plugin workflows with event listeners"
-    href="/docs/dev/events"
-  />
-</Cards>
+<TypeTable
+  type={{
+    name: { description: "The task's `name`.", required: true, type: "string" },
+    payload: { description: "JSON data passed to the handler.", default: "{}", type: "Record<string, unknown>" },
+    availableAt: { description: "Earliest time the task may run.", default: "now", type: "Date" },
+    dedupeKey: { description: "Drops the dispatch while an active task has the same key.", type: "string" },
+    maxAttempts: { description: "Overrides the task's attempt limit.", type: "number" },
+    priority: { description: "Higher runs first.", default: "0", type: "number" },
+    queue: { description: "Queue name. The default worker drains every queue except `ai`.", default: '"default"', type: "string" },
+    pluginId: { description: "Plugin that owns the task.", default: "the current route's plugin", type: "string" },
+    tx: { description: "A transaction to insert with.", type: "Transaction" },
+  }}
+/>
+
+`dispatch()` returns `Promise<{ deduplicated: boolean; id: number | null }>`.
+
+## Related
+
+- [Cron](/docs/dev/cron): recurring jobs, and the adapters that run the queue.
+- [Events](/docs/dev/events): react to something that happened, inside the request.

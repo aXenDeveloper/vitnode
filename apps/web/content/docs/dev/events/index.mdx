@@ -1,112 +1,160 @@
 ---
 title: Events
-description: Emit typed domain events from VitNode plugins and subscribe with isolated, typed event listeners.
+description: Declare a typed VitNode event in a plugin, emit it after a write, and react to it with a listener registered on a top-level API module, and see exactly how listeners run, fail and scale.
 icon: Radio
 ---
 
-import { TypeTable } from "fumadocs-ui/components/type-table"
+Events let one part of an app react to something another part did, without either importing the other. A route emits `site-notes.note.created`; any plugin can listen and send an email, update a search index or write an audit entry. In this guide `site-notes` declares that event, emits it when a note is created and logs it from a listener.
 
-VitNode includes an in-process event bus accessible via `c.get("events")`. Events decouple features across plugins (e.g. sending a welcome email when a user registers) without direct inter-plugin dependencies.
+## Before you begin
 
-## Quick start
+- The `site-notes` create route from [Permissions](/docs/dev/working-with-users/staff-permissions), or any route of your own that writes data.
 
-### 1. Emit an Event
+<Steps>
 
-Emit events from any Hono route or service after a database write:
+<Step>
 
-```ts
-await c.get("events").emit("user.created", {
-  userId: user.id,
-  email: user.email,
-  name: user.name,
-  emailVerified: user.emailVerified,
-})
+### Declare the event
+
+Events are typed through the `VitNodeEvents` interface in `@vitnode/core/api/models/events`. Augment it in `src/api/lib/events.ts`, with the payload listeners will receive:
+
+```ts title="plugins/site-notes/src/api/lib/events.ts"
+declare module "@vitnode/core/api/models/events" {
+  interface VitNodeEvents {
+    "site-notes.note.created": { noteId: number; title: string };
+  }
+}
+
+export {};
 ```
 
----
+Prefix event names with your plugin id, so they never collide with core's or another plugin's. Then import the file once from `src/config.api.ts`, so apps and other plugins that import your plugin see the event too:
 
-### 2. Subscribe with an Event Listener
+```ts title="plugins/site-notes/src/config.api.ts"
+import { notesModule } from "./api/modules/notes/notes.module";
+import "@/api/lib/events"; // [!code ++]
+```
 
-Define a listener in your plugin:
+</Step>
 
-```ts title="plugins/shop/src/api/lib/events.ts"
-import { buildEventListener } from "@vitnode/core/api/lib/events"
+<Step>
+
+### Emit it after the write
+
+In `src/api/modules/admin/notes/create.route.ts`, emit the event once the insert has returned, before answering:
+
+```ts title="plugins/site-notes/src/api/modules/admin/notes/create.route.ts"
+  handler: async c => {
+    const values = c.req.valid("json");
+    const [note] = await c
+      .get("db")
+      .insert(site_notes)
+      .values(values)
+      .returning({ id: site_notes.id, title: site_notes.title, body: site_notes.body });
+
+    // [!code ++:4]
+    await c.get("events").emit("site-notes.note.created", {
+      noteId: note.id,
+      title: note.title,
+    });
+
+    return c.json(note, 201);
+  },
+```
+
+`emit()` is type-checked against `VitNodeEvents`, so a wrong name or payload is a compile error. Emit after the data is saved. Inside a transaction, emit after it commits, or listeners may read data that is then rolled back.
+
+</Step>
+
+<Step>
+
+### Create a listener
+
+Create `src/api/lib/note-created.listener.ts`:
+
+```ts title="plugins/site-notes/src/api/lib/note-created.listener.ts"
+import { buildEventListener } from "@vitnode/core/api/lib/events";
+
+export const noteCreatedListener = buildEventListener({
+  event: "site-notes.note.created",
+  name: "log-new-note",
+  handler: async (c, payload, envelope) => {
+    await c
+      .get("log")
+      .debug(`New note #${payload.noteId}: "${payload.title}" (event ${envelope.eventId})`);
+  },
+});
+```
+
+`payload` is typed from the event name. `envelope` adds the event id, the emitting plugin, the time and the actor (`admin`, `user` or `system`). `name` identifies the listener in logs and failure reports.
+
+</Step>
+
+<Step>
+
+### Register it on a top-level module
+
+Add the listener to the `events` of `notesModule`, a module passed to `buildApiPlugin` directly:
+
+```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts"
+import { buildModule } from "@/api/builders";
+import { noteCreatedListener } from "@/api/lib/note-created.listener"; // [!code ++]
+
+export const notesModule = buildModule({
+  name: "notes",
+  routes: [listNotesRoute, showNoteRoute],
+  events: [noteCreatedListener], // [!code ++]
+});
+```
+
+Listeners are collected only from top-level modules. On a nested module, such as `admin/notes`, a listener never runs, and nothing warns you.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Create a note on the [AdminCP page](/docs/dev/plugins/admin), or with the **Create a test note** button from the [Permissions](/docs/dev/working-with-users/staff-permissions#check-the-result) lesson. Then open **Debug Panel → Log explorer** (`/admin/core/debug/logs`). A debug entry from `site-notes` reads `New note #8: "Lift maintenance" (event …)`, with your note's id and title. The same line is printed in the `pnpm dev` terminal.
+
+## How listeners run
+
+With the default local adapter:
+
+| Question | Answer |
+| --- | --- |
+| When do listeners run? | Inside the emitting request, one after another in registration order. `emit()` resolves after the last one. |
+| Does a failing listener break the request? | No. Its error is logged and returned in `emit()`'s `failures`; `emit()` never throws, and the remaining listeners still run. |
+| Is delivery retried or stored? | No. Events live only in that request. Work that must survive a crash or a failure belongs in the [queue](/docs/dev/advanced/queue). |
+| Do other instances hear the event? | No, only the instance that emitted it. A [custom adapter](/docs/dev/events/custom-adapter) can deliver elsewhere and report `status: "queued"`. |
+
+`emit()` resolves to `{ eventId, status, delivered, failures }`. `delivered` counts the listeners that succeeded; each failure names the plugin, module and listener. Keep listeners quick, because the person who created the note waits for all of them.
+
+## Hand slow work to the queue
+
+When a listener has slow work, such as sending email, queue it instead of doing it in the request. A listener runs with the emitter's context, so a dispatch defaults to the **emitting** plugin. Pass your plugin id when you listen to someone else's event, such as core's `user.created`:
+
+```ts title="plugins/site-notes/src/api/lib/welcome.listener.ts"
+import { buildEventListener } from "@vitnode/core/api/lib/events";
+
+import { manifest } from "@/manifest.gen";
 
 export const welcomeListener = buildEventListener({
   event: "user.created",
-  name: "send-welcome-email",
+  name: "queue-welcome-note",
   handler: async (c, payload) => {
     await c.get("queue").dispatch({
-      name: "send-welcome-email",
-      payload: { userId: payload.userId, email: payload.email },
-    })
+      name: "welcome-member",
+      payload: { userId: payload.userId },
+      pluginId: manifest.id,
+    });
   },
-})
+});
 ```
 
-Register the listener in your module's `events` array:
+`welcome-member` must be a task your plugin registers; [Queue](/docs/dev/advanced/queue) shows how to create one.
 
-```ts title="plugins/shop/src/api/modules/orders/orders.module.ts"
-import { buildModule } from "@/api/builders"
-import { welcomeListener } from "../../lib/events"
+## Related
 
-export const ordersModule = buildModule({
-  name: "orders",
-  routes: [listOrdersRoute],
-  events: [welcomeListener], // [!code ++]
-})
-```
-
----
-
-## Declare Custom Event Types
-
-Extend VitNode's global `EventMap` interface in your plugin so payload types are strictly enforced and autocompleted:
-
-```ts title="plugins/shop/src/api/lib/events.ts"
-export interface OrderPlacedPayload {
-  orderId: number
-  userId: number
-  total: number
-}
-
-// [!code ++:7]
-declare module "@vitnode/core/lib/events" {
-  interface EventMap {
-    "shop.order.placed": OrderPlacedPayload
-  }
-}
-```
-
-Now `emit("shop.order.placed", ...)` and `buildEventListener({ event: "shop.order.placed", ... })` are strictly type-checked.
-
----
-
-## Delivery Guarantees
-
-| Feature | Local Transport |
-| :--- | :--- |
-| **Execution** | Runs in-process on the emitting instance. |
-| **Ordering** | Sequential execution in registration order. |
-| **Error Isolation** | Per listener. An exception in one listener does not affect others. |
-| **Durability** | In-memory. For distributed brokers, see [Custom Adapter](/docs/dev/events/custom-adapter). |
-
-## Learn More
-
-<Cards>
-  <Card
-    title="Built-in Events"
-    description="Catalog of standard events emitted by core and Content Engine"
-    href="/docs/dev/events/built-in-events"
-  />
-  <Card
-    title="Background Queues"
-    description="Asynchronous persistent jobs and background workers"
-    href="/docs/dev/advanced/queue"
-  />
-  <Card
-    title="Cron Tasks"
-    description="Scheduled recurring jobs and automated maintenance"
-    href="/docs/dev/cron"
-  />
-</Cards>
+- [Built-in events](/docs/dev/events/built-in-events): every event core and the Content Engine emit, with payloads.
+- [Custom event adapter](/docs/dev/events/custom-adapter): deliver events through your own transport.

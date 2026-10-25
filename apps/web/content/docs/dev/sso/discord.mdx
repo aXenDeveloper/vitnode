@@ -170,10 +170,15 @@ Ask the API what it thinks it supports:
 
 ```bash
 curl http://localhost:3000/api/@vitnode/core/middleware
-# {"isEmail":false,"sso":[{"id":"discord","name":"Discord"}]}
 ```
 
-Then open `/login` and press **Discord**. You should see Discord's "connect to"
+The `sso` array in the response now lists the provider. Here it is abridged, with the SVG icon cut short:
+
+```json
+{ "sso": [{ "id": "discord", "name": "Discord", "icon": "<svg ...>", "brandColor": "#5865F2" }] }
+```
+
+Then open `/login` and press the **Discord** button under **Continue with**. You should see Discord's "connect to"
 authorization prompt listing your username and email, get bounced back to
 `/login/sso/discord?code=...&state=...`, and land on the front page signed in.
 
@@ -195,7 +200,7 @@ permissions.
 | Profile URL   | `https://discord.com/api/users/@me`    |
 | Scopes        | `identify email`                       |
 | Provider id   | `discord`                              |
-| Fields read   | `id`, `email`, `username`, `avatar`    |
+| Fields read   | `id`, `email`, `verified`, `username`, `avatar` |
 
 Both scopes are required: `identify` for the id and username, `email` for the
 address the account is created with.
@@ -216,11 +221,11 @@ avatar is offered.
   generic error screen.
 </Callout>
 
-<Callout type="warn" title="Discord's email verification flag is not checked">
-  Unlike the Google adapter, which rejects an unverified address, this one takes
-  Discord's `email` at face value and never reads Discord's `verified` field. If
-  you need that guarantee, copy the adapter into your own project and add the
-  check - see [Custom adapter](/docs/dev/sso/custom-adapter).
+<Callout type="warn" title="Unverified Discord emails are rejected">
+  The adapter reads Discord's `verified` field and answers `400 Email not
+  verified` when it is `false`, so a Discord account with an unconfirmed address
+  cannot sign in until its owner confirms it in Discord. The visitor sees the
+  generic error screen.
 </Callout>
 
 <Callout type="warn" title="A missing key fails on click, not on boot">
@@ -230,7 +235,7 @@ avatar is offered.
   toast is an environment problem, not a portal problem.
 </Callout>
 
-## Next
+## Related
 
 <Cards>
   <Card

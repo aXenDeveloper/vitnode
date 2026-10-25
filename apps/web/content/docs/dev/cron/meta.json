@@ -1,5 +1,5 @@
 {
-  "title": "Cron Jobs",
+  "title": "Cron",
   "description": "Recurring background jobs, the adapters that tick them, and the AdminCP screen that runs them",
   "icon": "Clock",
   "pages": [

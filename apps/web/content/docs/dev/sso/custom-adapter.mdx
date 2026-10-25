@@ -1,22 +1,27 @@
 ---
-title: Custom SSO Adapter
-description: Build a custom OAuth2 Single Sign-On adapter for any provider with the SSOApiPlugin interface.
+title: Custom adapter
+description: Build a custom OAuth2 single sign-on adapter for VitNode with the SSOApiPlugin interface, using GitHub as the example.
 icon: Puzzle
 ---
 
 import { TypeTable } from "fumadocs-ui/components/type-table"
 
-VitNode includes built-in SSO adapters for Google, Discord, and Facebook. You can connect any other OAuth2 provider (e.g. GitHub, Apple, Slack) by implementing the `SSOApiPlugin` interface. State cookie generation, user session linking, and login buttons are handled automatically.
+VitNode ships SSO adapters for Google, Discord and Facebook. To connect any other OAuth2 provider, such as GitHub, write an object that implements `SSOApiPlugin`. VitNode handles the state cookie, account linking, sessions and the login button; your adapter only talks to the provider.
 
-## Quick start: GitHub SSO Adapter
+## Before you begin
 
-Implement the 5 interface methods and register the adapter in `vitnode.api.config.ts`:
+- An OAuth app at the provider. For GitHub, create one under **Settings → Developer settings → OAuth Apps** with the callback URL `http://localhost:3000/login/sso/github` (your `VITNODE_WEB_URL` plus `login/sso/github`), and put its client ID and secret in the API's `.env` as `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`.
 
-### 1. Build the Adapter
+## Build a GitHub adapter
+
+An adapter has three functions: `getUrl`, `fetchToken` and `fetchUser`.
+
+### 1. Write the adapter
 
 ```ts title="apps/api/src/utils/sso/github.ts"
 import type { SSOApiPlugin } from "@vitnode/core/api/models/sso"
 import { getRedirectUri } from "@vitnode/core/api/models/sso"
+import { HTTPException } from "hono/http-exception"
 
 export const GitHubSSOApiPlugin = ({
   clientId,
@@ -32,11 +37,11 @@ export const GitHubSSOApiPlugin = ({
     id,
     name: "GitHub",
     profileFields: ["avatar"],
-    // 1. Build Authorization URL
+    // 1. Send the browser to the provider
     getUrl: ({ state }) =>
       `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user,user:email&state=${state}`,
 
-    // 2. Exchange Authorization Code for Token
+    // 2. Exchange the authorization code for a token
     fetchToken: async (code) => {
       const response = await fetch("https://github.com/login/oauth/access_token", {
         method: "POST",
@@ -52,10 +57,15 @@ export const GitHubSSOApiPlugin = ({
         }),
       })
 
-      return await response.json()
+      const data = await response.json()
+      if (!data.access_token) {
+        throw new HTTPException(400, { message: "GitHub refused the code" })
+      }
+
+      return { access_token: data.access_token, token_type: data.token_type }
     },
 
-    // 3. Retrieve User Profile & Email
+    // 3. Read the provider account
     fetchUser: async ({ access_token, token_type }) => {
       const headers = { Authorization: `${token_type} ${access_token}` }
 
@@ -68,11 +78,14 @@ export const GitHubSSOApiPlugin = ({
       const emails: Array<{ email: string; primary: boolean; verified: boolean }> =
         await emailRes.json()
       const primaryEmail = emails.find((e) => e.primary && e.verified)?.email
-      if (!primaryEmail) throw new Error("GitHub account has no verified email")
+      if (!primaryEmail) {
+        throw new HTTPException(400, { message: "Email not verified" })
+      }
 
       return {
         id: String(user.id),
         email: primaryEmail,
+        emailVerified: true, // only a verified primary address gets this far
         username: user.login,
         avatarUrl: user.avatar_url,
       }
@@ -81,9 +94,9 @@ export const GitHubSSOApiPlugin = ({
 }
 ```
 
----
+`getRedirectUri(id)` returns `{VITNODE_WEB_URL}login/sso/{id}`; send the same value from `getUrl` and `fetchToken`. Throw an `HTTPException` to fail a sign-in with a clear status; a plain `Error` becomes a `500`.
 
-### 2. Register in API Configuration
+### 2. Register it in the API config
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
 import { buildApiConfig } from "@vitnode/core/vitnode.config"
@@ -102,11 +115,11 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
-A **GitHub** login button automatically renders on `/login` and `/register`, and `/login/sso/github` routes incoming authentication requests. It is a neutral, text-only button until you give the adapter an [icon and a brand color](/docs/dev/sso/icons).
+## Check the result
 
----
+Restart the API and open `/login`. A **Continue with GitHub** button appears on `/login` and `/register`; pressing it sends you to GitHub and back to `/login/sso/github`, signed in. It is a neutral, text-only button until you give the adapter an [icon and a brand color](/docs/dev/sso/icons).
 
-## `SSOApiPlugin` Interface Reference
+## `SSOApiPlugin` reference
 
 <TypeTable
   type={{
@@ -121,12 +134,12 @@ A **GitHub** login button automatically renders on `/login` and `/register`, and
       type: "string",
     },
     icon: {
-      description: "Brand mark for the login button: inline SVG markup or an image URL. See Provider Icons and Colors.",
+      description: "Brand mark for the login button: inline SVG markup or an image URL. See Provider icons.",
       required: false,
       type: "string",
     },
     brandColor: {
-      description: "Hex color (#RGB or #RRGGBB) that fills the login button. The label turns white or near-black, whichever reads better. See Provider Icons and Colors.",
+      description: "Hex color (#RGB or #RRGGBB) that fills the login button. The label turns white or near-black, whichever reads better. See Provider icons.",
       required: false,
       type: "string",
     },
@@ -153,7 +166,7 @@ A **GitHub** login button automatically renders on `/login` and `/register`, and
   }}
 />
 
-See [Provider Icons and Colors](/docs/dev/sso/icons) for the accepted `icon` and `brandColor` formats, and for registering a React component instead.
+See [Provider icons](/docs/dev/sso/icons) for the accepted `icon` and `brandColor` formats, and for registering a React component instead.
 
 ## Profile data
 
@@ -182,21 +195,21 @@ All three are optional, so adapters written before this still work - they just h
 - `avatarUrl` must be `https`. VitNode downloads and re-stores it itself, with SSRF protection and size and type checks, so you don't have to.
 - Don't add scopes just for profile data. If a field needs extra permission, leave it out of `profileFields`.
 
-## Built-in SSO Adapters
+## Built-in adapters
 
 <Cards>
   <Card
-    title="Google SSO"
+    title="Google"
     description="Configure Google OAuth credentials"
     href="/docs/dev/sso/google"
   />
   <Card
-    title="Discord SSO"
+    title="Discord"
     description="Configure Discord OAuth credentials"
     href="/docs/dev/sso/discord"
   />
   <Card
-    title="Facebook SSO"
+    title="Facebook"
     description="Configure Facebook OAuth credentials"
     href="/docs/dev/sso/facebook"
   />

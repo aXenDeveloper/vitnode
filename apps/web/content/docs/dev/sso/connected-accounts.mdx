@@ -1,5 +1,5 @@
 ---
-title: Connected Accounts
+title: Connected accounts
 description: Let members connect Google, Discord, Facebook or custom SSO accounts from Settings, import their avatar and name, and keep them in sync on sign-in.
 icon: Link
 ---
@@ -8,7 +8,7 @@ import { TypeTable } from "fumadocs-ui/components/type-table"
 
 **Settings → Connected accounts** (`/settings/sso`) is where a signed-in member manages their SSO accounts. It shows up in the settings menu as soon as at least one [SSO adapter](/docs/dev/sso) is configured - no extra setup, no extra redirect URIs.
 
-// Image prompt: A settings page titled "Connected accounts" with three grouped lists - "Sign-in accounts" (Google with an email and "Connected Mar 14", Discord, Facebook with a Connect button), "Profile" (Avatar, First name, Last name rows, each with its current value and a "From Google" / "Manual" dropdown) and "Sync" (Google · First name, an "On sign-in" switch and a "Sync now" button), light theme, blue accents.
+{/* Image prompt: A settings page titled "Connected accounts" with three grouped lists - "Sign-in accounts" (Google with an email and "Connected Mar 14", Discord, Facebook with a Connect button), "Profile" (Avatar, First name, Last name rows, each with its current value and a "From Google" / "Manual" dropdown) and "Sync" (Google · First name, an "On sign-in" switch and a "Sync now" button), light theme, blue accents. */}
 
 The page uses the same grouped rows as the rest of Settings, in three groups:
 
@@ -118,6 +118,7 @@ Mutations take JSON bodies, which the browser can't send cross-site without a CO
 - [`user.sso.linked`](/docs/dev/events/built-in-events) - a provider was connected.
 - [`user.sso.unlinked`](/docs/dev/events/built-in-events) - a provider was disconnected.
 - [`user.sso.profile_synced`](/docs/dev/events/built-in-events) - profile fields changed because of a provider.
+- [`user.sso.preferences_updated`](/docs/dev/events/built-in-events) - profile-field sources or sync-on-sign-in settings were saved, by the member or by staff.
 
 ## Adapter support
 

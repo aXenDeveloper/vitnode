@@ -1,79 +1,118 @@
 ---
-title: Cron Jobs
-description: Declare recurring background jobs in VitNode plugins and execute them via internal or external cron triggers.
+title: Cron
+description: Add a recurring background job to a VitNode plugin with buildCron, register it on an API module, and pick what ticks the clock.
 icon: Clock
 ---
 
 import { TypeTable } from 'fumadocs-ui/components/type-table'
 
-A cron job in VitNode consists of a named handler and a standard 5-field cron expression. Cron definitions are automatically registered in the `core_cron` database table and manageable through the AdminCP.
+A cron job is a named handler with a cron expression, declared by a plugin. VitNode stores each job in the `core_cron` table, decides when it is due, and lists it in the AdminCP. In this guide the `site-notes` plugin gets a nightly job, and you run it once from the Debug Panel.
 
-## Quick start
+## Before you begin
 
-### 1. Define a Cron Job
+- The `site-notes` plugin with its `notes` module and `site_notes` table, from the beginner path up to [Database](/docs/dev/database). Any plugin with a top-level API module works the same way.
+- Something that ticks the cron endpoint once a minute: the [node-cron adapter](/docs/dev/cron/node-cron) on a long-lived server, or an [external scheduler](/docs/dev/cron/rest-api). Without one, jobs are registered but never run on their own. **Run Job Now** in the Debug Panel still works.
 
-Create a cron definition in your plugin:
+## Add a cron job
 
-```ts title="plugins/blog/src/api/cron/cleanup.cron.ts"
+<Steps>
+<Step>
+
+### Define the job
+
+Create `src/api/cron/count-notes.cron.ts`. `buildCron` takes a name, a schedule and a handler that receives a Hono context:
+
+```ts title="plugins/site-notes/src/api/cron/count-notes.cron.ts"
 import { buildCron } from '@vitnode/core/api/lib/cron'
+import { count } from 'drizzle-orm'
 
-export const cleanupCron = buildCron({
-  name: 'cleanup-drafts',
-  description: 'Remove expired post drafts every midnight',
-  schedule: '0 0 * * *', // Standard cron syntax
-  handler: async (c) => {
-    await c.get('log').info('Running midnight cleanup...')
+import { site_notes } from '@/database/notes'
+
+export const countNotesCron = buildCron({
+  name: 'count-notes',
+  description: 'Log how many site notes exist, every night at 03:00',
+  schedule: '0 3 * * *',
+  handler: async c => {
+    const [{ total }] = await c
+      .get('db')
+      .select({ total: count() })
+      .from(site_notes)
+
+    await c.get('log').debug(`site-notes holds ${total} notes`)
   },
 })
 ```
 
----
+`c.get('log')` has three levels: `debug`, `warn` and `error`. See [Logging](/docs/dev/debugging/logging).
 
-### 2. Register in an API Module
+</Step>
+<Step>
 
-Attach the cron job to a module in `src/api/modules/`:
+### Register it on a top-level module
 
-```ts title="plugins/blog/src/api/modules/posts/posts.module.ts"
+Add the job to the `cronJobs` array of a module passed to `buildApiPlugin({ modules })`:
+
+```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts"
 import { buildModule } from '@/api/builders'
-import { cleanupCron } from '../../cron/cleanup.cron'
+import { countNotesCron } from '@/api/cron/count-notes.cron' // [!code ++]
 
-export const postsModule = buildModule({
-  name: 'posts',
-  routes: [listPostsRoute],
-  cronJobs: [cleanupCron], // [!code ++]
+import { listNotesRoute } from './list.route'
+import { showNoteRoute } from './show.route'
+
+export const notesModule = buildModule({
+  name: 'notes',
+  routes: [listNotesRoute, showNoteRoute],
+  cronJobs: [countNotesCron], // [!code ++]
 })
 ```
 
-When your plugin is mounted in `config.api.ts`, the cron job is automatically registered.
+Keep any other keys your module already has, such as `queueTasks` or `events`.
 
----
+Only top-level modules are read. A job on a nested module, such as `admin/notes`, is never registered.
 
-## Execution Adapters
+</Step>
+<Step>
 
-VitNode does not hold persistent timers in the HTTP worker. Instead, jobs are triggered via an adapter:
+### Restart the dev server
 
-### Option A: In-Process Node CRON (Single Server)
+The API collects cron jobs when it starts and writes any new one to `core_cron`, so restart `pnpm dev` after adding or renaming a job. The row is keyed by plugin id, module and name, so renaming a job creates a new row and removes the old one.
 
-Best for single-instance or local development. Configure in `vitnode.api.config.ts`:
+</Step>
+</Steps>
 
-```ts title="apps/api/src/vitnode.api.config.ts"
-import { NodeCronAdapter } from '@vitnode/node-cron'
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+## Check the result
 
-export const vitNodeApiConfig = buildApiConfig({
-  cron: NodeCronAdapter(), // [!code ++]
-})
-```
+1. Open **Debug Panel → Cron & queue** (`/admin/core/debug/cron`). The table has a `count-notes` row with plugin `site-notes` and the status **Waiting for first run**.
+2. Press the play button on that row (**Run Job Now**).
+3. Open **Debug Panel → Log explorer** (`/admin/core/debug/logs`). A new **debug** entry reads `site-notes holds 3 notes` (or however many you have). The entry's plugin is `@vitnode/core`, for the reason explained in the next section.
 
-### Option B: External Webhook (Multi-Instance / Serverless)
+## What a job's context gives you
 
-Trigger runs via external HTTP schedulers (AWS EventBridge, GitHub Actions, or crontab):
+A job runs inside core's cron request, not inside one of your routes:
 
-```bash
-curl -X POST https://your-domain.com/api/@vitnode/core/cron   -H "Authorization: Bearer $CRON_SECRET"
-```
+- `c.get('db')`, `c.get('log')`, `c.get('queue')` and `c.get('cache')` work as in a route. There is no signed-in user.
+- `c.get('plugin')` is `@vitnode/core`, so logs are tagged with core, and `dispatch()` needs your plugin id: `c.get('queue').dispatch({ name: 'announce-note', pluginId: 'site-notes', payload })`.
+- All jobs that are due on a tick run at the same time.
+- The schedule is only as precise as the tick. With a tick every minute, `*/10 * * * * *` (every 10 seconds) still runs once a minute.
 
----
+## Choose what ticks the clock
+
+The API runs no timer by default. Every cron run starts with a `POST /api/@vitnode/core/cron` that carries `Authorization: Bearer <CRON_SECRET>`, and that endpoint runs whatever is due.
+
+| Option | Use it when | Guide |
+| --- | --- | --- |
+| `@vitnode/node-cron` | Your API is a long-lived Node process (self-hosted, Docker) | [node-cron](/docs/dev/cron/node-cron) |
+| External scheduler | Serverless hosting, or one scheduler for many instances | [Cron over REST](/docs/dev/cron/rest-api) |
+| Your own adapter | You already run a job runner or need a different timer | [Custom adapter](/docs/dev/cron/custom-adapter) |
+
+Pick one. Two tickers do no harm, since each due run is claimed once, but they double the requests for nothing.
+
+<Callout type="warn" title="Set CRON_SECRET in production">
+  Without `CRON_SECRET`, VitNode uses a built-in default. That works in
+  development, so a fresh checkout ticks. Outside development the default and
+  common placeholders (`changeme`, `secret`) are refused with `403`, and no job
+  runs, the [queue](/docs/dev/advanced/queue) included.
+</Callout>
 
 ## Manage cron jobs in the Debug Panel
 
@@ -102,46 +141,61 @@ Next to it you get the last run, the next run and how many jobs are registered. 
 
 The same check powers the Debug Panel **Overview** and the **Cron Jobs** and **Queue Tasks** cards at **Core → System → Integrations**.
 
----
+## Jobs must be idempotent
 
-## `buildCron` Options
+A job can run more often than its schedule suggests, so write handlers that are safe to run twice:
+
+- **A failed run is retried.** When a handler throws, VitNode hands the run back and the next tick runs it again, including whatever the first attempt already did.
+- **Runs can overlap.** Each due run is claimed by exactly one tick, even with several instances, but nothing waits for the previous run to finish. A job scheduled every minute that takes three minutes runs alongside itself.
+- **A new job is not claimed yet** on the very first tick after it is registered, so every instance that ticks at that moment runs it.
+
+Record what you processed and skip it next time, for example with a `processedAt` column or a [queue task](/docs/dev/advanced/queue) with a `dedupeKey`. Move slow work into the queue. A cron handler should take seconds, not minutes.
+
+## `buildCron` options
 
 <TypeTable
   type={{
     name: {
       description:
-        "Unique identifier within the plugin (e.g. 'cleanup-drafts').",
+        "Unique within the module (e.g. 'count-notes'). With the plugin id and module name it identifies the job's row in core_cron, so renaming a job creates a new row.",
       required: true,
       type: 'string',
     },
     schedule: {
-      description: 'Standard 5-part cron pattern (minute hour dom month dow).',
+      description:
+        'A cron expression with 5 fields (minute hour day month weekday), or 6 with seconds first. An invalid expression prints a console warning and the job is skipped.',
       required: true,
       type: 'string',
     },
     handler: {
-      description: 'Async function executed when the job is triggered.',
+      description:
+        "Runs when the job is due. A throw is logged and the run is retried on the next tick.",
       required: true,
-      type: '(c: Context) => Promise<void>',
+      type: '(c: Context<EnvVitNode>) => Promise<void> | void',
     },
     description: {
-      description: 'Human-readable purpose shown in AdminCP list.',
+      description: 'Shown to admins in the cron job list.',
       type: 'string',
     },
   }}
 />
 
-## Learn More
+## Related
 
 <Cards>
   <Card
-    title="Background Queues"
-    description="Process async persistent tasks and background workers"
+    title="Queue"
+    description="Move slow or retryable work out of a cron handler and into background tasks."
     href="/docs/dev/advanced/queue"
   />
   <Card
-    title="Events"
-    description="Emit and subscribe to application domain events"
-    href="/docs/dev/events"
+    title="node-cron"
+    description="Tick the cron endpoint from inside a long-lived API process."
+    href="/docs/dev/cron/node-cron"
+  />
+  <Card
+    title="Cron over REST"
+    description="Tick the cron endpoint from an external scheduler."
+    href="/docs/dev/cron/rest-api"
   />
 </Cards>

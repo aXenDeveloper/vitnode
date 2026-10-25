@@ -7,7 +7,7 @@ icon: Zap
 Without Redis, the Content Engine does not cache public reads. Every request to a [public API](/docs/content-engine/public-api) route queries Postgres, and the response carries no `Cache-Control` header:
 
 ```bash
-curl -si "http://localhost:3000/api/@vitnode/example/content/articles?first=1" | head -4
+curl -si "http://localhost:3000/api/newsroom/content/stories?first=1" | head -4
 ```
 
 ```text
@@ -17,7 +17,7 @@ content-type: application/json
 cross-origin-opener-policy: same-origin
 ```
 
-So a published article shows up on the next request, with nothing to expire.
+So a published story shows up on the next request, with nothing to expire.
 
 With [Redis](/docs/dev/cache/api) (`REDIS_URL`), the server also keeps the public list and detail responses for up to 60 seconds. Each entry is keyed by the parsed query, the resolved locale and a generation number per content type. Every content write bumps that generation, so a write still shows up on the next request and a stale entry is never read. A record whose future `publishedAt` comes due without a write can take up to that minute to appear. The language list and the container tree behind `includeDescendants` are cached the same way. There is nothing to configure.
 
@@ -36,25 +36,25 @@ Add caching where it pays off:
 
 Wrap the fetcher call in `queryOptions` and warm it in the route loader, exactly as in [Cache app data](/docs/dev/cache/app). Use `defineRoute` from `@vitnode/core/tanstack/plugin-routes`, because its loader context has the `queryClient`:
 
-```tsx title="latest-articles.tsx"
+```tsx title="latest-stories.tsx"
 import { queryOptions } from '@tanstack/react-query'
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
 import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
 
-export const latestArticlesQuery = () =>
+export const latestStoriesQuery = () =>
   queryOptions({
-    queryKey: ['@vitnode/example', 'articles', 'latest'],
+    queryKey: ['newsroom', 'stories', 'latest'],
     queryFn: async () => {
       const response = await fetcher({
-        plugin: '@vitnode/example',
+        plugin: 'newsroom',
         method: 'get',
-        module: 'content/articles',
+        module: 'content/stories',
         path: '/',
         args: { query: { first: 5 } },
       })
 
       if (response.status !== 200) {
-        throw new Error(`Loading articles answered ${response.status}.`)
+        throw new Error(`Loading stories answered ${response.status}.`)
       }
 
       const { edges } = await response.json()
@@ -66,7 +66,7 @@ export const latestArticlesQuery = () =>
 export const route = defineRoute({
   load: async ({ context }) => {
     await context.queryClient.query({
-      ...latestArticlesQuery(),
+      ...latestStoriesQuery(),
       staleTime: 60_000,
     })
   },
@@ -75,7 +75,7 @@ export const route = defineRoute({
 
 Each server render starts with an empty query client, so a full page load is always fresh. The `staleTime` only decides how long a visitor's open tab reuses the list during client-side navigation. `staleTime: "static"` keeps it until the tab reloads.
 
-Publishing in the AdminCP refreshes the AdminCP's own list, item and search queries. It cannot reach a visitor's browser, so pick a `staleTime` you are happy to wait out. For your own write routes, call `queryClient.invalidateQueries({ queryKey: ["@vitnode/example", "articles"] })` after the write.
+Publishing in the AdminCP refreshes the AdminCP's own list, item and search queries. It cannot reach a visitor's browser, so pick a `staleTime` you are happy to wait out. For your own write routes, call `queryClient.invalidateQueries({ queryKey: ["newsroom", "stories"] })` after the write.
 
 Public routes also send an `x-vitnode-cache-tags` header naming the record they read, such as `content:blog.post:item:3`, or the content type for a list. The page cache stores a page with these tags and invalidates it after every write, hard for a hide, delete, unpublish or slug change. [How cached pages stay fresh](/docs/dev/cache/pages-invalidation#content-engine-invalidation) explains the rules.
 
@@ -83,24 +83,24 @@ Public routes also send an `x-vitnode-cache-tags` header naming the record they 
 
 When a front end caches public reads under tags, it needs to know which tags a write affects. `@vitnode/core/content` exports pure string builders for that. They read nothing and need no server:
 
-| Builder                                             | Example for `example.article`                           |
-| --------------------------------------------------- | ------------------------------------------------------- |
-| `contentPublicListTag(typeId, locale?)`             | `content:example.article:list`                          |
-| `contentPublicItemTag(typeId, id, locale?)`         | `content:example.article:item:3`                        |
-| `contentPublicSlugTag(typeId, slug, locale?)`       | `content:example.article:slug:hello-content-engine`     |
-| `contentDeliveryTag(typeId, id, locale?)`           | `content:example.article:delivery:3`                    |
-| `contentDeliveryRedirectTag(typeId, slug, locale?)` | `content:example.article:redirect:hello-content-engine` |
-| `contentDeliverySitemapTag(typeId, locale?)`        | `content:example.article:sitemap`                       |
+| Builder                                             | Example for `newsroom.story`                           |
+| --------------------------------------------------- | ------------------------------------------------------ |
+| `contentPublicListTag(typeId, locale?)`             | `content:newsroom.story:list`                          |
+| `contentPublicItemTag(typeId, id, locale?)`         | `content:newsroom.story:item:3`                        |
+| `contentPublicSlugTag(typeId, slug, locale?)`       | `content:newsroom.story:slug:hello-content-engine`     |
+| `contentDeliveryTag(typeId, id, locale?)`           | `content:newsroom.story:delivery:3`                    |
+| `contentDeliveryRedirectTag(typeId, slug, locale?)` | `content:newsroom.story:redirect:hello-content-engine` |
+| `contentDeliverySitemapTag(typeId, locale?)`        | `content:newsroom.story:sitemap`                       |
 
-A locale goes after the kind, so a localized type's Polish list is `content:example.localized-article:list:pl`. An id goes in as text, so a [uuid or bigint](/docs/content-engine/id-strategy) record's item tag carries its exact UUID or decimal string.
+A locale goes after the kind, so a localized type's Polish list is `content:newsroom.bulletin:list:pl`. An id goes in as text, so a [uuid or bigint](/docs/content-engine/id-strategy) record's item tag carries its exact UUID or decimal string.
 
-`contentInvalidationTags` turns a description of one write into the exact tags to expire. Publishing article `3` returns all six tags above:
+`contentInvalidationTags` turns a description of one write into the exact tags to expire. Publishing story `3` returns all six tags above:
 
 ```ts title="revalidate.ts"
 import { contentInvalidationTags } from '@vitnode/core/content'
 
 const tags = contentInvalidationTags({
-  contentTypeId: 'example.article',
+  contentTypeId: 'newsroom.story',
   id: 3,
   slugs: ['hello-content-engine'],
   wasPublic: false,
@@ -127,7 +127,7 @@ VitNode then sends a `POST` to `{origin}/api/vitnode/content/revalidate` in thes
 
 | Change                                                                                      | Notifies origins                               |
 | ------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| A [scheduled](/docs/content-engine/editorial#schedule-publishing) publish or unpublish runs | Yes                                            |
+| A [scheduled](/docs/content-engine/editorial-scheduling) publish or unpublish runs          | Yes                                            |
 | A record is [hidden or unhidden](/docs/content-engine/content-visibility)                   | Yes, when that changes what the public can see |
 | A publish, unpublish, edit or delete from the AdminCP or the API                            | No                                             |
 

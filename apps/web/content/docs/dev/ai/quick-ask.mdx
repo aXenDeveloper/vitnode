@@ -1,0 +1,85 @@
+---
+title: Quick Ask
+description: Turn on Quick Ask, the AI button in the VitNode rich text editor that shortens, corrects, simplifies, changes the tone of or continues the selected text, and learn how it limits context, cost and markup.
+icon: WandSparkles
+---
+
+Quick Ask is the **Quick Ask (AI)** button in the toolbar of VitNode's rich text editor. It rewrites the selected text or writes more of it, streams the answer into a preview, and changes nothing until the editor applies it. It is built into Core and switched off for everyone except root roles until an admin allows it.
+
+## Before you begin
+
+- **A language model with the `text` and `streaming` capabilities** in `ai.models`. Quick Ask always streams, so without a `streaming` model it fails with `AI_MODEL_INCOMPATIBLE`. See [AI setup](/docs/dev/ai#model-capabilities).
+- **A model with `pricing`** if the roles you allow have a points allowance. See [Model pricing](/docs/dev/ai#model-pricing).
+- **An admin with `ai:can_manage`** to change a role's AI access.
+
+## Turn on Quick Ask for a role
+
+<Steps>
+
+<Step>
+
+### Allow the editor.assist permission
+
+Open **Users → Roles**, edit the role and switch to the **Artificial intelligence (AI)** tab. Find the row with **Rewrite selected text** and **Quick Ask** and set it to _Allow_. Both actions share the permission `@vitnode/core:editor.assist`, which has `defaultGranted: false`.
+
+</Step>
+
+<Step>
+
+### Give the role AI points
+
+On the same tab, give the role a monthly points allowance or **Unlimited points**. The default allowance is `0`, so a member of an allowed role without points gets `AI_USER_LIMIT_REACHED`. Save the role.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Sign in with a member of that role and open any form with a rich text field, such as an article in the AdminCP. The toolbar shows **Quick Ask (AI)**. Select a sentence, open Quick Ask and choose **Shorten**. The shorter text streams into a preview with **Replace selection** and **Insert below**. The run appears in **Debug Panel → AI logs** as `@vitnode/core:editor.selection.rewrite`.
+
+## What it can do
+
+| Operation        | Action key                               | Does                                                       |
+| :--------------- | :--------------------------------------- | :--------------------------------------------------------- |
+| Shorten          | `@vitnode/core:editor.selection.rewrite` | Tighter text, same meaning.                                |
+| Correct writing  | `@vitnode/core:editor.selection.rewrite` | Spelling, grammar and punctuation only.                    |
+| Simplify         | `@vitnode/core:editor.selection.rewrite` | Simpler words, shorter sentences.                          |
+| Change the tone  | `@vitnode/core:editor.selection.rewrite` | Friendly, formal, confident or neutral.                    |
+| Continue writing | `@vitnode/core:editor.quick-ask`         | One or two paragraphs from where the text ends.            |
+| Ask anything     | `@vitnode/core:editor.quick-ask`         | A custom request about the selection (max 500 characters). |
+
+An admin can switch either action off, or give it its own model, on **Artificial Intelligence (AI) → Actions**.
+
+## How it behaves
+
+- **Bounded context.** It sends the selection (up to 8,000 characters) and up to 1,500 characters before and after it, never the whole document.
+- **Cost shown first.** With a selection, the panel shows the reservation bound, not a price: _"One request costs at most N AI points - usually much less."_
+- **Stop is cheap.** **Stop** cancels the stream. Stopping before any text arrives charges nothing; stopping after text has streamed in counts as a run.
+- **Plain text only.** The answer becomes paragraphs and hard breaks. The editor never parses it as HTML, so it cannot inject markup, links or scripts.
+- **Stale selection.** If the selected text changed while the answer was written, **Replace selection** is disabled and **Insert below** still works.
+- **One-step undo.** Applying is one editor transaction. The toast's **Undo** or Ctrl+Z restores the text exactly.
+- **Nothing is saved** until you save the form.
+- **Content language.** It writes in the language of the field being edited (the multi-language tab), not the interface language.
+
+Quick Ask calls Core's AdminCP stream routes on `/admin` pages and the member routes everywhere else. See [Streaming](/docs/dev/ai/streaming#built-in-stream-routes).
+
+## Build your own editor tool
+
+Your own Tiptap tools can reuse the same pieces:
+
+- `streamAiAction()` and `estimateAiAction()` from `@vitnode/core/lib/ai/stream-client` run and price a text action. See [Streaming](/docs/dev/ai/streaming).
+- From `@vitnode/core/components/tiptap/quick-ask/quick-ask-editor`: `takeQuickAskSnapshot(editor)` captures the selection with its context (`{ before, selection, after, from, to }`), `isQuickAskStale(editor, snapshot)` tells whether the selection changed since, and `applyQuickAskResult(editor, { from, to, mode, text })` inserts the answer as one undoable transaction, with `mode` `"replace"` or `"below"`.
+
+```ts
+import { streamAiAction } from '@vitnode/core/lib/ai/stream-client'
+
+await streamAiAction({
+  action: '@vitnode/core:editor.selection.rewrite',
+  input: { after, before, locale, operation: 'shorten', selection },
+  onDelta: (delta) => setPreview((text) => text + delta),
+  scope: 'admin',
+})
+```
+
+`before`, `selection` and `after` come from `takeQuickAskSnapshot(editor)`, `locale` is the content language being edited, and `setPreview` is your component's state setter.

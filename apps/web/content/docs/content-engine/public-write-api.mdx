@@ -1,19 +1,19 @@
 ---
-title: Public write API
+title: Write API
 description: Reference for Content Engine publicWrite, with options and defaults, writable fields, generated create and edit routes, request and response bodies, status and error codes, createContentPublicWriteService and definition errors.
 icon: FileJson
 ---
 
-This page lists everything `publicWrite` accepts and everything its routes answer. For a guided setup, follow [Public write](/docs/content-engine/public-write). Examples use `example.discussion` from the example plugin, whose write routes live at `/api/@vitnode/example/content/discussions`.
+This page lists everything `publicWrite` accepts and everything its routes answer. For a guided setup, follow [Member writing](/docs/content-engine/public-write). Examples use `newsroom.letter` from the newsroom plugin, whose write routes live at `/api/newsroom/content/letters`.
 
 ## `publicWrite` options
 
 `publicWrite` is a block of `defineContentType` from `@vitnode/core/content`. Leave it out, or set it to `false`, to keep public writing off.
 
-```ts title="plugins/example/src/content/discussion.ts"
+```ts title="plugins/newsroom/src/content/letter.ts"
 publicWrite: {
   ownership: { field: "author" },
-  create: { fields: ["title", "body"], status: "published" },
+  create: { fields: ["title", "body", "desk"], status: "published" },
   update: { fields: ["title", "body"] },
 },
 ```
@@ -57,17 +57,17 @@ They never accept:
 
 A `relation` is writable only when its target content type has a `publicApi`. On each request, every referenced record must also be published and not hidden.
 
-A `container` is writable in `create.fields` only. A member picks the container once, when they create the record; moving it later is a staff edit, so an author cannot drop their record into a container they could not post in. On each create, the server reads the container back inside the write's transaction and checks that it belongs to the field's collection. A missing or foreign container answers `400` with an `unavailable` issue on that field. See [Containers on the frontend](/docs/content-engine/container-frontend#let-members-pick-a-board).
+A `container` is writable in `create.fields` only. A member picks the container once, when they create the record; moving it later is a staff edit, so an author cannot drop their record into a container they could not post in. On each create, the server reads the container back inside the write's transaction and checks that it belongs to the field's collection. A missing or foreign container answers `400` with an `unavailable` issue on that field. See [Container pages](/docs/content-engine/container-frontend#let-members-pick-a-desk).
 
 ### Moderator permission
 
-A content type with `update` adds `can_edit` to its plugin's moderator permissions, under the content type's permission module, such as `discussion`. It shares the `@vitnode/example:discussion:can_edit` label with the admin permission. If the plugin declares that module under `permissionStaff.moderator` itself, the declared list wins.
+A content type with `update` adds `can_edit` to its plugin's moderator permissions, under the content type's permission module, such as `letter`. It shares the `newsroom:letter:can_edit` label with the admin permission. If the plugin declares that module under `permissionStaff.moderator` itself, the declared list wins.
 
 When the content type lives in a container collection with [publishing policies](/docs/content-engine/container-policies), `can_edit` is scoped by that collection and `can_approve` is added next to it. See [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions).
 
 ## Generated routes
 
-The routes live in the public module, under `/api/{pluginId}/content/{publicApi.path}`, next to the [public read routes](/docs/content-engine/public-api#the-routes). Only the ones `publicWrite` enables are mounted, and the [fetcher](/docs/dev/fetcher) types them the same way: a `post` to a content type without `create` is a compile error.
+The routes live in the public module, under `/api/{pluginId}/content/{publicApi.path}`, next to the [public read routes](/docs/content-engine/public-api). The Content Engine mounts only the ones `publicWrite` enables, and the [fetcher](/docs/dev/fetcher) types them the same way: a `post` to a content type without `create` is a compile error.
 
 | Method and path  | Enabled by | Body                          | Success                                                                    |
 | ---------------- | ---------- | ----------------------------- | -------------------------------------------------------------------------- |
@@ -78,7 +78,7 @@ The routes live in the public module, under `/api/{pluginId}/content/{publicApi.
 
 `GET /{id}/edit` and `PATCH /{id}` answer only for the owner and for moderators. There is no public delete, publish or hide route.
 
-`GET /permissions` takes up to 50 comma-separated ids and answers for guests too. `canEdit` follows the same rules as `PATCH`; `canReport` is `true` for a public record, with `reports` on, that the visitor did not write. A record the visitor can neither read nor edit is left out of `items`, so the route never confirms a draft exists.
+`GET /permissions` takes up to 50 comma-separated ids and answers for guests too. `canEdit` follows the same rules as `PATCH`; `canReport` is `true` for a public record, with `reports` on, that the visitor did not write. A record the visitor can neither read nor edit is left out of `items`, so the route never confirms a draft exists. [Permissions](/docs/content-engine/public-permissions) has the full contract.
 
 A request passes these checks in order: the rate limit, the captcha (create only), the session, the body, then for an edit the owner or moderator check and the relation targets, all before anything is written.
 
@@ -95,7 +95,7 @@ Both bodies are strict JSON objects. A key outside the allowlist is refused, nev
 Each value uses the field's own validation, the same as in the AdminCP. A rich text field takes a ProseMirror document, and a relation takes an id, or an array of ids for `multiple: true`.
 
 ```http title="PATCH request"
-PATCH /api/@vitnode/example/content/discussions/1
+PATCH /api/newsroom/content/letters/1
 Content-Type: application/json
 Cookie: vitnode_auth=<session>
 
@@ -110,10 +110,10 @@ Every successful response is the same record shape:
 | ------------- | -------------------------- | -------------------------------------------------------------------------------------- |
 | `id`          | `number` or `string`       | A string for the `uuid` and `bigint` [ID strategies](/docs/content-engine/id-strategy) |
 | `slug`        | `string` \| `null`         | The value of the `publicApi` slug field, the key of `GET /{slug}`                      |
-| `status`      | `"draft"` \| `"published"` |                                                                                        |
+| `status`      | `"draft"` \| `"published"` | Only `"published"` is public. A draft may or may not wait for a moderator; check `approval` |
 | `publishedAt` | ISO date string \| `null`  |                                                                                        |
-| `version`     | `number`                   | Editorial content types only. Send it back as `expectedVersion`                        |
-| `approval`    | object \| `null`           | The record's pending submission, or a rejection nothing replaced yet. See [Approvals](/docs/content-engine/approvals#what-the-author-sees) |
+| `version`     | `number`                   | Editorial content types only. Send it back as `expectedVersion`; without `editorial`, `expectedVersion` is refused with `400` |
+| `approval`    | object \| `null`           | The record's pending submission, or a rejection nothing replaced yet. Always `null` outside a container with policies, even for drafts. See [Drafts and approval](/docs/content-engine/approvals#drafts-and-approval) |
 | `values`      | object                     | Every field in `create.fields` or `update.fields`, `null` when empty. Nothing else     |
 
 ```json title="200"
@@ -180,7 +180,7 @@ A title that is too short and an owner the client tried to set:
 ```json title="400"
 {
   "code": "CONTENT_INVALID_INPUT",
-  "contentTypeId": "example.discussion",
+  "contentTypeId": "newsroom.letter",
   "issues": [
     {
       "code": "too_small",
@@ -201,7 +201,7 @@ A body that is not JSON:
 ```json title="400"
 {
   "code": "CONTENT_INVALID_INPUT",
-  "contentTypeId": "example.discussion",
+  "contentTypeId": "newsroom.letter",
   "issues": [
     {
       "code": "invalid_json",
@@ -212,12 +212,12 @@ A body that is not JSON:
 }
 ```
 
-If discussions had a `category` relation, a draft, hidden or missing category would all get the same answer:
+If letters had a `category` relation, a draft, hidden or missing category would all get the same answer:
 
 ```json title="400"
 {
   "code": "CONTENT_INVALID_INPUT",
-  "contentTypeId": "example.discussion",
+  "contentTypeId": "newsroom.letter",
   "issues": [
     {
       "code": "unavailable",
@@ -228,12 +228,12 @@ If discussions had a `category` relation, a draft, hidden or missing category wo
 }
 ```
 
-A member editing somebody else's published discussion:
+A member editing somebody else's published letter:
 
 ```json title="403"
 {
   "code": "CONTENT_FORBIDDEN",
-  "contentTypeId": "example.discussion",
+  "contentTypeId": "newsroom.letter",
   "issues": []
 }
 ```
@@ -247,7 +247,7 @@ The same member editing somebody else's draft gets `404` with `"code": "CONTENT_
 ```json title="409 version conflict"
 {
   "code": "CONTENT_VERSION_CONFLICT",
-  "contentTypeId": "example.discussion",
+  "contentTypeId": "newsroom.letter",
   "currentVersion": 4,
   "expectedVersion": 3,
   "itemId": 1
@@ -257,12 +257,12 @@ The same member editing somebody else's draft gets `404` with `"code": "CONTENT_
 ```json title="409 unique conflict"
 {
   "code": "CONTENT_UNIQUE_CONFLICT",
-  "contentTypeId": "example.discussion",
+  "contentTypeId": "newsroom.letter",
   "itemId": null
 }
 ```
 
-`itemId` is `null` for a unique conflict on create. On `example.discussion`, a unique conflict means the slug derived from the title is taken.
+`itemId` is `null` for a unique conflict on create. On `newsroom.letter`, a unique conflict means the slug derived from the title is taken.
 
 ### Rate limit
 
@@ -304,42 +304,14 @@ const rejection = parseContentPublicWriteRejection(
 
 ## Frontend helpers
 
-From `@vitnode/core/tanstack/content`, for pages in the browser.
+From `@vitnode/core/tanstack/content`, for pages in the browser:
 
-### `useContentPermissions`
-
-```ts
-const permissions = useContentPermissions({ fetch, ids, queryKey });
-permissions.of(id); // { canEdit, canReport }
-```
-
-| Option     | Type                                                    | Description                                                                 |
-| ---------- | ------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `ids`      | `readonly (number \| string)[]`                         | The records on screen, at most 50                                           |
-| `fetch`    | `(ids) => Promise<{ items }>`                           | Calls `GET /permissions` through `fetcher` with `ids.join(",")`             |
-| `queryKey` | `QueryKey`                                              | The content type's query prefix; invalidating it refreshes the answer      |
-
-`of(id)` returns all `false` until the answer arrives and for a record left out. The hook waits for the session and asks again when somebody signs in or out.
-
-### `useContentPublicWrite`
-
-```ts
-const write = useContentPublicWrite({ fields, latestVersion, uniqueField, version });
-const record = await write.submit(form, async expectedVersion => await fetcher(/* ... */));
-```
-
-| Option          | Type                              | Description                                                                          |
-| --------------- | --------------------------------- | ------------------------------------------------------------------------------------ |
-| `fields`        | `readonly string[]`               | The form's fields. Server issues on them show under the field; others are a toast    |
-| `uniqueField`   | `string`                          | Where "already taken" shows on `409 CONTENT_UNIQUE_CONFLICT`. Without it, a toast    |
-| `version`       | `number`                          | The version the edit form opened with. Leave it out for a create                     |
-| `latestVersion` | `() => Promise<number \| null>`   | Reads the current version for **Keep my version**. Without it, only a reload is offered |
-
-`submit` returns the record on a `2xx` and `null` otherwise, after showing the reason. It passes the current `expectedVersion` to `request` and stores the new one after each save. `write.conflict` is the version-conflict alert, or `null`; render it above the form. Messages come from `core.global.content_write` and follow the reader's language.
+- [`useContentPublicWrite`](/docs/content-engine/public-write-form-api) sends a create or edit from an `AutoForm` and shows field errors, refusals and version conflicts.
+- [`useContentPermissions`](/docs/content-engine/public-permissions-api#usecontentpermissions) reads `GET /permissions` for any number of records, in batches of 50.
 
 ## Server API
 
-Use these from `@vitnode/core/content/server` when a plugin needs its own write route, such as "start a discussion from a question", with the same ownership, authorization and effects as the generated routes.
+Use these from `@vitnode/core/content/server` when a plugin needs its own write route, such as "write a letter from a question", with the same ownership, authorization and effects as the generated routes.
 
 ### `createContentPublicWriteService`
 
@@ -347,7 +319,7 @@ Use these from `@vitnode/core/content/server` when a plugin needs its own write 
 createContentPublicWriteService({ c, model, pluginId });
 ```
 
-`c` is the Hono context, `model` is the content model, such as `discussionContent`, and `pluginId` is the plugin that owns the content type. The service acts as the user session of `c`, never as an AdminCP session.
+`c` is the Hono context, `model` is the content model, such as `letterContent`, and `pluginId` is the plugin that owns the content type. The service acts as the user session of `c`, never as an AdminCP session.
 
 | Method             | Returns                             | Behavior                                                                                                                                                                                                  |
 | ------------------ | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -365,9 +337,9 @@ The methods throw instead of answering:
 | `ContentVersionConflict`       | `expectedVersion` is out of date (editorial content types)                                                         |
 | Postgres unique violation      | A unique value is taken                                                                                            |
 
-A route that starts a discussion from a single question. `withHttpErrors` turns a unique conflict into the structured `409`, and the `catch` maps a refusal to its status:
+A route that starts a letter from a single question on a chosen desk. `withHttpErrors` turns a unique conflict into the structured `409`, and the `catch` maps a refusal to its status:
 
-```ts title="plugins/example/src/api/modules/discussions/ask.route.ts"
+```ts title="Example: a letter from a question"
 import { ContentPublicWriteDenied } from "@vitnode/core/content";
 import {
   createContentPublicWriteService,
@@ -377,21 +349,24 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
-import { discussionContent } from "@/database/discussions";
+import { letterContent } from "@/database/letters";
 import { manifest } from "@/manifest.gen";
 
 export const askRoute = buildRoute({
   route: {
     method: "post",
     path: "/ask",
-    description: "Start a discussion from a question",
+    description: "Start a letter from a question",
     withCaptcha: true,
     request: {
       body: {
         required: true,
         content: {
           "application/json": {
-            schema: z.object({ question: z.string().trim().min(3).max(200) }),
+            schema: z.object({
+              question: z.string().trim().min(3).max(200),
+              desk: z.number().int().positive(),
+            }),
           },
         },
       },
@@ -403,17 +378,17 @@ export const askRoute = buildRoute({
             schema: z.object({ id: z.number(), slug: z.string().nullable() }),
           },
         },
-        description: "Discussion started",
+        description: "Letter started",
       },
       401: { description: "Not signed in" },
-      409: { description: "A discussion with this title exists" },
+      409: { description: "A letter with this title exists" },
     },
   },
   handler: async c => {
-    const { question } = c.req.valid("json");
+    const { question, desk } = c.req.valid("json");
     const service = createContentPublicWriteService({
       c,
-      model: discussionContent,
+      model: letterContent,
       pluginId: manifest.id,
     });
 
@@ -423,6 +398,7 @@ export const askRoute = buildRoute({
         async () =>
           await service.create({
             title: question,
+            desk,
             body: {
               type: "doc",
               content: [
@@ -433,7 +409,7 @@ export const askRoute = buildRoute({
               ],
             },
           }),
-        { contentTypeId: discussionContent.definition.id, structured: true },
+        { contentTypeId: letterContent.definition.id, structured: true },
       );
 
       return c.json({ id: record.id, slug: record.slug }, 201);

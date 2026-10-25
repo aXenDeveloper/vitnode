@@ -162,7 +162,7 @@ Core calls `access` once per delivery batch, again before each email or digest, 
 
 ## `grouping`
 
-```ts title="plugins/forum/src/api/lib/notifications.ts"
+```ts title="plugins/acme-forum/src/api/lib/notifications.ts"
 grouping: {
   windowMinutes: 60,
   key: ({ data }) => `topic:${data.topicId}`,
@@ -171,7 +171,7 @@ grouping: {
 
 Notifications with the same type and key, for the same member, in the same window join one inbox item, such as "Alex and 4 others replied to Shipping day". Windows are fixed UTC slots: with 60 minutes, 14:00 to 14:59 is one window. The key defaults to the subject. A notification without a subject, or a `key` that returns `null`, is never grouped. Use `actors`, `actorCount` and `eventCount` in `present` to word a grouped item:
 
-```json title="plugins/forum/src/locales/api/en.json"
+```json title="plugins/acme-forum/src/locales/api/en.json"
 "title": "{others, plural, =0 {{name} replied} one {{name} and # other replied} other {{name} and # others replied}} to {title}"
 ```
 
@@ -179,7 +179,7 @@ Notifications with the same type and key, for the same member, in the same windo
 
 Stored notifications outlive your code. When `schema` changes shape, increase `version` and make `migrate` upgrade the old data. Here version 1 stored `title`, and version 2 renames it to `topicTitle`:
 
-```ts title="plugins/forum/src/api/lib/notifications.ts"
+```ts title="plugins/acme-forum/src/api/lib/notifications.ts"
 export const topicReplyNotification = buildNotificationType({
   id: 'forum.topic_reply',
   version: 2,

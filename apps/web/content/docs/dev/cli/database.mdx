@@ -13,7 +13,19 @@ vitnode db status     # check the connection and what is pending
 vitnode db push       # sync the schema directly, development only
 ```
 
-Run them in the app that owns the database, the one with `drizzle.config.ts`. They use your app's own Drizzle configuration, connection and migration table.
+Run them in the app that owns the database, the one with `drizzle.config.ts` (`apps/web` in a single app with Turborepo, `apps/api` in a monorepo app), through your package manager: `pnpm vitnode db status`. They use your app's own Drizzle configuration, connection and migration table.
+
+## The scripts in a generated app
+
+A generated app also has two scripts that call older, hidden commands. They are what `pnpm dev` and the beginner guides use:
+
+| Script            | Runs                 | Generates | Applies | Seeds | Asks first |
+| ----------------- | -------------------- | --------- | ------- | ----- | ---------- |
+| `pnpm db:prepare` | `vitnode db:prepare` | Yes       | Yes     | Yes   | No         |
+| `pnpm db:migrate` | `vitnode migrate`    | Yes       | Yes     | Yes   | No         |
+| -                 | `vitnode db migrate` | No        | Yes     | Yes   | Yes, unless `--yes` |
+
+`vitnode dev` runs the same steps as `db:prepare` before the server starts, so in development you rarely call any of them yourself. In CI and production, use `vitnode db migrate --yes`. It applies only the migrations you committed and never writes a new one on the server.
 
 ## Generate, migrate or push?
 
@@ -53,8 +65,8 @@ When drizzle-kit cannot tell whether a column was renamed or replaced, the comma
 
 <Callout type="info" title="Build plugins first">
   Migrations are generated from each plugin's build output. After changing a
-  plugin's tables, run `vitnode build` in the plugin, then `vitnode db
-  generate`.
+  plugin's tables, build the plugin (its `build:plugins` script, or let
+  `pnpm dev` rebuild it), then run `vitnode db generate`.
 </Callout>
 
 ## Apply migrations
@@ -163,7 +175,7 @@ From a script, pass `--yes` to apply and `--accept-data-loss` to allow changes t
 
 Every command also accepts `--plain` and `--verbose`. With `--verbose`, the change lists are not shortened and a failure shows the complete drizzle-kit output.
 
-## Next steps
+## Related
 
 <Cards>
   <Card

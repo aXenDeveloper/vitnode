@@ -1,5 +1,5 @@
 ---
-title: VitNode CLI
+title: CLI
 description: The vitnode command runs, builds and starts VitNode apps, validates plugins, manages database migrations and translations.
 icon: SquareTerminal
 ---
@@ -24,7 +24,7 @@ npx vitnode dev
 
 </Tabs>
 
-Generated projects already call it from their `package.json` scripts, so `pnpm dev` and `pnpm start` run `vitnode dev` and `vitnode start` for you.
+Run it inside an app, an API app or a plugin folder, through your package manager. The workspace root of a monorepo does not depend on `@vitnode/core`, so `vitnode` is not found there. Generated projects already call it from their `package.json` scripts, so `pnpm dev` and `pnpm start` run `vitnode dev` and `vitnode start` for you.
 
 ## Commands
 
@@ -40,6 +40,23 @@ Generated projects already call it from their `package.json` scripts, so `pnpm d
 | `vitnode db status`       | Show the connection and what is pending        | [Database](/docs/dev/cli/database)      |
 | `vitnode db push`         | Sync the schema directly, in development only  | [Database](/docs/dev/cli/database)      |
 | `vitnode i18n <command>`  | Add, check, sync and translate languages       | [Internationalization](/docs/dev/i18n)  |
+
+## Scripts in a generated project
+
+`create-vitnode-app` writes these scripts. Two of them call older command names that `vitnode --help` does not list but still supports:
+
+| Script          | Runs                    | What it does                                                                                           |
+| --------------- | ----------------------- | ------------------------------------------------------------------------------------------------------ |
+| `dev`           | `vitnode dev`           | Starts development; an app that owns the database prepares it first                                   |
+| `build`         | `vitnode build`         | Builds for production                                                                                  |
+| `start`         | `vitnode start`         | Starts the production server                                                                           |
+| `db:prepare`    | `vitnode db:prepare`    | Generates a migration when the schema changed, applies pending migrations and seeds the initial data   |
+| `db:migrate`    | `vitnode migrate`       | The same as `db:prepare`, under its older name. It does not ask before applying                        |
+| `build:plugins` | `vitnode build`         | In a plugin: builds it                                                                                 |
+
+In a Turborepo workspace the root has its own scripts that run these through Turborepo: `build:plugins`, `db:prepare`, `db:migrate`, `build`, `start`, and `dev`, which runs `build:plugins` and `db:prepare` before it starts the apps.
+
+`pnpm db:migrate` is not the same as `vitnode db migrate`. The script also generates a migration from the current schema, while `vitnode db migrate` only applies the migration files you committed, and asks first. For production, prefer `vitnode db migrate --yes`. See [Database commands](/docs/dev/cli/database).
 
 To create a plugin, use the project generator: `create-vitnode-app --plugin`. See [Create a plugin](/docs/dev/plugins/create).
 
@@ -61,7 +78,7 @@ Run it at a monorepo root and the CLI stops with a hint to `cd` into your app, s
 
 The CLI drives the tools your project already uses: Vite through its JavaScript API, TanStack Start through your `vite.config.ts`, and your project's own `drizzle-kit`. You can still run `vite` or `drizzle-kit` directly. `vitnode` adds the database bootstrap, plugin checks and readable output around them.
 
-## Next steps
+## Related
 
 <Cards>
   <Card

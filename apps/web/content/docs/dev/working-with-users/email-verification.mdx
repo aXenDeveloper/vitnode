@@ -1,5 +1,5 @@
 ---
-title: Email Verification
+title: Email verification
 description: How VitNode confirms a new member's email address before they can sign in, and the API routes and events behind it.
 icon: MailCheck
 ---
@@ -33,7 +33,7 @@ If they try to sign in first, the sign-in form says **Confirm your email first**
 - **AdminCP sign-in** at `/admin` is not blocked. Only staff get in, and staff are picked by an administrator, so an install that just added an email adapter can't lock its admins out.
 - **SSO** sign-ups are confirmed already, since the provider vouches for the address.
 - **Completing a password reset** also confirms the address - the reset link went to the same mailbox.
-- **Staff** can confirm anyone by hand from the AdminCP user page.
+- **Staff** can confirm anyone by hand with **Verify Email** in the AdminCP user list or **Mark email as verified** on the user's page ([Manage users](/docs/dev/working-with-users/admin-users)).
 
 <Callout type="warn" title="Adding an email adapter to an existing install">
   Members who registered while an adapter was configured but before this feature
@@ -58,6 +58,7 @@ Call them through the [fetcher](/docs/dev/fetcher) like any other core route:
 ```ts title="src/lib/confirm-email.ts"
 import { fetcher } from '@vitnode/core/tanstack/fetcher'
 
+// `token` is the `?token=` value from the confirmation link
 const response = await fetcher({
   plugin: '@vitnode/core',
   method: 'post',

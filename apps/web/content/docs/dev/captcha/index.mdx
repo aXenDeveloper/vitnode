@@ -8,13 +8,13 @@ import { ImgDocs } from "@/components/fumadocs/img"
 import { TypeTable } from "fumadocs-ui/components/type-table"
 import captchaPreview from "./captcha_preview.png"
 
-VitNode provides built-in bot protection. When enabled in your API configuration, gated routes automatically demand and verify a challenge token before handler execution.
+VitNode has built-in bot protection with Cloudflare Turnstile or Google reCAPTCHA v3. Once a provider is configured, every route marked `withCaptcha` demands a valid token before its handler runs, and `AutoForm` renders the widget and sends the token for you. Sign-up, password reset and resending the email confirmation link are gated out of the box.
 
 ## Quick start
 
-### 1. Configure Captcha in API Config
+### 1. Configure a provider
 
-Add the `captcha` configuration to `apps/api/src/vitnode.api.config.ts`:
+Add `captcha` to `apps/api/src/vitnode.api.config.ts`. The keys come from your provider. See [Cloudflare Turnstile](/docs/dev/captcha/cloudflare) or [reCAPTCHA v3](/docs/dev/captcha/recaptcha).
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
 import { buildApiConfig } from "@vitnode/core/vitnode.config"
@@ -31,51 +31,66 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
-Built-in user registration and password recovery routes are protected immediately:
+Registration, password reset and the resend-confirmation form are protected straight away:
 
 <ImgDocs
   src={captchaPreview}
   alt="Cloudflare Turnstile widget showing success checkmark on VitNode sign-up form"
 />
 
----
+### 2. Gate your own route
 
-### 2. Protect Custom API Routes
+Add `withCaptcha: true` to the route definition. This `site-notes` route takes a message for the site owner:
 
-Enable captcha verification on any custom Hono endpoint with `withCaptcha: true`:
+```ts title="plugins/site-notes/src/api/modules/contact/send.route.ts"
+import { z } from "@hono/zod-openapi"
 
-```ts title="plugins/blog/src/api/modules/comments/routes/create.route.ts"
 import { buildRoute } from "@/api/builders"
 
-export const createCommentRoute = buildRoute({
+export const sendContactRoute = buildRoute({
   route: {
     withCaptcha: true, // [!code ++]
     method: "post",
     path: "/",
-    responses: { 201: { description: "Comment created" } },
+    request: {
+      body: {
+        content: {
+          "application/json": {
+            schema: z.object({ message: z.string().trim().min(1).max(2000) }),
+          },
+        },
+      },
+    },
+    responses: { 201: { description: "Message sent." } },
   },
   handler: async (c) => {
-    // Execution only reaches here if the captcha token is valid
+    // Only reached with a valid captcha token
+    const { message } = c.req.valid("json")
+    await c.get("log").debug(`Contact message: ${message}`)
+
+    return c.body(null, 201)
   },
 })
 ```
 
----
+Put it in a `contact` module and add that module to `buildApiPlugin` in `src/config.api.ts`, the same way as in [API modules](/docs/dev/plugins/api/modules). The route is then `POST /api/site-notes/contact`. Without a token it answers `400` before the handler runs.
 
-### 3. Render the Frontend Widget
+### 3. Render the widget
 
 Pass the app's captcha config to `AutoForm`. It loads the widget, keeps the submit button disabled until the captcha is ready, and hands `onSubmit` a fresh token to forward as the fetcher's `captchaToken`:
 
-```tsx title="plugins/blog/src/views/comment-form.tsx"
+```tsx title="plugins/site-notes/src/pages/contact-form.tsx"
 import { AutoForm } from "@vitnode/core/components/form/auto-form"
 import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea"
 import { useMiddlewareConfigQuery } from "@vitnode/core/tanstack/auth"
 import { fetcher } from "@vitnode/core/tanstack/fetcher"
 import { z } from "zod"
 
-const formSchema = z.object({ text: z.string().min(1) })
+import { manifest } from "@/manifest.gen"
 
-export const CommentForm = () => {
+const formSchema = z.object({ message: z.string().min(1) })
+
+export const ContactForm = () => {
   const { data: config } = useMiddlewareConfigQuery()
 
   return (
@@ -83,16 +98,16 @@ export const CommentForm = () => {
       captcha={config.captcha} // [!code ++]
       fields={[
         {
-          id: "text",
-          component: (props) => <AutoFormTextarea {...props} label="Comment" />,
+          id: "message",
+          component: (props) => <AutoFormTextarea {...props} label="Message" />,
         },
       ]}
       formSchema={formSchema}
       onSubmit={async (values, form, { captchaToken }) => {
         await fetcher({
-          plugin: "@acme/blog",
+          plugin: manifest.id,
           method: "post",
-          module: "comments",
+          module: "contact",
           path: "/",
           captchaToken, // [!code ++]
           args: { body: values },
@@ -103,11 +118,9 @@ export const CommentForm = () => {
 }
 ```
 
-`useMiddlewareConfigQuery` suspends until the config loads, so render the form under a `Suspense` boundary. Outside `AutoForm`, use the `useCaptcha` hook from `@vitnode/core/hooks/use-captcha`: it returns `isReady`, `getToken()` and `onReset()`, and for Turnstile your form must contain an element with `id="vitnode_captcha"`.
+`useMiddlewareConfigQuery` suspends until the config loads, so render the form under a `Suspense` boundary. A real form would also show a toast and reset after a successful send. For a form that is not an `AutoForm`, see [Custom forms](/docs/dev/captcha/custom-adapter).
 
----
-
-## Supported Providers
+## Supported providers
 
 <Cards>
   <Card
@@ -122,17 +135,17 @@ export const CommentForm = () => {
   />
 </Cards>
 
-## Learn More
+## Related
 
 <Cards>
   <Card
-    title="Rate Limiter"
+    title="Rate limiter"
     description="Limit IP request rates and defend against brute-force attacks"
     href="/docs/dev/advanced/rate-limiter"
   />
   <Card
-    title="Fetcher Client"
-    description="Type-safe API client with automatic captcha token handling"
+    title="Fetcher"
+    description="The typed API client and its captchaToken option"
     href="/docs/dev/fetcher"
   />
 </Cards>

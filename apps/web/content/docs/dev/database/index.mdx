@@ -1,60 +1,49 @@
 ---
-title: Database & Migrations
-description: Define PostgreSQL schemas with Drizzle ORM in VitNode plugins, generate migrations, and execute queries.
+title: Database
+description: Store the site-notes VitNode plugin's notes in PostgreSQL with Drizzle ORM, generate and apply the migration, and replace the sample data with real queries.
 icon: Database
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs"
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-VitNode uses [PostgreSQL](https://www.postgresql.org) and [Drizzle ORM](https://orm.drizzle.team). Plugins define typed schema files, compile them into SQL migrations, and query tables via `c.get("db")`.
+VitNode stores data in [PostgreSQL](https://www.postgresql.org) through [Drizzle ORM](https://orm.drizzle.team). A plugin defines its tables in TypeScript, VitNode turns them into SQL migrations, and routes query them with `c.get("db")`. In this lesson the `site-notes` endpoints stop returning sample data and read a real `site_notes` table.
 
-## Quick start
+## Before you begin
 
-### 1. Define the Schema
+- The `site-notes` plugin from [Plugin page](/docs/dev/plugins/page), with `pnpm dev` running at the workspace root.
 
-Create a database model in `plugins/{plugin}/src/database/{table}.ts`:
+<Steps>
 
-```ts title="plugins/reactions/src/database/reactions.ts"
-import { camelCase } from "drizzle-orm/pg-core"
+<Step>
 
-// [!code ++:7]
-export const reactions = camelCase.table.withRLS("reactions", (t) => ({
+### Define the table
+
+Create `src/database/notes.ts`:
+
+```ts title="plugins/site-notes/src/database/notes.ts"
+import { camelCase } from "drizzle-orm/pg-core";
+
+export const site_notes = camelCase.table.withRLS("site_notes", t => ({
   id: t.serial().primaryKey(),
-  itemId: t.integer().notNull(),
-  emoji: t.varchar({ length: 32 }).notNull(),
+  title: t.varchar({ length: 200 }).notNull(),
+  body: t.text().notNull(),
   createdAt: t.timestamp().notNull().defaultNow(),
-}))
+}));
 ```
 
----
+- **Every table is a named export of a file in `src/database/`.** The migration generator reads those exports from the plugin's build output; a table that is not exported there never reaches the database.
+- **Prefix the table name with the plugin**, as `site_notes` does, so two plugins never claim the same table.
+- **`camelCase.table`** keeps the TypeScript and column names identical (`createdAt`). **`withRLS`** turns on row-level security, as every core table does.
 
-### 2. Query in an API Route
+</Step>
 
-Access the typed Drizzle instance using `c.get("db")`:
+<Step>
 
-```ts title="plugins/reactions/src/api/modules/reactions/routes/get.route.ts"
-import { buildRoute } from "@/api/builders"
-import { reactions } from "@/database/reactions"
+### Generate and apply the migration
 
-export const getReactionsRoute = buildRoute({
-  route: {
-    method: "get",
-    path: "/",
-    responses: { 200: { description: "List of reactions" } },
-  },
-  handler: async (c) => {
-    // [!code ++:2]
-    const rows = await c.get("db").select().from(reactions)
-    return c.json(rows)
-  },
-})
-```
+`pnpm dev` already rebuilt the plugin when you saved. From the workspace root, create the migration and apply it:
 
----
-
-### 3. Build & Apply Migrations
-
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Migrate the database">
 
 ```bash tab="bun"
 bun run db:migrate
@@ -70,106 +59,112 @@ npm run db:migrate
 
 </Tabs>
 
-`db:migrate` reads the plugins `pnpm dev` keeps built and updates PostgreSQL. Without `pnpm dev` running, run `pnpm build:plugins` first.
+`db:migrate` compares your tables with the last migration, writes a new folder such as `migrations/20261024183641_little_the_phantom/` in the app that owns the database (`apps/web` in a Single App, `apps/api` in a Monorepo App), applies it and seeds core data. **Commit that folder**, because production applies the same files. Without `pnpm dev` running, run `pnpm build:plugins` first so the generator sees the new table.
 
----
+</Step>
 
-## Migration Commands
+<Step>
 
-Run these with the [VitNode CLI](/docs/dev/cli/database) in the app that owns the database:
+### Add demo notes
 
-| Command | Action |
-| :--- | :--- |
-| `vitnode db generate` | Shows schema changes and writes a timestamped SQL migration |
-| `vitnode db migrate` | Applies pending migrations against the target database |
-| `vitnode db status` | Checks the connection and lists pending migrations |
-| `vitnode db push` | Syncs the schema directly - development only |
+There is no write endpoint yet, so add three notes with SQL. With the Docker database from Setup, run this from the workspace root (the `my-vitnode` folder):
 
-<Callout type="info" title="Content Engine Alternative">
-  If your table represents an editorial entity (articles, FAQs, products), consider [Content Engine](/docs/content-engine/create-a-content-type) to generate your Drizzle table, API routes, and AdminCP screens from one definition.
-</Callout>
-
-## Connection pool
-
-VitNode talks to Postgres through [`postgres.js`](https://github.com/porsager/postgres), and the default config hands it a bare connection string:
-
-```ts title="src/vitnode.api.config.ts"
-dbProvider: drizzle({
-  connection: POSTGRES_URL,
-  relations: coreRelations,
-}),
+```bash
+docker compose -p my-vitnode-vitnode-dev exec -T database psql -U root -d vitnode -c "INSERT INTO site_notes (title, body) VALUES ('Welcome to site notes', 'Short updates for everyone on the site.'), ('Office closed on Friday', 'We are back on Monday at 9:00.'), ('New coffee machine', 'It is in the kitchen. Please descale it on Fridays.');"
 ```
 
-That means `postgres.js` defaults: up to **10** connections per process, idle connections kept **forever** (`idle_timeout: 0`), and automatic prepared statements (`prepare: true`). Perfectly fine on your laptop. In production you probably want to pick the numbers yourself.
+It answers `INSERT 0 3`. `database` is the PostgreSQL service in the generated `docker-compose.yml`, and `-p my-vitnode-vitnode-dev` is the Compose project that `docker:dev` started it in. If you named your project something else, use the `-p` value from the `docker:dev` script in your root `package.json`.
 
-Swap the string for an object - `url` plus any [`postgres.js` option](https://github.com/porsager/postgres#all-postgres-options):
+The notes get the ids `1`, `2` and `3` in that order, which later lessons use. With your own PostgreSQL, run the same `INSERT` in any client connected to `POSTGRES_URL`. The [Permissions](/docs/dev/working-with-users/staff-permissions) lesson adds the endpoint that creates notes properly.
 
-### Long-running server
+</Step>
 
-A Node server, a Docker container, a VPS. One process lives for days and handles plenty of requests at once, so give it room:
+<Step>
 
-```ts title="src/vitnode.api.config.ts"
-dbProvider: drizzle({
-  connection: POSTGRES_URL, // [!code --]
-  connection: { url: POSTGRES_URL, max: 20, idle_timeout: 20 }, // [!code ++]
-  relations: coreRelations,
-}),
+### Read the table in the list route
+
+Replace the handler of `src/api/modules/notes/list.route.ts`, and its imports. Select only the columns the response schema declares:
+
+```ts title="plugins/site-notes/src/api/modules/notes/list.route.ts"
+import { z } from "@hono/zod-openapi";
+import { desc } from "drizzle-orm"; // [!code ++]
+
+import { buildRoute } from "@/api/builders";
+import { site_notes } from "@/database/notes"; // [!code ++]
+
+import { zodNote } from "./notes.schema";
+import { sampleNotes } from "./sample-notes"; // [!code --]
+
+export const listNotesRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/",
+    responses: {
+      200: {
+        content: { "application/json": { schema: z.array(zodNote) } },
+        description: "Every note, newest first.",
+      },
+    },
+  },
+  handler: c => c.json(sampleNotes, 200), // [!code --]
+  // [!code ++:8]
+  handler: async c => {
+    const notes = await c
+      .get("db")
+      .select({ id: site_notes.id, title: site_notes.title, body: site_notes.body })
+      .from(site_notes)
+      .orderBy(desc(site_notes.createdAt), desc(site_notes.id));
+
+    return c.json(notes, 200);
+  },
+});
 ```
 
-| Option         | Default | What it does                                                                                  |
-| :------------- | :------ | :-------------------------------------------------------------------------------------------- |
-| `max`          | `10`    | The most connections this process will hold open. Queries beyond it wait their turn.          |
-| `idle_timeout` | `0`     | Seconds before an unused connection is closed. `0` never closes it; `20` frees quiet periods. |
-| `prepare`      | `true`  | Creates named prepared statements automatically. Turn it off behind a transaction pooler.     |
+</Step>
 
-**Sizing rule of thumb:** every process opens its own pool, and Postgres has a hard ceiling (`SHOW max_connections;` - often `100`). So:
+<Step>
 
-```text
-max ≈ (max_connections − headroom) ÷ number of processes
+### Read the table in the detail route
+
+Replace the handler of `src/api/modules/notes/show.route.ts` the same way. The params and responses stay as they are:
+
+```ts title="plugins/site-notes/src/api/modules/notes/show.route.ts"
+import { eq } from "drizzle-orm"; // [!code ++]
+
+import { site_notes } from "@/database/notes"; // [!code ++]
+import { sampleNotes } from "./sample-notes"; // [!code --]
+
+  // [!code ++:11]
+  handler: async c => {
+    const { id } = c.req.valid("param");
+    const [note] = await c
+      .get("db")
+      .select({ id: site_notes.id, title: site_notes.title, body: site_notes.body })
+      .from(site_notes)
+      .where(eq(site_notes.id, id));
+    if (!note) return c.body(null, 404);
+
+    return c.json(note, 200);
+  },
 ```
 
-Keep 10-20 connections of headroom for migrations, `db:studio`, backups and you poking around in `psql`. With `max_connections = 100`, 4 instances and 20 spare, that is `max: 20` each. Scale out to 8 instances and the same math says `max: 10` - forget to redo it and the fifth instance greets you with `too many connections`.
+Then delete `src/api/modules/notes/sample-notes.ts`; nothing imports it any more.
 
-### Serverless
+</Step>
 
-On Vercel, Netlify and friends every concurrent request may be its own process, so `max × processes` grows faster than you would like. Use your provider's pooled connection string, or keep each process to a single connection with `max: 1`. The [Vercel guide](/docs/dev/deployments/cloud/vercel#bring-a-managed-postgres) has the full setup.
+</Steps>
 
-### Behind a transaction pooler
+## Check the result
 
-<Callout type="warn" title="Set prepare: false for transaction-mode poolers">
-  The Supabase pooler on port `6543`, PgBouncer with `pool_mode = transaction`
-  and similar poolers hand you a different backend connection for every
-  transaction. A prepared statement created on one backend does not exist on
-  the next, so queries fail at random with `prepared statement "..." does not
-  exist`. Turn automatic prepared statements off:
-
-```ts title="src/vitnode.api.config.ts"
-dbProvider: drizzle({
-  connection: { url: POSTGRES_URL, prepare: false },
-  relations: coreRelations,
-}),
+```bash
+curl http://localhost:3000/api/site-notes/notes
 ```
 
-</Callout>
+The list now starts with **New coffee machine**, the newest note, and `GET /api/site-notes/notes/2` returns **Office closed on Friday**. Reload `http://localhost:3000/site-notes/notes` and the page shows all three notes, with no change to its code. Run the `INSERT` again with another title and it appears on the next reload.
 
-Direct connections and session-mode poolers keep `prepare: true` - it is the faster option. VitNode's own locks are transaction-scoped (`pg_advisory_xact_lock`), so they work behind either mode.
+## Go further
 
-## Learn More
-
-<Cards>
-  <Card
-    title="Pagination"
-    description="Implement cursor-based table pagination"
-    href="/docs/dev/database/pagination"
-  />
-  <Card
-    title="Search Tables"
-    description="Add search filters to single table queries"
-    href="/docs/dev/database/search"
-  />
-  <Card
-    title="Defining a Content Type"
-    description="Generate database models with Content Engine"
-    href="/docs/content-engine/create-a-content-type"
-  />
-</Cards>
+- [Pagination](/docs/dev/database/pagination) and [table search](/docs/dev/database/search) for long lists.
+- [Database commands](/docs/dev/cli/database): `vitnode db generate`, `migrate`, `status` and `push`, when you need the steps separately.
+- [Connection pool](/docs/dev/database/connection-pool): sizing the pool for production, serverless and poolers.
+- [Content Engine](/docs/content-engine/create-a-content-type): if your table is editorial content, one definition generates the table, the API and the AdminCP screens.

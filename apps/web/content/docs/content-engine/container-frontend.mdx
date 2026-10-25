@@ -1,16 +1,16 @@
 ---
-title: Containers on the frontend
-description: Read Content Engine containers with the typed fetcher, render a nested board tree, list the records of a container and its subcontainers with includeDescendants, and let members create content inside a container through publicWrite.
+title: Container pages
+description: Read Content Engine containers with the typed fetcher, render a nested desk tree, list the records of a container and its subcontainers with includeDescendants, and let members create content inside a container through publicWrite.
 icon: AppWindow
 ---
 
-This guide builds the member-facing side of the example plugin's boards: a `/boards` page with the nested board tree, a `/boards/:slug` page that lists the discussions of a board and every board below it, and a board picker on the "Start a discussion" form.
+This guide builds the member-facing side of the newsroom plugin's desks: a `/desks` page with the nested desk tree, a `/desks/:slug` page that lists the letters to the editor sent to a desk and every desk below it, and a desk picker on the "Write a letter" form.
 
-The finished pages are in `plugins/example/src/pages/`, in the `board-*` and `discussion-*` files. The code below is the same, with some styling trimmed.
+The finished pages are in `plugins/newsroom/src/pages/`, in the `desk-*` and `letter-*` files. The code below is the same, with some styling trimmed.
 
 ## Before you begin
 
-You need a container collection with `publicApi`, and a content type whose `field.container()` is public, filterable and writable on create, as set up in [Containers](/docs/content-engine/containers#add-a-container-collection). The example's collection has `publicApi.path: "boards"`, so the fetcher's module is `content/boards`.
+You need a container collection with `publicApi`, and a content type whose `field.container()` is public, filterable and writable on create, as set up in [Containers](/docs/content-engine/containers#add-a-container-collection). The newsroom's collection has `publicApi.path: "desks"`, so the fetcher's module is `content/desks`.
 
 The collection's public routes are read-only and need no session:
 
@@ -27,43 +27,43 @@ Each item is `{ id, parentId, name, slug, position, depth, metadata }`, where `m
 
 ### Add the routes
 
-Register the two board pages in `src/routes.ts`, and give the create page a `search` parser so it can read `?board=`. A `pendingComponent` is drawn while the loader runs, so import it directly rather than through `lazy()`:
+Register the two desk pages in `src/routes.ts`, and give the create page a `search` parser so it can read `?desk=`. A `pendingComponent` is the fallback while a page suspends, not a navigation screen. Navigations keep the current page and show the top progress bar. It can render before the page's chunk arrives, so import it directly rather than through `lazy()`:
 
-```ts title="plugins/example/src/routes.ts"
+```ts title="plugins/newsroom/src/routes.ts"
 // [!code ++:4]
 import {
   FeedPendingSkeleton,
   RoutePendingSkeleton,
 } from "@vitnode/core/tanstack/pending";
 
-import { boardSearch } from "./pages/board-search"; // [!code ++]
-import { discussionNewSearch } from "./pages/discussion-search"; // [!code ++]
+import { deskSearch } from "./pages/desk-search"; // [!code ++]
+import { letterNewSearch } from "./pages/letter-search"; // [!code ++]
 
 export const routes = definePluginRoutes([
   // [!code ++:13]
-  page("/boards", {
-    component: lazy(() => import("./pages/boards-page")),
-    messages: ["@vitnode/example.boards"],
+  page("/desks", {
+    component: lazy(() => import("./pages/desks-page")),
+    messages: ["newsroom.desks"],
     pendingComponent: RoutePendingSkeleton,
   }),
 
-  page("/boards/:slug", {
-    component: lazy(() => import("./pages/board-page")),
-    messages: ["@vitnode/example.boards"],
+  page("/desks/:slug", {
+    component: lazy(() => import("./pages/desk-page")),
+    messages: ["newsroom.desks"],
     pendingComponent: FeedPendingSkeleton,
-    search: boardSearch,
+    search: deskSearch,
   }),
 
-  page("/discussions/new", {
-    component: lazy(() => import("./pages/discussion-new-page")),
-    messages: ["@vitnode/example.discussions"],
+  page("/letters/new", {
+    component: lazy(() => import("./pages/letter-new-page")),
+    messages: ["newsroom.letters"],
     requires: "authenticated",
-    search: discussionNewSearch, // [!code ++]
+    search: letterNewSearch, // [!code ++]
   }),
 ]);
 ```
 
-`boardSearch` keeps a valid `cursor` for paging through discussions, and `discussionNewSearch` keeps a positive `board` id. Both are small functions in `board-search.ts` and `discussion-search.ts`. The strings live under `@vitnode/example.boards` in `src/locales/en.json`.
+`deskSearch` keeps a valid `cursor` for paging through letters, and `letterNewSearch` keeps a positive `desk` id. Both are small functions in `desk-search.ts` and `letter-search.ts`. The strings live under `newsroom.desks` in `src/locales/en.json`.
 
 </Step>
 
@@ -71,41 +71,51 @@ export const routes = definePluginRoutes([
 
 ### Load the tree
 
-Create a helper that reads every board. The list comes back in tree order, flat, so one request loads the whole tree:
+Create a helper that reads every desk. The list comes back in tree order, flat, so one request loads the whole tree:
 
-```ts title="plugins/example/src/pages/boards-data.ts"
+```ts title="plugins/newsroom/src/pages/desks-data.ts"
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 import { manifest } from "@/manifest.gen";
 
-export const fetchBoards = async () => {
+export const fetchDesks = async () => {
   const res = await fetcher({
     plugin: manifest.id,
     method: "get",
-    module: "content/boards",
+    module: "content/desks",
     path: "/",
     args: { query: {} },
   });
 
-  if (res.status !== 200) throw new Error("Loading the boards failed.");
+  if (res.status !== 200) throw new Error("Loading the desks failed.");
 
   const { items } = await res.json();
 
   return items;
 };
 
-export type Board = Awaited<ReturnType<typeof fetchBoards>>[number];
+export type Desk = Awaited<ReturnType<typeof fetchDesks>>[number];
 
 const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i;
 
-export const boardColor = (board: Pick<Board, "metadata">): null | string =>
-  typeof board.metadata.color === "string" &&
-  HEX_COLOR.test(board.metadata.color)
-    ? board.metadata.color
+export const deskColor = (desk: Pick<Desk, "metadata">): null | string =>
+  typeof desk.metadata.color === "string" && HEX_COLOR.test(desk.metadata.color)
+    ? desk.metadata.color
     : null;
 ```
 
-`Board` is inferred from the API, so `board.metadata.color` is typed as `string | null` from the definition's fields, and `board.metadata.locked` is a compile error because `locked` is not public. `boardColor` accepts only a hex value before it goes into a `style` attribute, because an admin typed it.
+`Desk` is inferred from the API, so `desk.metadata.color` is typed as `string | null` from the definition's fields, and `desk.metadata.locked` is a compile error because `locked` is not public. `deskColor` accepts only a hex value before it goes into a `style` attribute, because an admin typed it.
+
+The pages read the list through one TanStack Query entry, so the desks page, the letter form and a desk page share it:
+
+```ts title="plugins/newsroom/src/pages/desk-queries.ts (excerpt)"
+export const desksQueryOptions = () => ({
+  meta: LOADER_DATA_QUERY_META,
+  queryFn: fetchDesks,
+  queryKey: deskQueryKeys.desks(),
+  staleTime: RECORD_STALE_TIME,
+});
+```
 
 </Step>
 
@@ -115,16 +125,18 @@ export const boardColor = (board: Pick<Board, "metadata">): null | string =>
 
 `contentContainerTree` from `@vitnode/core/content` nests a tree-ordered list: each node gets a `children` array. Render it recursively as nested lists inside a labelled `nav`, so screen readers announce the structure:
 
-```tsx title="plugins/example/src/pages/board-tree.tsx"
+```tsx title="plugins/newsroom/src/pages/desk-tree.tsx"
 import type { ContentContainerTreeNode } from "@vitnode/core/content";
 
-import type { Board } from "./boards-data";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 
-import { boardHref } from "./board-search";
-import { boardColor } from "./boards-data";
+import type { Desk } from "./desks-data";
 
-export const BoardColorDot = ({ board }: { board: Board }) => {
-  const color = boardColor(board);
+import { deskHref } from "./desk-search";
+import { deskColor } from "./desks-data";
+
+export const DeskColorDot = ({ desk }: { desk: Desk }) => {
+  const color = deskColor(desk);
 
   return (
     <span
@@ -135,20 +147,20 @@ export const BoardColorDot = ({ board }: { board: Board }) => {
   );
 };
 
-const BoardTreeItems = ({
+const DeskTreeItems = ({
   nodes,
 }: {
-  nodes: ContentContainerTreeNode<Board>[];
+  nodes: ContentContainerTreeNode<Desk>[];
 }) => (
   <ul className="flex flex-col gap-2">
     {nodes.map(node => (
       <li className="flex flex-col gap-2" key={node.id}>
-        <a
+        <HrefLink
           className="flex flex-col gap-1 rounded-lg border p-4"
-          href={boardHref(node.slug)}
+          href={deskHref(node.slug)}
         >
           <span className="text-foreground flex items-center gap-2 font-medium text-balance">
-            <BoardColorDot board={node} />
+            <DeskColorDot desk={node} />
             {node.name}
           </span>
           {node.metadata.description ? (
@@ -156,11 +168,11 @@ const BoardTreeItems = ({
               {node.metadata.description}
             </span>
           ) : null}
-        </a>
+        </HrefLink>
 
         {node.children.length > 0 ? (
           <div className="border-l pl-4 md:pl-6">
-            <BoardTreeItems nodes={node.children} />
+            <DeskTreeItems nodes={node.children} />
           </div>
         ) : null}
       </li>
@@ -168,15 +180,15 @@ const BoardTreeItems = ({
   </ul>
 );
 
-export const BoardTree = ({
+export const DeskTree = ({
   label,
   nodes,
 }: {
   label: string;
-  nodes: ContentContainerTreeNode<Board>[];
+  nodes: ContentContainerTreeNode<Desk>[];
 }) => (
   <nav aria-label={label}>
-    <BoardTreeItems nodes={nodes} />
+    <DeskTreeItems nodes={nodes} />
   </nav>
 );
 ```
@@ -187,143 +199,176 @@ export const BoardTree = ({
 
 <Step>
 
-### Add the boards page
+### Add the desks page
 
-The route's `load` fetches and nests the tree, and the page shows it, or an empty state when no board exists yet:
+The route's `load` reads the cached desks and nests them, and the page shows the tree, or an empty state when no desk exists yet. The same `load` also warms the latest letters list that the page shows under the tree:
 
-```tsx title="plugins/example/src/pages/boards-page.tsx"
+```tsx title="plugins/newsroom/src/pages/desks-page.tsx (excerpt)"
 import { contentContainerTree } from "@vitnode/core/content";
 import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
+  defineRoute,
+  type RouteLoadContext,
+} from "@vitnode/core/tanstack/plugin-routes";
 import { useTranslations } from "use-intl";
 
-import { BoardTree } from "./board-tree";
-import { fetchBoards } from "./boards-data";
+import { desksQueryOptions } from "./desk-queries";
+import { DeskTree } from "./desk-tree";
+import { LatestLetters } from "./latest-letters";
+import { lettersQueryOptions } from "./letter-list";
 
-const loadBoards = async () => ({
-  tree: contentContainerTree(await fetchBoards()),
-});
+const loadDesks = async (
+  queryClient: RouteLoadContext["queryClient"],
+  locale: string,
+) => {
+  const [desks] = await Promise.all([
+    queryClient.query(desksQueryOptions()),
+    // No `LOADER_DATA_QUERY_META`: the entry is dehydrated, so
+    // `LatestLetters` finds it in the browser and renders on the server.
+    queryClient
+      .query(lettersQueryOptions({ locale, search: {} }))
+      .catch(() => null),
+  ]);
 
-type BoardsPageData = Awaited<ReturnType<typeof loadBoards>>;
+  return { tree: contentContainerTree(desks) };
+};
 
-export const route = definePluginRoute<BoardsPageData>({
-  load: loadBoards,
+type DesksPageData = Awaited<ReturnType<typeof loadDesks>>;
+
+export const route = defineRoute<DesksPageData>({
+  load: async ({ context }) =>
+    await loadDesks(context.queryClient, context.locale),
 
   head: ({ t }) => ({
-    description: t("@vitnode/example.boards.desc"),
-    title: t("@vitnode/example.boards.title"),
+    description: t("newsroom.desks.desc"),
+    title: t("newsroom.desks.title"),
   }),
+
+  breadcrumb: DesksBreadcrumb,
 });
 
-const BoardsPage = ({ loaderData }: PluginRoutePageProps<BoardsPageData>) => {
-  const t = useTranslations("@vitnode/example.boards");
+const DesksPage = ({ loaderData }: PluginRoutePageProps<DesksPageData>) => {
+  const t = useTranslations("newsroom.desks");
 
   return (
-    <div className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8">
-      <h1 className="text-3xl font-semibold tracking-tight text-balance">
-        {t("title")}
-      </h1>
+    <div className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 md:gap-8 md:py-12">
+      {/* The header: title, description and a "Write a letter" button */}
 
       {loaderData.tree.length === 0 ? (
-        <p className="text-muted-foreground leading-relaxed">
-          {t("empty.desc")}
-        </p>
+        <Empty className="border">{/* "No desks yet" */}</Empty>
       ) : (
-        <BoardTree label={t("tree")} nodes={loaderData.tree} />
+        <DeskTree label={t("tree")} nodes={loaderData.tree} />
       )}
+
+      <LatestLetters />
     </div>
   );
 };
 
-export default BoardsPage;
+export default DesksPage;
 ```
 
-The example's page also has a breadcrumb, a **New discussion** button and an `Empty` state with an icon.
+The full page also has the breadcrumb component, a **Write a letter** button and an `Empty` state with an icon.
 
 </Step>
 
 <Step>
 
-### Add the board page
+### Add the desk page
 
-`/boards/:slug` makes two requests. The detail route returns the board, its ancestors for the breadcrumb and its child boards. The discussions list is filtered by the board, and `includeDescendants: "true"` widens the filter to every board below it, so **Frontend** also lists what was posted in **React**:
+`/desks/:slug` makes two requests. The detail route returns the desk, its ancestors for the breadcrumb and its child desks. The letters list is filtered by the desk, and `includeDescendants: "true"` widens the filter to every desk below it, so **Politics** also lists what was sent to **Elections**:
 
-```tsx title="plugins/example/src/pages/board-page.tsx"
+```tsx title="plugins/newsroom/src/pages/desk-page.tsx (excerpt)"
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
 import { manifest } from "@/manifest.gen";
 
-import type { BoardSearch } from "./board-search";
+import type { DeskSearch } from "./desk-search";
 
-const zodDiscussionRow = z.object({
+import { cachedDeskId, queryDesk } from "./desk-queries";
+
+const PAGE_SIZE = 20;
+
+const zodLetterRow = z.object({
   id: z.number(),
   publishedAt: z.string().nullable(),
   slug: z.string().nullable(),
   title: z.string(),
 });
 
-const loadBoard = async (idOrSlug: string, { cursor }: BoardSearch) => {
-  const detail = await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "content/boards",
-    path: "/{idOrSlug}",
-    args: { params: { idOrSlug: encodeURIComponent(idOrSlug) } },
-  });
-
-  if (detail.status !== 200 && detail.status !== 404) {
-    throw new Error("Loading the board failed.");
-  }
-
-  // A 404 becomes the route's not-found page.
-  const { ancestors, children, container } = contentPageItem(
-    detail.status === 200 ? await detail.json() : null,
-  );
-
+const fetchLetters = async (deskId: number, cursor?: string) => {
   const filters = {
-    board: String(container.id),
+    desk: String(deskId),
     includeDescendants: "true",
   };
 
   const list = await fetcher({
     plugin: manifest.id,
     method: "get",
-    module: "content/discussions",
+    module: "content/letters",
     path: "/",
     args: {
-      query: { ...filters, first: "20", ...(cursor ? { cursor } : {}) },
+      query: {
+        ...filters,
+        first: String(PAGE_SIZE),
+        ...(cursor ? { cursor } : {}),
+      },
     },
   });
 
-  if (list.status !== 200) throw new Error("Loading the discussions failed.");
+  if (list.status !== 200) throw new Error("Loading the letters failed.");
 
   const { edges, pageInfo } = await list.json();
+
+  return {
+    letters: z.array(zodLetterRow).parse(edges),
+    nextCursor: pageInfo.hasNextPage ? pageInfo.endCursor : null,
+  };
+};
+
+const loadDesk = async (
+  queryClient: RouteLoadContext["queryClient"],
+  idOrSlug: string,
+  { cursor }: DeskSearch,
+) => {
+  // The list needs the desk's id. When the desks index already cached it,
+  // both requests go out together instead of one after the other.
+  const knownId = cachedDeskId(queryClient, idOrSlug);
+  const [desk, early] = await Promise.all([
+    queryDesk(queryClient, idOrSlug),
+    // A stale id (the desk was moved or deleted since) is not this page's
+    // error: the desk read below decides, and the list is fetched again.
+    knownId === null ? null : fetchLetters(knownId, cursor).catch(() => null),
+  ]);
+  const { ancestors, children, container } = contentPageItem(desk);
+  const page =
+    early && knownId === container.id
+      ? early
+      : await fetchLetters(container.id, cursor);
 
   return {
     ancestors,
     children,
     container,
-    discussions: z.array(zodDiscussionRow).parse(edges),
+    ...page,
     isFirstPage: cursor === undefined,
-    nextCursor: pageInfo.hasNextPage ? pageInfo.endCursor : null,
   };
 };
 ```
 
-- The filter parameter is named after the field, `board`, and works only because `board` is in `publicApi.filterableFields`. Without `includeDescendants`, it matches that one board.
+- `queryDesk` in `desk-queries.ts` calls `GET content/desks/{idOrSlug}` and returns `null` for a `404`. `contentPageItem(null)` turns that into the route's not-found page.
+- The filter parameter is named after the field, `desk`, and works only because `desk` is in `publicApi.filterableFields`. Without `includeDescendants`, it matches that one desk.
 - Filter parameters are not part of the inferred query type yet, so they are spread in from a small object instead of written as literal keys.
-- An unknown board id in the filter answers `404`, not an empty list, so a stale link never looks like an empty board.
-- `nextCursor` goes into `?cursor=` for an **Older discussions** link. Pass it back unchanged.
+- An unknown desk id in the filter answers `404`, not an empty list, so a stale link never looks like an empty desk.
+- `nextCursor` goes into `?cursor=` for an **Older letters** link. Pass it back unchanged.
 
 Declare the trail as a breadcrumb group, one crumb per ancestor, and give the route a `notFound` component for the 404:
 
-```tsx title="plugins/example/src/pages/board-page.tsx"
-export const route = definePluginRoute<BoardPageData, BoardSearch>({
-  load: async ({ params, search }) => await loadBoard(params.slug, search),
+```tsx title="plugins/newsroom/src/pages/desk-page.tsx (excerpt)"
+export const route = defineRoute<DeskPageData, DeskSearch>({
+  load: async ({ context, params, search }) =>
+    await loadDesk(context.queryClient, params.slug, search),
 
   head: ({ loaderData }) => ({
     description: loaderData?.container.metadata.description ?? undefined,
@@ -334,15 +379,17 @@ export const route = definePluginRoute<BoardPageData, BoardSearch>({
     group: ({ loaderData }) => (
       <>
         <BreadcrumbItem>
-          <BreadcrumbLink href={BOARDS_HREF}>
-            <BoardsCrumb />
+          <BreadcrumbLink render={<HrefLink href={DESKS_HREF} />}>
+            <DesksCrumb />
           </BreadcrumbLink>
         </BreadcrumbItem>
         {loaderData.ancestors.map(ancestor => (
           <Fragment key={ancestor.id}>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbLink href={boardHref(ancestor.slug)}>
+              <BreadcrumbLink
+                render={<HrefLink href={deskHref(ancestor.slug)} />}
+              >
                 {ancestor.name}
               </BreadcrumbLink>
             </BreadcrumbItem>
@@ -356,117 +403,127 @@ export const route = definePluginRoute<BoardPageData, BoardSearch>({
     ),
   },
 
-  notFound: BoardNotFound,
+  notFound: DeskNotFound,
 });
 ```
 
-The page renders the children with the same `BoardTree`, the discussions as a list of links, and a **New discussion** link to `/discussions/new?board={container.id}`. See the full component in `board-page.tsx`.
+The page renders the children with the same `DeskTree`, the letters as a list of links, and a **Write a letter** link to `/letters/new?desk={container.id}`. See the full component in `desk-page.tsx`.
 
 </Step>
 
 <Step>
 
-### Let members pick a board
+### Let members pick a desk
 
-Load the same tree for the create page and turn it into select options, indented by depth so the select reads like the tree:
+Load the same cached desks for the create page and turn them into select options, indented by depth so the select reads like the tree:
 
-```tsx title="plugins/example/src/pages/discussion-new-page.tsx"
-const loadBoardOptions = async () =>
-  (await fetchBoards()).map(board => ({
-    label: `${"— ".repeat(board.depth - 1)}${board.name}`,
-    value: String(board.id),
+```tsx title="plugins/newsroom/src/pages/letter-new-page.tsx (excerpt)"
+const loadDeskOptions = async (queryClient: RouteLoadContext["queryClient"]) =>
+  (await queryClient.query(desksQueryOptions())).map(desk => ({
+    label: `${"— ".repeat(desk.depth - 1)}${desk.name}`,
+    value: String(desk.id),
   }));
 
-export const route = definePluginRoute<DiscussionNewData, DiscussionNewSearch>({
-  load: loadBoardOptions,
+export const route = defineRoute<LetterNewData, LetterNewSearch>({
+  load: async ({ context }) => await loadDeskOptions(context.queryClient),
 });
 ```
 
-Add the board to the form schema. A select works with strings, so the ids become a `z.enum`, preselected from `?board=` when it names a real board:
+Add the desk to the form schema. A select works with strings, so the ids become a `z.enum`, preselected from `?desk=` when it names a real desk:
 
-```tsx title="plugins/example/src/pages/discussion-form.tsx"
-const createDiscussionCreateFormSchema = (
+```tsx title="plugins/newsroom/src/pages/letter-form.tsx (excerpt)"
+const createLetterCreateFormSchema = (
   t: (
-    key: "board.required" | "body.required" | "title.max" | "title.min",
+    key: "body.required" | "desk.required" | "title.max" | "title.min",
   ) => string,
   ids: [string, ...string[]],
   selected: string | undefined,
 ) => {
-  const board = z.enum(ids, { error: t("board.required") });
+  const desk = z.enum(ids, { error: t("desk.required") });
 
-  return createDiscussionFormSchema(t, {
+  return createLetterFormSchema(t, {
     body: emptyRichTextDocument(),
     title: "",
   }).extend({
-    board:
+    desk:
       selected !== undefined && ids.includes(selected)
-        ? board.default(selected)
-        : board,
+        ? desk.default(selected)
+        : desk,
   });
 };
 ```
 
 Render it with `AutoFormSelect` before the title and body fields:
 
-```tsx title="plugins/example/src/pages/discussion-form.tsx"
+```tsx title="plugins/newsroom/src/pages/letter-form.tsx (excerpt)"
 {
-  id: "board",
+  id: "desk",
   component: props => (
     <AutoFormSelect
       {...props}
-      description={t("board.desc")}
-      label={t("board.label")}
-      labels={boards.options}
-      placeholder={t("board.placeholder")}
+      description={t("desk.desc")}
+      label={t("desk.label")}
+      labels={desks.options}
+      placeholder={t("desk.placeholder")}
     />
   ),
 },
 ```
 
-On submit, send the board as a number inside `values`, like every other writable field:
+On submit, send the desk as a number inside `values`, like every other writable field. `LETTER_FIELDS` in `letter-form.tsx` is `["title", "body", "desk"]`:
 
-```tsx title="plugins/example/src/pages/discussion-new-page.tsx"
+```tsx title="plugins/newsroom/src/pages/letter-new-page.tsx (excerpt)"
 const write = useContentPublicWrite({
-  fields: ["title", "body", "board"],
+  fields: LETTER_FIELDS,
   uniqueField: "title",
 });
 
-const onSubmit: AutoFormOnSubmit<DiscussionCreateFormSchema> = async (
-  { board, ...values },
+const onSubmit: AutoFormOnSubmit<LetterCreateFormSchema> = async (
+  { desk, ...values },
   form,
 ) => {
-  const record = await write.submit(form, async () =>
-    await fetcher({
-      plugin: manifest.id,
-      method: "post",
-      module: "content/discussions",
-      path: "/",
-      args: { body: { values: { ...values, board: Number(board) } } },
-    }),
+  const record = await write.submit(
+    form,
+    async () =>
+      await fetcher({
+        plugin: manifest.id,
+        method: "post",
+        module: "content/letters",
+        path: "/",
+        args: { body: { values: { ...values, desk: Number(desk) } } },
+      }),
   );
-  // Redirect to the new discussion, as in Public create form.
+  if (!record) return;
+
+  setIsLeaving(true);
+  await invalidateLetterLists(queryClient);
+  await navigate(
+    record.slug === null
+      ? letterEditHref(record.id)
+      : letterHref(record.slug, { created: true }),
+  );
 };
 ```
 
-The server never trusts the id. It reads the board back inside the write's transaction and checks that it belongs to `example.boards`. A board that was deleted while the form was open, or one from another collection, answers `400` with an issue on the `board` field:
+The server never trusts the id. It reads the desk back inside the write's transaction and checks that it belongs to `newsroom.desks`. A desk that was deleted while the form was open, or one from another collection, answers `400` with an issue on the `desk` field:
 
 ```json
 {
   "code": "CONTENT_INVALID_INPUT",
-  "contentTypeId": "example.discussion",
+  "contentTypeId": "newsroom.letter",
   "issues": [
     {
       "code": "unavailable",
-      "field": "board",
+      "field": "desk",
       "message": "The selected container does not exist."
     }
   ]
 }
 ```
 
-Because `"board"` is in `fields`, [`useContentPublicWrite`](/docs/content-engine/public-write-frontend) shows that issue under the board select.
+Because `"desk"` is in `fields`, [`useContentPublicWrite`](/docs/content-engine/public-write-frontend) shows that issue under the desk select.
 
-The edit form stays as it was. A container field cannot be in `publicWrite.update.fields`, so moving a discussion to another board is a staff edit in the AdminCP.
+The edit form stays as it was. A container field cannot be in `publicWrite.update.fields`, so moving a letter to another desk is a staff edit in the AdminCP.
 
 </Step>
 
@@ -474,19 +531,19 @@ The edit form stays as it was. A container field cannot be in `publicWrite.updat
 
 ## Check the result
 
-1. Create **Frontend** with **React** inside it in the AdminCP, then open `/boards`. Both boards show, **React** nested under **Frontend**.
-2. Open **React** and click **New discussion**. The form opens with **— React** preselected. Post it.
-3. Open `/boards/frontend`. The discussion is listed there too, because of `includeDescendants`, and the breadcrumb ends with **Boards** and **Frontend**.
-4. Open `/boards/nope`. The not-found page shows.
+1. Create **Politics** with **Elections** inside it in the AdminCP, then open `/desks`. Both desks show, **Elections** nested under **Politics**.
+2. Open **Elections** and click **Write a letter**. The form opens with **— Elections** preselected. Send it.
+3. Open `/desks/politics`. The letter is listed there too, because of `includeDescendants`, and the breadcrumb ends with **Desks** and **Politics**.
+4. Open `/desks/nope`. The not-found page shows.
 
 ## Errors to handle
 
-| Request                                                             | Answer                  | What the page does                                     |
-| ------------------------------------------------------------------- | ----------------------- | ------------------------------------------------------ |
-| `GET content/boards/{idOrSlug}` for an unknown board                | `404`                   | `contentPageItem(null)` renders the route's `notFound` |
-| `GET content/boards?parent={id}` for an unknown parent              | `404`                   | Treat it like a missing board                          |
-| `GET content/discussions?board={id}` for an unknown board           | `404`                   | Treat it like a missing board                          |
-| `POST content/discussions` with a missing, deleted or foreign board | `400`, issue on `board` | Show the message under the select                      |
-| `POST content/discussions` with no `board` at all                   | `400`, issue on `board` | The form's own `required` check catches it first       |
+| Request                                                         | Answer                 | What the page does                                     |
+| --------------------------------------------------------------- | ---------------------- | ------------------------------------------------------ |
+| `GET content/desks/{idOrSlug}` for an unknown desk              | `404`                  | `contentPageItem(null)` renders the route's `notFound` |
+| `GET content/desks?parent={id}` for an unknown parent           | `404`                  | Treat it like a missing desk                           |
+| `GET content/letters?desk={id}` for an unknown desk             | `404`                  | Treat it like a missing desk                           |
+| `POST content/letters` with a missing, deleted or foreign desk  | `400`, issue on `desk` | Show the message under the select                      |
+| `POST content/letters` with no `desk` at all                    | `400`, issue on `desk` | The form's own `required` check catches it first       |
 
 The [public write status codes](/docs/content-engine/public-write-api#status-codes) cover sign-in, permission and rate-limit answers, which work the same with or without containers.

@@ -1,5 +1,5 @@
 {
-  "title": "Updates & Security",
+  "title": "Updates",
   "description": "Daily update checks and security updates for VitNode core and plugins, read from public JSON manifests",
   "icon": "RefreshCw",
   "pages": [

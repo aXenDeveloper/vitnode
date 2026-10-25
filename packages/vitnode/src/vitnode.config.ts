@@ -44,8 +44,6 @@ export type { LocaleConfig };
 export interface VitNodeConfig<
   AppLocales extends LocaleConfig[] = LocaleConfig[],
 > {
-  /** Starts `react-scan` render highlighting in development. Ignored in production. */
-  debug?: boolean;
   /** Editor settings shared by every `Editor` in the app. */
   editor?: VitNodeEditorConfig;
   /** Languages and locale routing. */

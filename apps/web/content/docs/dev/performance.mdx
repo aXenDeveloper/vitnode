@@ -6,11 +6,11 @@ icon: Gauge
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-TanStack Start splits components into separate lazy chunks by default, keeping the initial entry bundle light. Follow these key practices to maintain instant page loads.
+This page collects the practices that keep a VitNode app's JavaScript and CSS small and its first paint early: what lands in the initial bundle, what to lazy-load, and how to measure the result.
 
-## Performance Checklist
+## Checklist
 
-1. **Keep `head` metadata isolated**: Never import UI components into route `head`.
+1. **Keep `head` metadata isolated**: in the app's file routes, never import UI components into `head`.
 2. **Lazy-load heavy dialogs**: Use `React.lazy` + `Suspense` for complex editors and dialogs.
 3. **Dynamic imports inside loaders**: Lazy-load heavy server/client utilities with `await import(...)`.
 4. **Optimize images**: Use `loading="lazy"`, responsive widths, and explicit dimensions.
@@ -18,9 +18,9 @@ TanStack Start splits components into separate lazy chunks by default, keeping t
 
 ---
 
-## What Lands in the Client Entry Bundle
+## What lands in the client entry bundle
 
-TanStack Router automatically extracts route `component`, `errorComponent`, and `notFoundComponent` into lazy chunks:
+This table is about your app's own file routes (`createFileRoute` in `src/routes`). TanStack Router splits a route's `component`, `errorComponent` and `notFoundComponent` into lazy chunks, and keeps the rest in the entry bundle:
 
 | Route Option       | Read When             | In Initial Bundle?  | Optimization                                                            |
 | :----------------- | :-------------------- | :------------------ | :---------------------------------------------------------------------- |
@@ -30,38 +30,38 @@ TanStack Router automatically extracts route `component`, `errorComponent`, and 
 | `pendingComponent` | Route loading         | **Yes**             | Plain skeleton markup only - never a layout component from a UI library |
 | `component`        | Render                | **No (Lazy Chunk)** | Automatically code-split                                                |
 
+A plugin route is lighter by design. `routes.ts` holds only the declaration, and `load`, `head`, `breadcrumb` and the component all live in the page module that `lazy()` loads on demand. Only a plugin route's `pendingComponent` is in the entry bundle. See [Routing](/docs/dev/routing#how-a-plugin-route-works).
+
 ---
 
-## Best Practices
+## Practices
 
-### 1. Isolate Metadata from Components
+### 1. Isolate metadata in file routes
 
-Because `head` is evaluated in the main route bundle, importing strings from component files accidentally pulls entire component trees into the initial download:
+An app file route's `head` is part of the entry bundle, so whatever its file imports at the top level ships to every visitor. Import the strings `head` needs from a small leaf module, not from the component file:
 
-```tsx title="plugins/home/src/pages/home-page.tsx"
-import { definePluginRoute } from '@vitnode/core/routing'
+```tsx title="apps/web/src/routes/_main/pricing.tsx"
+import { createFileRoute } from '@tanstack/react-router'
+import { pageHead } from '@vitnode/core/tanstack/metadata'
 
-// BAD: Pulls HomeRouteContent and all its heavy icons/charts into main entry
-import { HOME_TITLE, HomeRouteContent } from '../views/home-content' // [!code --]
+// BAD: pulls PricingPage and everything it imports into the entry bundle
+import { PRICING_TITLE, PricingPage } from '@/site/pricing/pricing-page' // [!code --]
 
-// GOOD: Metadata strings live in a lightweight leaf file
-import { HomeRouteContent } from '../views/home-content' // [!code ++]
-import { HOME_DESCRIPTION, HOME_TITLE } from '../views/metadata' // [!code ++]
+// GOOD: the strings live in a leaf module with no UI imports
+import { PricingPage } from '@/site/pricing/pricing-page' // [!code ++]
+import { PRICING_DESCRIPTION, PRICING_TITLE } from '@/site/pricing/metadata' // [!code ++]
 
-export const route = definePluginRoute({
-  head: () =>
-    pageHead({
-      title: HOME_TITLE,
-      description: HOME_DESCRIPTION,
-    }),
+export const Route = createFileRoute('/_main/pricing')({
+  head: () => pageHead({ title: PRICING_TITLE, description: PRICING_DESCRIPTION }),
+  component: PricingPage,
 })
-
-export default HomeRouteContent
 ```
 
-### 2. Lazy Dialogs and Heavy Form Editors
+A plugin route needs none of this. Its `head` lives in the lazy page module and returns plain fields, `{ title, description, robots, alternates }`. See [Route module](/docs/dev/routing/route-module#head-arguments-and-result).
 
-Heavy editors (like Tiptap) or complex modals should be lazy-loaded with `React.lazy` and `Suspense`:
+### 2. Lazy dialogs and heavy form editors
+
+Lazy-load heavy editors (like Tiptap) and complex modals with `React.lazy` and `Suspense`. This example lazy-loads the AutoForm editor field, so a form downloads the editor only when it renders:
 
 ```tsx title="plugins/blog/src/views/admin/article-editor.tsx"
 import React, { Suspense } from 'react'
@@ -74,21 +74,21 @@ const RichEditor = React.lazy(async () =>
   })),
 )
 
-export const ArticleEditor = (props) => (
+export const ArticleEditor = (props: React.ComponentProps<typeof RichEditor>) => (
   <Suspense fallback={<Spinner size="xl" />}>
     <RichEditor {...props} />
   </Suspense>
 )
 ```
 
-### 3. Dynamic Imports Inside Loaders
+### 3. Dynamic imports inside loaders
 
 When a route loader requires a heavy calculation or parsing library, import it dynamically:
 
 ```tsx title="plugins/stats/src/pages/stats-page.tsx"
-import { definePluginRoute } from '@vitnode/core/routing'
+import { defineRoute } from '@vitnode/core/tanstack/plugin-routes'
 
-export const route = definePluginRoute({
+export const route = defineRoute({
   load: async () => {
     // Only downloaded when visitor navigates to /stats
     const { calculateStats } = await import('../features/stats/calculator') // [!code ++]
@@ -97,7 +97,7 @@ export const route = definePluginRoute({
 })
 ```
 
-### 4. Lazy Images Below the Fold
+### 4. Lazy images below the fold
 
 Always specify explicit aspect ratios and `loading="lazy"` on images outside the initial viewport, and ship WebP with a `srcSet` so a phone never downloads the desktop rendition:
 
@@ -117,7 +117,7 @@ Always specify explicit aspect ratios and `loading="lazy"` on images outside the
 
 The one image that is the page's largest element on arrival - a hero screenshot - is the exception: give it `loading="eager"` and `fetchPriority="high"` so the browser asks for it first.
 
-### 5. Skip Rendering Work for Offscreen Sections
+### 5. Skip rendering work for offscreen sections
 
 A long marketing page can carry a hundred CSS animations, most of them below the fold. Give each section `content-visibility: auto` with a `contain-intrinsic-size` estimate and the browser skips style, layout and animation work for everything not near the viewport:
 
@@ -131,11 +131,11 @@ A long marketing page can carry a hundred CSS animations, most of them below the
 
 The home page went from 133 running animations to 42 on arrival with this one rule, and the pages still scroll and deep-link normally.
 
-### 6. Keep the Plugin Factory Light
+### 6. Keep the plugin factory light
 
-`vitnode.config.ts` is bundled with the document shell, so everything a plugin factory imports ships to every visitor. A factory that spreads `admin/content` or `admin/nav` drags the AdminCP editing stack - AutoForm, schemas, dialogs - into the public bundle. Keep it to `pluginId`, `messages` and `routes`; see [Plugin frontend modules](/docs/content-engine/plugin-files).
+`vitnode.config.ts` is bundled with the document shell, so everything a plugin factory imports ships to every visitor. A factory that spreads `admin/content` or `admin/nav` drags the whole AdminCP editing stack into the public bundle, AutoForm, schemas and dialogs included. Keep it to `manifest`, `localeFiles`, `messages` and `routes`; see [Plugin frontend modules](/docs/content-engine/plugin-files).
 
-### 7. Route-Scoped Stylesheets
+### 7. Route-scoped stylesheets
 
 Tailwind emits one utility per class it finds in the sources you list. A documentation UI kit scanned globally pays its CSS on the home page too. Give it a stylesheet of its own and load it from the layout route that renders it:
 
@@ -174,7 +174,7 @@ export const Route = createFileRoute('/_main')({
 })
 ```
 
-### 8. Group Shared Vendor Modules
+### 8. Group shared vendor modules
 
 Rolldown splits every module shared by two routes into its own file, which for an icon library means dozens of 300-byte requests per page. Group the libraries that are shared by design into one chunk each:
 
@@ -194,7 +194,7 @@ build: {
 
 Group only libraries whose shared surface is small. A UI primitive library shared by every AdminCP screen turns into a single 280 KB chunk that public pages then download for a tooltip.
 
-### 9. Load JavaScript After the First Paint
+### 9. Load JavaScript after the first paint
 
 TanStack's `HeadContent` puts a `modulepreload` link for every chunk the page needs into `<head>`, ahead of the stylesheet. On a slow phone those downloads compete with the CSS the browser has to wait for, so the first paint arrives late. Render the document with `DocumentHead` and `DocumentScripts` from `@vitnode/core/tanstack/layout` instead:
 
@@ -222,15 +222,15 @@ import {
 </html>
 ```
 
-In a production build the HTML and CSS load first, and a small inline script adds the preloads and the app entry right after the browser paints. In a hidden tab it adds them immediately. Hydration starts a frame or two later than before. During `vite dev` both components render the stock `HeadContent` and `Scripts`. New apps from `create-vitnode-app` already use them.
+In a production build the HTML and CSS load first, and a small inline script adds the preloads and the app entry right after the browser paints. In a hidden tab it adds them immediately. Hydration starts a frame or two later than before. During `vitnode dev` both components render the stock `HeadContent` and `Scripts`. New apps from `create-vitnode-app` already use them.
 
 ---
 
-## Measuring Bundle Size
+## Measure the bundle
 
-Analyze your client bundle with Vite:
+Build the app. `vitnode build` prints a bundle size report with every client file, its gzip size, warnings for oversized chunks and a comparison with your previous build:
 
-<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and analyze">
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build the app">
 
 ```bash tab="bun"
 bun run build
@@ -246,19 +246,19 @@ npm run build
 
 </Tabs>
 
-Inspect the output chunk sizes in `apps/web/.output/public/assets/`, then load a page in the browser's network panel and check what the document shell actually requests - a chunk the manifest never preloads can still arrive through a static import. Keep any single lazy chunk below **150 KB** for optimal mobile performance.
+[Bundle size report](/docs/dev/cli/bundle-size) explains each part of the report, its size thresholds and `--analyze`. Then load a page with the browser's network panel open and check what the document shell actually requests, since a chunk the manifest never preloads can still arrive through a static import.
 
-## Learn More
+## Related
 
 <Cards>
   <Card
-    title="Data Fetching"
-    description="Warming TanStack Query and cache management"
+    title="Fetcher"
+    description="Call API routes and warm TanStack Query in loaders"
     href="/docs/dev/fetcher"
   />
   <Card
-    title="Loading States"
-    description="Pre-built skeletons and instant navigation UI"
+    title="Loading states"
+    description="Skeletons, the progress bar and button spinners"
     href="/docs/dev/routing/loading"
   />
 </Cards>

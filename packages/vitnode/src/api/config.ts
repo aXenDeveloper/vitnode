@@ -2,7 +2,6 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context, Env, Schema } from "hono";
 
 import { swaggerUI } from "@hono/swagger-ui";
-import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { HTTPException } from "hono/http-exception";
@@ -35,6 +34,7 @@ import {
   generatedContentModules,
   packageContentModules,
 } from "./lib/content-modules";
+import { bodyLimitMiddleware } from "./middlewares/body-limit.middleware";
 import {
   globalAdminMiddleware,
   globalMiddleware,
@@ -229,7 +229,7 @@ export function VitNodeAPI({
   // wall, and `maxBodySize` moves it for an install that stores large media.
   app.use(
     "*",
-    bodyLimit({
+    bodyLimitMiddleware({
       maxSize: vitNodeApiConfig.maxBodySize ?? DEFAULT_MAX_BODY_SIZE,
       onError: c => c.json({ error: "Payload Too Large" }, 413),
     }),

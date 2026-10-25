@@ -1,5 +1,5 @@
 ---
-title: Hide content
+title: Visibility
 description: Take a published VitNode Content Engine record off the public site, search and sitemap without unpublishing it, then bring it back with the same URL and publish date.
 icon: EyeOff
 ---
@@ -123,7 +123,7 @@ A record is public only when it is published, its `publishedAt` is not in the fu
 - The public API list leaves it out for everybody but the [people who can still see it](#who-can-still-see-it), and its detail route answers `404`, in every language, including a language that falls back to the default one.
 - Its [page](/docs/content-engine/public-pages) answers `404`, and so do its old slugs instead of redirecting.
 - The [sitemap](/docs/content-engine/seo#sitemap) and other pages' `hreflang` alternates leave it out, and [site search](/docs/content-engine/search) marks its document private.
-- Signed [preview links](/docs/content-engine/editorial#preview-links) still work, and the AdminCP still shows it.
+- Signed [preview links](/docs/content-engine/editorial-previews) still work, and the AdminCP still shows it.
 
 ## Who can still see it
 
@@ -175,19 +175,21 @@ The people who still see a hidden record should know readers don't. Tell them on
 - **A page with [delivery](/docs/content-engine/public-pages)** reads `metadata.hidden` from `contentDeliveryPage`. The blog shows an eye-off icon before the title and a notice, and drops the Report button.
 - **A page without delivery** reads the `X-Content-Hidden` header of `GET /{slug}`, which is `"true"` only for a hidden record:
 
-```tsx title="plugins/example/src/pages/discussion-page.tsx"
+```tsx title="plugins/newsroom/src/pages/letter-page.tsx (excerpt)"
 import { CONTENT_HIDDEN_HEADER } from "@vitnode/core/content";
 
 const detail = await fetcher({
   plugin: manifest.id,
   method: "get",
-  module: "content/discussions",
+  module: "content/letters",
   path: "/{slug}",
   args: { params: { slug: encodeURIComponent(slug) } },
 });
+// Only the author and moderators get a hidden letter; readers get 404.
 const hidden = detail.headers.get(CONTENT_HIDDEN_HEADER) === "true";
 
-{hidden ? (
+// The loader returns `hidden` with the letter, and the page reads it:
+{item.hidden ? (
   <Alert icon={<EyeOffIcon />} variant="warning">
     <AlertTitle>{t("hidden.title")}</AlertTitle>
     <AlertDescription>{t("hidden.desc")}</AlertDescription>
@@ -195,7 +197,7 @@ const hidden = detail.headers.get(CONTENT_HIDDEN_HEADER) === "true";
 ) : null}
 ```
 
-[`useContentPermissions`](/docs/content-engine/reports#ask-who-may-report-what) already answers `canReport: false` for a hidden record, and `canEdit: false` for its author, so the page needs no extra checks for its buttons. A moderator can still edit it.
+[`useContentPermissions`](/docs/content-engine/public-permissions) already answers `canReport: false` for a hidden record, and `canEdit: false` for its author, so the page needs no extra checks for its buttons. A moderator can still edit it.
 
 ## Delete, hide, unpublish or reject
 
@@ -227,11 +229,11 @@ curl -o /dev/null -w "%{http_code}\n" "http://localhost:3000/api/@vitnode/blog/c
 
 Both answer `404`, like a draft, and the article drops out of the blog list and the sitemap. In the AdminCP it is still **Published**. Unhide it, and the same requests answer `200` with the original `publishedAt`. Open `/blog` and the page while signed in as one of its authors, and the list shows it with the eye-off icon and the page loads with the hidden note.
 
-The example plugin's discussions show the same note through the header. Ben Ortiz opens his own hidden discussion, and only he and the moderators can:
+The newsroom plugin's letters to the editor show the same note through the header. Ada Lovelace opens their own hidden letter, and only they and the moderators can:
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={hiddenNotice}
-  alt="A discussion page with a warning This discussion is hidden above the message, seen by its author"
+  alt="A newsroom letter page with the warning This letter is hidden above the letter, seen by its author Ada Lovelace"
 />

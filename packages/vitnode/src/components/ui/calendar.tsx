@@ -13,7 +13,12 @@ import {
   getDefaultClassNames,
   type WeekNumber,
 } from "react-day-picker";
-import { useLocale, useTranslations } from "use-intl";
+import {
+  type DateTimeFormatOptions,
+  useFormatter,
+  useLocale,
+  useTranslations,
+} from "use-intl";
 
 import { type ButtonProps, buttonVariants } from "./button";
 import { getFirstDayOfWeek, toDateString } from "./calendar-utils";
@@ -96,10 +101,13 @@ const Calendar = ({
 }: CalendarProps) => {
   const t = useTranslations("core.global.calendar");
   const intlLocale = useLocale();
+  const format = useFormatter();
   const defaultClassNames = getDefaultClassNames();
   const followsIntlLocale = !locale;
-  const formatIntl = (date: Date, options: Intl.DateTimeFormatOptions) =>
-    new Intl.DateTimeFormat(intlLocale, options).format(date);
+  const calendarTimeZone =
+    props.timeZone ?? new Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const formatIntl = (date: Date, options: DateTimeFormatOptions) =>
+    format.dateTime(date, { ...options, timeZone: calendarTimeZone });
   const formatCaption = (month: Date) =>
     formatIntl(month, { month: "long", year: "numeric" });
 

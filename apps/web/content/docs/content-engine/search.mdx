@@ -15,7 +15,7 @@ implementation:
     - Every indexed field except `authorField` must be in `publicApi.fields`.
     - Records saved before the change need a Reindex in Debug Panel → Search. Own code that writes records must use the editorial service with `contentEditorialEffects` to keep the index current.
   related:
-    - title: Public pages
+    - title: Content page
       href: /docs/content-engine/public-pages
     - title: Search
       href: /docs/dev/search
@@ -27,13 +27,13 @@ import { ImgDocs } from "@/components/fumadocs/img";
 import searchAdmincpCollection from "./search-admincp-collection.webp";
 import searchResults from "./search-results.webp";
 
-Add a `search` block to a content type and its published records show up on the site search page at `/search`. VitNode writes a search document after every save, publish and delete, so you never call the search engine yourself. This guide turns search on for `example.article` from the example plugin.
+Add a `search` block to a content type and its published records show up on the site search page at `/search`. VitNode writes a search document after every save, publish and delete, so you never call the search engine yourself. This guide turns search on for `newsroom.story` from the newsroom plugin.
 
 ## Before you begin
 
 The content type needs [publication and a public API](/docs/content-engine/public-api), because a search result is a link to a public page and its text has to be public already. Without them, the definition throws when it loads: ``search needs `publication: true`.`` or ``search needs `publicApi: { path, fields }`.``
 
-It also needs a page that serves the result URL. [Public pages](/docs/content-engine/public-pages) shows how to add one.
+It also needs a page that serves the result URL. [Content page](/docs/content-engine/public-pages) shows how to add one.
 
 <Steps>
 
@@ -43,29 +43,53 @@ It also needs a page that serves the result URL. [Public pages](/docs/content-en
 
 Add `search` to the definition. This excerpt leaves out the fields and blocks search does not read:
 
-```ts title="plugins/example/src/content/article.ts"
-export const articleContentType = defineContentType({
-  id: "example.article",
-  tableName: "example_articles",
+```ts title="plugins/newsroom/src/content/story.ts (excerpt)"
+export const storyContentType = defineContentType({
+  id: "newsroom.story",
+  tableName: "newsroom_stories",
   fields: {
     title: field.text({ required: true, minLength: 3, maxLength: 200 }),
     slug: field.slug({ source: "title" }),
-    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    // ...
+    excerpt: field.textarea({
+      ai: {
+        action: "newsroom:story.excerpt",
+        mode: "suggestion",
+        sourceFields: ["title", "code"],
+      },
+      maxLength: 500,
+      nullable: true,
+    }),
+    // ...
     author: field.user(),
+    // ...
   },
   publication: true,
+  // ...
   publicApi: {
-    path: "articles",
-    fields: ["title", "slug", "excerpt", "publishedAt"],
+    path: "stories",
+    fields: [
+      "title",
+      "slug",
+      "excerpt",
+      "featured",
+      "category",
+      "animation",
+      "gallery",
+      "noIndex",
+      "publishedAt",
+    ],
+    // ...
   },
   // [!code ++:7]
   search: {
     titleField: "title",
     descriptionField: "excerpt",
     contentFields: ["title", "excerpt"],
-    pathTemplate: "/articles/{slug}",
+    pathTemplate: "/stories/{slug}",
     authorField: "author",
   },
+  // ...
 });
 ```
 
@@ -84,13 +108,13 @@ Every field except `authorField` must be in `publicApi.fields`. Otherwise a resu
 
 ### Index the records you already have
 
-New writes are indexed from now on, but records saved before the `search` block existed are not. Open **Debug Panel → Search** in the AdminCP (`/admin/core/debug/search`), type `example.article` into **Search collections…**, and click **Reindex** on that row. **Rebuild index** at the top rebuilds every collection.
+VitNode indexes new writes from now on, but not the records saved before the `search` block existed. Open **Debug Panel → Search** in the AdminCP (`/admin/core/debug/search`), type `newsroom.story` into **Search collections…**, and click **Reindex** on that row. **Rebuild index** at the top rebuilds every collection.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={searchAdmincpCollection}
-  alt="The Debug Panel Search section filtered to example.article, showing one indexed collection with 3 of 3 items, 100% coverage and a Reindex button"
+  alt="The Debug Panel Search section filtered to newsroom.story, showing one indexed newsroom collection with 4 of 4 items, 100% coverage and a Reindex button"
 />
 
 Both buttons need the **Rebuild and clear the search index** staff permission (`system` → `can_manage_search`). A rebuild clears the collection and refills it in pages of 200 records. It is a queued job, so it only runs while [cron](/docs/dev/cron) is running.
@@ -223,7 +247,7 @@ If the search engine fails, the save still succeeds. The failure is logged with 
 
 ## Localized content types
 
-A [localized](/docs/content-engine/localization) content type such as `example.localized-article` gets one document per translation, with the language stored on it. A translation is public only when both the record and that translation are published. Deleting a translation removes only that language's document. Deleting the record removes all of them.
+A [localized](/docs/content-engine/localization) content type such as `newsroom.bulletin` gets one document per translation, with the language stored on it. A translation is public only when both the record and that translation are published. Deleting a translation removes only that language's document. Deleting the record removes all of them.
 
 `/search` shows documents in the visitor's language. Documents of content types that are not localized match every language. With `localization.fallback: "default"`, a visitor whose language has no published translation sees the default language's document instead.
 
@@ -231,39 +255,39 @@ Each document gets the URL of its own language. `pathTemplate` stays the English
 
 ## Check the result
 
-1. Publish an article in **AdminCP → Example → Articles**.
-2. Open `/search` and type a whole word or two from its title or excerpt. The result links to `/articles/{slug}`.
+1. Publish a story in **AdminCP → Newsroom → Stories**.
+2. Open `/search` and type a whole word or two from its title or excerpt. The result links to `/stories/{slug}`.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={searchResults}
-  alt="The site search page with the query hello first and one result, Hello Content Engine, with the article excerpt below the title"
+  alt="The site search page with the query hello first and one result, the Hello Content Engine story by Test Admin, with its excerpt below the title"
 />
 
 The same results come from the public search API. `types` limits them to one content type:
 
 ```bash
-curl "http://localhost:3000/api/@vitnode/core/search?search=hello&types=example.article"
+curl "http://localhost:3000/api/@vitnode/core/search?search=hello&types=newsroom.story"
 ```
 
 ```json
 {
   "edges": [
     {
-      "pluginId": "@vitnode/example",
-      "itemType": "example.article",
+      "pluginId": "newsroom",
+      "itemType": "newsroom.story",
       "itemId": 3,
       "languageCode": "",
       "title": "Hello Content Engine",
-      "content": "Hello Content Engine A first article from the example plugin, served by the public API and rendered on its own page.",
-      "url": "/articles/hello-content-engine",
+      "content": "Hello Content Engine A first story from the newsroom plugin, served by the public API and rendered on its own page.",
+      "url": "/stories/hello-content-engine",
       "isPublic": true
     }
   ]
 }
 ```
 
-Unpublish the article and run the request again. This time `edges` is empty. If a record you published before adding `search` is missing, reindex the collection.
+Unpublish the story and run the request again. This time `edges` is empty. If a record you published before adding `search` is missing, reindex the collection.
 
 The index runs on Postgres full-text search by default. To switch engines, or to index data that is not a content type, see [Search & Discovery](/docs/dev/search) and [Elasticsearch](/docs/dev/search-elasticsearch).

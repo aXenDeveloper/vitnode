@@ -1,0 +1,170 @@
+---
+title: Custom UI
+description: Run any registered VitNode AI action from your own AdminCP component with useAvailableAiActions() and requestAiAssist(), using Core's generic AI routes instead of writing a route of your own.
+icon: MousePointerClick
+---
+
+The [field suggestion](/docs/dev/ai/fields-and-editor) button is built on generic Core routes that run any registered AI action for the signed-in user. Your own components can use them too, so an AI button needs no API route of its own. This page adds a **Summarize** button for the forum's **Summarize topic** action to an AdminCP component.
+
+## Before you begin
+
+- **An action that users can run** (`actors` includes `user`), registered in a plugin. This page uses **Summarize topic** from [AI actions](/docs/dev/ai/actions).
+- **An AdminCP page or dialog in your plugin** to put the button on. `requestAiAssist()` calls the AdminCP route, so it uses the admin's session.
+
+## Add an AI button
+
+<Steps>
+
+<Step>
+
+### Hide the button when the action is unavailable
+
+`useAvailableAiActions()` returns the action keys the current admin may start. An action makes the list when AI is on, the action is enabled, a configured model can run it, and the admin's roles grant its permission.
+
+```tsx title="plugins/forum/src/views/admin/summarize-button.tsx"
+import { useAvailableAiActions } from '@vitnode/core/components/ai/use-available-ai-actions'
+
+const SUMMARIZE_ACTION = '@vitnode/forum:topic.summarize'
+
+export const SummarizeButton = ({
+  content,
+  title,
+}: {
+  content: string
+  title: string
+}) => {
+  const { data: available = [] } = useAvailableAiActions('admin')
+  if (!available.includes(SUMMARIZE_ACTION)) return null
+
+  // ...the button comes in the next step
+}
+```
+
+The list only decides which buttons to show. The server checks the permission and `authorize()` again on every run.
+
+</Step>
+
+<Step>
+
+### Run the action
+
+`requestAiAssist()` posts to `POST /admin/ai/assist` with a fresh idempotency key and resolves to `{ output, runId }`. On failure it throws an `AiRequestError`; `aiErrorCodeOf()` reads its code, and Core's `core.global.ai_assist.error` messages translate it.
+
+```tsx title="plugins/forum/src/views/admin/summarize-button.tsx"
+import { useAvailableAiActions } from '@vitnode/core/components/ai/use-available-ai-actions'
+import { Button } from '@vitnode/core/components/ui/button'
+import {
+  aiErrorCodeOf,
+  requestAiAssist,
+} from '@vitnode/core/lib/ai/assist-client'
+import React from 'react'
+import { useTranslations } from 'use-intl'
+
+const SUMMARIZE_ACTION = '@vitnode/forum:topic.summarize'
+
+export const SummarizeButton = ({
+  content,
+  title,
+}: {
+  content: string
+  title: string
+}) => {
+  const tError = useTranslations('core.global.ai_assist.error')
+  const { data: available = [] } = useAvailableAiActions('admin')
+  const [summary, setSummary] = React.useState<null | string>(null)
+  const [error, setError] = React.useState<null | string>(null)
+  const [pending, setPending] = React.useState(false)
+
+  if (!available.includes(SUMMARIZE_ACTION)) return null
+
+  const onClick = async () => {
+    setPending(true)
+    setError(null)
+    try {
+      const { output } = await requestAiAssist({
+        action: SUMMARIZE_ACTION,
+        input: { content, title },
+      })
+      setSummary(typeof output === 'string' ? output : null)
+    } catch (caught) {
+      setError(tError(aiErrorCodeOf(caught)))
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button isLoading={pending} onClick={onClick}>
+        Summarize
+      </Button>
+      {summary && <p className="leading-relaxed">{summary}</p>}
+      {error && <p role="alert">{error}</p>}
+    </div>
+  )
+}
+```
+
+`output` is `unknown` in the browser, because the generic route does not know your action's types. Check its shape before you use it.
+
+</Step>
+
+<Step>
+
+### Record whether the result was used (optional)
+
+When the editor accepts or discards a suggestion, record it on the run. It feeds the AI logs and never changes what was charged. Read `runId` from the `requestAiAssist()` result:
+
+```ts
+import { sendAiFeedback } from '@vitnode/core/lib/ai/assist-client'
+
+await sendAiFeedback({ accepted: true, runId })
+```
+
+`sendAiFeedback()` ignores network errors, so it never breaks the UI.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Render `<SummarizeButton title={…} content={…} />` on an AdminCP page with a topic's title and text, then click **Summarize**. The button shows its loading state, and the summary appears below it. **Debug Panel → AI logs** shows the run. An admin whose roles lack the `summarize` permission does not see the button at all.
+
+## Built-in run routes
+
+| Route                                      | Session     | Purpose                                     |
+| :----------------------------------------- | :---------- | :------------------------------------------ |
+| `POST /admin/ai/assist`                    | AdminCP     | Run an action, JSON in, JSON out.           |
+| `GET /admin/ai/assist/available`           | AdminCP     | Action keys this admin may start.           |
+| `POST /admin/ai/assist/runs/{id}/feedback` | AdminCP     | Record `{ accepted }` for one of your runs. |
+| `POST /ai/run`                             | Site member | Run an action, JSON in, JSON out.           |
+| `GET /ai/available`                        | Site member | Action keys this member may start.          |
+| `POST /ai/runs/{id}/feedback`              | Site member | Record `{ accepted }`.                      |
+
+All of them live in `@vitnode/core`, so the full path is `/api/@vitnode/core/...`. The run body is `{ action, input, idempotencyKey?, resource?, sourceFingerprint? }`, and a successful run answers `{ output, runId, usage }`. The body never carries a model, a price or an actor; the server decides those. These routes have no extra staff permission on purpose. The action's AI permission and its `authorize()` decide who gets in.
+
+For member pages, use `useAvailableAiActions('user')` and call `POST /ai/run` with [`fetcher`](/docs/dev/fetcher). `requestAiAssist()` only calls the AdminCP route. To stream the answer instead, see [Streaming](/docs/dev/ai/streaming).
+
+## Example: pre-publication review
+
+The blog's `@vitnode/blog:article.review` action is an optional read-through in the article editor's side panel, built exactly like this. Its component sends `{ content, locale, title }` with `requestAiAssist()`, where `content` is the article's rich-text document. It is an `output: "object"` action, so it needs a `structured-output` model, and it returns:
+
+```ts
+{
+  summary: string,
+  suggestions: Array<{
+    area: 'clarity' | 'completeness' | 'structure' | 'tone',
+    fix: { quote: string, replacement: string } | null,
+    message: string,
+    priority: 'high' | 'low',
+  }>, // at most 8
+}
+```
+
+`fix` is set when a suggestion is about specific wording. `quote` is a passage copied from the article and `replacement` is the rewritten passage, or an empty string to delete it.
+
+- It **never verifies facts**. The prompt forbids judging whether facts are true, because the model has nothing to check them against.
+- It **never gates publishing**. Publishing works the same with or without a review.
+
+Read `plugins/blog/src/api/ai/actions.ts` and `plugins/blog/src/views/admin/article/editor/ai-review.tsx` for the whole feature.

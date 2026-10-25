@@ -139,11 +139,6 @@
         "pending": {
           "title": "Sent for approval",
           "desc": "A moderator will review your changes. Readers see the published version until then."
-        },
-        "conflict": {
-          "title": "This topic changed",
-          "desc": "Someone saved a newer version while you were editing. Reload to see it, then make your changes again.",
-          "reload": "Reload"
         }
       },
       "state": {

@@ -4,75 +4,71 @@ description: How VitNode combines TanStack Start for UI and isomorphic routing w
 icon: Blocks
 ---
 
-VitNode separates concerns between two core layers:
+A VitNode app is two layers in one project. TanStack Start renders the pages, and a Hono API answers every request for data. Read this page to know which layer owns a job before you write code for it.
 
-1. **TanStack Start**: Frontend UI, SSR, isomorphic routing, and client caching.
-2. **Hono API**: Backend routing, session management, staff permissions, and database operations.
+1. **TanStack Start**: the UI, server-side rendering (SSR), routing and the client cache.
+2. **Hono API**: API routes, sessions, staff permissions and database access.
 
 {/* Image prompt: VitNode architectural flow diagram displaying TanStack Start (SSR, route loaders, TanStack Query) communicating across an HTTP/RPC boundary with Hono API (middleware, sessions, Drizzle ORM) and PostgreSQL/Redis storage. Dark theme, 1600x900. */}
 
-## System Boundaries
+## Who owns what
 
-| Responsibility        | TanStack Start (Web App)                      | Hono (API)                                                      |
-| :-------------------- | :-------------------------------------------- | :-------------------------------------------------------------- |
-| **Routing**           | Page URLs, dynamic parameters, nested layouts | REST/RPC endpoints under `/api/*`                               |
-| **Data Fetching**     | Route loaders and the universal `fetcher`     | Query execution via Drizzle ORM                                 |
-| **State & Cache**     | TanStack Query client cache                   | Redis domain cache & database storage                           |
-| **Security Boundary** | UI guards (redirecting unauthenticated users) | **Enforces authentication, permissions, CSRF, and rate limits** |
+| Responsibility    | TanStack Start (web app)                      | Hono (API)                                                      |
+| :---------------- | :-------------------------------------------- | :-------------------------------------------------------------- |
+| **Routing**       | Page URLs, dynamic parameters, nested layouts | API routes under `/api/*`                                       |
+| **Data fetching** | Route loaders and the universal `fetcher`     | Queries through Drizzle ORM                                     |
+| **State & cache** | TanStack Query client cache                   | Redis domain cache and the database                             |
+| **Security**      | UI guards (redirecting signed-out visitors)   | **Enforces authentication, permissions, CSRF and rate limits** |
 
-<Callout type="warn" title="Security Boundary">
-  Route guards (`beforeLoad`) enhance UX by redirecting visitors early, but the
-  Hono API is the true security boundary. All private endpoints strictly verify
-  cookies and permissions on every request.
+<Callout type="warn" title="The API is the security boundary">
+  Route guards (`beforeLoad`) improve the experience by redirecting visitors
+  early, but anyone can call the API directly. Every private endpoint checks the
+  session cookie and permissions on every request.
 </Callout>
 
----
+## Request flow
 
-## End-to-End Request Flow
+When a visitor opens a page such as `/blog`:
 
-When a user visits a page (e.g. `/blog`):
+| Step                   | Runs on                | What happens                                                         |
+| :--------------------- | :--------------------- | :------------------------------------------------------------------- |
+| **1. Request**         | Browser                | The visitor navigates to `/blog`                                     |
+| **2. Routing**         | Server (SSR) / browser | TanStack Router matches the route and runs its `loader`              |
+| **3. Query warming**   | Server / browser       | `context.queryClient.query` runs the query, which calls the fetcher  |
+| **4. API call**        | Server / browser       | The universal `fetcher` calls the Hono endpoint by plugin id         |
+| **5. API middleware**  | Server (Hono)          | Reads the session cookie, applies rate limits, provides `c.get("db")` |
+| **6. Handler**         | Server (Hono)          | The route validates its input and queries PostgreSQL through Drizzle |
+| **7. Response**        | Server / browser       | The JSON fills the TanStack Query cache and the component renders    |
 
-| Phase                     | Runtime                | Action                                                            |
-| :------------------------ | :--------------------- | :---------------------------------------------------------------- |
-| **1. Request**            | Browser                | Visitor navigates to `/blog`                                      |
-| **2. Routing**            | Server (SSR) / Browser | TanStack Router matches route and executes `loader`               |
-| **3. Query Warming**      | Server / Browser       | `context.queryClient.query` executes isomorphic fetcher           |
-| **4. RPC Call**           | Server / Browser       | The universal `fetcher` calls the Hono endpoint by plugin id      |
-| **5. API Middleware**     | Server (Hono)          | Verifies session cookie, applies rate limits, injects `c.get(db)` |
-| **6. Handler & Database** | Server (Hono)          | Handler validates input and queries PostgreSQL via Drizzle        |
-| **7. Response**           | Server / Browser       | JSON data hydrates TanStack Query cache and paints component      |
+## Request middleware
 
----
+Before a page route matches, every request passes through the middleware that
+`createVitNodeStart` installs in `src/start.ts`, in this order:
 
-## The Request Pipeline
+1. **CSRF**, for server function calls.
+2. **Locale**, for page requests: canonical `308` redirects, the locale cookie,
+   and, on HTML responses, `Cache-Control: private, no-store` plus the security
+   headers.
+3. **Your own** `requestMiddleware`, in the order you list it.
 
-Before route matching, every request passes through the middleware
-`createVitNodeStart` installs - in this order, and an app cannot get in front of
-any of it:
+An app cannot put its own middleware in front of the first two. `/api/*`
+passes through untouched, so the Hono API sees the request exactly as the client
+sent it and keeps its own caching policy. The details, and how to add your own
+middleware, are in [Configuration](/docs/dev/configuration#request-pipeline).
 
-| Order | Middleware         | Applies to                                                                      |
-| :---- | :----------------- | :------------------------------------------------------------------------------ |
-| 1     | **CSRF**           | Server function calls (`handlerType === 'serverFn'`)                            |
-| 2     | **Locale**         | Page requests: canonical `308` redirects and the locale cookie                  |
-| 3     | **Document cache** | HTML responses: forced `Cache-Control: private, no-store` plus security headers |
-| 4     | Your own           | Whatever `requestMiddleware` lists                                              |
+## Plugins
 
-`/api/*` reaches the same middleware and passes through untouched - no redirect,
-no rewrite, no cache directive - so the Hono bridge sees the request exactly as
-the client sent it and keeps its own caching policy. See
-[Configuration](/docs/dev/configuration).
+Features live in plugins, each a package in `plugins/*` or `node_modules`:
 
----
+- **Separate packages.** A plugin compiles to its own `dist/` folder. Its
+  imports of React, Hono, Drizzle and other packages stay imports, so the app
+  installs them once.
+- **Declared, not wired by hand.** The plugin declares its routes, AdminCP
+  navigation and database tables, and the app's build generates the imports.
+- **Only configured plugins ship.** A plugin that is not listed in
+  `vitnode.config.ts` and `vitnode.api.config.ts` adds no code to the build.
 
-## Plugin System Architecture
-
-VitNode is built around modular plugins located in `plugins/*`:
-
-- **Independent Packages**: Plugins compile to their own `dist/` with isolated dependencies.
-- **Unified Manifest**: Routes, AdminCP navigation, and database models are registered declaratively.
-- **Zero Overhead**: Inactive plugins contribute no code or overhead to production bundles.
-
-## Learn More
+## Related
 
 <Cards>
   <Card

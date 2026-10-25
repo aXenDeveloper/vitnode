@@ -1,17 +1,16 @@
 ---
-title: Report content
-description: Let readers report a VitNode Content Engine record to moderators with the reports option and ReportButton, on a record's page and on every row of a list.
+title: Reports
+description: Let readers report a VitNode Content Engine record to moderators with the reports option, useContentPermissions and ReportButton, then find the report in the ModCP and open the reported content.
 icon: Flag
 implementation:
   objective: Let readers report records of an existing content type to moderators.
   decisions:
     - Which items can readers report? Offer content types with a public API that do not have `reports` yet.
     - Where does the Report button appear? Offer the plugin's public pages and lists that show the chosen items.
-    - What should moderators see in a report? Recommend the default snapshot (the title and the public text, rich text, choice and file fields), or pick fields.
   constraints:
     - 'Set `reports: true` or `{ titleField, snapshotFields }` on the content type. Nothing needs migrating.'
     - Show the button when `useContentPermissions` answers `canReport`, and build its target with `contentTarget`.
-    - Enabling reports grants nothing by itself. Label the generated moderator permissions in the plugin's locale.
+    - Enabling reports grants nothing by itself. Moderators need `can_view_reports`.
   related:
     - title: Process reports
       href: /docs/dev/moderation/process-reports
@@ -22,13 +21,16 @@ implementation:
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";
-import reportDetails from "../dev/moderation/moderation-report-details.webp";
 import reportDialog from "./reports-dialog.webp";
-import detail from "./reports-discussion-page.webp";
+import detail from "./reports-article-page.webp";
+import queue from "./reports-modcp-queue.webp";
+import report from "./reports-modcp-report.webp";
 
-`reports` adds a **Report** button to your content. A signed-in reader picks a reason, and the report lands in the moderators' queue with a copy of what they saw. This guide adds it to the example plugin's discussions: on each discussion's page and on every row of `/discussions`.
+`reports` adds a **Report** button to your content. A reader picks a reason, and the report lands in the moderators' queue with a copy of what they saw. This page adds it to the newsroom's articles and follows one report to the ModCP.
 
-You need a [public API](/docs/content-engine/public-api), because a reader can only report what they can read.
+## Before you begin
+
+You need a content type with a [public API](/docs/content-engine/public-api) and a public record page, such as the article page from [Content page](/docs/content-engine/public-pages). Members do not have to write articles, because readers can report staff-written articles too. Sign in with a member account to report, and use an account with moderator permissions, such as a root administrator, to read the report.
 
 <Steps>
 
@@ -36,39 +38,43 @@ You need a [public API](/docs/content-engine/public-api), because a reader can o
 
 ### Turn on reports
 
-```ts title="plugins/example/src/content/discussion.ts"
-export const discussionContentType = defineContentType({
-  id: "example.discussion",
-  // ...
+Edit `src/content/article.ts` and add `reports` after `publicApi`. This is an excerpt:
+
+```ts title="plugins/newsroom/src/content/article.ts"
+  publicApi: {
+    path: "news",
+    fields: ["id", "title", "slug", "body", "publishedAt"],
+  },
+
   reports: true, // [!code ++]
-});
 ```
 
-Reports live in core tables, so there is nothing to migrate. The content type gets moderator permissions such as `can_view_reports` and `can_manage_reports`; give them to someone in **AdminCP → Staff → Moderators** before you test. See [Configure moderators](/docs/dev/moderation/configure-moderators).
+Reports live in core tables, so there is nothing to migrate. The article type gets the moderator permissions `can_view_reports` and `can_manage_reports`, and a new public route, `GET /api/newsroom/content/news/permissions`, starts answering `canReport`.
 
 </Step>
 
 <Step>
 
-### Ask who may report what
+### Ask whether the visitor may report
 
-`useContentPermissions` asks the Content Engine what the visitor may do with the records on screen, in one request. `canReport` is `true` for a public record the visitor did not write, guests included; their dialog asks them to sign in.
+The button should only show where a report would be accepted, and that depends on who is looking. Create `src/pages/article-permissions.ts`. This is the complete file:
 
-```ts title="plugins/example/src/pages/discussion-list.ts"
+```ts title="plugins/newsroom/src/pages/article-permissions.ts"
 import { useContentPermissions } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
 import { manifest } from "@/manifest.gen";
 
-export const useDiscussionPermissions = (ids: readonly number[]) =>
+/** What the visitor may do with each article on screen: `canEdit`, `canReport`. */
+export const useArticlePermissions = (ids: readonly number[]) =>
   useContentPermissions({
     ids,
-    queryKey: [manifest.id, "discussions"],
+    queryKey: [manifest.id, "articles"],
     fetch: async request => {
       const res = await fetcher({
         plugin: manifest.id,
         method: "get",
-        module: "content/discussions",
+        module: "content/news",
         path: "/permissions",
         args: { query: { ids: request.join(",") } },
       });
@@ -79,76 +85,136 @@ export const useDiscussionPermissions = (ids: readonly number[]) =>
   });
 ```
 
-The same hook answers `canEdit`, used by the [edit form](/docs/content-engine/public-write-edit#show-the-edit-button).
+If you followed [Permissions](/docs/content-engine/public-permissions), this file already exists, so reuse it. The same route answers both `canEdit` and `canReport`.
+
+`canReport` is `true` for a public article the visitor did not write, guests included. The dialog asks a guest to sign in. An article staff wrote in the AdminCP has no author, so every reader may report it.
 
 </Step>
 
 <Step>
 
-### Add the button to the page
+### Add the Report button
 
-```tsx title="plugins/example/src/pages/discussion-page.tsx"
-import { contentTarget } from "@vitnode/core/content";
+Edit `src/pages/article-page.tsx`. Add `contentTarget` to the existing `@vitnode/core/content` import, the other imports, and an `ArticleActions` component above `ArticlePage`. These are excerpts:
+
+```tsx title="plugins/newsroom/src/pages/article-page.tsx"
+import { contentTarget, zodRichTextDocument } from "@vitnode/core/content"; // [!code highlight]
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
+import { useTranslations } from "use-intl";
 
-import { discussionContentType } from "@/content/discussion";
-import { manifest } from "@/manifest.gen";
+import { articleContentType } from "@/content/article";
 
-const { canReport } = useDiscussionPermissions([item.id]).of(item.id);
+import { useArticlePermissions } from "./article-permissions";
 
-{canReport ? (
-  <ReportButton
-    preview={{ title: item.title }}
-    target={contentTarget(manifest.id, discussionContentType, item.id)}
-    typeLabel={t("report_type")}
-  />
-) : null}
+/** Asked in the browser, so the cached page stays the same for everyone. */
+const ArticleActions = ({ id, title }: { id: number; title: string }) => {
+  const t = useTranslations("newsroom.articles");
+  const { canReport } = useArticlePermissions([id]).of(id);
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {canReport ? (
+        <ReportButton
+          preview={{ title }}
+          target={contentTarget(manifest.id, articleContentType, id)}
+          typeLabel={t("report_type")}
+        />
+      ) : null}
+    </div>
+  );
+};
+```
+
+Then render it at the end of the article's `<header>`, below the date:
+
+```tsx title="plugins/newsroom/src/pages/article-page.tsx"
+      <header className="flex flex-col gap-2">
+        {/* title and date as before */}
+        <ArticleActions id={item.id} title={item.title} /> {/* [!code ++] */}
+      </header>
 ```
 
 - `contentTarget` names the record from the content type, so the type id always matches what the API registered.
-- `typeLabel` finishes the dialog title, "What's wrong with this discussion?". Add `"report_type": "discussion"` to the plugin's locale file.
-- `preview` shows the reader what they are reporting at the top of the dialog.
+- `preview` shows the article's title in the dialog, and `typeLabel` finishes its title, "What's wrong with this article?".
+- The button loads its own messages, and its form only when the dialog opens.
 
-The button loads its own messages and its form only when the dialog opens.
+If `ArticleActions` already exists from [Permissions](/docs/content-engine/public-permissions), add the `canReport` branch next to its **Edit** link, read both flags with `const { canEdit, canReport } = useArticlePermissions([id]).of(id)`, and pass `title={item.title}` where the header renders it.
 
 </Step>
 
 <Step>
 
-### Add it to every row of a list
+### Add the label
 
-Ask once for the whole page, and point each button at its row's title with `describedBy`, so a screen reader hears "Report discussion, Captcha on public forms" instead of ten identical buttons:
+Add `report_type` under `newsroom.articles` in `src/locales/en.json`:
 
-```tsx title="plugins/example/src/pages/discussions-page.tsx"
-const permissions = useDiscussionPermissions(
-  discussions?.edges.map(discussion => discussion.id) ?? [],
-);
-
-renderItem={discussion => (
-  <>
-    <HrefLink href={discussionHref(discussion.slug)} id={`discussion-${discussion.id}`}>
-      {discussion.title}
-    </HrefLink>
-    {permissions.of(discussion.id).canReport ? (
-      <ReportButton
-        describedBy={`discussion-${discussion.id}`}
-        target={contentTarget(manifest.id, discussionContentType, discussion.id)}
-        typeLabel={t("report_type")}
-      />
-    ) : null}
-  </>
-)}
+```json title="plugins/newsroom/src/locales/en.json"
+{
+  "newsroom": {
+    "articles": {
+      "report_type": "article"
+    }
+  }
+}
 ```
+
+The dialog's own labels, such as the reasons, come from core.
+
+</Step>
+
+<Step>
+
+### Grant the moderator permissions
+
+Moderators need `can_view_reports` on articles to see a report, and `can_manage_reports` to handle it. A root administrator holds every moderator permission. For anyone else, open **AdminCP → Staff → Moderators**, add the user or role, and turn on the Newsroom report permissions, as [Configure moderators](/docs/dev/moderation/configure-moderators) shows.
 
 </Step>
 
 </Steps>
 
+## Check the result
+
+Sign in as a member and open `/news/welcome-to-the-newsroom`, which staff wrote. **Report** shows below the date:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={detail}
+  alt="The Welcome to the newsroom article page viewed by a signed-in member, with a Report button below the date"
+/>
+
+Click **Report**, pick **Spam**, add details and click **Send report**:
+
+<ImgDocs
+  src={reportDialog}
+  alt="Report dialog titled What's wrong with this article?, with the article's title and the reasons Spam, Abusive content, Rule violation and Other"
+/>
+
+Now sign in as the moderator and open `/modcp/reports`. The report is in the queue with its reason and the article:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={queue}
+  alt="The ModCP Reports queue with three new Spam reports about articles, the newest about Welcome to the newsroom"
+/>
+
+Open it. The report shows the reason, the reporter's details and a snapshot of the article as it was when reported. A staff-written article shows no author. **Open current content** links to `/news/welcome-to-the-newsroom`, the live article:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={report}
+  alt="ModCP report #3 about the article Welcome to the newsroom, with the Spam reason, Grace Hopper's description, the article snapshot without an author and an Open current content link"
+/>
+
+[Process reports](/docs/dev/moderation/process-reports) covers assigning, resolving and hiding.
+
 ## Choose what moderators see
 
-By default a report keeps the record's title and its public text, rich text, choice and file fields, frozen at the moment of the report. Pick the fields yourself when you want something else; they may even be private:
+By default a report keeps the record's title and its public text, rich text, choice and file fields, frozen at the moment of the report. Pick the fields yourself when you want something else. They may even be private:
 
-```ts title="plugins/example/src/content/discussion.ts"
+```ts title="plugins/newsroom/src/content/article.ts"
 reports: { titleField: "title", snapshotFields: ["body"] },
 ```
 
@@ -160,25 +226,9 @@ The button is only a hint. The report route checks again:
 - The reader can read the record through the public API. A draft or a hidden record is `404`.
 - One reader holds one open report per record, and files at most 20 reports an hour.
 
-## Check the result
+## Report from a list or a comment
 
-Sign in as a member and open someone else's discussion. Click **Report** and pick a reason:
+- **Every row of a list.** Call the permissions hook once with every id on the page, and point each button at its row's title with `describedBy`, so a screen reader hears which record each **Report** belongs to. The newsroom plugin's letters list does this in `plugins/newsroom/src/pages/letters-page.tsx`.
+- **Comments.** Add `reports: true` to the [comment type](/docs/content-engine/threads), read `canReport` from its own permissions hook, and pass `contentTarget(manifest.id, commentContentType, comment.id)`. `snapshotFields: ["body"]` gives moderators the comment's text, since a comment has no title.
 
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={detail}
-  alt="A discussion page viewed by another member, with Posted by Ada Lovelace and a Report button above the message"
-/>
-
-<ImgDocs
-  src={reportDialog}
-  alt="Report dialog titled What's wrong with this discussion?, with the discussion's title and the reasons Spam, Abusive content, Rule violation and Other"
-/>
-
-The dialog moves on to details, then says **Report sent**. A moderator with `can_view_reports` now sees it in the [ModCP](/docs/dev/moderation/process-reports).
-
-<ImgDocs
-  src={reportDetails}
-  alt="Report dialog titled Ready to send?, with the chosen reason, a What should moderators know? text box and a Send report button"
-/>
+Next, let readers answer an article with [Comments](/docs/content-engine/threads).

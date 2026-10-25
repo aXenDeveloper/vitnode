@@ -1,92 +1,195 @@
 ---
-title: Dashboard Widgets
-description: Add a configurable AdminCP dashboard widget from a VitNode plugin with sizing, permissions, and optional settings.
+title: Dashboard widgets
+description: Add a configurable AdminCP dashboard widget to a VitNode plugin, with real data, a settings form, translated strings, sizing and an optional staff permission.
 icon: LayoutDashboard
 ---
 
-import { BarChart3Icon, Settings2Icon } from 'lucide-react'
+import { ImgDocs } from "@/components/fumadocs/img";
+import notesWidget from "./dashboard-notes-widget.webp";
 
-Dashboard widgets are **AdminCP plugin extensions**. Define the component and
-list it on the plugin's `adminNav` export, next to its sidebar entries; the
-AdminCP dashboard then discovers it automatically.
+import { KeyRoundIcon, Settings2Icon } from 'lucide-react'
 
-{/* Image prompt: VitNode AdminCP dashboard with a “Site notes” statistics widget in a draggable grid. Show the widget panel, the corner resize bracket on each card, and the settings gear. Dark theme, 1600x900. */}
+A dashboard widget is a card a plugin adds to the AdminCP dashboard. Each
+administrator decides which widgets to show, where, and how big. In this guide
+the `site-notes` plugin gets a **Notes** widget that shows how many notes exist
+and the newest one, with a setting to hide the newest note.
+
+
+## Before you begin
+
+- The `site-notes` AdminCP page from [AdminCP page](/docs/dev/plugins/admin). This guide reuses its `src/pages/notes-query.ts`, its `@tanstack/react-query` dependency and its `src/admin/nav.tsx`.
 
 <Steps>
   <Step>
 
 ### Build the widget component
 
-```tsx title="plugins/site-notes/src/views/admin/widgets/stats-widget.tsx"
+Create `src/admin/notes-widget.tsx`. It reads the same notes query as the
+AdminCP page, so the count is real and refreshes with the list:
+
+```tsx title="plugins/site-notes/src/admin/notes-widget.tsx"
 import type { AdminDashboardWidgetProps } from '@vitnode/core/lib/plugin'
 
-export const StatsWidget = ({ settings }: AdminDashboardWidgetProps) => (
-  <div className="flex flex-col gap-1 p-2">
-    <span className="text-muted-foreground text-sm">Published notes</span>
-    <strong className="text-3xl tabular-nums">
-      {String(settings.total ?? 42)}
-    </strong>
-  </div>
-)
+import { useQuery } from '@tanstack/react-query'
+import { Skeleton } from '@vitnode/core/components/ui/skeleton'
+import { useTranslations } from 'use-intl'
+
+import { notesQueryOptions } from '@/pages/notes-query'
+
+export const NotesWidget = ({ settings }: AdminDashboardWidgetProps) => {
+  const t = useTranslations('site-notes.admin.dashboard.widgets.notes')
+  const { data: notes, isError, isPending } = useQuery(notesQueryOptions())
+  const showLatest = settings.showLatest !== false
+
+  if (isPending) return <Skeleton className="m-2 h-9 w-24" />
+  if (isError) return <p className="text-destructive p-2 text-sm">{t('load_error')}</p>
+
+  return (
+    <div className="flex flex-col gap-1 p-2">
+      <strong className="text-3xl tabular-nums">
+        {t('count', { count: notes.length })}
+      </strong>
+      {showLatest && notes[0] ? (
+        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+          {t('latest', { title: notes[0].title })}
+        </p>
+      ) : null}
+    </div>
+  )
+}
 ```
+
+`settings` holds what an administrator saved for this copy of the widget, and
+is `{}` until they save anything, so the widget treats a missing `showLatest`
+as on.
+
+  </Step>
+  <Step>
+
+### Add a settings form
+
+Create `src/admin/notes-widget-settings.tsx`. The dashboard renders it in the
+widget's panel while an administrator edits the layout.
+`useWidgetSettingsDialog()` gives it `save`, which stores the settings, shows a
+toast and refreshes the widget:
+
+```tsx title="plugins/site-notes/src/admin/notes-widget-settings.tsx"
+import type { AdminDashboardWidgetProps } from '@vitnode/core/lib/plugin'
+
+import { AutoForm } from '@vitnode/core/components/form/auto-form'
+import { AutoFormSwitch } from '@vitnode/core/components/form/fields/switch'
+import { useWidgetSettingsDialog } from '@vitnode/core/views/admin/views/core/dashboard/grid/widget-settings-context'
+import { useTranslations } from 'use-intl'
+import { z } from 'zod'
+
+export const NotesWidgetSettings = ({ settings }: AdminDashboardWidgetProps) => {
+  const t = useTranslations('site-notes.admin.dashboard.widgets.notes')
+  const { save } = useWidgetSettingsDialog()
+
+  const formSchema = z.object({
+    showLatest: z.boolean().default(settings.showLatest !== false),
+  })
+
+  return (
+    <AutoForm
+      fields={[
+        {
+          id: 'showLatest',
+          component: props => (
+            <AutoFormSwitch {...props} label={t('settings.show_latest')} />
+          ),
+        },
+      ]}
+      formSchema={formSchema}
+      onSubmit={async values => {
+        await save(values)
+      }}
+      submitButtonProps={{ children: t('settings.save') }}
+    />
+  )
+}
+```
+
+Skip this step, and `settingsComponent` in the next one, if your widget has
+nothing to configure.
 
   </Step>
   <Step>
 
 ### Register it on the plugin's `adminNav`
 
-Add it to the `adminNav` your plugin exports from its `admin/nav` module (the
-same object that holds its [sidebar entries](/docs/dev/plugins/admin)). VitNode
-collects every plugin's `adminNav` into the app's generated `admin-nav.gen.ts`,
-and the AdminCP shell hands the widgets to the dashboard.
+Add a `dashboard.widgets` list to the `adminNav` in `src/admin/nav.tsx`, next to
+the sidebar `nav` from the previous lesson. VitNode collects every plugin's
+`adminNav` into the app's generated `admin-nav.gen.ts`, and the AdminCP shell
+hands the widgets to the dashboard.
 
 ```tsx title="plugins/site-notes/src/admin/nav.tsx"
 import type { AdminNavPluginSource } from '@vitnode/core/lib/plugin'
 
-import { BarChart3Icon } from 'lucide-react'
+import { StickyNoteIcon } from 'lucide-react'
 
+import { NotesWidget } from '@/admin/notes-widget' // [!code ++]
+import { NotesWidgetSettings } from '@/admin/notes-widget-settings' // [!code ++]
 import { manifest } from '@/manifest.gen'
-import { StatsWidget } from '@/views/admin/widgets/stats-widget'
 
 export const adminNav = {
   pluginId: manifest.id,
   admin: {
+    // [!code ++:13]
     dashboard: {
       widgets: [
-        // [!code ++:8]
         {
-          component: StatsWidget,
+          id: 'notes',
+          component: NotesWidget,
+          settingsComponent: NotesWidgetSettings,
+          icon: <StickyNoteIcon />,
           defaultEnabled: true,
-          defaultRows: 1,
           defaultSpan: 1,
-          icon: <BarChart3Icon />,
-          id: 'stats',
+          defaultRows: 1,
         },
       ],
     },
+    nav: [
+      // ...the Notes link from the previous lesson
+    ],
   },
 } satisfies AdminNavPluginSource
 ```
 
-The full widget id is namespaced by the plugin, so `stats` will not collide with
-another plugin’s idea of a stats card. A good thing—statistics are dramatic
-enough already.
+The board namespaces the id as `site-notes:notes`, so `notes` never collides
+with another plugin's idea of a notes card. With `defaultEnabled`, the dashboard
+puts the widget at the end of the board for every administrator who has not
+seen it yet. Anyone who removes it keeps it removed.
 
   </Step>
   <Step>
 
-### Name it
+### Add the strings
 
-The widget's title comes from your plugin's frontend messages, under
-`admin.dashboard.widgets.{id}`. A `desc` is optional and shows in the widget panel.
+The dashboard loads the `site-notes.admin.dashboard.widgets` namespace. The
+widget's title is `notes.title` and its optional `desc` shows in the widget
+panel; the other keys are the ones the two components use. Add them under
+`site-notes.admin` in `src/locales/en.json`, next to `nav` and `notes`:
 
 ```json title="plugins/site-notes/src/locales/en.json"
 {
-  "@acme/site-notes": {
+  "site-notes": {
     "admin": {
+      // ...nav and notes from the previous lesson
+      // [!code ++:14]
       "dashboard": {
         "widgets": {
-          "stats": { "title": "Note stats", "desc": "How many notes are live." }
+          "notes": {
+            "title": "Notes",
+            "desc": "How many notes exist, and the newest one.",
+            "count": "{count, plural, one {# note} other {# notes}}",
+            "latest": "Latest: {title}",
+            "load_error": "The notes could not be loaded.",
+            "settings": {
+              "show_latest": "Show the newest note",
+              "save": "Save settings"
+            }
+          }
         }
       }
     }
@@ -95,37 +198,68 @@ The widget's title comes from your plugin's frontend messages, under
 ```
 
   </Step>
-  <Step>
+</Steps>
 
-### Add a permission or settings UI when needed
+## Check the result
 
-Add `permission` to hide a widget from staff who should not see it. Add
-`settingsComponent` when administrators need to save preferences; both stay in
-the plugin alongside the widget.
+Let the plugin rebuild (or run its `build:plugins` script), then reload the
+AdminCP dashboard at `/admin/core`.
+
+1. A **Notes** card sits at the end of the board, showing the number of notes
+   and "Latest:" with the newest title. With no notes yet it reads `0 notes`.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={notesWidget}
+  alt="The site-notes Notes widget at the end of the AdminCP dashboard, reading 6 notes and Latest: Lift maintenance, next to core's Send a notification widget"
+/>
+
+2. Press **Edit layout**, click the card, switch off **Show the newest note** and
+   choose **Save settings**. A toast confirms the save and the card shows only
+   the count.
+3. Create a note on the plugin's AdminCP page, then come back. The count has
+   gone up by one.
+
+## Show a widget only to some staff
+
+`permission` hides a widget from administrators without that staff permission:
 
 ```tsx title="plugins/site-notes/src/admin/nav.tsx"
 {
-  component: StatsWidget,
-  // [!code ++:4]
-  permission: { module: 'site_notes', permission: 'can_view_stats' },
-  settingsComponent: StatsSettings,
-  id: 'stats',
+  id: 'notes',
+  component: NotesWidget,
+  permission: { module: 'notes', permission: 'can_create' }, // [!code ++]
+  // ...
 }
 ```
 
-  </Step>
-</Steps>
+- **It only hides the card.** The data still comes from the API, so a widget
+  that shows private data must read it from a route guarded with
+  `adminStaffPermission`, as the create endpoint in
+  [Permissions](/docs/dev/working-with-users/staff-permissions) is. The notes
+  list is public, so the Notes widget needs no guard.
+- **Declare the permission** in `buildApiPlugin({ permissionStaff })`, as
+  `site-notes` already does for `notes.can_create`. An undeclared permission
+  cannot be granted in the staff editor, so only root administrators would see
+  the widget. `vitnode plugin validate` checks this for sidebar links, not for
+  widgets.
 
 ## Widget options
 
-| Option                        | What it controls                                  |
-| ----------------------------- | ------------------------------------------------- |
-| `defaultSpan` / `defaultRows` | Initial grid size from 1 to 3 columns or rows.    |
-| `minSpan`                     | Narrowest allowed width.                          |
-| `defaultEnabled`              | Whether a new dashboard receives the widget.      |
-| `allowMultiple`               | Whether an admin may place more than one copy.    |
-| `permission`                  | Staff permission required to see the widget.      |
-| `settingsComponent`           | Plugin form shown in the widget's panel while the dashboard is being edited. |
+| Name                | Type                                                | Required | Default        | Description                                                                                                                          |
+| :------------------ | :-------------------------------------------------- | :------- | :------------- | :----------------------------------------------------------------------------------------------------------------------------------- |
+| `id`                | `string`                                            | Yes      | -              | Unique within the plugin; the board uses `{pluginId}:{id}`. Also names the strings under `admin.dashboard.widgets.{id}`              |
+| `component`         | `ComponentType<AdminDashboardWidgetProps>`          | Yes      | -              | Renders the widget's body. Gets `settings` and `widgetId` (the id of this copy on the board)                                          |
+| `icon`              | `ReactNode`                                         | No       | -              | Shown in the widget panel                                                                                                            |
+| `defaultSpan`       | `1 \| 2 \| 3`                                       | No       | `minSpan`      | Width in grid columns when first placed                                                                                              |
+| `defaultRows`       | `1 \| 2 \| 3`                                       | No       | `1`            | Height in grid rows when first placed                                                                                                |
+| `minSpan`           | `1 \| 2 \| 3`                                       | No       | `1`            | The narrowest an administrator can resize it to                                                                                      |
+| `defaultEnabled`    | `boolean`                                           | No       | `false`        | Placed automatically for administrators who have never seen it                                                                       |
+| `allowMultiple`     | `boolean`                                           | No       | `false`        | Lets an administrator place more than one copy, each with its own settings                                                           |
+| `category`          | `string`                                            | No       | the plugin     | Groups the widget in the panel, titled by `admin.dashboard.widgets.categories.{category}` (the raw value when that key is missing)   |
+| `permission`        | `{ module, permission }`                            | No       | -              | Hides the widget from administrators without this staff permission of the declaring plugin                                           |
+| `settingsComponent` | `ComponentType<AdminDashboardWidgetProps>`          | No       | -              | A form for this copy's `settings`, shown while an administrator edits the dashboard. Saves with `useWidgetSettingsDialog().save`     |
 
 ## How admins arrange them
 
@@ -145,15 +279,17 @@ New widgets fade in and scroll into view, and screen readers hear where a widget
 
 The drop gap uses `defaultSpan` and `defaultRows`, so pick them to match what the widget looks like the moment it is added.
 
+## Related
+
 <Cards>
   <Card
     icon={<Settings2Icon />}
-    title="AdminCP pages"
-    description="Add plugin-owned routes and browser-safe sidebar navigation."
+    title="AdminCP page"
+    description="Add a plugin-owned AdminCP screen and its sidebar link."
     href="/docs/dev/plugins/admin"
   />
   <Card
-    icon={<BarChart3Icon />}
+    icon={<KeyRoundIcon />}
     title="Staff permissions"
     description="Define permissions before exposing staff-only capabilities."
     href="/docs/dev/working-with-users/staff-permissions"

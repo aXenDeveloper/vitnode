@@ -1,5 +1,5 @@
 ---
-title: Check for updates in the AdminCP
+title: AdminCP checks
 description: Where VitNode shows available updates and security updates, how the daily check and the Check for updates button work, and what each status means.
 icon: ShieldCheck
 ---
@@ -36,7 +36,7 @@ Staff with **Plugins → Check for plugin and core updates now** (`plugins.can_c
 - A long check keeps its lease by renewing it every minute. If an API instance crashes mid-check, its lease runs out within five minutes and the next check takes over.
 - If the server running a check can no longer confirm it holds the lease, the check stops and says _The check stopped before it finished_. Results stored before that are kept; press the button again a moment later.
 - A manual check can run once every two minutes. A click inside that window says how many seconds to wait.
-- The endpoint is `POST /api/@vitnode/core/admin/plugins/updates/check`. It answers `409` while a check runs (`"status": "running"`) or when the check was interrupted (`"status": "interrupted"`), and `429` during the cooldown.
+- The endpoint is `POST /api/@vitnode/core/admin/plugins/updates/check`. It answers `409` while a check runs (`"status": "running"`), when the check was interrupted (`"status": "interrupted"`) or when update checks are turned off (`"status": "disabled"`), and `429` during the cooldown.
 
 Viewing the results only needs **Plugins → View installed plugins and their versions** (`plugins.can_view`). The same permission shows the [update count, security alert and System updates widget](/docs/dev/updates/alerts) everywhere else in the AdminCP. How the lease keeps checks exclusive is explained in [How update checks share one lease](/docs/dev/updates/lease).
 

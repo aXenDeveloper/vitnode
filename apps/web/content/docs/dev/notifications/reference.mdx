@@ -1,5 +1,5 @@
 ---
-title: Notifications API reference
+title: API reference
 description: Reference for c.get("notifications") in VitNode (publish, remove and state), its errors, the member and AdminCP REST endpoints, and the realtime channel.
 icon: BookOpen
 ---
@@ -91,7 +91,7 @@ Without `type` and `userIds`, `remove()` deletes every item about the subject fo
 
 ### `state`
 
-```ts title="plugins/forum/src/api/modules/topics/routes/summary.route.ts"
+```ts title="plugins/acme-forum/src/api/modules/topics/routes/summary.route.ts"
 const { unread, revision } = await c.get('notifications').state(user.id)
 ```
 
@@ -166,9 +166,12 @@ The body of `PUT /types/{type}` accepts any of these keys:
   "allowPush": true,
   "allowEmail": true,
   "email": "daily",
-  "memberCanEdit": false
+  "memberCanEdit": false,
+  "enabled": true
 }
 ```
+
+`enabled: false` turns the type off for everyone, unless it is mandatory.
 
 `POST /reconcile` only reports by default: `dryRun` is `true` unless you send `false`. It returns `{ mismatched, corrected }`.
 
