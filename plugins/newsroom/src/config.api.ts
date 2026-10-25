@@ -5,6 +5,7 @@ import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 import { storyExcerptAiAction } from "@/api/ai/actions";
 import { buildContentPublicModule } from "@/api/builders";
 import { categoryModerationScope } from "@/api/lib/moderation";
+import { commentNotifications } from "@/api/lib/notifications";
 import { deskContainers } from "@/content/desks";
 import { settingsPage } from "@/content/settings-page";
 import { articleContent } from "@/database/articles";
@@ -17,6 +18,7 @@ import { letterContent } from "@/database/letters";
 import { pageContent } from "@/database/pages";
 import { storyContent } from "@/database/stories";
 import { tagContent } from "@/database/tags";
+import messages from "@/locales/api";
 import { manifest } from "@/manifest.gen";
 
 import { adminModule } from "./api/modules/admin/admin.module";
@@ -29,7 +31,9 @@ export const newsroomApiPlugin = () =>
     manifest,
     aiActions: [storyExcerptAiAction],
     blocks: widgets,
+    contentNotifications: [commentNotifications],
     editablePages: [settingsPage],
+    messages,
     moderation: { scopes: [categoryModerationScope] },
     permissionStaff: {
       moderator: {

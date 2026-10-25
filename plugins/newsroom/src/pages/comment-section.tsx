@@ -3,6 +3,7 @@ import { RichTextContent } from "@vitnode/core/components/rich-text";
 import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
 import { Skeleton } from "@vitnode/core/components/ui/skeleton";
 import { type RichTextDocument } from "@vitnode/core/content";
+import { useRevealHashTarget } from "@vitnode/core/hooks/use-reveal-hash-target";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
@@ -139,10 +140,15 @@ const CommentItem = ({
   );
 };
 
+/** The anchor a notification links to, `#comment-{id}`. */
+export const commentAnchorId = (id: number) => `comment-${id}`;
+
 /** What every comment in the tree needs from the section. */
 interface CommentThread {
   articleId: number;
   canReply: boolean;
+  /** The comment the URL hash points at, once it is on screen. */
+  highlightedId: null | string;
   onEdited: CommentEditorProps["onSaved"];
   onPosted: CommentComposerProps["onPosted"];
   permissions: ReturnType<typeof useCommentPermissions>;
@@ -158,9 +164,21 @@ const CommentBranch = ({
 }) => {
   const t = useTranslations("newsroom.comments");
   const [replying, setReplying] = useState(false);
+  const anchorId = node.record ? commentAnchorId(node.id) : undefined;
+  const highlighted =
+    anchorId !== undefined && anchorId === thread.highlightedId;
 
   return (
-    <li className="flex flex-col gap-3">
+    <li
+      className={
+        highlighted
+          ? "bg-muted text-foreground flex scroll-mt-24 flex-col gap-3 rounded-lg p-3 outline-none"
+          : "flex scroll-mt-24 flex-col gap-3 outline-none"
+      }
+      id={anchorId}
+      // Focusable from script only, so a notification link lands on it.
+      tabIndex={anchorId === undefined ? undefined : -1}
+    >
       {node.record ? (
         <>
           <CommentItem
@@ -246,6 +264,15 @@ export const CommentSection = ({
   const permissions = useCommentPermissions(
     items.flatMap(item => (item.record ? [item.id] : [])),
   );
+  // A notification links to `#comment-{id}`, which may be on a later page.
+  const anchor = useRevealHashTarget({
+    hasMore: comments.hasNextPage,
+    isLoadingMore: comments.isFetchingNextPage,
+    loadMore: comments.fetchNextPage,
+    prefix: "comment-",
+    ready: !comments.isPending,
+    renderedCount: items.length,
+  });
 
   const onPosted = async (outcome: CommentOutcome) => {
     if (outcome !== "published") {
@@ -278,6 +305,7 @@ export const CommentSection = ({
   const thread: CommentThread = {
     articleId,
     canReply: Boolean(session.data?.user),
+    highlightedId: anchor.status === "found" ? anchor.targetId : null,
     onEdited,
     onPosted,
     permissions,
@@ -325,6 +353,15 @@ export const CommentSection = ({
           ))}
         </ol>
       )}
+
+      {anchor.status === "missing" ? (
+        <p
+          className="text-muted-foreground text-sm leading-relaxed"
+          role="status"
+        >
+          {t("anchor_missing")}
+        </p>
+      ) : null}
 
       {pages?.some(page => page.truncated) ? (
         <p className="text-muted-foreground text-sm">{t("truncated")}</p>

@@ -225,7 +225,8 @@
       },
       "reply": "Reply",
       "removed": "This comment was removed.",
-      "truncated": "This conversation is long, so some deeper replies are not shown."
+      "truncated": "This conversation is long, so some deeper replies are not shown.",
+      "anchor_missing": "The comment this link points to is no longer available."
     },
     "admin": {
       "nav": {

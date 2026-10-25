@@ -374,6 +374,9 @@ export const CONTENT_QUEUE_TASK_SCHEDULE = "content-schedule";
 
 export const CONTENT_QUEUE_TASK_SCHEDULE_EFFECTS = "content-schedule-effects";
 
+/** Processes the notification intents content operations store in their transactions. */
+export const CONTENT_QUEUE_TASK_NOTIFICATIONS = "content-notifications";
+
 /** Machine-readable reasons a schedule was refused. */
 export const CONTENT_SCHEDULE_CODES = {
   inPast: "CONTENT_SCHEDULE_IN_PAST",

@@ -183,6 +183,33 @@ export type {
 } from "./model";
 export { buildContentAdminModule } from "./module";
 export {
+  contentNotificationAccess,
+  contentNotificationRefs,
+} from "./notifications/access";
+export type { ContentNotificationRefs } from "./notifications/access";
+export { buildContentNotifications } from "./notifications/define";
+export type {
+  ContentCustomNotificationRule,
+  ContentModerationDecision,
+  ContentModerationDecisionPreset,
+  ContentModerationDecisionStatus,
+  ContentModerationNotificationData,
+  ContentNotificationAccessFilter,
+  ContentNotificationContext,
+  ContentNotificationDefaults,
+  ContentNotificationRecords,
+  ContentNotificationRuleInput,
+  ContentNotificationsConfig,
+  ContentNotificationTrigger,
+  ContentNotificationUserField,
+  ContentThreadNotificationData,
+  ContentThreadReplyPreset,
+} from "./notifications/define";
+export type {
+  ContentNotificationRegistry,
+  RegisteredContentNotificationRule,
+} from "./notifications/registry";
+export {
   contentListPageCacheTags,
   contentRecordPageCacheTags,
 } from "./page-cache";

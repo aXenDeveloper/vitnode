@@ -5,6 +5,7 @@ import type { AnyContentContainerDefinition } from "@/content/containers/types";
 import type { AnyEditablePageDefinition } from "@/content/editor/types";
 import type { RegisteredContentType } from "@/content/registry";
 import type { AnyContentModel } from "@/content/server/model";
+import type { ContentNotificationsConfig } from "@/content/server/notifications/define";
 import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
@@ -68,6 +69,8 @@ export interface BuildPluginApiReturn<
   blocks?: BlockPluginSource;
   contentContainers?: AnyContentContainerDefinition[];
   contentModels?: AnyContentModel[];
+  /** Content notification rules; their types are already in `notificationTypes`. */
+  contentNotifications?: ContentNotificationsConfig[];
   contentTypes?: AnyContentTypeDefinition[];
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
   editablePages?: AnyEditablePageDefinition[];
@@ -103,8 +106,8 @@ export type AnyBuildPluginApiReturn = BuildPluginApiReturn<
 
 /**
  * Declares a plugin's API half: its Hono modules plus everything they bring -
- * content types, cron jobs, events, queues, notifications, WebSockets, staff
- * permissions. Its frontend half is `buildPlugin` from
+ * content types, cron jobs, events, queues, notifications (including content
+ * notifications), WebSockets, staff permissions. Its frontend half is `buildPlugin` from
  * `@vitnode/core/lib/plugin`; both take the plugin's generated manifest, whose
  * `id` (the package name) keys every registration.
  *
@@ -145,6 +148,7 @@ export function buildApiPlugin<
 >({
   aiActions,
   blocks,
+  contentNotifications,
   editablePages,
   manifest,
   messages,
@@ -161,6 +165,12 @@ export function buildApiPlugin<
   aiActions?: AnyAiActionDefinition[];
   /** The object the plugin's own widgets (`blocks`) module exports; its `pluginId` must match. */
   blocks?: BlockPluginSource;
+  /**
+   * Notifications for Content Engine operations, each built with
+   * `buildContentNotifications()`. Their notification types are registered
+   * with the plugin, so preferences and the AdminCP list them.
+   */
+  contentNotifications?: ContentNotificationsConfig[];
   /** Pages built from widgets that admins edit in place. Page ids must be unique within the plugin. */
   editablePages?: AnyEditablePageDefinition[];
   /** The plugin's generated manifest (`src/manifest.gen.ts`). */
@@ -266,6 +276,15 @@ export function buildApiPlugin<
 
   validateSearchIndexers(indexers.map(indexer => ({ ...indexer, pluginId })));
 
+  // A custom rule may reuse a type the plugin also lists itself.
+  for (const config of contentNotifications ?? []) {
+    for (const type of config.notificationTypes) {
+      if (!pluginNotificationTypes.includes(type)) {
+        pluginNotificationTypes.push(type);
+      }
+    }
+  }
+
   validateNotificationTypes(
     pluginNotificationTypes.map(definition => ({ definition, pluginId })),
   );
@@ -299,6 +318,7 @@ export function buildApiPlugin<
     openApiTags: [...new Set(openApiTags)],
     contentContainers: registeredContainers,
     contentModels,
+    contentNotifications,
     contentTypes: registered.map(entry => entry.definition),
     publicContentTypes: [...publishing.values()],
     cronJobs,

@@ -77,6 +77,13 @@ import {
 } from "./files";
 import { findContentLanguage } from "./language-resolver";
 import {
+  contentNotificationActorId,
+  hasContentFirstPublicationRules,
+  hasContentNotificationDependents,
+  recordContentFirstPublication,
+  recordContentNotificationCleanup,
+} from "./notifications/intents";
+import {
   buildFilterCondition,
   buildOrderColumn,
   buildSearchCondition,
@@ -758,19 +765,54 @@ export const createContentService = <
       : null;
   };
 
+  const publish = async (
+    id: ContentId,
+    options: ContentServiceOptions | undefined,
+  ): Promise<ContentPublicationResult<TDefinition> | null> =>
+    await transition(
+      id,
+      options,
+      {
+        // COALESCE, so a republish keeps the original date. `publishedAt` is
+        // the first-published timestamp and is never rewritten.
+        publishedAt: sql`coalesce(${columns.publishedAt}, now())`,
+        status: "published",
+      },
+      ne(columns.status, "published"),
+    );
+
   const publicationMethods: ContentPublicationMethods<TDefinition> = {
-    publish: async (id, options) =>
-      await transition(
-        id,
-        options,
-        {
-          // COALESCE, so a republish keeps the original date. `publishedAt` is
-          // the first-published timestamp and is never rewritten.
-          publishedAt: sql`coalesce(${columns.publishedAt}, now())`,
-          status: "published",
-        },
-        ne(columns.status, "published"),
-      ),
+    publish: async (id, options) => {
+      if (!hasContentFirstPublicationRules(c, definition)) {
+        return await publish(id, options);
+      }
+
+      // A first publication stores its notification intent in the same
+      // transaction. `publishedAt` is never rewritten, so "it was NULL under
+      // the row lock" is what tells a first publication from a republish.
+      return await inTransaction(options, async tx => {
+        const [before] = await tx
+          .select({ publishedAt: columns.publishedAt })
+          .from(table)
+          .where(eq(primaryCursor, id))
+          .limit(1)
+          .for("update");
+        const result = await publish(id, { ...options, tx });
+        if (result?.changed && before?.publishedAt === null) {
+          await recordContentFirstPublication(c, tx, {
+            actorId: contentNotificationActorId(
+              c,
+              (options as undefined | { actor?: { userId: null | number } })
+                ?.actor,
+            ),
+            definition,
+            itemId: id,
+          });
+        }
+
+        return result;
+      });
+    },
 
     unpublish: async (id, options) =>
       await transition(
@@ -947,13 +989,27 @@ export const createContentService = <
       }),
 
     delete: async (id, options) => {
-      const [row] = await db(options)
-        .delete(table)
-        .where(eq(primaryCursor, id))
-        .returning(ownSelection());
-      if (row) await cancelContentSubmissions(db(options), definition, id);
+      const remove = async (database: ContentDatabase) => {
+        const [row] = await database
+          .delete(table)
+          .where(eq(primaryCursor, id))
+          .returning(ownSelection());
+        if (row) {
+          await cancelContentSubmissions(database, definition, id);
+          await recordContentNotificationCleanup(c, database, {
+            definition,
+            itemId: id,
+          });
+        }
 
-      return row ? toRow(row) : null;
+        return row ? toRow(row) : null;
+      };
+
+      // The cleanup intent must commit with the delete, so a type with
+      // content notifications always deletes in a transaction.
+      return hasContentNotificationDependents(c, definition)
+        ? await inTransaction(options, remove)
+        : await remove(db(options));
     },
 
     findById: async (id, options) => {

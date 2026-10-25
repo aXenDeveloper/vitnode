@@ -196,6 +196,7 @@
         "desc": "Be the first to comment. No pressure."
       },
       "truncated": "This thread is very long, so some deeper comments are not shown here.",
+      "anchor_missing": "The comment this link points to is no longer available.",
       "load_more": "Load more comments",
       "load_failed": {
         "title": "Could not load comments",
