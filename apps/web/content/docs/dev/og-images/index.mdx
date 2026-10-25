@@ -1,6 +1,6 @@
 ---
 title: Open Graph images
-description: Generate 1200 x 630 link preview images (og:image) for VitNode pages with Satori and resvg, configured once in vitnode.api.config.ts.
+description: Generate 1200 x 630 link preview images (og:image) for VitNode pages with Satori, configured once in vitnode.api.config.ts.
 icon: Image
 ---
 
@@ -8,7 +8,7 @@ import { ImgDocs } from "@/components/fumadocs/img";
 import defaultCover from "./og-image-default-cover.webp";
 import defaultPolish from "./og-image-default-polish.webp";
 
-When someone shares a link on a social network or in a chat, the preview shows the page's `og:image`. VitNode can draw that image for you: a 1200 x 630 PNG with the page title, description, site name, logo and an optional cover, laid out on the server with [Satori](https://github.com/vercel/satori) and drawn with [resvg](https://github.com/thx/resvg-js) the first time a crawler asks for it.
+When someone shares a link on a social network or in a chat, the preview shows the page's `og:image`. VitNode can draw that image for you: a 1200 x 630 PNG with the page title, description, site name, logo and an optional cover, laid out on the server with [Satori](https://github.com/vercel/satori) and drawn with [`@napi-rs/image`](https://image.napi.rs) the first time a crawler asks for it.
 
 Everything about the images lives in the API config. The AdminCP only [previews them](/docs/dev/og-images/admincp-preview).
 
@@ -65,7 +65,7 @@ ogImages: {
 | `templates`             | `Record<string, OgImageTemplate>`            | `{ default: defaultOgImageTemplateEntry }`  | Every template, see [Custom templates](/docs/dev/og-images/templates)                              |
 | `fonts`                 | `OgImageFont[]`                              | Inter 400 and 700, Latin and Latin Extended | Replaces the bundled fonts, see [Fonts](/docs/dev/og-images/templates#use-your-own-fonts)         |
 | `branding.siteName`     | `string`                                     | `metadata.shortTitle ?? metadata.title`     | Name printed on the card                                                                          |
-| `branding.logo`         | `Uint8Array`, `ArrayBuffer`, loader or `https` URL | none                                  | PNG, JPEG, WebP or SVG. A URL is fetched once, with SSRF checks, an 8 second timeout and a 10 MB cap |
+| `branding.logo`         | `Uint8Array`, `ArrayBuffer`, loader or `https` URL | none                                  | PNG, JPEG, WebP, AVIF or SVG; a URL must point at PNG, JPEG or WebP. A URL is fetched once, with SSRF checks, an 8 second timeout and a 10 MB cap |
 | `theme`                 | `Partial<OgImageTheme>`                      | dark background, blue accent                | `backgroundColor`, `foregroundColor`, `mutedColor`, `accentColor`, `fontFamily`                   |
 | `loadAdditionalAsset`   | Satori's hook                                | none                                        | Supplies emoji or fonts for characters the fonts lack, see [Emoji and other scripts](/docs/dev/og-images/templates#emoji-and-other-scripts) |
 | `version`               | `string`                                     | none                                        | Bump it to re-render every cached image, for example after replacing a font file                  |

@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { createHash } from "node:crypto";
 
 import { detectImageMimeType } from "@/api/lib/image-signature";
-import { downloadRemoteImage, imageDimensions } from "@/api/lib/remote-image";
+import { downloadRemoteImage } from "@/api/lib/remote-image";
 import { core_files } from "@/database/files";
 
 import type { OgImageBinarySource, OgImageTemplateAsset } from "./types";
@@ -40,12 +40,11 @@ export interface DescribedOgImageAsset {
   load: () => Promise<null | OgImageTemplateAsset>;
 }
 
+/** What the image library decodes. GIF and TIFF covers are left out. */
 const RASTER_TYPES = new Set([
   "image/avif",
-  "image/gif",
   "image/jpeg",
   "image/png",
-  "image/tiff",
   "image/webp",
 ]);
 
@@ -76,7 +75,13 @@ const isSvg = (bytes: Uint8Array): boolean => {
 /**
  * Decodes, orients and shrinks one image to what a 1200 × 630 card can show,
  * and returns it as a `data:` URI - so the renderer never fetches anything.
- * Raster formats only, unless `allowSvg` (trusted config such as a logo).
+ *
+ * Uses `@napi-rs/image`, a statically linked native module, so it keeps
+ * working in bundled server output where a module that loads shared
+ * libraries by relative path (such as `sharp`) may not. Accepts JPEG, PNG,
+ * WebP and AVIF, plus SVG when `allowSvg` (trusted config such as a logo).
+ * The size is read from the header first, so an oversized image is refused
+ * before it is decoded.
  */
 export const prepareOgImageAsset = async (
   input: ArrayBuffer | Uint8Array,
@@ -102,96 +107,45 @@ export const prepareOgImageAsset = async (
   const svg = type === null && allowSvg && isSvg(bytes);
   if (!svg && (type === null || !RASTER_TYPES.has(type))) return null;
 
-  const sharp = await loadSharp();
-  if (!sharp) {
-    // The card renders without sharp too, so a missing native build only
-    // costs the resize: formats resvg draws go in as they are.
-    const passthrough = passThroughAsset(bytes, { alt, svg, type });
-    if (passthrough) return passthrough;
-
-    throw new Error(
-      "sharp could not be loaded, and the renderer cannot read this image as it is.",
-    );
-  }
-
-  const pipeline = sharp(bytes, {
-    animated: false,
-    limitInputPixels: OG_IMAGE_ASSET_MAX_PIXELS,
-  })
-    .rotate()
-    .resize({
-      fit: "inside",
-      height: box.height * 2,
-      width: box.width * 2,
-      withoutEnlargement: !svg,
-    });
-  // PNG keeps a logo's transparency; a cover is a photo, and JPEG is a
-  // fraction of the size.
-  const { data, info } = await (
-    format === "png" ? pipeline.png() : pipeline.jpeg({ quality: 82 })
-  ).toBuffer({ resolveWithObject: true });
-
-  return {
-    alt,
-    height: info.height,
-    src: `data:image/${info.format};base64,${data.toString("base64")}`,
-    width: info.width,
-  };
-};
-
-const loadSharp = async () => {
-  try {
-    return (await import("sharp")).default;
-  } catch {
+  const { ResizeFit, Transformer } = await import("@napi-rs/image");
+  const image = svg ? Transformer.fromSvg(bytes) : new Transformer(bytes);
+  const { height, width } = await image.metadata();
+  if (
+    width < 1 ||
+    height < 1 ||
+    (!svg && width * height > OG_IMAGE_ASSET_MAX_PIXELS)
+  ) {
     return null;
   }
-};
 
-/** Largest image handed to the renderer without resizing it first. */
-const PASSTHROUGH_MAX_BYTES = 4 * 1024 * 1024;
-
-const svgDimensions = (
-  bytes: Uint8Array,
-): null | { height: number; width: number } => {
-  const tag = /<svg[^>]*>/i.exec(new TextDecoder().decode(bytes))?.[0] ?? "";
-  const viewBox = /viewBox=["']([^"']+)["']/i
-    .exec(tag)?.[1]
-    ?.trim()
-    .split(/[\s,]+/)
-    .map(Number);
-  if (viewBox?.length === 4 && viewBox[2] > 0 && viewBox[3] > 0) {
-    return { height: viewBox[3], width: viewBox[2] };
+  // Twice the box, for sharp edges on high-density previews, and never
+  // larger than the source: an SVG is scaled to fit, a photo only shrinks.
+  const scale = Math.min(
+    (box.width * 2) / width,
+    (box.height * 2) / height,
+    svg ? Number.POSITIVE_INFINITY : 1,
+  );
+  const target = {
+    height: Math.max(1, Math.round(height * scale)),
+    width: Math.max(1, Math.round(width * scale)),
+  };
+  if (!svg) image.rotate();
+  if (scale !== 1) {
+    image.resize({ ...target, fit: ResizeFit.Inside });
   }
 
-  const width = Number(/\swidth=["']([\d.]+)/i.exec(tag)?.[1]);
-  const height = Number(/\sheight=["']([\d.]+)/i.exec(tag)?.[1]);
-
-  return width > 0 && height > 0 ? { height, width } : null;
-};
-
-/**
- * The image as it is, for when `sharp` cannot be loaded: PNG, JPEG and SVG up
- * to 4 MB, which resvg decodes itself. `null` for anything else - resvg draws
- * no WebP or AVIF, and an image it cannot draw would leave an empty box.
- */
-const passThroughAsset = (
-  bytes: Uint8Array,
-  { alt, svg, type }: { alt: null | string; svg: boolean; type: null | string },
-): null | OgImageTemplateAsset => {
-  if (bytes.byteLength > PASSTHROUGH_MAX_BYTES) return null;
-
-  const mimeType = svg ? "image/svg+xml" : type;
-  const dimensions = svg
-    ? svgDimensions(bytes)
-    : mimeType === "image/jpeg" || mimeType === "image/png"
-      ? imageDimensions(bytes, mimeType)
-      : null;
-  if (!mimeType || !dimensions) return null;
+  // PNG keeps a logo's transparency; a cover is a photo, and JPEG is a
+  // fraction of the size.
+  const data = format === "png" ? await image.png() : await image.jpeg(82);
+  const { height: outHeight, width: outWidth } = await new Transformer(
+    data,
+  ).metadata();
 
   return {
     alt,
-    ...dimensions,
-    src: `data:${mimeType};base64,${Buffer.from(bytes).toString("base64")}`,
+    height: outHeight,
+    src: `data:image/${format};base64,${Buffer.from(data).toString("base64")}`,
+    width: outWidth,
   };
 };
 
