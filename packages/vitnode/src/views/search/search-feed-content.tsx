@@ -170,7 +170,7 @@ const ItemHiddenIcon = ({
       className={className}
       focusable={focusable}
       label={t("hidden", {
-        type: t(getSearchTypeRenderer(item.itemType).labelKey),
+        type: t(getSearchTypeRenderer(item.itemType, item.metadata).labelKey),
       })}
     />
   );
@@ -237,7 +237,7 @@ interface SearchActivity {
 }
 
 const activityOf = (item: SearchResultItem): null | SearchActivity => {
-  const { activityKey } = getSearchTypeRenderer(item.itemType);
+  const { activityKey } = getSearchTypeRenderer(item.itemType, item.metadata);
   if (!activityKey) return null;
 
   const parsed = zodActivityContext.safeParse(item.metadata);
@@ -447,9 +447,9 @@ const DayTile = ({ date, isToday }: { date: Date; isToday: boolean }) => {
   );
 };
 
-const RailNode = ({ itemType }: { itemType: string }) => {
+const RailNode = ({ item }: { item: SearchResultItem }) => {
   const t = useTranslations("core.search");
-  const renderer = getSearchTypeRenderer(itemType);
+  const renderer = getSearchTypeRenderer(item.itemType, item.metadata);
   const Icon = renderer.icon;
 
   return (
@@ -473,7 +473,7 @@ const CardMeta = ({
   return (
     <div className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
       <span className="text-foreground font-medium">
-        {t(getSearchTypeRenderer(item.itemType).labelKey)}
+        {t(getSearchTypeRenderer(item.itemType, item.metadata).labelKey)}
       </span>
       {children}
       <DateFormat date={item.createdAt} />
@@ -789,7 +789,7 @@ const SearchTimeline = ({
                         >
                           <div className="flex w-12 shrink-0 flex-col items-center">
                             <span aria-hidden className="bg-border h-4 w-px" />
-                            <RailNode itemType={item.itemType} />
+                            <RailNode item={item} />
                             {!isLast && (
                               <span
                                 aria-hidden
@@ -816,7 +816,7 @@ const SearchTimeline = ({
 
 const SearchResultCard = ({ item }: { item: SearchResultItem }) => {
   const t = useTranslations("core.search");
-  const renderer = getSearchTypeRenderer(item.itemType);
+  const renderer = getSearchTypeRenderer(item.itemType, item.metadata);
   const Icon = renderer.icon;
   const snippet = useSnippet(item.content);
   const authors = authorsOf(item);

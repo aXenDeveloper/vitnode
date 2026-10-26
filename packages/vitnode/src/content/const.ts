@@ -6,6 +6,10 @@ export const CONTENT_EDITORIAL_FIELDS = ["version"] as const;
 
 export const CONTENT_VISIBILITY_FIELDS = ["hiddenAt", "hiddenBy"] as const;
 
+export const CONTENT_THREAD_FIELDS = ["deletedAt", "deletedBy"] as const;
+
+export const CONTENT_HIDDEN_REASON_MAX_LENGTH = 500;
+
 export const CONTENT_VISIBILITY_ACTIONS = ["hide", "unhide"] as const;
 
 export const CONTENT_VISIBILITY_FILTERS = ["hidden", "visible"] as const;

@@ -604,6 +604,20 @@
           "total_max_storage": "Całkowity maks. rozmiar pamięci",
           "unlimited": "Bez limitu"
         },
+        "edit_own_content": {
+          "allow": "Zezwól na edycję własnych treści",
+          "minutes": "Czas na edycję",
+          "minutes_desc": "Jak długo po opublikowaniu członek może jeszcze edytować treść.",
+          "in_unit": "w minutach",
+          "or": "lub",
+          "unlimited": "Bez limitu"
+        },
+        "delete_own_content": {
+          "allow": "Zezwól na usuwanie własnych treści"
+        },
+        "hide_own_content": {
+          "allow": "Zezwól na ukrywanie własnych treści"
+        },
         "ai": {
           "unlimited": "Punkty bez limitu",
           "unlimited_desc": "Użytkowników z tą rolą nie zatrzyma miesięczny limit. Budżet strony nadal obowiązuje.",
@@ -2494,6 +2508,15 @@
       "copied": "Skopiowano",
       "copy": "Kopiuj",
       "copy_failed": "Nie udało się skopiować do schowka. Spróbuj zaznaczyć tekst.",
+      "share": {
+        "title": "Udostępnij",
+        "link": "Link do udostępnienia",
+        "copy": "Kopiuj link",
+        "on": "Udostępnij na {network}",
+        "email": "Wyślij e-mailem",
+        "more": "Więcej opcji…",
+        "failed": "Nie udało się otworzyć menu udostępniania urządzenia."
+      },
       "decrease": "Zmniejsz",
       "increase": "Zwiększ",
       "more_count": "+{count} więcej",
@@ -3161,6 +3184,7 @@
       },
       "types": {
         "blog_post": "Wpis",
+        "comment": "Komentarz",
         "forum_comment": "Komentarz",
         "forum_topic": "Temat",
         "unknown": "Treść"

@@ -189,7 +189,7 @@ The result is headed by the related record's own `search.titleField`, here the t
 - It points at exactly one record of another content type: to-one, not nullable and not `self: true`.
 - It is in `publicApi.fields`, like every other indexed field.
 - The target has a `search` block of its own, because that is where the title comes from. Without one there is no heading to borrow, and the record stays out of the index.
-- The content type is not [localized](#localized-content-types), because one related title would have to serve every language.
+- The content type is not [localized](#localized-content-types), because one related title would have to serve every language. The *target* may be localized: its title and link then come from its default-language translation.
 
 A broken rule throws when the definition loads, for example `search.titleField names the nullable relation "topic". A search result needs a heading, so the relation must not be nullable.`
 
@@ -200,6 +200,17 @@ The two records then stay in step:
 - When the related record's search title changes, or it is published, unpublished, hidden or unhidden, every record that borrows its title is re-indexed. Deleting it removes their documents.
 
 Records saved before you turned this on need a **Reindex** of the collection, or **Rebuild index** in **Debug Panel → Search** (`/admin/core/debug/search`).
+
+### Comments get this for free
+
+A content type with [`thread`](/docs/content-engine/threads) and no `search` block is indexed this way automatically, so comments land in `/search`, `/discover` and profile timelines as "Maciej commented on *Hello world*" without a line of config. The engine fills in:
+
+- `titleField`: the thread's `root` relation.
+- `contentFields`: every text and rich text field in `publicApi.fields`, except the slug.
+- `authorField`: the `publicWrite` owner, when it's a `field.user()`.
+- `pathTemplate`: the comment's `delivery.path`, with `:slug` as `{slug}`.
+
+It only kicks in when all of that exists and the root type is searchable itself - otherwise the comments simply stay out of search, as before. Write your own `search` block to change any of it, or `search: false` to keep comments out.
 
 ## Say where a record lives
 

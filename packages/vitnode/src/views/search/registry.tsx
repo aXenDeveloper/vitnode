@@ -7,6 +7,7 @@ import {
 
 export type SearchTypeLabelKey =
   | "types.blog_post"
+  | "types.comment"
   | "types.forum_comment"
   | "types.forum_topic"
   | "types.unknown";
@@ -41,7 +42,16 @@ const fallback: SearchTypeRenderer = {
   labelKey: "types.unknown",
 };
 
-export const getSearchTypeRenderer = (itemType: string): SearchTypeRenderer =>
-  renderers[itemType] ?? fallback;
+const threadReply: SearchTypeRenderer = {
+  activityKey: "activity.commented",
+  icon: MessageSquareIcon,
+  labelKey: "types.comment",
+};
+
+export const getSearchTypeRenderer = (
+  itemType: string,
+  metadata?: Record<string, unknown>,
+): SearchTypeRenderer =>
+  renderers[itemType] ?? (metadata?.thread === true ? threadReply : fallback);
 
 export const searchTypeKeys = Object.keys(renderers);

@@ -40,6 +40,7 @@ describe("reports", () => {
   it.each([undefined, false] as const)("is off when %s", reports => {
     expect(define(reports).reports).toEqual({
       enabled: false,
+      selfReport: false,
       snapshotFields: [],
       titleField: null,
     });
@@ -48,6 +49,7 @@ describe("reports", () => {
   it("snapshots the public reader-facing fields, minus the title", () => {
     expect(define(true).reports).toEqual({
       enabled: true,
+      selfReport: false,
       snapshotFields: ["body", "summary"],
       titleField: "title",
     });
@@ -59,6 +61,7 @@ describe("reports", () => {
         .reports,
     ).toEqual({
       enabled: true,
+      selfReport: false,
       snapshotFields: ["internalNote", "views"],
       titleField: "slug",
     });

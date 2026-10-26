@@ -1,0 +1,96 @@
+---
+title: Share Popover
+description: A share menu with the link, a copy button, one-click sharing to social networks and the device's own share sheet.
+icon: Share2
+---
+
+## Preview
+
+<Preview name="share-popover" />
+
+## Usage
+
+```ts
+import { SharePopover } from '@vitnode/core/components/share-popover'
+```
+
+```tsx
+<SharePopover title="Hello world" url="/blog/article/hello-world">
+  <Button variant="outline">
+    <Share2Icon aria-hidden="true" />
+    Share
+  </Button>
+</SharePopover>
+```
+
+The child is the trigger. Any button that forwards its ref and props works.
+
+## What's inside
+
+- **The link** in a read-only field that selects itself on focus, with a [Copy Button](/docs/ui/copy-button) at the end.
+- **One-click sharing** to X, Bluesky, Facebook, Reddit and LinkedIn, plus email. Each opens in a new tab with the link (and `title`, where the network takes text) filled in, and the popover closes behind it.
+- **More options…** opens the device's own share sheet - Messages, WhatsApp, AirDrop and friends. It only shows up in browsers that have one (most phones, Safari, Edge), so nobody gets a button that does nothing.
+
+## Relative links
+
+`url` can be root-relative, or just a hash. It's resolved against the current page when the popover opens, so it renders fine on the server, where there's no `window` to ask.
+
+```tsx
+<SharePopover
+  description={`Comment by ${authorName}`}
+  title={articleTitle}
+  url={`/blog/article/${slug}#comment-${commentSlug}`}
+>
+  <Button size="xs" variant="ghost">
+    <Share2Icon aria-hidden="true" />
+    Share
+  </Button>
+</SharePopover>
+```
+
+Blog comments use exactly this, so a shared comment lands on its spot in the thread.
+
+## Accessibility
+
+- Each network button is labelled "Share on X" (and so on), with a tooltip that glides between them.
+- Network links open in a new tab with `rel="noopener noreferrer"`.
+- Canceling the native share sheet stays quiet. A real failure shows an error toast.
+
+## Props
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    url: {
+      description: 'The link to share: absolute, or relative to the current page.',
+      type: 'string',
+      required: true,
+    },
+    children: {
+      description: 'The trigger element.',
+      type: 'React.ReactElement',
+      required: true,
+    },
+    title: {
+      description: 'Text the networks prefill next to the link, and the email subject.',
+      type: 'string',
+    },
+    heading: {
+      description: 'The popover heading.',
+      type: 'React.ReactNode',
+      default: '"Share"',
+    },
+    description: {
+      description: 'A line under the heading, such as what is being shared.',
+      type: 'React.ReactNode',
+    },
+    side: { description: 'Popover side.', type: 'top | bottom | left | right', default: 'bottom' },
+    align: { description: 'Popover alignment.', type: 'start | center | end', default: 'start' },
+  }}
+/>
+
+## Related
+
+- [Copy Button](/docs/ui/copy-button)
+- [Popover](/docs/ui/popover)

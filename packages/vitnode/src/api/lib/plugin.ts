@@ -277,9 +277,11 @@ export function buildApiPlugin<
   validateSearchIndexers(indexers.map(indexer => ({ ...indexer, pluginId })));
 
   // A custom rule may reuse a type the plugin also lists itself.
+  const listedNotificationTypes = new Set(pluginNotificationTypes);
   for (const config of contentNotifications ?? []) {
     for (const type of config.notificationTypes) {
-      if (!pluginNotificationTypes.includes(type)) {
+      if (!listedNotificationTypes.has(type)) {
+        listedNotificationTypes.add(type);
         pluginNotificationTypes.push(type);
       }
     }

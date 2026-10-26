@@ -47,7 +47,9 @@ import { publicOrderableColumns } from "../registry";
 import { buildContentDeliveryRoutes } from "./delivery-routes";
 import { resolveContentPublicRowFiles } from "./files";
 import {
+  canViewHiddenContentRecord,
   contentListHiddenAccess,
+  contentThreadHiddenAccess,
   findViewableHiddenBySlug,
 } from "./hidden-access";
 import { findContentLanguage } from "./language-resolver";
@@ -64,6 +66,10 @@ import {
   contentPublicSelection,
   createContentPublicProjector,
 } from "./public-service";
+import {
+  contentPublicDeleteRoute,
+  contentPublicVisibilityRoutes,
+} from "./public-visibility-routes";
 import { contentPublicWriteRoutes } from "./public-write-routes";
 import {
   contentLocaleHeaders,
@@ -519,7 +525,12 @@ export const buildContentPublicRoutes = <
   });
 
   const threadNode = z.object({
+    deleted: z
+      .object({ byAuthor: z.boolean(), createdAt: z.string() })
+      .nullable(),
     depth: z.number(),
+    hidden: z.boolean(),
+    hiddenReason: z.string().nullable(),
     id: schemas.params.shape.id,
     parentId: schemas.params.shape.id.nullable(),
     record: schemas.publicSelectObject.nullable(),
@@ -576,22 +587,48 @@ export const buildContentPublicRoutes = <
       const rootId = target ? parseContentId(target.idStrategy, root) : null;
       // An existence check: `select: []` reads the same published, visible row
       // without hydrating a single field of it.
-      const rootRecord =
-        rootId === null
-          ? null
-          : await rootModel?.publicService?.(c).findById(rootId, {
-              select: [],
-            });
-      if (!rootRecord || rootId === null) {
+      const findReadableRoot = async () => {
+        const rootService = rootModel?.publicService?.(c);
+        if (rootId === null || !target || !rootService) return null;
+
+        if (await rootService.findById(rootId, { select: [] })) {
+          return { hidden: false };
+        }
+
+        const hidden = await rootService.findById(rootId, {
+          hidden: true,
+          select: [],
+        });
+
+        return hidden &&
+          (await canViewHiddenContentRecord(c, {
+            contentTypeId: target.id,
+            itemId: rootId,
+          }))
+          ? { hidden: true }
+          : null;
+      };
+      const readable = await findReadableRoot();
+      if (!readable || rootId === null) {
         throw new HTTPException(404, { message: "Thread not found." });
       }
 
       const read = service(c).findManyByIds;
+      const hiddenAccess = await contentThreadHiddenAccess(c, {
+        model,
+        pluginId,
+      });
       const page = await readContentThread(c, model, {
         after,
         first,
-        project: async ids => {
-          const rows = read ? await read(ids as never) : [];
+        hiddenAccess,
+        project: async (ids, { hiddenIds }) => {
+          const rows = read
+            ? await read(ids as never, {
+                hidden: hiddenIds.length > 0,
+                hiddenParents: readable.hidden,
+              })
+            : [];
 
           return new Map(
             rows.map(row => [
@@ -603,12 +640,29 @@ export const buildContentPublicRoutes = <
         root: rootId,
       });
 
+      const body = {
+        ...page,
+        items: page.items.map(({ deleted, ...item }) => ({
+          ...item,
+          deleted: deleted
+            ? {
+                byAuthor: deleted.byAuthor,
+                createdAt: deleted.createdAt.toISOString(),
+              }
+            : null,
+        })),
+      };
+
+      if (hiddenAccess || readable.hidden) {
+        return c.json(body, 200, { "Cache-Control": "private, no-store" });
+      }
+
       setPageCacheTags(c, [
         ...contentListPageCacheTags(definition),
         ...(target ? contentListPageCacheTags(target) : []),
       ]);
 
-      return c.json(page, 200);
+      return c.json(body, 200);
     },
   });
 
@@ -702,8 +756,17 @@ export const buildContentPublicRoutes = <
       ? buildContentDeliveryRoutes(model, { pluginId })
       : []),
     ...(definition.thread.enabled ? [thread] : []),
-    ...(definition.publicWrite.update.enabled || definition.reports.enabled
+    ...(definition.publicWrite.enabled ||
+    definition.reports.enabled ||
+    definition.visibility.enabled
       ? [contentPermissionsRoute(model, { pluginId })]
+      : []),
+    ...(definition.visibility.enabled &&
+    (definition.publicWrite.enabled || definition.reports.enabled)
+      ? contentPublicVisibilityRoutes(model, { pluginId })
+      : []),
+    ...(definition.publicWrite.enabled
+      ? [contentPublicDeleteRoute(model, { pluginId })]
       : []),
     detail,
     ...contentPublicWriteRoutes(model, { pluginId }),

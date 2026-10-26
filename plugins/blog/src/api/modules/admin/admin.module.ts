@@ -1,6 +1,7 @@
 import { buildContentAdminModule, buildModule } from "@/api/builders";
 import { blogLegacyEventListeners } from "@/api/lib/events";
 import { categoryContent } from "@/database/categories";
+import { commentContent } from "@/database/comments";
 import { postContent } from "@/database/posts";
 
 import { aiAdminModule } from "./ai/ai.admin.module";
@@ -11,7 +12,7 @@ export const adminModule = buildModule({
   modules: [
     aiAdminModule,
     buildContentAdminModule({
-      contentTypes: [categoryContent, postContent],
+      contentTypes: [categoryContent, postContent, commentContent],
     }),
   ],
   // Event listeners are only collected from top-level modules, so the

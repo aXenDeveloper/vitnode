@@ -9,10 +9,12 @@ import { and, asc, count, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 
 import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
+import type { ContentPublicHiddenAccess } from "./hidden-list";
 import type { ContentModel } from "./model";
 import type { ContentDatabase } from "./service";
 
 import { ContentInputError } from "../errors";
+import { isContentHidden } from "../visibility";
 import { publicationColumns, publishedCondition } from "./publication";
 import { isContentBaseRowPublic } from "./visibility";
 
@@ -148,8 +150,22 @@ export const assertContentThreadPlacement = async (
 };
 
 export interface ContentThreadNode<TRecord> {
+  /**
+   * Set for a reply that was deleted, or hidden from this reader, while it
+   * still had answers: it stays in the thread as an anonymous placeholder - no
+   * text, no author - dated when it was written. `byAuthor` tells whether its
+   * own author deleted or hid it, rather than a moderator.
+   */
+  deleted: null | { byAuthor: boolean; createdAt: Date };
   /** How deep the reply sits: 1 for a direct answer to the root. */
   depth: number;
+  /**
+   * `true` for a hidden reply shown only because the reader may see it - a
+   * moderator, an editor or its author. Never set without `hiddenAccess`.
+   */
+  hidden: boolean;
+  /** Why it was hidden, when the moderator gave a reason. Only with `hidden`. */
+  hiddenReason: null | string;
   id: ContentId;
   parentId: ContentId | null;
   /** The public record, or `null` for a removed reply kept so its answers stay in place. */
@@ -232,13 +248,25 @@ export const readContentThread = async <
   {
     first,
     after,
+    hiddenAccess,
     project,
     root,
   }: {
     after?: string;
     first: number;
-    /** Public rows for these ids, in any order. */
-    project: (ids: ContentId[]) => Promise<Map<string, TRecord>>;
+    /**
+     * Hidden replies this reader may see, from `contentThreadHiddenAccess`.
+     * They are kept with `hidden: true`; omit it for the public thread.
+     */
+    hiddenAccess?: ContentPublicHiddenAccess;
+    /**
+     * Rows for these ids, in any order: public ones, plus the hidden ones in
+     * `hiddenIds` the reader may see.
+     */
+    project: (
+      ids: ContentId[],
+      options: { hiddenIds: ContentId[] },
+    ) => Promise<Map<string, TRecord>>;
     root: ContentId;
   },
 ): Promise<ContentThreadPage<TRecord>> => {
@@ -252,6 +280,10 @@ export const readContentThread = async <
   const published = publicationColumns(definition, columns);
   const publicCondition = publishedCondition(published);
 
+  const ownerField =
+    definition.search.authorField ?? definition.publicWrite.ownerField;
+  const ownerColumn = ownerField ? columns[ownerField] : undefined;
+
   const nodeSelection = {
     createdAt: columns.createdAt,
     createdAtText: sql<string>`${columns.createdAt}::text`,
@@ -259,8 +291,25 @@ export const readContentThread = async <
     parent: parentColumn,
     publishedAt: columns.publishedAt,
     status: columns.status,
-    ...(columns.hiddenAt ? { hiddenAt: columns.hiddenAt } : {}),
+    ...(columns.hiddenAt
+      ? { hiddenAt: columns.hiddenAt, hiddenBy: columns.hiddenBy }
+      : {}),
+    ...(columns.hiddenReason ? { hiddenReason: columns.hiddenReason } : {}),
+    ...(columns.deletedAt
+      ? { deletedAt: columns.deletedAt, deletedBy: columns.deletedBy }
+      : {}),
+    ...(ownerColumn ? { owner: ownerColumn } : {}),
   };
+
+  const isViewableHidden = (row: NodeRow): boolean =>
+    hiddenAccess !== undefined &&
+    isContentHidden(row) &&
+    isContentBaseRowPublic({ ...row, hiddenAt: null }) &&
+    (hiddenAccess.all ||
+      (hiddenAccess.authorId !== null && row.owner === hiddenAccess.authorId));
+
+  const isReadable = (row: NodeRow): boolean =>
+    isContentBaseRowPublic(row) || isViewableHidden(row);
 
   const topLevel = and(eq(rootColumn, root), isNull(parentColumn));
   const after_ = (position: null | ThreadPosition) => {
@@ -294,9 +343,7 @@ export const readContentThread = async <
         .limit(first + 1)) as NodeRow[];
       if (batch.length === 0) break;
 
-      const hidden = batch
-        .filter(row => !isContentBaseRowPublic(row))
-        .map(row => row.id);
+      const hidden = batch.filter(row => !isReadable(row)).map(row => row.id);
       const answered = new Set(
         hidden.length === 0
           ? []
@@ -308,9 +355,7 @@ export const readContentThread = async <
             ).map(row => String(row.parent)),
       );
       collected.push(
-        ...batch.filter(
-          row => isContentBaseRowPublic(row) || answered.has(String(row.id)),
-        ),
+        ...batch.filter(row => isReadable(row) || answered.has(String(row.id))),
       );
 
       const last = batch.at(-1);
@@ -372,7 +417,7 @@ export const readContentThread = async <
     for (const child of children.get(String(row.id)) ?? []) {
       if (keep(child)) any = true;
     }
-    if (any || isContentBaseRowPublic(row)) {
+    if (any || isReadable(row)) {
       kept.add(String(row.id));
 
       return true;
@@ -382,21 +427,52 @@ export const readContentThread = async <
   };
   for (const row of page) keep(row);
 
+  const readable = [...kept]
+    .map(key => nodes.get(key))
+    .filter((row): row is NodeRow => row !== undefined)
+    .filter(row => isReadable(row));
   const records = await project(
-    [...kept]
-      .map(key => nodes.get(key))
-      .filter((row): row is NodeRow => row !== undefined)
-      .filter(row => isContentBaseRowPublic(row))
-      .map(row => row.id),
+    readable.map(row => row.id),
+    {
+      hiddenIds: readable
+        .filter(row => !isContentBaseRowPublic(row))
+        .map(row => row.id),
+    },
   );
+
+  const placeholderOf = (
+    row: NodeRow,
+    owner: null | number,
+  ): ContentThreadNode<TRecord>["deleted"] => {
+    const removedBy =
+      row.deletedAt instanceof Date
+        ? row.deletedBy
+        : row.hiddenAt instanceof Date
+          ? row.hiddenBy
+          : undefined;
+    if (removedBy === undefined) return null;
+
+    return {
+      byAuthor: owner !== null && removedBy === owner,
+      createdAt: row.createdAt,
+    };
+  };
 
   const items: ContentThreadNode<TRecord>[] = [];
   const walk = (row: NodeRow, depth: number): void => {
     const key = String(row.id);
     if (!kept.has(key)) return;
     const record = records.get(key) ?? null;
+    const owner = typeof row.owner === "number" ? row.owner : null;
+    const hidden = record !== null && isViewableHidden(row);
     items.push({
+      deleted: record === null ? placeholderOf(row, owner) : null,
       depth,
+      hidden,
+      hiddenReason:
+        hidden && typeof row.hiddenReason === "string"
+          ? row.hiddenReason
+          : null,
       id: row.id,
       parentId: row.parent,
       record,

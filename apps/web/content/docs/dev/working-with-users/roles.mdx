@@ -46,7 +46,20 @@ A fresh install gets four protected roles:
 - `default`: the role new members get.
 - `guest`: the role used for visitors who are not signed in.
 
-Roles also carry allowances: file uploads on the **Content** tab, and personal information plus avatar and cover limits on the **Profile** tab. [Profile fields](/docs/dev/working-with-users/profile-fields#who-may-edit) and [Avatars and covers](/docs/dev/working-with-users/avatars#role-settings) explain how several roles combine.
+Roles also carry allowances: file uploads and editing, deleting and hiding own content on the **Content** tab, and personal information plus avatar and cover limits on the **Profile** tab. [Profile fields](/docs/dev/working-with-users/profile-fields#who-may-edit) and [Avatars and covers](/docs/dev/working-with-users/avatars#role-settings) explain how several roles combine.
+
+### Editing own content
+
+**Allow editing own content** (on by default) lets members of the role edit the comments, topics and other Content Engine records they wrote from the site. Under it, **Time to edit** sets how many minutes after posting the edit stays open, or tick **Unlimited** to keep it open forever. Once the time runs out, **Edit** disappears from the member's comments and the API answers `edit_window_closed`.
+
+Two more switches, both off by default:
+
+- **Allow deleting own content** puts **Delete** on the member's own comments. A deleted record cannot be restored. A comment that has replies stays in the thread as **[deleted]** - "Comment deleted by user" - so its replies keep their place.
+- **Allow hiding own content** puts **Hide** on them. A hidden record disappears for everyone else; the member still sees it and can **Unhide** it - unless a moderator hid it, then it stays hidden.
+
+With several roles the most generous one wins: each action is allowed when any of the member's roles allows it, and the longest time to edit applies, with **Unlimited** beating any number. A forum board's own [edit window](/docs/content-engine/container-policies-api) still applies on top, so both have to allow the edit.
+
+Moderators don't need any of this. Every content type members write gets moderator permissions in **AdminCP → Staff → Moderators**, such as **Edit any comment**, **Delete any comment** and **Hide and unhide comments**, which work on everyone's content at any age.
 
 ## Primary and secondary roles
 

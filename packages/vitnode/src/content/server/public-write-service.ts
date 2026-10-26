@@ -53,6 +53,7 @@ import {
 } from "../errors";
 import { contentIdKey, requireContentId } from "../ids";
 import { isContentReferenceCollection } from "../paths";
+import { canViewHiddenContentRecord } from "./hidden-access";
 import {
   authorizeContentPublicWrite,
   contentPublicWriteRefusal,
@@ -281,6 +282,28 @@ export const createContentPublicWriteService = <
           .filter(row => isContentBaseRowPublic(row))
           .map(row => contentIdKey(row.id as ContentId)),
       );
+      const rootTarget =
+        field === definition.thread.rootField
+          ? definition.fields[field]
+          : undefined;
+      if (rootTarget?.kind === "relation" && !rootTarget.self) {
+        const contentTypeId = rootTarget.target().id;
+        const hiddenIds = rows
+          .filter(
+            row =>
+              !reachable.has(contentIdKey(row.id as ContentId)) &&
+              isContentBaseRowPublic({ ...row, hiddenAt: null }),
+          )
+          .map(row => row.id as ContentId);
+        const viewable = await Promise.all(
+          hiddenIds.map(itemId =>
+            canViewHiddenContentRecord(c, { contentTypeId, itemId }),
+          ),
+        );
+        hiddenIds.forEach((id, index) => {
+          if (viewable[index]) reachable.add(contentIdKey(id));
+        });
+      }
       if (ids.every(id => reachable.has(contentIdKey(id)))) continue;
 
       throw new ContentPublicWriteInputError({

@@ -50,6 +50,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/forum/topics/:id/edit' },
   { path: '/blog/article/:slug', maxAge: 300, staleWhileRevalidate: 60 },
   { path: '/blog/category/:slug', maxAge: 300, staleWhileRevalidate: 60 },
+  { path: '/blog/comments/:slug' },
   { path: '/forum/comments/:slug' },
   { path: '/forum/topics/:slug', maxAge: 60, staleWhileRevalidate: 30 },
   { path: '/login/sso/:providerId' },

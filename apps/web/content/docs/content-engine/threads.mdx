@@ -762,10 +762,23 @@ topic: field.relation({
 
 A moderator then sets **New posts** to **Wait for approval** for comments in a forum's [publishing rules](/docs/content-engine/container-policies). [Approvals](/docs/content-engine/approvals#drafts-and-approval) explains the difference between a draft and a pending submission.
 
+## Deleting a comment that has replies
+
+`POST /{publicApi.path}/{id}/delete` removes a comment for good when nothing answers it. When it has replies, the row stays as a placeholder instead, marked with `deletedAt` and `deletedBy`, so its answers keep their place in the tree. A placeholder is never public: lists, the detail route and search skip it, and the thread returns it with `record: null` and
+
+```json
+"deleted": { "byAuthor": true, "createdAt": "2026-10-25T18:02:11.000Z" }
+```
+
+without its text or its author, the way Reddit shows **[deleted]**. `byAuthor` is `false` when a moderator deleted it. Deleting the last reply under a placeholder removes the placeholder too.
+
+A hidden reply with answers looks exactly the same to readers who can't see it: same `deleted` object, with `byAuthor` telling whether its author hid it or a moderator did. Moderators and the author still get the real comment, flagged `hidden: true`.
+
 ## What the server checks
 
 - **Signed out.** `POST /comments` answers `401`; the section never offers the composer to guests.
-- **Placement.** The article must be public, the parent must belong to the same article, and nothing may nest deeper than `maxDepth`. A broken rule answers `400` with an issue on `parent`, which the composer shows as a toast.
-- **Hidden articles.** A comment is only as public as its article. Once the article is unpublished or hidden, its comments drop out of the thread and their own routes answer `404`.
+- **Placement.** The article must be public (or hidden, for a reader allowed to see it), the parent must belong to the same article, and nothing may nest deeper than `maxDepth`. A broken rule answers `400` with an issue on `parent`, which the composer shows as a toast.
+- **Hidden articles.** A comment is only as public as its article. Once the article is unpublished, its comments drop out of the thread and their own routes answer `404`. A *hidden* article keeps its conversation going for the people who can still see it - its authors, editors and moderators: they read the thread and comment as usual, and that response is never cached for anyone else. Everybody else gets `404`.
+- **Search and Discover.** Comments are indexed as "commented on <article>" by default, as long as the article type is searchable and the comment has a `delivery.path`. See [Comments get this for free](/docs/content-engine/search#comments-get-this-for-free).
 
 Next, [Comment editing](/docs/content-engine/threads-editing) lets authors fix their comments.

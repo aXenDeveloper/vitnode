@@ -229,6 +229,28 @@ The button is only a hint. The report route checks again:
 ## Report from a list or a comment
 
 - **Every row of a list.** Call the permissions hook once with every id on the page, and point each button at its row's title with `describedBy`, so a screen reader hears which record each **Report** belongs to. The newsroom plugin's letters list does this in `plugins/newsroom/src/pages/letters-page.tsx`.
-- **Comments.** Add `reports: true` to the [comment type](/docs/content-engine/threads), read `canReport` from its own permissions hook, and pass `contentTarget(manifest.id, commentContentType, comment.id)`. `snapshotFields: ["body"]` gives moderators the comment's text, since a comment has no title.
+- **Comments.** Add `reports` to the [comment type](/docs/content-engine/threads), read `canReport` from its own permissions hook, and pass `contentTarget(manifest.id, commentContentType, comment.id)`. A comment has no title, so point `titleField` at its rich text body: the report is titled with the comment's first 120 characters, and `snapshotFields: ["body"]` keeps the whole text.
+
+  ```ts
+  reports: { titleField: "body", snapshotFields: ["body"], selfReport: true },
+  ```
+
+  `selfReport: true` lets authors report their own comments too, for when they want a moderator to look at something they wrote. Without it the Report button skips the author's own records, which is the default for every content type.
+
+  Moderators can also hide or delete a comment without a report. The permissions route answers `canHide` and `canDelete`; `POST /{publicApi.path}/{id}/hide` and `/{id}/unhide` run the same hide as a ModCP report action, and `POST /{id}/delete` the same delete as the AdminCP. They need the moderator `can_hide` or `can_delete` permission on the content type (or the AdminCP one) - or, for the comment's author, a role with **Allow hiding own content** or **Allow deleting own content**. The thread route then also returns hidden comments, flagged `hidden: true`, to readers who may see them: moderators, editors and the comment's author.
+
+  The hide route takes an optional reason, up to 500 characters. Readers who can see the hidden comment get it back as `hiddenReason`, and unhiding clears it. Nobody else ever sees it, so "spam, links to a shady shop" is fine to write.
+
+  ```ts
+  await fetcher({
+    plugin: "@vitnode/blog",
+    method: "post",
+    module: "content/comments",
+    path: "/{id}/hide",
+    args: { params: { id: 42 }, body: { reason: "Off-topic" } },
+  });
+  ```
+
+  ModCP links each report to the record's public URL, from `delivery.path` or `search.pathTemplate`. A comment has no page of its own, so give it a permalink that redirects to its place in the thread. The blog does this with `delivery: { path: "/blog/comments/:slug" }` and a page that sends the reader to the article at `#comment-{slug}`.
 
 Next, let readers answer an article with [Comments](/docs/content-engine/threads).

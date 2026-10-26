@@ -97,7 +97,7 @@ function SelectContent({
         <SelectScrollUpButton />
         <SelectPrimitive.Popup
           className={cn(
-            "bg-popover/80 text-popover-foreground ring-foreground/10 ease-fluid relative z-50 max-h-(--available-height) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto overscroll-contain rounded-lg p-1 shadow-lg ring-1 backdrop-blur-sm transition-[opacity,scale] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
+            "bg-popover/90 text-popover-foreground ring-foreground/10 ease-fluid relative z-50 max-h-(--available-height) min-w-36 origin-(--transform-origin) overflow-x-hidden overflow-y-auto overscroll-contain rounded-lg p-1 shadow-lg ring-1 backdrop-blur-sm transition-[opacity,scale] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
             className,
           )}
           data-slot="select-content"

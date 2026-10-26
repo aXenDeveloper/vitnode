@@ -17,19 +17,24 @@ import { parseContentId } from "../ids";
 import { contentViewableHiddenCondition } from "./hidden-list";
 import { toAuthorIds } from "./search-document";
 
-const canEditContentType = async (
+export const canEditContentType = async (
   c: Context,
   {
     definition,
+    permission = CONTENT_PERMISSIONS.edit,
     pluginId,
-  }: { definition: AnyContentTypeDefinition; pluginId: string },
+  }: {
+    definition: AnyContentTypeDefinition;
+    permission?: string;
+    pluginId: string;
+  },
 ): Promise<boolean> => {
   const user = c.get("user");
   if (!user) return false;
 
   return await checkStaffPermissionOfUser(c, user, {
     module: definition.permissionModule,
-    permission: CONTENT_PERMISSIONS.edit,
+    permission,
     plugin: pluginId,
     type: "admin",
   });
@@ -70,18 +75,24 @@ export const contentAuthorIds = async <
   return toAuthorIds(row?.value);
 };
 
-const canModeratorViewHidden = async <
+const hasModeratorPermission = async <
   TDefinition extends AnyContentTypeDefinition,
 >(
   c: Context,
   {
     itemId,
     model,
+    permission,
     pluginId,
-  }: { itemId: ContentId; model: ContentModel<TDefinition>; pluginId: string },
+  }: {
+    itemId: ContentId;
+    model: ContentModel<TDefinition>;
+    permission: string;
+    pluginId: string;
+  },
 ): Promise<boolean> => {
   const user = c.get("user");
-  if (!user || !model.definition.reports.enabled) return false;
+  if (!user) return false;
 
   let resource: undefined | { family: string; id: string };
   if (model.moderationScope) {
@@ -107,11 +118,61 @@ const canModeratorViewHidden = async <
 
   return await checkStaffPermissionOfUser(c, user, {
     module: model.definition.permissionModule,
-    permission: MODERATION_PERMISSIONS.viewHidden,
+    permission,
     plugin: pluginId,
     resource,
     type: "moderator",
   });
+};
+
+const canModeratorViewHidden = async <
+  TDefinition extends AnyContentTypeDefinition,
+>(
+  c: Context,
+  args: {
+    itemId: ContentId;
+    model: ContentModel<TDefinition>;
+    pluginId: string;
+  },
+): Promise<boolean> =>
+  args.model.definition.reports.enabled &&
+  (await hasModeratorPermission(c, {
+    ...args,
+    permission: MODERATION_PERMISSIONS.viewHidden,
+  }));
+
+/**
+ * Whether the visitor may hide and unhide any record of this type from the
+ * site: a moderator with `can_hide` on the content type (within its scope), or
+ * staff with the AdminCP `can_hide` permission. Needs `visibility`.
+ * Server-only.
+ */
+export const canModerateContentVisibility = async <
+  TDefinition extends AnyContentTypeDefinition,
+>(
+  c: Context,
+  {
+    itemId,
+    model,
+    pluginId,
+  }: { itemId: ContentId; model: ContentModel<TDefinition>; pluginId: string },
+): Promise<boolean> => {
+  const { definition } = model;
+  if (!definition.visibility.enabled) return false;
+
+  return (
+    (await canEditContentType(c, {
+      definition,
+      permission: CONTENT_PERMISSIONS.hide,
+      pluginId,
+    })) ||
+    (await hasModeratorPermission(c, {
+      itemId,
+      model,
+      permission: MODERATION_PERMISSIONS.hide,
+      pluginId,
+    }))
+  );
 };
 
 const canModeratorViewAllHidden = async <
@@ -159,6 +220,22 @@ const canViewHiddenContent = async <
   }
 
   return await canModeratorViewHidden(c, { itemId, model, pluginId });
+};
+
+export const canViewHiddenContentRecord = async (
+  c: Context,
+  { contentTypeId, itemId }: { contentTypeId: string; itemId: ContentId },
+): Promise<boolean> => {
+  const entry = (c.get("core")?.contentModels ?? []).find(
+    candidate => candidate.model.definition.id === contentTypeId,
+  );
+  if (!entry?.model.definition.visibility.enabled) return false;
+
+  return await canViewHiddenContent(c, {
+    itemId,
+    model: entry.model,
+    pluginId: entry.pluginId,
+  });
 };
 
 export const findViewableHiddenBySlug = async <
@@ -258,4 +335,29 @@ export const contentSearchHiddenAccess = async (
   );
 
   return { authorId: user.id, itemTypes: editable.flat() };
+};
+
+/**
+ * Which hidden records of a thread the visitor may read: every one for
+ * editors and unscoped moderators (`all`), otherwise the ones they own. A
+ * thread read with it is personal - never cache it. `undefined` for guests and
+ * types without `visibility`. Server-only.
+ */
+export const contentThreadHiddenAccess = async <
+  TDefinition extends AnyContentTypeDefinition,
+>(
+  c: Context,
+  { model, pluginId }: { model: ContentModel<TDefinition>; pluginId: string },
+): Promise<ContentPublicHiddenAccess | undefined> => {
+  const user = c.get("user");
+  if (!user || !model.definition.visibility.enabled) return undefined;
+
+  return {
+    all:
+      (await canEditContentType(c, {
+        definition: model.definition,
+        pluginId,
+      })) || (await canModeratorViewAllHidden(c, { model, pluginId })),
+    authorId: user.id,
+  };
 };

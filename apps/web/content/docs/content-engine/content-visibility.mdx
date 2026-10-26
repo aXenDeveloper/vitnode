@@ -57,7 +57,7 @@ CREATE INDEX "blog_posts_hidden_by_idx" ON "blog_posts" ("hiddenBy");
 ALTER TABLE "blog_posts" ADD CONSTRAINT "blog_posts_hiddenBy_core_users_id_fkey" FOREIGN KEY ("hiddenBy") REFERENCES "core_users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 ```
 
-Existing records stay visible. `hiddenAt` is when the record was hidden and `hiddenBy` is the staff member who hid it.
+Existing records stay visible. `hiddenAt` is when the record was hidden and `hiddenBy` is the staff member who hid it. A later migration adds a third nullable column, `hiddenReason` (up to 500 characters), for the optional note left when hiding from the site.
 
 </Step>
 
@@ -108,7 +108,7 @@ The edit page shows the same icon before the title, an **Unhide** action (in the
   alt="Blog article editor header with the Draft and Published switch, a Hidden badge, an Unhide button and the note Hidden from the public site, search and the sitemap"
 />
 
-Choose **Unhide** in the same menu, or on the edit page, to bring the article back. In the database, hiding sets `blog_posts."hiddenAt"` and `"hiddenBy"`, and unhiding clears both.
+Choose **Unhide** in the same menu, or on the edit page, to bring the article back. In the database, hiding sets `blog_posts."hiddenAt"` and `"hiddenBy"`, and unhiding clears both, along with `"hiddenReason"`.
 
 Cleaning up after a spam wave? Tick several articles and choose **Visibility → Hide** in the floating bar. The menu counts how many of them are still visible, such as **Hide 2 of 3**, and leaves the rest alone. **Unhide** works the same way. See [Bulk actions](/docs/content-engine/admincp#bulk-actions).
 

@@ -45,6 +45,7 @@ import type { PostOutline } from "./post-outline";
 
 import { BlogCategorySwatch, categoryBorder, categoryStyle } from "./blog-card";
 import { BLOG_HREF, blogCategoryHref } from "./blog-list";
+import { blogPostHref } from "./blog-post-href";
 import { blogCategoriesQueryOptions } from "./blog-queries";
 import {
   blogArticleCoverTransition,
@@ -52,6 +53,7 @@ import {
   BlogTransitionStyles,
   rememberBlogArticle,
 } from "./blog-transitions";
+import { PostComments } from "./post-comments";
 import { postOutline, postReadingMinutes } from "./post-outline";
 import { blogPostQueryOptions } from "./post-query";
 import { PostToc } from "./post-toc";
@@ -251,6 +253,11 @@ const BlogPostPage = ({
     >[0]);
   }, [router]);
 
+  const articleAuthorIds = React.useMemo(
+    () => item.authorId.map(author => author.id),
+    [item.authorId],
+  );
+
   useRecordView({
     itemId: metadata.hidden ? null : metadata.itemId,
     itemType: blogPostContentType.id,
@@ -393,6 +400,17 @@ const BlogPostPage = ({
               <PostToc headings={outline.headings} />
             </nav>
           </aside>
+        ) : null}
+
+        {metadata.itemId !== null ? (
+          <div className="min-w-0 lg:col-start-2 lg:row-start-2">
+            <PostComments
+              articleAuthorIds={articleAuthorIds}
+              articleHref={blogPostHref(item.friendlyUrl)}
+              articleId={item.id}
+              articleTitle={item.title}
+            />
+          </div>
         ) : null}
       </div>
     </article>

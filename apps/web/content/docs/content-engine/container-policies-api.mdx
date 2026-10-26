@@ -61,7 +61,11 @@ The record's container is always resolved on the server: from its `field.contain
 | Create with `"moderators"` | `can_edit` for the container, a root role                                                |
 | Skip `publish` / `edits` approval | `can_approve` for the container, a root role                                      |
 | Edit any record           | `can_edit` for the container, a root role. Independent of `authorEdit`                    |
-| Edit own record           | The owner, while `update.own` is on, the record is not hidden and `authorEdit` allows it  |
+| Edit own record           | The owner, while `update.own` is on, the record is not hidden, one of their roles has **Allow editing own content** with its **Time to edit** still open, and `authorEdit` allows it |
+| Delete any record         | `can_delete` for the container, a root role                                               |
+| Delete own record         | The owner, when one of their roles has **Allow deleting own content**                     |
+| Hide or unhide any record | `can_hide`, a root role                                                                   |
+| Hide own record           | The owner, when one of their roles has **Allow hiding own content**; they may unhide only what they hid themselves |
 
 Container scopes are explained in [Container-scoped permissions](/docs/dev/moderation/scoped-permissions#container-scoped-permissions).
 

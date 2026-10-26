@@ -163,7 +163,7 @@ export const SearchAdminContent = ({
         open={open}
       >
         <DialogContent
-          className="bg-popover/80 top-1/3 max-h-[calc(66.667vh-2rem)] translate-y-0 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl p-0 backdrop-blur-sm outline-none sm:max-h-[calc(66.667vh-5rem)]"
+          className="bg-popover/90 top-1/3 max-h-[calc(66.667vh-2rem)] translate-y-0 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl p-0 backdrop-blur-sm outline-none sm:max-h-[calc(66.667vh-5rem)]"
           showCloseButton={false}
         >
           <DialogHeader className="sr-only">

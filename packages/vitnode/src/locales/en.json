@@ -118,6 +118,7 @@
       },
       "types": {
         "blog_post": "Article",
+        "comment": "Comment",
         "forum_comment": "Comment",
         "forum_topic": "Topic",
         "unknown": "Content"
@@ -229,6 +230,15 @@
       "increase": "Increase",
       "copied": "Copied",
       "copy_failed": "Couldn't copy to the clipboard. Try selecting the text instead.",
+      "share": {
+        "title": "Share",
+        "link": "Link to share",
+        "copy": "Copy link",
+        "on": "Share on {network}",
+        "email": "Send by email",
+        "more": "More options…",
+        "failed": "Couldn't open your device's share menu."
+      },
       "more_count": "+{count} more",
       "previous": "Previous",
       "next": "Next",
@@ -3319,6 +3329,20 @@
           "in_unit": "in kB",
           "or": "or",
           "unlimited": "Unlimited"
+        },
+        "edit_own_content": {
+          "allow": "Allow editing own content",
+          "minutes": "Time to edit",
+          "minutes_desc": "How long after posting a member can still edit it.",
+          "in_unit": "in minutes",
+          "or": "or",
+          "unlimited": "Unlimited"
+        },
+        "delete_own_content": {
+          "allow": "Allow deleting own content"
+        },
+        "hide_own_content": {
+          "allow": "Allow hiding own content"
         },
         "personal_info": {
           "allow_edit": "Allow editing personal information",
