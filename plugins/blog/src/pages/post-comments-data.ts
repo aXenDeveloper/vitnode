@@ -1,29 +1,30 @@
-import { infiniteQueryOptions } from "@tanstack/react-query";
 import {
+  contentTarget,
   zodContentPublicPerson,
   zodRichTextDocument,
 } from "@vitnode/core/content";
-import { useContentPermissions } from "@vitnode/core/tanstack/content";
+import {
+  CONTENT_COMMENT_ANCHOR_PREFIX,
+  useContentComments,
+} from "@vitnode/core/tanstack/comments";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
+import {
+  BLOG_COMMENT_MAX_DEPTH,
+  blogCommentContentType,
+} from "@/content/comment";
 import { manifest } from "@/manifest.gen";
 
 import { blogQueryKeys } from "./post-query";
-
-const COMMENTS_PAGE_SIZE = 20;
 
 const zodRelationId = z
   .object({ id: z.number() })
   .transform(relation => relation.id);
 
-const zodPerson = zodContentPublicPerson.nullable().catch(null);
-
-export type CommentPerson = z.infer<typeof zodPerson>;
-
-const zodComment = z.object({
+const zodPostComment = z.object({
   article: zodRelationId,
-  author: zodPerson,
+  author: zodContentPublicPerson.nullable().catch(null),
   body: zodRichTextDocument,
   createdAt: z.string(),
   id: z.number(),
@@ -33,114 +34,102 @@ const zodComment = z.object({
   updatedAt: z.string(),
 });
 
-export type PostComment = z.infer<typeof zodComment>;
+/** One comment's public record, as the thread serves it. */
+export type PostComment = z.infer<typeof zodPostComment>;
 
-const zodThreadPage = z.object({
-  items: z.array(
-    z.object({
-      depth: z.number(),
-      deleted: z
-        .object({ byAuthor: z.boolean(), createdAt: z.string() })
-        .nullable(),
-      hidden: z.boolean(),
-      hiddenReason: z.string().nullable(),
-      id: z.number(),
-      parentId: z.number().nullable(),
-      record: zodComment.nullable(),
-      removed: z.boolean(),
-    }),
-  ),
-  pageInfo: z.object({
-    endCursor: z.string().nullable(),
-    hasNextPage: z.boolean(),
-    totalCount: z.number(),
-  }),
-  replyCount: z.number(),
-  truncated: z.boolean(),
-});
-
-type CommentsPage = z.infer<typeof zodThreadPage>;
-
-export type CommentNode = CommentsPage["items"][number];
-
-export interface CommentTreeNode extends CommentNode {
-  children: CommentTreeNode[];
-}
-
-const fetchCommentsPage = async ({
-  after,
-  articleId,
-}: {
-  after: null | string;
-  articleId: number;
-}): Promise<CommentsPage> => {
-  const res = await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "content/comments",
-    path: "/thread",
-    args: {
-      query: {
-        root: String(articleId),
-        first: COMMENTS_PAGE_SIZE,
-        ...(after ? { after } : {}),
-      },
-    },
-  });
-
-  if (res.status !== 200) {
-    throw new Error(`Loading the comments answered ${res.status}.`);
-  }
-
-  return zodThreadPage.parse(await res.json());
-};
-
-export const postCommentsQueryOptions = (articleId: number) =>
-  infiniteQueryOptions({
-    getNextPageParam: (last: CommentsPage) =>
-      last.pageInfo.hasNextPage ? last.pageInfo.endCursor : null,
-    initialPageParam: null as null | string,
-    queryFn: async ({ pageParam }) =>
-      await fetchCommentsPage({ after: pageParam, articleId }),
+/**
+ * The comment thread under one article, wired to the blog's typed comment
+ * routes: replies, editing with revisions, deleting, hiding and reports.
+ */
+export const usePostComments = (articleId: number) =>
+  useContentComments({
     queryKey: blogQueryKeys.comments(articleId),
-  });
-
-export const buildCommentTree = (
-  items: readonly CommentNode[],
-): CommentTreeNode[] => {
-  const nodes = new Map<number, CommentTreeNode>();
-  const roots: CommentTreeNode[] = [];
-
-  for (const item of items) {
-    const node: CommentTreeNode = { ...item, children: [] };
-    nodes.set(item.id, node);
-
-    const parent =
-      item.parentId === null ? undefined : nodes.get(item.parentId);
-    if (parent) parent.children.push(node);
-    else roots.push(node);
-  }
-
-  return roots;
-};
-
-export const useCommentPermissions = (ids: readonly number[]) =>
-  useContentPermissions({
-    ids,
-    queryKey: blogQueryKeys.commentPermissions,
-    fetch: async request => {
-      const res = await fetcher({
+    maxDepth: BLOG_COMMENT_MAX_DEPTH,
+    record: zodPostComment,
+    thread: async ({ after, first }) =>
+      await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "content/comments",
+        path: "/thread",
+        args: {
+          query: {
+            root: String(articleId),
+            first,
+            ...(after ? { after } : {}),
+          },
+        },
+      }),
+    permissions: async ids =>
+      await fetcher({
         plugin: manifest.id,
         method: "get",
         module: "content/comments",
         path: "/permissions",
-        args: { query: { ids: request.join(",") } },
-      });
-      if (res.status !== 200) throw new Error("Loading permissions failed.");
-
-      return await res.json();
+        args: { query: { ids: ids.join(",") } },
+      }),
+    create: async ({ body, parentId }) =>
+      await fetcher({
+        plugin: manifest.id,
+        method: "post",
+        module: "content/comments",
+        path: "/",
+        args: {
+          body: { values: { article: articleId, body, parent: parentId } },
+        },
+      }),
+    edit: {
+      load: async id =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "get",
+          module: "content/comments",
+          path: "/{id}/edit",
+          args: { params: { id } },
+        }),
+      // Comments keep revisions, so the editable values always carry a
+      // version; a stale one is answered with the conflict alert.
+      save: async (id, { body, expectedVersion = 0 }) =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "patch",
+          module: "content/comments",
+          path: "/{id}",
+          args: {
+            params: { id },
+            body: { values: { body }, expectedVersion },
+          },
+        }),
     },
+    delete: async id =>
+      await fetcher({
+        plugin: manifest.id,
+        method: "post",
+        module: "content/comments",
+        path: "/{id}/delete",
+        args: { params: { id } },
+      }),
+    visibility: {
+      hide: async (id, { reason }) =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "post",
+          module: "content/comments",
+          path: "/{id}/hide",
+          args: { params: { id }, body: reason ? { reason } : {} },
+        }),
+      unhide: async id =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "post",
+          module: "content/comments",
+          path: "/{id}/unhide",
+          args: { params: { id } },
+        }),
+    },
+    report: id => contentTarget(manifest.id, blogCommentContentType, id),
   });
 
+/** The element id a comment's permalink scrolls to: `comment-{slug}`. */
 export const commentAnchorId = (commentSlug: string): string =>
-  `comment-${commentSlug}`;
+  `${CONTENT_COMMENT_ANCHOR_PREFIX}${commentSlug}`;

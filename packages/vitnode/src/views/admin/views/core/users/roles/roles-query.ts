@@ -52,8 +52,8 @@ export const normalizeAdminRolesParams = (
 export interface AdminRoleRow {
   allowDeleteOwnContent: boolean;
   allowEditOwnContent: boolean;
-  allowHideOwnContent: boolean;
   allowEditPersonalInfo: boolean;
+  allowHideOwnContent: boolean;
   allowUploadAvatar: boolean;
   allowUploadCover: boolean;
   allowUploadFiles: boolean;

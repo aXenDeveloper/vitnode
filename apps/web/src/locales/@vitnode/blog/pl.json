@@ -217,120 +217,13 @@
       }
     },
     "comments": {
-      "title": "{count, plural, =0 {Komentarze} one {# komentarz} few {# komentarze} many {# komentarzy} other {# komentarza}}",
-      "empty": {
-        "title": "Brak komentarzy",
-        "desc": "Masz przemyślenia na temat tego artykułu? Rozpocznij rozmowę."
-      },
-      "truncated": "Ten wątek jest bardzo długi, więc część głębszych komentarzy nie jest tu widoczna.",
-      "anchor_missing": "Komentarz, do którego prowadzi ten link, nie jest już dostępny.",
-      "load_more": "Wczytaj więcej komentarzy",
-      "load_failed": {
-        "title": "Nie udało się wczytać komentarzy",
-        "desc": "Sprawdź połączenie i spróbuj ponownie.",
-        "retry": "Spróbuj ponownie"
-      },
-      "loading": "Wczytywanie komentarzy",
-      "compose": {
-        "title": "Zostaw komentarz",
-        "guest": "Aby komentować, potrzebujesz konta.",
-        "sign_in": "Zaloguj się, aby skomentować",
-        "open": "Napisz komentarz…"
-      },
-      "form": {
-        "body_label": "Twój komentarz",
-        "edit_label": "Edytuj komentarz",
-        "answer_label": "Odpowiedz: {name}",
-        "submit": "Opublikuj komentarz",
-        "save": "Zapisz",
-        "cancel": "Anuluj",
-        "body": {
-          "required": "Najpierw napisz komentarz."
-        }
-      },
-      "pending": {
-        "title": "Twój komentarz czeka na moderatora",
-        "desc": "Pojawi się pod artykułem po zatwierdzeniu."
-      },
-      "created": {
-        "title": "Komentarz opublikowany",
-        "desc": "Twój komentarz jest już widoczny pod artykułem."
-      },
-      "edited": {
-        "title": "Komentarz zapisany",
-        "desc": "Zmiany są już widoczne."
-      },
-      "conflict": {
-        "title": "Ten komentarz się zmienił",
-        "desc": "W trakcie edycji zapisano nowszą wersję. Odśwież stronę i spróbuj ponownie."
-      },
-      "errors": {
-        "title": "Nie udało się",
-        "unknown": "Coś poszło nie tak. Spróbuj ponownie za chwilę.",
-        "forbidden": "Nie możesz tego tutaj zrobić.",
-        "invalid": "Część przesłanych danych jest nieprawidłowa. Sprawdź formularz i spróbuj ponownie.",
-        "not_found": "To już nie istnieje albo nie masz do tego dostępu.",
-        "unauthenticated": "Twoja sesja wygasła. Zaloguj się i spróbuj ponownie.",
-        "issues": {
-          "edit_window_closed": "Czas na edycję minął. Poproś moderatora, jeśli coś wymaga poprawki.",
-          "not_writable": "Tego pola nie można zmienić.",
-          "unavailable": "To nie jest dostępne.",
-          "parent_unavailable": "Na ten komentarz nie można już odpowiedzieć. Odpowiedz wyżej w wątku.",
-          "article_unavailable": "Ten artykuł nie przyjmuje już komentarzy."
-        }
-      },
-      "permalink": "Link do tego komentarza",
-      "edited_label": "edytowano",
-      "reply": "Odpowiedz",
-      "edit": "Edytuj",
-      "report_type": "komentarz",
-      "someone": "ten komentarz",
-      "deleted_user": "Usunięty użytkownik",
-      "removed": "Ten komentarz został usunięty.",
-      "report": "Zgłoś",
-      "more_actions": "Więcej działań dla komentarza od {name}",
       "article_author": "Autor",
       "share": {
         "label": "Udostępnij",
         "description": "Komentarz od {name}"
       },
-      "visibility": {
-        "hidden_label": "Ukryty",
-        "hidden_reason": "Powód: {reason}",
-        "hide": {
-          "action": "Ukryj",
-          "title": "Komentarz ukryty",
-          "desc": "Widzą go teraz tylko moderatorzy i jego autor.",
-          "prompt_title": "Ukryć ten komentarz?",
-          "prompt_desc": "Przestaną go widzieć wszyscy poza moderatorami i jego autorem.",
-          "reason": "Powód",
-          "reason_desc": "Zobaczą go moderatorzy i autor."
-        },
-        "unhide": {
-          "action": "Pokaż",
-          "title": "Komentarz znów widoczny",
-          "desc": "Każdy może go przeczytać pod artykułem."
-        }
-      },
-      "show_answers": "{count, plural, one {Pokaż # odpowiedź} few {Pokaż # odpowiedzi} many {Pokaż # odpowiedzi} other {Pokaż # odpowiedzi}}",
-      "hide_answers": "{count, plural, one {Ukryj # odpowiedź} few {Ukryj # odpowiedzi} many {Ukryj # odpowiedzi} other {Ukryj # odpowiedzi}}",
       "replying_to": "W odpowiedzi: {name}",
-      "removed_comment": "usunięty komentarz",
-      "delete": {
-        "action": "Usuń",
-        "title": "Usunąć ten komentarz?",
-        "desc": "Zniknie dla wszystkich i nie da się go przywrócić. Odpowiedzi na niego zostaną w rozmowie.",
-        "confirm": "Usuń komentarz",
-        "done": {
-          "title": "Komentarz usunięty",
-          "desc": "Zniknął z rozmowy."
-        }
-      },
-      "placeholder": {
-        "name": "[usunięty]",
-        "by_author": "Komentarz usunięty przez użytkownika",
-        "by_moderator": "Komentarz usunięty przez moderatora"
-      }
+      "removed_comment": "usunięty komentarz"
     }
   },
   "@vitnode/blog:categories": "Kategorie",

@@ -1,17 +1,19 @@
-import {
-  AutoForm,
-  type AutoFormOnSubmit,
-  AutoFormSubmitButton,
-} from "@vitnode/core/components/form/auto-form";
-import { AutoFormTextarea } from "@vitnode/core/components/form/fields/textarea";
-import { Button } from "@vitnode/core/components/ui/button";
-import { CONTENT_HIDDEN_REASON_MAX_LENGTH } from "@vitnode/core/content";
 import { EyeOffIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-export interface PostCommentHideFormProps {
+import {
+  AutoForm,
+  type AutoFormOnSubmit,
+  AutoFormSubmitButton,
+} from "@/components/form/auto-form";
+import { AutoFormTextarea } from "@/components/form/fields/textarea";
+import { Button } from "@/components/ui/button";
+import { CONTENT_HIDDEN_REASON_MAX_LENGTH } from "@/content/const";
+
+export interface ContentCommentHideFormProps {
   onCancel: () => void;
+  /** Hides the comment; `reason` is `null` when left empty. */
   onHide: (reason: null | string) => Promise<void>;
 }
 
@@ -23,11 +25,12 @@ const formSchema = z.object({
     .default(""),
 });
 
-const PostCommentHideForm = ({
+/** The optional reason asked before hiding a comment. Lazy-loaded. */
+const ContentCommentHideForm = ({
   onCancel,
   onHide,
-}: PostCommentHideFormProps) => {
-  const t = useTranslations("@vitnode/blog.comments");
+}: ContentCommentHideFormProps) => {
+  const t = useTranslations("core.comments");
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async ({
     hideReason,
@@ -53,7 +56,7 @@ const PostCommentHideForm = ({
         },
       ]}
       formSchema={formSchema}
-      layout={fields => fields.hideReason}
+      layout={fields => <>{fields.hideReason}</>}
       mode="onSubmit"
       onSubmit={onSubmit}
     >
@@ -70,4 +73,4 @@ const PostCommentHideForm = ({
   );
 };
 
-export default PostCommentHideForm;
+export default ContentCommentHideForm;

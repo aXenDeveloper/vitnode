@@ -1,25 +1,14 @@
-import type { ContentPermissions } from "@vitnode/core/tanstack/content";
-
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Avatar } from "@vitnode/core/components/avatar";
-import { ConfirmActionAlertDialog } from "@vitnode/core/components/confirm-action/confirm-action-alert-dialog";
 import { DateFormat } from "@vitnode/core/components/date-format";
 import { RichTextContent } from "@vitnode/core/components/rich-text";
 import { SharePopover } from "@vitnode/core/components/share-popover";
 import { Badge } from "@vitnode/core/components/ui/badge";
-import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
+import { Button } from "@vitnode/core/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@vitnode/core/components/ui/collapsible";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@vitnode/core/components/ui/dropdown-menu";
 import {
   Empty,
   EmptyDescription,
@@ -27,159 +16,51 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
-import {
-  Popover,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-} from "@vitnode/core/components/ui/popover";
 import { Skeleton } from "@vitnode/core/components/ui/skeleton";
 import { UserFormat } from "@vitnode/core/components/user-format";
-import { contentTarget, zodRichTextDocument } from "@vitnode/core/content";
 import { useRevealHashTarget } from "@vitnode/core/hooks/use-reveal-hash-target";
-import { useSessionQuery } from "@vitnode/core/tanstack/auth";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { HrefLink } from "@vitnode/core/tanstack/link";
-import { ReportDialog } from "@vitnode/core/tanstack/moderation";
+import {
+  CONTENT_COMMENT_ANCHOR_PREFIX,
+  ContentCommentActions,
+  contentCommentAuthorName,
+  ContentCommentComposer,
+  ContentCommentPlaceholder,
+  ContentCommentsComposer,
+  ContentCommentsLoadMore,
+  ContentCommentsRoot,
+  type ContentCommentTreeNode,
+  preloadContentCommentComposer,
+  useContentCommentItem,
+} from "@vitnode/core/tanstack/comments";
 import { cn } from "cn";
 import {
   ChevronDownIcon,
   CircleMinusIcon,
   CirclePlusIcon,
   CornerDownRightIcon,
-  EllipsisIcon,
-  EyeIcon,
   EyeOffIcon,
-  FlagIcon,
-  LogInIcon,
   MessageSquareIcon,
   PencilIcon,
   PenLineIcon,
   ReplyIcon,
   RotateCwIcon,
   Share2Icon,
-  Trash2Icon,
   UserRoundIcon,
 } from "lucide-react";
-import {
-  lazy,
-  memo,
-  Suspense,
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { toast } from "sonner";
+import { memo, useMemo, useState } from "react";
 import { useTranslations } from "use-intl";
-import { z } from "zod";
 
-import {
-  BLOG_COMMENT_MAX_DEPTH,
-  blogCommentContentType,
-} from "@/content/comment";
-import { manifest } from "@/manifest.gen";
+import type { PostComment } from "./post-comments-data";
 
-import type { PostCommentComposerProps } from "./post-comment-composer";
-import type { PostCommentHideFormProps } from "./post-comment-hide-form";
-import type {
-  CommentPerson,
-  CommentTreeNode,
-  PostComment,
-} from "./post-comments-data";
-
-import { useCommentRejection } from "./post-comment-errors";
-import {
-  buildCommentTree,
-  commentAnchorId,
-  postCommentsQueryOptions,
-  useCommentPermissions,
-} from "./post-comments-data";
-import { blogQueryKeys } from "./post-query";
+import { commentAnchorId, usePostComments } from "./post-comments-data";
 
 const EDITED_AFTER_MS = 60_000;
 
 const COMMENT_ACTION_CLASS = "text-muted-foreground font-semibold";
 
-const loadCommentComposer = async () => await import("./post-comment-composer");
+type CommentPerson = PostComment["author"];
 
-const CommentComposer = lazy(loadCommentComposer);
-
-const preloadCommentComposer = () => {
-  void loadCommentComposer();
-};
-
-const ComposerFallback = () => (
-  <Skeleton aria-hidden="true" className="h-40 w-full rounded-lg" />
-);
-
-const LazyCommentComposer = (props: PostCommentComposerProps) => (
-  <Suspense fallback={<ComposerFallback />}>
-    <CommentComposer {...props} />
-  </Suspense>
-);
-
-const loadCommentHideForm = async () =>
-  await import("./post-comment-hide-form");
-
-const CommentHideForm = lazy(loadCommentHideForm);
-
-const preloadCommentHideForm = () => {
-  void loadCommentHideForm();
-};
-
-const LazyCommentHideForm = (props: PostCommentHideFormProps) => (
-  <Suspense
-    fallback={
-      <Skeleton aria-hidden="true" className="h-36 w-full rounded-lg" />
-    }
-  >
-    <CommentHideForm {...props} />
-  </Suspense>
-);
-
-const zodProposedBody = z.object({ body: zodRichTextDocument.optional() });
-
-const useCommentEditor = () => {
-  const reject = useCommentRejection([]);
-  const t = useTranslations("@vitnode/blog.comments.errors");
-
-  return async (commentId: number) => {
-    const res = await fetcher({
-      plugin: manifest.id,
-      method: "get",
-      module: "content/comments",
-      path: "/{id}/edit",
-      args: { params: { id: commentId } },
-    });
-
-    if (res.status !== 200) {
-      if (res.status === 401 || res.status === 403 || res.status === 404) {
-        await reject(res);
-      } else {
-        toast.error(t("title"), { description: t("unknown") });
-      }
-
-      return null;
-    }
-
-    const record = await res.json();
-    const { approval } = record;
-    const proposed =
-      approval?.status === "pending" && approval.kind === "edit"
-        ? zodProposedBody.parse(approval.values ?? {})
-        : {};
-
-    return {
-      body: proposed.body ?? record.values.body,
-      version: record.version,
-    };
-  };
-};
-
-const displayNameOf = (person: CommentPerson): null | string =>
-  person ? (person.fullName ?? person.name) : null;
+type CommentTreeNode = ContentCommentTreeNode<PostComment, number>;
 
 const AVATAR_SIZE_CLASS = { 24: "size-6", 32: "size-8" };
 
@@ -217,7 +98,7 @@ const CommentAuthor = ({
   id: string;
   person: CommentPerson;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments");
+  const t = useTranslations("core.comments");
 
   return person ? (
     <UserFormat
@@ -258,16 +139,10 @@ const RailMarker = ({
 interface ThreadActions {
   articleAuthorIds: ReadonlySet<number>;
   articleHref: string;
-  articleId: number;
   articleTitle: string;
-  canComment: boolean;
   currentUserId: null | number;
   hashTargetId: null | string;
   highlightedId: null | string;
-  onChanged: (outcome: { pending: boolean }) => void;
-  onDelete: (comment: PostComment) => void;
-  onReport: (comment: PostComment) => void;
-  permissionsOf: (id: number) => ContentPermissions;
 }
 
 const countReplies = (node: CommentTreeNode): number =>
@@ -281,173 +156,6 @@ const repliesInclude = (node: CommentTreeNode, anchorId: string): boolean =>
       repliesInclude(child, anchorId),
   );
 
-const useCommentVisibility = (onChanged: () => void) => {
-  const t = useTranslations("@vitnode/blog.comments");
-  const [isPending, setIsPending] = useState(false);
-
-  const change = async (
-    commentId: number,
-    action: "hide" | "unhide",
-    reason: null | string = null,
-  ): Promise<boolean> => {
-    setIsPending(true);
-    try {
-      const res =
-        action === "hide"
-          ? await fetcher({
-              plugin: manifest.id,
-              method: "post",
-              module: "content/comments",
-              path: "/{id}/hide",
-              args: {
-                params: { id: commentId },
-                body: reason === null ? {} : { reason },
-              },
-            })
-          : await fetcher({
-              plugin: manifest.id,
-              method: "post",
-              module: "content/comments",
-              path: "/{id}/unhide",
-              args: { params: { id: commentId } },
-            });
-
-      if (res.status !== 200) {
-        toast.error(t("errors.title"), {
-          description:
-            res.status === 403 ? t("errors.forbidden") : t("errors.unknown"),
-        });
-
-        return false;
-      }
-
-      toast.success(t(`visibility.${action}.title`), {
-        description: t(`visibility.${action}.desc`),
-      });
-      onChanged();
-
-      return true;
-    } finally {
-      setIsPending(false);
-    }
-  };
-
-  return { change, isPending };
-};
-
-interface MenuOrigin {
-  height: number;
-  width: number;
-}
-
-const HIDE_PROMPT_MORPH_CLASS =
-  "[clip-path:inset(-2rem_round_var(--radius-lg))] transition-[opacity,scale,clip-path] duration-200 data-starting-style:scale-100 data-starting-style:[clip-path:inset(0_calc(100%-var(--menu-width,100%))_calc(100%-var(--menu-height,100%))_0_round_var(--radius-lg))] data-[side=top]:data-starting-style:[clip-path:inset(calc(100%-var(--menu-height,100%))_calc(100%-var(--menu-width,100%))_0_0_round_var(--radius-lg))]";
-
-const CommentMenu = ({
-  canDelete,
-  canEdit,
-  canHide,
-  canReport,
-  comment,
-  isBusy,
-  isHidden,
-  onDelete,
-  onEdit,
-  onReport,
-  onVisibility,
-  triggerRef,
-}: {
-  canDelete: boolean;
-  canEdit: boolean;
-  canHide: boolean;
-  canReport: boolean;
-  comment: PostComment;
-  isBusy: boolean;
-  isHidden: boolean;
-  onDelete: () => void;
-  onEdit: () => void;
-  onReport: () => void;
-  onVisibility: (origin: MenuOrigin | null) => void;
-  triggerRef: React.Ref<HTMLButtonElement>;
-}) => {
-  const t = useTranslations("@vitnode/blog.comments");
-  const label = t("more_actions", {
-    name: displayNameOf(comment.author) ?? t("deleted_user"),
-  });
-
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  if (!canEdit && !canReport && !canHide && !canDelete) return null;
-
-  const preload = () => {
-    if (canEdit) preloadCommentComposer();
-    if (canHide && !isHidden) preloadCommentHideForm();
-  };
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        onFocus={preload}
-        onPointerEnter={preload}
-        ref={triggerRef}
-        render={
-          <Button
-            aria-label={label}
-            className={COMMENT_ACTION_CLASS}
-            isLoading={isBusy}
-            size="icon-xs"
-            variant="ghost"
-          />
-        }
-      >
-        <EllipsisIcon aria-hidden="true" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="min-w-44" ref={menuRef}>
-        {canEdit ? (
-          <DropdownMenuItem onClick={onEdit}>
-            <PencilIcon aria-hidden="true" />
-            {t("edit")}
-          </DropdownMenuItem>
-        ) : null}
-        {canReport ? (
-          <DropdownMenuItem onClick={onReport}>
-            <FlagIcon aria-hidden="true" />
-            {t("report")}
-          </DropdownMenuItem>
-        ) : null}
-        {(canHide || canDelete) && (canEdit || canReport) ? (
-          <DropdownMenuSeparator />
-        ) : null}
-        {canHide ? (
-          <DropdownMenuItem
-            onClick={() => {
-              const rect = menuRef.current?.getBoundingClientRect();
-              onVisibility(
-                rect ? { height: rect.height, width: rect.width } : null,
-              );
-            }}
-          >
-            {isHidden ? (
-              <EyeIcon aria-hidden="true" />
-            ) : (
-              <EyeOffIcon aria-hidden="true" />
-            )}
-            {isHidden
-              ? t("visibility.unhide.action")
-              : t("visibility.hide.action")}
-          </DropdownMenuItem>
-        ) : null}
-        {canDelete ? (
-          <DropdownMenuItem onClick={onDelete} variant="destructive">
-            <Trash2Icon aria-hidden="true" />
-            {t("delete.action")}
-          </DropdownMenuItem>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-};
-
 const CommentEntry = ({
   actions,
   comment,
@@ -460,29 +168,14 @@ const CommentEntry = ({
   replies?: RepliesState;
 }) => {
   const t = useTranslations("@vitnode/blog.comments");
-  const openEditor = useCommentEditor();
-  const visibility = useCommentVisibility(() => {
-    actions.onChanged({ pending: false });
-  });
-  const [isReplying, setIsReplying] = useState(false);
-  const [editing, setEditing] = useState<null | {
-    body: PostComment["body"];
-    version: number;
-  }>(null);
-  const [isOpeningEditor, setIsOpeningEditor] = useState(false);
-  const [isHidePromptOpen, setIsHidePromptOpen] = useState(false);
-  const [hidePromptOrigin, setHidePromptOrigin] = useState<MenuOrigin | null>(
-    null,
-  );
-  const menuTriggerRef = useRef<HTMLButtonElement>(null);
-  const { canDelete, canEdit, canHide, canReport } = actions.permissionsOf(
-    comment.id,
-  );
+  const tc = useTranslations("core.comments");
+  const item = useContentCommentItem(node);
   const isHidden = node.hidden;
-  const canAnswer =
-    actions.canComment && !isHidden && node.depth < BLOG_COMMENT_MAX_DEPTH;
   const anchorId = commentAnchorId(comment.slug);
   const authorId = `${anchorId}-author`;
+  const authorName =
+    contentCommentAuthorName(comment.author) ?? tc("deleted_user");
+  // Styling only: what the visitor may do always comes from the server.
   const isOwn =
     actions.currentUserId !== null &&
     comment.author?.id === actions.currentUserId;
@@ -493,33 +186,17 @@ const CommentEntry = ({
       EDITED_AFTER_MS;
   const date = comment.publishedAt ?? comment.createdAt;
 
-  const startEditing = async () => {
-    setIsOpeningEditor(true);
-    try {
-      const editable = await openEditor(comment.id);
-      if (editable) setEditing(editable);
-    } finally {
-      setIsOpeningEditor(false);
-    }
-  };
-
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1">
-      {editing ? (
-        <LazyCommentComposer
+      {item.editing ? (
+        <ContentCommentComposer
           autoFocus
-          commentId={comment.id}
-          defaultBody={editing.body}
-          expectedVersion={editing.version}
-          label={t("form.edit_label")}
+          editable={item.editing}
+          id={comment.id}
+          label={tc("form.edit_label")}
           mode="edit"
-          onCancel={() => {
-            setEditing(null);
-          }}
-          onDone={outcome => {
-            setEditing(null);
-            actions.onChanged(outcome);
-          }}
+          onCancel={item.stopEditing}
+          onDone={item.stopEditing}
         />
       ) : (
         <article
@@ -549,20 +226,20 @@ const CommentEntry = ({
             ) : null}
             <span className="text-muted-foreground inline-flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap">
               <span aria-hidden="true">·</span>
-              <HrefLink
+              <a
                 className="hover:text-foreground rounded-sm tabular-nums hover:underline"
                 href={`${actions.articleHref}#${anchorId}`}
               >
                 <time dateTime={new Date(date).toISOString()}>
                   <DateFormat date={date} />
                 </time>
-                <span className="sr-only"> {t("permalink")}</span>
-              </HrefLink>
-              {isEdited ? <span>· {t("edited_label")}</span> : null}
+                <span className="sr-only"> {tc("permalink")}</span>
+              </a>
+              {isEdited ? <span>· {tc("edited_label")}</span> : null}
               {isHidden ? (
                 <span className="inline-flex items-center gap-1 font-medium">
                   · <EyeOffIcon aria-hidden="true" className="size-3.5" />
-                  {t("visibility.hidden_label")}
+                  {tc("visibility.hidden_label")}
                 </span>
               ) : null}
             </span>
@@ -576,35 +253,33 @@ const CommentEntry = ({
           />
           {isHidden && node.hiddenReason ? (
             <p className="text-muted-foreground border-t border-dashed pt-1.5 text-sm leading-relaxed text-pretty">
-              {t("visibility.hidden_reason", { reason: node.hiddenReason })}
+              {tc("visibility.hidden_reason", { reason: node.hiddenReason })}
             </p>
           ) : null}
         </article>
       )}
 
-      {editing ? null : (
+      {item.editing ? null : (
         <div className="flex flex-wrap items-center gap-x-1 ps-2">
-          {canAnswer ? (
+          {item.canReply ? (
             <Button
-              aria-expanded={isReplying}
+              aria-expanded={item.isReplying}
               className={COMMENT_ACTION_CLASS}
               onClick={() => {
-                setIsReplying(!isReplying);
+                item.setIsReplying(!item.isReplying);
               }}
-              onFocus={preloadCommentComposer}
-              onPointerEnter={preloadCommentComposer}
+              onFocus={preloadContentCommentComposer}
+              onPointerEnter={preloadContentCommentComposer}
               size="xs"
               variant="ghost"
             >
               <ReplyIcon aria-hidden="true" />
-              {t("reply")}
+              {tc("reply")}
             </Button>
           ) : null}
           {isHidden ? null : (
             <SharePopover
-              description={t("share.description", {
-                name: displayNameOf(comment.author) ?? t("deleted_user"),
-              })}
+              description={t("share.description", { name: authorName })}
               title={actions.articleTitle}
               url={`${actions.articleHref}#${anchorId}`}
             >
@@ -619,72 +294,7 @@ const CommentEntry = ({
               </Button>
             </SharePopover>
           )}
-          <CommentMenu
-            canDelete={canDelete}
-            canEdit={canEdit}
-            canHide={canHide}
-            canReport={canReport}
-            comment={comment}
-            isBusy={isOpeningEditor || visibility.isPending}
-            isHidden={isHidden}
-            onDelete={() => {
-              actions.onDelete(comment);
-            }}
-            onEdit={() => {
-              void startEditing();
-            }}
-            onReport={() => {
-              actions.onReport(comment);
-            }}
-            onVisibility={origin => {
-              if (isHidden) {
-                void visibility.change(comment.id, "unhide");
-              } else {
-                setHidePromptOrigin(origin);
-                setIsHidePromptOpen(true);
-              }
-            }}
-            triggerRef={menuTriggerRef}
-          />
-          {canHide && !isHidden ? (
-            <Popover onOpenChange={setIsHidePromptOpen} open={isHidePromptOpen}>
-              <PopoverContent
-                align="start"
-                anchor={menuTriggerRef}
-                className={cn(
-                  "w-80 max-w-[calc(100vw-2rem)]",
-                  HIDE_PROMPT_MORPH_CLASS,
-                )}
-                style={
-                  hidePromptOrigin
-                    ? ({
-                        "--menu-height": `${hidePromptOrigin.height}px`,
-                        "--menu-width": `${hidePromptOrigin.width}px`,
-                      } as React.CSSProperties)
-                    : undefined
-                }
-              >
-                <PopoverHeader>
-                  <PopoverTitle>
-                    {t("visibility.hide.prompt_title")}
-                  </PopoverTitle>
-                  <PopoverDescription>
-                    {t("visibility.hide.prompt_desc")}
-                  </PopoverDescription>
-                </PopoverHeader>
-                <LazyCommentHideForm
-                  onCancel={() => {
-                    setIsHidePromptOpen(false);
-                  }}
-                  onHide={async reason => {
-                    if (await visibility.change(comment.id, "hide", reason)) {
-                      setIsHidePromptOpen(false);
-                    }
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
-          ) : null}
+          <ContentCommentActions item={item} node={node} />
           {replies && !replies.open ? (
             <Button
               className={COMMENT_ACTION_CLASS}
@@ -695,27 +305,25 @@ const CommentEntry = ({
               variant="ghost"
             >
               <ChevronDownIcon aria-hidden="true" />
-              {t("show_answers", { count: replies.count })}
+              {tc("show_replies", { count: replies.count })}
             </Button>
           ) : null}
         </div>
       )}
 
-      {isReplying ? (
+      {item.isReplying ? (
         <div className="pt-2">
-          <LazyCommentComposer
-            articleId={actions.articleId}
+          <ContentCommentComposer
             autoFocus
-            label={t("form.answer_label", {
-              name: displayNameOf(comment.author) ?? t("someone"),
+            label={tc("form.answer_label", {
+              name: contentCommentAuthorName(comment.author) ?? tc("someone"),
             })}
             mode="create"
             onCancel={() => {
-              setIsReplying(false);
+              item.setIsReplying(false);
             }}
-            onDone={outcome => {
-              setIsReplying(false);
-              actions.onChanged(outcome);
+            onDone={() => {
+              item.setIsReplying(false);
             }}
             parentId={comment.id}
           />
@@ -796,13 +404,13 @@ const ReplyingTo = ({
 };
 
 const RepliesToggle = ({ count, open }: { count: number; open: boolean }) => {
-  const t = useTranslations("@vitnode/blog.comments");
+  const t = useTranslations("core.comments");
   const Icon = open ? CircleMinusIcon : CirclePlusIcon;
 
   return (
     <CollapsibleTrigger
       aria-label={
-        open ? t("hide_answers", { count }) : t("show_answers", { count })
+        open ? t("hide_replies", { count }) : t("show_replies", { count })
       }
       className="bg-background text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 relative mb-0.5 flex size-5 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-150 ease-out outline-none focus-visible:ring-3"
     >
@@ -825,6 +433,7 @@ const CommentBranch = ({
   node: CommentTreeNode;
 }) => {
   const t = useTranslations("@vitnode/blog.comments");
+  const tc = useTranslations("core.comments");
   const holdsHashTarget = useMemo(
     () =>
       actions.hashTargetId !== null &&
@@ -843,7 +452,7 @@ const CommentBranch = ({
   const hasReplies = node.children.length > 0;
   const flattening = flatteningBelow(node.depth);
   const parentName = node.record
-    ? (displayNameOf(node.record.author) ?? t("deleted_user"))
+    ? (contentCommentAuthorName(node.record.author) ?? tc("deleted_user"))
     : t("removed_comment");
 
   const row = (
@@ -903,31 +512,11 @@ const RemovedEntry = ({
   node: CommentTreeNode;
   replies?: RepliesState;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments");
-  const { deleted } = node;
+  const t = useTranslations("core.comments");
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1">
-      <div className="bg-muted/40 text-muted-foreground flex w-fit max-w-full flex-col gap-0.5 rounded-2xl rounded-ss-sm border border-dashed px-4 py-2.5">
-        <p className="flex min-w-0 items-center gap-1.5 text-sm leading-relaxed">
-          <span className="font-medium">{t("placeholder.name")}</span>
-          {deleted ? (
-            <span className="inline-flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap">
-              <span aria-hidden="true">·</span>
-              <time dateTime={deleted.createdAt}>
-                <DateFormat date={deleted.createdAt} />
-              </time>
-            </span>
-          ) : null}
-        </p>
-        <p className="leading-relaxed text-pretty">
-          {deleted
-            ? deleted.byAuthor
-              ? t("placeholder.by_author")
-              : t("placeholder.by_moderator")
-            : t("removed")}
-        </p>
-      </div>
+      <ContentCommentPlaceholder node={node} />
       {replies ? (
         <div className="flex flex-wrap items-center gap-x-1 ps-2">
           <Button
@@ -947,8 +536,8 @@ const RemovedEntry = ({
               )}
             />
             {replies.open
-              ? t("hide_answers", { count: replies.count })
-              : t("show_answers", { count: replies.count })}
+              ? t("hide_replies", { count: replies.count })
+              : t("show_replies", { count: replies.count })}
           </Button>
         </div>
       ) : null}
@@ -1081,74 +670,31 @@ const CommentsPendingSkeleton = ({ label }: { label: string }) => (
   </div>
 );
 
-export const PostComments = ({
+const PostCommentsThread = ({
   articleAuthorIds,
   articleHref,
-  articleId,
   articleTitle,
+  comments,
 }: {
   articleAuthorIds: readonly number[];
   articleHref: string;
-  articleId: number;
   articleTitle: string;
+  comments: ReturnType<typeof usePostComments>;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments");
-  const queryClient = useQueryClient();
+  const t = useTranslations("core.comments");
   const authorIdSet = useMemo(
     () => new Set(articleAuthorIds),
     [articleAuthorIds],
   );
-  const { data: session, isPending: isSessionPending } = useSessionQuery();
-  const currentUserId = session?.user?.id ?? null;
-  const comments = useInfiniteQuery(postCommentsQueryOptions(articleId));
-  const [composerKey, setComposerKey] = useState(0);
-  const [composer, setComposer] = useState<"closed" | "open" | "opening">(
-    "closed",
-  );
-  const [reporting, setReporting] = useState<null | PostComment>(null);
-  const [deleting, setDeleting] = useState<null | PostComment>(null);
-
-  const pages = comments.data?.pages;
-  const items = useMemo(
-    () => pages?.flatMap(page => page.items) ?? [],
-    [pages],
-  );
-  const tree = useMemo(() => buildCommentTree(items), [items]);
-  const permissions = useCommentPermissions(
-    items.flatMap(item => (item.record ? [item.id] : [])),
-  );
-  const last = pages?.at(-1);
-  const commentCount = last?.replyCount ?? 0;
-
-  const loadMore = useCallback(async () => {
-    const result = await comments.fetchNextPage();
-    if (result.isError) {
-      toast.error(t("load_failed.title"), {
-        description: t("load_failed.desc"),
-      });
-    }
-  }, [comments, t]);
-
-  const onChanged = useCallback(
-    ({ pending }: { pending: boolean }) => {
-      if (pending) return;
-      void queryClient.invalidateQueries({
-        queryKey: blogQueryKeys.comments(articleId),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: blogQueryKeys.commentPermissions,
-      });
-    },
-    [articleId, queryClient],
-  );
+  const { tree } = comments;
 
   const anchor = useRevealHashTarget({
-    hasMore: comments.hasNextPage,
-    isLoadingMore: comments.isFetchingNextPage,
-    loadMore,
-    prefix: "comment-",
-    ready: comments.isSuccess,
-    renderedCount: items.length,
+    hasMore: comments.hasMore,
+    isLoadingMore: comments.isLoadingMore,
+    loadMore: comments.loadMore,
+    prefix: CONTENT_COMMENT_ANCHOR_PREFIX,
+    ready: comments.status === "success",
+    renderedCount: comments.items.length,
   });
   const highlightedId = anchor.status === "found" ? anchor.targetId : null;
 
@@ -1156,36 +702,23 @@ export const PostComments = ({
     () => ({
       articleAuthorIds: authorIdSet,
       articleHref,
-      articleId,
       articleTitle,
-      canComment: currentUserId !== null,
-      currentUserId,
+      currentUserId: comments.userId,
       hashTargetId: anchor.targetId,
       highlightedId,
-      onChanged,
-      onDelete: setDeleting,
-      onReport: setReporting,
-      permissionsOf: permissions.of,
     }),
     [
       anchor.targetId,
       authorIdSet,
       articleHref,
-      articleId,
       articleTitle,
-      currentUserId,
+      comments.userId,
       highlightedId,
-      onChanged,
-      permissions.of,
     ],
   );
 
   return (
-    <section
-      aria-labelledby="blog-comments"
-      className="flex flex-col gap-6 border-t pt-10"
-      id="comments"
-    >
+    <>
       <h2
         className="text-foreground flex items-center gap-2 text-2xl font-semibold tracking-tight text-balance"
         id="blog-comments"
@@ -1194,20 +727,20 @@ export const PostComments = ({
           aria-hidden="true"
           className="text-muted-foreground size-5"
         />
-        {t("title", { count: commentCount })}
+        {t("title", { count: comments.replyCount })}
       </h2>
 
-      {comments.isPending ? (
+      {comments.status === "pending" ? (
         <CommentsPendingSkeleton label={t("loading")} />
-      ) : comments.isError ? (
+      ) : comments.status === "error" ? (
         <div className="flex flex-col items-start gap-3" role="alert">
           <p className="text-muted-foreground leading-relaxed text-pretty">
             {t("load_failed.title")}. {t("load_failed.desc")}
           </p>
           <Button
-            isLoading={comments.isFetching}
+            isLoading={comments.isRefreshing}
             onClick={() => {
-              void comments.refetch();
+              void comments.retry();
             }}
             variant="outline"
           >
@@ -1226,7 +759,7 @@ export const PostComments = ({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ol aria-busy={comments.isFetching} className="flex flex-col gap-6">
+        <ol aria-busy={comments.isRefreshing} className="flex flex-col gap-6">
           {tree.map(node => (
             <ThreadNodeView actions={actions} key={node.id} node={node} />
           ))}
@@ -1242,138 +775,55 @@ export const PostComments = ({
         </p>
       ) : null}
 
-      {last?.truncated ? (
+      {comments.truncated ? (
         <p className="text-muted-foreground text-sm leading-relaxed">
           {t("truncated")}
         </p>
       ) : null}
 
-      {comments.hasNextPage ? (
-        <Button
-          className="self-start"
-          isLoading={comments.isFetchingNextPage}
-          onClick={loadMore}
-          variant="outline"
-        >
-          <ChevronDownIcon aria-hidden="true" />
-          {t("load_more")}
-        </Button>
-      ) : null}
+      <ContentCommentsLoadMore />
 
       <div className="flex items-start gap-3">
         <RailMarker>
           <PencilIcon />
         </RailMarker>
-        <div className="bg-card text-card-foreground flex min-w-0 flex-1 flex-col gap-3 rounded-2xl rounded-ss-sm border p-4">
-          <h3 className="font-semibold text-balance">{t("compose.title")}</h3>
-          {isSessionPending ? (
-            <ComposerFallback />
-          ) : currentUserId === null ? (
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-muted-foreground leading-relaxed text-pretty">
-                {t("compose.guest")}
-              </p>
-              <HrefLink
-                className={buttonVariants({ size: "sm", variant: "outline" })}
-                href={`/login?returnTo=${encodeURIComponent(`${articleHref}#comments`)}`}
-              >
-                <LogInIcon aria-hidden="true" />
-                {t("compose.sign_in")}
-              </HrefLink>
-            </div>
-          ) : composer === "closed" ? (
-            <Button
-              className="text-muted-foreground h-auto justify-start py-3 font-normal"
-              onClick={() => {
-                setComposer("opening");
-              }}
-              onFocus={preloadCommentComposer}
-              onPointerEnter={preloadCommentComposer}
-              variant="outline"
-            >
-              <PencilIcon aria-hidden="true" />
-              {t("compose.open")}
-            </Button>
-          ) : (
-            <LazyCommentComposer
-              articleId={articleId}
-              autoFocus={composer === "opening"}
-              key={composerKey}
-              label={t("form.body_label")}
-              mode="create"
-              onCancel={() => {
-                setComposer("closed");
-              }}
-              onDone={outcome => {
-                setComposer("open");
-                setComposerKey(composerKey + 1);
-                onChanged(outcome);
-              }}
-              parentId={null}
-            />
-          )}
-        </div>
+        <ContentCommentsComposer className="flex-1 rounded-ss-sm" />
       </div>
+    </>
+  );
+};
 
-      <ConfirmActionAlertDialog
-        description={t("delete.desc")}
-        icon={<Trash2Icon />}
-        onOpenChange={open => {
-          if (!open) setDeleting(null);
-        }}
-        onSubmit={async ({ onClose }) => {
-          if (!deleting) return;
-          const res = await fetcher({
-            plugin: manifest.id,
-            method: "post",
-            module: "content/comments",
-            path: "/{id}/delete",
-            args: { params: { id: deleting.id } },
-          });
+export const PostComments = ({
+  articleAuthorIds,
+  articleHref,
+  articleId,
+  articleTitle,
+}: {
+  articleAuthorIds: readonly number[];
+  articleHref: string;
+  articleId: number;
+  articleTitle: string;
+}) => {
+  const t = useTranslations("core.global");
+  const comments = usePostComments(articleId);
 
-          if (res.status !== 200) {
-            toast.error(t("errors.title"), {
-              description:
-                res.status === 403
-                  ? t("errors.forbidden")
-                  : res.status === 404
-                    ? t("errors.not_found")
-                    : t("errors.unknown"),
-            });
-
-            return;
-          }
-
-          toast.success(t("delete.done.title"), {
-            description: t("delete.done.desc"),
-          });
-          onClose();
-          onChanged({ pending: false });
-        }}
-        open={deleting !== null}
-        textSubmit={
-          <>
-            <Trash2Icon aria-hidden="true" />
-            {t("delete.confirm")}
-          </>
-        }
-        title={t("delete.title")}
-      />
-
-      {reporting ? (
-        <ReportDialog
-          onOpenChange={open => {
-            if (!open) setReporting(null);
-          }}
-          open
-          target={contentTarget(
-            manifest.id,
-            blogCommentContentType,
-            reporting.id,
-          )}
-          typeLabel={t("report_type")}
+  return (
+    <section
+      aria-labelledby="blog-comments"
+      className="flex flex-col gap-6 border-t pt-10"
+      id="comments"
+    >
+      <ContentCommentsRoot
+        comments={comments}
+        fallback={<CommentsPendingSkeleton label={t("loading")} />}
+      >
+        <PostCommentsThread
+          articleAuthorIds={articleAuthorIds}
+          articleHref={articleHref}
+          articleTitle={articleTitle}
+          comments={comments}
         />
-      ) : null}
+      </ContentCommentsRoot>
     </section>
   );
 };

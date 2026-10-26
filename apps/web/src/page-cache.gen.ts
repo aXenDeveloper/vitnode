@@ -56,6 +56,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/login/sso/:providerId' },
   { path: '/modcp/approvals/:id' },
   { path: '/modcp/reports/:id' },
+  { path: '/news/comments/:slug' },
   { path: '/newsroom/guide/:topic' },
   { path: '/newsroom/notes/:slug' },
   { path: '/newsroom/pages/:slug' },

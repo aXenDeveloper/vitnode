@@ -18,10 +18,12 @@ import { z } from "zod";
 import { articleContentType } from "@/content/article";
 import { manifest } from "@/manifest.gen";
 
+import {
+  ArticleComments,
+  articleCommentsQueryOptions,
+} from "./article-comments";
 import { articlesQueryOptions } from "./article-list";
 import { useArticlePermissions } from "./article-permissions";
-import { commentsQueryOptions } from "./comment-data";
-import { CommentSection } from "./comment-section";
 import { LatestArticles } from "./latest-articles";
 
 const zodArticle = z.object({
@@ -71,7 +73,7 @@ export const route = defineRoute({
       // The first page of comments arrives with the article's HTML. A failure
       // leaves the section to show its own error instead of breaking the page.
       context.queryClient
-        .infiniteQuery(commentsQueryOptions(page.item.id))
+        .infiniteQuery(articleCommentsQueryOptions(page.item.id))
         .catch(() => null),
       // Same options as the first page of /news. A failure leaves the box to
       // retry in the browser instead of breaking the article.
@@ -137,7 +139,7 @@ const ArticlePage = ({
         content={item.body}
       />
 
-      <CommentSection articleId={item.id} articleSlug={item.slug} />
+      <ArticleComments articleId={item.id} />
     </article>
 
     <LatestArticles currentId={item.id} />

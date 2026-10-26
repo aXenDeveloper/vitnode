@@ -27,10 +27,20 @@ export const commentContentType = defineContentType({
 
   publication: true,
   visibility: true,
+  reports: { titleField: "body", snapshotFields: ["body"] },
 
   publicApi: {
-    path: "comments",
-    fields: ["id", "slug", "body", "article", "parent", "publishedAt"],
+    path: "article-comments",
+    fields: [
+      "id",
+      "slug",
+      "body",
+      "article",
+      "parent",
+      "publishedAt",
+      "createdAt",
+      "updatedAt",
+    ],
     people: ["author"],
   },
 
@@ -39,6 +49,11 @@ export const commentContentType = defineContentType({
     create: { fields: ["body", "article", "parent"], status: "published" },
     update: { fields: ["body"] },
   },
+
+  // The permalink reports link to; its page redirects to the comment under
+  // its article. Delivery claims `publicApi.path` site-wide, which is why
+  // these comments are `article-comments`: the blog already owns `comments`.
+  delivery: { path: "/news/comments/:slug" },
 
   thread: { parent: "parent", root: "article", maxDepth: COMMENT_MAX_DEPTH },
 

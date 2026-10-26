@@ -19,7 +19,6 @@ export const blogQueryKeys = {
   categories: (locale: string) => [...all, "categories", locale] as const,
   commentLink: (request: { locale: string; slug: string }) =>
     [...all, "comment-link", request] as const,
-  commentPermissions: [...all, "comment-permissions"] as const,
   comments: (articleId: number) => [...all, "comments", articleId] as const,
   post: (request: { locale: string; slug: string }) =>
     [...all, "post", request] as const,

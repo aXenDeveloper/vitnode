@@ -296,7 +296,7 @@ export const createContentPublicWriteService = <
           )
           .map(row => row.id as ContentId);
         const viewable = await Promise.all(
-          hiddenIds.map(itemId =>
+          hiddenIds.map(async itemId =>
             canViewHiddenContentRecord(c, { contentTypeId, itemId }),
           ),
         );
