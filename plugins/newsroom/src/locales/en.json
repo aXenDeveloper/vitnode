@@ -181,53 +181,6 @@
         "loading": "Loading the latest articles"
       }
     },
-    "comments": {
-      "title": "{count, plural, =0 {Comments} one {# comment} other {# comments}}",
-      "empty": "No comments yet. Be the first.",
-      "loading": "Loading comments",
-      "retry": "Try again",
-      "load_more": "Load more comments",
-      "load_failed": {
-        "title": "Could not load comments",
-        "desc": "Check your connection and try again."
-      },
-      "sign_in": "Sign in to comment",
-      "form": {
-        "label": "Your comment",
-        "submit": "Post comment",
-        "required": "Write a comment first.",
-        "edit_label": "Edit your comment",
-        "save": "Save",
-        "cancel": "Cancel",
-        "reply_label": "Reply to {name}"
-      },
-      "created": {
-        "title": "Comment posted",
-        "desc": "Your comment is below the article."
-      },
-      "draft": {
-        "title": "Comment saved as a draft",
-        "desc": "It is not public yet, so it does not appear below the article."
-      },
-      "pending": {
-        "title": "Your comment is waiting for a moderator",
-        "desc": "A moderator reviews it before readers can see it."
-      },
-      "someone": "Deleted user",
-      "edit": "Edit",
-      "edited": {
-        "title": "Comment saved",
-        "desc": "Your changes are live."
-      },
-      "edit_pending": {
-        "title": "Your changes are waiting for a moderator",
-        "desc": "Readers see the earlier text until a moderator approves."
-      },
-      "reply": "Reply",
-      "removed": "This comment was removed.",
-      "truncated": "This conversation is long, so some deeper replies are not shown.",
-      "anchor_missing": "The comment this link points to is no longer available."
-    },
     "admin": {
       "nav": {
         "overview": "Overview"
@@ -471,6 +424,9 @@
   "newsroom:comment:can_delete": "Delete comments",
   "newsroom:comment:can_publish": "Publish and unpublish comments",
   "newsroom:comment:can_hide": "Hide and unhide comments",
+  "newsroom:comment:can_view_reports": "View comment reports",
+  "newsroom:comment:can_manage_reports": "Claim, assign and resolve comment reports",
+  "newsroom:comment:can_view_hidden": "Open hidden comments",
   "newsroom:story": "Stories",
   "newsroom:story:can_view": "View stories",
   "newsroom:story:can_create": "Create stories",

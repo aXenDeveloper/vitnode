@@ -22,6 +22,7 @@ import messages from "@/locales/api";
 import { manifest } from "@/manifest.gen";
 
 import { adminModule } from "./api/modules/admin/admin.module";
+import { articlesModule } from "./api/modules/articles/articles.module";
 import { helloModule } from "./api/modules/hello/hello.module";
 import { widgets } from "./widgets";
 import "@/api/lib/events";
@@ -43,6 +44,7 @@ export const newsroomApiPlugin = () =>
     modules: [
       helloModule,
       adminModule,
+      articlesModule,
       buildContentPublicModule({
         containers: [deskContainers],
         contentTypes: [

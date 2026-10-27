@@ -4,6 +4,20 @@ import React from "react";
 
 const TOOLTIP_OPEN_DELAY = 200;
 
+const TOOLTIP_SURFACE =
+  "relative isolate before:absolute before:inset-0 before:-z-10 before:rounded-[inherit] before:backdrop-blur-sm";
+
+const TooltipFill = ({ arrowClassName }: { arrowClassName?: string }) => (
+  <span className="bg-foreground absolute inset-0 -z-10 rounded-[inherit] opacity-80">
+    <TooltipPrimitive.Arrow
+      className={cn(
+        "bg-foreground size-2.5 rotate-45 rounded-xs data-[side=bottom]:-top-1.25 data-[side=left]:-right-1.25 data-[side=right]:-left-1.25 data-[side=top]:-bottom-1.25",
+        arrowClassName,
+      )}
+    />
+  </span>
+);
+
 const TooltipDelayContext = React.createContext(TOOLTIP_OPEN_DELAY);
 
 function TooltipProvider({
@@ -70,14 +84,15 @@ function TooltipContent({
       >
         <TooltipPrimitive.Popup
           className={cn(
-            "bg-foreground/80 text-background ease-fluid z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-1.5 rounded-md px-3 py-1.5 text-xs backdrop-blur-sm transition-[opacity,scale] duration-150 has-data-[slot=kbd]:pe-1.5 data-ending-style:scale-90 data-ending-style:opacity-0 data-ending-style:duration-100 data-instant:transition-none data-starting-style:scale-90 data-starting-style:opacity-0 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm motion-reduce:transition-none",
+            TOOLTIP_SURFACE,
+            "text-background ease-fluid z-50 inline-flex w-fit max-w-xs origin-(--transform-origin) items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition-[opacity,scale] duration-150 has-data-[slot=kbd]:pe-1.5 data-ending-style:scale-90 data-ending-style:opacity-0 data-ending-style:duration-100 data-instant:transition-none data-starting-style:scale-90 data-starting-style:opacity-0 **:data-[slot=kbd]:relative **:data-[slot=kbd]:isolate **:data-[slot=kbd]:z-50 **:data-[slot=kbd]:rounded-sm motion-reduce:transition-none",
             className,
           )}
           data-slot="tooltip-content"
           {...props}
         >
           {children}
-          <TooltipPrimitive.Arrow className="bg-foreground z-50 size-2.5 rotate-45 rounded-xs data-[side=bottom]:-top-1.25 data-[side=left]:-right-1.25 data-[side=right]:-left-1.25 data-[side=top]:-bottom-1.25" />
+          <TooltipFill />
         </TooltipPrimitive.Popup>
       </TooltipPrimitive.Positioner>
     </TooltipPrimitive.Portal>
@@ -154,7 +169,8 @@ function TooltipGroup({
             >
               <TooltipPrimitive.Popup
                 className={cn(
-                  "bg-foreground text-background relative h-(--popup-height,auto) w-(--popup-width,auto) max-w-xs origin-(--transform-origin) rounded-md text-xs transition-[width,height,opacity,scale] data-ending-style:scale-90 data-ending-style:opacity-0 data-starting-style:scale-90 data-starting-style:opacity-0",
+                  TOOLTIP_SURFACE,
+                  "text-background h-(--popup-height,auto) w-(--popup-width,auto) max-w-xs origin-(--transform-origin) rounded-md text-xs transition-[width,height,opacity,scale] data-ending-style:scale-90 data-ending-style:opacity-0 data-starting-style:scale-90 data-starting-style:opacity-0",
                   GLIDE,
                 )}
                 data-slot="tooltip-content"
@@ -172,11 +188,8 @@ function TooltipGroup({
                 >
                   {payload}
                 </TooltipPrimitive.Viewport>
-                <TooltipPrimitive.Arrow
-                  className={cn(
-                    "bg-foreground z-50 size-2.5 rotate-45 rounded-xs transition-[left,top] data-[side=bottom]:-top-1.25 data-[side=left]:-right-1.25 data-[side=right]:-left-1.25 data-[side=top]:-bottom-1.25",
-                    GLIDE,
-                  )}
+                <TooltipFill
+                  arrowClassName={cn("transition-[left,top]", GLIDE)}
                 />
               </TooltipPrimitive.Popup>
             </TooltipPrimitive.Positioner>

@@ -423,9 +423,11 @@ export const contentPermissionEntries = (
 
 /**
  * Moderators act from the public site. `can_edit` edits any record a member
- * could edit; `can_approve` reviews submissions. In a container collection with
- * policies both are scoped by that collection, so a grant names the containers
- * it covers.
+ * could edit; `can_delete` deletes and `can_hide` hides and unhides any record
+ * members write (for a type with `reports`, the moderation entries add
+ * `can_hide` instead, behind `can_view_hidden`); `can_approve` reviews
+ * submissions. In a container collection with policies they are scoped by
+ * that collection, so a grant names the containers it covers.
  */
 export const contentModeratorPermissionEntries = (
   definition: AnyContentTypeDefinition,
@@ -438,6 +440,14 @@ export const contentModeratorPermissionEntries = (
   return [
     ...(definition.publicWrite.update.enabled
       ? [scoped(CONTENT_PERMISSIONS.edit)]
+      : []),
+    ...(definition.publicWrite.enabled
+      ? [scoped(CONTENT_PERMISSIONS.delete)]
+      : []),
+    ...(definition.publicWrite.enabled &&
+    definition.visibility.enabled &&
+    !definition.reports.enabled
+      ? [scoped(CONTENT_PERMISSIONS.hide)]
       : []),
     ...(scope && definition.publicWrite.enabled
       ? [scoped(CONTENT_PERMISSIONS.approve)]

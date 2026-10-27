@@ -38,7 +38,14 @@ const keepInView = (element: HTMLElement): (() => void) => {
   return stop;
 };
 
-const readHash = () => decodeURIComponent(window.location.hash.slice(1));
+const readHash = () => {
+  const hash = window.location.hash.slice(1);
+  try {
+    return decodeURIComponent(hash);
+  } catch {
+    return hash;
+  }
+};
 
 /**
  * Brings the element named by the URL hash into view in a paginated list - a

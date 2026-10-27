@@ -69,35 +69,40 @@ const REPLY_TYPE = "ntest.comment_reply";
 const DECISION_TYPE = "ntest.comment_decision";
 const TOPIC_TYPE = testTopicPublishedNotification.id;
 
-const commentNotifications = buildContentNotifications({
-  content: testNoticeCommentContentType,
-  root: testNoticeTopicContentType,
-  rules: {
-    replies: {
-      id: REPLY_TYPE,
-      preset: "threadReply",
-      grouping: { windowMinutes: 60 },
-      recipients: { authorField: "author", rootAuthorField: "author" },
-      messages: {
-        label: "ntest.reply.label",
-        comment: "ntest.reply.comment",
-        reply: "ntest.reply.reply",
+/** Without `rootAuthorField` the rule covers replies only, as on Blog. */
+const commentNotifications = (rootAuthorField?: "author") =>
+  buildContentNotifications({
+    content: testNoticeCommentContentType,
+    root: testNoticeTopicContentType,
+    rules: {
+      replies: {
+        id: REPLY_TYPE,
+        preset: "threadReply",
+        grouping: { windowMinutes: 60 },
+        recipients: { authorField: "author", rootAuthorField },
+        messages: {
+          label: "ntest.reply.label",
+          comment: "ntest.reply.comment",
+          reply: "ntest.reply.reply",
+        },
+        target: ({ content, root }) =>
+          `/topics/${root.id}#comment-${content.id}`,
       },
-      target: ({ content, root }) => `/topics/${root.id}#comment-${content.id}`,
-    },
-    decisions: {
-      id: DECISION_TYPE,
-      preset: "moderationDecision",
-      messages: {
-        label: "ntest.decision.label",
-        approved: "ntest.decision.approved",
-        rejected: "ntest.decision.rejected",
+      decisions: {
+        id: DECISION_TYPE,
+        preset: "moderationDecision",
+        messages: {
+          label: "ntest.decision.label",
+          approved: "ntest.decision.approved",
+          rejected: "ntest.decision.rejected",
+        },
+        target: ({ content, decision }) =>
+          decision.status === "approved"
+            ? `/comments/${content.id}`
+            : "/pending",
       },
-      target: ({ content, decision }) =>
-        decision.status === "approved" ? `/comments/${content.id}` : "/pending",
     },
-  },
-});
+  });
 
 const topicNotifications = buildContentNotifications({
   content: testNoticeTopicContentType,
@@ -114,31 +119,40 @@ const topicNotifications = buildContentNotifications({
   },
 });
 
-const plugin = buildApiPlugin({
-  manifest: testManifest(PLUGIN_ID),
-  modules: [],
-  contentNotifications: [commentNotifications, topicNotifications],
-});
-
 const contentModels = [noticeTopics, noticeComments, noticeQuiet].map(
   model => ({ model, pluginId: PLUGIN_ID }),
 );
 
+const registriesOf = (comments: ReturnType<typeof commentNotifications>) => {
+  const plugin = buildApiPlugin({
+    manifest: testManifest(PLUGIN_ID),
+    modules: [],
+    contentNotifications: [comments, topicNotifications],
+  });
+
+  return {
+    contentNotifications: createContentNotificationRegistry(
+      (plugin.contentNotifications ?? []).map(config => ({
+        config,
+        pluginId: PLUGIN_ID,
+      })),
+      contentModels,
+    ),
+    notifications: createNotificationRegistry(
+      (plugin.notificationTypes ?? []).map(definition => ({
+        definition,
+        pluginId: PLUGIN_ID,
+      })),
+    ),
+  };
+};
+
+const threadRules = registriesOf(commentNotifications("author"));
+const repliesOnlyRules = registriesOf(commentNotifications());
+
 const core = {
   contentModels,
-  contentNotifications: createContentNotificationRegistry(
-    (plugin.contentNotifications ?? []).map(config => ({
-      config,
-      pluginId: PLUGIN_ID,
-    })),
-    contentModels,
-  ),
-  notifications: createNotificationRegistry(
-    (plugin.notificationTypes ?? []).map(definition => ({
-      definition,
-      pluginId: PLUGIN_ID,
-    })),
-  ),
+  ...threadRules,
   queue: [contentNotificationsQueueTask, notificationsFanoutTask].map(task => ({
     ...task,
     module: "test",
@@ -386,6 +400,7 @@ describe.skipIf(!POSTGRES_TEST_URL)(
 
     beforeEach(async () => {
       vi.restoreAllMocks();
+      Object.assign(core, threadRules);
       await schema.client.unsafe(
         `truncate ntest_comments, ntest_topics, ntest_quiet, core_queue,
           core_notification_events, core_notifications, core_notification_receipts,
@@ -669,6 +684,7 @@ describe.skipIf(!POSTGRES_TEST_URL)(
             topic: null | number;
           },
           { recipients: number[]; relation: "comment" | "reply" }[],
+          rules?: typeof threadRules,
         ]
       >([
         [
@@ -714,7 +730,20 @@ describe.skipIf(!POSTGRES_TEST_URL)(
           { actor: null, comment: null, topic: TOPIC_AUTHOR },
           [{ recipients: [TOPIC_AUTHOR], relation: "comment" }],
         ],
-      ])("%s", async (_, authors, expected) => {
+        [
+          "without a root author field, a comment notifies nobody",
+          { comment: COMMENTER, topic: TOPIC_AUTHOR },
+          [],
+          repliesOnlyRules,
+        ],
+        [
+          "without a root author field, only the parent's author hears about a reply",
+          { comment: REPLIER, parent: COMMENTER, topic: TOPIC_AUTHOR },
+          [{ recipients: [COMMENTER], relation: "reply" }],
+          repliesOnlyRules,
+        ],
+      ])("%s", async (_, authors, expected, rules = threadRules) => {
+        Object.assign(core, rules);
         const topic = await createTopic({ author: authors.topic });
         const parent =
           authors.parent === undefined

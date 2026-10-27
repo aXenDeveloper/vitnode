@@ -5,7 +5,7 @@ icon: KeyRound
 implementation:
   objective: Show action buttons, such as Edit, only to visitors the Content Engine allows.
   decisions:
-    - Which items get the buttons? Offer content types with `publicWrite.update` or `reports`.
+    - Which items get the buttons? Offer content types with `publicWrite`, `reports` or `visibility`.
     - Which pages show them? Offer the record pages and lists that render those items.
   constraints:
     - Ask `GET /{publicApi.path}/permissions` through `useContentPermissions`; never compare author ids or roles in the browser.

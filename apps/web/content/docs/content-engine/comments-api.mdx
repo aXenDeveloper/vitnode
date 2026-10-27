@@ -1,0 +1,182 @@
+---
+title: Comments API
+description: Reference for @vitnode/core/tanstack/comments, covering useContentComments, its typed callbacks and controller, the ContentComments section, ContentCommentsRoot for custom layouts, and the comment item, actions and composer components.
+icon: SquareFunction
+---
+
+`@vitnode/core/tanstack/comments` turns a Content Engine content type with `thread` into a comment section. `useContentComments` holds the thread's state and actions, and the components render them. For a guided setup, follow [Comments](/docs/content-engine/threads), [Comment actions](/docs/content-engine/threads-editing) and [Replies](/docs/content-engine/threads-frontend).
+
+Everything here is browser code. It calls the Content Engine's own routes for the thread, permissions, writes, deletes, hiding and reports, and those routes decide every permission.
+
+## `useContentComments`
+
+```tsx
+import { useContentComments } from '@vitnode/core/tanstack/comments'
+
+const comments = useContentComments({ queryKey, thread, ...actions })
+```
+
+### Options
+
+| Name          | Type                                                | Required | Description                                                                                                                                                                                                                                                        |
+| ------------- | --------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `queryKey`    | `QueryKey`                                          | Yes      | The thread's cache key prefix, unique per root record, e.g. `[manifest.id, "comments", article.id]`. The thread is cached under `[...queryKey, "thread"]` and the permissions under `[...queryKey, "permissions", ...]`, so invalidating `queryKey` refreshes both |
+| `thread`      | `({ after, first }) => Promise<Response>`           | Yes      | `GET /thread` with `root`, `first` and `after`                                                                                                                                                                                                                     |
+| `maxDepth`    | `number`                                            | No       | The type's `thread.maxDepth`. Without it the comments are flat and **Reply** never shows                                                                                                                                                                           |
+| `pageSize`    | `number`                                            | No       | Top-level comments per page, 1-50. Defaults to `20`                                                                                                                                                                                                                |
+| `permissions` | `(ids) => Promise<Response>`                        | No       | `GET /permissions` with `ids` joined by commas. Without it every comment has no actions                                                                                                                                                                            |
+| `create`      | `({ body, parentId }) => Promise<Response>`         | No       | `POST /` with the root record, `body` and `parent: parentId`. Without it there is no composer                                                                                                                                                                      |
+| `edit`        | `{ load(id), save(id, { body, expectedVersion }) }` | No       | `GET /{id}/edit` and `PATCH /{id}`. `expectedVersion` is a number with `editorial` and `undefined` without it                                                                                                                                                      |
+| `delete`      | `(id) => Promise<Response>`                         | No       | `POST /{id}/delete`                                                                                                                                                                                                                                                |
+| `visibility`  | `{ hide(id, { reason }), unhide(id) }`              | No       | `POST /{id}/hide` with an optional `reason` (`null` when empty, at most 500 characters) and `POST /{id}/unhide`                                                                                                                                                    |
+| `report`      | `(id) => ContentTarget`                             | No       | `contentTarget(manifest.id, commentContentType, id)` from `@vitnode/core/content`                                                                                                                                                                                  |
+| `record`      | `ZodType<TRecord>`                                  | No       | Validates every loaded comment's public record and gives it a type. The thread route types records loosely, so pass it when your own rendering reads their fields                                                                                                  |
+| `field`       | `string`                                            | No       | The rich-text field with the comment's text. Defaults to `"body"`                                                                                                                                                                                                  |
+| `onChanged`   | `(queryClient) => void \| Promise<void>`            | No       | Refreshes your other queries after a successful write, such as a comment count elsewhere on the page                                                                                                                                                               |
+
+### Callback contract
+
+- **Write each `fetcher` call inline** and return its response unchanged. The plugin, module, path, arguments and answer then stay typed from your routes; the hook infers the comment id type (`number`, or `string` for a [uuid](/docs/content-engine/id-strategy) type) from `thread`.
+- **Don't check the status yourself.** The hook reads `ok` and `status`: a `2xx` is a success, anything else is reported by the section, and a thrown error counts as a failed request.
+- **An action you leave out** never shows. One you wire up still shows only where the server's `can*` answer allows it.
+
+### Controller
+
+`useContentComments` returns the controller every component reads. The fields you are most likely to use in a custom layout:
+
+| Name                                           | Description                                                                                                                                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `tree`                                         | The loaded comments as a tree: `ContentCommentTreeNode[]`, replies in `children`                                                                                                     |
+| `items`                                        | The same entries, flat and depth first                                                                                                                                               |
+| `status`                                       | `"pending"` before the first page, `"error"` when it failed, then `"success"`                                                                                                        |
+| `hasMore`, `loadMore()`, `isLoadingMore`       | The next page of top-level comments. `loadMore` resolves to `false` when it failed                                                                                                   |
+| `isRefreshing`, `retry()`                      | A refetch over data on screen, and retrying a failed first load                                                                                                                      |
+| `replyCount`, `truncated`                      | Every public comment at any depth, and whether a page held more replies than one answer carries                                                                                      |
+| `permissionsOf(id)`                            | `{ canDelete, canEdit, canHide, canReport }`, all `false` until known or after a failed batch                                                                                        |
+| `canComment`, `canReply(node)`                 | Whether the composer and **Reply** show: signed in, `create` given, under `maxDepth`, not hidden                                                                                     |
+| `features`                                     | Which actions you wired up                                                                                                                                                           |
+| `busy`                                         | The action running right now, `{ action, id }` or `null`. A second action waits for it                                                                                               |
+| `remove(id)`, `hide(id, reason)`, `unhide(id)` | Run an action and refresh after success. Resolve to `{ ok: true }` or `{ ok: false, status }`; `status` is `409` when another action was still running and `0` for a network failure |
+| `refresh()`                                    | Refreshes the thread, its permissions and `onChanged`'s queries                                                                                                                      |
+| `userId`                                       | The signed-in visitor's id, or `null`                                                                                                                                                |
+
+### Thread entries
+
+Each entry of `tree` and `items` is a `ContentCommentNode`:
+
+| Field                    | Description                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| `id`, `parentId`         | The comment and the comment it answers, `null` at the top level              |
+| `depth`                  | `1` for a comment on the root record, `2` for a reply to it                  |
+| `record`                 | The public record, or `null` for a placeholder                               |
+| `deleted`                | For a placeholder: `{ byAuthor, createdAt }`, with no text and no author     |
+| `hidden`, `hiddenReason` | Set only for a hidden comment this reader may see: its author or a moderator |
+
+`buildContentCommentTree(items)` and `countContentCommentReplies(node)` are exported for layouts that work on the flat list.
+
+## `contentCommentsQueryOptions`
+
+The thread's infinite query, for warming the first page in a route's `loader`. It takes the same `queryKey`, `thread`, `pageSize` and `record` as the hook and reads the same cache entry:
+
+```tsx
+await context.queryClient
+  .infiniteQuery(contentCommentsQueryOptions({ queryKey, thread }))
+  .catch(() => null)
+```
+
+Its `queryFn` throws when the thread route answers anything but `2xx`.
+
+## `ContentComments`
+
+The complete section: the count, the thread, **Load more comments**, the composer or a sign-in link, the actions menu, the delete confirmation and the report dialog. It scrolls to and rings the comment a `#comment-...` link points to, loading more pages until it appears.
+
+```tsx
+<ContentComments comments={comments} />
+```
+
+| Prop                     | Description                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `comments`               | The controller from `useContentComments`                                                                           |
+| `className`              | Classes for the `<section>`                                                                                        |
+| `title`                  | Replaces the "N comments" heading                                                                                  |
+| `anchorKey(record)`      | What follows `comment-` in each comment's element id. Defaults to the id; return the slug to match slug permalinks |
+| `permalink(anchorId)`    | The link on each comment's date. Defaults to `#comment-...` on the same page                                       |
+| `render.author(record)`  | Replaces the author's name                                                                                         |
+| `render.body(record)`    | Replaces the text                                                                                                  |
+| `render.meta(record)`    | Adds details after the date, such as a badge                                                                       |
+| `render.actions(record)` | Adds buttons next to **Reply**                                                                                     |
+
+The section's element id is `comments`, so `#comments` links scroll to it. Its messages live in the `core.comments` namespace; add it to the page's route `messages` to load them with the page.
+
+## Your own layout
+
+`ContentCommentsRoot` provides the controller to the building blocks below and renders the dialogs they open. It adds the comment messages to the page's, so your own components inside keep their translations.
+
+```tsx
+import {
+  ContentCommentActions,
+  ContentCommentComposer,
+  ContentCommentsComposer,
+  ContentCommentsLoadMore,
+  ContentCommentsRoot,
+  useContentCommentItem,
+} from '@vitnode/core/tanstack/comments'
+
+const MyComment = ({ node }) => {
+  const item = useContentCommentItem(node)
+
+  if (item.editing) {
+    return (
+      <ContentCommentComposer
+        editable={item.editing}
+        id={node.id}
+        label="Edit your comment"
+        mode="edit"
+        onCancel={item.stopEditing}
+        onDone={item.stopEditing}
+      />
+    )
+  }
+
+  return (
+    <article>
+      {/* your own rendering of node.record */}
+      <ContentCommentActions item={item} node={node} />
+    </article>
+  )
+}
+
+;<ContentCommentsRoot comments={comments}>
+  {comments.tree.map((node) => (
+    <MyComment key={node.id} node={node} />
+  ))}
+  <ContentCommentsLoadMore />
+  <ContentCommentsComposer />
+</ContentCommentsRoot>
+```
+
+| Export                                                             | What it is                                                                                                                                                                            |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ContentCommentsRoot`                                              | Provides `comments` to the components below; takes a `fallback` shown while the messages load                                                                                         |
+| `useContentCommentItem(node)`                                      | One comment's state: `permissions` (the server's answers limited to wired actions), `canReply`, `editing`, `startEditing()`, `stopEditing()`, `isReplying`, `setIsReplying`, `isBusy` |
+| `ContentCommentActions`                                            | The **More actions** menu with the hide-reason prompt. `children` adds your own menu items                                                                                            |
+| `ContentCommentComposer`                                           | The comment form, lazy-loaded: `mode="create"` with `parentId`, or `mode="edit"` with `id` and `editable`                                                                             |
+| `ContentCommentItem`                                               | One comment as the default section draws it                                                                                                                                           |
+| `ContentCommentPlaceholder`                                        | The anonymous stand-in for a removed comment                                                                                                                                          |
+| `ContentCommentsComposer`, `ContentCommentsLoadMore`               | The new-comment card and the load-more button                                                                                                                                         |
+| `contentCommentAuthor(record)`, `contentCommentAuthorName(person)` | Read the `author` person and the name to show                                                                                                                                         |
+| `useContentCommentErrorToast()`                                    | Shows the section's message for a failed action's status                                                                                                                              |
+
+The Blog plugin's `plugins/blog/src/pages/post-comments.tsx` is a complete custom layout: rail connectors, collapsible branches, share buttons and slug permalinks, with every action from these components.
+
+## Outcomes and errors
+
+- **Writes.** The composer posts through [`useContentPublicWrite`](/docs/content-engine/public-write-form-api): a refused write keeps the text and shows the reason, and with `editorial` a stale edit shows the version-conflict alert. A success reads the answer's `status` and `approval`: **Comment posted** only when it is public, **saved as a draft** or **waiting for a moderator** otherwise.
+- **Actions.** Delete, hide and unhide show **Comment deleted**, **Comment hidden** or **Comment visible again** after the server accepts them. When it refuses, the section shows one message for the cause: signed out, not allowed, gone, busy or unknown.
+- **Loading.** A failed first load shows **Try again**; a failed **Load more** keeps the loaded comments and says it failed.
+
+## Related
+
+- [Comments](/docs/content-engine/threads): the guided setup.
+- [Permissions API](/docs/content-engine/public-permissions-api): `useContentPermissions`, which the hook uses for `permissionsOf`.
+- [thread reference](/docs/content-engine/reference#thread): the `thread` option on the content type.

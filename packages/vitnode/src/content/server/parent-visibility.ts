@@ -20,6 +20,7 @@ interface ContentParentVisibility {
   selection: Record<string, PgColumn>;
   visible: <TRow extends Record<string, unknown>>(
     rows: TRow[],
+    options?: { hiddenParents?: boolean },
   ) => Promise<TRow[]>;
 }
 
@@ -71,7 +72,12 @@ export const createContentParentVisibility = (
     selection: { [CONTENT_PARENT_KEY]: columns[parent.field] },
     visible: async <TRow extends Record<string, unknown>>(
       rows: TRow[],
+      options?: { hiddenParents?: boolean },
     ): Promise<TRow[]> => {
+      const parentPublication = publicationColumns(
+        parent.target,
+        parentColumns,
+      );
       const ids = [
         ...new Set(
           rows.map(row => row[CONTENT_PARENT_KEY]).filter(isParentReference),
@@ -89,7 +95,9 @@ export const createContentParentVisibility = (
                   and(
                     inArray(parentId, ids),
                     publishedCondition(
-                      publicationColumns(parent.target, parentColumns),
+                      options?.hiddenParents
+                        ? { ...parentPublication, hiddenAt: undefined }
+                        : parentPublication,
                     ),
                   ),
                 )

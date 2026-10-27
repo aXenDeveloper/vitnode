@@ -149,6 +149,21 @@
         },
         "label": "{count, plural, one {Artykuł} few {Artykuły} many {Artykułów} other {Artykułu}}",
         "title": "Artykuły"
+      },
+      "comment": {
+        "label": "{count, plural, one {Komentarz} few {Komentarze} many {Komentarzy} other {Komentarza}}",
+        "title": "Komentarze",
+        "desc": "Komentarze czytelników pod artykułami i odpowiedzi na nie.",
+        "fields": {
+          "slug": "Link bezpośredni",
+          "body": "Treść",
+          "author": "Autor",
+          "article": "Artykuł",
+          "parent": "W odpowiedzi na",
+          "publishedAt": "Opublikowano",
+          "updatedAt": "Zaktualizowano",
+          "createdAt": "Utworzono"
+        }
       }
     },
     "title": "Blog",
@@ -200,6 +215,15 @@
         "desc": "Coś poszło nie tak po naszej stronie. Spróbuj ponownie za chwilę.",
         "retry": "Spróbuj ponownie"
       }
+    },
+    "comments": {
+      "article_author": "Autor",
+      "share": {
+        "label": "Udostępnij",
+        "description": "Komentarz od {name}"
+      },
+      "replying_to": "W odpowiedzi: {name}",
+      "removed_comment": "usunięty komentarz"
     }
   },
   "@vitnode/blog:categories": "Kategorie",
@@ -225,5 +249,16 @@
         "description": "Tłumaczy jedno pole artykułu na inny język."
       }
     }
-  }
+  },
+  "@vitnode/blog:comment": "Komentarze",
+  "@vitnode/blog:comment:can_view": "Przeglądanie komentarzy",
+  "@vitnode/blog:comment:can_create": "Tworzenie komentarzy",
+  "@vitnode/blog:comment:can_edit": "Edycja dowolnego komentarza",
+  "@vitnode/blog:comment:can_delete": "Usuwanie dowolnego komentarza",
+  "@vitnode/blog:comment:can_publish": "Publikowanie i wycofywanie komentarzy",
+  "@vitnode/blog:comment:can_hide": "Ukrywanie i pokazywanie komentarzy",
+  "@vitnode/blog:comment:can_restore": "Przywracanie wcześniejszej wersji komentarza",
+  "@vitnode/blog:comment:can_view_reports": "Przeglądanie zgłoszeń komentarzy",
+  "@vitnode/blog:comment:can_manage_reports": "Przejmowanie, przydzielanie i zamykanie zgłoszeń komentarzy",
+  "@vitnode/blog:comment:can_view_hidden": "Otwieranie ukrytych komentarzy"
 }

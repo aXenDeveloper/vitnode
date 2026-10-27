@@ -1,4 +1,5 @@
 import { blogCategoryContentType } from "@/content/category";
+import { blogCommentContentType } from "@/content/comment";
 import { blogPostContentType } from "@/content/post";
 
 /**
@@ -7,4 +8,8 @@ import { blogPostContentType } from "@/content/post";
  * (only the article has one: its `search.pathTemplate`, `/blog/article/{slug}`).
  * Browser-safe: it imports only the definitions, never the database models.
  */
-export const contentTypes = [blogPostContentType, blogCategoryContentType];
+export const contentTypes = [
+  blogPostContentType,
+  blogCategoryContentType,
+  blogCommentContentType,
+];

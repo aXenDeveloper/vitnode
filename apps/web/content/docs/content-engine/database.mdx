@@ -89,6 +89,7 @@ You never declare these. A field with the same name throws an error.
 | `version`     | `integer`, defaults to `1`                                                | `editorial`   |
 | `hiddenAt`    | `timestamp`, nullable                                                     | `visibility`  |
 | `hiddenBy`    | `integer`, nullable, references `core_users.id` with `ON DELETE SET NULL` | `visibility`  |
+| `hiddenReason` | `varchar(500)`, nullable                                                 | `visibility`  |
 
 Column names are camelCase in SQL, exactly as in TypeScript. Every generated table has row-level security enabled. A field group adds one column per leaf to the main table, so the `syndication` group's `indexable` field becomes `syndicationIndexable`. Column types per field are listed in [Fields](/docs/content-engine/fields).
 

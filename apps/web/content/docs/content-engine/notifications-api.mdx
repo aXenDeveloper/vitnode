@@ -43,7 +43,7 @@ It throws `ContentEngineError` when an author field is not a to-one, shared `fie
 
 ### Stable ids
 
-`id` is stored with every notification event and every member's preference, so it must never change. The key in `rules` is not stored anywhere: rename it freely. Two rules, in any plugin, cannot share an id.
+`id` is stored with every notification event and every member's preference, so it must never change. The key in `rules` is not stored anywhere, so rename it freely. Two rules, in any plugin, cannot share an id.
 
 ## `threadReply` preset
 
@@ -64,7 +64,9 @@ New comments and replies in a thread. Runs on the record's [first publication](#
 
 Author fields are typed: only to-one, shared `field.user()` names of each content type compile. `content`, `parent` and `root` in `target` are typed rows of their content types.
 
-A member who is both the root's author and the parent's author gets one notification with the `reply` text. `{actor}` is the record's author, or "Someone" when the account is gone.
+A member who is both the root's author and the parent's author gets one notification with the `reply` text. The record's author and whoever made it public, such as the moderator who approved it, never receive it. `{actor}` is the record's author, or "Someone" when the account is gone.
+
+Without `rootAuthorField` the rule notifies replies only, so the root type needs no author. `{title}` reads the root's own row, so a localized title field gives an empty string. Leave `{title}` out of the texts or pass `title`.
 
 ## `moderationDecision` preset
 
@@ -134,7 +136,7 @@ deskEditors: {
 | `data`       | `(context) => TData`                       | Yes      |         | Data for the type's `schema`, typed from it |
 | `allowSelf`  | `boolean`                                  | No       | `false` | Let the actor receive it |
 
-`context` holds `content`, `parent` and `root` (typed rows, reloaded when the notification is sent), `decision` (for `moderationDecision`: `submissionId`, `status`, `kind`, `authorId`, `reviewerId`, `reason`), `actorId`, `trigger`, `contentTypeId` and `c`. `c` is the background worker's context: the database works, but there is no signed-in user.
+`context` holds `content`, `parent` and `root` (typed rows, reloaded when the notification is sent), `decision` (for `moderationDecision`: `submissionId`, `status`, `kind`, `authorId`, `reviewerId`, `reason`), `actorId`, `trigger`, `contentTypeId` and `c`. `c` is the background worker's context. The database works, but there is no signed-in user.
 
 <Callout type="warn">
   `recipients` and `data` can run more than once for one operation, because the worker retries after a failure. Keep them free of side effects: read and compute, never send email, call webhooks or write rows. Anything they throw retries the whole operation.
@@ -154,7 +156,7 @@ Two different things decide whether something is sent twice:
 | `firstPublication` | When the record becomes public for the first time: a published create, a publish, a scheduled publish when it fires, or the approval of a create | Never. Unpublishing and republishing, hiding and showing, restoring a revision and editing do not run it |
 | `moderationDecision` | When a moderator approves or rejects a submission | Once per submission, so each review cycle can notify |
 
-The first publication is recognised inside the publishing transaction: the record's `publishedAt` is `NULL` under the row lock, and VitNode never rewrites it. That state lives on the record itself, not in anyone's inbox, so deleting a notification or the passing of time cannot make a comment notify again. Content published before the rules existed already has a `publishedAt`, so adding rules sends nothing for it, and no migration or backfill is needed.
+VitNode recognises the first publication inside the publishing transaction, where the record's `publishedAt` is still `NULL` under the row lock. Once set, VitNode never rewrites it. That state lives on the record itself, not in anyone's inbox, so deleting a notification or the passing of time cannot make a comment notify again. Content published before the rules existed already has a `publishedAt`, so adding rules sends nothing for it, and no migration or backfill is needed.
 
 ## Access
 
@@ -174,13 +176,13 @@ A notification that fails the check shows "This notification is no longer availa
 3. It resolves recipients, calls your callbacks and publishes every notification of the operation in one transaction.
 4. Core fans out to inboxes and emails, checking access again.
 
-A failure retries with backoff up to 5 attempts, then the task is marked `failed` with its error, visible with the other queue tasks. A rule or content type that is no longer registered is skipped with a warning in the logs, never retried forever. Nothing depends on a long-running process: any request or the cron endpoint drives the queue.
+A failure retries with backoff up to 5 attempts, then the task is marked `failed` with its error, visible with the other queue tasks. A rule or content type that is no longer registered is skipped with a warning in the logs, never retried forever. Nothing depends on a long-running process. Any request or the cron endpoint drives the queue.
 
 ## Cleanup
 
 Deleting a record stores a cleanup intent in the same transaction. Once it runs, the record's notifications leave every inbox, and so do notifications about records in its thread when the record was the root, including replies a database cascade removed. A grouped item loses only the deleted contributions and points at the newest one left; it disappears when none is left. Pending emails for those notifications are dropped.
 
-Hiding is not deleting: a hidden record's notifications are only unavailable until it is shown again. A delete that races with a notification being sent is safe either way, because the access check runs again at every step.
+Hiding is not deleting. A hidden record's notifications are only unavailable until it is shown again. A delete that races with a notification being sent is safe either way, because the access check runs again at every step.
 
 ## `useRevealHashTarget()`
 

@@ -1,0 +1,12 @@
+{
+  "@vitnode/blog": {
+    "notifications": {
+      "comment_reply": {
+        "label": "Replies to your comments",
+        "description": "Someone replies to a comment you wrote on an article.",
+        "comment": "{actor} commented on an article",
+        "reply": "{actor} replied to your comment"
+      }
+    }
+  }
+}

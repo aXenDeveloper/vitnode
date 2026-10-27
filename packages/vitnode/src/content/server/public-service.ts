@@ -6,7 +6,7 @@ import type {
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 
 import type { PaginationCursorColumn } from "../../api/lib/with-pagination";
 import type { ContentIdOf } from "../ids";
@@ -144,6 +144,18 @@ export interface ContentPublicService<TDefinition> {
    */
   findManyByIds?: (
     ids: readonly ContentIdOf<TDefinition>[],
+    options?: {
+      /**
+       * Also read published records that are hidden. Only for ids the caller
+       * already cleared for this reader, such as a thread's moderators.
+       */
+      hidden?: boolean;
+      /**
+       * Also keep records whose parent (a thread's root) is hidden. Only once
+       * the caller cleared that parent for this reader.
+       */
+      hiddenParents?: boolean;
+    },
   ) => Promise<ContentPublicSelect<TDefinition>[]>;
 }
 
@@ -431,7 +443,8 @@ export const createContentPublicService = <
     parent ? { ...selection, ...parent.selection } : selection;
   const keepVisible = async <TRow extends Record<string, unknown>>(
     rows: TRow[],
-  ): Promise<TRow[]> => (parent ? await parent.visible(rows) : rows);
+    options?: { hiddenParents?: boolean },
+  ): Promise<TRow[]> => (parent ? await parent.visible(rows, options) : rows);
   const primaryCursor = columns.id as PaginationCursorColumn;
   const searchColumns = publicApi.searchableFields.map(name => columns[name]);
   const orderable = publicOrderableColumns(definition);
@@ -492,20 +505,22 @@ export const createContentPublicService = <
     findBySlug: async (slug, options) =>
       await readOne(eq(columns[publicApi.slugField], slug), options),
 
-    findManyByIds: async ids => {
+    findManyByIds: async (ids, options) => {
       if (ids.length === 0) return [];
 
+      const readable = options?.hidden
+        ? or(
+            publishedCondition(published),
+            contentPublicReadCondition(published, { hidden: true }),
+          )
+        : publishedCondition(published);
       const rows = await keepVisible(
         await c
           .get("db")
           .select(withParent(detail.selection))
           .from(table)
-          .where(
-            and(
-              publishedCondition(published),
-              inArray(primaryCursor, [...ids]),
-            ),
-          ),
+          .where(and(readable, inArray(primaryCursor, [...ids]))),
+        { hiddenParents: options?.hiddenParents },
       );
 
       return (await detail.hydrate(rows)).map(detail.project);

@@ -118,6 +118,7 @@
       },
       "types": {
         "blog_post": "Article",
+        "comment": "Comment",
         "forum_comment": "Comment",
         "forum_topic": "Topic",
         "unknown": "Content"
@@ -229,6 +230,15 @@
       "increase": "Increase",
       "copied": "Copied",
       "copy_failed": "Couldn't copy to the clipboard. Try selecting the text instead.",
+      "share": {
+        "title": "Share",
+        "link": "Link to share",
+        "copy": "Copy link",
+        "on": "Share on {network}",
+        "email": "Send by email",
+        "more": "More options…",
+        "failed": "Couldn't open your device's share menu."
+      },
       "more_count": "+{count} more",
       "previous": "Previous",
       "next": "Next",
@@ -1548,6 +1558,113 @@
             "check_spam": "If you don't see the email in your inbox, please check your spam folder."
           }
         }
+      }
+    },
+    "comments": {
+      "title": "{count, plural, =0 {Comments} one {# comment} other {# comments}}",
+      "loading": "Loading comments",
+      "empty": {
+        "title": "No comments yet",
+        "desc": "Got a thought on this? Start the conversation."
+      },
+      "load_failed": {
+        "title": "Could not load comments",
+        "desc": "Please check your connection and try again.",
+        "retry": "Try again"
+      },
+      "load_more": "Load more comments",
+      "truncated": "This thread is very long, so some deeper comments are not shown here.",
+      "anchor_missing": "The comment this link points to is no longer available.",
+      "compose": {
+        "title": "Leave a comment",
+        "guest": "You need an account to comment.",
+        "sign_in": "Sign in to comment",
+        "open": "Write a comment…"
+      },
+      "form": {
+        "body_label": "Your comment",
+        "edit_label": "Edit your comment",
+        "answer_label": "Reply to {name}",
+        "submit": "Post comment",
+        "save": "Save",
+        "cancel": "Cancel",
+        "required": "Write a comment first.",
+        "proposed": "You are editing your change that still waits for a moderator."
+      },
+      "outcome": {
+        "published": {
+          "title": "Comment posted",
+          "desc": "Your comment is live in the conversation."
+        },
+        "draft": {
+          "title": "Comment saved as a draft",
+          "desc": "It is not public yet, so nobody else can see it."
+        },
+        "pending": {
+          "title": "Your comment is waiting for a moderator",
+          "desc": "It appears in the conversation once it is approved."
+        },
+        "edited": {
+          "title": "Comment saved",
+          "desc": "Your changes are live."
+        },
+        "edit_pending": {
+          "title": "Your edit is waiting for a moderator",
+          "desc": "The comment keeps its current text until the change is approved."
+        }
+      },
+      "errors": {
+        "title": "That did not go through",
+        "unknown": "Something went wrong. Please try again in a moment.",
+        "forbidden": "You are not allowed to do that here.",
+        "not_found": "This no longer exists, or you cannot see it.",
+        "unauthenticated": "Your session ended. Sign in and try again.",
+        "busy": "Another action on this conversation is still running. Wait a moment and try again."
+      },
+      "permalink": "Link to this comment",
+      "edited_label": "edited",
+      "reply": "Reply",
+      "edit": "Edit",
+      "report": "Report",
+      "report_type": "comment",
+      "more_actions": "More actions for the comment by {name}",
+      "someone": "this comment",
+      "deleted_user": "Deleted user",
+      "removed": "This comment was removed.",
+      "show_replies": "{count, plural, one {Show # reply} other {Show # replies}}",
+      "hide_replies": "{count, plural, one {Hide # reply} other {Hide # replies}}",
+      "visibility": {
+        "hidden_label": "Hidden",
+        "hidden_reason": "Reason: {reason}",
+        "hide": {
+          "action": "Hide",
+          "title": "Comment hidden",
+          "desc": "Only moderators and its author can see it now.",
+          "prompt_title": "Hide this comment?",
+          "prompt_desc": "Everyone except moderators and its author stops seeing it.",
+          "reason": "Reason",
+          "reason_desc": "Optional. Moderators and the author will see it."
+        },
+        "unhide": {
+          "action": "Unhide",
+          "title": "Comment visible again",
+          "desc": "Everyone can read it in the conversation."
+        }
+      },
+      "delete": {
+        "action": "Delete",
+        "title": "Delete this comment?",
+        "desc": "It is removed for everyone and cannot be restored. Replies to it stay in the conversation.",
+        "confirm": "Delete comment",
+        "done": {
+          "title": "Comment deleted",
+          "desc": "It is gone from the conversation."
+        }
+      },
+      "placeholder": {
+        "name": "[deleted]",
+        "by_author": "Comment deleted by user",
+        "by_moderator": "Comment removed by a moderator"
       }
     },
     "content": {
@@ -3319,6 +3436,20 @@
           "in_unit": "in kB",
           "or": "or",
           "unlimited": "Unlimited"
+        },
+        "edit_own_content": {
+          "allow": "Allow editing own content",
+          "minutes": "Time to edit",
+          "minutes_desc": "How long after posting a member can still edit it.",
+          "in_unit": "in minutes",
+          "or": "or",
+          "unlimited": "Unlimited"
+        },
+        "delete_own_content": {
+          "allow": "Allow deleting own content"
+        },
+        "hide_own_content": {
+          "allow": "Allow hiding own content"
         },
         "personal_info": {
           "allow_edit": "Allow editing personal information",

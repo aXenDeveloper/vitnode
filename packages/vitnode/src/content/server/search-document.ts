@@ -201,8 +201,20 @@ export const contentSearchDocument = (
           ...(context.containerId === null
             ? {}
             : { containerId: context.containerId }),
+        }
+      : {}),
+    ...(context || definition.thread.enabled
+      ? {
           metadata: {
-            context: { title: normalize(context.title), url: context.url },
+            ...(context
+              ? {
+                  context: {
+                    title: normalize(context.title),
+                    url: context.url,
+                  },
+                }
+              : {}),
+            ...(definition.thread.enabled ? { thread: true } : {}),
           },
         }
       : {}),

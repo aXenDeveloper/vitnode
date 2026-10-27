@@ -28,6 +28,7 @@ import { contentDeliveryPublicUrl } from "../delivery";
 import { contentIdKey, parseContentId } from "../ids";
 import { contentPublicHref } from "../public-url";
 import { isRichTextDocument } from "../rich-text/document";
+import { richTextToPlainText } from "../rich-text/plain-text";
 import { contentSearchUrl } from "../search";
 import { isContentHidden } from "../visibility";
 import { resolveContentActor } from "./actor";
@@ -157,6 +158,20 @@ const snapshotValue = async (
             : null,
       };
   }
+};
+
+const REPORT_TITLE_EXCERPT_LENGTH = 120;
+
+const reportTitleOf = (value: unknown): null | string => {
+  if (typeof value === "string") return value;
+  if (!isRichTextDocument(value)) return null;
+
+  const text = richTextToPlainText(value).replace(/\s+/g, " ").trim();
+  if (text === "") return null;
+
+  return text.length > REPORT_TITLE_EXCERPT_LENGTH
+    ? `${text.slice(0, REPORT_TITLE_EXCERPT_LENGTH - 1).trimEnd()}…`
+    : text;
 };
 
 const contentUrlOf = (
@@ -318,7 +333,7 @@ const captureContent = async (
       }
 
       const titleField = definition.reports.titleField;
-      const title = titleField ? valueOf(titleField) : null;
+      const title = titleField ? reportTitleOf(valueOf(titleField)) : null;
       const slug = definition.publicApi.enabled
         ? (visible[definition.publicApi.slugField] ?? null)
         : null;
@@ -350,7 +365,7 @@ const captureContent = async (
           updatedAt: latestIso(base.updatedAt, translation?.updatedAt),
           version: typeof base.version === "number" ? base.version : null,
         },
-        title: typeof title === "string" ? title : null,
+        title,
         url: contentUrlOf(c, definition, { locale: servedLocale, slug }),
       };
     },
@@ -395,7 +410,7 @@ const currentContent = async (
   };
 };
 
-const visibilityAction = (
+export const visibilityAction = (
   model: AnyContentModel,
   pluginId: string,
   action: ContentVisibilityAction,

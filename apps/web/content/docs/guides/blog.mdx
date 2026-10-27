@@ -181,6 +181,41 @@ you scroll, highlighting every section you are looking at. On phones it folds
 into a box above the cover. Headings get their own link anchors, so you can
 share `/blog/article/building-a-plugin#why-plugins`.
 
+### Comments
+
+Below the article sits the conversation, styled like a chat: every comment is a
+bubble on a timeline, with your own comments tinted, and replies nest up to
+six levels deep. Signed-in members write with the rich text editor. Guests can
+read everything and get a **Sign in to comment** button that brings them back to
+the article afterwards.
+
+Under each bubble sit three actions:
+
+- **Reply** opens the editor right under the comment.
+- **Share** copies a link to the comment (`#comment-{slug}`); opening it loads
+  more comments until the linked one is on screen, and highlights it.
+- **⋯** holds **Edit** for your own comments and **Report**, which sends the
+  comment to the ModCP. That includes your own comments, in case you want a
+  moderator to look at something you wrote. Moderators also get **Hide** and
+  **Unhide**. A hidden comment disappears for readers, while moderators and its
+  author still see it as a dashed bubble marked **Hidden**.
+
+A comment with replies gets a round button on the timeline that folds them
+away (**Hide 2 replies**) and back (**Show 2 replies**). Replies stop moving
+right after four levels on a computer and two on a phone; deeper ones line up
+with their parent and say who they answer (**Replying to Ada**), so a long
+thread stays readable on any screen.
+
+Comments are a Content Engine [thread](/docs/content-engine/threads): the
+`blog.comment` content type, stored in `blog_comments`, with the article as the
+thread's root. One conversation is shared by every translation of an article,
+and comments load in the browser, so the article's cached page never shows an
+old conversation. Hiding or unpublishing an article takes its comments with it;
+deleting it deletes them. Comments have no AdminCP screen. Moderate them from
+the article itself and the ModCP.
+
+{/* Image prompt: VitNode blog article page, the comments section below the article text: heading "3 comments", chat-style bubbles on a thin vertical timeline line, each bubble with the author name and "· 2 hours ago" in its first line, and a small "Reply · Share · ⋯" row under it; one smaller nested reply bubble; a "Leave a comment" card at the end. Light theme, 1280x900. */}
+
 ### Categories and article counts in your own pages
 
 The sidebar and the category tags come from a small public route that returns
@@ -355,6 +390,10 @@ a shorter one. Old article links redirect, but search results store their URL,
 so rebuild the `blog.post` collection in **AdminCP → Debug Panel → Search**
 afterwards. If you map the article route in `routePaths`, rename the key to
 `'/blog/article/:slug'`.
+
+Article comments add the `blog_comments` table, so the migration below creates
+it. There's nothing else to set up. The comments appear under every published
+article.
 
 Run your migrations after you upgrade `@vitnode/blog`:
 

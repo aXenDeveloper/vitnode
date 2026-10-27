@@ -31,6 +31,7 @@ import { core_users } from "../../database/users";
 import {
   CONTENT_EDITORIAL_FIELDS,
   CONTENT_PUBLICATION_FIELDS,
+  CONTENT_THREAD_FIELDS,
   CONTENT_VISIBILITY_FIELDS,
 } from "../const";
 import { ContentEngineError } from "../errors";
@@ -42,6 +43,7 @@ import {
   buildEditorialColumns,
   buildPublicationColumns,
   buildSystemColumns,
+  buildThreadColumns,
   buildVisibilityColumns,
 } from "./column-builders";
 
@@ -268,6 +270,9 @@ export const createContentTable = <
     ...(definition.visibility.enabled
       ? buildVisibilityColumns(() => core_users.id)
       : {}),
+    ...(definition.thread.enabled
+      ? buildThreadColumns(() => core_users.id)
+      : {}),
   };
 
   for (const name of Object.keys(fields)) {
@@ -362,7 +367,10 @@ export const contentTableColumns = <
     "updatedAt",
     ...(definition.publication.enabled ? CONTENT_PUBLICATION_FIELDS : []),
     ...(definition.editorial.enabled ? CONTENT_EDITORIAL_FIELDS : []),
-    ...(definition.visibility.enabled ? CONTENT_VISIBILITY_FIELDS : []),
+    ...(definition.visibility.enabled
+      ? [...CONTENT_VISIBILITY_FIELDS, "hiddenReason"]
+      : []),
+    ...(definition.thread.enabled ? CONTENT_THREAD_FIELDS : []),
     ...Object.keys(contentStorageColumns(sharedFields)),
   ];
 

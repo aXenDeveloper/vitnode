@@ -5,7 +5,9 @@ import { describe, expect, it, vi } from "vitest";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
 import { buildApiPlugin } from "@/api/lib/plugin";
+import { defineContentType } from "@/content/define";
 import { ContentEngineError } from "@/content/errors";
+import { field } from "@/content/fields";
 import {
   noticeComments,
   noticeQuiet,
@@ -141,6 +143,28 @@ describe("buildContentNotifications", () => {
           },
         }),
       /"ntest.topic" has no field "owner"/,
+    ],
+    [
+      "a root author field with several users",
+      () =>
+        buildContentNotifications({
+          content: testNoticeCommentContentType,
+          root: defineContentType({
+            id: "ntest.article",
+            tableName: "ntest_articles",
+            fields: { authors: field.user({ multiple: true }) },
+          }),
+          rules: {
+            replies: {
+              ...replyRule(),
+              recipients: {
+                authorField: "author",
+                rootAuthorField: "authors" as never,
+              },
+            },
+          },
+        }),
+      /"ntest.article.authors" must be a to-one, shared `field.user\(\)`/,
     ],
     [
       "threadReply on a content type without a thread",

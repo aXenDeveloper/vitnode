@@ -74,13 +74,17 @@ const titleFieldOf = (
 const recipientsFrom = (
   ids: readonly (null | number | undefined)[],
   exclude: readonly (null | number)[],
-): number[] => [
-  ...new Set(
-    ids
-      .map(userIdOf)
-      .filter((id): id is number => id !== null && !exclude.includes(id)),
-  ),
-];
+): number[] => {
+  const excluded = new Set(exclude);
+
+  return [
+    ...new Set(
+      ids
+        .map(userIdOf)
+        .filter((id): id is number => id !== null && !excluded.has(id)),
+    ),
+  ];
+};
 
 const warn = async (c: Context<EnvVitNode>, message: string) => {
   await c.get("log").warn(`${CONTENT_NOTIFICATIONS_LOG_PREFIX} ${message}`);

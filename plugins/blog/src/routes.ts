@@ -10,8 +10,10 @@ import {
  * The blog's public pages: the `/blog` index, one page per category at
  * `/blog/category/:slug`, and `/blog/article/:slug`, which serves the article's
  * `delivery.path` and `search.pathTemplate` (`/blog/article/{slug}`); the web
- * build fails if that URL has no matching page. `/blog/:slug` only redirects
- * links from before articles moved under `/blog/article`.
+ * build fails if that URL has no matching page. `/blog/comments/:slug` is a
+ * comment's permalink and redirects to its place under the article.
+ * `/blog/:slug` only redirects links from before articles moved under
+ * `/blog/article`.
  */
 export const routes = definePluginRoutes([
   page("/blog", {
@@ -40,7 +42,11 @@ export const routes = definePluginRoutes([
     // unpublishing and hiding invalidate it through the Content Engine.
     cache: { maxAge: 300, staleWhileRevalidate: 60 },
     component: lazy(() => import("./pages/post-page")),
-    messages: ["@vitnode/blog.post"],
+    messages: ["@vitnode/blog.post", "@vitnode/blog.comments", "core.comments"],
+  }),
+
+  page("/blog/comments/:slug", {
+    component: lazy(() => import("./pages/comment-redirect-page")),
   }),
 
   page("/blog/:slug", {

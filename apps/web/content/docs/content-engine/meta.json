@@ -64,6 +64,7 @@
     "public-write-form-api",
     "notifications-api",
     "public-permissions-api",
+    "comments-api",
     "container-policies-api",
     "live-editing-api"
   ]

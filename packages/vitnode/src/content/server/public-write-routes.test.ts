@@ -764,7 +764,10 @@ describe("generated surface", () => {
       "/": ["get", "post"],
       "/permissions": ["get"],
       "/{id}": ["patch"],
+      "/{id}/delete": ["post"],
       "/{id}/edit": ["get"],
+      "/{id}/hide": ["post"],
+      "/{id}/unhide": ["post"],
       "/{slug}": ["get"],
     });
   });
@@ -772,6 +775,8 @@ describe("generated surface", () => {
   it("generates no edit routes when only create is enabled", () => {
     expect(operations(harness(drafts as never, []).app)).toEqual({
       "/": ["get", "post"],
+      "/permissions": ["get"],
+      "/{id}/delete": ["post"],
       "/{slug}": ["get"],
     });
   });

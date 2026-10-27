@@ -604,6 +604,20 @@
           "total_max_storage": "Całkowity maks. rozmiar pamięci",
           "unlimited": "Bez limitu"
         },
+        "edit_own_content": {
+          "allow": "Zezwól na edycję własnych treści",
+          "minutes": "Czas na edycję",
+          "minutes_desc": "Jak długo po opublikowaniu członek może jeszcze edytować treść.",
+          "in_unit": "w minutach",
+          "or": "lub",
+          "unlimited": "Bez limitu"
+        },
+        "delete_own_content": {
+          "allow": "Zezwól na usuwanie własnych treści"
+        },
+        "hide_own_content": {
+          "allow": "Zezwól na ukrywanie własnych treści"
+        },
         "ai": {
           "unlimited": "Punkty bez limitu",
           "unlimited_desc": "Użytkowników z tą rolą nie zatrzyma miesięczny limit. Budżet strony nadal obowiązuje.",
@@ -2494,6 +2508,15 @@
       "copied": "Skopiowano",
       "copy": "Kopiuj",
       "copy_failed": "Nie udało się skopiować do schowka. Spróbuj zaznaczyć tekst.",
+      "share": {
+        "title": "Udostępnij",
+        "link": "Link do udostępnienia",
+        "copy": "Kopiuj link",
+        "on": "Udostępnij na {network}",
+        "email": "Wyślij e-mailem",
+        "more": "Więcej opcji…",
+        "failed": "Nie udało się otworzyć menu udostępniania urządzenia."
+      },
       "decrease": "Zmniejsz",
       "increase": "Zwiększ",
       "more_count": "+{count} więcej",
@@ -3161,6 +3184,7 @@
       },
       "types": {
         "blog_post": "Wpis",
+        "comment": "Komentarz",
         "forum_comment": "Komentarz",
         "forum_topic": "Temat",
         "unknown": "Treść"
@@ -3245,6 +3269,113 @@
         "test_subject": "Testowy e-mail z powiadomieniem",
         "test_title": "E-maile z powiadomieniami działają",
         "test_body": "Jeśli to czytasz, e-maile z powiadomieniami z tej strony docierają do Twojej skrzynki. Nic nie musisz robić."
+      }
+    },
+    "comments": {
+      "title": "{count, plural, =0 {Komentarze} one {# komentarz} few {# komentarze} many {# komentarzy} other {# komentarza}}",
+      "loading": "Wczytywanie komentarzy",
+      "empty": {
+        "title": "Brak komentarzy",
+        "desc": "Masz jakieś przemyślenia? Rozpocznij rozmowę."
+      },
+      "load_failed": {
+        "title": "Nie udało się wczytać komentarzy",
+        "desc": "Sprawdź połączenie i spróbuj ponownie.",
+        "retry": "Spróbuj ponownie"
+      },
+      "load_more": "Wczytaj więcej komentarzy",
+      "truncated": "Ten wątek jest bardzo długi, więc część głębszych komentarzy nie jest tu widoczna.",
+      "anchor_missing": "Komentarz, do którego prowadzi ten link, nie jest już dostępny.",
+      "compose": {
+        "title": "Zostaw komentarz",
+        "guest": "Aby komentować, potrzebujesz konta.",
+        "sign_in": "Zaloguj się, aby skomentować",
+        "open": "Napisz komentarz…"
+      },
+      "form": {
+        "body_label": "Twój komentarz",
+        "edit_label": "Edytuj komentarz",
+        "answer_label": "Odpowiedz: {name}",
+        "submit": "Opublikuj komentarz",
+        "save": "Zapisz",
+        "cancel": "Anuluj",
+        "required": "Najpierw napisz komentarz.",
+        "proposed": "Edytujesz swoją zmianę, która wciąż czeka na moderatora."
+      },
+      "outcome": {
+        "published": {
+          "title": "Komentarz opublikowany",
+          "desc": "Twój komentarz jest już widoczny w rozmowie."
+        },
+        "draft": {
+          "title": "Komentarz zapisany jako szkic",
+          "desc": "Nie jest jeszcze publiczny, więc nikt inny go nie widzi."
+        },
+        "pending": {
+          "title": "Twój komentarz czeka na moderatora",
+          "desc": "Pojawi się w rozmowie po zatwierdzeniu."
+        },
+        "edited": {
+          "title": "Komentarz zapisany",
+          "desc": "Zmiany są już widoczne."
+        },
+        "edit_pending": {
+          "title": "Twoja zmiana czeka na moderatora",
+          "desc": "Komentarz zachowuje obecną treść, dopóki zmiana nie zostanie zatwierdzona."
+        }
+      },
+      "errors": {
+        "title": "Nie udało się",
+        "unknown": "Coś poszło nie tak. Spróbuj ponownie za chwilę.",
+        "forbidden": "Nie możesz tego tutaj zrobić.",
+        "not_found": "To już nie istnieje albo nie masz do tego dostępu.",
+        "unauthenticated": "Twoja sesja wygasła. Zaloguj się i spróbuj ponownie.",
+        "busy": "Inne działanie w tej rozmowie wciąż trwa. Poczekaj chwilę i spróbuj ponownie."
+      },
+      "permalink": "Link do tego komentarza",
+      "edited_label": "edytowano",
+      "reply": "Odpowiedz",
+      "edit": "Edytuj",
+      "report": "Zgłoś",
+      "report_type": "komentarz",
+      "more_actions": "Więcej działań dla komentarza od {name}",
+      "someone": "ten komentarz",
+      "deleted_user": "Usunięty użytkownik",
+      "removed": "Ten komentarz został usunięty.",
+      "show_replies": "{count, plural, one {Pokaż # odpowiedź} few {Pokaż # odpowiedzi} many {Pokaż # odpowiedzi} other {Pokaż # odpowiedzi}}",
+      "hide_replies": "{count, plural, one {Ukryj # odpowiedź} few {Ukryj # odpowiedzi} many {Ukryj # odpowiedzi} other {Ukryj # odpowiedzi}}",
+      "visibility": {
+        "hidden_label": "Ukryty",
+        "hidden_reason": "Powód: {reason}",
+        "hide": {
+          "action": "Ukryj",
+          "title": "Komentarz ukryty",
+          "desc": "Widzą go teraz tylko moderatorzy i jego autor.",
+          "prompt_title": "Ukryć ten komentarz?",
+          "prompt_desc": "Przestaną go widzieć wszyscy poza moderatorami i jego autorem.",
+          "reason": "Powód",
+          "reason_desc": "Opcjonalnie. Zobaczą go moderatorzy i autor."
+        },
+        "unhide": {
+          "action": "Pokaż",
+          "title": "Komentarz znów widoczny",
+          "desc": "Każdy może go przeczytać w rozmowie."
+        }
+      },
+      "delete": {
+        "action": "Usuń",
+        "title": "Usunąć ten komentarz?",
+        "desc": "Zniknie dla wszystkich i nie da się go przywrócić. Odpowiedzi na niego zostaną w rozmowie.",
+        "confirm": "Usuń komentarz",
+        "done": {
+          "title": "Komentarz usunięty",
+          "desc": "Zniknął z rozmowy."
+        }
+      },
+      "placeholder": {
+        "name": "[usunięty]",
+        "by_author": "Komentarz usunięty przez użytkownika",
+        "by_moderator": "Komentarz usunięty przez moderatora"
       }
     }
   },

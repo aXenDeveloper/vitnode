@@ -23,6 +23,10 @@ export const core_roles = camelCase.table.withRLS(
     allowUploadCover: t.boolean().notNull().default(true),
     maxCoverSize: t.integer().notNull().default(5120),
     allowEditPersonalInfo: t.boolean().notNull().default(true),
+    allowEditOwnContent: t.boolean().notNull().default(true),
+    editOwnContentMinutes: t.integer(),
+    allowDeleteOwnContent: t.boolean().notNull().default(false),
+    allowHideOwnContent: t.boolean().notNull().default(false),
   }),
   t => [index("core_roles_updated_at_id_idx").on(t.updatedAt, t.id)],
 );
