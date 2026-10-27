@@ -18,7 +18,7 @@ export const ContentConfirmAction = ({
   /** Defaults to `destructive`. */
   submitVariant?: React.ComponentProps<typeof Button>["variant"];
   /** The confirm button's label. Defaults to a translated "Yes, confirm". */
-  textSubmit?: string;
+  textSubmit?: React.ReactNode;
 }) => {
   const t = useTranslations("core.global.confirm_action");
   const { setOpen } = useAlertDialog();

@@ -1,0 +1,12 @@
+{
+  "newsroom": {
+    "notifications": {
+      "comment_reply": {
+        "label": "Comments and replies",
+        "description": "Someone comments on your article or replies to your comment.",
+        "comment": "{actor} commented on \"{title}\"",
+        "reply": "{actor} replied to your comment on \"{title}\""
+      }
+    }
+  }
+}

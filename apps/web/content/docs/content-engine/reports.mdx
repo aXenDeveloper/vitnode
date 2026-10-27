@@ -229,6 +229,16 @@ The button is only a hint. The report route checks again:
 ## Report from a list or a comment
 
 - **Every row of a list.** Call the permissions hook once with every id on the page, and point each button at its row's title with `describedBy`, so a screen reader hears which record each **Report** belongs to. The newsroom plugin's letters list does this in `plugins/newsroom/src/pages/letters-page.tsx`.
-- **Comments.** Add `reports: true` to the [comment type](/docs/content-engine/threads), read `canReport` from its own permissions hook, and pass `contentTarget(manifest.id, commentContentType, comment.id)`. `snapshotFields: ["body"]` gives moderators the comment's text, since a comment has no title.
+- **Comments.** The shared comment section reports through this same dialog: add `reports` to the comment type and a `report` callback to `useContentComments`, as [Comment actions](/docs/content-engine/threads-editing#connect-reporting) shows. A comment has no title, so point `titleField` at its rich-text body: the report is titled with the comment's first 120 characters, and `snapshotFields: ["body"]` keeps the whole text.
 
-Next, let readers answer an article with [Comments](/docs/content-engine/threads).
+  ```ts
+  reports: { titleField: "body", snapshotFields: ["body"], selfReport: true },
+  ```
+
+  `selfReport: true` lets authors report their own comments too, for when they want a moderator to look at something they wrote. Without it the Report button skips the author's own records, which is the default for every content type.
+
+  ModCP links each report to the record's public URL, from `delivery.path` or `search.pathTemplate`. A comment has no page of its own, so give it a permalink that redirects to its place in the thread, as [Link reports to the comment](/docs/content-engine/threads-editing#link-reports-to-the-comment) does for the Newsroom and `delivery: { path: "/blog/comments/:slug" }` does for the Blog.
+
+## Related
+
+- [Comment actions](/docs/content-engine/threads-editing): report, hide and delete comments from the shared comment section.

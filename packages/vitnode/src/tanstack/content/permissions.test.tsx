@@ -36,7 +36,9 @@ const deferredFetch = () => {
           inFlight--;
           resolve({
             items: ids.map(id => ({
+              canDelete: false,
               canEdit: id % 2 === 0,
+              canHide: false,
               canReport: true,
               id,
             })),
@@ -78,7 +80,9 @@ describe("useContentPermissions", () => {
     });
     expect(result.current.isPending).toBe(true);
     expect(result.current.of(2)).toStrictEqual({
+      canDelete: false,
       canEdit: false,
+      canHide: false,
       canReport: false,
     });
 
@@ -102,10 +106,10 @@ describe("useContentPermissions", () => {
     ).toStrictEqual(ids);
     expect(result.current.isError).toBe(false);
     expect([2, 3, 228, 229].map(id => result.current.of(id))).toStrictEqual([
-      { canEdit: true, canReport: true },
-      { canEdit: false, canReport: true },
-      { canEdit: true, canReport: true },
-      { canEdit: false, canReport: true },
+      { canDelete: false, canEdit: true, canHide: false, canReport: true },
+      { canDelete: false, canEdit: false, canHide: false, canReport: true },
+      { canDelete: false, canEdit: true, canHide: false, canReport: true },
+      { canDelete: false, canEdit: false, canHide: false, canReport: true },
     ]);
   });
 
@@ -129,11 +133,15 @@ describe("useContentPermissions", () => {
     const [failed] = calls[1].ids;
     const [answered] = calls[2].ids.filter(id => id % 2 === 0);
     expect(result.current.of(failed)).toStrictEqual({
+      canDelete: false,
       canEdit: false,
+      canHide: false,
       canReport: false,
     });
     expect(result.current.of(answered)).toStrictEqual({
+      canDelete: false,
       canEdit: true,
+      canHide: false,
       canReport: true,
     });
   });

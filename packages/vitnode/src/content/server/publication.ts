@@ -13,6 +13,7 @@ import { ContentEngineError } from "../errors";
  * the content type has `visibility`.
  */
 export interface PublicationColumns {
+  deletedAt?: PgColumn;
   hiddenAt?: PgColumn;
   publishedAt: PgColumn;
   status: PgColumn;
@@ -38,7 +39,8 @@ export const publicationColumns = (
   definition: AnyContentTypeDefinition,
   columns: Record<string, PgColumn>,
 ): PublicationColumns => {
-  const { hiddenAt, publishedAt, status } = columns;
+  const { deletedAt, hiddenAt, publishedAt, status } = columns;
+  const thread = definition.thread.enabled && deletedAt ? { deletedAt } : {};
 
   if (!definition.publication.enabled || !publishedAt || !status) {
     throw new ContentEngineError(
@@ -47,7 +49,7 @@ export const publicationColumns = (
     );
   }
 
-  if (!definition.visibility.enabled) return { publishedAt, status };
+  if (!definition.visibility.enabled) return { ...thread, publishedAt, status };
 
   if (!hiddenAt) {
     throw new ContentEngineError(
@@ -56,7 +58,7 @@ export const publicationColumns = (
     );
   }
 
-  return { hiddenAt, publishedAt, status };
+  return { ...thread, hiddenAt, publishedAt, status };
 };
 
 /**
@@ -72,6 +74,7 @@ export const publishedCondition = (
     isNotNull(columns.publishedAt),
     lte(columns.publishedAt, sql`now()`),
     columns.hiddenAt === undefined ? undefined : isNull(columns.hiddenAt),
+    columns.deletedAt === undefined ? undefined : isNull(columns.deletedAt),
   );
 
 const hiddenPublishedCondition = (

@@ -12,9 +12,19 @@ import { useSessionQuery } from "../auth/session-query";
  * `GET /{publicApi.path}/permissions` route decides it.
  */
 export interface ContentPermissions {
+  /** `POST /{id}/delete` will work: the author when a role allows it, or a moderator with `can_delete`. */
+  canDelete: boolean;
   /** The edit page will open: the owner while allowed, or a moderator with `can_edit`. */
   canEdit: boolean;
-  /** A Report button makes sense: `reports` is on, the record is public and not the visitor's. */
+  /**
+   * `POST /{id}/hide` (or `/unhide` for a hidden record) will work: a
+   * moderator with `can_hide`, or the author when a role allows it.
+   */
+  canHide: boolean;
+  /**
+   * A Report button makes sense: `reports` is on, the record is public and not
+   * the visitor's - unless `reports.selfReport` lets authors report their own.
+   */
   canReport: boolean;
 }
 
@@ -24,7 +34,9 @@ export interface ContentPermissionsResponse<TId extends number | string> {
 }
 
 const NO_PERMISSIONS: ContentPermissions = {
+  canDelete: false,
   canEdit: false,
+  canHide: false,
   canReport: false,
 };
 
@@ -177,7 +189,12 @@ export const useContentPermissions = <TId extends number | string>({
       const item = batches.byId.get(String(id));
 
       return item
-        ? { canEdit: item.canEdit, canReport: item.canReport }
+        ? {
+            canDelete: item.canDelete,
+            canEdit: item.canEdit,
+            canHide: item.canHide,
+            canReport: item.canReport,
+          }
         : NO_PERMISSIONS;
     },
     [batches.byId],

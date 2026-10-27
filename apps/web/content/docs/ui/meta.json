@@ -43,6 +43,7 @@
     "button",
     "button-group",
     "copy-button",
+    "share-popover",
     "toggle",
     "toggle-group",
     "---Overlays---",

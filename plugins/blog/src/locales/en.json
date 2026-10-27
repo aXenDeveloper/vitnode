@@ -29,6 +29,21 @@
           "color": "Color",
           "updatedAt": "Updated"
         }
+      },
+      "comment": {
+        "label": "{count, plural, one {Comment} other {Comments}}",
+        "title": "Comments",
+        "desc": "Readers' comments on articles and replies to them.",
+        "fields": {
+          "slug": "Permalink",
+          "body": "Message",
+          "author": "Author",
+          "article": "Article",
+          "parent": "In reply to",
+          "publishedAt": "Published",
+          "updatedAt": "Updated",
+          "createdAt": "Created"
+        }
       }
     },
     "admin": {
@@ -211,6 +226,15 @@
       "edited": "Edited",
       "reading_time": "{minutes} min read",
       "on_this_page": "On this page"
+    },
+    "comments": {
+      "article_author": "Author",
+      "share": {
+        "label": "Share",
+        "description": "Comment by {name}"
+      },
+      "replying_to": "Replying to {name}",
+      "removed_comment": "a removed comment"
     }
   },
   "@vitnode/blog:posts": "Articles",
@@ -240,5 +264,16 @@
         "description": "Translates one field of an article into another language."
       }
     }
-  }
+  },
+  "@vitnode/blog:comment": "Comments",
+  "@vitnode/blog:comment:can_view": "View comments",
+  "@vitnode/blog:comment:can_create": "Create comments",
+  "@vitnode/blog:comment:can_edit": "Edit any comment",
+  "@vitnode/blog:comment:can_delete": "Delete any comment",
+  "@vitnode/blog:comment:can_publish": "Publish and unpublish comments",
+  "@vitnode/blog:comment:can_hide": "Hide and unhide comments",
+  "@vitnode/blog:comment:can_restore": "Restore an earlier version of a comment",
+  "@vitnode/blog:comment:can_view_reports": "View comment reports",
+  "@vitnode/blog:comment:can_manage_reports": "Claim, assign and resolve comment reports",
+  "@vitnode/blog:comment:can_view_hidden": "Open hidden comments"
 }

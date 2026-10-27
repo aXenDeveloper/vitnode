@@ -29,6 +29,7 @@ import {
 } from "@/lib/ai/action-text";
 import { EMOJI_ICON_MAX_LENGTH } from "@/lib/emoji-icon";
 import { multiLangValueSchema } from "@/lib/helpers/multi-lang";
+import { ROLE_EDIT_OWN_CONTENT_MAX_MINUTES } from "@/lib/own-content";
 import {
   fromAiDecimal,
   toAiDecimal,
@@ -57,11 +58,15 @@ export type AdminRoleAiValues = Omit<AdminAiRoleAccessInput, "roleId">;
 /** The shape the roles API takes, as the form produces it. */
 export interface AdminRoleFormValues {
   ai?: AdminRoleAiValues;
+  allowDeleteOwnContent: boolean;
+  allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;
+  allowHideOwnContent: boolean;
   allowUploadAvatar: boolean;
   allowUploadCover: boolean;
   allowUploadFiles: boolean;
   color: string;
+  editOwnContentMinutes: null | number;
   maxAvatarSize: number;
   maxCoverSize: number;
   maxStorageForSubmit: null | number;
@@ -72,11 +77,15 @@ export interface AdminRoleFormValues {
 
 /** The row an edit re-opens with. Absent for a create. */
 export interface AdminRoleFormData {
+  allowDeleteOwnContent: boolean;
+  allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;
+  allowHideOwnContent: boolean;
   allowUploadAvatar: boolean;
   allowUploadCover: boolean;
   allowUploadFiles: boolean;
   color: null | string;
+  editOwnContentMinutes: null | number;
   id: number;
   maxAvatarSize: number;
   maxCoverSize: number;
@@ -257,6 +266,21 @@ export const AdminRoleFormContent = ({
       .default(fallback);
 
   const formSchema = z.object({
+    allowEditOwnContent: z.boolean().default(data?.allowEditOwnContent ?? true),
+    allowDeleteOwnContent: z
+      .boolean()
+      .default(data?.allowDeleteOwnContent ?? false),
+    allowHideOwnContent: z
+      .boolean()
+      .default(data?.allowHideOwnContent ?? false),
+    editOwnContentMinutes: z
+      .number()
+      .int()
+      .min(1)
+      .max(ROLE_EDIT_OWN_CONTENT_MAX_MINUTES)
+      .nullable()
+      .default(data?.editOwnContentMinutes ?? null)
+      .describe(t("form.edit_own_content.minutes_desc")),
     allowEditPersonalInfo: z
       .boolean()
       .default(data?.allowEditPersonalInfo ?? true),
@@ -387,6 +411,54 @@ export const AdminRoleFormContent = ({
             <AutoFormSwitch label={t("form.upload.allow")} {...props} />
           ),
           id: "allowUploadFiles",
+          tab: "content",
+        },
+        {
+          children: [
+            {
+              component: props => (
+                <AutoFormNullableNumber
+                  label={t("form.edit_own_content.minutes")}
+                  max={ROLE_EDIT_OWN_CONTENT_MAX_MINUTES}
+                  min={1}
+                  orLabel={t("form.edit_own_content.or")}
+                  resumeValue={60}
+                  step={1}
+                  toggleLabel={t("form.edit_own_content.unlimited")}
+                  unitLabel={t("form.edit_own_content.in_unit")}
+                  {...props}
+                />
+              ),
+              id: "editOwnContentMinutes",
+            },
+          ],
+          component: props => (
+            <AutoFormSwitch
+              {...props}
+              label={t("form.edit_own_content.allow")}
+            />
+          ),
+          id: "allowEditOwnContent",
+          tab: "content",
+        },
+        {
+          component: props => (
+            <AutoFormSwitch
+              {...props}
+              label={t("form.delete_own_content.allow")}
+            />
+          ),
+          id: "allowDeleteOwnContent",
+          tab: "content",
+        },
+        {
+          component: props => (
+            <AutoFormSwitch
+              {...props}
+              label={t("form.hide_own_content.allow")}
+            />
+          ),
+          id: "allowHideOwnContent",
           tab: "content",
         },
         {

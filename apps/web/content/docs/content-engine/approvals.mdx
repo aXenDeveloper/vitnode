@@ -133,7 +133,7 @@ Deleting a record cancels its pending submission, from the AdminCP or anywhere e
 
 Opening a submission emits `content.approval.submitted`, and a decision emits `content.approval.approved` or `content.approval.rejected`. They carry the submission id, the content type, the record id, the container, the author and, for decisions, the reviewer. The record's own events are not duplicated: a pending create emits `created` but not `published` until it is approved. Payloads are in [Built-in events](/docs/dev/events/built-in-events#content-approval-events).
 
-A listener on `content.approval.rejected` is a good place to tell the author why their post did not make it, gently.
+To tell authors about decisions in their notification inbox, use the [`moderationDecision` preset](/docs/content-engine/notifications#tell-authors-about-moderation-decisions) instead of a listener: it is stored with the decision and sent exactly once.
 
 ## Check the result
 

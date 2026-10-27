@@ -22,6 +22,7 @@ import {
 import { ContentInputError, ContentVersionConflict } from "../../errors";
 import { parseContentId } from "../../ids";
 import { contentDefinitionOf } from "../../server/model";
+import { recordContentModerationDecision } from "../../server/notifications/intents";
 import { publicationMethods } from "../../server/publication";
 import {
   contentEditorialWriteEffects,
@@ -288,6 +289,9 @@ export const decideContentSubmission = async (
       })
       .where(eq(core_content_submissions.id, submission.id))
       .returning();
+    // In the deciding transaction, so the submitter is told exactly when the
+    // decision commits.
+    await recordContentModerationDecision(c, tx, decided);
 
     return { applied, decided, kind: "decided" as const, model };
   });

@@ -8,7 +8,7 @@ This page is the contract behind [Permissions](/docs/content-engine/public-permi
 
 ## When the route exists
 
-The Content Engine mounts `GET /permissions` next to the [public read routes](/docs/content-engine/public-api) when the content type has [`publicWrite.update`](/docs/content-engine/public-write) or [`reports`](/docs/content-engine/reports). Without either, there is nothing to answer and the [fetcher](/docs/dev/fetcher) refuses the path at compile time.
+The Content Engine mounts `GET /permissions` next to the [public read routes](/docs/content-engine/public-api) when the content type has [`publicWrite`](/docs/content-engine/public-write), [`reports`](/docs/content-engine/reports) or [`visibility`](/docs/content-engine/content-visibility). Without any of them, there is nothing to answer and the [fetcher](/docs/dev/fetcher) refuses the path at compile time.
 
 ```http title="Request"
 GET /api/newsroom/content/news/permissions?ids=1,2,15

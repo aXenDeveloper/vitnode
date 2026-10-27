@@ -1,0 +1,354 @@
+---
+title: Notifications
+description: Tell VitNode members about replies to their comments, and article authors about new comments, with buildContentNotifications. The notifications are sent by the server, so they work with the shared comment section, a custom layout or the AdminCP.
+icon: Bell
+implementation:
+  objective: Notify members about replies to their comments, and optionally root authors about new comments, on a threaded content type through the core notification system.
+  decisions:
+    - Which threaded content type? Offer content types with the `thread` option and a to-one `field.user()` author field from the project's plugins.
+    - Replies only, or comments and replies? Comments need a to-one, shared `field.user()` on the root type. Without one, set up replies only and do not add an author field just for this.
+    - 'Should members also get email by default? Recommend `email: "none"` with `email: true`, so members can opt in.'
+    - Do the comments go through approval? Only then add a `moderationDecision` rule, and ask where a rejected author should be sent.
+  constraints:
+    - Configure rules with `buildContentNotifications` in a server-only file and register them in `buildApiPlugin({ contentNotifications })`; never send notifications from a React component, an event listener or a direct `publish()` call for these cases.
+    - Give every rule a stable, plugin-scoped `id` and API message keys in `src/locales/api`, passed as `buildApiPlugin({ messages })`.
+    - Point `target` at an anchor the comment section renders (`#comment-{id}`, or the slug with `anchorKey`), or at an existing comment permalink route. Do not add a second permalink mechanism.
+  related:
+    - title: Notifications API
+      href: /docs/content-engine/notifications-api
+    - title: Replies
+      href: /docs/content-engine/threads-frontend
+    - title: Notification types
+      href: /docs/dev/notifications/notification-types
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import bell from "./notifications-bell.webp";
+import comment from "./notifications-comment.webp";
+
+When someone answers a comment, its author should hear about it, and when someone comments on an article, the article's author should too. `buildContentNotifications` sets that up for a threaded content type: you name the author fields, the texts and the link, and VitNode sends the notifications through the [core notification system](/docs/dev/notifications), with its bell, inbox, preferences and email.
+
+The server sends them when a comment becomes public, whoever wrote it and however: the shared comment section, your own layout, the public API or the AdminCP. Your React components send nothing, so there is nothing to change in them.
+
+## Before you begin
+
+You need:
+
+- **The newsroom comments**, from [Comments](/docs/content-engine/threads). The comment type has `author: field.user()` and `thread: { parent: "parent", root: "article" }`.
+- **[Replies](/docs/content-engine/threads-frontend)**, to have replies to notify about. [Comment actions](/docs/content-engine/threads-editing) is not needed.
+- **Two member accounts**, to see a notification arrive. Nobody is notified about their own comment.
+
+## Choose a setup
+
+| Setup | Who is told | The article needs |
+| --- | --- | --- |
+| **A: replies only** | The author of the comment being answered | Nothing |
+| **B: comments and replies** | Setup A, plus the article's author about every new comment | A to-one, shared `field.user()` author |
+
+Pick A when your articles have no single author, for example when staff write them without one or when the author field lists several people. The Blog plugin is in that case: its articles have `authorId: field.user({ multiple: true })`, so Blog uses setup A. Adding an author field only for notifications is never required.
+
+<Steps>
+
+<Step>
+
+### Give articles an author (setup B only)
+
+Skip this step for setup A.
+
+The newsroom article already has `author: field.user()` if you followed [Create form](/docs/content-engine/public-write). If you did not, add the field to `src/content/article.ts`. This is an excerpt:
+
+```ts title="plugins/newsroom/src/content/article.ts"
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    // ...
+    author: field.user(), // [!code ++]
+  },
+```
+
+Then build and migrate from the workspace root. The migration adds a nullable `author` column, so existing articles have no author until you set one:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
+
+```bash tab="bun"
+bun run build:plugins
+bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins
+pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins
+npm run db:migrate
+```
+
+</Tabs>
+
+An article gets its author in one of two ways:
+
+- **In the AdminCP.** Open **AdminCP → Newsroom → Articles** and click **Create Article**, or **Edit** on an existing one. Pick a member in **Author**, then save (**Save changes** when editing). The AdminCP shows a user picker for every `field.user()`, so no member forms are involved.
+- **From the site.** With [Create form](/docs/content-engine/public-write), `publicWrite.ownership` sets the member who writes the article as its author.
+
+</Step>
+
+<Step>
+
+### Declare the notifications
+
+Create `src/api/lib/notifications.ts`. It is server-only, so only `config.api.ts` imports it, never a page.
+
+<Tabs items={["A: replies only", "B: comments and replies"]} label="Choose a setup">
+
+<Tab value="A: replies only">
+
+```ts title="plugins/newsroom/src/api/lib/notifications.ts"
+import { buildContentNotifications } from "@vitnode/core/content/server";
+
+import { articleContentType } from "@/content/article";
+import { commentContentType } from "@/content/comment";
+
+export const commentNotifications = buildContentNotifications({
+  content: commentContentType,
+  root: articleContentType,
+  rules: {
+    replies: {
+      id: "newsroom.comment_reply",
+      preset: "threadReply",
+      recipients: { authorField: "author" },
+      messages: {
+        label: "newsroom.notifications.comment_reply.label",
+        description: "newsroom.notifications.comment_reply.description",
+        comment: "newsroom.notifications.comment_reply.comment",
+        reply: "newsroom.notifications.comment_reply.reply",
+      },
+      target: ({ root, content }) =>
+        `/news/${root.slug}#comment-${content.id}`,
+      defaults: { inApp: true, email: "none" },
+      email: true,
+    },
+  },
+});
+```
+
+</Tab>
+
+<Tab value="B: comments and replies">
+
+```ts title="plugins/newsroom/src/api/lib/notifications.ts"
+import { buildContentNotifications } from "@vitnode/core/content/server";
+
+import { articleContentType } from "@/content/article";
+import { commentContentType } from "@/content/comment";
+
+export const commentNotifications = buildContentNotifications({
+  content: commentContentType,
+  root: articleContentType,
+  rules: {
+    replies: {
+      id: "newsroom.comment_reply",
+      preset: "threadReply",
+      recipients: { authorField: "author", rootAuthorField: "author" },
+      messages: {
+        label: "newsroom.notifications.comment_reply.label",
+        description: "newsroom.notifications.comment_reply.description",
+        comment: "newsroom.notifications.comment_reply.comment",
+        reply: "newsroom.notifications.comment_reply.reply",
+      },
+      target: ({ root, content }) =>
+        `/news/${root.slug}#comment-${content.id}`,
+      defaults: { inApp: true, email: "none" },
+      email: true,
+    },
+  },
+});
+```
+
+</Tab>
+
+</Tabs>
+
+- **`id`** is the notification type's id, stored with every notification and every member's preference. Keep it forever, and start it with your plugin's name. The key `replies` is only a name in your code.
+- **`preset: "threadReply"`** notifies the author of the comment being answered (`reply` text). With `rootAuthorField`, it also tells the article's author about every new comment (`comment` text). `comment` is required either way; in setup A nobody receives it.
+- **`recipients`** names author fields. Both are type-checked. A field that is not a to-one, shared `field.user()` does not compile, which is why a multi-author field cannot be the `rootAuthorField`.
+- **`target`** is where the notification leads. `root` is the article and `content` the new comment, both typed.
+- **`defaults`** is what members get before they choose: the bell on, email off. `email: true` still lets them turn email on.
+
+</Step>
+
+<Step>
+
+### Register it with the plugin
+
+Pass the result to `buildApiPlugin` in `src/config.api.ts`, next to the API messages the next step adds:
+
+```ts title="plugins/newsroom/src/config.api.ts"
+import { commentNotifications } from "@/api/lib/notifications"; // [!code ++]
+import messages from "@/locales/api"; // [!code ++]
+
+export const newsroomApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    contentNotifications: [commentNotifications], // [!code ++]
+    messages, // [!code ++]
+    modules: [
+      // ...unchanged
+    ],
+  });
+```
+
+The notification type is registered with the plugin, so it shows up on members' preferences page and on the AdminCP notifications page without more code.
+
+</Step>
+
+<Step>
+
+### Add the texts
+
+Notification texts are translated on the API, in the recipient's language, so they live in the plugin's API messages, not in the frontend `locales/en.json`. Create both files:
+
+```json title="plugins/newsroom/src/locales/api/en.json"
+{
+  "newsroom": {
+    "notifications": {
+      "comment_reply": {
+        "label": "Comments and replies",
+        "description": "Someone comments on your article or replies to your comment.",
+        "comment": "{actor} commented on \"{title}\"",
+        "reply": "{actor} replied to your comment on \"{title}\""
+      }
+    }
+  }
+}
+```
+
+```ts title="plugins/newsroom/src/locales/api/index.ts"
+import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
+
+const messages: LocaleMessagesMap = {
+  en: async () => await import("./en.json", { with: { type: "json" } }),
+};
+
+export default messages;
+```
+
+`{actor}` is the comment's author (or "Someone" for a deleted account) and `{title}` the article's `admin.titleField`. Both are plain text, and the inbox never renders them as HTML. For setup A, write the label and description about replies only.
+
+A localized title field is not on the article's own row, so `{title}` would be empty. The Blog plugin's titles are localized, and its texts leave `{title}` out: `"{actor} replied to your comment"`.
+
+</Step>
+
+<Step>
+
+### Make the link land on the comment
+
+The link ends in `#comment-{id}`, and the shared section from [Comments](/docs/content-engine/threads) gives every comment that element id. When the URL has such a hash, `ContentComments` loads more pages until the comment is on screen, scrolls it into view, focuses it and outlines it. If it is gone or hidden from the reader, the section says **The comment this link points to is no longer available.** There is nothing to add.
+
+A custom layout built on `ContentCommentsRoot` does the same with `useRevealHashTarget` from `@vitnode/core/hooks/use-reveal-hash-target`, as the [Comments API](/docs/content-engine/comments-api#your-own-layout) describes. If your comment type has a permalink route, point `target` there instead. The Blog plugin uses its existing `/blog/comments/:slug` route, which redirects to `#comment-{slug}` under the article in the reader's language, and answers 404 for a comment that is hidden or gone:
+
+```ts title="plugins/blog/src/api/lib/notifications.ts"
+target: ({ content }) => `/blog/comments/${encodeURIComponent(content.slug)}`,
+```
+
+</Step>
+
+<Step>
+
+### Rebuild the plugin
+
+Run `pnpm build:plugins` from the workspace root, then restart `pnpm dev`. Nothing needs migrating for the notifications themselves, because they use core tables that already exist.
+
+</Step>
+
+</Steps>
+
+## Who gets notified
+
+Ada writes the article, Bob and Cleo are members, and Max is a moderator. Recipients are read from the comment, the comment it answers and the article when the notification is sent, never from anyone's session.
+
+| What happens | Setup A | Setup B | Why |
+| --- | --- | --- | --- |
+| Bob comments on Ada's article | Nobody | Ada (`comment`) | Ada is the article's author |
+| Ada comments on her own article | Nobody | Nobody | A comment's author is never notified about it |
+| Cleo replies to Bob's comment | Bob (`reply`) | Bob (`reply`), Ada (`comment`) | Bob wrote the parent, Ada the article |
+| Ada replies to Bob's comment on her article | Bob (`reply`) | Bob (`reply`) | Ada wrote the reply, so she is left out |
+| Cleo replies to Ada's comment on Ada's article | Ada (`reply`) | Ada once (`reply`) | Someone who is both authors gets one notification, worded as a reply |
+| Bob replies to his own comment on Ada's article | Nobody | Ada (`comment`) | Bob is left out; Ada still hears about a new comment in her article |
+| The article or the parent comment has no author | Nobody for that one | Nobody for that one | An empty author field, including a deleted account, is skipped; the other recipient still gets theirs |
+| The new comment has no author | As above | As above | Recipients still get it, and `{actor}` reads "Someone" |
+| Max approves Bob's pending comment | As if Bob posted it | As if Bob posted it, minus Max | Bob is the actor shown. Whoever made the comment public is skipped, so Max hears nothing even when he wrote the article or the parent |
+
+Core then drops deleted accounts, members who turned the type off and anyone who may no longer see the comment.
+
+## When it fires
+
+A comment notifies **once, the first time it becomes public**. VitNode tells that moment apart by the comment's `publishedAt`, which is set once and never rewritten. A notification already in an inbox is checked again each time the inbox loads and before each email, so it follows what happens to the comment later.
+
+| What happens to the comment | Notification |
+| --- | --- |
+| Posted with `create.status: "published"` | Sent a moment later |
+| Saved as a draft | Nothing yet. Sent when the draft is first published |
+| Waiting for approval, then approved | Sent once, at approval |
+| Rejected | None about the comment. A [`moderationDecision` rule](#tell-authors-about-moderation-decisions) can tell its author |
+| Edited, or an edit approved | No new one |
+| Hidden, then shown again | Shows "This notification is no longer available." while hidden, then comes back. A comment hidden before the notification went out is never announced |
+| Unpublished, then published again | Unavailable meanwhile, then back. No new one |
+| Deleted without replies | Removed from inboxes |
+| Deleted while it has replies | It stays as a placeholder in the thread, and its notification is unavailable. Notifications about its replies stay |
+| Its article unpublished, hidden or deleted | Unavailable while the article is not public; removed with a deleted article |
+
+Comments that were already public before you added the rules never notify, so deploying them doesn't bury every author under a year of old news.
+
+The notification is stored in the same database transaction as the comment, and a background task sends it a moment after the response. If the comment's transaction rolls back, nothing is sent. If the task fails, the queue retries it without ever creating a second notification. [Notifications API](/docs/content-engine/notifications-api#delivery-and-retries) has the details.
+
+## Tell authors about moderation decisions
+
+When comments go through [approval](/docs/content-engine/approvals), add a `moderationDecision` rule to tell the person who submitted a comment what a moderator decided. Newsroom comments are never pending, so this example comes from the Forum plugin, whose forums have [publishing policies](/docs/content-engine/container-policies):
+
+```ts title="plugins/forum/src/api/lib/notifications.ts"
+decisions: {
+  id: "forum.comment_decision",
+  preset: "moderationDecision",
+  messages: {
+    label: "@vitnode/forum.notifications.comment_decision.label",
+    approved: "@vitnode/forum.notifications.comment_decision.approved",
+    rejected: "@vitnode/forum.notifications.comment_decision.rejected",
+  },
+  target: ({ content, decision }) =>
+    decision.status === "approved"
+      ? commentPermalink(content.slug)
+      : FORUM_PENDING_HREF,
+},
+```
+
+Each decision notifies the submitter once, so a resubmitted comment that is rejected again gets a second notification. A rejected comment is a draft that readers cannot open, so `target` sends its author to their pending list instead of an anchor the topic page does not have. The texts receive `{title}`, `{kind}` (`create` or `edit`) and `{reason}`.
+
+## Preferences and email
+
+Each rule is an ordinary notification type. Members find **Comments and replies** under **Settings → Notifications** and can turn the notification list, push or email on and off for it. Administrators can change the defaults or switch the type off on the [AdminCP notifications page](/docs/dev/notifications/admincp). Email needs an email adapter and `email: true` (or a `defaults.email` other than `"none"`); immediate emails and daily or weekly digests then work like every other type.
+
+## Check the result
+
+You need two members, Ada and Grace. For setup B, first make Ada the author of a published article, as in [Give articles an author](#give-articles-an-author-setup-b-only). For setup A, any published article works.
+
+1. Sign in as Grace in another browser and comment on the article. With setup B, Ada's bell shows a new notification within a few seconds:
+
+<ImgDocs alt="The notification bell open with two unread notifications: 'Grace Hopper commented on Town council approves the new park' and 'Grace Hopper replied to your comment on Town council approves the new park'" src={bell} />
+
+2. As Ada, open the notification. The article opens with Grace's comment highlighted, even when it is on a later page of comments:
+
+<ImgDocs alt="The article's comments on a later page, with Grace Hopper's notified comment outlined below earlier comments and replies" src={comment} />
+
+3. As Ada, reply to Grace's comment. Grace gets "replied to your comment" and Ada gets nothing. Open it as Grace, and the reply is highlighted below Grace's comment.
+4. As Grace, open **Settings → Notifications**, expand **Comments and replies** and turn **Notification list** off. Have Ada reply again. Nothing new arrives. Turn it back on.
+5. As a moderator, hide Grace's comment. Ada's notification now says it is no longer available. Show the comment again and the notification comes back.
+6. Delete the article. Both notifications disappear from the inboxes.
+
+## Related
+
+- [Notifications API](/docs/content-engine/notifications-api): every option, custom rules, access and retries.
+- [Notification types](/docs/dev/notifications/notification-types): what a type controls in the core notification system.
+- [Approvals](/docs/content-engine/approvals): when comments wait for a moderator.

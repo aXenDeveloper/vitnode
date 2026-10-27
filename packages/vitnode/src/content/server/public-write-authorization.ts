@@ -5,6 +5,8 @@ import type { ContentRecordContainer } from "../containers/server/policy";
 import type { ContentActor } from "../revisions";
 import type { AnyContentTypeDefinition } from "../types";
 
+import { resolveOwnContentPolicy } from "../../api/lib/own-content-policy";
+import { ownContentEditOpen } from "../../lib/own-content";
 import { CONTENT_PERMISSIONS } from "../const";
 import { contentAuthorMayEdit } from "../containers/policies";
 import { canModerateContent } from "../containers/server/policy";
@@ -50,8 +52,10 @@ export type ContentPublicWriteAuthorization =
 /**
  * Who may edit a record from the public site. A moderator holding `can_edit`
  * for the record's container edits anything there, at any age. An owner edits
- * their own record while it is not hidden and the container's `authorEdit`
- * policy still allows it - measured from the row's server `createdAt`.
+ * their own record while it is not hidden, one of their roles has "Edit own
+ * content" on with a window that is still open, and the container's
+ * `authorEdit` policy still allows it - both windows measured from the row's
+ * server `createdAt`.
  */
 export const authorizeContentPublicWrite = async (
   c: Context,
@@ -79,11 +83,22 @@ export const authorizeContentPublicWrite = async (
   }
 
   const hidden = row.hiddenAt !== null && row.hiddenAt !== undefined;
+  const deleted = row.deletedAt !== null && row.deletedAt !== undefined;
   const owns =
     update.own &&
     !hidden &&
+    !deleted &&
     contentPublicWriteOwnerOf(definition, row) === actor.userId;
   if (!owns) return { allowed: false, reason: null, via: null };
+
+  const user = c.get("user");
+  const rolePolicy = user
+    ? (await resolveOwnContentPolicy(c, user)).edit
+    : { allowed: false, minutes: null };
+  if (!rolePolicy.allowed) return { allowed: false, reason: null, via: null };
+  if (!ownContentEditOpen(rolePolicy, row.createdAt as Date | undefined)) {
+    return { allowed: false, reason: "editWindowClosed", via: null };
+  }
 
   if (
     policy &&

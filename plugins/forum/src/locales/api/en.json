@@ -1,0 +1,24 @@
+{
+  "@vitnode/forum": {
+    "notifications": {
+      "comment_reply": {
+        "label": "Comments and replies",
+        "description": "Someone comments on your topic or replies to your comment.",
+        "comment": "{actor} commented on \"{title}\"",
+        "reply": "{actor} replied to your comment in \"{title}\""
+      },
+      "comment_decision": {
+        "label": "Comment reviews",
+        "description": "A moderator approves or rejects a comment you submitted.",
+        "approved": "{kind, select, edit {Your edit to a comment in \"{title}\" was approved} other {Your comment in \"{title}\" was approved}}",
+        "rejected": "{kind, select, edit {Your edit to a comment in \"{title}\" was not approved} other {Your comment in \"{title}\" was not approved}}"
+      },
+      "topic_decision": {
+        "label": "Topic reviews",
+        "description": "A moderator approves or rejects a topic or edit you submitted.",
+        "approved": "{kind, select, edit {Your edit to \"{title}\" was approved} other {Your topic \"{title}\" was approved}}",
+        "rejected": "{kind, select, edit {Your edit to \"{title}\" was not approved} other {Your topic \"{title}\" was not approved}}"
+      }
+    }
+  }
+}

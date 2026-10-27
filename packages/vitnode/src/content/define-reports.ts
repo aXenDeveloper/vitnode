@@ -32,6 +32,7 @@ const DEFAULT_SNAPSHOT_KINDS = new Set<ContentFieldDescriptor["kind"]>([
 ]);
 
 const TITLE_KINDS = new Set<ContentFieldDescriptor["kind"]>([
+  "richText",
   "slug",
   "text",
   "textarea",
@@ -39,11 +40,16 @@ const TITLE_KINDS = new Set<ContentFieldDescriptor["kind"]>([
 
 const DISABLED: ResolvedContentReportsConfig<false> = {
   enabled: false,
+  selfReport: false,
   snapshotFields: [],
   titleField: null,
 };
 
-const REPORT_OPTION_KEYS = new Set(["snapshotFields", "titleField"]);
+const REPORT_OPTION_KEYS = new Set([
+  "selfReport",
+  "snapshotFields",
+  "titleField",
+]);
 
 export const resolveReports = (
   id: string,
@@ -62,7 +68,7 @@ export const resolveReports = (
 
   if (reports !== true && (typeof reports !== "object" || reports === null)) {
     throw new ContentEngineError(
-      "reports is `true` or an options object with `titleField` and `snapshotFields`.",
+      "reports is `true` or an options object with `titleField`, `snapshotFields` and `selfReport`.",
       { contentTypeId: id },
     );
   }
@@ -73,7 +79,7 @@ export const resolveReports = (
   );
   if (unknownKey) {
     throw new ContentEngineError(
-      `reports.${unknownKey} is not an option. Use \`titleField\` and \`snapshotFields\`.`,
+      `reports.${unknownKey} is not an option. Use \`titleField\`, \`snapshotFields\` and \`selfReport\`.`,
       { contentTypeId: id },
     );
   }
@@ -92,7 +98,7 @@ export const resolveReports = (
     const descriptor = fields[options.titleField];
     if (!descriptor || !TITLE_KINDS.has(descriptor.kind)) {
       throw new ContentEngineError(
-        `reports.titleField "${options.titleField}" must be a text, textarea or slug field of this content type.`,
+        `reports.titleField "${options.titleField}" must be a text, textarea, slug or rich text field of this content type.`,
         { contentTypeId: id },
       );
     }
@@ -139,5 +145,19 @@ export const resolveReports = (
       .map(([name]) => name);
   }
 
-  return { enabled: true, snapshotFields, titleField };
+  if (
+    options.selfReport !== undefined &&
+    typeof options.selfReport !== "boolean"
+  ) {
+    throw new ContentEngineError("reports.selfReport is `true` or `false`.", {
+      contentTypeId: id,
+    });
+  }
+
+  return {
+    enabled: true,
+    selfReport: options.selfReport ?? false,
+    snapshotFields,
+    titleField,
+  };
 };

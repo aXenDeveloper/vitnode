@@ -4,10 +4,14 @@ import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 
 import { blogAiActions } from "@/api/ai/actions";
 import { buildContentPublicModule } from "@/api/builders";
+import { commentNotifications } from "@/api/lib/notifications";
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { categoriesModule } from "@/api/modules/categories/categories.module";
+import { postsModule } from "@/api/modules/posts/posts.module";
 import { categoryContent } from "@/database/categories";
+import { commentContent } from "@/database/comments";
 import { postContent } from "@/database/posts";
+import messages from "@/locales/api";
 import { manifest } from "@/manifest.gen";
 
 /**
@@ -20,12 +24,17 @@ import { manifest } from "@/manifest.gen";
  *   from `@/api/lib/events`.
  * - `content/blog` - the public read and delivery routes the Content Engine
  *   generates from the article's `publicApi`.
+ * - `content/comments` - the readers' comments: the thread under an article,
+ *   and creating and editing one's own comments.
+ * - `posts` - an article's friendly URL by id, which the
+ *   `/blog/comments/:slug` permalink redirect reads.
  * - `categories` - the public category summaries (id, localized name, colour,
  *   article count) the `/blog` sidebar and article labels read. Categories
  *   have no `publicApi`, so this is their only public route.
  *
- * The blog's AI actions (field translation and article review) are registered
- * here too.
+ * The blog's AI actions (field translation and article review) and the
+ * reply notifications from `@/api/lib/notifications`, with their API texts,
+ * are registered here too.
  *
  * @example
  * ```ts
@@ -43,13 +52,16 @@ export const blogApiPlugin = () =>
   buildApiPlugin({
     manifest,
     aiActions: blogAiActions,
+    contentNotifications: [commentNotifications],
+    messages,
     modules: [
       adminModule,
       categoriesModule,
+      postsModule,
       buildContentPublicModule({
         // Skips any content type without `publicApi`, so the category
         // contributes nothing - it has no public URL of its own.
-        contentTypes: [categoryContent, postContent],
+        contentTypes: [categoryContent, postContent, commentContent],
       }),
     ],
   });

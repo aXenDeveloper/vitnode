@@ -8,6 +8,7 @@ import {
   parseEmojiIcon,
   serializeEmojiIcon,
 } from "@/lib/emoji-icon";
+import { ROLE_EDIT_OWN_CONTENT_MAX_MINUTES } from "@/lib/own-content";
 
 // Role names are not a column on `core_roles` - every translation lives in
 // `core_languages_words`, so the name is the full list of per-language values.
@@ -32,6 +33,13 @@ export const zodRoleImageSizeSchema = z
 
 export const zodRolePrefixSchema = z.string().max(EMOJI_ICON_MAX_LENGTH);
 
+export const zodRoleEditOwnContentMinutesSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(ROLE_EDIT_OWN_CONTENT_MAX_MINUTES)
+  .nullable();
+
 export const zodCreateRoleAdminSchema = z.object({
   name: zodRoleNameSchema,
   color: z.string().max(50).optional(),
@@ -41,6 +49,10 @@ export const zodCreateRoleAdminSchema = z.object({
   maxStorageForSubmit: zodRoleStorageSchema.optional(),
   allowUploadAvatar: z.boolean().optional(),
   allowEditPersonalInfo: z.boolean().optional(),
+  allowEditOwnContent: z.boolean().optional(),
+  editOwnContentMinutes: zodRoleEditOwnContentMinutesSchema.optional(),
+  allowDeleteOwnContent: z.boolean().optional(),
+  allowHideOwnContent: z.boolean().optional(),
   maxAvatarSize: zodRoleImageSizeSchema.optional(),
   allowUploadCover: z.boolean().optional(),
   maxCoverSize: zodRoleImageSizeSchema.optional(),
@@ -86,6 +98,10 @@ export const createRoleAdminRoute = buildRoute({
       maxStorageForSubmit,
       allowUploadAvatar,
       allowEditPersonalInfo,
+      allowEditOwnContent,
+      editOwnContentMinutes,
+      allowDeleteOwnContent,
+      allowHideOwnContent,
       maxAvatarSize,
       allowUploadCover,
       maxCoverSize,
@@ -104,6 +120,10 @@ export const createRoleAdminRoute = buildRoute({
         ...(allowEditPersonalInfo === undefined
           ? {}
           : { allowEditPersonalInfo }),
+        ...(allowEditOwnContent === undefined ? {} : { allowEditOwnContent }),
+        editOwnContentMinutes: editOwnContentMinutes ?? null,
+        allowDeleteOwnContent: allowDeleteOwnContent ?? false,
+        allowHideOwnContent: allowHideOwnContent ?? false,
         ...(maxAvatarSize === undefined ? {} : { maxAvatarSize }),
         ...(allowUploadCover === undefined ? {} : { allowUploadCover }),
         ...(maxCoverSize === undefined ? {} : { maxCoverSize }),

@@ -45,7 +45,12 @@ export const routes = definePluginRoutes([
 
   page("/news/:slug", {
     component: lazy(() => import("./pages/article-page")),
-    messages: ["newsroom.articles", "newsroom.comments"],
+    messages: ["newsroom.articles", "core.comments"],
+  }),
+
+  // A comment's permalink: redirects to the comment under its article.
+  page("/news/comments/:slug", {
+    component: lazy(() => import("./pages/comment-redirect-page")),
   }),
 
   page("/newsroom/notes/:slug", {

@@ -85,8 +85,12 @@ export const visibilityValues = (
   actorUserId: null | number | undefined,
 ): Record<string, unknown> =>
   action === "hide"
-    ? { hiddenAt: sql`now()`, hiddenBy: actorUserId ?? null }
-    : { hiddenAt: null, hiddenBy: null };
+    ? {
+        hiddenAt: sql`now()`,
+        hiddenBy: actorUserId ?? null,
+        hiddenReason: null,
+      }
+    : { hiddenAt: null, hiddenBy: null, hiddenReason: null };
 
 const toDate = (value: unknown): Date | null => {
   if (value instanceof Date) return value;
@@ -105,6 +109,7 @@ export const visibilityStateOf = (
 });
 
 export const isContentBaseRowPublic = (row: Record<string, unknown>): boolean =>
+  (row.deletedAt === null || row.deletedAt === undefined) &&
   isContentPubliclyVisible({
     hiddenAt: row.hiddenAt as Date | null | string | undefined,
     publishedAt: row.publishedAt as Date | null | string | undefined,

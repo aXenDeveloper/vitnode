@@ -9,6 +9,7 @@ import { parseEmojiIcon, serializeEmojiIcon } from "@/lib/emoji-icon";
 
 import { assertCanManageAdminRole } from "../lib/assert-manage-admin-role";
 import {
+  zodRoleEditOwnContentMinutesSchema,
   zodRoleImageSizeSchema,
   zodRoleNameSchema,
   zodRolePrefixSchema,
@@ -25,6 +26,10 @@ export const zodUpdateRoleAdminSchema = z
     maxStorageForSubmit: zodRoleStorageSchema,
     allowUploadAvatar: z.boolean(),
     allowEditPersonalInfo: z.boolean(),
+    allowEditOwnContent: z.boolean(),
+    editOwnContentMinutes: zodRoleEditOwnContentMinutesSchema,
+    allowDeleteOwnContent: z.boolean(),
+    allowHideOwnContent: z.boolean(),
     maxAvatarSize: zodRoleImageSizeSchema,
     allowUploadCover: z.boolean(),
     maxCoverSize: zodRoleImageSizeSchema,
@@ -119,6 +124,18 @@ export const updateRoleAdminRoute = buildRoute({
     }
     if (body.allowEditPersonalInfo !== undefined) {
       values.allowEditPersonalInfo = body.allowEditPersonalInfo;
+    }
+    if (body.allowEditOwnContent !== undefined) {
+      values.allowEditOwnContent = body.allowEditOwnContent;
+    }
+    if (body.editOwnContentMinutes !== undefined) {
+      values.editOwnContentMinutes = body.editOwnContentMinutes;
+    }
+    if (body.allowDeleteOwnContent !== undefined) {
+      values.allowDeleteOwnContent = body.allowDeleteOwnContent;
+    }
+    if (body.allowHideOwnContent !== undefined) {
+      values.allowHideOwnContent = body.allowHideOwnContent;
     }
 
     if (body.allowUploadAvatar !== undefined) {

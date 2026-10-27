@@ -6,6 +6,10 @@ export const CONTENT_EDITORIAL_FIELDS = ["version"] as const;
 
 export const CONTENT_VISIBILITY_FIELDS = ["hiddenAt", "hiddenBy"] as const;
 
+export const CONTENT_THREAD_FIELDS = ["deletedAt", "deletedBy"] as const;
+
+export const CONTENT_HIDDEN_REASON_MAX_LENGTH = 500;
+
 export const CONTENT_VISIBILITY_ACTIONS = ["hide", "unhide"] as const;
 
 export const CONTENT_VISIBILITY_FILTERS = ["hidden", "visible"] as const;
@@ -373,6 +377,9 @@ export const CONTENT_SCHEDULE_RETENTION_DAYS = 30;
 export const CONTENT_QUEUE_TASK_SCHEDULE = "content-schedule";
 
 export const CONTENT_QUEUE_TASK_SCHEDULE_EFFECTS = "content-schedule-effects";
+
+/** Processes the notification intents content operations store in their transactions. */
+export const CONTENT_QUEUE_TASK_NOTIFICATIONS = "content-notifications";
 
 /** Machine-readable reasons a schedule was refused. */
 export const CONTENT_SCHEDULE_CODES = {

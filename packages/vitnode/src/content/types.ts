@@ -1020,6 +1020,12 @@ type ContentVisibilityColumns<TDefinition> = TDefinition extends {
 /** Options for `reports`. Every field named here must be a field of the content type. */
 export interface ContentReportsConfig<TField extends string = string> {
   /**
+   * Let authors report their own records too - for a comment, a way to ask the
+   * moderators to look at something they wrote. Off by default: the Report
+   * button skips the author's own records.
+   */
+  selfReport?: boolean;
+  /**
    * Fields copied into the report when it is filed, so moderators see what was
    * reported even after an edit. Self-contained kinds only (text, textarea,
    * rich text, slug, number, boolean, enum, date, file). Defaults to the public
@@ -1027,7 +1033,9 @@ export interface ContentReportsConfig<TField extends string = string> {
    */
   snapshotFields?: TField[];
   /**
-   * A text, textarea or slug field used as the report's title. Defaults to
+   * A text, textarea, slug or rich text field used as the report's title. A
+   * rich text field gives its first 120 characters as plain text - the way to
+   * title a comment, which has no title of its own. Defaults to
    * `admin.titleField` when it is public, otherwise none.
    */
   titleField?: TField;
@@ -1058,6 +1066,7 @@ export interface ResolvedContentReportsConfig<
   TEnabled extends boolean = boolean,
 > {
   enabled: TEnabled;
+  selfReport: boolean;
   snapshotFields: string[];
   titleField: null | string;
 }

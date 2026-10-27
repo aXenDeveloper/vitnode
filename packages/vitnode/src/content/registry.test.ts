@@ -349,13 +349,21 @@ describe("withContentPermissions", () => {
     it("registers can_edit for a content type whose public writes include updates", () => {
       const merged = withContentPermissions({}, [entry(testTopicContentType)]);
 
-      expect(merged?.moderator?.[topicModule]).toEqual(["can_edit"]);
+      expect(merged?.moderator?.[topicModule]).toEqual([
+        "can_edit",
+        "can_delete",
+        "can_hide",
+      ]);
     });
 
     it("registers it for a content type mounted only through the public module", () => {
       const merged = withContentPermissions({}, [], [testTopicContentType]);
 
-      expect(merged?.moderator?.[topicModule]).toEqual(["can_edit"]);
+      expect(merged?.moderator?.[topicModule]).toEqual([
+        "can_edit",
+        "can_delete",
+        "can_hide",
+      ]);
       expect(merged?.admin?.[topicModule]).toBeUndefined();
     });
 
@@ -370,12 +378,19 @@ describe("withContentPermissions", () => {
 
     it.each([
       ["a read-only public API", testForumContentType],
-      ["a create-only publicWrite", createOnly],
       ["no public API at all", testArticleContentType],
     ])("adds no moderator module for %s", (_label, definition) => {
       const merged = withContentPermissions({}, [entry(definition)]);
 
       expect(merged?.moderator).toBeUndefined();
+    });
+
+    it("registers only can_delete for a create-only publicWrite", () => {
+      const merged = withContentPermissions({}, [entry(createOnly)]);
+
+      expect(merged?.moderator?.[createOnly.permissionModule]).toEqual([
+        "can_delete",
+      ]);
     });
 
     it("passes the config through when a public-only content type has nothing to add", () => {
@@ -957,24 +972,24 @@ describe("contentModeratorPermissionEntries", () => {
 
   it.each<[string, AnyContentTypeDefinition, unknown[]]>([
     [
-      "an unscoped can_edit in a container without policies",
+      "an unscoped can_edit and can_delete in a container without policies",
       testThreadContentType,
-      ["can_edit"],
+      ["can_edit", "can_delete"],
     ],
     [
-      "scoped can_edit and can_approve in a container with policies",
+      "scoped can_edit, can_delete and can_approve in a container with policies",
       topic,
-      [scoped("can_edit"), scoped("can_approve")],
+      [scoped("can_edit"), scoped("can_delete"), scoped("can_approve")],
     ],
     [
       "the same, scoped by an inherited container",
       reply,
-      [scoped("can_edit"), scoped("can_approve")],
+      [scoped("can_edit"), scoped("can_delete"), scoped("can_approve")],
     ],
     [
-      "only can_approve when public writes cannot update",
+      "can_delete and can_approve when public writes cannot update",
       topicIn({}),
-      [scoped("can_approve")],
+      [scoped("can_delete"), scoped("can_approve")],
     ],
   ])("registers %s", (_label, definition, expected) => {
     expect(contentModeratorPermissionEntries(definition)).toEqual(expected);

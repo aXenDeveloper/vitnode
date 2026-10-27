@@ -30,6 +30,7 @@
     },
     "notifications": {
       "unavailable": "This notification is no longer available.",
+      "someone": "Someone",
       "categories": {
         "account": "Account",
         "content": "Content",

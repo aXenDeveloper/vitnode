@@ -392,7 +392,7 @@ function SidebarContent({
   return (
     <div
       className={cn(
-        "group/sidebar-content no-scrollbar relative flex min-h-0 flex-1 flex-col gap-2 overflow-auto group-data-[collapsible=icon]:overflow-hidden",
+        "group/sidebar-content scroll-fade no-scrollbar relative flex min-h-0 flex-1 flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain",
         className,
       )}
       data-sidebar="content"

@@ -17,6 +17,10 @@ import {
 } from "../containers/server/policy";
 import { contentIdKey, parseContentId } from "../ids";
 import {
+  canDeleteContentRecord,
+  canHideContentRecord,
+} from "./content-actions-access";
+import {
   authorizeContentPublicWrite,
   contentPublicWriteOwnerOf,
 } from "./public-write-authorization";
@@ -25,14 +29,28 @@ import { isContentBaseRowPublic } from "./visibility";
 /** What the current visitor may do with one record. */
 export interface ContentViewerPermissions {
   /**
+   * `POST /{id}/delete` will accept this visitor: a moderator with
+   * `can_delete`, or the author when one of their roles allows deleting own
+   * content.
+   */
+  canDelete: boolean;
+  /**
    * `GET /{id}/edit` and `PATCH /{id}` will accept this visitor: the owner
    * while the container's policy allows it, or a moderator with `can_edit`.
    */
   canEdit: boolean;
   /**
+   * `POST /{id}/hide` (or `/unhide` for a hidden record) will accept this
+   * visitor: a moderator with `can_hide`, or the author when one of their roles
+   * allows hiding own content - who may only unhide what they hid themselves.
+   * Only for published records of a type with `visibility`.
+   */
+  canHide: boolean;
+  /**
    * A Report button makes sense: the type has `reports`, the record is public
-   * and the visitor did not write it. Guests get `true`; the report dialog
-   * asks them to sign in.
+   * and the visitor did not write it - unless `reports.selfReport` lets
+   * authors report their own. Guests get `true`; the report dialog asks them
+   * to sign in.
    */
   canReport: boolean;
 }
@@ -100,11 +118,26 @@ export const resolveContentViewerPermissions = async (
         canEdit = decision.allowed;
       }
 
-      if (!isPublic && !canEdit) return null;
+      const isPublished = isContentBaseRowPublic({ ...row, hiddenAt: null });
+      const canHide =
+        isPublished &&
+        (await canHideContentRecord(c, { model, pluginId, row }));
+      const canDelete = await canDeleteContentRecord(c, {
+        model,
+        pluginId,
+        row,
+      });
+
+      if (!isPublic && !canEdit && !canHide && !canDelete) return null;
 
       return {
+        canDelete,
         canEdit,
-        canReport: definition.reports.enabled && isPublic && !isOwner,
+        canHide,
+        canReport:
+          definition.reports.enabled &&
+          isPublic &&
+          (!isOwner || definition.reports.selfReport),
         id,
       };
     }),
@@ -124,7 +157,7 @@ export const resolveContentViewerPermissions = async (
 /**
  * `GET /{publicApi.path}/permissions?ids=1,2,3`: what the current visitor may
  * do with each record, as `can*` flags. Mounted for content types with
- * `publicWrite.update` or `reports`. At most `CONTENT_PUBLIC_MAX_PAGE_SIZE`
+ * `publicWrite`, `reports` or `visibility`. At most `CONTENT_PUBLIC_MAX_PAGE_SIZE`
  * distinct ids per request - `useContentPermissions` batches for you.
  * Personal, so never cached.
  */
@@ -143,7 +176,7 @@ export const contentPermissionsRoute = <
     route: {
       method: "get",
       path: "/permissions",
-      description: `What the current visitor may do with each listed ${name}: edit it, report it`,
+      description: `What the current visitor may do with each listed ${name}: edit, delete, hide or report it`,
       request: {
         query: z.object({
           ids: z
@@ -159,7 +192,9 @@ export const contentPermissionsRoute = <
               schema: z.object({
                 items: z.array(
                   z.object({
+                    canDelete: z.boolean(),
                     canEdit: z.boolean(),
+                    canHide: z.boolean(),
                     canReport: z.boolean(),
                     id: schemas.params.shape.id,
                   }),

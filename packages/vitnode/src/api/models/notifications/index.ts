@@ -43,6 +43,16 @@ export class NotificationsModel {
   }
 
   /**
+   * Runs an already dispatched queue task once the handler returns, without
+   * delaying the response - for background work a write enqueued in its own
+   * transaction. A task whose transaction rolled back is simply not found;
+   * the queue worker covers anything that does not finish then.
+   */
+  processAfterResponse(queueId: number): void {
+    this.queued.push(queueId);
+  }
+
+  /**
    * Stores a notification event and queues delivery to its recipients. With
    * recipients, delivery also starts once the handler returns, without
    * delaying the response; the queue worker covers anything that does not

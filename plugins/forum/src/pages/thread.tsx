@@ -11,6 +11,7 @@ import {
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
 import { contentTarget, zodRichTextDocument } from "@vitnode/core/content";
+import { useRevealHashTarget } from "@vitnode/core/hooks/use-reveal-hash-target";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
@@ -121,6 +122,8 @@ const useCommentEditor = () => {
 
 interface ThreadActions {
   canComment: boolean;
+  /** The comment a `#comment-{slug}` link points at, once it is on screen. */
+  highlightedId: null | string;
   onChanged: (outcome: { pending: boolean }) => void;
   /** What the visitor may do with each comment, from the Content Engine. */
   permissionsOf: (id: number) => ContentPermissions;
@@ -287,11 +290,21 @@ const ThreadNodeView = memo(
     const [isCollapsed, setIsCollapsed] = useState(false);
     const hidden = descendants.get(node.id) ?? 0;
     const childrenId = `comment-children-${node.id}`;
+    const anchorId = node.record
+      ? commentAnchorId(node.record.slug)
+      : undefined;
 
     return (
       <li
-        className="flex scroll-mt-24 flex-col gap-3"
-        id={node.record ? commentAnchorId(node.record.slug) : undefined}
+        className={cn(
+          "flex scroll-mt-24 flex-col gap-3 outline-none",
+          anchorId !== undefined &&
+            anchorId === actions.highlightedId &&
+            "bg-muted text-foreground rounded-lg p-3",
+        )}
+        id={anchorId}
+        // Focusable from script only, so a notification link lands on it.
+        tabIndex={anchorId === undefined ? undefined : -1}
       >
         {node.record ? (
           <CommentBody actions={actions} comment={node.record} node={node} />
@@ -424,15 +437,34 @@ export const ForumThread = ({
     [queryClient, refresh, topicId],
   );
 
+  // A notification links to `#comment-{slug}`, which may be on a later page.
+  const anchor = useRevealHashTarget({
+    hasMore: last.pageInfo.hasNextPage,
+    isLoadingMore,
+    loadMore,
+    prefix: "comment-",
+    ready: true,
+    renderedCount: items.length,
+  });
+  const highlightedId = anchor.status === "found" ? anchor.targetId : null;
+
   const actions = useMemo<ThreadActions>(
     () => ({
       canComment: currentUserId !== null,
+      highlightedId,
       onChanged,
       permissionsOf: permissions.of,
       topicId,
       topicSlug,
     }),
-    [currentUserId, onChanged, permissions.of, topicId, topicSlug],
+    [
+      currentUserId,
+      highlightedId,
+      onChanged,
+      permissions.of,
+      topicId,
+      topicSlug,
+    ],
   );
 
   return (
@@ -467,6 +499,15 @@ export const ForumThread = ({
           ))}
         </ol>
       )}
+
+      {anchor.status === "missing" ? (
+        <p
+          className="text-muted-foreground text-sm leading-relaxed"
+          role="status"
+        >
+          {t("anchor_missing")}
+        </p>
+      ) : null}
 
       {last.truncated ? (
         <p className="text-muted-foreground text-sm leading-relaxed">

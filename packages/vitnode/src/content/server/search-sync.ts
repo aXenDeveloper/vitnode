@@ -31,6 +31,7 @@ import { createContentSearchIndexer } from "./search-indexer";
 import {
   contentSearchContextKey,
   loadContentSearchContexts,
+  loadRelatedSearchContext,
   toContainerSearchContext,
   toRelatedSearchContext,
 } from "./search-related";
@@ -342,7 +343,9 @@ export const runContentSearchDependentsTask = async (
 
   await reindexContentSearchDependent(c, dependent, {
     after,
-    context: toRelatedSearchContext(definition, row, contentLocaleRouting(c)),
+    context:
+      (await loadRelatedSearchContext(c, definition, itemId)) ??
+      toRelatedSearchContext(definition, row, contentLocaleRouting(c)),
     field: payload.field,
     value: itemId,
   });
@@ -375,6 +378,16 @@ const syncContentSearchDependents = async (
     input,
     itemId,
     run: async () => {
+      const context =
+        sync === "delete"
+          ? undefined
+          : ((await loadRelatedSearchContext(c, definition, itemId)) ??
+            toRelatedSearchContext(
+              definition,
+              input.row,
+              contentLocaleRouting(c),
+            ));
+
       for (const { entry, field } of dependents) {
         const dependent = contentDefinitionOf(entry.model);
 
@@ -388,6 +401,7 @@ const syncContentSearchDependents = async (
           }
           continue;
         }
+        if (!context) continue;
 
         // Absent outside a full request - a test, a script - which keeps the
         // whole walk inline.
@@ -397,11 +411,7 @@ const syncContentSearchDependents = async (
         // comments is consistent the moment the edit returns. Thousands of them
         // are the queue's job, not the editor's request.
         await reindexContentSearchDependent(c, entry, {
-          context: toRelatedSearchContext(
-            definition,
-            input.row,
-            contentLocaleRouting(c),
-          ),
+          context,
           ...(queue
             ? {
                 defer: async after => {

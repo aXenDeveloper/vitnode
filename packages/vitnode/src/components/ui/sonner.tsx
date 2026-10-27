@@ -19,7 +19,7 @@ type ToastClassNames = NonNullable<
 
 const toastClassNames: ToastClassNames = {
   toast: cn(
-    "group/toast bg-popover/80 text-popover-foreground ring-foreground/10 flex w-(--width) items-start gap-3 rounded-xl p-4 shadow-lg ring-1 backdrop-blur-sm",
+    "group/toast bg-popover/90 text-popover-foreground ring-foreground/10 flex w-(--width) items-start gap-3 rounded-xl p-4 shadow-lg ring-1 backdrop-blur-sm",
     "focus-visible:ring-ring/50 focus-visible:ring-3",
     "*:transition-opacity *:duration-200 data-[expanded=false]:data-[front=false]:*:opacity-0 motion-reduce:*:transition-none",
   ),

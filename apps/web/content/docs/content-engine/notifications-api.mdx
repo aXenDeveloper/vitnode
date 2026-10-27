@@ -1,0 +1,211 @@
+---
+title: Notifications API
+description: Reference for buildContentNotifications in the VitNode Content Engine, with the threadReply and moderationDecision presets, stable ids, custom rules, triggers and deduplication, access policies, delivery and retries, cleanup and useRevealHashTarget.
+icon: BellRing
+---
+
+This page lists everything `buildContentNotifications` accepts and how its notifications behave. For a guided setup, follow [Notifications](/docs/content-engine/notifications). Examples use `newsroom.comment` and `newsroom.article` from the newsroom plugin.
+
+## `buildContentNotifications()`
+
+```ts title="plugins/newsroom/src/api/lib/notifications.ts"
+import { buildContentNotifications } from "@vitnode/core/content/server";
+
+export const commentNotifications = buildContentNotifications({
+  content: commentContentType,
+  root: articleContentType,
+  rules: {
+    replies: { id: "newsroom.comment_reply", preset: "threadReply" /* ... */ },
+  },
+});
+```
+
+Server-only, from `@vitnode/core/content/server`. Register the result in `buildApiPlugin({ contentNotifications: [commentNotifications] })`. Each rule becomes one [notification type](/docs/dev/notifications/notification-types), registered with the plugin.
+
+| Name      | Type                          | Required          | Default | Description |
+| --------- | ----------------------------- | ----------------- | ------- | ----------- |
+| `content` | content type definition       | Yes               |         | The content type whose operations notify. Its model must be registered with `buildContentAdminModule` |
+| `root`    | content type definition       | For `threadReply` |         | The type `thread.root` points at. Checked at startup |
+| `access`  | `({ c, contentId, rootId, userIds }) => number[]` | No | | Narrows who may see every preset notification, for content your plugin restricts to some members. Return the allowed ids, one query per batch |
+| `rules`   | object of rules               | Yes               |         | At least one. Keys are names in your code only |
+
+It throws `ContentEngineError` when an author field is not a to-one, shared `field.user()`, when `threadReply` is used without `thread` or without `root`, when two rules share an `id`, or when `rules` is empty. An invalid `id` or `category` throws `NotificationRegistryError`. At startup, an unregistered content type or a `root` that is not the `thread.root` target stops the app with a message naming the plugin.
+
+## Options shared by the presets
+
+| Name             | Type                                               | Required | Default     | Description |
+| ---------------- | -------------------------------------------------- | -------- | ----------- | ----------- |
+| `id`             | `string`                                           | Yes      |             | The notification type id, such as `"newsroom.comment_reply"`: at least two dot-separated segments of `a-z`, `0-9`, `_`, `-`, at most 100 characters |
+| `category`       | `string`                                           | No       | `"content"` | Groups types on the preferences page |
+| `defaults.inApp` | `boolean`                                          | No       | `true`      | Whether members get it in the bell before choosing |
+| `defaults.email` | `"none"` \| `"immediate"` \| `"daily"` \| `"weekly"` | No     | `"none"`    | Email before choosing. Anything but `"none"` enables email for the type |
+| `email`          | `boolean`                                          | No       | `false`     | Allows email so members can opt in while the default stays `"none"` |
+
+### Stable ids
+
+`id` is stored with every notification event and every member's preference, so it must never change. The key in `rules` is not stored anywhere, so rename it freely. Two rules, in any plugin, cannot share an id.
+
+## `threadReply` preset
+
+New comments and replies in a thread. Runs on the record's [first publication](#triggers-and-deduplication).
+
+| Name                         | Type                                   | Required | Default | Description |
+| ---------------------------- | -------------------------------------- | -------- | ------- | ----------- |
+| `recipients.authorField`     | author field of `content`              | Yes      |         | Who wrote the record: excluded from its own notification, and the recipient when someone answers it |
+| `recipients.rootAuthorField` | author field of `root`                 | No       |         | The root's author, told about every new record in the thread. Omit to skip |
+| `recipients.parentAuthor`    | `boolean`                              | No       | `true`  | Tell the author of the record being answered |
+| `messages.label`             | API message key                        | Yes      |         | The type's name in preferences |
+| `messages.description`       | API message key                        | No       |         | One line under the label |
+| `messages.comment`           | API message key                        | Yes      |         | Title for the root's author. Receives `{actor}` and `{title}` |
+| `messages.reply`             | API message key                        | Yes      |         | Title for the parent's author. Receives `{actor}` and `{title}` |
+| `target`                     | `({ content, parent, root }) => string` | Yes     |         | Same-site path the notification opens. Called when the notification is sent; the result is stored |
+| `title`                      | `({ content, root }) => string`        | No       | root's `admin.titleField` | The `{title}` value, cut at 300 characters |
+| `grouping.windowMinutes`     | `number`                               | No       | off     | Merges a member's notifications for the same root and wording into one item within the window (1 to 10080). The item opens the newest one |
+
+Author fields are typed: only to-one, shared `field.user()` names of each content type compile. `content`, `parent` and `root` in `target` are typed rows of their content types.
+
+A member who is both the root's author and the parent's author gets one notification with the `reply` text. The record's author and whoever made it public, such as the moderator who approved it, never receive it. `{actor}` is the record's author, or "Someone" when the account is gone.
+
+Without `rootAuthorField` the rule notifies replies only, so the root type needs no author. `{title}` reads the root's own row, so a localized title field gives an empty string. Leave `{title}` out of the texts or pass `title`.
+
+## `moderationDecision` preset
+
+Tells the submitter of a [moderated](/docs/content-engine/approvals) create or edit what a moderator decided.
+
+| Name                   | Type                                                  | Required | Default                    | Description |
+| ---------------------- | ----------------------------------------------------- | -------- | -------------------------- | ----------- |
+| `decisions`            | `("approved" \| "rejected")[]`                        | No       | both                       | Which decisions notify |
+| `messages.label`       | API message key                                       | Yes      |                            | The type's name in preferences |
+| `messages.description` | API message key                                       | No       |                            | One line under the label |
+| `messages.approved`    | API message key                                       | Yes      |                            | Receives `{title}` and `{kind}` (`create` or `edit`) |
+| `messages.rejected`    | API message key                                       | Yes      |                            | Receives `{title}`, `{kind}` and `{reason}` (empty without one) |
+| `target`               | `({ content, decision, root }) => string \| null`      | Yes      |                            | Where it leads. A rejected create is a draft, so link somewhere its author can open |
+| `title`                | `({ content, root }) => string`                       | No       | root's, then the record's `admin.titleField` | The `{title}` value |
+
+The recipient is the submission's `authorId`, which is the person who proposed the change, not necessarily the record's author. The moderator who decided is not named on the notification and is never notified about their own submission. Approving a create also runs the record's first-publication rules; approving an edit does not.
+
+## Custom rules
+
+A rule with `type` instead of `preset` publishes an existing notification type on a supported trigger:
+
+```ts title="plugins/newsroom/src/api/lib/notifications.ts"
+import {
+  contentNotificationAccess,
+  contentNotificationRefs,
+} from "@vitnode/core/content/server";
+import { buildNotificationType } from "@vitnode/core/api/lib/notifications/registry";
+import { z } from "zod";
+
+const deskCommentNotification = buildNotificationType({
+  id: "newsroom.desk_comment",
+  version: 1,
+  schema: z.object({
+    contentId: z.string(),
+    contentTypeId: z.string(),
+    rootId: z.string().nullable(),
+    target: z.string(),
+  }),
+  category: "content",
+  label: "newsroom.notifications.desk_comment.label",
+  defaults: { inApp: true, email: "none" },
+  access: contentNotificationAccess({ content: commentContentType, policy: "content" }),
+  present: ({ data, t }) => ({
+    title: t("newsroom.notifications.desk_comment.title"),
+    target: data.target,
+  }),
+});
+
+// In buildContentNotifications({ ..., rules }):
+deskEditors: {
+  type: deskCommentNotification,
+  on: "firstPublication",
+  // Your own query: the user ids that should hear about it.
+  recipients: async ({ c, root }) => await findDeskEditorIds(c, root),
+  data: context => ({
+    ...contentNotificationRefs(context),
+    target: `/news/${String(context.root?.slug)}#comment-${String(context.content.id)}`,
+  }),
+},
+```
+
+| Name         | Type                                       | Required | Default | Description |
+| ------------ | ------------------------------------------ | -------- | ------- | ----------- |
+| `type`       | `buildNotificationType()` result           | Yes      |         | Registered for you; listing it in `notificationTypes` as well is fine |
+| `on`         | `"firstPublication"` \| `"moderationDecision"` | Yes  |         | The [trigger](#triggers-and-deduplication) |
+| `recipients` | `(context) => (number \| null \| undefined)[]` | Yes  |         | Candidate user ids. `null`s and duplicates are dropped, and so is the actor unless `allowSelf` |
+| `data`       | `(context) => TData`                       | Yes      |         | Data for the type's `schema`, typed from it |
+| `allowSelf`  | `boolean`                                  | No       | `false` | Let the actor receive it |
+
+`context` holds `content`, `parent` and `root` (typed rows, reloaded when the notification is sent), `decision` (for `moderationDecision`: `submissionId`, `status`, `kind`, `authorId`, `reviewerId`, `reason`), `actorId`, `trigger`, `contentTypeId` and `c`. `c` is the background worker's context. The database works, but there is no signed-in user.
+
+<Callout type="warn">
+  `recipients` and `data` can run more than once for one operation, because the worker retries after a failure. Keep them free of side effects: read and compute, never send email, call webhooks or write rows. Anything they throw retries the whole operation.
+</Callout>
+
+Give a custom type `access: contentNotificationAccess({ content, policy })` and spread `contentNotificationRefs(context)` into its data, so core can check the record again later. Without it, only the type's own `access` (or none) applies.
+
+## Triggers and deduplication
+
+Two different things decide whether something is sent twice:
+
+- **Retrying one operation** never duplicates anything. Each publication carries a key built from the operation (`first-publication:{contentTypeId}:{id}:{relation}` or `decision:{contentTypeId}:{submissionId}`), and core stores at most one event per type and key, enforced by a unique index. A worker that publishes and then crashes before finishing finds the same event on its retry.
+- **Separate operations** notify again only when the trigger allows it:
+
+| Trigger | Runs | Again later? |
+| --- | --- | --- |
+| `firstPublication` | When the record becomes public for the first time: a published create, a publish, a scheduled publish when it fires, or the approval of a create | Never. Unpublishing and republishing, hiding and showing, restoring a revision and editing do not run it |
+| `moderationDecision` | When a moderator approves or rejects a submission | Once per submission, so each review cycle can notify |
+
+VitNode recognises the first publication inside the publishing transaction, where the record's `publishedAt` is still `NULL` under the row lock. Once set, VitNode never rewrites it. That state lives on the record itself, not in anyone's inbox, so deleting a notification or the passing of time cannot make a comment notify again. Content published before the rules existed already has a `publishedAt`, so adding rules sends nothing for it, and no migration or backfill is needed.
+
+## Access
+
+Core checks a notification type's `access` before delivering it, before every immediate or digest email and every time an inbox loads. Presets use `contentNotificationAccess`:
+
+| Policy | A member may see it while |
+| --- | --- |
+| `"content"` (`threadReply`) | The record and its root exist and are public: published, not hidden, not scheduled for later. For a reply, the comment it answers still exists |
+| `"submission"` (`moderationDecision`) | The member is the submission's author, the submission still has that decision and the record exists. An approval also needs the record to be public; a rejection does not. The root must stay public |
+
+A notification that fails the check shows "This notification is no longer available", with no title, text or link, and its email is skipped. Content Engine reads are not role-based, so add `access` to `buildContentNotifications` when your plugin limits content to some members. An email that was already sent cannot be taken back.
+
+## Delivery and retries
+
+1. The operation commits. In the same transaction VitNode stored an **intent**: a `content-notifications` task in `core_queue` holding only ids and the facts of the operation (who acted, which decision). A rolled-back operation leaves no intent. An existing transaction is joined, never committed early.
+2. Right after the response, or on the next run of the queue cron, a worker claims the task (`FOR UPDATE SKIP LOCKED`, so two workers never take the same one), reloads the records and checks they are still public.
+3. It resolves recipients, calls your callbacks and publishes every notification of the operation in one transaction.
+4. Core fans out to inboxes and emails, checking access again.
+
+A failure retries with backoff up to 5 attempts, then the task is marked `failed` with its error, visible with the other queue tasks. A rule or content type that is no longer registered is skipped with a warning in the logs, never retried forever. Nothing depends on a long-running process. Any request or the cron endpoint drives the queue.
+
+## Cleanup
+
+Deleting a record stores a cleanup intent in the same transaction. Once it runs, the record's notifications leave every inbox, and so do notifications about records in its thread when the record was the root, including replies a database cascade removed. A grouped item loses only the deleted contributions and points at the newest one left; it disappears when none is left. Pending emails for those notifications are dropped.
+
+Hiding is not deleting. A hidden record's notifications are only unavailable until it is shown again. A delete that races with a notification being sent is safe either way, because the access check runs again at every step.
+
+## `useRevealHashTarget()`
+
+```ts
+import { useRevealHashTarget } from "@vitnode/core/hooks/use-reveal-hash-target";
+```
+
+Brings the element named by the URL hash into view in a paginated list. Until the element exists it loads the next page; then it scrolls the element to the middle of the screen, keeps it there while late content settles and focuses it (give the element `tabIndex={-1}`).
+
+| Name            | Type                     | Required | Default | Description |
+| --------------- | ------------------------ | -------- | ------- | ----------- |
+| `prefix`        | `string`                 | Yes      |         | Only hashes starting with it react, such as `"comment-"` |
+| `ready`         | `boolean`                | Yes      |         | `false` while the first page is pending |
+| `renderedCount` | `number`                 | Yes      |         | Items on screen; a change looks again |
+| `hasMore`       | `boolean`                | Yes      |         | Whether another page exists |
+| `isLoadingMore` | `boolean`                | Yes      |         | Whether a page is loading |
+| `loadMore`      | `() => Promise<unknown>` | Yes      |         | Loads the next page |
+| `maxLoads`      | `number`                 | No       | `10`    | Pages to load while looking |
+
+It returns `{ status, targetId }`, where `status` is `"idle"`, `"searching"`, `"found"` or `"missing"`. Show a short notice for `"missing"` so a stale link is not silently ignored.
+
+## Related
+
+- [Notifications](/docs/content-engine/notifications): set up comment and reply notifications step by step.
+- [Limit access](/docs/dev/notifications/access): how core uses `access` and `remove()`.
+- [Queue and scale](/docs/dev/notifications/queue-and-scale): how the core workers deliver.

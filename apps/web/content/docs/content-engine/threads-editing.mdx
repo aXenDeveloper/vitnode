@@ -1,683 +1,526 @@
 ---
-title: Comment editing
-description: Let VitNode Content Engine comment authors fix their comments. Ask useContentPermissions who may edit, load the editable text, save it with PATCH and refresh the thread, with the concurrency behavior that applies without editorial.
+title: Comment actions
+description: Let VitNode Content Engine comment authors and moderators edit, delete, hide, restore and report comments in the shared comment section. Each action takes one content-type option and one typed callback, and the server decides who may do what.
 icon: MessageSquareText
 implementation:
-  objective: Let members edit their own comments in an existing comment section.
+  objective: Add edit, delete, hide and restore, and report to an existing shared comment section.
   decisions:
-    - Should two saves of the same comment be checked against each other? That needs `editorial` on the comment type; without it, the last save wins.
+    - Which actions should the section offer? Offer edit, delete, hide and restore, and report, and add only the chosen ones.
+    - May members delete or hide their own comments? Both are off by default; they are role settings in the AdminCP, not code.
+    - Should authors be able to report their own comments? Recommend no; `reports.selfReport` turns it on.
   constraints:
-    - Show Edit only when `useContentPermissions` answers `canEdit`, with one hook call for every comment on screen.
-    - Load the text with `GET /{id}/edit` before editing, save with `PATCH /{id}` through `useContentPublicWrite`, then invalidate the thread query.
+    - 'Enable the matching content-type options first: `publicWrite.update` for edit, `visibility` for hide, `reports` for report. Delete needs only `publicWrite`.'
+    - Add each action as one inline `fetcher` callback to the existing `useContentComments` call, and add `permissions`; never decide visibility of an action from author ids.
+    - Give comments a permalink (`delivery.path` plus a redirect page) so ModCP links open the reported comment.
   related:
     - title: Comments
       href: /docs/content-engine/threads
-    - title: Replies
-      href: /docs/content-engine/threads-frontend
-    - title: Permissions API
-      href: /docs/content-engine/public-permissions-api
+    - title: Comments API
+      href: /docs/content-engine/comments-api
+    - title: Roles
+      href: /docs/dev/working-with-users/roles#editing-own-content
 ---
 
-import { Accordion, Accordions } from "fumadocs-ui/components/accordion";
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
 import { ImgDocs } from "@/components/fumadocs/img";
-import editing from "./threads-editing-form.webp";
+import deleted from "./comment-actions-delete.webp";
+import editing from "./comment-actions-edit.webp";
+import hidden from "./comment-actions-hidden.webp";
+import menu from "./comment-actions-menu.webp";
+import modcp from "./comment-actions-modcp.webp";
 
-This page adds **Edit** to the comments a visitor may change, opens an editor in place, and refreshes the thread after a save. Authors edit their own comments; moderators with `can_edit` edit anyone's.
+This page puts a **More actions** menu on each comment of the section from [Comments](/docs/content-engine/threads): **Edit**, **Delete**, **Hide** or **Unhide**, and **Report**. Each action is a content-type option plus one callback in `article-comments.tsx`. The menu shows an action only where you wired it **and** the server says this visitor may use it on this comment.
 
-This continues the working comment section from [Comments](/docs/content-engine/threads). Its comment type already has `update: { fields: ["body"] }`, so `PATCH /comments/{id}` and `GET /comments/{id}/edit` exist.
+| Action | Required configuration | Server permission | Callback and shared UI |
+| --- | --- | --- | --- |
+| Edit | `publicWrite.update` | `canEdit`: the author while their role's edit window is open, or a moderator with **Edit** | `edit: { load, save }` adds an inline editor and a conflict alert with revisions |
+| Delete | `publicWrite` | `canDelete`: the author when their role allows it, or a moderator with **Delete** | `delete` adds a confirmation dialog, and a placeholder when the comment has replies |
+| Hide and restore | `visibility` | `canHide`: a moderator with **Hide**, or the author when their role allows it | `visibility: { hide, unhide }` adds a reason prompt and the hidden state |
+| Report | `reports` | `canReport`: signed-in visitors on other people's comments | `report` opens the core report dialog, which files to ModCP |
+
+## Before you begin
+
+- The working comment section from [Comments](/docs/content-engine/threads).
+- Two member accounts, and an account that moderates. A root administrator holds every moderator permission. For anyone else, add them in **AdminCP → Staff → Moderators**, as [Configure moderators](/docs/dev/moderation/configure-moderators) shows.
 
 <Steps>
 
 <Step>
 
-### Ask who may edit
+### Turn on the options
 
-Create `src/pages/comment-permissions.ts`. This is the complete file, like the article's in [Permissions](/docs/content-engine/public-permissions):
+Add `visibility`, `reports` and `update` to the comment type in `src/content/comment.ts`. This is an excerpt; keep the rest of the file:
 
-```ts title="plugins/newsroom/src/pages/comment-permissions.ts"
-import { useContentPermissions } from "@vitnode/core/tanstack/content";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
+```ts title="plugins/newsroom/src/content/comment.ts"
+  publication: true,
+  visibility: true, // [!code ++]
+  reports: { titleField: "body", snapshotFields: ["body"] }, // [!code ++]
 
-import { manifest } from "@/manifest.gen";
-
-/** What the visitor may do with each comment on screen: `canEdit`, `canReport`. */
-export const useCommentPermissions = (ids: readonly number[]) =>
-  useContentPermissions({
-    ids,
-    queryKey: [manifest.id, "comments"],
-    fetch: async request => {
-      const res = await fetcher({
-        plugin: manifest.id,
-        method: "get",
-        module: "content/comments",
-        path: "/permissions",
-        args: { query: { ids: request.join(",") } },
-      });
-      if (res.status !== 200) throw new Error("Loading permissions failed.");
-
-      return await res.json();
-    },
-  });
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["body", "article", "parent"], status: "published" },
+    update: { fields: ["body"] }, // [!code ++]
+  },
 ```
 
-`GET /comments/permissions` answers `canEdit` per comment for the visitor who asks. It is `true` for the author while the rules allow it, and for a moderator with `can_edit`. `queryKey` starts with the comments' prefix, so invalidating `[manifest.id, "comments"]` refreshes the answers too.
+- **`visibility`** adds `POST /{id}/hide` and `/unhide`, and the columns that remember who hid a comment and why.
+- **`reports`** adds reporting. `titleField: "body"` gives moderators the first line of the comment as the report's title, so comments need no title field of their own. `snapshotFields` keeps a copy of the text as it was when reported.
+- **`update`** adds `GET /{id}/edit` and `PATCH /{id}`. Only `body` is editable; a comment never moves to another article or parent.
+- **`GET /permissions`**, which the menu asks, already exists, because `publicWrite` mounts it.
+
+Add the moderation labels next to the other `newsroom:comment` labels in `src/locales/en.json`:
+
+```json title="plugins/newsroom/src/locales/en.json"
+{
+  "newsroom:comment:can_view_reports": "View comment reports",
+  "newsroom:comment:can_manage_reports": "Claim, assign and resolve comment reports",
+  "newsroom:comment:can_view_hidden": "Open hidden comments"
+}
+```
+
+Then build and migrate from the workspace root:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build and migrate">
+
+```bash tab="bun"
+bun run build:plugins
+bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm build:plugins
+pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run build:plugins
+npm run db:migrate
+```
+
+</Tabs>
 
 </Step>
 
 <Step>
 
-### Write the editor
+### Ask who may do what
 
-Create `src/pages/comment-editor.tsx`. This is the complete file. It edits one comment's body and reports whether the save waits for a moderator:
+Add `permissions` to the `useContentComments` call in `src/pages/article-comments.tsx`. This is an excerpt; the following steps add to the same call:
 
-```tsx title="plugins/newsroom/src/pages/comment-editor.tsx"
-import {
-  AutoForm,
-  type AutoFormOnSubmit,
-  AutoFormSubmitButton,
-} from "@vitnode/core/components/form/auto-form";
-import { AutoFormEditor } from "@vitnode/core/components/form/fields/editor";
-import { Button } from "@vitnode/core/components/ui/button";
-import {
-  isRichTextEmpty,
-  type RichTextDocument,
-  zodRichTextDocument,
-} from "@vitnode/core/content";
-import { useContentPublicWrite } from "@vitnode/core/tanstack/content";
+```tsx title="plugins/newsroom/src/pages/article-comments.tsx"
+  const comments = useContentComments({
+    ...articleCommentsThread(articleId),
+    create: async ({ body, parentId }) => /* unchanged */,
+    // [!code ++:9]
+    permissions: async ids =>
+      await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "content/article-comments",
+        path: "/permissions",
+        args: { query: { ids: ids.join(",") } },
+      }),
+  });
+```
+
+The section asks once for every comment on screen, in batches of 50, and again for the comments **Load more comments** adds. A comment whose answer has not arrived, or whose batch failed, shows no actions. The answers belong to the signed-in visitor, so signing in or out asks again.
+
+The server answers from settings, not from your code:
+
+- **Authors** edit their own comments while their role's **Time to edit** runs, if **Allow editing own content** is on (it is, by default). **Allow deleting own content** and **Allow hiding own content** are off by default. Turning on `visibility` does not turn them on. [Roles](/docs/dev/working-with-users/roles#editing-own-content) explains all three.
+- **Moderators** act on anyone's comments, at any age, with the comment type's permissions in **AdminCP → Staff → Moderators**: **Edit comments**, **Delete comments** and **Hide and unhide comments**.
+- **Reporting** is open to every signed-in visitor on other people's comments. Add `selfReport: true` to `reports` to let authors report their own.
+
+</Step>
+
+<Step>
+
+### Connect edit
+
+```tsx title="plugins/newsroom/src/pages/article-comments.tsx"
+    // [!code ++:20]
+    edit: {
+      load: async id =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "get",
+          module: "content/article-comments",
+          path: "/{id}/edit",
+          args: { params: { id } },
+        }),
+      // Comments have no editorial revisions, so the last save wins.
+      save: async (id, { body }) =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "patch",
+          module: "content/article-comments",
+          path: "/{id}",
+          args: { params: { id }, body: { values: { body } } },
+        }),
+    },
+```
+
+**Edit** loads the editable text first and opens the editor in place of the comment. After **Save**, the thread and the form's defaults refresh. If the author's edit waits for a moderator, the editor opens on that proposed text, and saving says it is waiting rather than live.
+
+Newsroom comments have no `editorial`, so two saves of the same comment both succeed and the last one wins. To refuse a stale save instead, add `editorial: true` to the comment type, migrate, and send the version:
+
+```tsx
+save: async (id, { body, expectedVersion }) =>
+  await fetcher({
+    plugin: manifest.id,
+    method: "patch",
+    module: "content/article-comments",
+    path: "/{id}",
+    args: { params: { id }, body: { values: { body }, expectedVersion } },
+  }),
+```
+
+A stale save then answers `409`, and the editor shows **Someone else saved in the meantime** with **Keep my version** and **Load latest version**. The Blog plugin's comments work this way.
+
+</Step>
+
+<Step>
+
+### Connect delete
+
+```tsx title="plugins/newsroom/src/pages/article-comments.tsx"
+    // [!code ++:8]
+    delete: async id =>
+      await fetcher({
+        plugin: manifest.id,
+        method: "post",
+        module: "content/article-comments",
+        path: "/{id}/delete",
+        args: { params: { id } },
+      }),
+```
+
+**Delete** asks for confirmation first. A comment nobody answered is removed. A comment with replies stays in the thread as an anonymous **[deleted]** placeholder with no text and no author, so its replies keep their place. The placeholder reads "Comment deleted by user" or "Comment removed by a moderator". Deleting the last reply under a placeholder removes the placeholder too. A deleted comment cannot be restored.
+
+</Step>
+
+<Step>
+
+### Connect hide and restore
+
+```tsx title="plugins/newsroom/src/pages/article-comments.tsx"
+    // [!code ++:18]
+    visibility: {
+      hide: async (id, { reason }) =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "post",
+          module: "content/article-comments",
+          path: "/{id}/hide",
+          args: { params: { id }, body: reason ? { reason } : {} },
+        }),
+      unhide: async id =>
+        await fetcher({
+          plugin: manifest.id,
+          method: "post",
+          module: "content/article-comments",
+          path: "/{id}/unhide",
+          args: { params: { id } },
+        }),
+    },
+```
+
+**Hide** asks for an optional reason of up to 500 characters. A hidden comment disappears for everyone else, but stays visible, marked **Hidden** with its reason, to its author and to moderators, who get **Unhide**. Readers who can't see it get the same placeholder as a deleted comment when it has replies, and nothing when it has none. Hiding is not deleting. **Unhide** brings the comment back unchanged. It is also not unpublishing, which is a staff action in the AdminCP.
+
+</Step>
+
+<Step>
+
+### Connect reporting
+
+```tsx title="plugins/newsroom/src/pages/article-comments.tsx"
+import { contentTarget } from "@vitnode/core/content"; // [!code ++]
+
+import { commentContentType } from "@/content/comment"; // [!code ++]
+
+    report: id => contentTarget(manifest.id, commentContentType, id), // [!code ++]
+```
+
+**Report** opens the core report dialog, where the visitor picks a reason. A guest who reaches it is asked to sign in first and comes back to the article. Reports land in ModCP with the comment's first line as their title.
+
+</Step>
+
+<Step>
+
+### Link reports to the comment
+
+ModCP links each report to its content's public URL, and a comment has none yet. Give it a permalink that redirects to the comment under its article.
+
+Add `delivery` to the comment type. This is an excerpt:
+
+```ts title="plugins/newsroom/src/content/comment.ts"
+  delivery: { path: "/news/comments/:slug" }, // [!code ++]
+
+  thread: { parent: "parent", root: "article", maxDepth: 1 },
+```
+
+Delivery claims the type's `publicApi.path` across the whole site. That's why this guide picked `article-comments`. The Blog plugin already delivers `comments`, and two plugins can't share a path.
+
+The redirect needs the article's slug, and a comment only knows its article's id. Add a small public route that answers it. Create `src/api/modules/articles/articles.module.ts`:
+
+```ts title="plugins/newsroom/src/api/modules/articles/articles.module.ts"
+import { z } from "@hono/zod-openapi";
+import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
+import { contentPublicListTag } from "@vitnode/core/content";
+import { HTTPException } from "hono/http-exception";
+
+import { buildModule, buildRoute } from "@/api/builders";
+import { articleContent } from "@/database/articles";
+
+const articleSlugRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/{id}/slug",
+    description:
+      "The slug of one public article, for turning a comment permalink into the comment under its article",
+    request: {
+      params: z.object({
+        id: z.coerce.number().int().positive().openapi({ example: 1 }),
+      }),
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({ id: z.number(), slug: z.string() }),
+          },
+        },
+        description: "The article's slug",
+      },
+      404: { description: "No public article with this id" },
+    },
+  },
+  handler: async c => {
+    const { id } = c.req.valid("param");
+    const service = articleContent.publicService?.(c);
+    if (!service) {
+      throw new HTTPException(500, { message: "Articles have no public API." });
+    }
+
+    const article = await service.findById(id);
+    if (!article) throw new HTTPException(404, { message: "Article not found." });
+
+    setPageCacheTags(c, [contentPublicListTag(articleContent.definition.id)]);
+
+    return c.json({ id: article.id, slug: article.slug }, 200);
+  },
+});
+
+export const articlesModule = buildModule({
+  name: "articles",
+  routes: [articleSlugRoute],
+});
+```
+
+Register it in `src/config.api.ts`. This is an excerpt:
+
+```ts title="plugins/newsroom/src/config.api.ts"
+import { articlesModule } from "./api/modules/articles/articles.module"; // [!code ++]
+
+    modules: [
+      helloModule,
+      adminModule,
+      articlesModule, // [!code ++]
+```
+
+The redirect page uses TanStack Query and TanStack Router. Skip this if the plugin already has both; otherwise run this from the workspace root:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Add TanStack Query and Router">
+
+```bash tab="bun"
+bun add @tanstack/react-query @tanstack/react-router --cwd plugins/newsroom
+```
+
+```bash tab="pnpm"
+pnpm --filter newsroom add @tanstack/react-query @tanstack/react-router
+```
+
+```bash tab="npm"
+npm install @tanstack/react-query @tanstack/react-router --workspace newsroom
+```
+
+</Tabs>
+
+Create `src/pages/comment-redirect-page.tsx`:
+
+```tsx title="plugins/newsroom/src/pages/comment-redirect-page.tsx"
+import { queryOptions } from "@tanstack/react-query";
+import { redirect } from "@tanstack/react-router";
+import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
+import { CONTENT_COMMENT_ANCHOR_PREFIX } from "@vitnode/core/tanstack/comments";
+import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { useTranslations } from "use-intl";
+import { localizeHref } from "@vitnode/core/tanstack/i18n";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { z } from "zod";
 
 import { manifest } from "@/manifest.gen";
 
-export interface CommentEditorProps {
-  /** The comment's latest text, from `GET /comments/{id}/edit`. */
-  body: RichTextDocument;
-  commentId: number;
-  label: string;
-  onCancel: () => void;
-  /** Called after a save, with whether it waits for a moderator. */
-  onSaved: (pending: boolean) => Promise<void>;
-}
+const zodCommentLink = z.object({
+  article: z.object({ id: z.number() }),
+  id: z.number(),
+});
 
-const createSchema = (body: RichTextDocument, required: string) =>
-  z.object({
-    body: zodRichTextDocument
-      .refine(doc => !isRichTextEmpty(doc), required)
-      .default(body),
-  });
-
-const CommentEditor = ({
-  body,
-  commentId,
-  label,
-  onCancel,
-  onSaved,
-}: CommentEditorProps) => {
-  const t = useTranslations("newsroom.comments.form");
-  const write = useContentPublicWrite({ fields: ["body"] });
-
-  const onSubmit: AutoFormOnSubmit<ReturnType<typeof createSchema>> = async (
-    values,
-    form,
-  ) => {
-    const saved = await write.submit(
-      form,
-      async () =>
-        await fetcher({
-          plugin: manifest.id,
-          method: "patch",
-          module: "content/comments",
-          path: "/{id}",
-          args: { params: { id: commentId }, body: { values } },
-        }),
-    );
-    if (!saved) return;
-
-    await onSaved(saved.approval?.status === "pending");
-  };
-
-  return (
-    <AutoForm
-      aria-label={label}
-      className="flex flex-col gap-3"
-      fields={[
-        {
-          id: "body",
-          component: fieldProps => (
-            <AutoFormEditor {...fieldProps} format="json" label={label} />
-          ),
-        },
-      ]}
-      formSchema={createSchema(body, t("required"))}
-      layout={fields => <>{fields.body}</>}
-      onSubmit={onSubmit}
-    >
-      <div className="flex flex-wrap items-center gap-2">
-        <AutoFormSubmitButton>{t("save")}</AutoFormSubmitButton>
-        <Button onClick={onCancel} type="button" variant="ghost">
-          {t("cancel")}
-        </Button>
-      </div>
-    </AutoForm>
-  );
-};
-
-export default CommentEditor;
-```
-
-- **The request** sends only `body` to `PATCH /comments/{id}`. Members can never move a comment, because `article` and `parent` are not in `update.fields`.
-- **`write.submit`** shows a refusal as a toast and returns `null`, so the editor stays open with the text.
-- **`onSaved(pending)`** is `true` only when the comment lives in a container that holds edits for approval. For newsroom comments it is always `false`.
-
-</Step>
-
-<Step>
-
-### Show Edit and load the comment
-
-Edit `src/pages/comment-section.tsx`. Add the imports, load the editor lazily next to the composer, and add a `CommentItem` component above `CommentSection`. These are excerpts:
-
-```tsx title="plugins/newsroom/src/pages/comment-section.tsx (excerpt)"
-import { type RichTextDocument } from "@vitnode/core/content"; // [!code ++]
-import { fetcher } from "@vitnode/core/tanstack/fetcher"; // [!code ++]
-
-import { manifest } from "@/manifest.gen"; // [!code ++]
-
-import type { CommentEditorProps } from "./comment-editor"; // [!code ++]
-
-import { useCommentPermissions } from "./comment-permissions"; // [!code ++]
-
-const CommentComposer = lazy(async () => await import("./comment-composer"));
-const CommentEditor = lazy(async () => await import("./comment-editor")); // [!code ++]
-```
-
-```tsx title="plugins/newsroom/src/pages/comment-section.tsx (excerpt)"
-/** A comment, with Edit for the visitors who may use it. */
-const CommentItem = ({
-  canEdit,
-  comment,
-  onSaved,
-}: {
-  canEdit: boolean;
-  comment: ArticleComment;
-  onSaved: CommentEditorProps["onSaved"];
-}) => {
-  const t = useTranslations("newsroom.comments");
-  const tWrite = useTranslations("core.global.content_write");
-  const [editing, setEditing] = useState<null | RichTextDocument>(null);
-  const [isOpening, setIsOpening] = useState(false);
-
-  // Opens the editor on the comment's latest text, not on the cached copy.
-  const openEditor = async () => {
-    setIsOpening(true);
-    try {
-      const res = await fetcher({
+/** Where a comment's permalink leads: its article's slug and the comment's id. */
+const commentLinkQueryOptions = (slug: string) =>
+  queryOptions({
+    meta: LOADER_DATA_QUERY_META,
+    queryFn: async () => {
+      const comment = await fetcher({
         plugin: manifest.id,
         method: "get",
-        module: "content/comments",
-        path: "/{id}/edit",
-        args: { params: { id: comment.id } },
+        module: "content/article-comments",
+        path: "/{slug}",
+        args: { params: { slug: encodeURIComponent(slug) } },
       });
-      if (res.status !== 200) {
-        const reason =
-          res.status === 401
-            ? "unauthenticated"
-            : res.status === 403
-              ? "forbidden"
-              : res.status === 404
-                ? "not_found"
-                : "unknown";
-        toast.error(tWrite("title"), { description: tWrite(reason) });
-
-        return;
+      if (comment.status === 404) return null;
+      if (comment.status !== 200) {
+        throw new Error(`Resolving the comment "${slug}" failed.`);
       }
 
-      setEditing((await res.json()).values.body);
-    } finally {
-      setIsOpening(false);
-    }
-  };
+      const record = zodCommentLink.parse(await comment.json());
+      const article = await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "articles",
+        path: "/{id}/slug",
+        args: { params: { id: record.article.id } },
+      });
+      if (article.status === 404) return null;
+      if (article.status !== 200) {
+        throw new Error(`Resolving the article of the comment "${slug}" failed.`);
+      }
 
-  if (editing) {
-    return (
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium">
-          {comment.author?.name ?? t("someone")}
-        </p>
-        <Suspense fallback={<Skeleton className="h-40 w-full rounded-lg" />}>
-          <CommentEditor
-            body={editing}
-            commentId={comment.id}
-            label={t("form.edit_label")}
-            onCancel={() => {
-              setEditing(null);
-            }}
-            onSaved={async pending => {
-              setEditing(null);
-              await onSaved(pending);
-            }}
-          />
-        </Suspense>
-      </div>
+      return { article: (await article.json()).slug, comment: record.id };
+    },
+    queryKey: [manifest.id, "comment-link", slug],
+  });
+
+export const route = defineRoute({
+  load: async ({ context, params }) => {
+    const { article, comment } = contentPageItem(
+      await context.queryClient.query(commentLinkQueryOptions(params.slug)),
     );
-  }
 
-  return (
-    <div className="flex flex-col gap-2">
-      <CommentBody comment={comment} />
-      {canEdit ? (
-        <Button
-          className="self-start"
-          isLoading={isOpening}
-          onClick={openEditor}
-          size="sm"
-          variant="ghost"
-        >
-          {t("edit")}
-        </Button>
-      ) : null}
-    </div>
-  );
-};
-```
-
-- **Edit** first loads `GET /comments/{id}/edit`, so the editor opens on the latest saved text, not on the copy the thread cached. The button shows a spinner while it loads, so a second click cannot open it twice.
-- A refusal, such as a session that expired in the meantime, becomes a toast with core's message, and the comment stays as it was.
-- While editing, the comment's text is replaced by the editor, with **Save** and **Cancel**.
-
-</Step>
-
-<Step>
-
-### Save and refresh the section
-
-In `CommentSection`, ask for the permissions of every comment on screen, add a handler for saved edits, and render `CommentItem` instead of `CommentBody`. These are excerpts:
-
-```tsx title="plugins/newsroom/src/pages/comment-section.tsx (excerpt)"
-  const items = useMemo(
-    () => pages?.flatMap(page => page.items) ?? [],
-    [pages],
-  );
-  // [!code ++:4]
-  // One request for every comment on screen, batched by the hook.
-  const permissions = useCommentPermissions(
-    items.flatMap(item => (item.record ? [item.id] : [])),
-  );
-
-  // [!code ++:12]
-  const onEdited = async (pending: boolean) => {
-    if (pending) {
-      toast.info(t("edit_pending.title"), {
-        description: t("edit_pending.desc"),
-      });
-    } else {
-      toast.success(t("edited.title"), { description: t("edited.desc") });
-    }
-    await queryClient.invalidateQueries({
-      queryKey: commentsQueryKey(articleId),
+    // oxlint-disable-next-line typescript/only-throw-error
+    throw redirect({
+      href: `${localizeHref(`/news/${article}`, context.locale)}#${CONTENT_COMMENT_ANCHOR_PREFIX}${comment}`,
+      statusCode: 302,
     });
-  };
+  },
+
+  head: () => ({ robots: "noindex, nofollow" }),
+});
+
+const CommentRedirectPage = () => null;
+
+export default CommentRedirectPage;
 ```
 
-```tsx title="plugins/newsroom/src/pages/comment-section.tsx (excerpt)"
-          {items.map(item =>
-            item.record ? (
-              <li key={item.id}>
-                {/* [!code ++:5] */}
-                <CommentItem
-                  canEdit={permissions.of(item.id).canEdit}
-                  comment={item.record}
-                  onSaved={onEdited}
-                />
-              </li>
-            ) : null,
-          )}
+- **`contentPageItem`** turns a `null` into the not-found page, for a comment or article that is gone or not public.
+- **`#comment-{id}`** is the element id the section gives every comment. The section scrolls to it, loading more pages until it appears, focuses it and rings it.
+
+Declare the page in `src/routes.ts`:
+
+```ts title="plugins/newsroom/src/routes.ts"
+  // [!code ++:4]
+  page("/news/comments/:slug", {
+    component: lazy(() => import("./pages/comment-redirect-page")),
+  }),
 ```
 
-- **`useCommentPermissions`** gets every comment with a record in one call. It sends at most 50 ids per request and keeps earlier answers when **Load more comments** adds ids, as [Permissions API](/docs/content-engine/public-permissions-api#batches) describes. `of(id)` is all `false` until the answer arrives, so **Edit** appears a moment after the comments.
-- **`onEdited`** invalidates the article's comment query, which refetches every loaded page, so the new text shows in place.
+Build again, so the new route's types and the delivery URL exist:
 
-</Step>
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Build the plugin">
 
-<Step>
-
-### Add the labels
-
-Add these keys to the `comments` group in `src/locales/en.json`:
-
-```json title="plugins/newsroom/src/locales/en.json"
-{
-  "newsroom": {
-    "comments": {
-      "form": { "edit_label": "Edit your comment", "save": "Save", "cancel": "Cancel" },
-      "edit": "Edit",
-      "edited": { "title": "Comment saved", "desc": "Your changes are live." },
-      "edit_pending": {
-        "title": "Your changes are waiting for a moderator",
-        "desc": "Readers see the earlier text until a moderator approves."
-      }
-    }
-  }
-}
+```bash tab="bun"
+bun run build:plugins
 ```
+
+```bash tab="pnpm"
+pnpm build:plugins
+```
+
+```bash tab="npm"
+npm run build:plugins
+```
+
+</Tabs>
 
 </Step>
 
 </Steps>
 
-<Accordions>
-<Accordion title="The complete src/pages/comment-section.tsx">
-
-```tsx title="plugins/newsroom/src/pages/comment-section.tsx"
-import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
-import { RichTextContent } from "@vitnode/core/components/rich-text";
-import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
-import { Skeleton } from "@vitnode/core/components/ui/skeleton";
-import { type RichTextDocument } from "@vitnode/core/content";
-import { useSessionQuery } from "@vitnode/core/tanstack/auth";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { HrefLink } from "@vitnode/core/tanstack/link";
-import { lazy, Suspense, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { useTranslations } from "use-intl";
-
-import { manifest } from "@/manifest.gen";
-
-import type { CommentComposerProps, CommentOutcome } from "./comment-composer";
-import type { ArticleComment } from "./comment-data";
-import type { CommentEditorProps } from "./comment-editor";
-
-import { commentsQueryKey, commentsQueryOptions } from "./comment-data";
-import { useCommentPermissions } from "./comment-permissions";
-
-// The editor is heavy and most readers never write, so it loads on demand.
-const CommentComposer = lazy(async () => await import("./comment-composer"));
-const CommentEditor = lazy(async () => await import("./comment-editor"));
-
-const Composer = (props: CommentComposerProps) => (
-  <Suspense fallback={<Skeleton className="h-40 w-full rounded-lg" />}>
-    <CommentComposer {...props} />
-  </Suspense>
-);
-
-/** Who wrote a comment, and what they said. */
-const CommentBody = ({ comment }: { comment: ArticleComment }) => {
-  const t = useTranslations("newsroom.comments");
-
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-sm font-medium">
-        {comment.author?.name ?? t("someone")}
-      </p>
-      <RichTextContent
-        className="leading-relaxed text-pretty"
-        content={comment.body}
-      />
-    </div>
-  );
-};
-
-/** A comment, with Edit for the visitors who may use it. */
-const CommentItem = ({
-  canEdit,
-  comment,
-  onSaved,
-}: {
-  canEdit: boolean;
-  comment: ArticleComment;
-  onSaved: CommentEditorProps["onSaved"];
-}) => {
-  const t = useTranslations("newsroom.comments");
-  const tWrite = useTranslations("core.global.content_write");
-  const [editing, setEditing] = useState<null | RichTextDocument>(null);
-  const [isOpening, setIsOpening] = useState(false);
-
-  // Opens the editor on the comment's latest text, not on the cached copy.
-  const openEditor = async () => {
-    setIsOpening(true);
-    try {
-      const res = await fetcher({
-        plugin: manifest.id,
-        method: "get",
-        module: "content/comments",
-        path: "/{id}/edit",
-        args: { params: { id: comment.id } },
-      });
-      if (res.status !== 200) {
-        const reason =
-          res.status === 401
-            ? "unauthenticated"
-            : res.status === 403
-              ? "forbidden"
-              : res.status === 404
-                ? "not_found"
-                : "unknown";
-        toast.error(tWrite("title"), { description: tWrite(reason) });
-
-        return;
-      }
-
-      setEditing((await res.json()).values.body);
-    } finally {
-      setIsOpening(false);
-    }
-  };
-
-  if (editing) {
-    return (
-      <div className="flex flex-col gap-2">
-        <p className="text-sm font-medium">
-          {comment.author?.name ?? t("someone")}
-        </p>
-        <Suspense fallback={<Skeleton className="h-40 w-full rounded-lg" />}>
-          <CommentEditor
-            body={editing}
-            commentId={comment.id}
-            label={t("form.edit_label")}
-            onCancel={() => {
-              setEditing(null);
-            }}
-            onSaved={async pending => {
-              setEditing(null);
-              await onSaved(pending);
-            }}
-          />
-        </Suspense>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      <CommentBody comment={comment} />
-      {canEdit ? (
-        <Button
-          className="self-start"
-          isLoading={isOpening}
-          onClick={openEditor}
-          size="sm"
-          variant="ghost"
-        >
-          {t("edit")}
-        </Button>
-      ) : null}
-    </div>
-  );
-};
-
-export const CommentSection = ({
-  articleId,
-  articleSlug,
-}: {
-  articleId: number;
-  articleSlug: string;
-}) => {
-  const t = useTranslations("newsroom.comments");
-  const queryClient = useQueryClient();
-  const session = useSessionQuery();
-  const [composerKey, setComposerKey] = useState(0);
-  const comments = useInfiniteQuery(commentsQueryOptions(articleId));
-
-  const pages = comments.data?.pages;
-  const items = useMemo(
-    () => pages?.flatMap(page => page.items) ?? [],
-    [pages],
-  );
-  // One request for every comment on screen, batched by the hook.
-  const permissions = useCommentPermissions(
-    items.flatMap(item => (item.record ? [item.id] : [])),
-  );
-
-  const onPosted = async (outcome: CommentOutcome) => {
-    if (outcome !== "published") {
-      // Not in the public thread, so there is nothing to refresh.
-      toast.info(t(`${outcome}.title`), { description: t(`${outcome}.desc`) });
-
-      return;
-    }
-
-    toast.success(t("created.title"), { description: t("created.desc") });
-    // Refetches every loaded page in order, with the new count.
-    await queryClient.invalidateQueries({
-      queryKey: commentsQueryKey(articleId),
-    });
-  };
-
-  const onEdited = async (pending: boolean) => {
-    if (pending) {
-      toast.info(t("edit_pending.title"), {
-        description: t("edit_pending.desc"),
-      });
-    } else {
-      toast.success(t("edited.title"), { description: t("edited.desc") });
-    }
-    await queryClient.invalidateQueries({
-      queryKey: commentsQueryKey(articleId),
-    });
-  };
-
-  return (
-    <section aria-labelledby="comments-title" className="flex flex-col gap-6">
-      <h2 className="text-xl font-semibold text-balance" id="comments-title">
-        {t("title", { count: pages?.[0]?.replyCount ?? 0 })}
-      </h2>
-
-      {comments.isPending ? (
-        <div aria-busy="true" className="flex flex-col gap-4">
-          <span className="sr-only" role="status">
-            {t("loading")}
-          </span>
-          {[0, 1].map(key => (
-            <div className="flex flex-col gap-2" key={key}>
-              <Skeleton className="h-4 w-32" />
-              <Skeleton className="h-4 w-full" />
-            </div>
-          ))}
-        </div>
-      ) : comments.isError && items.length === 0 ? (
-        <div className="flex flex-col items-start gap-3">
-          <p className="text-muted-foreground leading-relaxed" role="alert">
-            {t("load_failed.desc")}
-          </p>
-          <Button
-            isLoading={comments.isFetching}
-            onClick={async () => {
-              await comments.refetch();
-            }}
-            variant="outline"
-          >
-            {t("retry")}
-          </Button>
-        </div>
-      ) : items.length === 0 ? (
-        <p className="text-muted-foreground leading-relaxed">{t("empty")}</p>
-      ) : (
-        <ol aria-busy={comments.isFetching} className="flex flex-col gap-6">
-          {items.map(item =>
-            item.record ? (
-              <li key={item.id}>
-                <CommentItem
-                  canEdit={permissions.of(item.id).canEdit}
-                  comment={item.record}
-                  onSaved={onEdited}
-                />
-              </li>
-            ) : null,
-          )}
-        </ol>
-      )}
-
-      {comments.hasNextPage ? (
-        <Button
-          className="self-start"
-          disabled={comments.isFetching}
-          isLoading={comments.isFetchingNextPage}
-          onClick={async () => {
-            const next = await comments.fetchNextPage();
-            if (next.isError) {
-              toast.error(t("load_failed.title"), {
-                description: t("load_failed.desc"),
-              });
-            }
-          }}
-          variant="outline"
-        >
-          {t("load_more")}
-        </Button>
-      ) : null}
-
-      {session.data?.user ? (
-        <Composer
-          articleId={articleId}
-          // A fresh key gives the next comment an empty editor.
-          key={composerKey}
-          label={t("form.label")}
-          onPosted={async outcome => {
-            setComposerKey(key => key + 1);
-            await onPosted(outcome);
-          }}
-          parentId={null}
-        />
-      ) : (
-        <HrefLink
-          className={buttonVariants({
-            className: "self-start",
-            variant: "outline",
-          })}
-          href={`/login?returnTo=${encodeURIComponent(`/news/${articleSlug}`)}`}
-        >
-          {t("sign_in")}
-        </HrefLink>
-      )}
-    </section>
-  );
-};
-```
-
-</Accordion>
-</Accordions>
-
 ## Check the result
 
-Open the article with comments from two members, `/news/welcome-to-the-newsroom` from [Comments](/docs/content-engine/threads#check-the-result):
+Open an article with two comments by **Ada**, a member. Then check each action with the right account:
 
-1. Sign in as one of them. **Edit** shows under your own comment only.
-2. Click **Edit**, change the text and click **Save**. **Comment saved** appears and the new text shows in place.
-3. Sign in as the other member, or open the page signed out. There is no **Edit** on comments you did not write.
+1. **As Ada**, open **More actions** on one of the comments. It offers only **Edit**, because deleting and hiding your own comments are off by default. Click **Edit**, change the text and click **Save**. **Comment saved** appears and the comment shows the new text, marked **edited** when you changed it more than a minute after posting.
 
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={editing}
-  alt="A comment section with Grace Hopper's comment and Ada Lovelace's comment open in an editor labelled Edit your comment, with Save and Cancel buttons, above the Your comment composer"
-/>
+   <ImgDocs
+     withoutBackground
+     className="*:max-w-full"
+     src={editing}
+     alt="A comment open in the inline editor under the label Edit your comment, with Save and Cancel buttons, above the replies to it"
+   />
 
-## Two saves of the same comment
+2. **As Grace**, another member, the menu on Ada's comment offers **Report**. Pick **Spam** and click **Send report**.
+3. **As the moderator**, the menu offers **Edit**, **Report**, **Hide** and **Delete**:
 
-Newsroom comments have no `editorial`, so they have no `version`. `PATCH /comments/{id}` takes `{ "values": { "body": ... } }` and nothing else. When two tabs save the same comment, both answer `200` and the last save wins. Sending an `expectedVersion` anyway answers `400` with `Unrecognized key: "expectedVersion"`.
+   <ImgDocs
+     withoutBackground
+     className="*:max-w-full"
+     src={menu}
+     alt="The More actions menu open on a comment, with Edit, Report, Hide and Delete, Delete in red"
+   />
 
-For short comments that is usually fine. To stop silent overwrites, add `editorial: true` to the comment type and migrate. Every comment then gets a `version`, `GET /{id}/edit` returns it, and a stale save answers `409 CONTENT_VERSION_CONFLICT`. Pass `version` and `latestVersion` to `useContentPublicWrite`, send `expectedVersion` from `write.submit`, and render `write.conflict` above the editor, as the article's [Edit form](/docs/content-engine/public-write-edit#handle-version-conflicts) does.
+4. Click **Hide**, type a reason and click **Hide**. The comment stays visible to you and to Ada, marked **Hidden** with the reason. Signed out, it is gone, and the count drops by one:
 
-Next, [Replies](/docs/content-engine/threads-frontend) lets comments answer each other.
+   <ImgDocs
+     withoutBackground
+     className="*:max-w-full"
+     src={hidden}
+     alt="A comment marked Hidden with the reason Off topic for this article, seen by a moderator, above a visible comment"
+   />
+
+5. Open **More actions** again and click **Unhide**. Everyone sees the comment again.
+6. Click **Delete** on Ada's other comment. The section asks first, and the comment is gone after you confirm:
+
+   <ImgDocs
+     withoutBackground
+     className="*:max-w-full"
+     src={deleted}
+     alt="The Delete this comment? confirmation, saying it is removed for everyone and that replies to it stay, with Cancel and Delete comment buttons"
+   />
+
+7. In ModCP, open **Reports** and the report from step 2. Its title is the comment's first line. **Open current content** opens `/news/comments/{slug}`, which lands on the article with the reported comment scrolled into view, focused and outlined:
+
+   <ImgDocs
+     withoutBackground
+     className="*:max-w-full"
+     src={modcp}
+     alt="A ModCP report for a comment by Ada Lovelace, reason Spam, with the snapshot of its text and an Open current content link"
+   />
+
+With [Replies](/docs/content-engine/threads-frontend), a hidden or deleted comment that has answers stays in the thread as a placeholder, so its replies keep their place.
+
+To let members delete or hide their own comments, turn on **Allow deleting own content** or **Allow hiding own content** in their role (**AdminCP → Core → Users → Roles**). Ada's menu then offers **Delete** or **Hide** too. With a **Time to edit** of a few minutes, **Edit** disappears from Ada's comments once it runs out.
+
+## What the server checks
+
+- **Every action.** The menu only hides buttons; each route checks the permission again and answers `401`, `403` or `404` when it says no. The section shows one message for it and keeps the comment as it was.
+- **One action at a time.** While one action runs, the comment's menu waits, and **Post comment**, **Save** and the dialogs' buttons are disabled until the server answers. Nothing is shown as done before it accepts.
+- **Edit window.** A save after the window closed answers `403` with the `edit_window_closed` issue, even from a page loaded before it closed, and the editor says **The time to edit this has run out** without losing the text.
+- **Hidden comments.** Only the author and moderators get `hidden: true` and the reason; everyone else gets a placeholder or nothing.
+
+## Related
+
+- [Replies](/docs/content-engine/threads-frontend): let comments answer each other.
+- [Comments API](/docs/content-engine/comments-api): every option and component, and building your own comment layout.
+- [Reports](/docs/content-engine/reports): report reasons, snapshots and ModCP.

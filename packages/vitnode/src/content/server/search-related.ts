@@ -1,4 +1,4 @@
-import type { PgColumn } from "drizzle-orm/pg-core";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
 import { and, eq, inArray } from "drizzle-orm";
@@ -15,6 +15,7 @@ import {
   contentSearchTemplateUrl,
   contentSearchUrl,
 } from "../search";
+import { listContentLanguages } from "./language-resolver";
 import { contentLocaleRouting } from "./locale-routing";
 import { findContentModel } from "./model";
 import { isContentRowPublic } from "./search-document";
@@ -53,6 +54,7 @@ export const toRelatedSearchContext = (
   target: AnyContentTypeDefinition,
   row: object,
   routing: ContentLocaleRouting,
+  locale?: string,
 ): ContentSearchContext => {
   const values = row as Record<string, unknown>;
   const title = values[target.search.titleField];
@@ -68,7 +70,7 @@ export const toRelatedSearchContext = (
     title: typeof title === "string" ? title : "",
     url:
       typeof slug === "string"
-        ? contentSearchUrl({ definition: target, routing, slug })
+        ? contentSearchUrl({ definition: target, locale, routing, slug })
         : null,
   };
 };
@@ -89,13 +91,76 @@ export const toContainerSearchContext = (
   }),
 });
 
+interface RelatedTranslation {
+  locale: string;
+  values: Record<string, unknown>;
+}
+
+const loadRelatedTranslations = async (
+  c: Context,
+  {
+    columns,
+    defaultLocale,
+    ids,
+    names,
+    table,
+  }: {
+    columns: Record<string, PgColumn | undefined>;
+    defaultLocale: string;
+    ids: readonly (number | string)[];
+    names: string[];
+    table: PgTable;
+  },
+): Promise<Map<string, RelatedTranslation>> => {
+  const itemIdColumn = columns.itemId;
+  const languageIdColumn = columns.languageId;
+  if (!itemIdColumn || !languageIdColumn || names.length === 0) {
+    return new Map();
+  }
+
+  const selection: Record<string, PgColumn> = {
+    itemId: itemIdColumn,
+    languageId: languageIdColumn,
+  };
+  for (const name of names) {
+    const column = columns[name];
+    if (column) selection[name] = column;
+  }
+
+  const [rows, languages] = await Promise.all([
+    c
+      .get("db")
+      .select(selection)
+      .from(table)
+      .where(inArray(itemIdColumn, [...ids])),
+    listContentLanguages(c),
+  ]);
+  const localeOf = new Map(
+    languages.map(language => [language.id, language.locale]),
+  );
+
+  const picked = new Map<string, RelatedTranslation>();
+  for (const row of rows) {
+    const locale = localeOf.get(row.languageId as number);
+    if (locale === undefined) continue;
+
+    const key = contentIdKey(row.itemId as number | string);
+    const current = picked.get(key);
+    if (current && current.locale === defaultLocale) continue;
+    if (!current || locale === defaultLocale) {
+      picked.set(key, { locale, values: row });
+    }
+  }
+
+  return picked;
+};
+
 const loadRelatedContexts = async (
   c: Context,
-  source: Extract<ContentSearchContextSource, { kind: "relation" }>,
+  target: AnyContentTypeDefinition,
   ids: readonly (number | string)[],
 ): Promise<[string, ContentSearchContext][]> => {
-  const { target } = source;
-  if (!target.search.enabled) return [];
+  if (!target.search.enabled || ids.length === 0) return [];
 
   const targetModel = findContentModel(
     c.get("core")?.contentModels ?? [],
@@ -104,36 +169,71 @@ const loadRelatedContexts = async (
   if (!targetModel) return [];
 
   const columns = targetModel.columns as Record<string, PgColumn | undefined>;
+  const translationColumns = targetModel.translationColumns as null | Record<
+    string,
+    PgColumn | undefined
+  >;
+  const { titleField } = target.search;
+  const { slugField } = target.publicApi;
   const idColumn = columns.id;
-  const titleColumn = columns[target.search.titleField];
-  const slugColumn = columns[target.publicApi.slugField];
-  if (!idColumn || !titleColumn) return [];
+  const translated = [titleField, slugField].filter(
+    name => !columns[name] && translationColumns?.[name],
+  );
+  if (!idColumn || (!columns[titleField] && !translated.includes(titleField))) {
+    return [];
+  }
 
-  const selection: Record<string, PgColumn> = {
-    id: idColumn,
-    [target.search.titleField]: titleColumn,
-    ...(slugColumn ? { [target.publicApi.slugField]: slugColumn } : {}),
-  };
-  for (const name of RELATED_PUBLICATION_COLUMNS) {
+  const selection: Record<string, PgColumn> = { id: idColumn };
+  for (const name of [titleField, slugField, ...RELATED_PUBLICATION_COLUMNS]) {
     const column = columns[name];
     if (column) selection[name] = column;
   }
 
-  const rows = await c
-    .get("db")
-    .select(selection)
-    .from(targetModel.table)
-    .where(inArray(idColumn, [...ids]));
+  const [rows, translations] = await Promise.all([
+    c
+      .get("db")
+      .select(selection)
+      .from(targetModel.table)
+      .where(inArray(idColumn, [...ids])),
+    translationColumns && targetModel.translationTable
+      ? loadRelatedTranslations(c, {
+          columns: translationColumns,
+          defaultLocale: target.localization.defaultLocale,
+          ids,
+          names: translated,
+          table: targetModel.translationTable,
+        })
+      : new Map<string, RelatedTranslation>(),
+  ]);
   const routing = contentLocaleRouting(c);
 
   return rows.flatMap(row => {
     const id = parseContentId(target.idStrategy, row.id);
+    if (id === null) return [];
 
-    return id === null
-      ? []
-      : [[contentIdKey(id), toRelatedSearchContext(target, row, routing)]];
+    const key = contentIdKey(id);
+    const translation = translations.get(key);
+
+    return [
+      [
+        key,
+        toRelatedSearchContext(
+          target,
+          translation ? { ...row, ...translation.values } : row,
+          routing,
+          translation?.locale,
+        ),
+      ],
+    ];
   });
 };
+
+export const loadRelatedSearchContext = async (
+  c: Context,
+  target: AnyContentTypeDefinition,
+  id: number | string,
+): Promise<ContentSearchContext | undefined> =>
+  new Map(await loadRelatedContexts(c, target, [id])).get(contentIdKey(id));
 
 const loadContainerContexts = async (
   c: Context,
@@ -185,7 +285,7 @@ export const loadContentSearchContexts = async (
 
   return new Map(
     source.kind === "relation"
-      ? await loadRelatedContexts(c, source, [...ids.values()])
+      ? await loadRelatedContexts(c, source.target, [...ids.values()])
       : await loadContainerContexts(c, source, [...ids.values()]),
   );
 };

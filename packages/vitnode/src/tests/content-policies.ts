@@ -210,7 +210,20 @@ export const createPolicyWorld = async ({
         roleId: MEMBER_ROLE,
       })),
     ],
-    [core_roles, [{ color: null, id: MEMBER_ROLE, prefix: null }]],
+    [
+      core_roles,
+      [
+        {
+          allowDeleteOwnContent: false,
+          allowEditOwnContent: true,
+          allowHideOwnContent: false,
+          color: null,
+          editOwnContentMinutes: null,
+          id: MEMBER_ROLE,
+          prefix: null,
+        },
+      ],
+    ],
     [core_files, []],
   ] as [Table, readonly object[]][]);
 

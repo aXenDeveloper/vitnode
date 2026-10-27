@@ -1,4 +1,13 @@
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  sql,
+} from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
@@ -10,6 +19,7 @@ import type {
 
 import {
   core_notification_events,
+  core_notification_receipts,
   core_notification_user_state,
   core_notifications,
 } from "@/database/notifications";
@@ -516,4 +526,119 @@ export const removeNotificationItems = async (
   }
 
   return removed;
+};
+
+/**
+ * Takes events out of every inbox item they contributed to - for events about
+ * something that no longer exists. An item with no other contribution left is
+ * deleted; a grouped item keeps its other events, points at the newest one
+ * and counts one fewer. Pending emails for those events are dropped with
+ * their receipts. The events themselves stay until retention removes them.
+ *
+ * @returns How many items were deleted and how many were kept with fewer events.
+ */
+export const detachNotificationEvents = async (
+  c: NotificationsContext,
+  eventIds: readonly number[],
+): Promise<{ removed: number; updated: number }> => {
+  let removed = 0;
+  let updated = 0;
+
+  for (
+    let start = 0;
+    start < eventIds.length;
+    start += ITEMS_PER_REMOVE_BATCH
+  ) {
+    const chunk = eventIds.slice(start, start + ITEMS_PER_REMOVE_BATCH);
+    const receipts = await c
+      .get("db")
+      .select({ userId: core_notification_receipts.userId })
+      .from(core_notification_receipts)
+      .where(inArray(core_notification_receipts.eventId, chunk));
+    if (receipts.length === 0) continue;
+
+    const batch = await c.get("db").transaction(async tx => {
+      await lockUserStates(tx, [...new Set(receipts.map(row => row.userId))]);
+
+      const dropped = await tx
+        .delete(core_notification_receipts)
+        .where(inArray(core_notification_receipts.eventId, chunk))
+        .returning({
+          notificationId: core_notification_receipts.notificationId,
+        });
+      const perItem = new Map<number, number>();
+      for (const { notificationId } of dropped) {
+        if (notificationId !== null) {
+          perItem.set(notificationId, (perItem.get(notificationId) ?? 0) + 1);
+        }
+      }
+
+      const deltas = new Map<number, number>();
+      let itemsRemoved = 0;
+      let itemsUpdated = 0;
+      for (const [notificationId, count] of perItem) {
+        const [latest] = await tx
+          .select({
+            eventId: core_notification_receipts.eventId,
+            subjectId: core_notification_events.subjectId,
+            subjectType: core_notification_events.subjectType,
+          })
+          .from(core_notification_receipts)
+          .innerJoin(
+            core_notification_events,
+            eq(core_notification_events.id, core_notification_receipts.eventId),
+          )
+          .where(
+            and(
+              eq(core_notification_receipts.notificationId, notificationId),
+              isNotNull(core_notification_receipts.seq),
+            ),
+          )
+          .orderBy(desc(core_notification_receipts.seq))
+          .limit(1);
+
+        if (latest) {
+          await tx
+            .update(core_notifications)
+            .set({
+              eventCount: sql`greatest(${core_notifications.eventCount} - ${count}, 1)`,
+              latestEventId: latest.eventId,
+              subjectId: latest.subjectId,
+              subjectType: latest.subjectType,
+            })
+            .where(eq(core_notifications.id, notificationId));
+          itemsUpdated++;
+          continue;
+        }
+
+        const [item] = await tx
+          .delete(core_notifications)
+          .where(eq(core_notifications.id, notificationId))
+          .returning({
+            activitySeq: core_notifications.activitySeq,
+            archivedAt: core_notifications.archivedAt,
+            readSeq: core_notifications.readSeq,
+            userId: core_notifications.userId,
+          });
+        if (!item) continue;
+        itemsRemoved++;
+        deltas.set(
+          item.userId,
+          (deltas.get(item.userId) ?? 0) - Number(isCounted(item)),
+        );
+      }
+
+      return {
+        removed: itemsRemoved,
+        updated: itemsUpdated,
+        updates: await applyUnreadDeltas(tx, deltas, "removed"),
+      };
+    });
+
+    sendNotificationStates(c, batch.updates);
+    removed += batch.removed;
+    updated += batch.updated;
+  }
+
+  return { removed, updated };
 };

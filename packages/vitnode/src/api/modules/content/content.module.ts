@@ -2,6 +2,7 @@ import { buildModule } from "@/api/builders";
 import { contentLiveWebSocket } from "@/content/server/live/socket";
 
 import { contentEditorialCleanupCron } from "./cron/content-editorial-cleanup.cron";
+import { contentNotificationsQueueTask } from "./tasks/content-notifications.task";
 import { contentScheduleEffectsQueueTask } from "./tasks/content-schedule-effects.task";
 import { contentScheduleQueueTask } from "./tasks/content-schedule.task";
 import { contentSearchDependentsQueueTask } from "./tasks/content-search-dependents.task";
@@ -14,6 +15,7 @@ export const contentModule = buildModule({
     contentScheduleQueueTask,
     contentScheduleEffectsQueueTask,
     contentSearchDependentsQueueTask,
+    contentNotificationsQueueTask,
   ],
   webSockets: [contentLiveWebSocket],
 });

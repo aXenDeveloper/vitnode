@@ -20,6 +20,7 @@ import type { ContentFieldDescriptor } from "../types";
 
 import {
   CONTENT_ENUM_DEFAULT_LENGTH,
+  CONTENT_HIDDEN_REASON_MAX_LENGTH,
   CONTENT_PUBLICATION_STATUS_LENGTH,
   CONTENT_PUBLICATION_STATUSES,
   CONTENT_SLUG_DEFAULT_LENGTH,
@@ -78,6 +79,17 @@ export const buildVisibilityColumns = (
 ): Record<string, AnyPgColumnBuilder> => ({
   hiddenAt: timestamp(),
   hiddenBy: integer().references(userReference, {
+    onDelete: "set null",
+    onUpdate: "cascade",
+  }),
+  hiddenReason: varchar({ length: CONTENT_HIDDEN_REASON_MAX_LENGTH }),
+});
+
+export const buildThreadColumns = (
+  userReference: ColumnReferenceThunk,
+): Record<string, AnyPgColumnBuilder> => ({
+  deletedAt: timestamp(),
+  deletedBy: integer().references(userReference, {
     onDelete: "set null",
     onUpdate: "cascade",
   }),

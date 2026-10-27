@@ -192,6 +192,7 @@ export const resolveContentIndexes = ({
   fields,
   publication = false,
   tableName,
+  thread = false,
   visibility = false,
 }: {
   contentTypeId: string;
@@ -199,6 +200,7 @@ export const resolveContentIndexes = ({
   fields: ContentFieldMap;
   publication?: boolean;
   tableName: string;
+  thread?: boolean;
   visibility?: boolean;
 }): ResolvedContentIndex[] => {
   const seenNames = new Map<string, string[]>();
@@ -262,6 +264,7 @@ export const resolveContentIndexes = ({
       ? [named(tableName, { on: ["status", "publishedAt"] })]
       : []),
     ...(visibility ? [named(tableName, { on: ["hiddenBy"] })] : []),
+    ...(thread ? [named(tableName, { on: ["deletedBy"] })] : []),
   ];
 
   const bySignature = new Map<string, ResolvedContentIndex>();

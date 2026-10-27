@@ -5,6 +5,7 @@ import { HTTPException } from "hono/http-exception";
 import type { CacheClient } from "@/api/lib/cache";
 import type { RegisteredContentType } from "@/content/registry";
 import type { RegisteredContentModel } from "@/content/server/model";
+import type { ContentNotificationRegistry } from "@/content/server/notifications/registry";
 import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
 import type { UpdateChannel } from "@/lib/updates/manifest";
@@ -39,6 +40,7 @@ import {
 } from "@/content/containers/registry";
 import { validateContentTypes } from "@/content/registry";
 import { ensureContentLocalizationLanguages } from "@/content/server/language-resolver";
+import { createContentNotificationRegistry } from "@/content/server/notifications/registry";
 import { warnAboutContentPreviewConfig } from "@/content/server/preview-config";
 import { ensureContentPreviewSecret } from "@/content/server/preview-secret";
 import { CONFIG } from "@/lib/config";
@@ -184,6 +186,8 @@ export interface EnvVariablesVitNode {
 
     contentContainers: RegisteredContentContainer[];
     contentModels: RegisteredContentModel[];
+    /** Content notification rules of every plugin. */
+    contentNotifications?: ContentNotificationRegistry;
 
     contentPreviewSecret?: string;
     /** Web origins the background cache bridge posts to. */
@@ -514,6 +518,16 @@ export const globalMiddleware = ({
   assertContentAiActions(contentTypesMetadata, aiActionsMetadata);
   assertAiModelPricing(ai?.models ?? []);
 
+  const contentNotificationsMetadata = createContentNotificationRegistry(
+    plugins.flatMap(plugin =>
+      (plugin.contentNotifications ?? []).map(config => ({
+        config,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+    contentModelsMetadata,
+  );
+
   const notificationsMetadata = createNotificationRegistry(
     plugins.flatMap(plugin =>
       (plugin.notificationTypes ?? []).map(definition => ({
@@ -611,6 +625,7 @@ export const globalMiddleware = ({
       notificationWorkers,
       contentContainers: contentContainersMetadata,
       contentModels: contentModelsMetadata,
+      contentNotifications: contentNotificationsMetadata,
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,
     };

@@ -85,6 +85,7 @@ import {
   visibilityFields,
 } from "./define-shared";
 import { resolveContentThread } from "./define-thread";
+import { defaultThreadSearch } from "./define-thread-search";
 import { resolveContentDelivery } from "./delivery";
 import { ContentEngineError } from "./errors";
 import { resolveContentIndexes } from "./indexes";
@@ -587,6 +588,7 @@ export const defineContentType = <
     fields: sharedColumns,
     publication: publicationEnabled,
     tableName,
+    thread: thread !== undefined && thread !== false,
     visibility: visibilityEnabled,
   });
 
@@ -624,15 +626,6 @@ export const defineContentType = <
     localized: Object.keys(localizedFields).length > 0,
     publicApi: resolvedPublicApi,
   });
-
-  const resolvedSearch = resolveSearch(
-    id,
-    fieldMap,
-    search,
-    resolvedPublicApi,
-    publicationEnabled,
-    Object.keys(localizedFields).length > 0,
-  );
 
   const resolvedEditorial = resolveEditorial(
     id,
@@ -682,6 +675,22 @@ export const defineContentType = <
     publicApi: resolvedPublicApi,
     publicWrite: resolvedPublicWrite,
   });
+
+  const resolvedSearch = resolveSearch(
+    id,
+    fieldMap,
+    search ??
+      defaultThreadSearch({
+        delivery: resolvedDelivery,
+        fields: fieldMap,
+        publicApi: resolvedPublicApi,
+        publicWrite: resolvedPublicWrite,
+        thread: resolvedThread,
+      }),
+    resolvedPublicApi,
+    publicationEnabled,
+    Object.keys(localizedFields).length > 0,
+  );
 
   const resolvedDuplication = resolveDuplication(
     id,

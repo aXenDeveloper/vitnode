@@ -51,7 +51,7 @@ function CommandDialog({
     <Dialog {...props}>
       <DialogContent
         className={cn(
-          "bg-popover/80 top-1/3 max-h-[calc(66.667vh-2rem)] translate-y-0 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl p-0 backdrop-blur-sm sm:max-h-[calc(66.667vh-5rem)]",
+          "bg-popover/90 top-1/3 max-h-[calc(66.667vh-2rem)] translate-y-0 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-xl p-0 backdrop-blur-sm sm:max-h-[calc(66.667vh-5rem)]",
           className,
         )}
         showCloseButton={showCloseButton}

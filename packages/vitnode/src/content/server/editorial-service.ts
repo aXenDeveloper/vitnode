@@ -83,6 +83,12 @@ import {
 } from "./files";
 import { contentLocaleRouting } from "./locale-routing";
 import {
+  contentNotificationActorId,
+  hasContentFirstPublicationRules,
+  recordContentFirstPublication,
+  recordContentNotificationCleanup,
+} from "./notifications/intents";
+import {
   changedPathsToColumns,
   diffChangedPaths,
   toInsertColumns,
@@ -684,6 +690,20 @@ export const createContentEditorialService = <
         conditions.push(eq(versionColumn, options.expectedVersion));
       }
 
+      // `publishedAt` is never rewritten, so NULL under the row lock means
+      // this is the record's first publication - read only when a content
+      // notification rule wants to know.
+      const [unpublished] =
+        operation === "publish" &&
+        hasContentFirstPublicationRules(c, definition)
+          ? await tx
+              .select({ publishedAt: columns.publishedAt })
+              .from(table)
+              .where(eq(primaryCursor, id))
+              .limit(1)
+              .for("update")
+          : [];
+
       const [row] = await tx
         .update(table)
         .set({ ...values, version: sql`${versionColumn} + 1` })
@@ -732,6 +752,14 @@ export const createContentEditorialService = <
           row: toRow(current),
           version: versionOf(current),
         };
+      }
+
+      if (unpublished?.publishedAt === null) {
+        await recordContentFirstPublication(c, tx, {
+          actorId: contentNotificationActorId(c, options.actor),
+          definition,
+          itemId: id,
+        });
       }
 
       // After the base row moves and before this record's own revision, so each
@@ -1103,6 +1131,10 @@ export const createContentEditorialService = <
           itemId: id,
         });
         await cancelContentSubmissions(tx, definition, id);
+        await recordContentNotificationCleanup(c, tx, {
+          definition,
+          itemId: id,
+        });
 
         return {
           changed: true,
