@@ -22,6 +22,8 @@ import type {
 } from "../types";
 
 import { core_content_containers } from "../../../database/content-containers";
+import { expireContentAccessFamily } from "../../access/server/invalidate";
+import { deleteContentAccessRules } from "../../access/server/rules";
 import { invalidatePageCacheTags } from "../../../page-cache/store.server";
 import { contentContainerTag } from "../../cache";
 import { contentDefinitionOf } from "../../server/model";
@@ -368,6 +370,11 @@ export const createContentContainerService = <
     await invalidatePageCacheTags([contentContainerTag(definitionId)], {
       mode,
     });
+    // A move or a delete changes who may read the subtree, so everything the
+    // collection's access rules decided goes too.
+    if (definition.access.enabled) {
+      await expireContentAccessFamily(c, { id: definitionId, kind: "container" });
+    }
   };
 
   const emit = async <
@@ -536,6 +543,7 @@ export const createContentContainerService = <
               eq(core_content_containers.definitionId, definitionId),
             ),
           );
+        await deleteContentAccessRules(tx, definitionId, [String(id)]);
         await applyPlacements(tx, plan.shifted);
 
         return row;

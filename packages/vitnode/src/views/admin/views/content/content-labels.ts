@@ -65,6 +65,7 @@ export const contentLabelsFrom = (
 
 export const contentRouteNamespaces = (pluginId: string): string[] => [
   "core.global",
+  "core.access",
   "core.content",
   pluginId,
 ];

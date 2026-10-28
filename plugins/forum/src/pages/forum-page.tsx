@@ -18,7 +18,10 @@ import {
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
 import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
-import { contentPageItem } from "@vitnode/core/tanstack/content";
+import {
+  ContentAccessRequired,
+  contentPageItem,
+} from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
@@ -96,13 +99,18 @@ const loadForum = async (
     await queryForum(queryClient, slug),
   );
 
+  // A forum the viewer may see but not read lists nothing - not even how
+  // many topics it holds.
+  const canRead = container.access.canRead;
   const [{ nextCursor, topics }, forumStats] = await Promise.all([
-    queryClient.query(
-      forumTopicsQueryOptions({
-        forumId: container.id,
-        ...(cursor ? { cursor } : {}),
-      }),
-    ),
+    canRead
+      ? queryClient.query(
+          forumTopicsQueryOptions({
+            forumId: container.id,
+            ...(cursor ? { cursor } : {}),
+          }),
+        )
+      : Promise.resolve({ nextCursor: null, topics: [] }),
     children.length > 0
       ? queryClient.query(forumStatsQueryOptions())
       : Promise.resolve([]),
@@ -110,6 +118,7 @@ const loadForum = async (
 
   return {
     ancestors,
+    canRead,
     children,
     container,
     forumStats,
@@ -244,19 +253,28 @@ const ForumPage = ({
   loaderData,
 }: PluginRoutePageProps<ForumPageData, ForumSearch>) => {
   const t = useTranslations("@vitnode/forum.forums");
-  const { children, container, forumStats, isFirstPage, nextCursor, topics } =
-    loaderData;
+  const {
+    canRead,
+    children,
+    container,
+    forumStats,
+    isFirstPage,
+    nextCursor,
+    topics,
+  } = loaderData;
 
   return (
     <ForumShell
       actions={
-        <HrefLink
-          className={buttonVariants()}
-          href={topicNewHref(container.id)}
-        >
-          <PenSquareIcon aria-hidden="true" />
-          {t("new_topic")}
-        </HrefLink>
+        canRead ? (
+          <HrefLink
+            className={buttonVariants()}
+            href={topicNewHref(container.id)}
+          >
+            <PenSquareIcon aria-hidden="true" />
+            {t("new_topic")}
+          </HrefLink>
+        ) : null
       }
       description={container.metadata.description}
       title={
@@ -293,7 +311,9 @@ const ForumPage = ({
           {t("topics")}
         </h2>
 
-        {topics.length === 0 ? (
+        {!canRead ? (
+          <ContentAccessRequired headingLevel="h3" />
+        ) : topics.length === 0 ? (
           <Empty className="border">
             <EmptyHeader>
               <EmptyMedia variant="icon">

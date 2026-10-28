@@ -1774,6 +1774,7 @@
         "duplicate": "Duplicate",
         "hide": "Hide",
         "unhide": "Unhide",
+        "access": "Access",
         "activity": "Activity"
       },
       "create": {
@@ -3070,6 +3071,103 @@
         "reference": "Reference",
         "customerId": "Customer id",
         "errorCode": "Error code"
+      }
+    },
+    "access": {
+      "loading": "Checking your access",
+      "sign_in": "Sign in",
+      "read": {
+        "guest": {
+          "title": "Sign in to read this",
+          "desc": "This part of the community is open to signed-in members only. Sign in and it might just open up for you."
+        },
+        "member": {
+          "title": "You don't have access here",
+          "desc": "Your account can't read this yet. If you think it should, ask an administrator."
+        }
+      },
+      "comment": {
+        "guest": {
+          "title": "Sign in to reply",
+          "desc": "Replies are for signed-in members. Sign in to join the conversation."
+        },
+        "member": {
+          "title": "Replies are closed to you here",
+          "desc": "You can read this, but your account can't reply in this place."
+        }
+      },
+      "attachment": {
+        "title": "An attachment is available",
+        "desc": "You do not have permission to download it."
+      },
+      "admin": {
+        "action": "Access",
+        "title": "Access",
+        "desc": "Who may see {name}, read what is inside, reply and download attachments. Each rule can inherit from the parent - a child can be stricter than its parent, never more open.",
+        "submit": "Save access",
+        "success": "Access saved",
+        "successDesc": "New rules for {name} apply from the next request.",
+        "loadError": "The access rules could not be loaded.",
+        "retry": "Try again",
+        "inherit": "Inherit ({value})",
+        "this_scope": "this one",
+        "deleted_role": "a deleted role",
+        "roles_label": "Roles that may {action}",
+        "roles_desc": "Members with any of these roles, as a primary or secondary role. Pick at least one.",
+        "modes": {
+          "roles": "Selected roles"
+        },
+        "audience": {
+          "everyone": "Everyone",
+          "members": "Signed-in members",
+          "roles": "Members with {roles}",
+          "nobody": "Nobody (no role left)"
+        },
+        "actions": {
+          "view": {
+            "label": "View",
+            "desc": "See that it exists - its name and description in lists and breadcrumbs."
+          },
+          "read": {
+            "label": "Read",
+            "desc": "Open and read what is filed in it, find it in search and Discover."
+          },
+          "comment": {
+            "label": "Comment",
+            "desc": "Reply to what is filed in it. Signing in and every moderation rule still apply."
+          },
+          "downloadAttachments": {
+            "label": "Download attachments",
+            "desc": "Download protected attachments of what readers can read."
+          }
+        },
+        "source": {
+          "scope": "Now inherited from {name}.",
+          "default": "Now inherited from the collection's default.",
+          "fallback": "Now open to everyone - nothing above sets it."
+        },
+        "effective": {
+          "title": "Effective access",
+          "open": "Everyone",
+          "self": "{audience} - set here or inherited for {scope}",
+          "ancestor": "{audience} for {action} - required by {scope}, a parent",
+          "prerequisite": "{audience} for {action} - needed first",
+          "needs": "Needs {action} first, so it is never wider than that."
+        },
+        "warnings": {
+          "nobody": "Nobody but a root role can {action} here: the rule on {scope} has no role left."
+        },
+        "descendants": "{count, plural, one {# scope inside follows these rules too.} other {# scopes inside follow these rules too.}}",
+        "attachments": {
+          "unsupported": "The storage adapter keeps files public, so downloads stay open to everyone. Configure private storage to restrict them."
+        },
+        "errors": {
+          "invalidAccess": "One of the rules is not valid.",
+          "notFound": "It no longer exists.",
+          "unknownRole": "One of the roles no longer exists. Pick the roles again.",
+          "unsupportedStorage": "Downloads can't be restricted: the storage adapter keeps files public.",
+          "unknown": "Something went wrong. Try again in a moment."
+        }
       }
     }
   },

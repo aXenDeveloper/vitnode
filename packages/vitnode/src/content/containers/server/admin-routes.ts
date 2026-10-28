@@ -14,6 +14,7 @@ import type {
 import type { ContentContainerUsageCheck } from "./service";
 
 import { buildRoute } from "../../../api/lib/route";
+import { buildContentAccessAdminRoutes } from "../../access/server/admin-routes";
 import { CONTENT_PERMISSIONS } from "../../const";
 import { CONTENT_CONTAINER_ERROR_CODES } from "../const";
 import { ContentContainerError } from "../errors";
@@ -257,8 +258,16 @@ export const buildContentContainerAdminRoutes = <
     },
   });
 
+  const access = definition.access.enabled
+    ? buildContentAccessAdminRoutes({
+        familyId: definition.id,
+        permissionModule: module,
+        pluginId,
+      })
+    : [];
+
   if (!definition.policies.enabled) {
-    return [list, create, update, move, remove];
+    return [list, create, update, move, remove, ...access];
   }
 
   const policies = buildRoute({
@@ -337,5 +346,14 @@ export const buildContentContainerAdminRoutes = <
     },
   });
 
-  return [list, create, update, move, remove, policies, updatePolicies];
+  return [
+    list,
+    create,
+    update,
+    move,
+    remove,
+    policies,
+    updatePolicies,
+    ...access,
+  ];
 };

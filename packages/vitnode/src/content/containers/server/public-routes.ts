@@ -6,9 +6,21 @@ import type {
   ContentContainerPublicRecord,
 } from "../types";
 
+import type { ContentAccessFlags } from "../../access/policy";
+
 import { setPageCacheTags } from "../../../api/lib/page-cache";
 import { buildRoute } from "../../../api/lib/route";
-import { contentContainerTag } from "../../cache";
+import {
+  CONTENT_ACCESS_OPEN_FLAGS,
+  zodContentAccessFlags,
+} from "../../access/policy";
+import { contentAccessFlagsForScopes } from "../../access/server/decide";
+import {
+  findContentAccessFamily,
+  isContentAccessFamilyOpen,
+} from "../../access/server/families";
+import { CONTENT_ACCESS_PRIVATE_HEADERS } from "../../access/server/http";
+import { contentAccessTag, contentContainerTag } from "../../cache";
 import { CONTENT_CONTAINER_SLUG_MAX_LENGTH } from "../const";
 import { contentContainerAncestors } from "../tree";
 import { createContentContainerService } from "./service";
@@ -26,11 +38,86 @@ export const buildContentContainerPublicRoutes = <
   definition: TDefinition,
   { pluginId }: { pluginId: P },
 ) => {
-  const record = definition.schemas.publicRecord as unknown as z.ZodType<
-    ContentContainerPublicRecord<TDefinition>
+  // Every container says what the viewer may do in it - the frontend shows
+  // "sign in to read" from this, the server still decides. Without access
+  // rules every flag is `true`.
+  const record = definition.schemas.publicRecord.extend({
+    access: zodContentAccessFlags,
+  }) as unknown as z.ZodType<
+    ContentContainerPublicRecord<TDefinition> & {
+      access: ContentAccessFlags;
+    }
   >;
   const service = (c: Parameters<typeof createContentContainerService>[0]) =>
     createContentContainerService(c, { definition, pluginId });
+
+  type Context = Parameters<typeof createContentContainerService>[0];
+  type Item = Awaited<ReturnType<ReturnType<typeof service>["list"]>>[number];
+
+  /**
+   * Every container the viewer may see, each with its flags; a container
+   * inside a hidden one is hidden too. `shareable` when no rule of the
+   * collection keeps anybody out, so the answer is everybody's.
+   */
+  const visibleContainers = async (
+    c: Context,
+    all: Item[],
+  ): Promise<{
+    flags: Map<number, ContentAccessFlags>;
+    items: Item[];
+    shareable: boolean;
+  }> => {
+    const family = definition.access.enabled
+      ? findContentAccessFamily(c, definition.id)
+      : undefined;
+    if (!family) {
+      return {
+        flags: new Map(all.map(item => [item.id, CONTENT_ACCESS_OPEN_FLAGS])),
+        items: all,
+        shareable: true,
+      };
+    }
+
+    const flags = new Map<number, ContentAccessFlags>();
+    for (const item of all) {
+      const { denied: _denied, ...decided } = await contentAccessFlagsForScopes(
+        c,
+        { scopes: [{ family: family.id, scopeId: String(item.id) }] },
+      );
+      flags.set(item.id, decided);
+    }
+
+    return {
+      flags,
+      items: all.filter(item => flags.get(item.id)?.canView === true),
+      shareable: await isContentAccessFamilyOpen(c, family),
+    };
+  };
+
+  const withAccess =
+    (
+      containers: ReturnType<typeof service>,
+      flags: Map<number, ContentAccessFlags>,
+    ) =>
+    (item: Item) => ({
+      ...containers.toPublic(item),
+      access: flags.get(item.id) ?? CONTENT_ACCESS_OPEN_FLAGS,
+    });
+
+  const respond = <T>(
+    c: Context,
+    body: T,
+    shareable: boolean,
+  ) => {
+    if (!shareable) return c.json(body, 200, CONTENT_ACCESS_PRIVATE_HEADERS);
+
+    setPageCacheTags(c, [
+      contentContainerTag(definition.id),
+      ...(definition.access.enabled ? [contentAccessTag(definition.id)] : []),
+    ]);
+
+    return c.json(body, 200);
+  };
 
   const list = buildRoute({
     pluginId,
@@ -61,7 +148,10 @@ export const buildContentContainerPublicRoutes = <
     handler: async c => {
       const { parent } = c.req.valid("query");
       const containers = service(c);
-      const all = await containers.list();
+      const { flags, items: all, shareable } = await visibleContainers(
+        c,
+        await containers.list(),
+      );
       let items = all;
 
       if (parent === "root") {
@@ -73,9 +163,11 @@ export const buildContentContainerPublicRoutes = <
         items = all.filter(item => item.parentId === parent);
       }
 
-      setPageCacheTags(c, [contentContainerTag(definition.id)]);
-
-      return c.json({ items: items.map(containers.toPublic) }, 200);
+      return respond(
+        c,
+        { items: items.map(withAccess(containers, flags)) },
+        shareable,
+      );
     },
   });
 
@@ -109,7 +201,12 @@ export const buildContentContainerPublicRoutes = <
     handler: async c => {
       const { idOrSlug } = c.req.valid("param");
       const containers = service(c);
-      const all = await containers.list();
+      const { flags, items: all, shareable } = await visibleContainers(
+        c,
+        await containers.list(),
+      );
+      // A container the viewer may not see is not found, like one that never
+      // existed - its slug and id answer the same.
       const container = NUMERIC_ID.test(idOrSlug)
         ? all.find(item => item.id === Number(idOrSlug))
         : all.find(item => item.slug === idOrSlug);
@@ -118,18 +215,18 @@ export const buildContentContainerPublicRoutes = <
       }
 
       const ancestors = contentContainerAncestors(all, container.id);
+      const toPublic = withAccess(containers, flags);
 
-      setPageCacheTags(c, [contentContainerTag(definition.id)]);
-
-      return c.json(
+      return respond(
+        c,
         {
-          ancestors: ancestors.map(containers.toPublic),
+          ancestors: ancestors.map(toPublic),
           children: all
             .filter(item => item.parentId === container.id)
-            .map(containers.toPublic),
-          container: containers.toPublic(container),
+            .map(toPublic),
+          container: toPublic(container),
         },
-        200,
+        shareable,
       );
     },
   });

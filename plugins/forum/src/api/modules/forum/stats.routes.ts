@@ -4,10 +4,12 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
 import {
+  contentAccessTag,
   contentContainerTag,
   contentPublicListTag,
 } from "@vitnode/core/content";
 import {
+  createContentAccess,
   publicationColumns,
   publishedCondition,
 } from "@vitnode/core/content/server";
@@ -41,7 +43,40 @@ const statsTags = (): string[] => [
   contentPublicListTag(topicContent.definition.id),
   contentPublicListTag(commentContent.definition.id),
   contentContainerTag(forumContainers.id),
+  contentAccessTag(forumContainers.id),
 ];
+
+/**
+ * The forums whose topics the viewer may read, or `null` for all of them.
+ * The cached stats are everybody's; each response keeps only these rows, so a
+ * restricted forum's counts and newest title never reach anyone else.
+ */
+export const readableForumIds = async (
+  c: Context,
+): Promise<null | Set<number>> => {
+  const allowed = await createContentAccess(c).allowedScopes(
+    forumContainers.id,
+    "read",
+  );
+
+  return allowed.all ? null : new Set(allowed.ids.map(Number));
+};
+
+/**
+ * The headers of a stats response: shared (and page-cache tagged) only when
+ * no access rule can change it, `private, no-store` otherwise.
+ */
+export const forumStatsHeaders = async (
+  c: Context,
+): Promise<Record<string, string>> => {
+  if (!(await createContentAccess(c).isOpen(topicContent))) {
+    return { "Cache-Control": "private, no-store" };
+  }
+
+  setPageCacheTags(c, statsTags());
+
+  return {};
+};
 
 const json = <T extends z.ZodType>(schema: T, description: string) => ({
   content: { "application/json": { schema } },
@@ -130,12 +165,15 @@ export const forumStatsRoute = buildRoute({
       commentCounts.map(row => [row.forumId, row.value]),
     );
     const latestOf = new Map(latest.map(row => [row.forumId, row]));
+    const readable = await readableForumIds(c);
 
-    setPageCacheTags(c, statsTags());
+    const headers = await forumStatsHeaders(c);
 
     return c.json(
       {
-        items: topicCounts.map(row => {
+        items: topicCounts
+          .filter(row => !readable || readable.has(row.forumId))
+          .map(row => {
           const newest = latestOf.get(row.forumId);
 
           return {
@@ -154,6 +192,7 @@ export const forumStatsRoute = buildRoute({
         }),
       },
       200,
+      headers,
     );
   },
 });
@@ -205,6 +244,29 @@ export const loadTopicStats = async (
   });
 };
 
+/** The topics among `ids` the viewer may read, by their forum's rules now. */
+export const readableTopicIds = async (
+  c: Context,
+  ids: readonly number[],
+): Promise<number[]> => {
+  const unique = [...new Set(ids)].filter(id => Number.isSafeInteger(id));
+  if (unique.length === 0) return [];
+  const condition = await createContentAccess(c).condition(
+    topicContent,
+    "read",
+  );
+  if (!condition) return unique;
+
+  const topics = topicContent.table;
+  const rows = await c
+    .get("db")
+    .select({ id: topics.id })
+    .from(topics)
+    .where(and(inArray(topics.id, unique), condition));
+
+  return rows.map(row => row.id);
+};
+
 const TOPIC_IDS = new RegExp(
   `^[1-9]\\d{0,15}(,[1-9]\\d{0,15}){0,${FORUM_STATS_MAX_TOPICS - 1}}$`,
 );
@@ -237,11 +299,11 @@ export const topicStatsRoute = buildRoute({
   },
   handler: async c => {
     const ids = c.req.valid("query").ids.split(",").map(Number);
-    const items = await loadTopicStats(c, ids);
+    const items = await loadTopicStats(c, await readableTopicIds(c, ids));
 
-    setPageCacheTags(c, statsTags());
+    const headers = await forumStatsHeaders(c);
 
-    return c.json({ items }, 200);
+    return c.json({ items }, 200, headers);
   },
 });
 
@@ -268,14 +330,27 @@ export const topicSlugRoute = buildRoute({
     const { id } = c.req.valid("param");
     const topics = topicContent.table;
 
+    const access = createContentAccess(c);
     const [row] = await c
       .get("db")
       .select({ id: topics.id, slug: topics.slug })
       .from(topics)
-      .where(and(eq(topics.id, id), publicTopic()))
+      .where(
+        and(
+          eq(topics.id, id),
+          publicTopic(),
+          await access.condition(topicContent, "read"),
+        ),
+      )
       .limit(1);
 
     if (!row) throw new HTTPException(404, { message: "Topic not found." });
+
+    if (!(await access.isOpen(topicContent))) {
+      return c.json({ id: row.id, slug: row.slug }, 200, {
+        "Cache-Control": "private, no-store",
+      });
+    }
 
     setPageCacheTags(c, [contentPublicListTag(topicContent.definition.id)]);
 

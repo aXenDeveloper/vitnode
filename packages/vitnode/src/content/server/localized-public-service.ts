@@ -23,7 +23,10 @@ import type {
   ContentPublicService,
 } from "./public-service";
 
+import type { ContentAccessActor } from "../access/policy";
+
 import { withPagination } from "../../api/lib/with-pagination";
+import { contentPublicAccessCondition } from "../access/server/source";
 import {
   CONTENT_PUBLIC_DEFAULT_PAGE_SIZE,
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
@@ -406,9 +409,10 @@ export const createContentLocalizedPublicService = <
     resolved: ResolvedLocale,
     condition: SQL | undefined,
     {
+      actor,
       hidden = false,
       strict = false,
-    }: { hidden?: boolean; strict?: boolean } = {},
+    }: { actor?: ContentAccessActor; hidden?: boolean; strict?: boolean } = {},
   ): Promise<ContentPublicSelect<TDefinition> | null> => {
     // A strict read must not fall back - `findBySlug`. Dropping the fallback
     // language makes the join inner and the visibility test single-armed, so
@@ -424,6 +428,7 @@ export const createContentLocalizedPublicService = <
         contentPublicReadCondition(basePublication, { hidden }),
         visibleIn(scope),
         condition,
+        await contentPublicAccessCondition(c, definition, { actor }),
       ),
       { limit: 1 },
     );
@@ -441,6 +446,7 @@ export const createContentLocalizedPublicService = <
       if (!resolved) return null;
 
       return await readOne(readerFor(options), resolved, eq(columns.id, id), {
+        actor: options?.actor,
         hidden: options?.hidden,
       });
     },
@@ -466,7 +472,7 @@ export const createContentLocalizedPublicService = <
         projection,
         resolved,
         slugIn(resolved.requested.id),
-        { hidden: options?.hidden, strict: true },
+        { actor: options?.actor, hidden: options?.hidden, strict: true },
       );
       if (row || !options?.fallback || !resolved.fallbackTo) return row;
 
@@ -474,11 +480,12 @@ export const createContentLocalizedPublicService = <
         projection,
         resolved,
         slugIn(resolved.fallbackTo.id),
-        { hidden: options?.hidden },
+        { actor: options?.actor, hidden: options?.hidden },
       );
     },
 
     findMany: async ({
+      actor,
       filters = {},
       hidden,
       locale,
@@ -507,6 +514,7 @@ export const createContentLocalizedPublicService = <
       );
 
       const where = conditions(
+        await contentPublicAccessCondition(c, definition, { actor }),
         contentPublicListCondition({ advanced, columns, definition }, hidden),
         // The localized filter goes through the same visibility test as the read
         // itself, so a filter can only ever match the translation the reader

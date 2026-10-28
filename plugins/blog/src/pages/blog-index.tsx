@@ -10,7 +10,10 @@ import {
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
-import { ContentListPagination } from "@vitnode/core/tanstack/content";
+import {
+  ContentAccessRequired,
+  ContentListPagination,
+} from "@vitnode/core/tanstack/content";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import {
   FolderOpenIcon,
@@ -161,6 +164,11 @@ export const BlogIndex = ({
   };
 
   const body = () => {
+    // A category the viewer may see but not read lists nothing at all.
+    if (selected && !selected.access.canRead) {
+      return <ContentAccessRequired headingLevel="h3" />;
+    }
+
     if (!posts) {
       return (
         <BlogEmpty
@@ -244,7 +252,9 @@ export const BlogIndex = ({
         </h1>
         <p className="text-muted-foreground max-w-2xl text-base leading-relaxed text-pretty md:text-lg">
           {selected
-            ? t("article_count", { count: selected.articleCount })
+            ? selected.access.canRead
+              ? t("article_count", { count: selected.articleCount })
+              : null
             : t("desc")}
         </p>
       </header>

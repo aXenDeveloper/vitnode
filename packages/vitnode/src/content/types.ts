@@ -21,6 +21,7 @@ import type {
   CONTENT_VISIBILITY_FIELDS,
   CONTENT_VISIBILITY_FILTERS,
 } from "./const";
+import type { ResolvedContentTypeAccess } from "./define-access";
 import type { AnyContentContainerDefinition } from "./containers/types";
 import type { ContentFileDescriptor } from "./files";
 import type {
@@ -2091,6 +2092,8 @@ export interface ContentTypeDefinition<
   TPublicPeople extends string = string,
   TPublicListField extends string = string,
 > {
+  /** Role-based access rules, or the disabled default when `access` is omitted. */
+  access: ResolvedContentTypeAccess;
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
   advanced: ResolvedContentAdvancedConfig;

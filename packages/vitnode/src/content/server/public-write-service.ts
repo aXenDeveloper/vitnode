@@ -8,6 +8,8 @@ import type { Context } from "hono";
 import { eq, getColumns, getColumnTable, inArray } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 
+import type { ContentAccessAction } from "../access/policy";
+import type { ContentAccessScopeRef } from "../access/server/source";
 import type { ContentSubmissionRow } from "../approvals/server/submissions";
 import type { EffectiveContentContainerPolicy } from "../containers/policies";
 import type { ContentRecordContainer } from "../containers/server/policy";
@@ -19,7 +21,7 @@ import type {
   ContentPublicUpdateBody,
   ContentPublicWriteRecord,
 } from "../types";
-import type { ContentModel } from "./model";
+import type { AnyContentModel, ContentModel } from "./model";
 import type { ContentPublicWriteActor } from "./public-write-authorization";
 import type { ContentDatabase } from "./service";
 
@@ -51,6 +53,12 @@ import {
   ContentPublicWriteInputError,
   ContentVersionConflict,
 } from "../errors";
+import { decideContentAccessForScopes } from "../access/server/decide";
+import {
+  contentAccessScopesForValues,
+  contentAccessSourceOf,
+  contentRecordAccessScopes,
+} from "../access/server/source";
 import { contentIdKey, requireContentId } from "../ids";
 import { isContentReferenceCollection } from "../paths";
 import { canViewHiddenContentRecord } from "./hidden-access";
@@ -193,6 +201,39 @@ export const createContentPublicWriteService = <
     reason: ContentPublicWriteDenied["reason"],
     issue: ContentPublicWriteDenied["issue"] = null,
   ) => new ContentPublicWriteDenied({ contentTypeId, issue, reason });
+
+  const accessModel = model as unknown as AnyContentModel;
+  // A reply is written under its parent's `comment` rule; anything else needs
+  // to read the scope it is written into.
+  const writeAction = (): ContentAccessAction =>
+    contentAccessSourceOf(c, accessModel)?.kind === "parent"
+      ? "comment"
+      : "read";
+
+  /**
+   * The access rules of the scopes a write lands in, decided from the
+   * database for this request - so a role taken away a moment ago is already
+   * gone, whatever form the member still has open. A scope they may not even
+   * see is a 404, like a record that does not exist.
+   */
+  const assertWriteAccess = async (
+    scopes: ContentAccessScopeRef[] | null | undefined,
+  ): Promise<void> => {
+    if (!scopes) throw deny("notFound");
+    if (scopes.length === 0) return;
+
+    const action = writeAction();
+    const decision = await decideContentAccessForScopes(c, { action, scopes });
+    if (decision.allowed) return;
+
+    const visible = await decideContentAccessForScopes(c, {
+      action: "view",
+      scopes,
+    });
+    throw visible.allowed
+      ? deny("forbidden", CONTENT_PUBLIC_WRITE_ISSUE_CODES.accessDenied)
+      : deny("notFound");
+  };
 
   const requireActor = (): ContentPublicWriteActor => {
     const actor = resolveContentPublicWriteActor(c);
@@ -421,6 +462,12 @@ export const createContentPublicWriteService = <
   ) => {
     if (!row) throw deny("notFound");
 
+    await assertWriteAccess(
+      (
+        await contentRecordAccessScopes(c, accessModel, [row.id as ContentId])
+      ).get(contentIdKey(row.id as ContentId)),
+    );
+
     const container = await resolveContentRowContainer(c, tx, definition, row);
     const policy = effectiveContentPolicy(definition, container);
     const decision = await authorizeContentPublicWrite(c, {
@@ -516,6 +563,9 @@ export const createContentPublicWriteService = <
 
       const prepare = async (tx: ContentDatabase) => {
         await assertPublicRelationTargets(tx, parsed);
+        await assertWriteAccess(
+          await contentAccessScopesForValues(c, accessModel, parsed),
+        );
         const container = await asInputError(
           async () =>
             await resolveContentWriteContainer(c, tx, definition, parsed),

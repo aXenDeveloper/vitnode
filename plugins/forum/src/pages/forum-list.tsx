@@ -1,6 +1,7 @@
 import type { ContentContainerTreeNode } from "@vitnode/core/content";
 
 import { HrefLink } from "@vitnode/core/tanstack/link";
+import { LockIcon } from "lucide-react";
 import { useFormatter, useTranslations } from "use-intl";
 
 import type { Forum, ForumStats } from "./forum-data";
@@ -18,6 +19,7 @@ const ForumRow = ({
   const t = useTranslations("@vitnode/forum.forums");
   const format = useFormatter();
   const latest = stats?.latestTopic ?? null;
+  const locked = !forum.access.canRead;
 
   return (
     <article className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:gap-6">
@@ -31,6 +33,12 @@ const ForumRow = ({
             >
               {forum.name}
             </HrefLink>
+            {locked ? (
+              <span className="text-muted-foreground ms-2 inline-flex items-center gap-1 align-middle text-xs font-normal">
+                <LockIcon aria-hidden="true" className="size-3.5" />
+                {t("members_only")}
+              </span>
+            ) : null}
           </h3>
           {forum.metadata.description ? (
             <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
@@ -40,6 +48,7 @@ const ForumRow = ({
         </div>
       </div>
 
+      {locked ? null : (
       <dl className="text-muted-foreground flex items-center gap-6 text-sm md:w-40 md:justify-end">
         <div className="flex flex-col md:items-end">
           <dt>{t("stats.topics")}</dt>
@@ -54,7 +63,9 @@ const ForumRow = ({
           </dd>
         </div>
       </dl>
+      )}
 
+      {locked ? null : (
       <div className="flex min-w-0 flex-col gap-1 text-sm leading-relaxed md:w-56">
         {latest ? (
           <>
@@ -75,6 +86,7 @@ const ForumRow = ({
           <span className="text-muted-foreground">{t("no_topics_yet")}</span>
         )}
       </div>
+      )}
     </article>
   );
 };

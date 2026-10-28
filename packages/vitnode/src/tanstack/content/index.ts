@@ -39,3 +39,8 @@ export type {
 } from "./permissions";
 export { useContentPermissions } from "./permissions";
 export { useContentPublicWrite } from "./public-write";
+export type { ContentAccessRequiredProps } from "./access-required";
+export {
+  CONTENT_ACCESS_NAMESPACES,
+  ContentAccessRequired,
+} from "./access-required";

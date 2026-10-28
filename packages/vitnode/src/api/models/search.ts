@@ -27,6 +27,11 @@ import {
   canonicalSearchSuggestions,
 } from "@/api/lib/search-suggestions";
 import { storageUrlOf } from "@/api/lib/storage-url";
+import {
+  contentSearchAllowedScopes,
+  verifyContentSearchHits,
+  withContentSearchAccessScopes,
+} from "@/content/access/server/search";
 import { contentIdFromKey, contentIdKey } from "@/content/ids";
 import { contentLocalesMatch } from "@/content/locale";
 import { core_files } from "@/database/files";
@@ -49,6 +54,12 @@ const BULK_UPSERT_CHUNK = 500;
  * it to {@link SearchModel}.
  */
 export interface SearchDocument {
+  /**
+   * The access scopes the item is filed in, as `family:scopeId`. Filled in by
+   * {@link SearchModel} from the content tables for every access-controlled
+   * content type - whatever a builder passes is replaced.
+   */
+  accessScopes?: readonly string[];
   /** Users credited for the item, for author filters and author hits. */
   authorIds?: readonly number[];
   /** The forum, category or other container holding the item. */
@@ -89,6 +100,12 @@ export interface SearchDocument {
 
 /** A search query: filters, sorting and cursor pagination. */
 export interface SearchQueryParams {
+  /**
+   * The scope tokens the viewer may read: a document is found only when every
+   * one of its `accessScopes` is listed. `null` or absent is no access filter.
+   * {@link SearchModel} fills it in for the request's viewer.
+   */
+  accessScopes?: null | readonly string[];
   authorId?: number;
   authorIds?: readonly number[];
   containerId?: number;
@@ -100,6 +117,11 @@ export interface SearchQueryParams {
   hiddenAccess?: SearchHiddenAccess;
   /** Skips every visibility check - for admin and diagnostic reads only. */
   includePrivate?: boolean;
+  /**
+   * Skips the access rules of content scopes as well - only for staff routes
+   * that already checked an AdminCP permission. Defaults to `false`.
+   */
+  skipAccess?: boolean;
   itemTypes?: string[];
   // Restrict results to one locale (the viewer's). Rows with an empty
   // `languageCode` (language-agnostic content) always match.
@@ -401,6 +423,7 @@ const toRow = (doc: SearchDocument) => ({
   content: doc.content,
   containerType: doc.containerType ?? null,
   containerId: doc.containerId ?? null,
+  accessScopes: [...new Set(doc.accessScopes ?? [])],
   url: doc.url ?? null,
   isPublic: doc.isPublic ?? true,
   isHidden: doc.isHidden ?? false,
@@ -604,6 +627,7 @@ export class SearchModel {
             content: sql`excluded."content"`,
             containerType: sql`excluded."containerType"`,
             containerId: sql`excluded."containerId"`,
+            accessScopes: sql`excluded."accessScopes"`,
             url: sql`excluded."url"`,
             isPublic: sql`excluded."isPublic"`,
             isHidden: sql`excluded."isHidden"`,
@@ -630,6 +654,86 @@ export class SearchModel {
       : params;
   }
 
+  /** The viewer's access filter, unless the caller is a staff route that skips it. */
+  private async withAccess(
+    params: SearchQueryParams,
+  ): Promise<SearchQueryParams> {
+    if (params.skipAccess) return { ...params, accessScopes: null };
+
+    return {
+      ...params,
+      accessScopes: await contentSearchAllowedScopes(this.c),
+    };
+  }
+
+  /**
+   * Re-stamps the access scopes of indexed items from the content tables, in
+   * the canonical table and the provider - after a search found an item whose
+   * stored scopes no longer match, or from the reconciliation job.
+   */
+  async refreshAccessScopes(
+    items: readonly { itemId: ContentId; itemType: string }[],
+  ): Promise<number> {
+    if (items.length === 0) return 0;
+
+    const db = this.c.get("db");
+    const byType = new Map<string, string[]>();
+    for (const item of items) {
+      byType.set(item.itemType, [
+        ...(byType.get(item.itemType) ?? []),
+        contentIdKey(item.itemId),
+      ]);
+    }
+
+    let changed = 0;
+    for (const [itemType, keys] of byType) {
+      const rows = await db
+        .select()
+        .from(core_search_index)
+        .where(
+          and(
+            eq(core_search_index.itemType, itemType),
+            inArray(core_search_index.itemId, [...new Set(keys)]),
+          ),
+        );
+      if (rows.length === 0) continue;
+
+      const contentTypes = this.c.get("core")?.contentTypes ?? [];
+      const docs: SearchDocument[] = rows.map(row => ({
+        accessScopes: row.accessScopes,
+        authorIds: row.authorIds,
+        containerId: row.containerId ?? undefined,
+        containerType: row.containerType ?? undefined,
+        content: row.content,
+        createdAt: row.createdAt,
+        imageId: row.imageId,
+        isHidden: row.isHidden,
+        isPublic: row.isPublic,
+        itemId: searchItemIdFromKey(contentTypes, row.itemType, row.itemId),
+        itemType: row.itemType,
+        languageCode: row.languageCode,
+        metadata: row.metadata,
+        pluginId: row.pluginId,
+        title: row.title,
+        updatedAt: row.updatedAt ?? undefined,
+        url: row.url ?? undefined,
+      }));
+      const stamped = await withContentSearchAccessScopes(this.c, docs);
+      const stale = stamped.filter(
+        (doc, index) =>
+          JSON.stringify([...(doc.accessScopes ?? [])].sort()) !==
+          JSON.stringify([...(rows[index]?.accessScopes ?? [])].sort()),
+      );
+      if (stale.length === 0) continue;
+
+      changed += stale.length;
+      await this.upsertRows(stale);
+      await this.provider().bulkIndex(this.c, stale);
+    }
+
+    return changed;
+  }
+
   private async withSuggestionImages(
     suggestions: SearchSuggestion[],
   ): Promise<SearchSuggestionResult[]> {
@@ -646,9 +750,15 @@ export class SearchModel {
     term?: string;
   }): Promise<SearchHitAuthor[]> {
     const db = this.c.get("db");
+    // Only authors credited on what this viewer may read: a member who only
+    // writes in a restricted scope is not listed for anybody outside it.
+    const allowedScopes = await contentSearchAllowedScopes(this.c);
     const listed = and(
       eq(core_search_index.isPublic, true),
       eq(core_search_index.isHidden, false),
+      allowedScopes
+        ? sql`${core_search_index.accessScopes} <@ ${sql.param(allowedScopes)}::text[]`
+        : undefined,
     );
     const columns = {
       id: core_users.id,
@@ -697,12 +807,7 @@ export class SearchModel {
       return rows.map(toAuthor);
     }
 
-    const topAuthorIds = await this.c
-      .get("cache")
-      .remember(
-        `search:top-authors:${limit}`,
-        SEARCH_TOP_AUTHORS_TTL_SECONDS,
-        async () => {
+    const loadTopAuthors = async () => {
           const activity = db
             .select({
               authorId: sql<number>`unnest(${core_search_index.authorIds})`.as(
@@ -720,8 +825,18 @@ export class SearchModel {
             .limit(limit);
 
           return top.map(row => row.authorId);
-        },
-      );
+        };
+    // The shared cache only holds the list everybody gets; a restricted
+    // viewer's own list is read fresh.
+    const topAuthorIds = allowedScopes
+      ? await loadTopAuthors()
+      : await this.c
+          .get("cache")
+          .remember(
+            `search:top-authors:${limit}`,
+            SEARCH_TOP_AUTHORS_TTL_SECONDS,
+            loadTopAuthors,
+          );
     if (topAuthorIds.length === 0) return [];
 
     const rows = await db
@@ -740,8 +855,11 @@ export class SearchModel {
 
   /** {@link SearchModel.index} for many documents at once. */
   async bulkIndex(docs: SearchDocument[]): Promise<void> {
-    const clean = docs.map(doc =>
-      this.resolveOwner({ ...doc, content: stripHtml(doc.content) }),
+    const clean = await withContentSearchAccessScopes(
+      this.c,
+      docs.map(doc =>
+        this.resolveOwner({ ...doc, content: stripHtml(doc.content) }),
+      ),
     );
 
     await this.upsertRows(clean);
@@ -764,7 +882,10 @@ export class SearchModel {
     const provider = this.provider();
     if (!provider.countByType) return null;
 
-    return await provider.countByType(this.c, this.withFallbacks(params));
+    return await provider.countByType(
+      this.c,
+      this.withFallbacks(await this.withAccess(params)),
+    );
   }
 
   /**
@@ -882,10 +1003,12 @@ export class SearchModel {
    * `core_search_index`; the provider mirrors it.
    */
   async index(doc: SearchDocument): Promise<void> {
-    const clean = this.resolveOwner({
-      ...doc,
-      content: stripHtml(doc.content),
-    });
+    const [clean] = await withContentSearchAccessScopes(this.c, [
+      this.resolveOwner({
+        ...doc,
+        content: stripHtml(doc.content),
+      }),
+    ]);
 
     const commentParent = await this.newCommentParent(clean);
 
@@ -945,12 +1068,16 @@ export class SearchModel {
     languageCode?: string;
     limit: number;
   }): Promise<SearchSuggestionResult[]> {
-    return await this.withSuggestionImages(
-      await canonicalPopularSearchItems(this.c, {
-        limit,
-        params: this.withFallbacks({ includePrivate: false, languageCode }),
-      }),
-    );
+    const params = await this.withAccess({
+      includePrivate: false,
+      languageCode,
+    });
+    const items = await canonicalPopularSearchItems(this.c, {
+      limit,
+      params: this.withFallbacks(params),
+    });
+
+    return await this.withSuggestionImages(await this.verified(items));
   }
 
   async recordPopularity({
@@ -967,23 +1094,66 @@ export class SearchModel {
 
   /** Runs a query on the search adapter and attaches each hit's authors and image. */
   async search(params: SearchQueryParams): Promise<SearchResult> {
+    const scoped = await this.withAccess(params);
     const result = await this.provider().search(
       this.c,
-      this.withFallbacks(params),
+      this.withFallbacks(scoped),
     );
 
+    // The index filtered by the scopes it remembers; the content tables decide.
+    // A hit that fails here was indexed before its record moved or a rule
+    // changed: it is never returned, its scopes are stamped again, and the
+    // total no longer counts it. Counts are therefore an upper bound only
+    // while such stale entries exist - they never include a hit this viewer
+    // was shown.
+    const { dropped, kept } = scoped.skipAccess
+      ? { dropped: [], kept: result.edges }
+      : await verifyContentSearchHits(this.c, result.edges);
+    if (dropped.length > 0) {
+      await this.refreshAccessScopes(dropped).catch(() => 0);
+    }
+    const pageInfo =
+      dropped.length > 0
+        ? {
+            ...result.pageInfo,
+            count: kept.length,
+            totalCount: Math.max(
+              kept.length,
+              result.pageInfo.totalCount - dropped.length,
+            ),
+          }
+        : result.pageInfo;
+
     const [withAuthors, withImages] = await Promise.all([
-      this.hydrateAuthors(result.edges),
-      this.hydrateImages(result.edges),
+      this.hydrateAuthors(kept),
+      this.hydrateImages(kept),
     ]);
 
     return {
-      ...result,
       edges: withAuthors.map((edge, index) => ({
         ...edge,
         image: withImages[index]?.image ?? null,
       })),
+      pageInfo,
     };
+  }
+
+  /** The suggestions the viewer may read now; stale ones are re-stamped. */
+  private async verified<T extends { itemId: string; itemType: string }>(
+    items: T[],
+  ): Promise<T[]> {
+    const { dropped, kept } = await verifyContentSearchHits(this.c, items);
+    if (dropped.length > 0) {
+      const contentTypes = this.c.get("core")?.contentTypes ?? [];
+      await this.refreshAccessScopes(
+        dropped.map(item => ({
+          itemId: searchItemIdFromKey(contentTypes, item.itemType, item.itemId),
+          itemType: item.itemType,
+        })),
+      ).catch(() => 0);
+    }
+
+    return kept;
   }
 
   async suggest({
@@ -994,12 +1164,12 @@ export class SearchModel {
     limit: number;
     term: string;
   }): Promise<SearchSuggestionResult[]> {
-    return await this.withSuggestionImages(
-      await canonicalSearchSuggestions(this.c, {
-        limit,
-        params: this.withFallbacks(params),
-        term,
-      }),
-    );
+    const items = await canonicalSearchSuggestions(this.c, {
+      limit,
+      params: this.withFallbacks(await this.withAccess(params)),
+      term,
+    });
+
+    return await this.withSuggestionImages(await this.verified(items));
   }
 }

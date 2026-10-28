@@ -16,7 +16,10 @@ import {
   zodRichTextDocument,
 } from "@vitnode/core/content";
 import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
-import { contentPageItem } from "@vitnode/core/tanstack/content";
+import {
+  ContentAccessRequired,
+  contentPageItem,
+} from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import { localeAlternateLinks } from "@vitnode/core/tanstack/metadata";
@@ -97,6 +100,10 @@ const topicQueryOptions = (slug: string) =>
       });
 
       if (res.status === 404) return { shared: false, topic: null };
+      // In a forum the viewer may see but not read: no topic, only the fact.
+      if (res.status === 403) {
+        return { accessRequired: true as const, shared: false, topic: null };
+      }
       if (res.status !== 200) {
         throw new Error(`Loading the topic "${slug}" failed.`);
       }
@@ -114,9 +121,9 @@ const loadTopic = async (
   queryClient: QueryClient,
   { locale, slug }: { locale: string; slug: string },
 ) => {
-  const topic = contentPageItem(
-    (await queryClient.query(topicQueryOptions(slug))).topic,
-  );
+  const loaded = await queryClient.query(topicQueryOptions(slug));
+  if ("accessRequired" in loaded) return { accessRequired: true as const };
+  const topic = contentPageItem(loaded.topic);
 
   const [forum, thread] = await Promise.all([
     queryForum(queryClient, String(topic.forum)).catch(() => null),
@@ -132,6 +139,8 @@ const loadTopic = async (
     )?.href ?? path;
 
   return {
+    accessRequired: false as const,
+    canComment: forum?.container.access.canComment ?? true,
     canonicalUrl,
     description: excerptOf(
       richTextToPlainText(topic.body).replace(/\s+/g, " "),
@@ -167,13 +176,19 @@ export const route = defineRoute<TopicPageData, TopicSearch>({
       slug: params.slug,
     }),
 
-  head: ({ loaderData }) => ({
-    alternates: loaderData
-      ? { [loaderData.locale]: topicHref(loaderData.topic.slug) }
-      : undefined,
-    description: loaderData?.description,
-    title: loaderData?.topic.title,
-  }),
+  head: ({ loaderData, t }) =>
+    !loaderData || loaderData.accessRequired
+      ? {
+          robots: "noindex, nofollow",
+          title: t("@vitnode/forum.forums.access_required"),
+        }
+      : {
+          alternates: {
+            [loaderData.locale]: topicHref(loaderData.topic.slug),
+          },
+          description: loaderData.description,
+          title: loaderData.topic.title,
+        },
 
   breadcrumb: {
     group: ({ loaderData }) => (
@@ -183,7 +198,7 @@ export const route = defineRoute<TopicPageData, TopicSearch>({
             <ForumsCrumb />
           </BreadcrumbLink>
         </BreadcrumbItem>
-        {loaderData.trail.map(forum => (
+        {(loaderData.accessRequired ? [] : loaderData.trail).map(forum => (
           <Fragment key={forum.id}>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
@@ -195,10 +210,14 @@ export const route = defineRoute<TopicPageData, TopicSearch>({
             </BreadcrumbItem>
           </Fragment>
         ))}
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>{loaderData.topic.title}</BreadcrumbPage>
-        </BreadcrumbItem>
+        {loaderData.accessRequired ? null : (
+          <>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{loaderData.topic.title}</BreadcrumbPage>
+            </BreadcrumbItem>
+          </>
+        )}
       </>
     ),
   },
@@ -246,7 +265,7 @@ const TopicViewerActions = ({
 const TopicJsonLd = ({
   data: { canonicalUrl, description, locale, thread, topic },
 }: {
-  data: TopicPageData;
+  data: Extract<TopicPageData, { accessRequired: false }>;
 }) => {
   const json = {
     "@context": "https://schema.org",
@@ -289,13 +308,41 @@ const TopicJsonLd = ({
   );
 };
 
-const TopicPage = ({
+const TopicAccessRequired = () => {
+  const t = useTranslations("@vitnode/forum.forums");
+
+  return (
+    <div className="container mx-auto flex max-w-3xl px-4 py-8 md:py-12">
+      <ContentAccessRequired>
+        <HrefLink
+          className={buttonVariants({ variant: "outline" })}
+          href={FORUM_HREF}
+        >
+          {t("not_found.back")}
+        </HrefLink>
+      </ContentAccessRequired>
+    </div>
+  );
+};
+
+const TopicPage = (
+  props: PluginRoutePageProps<TopicPageData, TopicSearch>,
+) =>
+  props.loaderData.accessRequired ? (
+    <TopicAccessRequired />
+  ) : (
+    <TopicView {...props} loaderData={props.loaderData} />
+  );
+
+const TopicView = ({
   loaderData,
   navigate,
   search,
-}: PluginRoutePageProps<TopicPageData, TopicSearch>) => {
+}: Omit<PluginRoutePageProps<TopicPageData, TopicSearch>, "loaderData"> & {
+  loaderData: Extract<TopicPageData, { accessRequired: false }>;
+}) => {
   const t = useTranslations("@vitnode/forum.topics.detail");
-  const { thread, topic, trail } = loaderData;
+  const { canComment, thread, topic, trail } = loaderData;
   const created = search.created === true;
   const announcedRef = useRef(false);
   const forum = trail.at(-1);
@@ -365,7 +412,12 @@ const TopicPage = ({
         />
       </article>
 
-      <ForumThread initial={thread} topicId={topic.id} topicSlug={topic.slug} />
+      <ForumThread
+        canReply={canComment}
+        initial={thread}
+        topicId={topic.id}
+        topicSlug={topic.slug}
+      />
     </div>
   );
 };

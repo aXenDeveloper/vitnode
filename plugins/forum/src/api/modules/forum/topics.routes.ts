@@ -1,22 +1,20 @@
 import { z } from "@hono/zod-openapi";
-import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
 import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@vitnode/core/api/lib/with-pagination";
 import {
-  contentContainerTag,
-  contentPublicListTag,
+  CONTENT_ACCESS_REQUIRED_CODE,
   zodContentPublicPerson,
 } from "@vitnode/core/content";
+import { createContentAccess } from "@vitnode/core/content/server";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
 import { forumContainers } from "@/content/forums";
-import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";
 
-import { iso, loadTopicStats } from "./stats.routes";
+import { forumStatsHeaders, iso, loadTopicStats } from "./stats.routes";
 
 /**
  * One page of a forum's topics with their comment stats, for the forum page.
@@ -63,6 +61,18 @@ export const forumTopicsRoute = buildRoute({
         description: "A page of topics, newest first",
       },
       400: { description: "Invalid query parameters" },
+      403: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              accessRequired: z.literal(true),
+              code: z.literal(CONTENT_ACCESS_REQUIRED_CODE),
+            }),
+          },
+        },
+        description: "The viewer may see the forum but not read its topics",
+      },
+      404: { description: "No forum the viewer may see" },
     },
   },
   handler: async c => {
@@ -70,6 +80,20 @@ export const forumTopicsRoute = buildRoute({
     const service = topicContent.publicService?.(c);
     if (!service) {
       throw new HTTPException(500, { message: "Topics have no public API." });
+    }
+
+    // A forum the viewer may not see is not found; one they may see but not
+    // read says so, without listing anything in it.
+    const access = createContentAccess(c);
+    if (!(await access.canScope(forumContainers.id, forumId, "view"))) {
+      throw new HTTPException(404, { message: "Forum not found." });
+    }
+    if (!(await access.canScope(forumContainers.id, forumId, "read"))) {
+      return c.json(
+        { accessRequired: true as const, code: CONTENT_ACCESS_REQUIRED_CODE },
+        403,
+        { "Cache-Control": "private, no-store" },
+      );
     }
 
     const { edges, pageInfo } = await service.findMany({
@@ -85,11 +109,7 @@ export const forumTopicsRoute = buildRoute({
       ).map(item => [item.topicId, item]),
     );
 
-    setPageCacheTags(c, [
-      contentPublicListTag(topicContent.definition.id),
-      contentPublicListTag(commentContent.definition.id),
-      contentContainerTag(forumContainers.id),
-    ]);
+    const headers = await forumStatsHeaders(c);
 
     return c.json(
       {
@@ -110,6 +130,7 @@ export const forumTopicsRoute = buildRoute({
         pageInfo,
       },
       200,
+      headers,
     );
   },
 });

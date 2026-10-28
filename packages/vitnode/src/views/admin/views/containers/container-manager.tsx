@@ -27,6 +27,7 @@ import { cn } from "cn";
 import { FolderTreeIcon, PlusIcon, RotateCwIcon } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
@@ -54,6 +55,7 @@ import {
 } from "@/lib/dnd/drag-motion";
 import { FinePointerSensor } from "@/lib/dnd/sensors";
 import { isAdminRequestError } from "@/views/admin/admin-request";
+import { ContentAccessSheet } from "@/views/admin/views/access/access-sheet";
 
 import type { ContentContainerSave } from "./container-form-content";
 import type { ContentContainerPoliciesSave } from "./container-policies-form";
@@ -68,7 +70,10 @@ import {
   ContentContainerPoliciesSheet,
   ContentContainerSheet,
 } from "./container-dialogs";
-import { contentContainerErrorKey } from "./container-query";
+import {
+  contentContainerErrorKey,
+  invalidateContentContainers,
+} from "./container-query";
 import {
   ContainerDragChip,
   type ContainerRowActions,
@@ -260,6 +265,8 @@ export const ContentContainerManager = ({
   const [sheetMode, setSheetMode] = React.useState<"create" | "edit">("create");
   const deleting = useOverlay();
   const policies = useOverlay();
+  const access = useOverlay();
+  const queryClient = useQueryClient();
   const announcementContainer = React.useSyncExternalStore(
     subscribeToNothing,
     getAnnouncementContainer,
@@ -469,6 +476,11 @@ export const ContentContainerManager = ({
       const move = rootContainerMove(ordered, id);
       if (move) commitMove(move);
     },
+    onAccess: definition.access.enabled
+      ? id => {
+          access.show({ id });
+        }
+      : undefined,
     onPolicies:
       definition.policies.enabled && onSavePolicies
         ? id => {
@@ -674,6 +686,10 @@ export const ContentContainerManager = ({
     policies.id === null
       ? undefined
       : ordered.find(record => record.id === policies.id);
+  const accessContainer =
+    access.id === null
+      ? undefined
+      : ordered.find(record => record.id === access.id);
   const deletingContainer =
     deleting.id === null
       ? undefined
@@ -713,6 +729,27 @@ export const ContentContainerManager = ({
           pluginId={pluginId}
           records={ordered}
           singular={labels.singular}
+        />
+      ) : null}
+
+      {definition.access.enabled ? (
+        <ContentAccessSheet
+          formKey={access.session}
+          onOpenChange={access.setOpen}
+          onSaved={async () => {
+            await invalidateContentContainers(queryClient, definition.id);
+          }}
+          open={access.isOpen}
+          scopeId={accessContainer ? String(accessContainer.id) : null}
+          scopeName={accessContainer?.name ?? ""}
+          scopeNames={
+            new Map(ordered.map(record => [String(record.id), record.name]))
+          }
+          target={{
+            family: definition.id,
+            module: `content/${definition.admin.permissionModule}`,
+            pluginId,
+          }}
         />
       ) : null}
 

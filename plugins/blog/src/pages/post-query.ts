@@ -63,6 +63,8 @@ const fetchBlogPost = async ({
   }
 
   return {
+    // In a category the viewer may see but not read: no article, only that.
+    accessRequired: detail.status === 403,
     item: detail.status === 200 ? await detail.json() : null,
     resolution: await resolution.json(),
   };

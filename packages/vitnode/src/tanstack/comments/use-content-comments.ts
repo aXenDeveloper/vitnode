@@ -97,6 +97,13 @@ export interface ContentCommentsConfig<
   TRecord = ContentCommentRecordOf<R>,
 > {
   /**
+   * Whether the access rules of the commented record let this visitor reply -
+   * the `canComment` flag a container, a category or `GET /permissions`
+   * reported. `false` swaps the composer for a "no access" note and hides
+   * **Reply**; the server checks again on every write. Defaults to `true`.
+   */
+  allowed?: boolean;
+  /**
    * Re-reads a few top-level branches - `GET /thread/branches` with `root`
    * and `ids` joined by commas (left out when there are none). With it, a
    * write refreshes only the branch it touched instead of every loaded page,
@@ -334,8 +341,10 @@ export interface ContentCommentsController<
 > {
   /** The action running right now, or `null`. Other actions wait for it. */
   busy: ContentCommentBusy<TId> | null;
-  /** Whether the visitor may write a new comment here: signed in, with `create` given. */
+  /** Whether the visitor may write a new comment here: signed in, with `create` given and `allowed`. */
   canComment: boolean;
+  /** Whether a signed-in visitor is kept from commenting by access rules. */
+  commentLocked: boolean;
   /** Whether **Reply** shows under `node`: replies allowed, under `maxDepth`, not hidden or removed. */
   canReply: (node: ContentCommentNode<TRecord, TId>) => boolean;
   /** Which actions the plugin wired up. A button also needs the server's `can*` answer. */
@@ -617,6 +626,7 @@ export const useContentComments = <
   const queryClient = useQueryClient();
   const session = useSessionQuery();
   const {
+    allowed = true,
     branches: requestBranches,
     create,
     delete: remove,
@@ -780,10 +790,12 @@ export const useContentComments = <
 
   return {
     busy,
-    canComment: Boolean(create) && signedIn,
+    canComment: Boolean(create) && signedIn && allowed,
+    commentLocked: signedIn && !allowed,
     canReply: node =>
       Boolean(create) &&
       signedIn &&
+      allowed &&
       maxDepth !== undefined &&
       !node.hidden &&
       !node.removed &&

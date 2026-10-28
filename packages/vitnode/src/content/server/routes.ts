@@ -83,6 +83,10 @@ import {
   zodContentReferenceListItem,
   zodContentReferenceListItemAnyId,
 } from "./list-references";
+import {
+  buildContentAccessAdminRoutes,
+  buildContentAccessEffectiveRoute,
+} from "../access/server/admin-routes";
 import { buildContentLiveRoutes } from "./live-routes";
 import { commitContentDrafts } from "./live-store";
 import { resetContentLiveRecord } from "./live/hooks";
@@ -2100,6 +2104,25 @@ export const buildContentRoutes = <
       : []),
     // Mounted under the same module and the same permissions, so a localized
     // content type gets its translation routes without a second registration.
+    // A scope content type (a blog category) gets the same access editor
+    // routes a container collection has; one filed under scopes gets the
+    // effective-access check its editor shows.
+    ...(definition.access.scope.enabled
+      ? buildContentAccessAdminRoutes({
+          familyId: definition.id,
+          permissionModule: definition.permissionModule,
+          pluginId,
+        })
+      : []),
+    ...(definition.access.from
+      ? [
+          buildContentAccessEffectiveRoute({
+            contentTypeId: definition.id,
+            permissionModule: definition.permissionModule,
+            pluginId,
+          }),
+        ]
+      : []),
     ...(definition.localization.enabled
       ? [
           ...buildContentTranslationRoutes(model, { pluginId }),

@@ -806,14 +806,17 @@ export const PostComments = ({
   articleHref,
   articleId,
   articleTitle,
+  canComment = true,
 }: {
   articleAuthorIds: readonly number[];
   articleHref: string;
   articleId: number;
   articleTitle: string;
+  /** Whether the article's categories let this reader comment. */
+  canComment?: boolean;
 }) => {
   const t = useTranslations("core.global");
-  const comments = usePostComments(articleId);
+  const comments = usePostComments(articleId, canComment);
 
   return (
     <section

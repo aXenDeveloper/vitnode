@@ -9,6 +9,7 @@ import type { Context } from "hono";
 import { and, eq, inArray, or } from "drizzle-orm";
 
 import type { PaginationCursorColumn } from "../../api/lib/with-pagination";
+import type { ContentAccessActor } from "../access/policy";
 import type { ContentIdOf } from "../ids";
 import type {
   AnyContentTypeDefinition,
@@ -25,6 +26,7 @@ import type {
 import type { ContentPageInfo } from "./service";
 
 import { withPagination } from "../../api/lib/with-pagination";
+import { contentPublicAccessCondition } from "../access/server/source";
 import {
   CONTENT_PUBLIC_DEFAULT_PAGE_SIZE,
   CONTENT_PUBLIC_MAX_PAGE_SIZE,
@@ -59,6 +61,12 @@ import {
 export { nestContentPublicRow } from "./public-row-hydration";
 
 export interface ContentPublicReadOptions {
+  /**
+   * Whose access rules the read applies. Defaults to the request's own viewer;
+   * pass a guest to build something every visitor will see (a sitemap), or a
+   * recipient to check what a notification may say.
+   */
+  actor?: ContentAccessActor;
   /** Language to read, on a localized content type. Defaults to `localization.defaultLocale`. */
   locale?: string;
 }
@@ -145,6 +153,8 @@ export interface ContentPublicService<TDefinition> {
   findManyByIds?: (
     ids: readonly ContentIdOf<TDefinition>[],
     options?: {
+      /** Whose access rules apply. Defaults to the request's viewer. */
+      actor?: ContentAccessActor;
       /**
        * Also read published records that are hidden. Only for ids the caller
        * already cleared for this reader, such as a thread's moderators.
@@ -482,12 +492,17 @@ export const createContentPublicService = <
     const { hydrate, project, selection } = options.select
       ? reader(contentPublicSelectProjection(definition, options.select))
       : detail;
+    const access = await contentPublicAccessCondition(c, definition, {
+      actor: options.actor,
+    });
     const [row] = await keepVisible(
       await c
         .get("db")
         .select(withParent(selection))
         .from(table)
-        .where(and(contentPublicReadCondition(published, options), condition))
+        .where(
+          and(contentPublicReadCondition(published, options), condition, access),
+        )
         .limit(1),
     );
 
@@ -514,20 +529,32 @@ export const createContentPublicService = <
             contentPublicReadCondition(published, { hidden: true }),
           )
         : publishedCondition(published);
+      const access = await contentPublicAccessCondition(c, definition, {
+        actor: options?.actor,
+      });
       const rows = await keepVisible(
         await c
           .get("db")
           .select(withParent(detail.selection))
           .from(table)
-          .where(and(readable, inArray(primaryCursor, [...ids]))),
+          .where(and(readable, inArray(primaryCursor, [...ids]), access)),
         { hiddenParents: options?.hiddenParents },
       );
 
       return (await detail.hydrate(rows)).map(detail.project);
     },
 
-    findMany: async ({ filters = {}, hidden, orderBy, query = {} } = {}) => {
+    findMany: async ({
+      actor,
+      filters = {},
+      hidden,
+      orderBy,
+      query = {},
+    } = {}) => {
       const conditions = [
+        // Before pagination, so a page, its cursor and its count only ever
+        // know about records this viewer may read.
+        await contentPublicAccessCondition(c, definition, { actor }),
         contentPublicListCondition({ advanced, columns, definition }, hidden),
         buildFilterCondition({
           allowed: publicApi.filterableFields,

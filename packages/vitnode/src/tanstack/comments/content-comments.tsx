@@ -34,6 +34,7 @@ import { useRevealHashTarget } from "@/hooks/use-reveal-hash-target";
 import type { ContentCommentNode, ContentCommentTreeNode } from "./thread";
 import type { ContentCommentsController } from "./use-content-comments";
 
+import { ContentAccessRequired } from "../content/access-required";
 import { LOGIN_PATH, returnToFor } from "../auth/redirects";
 import {
   ContentCommentActions,
@@ -549,6 +550,8 @@ export const ContentCommentsComposer = ({
       <h3 className="font-semibold text-balance">{t("compose.title")}</h3>
       {comments.isSessionPending ? (
         <Skeleton aria-hidden="true" className="h-12 w-full rounded-lg" />
+      ) : comments.commentLocked ? (
+        <ContentAccessRequired headingLevel="h3" kind="comment" />
       ) : comments.canComment ? (
         state === "closed" ? (
           <Button

@@ -11,6 +11,7 @@ import {
   LinkIcon,
   PencilIcon,
   SendIcon,
+  LockIcon,
   Trash2Icon,
 } from "lucide-react";
 import React from "react";
@@ -52,6 +53,7 @@ import {
   contentVisibilityTransition,
   isContentHidden,
 } from "@/content/visibility";
+import { ContentAccessSheet } from "@/views/admin/views/access/access-sheet";
 import { ContentDuplicateDialog } from "@/views/admin/views/content/actions/duplicate-dialog";
 import {
   CONTENT_EDITORIAL_ACTION_IDS,
@@ -299,6 +301,7 @@ const ACTION_ICONS: Record<
   Exclude<ContentRowActionId, "visibility">,
   React.ReactNode
 > = {
+  access: <LockIcon />,
   activity: <ActivityIcon />,
   delete: <Trash2Icon />,
   delivery: <LinkIcon />,
@@ -508,6 +511,11 @@ const ContentRowActionsMenu = ({
     permission: CONTENT_PERMISSIONS.delete,
     plugin: pluginId,
   });
+  const canEdit = useAdminPermission({
+    module,
+    permission: CONTENT_PERMISSIONS.edit,
+    plugin: pluginId,
+  });
 
   const target = contentApiTarget(definition, pluginId);
   const visibility = contentVisibilityTransition({
@@ -515,8 +523,10 @@ const ContentRowActionsMenu = ({
   });
   const slots = contentAdminSlots();
   const items = contentRowActionIds({
+    access: definition.access.scope.enabled,
     canCreate,
     canDelete,
+    canEdit,
     canHide,
     canPublish,
     canView,
@@ -644,6 +654,25 @@ const ContentRowActionsMenu = ({
           row={row}
           singular={singular}
           title={title}
+        />
+      ) : null}
+
+      {panel?.id === "access" ? (
+        <ContentAccessSheet
+          formKey={0}
+          onOpenChange={closePanel}
+          onSaved={async () => {
+            await invalidateContentList(queryClient, definition.id);
+          }}
+          open={panel.open}
+          scopeId={String(row.id)}
+          scopeName={title}
+          scopeNames={new Map([[String(row.id), title]])}
+          target={{
+            family: definition.id,
+            module: `content/${definition.permissionModule}`,
+            pluginId,
+          }}
         />
       ) : null}
 

@@ -14,6 +14,7 @@ import type {
   CONTENT_CONTAINER_ERROR_CODES,
   CONTENT_CONTAINER_ORDERING_MODES,
 } from "./const";
+import type { ResolvedContentAccessScope } from "../access/policy";
 import type { ResolvedContentContainerPolicies } from "./policies";
 
 export type ContentContainerFieldDescriptor =
@@ -96,6 +97,8 @@ export interface ContentContainerDefinition<
   TPublicEnabled extends boolean = boolean,
   TPublicPath extends string = string,
 > {
+  /** Per-container access rules, or the disabled default. */
+  access: ResolvedContentAccessScope;
   admin: {
     navigation: { enabled: boolean };
     path: string;
