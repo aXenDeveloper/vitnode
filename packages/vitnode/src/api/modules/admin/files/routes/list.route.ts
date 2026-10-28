@@ -2,13 +2,13 @@ import { eq } from "drizzle-orm";
 import z from "zod";
 
 import { buildRoute } from "@/api/builders";
-import { contentPrivateAdminFileUrl } from "@/content/access/server/files";
 import { resolveRoleNames } from "@/api/lib/resolve-role-names";
 import {
   withPagination,
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
+import { contentPrivateAdminFileUrl } from "@/content/access/server/files";
 import { core_files } from "@/database/files";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
@@ -150,12 +150,12 @@ export const listFilesAdminRoute = buildRoute({
         }) => ({
           ...file,
           // A private file has no public address: the list shows it through the
-        // session's own download route.
-        url: hasAdapter
-          ? visibility === "private"
-            ? contentPrivateAdminFileUrl(file.id)
-            : storage.getUrl(key)
-          : null,
+          // session's own download route.
+          url: hasAdapter
+            ? visibility === "private"
+              ? contentPrivateAdminFileUrl(file.id)
+              : storage.getUrl(key)
+            : null,
           dimensions: parseImageDimensions(file.metadata),
           user:
             userId != null && userName != null

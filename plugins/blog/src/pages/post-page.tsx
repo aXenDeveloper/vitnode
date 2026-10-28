@@ -12,13 +12,13 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@vitnode/core/components/ui/alert";
+import { buttonVariants } from "@vitnode/core/components/ui/button";
 import { TooltipWithContent } from "@vitnode/core/components/ui/tooltip";
 import { UserFormat } from "@vitnode/core/components/user-format";
 import { contentTarget } from "@vitnode/core/content";
 import { richTextNodeElement } from "@vitnode/core/content/rich-text";
 import { resolveImageAlt } from "@vitnode/core/lib/files/resolve-alt";
 import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
-import { buttonVariants } from "@vitnode/core/components/ui/button";
 import {
   ContentAccessRequired,
   contentDeliveryPage,
@@ -266,7 +266,9 @@ const BlogPostAccessRequired = () => {
   );
 };
 
-const BlogPostPage = ({ loaderData }: PluginRoutePageProps<BlogPostPageData>) =>
+const BlogPostPage = ({
+  loaderData,
+}: PluginRoutePageProps<BlogPostPageData>) =>
   loaderData.accessRequired ? (
     <BlogPostAccessRequired />
   ) : (

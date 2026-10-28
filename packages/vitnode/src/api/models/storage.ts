@@ -140,6 +140,11 @@ export interface StorageApiPlugin {
   /** The public URL of a stored object. */
   getUrl: (key: string) => string;
   /**
+   * Private objects, for protected attachments. Optional: without it every
+   * file has a public URL and downloads cannot be restricted.
+   */
+  private?: StoragePrivateStore;
+  /**
    * Reads an object's bytes, or `null` when missing. Optional: without it,
    * reads fetch `getUrl`.
    */
@@ -147,11 +152,6 @@ export interface StorageApiPlugin {
     key: string,
     options: { maxBytes: number },
   ) => Promise<null | Uint8Array>;
-  /**
-   * Private objects, for protected attachments. Optional: without it every
-   * file has a public URL and downloads cannot be restricted.
-   */
-  private?: StoragePrivateStore;
   /** How to serve stored files from disk; only for disk-backed adapters. */
   static?: StorageStaticConfig;
   /** Writes one object under `args.key` and returns its key and public URL. */
@@ -522,10 +522,10 @@ export class StorageModel {
 
       let row: undefined | { key: string; visibility: "private" | "public" };
       try {
-        [row] = await tx
-          .delete(core_files)
-          .where(where)
-          .returning({ key: core_files.key, visibility: core_files.visibility });
+        [row] = await tx.delete(core_files).where(where).returning({
+          key: core_files.key,
+          visibility: core_files.visibility,
+        });
       } catch (error) {
         if (!isPgReferenceViolation(error)) throw error;
 
@@ -566,37 +566,6 @@ export class StorageModel {
     return this.requireProvider().getUrl(key);
   }
 
-  /** Whether the adapter can keep files private (protected attachments). */
-  supportsPrivateFiles(): boolean {
-    return this.c.get("core").storage?.adapter?.private !== undefined;
-  }
-
-  /**
-   * Streams one stored file, public or private, for a route that already
-   * decided the visitor may have it. `null` when the object is missing.
-   */
-  async openFile({
-    key,
-    visibility,
-  }: {
-    key: string;
-    visibility: "private" | "public";
-  }): Promise<null | StoragePrivateObject> {
-    const provider = this.requireProvider();
-    if (visibility === "private") {
-      return (await provider.private?.read(key)) ?? null;
-    }
-
-    const response = await fetch(provider.getUrl(key)).catch(() => null);
-    if (!response?.ok || !response.body) return null;
-    const declared = Number(response.headers.get("content-length") ?? "");
-
-    return {
-      body: response.body,
-      ...(Number.isFinite(declared) && declared > 0 ? { size: declared } : {}),
-    };
-  }
-
   /**
    * Moves one public file into the private store under the same key and
    * deletes the public object, so the URL that was handed out stops working.
@@ -633,7 +602,9 @@ export class StorageModel {
       Math.max(row.size, 1) * 2 + 1024,
     );
     if (!bytes) {
-      throw new HTTPException(404, { message: "The stored object is missing." });
+      throw new HTTPException(404, {
+        message: "The stored object is missing.",
+      });
     }
 
     await store.upload({
@@ -650,6 +621,35 @@ export class StorageModel {
     await provider.delete(row.key);
 
     return "moved";
+  }
+
+  /**
+   * Streams one stored file, public or private, for a route that already
+   * decided the visitor may have it. `null` when the object is missing.
+   */
+  async openFile({
+    key,
+    visibility,
+  }: {
+    key: string;
+    visibility: "private" | "public";
+  }): Promise<null | StoragePrivateObject> {
+    const provider = this.requireProvider();
+    if (visibility === "private") {
+      return (await provider.private?.read(key)) ?? null;
+    }
+
+    const response = await fetch(provider.getUrl(key)).catch(() => null);
+    if (!response?.ok || !response.body) return null;
+    const length = response.headers.get("content-length");
+    const declared = length === null ? Number.NaN : Number(length);
+
+    return {
+      body: response.body,
+      ...(Number.isInteger(declared) && declared >= 0
+        ? { size: declared }
+        : {}),
+    };
   }
 
   /** An object's bytes, or `null` when it is missing, unreadable or larger than `maxBytes`. */
@@ -686,6 +686,11 @@ export class StorageModel {
     }
 
     return Buffer.concat(chunks);
+  }
+
+  /** Whether the adapter can keep files private (protected attachments). */
+  supportsPrivateFiles(): boolean {
+    return this.c.get("core").storage?.adapter?.private !== undefined;
   }
 
   /**
@@ -760,9 +765,10 @@ export class StorageModel {
       ? { key: (await privateStore.upload(stored)).key, url: "" }
       : await provider.upload(stored);
     const removeStored = async () => {
-      await (privateStore
-        ? privateStore.delete(result.key)
-        : provider.delete(result.key)
+      await (
+        privateStore
+          ? privateStore.delete(result.key)
+          : provider.delete(result.key)
       ).catch(() => undefined);
     };
 

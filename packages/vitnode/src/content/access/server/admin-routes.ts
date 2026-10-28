@@ -5,8 +5,8 @@ import { inArray } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import type { RouteValidationHook } from "../../../api/lib/route";
-import type { ContentAccessOverrides } from "../policy";
 import type { AnyContentModel } from "../../server/model";
+import type { ContentAccessOverrides } from "../policy";
 import type {
   ContentAccessAdminRole,
   ContentAccessEffectiveResponse,
@@ -27,9 +27,6 @@ import {
   sameContentAccessAudience,
   zodContentAccessOverrides,
 } from "../policy";
-import { contentAccessAttachmentSupport } from "./attachments";
-import { findContentAccessFamily, loadContentAccessFamilyState } from "./families";
-import { expireContentAccessFamily, forgetContentAccessState } from "./invalidate";
 import {
   zodContentAccessAdminResponse as zodAccessResponse,
   zodContentAccessEffectiveResponse,
@@ -37,15 +34,24 @@ import {
   zodContentAccessFileStatus,
   zodContentAccessProtectResult,
 } from "../schemas";
+import { contentAccessAttachmentSupport } from "./attachments";
 import { contentAccessRequirementsForScopes } from "./decide";
+import {
+  findContentAccessFamily,
+  loadContentAccessFamilyState,
+} from "./families";
 import {
   CONTENT_ACCESS_PROTECT_BATCH,
   contentAccessFileStatus,
   protectContentAccessFiles,
 } from "./file-protection";
-import { contentAccessSourceOf } from "./source";
+import {
+  expireContentAccessFamily,
+  forgetContentAccessState,
+} from "./invalidate";
 import { contentAccessScopeReport } from "./report";
 import { ContentAccessRoleError, replaceContentAccessRules } from "./rules";
+import { contentAccessSourceOf } from "./source";
 
 /** The roles a report names, with their translated names. Missing ones are left out. */
 const rolesOf = async (

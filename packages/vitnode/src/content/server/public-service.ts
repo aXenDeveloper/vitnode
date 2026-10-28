@@ -501,7 +501,11 @@ export const createContentPublicService = <
         .select(withParent(selection))
         .from(table)
         .where(
-          and(contentPublicReadCondition(published, options), condition, access),
+          and(
+            contentPublicReadCondition(published, options),
+            condition,
+            access,
+          ),
         )
         .limit(1),
     );

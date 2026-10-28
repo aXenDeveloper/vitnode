@@ -27,7 +27,6 @@ export type {
   ContentAccessRequirement,
   ContentAccessScopeInput,
 } from "./access/policy";
-export type { ContentAccessInput } from "./define-access";
 export {
   contentContainerAdminHref,
   contentContainerI18nKeys,
@@ -57,8 +56,8 @@ export type {
   RegisteredFrontendContentContainer,
   RegisteredFrontendContentType,
 } from "./admin/registry";
-
 export { resolveContentAdminRoute } from "./admin/route";
+
 export type {
   ContentAdminAction,
   ContentAdminRoute,
@@ -329,6 +328,7 @@ export type {
   ContentContainerUpdateInput,
 } from "./containers/types";
 export { defineContentType } from "./define";
+export type { ContentAccessInput } from "./define-access";
 export {
   contentDeliveryAlternateHref,
   contentDeliveryDisabled,

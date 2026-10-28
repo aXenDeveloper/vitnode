@@ -1,15 +1,12 @@
 import type { Context } from "hono";
 
 import { and, eq, getColumns, inArray, sql } from "drizzle-orm";
-import { PgTable, type PgColumn } from "drizzle-orm/pg-core";
+import { type PgColumn, PgTable } from "drizzle-orm/pg-core";
 
 import type { ContentFileDescriptor } from "../../files";
 import type { ContentId } from "../../ids";
 import type { AnyContentModel } from "../../server/model";
-import type {
-  AnyContentTypeDefinition,
-  ContentFieldMap,
-} from "../../types";
+import type { AnyContentTypeDefinition, ContentFieldMap } from "../../types";
 import type { ContentAccessFlags } from "../policy";
 
 import { core_files } from "../../../database/files";
@@ -285,7 +282,7 @@ export const contentRecordHasFile = async (
       const junction = (
         model.advancedTables.junctions as unknown as Record<
           string,
-          undefined | Record<string, PgColumn>
+          Record<string, PgColumn> | undefined
         >
       )[name];
       if (!junction) continue;
@@ -353,8 +350,9 @@ export const contentUploadVisibility = (
   model: AnyContentModel,
 ): "private" | "public" =>
   contentAccessSourceOf(c, model) !== null &&
-  (c.get("storage") as { supportsPrivateFiles?: () => boolean })
-    .supportsPrivateFiles?.() === true
+  (
+    c.get("storage") as { supportsPrivateFiles?: () => boolean }
+  ).supportsPrivateFiles?.() === true
     ? "private"
     : "public";
 

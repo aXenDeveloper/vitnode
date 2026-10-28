@@ -148,7 +148,14 @@ describe("GET /{idOrSlug}", () => {
         children: PublicContainer[];
         container: PublicContainer;
       };
+      // A collection without access rules answers every flag open.
       expect(body.container).toEqual({
+        access: {
+          canComment: true,
+          canDownloadAttachments: true,
+          canRead: true,
+          canView: true,
+        },
         depth: 2,
         id: BOARD.NEWS,
         metadata: { color: "#ffffff", description: "About news" },

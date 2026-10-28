@@ -49,43 +49,43 @@ const ForumRow = ({
       </div>
 
       {locked ? null : (
-      <dl className="text-muted-foreground flex items-center gap-6 text-sm md:w-40 md:justify-end">
-        <div className="flex flex-col md:items-end">
-          <dt>{t("stats.topics")}</dt>
-          <dd className="text-foreground font-medium tabular-nums">
-            {format.number(stats?.topicCount ?? 0)}
-          </dd>
-        </div>
-        <div className="flex flex-col md:items-end">
-          <dt>{t("stats.comments")}</dt>
-          <dd className="text-foreground font-medium tabular-nums">
-            {format.number(stats?.commentCount ?? 0)}
-          </dd>
-        </div>
-      </dl>
+        <dl className="text-muted-foreground flex items-center gap-6 text-sm md:w-40 md:justify-end">
+          <div className="flex flex-col md:items-end">
+            <dt>{t("stats.topics")}</dt>
+            <dd className="text-foreground font-medium tabular-nums">
+              {format.number(stats?.topicCount ?? 0)}
+            </dd>
+          </div>
+          <div className="flex flex-col md:items-end">
+            <dt>{t("stats.comments")}</dt>
+            <dd className="text-foreground font-medium tabular-nums">
+              {format.number(stats?.commentCount ?? 0)}
+            </dd>
+          </div>
+        </dl>
       )}
 
       {locked ? null : (
-      <div className="flex min-w-0 flex-col gap-1 text-sm leading-relaxed md:w-56">
-        {latest ? (
-          <>
-            <span className="text-muted-foreground">{t("latest")}</span>
-            <HrefLink
-              className="text-foreground truncate font-medium hover:underline"
-              href={topicHref(latest.slug)}
-            >
-              {latest.title}
-            </HrefLink>
-            {latest.publishedAt ? (
-              <span className="text-muted-foreground">
-                <TimeAgo date={latest.publishedAt} />
-              </span>
-            ) : null}
-          </>
-        ) : (
-          <span className="text-muted-foreground">{t("no_topics_yet")}</span>
-        )}
-      </div>
+        <div className="flex min-w-0 flex-col gap-1 text-sm leading-relaxed md:w-56">
+          {latest ? (
+            <>
+              <span className="text-muted-foreground">{t("latest")}</span>
+              <HrefLink
+                className="text-foreground truncate font-medium hover:underline"
+                href={topicHref(latest.slug)}
+              >
+                {latest.title}
+              </HrefLink>
+              {latest.publishedAt ? (
+                <span className="text-muted-foreground">
+                  <TimeAgo date={latest.publishedAt} />
+                </span>
+              ) : null}
+            </>
+          ) : (
+            <span className="text-muted-foreground">{t("no_topics_yet")}</span>
+          )}
+        </div>
       )}
     </article>
   );

@@ -25,6 +25,12 @@ import type { AnyContentModel, ContentModel } from "./model";
 import type { ContentPublicWriteActor } from "./public-write-authorization";
 import type { ContentDatabase } from "./service";
 
+import { decideContentAccessForScopes } from "../access/server/decide";
+import {
+  contentAccessScopesForValues,
+  contentAccessSourceOf,
+  contentRecordAccessScopes,
+} from "../access/server/source";
 import {
   emitContentApprovalSubmitted,
   findLatestContentSubmission,
@@ -53,12 +59,6 @@ import {
   ContentPublicWriteInputError,
   ContentVersionConflict,
 } from "../errors";
-import { decideContentAccessForScopes } from "../access/server/decide";
-import {
-  contentAccessScopesForValues,
-  contentAccessSourceOf,
-  contentRecordAccessScopes,
-} from "../access/server/source";
 import { contentIdKey, requireContentId } from "../ids";
 import { isContentReferenceCollection } from "../paths";
 import { canViewHiddenContentRecord } from "./hidden-access";

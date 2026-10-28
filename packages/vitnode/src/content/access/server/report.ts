@@ -7,11 +7,10 @@ import type {
   ContentAccessRequirement,
   ContentAccessRuleSource,
 } from "../policy";
+import type { ContentAccessScopeReport } from "../schemas";
 import type { ContentAccessFamily } from "./families";
 
 import { CONTENT_ACCESS_ACTIONS, CONTENT_ACCESS_PREREQUISITES } from "../const";
-import type { ContentAccessScopeReport } from "../schemas";
-
 import { resolveContentAccessRules } from "../policy";
 import {
   contentAccessChainOf,
@@ -102,10 +101,7 @@ export const contentAccessScopeReport = async (
     actions,
     descendants,
     family: family.id,
-    overrides: (state.rules.get(scopeId) ?? {}) as Record<
-      string,
-      ContentAccessAudience
-    >,
+    overrides: state.rules.get(scopeId) ?? {},
     scopeId,
     warnings,
   };

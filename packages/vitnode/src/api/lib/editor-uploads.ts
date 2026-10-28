@@ -11,7 +11,6 @@ import {
   contentUploadVisibility,
 } from "@/content/access/server/files";
 import { CONFIG } from "@/lib/config";
-
 import {
   EDITOR_ATTACHMENT_MAX_BYTES,
   EDITOR_ATTACHMENT_MIME_TYPES,

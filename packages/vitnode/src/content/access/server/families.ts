@@ -1,5 +1,5 @@
-import type { Context } from "hono";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import type { Context } from "hono";
 
 import { eq } from "drizzle-orm";
 
@@ -39,7 +39,9 @@ export interface ContentAccessFamily {
 }
 
 /** Every access-enabled scope family of the running app. */
-export const listContentAccessFamilies = (c: Context): ContentAccessFamily[] => {
+export const listContentAccessFamilies = (
+  c: Context,
+): ContentAccessFamily[] => {
   const core = c.get("core") as
     | undefined
     | {

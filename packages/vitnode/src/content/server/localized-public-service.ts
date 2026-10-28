@@ -14,6 +14,7 @@ import type {
   PaginationCursorColumn,
   PaginationCursorSelection,
 } from "../../api/lib/with-pagination";
+import type { ContentAccessActor } from "../access/policy";
 import type { AnyContentTypeDefinition, ContentPublicSelect } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
 import type { ContentLanguage } from "./language-resolver";
@@ -22,8 +23,6 @@ import type {
   ContentPublicProjection,
   ContentPublicService,
 } from "./public-service";
-
-import type { ContentAccessActor } from "../access/policy";
 
 import { withPagination } from "../../api/lib/with-pagination";
 import { contentPublicAccessCondition } from "../access/server/source";

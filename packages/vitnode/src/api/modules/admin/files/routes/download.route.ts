@@ -66,8 +66,7 @@ export const downloadFileAdminRoute = buildRoute({
     return (
       (await attachStoredFile(c, file, {
         inline: c.req.valid("query").inline === "true",
-      })) ??
-      c.json({ error: "File not found" }, 404)
+      })) ?? c.json({ error: "File not found" }, 404)
     );
   },
 });

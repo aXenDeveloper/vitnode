@@ -1,18 +1,26 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { INTL_QUERY_SCOPE } from "../i18n/query";
-import { SESSION_QUERY_KEY } from "./state";
 import { DEVICES_IDENTITY_ROOT } from "@/views/auth/settings/devices/devices-query";
 import { PASSKEYS_IDENTITY_ROOT } from "@/views/auth/settings/passkeys/passkeys-query";
 import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
 import { MY_FILES_IDENTITY_ROOT } from "@/views/files/my-files-query";
 import { NOTIFICATIONS_IDENTITY_ROOT } from "@/views/notifications/notifications-query";
 
+import { INTL_QUERY_SCOPE } from "../i18n/query";
+import { MIDDLEWARE_QUERY_KEY } from "./middleware-config";
+import { SESSION_QUERY_KEY } from "./state";
+
+const startsWith = (
+  queryKey: readonly unknown[],
+  prefix: readonly unknown[],
+): boolean => prefix.every((part, index) => queryKey[index] === part);
+
 const isKept = (queryKey: readonly unknown[]): boolean =>
-  // The session itself (refetched right after) and translations, which say
-  // the same thing to everybody.
-  (queryKey[0] === SESSION_QUERY_KEY[0] && queryKey[1] === SESSION_QUERY_KEY[1]) ||
-  INTL_QUERY_SCOPE.every((part, index) => queryKey[index] === part);
+  // The session itself (refetched right after), translations and the
+  // deployment configuration, which say the same thing to everybody.
+  startsWith(queryKey, SESSION_QUERY_KEY) ||
+  startsWith(queryKey, INTL_QUERY_SCOPE) ||
+  startsWith(queryKey, MIDDLEWARE_QUERY_KEY);
 
 /**
  * Drops everything the previous visitor's identity may have shaped, after a

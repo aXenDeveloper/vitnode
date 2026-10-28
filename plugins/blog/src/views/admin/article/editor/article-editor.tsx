@@ -323,7 +323,10 @@ export const ArticleEditor = ({
           pluginId={manifest.id}
           scopeIds={
             Array.isArray(values.categoryId)
-              ? (values.categoryId as (number | string)[])
+              ? values.categoryId.filter(
+                  (id): id is number | string =>
+                    typeof id === "number" || typeof id === "string",
+                )
               : []
           }
         />

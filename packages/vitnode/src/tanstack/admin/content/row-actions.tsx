@@ -9,9 +9,9 @@ import {
   FileClockIcon,
   HistoryIcon,
   LinkIcon,
+  LockIcon,
   PencilIcon,
   SendIcon,
-  LockIcon,
   Trash2Icon,
 } from "lucide-react";
 import React from "react";

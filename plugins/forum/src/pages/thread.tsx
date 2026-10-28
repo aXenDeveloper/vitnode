@@ -553,7 +553,9 @@ export const ForumThread = ({
         ) : canReply ? null : (
           <ContentAccessRequired headingLevel="h3" kind="comment" />
         )}
-        {isSessionPending || currentUserId === null || !canReply ? null : composer === "closed" ? (
+        {isSessionPending ||
+        currentUserId === null ||
+        !canReply ? null : composer === "closed" ? (
           // The editor is a heavy chunk most readers never need, so it waits
           // for intent: hovering or focusing this starts the download, and a
           // click swaps it in with the caret already inside.

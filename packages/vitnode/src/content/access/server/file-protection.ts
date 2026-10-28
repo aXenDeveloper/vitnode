@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 
 import { getColumns, inArray, sql } from "drizzle-orm";
-import { PgTable, type PgColumn } from "drizzle-orm/pg-core";
+import { type PgColumn, PgTable } from "drizzle-orm/pg-core";
 
 import type { AnyContentModel } from "../../server/model";
 import type { ContentFieldMap } from "../../types";
@@ -19,8 +19,10 @@ const jsonbColumnsOf = (table: PgTable): PgColumn[] =>
   );
 
 const tablesOf = (model: AnyContentModel): PgTable[] => [
-  model.table as PgTable,
-  ...(model.translationTable instanceof PgTable ? [model.translationTable] : []),
+  model.table,
+  ...(model.translationTable instanceof PgTable
+    ? [model.translationTable]
+    : []),
   ...Object.values(model.advancedTables.repeatables).flatMap(table =>
     table instanceof PgTable ? [table] : [],
   ),
@@ -47,7 +49,7 @@ const fileIdsOfModel = async (
       const junction = (
         model.advancedTables.junctions as unknown as Record<
           string,
-          undefined | Record<string, PgColumn>
+          Record<string, PgColumn> | undefined
         >
       )[name];
       if (!junction) continue;
@@ -61,9 +63,7 @@ const fileIdsOfModel = async (
     }
     const column = columns[name];
     if (!column) continue;
-    const rows = await db
-      .selectDistinct({ id: column })
-      .from(model.table as PgTable);
+    const rows = await db.selectDistinct({ id: column }).from(model.table);
     rows.forEach(row => {
       add(row.id);
     });
@@ -91,7 +91,8 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const withFileSrc = (value: unknown, fileId: number, src: string): unknown => {
-  if (Array.isArray(value)) return value.map(item => withFileSrc(item, fileId, src));
+  if (Array.isArray(value))
+    return value.map(item => withFileSrc(item, fileId, src));
   if (!isRecord(value)) return value;
 
   const next: Record<string, unknown> = {};

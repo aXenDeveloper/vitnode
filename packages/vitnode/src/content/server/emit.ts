@@ -126,7 +126,7 @@ export const emitContentEvent = async (
     await followContentSubmissionContainer(
       c,
       definition,
-      payload.contentId as ContentId,
+      payload.contentId,
     ).catch(async (error: unknown) => {
       await c
         .get("log")

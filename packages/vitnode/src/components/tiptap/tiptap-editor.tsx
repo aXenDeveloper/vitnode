@@ -152,6 +152,7 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
   const uploadOptions: EditorUploadsOptions =
     typeof uploads === "object" ? uploads : {};
   const uploadSession = uploads ? (uploadOptions.session ?? "member") : null;
+  const uploadContentType = uploadOptions.contentType;
   const allowsAttachments =
     uploadOptions.session === "admin" && uploadOptions.files === true;
   const allowsRemoteImages = images?.remote === true;
@@ -182,10 +183,16 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
             remote: allowsRemoteImages,
             upload: async file =>
               await uploadEditorFile(uploadSession, file, {
-                contentType: uploadOptions.contentType,
+                contentType: uploadContentType,
               }),
           },
-    [allowsAttachments, allowsRemoteImages, t, uploadSession],
+    [
+      allowsAttachments,
+      allowsRemoteImages,
+      t,
+      uploadContentType,
+      uploadSession,
+    ],
   );
 
   // Stable options keep `useEditor` from calling `setOptions` on every render.

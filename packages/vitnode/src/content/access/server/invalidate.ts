@@ -10,6 +10,7 @@ import {
   contentDeliverySitemapTag,
   contentPublicListTag,
 } from "../../cache";
+import { contentDefinitionOf } from "../../server/model";
 import {
   bumpContentContainerGeneration,
   bumpContentPublicGeneration,
@@ -61,8 +62,8 @@ export const expireContentAccessFamily = async (
           ? [contentContainerTag(family.id)]
           : [contentPublicListTag(family.id)]),
         ...models.flatMap(model => [
-          contentPublicListTag(model.definition.id),
-          contentDeliverySitemapTag(model.definition.id),
+          contentPublicListTag(contentDefinitionOf(model).id),
+          contentDeliverySitemapTag(contentDefinitionOf(model).id),
         ]),
       ],
       { mode: "hard" },
@@ -71,7 +72,7 @@ export const expireContentAccessFamily = async (
       ? bumpContentContainerGeneration(c, family.id)
       : bumpContentPublicGeneration(c, family.id).catch(() => undefined),
     ...models.map(async model => {
-      await bumpContentPublicGeneration(c, model.definition.id).catch(
+      await bumpContentPublicGeneration(c, contentDefinitionOf(model).id).catch(
         () => undefined,
       );
     }),

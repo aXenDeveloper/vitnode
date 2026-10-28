@@ -325,9 +325,7 @@ const TopicAccessRequired = () => {
   );
 };
 
-const TopicPage = (
-  props: PluginRoutePageProps<TopicPageData, TopicSearch>,
-) =>
+const TopicPage = (props: PluginRoutePageProps<TopicPageData, TopicSearch>) =>
   props.loaderData.accessRequired ? (
     <TopicAccessRequired />
   ) : (

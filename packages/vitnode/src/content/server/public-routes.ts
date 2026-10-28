@@ -17,11 +17,10 @@ import type {
   ContentPublicOrderableFieldName,
 } from "../types";
 import type { ContentModel } from "./model";
+import type { AnyContentModel } from "./model";
 import type { ContentPreviewTokenPayload } from "./preview-token";
 import type { ContentPublicService } from "./public-service";
 import type { ContentThreadNode } from "./thread";
-
-import type { AnyContentModel } from "./model";
 
 import { setPageCacheTags } from "../../api/lib/page-cache";
 import { buildRoute } from "../../api/lib/route";
@@ -434,10 +433,7 @@ export const buildContentPublicRoutes = <
         }
       }
 
-      const refusal = await filterScopeRefusal(
-        c,
-        filters as Record<string, unknown>,
-      );
+      const refusal = await filterScopeRefusal(c, filters);
       if (refusal === "notFound") {
         throw new HTTPException(404, { message: "Container not found." });
       }

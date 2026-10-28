@@ -1,4 +1,4 @@
-import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import type { PgColumn } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
 import { and, eq, inArray } from "drizzle-orm";
@@ -10,6 +10,7 @@ import type { AnyContentTypeDefinition } from "../../types";
 import { core_content_submissions } from "../../../database/content-submissions";
 import { contentContainerSourceOf } from "../../containers/association";
 import { resolveContentRowContainer } from "../../containers/server/policy";
+import { contentDefinitionOf } from "../../server/model";
 
 /**
  * Keeps pending submissions filed where their record is now. A queue is
@@ -33,7 +34,7 @@ export const followContentSubmissionContainer = async (
   const columns = model.columns as Record<string, PgColumn>;
   const [row] = (await db
     .select()
-    .from(model.table as PgTable)
+    .from(model.table)
     .where(eq(columns.id, itemId))
     .limit(1)) as Record<string, unknown>[];
   if (!row) return;
@@ -54,7 +55,7 @@ export const followContentSubmissionContainer = async (
 
   // Records filed through this one (`field.relation({ container: true })`).
   for (const dependent of models) {
-    const source = contentContainerSourceOf(dependent.definition);
+    const source = contentContainerSourceOf(contentDefinitionOf(dependent));
     if (source?.kind !== "relation" || source.target?.id !== definition.id) {
       continue;
     }
@@ -63,7 +64,7 @@ export const followContentSubmissionContainer = async (
     if (!column) continue;
     const rows = await db
       .select({ id: dependentColumns.id })
-      .from(dependent.table as PgTable)
+      .from(dependent.table)
       .where(eq(column, itemId));
     if (rows.length === 0) continue;
     await db
@@ -71,7 +72,7 @@ export const followContentSubmissionContainer = async (
       .set({ containerId })
       .where(
         pending(
-          dependent.definition.id,
+          contentDefinitionOf(dependent).id,
           rows.map(entry => entry.id as ContentId),
         ),
       );

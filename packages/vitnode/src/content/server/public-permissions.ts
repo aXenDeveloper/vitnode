@@ -4,11 +4,10 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { inArray } from "drizzle-orm";
 
+import type { ContentAccessFlags } from "../access/policy";
 import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
-
-import type { ContentAccessFlags } from "../access/policy";
 
 import { buildRoute } from "../../api/lib/route";
 import { CONTENT_ACCESS_OPEN_FLAGS } from "../access/policy";

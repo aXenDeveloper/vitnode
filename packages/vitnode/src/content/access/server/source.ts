@@ -2,7 +2,16 @@ import type { SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, eq, inArray, isNull, not, notInArray, or, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  inArray,
+  isNull,
+  not,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 
 import type { ContentId } from "../../ids";
 import type { AnyContentModel } from "../../server/model";
@@ -13,6 +22,7 @@ import type { ContentAccessFamily } from "./families";
 import { contentContainerFieldOf } from "../../containers/association";
 import { contentIdKey } from "../../ids";
 import { contentSearchContextSource } from "../../search";
+import { contentDefinitionOf } from "../../server/model";
 import { resolveContentAccessActor } from "./actor";
 import {
   contentAccessAllowedScopes,
@@ -56,13 +66,8 @@ export interface ContentAccessScopeRef {
   scopeId: string;
 }
 
-const modelsOf = (
-  c: Context,
-): { model: AnyContentModel; pluginId: string }[] =>
-  (c.get("core")?.contentModels ?? []) as {
-    model: AnyContentModel;
-    pluginId: string;
-  }[];
+const modelsOf = (c: Context): { model: AnyContentModel; pluginId: string }[] =>
+  c.get("core")?.contentModels ?? [];
 
 const modelById = (c: Context, id: string): AnyContentModel | undefined =>
   modelsOf(c).find(entry => entry.model.definition.id === id)?.model;
@@ -137,7 +142,7 @@ export const contentAccessSourceOf = (
   const cache = sourceCacheOf(c);
   if (cache.has(model)) return cache.get(model) ?? null;
 
-  const { definition } = model;
+  const definition = contentDefinitionOf(model);
   const columns = model.columns as Record<string, PgColumn>;
   const families = listContentAccessFamilies(c);
   const resolve = (): ContentAccessSource | null => {
@@ -155,7 +160,7 @@ export const contentAccessSourceOf = (
       const junction = (
         model.advancedTables.junctions as unknown as Record<
           string,
-          undefined | Record<string, unknown>
+          Record<string, unknown> | undefined
         >
       )[from];
 
@@ -412,7 +417,12 @@ export const contentRecordAccessScopes = async (
       // A parent that no longer exists resolves to nothing - never to "open".
       result.set(
         key,
-        scopes ?? [{ family: "", scopeId: `missing:${String(value)}` }],
+        scopes ?? [
+          {
+            family: "",
+            scopeId: `missing:${contentIdKey(value as ContentId)}`,
+          },
+        ],
       );
     }
 
@@ -425,7 +435,12 @@ export const contentRecordAccessScopes = async (
       contentIdKey(row.id as ContentId),
       value === null || value === undefined
         ? []
-        : [{ family: source.family.id, scopeId: String(value) }],
+        : [
+            {
+              family: source.family.id,
+              scopeId: contentIdKey(value as ContentId),
+            },
+          ],
     );
   }
 

@@ -95,7 +95,11 @@ export const contentAccessFlagsForScopes = async (
     actor,
     scopes,
   }: { actor?: ContentAccessActor; scopes: readonly ContentAccessScopeRef[] },
-): Promise<ContentAccessFlags & { denied: Partial<Record<ContentAccessAction, ContentAccessRequirement>> }> => {
+): Promise<
+  ContentAccessFlags & {
+    denied: Partial<Record<ContentAccessAction, ContentAccessRequirement>>;
+  }
+> => {
   const who = actor ?? (await resolveContentAccessActor(c));
   const flags: Record<string, boolean> = {};
   const denied: Partial<Record<ContentAccessAction, ContentAccessRequirement>> =
@@ -206,8 +210,7 @@ export const createContentAccess = (c: Context) => ({
     model: AnyContentModel,
     id: ContentId,
     action: ContentAccessAction,
-  ): Promise<boolean> =>
-    await canAccessContentRecord(c, { action, id, model }),
+  ): Promise<boolean> => await canAccessContentRecord(c, { action, id, model }),
   /** Whether the viewer may perform `action` in one scope of a family. */
   canScope: async (
     familyId: string,
@@ -224,8 +227,7 @@ export const createContentAccess = (c: Context) => ({
   condition: async (
     model: AnyContentModel,
     action: ContentAccessAction,
-  ): Promise<SQL | undefined> =>
-    await contentAccessCondition(c, model, action),
+  ): Promise<SQL | undefined> => await contentAccessCondition(c, model, action),
   /** Flags per record id key. */
   flags: async (
     model: AnyContentModel,

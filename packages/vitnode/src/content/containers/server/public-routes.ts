@@ -1,12 +1,11 @@
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
+import type { ContentAccessFlags } from "../../access/policy";
 import type {
   AnyContentContainerDefinition,
   ContentContainerPublicRecord,
 } from "../types";
-
-import type { ContentAccessFlags } from "../../access/policy";
 
 import { setPageCacheTags } from "../../../api/lib/page-cache";
 import { buildRoute } from "../../../api/lib/route";
@@ -104,11 +103,7 @@ export const buildContentContainerPublicRoutes = <
       access: flags.get(item.id) ?? CONTENT_ACCESS_OPEN_FLAGS,
     });
 
-  const respond = <T>(
-    c: Context,
-    body: T,
-    shareable: boolean,
-  ) => {
+  const respond = <T>(c: Context, body: T, shareable: boolean) => {
     if (!shareable) return c.json(body, 200, CONTENT_ACCESS_PRIVATE_HEADERS);
 
     setPageCacheTags(c, [
@@ -148,10 +143,11 @@ export const buildContentContainerPublicRoutes = <
     handler: async c => {
       const { parent } = c.req.valid("query");
       const containers = service(c);
-      const { flags, items: all, shareable } = await visibleContainers(
-        c,
-        await containers.list(),
-      );
+      const {
+        flags,
+        items: all,
+        shareable,
+      } = await visibleContainers(c, await containers.list());
       let items = all;
 
       if (parent === "root") {
@@ -201,10 +197,11 @@ export const buildContentContainerPublicRoutes = <
     handler: async c => {
       const { idOrSlug } = c.req.valid("param");
       const containers = service(c);
-      const { flags, items: all, shareable } = await visibleContainers(
-        c,
-        await containers.list(),
-      );
+      const {
+        flags,
+        items: all,
+        shareable,
+      } = await visibleContainers(c, await containers.list());
       // A container the viewer may not see is not found, like one that never
       // existed - its slug and id answer the same.
       const container = NUMERIC_ID.test(idOrSlug)

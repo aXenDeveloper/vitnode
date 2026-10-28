@@ -11,6 +11,7 @@ import type { ContentVisibilityAction } from "../visibility";
 import type { AnyContentModel, ContentModel } from "./model";
 
 import { buildRoute } from "../../api/lib/route";
+import { canAccessContentRecord } from "../access/server/decide";
 import { contentTypeName } from "../admin/labels";
 import { CONTENT_HIDDEN_REASON_MAX_LENGTH } from "../const";
 import { contentIdKey } from "../ids";
@@ -22,7 +23,6 @@ import {
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
 import { withHttpErrors } from "./http-errors";
-import { canAccessContentRecord } from "../access/server/decide";
 import { resetContentLiveRecord } from "./live/hooks";
 import { contentPublicStateOf } from "./page-cache";
 import { visibilityAction } from "./report-target";
@@ -44,7 +44,7 @@ const readRow = async (
   const [row] = (await c
     .get("db")
     .select()
-    .from(model.table as PgTable)
+    .from(model.table)
     .where(eq(model.columns.id as never, id))
     .limit(1)) as Record<string, unknown>[];
   if (!row) return undefined;
@@ -225,7 +225,7 @@ export const contentPublicDeleteRoute = <
       if (!user) throw new HTTPException(401, { message: "Sign in first." });
 
       const id = contentIdentifier(c, definition);
-      const row = await readRow(c, model as unknown as AnyContentModel, id);
+      const row = await readRow(c, model, id);
       if (!row) throw new HTTPException(404, { message: `${name} not found.` });
       if (!(await canDeleteContentRecord(c, { model, pluginId, row }))) {
         throw new HTTPException(403, {

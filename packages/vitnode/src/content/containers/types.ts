@@ -1,5 +1,6 @@
 import type { z } from "zod";
 
+import type { ResolvedContentAccessScope } from "../access/policy";
 import type {
   ContentBooleanField,
   ContentEnumField,
@@ -14,7 +15,6 @@ import type {
   CONTENT_CONTAINER_ERROR_CODES,
   CONTENT_CONTAINER_ORDERING_MODES,
 } from "./const";
-import type { ResolvedContentAccessScope } from "../access/policy";
 import type { ResolvedContentContainerPolicies } from "./policies";
 
 export type ContentContainerFieldDescriptor =

@@ -1,3 +1,4 @@
+import type { ContentAccessInput } from "./define-access";
 import type { ContentIdStrategy } from "./ids";
 import type {
   AnyContentTypeDefinition,
@@ -47,8 +48,6 @@ import type {
   ResolvedContentSearchConfig,
   ResolvedContentVisibilityConfig,
 } from "./types";
-
-import type { ContentAccessInput } from "./define-access";
 
 import { contentEntityKey } from "./admin/labels";
 import {

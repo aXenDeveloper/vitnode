@@ -62,7 +62,10 @@ const Notice = (props: ContentAccessEffectiveNoticeProps) => {
 
   if (query.isPending) {
     return (
-      <div aria-busy="true" className="flex flex-col gap-2 rounded-lg border p-4">
+      <div
+        aria-busy="true"
+        className="flex flex-col gap-2 rounded-lg border p-4"
+      >
         <span className="sr-only" role="status">
           {t("effective.loading")}
         </span>
@@ -153,7 +156,10 @@ const Notice = (props: ContentAccessEffectiveNoticeProps) => {
       )}
       {missing.length > 0 ? (
         <p className="bg-destructive/10 text-destructive flex items-start gap-2 rounded-md p-3 text-sm leading-relaxed text-pretty">
-          <TriangleAlertIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+          <TriangleAlertIcon
+            aria-hidden="true"
+            className="mt-0.5 size-4 shrink-0"
+          />
           {t("notice.missing")}
         </p>
       ) : null}

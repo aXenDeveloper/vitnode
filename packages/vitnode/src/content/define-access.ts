@@ -54,7 +54,7 @@ export const resolveContentTypeAccess = (
   const keys = Object.keys(access);
   if (keys.length !== 1 || (keys[0] !== "scope" && keys[0] !== "from")) {
     return fail(
-      'access takes exactly one of `scope` (records of this type are access scopes) or `from` (a relation to a scope content type).',
+      "access takes exactly one of `scope` (records of this type are access scopes) or `from` (a relation to a scope content type).",
     );
   }
 
@@ -73,7 +73,7 @@ export const resolveContentTypeAccess = (
   const field = fields[name];
   if (field?.kind !== "relation") {
     return fail(
-      `access.from names "${String(name)}", which is not a relation field of this content type.`,
+      `access.from names "${name}", which is not a relation field of this content type.`,
     );
   }
   if (field.localized === true) {

@@ -1,9 +1,5 @@
 import type { Context } from "hono";
 
-import {
-  contentPrivateAdminFileUrl,
-  protectContentPublicRowFiles,
-} from "../access/server/files";
 import { inArray, sql } from "drizzle-orm";
 
 import type { StorageFileUploadResult } from "../../api/models/storage";
@@ -18,6 +14,10 @@ import type { ContentDatabase } from "./service";
 
 import { core_files, core_files_alt } from "../../database/files";
 import { parseImageDimensions } from "../../lib/api/upload";
+import {
+  contentPrivateAdminFileUrl,
+  protectContentPublicRowFiles,
+} from "../access/server/files";
 import { CONTENT_FILE_CODES } from "../const";
 import { ContentInputError } from "../errors";
 import { contentFileConstraints, validateContentFile } from "../files";

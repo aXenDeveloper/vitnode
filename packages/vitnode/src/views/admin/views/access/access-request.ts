@@ -31,7 +31,8 @@ export interface ContentAccessApiTarget {
   pluginId: string;
 }
 
-export type ContentAccessErrorCode = (typeof CONTENT_ACCESS_ERROR_CODES)[number];
+export type ContentAccessErrorCode =
+  (typeof CONTENT_ACCESS_ERROR_CODES)[number];
 
 const errorSchema = z.object({ code: z.enum(CONTENT_ACCESS_ERROR_CODES) });
 
@@ -163,7 +164,9 @@ export const contentAccessFilesQuery = (target: ContentAccessApiTarget) =>
       });
       const screen = `the files of ${target.family}`;
       if (!response.ok) throw new AdminRequestError(response.status, screen);
-      const parsed = zodContentAccessFileStatus.safeParse(await response.json());
+      const parsed = zodContentAccessFileStatus.safeParse(
+        await response.json(),
+      );
       if (!parsed.success) {
         throw new AdminRequestError(response.status, screen, "unexpected body");
       }

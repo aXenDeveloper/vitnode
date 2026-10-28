@@ -3,8 +3,8 @@ import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { z } from "@hono/zod-openapi";
 import { and, eq } from "drizzle-orm";
 
-import type { AnyContentTypeDefinition } from "../../types";
 import type { AnyContentModel, ContentModel } from "../../server/model";
+import type { AnyContentTypeDefinition } from "../../types";
 
 import { attachStoredFile } from "../../../api/lib/file-download";
 import { buildRoute } from "../../../api/lib/route";
@@ -19,7 +19,10 @@ import {
 import { CONTENT_ACCESS_REQUIRED_CODE } from "../const";
 import { canAccessContentRecord } from "./decide";
 import { contentRecordHasFile } from "./files";
-import { CONTENT_ACCESS_PRIVATE_HEADERS, zodContentAccessRequired } from "./http";
+import {
+  CONTENT_ACCESS_PRIVATE_HEADERS,
+  zodContentAccessRequired,
+} from "./http";
 import { contentAccessCondition } from "./source";
 
 /**
@@ -79,7 +82,11 @@ export const contentFileDownloadRoute = <
       const { fileId, id } = c.req.valid("param");
       const itemId = parseContentId(definition.idStrategy, id);
       const missing = () =>
-        c.json({ message: "File not found." }, 404, CONTENT_ACCESS_PRIVATE_HEADERS);
+        c.json(
+          { message: "File not found." },
+          404,
+          CONTENT_ACCESS_PRIVATE_HEADERS,
+        );
       if (itemId === null) return missing();
 
       // Published and readable under the rules of its scopes right now - any

@@ -65,10 +65,10 @@ export interface ContentAccessFormProps {
   onSaved?: () => Promise<void> | void;
   /** The scope being edited, as the admin knows it. */
   scopeId: string;
-  /** Names of the family's scopes by id, to name where a rule comes from. */
-  scopeNames: ReadonlyMap<string, string>;
   /** The scope's own display name. */
   scopeName: string;
+  /** Names of the family's scopes by id, to name where a rule comes from. */
+  scopeNames: ReadonlyMap<string, string>;
   target: ContentAccessApiTarget;
 }
 
@@ -88,9 +88,7 @@ const buildFormSchema = (
         : [...MODES];
     shape[modeKey(action)] = z
       .enum(choices)
-      .default(
-        own && choices.includes(own.mode) ? (own.mode as Mode) : "inherit",
-      );
+      .default(own && choices.includes(own.mode) ? own.mode : "inherit");
     shape[rolesKey(action)] = z
       .array(z.number().int().positive())
       .default(own?.mode === "roles" ? own.roleIds : []);
@@ -114,7 +112,9 @@ const buildFormSchema = (
 };
 
 /** The overrides the form's values describe. `roles` with none picked is left out. */
-const overridesOf = (values: Record<string, unknown>): ContentAccessOverrides => {
+const overridesOf = (
+  values: Record<string, unknown>,
+): ContentAccessOverrides => {
   const overrides: ContentAccessOverrides = {};
   for (const action of CONTENT_ACCESS_ACTIONS) {
     const mode = values[modeKey(action)];
@@ -200,7 +200,14 @@ const EffectivePanel = ({
         JSON.parse(debounced) as ContentAccessOverrides,
         { signal },
       ),
-    queryKey: ["vitnode", "admin", "access-preview", target.family, scopeId, debounced],
+    queryKey: [
+      "vitnode",
+      "admin",
+      "access-preview",
+      target.family,
+      scopeId,
+      debounced,
+    ],
     retry: false,
     staleTime: Infinity,
   });
@@ -227,7 +234,9 @@ const EffectivePanel = ({
 
           return (
             <div className="flex flex-col gap-1" key={action}>
-              <dt className="text-sm font-medium">{t(`actions.${action}.label`)}</dt>
+              <dt className="text-sm font-medium">
+                {t(`actions.${action}.label`)}
+              </dt>
               <dd className="text-muted-foreground flex flex-col gap-1 text-sm leading-relaxed text-pretty">
                 {requirements.length === 0 ? (
                   <span className="flex items-center gap-1.5">
@@ -241,7 +250,10 @@ const EffectivePanel = ({
                         className="flex items-start gap-1.5"
                         key={`${requirement.scopeId}-${requirement.action}-${requirement.via}`}
                       >
-                        <LockIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                        <LockIcon
+                          aria-hidden="true"
+                          className="mt-0.5 size-4 shrink-0"
+                        />
                         <span>
                           {t(
                             requirement.via === "ancestor"
@@ -280,7 +292,10 @@ const EffectivePanel = ({
               className="bg-destructive/10 text-destructive flex items-start gap-2 rounded-md p-3 text-sm leading-relaxed text-pretty"
               key={`${warning.action}-${warning.scopeId}`}
             >
-              <AlertTriangleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+              <AlertTriangleIcon
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0"
+              />
               {t("warnings.nobody", {
                 action: t(`actions.${warning.action}.label`),
                 scope: nameOf(warning.scopeId),
@@ -318,7 +333,10 @@ const FilesPanel = ({ target }: { target: ContentAccessApiTarget }) => {
 
   if (query.isPending) {
     return (
-      <div aria-busy="true" className="flex flex-col gap-2 rounded-lg border p-4">
+      <div
+        aria-busy="true"
+        className="flex flex-col gap-2 rounded-lg border p-4"
+      >
         <span className="sr-only" role="status">
           {t("loading")}
         </span>
@@ -413,7 +431,9 @@ const AccessForm = ({
     const { inheritedSource } = response.report.actions[action];
     if (inheritedSource.kind === "scope") {
       return t("source.scope", {
-        name: scopeNames.get(inheritedSource.scopeId) ?? `#${inheritedSource.scopeId}`,
+        name:
+          scopeNames.get(inheritedSource.scopeId) ??
+          `#${inheritedSource.scopeId}`,
       });
     }
 
@@ -465,9 +485,7 @@ const AccessForm = ({
   ]);
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
-    const parsed = zodContentAccessOverrides.safeParse(
-      overridesOf(values as Record<string, unknown>),
-    );
+    const parsed = zodContentAccessOverrides.safeParse(overridesOf(values));
     const result = parsed.success
       ? await saveContentAccess(target, scopeId, parsed.data)
       : { error: { code: "invalidAccess" as const, status: 400 } };

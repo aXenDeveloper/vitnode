@@ -58,7 +58,10 @@ export const loadContentAccessActors = async (
             .select({ id: core_roles.id })
             .from(core_roles)
             .where(
-              and(inArray(core_roles.id, allRoleIds), eq(core_roles.root, true)),
+              and(
+                inArray(core_roles.id, allRoleIds),
+                eq(core_roles.root, true),
+              ),
             )
         ).map(row => row.id),
   );

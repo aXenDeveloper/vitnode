@@ -2,10 +2,7 @@ import { z } from "zod";
 
 import type { ContentAccessAction } from "./policy";
 
-import {
-  CONTENT_ACCESS_ACTIONS,
-  CONTENT_ACCESS_ERROR_CODES,
-} from "./const";
+import { CONTENT_ACCESS_ACTIONS, CONTENT_ACCESS_ERROR_CODES } from "./const";
 import { zodContentAccessAudienceRead } from "./policy";
 
 const zodRuleSource = z.discriminatedUnion("kind", [
@@ -58,7 +55,6 @@ export type ContentAccessScopeReport = z.infer<
   typeof zodContentAccessScopeReport
 >;
 
-
 export const zodContentAccessError = z.object({
   code: z.enum(CONTENT_ACCESS_ERROR_CODES),
   message: z.string(),
@@ -81,7 +77,6 @@ export const zodContentAccessAdminResponse = z.object({
   /** Every role the report names that still exists, for labels. */
   roles: z.array(zodContentAccessAdminRole),
 });
-
 
 export type ContentAccessAdminRole = z.infer<typeof zodContentAccessAdminRole>;
 

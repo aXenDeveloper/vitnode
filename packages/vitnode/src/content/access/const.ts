@@ -35,8 +35,8 @@ export const CONTENT_ACCESS_ERROR_CODES = [
 ] as const;
 
 /**
- * The header a public detail route sets when a record exists in a scope the
- * viewer may see but not read. The body is the limited `{ accessRequired }`
- * shape, never the record.
+ * The `code` of the 403 body a public detail route answers when a record
+ * exists in a scope the viewer may see but not read. The body is the limited
+ * `{ accessRequired, code }` shape, never the record.
  */
 export const CONTENT_ACCESS_REQUIRED_CODE = "CONTENT_ACCESS_REQUIRED";

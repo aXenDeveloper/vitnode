@@ -3,11 +3,7 @@ import type { Context } from "hono";
 import { and, eq, inArray } from "drizzle-orm";
 
 import type { ContentDatabase } from "../../server/service";
-import type {
-  ContentAccessAction,
-  ContentAccessAudience,
-  ContentAccessOverrides,
-} from "../policy";
+import type { ContentAccessAudience, ContentAccessOverrides } from "../policy";
 
 import {
   core_content_access_rule_roles,
@@ -19,7 +15,10 @@ import { readContentAccessOverrides } from "../policy";
 
 export type ContentAccessRuleMap = Map<string, ContentAccessOverrides>;
 
-const memos = new WeakMap<Context, Map<string, Promise<ContentAccessRuleMap>>>();
+const memos = new WeakMap<
+  Context,
+  Map<string, Promise<ContentAccessRuleMap>>
+>();
 
 const readRules = async (
   db: ContentDatabase,
@@ -198,7 +197,7 @@ export const replaceContentAccessRules = async (
 
     const audienceOf = new Map<string, ContentAccessAudience>(entries);
     const links = inserted.flatMap(rule => {
-      const audience = audienceOf.get(rule.action as ContentAccessAction);
+      const audience = audienceOf.get(rule.action);
 
       return audience?.mode === "roles"
         ? audience.roleIds.map(roleId => ({ roleId, ruleId: rule.id }))

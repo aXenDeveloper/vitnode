@@ -44,7 +44,9 @@ export const ContentAccessSheet = ({
       >
         <SheetHeader className="border-b pe-12">
           <SheetTitle className="text-balance">{t("title")}</SheetTitle>
-          <SheetDescription className="truncate">{form.scopeName}</SheetDescription>
+          <SheetDescription className="truncate">
+            {form.scopeName}
+          </SheetDescription>
         </SheetHeader>
 
         {scopeId === null ? null : (
@@ -55,7 +57,11 @@ export const ContentAccessSheet = ({
               </div>
             }
           >
-            <ContentAccessFormContent key={formKey} scopeId={scopeId} {...form} />
+            <ContentAccessFormContent
+              key={formKey}
+              scopeId={scopeId}
+              {...form}
+            />
           </React.Suspense>
         )}
       </SheetContent>

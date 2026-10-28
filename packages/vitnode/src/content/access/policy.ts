@@ -1,9 +1,10 @@
 import { z } from "zod";
 
+import type { CONTENT_ACCESS_MODES } from "./const";
+
 import {
   CONTENT_ACCESS_ACTIONS,
   CONTENT_ACCESS_MAX_ROLES,
-  CONTENT_ACCESS_MODES,
   CONTENT_ACCESS_PREREQUISITES,
 } from "./const";
 
@@ -164,7 +165,10 @@ const zodScopeInput = z.strictObject({
           action,
           zodDefaultAudience.optional(),
         ]),
-      ) as Record<ContentAccessAction, z.ZodOptional<typeof zodDefaultAudience>>,
+      ) as Record<
+        ContentAccessAction,
+        z.ZodOptional<typeof zodDefaultAudience>
+      >,
     )
     .optional(),
 });
@@ -429,7 +433,10 @@ export const contentAccessRequirementsByAction = (args: {
 
 export const contentAccessFlagsOf = (
   actor: ContentAccessActor,
-  requirements: Record<ContentAccessAction, readonly ContentAccessRequirement[]>,
+  requirements: Record<
+    ContentAccessAction,
+    readonly ContentAccessRequirement[]
+  >,
 ): ContentAccessFlags =>
   Object.fromEntries(
     CONTENT_ACCESS_ACTIONS.map(action => [

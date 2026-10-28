@@ -22,9 +22,9 @@ import type {
 } from "../types";
 
 import { core_content_containers } from "../../../database/content-containers";
+import { invalidatePageCacheTags } from "../../../page-cache/store.server";
 import { expireContentAccessFamily } from "../../access/server/invalidate";
 import { deleteContentAccessRules } from "../../access/server/rules";
-import { invalidatePageCacheTags } from "../../../page-cache/store.server";
 import { contentContainerTag } from "../../cache";
 import { contentDefinitionOf } from "../../server/model";
 import {
@@ -373,7 +373,10 @@ export const createContentContainerService = <
     // A move or a delete changes who may read the subtree, so everything the
     // collection's access rules decided goes too.
     if (definition.access.enabled) {
-      await expireContentAccessFamily(c, { id: definitionId, kind: "container" });
+      await expireContentAccessFamily(c, {
+        id: definitionId,
+        kind: "container",
+      });
     }
   };
 

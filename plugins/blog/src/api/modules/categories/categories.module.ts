@@ -1,10 +1,9 @@
 import type { EnvVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+import type { ContentAccessFlags } from "@vitnode/core/content";
 import type { ContentPublicHiddenAccess } from "@vitnode/core/content/server";
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
-import type { ContentAccessFlags } from "@vitnode/core/content";
-
 import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
 import {
   CONTENT_LOCALE_MAX_LENGTH,
@@ -15,11 +14,11 @@ import {
 import {
   contentAccessFlagsForScopes,
   contentListHiddenAccess,
+  contentListPageCacheTags,
+  contentLocaleHeaders,
   createContentAccess,
   findContentAccessFamily,
   isContentAccessFamilyOpen,
-  contentListPageCacheTags,
-  contentLocaleHeaders,
   listContentLanguages,
   rememberContentPublicRead,
   resolveContentRequestLocale,

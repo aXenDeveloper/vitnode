@@ -44,7 +44,10 @@ const Inner = ({
 
   if (session.isPending) {
     return (
-      <div aria-busy="true" className="flex flex-col gap-3 rounded-xl border p-6">
+      <div
+        aria-busy="true"
+        className="flex flex-col gap-3 rounded-xl border p-6"
+      >
         <span className="sr-only" role="status">
           {t("loading")}
         </span>

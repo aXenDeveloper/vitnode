@@ -174,22 +174,22 @@ export const forumStatsRoute = buildRoute({
         items: topicCounts
           .filter(row => !readable || readable.has(row.forumId))
           .map(row => {
-          const newest = latestOf.get(row.forumId);
+            const newest = latestOf.get(row.forumId);
 
-          return {
-            forumId: row.forumId,
-            latestTopic: newest
-              ? {
-                  id: newest.id,
-                  publishedAt: newest.publishedAt,
-                  slug: newest.slug,
-                  title: newest.title,
-                }
-              : null,
-            commentCount: commentCountOf.get(row.forumId) ?? 0,
-            topicCount: row.value,
-          };
-        }),
+            return {
+              forumId: row.forumId,
+              latestTopic: newest
+                ? {
+                    id: newest.id,
+                    publishedAt: newest.publishedAt,
+                    slug: newest.slug,
+                    title: newest.title,
+                  }
+                : null,
+              commentCount: commentCountOf.get(row.forumId) ?? 0,
+              topicCount: row.value,
+            };
+          }),
       },
       200,
       headers,

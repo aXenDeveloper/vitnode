@@ -69,9 +69,7 @@ export const RestrictedUpload = () => {
         <FileLockIcon />
       </span>
       <span className="flex min-w-0 flex-col">
-        <span className="tiptap-attachment-name">
-          {t("restricted_title")}
-        </span>
+        <span className="tiptap-attachment-name">{t("restricted_title")}</span>
         <span className="tiptap-attachment-meta">{t("restricted_desc")}</span>
       </span>
     </span>

@@ -9,10 +9,10 @@ import {
   CornerLeftUpIcon,
   FolderIcon,
   GripVerticalIcon,
+  LockIcon,
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
-  LockIcon,
   ShieldCheckIcon,
   Trash2Icon,
 } from "lucide-react";

@@ -21,8 +21,8 @@ import type {
   CONTENT_VISIBILITY_FIELDS,
   CONTENT_VISIBILITY_FILTERS,
 } from "./const";
-import type { ResolvedContentTypeAccess } from "./define-access";
 import type { AnyContentContainerDefinition } from "./containers/types";
+import type { ResolvedContentTypeAccess } from "./define-access";
 import type { ContentFileDescriptor } from "./files";
 import type {
   ContentId,

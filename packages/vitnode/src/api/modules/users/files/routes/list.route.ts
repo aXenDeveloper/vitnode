@@ -3,7 +3,6 @@ import { HTTPException } from "hono/http-exception";
 import z from "zod";
 
 import { buildRoute } from "@/api/builders";
-import { CONFIG } from "@/lib/config";
 import { notAttachedAsUserImage } from "@/api/lib/user-images";
 import {
   withPagination,
@@ -12,6 +11,7 @@ import {
 } from "@/api/lib/with-pagination";
 import { core_files } from "@/database/files";
 import { parseImageDimensions } from "@/lib/api/upload";
+import { CONFIG } from "@/lib/config";
 
 export const listUserFilesRoute = buildRoute({
   route: {

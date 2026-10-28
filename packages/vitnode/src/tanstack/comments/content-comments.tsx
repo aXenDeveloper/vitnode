@@ -34,8 +34,8 @@ import { useRevealHashTarget } from "@/hooks/use-reveal-hash-target";
 import type { ContentCommentNode, ContentCommentTreeNode } from "./thread";
 import type { ContentCommentsController } from "./use-content-comments";
 
-import { ContentAccessRequired } from "../content/access-required";
 import { LOGIN_PATH, returnToFor } from "../auth/redirects";
+import { ContentAccessRequired } from "../content/access-required";
 import {
   ContentCommentActions,
   contentCommentAuthor,

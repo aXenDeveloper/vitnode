@@ -64,7 +64,7 @@ const fetchMiddlewareConfig = async (): Promise<MiddlewareConfigState> => {
 };
 
 /** Everything a middleware-configuration cache entry's key starts with. */
-const MIDDLEWARE_QUERY_KEY = ["vitnode", "middleware"] as const;
+export const MIDDLEWARE_QUERY_KEY = ["vitnode", "middleware"] as const;
 
 /**
  * The deployment configuration as a TanStack Query. A successful answer is

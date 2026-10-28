@@ -1,7 +1,6 @@
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { contentContainerFieldOf } from "../containers/association";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
@@ -14,6 +13,7 @@ import type { ContentSearchContext } from "./search-document";
 
 import { searchItemIdFromKey } from "../../api/models/search";
 import { core_search_index } from "../../database/search";
+import { contentContainerFieldOf } from "../containers/association";
 import { parseContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
@@ -91,10 +91,9 @@ export interface ContentSearchSyncOutcome {
  * visible in them moved.
  */
 const accessFieldsOf = (definition: AnyContentTypeDefinition): string[] =>
-  [
-    definition.access?.from,
-    contentContainerFieldOf(definition)?.name,
-  ].filter((name): name is string => typeof name === "string");
+  [definition.access?.from, contentContainerFieldOf(definition)?.name].filter(
+    (name): name is string => typeof name === "string",
+  );
 
 /** What the row is, and what the index therefore has to hold. */
 const decide = (

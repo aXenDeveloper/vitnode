@@ -9,6 +9,7 @@ import type { ContentAccessActor } from "../policy";
 import type { ContentAccessScopeRef } from "./source";
 
 import { contentIdKey, parseContentId } from "../../ids";
+import { contentDefinitionOf } from "../../server/model";
 import { resolveContentAccessActor } from "./actor";
 import {
   contentAccessAllowedScopes,
@@ -38,7 +39,11 @@ const modelOf = (c: Context, itemType: string): AnyContentModel | undefined =>
  * goes through here, whatever built the document. Server-only.
  */
 export const withContentSearchAccessScopes = async <
-  TDoc extends { accessScopes?: readonly string[]; itemId: ContentId; itemType: string },
+  TDoc extends {
+    accessScopes?: readonly string[];
+    itemId: ContentId;
+    itemType: string;
+  },
 >(
   c: Context,
   docs: readonly TDoc[],
@@ -72,7 +77,9 @@ export const withContentSearchAccessScopes = async <
   }
 
   return docs.map(doc => {
-    const tokens = scopesByKey.get(`${doc.itemType}|${contentIdKey(doc.itemId)}`);
+    const tokens = scopesByKey.get(
+      `${doc.itemType}|${contentIdKey(doc.itemId)}`,
+    );
 
     return tokens ? { ...doc, accessScopes: tokens } : doc;
   });
@@ -127,7 +134,8 @@ export const verifyContentSearchHits = async <
   hits: readonly THit[],
 ): Promise<{ dropped: THit[]; kept: THit[] }> => {
   const actor = await resolveContentAccessActor(c);
-  if (actor.kind === "member" && actor.root) return { dropped: [], kept: [...hits] };
+  if (actor.kind === "member" && actor.root)
+    return { dropped: [], kept: [...hits] };
 
   const readable = new Map<string, Set<string>>();
   const types = [...new Set(hits.map(hit => hit.itemType))];
@@ -139,7 +147,10 @@ export const verifyContentSearchHits = async <
     const ids = hits
       .filter(hit => hit.itemType === itemType)
       .flatMap(hit => {
-        const id = parseContentId(model.definition.idStrategy, hit.itemId);
+        const id = parseContentId(
+          contentDefinitionOf(model).idStrategy,
+          hit.itemId,
+        );
 
         return id === null ? [] : [id];
       });
@@ -167,7 +178,7 @@ export const verifyContentSearchHits = async <
   const dropped: THit[] = [];
   for (const hit of hits) {
     const allowed = readable.get(hit.itemType);
-    if (!allowed || allowed.has(contentIdKey(hit.itemId as ContentId))) {
+    if (!allowed || allowed.has(contentIdKey(hit.itemId))) {
       kept.push(hit);
     } else {
       dropped.push(hit);
