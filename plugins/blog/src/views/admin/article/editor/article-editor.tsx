@@ -36,10 +36,14 @@ import {
   getLangValue,
   upsertLangValue,
 } from "@vitnode/core/lib/helpers/multi-lang";
+import { ContentAccessEffectiveNotice } from "@vitnode/core/views/admin/views/access/effective-notice";
 import { cn } from "cn";
 import { ArrowLeftIcon, SearchIcon, SparklesIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
+
+import { blogPostContentType } from "@/content/post";
+import { manifest } from "@/manifest.gen";
 
 import type { CheckAction } from "./readiness-actions";
 
@@ -314,6 +318,15 @@ export const ArticleEditor = ({
     <div className="grid grid-cols-1 gap-4 border-y py-4 md:grid-cols-2">
       <div className="flex flex-col gap-2">
         <ContentFormField name="categoryId" />
+        <ContentAccessEffectiveNotice
+          permissionModule={blogPostContentType.permissionModule}
+          pluginId={manifest.id}
+          scopeIds={
+            Array.isArray(values.categoryId)
+              ? (values.categoryId as (number | string)[])
+              : []
+          }
+        />
       </div>
       <div className="flex flex-col gap-2">
         <ContentFormField name="authorId" />

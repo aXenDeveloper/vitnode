@@ -27,6 +27,8 @@ import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentPublicState } from "./page-cache";
 
+import { followContentSubmissionContainer } from "../approvals/server/follow-container";
+import { contentContainerFieldOf } from "../containers/association";
 import { contentEventName } from "../events";
 import { invalidateContentPages } from "./page-cache";
 import { publishContentRefresh } from "./refresh/publish";
@@ -110,6 +112,29 @@ export const emitContentEvent = async (
       options?.publicState,
     ),
   ]);
+
+  // A record that moved to another container takes its pending approvals - and
+  // its replies' - to the new container's moderators.
+  const moved = contentContainerFieldOf(definition)?.name;
+  if (
+    action === "updated" &&
+    moved !== undefined &&
+    "changedFields" in payload &&
+    Array.isArray(payload.changedFields) &&
+    (payload.changedFields as string[]).includes(moved)
+  ) {
+    await followContentSubmissionContainer(
+      c,
+      definition,
+      payload.contentId as ContentId,
+    ).catch(async (error: unknown) => {
+      await c
+        .get("log")
+        ?.error(
+          `[content-approvals] ${definition.id}: pending submissions could not follow the record to its new container (${error instanceof Error ? error.message : String(error)}).`,
+        );
+    });
+  }
 
   // After the caches above, so whoever reads again on this signal misses them.
   await publishContentRefresh(c, {

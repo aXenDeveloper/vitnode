@@ -3154,7 +3154,8 @@
           "self": "{audience} - set here or inherited for {scope}",
           "ancestor": "{audience} for {action} - required by {scope}, a parent",
           "prerequisite": "{audience} for {action} - needed first",
-          "needs": "Needs {action} first, so it is never wider than that."
+          "needs": "Needs {action} first, so it is never wider than that.",
+          "loading": "Checking who can read this"
         },
         "warnings": {
           "nobody": "Nobody but a root role can {action} here: the rule on {scope} has no role left."
@@ -3179,6 +3180,13 @@
           "successDesc": "{moved} moved to private storage, {remaining} left for another run, {shared} used elsewhere too and kept public - upload those again where they should be private.",
           "failed": "The files could not be moved. Try again in a moment.",
           "unsupported": "The storage adapter keeps every file public, so these stay reachable by address whatever the rules say. Configure a private store to protect them."
+        },
+        "notice": {
+          "title": "Who can see this",
+          "open": "Everyone can read this, comment on it and download its attachments - none of its categories restricts it.",
+          "and": ", and also ",
+          "intersection": "A reader has to meet the rule of every category it is in, so two restricted categories together let in fewer people than either one alone.",
+          "missing": "One of the selected categories no longer exists. Nobody but a root role can read a record filed there."
         }
       }
     }
