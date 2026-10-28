@@ -6,13 +6,13 @@ describe("visibleSettingsNavItems", () => {
   it("shows Security while passkeys are on", () => {
     expect(
       visibleSettingsNavItems({ passkeys: true }).map(item => item.key),
-    ).toEqual(["overview", "notifications", "devices", "security"]);
+    ).toEqual(["overview", "notifications", "devices", "security", "standing"]);
   });
 
   it("hides Security when passkeys are switched off", () => {
     expect(
       visibleSettingsNavItems({ passkeys: false }).map(item => item.key),
-    ).toEqual(["overview", "notifications", "devices"]);
+    ).toEqual(["overview", "notifications", "devices", "standing"]);
   });
 
   it("shows Connected accounts only while an SSO provider is configured", () => {
@@ -21,12 +21,12 @@ describe("visibleSettingsNavItems", () => {
         passkeys: false,
         sso: [{ id: "google", name: "Google" }],
       }).map(item => item.key),
-    ).toEqual(["overview", "notifications", "devices", "sso"]);
+    ).toEqual(["overview", "notifications", "devices", "sso", "standing"]);
     expect(
       visibleSettingsNavItems({ passkeys: false, sso: [] }).map(
         item => item.key,
       ),
-    ).toEqual(["overview", "notifications", "devices"]);
+    ).toEqual(["overview", "notifications", "devices", "standing"]);
   });
 
   it("shows AI usage only while the site has an AI model configured", () => {
@@ -35,12 +35,12 @@ describe("visibleSettingsNavItems", () => {
         ai: { models: [{ id: "fast" }] },
         passkeys: false,
       }).map(item => item.key),
-    ).toEqual(["overview", "notifications", "devices", "ai"]);
+    ).toEqual(["overview", "notifications", "devices", "ai", "standing"]);
     expect(
       visibleSettingsNavItems({ ai: { models: [] }, passkeys: false }).map(
         item => item.key,
       ),
-    ).toEqual(["overview", "notifications", "devices"]);
+    ).toEqual(["overview", "notifications", "devices", "standing"]);
   });
 
   it("hides AI usage from a member without any AI feature", () => {
@@ -50,6 +50,6 @@ describe("visibleSettingsNavItems", () => {
         aiFeatures: false,
         passkeys: false,
       }).map(item => item.key),
-    ).toEqual(["overview", "notifications", "devices"]);
+    ).toEqual(["overview", "notifications", "devices", "standing"]);
   });
 });

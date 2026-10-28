@@ -11,6 +11,7 @@ import type {
   WarningThresholdAction,
 } from "@/lib/moderation/warnings";
 
+import { isUniqueViolation } from "@/api/lib/db-errors";
 import { canOnReport } from "@/api/lib/moderation/access";
 import { findReportTarget } from "@/api/lib/moderation/registry";
 import {
@@ -535,201 +536,212 @@ export const issueWarning = async (
     if (report.status === "done") throw reportConflict(report, "report_closed");
   }
 
-  const result = await c.get("db").transaction(async (tx: Db) => {
-    await lockUserWarnings(tx, draft.user.id);
+  const issue = async () =>
+    await c.get("db").transaction(async (tx: Db) => {
+      await lockUserWarnings(tx, draft.user.id);
 
-    const existing = await findIssuedWarning(tx, moderator, input);
-    if (existing) return existing;
+      const existing = await findIssuedWarning(tx, moderator, input);
+      if (existing) return existing;
 
-    const now = new Date();
-    const expiresAt = draft.expiresAt(now);
-    const before = await loadActivePoints(tx, draft.user.id, now);
-    const counts = expiresAt === null || expiresAt.getTime() > now.getTime();
-    const after = before + (counts ? draft.points : 0);
+      const now = new Date();
+      const expiresAt = draft.expiresAt(now);
+      const before = await loadActivePoints(tx, draft.user.id, now);
+      const counts = expiresAt === null || expiresAt.getTime() > now.getTime();
+      const after = before + (counts ? draft.points : 0);
 
-    const [warning] = await tx
-      .insert(core_moderation_warnings)
-      .values({
-        contentSnapshot: draft.content?.snapshot ?? null,
-        defaultPoints: draft.defaultPoints,
-        expiresAt,
-        idempotencyKey: input.idempotencyKey,
-        issuedAt: now,
-        issuedById: moderator.user.id,
-        message: input.message.trim(),
-        overrideNote: overridden ? overrideNote : null,
-        pluginId: draft.content?.pluginId ?? null,
-        points: draft.points,
-        pointsAfter: after,
-        pointsBefore: before,
-        reasonId: draft.reason?.id ?? null,
-        reasonSnapshot: draft.reason ? { title: draft.reason.title } : null,
-        reportId: report?.id ?? null,
-        scopeFamily: draft.content?.scopeFamily ?? null,
-        scopeId: draft.content?.scopeId ?? null,
-        staffNote: staffNote === "" ? null : staffNote,
-        targetId: draft.content?.targetId ?? null,
-        targetType: draft.content?.targetType ?? null,
-        userId: draft.user.id,
-      })
-      .returning({ id: core_moderation_warnings.id });
-
-    await appendModerationAudit(tx, {
-      actorId: moderator.user.id,
-      data: {
-        content: draft.content
-          ? {
-              pluginId: draft.content.pluginId,
-              targetId: draft.content.targetId,
-              targetType: draft.content.targetType,
-            }
-          : null,
-        expiresAt: expiresAt?.toISOString() ?? null,
-        points: draft.points,
-        reasonId: draft.reason?.id ?? null,
-        reportId: report?.id ?? null,
-      },
-      type: "warning_issued",
-      userId: draft.user.id,
-      warningId: warning.id,
-    });
-    if (overridden) {
-      await appendModerationAudit(tx, {
-        actorId: moderator.user.id,
-        data: {
-          defaultExpiresAfterHours: draft.defaultExpiresAfterHours,
-          defaultPoints: draft.defaultPoints,
-          expiresAt: expiresAt?.toISOString() ?? null,
-          expiration: draft.overrides.expiration,
-          points: draft.points,
-          pointsOverridden: draft.overrides.points,
-        },
-        type: "warning_overridden",
-        userId: draft.user.id,
-        warningId: warning.id,
-      });
-    }
-
-    const rules = await loadEnabledThresholds(tx);
-    const { applied, crossed } = evaluateWarningThresholds({
-      after,
-      before,
-      rules,
-    });
-    await appendModerationAudit(tx, {
-      actorId: moderator.user.id,
-      data: {
-        after,
-        appliedThresholdId: applied?.id ?? null,
-        before,
-        crossedThresholdIds: crossed.map(rule => rule.id),
-      },
-      type: "threshold_evaluated",
-      userId: draft.user.id,
-      warningId: warning.id,
-    });
-
-    let sanction: IssuedWarning["sanction"] = null;
-    if (applied) {
-      const endsAt = thresholdSuspensionEnd(applied, now);
-      const [row] = await tx
-        .insert(core_moderation_sanctions)
+      const [warning] = await tx
+        .insert(core_moderation_warnings)
         .values({
-          createdById: moderator.user.id,
-          endsAt,
-          source: "threshold",
-          startsAt: now,
-          thresholdId: applied.id,
-          thresholdSnapshot: {
-            action: applied.action,
-            durationHours: applied.durationHours,
-            points: applied.points,
-          },
-          type: "suspension",
+          contentSnapshot: draft.content?.snapshot ?? null,
+          defaultPoints: draft.defaultPoints,
+          expiresAt,
+          idempotencyKey: input.idempotencyKey,
+          issuedAt: now,
+          issuedById: moderator.user.id,
+          message: input.message.trim(),
+          overrideNote: overridden ? overrideNote : null,
+          pluginId: draft.content?.pluginId ?? null,
+          points: draft.points,
+          pointsAfter: after,
+          pointsBefore: before,
+          reasonId: draft.reason?.id ?? null,
+          reasonSnapshot: draft.reason ? { title: draft.reason.title } : null,
+          reportId: report?.id ?? null,
+          scopeFamily: draft.content?.scopeFamily ?? null,
+          scopeId: draft.content?.scopeId ?? null,
+          staffNote: staffNote === "" ? null : staffNote,
+          targetId: draft.content?.targetId ?? null,
+          targetType: draft.content?.targetType ?? null,
           userId: draft.user.id,
-          warningId: warning.id,
         })
-        .returning({ id: core_moderation_sanctions.id });
-      sanction = { endsAt, id: row.id, thresholdId: applied.id };
+        .returning({ id: core_moderation_warnings.id });
+
       await appendModerationAudit(tx, {
         actorId: moderator.user.id,
         data: {
-          action: applied.action,
-          endsAt: endsAt?.toISOString() ?? null,
-          source: "threshold",
-          thresholdId: applied.id,
-          thresholdPoints: applied.points,
+          content: draft.content
+            ? {
+                pluginId: draft.content.pluginId,
+                targetId: draft.content.targetId,
+                targetType: draft.content.targetType,
+              }
+            : null,
+          expiresAt: expiresAt?.toISOString() ?? null,
+          points: draft.points,
+          reasonId: draft.reason?.id ?? null,
+          reportId: report?.id ?? null,
         },
-        sanctionId: row.id,
-        type: "sanction_applied",
+        type: "warning_issued",
         userId: draft.user.id,
         warningId: warning.id,
       });
-    }
-
-    if (report) {
-      await appendReportEvent(tx, {
-        actorId: moderator.user.id,
-        data: {
-          points: draft.points,
+      if (overridden) {
+        await appendModerationAudit(tx, {
+          actorId: moderator.user.id,
+          data: {
+            defaultExpiresAfterHours: draft.defaultExpiresAfterHours,
+            defaultPoints: draft.defaultPoints,
+            expiresAt: expiresAt?.toISOString() ?? null,
+            expiration: draft.overrides.expiration,
+            points: draft.points,
+            pointsOverridden: draft.overrides.points,
+          },
+          type: "warning_overridden",
           userId: draft.user.id,
           warningId: warning.id,
-        },
-        reportId: report.id,
-        type: "warning",
-      });
-      if (resolveReport) {
-        await updateReport(tx, report, {
-          openKey: null,
-          resolution: "action_taken",
-          resolvedAt: now,
-          resolvedById: moderator.user.id,
-          status: "done",
-        });
-        await appendReportEvent(tx, {
-          actorId: moderator.user.id,
-          data: { resolution: "action_taken", warningId: warning.id },
-          reportId: report.id,
-          type: "resolved",
         });
       }
-    }
 
-    const notifications = c.get("notifications");
-    await notifications.publish({
-      actorId: null,
-      data: {
-        message: input.message.trim(),
-        points: draft.points,
-        reason: draft.reason?.title ?? null,
+      const rules = await loadEnabledThresholds(tx);
+      const { applied, crossed } = evaluateWarningThresholds({
+        after,
+        before,
+        rules,
+      });
+      await appendModerationAudit(tx, {
+        actorId: moderator.user.id,
+        data: {
+          after,
+          appliedThresholdId: applied?.id ?? null,
+          before,
+          crossedThresholdIds: crossed.map(rule => rule.id),
+        },
+        type: "threshold_evaluated",
+        userId: draft.user.id,
         warningId: warning.id,
-      },
-      idempotencyKey: `warning:${warning.id}`,
-      recipients: [draft.user.id],
-      tx,
-      type: warningIssuedNotification,
-    });
-    if (sanction) {
+      });
+
+      let sanction: IssuedWarning["sanction"] = null;
+      if (applied) {
+        const endsAt = thresholdSuspensionEnd(applied, now);
+        const [row] = await tx
+          .insert(core_moderation_sanctions)
+          .values({
+            createdById: moderator.user.id,
+            endsAt,
+            source: "threshold",
+            startsAt: now,
+            thresholdId: applied.id,
+            thresholdSnapshot: {
+              action: applied.action,
+              durationHours: applied.durationHours,
+              points: applied.points,
+            },
+            type: "suspension",
+            userId: draft.user.id,
+            warningId: warning.id,
+          })
+          .returning({ id: core_moderation_sanctions.id });
+        sanction = { endsAt, id: row.id, thresholdId: applied.id };
+        await appendModerationAudit(tx, {
+          actorId: moderator.user.id,
+          data: {
+            action: applied.action,
+            endsAt: endsAt?.toISOString() ?? null,
+            source: "threshold",
+            thresholdId: applied.id,
+            thresholdPoints: applied.points,
+          },
+          sanctionId: row.id,
+          type: "sanction_applied",
+          userId: draft.user.id,
+          warningId: warning.id,
+        });
+      }
+
+      if (report) {
+        await appendReportEvent(tx, {
+          actorId: moderator.user.id,
+          data: {
+            points: draft.points,
+            userId: draft.user.id,
+            warningId: warning.id,
+          },
+          reportId: report.id,
+          type: "warning",
+        });
+        if (resolveReport) {
+          await updateReport(tx, report, {
+            openKey: null,
+            resolution: "action_taken",
+            resolvedAt: now,
+            resolvedById: moderator.user.id,
+            status: "done",
+          });
+          await appendReportEvent(tx, {
+            actorId: moderator.user.id,
+            data: { resolution: "action_taken", warningId: warning.id },
+            reportId: report.id,
+            type: "resolved",
+          });
+        }
+      }
+
+      const notifications = c.get("notifications");
       await notifications.publish({
         actorId: null,
         data: {
-          endsAt: sanction.endsAt?.toISOString() ?? null,
-          sanctionId: sanction.id,
+          message: input.message.trim(),
+          points: draft.points,
+          reason: draft.reason?.title ?? null,
+          warningId: warning.id,
         },
-        idempotencyKey: `sanction:${sanction.id}`,
+        idempotencyKey: `warning:${warning.id}`,
         recipients: [draft.user.id],
         tx,
-        type: accountSuspendedNotification,
+        type: warningIssuedNotification,
       });
-    }
+      if (sanction) {
+        await notifications.publish({
+          actorId: null,
+          data: {
+            endsAt: sanction.endsAt?.toISOString() ?? null,
+            sanctionId: sanction.id,
+          },
+          idempotencyKey: `sanction:${sanction.id}`,
+          recipients: [draft.user.id],
+          tx,
+          type: accountSuspendedNotification,
+        });
+      }
 
-    return {
-      duplicate: false,
-      points: { after, before },
-      reportResolved: resolveReport,
-      sanction,
-      warningId: warning.id,
-    } satisfies IssuedWarning;
+      return {
+        duplicate: false,
+        points: { after, before },
+        reportResolved: resolveReport,
+        sanction,
+        warningId: warning.id,
+      } satisfies IssuedWarning;
+    });
+
+  // The lock is per warned member, so the same key sent at once for two
+  // members only meets at the unique (issuedById, idempotencyKey) index.
+  const result = await issue().catch(async (error: unknown) => {
+    if (!isUniqueViolation(error)) throw error;
+    const existing = await findIssuedWarning(c.get("db"), moderator, input);
+    if (!existing) throw error;
+
+    return existing;
   });
 
   if (result.duplicate) return result;
