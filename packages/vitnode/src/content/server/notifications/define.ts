@@ -29,10 +29,23 @@ import { contentNotificationAccess } from "./access";
  *   never fire it again.
  * - `moderationDecision`: a moderator approved or rejected one submission.
  *   Once per submission, so each review cycle can notify again.
+ * - `approvalSubmitted`: a new record or an edit started waiting in the
+ *   approval queue. Once per submission, so a resubmission notifies again.
  */
 export type ContentNotificationTrigger =
+  | "approvalSubmitted"
   | "firstPublication"
   | "moderationDecision";
+
+/**
+ * The triggers a custom rule can use. `approvalSubmitted` - a submission
+ * started waiting for a moderator - belongs to the `approvalPending` preset,
+ * whose recipients come from moderator permissions.
+ */
+export type ContentCustomNotificationTrigger = Exclude<
+  ContentNotificationTrigger,
+  "approvalSubmitted"
+>;
 
 export type ContentModerationDecisionStatus = "approved" | "rejected";
 
@@ -215,6 +228,40 @@ export interface ContentModerationDecisionPreset<
 }
 
 /**
+ * Tells moderators that a new record or a proposed edit waits for them in the
+ * Moderator CP approval queue, and links to the submission there.
+ *
+ * Only moderators who may decide it hear about it: those whose `can_approve`
+ * for the content type covers the container the record is filed in - own and
+ * role grants, the container, a subtree or all resources, and root roles,
+ * exactly as the queue and the decision check them. The submitter is never
+ * told about their own submission. Access is checked again on delivery and
+ * whenever the inbox loads, and the item leaves every inbox once the
+ * submission is decided, replaced or cancelled.
+ *
+ * The text names no title or body, so nothing about the content stays behind
+ * in an inbox after a moderator loses access.
+ */
+export interface ContentApprovalPendingPreset extends ContentNotificationPresetBase {
+  /**
+   * Preferences group. Defaults to `"moderation"`, so moderators find it apart
+   * from member notifications.
+   */
+  category?: string;
+  /**
+   * API message keys. `pending` receives `{kind}` (`create` or `edit`, for an
+   * ICU `select`) and `{container}`, the name of the container the record is
+   * filed in.
+   */
+  messages: {
+    description?: string;
+    label: string;
+    pending: string;
+  };
+  preset: "approvalPending";
+}
+
+/**
  * The escape hatch: an existing notification type, published on a supported
  * trigger with your own recipients and data. Callbacks may run more than once
  * for one operation (the worker retries), so keep them side-effect free.
@@ -232,7 +279,7 @@ export interface ContentCustomNotificationRule<TContent, TRoot, TData> {
   allowSelf?: boolean;
   /** Builds `data` for the type's `schema`. Must not have side effects. */
   data: (context: ContentNotificationContext<TContent, TRoot>) => TData;
-  on: ContentNotificationTrigger;
+  on: ContentCustomNotificationTrigger;
   /** Candidate recipients. `null`s, duplicates and the actor are dropped. */
   recipients: (
     context: ContentNotificationContext<TContent, TRoot>,
@@ -247,6 +294,7 @@ export interface ContentCustomNotificationRule<TContent, TRoot, TData> {
 }
 
 export type ContentNotificationRuleInput<TContent, TRoot, TData = unknown> =
+  | ContentApprovalPendingPreset
   | ContentCustomNotificationRule<TContent, TRoot, TData>
   | ContentModerationDecisionPreset<TContent, TRoot>
   | ContentThreadReplyPreset<TContent, TRoot>;
@@ -282,7 +330,7 @@ export type ResolvedContentNotificationRule =
       data: (context: ContentNotificationRuntimeContext) => unknown;
       key: string;
       kind: "custom";
-      on: ContentNotificationTrigger;
+      on: ContentCustomNotificationTrigger;
       recipients: (
         context: ContentNotificationRuntimeContext,
       ) =>
@@ -323,6 +371,12 @@ export type ResolvedContentNotificationRule =
         root: ContentNotificationRow | null;
       }) => string;
       type: NotificationTypeDefinition<ContentModerationNotificationData>;
+    }
+  | {
+      key: string;
+      kind: "approvalPending";
+      on: "approvalSubmitted";
+      type: NotificationTypeDefinition<ContentApprovalPendingNotificationData>;
     };
 
 type ResolvedRule<TKind extends ResolvedContentNotificationRule["kind"]> =
@@ -367,6 +421,22 @@ export interface ContentModerationNotificationData {
   title: string;
 }
 
+/** Stored data of an `approvalPending` notification. */
+export interface ContentApprovalPendingNotificationData {
+  /** The container's name when the notification was published. */
+  container: string;
+  contentId: string;
+  contentTypeId: string;
+  kind: ContentSubmissionKind;
+  /** The thread's root, so deleting it removes the notification too. */
+  rootId: null | string;
+  submissionId: number;
+}
+
+/** Where an `approvalPending` notification leads: the submission in the Moderator CP. */
+export const contentApprovalPendingTarget = (submissionId: number): string =>
+  `/modcp/approvals/${submissionId}`;
+
 const threadDataSchema: z.ZodType<ContentThreadNotificationData> = z.object({
   contentId: z.string().min(1).max(64),
   contentTypeId: z.string().min(1).max(100),
@@ -388,6 +458,16 @@ const moderationDataSchema: z.ZodType<ContentModerationNotificationData> =
     submissionId: z.number().int().positive(),
     target: z.string().min(1).max(2048).nullable(),
     title: z.string().max(MAX_TEXT),
+  });
+
+const approvalPendingDataSchema: z.ZodType<ContentApprovalPendingNotificationData> =
+  z.object({
+    container: z.string().max(MAX_TEXT),
+    contentId: z.string().min(1).max(64),
+    contentTypeId: z.string().min(1).max(100),
+    kind: z.enum(["create", "edit"]),
+    rootId: z.string().min(1).max(64).nullable(),
+    submissionId: z.number().int().positive(),
   });
 
 /** Cuts a value to what a notification stores. */
@@ -441,7 +521,8 @@ const fail = (contentTypeId: string, message: string): never => {
  * and publishes exactly once per operation, however often it is retried.
  *
  * Presets cover the standard cases: `threadReply` for comments and replies,
- * `moderationDecision` for approval and rejection. A rule with `type` is the
+ * `moderationDecision` for approval and rejection, `approvalPending` for the
+ * moderators who may approve a waiting submission. A rule with `type` is the
  * custom escape hatch.
  *
  * @throws {ContentEngineError} For an author field that is not a to-one
@@ -545,6 +626,43 @@ export function buildContentNotifications<
     }
 
     const { defaults, email } = presetDefaults(rule);
+
+    if (rule.preset === "approvalPending") {
+      const { messages } = rule;
+      const type =
+        buildNotificationType<ContentApprovalPendingNotificationData>({
+          access: contentNotificationAccess({
+            content,
+            filter: config.access,
+            policy: "approval",
+          }),
+          category: rule.category ?? "moderation",
+          defaults,
+          description: messages.description,
+          email,
+          id: rule.id,
+          label: messages.label,
+          present: ({ data, t }) => ({
+            target: contentApprovalPendingTarget(data.submissionId),
+            title: t(messages.pending, {
+              container: data.container,
+              kind: data.kind,
+            }),
+          }),
+          schema: approvalPendingDataSchema,
+          subjectType: content.id,
+          version: 1,
+        });
+      register(key, type);
+      rules.push({
+        key,
+        kind: "approvalPending",
+        on: "approvalSubmitted",
+        type,
+      });
+      continue;
+    }
+
     const category = rule.category ?? "content";
 
     if (rule.preset === "threadReply") {

@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 
+import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 
 import type { ContentSubmissionRow } from "../../approvals/server/submissions";
@@ -8,6 +9,7 @@ import type { AnyContentTypeDefinition } from "../../types";
 import type { ContentDatabase } from "../service";
 import type { ContentNotificationRegistry } from "./registry";
 
+import { core_notification_events } from "../../../database/notifications";
 import { CONTENT_QUEUE_TASK_NOTIFICATIONS } from "../../const";
 import { contentIdKey } from "../../ids";
 
@@ -42,6 +44,22 @@ export const contentNotificationIntentSchema = z.discriminatedUnion("trigger", [
     trigger: z.literal("deleted"),
     v: z.literal(1),
   }),
+  z.object({
+    contentTypeId: z.string().min(1),
+    itemId: z.string().min(1),
+    ruleIds: z.array(z.string().min(1)).min(1),
+    submissionId: z.number().int().positive(),
+    trigger: z.literal("approvalSubmitted"),
+    v: z.literal(1),
+  }),
+  z.object({
+    contentTypeId: z.string().min(1),
+    itemId: z.string().min(1),
+    ruleIds: z.array(z.string().min(1)).min(1),
+    submissionId: z.number().int().positive(),
+    trigger: z.literal("approvalResolved"),
+    v: z.literal(1),
+  }),
 ]);
 
 export type ContentNotificationIntent = z.infer<
@@ -49,6 +67,11 @@ export type ContentNotificationIntent = z.infer<
 >;
 
 const MAX_ATTEMPTS = 5;
+
+/** The idempotency key of a submission's "waiting for approval" event: one per submission, ever. */
+export const contentApprovalPendingKey = (
+  submission: Pick<ContentSubmissionRow, "contentTypeId" | "id">,
+): string => `approval:${submission.contentTypeId}:${submission.id}`;
 
 export const contentNotificationRegistryOf = (
   c: Context,
@@ -209,6 +232,81 @@ export const recordContentNotificationCleanup = async (
     contentTypeId: definition.id,
     itemId: contentIdKey(itemId),
     trigger: "deleted",
+    v: 1,
+  });
+};
+
+/**
+ * Stores the intent to tell moderators a submission waits for them, inside
+ * the transaction that opened it - a rolled-back write leaves nothing behind.
+ * A no-op without an `approvalPending` rule for the content type.
+ */
+export const recordContentApprovalSubmitted = async (
+  c: Context,
+  tx: ContentDatabase,
+  submission: Pick<ContentSubmissionRow, "contentTypeId" | "id" | "itemId">,
+): Promise<void> => {
+  const rules =
+    contentNotificationRegistryOf(c)?.rulesFor(
+      submission.contentTypeId,
+      "approvalSubmitted",
+    ) ?? [];
+  if (rules.length === 0) return;
+
+  await dispatchIntent(c, tx, {
+    contentTypeId: submission.contentTypeId,
+    itemId: submission.itemId,
+    ruleIds: rules.map(entry => entry.rule.type.id),
+    submissionId: submission.id,
+    trigger: "approvalSubmitted",
+    v: 1,
+  });
+};
+
+/**
+ * Stores a cleanup intent for a submission that stopped waiting - decided,
+ * superseded or cancelled - inside the transaction that changed it, so the
+ * moderators' "waiting for approval" items leave their inboxes once it
+ * commits. Call it after the submission row is locked: a delivery in progress
+ * holds that lock, so its event is visible here. A no-op when no such event
+ * was published.
+ */
+export const recordContentApprovalResolved = async (
+  c: Context,
+  tx: ContentDatabase,
+  submission: Pick<ContentSubmissionRow, "contentTypeId" | "id" | "itemId">,
+): Promise<void> => {
+  const rules =
+    contentNotificationRegistryOf(c)?.rulesFor(
+      submission.contentTypeId,
+      "approvalSubmitted",
+    ) ?? [];
+  if (rules.length === 0) return;
+
+  const idempotencyKey = contentApprovalPendingKey(submission);
+  const [published] = await tx
+    .select({ id: core_notification_events.id })
+    .from(core_notification_events)
+    .where(
+      or(
+        ...rules.map(entry =>
+          and(
+            eq(core_notification_events.pluginId, entry.pluginId),
+            eq(core_notification_events.type, entry.rule.type.id),
+            eq(core_notification_events.idempotencyKey, idempotencyKey),
+          ),
+        ),
+      ),
+    )
+    .limit(1);
+  if (!published) return;
+
+  await dispatchIntent(c, tx, {
+    contentTypeId: submission.contentTypeId,
+    itemId: submission.itemId,
+    ruleIds: rules.map(entry => entry.rule.type.id),
+    submissionId: submission.id,
+    trigger: "approvalResolved",
     v: 1,
   });
 };

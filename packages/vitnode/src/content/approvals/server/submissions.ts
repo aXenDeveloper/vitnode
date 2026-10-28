@@ -4,6 +4,7 @@ import { and, desc, eq } from "drizzle-orm";
 
 import type { ContentRecordContainer } from "../../containers/server/policy";
 import type { ContentId } from "../../ids";
+import type { AnyContentModel } from "../../server/model";
 import type { ContentDatabase } from "../../server/service";
 import type { AnyContentTypeDefinition } from "../../types";
 import type { ContentSubmissionKind } from "../const";
@@ -11,6 +12,10 @@ import type { ContentApprovalState } from "../schema";
 
 import { core_content_submissions } from "../../../database/content-submissions";
 import { contentIdKey } from "../../ids";
+import {
+  recordContentApprovalResolved,
+  recordContentApprovalSubmitted,
+} from "../../server/notifications/intents";
 
 export type { ContentApprovalState } from "../schema";
 
@@ -26,6 +31,16 @@ export const toContentApprovalState = (
   submittedAt: row.createdAt,
   values: row.status === "pending" && row.kind === "edit" ? row.values : null,
 });
+
+export const findSubmissionModel = (
+  c: Context,
+  submission: Pick<ContentSubmissionRow, "contentTypeId" | "pluginId">,
+): AnyContentModel | null =>
+  (c.get("core")?.contentModels ?? []).find(
+    entry =>
+      entry.pluginId === submission.pluginId &&
+      entry.model.definition.id === submission.contentTypeId,
+  )?.model ?? null;
 
 const itemCondition = (definition: AnyContentTypeDefinition, id: ContentId) =>
   and(
@@ -90,8 +105,12 @@ export interface OpenContentSubmissionInput {
  * Opens a pending submission. A record has at most one: an older pending one
  * is marked `superseded` in the same transaction, and its id is returned so
  * the caller can say what was replaced.
+ *
+ * The moderators' notification intent is stored in the same transaction, so
+ * it commits - or rolls back - with the submission.
  */
 export const openContentSubmission = async (
+  c: Context,
   tx: ContentDatabase,
   input: OpenContentSubmissionInput,
 ): Promise<{ replaced: null | number; row: ContentSubmissionRow }> => {
@@ -106,6 +125,7 @@ export const openContentSubmission = async (
       .update(core_content_submissions)
       .set({ decidedAt: new Date(), status: "superseded" })
       .where(eq(core_content_submissions.id, previous.id));
+    await recordContentApprovalResolved(c, tx, previous);
   }
 
   const [row] = await tx
@@ -124,6 +144,7 @@ export const openContentSubmission = async (
       values: input.values,
     })
     .returning();
+  await recordContentApprovalSubmitted(c, tx, row);
 
   return { replaced: previous?.id ?? null, row };
 };

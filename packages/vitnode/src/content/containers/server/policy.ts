@@ -3,6 +3,7 @@ import type { Context } from "hono";
 
 import { eq, inArray } from "drizzle-orm";
 
+import type { StaffPermissionSet } from "../../../api/lib/permission-staff";
 import type { ContentId } from "../../ids";
 import type { ContentDatabase } from "../../server/service";
 import type { AnyContentTypeDefinition } from "../../types";
@@ -132,7 +133,11 @@ const containerOfRelated = async (
   return typeof value === "number" ? value : null;
 };
 
-const toContext = async (
+/**
+ * A container by id as a {@link ContentRecordContainer}, with its chain of
+ * ancestors - or `null` when it is gone or belongs to another collection.
+ */
+export const loadContentRecordContainer = async (
   db: ContentDatabase,
   definition: AnyContentContainerDefinition,
   containerId: null | number,
@@ -176,10 +181,12 @@ export const resolveContentWriteContainer = async (
       values,
     );
 
-    return assigned ? await toContext(db, source.container, assigned.id) : null;
+    return assigned
+      ? await loadContentRecordContainer(db, source.container, assigned.id)
+      : null;
   }
 
-  return await toContext(
+  return await loadContentRecordContainer(
     db,
     source.container,
     await containerOfRelated(c, db, definition, values[source.name]),
@@ -199,14 +206,14 @@ export const resolveContentRowContainer = async (
   if (source.kind === "field") {
     const value = row[source.name];
 
-    return await toContext(
+    return await loadContentRecordContainer(
       db,
       source.container,
       typeof value === "number" ? value : null,
     );
   }
 
-  return await toContext(
+  return await loadContentRecordContainer(
     db,
     source.container,
     await containerOfRelated(c, db, definition, row[source.name]),
@@ -252,22 +259,37 @@ export const contentContainerScopeResources = (
  */
 export const canModerateContent = async (
   c: Context,
-  {
-    container,
-    definition,
-    permission,
-    pluginId,
-  }: {
-    container: ContentRecordContainer | null;
-    definition: AnyContentTypeDefinition;
-    permission: string;
-    pluginId: string;
-  },
+  args: ContentModeratorPermissionCheck,
 ): Promise<boolean> => {
   const user = c.get("user");
   if (!user) return false;
 
   const set = await resolveStaffPermissions(c, { type: "moderator", user });
+
+  return hasContentModeratorPermission(set, args);
+};
+
+export interface ContentModeratorPermissionCheck {
+  container: ContentRecordContainer | null;
+  definition: AnyContentTypeDefinition;
+  permission: string;
+  pluginId: string;
+}
+
+/**
+ * {@link canModerateContent} for a permission set already resolved - one
+ * user's, or each of many users' - so a batch applies the same scope rules as
+ * a request.
+ */
+export const hasContentModeratorPermission = (
+  set: StaffPermissionSet,
+  {
+    container,
+    definition,
+    permission,
+    pluginId,
+  }: ContentModeratorPermissionCheck,
+): boolean => {
   const check = {
     module: definition.permissionModule,
     permission,

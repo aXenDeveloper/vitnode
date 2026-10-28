@@ -24,7 +24,7 @@ import { contentContainerAncestors } from "../../containers/tree";
 import { parseContentId } from "../../ids";
 import { contentDefinitionOf } from "../../server/model";
 import { isContentBaseRowPublic } from "../../server/visibility";
-import { findSubmissionModel } from "./decide";
+import { findSubmissionModel } from "./submissions";
 
 export interface ReviewableContentType {
   containerDefinitionId: string;

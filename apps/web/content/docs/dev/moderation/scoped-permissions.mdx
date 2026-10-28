@@ -153,7 +153,7 @@ A resource is either one container or one container with everything below it:
 | `"12"`      | Help         | Container 12 only, never its children                                     |
 | `"12:tree"` | Help › *     | Container 12 and every container below it, including ones created later   |
 
-The `:tree` entry is listed only for a container that has children. A record in container `C` is covered by a grant that names `C`, `C:tree` or the `:tree` of any ancestor, by **All resources**, by an unscoped grant, or by a root role. The server resolves the record's container on every check, and again when a decision is made, so a topic moved to another forum follows its new scope.
+The `:tree` entry is listed only for a container that has children. A record in container `C` is covered by a grant that names `C`, `C:tree` or the `:tree` of any ancestor, by **All resources**, by an unscoped grant, or by a root role. The server resolves the record's container on every check, and again when a decision is made, so a topic moved to another forum follows its new scope. The same rule picks who is [notified about pending submissions](/docs/dev/moderation/review-approvals#get-notified).
 
 A moderator entry on its own grants nothing. Someone flagged as staff, with no `can_edit` or `can_approve` for a forum, edits and approves exactly as much there as any member: nothing beyond their own posts.
 

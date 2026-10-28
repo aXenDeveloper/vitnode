@@ -8,7 +8,7 @@ import {
   topicHref,
 } from "@/pages/forum-links";
 
-/** Comments, replies and moderation decisions on comments. Server-only. */
+/** Comments, replies, comments awaiting approval and decisions on them. Server-only. */
 export const commentNotifications = buildContentNotifications({
   content: commentContentType,
   root: topicContentType,
@@ -42,10 +42,19 @@ export const commentNotifications = buildContentNotifications({
           ? commentPermalink(content.slug)
           : FORUM_PENDING_HREF,
     },
+    pending: {
+      id: "forum.comment_pending",
+      preset: "approvalPending",
+      messages: {
+        label: "@vitnode/forum.notifications.comment_pending.label",
+        description: "@vitnode/forum.notifications.comment_pending.description",
+        pending: "@vitnode/forum.notifications.comment_pending.pending",
+      },
+    },
   },
 });
 
-/** Moderation decisions on topics. Server-only. */
+/** Topics awaiting approval and moderation decisions on topics. Server-only. */
 export const topicNotifications = buildContentNotifications({
   content: topicContentType,
   rules: {
@@ -62,6 +71,15 @@ export const topicNotifications = buildContentNotifications({
         decision.status === "approved"
           ? topicHref(content.slug)
           : FORUM_PENDING_HREF,
+    },
+    pending: {
+      id: "forum.topic_pending",
+      preset: "approvalPending",
+      messages: {
+        label: "@vitnode/forum.notifications.topic_pending.label",
+        description: "@vitnode/forum.notifications.topic_pending.description",
+        pending: "@vitnode/forum.notifications.topic_pending.pending",
+      },
     },
   },
 });

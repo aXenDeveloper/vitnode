@@ -326,6 +326,30 @@ decisions: {
 
 Each decision notifies the submitter once, so a resubmitted comment that is rejected again gets a second notification. A rejected comment is a draft that readers cannot open, so `target` sends its author to their pending list instead of an anchor the topic page does not have. The texts receive `{title}`, `{kind}` (`create` or `edit`) and `{reason}`.
 
+## Tell moderators what waits for approval
+
+The `approvalPending` preset notifies the moderators who could decide a pending comment or edit, and links to it in the Moderator CP. Add it next to the decisions rule:
+
+```ts title="plugins/forum/src/api/lib/notifications.ts"
+pending: {
+  id: "forum.comment_pending",
+  preset: "approvalPending",
+  messages: {
+    label: "@vitnode/forum.notifications.comment_pending.label",
+    pending: "@vitnode/forum.notifications.comment_pending.pending",
+  },
+},
+```
+
+```json title="plugins/forum/src/locales/api/en.json"
+"comment_pending": {
+  "label": "Comments awaiting approval",
+  "pending": "{kind, select, edit {An edit to a comment is waiting for approval in {container}} other {A new comment is waiting for approval in {container}}}"
+}
+```
+
+Only moderators whose `can_approve` covers the comment's forum receive it, and it leaves their inboxes once someone decides. [Get notified](/docs/dev/moderation/review-approvals#get-notified) describes it from the moderator's side, and the [Notifications API](/docs/content-engine/notifications-api#approvalpending-preset) lists the options.
+
 ## Preferences and email
 
 Each rule is an ordinary notification type. Members find **Comments and replies** under **Settings → Notifications** and can turn the notification list, push or email on and off for it. Administrators can change the defaults or switch the type off on the [AdminCP notifications page](/docs/dev/notifications/admincp). Email needs an email adapter and `email: true` (or a `defaults.email` other than `"none"`); immediate emails and daily or weekly digests then work like every other type.

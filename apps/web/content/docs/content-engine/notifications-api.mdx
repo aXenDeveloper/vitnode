@@ -1,6 +1,6 @@
 ---
 title: Notifications API
-description: Reference for buildContentNotifications in the VitNode Content Engine, with the threadReply and moderationDecision presets, stable ids, custom rules, triggers and deduplication, access policies, delivery and retries, cleanup and useRevealHashTarget.
+description: Reference for buildContentNotifications in the VitNode Content Engine, with the threadReply, moderationDecision and approvalPending presets, stable ids, custom rules, triggers and deduplication, access policies, delivery and retries, cleanup and useRevealHashTarget.
 icon: BellRing
 ---
 
@@ -36,7 +36,7 @@ It throws `ContentEngineError` when an author field is not a to-one, shared `fie
 | Name             | Type                                               | Required | Default     | Description |
 | ---------------- | -------------------------------------------------- | -------- | ----------- | ----------- |
 | `id`             | `string`                                           | Yes      |             | The notification type id, such as `"newsroom.comment_reply"`: at least two dot-separated segments of `a-z`, `0-9`, `_`, `-`, at most 100 characters |
-| `category`       | `string`                                           | No       | `"content"` | Groups types on the preferences page |
+| `category`       | `string`                                           | No       | `"content"` | Groups types on the preferences page. `approvalPending` defaults to `"moderation"` |
 | `defaults.inApp` | `boolean`                                          | No       | `true`      | Whether members get it in the bell before choosing |
 | `defaults.email` | `"none"` \| `"immediate"` \| `"daily"` \| `"weekly"` | No     | `"none"`    | Email before choosing. Anything but `"none"` enables email for the type |
 | `email`          | `boolean`                                          | No       | `false`     | Allows email so members can opt in while the default stays `"none"` |
@@ -83,6 +83,34 @@ Tells the submitter of a [moderated](/docs/content-engine/approvals) create or e
 | `title`                | `({ content, root }) => string`                       | No       | root's, then the record's `admin.titleField` | The `{title}` value |
 
 The recipient is the submission's `authorId`, which is the person who proposed the change, not necessarily the record's author. The moderator who decided is not named on the notification and is never notified about their own submission. Approving a create also runs the record's first-publication rules; approving an edit does not.
+
+## `approvalPending` preset
+
+Tells moderators that a new record or a proposed edit waits in the [approval queue](/docs/dev/moderation/review-approvals), and links to that submission at `/modcp/approvals/{id}`. The Forum plugin registers one for topics and one for comments:
+
+```ts title="plugins/forum/src/api/lib/notifications.ts"
+pending: {
+  id: "forum.topic_pending",
+  preset: "approvalPending",
+  messages: {
+    label: "@vitnode/forum.notifications.topic_pending.label",
+    description: "@vitnode/forum.notifications.topic_pending.description",
+    pending: "@vitnode/forum.notifications.topic_pending.pending",
+  },
+},
+```
+
+| Name                   | Type            | Required | Default | Description |
+| ---------------------- | --------------- | -------- | ------- | ----------- |
+| `messages.label`       | API message key | Yes      |         | The type's name in preferences |
+| `messages.description` | API message key | No       |         | One line under the label |
+| `messages.pending`     | API message key | Yes      |         | Receives `{kind}` (`create` or `edit`) and `{container}`, the name of the container the record is filed in |
+
+The link is fixed, so there is no `target`, and the text carries no title or body: a moderator who loses access keeps nothing readable about the content. A typical message is `"{kind, select, edit {An edit to a topic is waiting for approval in {container}} other {A new topic is waiting for approval in {container}}}"`.
+
+Recipients are the moderators who could decide the submission: their `can_approve` for the content type, merged from their own entry and their roles, must cover the container the record is filed in, with the same [container scopes](/docs/dev/moderation/scoped-permissions#pick-forums-or-whole-subtrees) the queue uses. Root roles and unrestricted moderator entries qualify everywhere. Being staff, or an administrator, is not enough. Permissions are read from the database when the notification is sent, not from the staff permission cache, and the submitter is never told about their own submission. At most 1000 permission holders are considered per submission; past that, the rest are skipped with a warning in the logs.
+
+The preset only applies to content types whose container collection has [publishing policies](/docs/content-engine/container-policies) and whose `publicWrite` is on, because the queue lists nothing else.
 
 ## Custom rules
 
@@ -148,13 +176,14 @@ Give a custom type `access: contentNotificationAccess({ content, policy })` and 
 
 Two different things decide whether something is sent twice:
 
-- **Retrying one operation** never duplicates anything. Each publication carries a key built from the operation (`first-publication:{contentTypeId}:{id}:{relation}` or `decision:{contentTypeId}:{submissionId}`), and core stores at most one event per type and key, enforced by a unique index. A worker that publishes and then crashes before finishing finds the same event on its retry.
+- **Retrying one operation** never duplicates anything. Each publication carries a key built from the operation (`first-publication:{contentTypeId}:{id}:{relation}` or `decision:{contentTypeId}:{submissionId}` or `approval:{contentTypeId}:{submissionId}`), and core stores at most one event per type and key, enforced by a unique index. A worker that publishes and then crashes before finishing finds the same event on its retry.
 - **Separate operations** notify again only when the trigger allows it:
 
 | Trigger | Runs | Again later? |
 | --- | --- | --- |
 | `firstPublication` | When the record becomes public for the first time: a published create, a publish, a scheduled publish when it fires, or the approval of a create | Never. Unpublishing and republishing, hiding and showing, restoring a revision and editing do not run it |
 | `moderationDecision` | When a moderator approves or rejects a submission | Once per submission, so each review cycle can notify |
+| `approvalSubmitted` (`approvalPending` only) | When a submission starts waiting: a pending create, an edit proposal, or a newer proposal that replaces one | Once per submission, so a resubmission after a rejection notifies again |
 
 VitNode recognises the first publication inside the publishing transaction, where the record's `publishedAt` is still `NULL` under the row lock. Once set, VitNode never rewrites it. That state lives on the record itself, not in anyone's inbox, so deleting a notification or the passing of time cannot make a comment notify again. Content published before the rules existed already has a `publishedAt`, so adding rules sends nothing for it, and no migration or backfill is needed.
 
@@ -166,6 +195,7 @@ Core checks a notification type's `access` before delivering it, before every im
 | --- | --- |
 | `"content"` (`threadReply`) | The record and its root exist and are public: published, not hidden, not scheduled for later. For a reply, the comment it answers still exists |
 | `"submission"` (`moderationDecision`) | The member is the submission's author, the submission still has that decision and the record exists. An approval also needs the record to be public; a rejection does not. The root must stay public |
+| `"approval"` (`approvalPending`) | The submission is still pending, the record exists, and the member holds `can_approve` both for the container the queue lists the submission under and for the one the record is filed in now. The record does not have to be public |
 
 A notification that fails the check shows "This notification is no longer available", with no title, text or link, and its email is skipped. Content Engine reads are not role-based, so add `access` to `buildContentNotifications` when your plugin limits content to some members. An email that was already sent cannot be taken back.
 
@@ -181,6 +211,8 @@ A failure retries with backoff up to 5 attempts, then the task is marked `failed
 ## Cleanup
 
 Deleting a record stores a cleanup intent in the same transaction. Once it runs, the record's notifications leave every inbox, and so do notifications about records in its thread when the record was the root, including replies a database cascade removed. A grouped item loses only the deleted contributions and points at the newest one left; it disappears when none is left. Pending emails for those notifications are dropped.
+
+A submission that stops waiting, because a moderator decided it, the author replaced it with a newer proposal or the record was deleted, stores a cleanup intent in the same transaction, and its `approvalPending` notifications leave the moderators' inboxes. Delivery that has not reached an inbox yet is stopped by the access check; in the rare case that delivery and cleanup cross, the item stays behind as "no longer available".
 
 Hiding is not deleting. A hidden record's notifications are only unavailable until it is shown again. A delete that races with a notification being sent is safe either way, because the access check runs again at every step.
 

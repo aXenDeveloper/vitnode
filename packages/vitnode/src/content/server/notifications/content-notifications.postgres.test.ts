@@ -335,11 +335,13 @@ describe.skipIf(!POSTGRES_TEST_URL)(
       kind: "create" | "edit",
       values: Record<string, unknown> = {},
       baseUpdatedAt?: Date,
-    ) =>
-      (
+    ) => {
+      const c = await contextAs(COMMENTER);
+
+      return (
         await schema.db.transaction(
           async tx =>
-            await openContentSubmission(tx, {
+            await openContentSubmission(c, tx, {
               authorId: COMMENTER,
               baseUpdatedAt,
               container: null,
@@ -351,6 +353,7 @@ describe.skipIf(!POSTGRES_TEST_URL)(
             }),
         )
       ).row.id;
+    };
 
     const decide = async (id: number, decision: "approve" | "reject") =>
       await decideContentSubmission(await contextAs(MODERATOR), {

@@ -18,6 +18,16 @@
         "description": "A moderator approves or rejects a topic or edit you submitted.",
         "approved": "{kind, select, edit {Your edit to \"{title}\" was approved} other {Your topic \"{title}\" was approved}}",
         "rejected": "{kind, select, edit {Your edit to \"{title}\" was not approved} other {Your topic \"{title}\" was not approved}}"
+      },
+      "comment_pending": {
+        "label": "Comments awaiting approval",
+        "description": "A new comment or a comment edit waits for your approval in a section you moderate.",
+        "pending": "{kind, select, edit {An edit to a comment is waiting for approval in {container}} other {A new comment is waiting for approval in {container}}}"
+      },
+      "topic_pending": {
+        "label": "Topics awaiting approval",
+        "description": "A new topic or a topic edit waits for your approval in a section you moderate.",
+        "pending": "{kind, select, edit {An edit to a topic is waiting for approval in {container}} other {A new topic is waiting for approval in {container}}}"
       }
     }
   }

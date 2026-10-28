@@ -74,9 +74,10 @@ export const createPostgresTestSchema = async ({
 
   // The search index maps `pl` to the hunspell `polish` configuration VitNode's
   // dev image installs. A stock Postgres lacks it, so the schema gets a plain
-  // stand-in - nothing here searches Polish text.
+  // stand-in - nothing here searches Polish text. Only a visible one counts:
+  // another test file's schema may hold its own stand-in at the same time.
   const [polish] = await client.unsafe(
-    "select 1 from pg_ts_config where cfgname = 'polish'",
+    "select 1 from pg_ts_config where cfgname = 'polish' and pg_ts_config_is_visible(oid)",
   );
   if (!polish) {
     await client.unsafe(
