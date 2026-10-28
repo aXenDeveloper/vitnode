@@ -84,6 +84,7 @@ describe("useContentPermissions", () => {
       canEdit: false,
       canHide: false,
       canReport: false,
+      canWarn: false,
     });
 
     for (let settled = 0; settled < 5; settled++) {
@@ -106,10 +107,34 @@ describe("useContentPermissions", () => {
     ).toStrictEqual(ids);
     expect(result.current.isError).toBe(false);
     expect([2, 3, 228, 229].map(id => result.current.of(id))).toStrictEqual([
-      { canDelete: false, canEdit: true, canHide: false, canReport: true },
-      { canDelete: false, canEdit: false, canHide: false, canReport: true },
-      { canDelete: false, canEdit: true, canHide: false, canReport: true },
-      { canDelete: false, canEdit: false, canHide: false, canReport: true },
+      {
+        canDelete: false,
+        canEdit: true,
+        canHide: false,
+        canReport: true,
+        canWarn: false,
+      },
+      {
+        canDelete: false,
+        canEdit: false,
+        canHide: false,
+        canReport: true,
+        canWarn: false,
+      },
+      {
+        canDelete: false,
+        canEdit: true,
+        canHide: false,
+        canReport: true,
+        canWarn: false,
+      },
+      {
+        canDelete: false,
+        canEdit: false,
+        canHide: false,
+        canReport: true,
+        canWarn: false,
+      },
     ]);
   });
 
@@ -137,12 +162,14 @@ describe("useContentPermissions", () => {
       canEdit: false,
       canHide: false,
       canReport: false,
+      canWarn: false,
     });
     expect(result.current.of(answered)).toStrictEqual({
       canDelete: false,
       canEdit: true,
       canHide: false,
       canReport: true,
+      canWarn: false,
     });
   });
 });

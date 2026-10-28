@@ -154,6 +154,7 @@ const NONE = {
   canEdit: false,
   canHide: false,
   canReport: false,
+  canWarn: false,
 };
 
 type Comments = ReturnType<

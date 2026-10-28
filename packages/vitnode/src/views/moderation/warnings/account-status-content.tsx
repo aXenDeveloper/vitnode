@@ -1,10 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import {
-  ExternalLinkIcon,
-  LogInIcon,
-  ShieldAlertIcon,
-} from "lucide-react";
+import { ExternalLinkIcon, LogInIcon, ShieldAlertIcon } from "lucide-react";
 import React from "react";
 import { useFormatter, useLocale, useTranslations } from "use-intl";
 
