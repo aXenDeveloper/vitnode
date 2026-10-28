@@ -30,6 +30,7 @@ import {
   zodPaginationQuery,
 } from "../../api/lib/with-pagination";
 import { decideContentAccessForScopes } from "../access/server/decide";
+import { contentFileDownloadRoute } from "../access/server/download-route";
 import {
   CONTENT_ACCESS_PRIVATE_HEADERS,
   CONTENT_ACCESS_SYSTEM_ACTOR,
@@ -994,6 +995,16 @@ export const buildContentPublicRoutes = <
       : []),
     ...(definition.publicWrite.enabled
       ? [contentPublicDeleteRoute(model, { pluginId })]
+      : []),
+    // Three segments, so it never shadows `/{slug}`. Mounted for every type
+    // that exposes a file or a rich-text document, which is where protected
+    // files and their authorized URLs come from.
+    ...(definition.publicApi.fields.some(field => {
+      const kind = definition.fields[field]?.kind;
+
+      return kind === "file" || kind === "richText";
+    })
+      ? [contentFileDownloadRoute(model, { pluginId })]
       : []),
     detail,
     ...contentPublicWriteRoutes(model, { pluginId }),

@@ -115,3 +115,28 @@ export const zodContentAccessEffectiveResponse = z.object({
 export type ContentAccessEffectiveResponse = z.infer<
   typeof zodContentAccessEffectiveResponse
 >;
+
+/** Where a family's files are stored: what is protected and what is not. */
+export const zodContentAccessFileStatus = z.object({
+  /** Whether the storage adapter can keep files private at all. */
+  privateStorage: z.boolean(),
+  private: z.number().int(),
+  /** Still reachable by anybody holding the URL. */
+  public: z.number().int(),
+});
+
+export type ContentAccessFileStatusResponse = z.infer<
+  typeof zodContentAccessFileStatus
+>;
+
+export const zodContentAccessProtectResult = z.object({
+  moved: z.number().int(),
+  /** Public files left for the next batch. */
+  remaining: z.number().int(),
+  /** Public files other content uses too, which stay public. */
+  shared: z.number().int(),
+});
+
+export type ContentAccessProtectResult = z.infer<
+  typeof zodContentAccessProtectResult
+>;

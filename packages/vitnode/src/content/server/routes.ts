@@ -83,6 +83,7 @@ import {
   zodContentReferenceListItem,
   zodContentReferenceListItemAnyId,
 } from "./list-references";
+import { contentUploadVisibility } from "../access/server/files";
 import {
   buildContentAccessAdminRoutes,
   buildContentAccessEffectiveRoute,
@@ -778,6 +779,12 @@ export const buildContentRoutes = <
             : {}),
           maxBytes: constraints.maxBytes,
           metadata: { contentTypeId: definition.id, field },
+          // Behind access rules, and the adapter can keep it private: never a
+          // public URL, only the record's authorized download route.
+          visibility: contentUploadVisibility(
+            c,
+            model as unknown as AnyContentModel,
+          ),
         });
       } catch (error) {
         // `StorageModel` speaks in `HTTPException`s, whose messages are exactly

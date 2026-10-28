@@ -1,10 +1,15 @@
 import { useSelector } from "@tanstack/react-form";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   AlertTriangleIcon,
   CircleCheckIcon,
   LockIcon,
   RotateCwIcon,
+  ShieldCheckIcon,
 } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -34,6 +39,7 @@ import { AutoFormSelect } from "@/components/form/fields/select";
 import { Button } from "@/components/ui/button";
 import { useDialog } from "@/components/ui/dialog";
 import { useFormApi } from "@/components/ui/form";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { CONTENT_ACCESS_ACTIONS } from "@/content/access/const";
 import { zodContentAccessOverrides } from "@/content/access/policy";
@@ -42,8 +48,10 @@ import { searchAdminRolesInBrowser } from "@/views/admin/views/core/users/roles/
 import type { ContentAccessApiTarget } from "./access-request";
 
 import {
+  contentAccessFilesQuery,
   contentAccessQuery,
   previewContentAccess,
+  protectContentAccessFiles,
   saveContentAccess,
 } from "./access-request";
 
@@ -297,6 +305,90 @@ const EffectivePanel = ({
   );
 };
 
+/**
+ * Where the family's files are stored. A rule cannot make a file private that
+ * still has a public URL, so this says how many do and moves them on request.
+ */
+const FilesPanel = ({ target }: { target: ContentAccessApiTarget }) => {
+  const t = useTranslations("core.access.admin.files");
+  const tError = useTranslations("core.global.errors");
+  const queryClient = useQueryClient();
+  const query = useQuery(contentAccessFilesQuery(target));
+  const [isPending, startTransition] = React.useTransition();
+
+  if (query.isPending) {
+    return (
+      <div aria-busy="true" className="flex flex-col gap-2 rounded-lg border p-4">
+        <span className="sr-only" role="status">
+          {t("loading")}
+        </span>
+        <Skeleton className="h-4 w-1/2" />
+        <Skeleton className="h-4 w-3/4" />
+      </div>
+    );
+  }
+  if (!query.data) return null;
+
+  const { privateStorage, public: publicCount } = query.data;
+  const protect = () => {
+    startTransition(async () => {
+      const result = await protectContentAccessFiles(target);
+      if (!result) {
+        toast.error(tError("title"), { description: t("failed") });
+
+        return;
+      }
+      toast.success(t("success"), {
+        description: t("successDesc", {
+          moved: result.moved,
+          remaining: result.remaining,
+          shared: result.shared,
+        }),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: contentAccessFilesQuery(target).queryKey,
+      });
+    });
+  };
+
+  return (
+    <section
+      aria-labelledby="content-access-files"
+      className="flex flex-col gap-3 rounded-lg border p-4"
+    >
+      <h3
+        className="text-base leading-snug font-semibold text-balance"
+        id="content-access-files"
+      >
+        {t("title")}
+      </h3>
+      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+        {t("desc", {
+          private: query.data.private,
+          public: publicCount,
+        })}
+      </p>
+      {privateStorage && publicCount > 0 ? (
+        <Button
+          className="self-start"
+          isLoading={isPending}
+          onClick={protect}
+          type="button"
+          variant="outline"
+        >
+          <ShieldCheckIcon aria-hidden="true" />
+          {t("protect")}
+        </Button>
+      ) : null}
+      {!privateStorage && publicCount > 0 ? (
+        <p className="bg-destructive/10 text-destructive rounded-md p-3 text-sm leading-relaxed text-pretty">
+          {t("unsupported")}
+        </p>
+      ) : null}
+    </section>
+  );
+};
+
 const AccessForm = ({
   onSaved,
   response,
@@ -424,6 +516,7 @@ const AccessForm = ({
               scopeNames={scopeNames}
               target={target}
             />
+            <FilesPanel target={target} />
           </div>
           <AutoFormSheetFooter submitLabel={t("submit")} />
         </>

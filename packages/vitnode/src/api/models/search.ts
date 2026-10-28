@@ -27,6 +27,7 @@ import {
   canonicalSearchSuggestions,
 } from "@/api/lib/search-suggestions";
 import { storageUrlOf } from "@/api/lib/storage-url";
+import { contentProtectedFileUrl } from "@/content/access/server/files";
 import {
   contentSearchAllowedScopes,
   verifyContentSearchHits,
@@ -413,6 +414,29 @@ export interface SearchProviderApiPlugin {
   search: (c: Context, params: SearchQueryParams) => Promise<SearchResult>;
 }
 
+/** The authorized URL of a private image a hit shows, or `null`. */
+const searchPrivateImageUrl = (
+  c: Context,
+  edge: { itemId?: ContentId; itemType?: string },
+  fileId: number,
+): null | string => {
+  if (edge.itemId === undefined || edge.itemType === undefined) return null;
+  const entry = (
+    (c.get("core")?.contentModels ?? []) as {
+      model: { definition: { publicApi: { enabled: boolean; path: string } ; id: string } };
+      pluginId: string;
+    }[]
+  ).find(candidate => candidate.model.definition.id === edge.itemType);
+  if (!entry?.model.definition.publicApi.enabled) return null;
+
+  return contentProtectedFileUrl({
+    fileId,
+    itemId: edge.itemId,
+    pluginId: entry.pluginId,
+    publicPath: entry.model.definition.publicApi.path,
+  });
+};
+
 const toRow = (doc: SearchDocument) => ({
   pluginId: doc.pluginId ?? "core",
   itemType: doc.itemType,
@@ -497,9 +521,9 @@ export class SearchModel {
     });
   }
 
-  private async hydrateImages<T extends { imageId: null | number }>(
-    edges: T[],
-  ): Promise<(T & { image: null | SearchHitImage })[]> {
+  private async hydrateImages<
+    T extends { imageId: null | number; itemId?: ContentId; itemType?: string },
+  >(edges: T[]): Promise<(T & { image: null | SearchHitImage })[]> {
     const wanted = [
       ...new Set(
         edges.flatMap(edge => (edge.imageId === null ? [] : [edge.imageId])),
@@ -516,36 +540,34 @@ export class SearchModel {
         key: core_files.key,
         metadata: core_files.metadata,
         mimeType: core_files.mimeType,
+        visibility: core_files.visibility,
       })
       .from(core_files)
       .where(inArray(core_files.id, wanted));
 
-    const byId = new Map(
-      rows.flatMap(row => {
-        const url = row.mimeType?.startsWith("image/")
-          ? storageUrlOf(this.c, row.key)
-          : null;
-        if (!url) return [];
-        const dimensions = parseImageDimensions(row.metadata);
+    const byId = new Map(rows.map(row => [row.id, row]));
+    // A private image is shown through its record's authorized route - the
+    // hit was already checked against the reader's access, and the route
+    // checks again for every request.
+    const imageOf = (edge: T): null | SearchHitImage => {
+      const row = edge.imageId === null ? undefined : byId.get(edge.imageId);
+      if (!row?.mimeType?.startsWith("image/")) return null;
+      const url =
+        row.visibility === "private"
+          ? searchPrivateImageUrl(this.c, edge, row.id)
+          : storageUrlOf(this.c, row.key);
+      if (!url) return null;
+      const dimensions = parseImageDimensions(row.metadata);
 
-        return [
-          [
-            row.id,
-            {
-              url,
-              ...(dimensions
-                ? { height: dimensions.height, width: dimensions.width }
-                : {}),
-            },
-          ] as const,
-        ];
-      }),
-    );
+      return {
+        url,
+        ...(dimensions
+          ? { height: dimensions.height, width: dimensions.width }
+          : {}),
+      };
+    };
 
-    return edges.map(edge => ({
-      ...edge,
-      image: edge.imageId === null ? null : (byId.get(edge.imageId) ?? null),
-    }));
+    return edges.map(edge => ({ ...edge, image: imageOf(edge) }));
   }
 
   private async newCommentParent(

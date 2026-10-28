@@ -1,7 +1,8 @@
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { eq } from "drizzle-orm";
+import { contentContainerFieldOf } from "../containers/association";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import type { QueueModel } from "../../api/models/queue";
@@ -11,6 +12,8 @@ import type { AnyContentModel } from "./model";
 import type { RegisteredContentModel } from "./model";
 import type { ContentSearchContext } from "./search-document";
 
+import { searchItemIdFromKey } from "../../api/models/search";
+import { core_search_index } from "../../database/search";
 import { parseContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
@@ -81,6 +84,18 @@ export interface ContentSearchSyncOutcome {
   error?: Error;
 }
 
+/**
+ * The fields that decide which access scopes a record is filed in: its
+ * container and its `access.from` relation. A change to one has to re-stamp
+ * the record's search document, and its dependents', even when nothing
+ * visible in them moved.
+ */
+const accessFieldsOf = (definition: AnyContentTypeDefinition): string[] =>
+  [
+    definition.access?.from,
+    contentContainerFieldOf(definition)?.name,
+  ].filter((name): name is string => typeof name === "string");
+
 /** What the row is, and what the index therefore has to hold. */
 const decide = (
   definition: AnyContentTypeDefinition,
@@ -102,8 +117,11 @@ const decide = (
   // is built from actually moved. A slug change is covered, because the exposed
   // slug is one of the indexed field names.
   const indexed = contentSearchIndexedPaths(definition);
+  const access = accessFieldsOf(definition);
 
-  return (changedFields ?? []).some(name => indexed.has(name))
+  return (changedFields ?? []).some(
+    name => indexed.has(name) || access.includes(name),
+  )
     ? "upsert"
     : "skip";
 };
@@ -242,7 +260,11 @@ const dependentSyncOf = (
     return changed === true ? "upsert" : "skip";
   }
 
-  const linked = [definition.search.titleField, definition.publicApi.slugField];
+  const linked = [
+    definition.search.titleField,
+    definition.publicApi.slugField,
+    ...accessFieldsOf(definition),
+  ];
 
   return (changedFields ?? []).some(name => linked.includes(name))
     ? "upsert"
@@ -635,7 +657,10 @@ export const syncContentLocalizedSearch = async (
   // declared field, so a publish never reaches this.
   if (input.operation === "update" || input.operation === "restore") {
     const indexed = contentSearchIndexedPaths(definition);
-    const moved = (input.changedFields ?? []).some(name => indexed.has(name));
+    const access = accessFieldsOf(definition);
+    const moved = (input.changedFields ?? []).some(
+      name => indexed.has(name) || access.includes(name),
+    );
     if (!moved) return [];
   }
 
@@ -727,7 +752,60 @@ export const syncContentLocalizedSearch = async (
     );
   }
 
+  if (
+    (input.operation === "update" || input.operation === "restore") &&
+    (input.changedFields ?? []).some(name =>
+      accessFieldsOf(definition).includes(name),
+    )
+  ) {
+    await refreshContentSearchDependentAccess(c, definition, itemId);
+  }
+
   return outcomes;
+};
+
+/**
+ * Re-stamps the access scopes of every document indexed under one record - a
+ * blog article's comments after its categories changed. Reads the index for
+ * them rather than every dependent table, and never throws: a failure is
+ * logged, the search-time check against the content tables still holds, and
+ * the reconciliation job catches up.
+ */
+export const refreshContentSearchDependentAccess = async (
+  c: Context,
+  definition: Pick<AnyContentTypeDefinition, "id">,
+  itemId: ContentId,
+): Promise<void> => {
+  if (typeof itemId !== "number") return;
+
+  try {
+    const rows = await c
+      .get("db")
+      .selectDistinct({
+        itemId: core_search_index.itemId,
+        itemType: core_search_index.itemType,
+      })
+      .from(core_search_index)
+      .where(
+        and(
+          eq(core_search_index.containerType, definition.id),
+          eq(core_search_index.containerId, itemId),
+        ),
+      );
+    const contentTypes = c.get("core")?.contentTypes ?? [];
+    await c.get("search").refreshAccessScopes(
+      rows.map(row => ({
+        itemId: searchItemIdFromKey(contentTypes, row.itemType, row.itemId),
+        itemType: row.itemType,
+      })),
+    );
+  } catch (error) {
+    await c
+      .get("log")
+      .error(
+        `[content-search] ${definition.id} ${String(itemId)}: dependent access scopes could not be refreshed (${error instanceof Error ? error.message : String(error)}). The reconciliation job will retry.`,
+      );
+  }
 };
 
 /**

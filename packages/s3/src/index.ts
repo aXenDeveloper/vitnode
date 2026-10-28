@@ -25,6 +25,7 @@ export const S3StorageAdapter = ({
   bucket = "",
   endpoint,
   forcePathStyle,
+  privateBucket,
   publicUrl,
   region = "auto",
   secretAccessKey = "",
@@ -33,6 +34,13 @@ export const S3StorageAdapter = ({
   bucket: string | undefined;
   endpoint?: string;
   forcePathStyle?: boolean;
+  /**
+   * A second bucket for protected attachments, read only with these
+   * credentials. It must not be public - no public bucket policy, no public
+   * R2 domain, no CDN in front of it. Leave it out and attachment downloads
+   * cannot be restricted.
+   */
+  privateBucket?: string;
   publicUrl?: string;
   region?: string;
   secretAccessKey: string | undefined;
@@ -69,6 +77,46 @@ export const S3StorageAdapter = ({
   };
 
   return {
+    ...(privateBucket
+      ? {
+          private: {
+            delete: async (key: string): Promise<void> => {
+              await getClient().send(
+                new DeleteObjectCommand({ Bucket: privateBucket, Key: key }),
+              );
+            },
+            read: async (key: string) => {
+              try {
+                const object = await getClient().send(
+                  new GetObjectCommand({ Bucket: privateBucket, Key: key }),
+                );
+                if (!object.Body) return null;
+
+                return {
+                  body: object.Body.transformToWebStream() as ReadableStream<Uint8Array>,
+                  ...(object.ContentLength === undefined
+                    ? {}
+                    : { size: object.ContentLength }),
+                };
+              } catch {
+                return null;
+              }
+            },
+            upload: async ({ body, contentType, key }: StorageUploadArgs) => {
+              await getClient().send(
+                new PutObjectCommand({
+                  Body: body,
+                  Bucket: privateBucket,
+                  ContentType: contentType,
+                  Key: key,
+                }),
+              );
+
+              return { key };
+            },
+          },
+        }
+      : {}),
     delete: async (key: string): Promise<void> => {
       await getClient().send(
         new DeleteObjectCommand({ Bucket: bucket, Key: key }),

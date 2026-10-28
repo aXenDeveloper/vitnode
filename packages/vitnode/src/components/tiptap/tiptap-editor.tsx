@@ -42,7 +42,7 @@ import { uploadEditorFile } from "./uploads/upload";
  * AdminCP session, needs the staff permission `files:can_upload`, and can
  * also accept `files`.
  */
-export type EditorUploadsOptions =
+export type EditorUploadsOptions = (
   | {
       /**
        * Also accepts PDF, Word, PowerPoint and ZIP files as downloadable
@@ -51,7 +51,15 @@ export type EditorUploadsOptions =
       files?: boolean;
       session: "admin";
     }
-  | { session?: "member" };
+  | { session?: "member" }
+) & {
+  /**
+   * The content type the document belongs to, e.g. `blog.post`. One with
+   * access rules has its uploads stored privately and served only to readers
+   * its rules let in. Leave it out for documents that are not content.
+   */
+  contentType?: string;
+};
 
 export type TipTapEditorBaseProps = Omit<
   React.ComponentProps<"div">,
@@ -172,7 +180,10 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
               });
             },
             remote: allowsRemoteImages,
-            upload: async file => await uploadEditorFile(uploadSession, file),
+            upload: async file =>
+              await uploadEditorFile(uploadSession, file, {
+                contentType: uploadOptions.contentType,
+              }),
           },
     [allowsAttachments, allowsRemoteImages, t, uploadSession],
   );

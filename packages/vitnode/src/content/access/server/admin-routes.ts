@@ -34,8 +34,15 @@ import {
   zodContentAccessAdminResponse as zodAccessResponse,
   zodContentAccessEffectiveResponse,
   zodContentAccessError,
+  zodContentAccessFileStatus,
+  zodContentAccessProtectResult,
 } from "../schemas";
 import { contentAccessRequirementsForScopes } from "./decide";
+import {
+  CONTENT_ACCESS_PROTECT_BATCH,
+  contentAccessFileStatus,
+  protectContentAccessFiles,
+} from "./file-protection";
 import { contentAccessSourceOf } from "./source";
 import { contentAccessScopeReport } from "./report";
 import { ContentAccessRoleError, replaceContentAccessRules } from "./rules";
@@ -314,7 +321,71 @@ export const buildContentAccessAdminRoutes = <P extends string>({
     },
   });
 
-  return [read, preview, update];
+  const filesStatus = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    route: {
+      method: "get",
+      path: "/access/files",
+      description: `How many files the content of ${familyId} references, private and still public (Admin only)`,
+      responses: {
+        200: {
+          content: {
+            "application/json": { schema: zodContentAccessFileStatus },
+          },
+          description: "File counts by storage",
+        },
+        403: { description: "Access Denied" },
+      },
+    },
+    handler: async c =>
+      c.json(
+        {
+          ...(await contentAccessFileStatus(c, familyId)),
+          privateStorage: contentAccessAttachmentSupport(c).privateStorage,
+        },
+        200,
+        { "Cache-Control": "private, no-store" },
+      ),
+  });
+
+  const protectFiles = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    route: {
+      method: "post",
+      path: "/access/files/protect",
+      description: `Move up to ${CONTENT_ACCESS_PROTECT_BATCH} public files of ${familyId} into private storage. Files other content also uses stay public (Admin only)`,
+      responses: {
+        200: {
+          content: {
+            "application/json": { schema: zodContentAccessProtectResult },
+          },
+          description: "What moved, what is left and what is shared",
+        },
+        400: errorResponse("The storage adapter has no private store"),
+        403: { description: "Access Denied" },
+      },
+    },
+    handler: async c => {
+      if (!contentAccessAttachmentSupport(c).privateStorage) {
+        return refuse(
+          400,
+          "unsupportedStorage",
+          "The storage adapter cannot keep files private.",
+        );
+      }
+
+      const result = await protectContentAccessFiles(c, familyId);
+      if (result.moved > 0) {
+        await expireContentAccessFamily(c, familyOf(c, familyId));
+      }
+
+      return c.json(result, 200);
+    },
+  });
+
+  return [read, preview, update, filesStatus, protectFiles];
 };
 
 /**

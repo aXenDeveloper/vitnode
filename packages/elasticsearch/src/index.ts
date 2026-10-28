@@ -45,6 +45,9 @@ export interface ElasticsearchAdapterOptions {
 }
 
 interface EsSource {
+  /** `family:scopeId` of every access scope the item is filed in. */
+  accessScopeCount?: number;
+  accessScopes?: string[];
   authorIds?: number[];
   containerId: null | number;
   containerType: null | string;
@@ -94,6 +97,8 @@ const toSource = (doc: SearchDocument): EsSource => ({
   content: doc.content,
   containerType: doc.containerType ?? null,
   containerId: doc.containerId ?? null,
+  accessScopes: [...new Set(doc.accessScopes ?? [])],
+  accessScopeCount: new Set(doc.accessScopes ?? []).size,
   url: doc.url ?? null,
   isPublic: doc.isPublic ?? true,
   isHidden: doc.isHidden ?? false,
@@ -167,6 +172,27 @@ const buildFilters = (
   }
   if (!params.includePrivate) {
     filter.push(visibleFilter(params));
+  }
+  if (params.accessScopes) {
+    // Every scope of the document has to be allowed: `terms_set` matches when
+    // as many of its tokens are in the list as it has tokens. A document in no
+    // scope has none, which `exists` cannot see, so it passes on its own.
+    filter.push({
+      bool: {
+        minimum_should_match: 1,
+        should: [
+          { bool: { must_not: { exists: { field: "accessScopes" } } } },
+          {
+            terms_set: {
+              accessScopes: {
+                minimum_should_match_field: "accessScopeCount",
+                terms: [...params.accessScopes],
+              },
+            },
+          },
+        ],
+      },
+    });
   }
 
   return filter;
@@ -310,6 +336,8 @@ export const ElasticsearchSearchAdapter = (
       await es.indices.putMapping({
         index,
         properties: {
+          accessScopeCount: { type: "integer" },
+          accessScopes: { type: "keyword" },
           imageId: { type: "integer" },
           isHidden: { type: "boolean" },
           itemKey: { type: "keyword" },
@@ -334,6 +362,8 @@ export const ElasticsearchSearchAdapter = (
             content: { type: "text" },
             containerType: { type: "keyword" },
             containerId: { type: "integer" },
+            accessScopes: { type: "keyword" },
+            accessScopeCount: { type: "integer" },
             url: { type: "keyword" },
             isPublic: { type: "boolean" },
             isHidden: { type: "boolean" },

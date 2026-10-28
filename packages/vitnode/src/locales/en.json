@@ -357,7 +357,9 @@
             "insert": "Insert {name}",
             "insert_all": "Insert all ({count})",
             "image": "Image"
-          }
+          },
+          "restricted_title": "An attachment is available.",
+          "restricted_desc": "You do not have permission to download it."
         },
         "table": {
           "label": "Table",
@@ -3167,6 +3169,16 @@
           "unknownRole": "One of the roles no longer exists. Pick the roles again.",
           "unsupportedStorage": "Downloads can't be restricted: the storage adapter keeps files public.",
           "unknown": "Something went wrong. Try again in a moment."
+        },
+        "files": {
+          "title": "Files",
+          "loading": "Counting files",
+          "desc": "{private, plural, =0 {No file is stored privately} one {# file is stored privately} other {# files are stored privately}}; {public, plural, =0 {none still has a public address.} one {# still has a public address anybody holding it can open.} other {# still have a public address anybody holding it can open.}}",
+          "protect": "Protect public files",
+          "success": "Files protected",
+          "successDesc": "{moved} moved to private storage, {remaining} left for another run, {shared} used elsewhere too and kept public - upload those again where they should be private.",
+          "failed": "The files could not be moved. Try again in a moment.",
+          "unsupported": "The storage adapter keeps every file public, so these stay reachable by address whatever the rules say. Configure a private store to protect them."
         }
       }
     }

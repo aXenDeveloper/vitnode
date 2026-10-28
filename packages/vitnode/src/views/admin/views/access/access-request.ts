@@ -2,10 +2,18 @@ import { queryOptions } from "@tanstack/react-query";
 import { z } from "zod";
 
 import type { ContentAccessOverrides } from "@/content/access/policy";
-import type { ContentAccessAdminResponse } from "@/content/access/schemas";
+import type {
+  ContentAccessAdminResponse,
+  ContentAccessFileStatusResponse,
+  ContentAccessProtectResult,
+} from "@/content/access/schemas";
 
 import { CONTENT_ACCESS_ERROR_CODES } from "@/content/access/const";
-import { zodContentAccessAdminResponse } from "@/content/access/schemas";
+import {
+  zodContentAccessAdminResponse,
+  zodContentAccessFileStatus,
+  zodContentAccessProtectResult,
+} from "@/content/access/schemas";
 import { rawFetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
@@ -143,3 +151,48 @@ export const contentAccessQuery = (
     retry: false,
     staleTime: 0,
   });
+
+export const contentAccessFilesQuery = (target: ContentAccessApiTarget) =>
+  queryOptions({
+    queryFn: async ({ signal }): Promise<ContentAccessFileStatusResponse> => {
+      const response = await rawFetcher({
+        ...requestArgs(target),
+        method: "get",
+        options: { signal },
+        path: "/access/files",
+      });
+      const screen = `the files of ${target.family}`;
+      if (!response.ok) throw new AdminRequestError(response.status, screen);
+      const parsed = zodContentAccessFileStatus.safeParse(await response.json());
+      if (!parsed.success) {
+        throw new AdminRequestError(response.status, screen, "unexpected body");
+      }
+
+      return parsed.data;
+    },
+    queryKey: [...contentAccessQueryRoot(target.family), "files"],
+    refetchOnWindowFocus: false,
+    retry: false,
+    staleTime: 0,
+  });
+
+/** Moves one batch of the family's public files into private storage. */
+export const protectContentAccessFiles = async (
+  target: ContentAccessApiTarget,
+): Promise<ContentAccessProtectResult | null> => {
+  try {
+    const response = await rawFetcher({
+      ...requestArgs(target),
+      method: "post",
+      path: "/access/files/protect",
+    });
+    if (!response.ok) return null;
+    const parsed = zodContentAccessProtectResult.safeParse(
+      await response.json(),
+    );
+
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+};
