@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, gte, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
@@ -11,6 +11,15 @@ import {
   processCronJobs,
   updateCronJobs,
 } from "../helpers/process-cron-jobs";
+
+// Postgres keeps microseconds; the `Date` read back keeps milliseconds. A row
+// written outside JavaScript (`now()` in SQL) would never equal the value read,
+// so the compare-and-set matches the millisecond it was read as.
+const sameMillisecond = (lastRun: Date) =>
+  and(
+    gte(core_cron.lastRun, lastRun),
+    lt(core_cron.lastRun, new Date(lastRun.getTime() + 1)),
+  );
 
 export const runCronRoute = buildRoute({
   route: {
@@ -108,7 +117,7 @@ export const runCronRoute = buildRoute({
                 and(
                   eq(core_cron.id, dbJob.id),
                   dbJob.lastRun
-                    ? eq(core_cron.lastRun, dbJob.lastRun)
+                    ? sameMillisecond(dbJob.lastRun)
                     : isNull(core_cron.lastRun),
                 ),
               )
