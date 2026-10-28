@@ -10,10 +10,12 @@ import { forumApiPlugin } from "@vitnode/forum/config.api";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
 // import { S3StorageAdapter } from "@vitnode/s3";
+import { StripePaymentAdapter } from "@vitnode/stripe";
 import { SupabaseStorageAdapter } from "@vitnode/supabase-storage";
 import { config } from "dotenv";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { newsroomApiPlugin } from "newsroom/config.api";
+import { paymentsDemoApiPlugin } from "payments-demo/config.api";
 
 import { i18n } from "./i18n.js";
 
@@ -25,7 +27,12 @@ export const POSTGRES_URL =
   process.env.POSTGRES_URL ?? "postgresql://root:root@localhost:5432/vitnode";
 
 export const vitNodeApiConfig = buildApiConfig({
-  plugins: [blogApiPlugin(), forumApiPlugin(), newsroomApiPlugin()],
+  plugins: [
+    blogApiPlugin(),
+    forumApiPlugin(),
+    newsroomApiPlugin(),
+    paymentsDemoApiPlugin(),
+  ],
   ai: {
     models: [
       {
@@ -107,6 +114,17 @@ export const vitNodeApiConfig = buildApiConfig({
     }),
   },
 
+  payments: {
+    providers: process.env.STRIPE_SECRET_KEY
+      ? [
+          StripePaymentAdapter({
+            id: "stripe-main",
+            secretKey: process.env.STRIPE_SECRET_KEY,
+            webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+          }),
+        ]
+      : [],
+  },
   authorization: {
     passkeys: true,
     ssoAdapters: [

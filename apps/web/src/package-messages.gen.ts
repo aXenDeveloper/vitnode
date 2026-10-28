@@ -33,4 +33,7 @@ export const packageMessages: Record<string, LocaleMessagesMap> = {
   'newsroom': {
     en: async () => await import('newsroom/locales/en.json'),
   },
+  'payments-demo': {
+    en: async () => await import('payments-demo/locales/en.json'),
+  },
 }
