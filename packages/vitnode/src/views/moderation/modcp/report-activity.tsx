@@ -9,6 +9,7 @@ import {
   PencilIcon,
   RotateCcwIcon,
   Trash2Icon,
+  TriangleAlertIcon,
   UserCheckIcon,
   UserMinusIcon,
   WorkflowIcon,
@@ -78,6 +79,7 @@ const EVENT_STYLE: Record<
   resolved: { icon: CheckCircle2Icon, tone: "success" },
   status_changed: { icon: WorkflowIcon, tone: "info" },
   unassigned: { icon: UserMinusIcon, tone: "muted" },
+  warning: { icon: TriangleAlertIcon, tone: "warning" },
 };
 
 const isUnhide = (event: ReportEvent) =>
@@ -140,6 +142,11 @@ const EventText = ({
         : tEvents.rich("unassigned", {
             assignee: () => mention(event.data.previousAssigneeId),
           });
+    case "warning":
+      return tEvents.rich("warning", {
+        member: () => mention(event.data.userId),
+        points: typeof event.data.points === "number" ? event.data.points : 0,
+      });
     default:
       return tEvents(event.type);
   }

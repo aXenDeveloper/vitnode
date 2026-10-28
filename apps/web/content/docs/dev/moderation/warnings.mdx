@@ -1,0 +1,53 @@
+---
+title: Warnings
+description: How VitNode warnings, active points, thresholds and account suspensions fit together, who can do what, and what a suspended member sees.
+icon: TriangleAlert
+---
+
+A **warning** records a moderator's decision about a member. It can carry **points**, and when a warning brings a member's **active points** up to an administrator's **threshold**, VitNode suspends the account automatically. Warnings, points and suspensions are separate records, so revoking one never silently rewrites another.
+
+| Concept | What it is |
+| --- | --- |
+| Warning | Who was warned, by whom, why, how many points, the message the member reads, a private staff note, and optionally the content or report it is about |
+| Active points | The sum of points on warnings that are not revoked and whose expiry is still in the future, computed from timestamps on every read |
+| Threshold | An administrator's rule, like "at 8 active points, suspend for 24 hours" |
+| Sanction | A consequence on the account. This version has temporary and indefinite **suspensions** |
+
+## Choose a guide
+
+| You want to | Read |
+| --- | --- |
+| Set up warning reasons and automatic suspensions | [Configure warnings](/docs/dev/moderation/configure-warnings) |
+| Warn a member, revoke a warning or lift a suspension | [Issue warnings](/docs/dev/moderation/issue-warnings) |
+| Add **Warn author** to your plugin's content | [Warn content authors](/docs/dev/moderation/warn-content) |
+| Look up routes, permissions and events | [Moderation reference](/docs/dev/moderation/reference#warnings) |
+
+## How a warning becomes a suspension
+
+1. A moderator opens the warn form. It previews the member's active points before and after, and the suspension a threshold would apply.
+2. On submit, the server checks every permission again and locks that member's warnings for the length of one transaction. Two moderators warning the same member at once are handled one after the other, so the points add up and each threshold fires once.
+3. A threshold applies when the warning moves active points from below its number to its number or above. When one warning crosses several, only the highest applies: 6 → 11 points with thresholds at 8 and 10 gives only the 10-point suspension.
+4. The warning, the threshold decision, the suspension, the audit entries and the member's notifications commit together or not at all.
+
+A temporary suspension ends at its own end time, even when the member still has the points. Expired points or a changed threshold never create a new suspension on their own; only a new warning does. Points that later fall below a threshold let it fire again on a future crossing.
+
+## What a suspended member sees
+
+The server checks suspensions when it reads the session, for every request: core routes, plugin routes, server functions and WebSocket handshakes. A suspended account is treated as a guest everywhere, so it can browse public pages but cannot post, comment, report, moderate or open the AdminCP. Open WebSocket connections are closed when the suspension is applied.
+
+The member keeps their session. A strip under the header says the account is suspended and links to **Account status** at `/account-status`, which shows the suspension end time, active points and the warning history with each message. Members reach the same page from **Settings → Account status** at any time. It never shows staff notes or which moderator issued a warning.
+
+## Who is protected
+
+Nobody can warn themselves. A member who holds a root role cannot be warned at all, and other staff (admins and moderators) can only be warned by someone who holds a root role. These checks run before a threshold is evaluated, so a threshold can never suspend a protected account.
+
+## Limits of this version
+
+- Suspensions are the only sanction. There is no manual "suspend without a warning" action, no appeal workflow and no posting restriction per plugin yet; the data model leaves room for them.
+- Suspension state is cached for up to a minute per member. Applying or lifting a suspension clears that cache, and with Redis every instance sees it at once. Without Redis, other instances may take up to a minute.
+- The audit trail is stored in `core_moderation_audit` but has no screen yet.
+
+## Related
+
+- [Scoped permissions](/docs/dev/moderation/scoped-permissions)
+- [Configure moderators](/docs/dev/moderation/configure-moderators)

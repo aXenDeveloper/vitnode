@@ -149,6 +149,52 @@ export interface VitNodeEvents {
     code: string;
     reasonId: number;
   };
+  "moderation.sanction.applied": {
+    /** `null` for an indefinite sanction. */
+    endsAt: Date | null;
+    sanctionId: number;
+    source: "manual" | "threshold";
+    thresholdId: null | number;
+    type: "suspension";
+    userId: number;
+    warningId: null | number;
+  };
+  "moderation.sanction.revoked": {
+    revokedById: number;
+    sanctionId: number;
+    userId: number;
+  };
+  "moderation.warning.issued": {
+    issuedById: number;
+    pluginId: null | string;
+    points: number;
+    reasonId: null | number;
+    reportId: null | number;
+    targetId: null | string;
+    targetType: null | string;
+    userId: number;
+    warningId: number;
+  };
+  "moderation.warning.revoked": {
+    revokedById: number;
+    userId: number;
+    warningId: number;
+  };
+  "moderation.warning_reason.created": {
+    reasonId: number;
+  };
+  "moderation.warning_reason.updated": {
+    reasonId: number;
+  };
+  "moderation.warning_threshold.created": {
+    thresholdId: number;
+  };
+  "moderation.warning_threshold.deleted": {
+    thresholdId: number;
+  };
+  "moderation.warning_threshold.updated": {
+    thresholdId: number;
+  };
   "notifications.deleted_all": {
     items: number;
   };

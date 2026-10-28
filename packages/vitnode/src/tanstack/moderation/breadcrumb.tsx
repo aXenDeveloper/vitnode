@@ -37,3 +37,19 @@ export const ModcpApprovalBreadcrumb = ({
 
   return <>{t("title", { id: loaderData?.id ?? 0 })}</>;
 };
+
+export const ModcpWarningsBreadcrumb = () => {
+  const t = useTranslations("core.moderation.warn.list");
+
+  return <>{t("title")}</>;
+};
+
+export const ModcpMemberBreadcrumb = ({
+  loaderData,
+}: {
+  loaderData?: { title: string };
+}) => {
+  const t = useTranslations("core.moderation.warn.member");
+
+  return <>{loaderData?.title ?? t("breadcrumb")}</>;
+};

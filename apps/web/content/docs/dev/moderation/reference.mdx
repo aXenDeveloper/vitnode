@@ -223,11 +223,66 @@ Statuses are `pending`, `approved`, `rejected`, `superseded` (replaced by the au
 | `moderation.report_reason.updated` | `{ reasonId, code }`                                     |
 | `moderation.report_reason.deleted` | `{ reasonId, code }`                                     |
 | `moderation.report_reason.reordered` | `{ reasonIds }` in the new order                       |
+| `moderation.warning.issued`   | `{ warningId, userId, issuedById, points, reasonId, reportId, pluginId, targetType, targetId }` |
+| `moderation.warning.revoked`  | `{ warningId, userId, revokedById }`                          |
+| `moderation.sanction.applied` | `{ sanctionId, userId, type, source, endsAt, thresholdId, warningId }` |
+| `moderation.sanction.revoked` | `{ sanctionId, userId, revokedById }`                         |
+| `moderation.warning_reason.created` / `.updated` | `{ reasonId }`                             |
+| `moderation.warning_threshold.created` / `.updated` / `.deleted` | `{ thresholdId }`          |
 | `content.approval.submitted`  | `{ submissionId, replacedSubmissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId }` |
 | `content.approval.approved`   | `{ submissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId, reviewerId }` |
 | `content.approval.rejected`   | `{ submissionId, pluginId, contentTypeId, contentId, containerId, kind, authorId, reviewerId, reason }` |
 
 Adding a note emits no event. Hiding through a report also emits the content type's own `hidden` or `unhidden` event. See [Built-in events](/docs/dev/events/built-in-events#moderation-events).
+
+## Warnings
+
+Concepts and flows are in [Warnings](/docs/dev/moderation/warnings). Everything below is core's.
+
+### Warning permissions
+
+| Type | Module | Permission | Scoped |
+| --- | --- | --- | --- |
+| Moderator | A report target's `permissionModule` | `can_warn`: warn the content's authors. Added only for targets with `resolveAuthors` | With the target's `scope` |
+| Moderator | `warnings` | `can_view`, `can_warn` (direct), `can_override_points`, `can_override_expiration`, `can_view_notes`, `can_revoke`, `can_view_sanctions`, `can_manage_sanctions` | No |
+| Admin | `warning_settings` | `can_view`, `can_manage` | No |
+
+### Warning API routes
+
+Under `/api/@vitnode/core/moderation`, using the user session.
+
+| Method and path | Who | Body or query |
+| --- | --- | --- |
+| `GET /warnings/reasons` | Anyone who can warn | Enabled reasons in display order |
+| `POST /warnings/preview` | Anyone who can warn | `{ userId, reasonId, points?, expiration?, content?, reportId? }`. Runs every check and answers points before and after and the projected `sanction` |
+| `POST /warnings` | Anyone who can warn | The preview body plus `{ message, staffNote?, overrideNote?, resolveReport?, idempotencyKey }` |
+| `POST /warnings/{id}/revoke` | `can_revoke` | `{ reason }` |
+| `GET /warnings` | Moderators | Query `userId`, `reasonId`, `issuedById`, `status`, `pluginId`, `targetType`, `from`, `to`, `page`, `pageSize` |
+| `GET /members?search=` | `can_view` or `can_warn` | Up to 10 members |
+| `GET /members/{id}` | `can_view` or anyone who can warn | Active points, visible warnings, `hiddenWarnings`, sanctions with `can_view_sanctions` |
+| `POST /sanctions/{id}/revoke` | `can_manage_sanctions` | `{ reason }` |
+| `GET /account-status` | The member, also while suspended | Own suspension, active points, warnings and suspensions, never staff notes |
+
+`expiration` is `{ mode: "default" }`, `{ mode: "never" }`, `{ mode: "hours", hours }` or `{ mode: "at", at }` (an ISO date in the future). `content` is `{ pluginId, targetType, targetId }`; with `reportId`, the content comes from the report. A retry with the same `idempotencyKey` from the same moderator answers the first result with `duplicate: true`.
+
+Refusals answer `{ error }`: `self` and `protected` (`403`), `forbidden` (`403`), `points_override_forbidden` and `expiration_override_forbidden` (`403`), `override_note_required`, `invalid_points`, `invalid_expiration`, `author_mismatch` and `report_mismatch` (`400`), `user_not_found`, `reason_not_found` and `content_not_found` (`404`), `reason_disabled`, `already_revoked` and `report_closed` (`409`).
+
+The AdminCP routes are under `/api/@vitnode/core/admin/warnings`: `GET`/`POST /reasons`, `PATCH /reasons/{id}`, `PUT /reasons/reorder`, `GET`/`POST /thresholds`, `PUT`/`DELETE /thresholds/{id}`. A second enabled threshold at the same points answers `409 duplicate_points`.
+
+### Warning limits
+
+| Limit | Value |
+| --- | --- |
+| Points per warning or reason | 0 to 100 |
+| Threshold points | 1 to 1000 |
+| Expiry and suspension length | 1 hour to 5 years |
+| Message to the member | 3 to 2000 characters |
+| Staff note, explanations, revocation reasons | Up to 2000 characters; explanations and reasons at least 3 |
+| Warning reasons / thresholds | 50 / 20 |
+
+### Warning notifications
+
+`core.warning_issued`, `core.warning_revoked`, `core.account_suspended` and `core.suspension_revoked`, in the **Account** category. They are mandatory in the inbox, link to `/account-status`, and are published inside the warning's transaction, so a rolled-back warning notifies nobody. They carry the member's message and points, never staff notes or the moderator's name.
 
 ## Snapshot format
 
@@ -273,5 +328,7 @@ File fields keep `{ id, name, mimeType, size, url }` only. The file's bytes are 
 The migration `20261011193321_add_moderation_reports` adds `core_moderation_reports` and `core_moderation_report_events`. Neither references the reported content, so deleting content keeps its reports. Reporter, assignee and resolver are `ON DELETE SET NULL`, so deleting an account keeps the evidence. The unique `openKey` column enforces one open report per reporter and target, even under concurrent submissions.
 
 The migration `20261019161102_add_moderation_report_reasons` adds `core_moderation_report_reasons` with a unique `code`, `requiresDetails` and `position`. Titles and descriptions live in `core_languages_words`. `core_moderation_reports.reason` holds the reason's `code` without a foreign key, so deleting a reason keeps its reports. `db:prepare` and `db:migrate` add the four starter reasons only while the table is empty.
+
+The migration `20261028212551_add_moderation_warnings` adds `core_moderation_warning_reasons`, `core_moderation_warning_thresholds` (a partial unique index allows one enabled threshold per number of points), `core_moderation_warnings`, `core_moderation_sanctions` and `core_moderation_audit`. A warning keeps a copy of its reason's title, the points it was issued with and a short content snapshot; `(issuedById, idempotencyKey)` is unique, and so is a sanction's `warningId`. Warned users' rows cascade on account deletion; actors are `ON DELETE SET NULL`.
 
 Approvals live in `core_content_submissions`, one row per submission. Rows are never deleted with the content, author and reviewer are `ON DELETE SET NULL`, and a partial unique index allows one `pending` submission per record. Container policy overrides are stored in `core_content_containers.policies`.

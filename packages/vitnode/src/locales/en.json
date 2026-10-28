@@ -877,7 +877,9 @@
           "removed": "Cover image removed."
         }
       },
-      "presence": "Online status"
+      "presence": "Online status",
+      "warn": "Warn",
+      "view_warnings": "Warnings ({points, plural, one {# point} other {# points}})"
     },
     "files": {
       "title": "My Files",
@@ -1163,7 +1165,8 @@
           "security": "Security",
           "sso": "Connected accounts",
           "notifications": "Notifications",
-          "ai": "AI usage"
+          "ai": "AI usage",
+          "standing": "Account status"
         },
         "overview": {
           "desc": "Your avatar and the details on your account.",
@@ -1736,6 +1739,7 @@
         "by_author": "Comment deleted by user",
         "by_moderator": "Comment removed by a moderator"
       },
+      "warn": "Warn author",
       "live": {
         "new_comments": "New comments were posted.",
         "show_new": "Show new comments",
@@ -2861,12 +2865,223 @@
               "resolved": "closed it as {resolution}",
               "reopened": "reopened it",
               "note_edited": "edited a note",
-              "note_deleted": "deleted a note"
+              "note_deleted": "deleted a note",
+              "warning": "warned <member></member> ({points, plural, one {# point} other {# points}})"
             },
             "note_required": "Write something before adding the note.",
             "before": "Before",
             "after": "After"
           }
+        },
+        "warnings": {
+          "title": "Warnings"
+        }
+      },
+      "warn": {
+        "button": "Warn author",
+        "button_member": "Warn member",
+        "title": "Warn {name}",
+        "title_loading": "Warn member",
+        "desc": "The member gets your message in a notification. Points count across the whole site.",
+        "no_reasons": "No warning reasons are set up yet - an administrator can add them in the AdminCP.",
+        "cancel": "Cancel",
+        "submit": "Issue warning",
+        "points": "{count, plural, one {# point} other {# points}}",
+        "custom_reason": "Custom warning",
+        "deleted_user": "Deleted account",
+        "global": {
+          "title": "Points count everywhere",
+          "desc": "This warning is about content in one place, but its points count toward account-wide limits that can suspend the whole account."
+        },
+        "consequences": {
+          "title": "What happens",
+          "current": "Active points now",
+          "warning": "This warning",
+          "projected": "Active points after",
+          "action": "Automatic action:",
+          "no_action": "None.",
+          "already_suspended": "This account is already suspended.",
+          "related": "{count, plural, one {# warning was} other {# warnings were}} already issued for this content.",
+          "advisory": "A preview. The server checks again when you send it, in case someone else warned this member in the meantime."
+        },
+        "sanction": {
+          "indefinite": "Account suspended indefinitely.",
+          "for": "Account suspended for",
+          "until": "(until {endsAt}).",
+          "suspended_until": "Account suspended until {endsAt}."
+        },
+        "form": {
+          "reason": "Reason",
+          "no_reason": "No reason (custom warning)",
+          "points": "Points",
+          "points_desc": "Starts at the reason's points. Changing them needs an explanation.",
+          "expiration": "Points expire",
+          "expiration_modes": {
+            "default": "As the reason says",
+            "never": "Never",
+            "hours": "After a number of hours",
+            "at": "On a date"
+          },
+          "expiration_hours": "Expire after",
+          "hours_unit": "hours",
+          "expiration_at": "Expire on",
+          "override_note": "Why the change?",
+          "override_note_desc": "Staff only. Required when you change the points or the expiry.",
+          "override_note_required": "Explain why you changed the points or the expiry.",
+          "expiration_at_required": "Pick when the points expire.",
+          "message": "Message to the member",
+          "message_desc": "The member reads this in the notification and on their account status page.",
+          "staff_note": "Staff note",
+          "staff_note_desc": "Only staff who can read notes see this. The member never does.",
+          "resolve_report": "Also close the report as action taken",
+          "resolve_report_desc": "Closes the report in the same step. If either one fails, neither happens."
+        },
+        "done": {
+          "title": "Warning issued",
+          "points": "{name} now has {after, plural, one {# active point} other {# active points}}.",
+          "suspended_until": "Their account is suspended until {endsAt}.",
+          "suspended_indefinitely": "Their account is suspended indefinitely.",
+          "report_resolved": "The report is closed.",
+          "differs": "That's different from the preview - their points changed in the meantime."
+        },
+        "errors": {
+          "title": "Could not issue the warning",
+          "unknown": "Something went wrong. Try again in a moment.",
+          "unauthenticated": "Your session has ended. Sign in again.",
+          "validation": "Check the fields and try again.",
+          "forbidden": "You can't warn this member here.",
+          "not_found": "That no longer exists.",
+          "already_revoked": "It was already revoked or lifted.",
+          "author_mismatch": "This member didn't write that content.",
+          "content_not_found": "That content is gone, so the warning can't point at it.",
+          "expiration_override_forbidden": "You can't change when points expire.",
+          "idempotency_conflict": "Reopen the form and try again.",
+          "invalid_expiration": "Pick an expiry in the future, at most five years away.",
+          "invalid_points": "Points must be a whole number from 0 to 100.",
+          "override_note_required": "Explain why you changed the points or the expiry.",
+          "points_override_forbidden": "You can't change the points.",
+          "protected": "Staff accounts can't be warned here.",
+          "reason_disabled": "That reason was just disabled. Pick another one.",
+          "reason_not_found": "That reason was removed. Pick another one.",
+          "report_closed": "The report is already closed. Warn without closing it.",
+          "report_mismatch": "The report is about different content.",
+          "self": "You can't warn yourself.",
+          "user_not_found": "That member no longer exists."
+        },
+        "duration": {
+          "days": "{count, plural, one {# day} other {# days}}",
+          "hours": "{count, plural, one {# hour} other {# hours}}"
+        },
+        "statuses": {
+          "active": "Active",
+          "expired": "Expired",
+          "revoked": "Revoked"
+        },
+        "revoke": {
+          "button": "Revoke",
+          "title": "Revoke this warning?",
+          "desc": "Its points stop counting right away. The warning stays in the history, and a suspension it led to stays until you lift it separately.",
+          "reason": "Reason",
+          "reason_desc": "Kept with the warning for staff.",
+          "done": "Warning revoked",
+          "done_desc": "The member was notified."
+        },
+        "list": {
+          "title": "Warnings",
+          "desc": "Every warning you can see, newest first.",
+          "status_label": "Filter by status",
+          "all": "All",
+          "reason_filter": "Reason",
+          "all_reasons": "All reasons",
+          "empty_title": "No warnings here",
+          "empty_desc": "Nothing matches these filters. Peaceful.",
+          "member": "Member",
+          "issued_by": "Issued by",
+          "expires": "Points expire",
+          "never": "Never",
+          "default_points": "Reason's points",
+          "content": "Content",
+          "untitled": "Untitled",
+          "report": "Report",
+          "report_link": "Report #{id}",
+          "message": "Message to the member",
+          "staff_only": "Staff only",
+          "staff_note": "Staff note",
+          "override_note": "Why the points or expiry changed",
+          "revoked": "Revoked by <by></by> <date></date>.",
+          "lifted": "Lifted by <by></by> <date></date>.",
+          "sanction_stays": "The suspension this warning led to was not lifted with it."
+        },
+        "lookup": {
+          "title": "Find a member",
+          "label": "Member name",
+          "placeholder": "Search by name",
+          "results": "{count, plural, =0 {No members found} one {# member found} other {# members found}}",
+          "empty": "No members match that name.",
+          "forbidden": "You can't look up members."
+        },
+        "member": {
+          "title": "{name}'s standing",
+          "breadcrumb": "Member",
+          "desc": "Active points, warnings and suspensions.",
+          "active_points": "Active points",
+          "status": "Status",
+          "suspended": "Suspended",
+          "in_good_standing": "In good standing",
+          "sanctions": "Suspensions",
+          "no_sanctions": "No suspensions.",
+          "warnings": "Warnings",
+          "no_warnings": "No warnings you can see.",
+          "hidden_warnings": "{count, plural, one {# more warning is} other {# more warnings are}} outside your moderation scope."
+        },
+        "sanctions": {
+          "temporary": "Temporary suspension",
+          "indefinite": "Indefinite suspension",
+          "active": "Active",
+          "lifted": "Lifted",
+          "ended": "Ended",
+          "lift": "Lift",
+          "lift_title": "Lift this suspension?",
+          "lift_desc": "The account works again unless another suspension still applies.",
+          "lifted_done": "Suspension lifted",
+          "lifted_done_desc": "Any other active suspension still applies.",
+          "ends": "Ends",
+          "source": "Source",
+          "from_threshold": "Reached {points, plural, one {# point} other {# points}}",
+          "manual": "Applied by staff"
+        }
+      },
+      "account_status": {
+        "title": "Account status",
+        "desc": "Your warnings and whether anything restricts your account.",
+        "loading": "Loading your account status",
+        "signed_out": "Sign in to see your account status.",
+        "sign_in": "Sign in",
+        "suspended_title": "Your account is suspended",
+        "suspended_until": "You can use your account again after {endsAt}.",
+        "suspended_indefinite": "Your account stays suspended until a moderator lifts the suspension.",
+        "suspended_restrictions": "Until then you can browse like a visitor, but you can't post, comment or change anything on your account.",
+        "contact": "Think this is a mistake? Contact the site's administrators.",
+        "good_title": "Your account is in good standing",
+        "good_desc": "Nothing restricts your account.",
+        "points_title": "Active points",
+        "points_desc": "Points from warnings that haven't expired or been revoked. Reaching a limit can suspend your account.",
+        "warnings_title": "Your warnings",
+        "no_warnings": "You haven't received any warnings. Keep it up!",
+        "expires": "Points expire:",
+        "never": "Never",
+        "content": "About:",
+        "untitled": "Untitled",
+        "sanctions_title": "Suspensions",
+        "sanction_temporary": "Temporary suspension",
+        "sanction_indefinite": "Indefinite suspension",
+        "sanction_active": "Active",
+        "sanction_lifted": "Lifted",
+        "sanction_ended": "Ended",
+        "notice": {
+          "until": "Your account is suspended until {endsAt}.",
+          "indefinite": "Your account is suspended.",
+          "details": "See details"
         }
       }
     },
@@ -3246,7 +3461,9 @@
         },
         "moderation": {
           "title": "Moderation",
-          "report_reasons": "Report reasons"
+          "report_reasons": "Report reasons",
+          "warning_reasons": "Warning reasons",
+          "warning_thresholds": "Warning thresholds"
         },
         "user_bar": {
           "home_page": "Home Page",
@@ -3991,6 +4208,116 @@
           "error": "Could not delete the reason",
           "last_reason": "Keep at least one reason - members need something to pick.",
           "unknown": "Something went wrong. Try again in a moment."
+        }
+      },
+      "warning_reasons": {
+        "title": "Warning reasons",
+        "desc": "The reasons moderators pick when they warn someone, with their default points and expiry. Drag to change the order.",
+        "create": "Add reason",
+        "limit": "You can have up to {max} reasons. Disable one you no longer use.",
+        "columns": {
+          "reason": "Reason",
+          "points": "Points",
+          "expires": "Points expire",
+          "status": "Status"
+        },
+        "never": "Never",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "edit": "Edit",
+        "empty_title": "No warning reasons yet",
+        "empty_desc": "Add one so moderators can warn with consistent points.",
+        "reorder": {
+          "success": "Order saved",
+          "success_desc": "Moderators see the reasons in the new order."
+        },
+        "form": {
+          "create_title": "Add warning reason",
+          "edit_title": "Edit warning reason",
+          "sheet_desc": "Changes apply to new warnings only. Warnings already issued keep their points, expiry and title.",
+          "title": "Title",
+          "title_desc": "Short and specific, like “Spam” or “Harassment”.",
+          "description": "Description",
+          "description_desc": "Helps moderators pick the right reason. Members don't see it.",
+          "points": "Points",
+          "points_desc": "How many points a warning adds. 0 makes it an official warning that adds none.",
+          "points_unit": "points",
+          "expires": "Points expire after",
+          "expires_desc": "After this, the points stop counting. The warning stays in the history.",
+          "or": "or",
+          "never_expires": "Never expire",
+          "days_unit": "days",
+          "message": "Default message",
+          "message_desc": "Prefilled in the warn form. Moderators can edit it before sending.",
+          "enabled": "Enabled",
+          "enabled_desc": "Disabled reasons can't be picked for new warnings. Old warnings stay as they are.",
+          "submit_create": "Add reason",
+          "submit_edit": "Save changes",
+          "created": "Reason added",
+          "created_desc": "Moderators can pick “{reason}” when they warn someone.",
+          "updated": "Reason saved",
+          "updated_desc": "New warnings use the new settings.",
+          "error": "Could not save the reason",
+          "error_desc": "Check the fields and try again.",
+          "limit_reached": "You can have up to {max} reasons."
+        }
+      },
+      "warning_thresholds": {
+        "title": "Warning thresholds",
+        "desc": "What happens automatically when a warning brings a member's active points up to a limit.",
+        "create": "Add threshold",
+        "limit": "You can have up to {max} thresholds.",
+        "columns": {
+          "points": "Active points",
+          "action": "Action",
+          "status": "Status"
+        },
+        "at_points": "At {points, plural, one {# point} other {# points}}",
+        "suspend_for": "Suspend for",
+        "suspend_indefinitely": "Suspend indefinitely",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "edit": "Edit",
+        "actions_label": "Actions for the threshold at {points} points",
+        "empty_title": "No thresholds yet",
+        "empty_desc": "Without one, warnings never suspend anyone automatically.",
+        "delete": {
+          "button": "Delete",
+          "title": "Delete the threshold at {points} points?",
+          "desc": "New warnings won't trigger it anymore. Suspensions it already created stay until they end or are lifted.",
+          "error": "Could not delete the threshold",
+          "success": "Threshold deleted",
+          "success_desc": "Reaching {points} points no longer suspends anyone."
+        },
+        "form": {
+          "create_title": "Add threshold",
+          "edit_title": "Edit threshold",
+          "sheet_desc": "When a warning brings active points from below this number to it or above, the action runs once.",
+          "future_only": "Changes apply to warnings issued from now on. Nobody is suspended or unsuspended just because you saved this.",
+          "points": "Active points",
+          "points_desc": "Only one enabled threshold can use each number.",
+          "points_unit": "points",
+          "action": "Action",
+          "actions": {
+            "suspend_temporary": "Temporary suspension",
+            "suspend_temporary_desc": "Ends on its own after the duration, even if the points are still there.",
+            "suspend_indefinite": "Indefinite suspension",
+            "suspend_indefinite_desc": "Lasts until a moderator lifts it."
+          },
+          "duration": "Duration",
+          "duration_desc": "How long the suspension lasts. 24 is a day, 168 a week.",
+          "hours_unit": "hours",
+          "enabled": "Enabled",
+          "enabled_desc": "Disabled thresholds never run.",
+          "submit_create": "Add threshold",
+          "submit_edit": "Save changes",
+          "created": "Threshold added",
+          "updated": "Threshold saved",
+          "saved_desc": "It applies to the next warnings.",
+          "error": "Could not save the threshold",
+          "error_desc": "Check the fields and try again.",
+          "duplicate_points": "Another enabled threshold already uses this number of points.",
+          "limit_reached": "You can have up to {max} thresholds."
         }
       }
     },
@@ -5048,5 +5375,18 @@
         "description": "Rewrites the selected text: shorter, corrected, simpler or in another tone."
       }
     }
-  }
+  },
+  "@vitnode/core:warnings": "Warnings",
+  "@vitnode/core:warnings:can_view": "View every member's warnings",
+  "@vitnode/core:warnings:can_warn": "Warn members directly, without content",
+  "@vitnode/core:warnings:can_override_points": "Change a warning's points",
+  "@vitnode/core:warnings:can_override_expiration": "Change when a warning's points expire",
+  "@vitnode/core:warnings:can_view_notes": "Read staff notes on warnings",
+  "@vitnode/core:warnings:can_revoke": "Revoke warnings",
+  "@vitnode/core:warnings:can_view_sanctions": "View suspensions",
+  "@vitnode/core:warnings:can_manage_sanctions": "Lift suspensions",
+  "@vitnode/core:warning_settings": "Warning settings",
+  "@vitnode/core:warning_settings:can_view": "View warning reasons and thresholds",
+  "@vitnode/core:warning_settings:can_manage": "Manage warning reasons and thresholds",
+  "@vitnode/core:moderation:can_warn": "Warn authors of this content"
 }

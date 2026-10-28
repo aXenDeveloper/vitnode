@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
 import { canOnReport, requireModerator } from "@/api/lib/moderation/access";
+import { canWarnForContent } from "@/api/lib/moderation/warnings/access";
 import { core_moderation_report_events } from "@/database/moderation";
 import {
   MODERATION_PERMISSIONS,
@@ -76,6 +77,8 @@ const detailSchema = z.object({
   }),
   permissions: z.object({
     manage: z.boolean(),
+    /** Whether the moderator may warn the content's authors from this report. */
+    warn: z.boolean(),
     actions: z.array(
       z.object({
         action: z.enum(MODERATION_TARGET_ACTIONS),
@@ -217,6 +220,9 @@ export const showReportRoute = buildRoute({
         },
         permissions: {
           manage,
+          warn:
+            target?.definition.resolveAuthors !== undefined &&
+            canWarnForContent(c, moderator.set, ref),
           actions: MODERATION_TARGET_ACTIONS.flatMap(action => {
             const definition = target?.definition.actions?.[action];
             if (!definition) return [];

@@ -6,13 +6,14 @@ import {
 } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
-import { UserRoundPenIcon } from "lucide-react";
+import { ShieldIcon, TriangleAlertIcon, UserRoundPenIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { UserPresenceStatus } from "@/components/user-presence-status";
 import { USER_HEADER_HREF } from "@/views/layouts/theme/header/user/user-header-model";
+import { memberStandingQueryOptions } from "@/views/moderation/warnings/warnings-api";
 import { userPresenceQueryOptions } from "@/views/presence/presence-query";
 import { ProfileContent } from "@/views/profile/profile-content";
 import { userProfileQueryKey } from "@/views/profile/profile-query";
@@ -22,6 +23,7 @@ import { SearchFeedList } from "@/views/search/search-feed-content";
 import { useSessionQuery } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { RouteMessages } from "../i18n/route-messages";
+import { WarnDialog } from "../moderation/warn-button";
 import { useOwnUserImageEditor } from "./own-image-editor";
 import { userProfileQuery } from "./query";
 import { PROFILE_NAMESPACES } from "./route";
@@ -72,6 +74,43 @@ const ProfilePresence = ({
   );
 };
 
+/**
+ * Warn and View warnings for moderators. Shown only when the server's
+ * standing route answers for this member - it decides who may warn directly.
+ */
+const ModeratorActions = ({ userId }: { userId: number }) => {
+  const t = useTranslations("core.profile");
+  const [open, setOpen] = React.useState(false);
+  const { data } = useQuery(memberStandingQueryOptions(userId));
+  if (!data) return null;
+
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row">
+      <Link
+        className={cn(buttonVariants({ variant: "outline" }))}
+        to={`/modcp/members/${userId}`}
+      >
+        <ShieldIcon aria-hidden="true" />
+        {t("view_warnings", { points: data.activePoints })}
+      </Link>
+      {data.permissions.warn ? (
+        <>
+          <Button
+            onClick={() => {
+              setOpen(true);
+            }}
+            variant="outline"
+          >
+            <TriangleAlertIcon aria-hidden="true" />
+            {t("warn")}
+          </Button>
+          <WarnDialog onOpenChange={setOpen} open={open} userId={userId} />
+        </>
+      ) : null}
+    </div>
+  );
+};
+
 const ProfileTimeline = ({
   userId,
   viewerId,
@@ -116,7 +155,13 @@ const ProfileScreen = ({ children, nameCode }: ProfileRouteProps) => {
 
   return (
     <ProfileContent
-      action={isOwner ? <EditProfileAction /> : null}
+      action={
+        isOwner ? (
+          <EditProfileAction />
+        ) : session?.user?.isModerator ? (
+          <ModeratorActions userId={user.id} />
+        ) : null
+      }
       editor={editor}
       presence={
         <ProfilePresence

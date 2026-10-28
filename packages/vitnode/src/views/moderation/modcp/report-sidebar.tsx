@@ -33,6 +33,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { WarnAuthorButton } from "@/tanstack/moderation/warn-button";
 import { ReportReasonLabel } from "@/views/moderation/report-reason-label";
 
 import type { ModcpReportDetail } from "./modcp-query";
@@ -555,6 +556,21 @@ export const ReportSidebar = ({
         </div>
         <ActionsMenu data={data} onDone={onDone} userId={userId} />
       </div>
+      {data.permissions.warn && author ? (
+        <WarnAuthorButton
+          className="w-full"
+          content={{
+            id: report.targetId,
+            pluginId: report.pluginId,
+            type: report.targetType,
+          }}
+          onIssued={() => {
+            void onDone();
+          }}
+          reportId={report.id}
+          userId={author.id}
+        />
+      ) : null}
       <section
         aria-labelledby="modcp-report-details"
         className="bg-card ring-foreground/5 overflow-hidden rounded-xl shadow-xs ring-1 dark:shadow-none"

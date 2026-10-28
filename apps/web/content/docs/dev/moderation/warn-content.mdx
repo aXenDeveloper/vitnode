@@ -1,0 +1,90 @@
+---
+title: Warn content authors
+description: Let VitNode moderators warn the author of your plugin's content, with the server resolving authorship and moderation scope, and add the WarnAuthorButton.
+icon: UserX
+---
+
+A content-linked warning names a piece of content, so moderators limited to one section can warn for that section only. This guide adds **Warn author** to your plugin's content.
+
+## How the server decides
+
+Warnings reuse your content's **report target**. The browser sends only the content's `pluginId`, `targetType`, `targetId` and the member's id. The server then:
+
+1. Finds the report target, and refuses content without one.
+2. Resolves the content's moderation scope with the target's `resolveScope`.
+3. Checks the moderator's `can_warn` in the target's `permissionModule` for that scope.
+4. Reads the current authors with the target's `resolveAuthors`, and refuses the warning unless the member is one of them.
+
+A client-sent author or scope is never trusted. The warning keeps a short title and URL of the content, so it stays readable after the content is deleted or its plugin is removed.
+
+## Content Engine types
+
+A content type with `reports` is warnable with no extra code. Core adds `resolveAuthors`, reading the same author field search and reports use, and adds `can_warn` to the type's moderator permissions next to `can_view_reports`.
+
+The permissions route answers `canWarn` for each record:
+
+```json title="GET /api/@vitnode/blog/content/comments/permissions?ids=1"
+{
+  "items": [
+    {
+      "id": 1,
+      "canDelete": false,
+      "canEdit": false,
+      "canHide": false,
+      "canReport": true,
+      "canWarn": true
+    }
+  ]
+}
+```
+
+Comments rendered with [`ContentCommentActions`](/docs/content-engine/comments-api) show **Warn author** in the **More actions** menu whenever `canWarn` is true and the thread has `report`. The blog's comments get it this way.
+
+## Add the button to your own page
+
+For other content, render `WarnAuthorButton` when the permissions route answers `canWarn`:
+
+```tsx title="src/pages/topic-page.tsx"
+import { contentTarget } from "@vitnode/core/content";
+import { WarnAuthorButton } from "@vitnode/core/tanstack/moderation";
+
+import { topicContentType } from "@/content/topic";
+import { manifest } from "@/manifest.gen";
+
+{permissions.canWarn && topic.author ? (
+  <WarnAuthorButton
+    content={contentTarget(manifest.id, topicContentType, topic.id)}
+    userId={topic.author.id}
+  />
+) : null}
+```
+
+`WarnDialog` takes the same props plus `open` and `onOpenChange`, for a menu item or a trigger you already have. Both accept `reportId` to link the warning to a report, and `onIssued` to refresh your own data with the server's result.
+
+## Custom report targets
+
+For a target built with `defineReportTarget`, add `resolveAuthors`. It runs on the server as the moderator, so hidden content still resolves; return `null` once the content is deleted:
+
+```ts title="src/moderation/topic-target.ts"
+import { defineReportTarget } from "@vitnode/core/api/moderation";
+
+export const topicTarget = defineReportTarget({
+  // ...type, label, permissionModule, parseId, capture, current
+  resolveAuthors: async (c, { targetId }) => {
+    const topic = await findTopic(c, targetId);
+
+    return topic ? { authorIds: [topic.authorId], title: topic.title } : null;
+  },
+});
+```
+
+With `resolveAuthors`, the target's module gets a `can_warn` permission. Without it, the target stays reportable but not warnable.
+
+## Check the result
+
+Sign in as a moderator with **Warn authors of this content** for your module and open a record written by someone else: **Warn author** appears. Sign in as a moderator without it: the button is gone, and `POST /moderation/warnings` with that content answers `403`.
+
+## Related
+
+- [Issue warnings](/docs/dev/moderation/issue-warnings)
+- [Custom report targets](/docs/dev/moderation/reference#custom-report-targets)
