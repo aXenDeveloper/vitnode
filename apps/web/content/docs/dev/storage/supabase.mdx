@@ -199,8 +199,29 @@ public matters more here than it looks.
       type: 'string',
       required: true,
     },
+    privateBucket: {
+      description:
+        'A second bucket with **Public bucket** off, for [protected attachments](/docs/content-engine/access-attachments). Without it, attachment downloads cannot be restricted.',
+      type: 'string',
+    },
   }}
 />
+
+## Keep some files private
+
+[Access rules](/docs/content-engine/access) can restrict who downloads the
+attachments of a forum or category. Those files go to `privateBucket` and are
+served only through a route that checks the reader. Create a second bucket with
+**Public bucket** off and pass its name:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+SupabaseStorageAdapter({
+  bucket: process.env.SUPABASE_STORAGE_BUCKET,
+  privateBucket: process.env.SUPABASE_STORAGE_PRIVATE_BUCKET, // [!code ++]
+  secretKey: process.env.SUPABASE_SECRET_KEY,
+  url: process.env.SUPABASE_URL,
+})
+```
 
 ## Gotchas
 

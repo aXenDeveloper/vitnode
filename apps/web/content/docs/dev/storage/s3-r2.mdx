@@ -235,8 +235,30 @@ hostname in `publicUrl`.
         'Use path-style addressing (`endpoint/bucket/key`). Defaults to `true` whenever `endpoint` is set.',
       type: 'boolean',
     },
+    privateBucket: {
+      description:
+        'A second bucket nothing public reaches, for [protected attachments](/docs/content-engine/access-attachments). Without it, attachment downloads cannot be restricted.',
+      type: 'string',
+    },
   }}
 />
+
+## Keep some files private
+
+[Access rules](/docs/content-engine/access) can restrict who downloads the
+attachments of a forum or category. Those files go to `privateBucket` and are
+served only through a route that checks the reader. Create a second bucket with
+no public policy, no `r2.dev` or custom domain and no CDN in front of it, give
+the access key the same three actions on it, and pass its name:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+S3StorageAdapter({
+  accessKeyId: process.env.S3_ACCESS_KEY_ID,
+  bucket: process.env.S3_BUCKET,
+  privateBucket: process.env.S3_PRIVATE_BUCKET, // [!code ++]
+  secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
+})
+```
 
 ## Gotchas
 
@@ -250,12 +272,13 @@ hostname in `publicUrl`.
   storage** after any credential change.
 </Callout>
 
-<Callout type="warn" title="A private bucket breaks previews and downloads">
-  VitNode serves files by URL, and the built-in download routes fetch that URL
+<Callout type="warn" title="A private `bucket` breaks previews and downloads">
+  VitNode serves the files in `bucket` by URL, and the built-in download routes fetch that URL
   server-side before re-streaming it. If neither the bucket nor `publicUrl` is
   publicly readable, thumbnails never load and both download routes turn the
   refused fetch into a `404`. Front the bucket with CloudFront, an R2 custom
-  domain, or make it public.
+  domain, or make it public. Files that must stay private belong in
+  `privateBucket` instead.
 </Callout>
 
 <Callout type="warn" title="A provider error reaches the browser as a 500">

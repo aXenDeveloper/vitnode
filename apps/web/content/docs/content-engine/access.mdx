@@ -1,0 +1,133 @@
+---
+title: Access rules
+description: Restrict who can see a forum, read its topics, reply and download attachments with VitNode Content Engine access rules. Turn on access for a container collection, then choose everyone, signed-in members or selected roles per forum in the AdminCP.
+icon: Lock
+implementation:
+  objective: Let administrators restrict who can view, read, comment in and download attachments from the containers of a collection.
+  decisions:
+    - Which container collection gets access rules? Offer the collections defined with `defineContentContainer` in the project.
+    - Should any action start restricted for every container, for example comments for signed-in members only?
+  constraints:
+    - 'Add `access: true` or `access: { defaults }` to `defineContentContainer`. Code defaults are `{ mode: "everyone" }` or `{ mode: "members" }`; roles are chosen in the AdminCP.'
+    - Before turning access on, make every custom route of the plugin that reads content filed in the collection go through the Content Engine public services or `createContentAccess(c)`.
+    - Run `vitnode db migrate` once after upgrading so `core_content_access_rules` exists.
+  related:
+    - title: Access rules API
+      href: /docs/content-engine/access-api
+    - title: How access is enforced
+      href: /docs/content-engine/access-behavior
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+Access rules decide who may see a container, read what is filed in it, reply there and download its attachments. Use them for a staff-only forum, a members-only board, or a VIP section that only some roles can open.
+
+This guide uses the Forum plugin: the `forum.forums` collection, topics filed into forums and comments that follow their topic.
+
+## The four actions
+
+Each container has one rule per action. An action needs the one above it, so a role allowed to comment but not to read still cannot comment.
+
+| Action                   | What it allows                                                              | Needs  |
+| ------------------------ | --------------------------------------------------------------------------- | ------ |
+| **View**                 | See that the forum exists: its name and description in lists and breadcrumbs | -      |
+| **Read**                 | Open its topics, find them in search, Discover and profiles                 | View   |
+| **Comment**              | Reply to its topics                                                         | Read   |
+| **Download attachments** | Download protected files attached to what the reader can read               | Read   |
+
+Each rule is one of three audiences: **Everyone** (guests too), **Signed-in members**, or **Selected roles** (members holding at least one of the roles, as a primary or secondary role). Access rules only add restrictions. Replying still needs a signed-in member and the forum's [publishing rules](/docs/content-engine/container-policies), whatever **Comment** says.
+
+## Before you begin
+
+You need a [container collection](/docs/content-engine/containers) with content filed into it. After upgrading VitNode, apply the migration that adds the access tables:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Apply migrations'>
+
+```bash tab="bun"
+bun vitnode db migrate
+```
+
+```bash tab="pnpm"
+pnpm vitnode db migrate
+```
+
+```bash tab="npm"
+npx vitnode db migrate
+```
+
+</Tabs>
+
+<Steps>
+
+<Step>
+
+### Turn on access for the collection
+
+Add `access` to the collection's definition:
+
+```ts title="plugins/forum/src/content/forums.ts"
+import { defineContentContainer, field } from "@vitnode/core/content";
+
+export const forumContainers = defineContentContainer({
+  id: "forum.forums",
+  fields: {
+    description: field.textarea({ maxLength: 500, nullable: true }),
+  },
+  hierarchy: { maxDepth: 4 },
+  access: true, // [!code ++]
+  publicApi: { path: "forums", fields: ["description"] },
+  admin: { path: "forum/forums" },
+});
+```
+
+`access: true` starts every action open to everyone, so nothing changes until an administrator restricts a forum. To start stricter, pass defaults instead, such as `access: { defaults: { comment: { mode: "members" } } }`.
+
+<Callout type="warn">
+Turn access on only when every custom route of the plugin that reads topics or comments goes through the Content Engine's public services or `createContentAccess(c)`. A route that queries the table directly ignores the rules. The Forum plugin's stats and topic routes already do this.
+</Callout>
+
+</Step>
+
+<Step>
+
+### Restrict a forum in the AdminCP
+
+Open **AdminCP → Forums** (`/admin/containers/forum/forums`). In a forum's row menu, choose **Access**.
+
+{/* Image prompt: AdminCP Access sheet for the forum "Members", with View set to Signed-in members, Read inheriting, and the Effective access panel listing "Signed-in members - set here" for each action */}
+
+Set **View** to **Signed-in members** for a forum called "Members", and choose **Save access**. Every action left on **Inherit** follows the nearest parent forum that sets it, then the collection's defaults. The **Effective access** panel below the fields shows what applies once parent forums are counted, and updates as you change the fields.
+
+Saving needs the collection's `can_edit` admin permission. The rules apply from the next request, including to members who are signed in right now.
+
+</Step>
+
+<Step>
+
+### Restrict a child forum to a role
+
+Under "Members", create a forum called "VIP". Open its **Access** sheet, set **View** to **Selected roles** and pick a VIP role, then save.
+
+A child can be stricter than its parent, never more open: to reach "VIP", a member has to pass the rules of "Members" too. With "General" left on **Inherit** beside it:
+
+| Visitor                       | Members | General | VIP |
+| ----------------------------- | ------- | ------- | --- |
+| Guest                         | No      | No      | No  |
+| Member without the VIP role   | Yes     | Yes     | No  |
+| Member with the VIP role      | Yes     | Yes     | Yes |
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Sign out and open `/forum`. "Members" and its children are gone from the forum list, and `/forum/members` answers **Forum not found**, as if it never existed. Sign in as a member without the VIP role: "Members" and "General" appear, "VIP" does not. Search for a topic title from "VIP" as both visitors: only a member with the role finds it.
+
+To try a forum readers may see but not read, set **View** to **Everyone** and **Read** to **Signed-in members**. Guests then see the forum with a **Restricted** label, and its page asks them to sign in instead of listing topics.
+
+## Related
+
+- [Blog category access](/docs/content-engine/access-categories)
+- [Protected attachments](/docs/content-engine/access-attachments)
+- [How access is enforced](/docs/content-engine/access-behavior)
