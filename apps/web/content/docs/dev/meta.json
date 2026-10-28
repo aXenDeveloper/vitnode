@@ -41,6 +41,7 @@
     "search-elasticsearch",
     "storage",
     "email",
+    "payments",
     "captcha",
     "sso",
     "passkeys",

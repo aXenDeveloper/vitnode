@@ -1,0 +1,154 @@
+---
+title: Custom provider
+description: Reference for the VitNode payment provider contract - PaymentProviderApiPlugin, normalized checkout state, error kinds, idempotency, webhook verification and reconciliation.
+icon: Puzzle
+---
+
+A payment provider adapter connects VitNode payments to a service with a hosted
+checkout page. Core owns the payment records, the webhook route, idempotent
+event handling and recovery; the adapter only talks to the provider and
+translates its objects. `@vitnode/stripe` (`packages/stripe/src/index.ts`) is
+the reference implementation.
+
+## Contract
+
+```ts
+import type {
+  PaymentCheckoutState,
+  PaymentCreateCheckoutArgs,
+  PaymentProviderApiPlugin,
+  PaymentWebhookEvent,
+} from '@vitnode/core/api/lib/payments/provider'
+```
+
+| Member            | Required | Behavior                                                                                                          |
+| ----------------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `id`              | Yes      | Instance id: 1-100 lowercase letters, digits, `-`, `_`. Unique; names the webhook URL                             |
+| `type`            | Yes      | Adapter kind, e.g. `"stripe"`. Several instances may share it                                                    |
+| `name`            | Yes      | Display name, safe for the browser                                                                                |
+| `createCheckout`  | Yes      | Creates the hosted checkout; must be idempotent on `idempotencyKey`. Returns `PaymentCheckoutState & { url }`     |
+| `verifyWebhook`   | Yes      | Verifies `{ body: Uint8Array, headers: Headers }` and returns a `PaymentWebhookEvent`                              |
+| `retrieveCheckout`| No       | Reads a checkout's current state. Without it, a missed webhook is only fixed by a redelivery                      |
+| `expireCheckout`  | No       | Closes an open checkout and returns its state. Without it, an open checkout blocks a replacement until it expires |
+| `validateAmount`  | No       | Throws `PaymentProviderError` (kind `rejected`) for an amount the provider cannot charge                          |
+
+The factory should throw at startup when a required secret is missing, so an
+install never runs a half-configured provider.
+
+## createCheckout arguments
+
+| Name             | Type     | Description                                                                                     |
+| ---------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `paymentId`      | `string` | VitNode payment id. Put it in the checkout's signed metadata and return it as `paymentId`       |
+| `idempotencyKey` | `string` | `vitnode-payment-{paymentId}`. Send it as the provider's idempotency key                        |
+| `amount`         | `number` | Positive safe integer in minor units, already validated                                         |
+| `currency`       | `string` | Lowercase ISO 4217 code                                                                         |
+| `description`    | `string` | One line for the hosted page                                                                    |
+| `successUrl`     | `string` | Absolute URL on `VITNODE_WEB_URL`. Never proof of payment                                       |
+| `cancelUrl`      | `string` | Absolute URL on `VITNODE_WEB_URL`                                                               |
+| `expiresAt`      | `Date`   | Pass it to the provider so the checkout never outlives its attempt                              |
+
+Core may call `createCheckout` again with identical arguments after a timeout or
+a lost response. The provider must answer with the same checkout, not a new one.
+Core only replays while more than 35 minutes remain before `expiresAt`, and
+`expiresAt` is at most 23 hours away, which keeps replays inside the 24-hour
+idempotency window most providers offer. After that, an attempt whose checkout
+URL never reached the customer is expired instead of replayed.
+
+## Checkout state
+
+```ts
+interface PaymentCheckoutState {
+  checkoutId: string // the provider's id
+  paymentId: string | null // from the checkout's metadata
+  status: 'pending' | 'processing' | 'succeeded' | 'failed' | 'expired'
+  providerStatus: string // diagnostics only, max 50 chars
+  amount: number | null // what the provider will charge, minor units
+  currency: string | null
+  livemode?: boolean | null
+  expiresAt?: Date | null
+  url?: string | null // while open
+}
+```
+
+Report `succeeded` only when the provider confirms the money, `processing` when
+the customer finished but the payment is settling, and `failed` only for a
+final failure of that checkout. A declined card the customer can retry on the
+same page is still `pending`.
+
+Core rejects state whose checkout id, `paymentId`, amount, currency or mode
+contradicts the stored payment, and logs it. Status only moves along
+`pending → processing → succeeded | failed` and `pending → succeeded | failed |
+expired`; final statuses never change.
+
+## Webhooks
+
+`verifyWebhook` receives the exact request bytes. Verify the signature over
+those bytes before parsing them.
+
+```ts
+type PaymentWebhookEvent =
+  | { kind: 'checkout'; eventId: string; type: string; checkout: PaymentCheckoutState }
+  | { kind: 'ignored'; eventId: string; type: string }
+```
+
+- Throw `PaymentWebhookVerificationError` for a bad signature, an expired
+  timestamp or the wrong live/test mode. Core answers `400` and writes nothing.
+- Return `kind: "ignored"` for verified events you do not handle, and for
+  checkouts another instance created. Core answers `200`.
+- For `kind: "checkout"`, core records `(providerId, eventId)` and applies the
+  state in one transaction. A redelivery answers `duplicate`; a database error
+  answers `500` so the provider retries.
+- An event can arrive before core stored the checkout id. Core then matches it
+  by `checkout.paymentId`, which must belong to the same instance.
+
+The route is `POST /api/@vitnode/core/payments/webhooks/{id}` and answers
+`{ "outcome": "processed" | "duplicate" | "ignored" | "unmatched" | "mismatch" }`.
+
+## Errors
+
+Throw `PaymentProviderError` from `@vitnode/core/api/lib/payments/errors` for
+provider failures. Never put secrets, card data or checkout URLs in the
+message.
+
+| `kind`          | Use for                                         | Core does                                                                 |
+| --------------- | ----------------------------------------------- | ------------------------------------------------------------------------- |
+| `unavailable`   | Network errors, timeouts, rate limits, outages | Keeps the attempt; the next call or the reconciler replays it             |
+| `rejected`      | Invalid parameters, unsupported currency        | Marks a new attempt `failed` with `code` as `errorCode`                   |
+| `configuration` | Missing or refused credentials                  | Same as `unavailable`, and logs it as an error                            |
+
+## Recovery
+
+- **Missed webhook**: `getForUser({ refresh: true })` and the
+  `reconcile-payments` cron job call `retrieveCheckout`. A provider that is down
+  is skipped until the next run.
+- **Lost createCheckout response**: the next call for the same reference, or a
+  webhook carrying the payment id, attaches the checkout.
+- **Checkout never created**: the reconciler expires the attempt after 15
+  minutes. Its URL never left the server, so nobody can pay it.
+
+## Several instances and tests
+
+Configure as many instances as you need; each gets its own id, secret and
+webhook URL. Core never moves a payment to another instance.
+
+For automated tests, `FakePaymentAdapter` from
+`@vitnode/core/api/adapters/payments/fake` implements the contract in memory.
+Its `settle(checkoutId, outcome)` returns a signed webhook to post, and
+`setUnavailable(true)` simulates an outage. It moves no money, has no hosted
+page and refuses to start when `NODE_ENV=production`.
+
+## Related
+
+<Cards>
+  <Card
+    title="Stripe"
+    description="The official adapter, set up in test mode"
+    href="/docs/dev/payments/stripe"
+  />
+  <Card
+    title="Use payments in a plugin"
+    description="createCheckout, getForUser and listByReference in practice"
+    href="/docs/dev/payments/plugin"
+  />
+</Cards>

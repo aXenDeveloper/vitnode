@@ -1,0 +1,102 @@
+---
+title: Payments
+description: How VitNode takes one-time payments through a provider's hosted checkout - provider instances, payment statuses, webhooks and what the MVP does not cover yet.
+icon: CreditCard
+---
+
+VitNode payments let a plugin charge a signed-in member a fixed, server-decided
+amount through a provider's hosted checkout page, and find out reliably whether
+the money arrived. Use it when a plugin sells something simple: a download, a
+badge, access to a page.
+
+<Callout type="warn" title="A foundation, not a shop">
+  Payments cover one-time, positive amounts and nothing else. There is no
+  catalog, cart, tax, invoice, refund, subscription or saved card, and no
+  AdminCP screen for providers. Build those in your plugin, or wait for later
+  releases.
+</Callout>
+
+## How a payment flows
+
+1. Your plugin's route decides the price on the server and calls
+   `c.get("payments").createCheckout()`.
+2. Core stores a `pending` payment, asks the provider for a hosted checkout and
+   returns its URL. The browser goes there; VitNode never sees card details.
+3. The provider sends the customer back to a page on your site. That redirect
+   proves nothing, so the page shows the status the server knows.
+4. The provider posts a webhook to
+   `/api/@vitnode/core/payments/webhooks/{providerId}`. Core verifies its
+   signature against the exact bytes received, then records the new status.
+5. Your plugin reads the stored payment to decide what the member owns.
+
+If a webhook never arrives, core asks the provider itself: when the customer
+looks at the status page (at most every 15 seconds) and from the
+`reconcile-payments` cron job (every 5 minutes, for payments quiet for 10
+minutes).
+
+## Statuses
+
+| Status       | Meaning                                                                            | Can change to                               |
+| ------------ | ---------------------------------------------------------------------------------- | ------------------------------------------- |
+| `pending`    | Stored; the checkout is being created or is open                                   | `processing`, `succeeded`, `failed`, `expired` |
+| `processing` | The customer finished, but a delayed payment method has not settled                | `succeeded`, `failed`                       |
+| `succeeded`  | The provider confirmed the money                                                   | nothing                                     |
+| `failed`     | The provider reported a final failure, or refused to create the checkout          | nothing                                     |
+| `expired`    | The checkout closed without payment, or was never created and nobody got its URL   | nothing                                     |
+
+Final statuses never change, so a late, duplicated or out-of-order webhook
+cannot undo a success. A declined card is not `failed`: the customer stays on
+the hosted page and can try another card.
+
+## Provider instances
+
+A provider instance is one configured provider with its own `id`, credentials
+and webhook URL. You can run several at once, for example two Stripe accounts:
+
+```ts title="src/vitnode.api.config.ts"
+payments: {
+  providers: [
+    StripePaymentAdapter({ id: 'stripe-main', /* ... */ }),
+    StripePaymentAdapter({ id: 'stripe-eu', /* ... */ }),
+  ],
+},
+```
+
+- A plugin passes the instance `id` when it creates a payment. The browser may
+  suggest one, but the server only accepts configured ids.
+- A payment stays bound to its instance. Core never retries it elsewhere.
+- Missing, malformed or duplicate ids stop the API from starting.
+- With no providers, the rest of VitNode works and `createCheckout()` fails
+  with `provider_not_found`.
+
+`payments.checkoutExpiresInMinutes` sets how long a checkout accepts payment:
+30 to 1380 minutes, 60 by default.
+
+## Events
+
+Core emits `payment.processing`, `payment.succeeded`, `payment.failed` and
+`payment.expired` after the status change is committed. See
+[built-in events](/docs/dev/events/built-in-events#payment-events). The
+default events adapter runs listeners inside the webhook request and never
+retries them, so do not grant anything from a listener alone: read the stored
+payment instead.
+
+## Guides
+
+<Cards>
+  <Card
+    title="Stripe"
+    description="Configure Stripe Checkout in test mode and forward webhooks locally"
+    href="/docs/dev/payments/stripe"
+  />
+  <Card
+    title="Use payments in a plugin"
+    description="Charge a fixed price and show a confirmed result"
+    href="/docs/dev/payments/plugin"
+  />
+  <Card
+    title="Custom provider"
+    description="The provider contract, for another payment service"
+    href="/docs/dev/payments/custom-provider"
+  />
+</Cards>

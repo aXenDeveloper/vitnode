@@ -1,0 +1,6 @@
+{
+  "title": "Payments",
+  "description": "One-time payments through a hosted checkout, with Stripe or your own provider",
+  "icon": "CreditCard",
+  "pages": ["index", "stripe", "plugin", "---Advanced---", "custom-provider"]
+}
