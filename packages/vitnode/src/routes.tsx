@@ -1,4 +1,5 @@
 import { defineRoutes, index, layout, lazy, page } from "./routing";
+import { ACCOUNT_STATUS_NAMESPACES } from "./tanstack/account-status/route";
 import { ADMIN_AI_NAMESPACES } from "./tanstack/admin/ai/route";
 import {
   normalizeAiHistoryRouteSearch,
@@ -41,6 +42,7 @@ import { normalizeStaffRouteSearch } from "./tanstack/admin/staff/route-search";
 import { ADMIN_USER_NAMESPACES } from "./tanstack/admin/users/detail-route";
 import { ADMIN_USERS_NAMESPACES } from "./tanstack/admin/users/route";
 import { normalizeUsersRouteSearch } from "./tanstack/admin/users/route-search";
+import { ADMIN_WARNINGS_NAMESPACES } from "./tanstack/admin/warnings/route";
 import { LOGIN_NAMESPACES } from "./tanstack/auth/login-route";
 import {
   LoginPendingSkeleton,
@@ -65,6 +67,7 @@ import { normalizeMyFilesRouteSearch } from "./tanstack/files/route-search";
 import { normalizeModcpApprovalsSearch } from "./tanstack/moderation/approvals-route-search";
 import { MODCP_NAMESPACES } from "./tanstack/moderation/namespaces";
 import { normalizeModcpReportsSearch } from "./tanstack/moderation/route-search";
+import { normalizeModcpWarningsSearch } from "./tanstack/moderation/warnings-route";
 import { NOTIFICATIONS_NAMESPACES } from "./tanstack/notifications/namespaces";
 import { normalizeNotificationsRouteSearch } from "./tanstack/notifications/route-search";
 import {
@@ -237,7 +240,24 @@ export const routes = defineRoutes([
         component: lazy(() => import("./pages/modcp/approval")),
         pendingComponent: () => <FeedPendingSkeleton rows={4} />,
       }),
+
+      page("warnings", {
+        component: lazy(() => import("./pages/modcp/warnings")),
+        pendingComponent: () => <FeedPendingSkeleton rows={5} />,
+        search: normalizeModcpWarningsSearch,
+      }),
+
+      page("members/:id", {
+        component: lazy(() => import("./pages/modcp/member")),
+        pendingComponent: () => <FeedPendingSkeleton rows={4} />,
+      }),
     ],
+  }),
+
+  page("/account-status", {
+    component: lazy(() => import("./pages/account-status")),
+    messages: ACCOUNT_STATUS_NAMESPACES,
+    pendingComponent: () => <FeedPendingSkeleton rows={3} />,
   }),
 
   page("/notifications", {
@@ -368,6 +388,22 @@ export const routes = defineRoutes([
     area: "admin",
     component: lazy(() => import("./pages/admin/moderation/report-reasons")),
     messages: ADMIN_REPORT_REASONS_NAMESPACES,
+    pendingComponent: TablePendingSkeleton,
+  }),
+
+  page("/admin/core/moderation/warning-reasons", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/moderation/warning-reasons")),
+    messages: ADMIN_WARNINGS_NAMESPACES,
+    pendingComponent: TablePendingSkeleton,
+  }),
+
+  page("/admin/core/moderation/warning-thresholds", {
+    area: "admin",
+    component: lazy(
+      () => import("./pages/admin/moderation/warning-thresholds"),
+    ),
+    messages: ADMIN_WARNINGS_NAMESPACES,
     pendingComponent: TablePendingSkeleton,
   }),
 

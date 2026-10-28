@@ -1,0 +1,80 @@
+---
+title: Configure warnings
+description: Set up VitNode warning reasons with default points and expiry, and warning thresholds that suspend an account automatically, in the AdminCP.
+icon: Settings2
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import reasons from "./warning-reasons.webp";
+import thresholds from "./warning-thresholds.webp";
+
+Warning reasons give moderators consistent points and messages, and thresholds decide when points turn into a suspension. This guide sets up the example from [Warnings](/docs/dev/moderation/warnings): a 2-point **Spam** reason and suspensions at 8 and 10 points.
+
+## Before you begin
+
+You need an AdminCP account with the **Warning settings** permissions: **View warning reasons and thresholds**, and **Manage warning reasons and thresholds** to change them. Admins with a root role have both.
+
+<Steps>
+
+<Step>
+
+### Add a warning reason
+
+Open **AdminCP → Moderation → Warning reasons** and choose **Add reason**. Fill in:
+
+| Field | Example | What it does |
+| --- | --- | --- |
+| Title | Spam | What moderators pick and what the member reads |
+| Description | Ads or repeated junk | Helps moderators choose; members never see it |
+| Points | 2 | Added to the member's active points. `0` makes an official warning without points |
+| Points expire after | 30 days | After this the points stop counting. Check **Never expire** for permanent points |
+| Default message | Please stop posting spam. | Prefilled in the warn form; moderators can edit it |
+| Enabled | On | Disabled reasons can't be picked for new warnings |
+
+Title, description and message are translated per language, like report reasons. Drag rows to set the order moderators see.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={reasons}
+  alt="Warning reasons in the AdminCP: a table with the reason, its points, when its points expire and whether it is enabled, plus an Add reason button"
+/>
+
+Reasons are never deleted, only disabled. Every warning keeps a copy of its reason's title and the points it was issued with, so editing or disabling a reason never changes a warning already issued.
+
+</Step>
+
+<Step>
+
+### Add thresholds
+
+Open **AdminCP → Moderation → Warning thresholds** and choose **Add threshold** twice:
+
+| Active points | Action | Duration |
+| --- | --- | --- |
+| 8 | Temporary suspension | 24 hours |
+| 10 | Indefinite suspension | - |
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={thresholds}
+  alt="Warning thresholds in the AdminCP: at 8 points suspend for 1 day, at 10 points suspend indefinitely, both enabled"
+/>
+
+Only one enabled threshold can use each number of points; saving a second one answers **Another enabled threshold already uses this number of points**. Disable or delete a threshold to stop it. Suspensions it already created keep a copy of the rule and stay until they end or are lifted.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Warn a test member twice with **Spam** (4 points), then preview a third time in the warn form: **Automatic action** says nothing. Change the points to 4 (with an explanation) and the preview shows **Account suspended for 1 day**. See [Issue warnings](/docs/dev/moderation/issue-warnings).
+
+Changes apply to warnings issued from now on. Saving a lower threshold does not suspend members who are already above it, and raising one does not lift anything.
+
+## Related
+
+- [Warnings](/docs/dev/moderation/warnings)
+- [Configure moderators](/docs/dev/moderation/configure-moderators)

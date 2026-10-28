@@ -9,7 +9,8 @@ export type SettingsNavKey =
   | "notifications"
   | "overview"
   | "security"
-  | "sso";
+  | "sso"
+  | "standing";
 
 export interface SettingsNavItem {
   href: string;
@@ -24,6 +25,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { href: "/settings/security", key: "security" },
   { href: "/settings/sso", key: "sso" },
   { href: "/settings/ai", key: "ai" },
+  { href: "/account-status", key: "standing" },
 ];
 
 export const visibleSettingsNavItems = ({

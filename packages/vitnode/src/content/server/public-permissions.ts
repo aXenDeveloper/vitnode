@@ -9,6 +9,8 @@ import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 
+import { resolveStaffPermissions } from "../../api/lib/check-staff-permission";
+import { canWarnForContent } from "../../api/lib/moderation/warnings/access";
 import { buildRoute } from "../../api/lib/route";
 import { CONTENT_ACCESS_OPEN_FLAGS } from "../access/policy";
 import { contentRecordAccessFlags } from "../access/server/decide";
@@ -57,6 +59,13 @@ export interface ContentViewerPermissions extends ContentAccessFlags {
    * to sign in.
    */
   canReport: boolean;
+  /**
+   * A **Warn author** action makes sense: the type has `reports`, the
+   * visitor is a moderator with `can_warn` for the record's scope and did not
+   * write it. `POST /moderation/warnings` re-checks all of it, with the
+   * author resolved on the server.
+   */
+  canWarn: boolean;
 }
 
 const parseIds = (
@@ -108,6 +117,25 @@ export const resolveContentViewerPermissions = async (
     accessModel,
     rows.map(row => row.id as ContentId),
   );
+  const moderatorSet =
+    user && definition.reports.enabled
+      ? await resolveStaffPermissions(c, { type: "moderator", user })
+      : null;
+  const scopeColumn = model.moderationScope?.column;
+  const canWarnOn = (row: Record<string, unknown>, ownerId: unknown) => {
+    if (!moderatorSet?.staff || typeof ownerId !== "number") return false;
+    if (ownerId === user?.id) return false;
+    const scope = scopeColumn ? row[scopeColumn] : null;
+
+    return canWarnForContent(c, moderatorSet, {
+      pluginId,
+      scopeId:
+        typeof scope === "number" || typeof scope === "string"
+          ? String(scope)
+          : null,
+      targetType: definition.id,
+    });
+  };
 
   const decided = await Promise.all(
     rows.map(async row => {
@@ -162,6 +190,7 @@ export const resolveContentViewerPermissions = async (
           definition.reports.enabled &&
           isPublic &&
           (!isOwner || definition.reports.selfReport),
+        canWarn: definition.reports.enabled && canWarnOn(row, ownerId),
         id,
       };
     }),
@@ -200,7 +229,7 @@ export const contentPermissionsRoute = <
     route: {
       method: "get",
       path: "/permissions",
-      description: `What the current visitor may do with each listed ${name}: read, comment on, download from, edit, delete, hide or report it`,
+      description: `What the current visitor may do with each listed ${name}: read, comment on, download from, edit, delete, hide, report it or warn its author`,
       request: {
         query: z.object({
           ids: z
@@ -224,6 +253,7 @@ export const contentPermissionsRoute = <
                     canRead: z.boolean(),
                     canReport: z.boolean(),
                     canView: z.boolean(),
+                    canWarn: z.boolean(),
                     id: schemas.params.shape.id,
                   }),
                 ),

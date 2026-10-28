@@ -37,6 +37,7 @@ Cookie: vitnode_auth=<session>
 | --- | --- | --- |
 | `canEdit` | `GET /{id}/edit` and `PATCH /{id}` would accept this visitor: a moderator with `can_edit` in the record's container, or the owner while the record is not hidden, `update.own` is on and the container's `authorEdit` policy still allows it | Always `false` |
 | `canReport` | The content type has `reports`, the record is public, and the visitor did not write it | `true` on public records. The report dialog asks them to sign in |
+| `canWarn` | The content type has `reports`, the visitor is a moderator with `can_warn` for the record's scope, and did not write it. See [Warn content authors](/docs/dev/moderation/warn-content) | `false` |
 
 A record is **left out of `items`** when the visitor can neither read it publicly nor edit it: a missing id, someone else's draft, or a hidden record for anyone but a moderator with `can_edit`. The route answers the same way for all of them, so it never confirms that a draft exists. Your own draft comes back with `canEdit: true` and `canReport: false`.
 

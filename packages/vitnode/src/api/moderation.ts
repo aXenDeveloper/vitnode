@@ -15,5 +15,6 @@ export {
   type ModerationCaptureResult,
   type ModerationReportTargetDefinition,
   type ModerationTargetActionDefinition,
+  type ModerationTargetAuthors,
   type ModerationTargetState,
 } from "./lib/moderation/targets";
