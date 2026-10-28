@@ -4,6 +4,7 @@ import type { CacheConfig } from "./api/lib/cache";
 import type { CronAdapter } from "./api/lib/cron";
 import type { NotificationWorkerSettings } from "./api/lib/notifications/preferences";
 import type { PasskeysConfig } from "./api/lib/passkey-config";
+import type { PaymentProviderApiPlugin } from "./api/lib/payments/provider";
 import type { BuildPluginApiReturn } from "./api/lib/plugin";
 import type { RateLimiterConfig } from "./api/middlewares/rate-limiter-config";
 import type { AIConfig } from "./api/models/ai";
@@ -248,6 +249,27 @@ export interface VitNodeApiConfig {
     /** The longest `maxAge + staleWhileRevalidate` of any cached route, in seconds. Defaults to a day. */
     maxLifetime?: number;
     storage: "redis";
+  };
+  /**
+   * Hosted-checkout payments, used by plugins through `c.get("payments")`.
+   * Without providers the rest of VitNode works as usual, and creating a
+   * payment fails with `provider_not_found`.
+   */
+  payments?: {
+    /**
+     * How long a hosted checkout accepts payment, in minutes. Clamped to
+     * 30-1380 (23 hours, inside the providers' 24-hour idempotency window).
+     * Defaults to 60.
+     */
+    checkoutExpiresInMinutes?: number;
+    /**
+     * The provider instances, e.g. `StripePaymentAdapter({ id: "stripe-main", ... })`
+     * from `@vitnode/stripe`. Each `id` must be unique: it is stored on every
+     * payment and names the instance's webhook URL,
+     * `/api/@vitnode/core/payments/webhooks/{id}`. Duplicate or malformed ids
+     * stop the API from starting.
+     */
+    providers?: PaymentProviderApiPlugin[];
   };
   /** The installed plugins' API halves, each a plugin's `buildApiPlugin()` result. Core is added automatically. */
   plugins: BuildPluginApiReturn[];

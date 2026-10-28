@@ -87,12 +87,21 @@ const AUTH_RATE_LIMITED_PATHS = [
 
 const READ_METHODS = new Set(["GET", "HEAD"]);
 
+/**
+ * Provider webhooks: server-to-server, authenticated by their signature, and
+ * sent in bursts from a handful of provider IPs. Counting them against the
+ * per-IP write budget would refuse legitimate deliveries, so only the safety
+ * cap applies.
+ */
+const PAYMENT_WEBHOOK_PATH = /\/@vitnode\/core\/payments\/webhooks\/[^/]+$/;
+
 export const rateLimiterCategoriesFor = (
   method: string,
   path: string,
 ): RateLimiterCategory[] => {
   if (method === "OPTIONS") return ["safety"];
   if (READ_METHODS.has(method)) return ["safety", "read"];
+  if (method === "POST" && PAYMENT_WEBHOOK_PATH.test(path)) return ["safety"];
 
   const categories: RateLimiterCategory[] = ["safety", "write"];
   if (

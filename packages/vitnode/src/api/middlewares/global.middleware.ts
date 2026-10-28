@@ -24,6 +24,11 @@ import { EmailModel } from "@/api/models/email";
 import { EventsModel } from "@/api/models/events";
 import { I18nModel } from "@/api/models/i18n";
 import { NotificationsModel } from "@/api/models/notifications";
+import {
+  PAYMENT_CHECKOUT_MINUTES_RANGE,
+  PAYMENT_DEFAULT_CHECKOUT_MINUTES,
+  PaymentsModel,
+} from "@/api/models/payments";
 import { QueueModel } from "@/api/models/queue";
 import {
   assertSearchProviderCapabilities,
@@ -60,6 +65,7 @@ import type { ModerationRegistry } from "../lib/moderation/registry";
 import type { NotificationWorkerSettings } from "../lib/notifications/preferences";
 import type { NotificationRegistry } from "../lib/notifications/registry";
 import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
+import type { PaymentProviderApiPlugin } from "../lib/payments/provider";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { BuildQueueTaskReturn } from "../lib/queue";
 import type { UpdateComponent } from "../lib/updates/components";
@@ -89,6 +95,7 @@ import { validateModerationRegistry } from "../lib/moderation/registry";
 import { resolveNotificationWorkerSettings } from "../lib/notifications/preferences";
 import { createNotificationRegistry } from "../lib/notifications/registry";
 import { resolvePasskeysConfig } from "../lib/passkey-config";
+import { validatePaymentProviders } from "../lib/payments/provider";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
 import { collectUpdateComponents } from "../lib/updates/components";
 import { resolveUpdatesConfig } from "../lib/updates/config";
@@ -217,6 +224,11 @@ export interface EnvVariablesVitNode {
     moderation: ModerationRegistry;
     notifications?: NotificationRegistry;
     notificationWorkers?: NotificationWorkerSettings;
+    /** Payment provider instances and the checkout lifetime, in milliseconds. */
+    payments: {
+      checkoutTtlMs: number;
+      providers: PaymentProviderApiPlugin[];
+    };
     permissionStaff: PermissionStaffCatalogEntry[];
     /** Which personal-information fields this install offers. */
     personalInformationFields: PersonalInformationFields;
@@ -255,6 +267,8 @@ export interface EnvVariablesVitNode {
   log: LoggerMiddlewareType;
   /** Creates and delivers user notifications. */
   notifications: NotificationsModel;
+  /** Hosted-checkout payments through the configured providers: see {@link PaymentsModel}. */
+  payments: PaymentsModel;
   /**
    * The plugin whose route is handling the request, set by every route built
    * with `buildRoute`. Scopes `cache` keys and stored files to that plugin.
@@ -318,6 +332,7 @@ export const globalMiddleware = ({
   plugins,
   i18n,
   notifications,
+  payments,
   search,
   storage,
   updates,
@@ -336,6 +351,7 @@ export const globalMiddleware = ({
   | "frontendPlugins"
   | "i18n"
   | "notifications"
+  | "payments"
   | "plugins"
   | "search"
   | "storage"
@@ -537,6 +553,25 @@ export const globalMiddleware = ({
     ),
   );
 
+  // Refused at boot: a duplicated id would make two instances share stored
+  // payments and one webhook URL.
+  const paymentsMetadata = {
+    providers: validatePaymentProviders(payments?.providers ?? []),
+    checkoutTtlMs:
+      Math.min(
+        Math.max(
+          Math.trunc(
+            payments?.checkoutExpiresInMinutes ??
+              PAYMENT_DEFAULT_CHECKOUT_MINUTES,
+          ),
+          PAYMENT_CHECKOUT_MINUTES_RANGE.min,
+        ),
+        PAYMENT_CHECKOUT_MINUTES_RANGE.max,
+      ) *
+      60 *
+      1000,
+  };
+
   const passkeysMetadata = resolvePasskeysConfig({
     config: authorization?.passkeys,
     rpNameFallback: metadata.shortTitle ?? metadata.title,
@@ -623,6 +658,7 @@ export const globalMiddleware = ({
       moderation: moderationMetadata,
       notifications: notificationsMetadata,
       notificationWorkers,
+      payments: paymentsMetadata,
       contentContainers: contentContainersMetadata,
       contentModels: contentModelsMetadata,
       contentNotifications: contentNotificationsMetadata,
@@ -664,6 +700,7 @@ export const globalMiddleware = ({
     c.set("events", new EventsModel(c));
     c.set("i18n", new I18nModel(c));
     c.set("notifications", new NotificationsModel(c as Context<EnvVitNode>));
+    c.set("payments", new PaymentsModel(c));
     c.set("queue", new QueueModel(c));
     c.set("search", new SearchModel(c));
     c.set("storage", new StorageModel(c));
