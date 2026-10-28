@@ -1,0 +1,43 @@
+{
+  "name": "@vitnode/stripe",
+  "version": "2.0.0-canary.13",
+  "description": "Stripe Checkout payment adapter for VitNode.",
+  "author": "VitNode Team",
+  "license": "MIT",
+  "homepage": "https://vitnode.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aXenDeveloper/vitnode.git",
+    "directory": "packages/stripe"
+  },
+  "keywords": [
+    "vitnode",
+    "stripe",
+    "payments"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/src/index.js",
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "scripts": {
+    "build:plugins": "vitnode build",
+    "dev:plugins": "vitnode dev",
+    "lint": "oxlint --type-aware",
+    "lint:fix": "oxlint --type-aware --fix"
+  },
+  "dependencies": {
+    "stripe": "^23.0.1"
+  },
+  "devDependencies": {
+    "@vitnode/config": "workspace:*",
+    "@vitnode/core": "workspace:*",
+    "oxlint": "^1.87.0",
+    "oxlint-tsgolint": "^7.0.2003",
+    "tsdown": "^0.23.0",
+    "typescript": "^6.0.3"
+  }
+}
