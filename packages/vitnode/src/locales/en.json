@@ -3144,9 +3144,9 @@
           }
         },
         "source": {
-          "scope": "Now inherited from {name}.",
-          "default": "Now inherited from the collection's default.",
-          "fallback": "Now open to everyone - nothing above sets it."
+          "scope": "Inherit follows {name}.",
+          "default": "Inherit follows the collection's default.",
+          "fallback": "Inherit means everyone - nothing above sets this."
         },
         "effective": {
           "title": "Effective access",

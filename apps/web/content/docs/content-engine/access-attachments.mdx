@@ -4,6 +4,9 @@ description: Keep the files of restricted VitNode content private. Configure a p
 icon: FileLock
 ---
 
+import { ImgDocs } from "@/components/fumadocs/img";
+import attachmentRestricted from "./access-attachment-restricted.webp";
+
 A rule on **Download attachments** only protects files nobody can fetch by URL. This guide sets up private storage, so files of access-controlled content are served only through a route that checks the reader every time, and moves the files that are still public.
 
 ## How files are served
@@ -14,7 +17,15 @@ Every content type with access rules gets a download route, `GET /api/{plugin}/c
 2. the file belongs to that record: a file field holds it, or one of its rich-text documents names it;
 3. for anything but an image, the reader may also **download attachments**.
 
-Images follow **Read**: anyone who can read an article sees its images, and anyone who can see an image can save a copy of it. **Download attachments** covers files offered for download, such as PDFs and archives. A reader without it sees **An attachment is available. You do not have permission to download it.**, with no name, size or link. File fields work the same way, with `restricted: true` on the descriptor.
+Images follow **Read**: anyone who can read an article sees its images, and anyone who can see an image can save a copy of it. **Download attachments** covers files offered for download, such as PDFs and archives. A reader without it sees **An attachment is available. You do not have permission to download it.**, with no name, size or link:
+
+<ImgDocs
+  withoutBackground
+  src={attachmentRestricted}
+  alt="A topic for a member without the download rule: the paragraph above the attachment, then a dashed box with a locked file icon, An attachment is available. and You do not have permission to download it."
+/>
+
+File fields work the same way, with `restricted: true` on the descriptor.
 
 Responses are `private, no-store`, `nosniff` and sandboxed. Nothing is served through a signed URL, so taking a role away blocks the next download at once.
 

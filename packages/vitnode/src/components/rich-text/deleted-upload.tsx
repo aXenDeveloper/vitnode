@@ -64,7 +64,7 @@ export const RestrictedUpload = () => {
   const t = useTranslations("core.global.editor.uploads");
 
   return (
-    <span className="tiptap-upload-deleted" role="note">
+    <span className="tiptap-upload-deleted" data-restricted="" role="note">
       <span aria-hidden="true" className="tiptap-upload-deleted-icon">
         <FileLockIcon />
       </span>

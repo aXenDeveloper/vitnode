@@ -16,6 +16,9 @@ implementation:
       href: /docs/content-engine/access-api
 ---
 
+import { ImgDocs } from "@/components/fumadocs/img";
+import categoryNotice from "./access-category-notice.webp";
+
 A content type can hold access scopes of its own: every record gets view, read, comment and download rules, like a forum does. The Blog plugin uses this for categories, and an article is readable only when **every** one of its categories allows it.
 
 Use it when the scopes are records you already manage in the AdminCP, such as categories or tags, rather than a [container tree](/docs/content-engine/access). The actions, audiences and prerequisites are the same as for containers.
@@ -80,6 +83,12 @@ Comments need nothing: a record that answers a parent through its thread root, l
 Open **AdminCP → Categories** (`/admin/content/blog/categories`). In a category's row menu, choose **Access**, set **Read** to **Selected roles**, pick a role and choose **Save access**.
 
 The article editor shows **Who can see this** under the categories field. It asks the server what the selected categories require together, so it is right before you save.
+
+<ImgDocs
+  withoutBackground
+  src={categoryNotice}
+  alt="The article editor with the categories News and Insiders selected, and the Who can see this panel below: View Everyone, Read, Comment and Download attachments Members with VIP, and a note that a reader has to meet the rule of every category"
+/>
 
 </Step>
 

@@ -20,6 +20,12 @@ implementation:
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
+import { ImgDocs } from "@/components/fumadocs/img";
+import effectiveChild from "./access-effective-child.webp";
+import forumRestricted from "./access-forum-restricted.webp";
+import accessSheet from "./access-sheet.webp";
+import signIn from "./access-sign-in.webp";
+
 Access rules decide who may see a container, read what is filed in it, reply there and download its attachments. Use them for a staff-only forum, a members-only board, or a VIP section that only some roles can open.
 
 This guide uses the Forum plugin: the `forum.forums` collection, topics filed into forums and comments that follow their topic.
@@ -94,9 +100,13 @@ Turn access on only when every custom route of the plugin that reads topics or c
 
 Open **AdminCP → Forums** (`/admin/containers/forum/forums`). In a forum's row menu, choose **Access**.
 
-{/* Image prompt: AdminCP Access sheet for the forum "Members", with View set to Signed-in members, Read inheriting, and the Effective access panel listing "Signed-in members - set here" for each action */}
-
 Set **View** to **Signed-in members** for a forum called "Members", and choose **Save access**. Every action left on **Inherit** follows the nearest parent forum that sets it, then the collection's defaults. The **Effective access** panel below the fields shows what applies once parent forums are counted, and updates as you change the fields.
+
+<ImgDocs
+  withoutBackground
+  src={accessSheet}
+  alt="The Access sheet of the Members forum in the AdminCP: View set to Signed-in members, Read, Comment and Download attachments on Inherit (Everyone), and the Effective access panel showing Signed-in members for every action"
+/>
 
 Saving needs the collection's `can_edit` admin permission. The rules apply from the next request, including to members who are signed in right now.
 
@@ -108,7 +118,15 @@ Saving needs the collection's `can_edit` admin permission. The rules apply from 
 
 Under "Members", create a forum called "VIP". Open its **Access** sheet, set **View** to **Selected roles** and pick a VIP role, then save.
 
-A child can be stricter than its parent, never more open: to reach "VIP", a member has to pass the rules of "Members" too. With "General" left on **Inherit** beside it:
+A child can be stricter than its parent, never more open: to reach "VIP", a member has to pass the rules of "Members" too. Its **Effective access** panel lists both requirements:
+
+<ImgDocs
+  withoutBackground
+  src={effectiveChild}
+  alt="The Effective access panel of the VIP forum: every action needs Signed-in members, required by Members, a parent, and Members with VIP, set here"
+/>
+
+With "General" left on **Inherit** beside it:
 
 | Visitor                       | Members | General | VIP |
 | ----------------------------- | ------- | ------- | --- |
@@ -124,7 +142,21 @@ A child can be stricter than its parent, never more open: to reach "VIP", a memb
 
 Sign out and open `/forum`. "Members" and its children are gone from the forum list, and `/forum/members` answers **Forum not found**, as if it never existed. Sign in as a member without the VIP role: "Members" and "General" appear, "VIP" does not. Search for a topic title from "VIP" as both visitors: only a member with the role finds it.
 
-To try a forum readers may see but not read, set **View** to **Everyone** and **Read** to **Signed-in members**. Guests then see the forum with a **Restricted** label, and its page asks them to sign in instead of listing topics.
+To try a forum readers may see but not read, set **View** to **Everyone** and **Read** to **Signed-in members**. Guests then see the forum with a **Restricted** label:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={forumRestricted}
+  alt="The forum list as a guest: General with its topic count and latest topic, and Announcements with a Restricted label and no counts"
+/>
+
+Its page and its topics ask guests to sign in instead of showing anything. A signed-in member without access sees **You don't have access here** instead.
+
+<ImgDocs
+  src={signIn}
+  alt="A topic page for a guest: a lock icon, Sign in to read this, a Sign in button and a link back to all forums"
+/>
 
 ## Related
 
