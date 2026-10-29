@@ -5,6 +5,11 @@ import { HTTPException } from "hono/http-exception";
 import { describe, expect, it } from "vitest";
 
 import { core_content_containers } from "@/database/content-containers";
+import {
+  BOARD as ACCESS_BOARD,
+  createAccessWorld,
+  USER,
+} from "@/tests/content-access";
 import { testBoardContainers } from "@/tests/content-fixtures";
 import { createMemoryDb } from "@/tests/memory-db";
 
@@ -189,6 +194,73 @@ describe("private metadata", () => {
       expect(text).not.toContain("notes");
       expect(text).not.toContain("Staff only");
       expect(text).not.toContain("createdAt");
+    },
+  );
+});
+
+describe("with access rules", () => {
+  it.each([
+    [
+      undefined,
+      [ACCESS_BOARD.OPEN, ACCESS_BOARD.OPEN_CHILD, ACCESS_BOARD.READERS],
+    ],
+    [
+      USER.MEMBER,
+      [
+        ACCESS_BOARD.OPEN,
+        ACCESS_BOARD.OPEN_CHILD,
+        ACCESS_BOARD.MEMBERS,
+        ACCESS_BOARD.READERS,
+      ],
+    ],
+    [
+      USER.VIP,
+      [
+        ACCESS_BOARD.OPEN,
+        ACCESS_BOARD.OPEN_CHILD,
+        ACCESS_BOARD.MEMBERS,
+        ACCESS_BOARD.VIP,
+        ACCESS_BOARD.READERS,
+      ],
+    ],
+  ])("lists only the containers user %s may see", async (user, expected) => {
+    const world = await createAccessWorld();
+
+    const body = (await (
+      await world.send("GET", "/boards", { user })
+    ).json()) as {
+      items: PublicContainer[];
+    };
+
+    expect(ids(body.items)).toEqual(expected);
+  });
+
+  it("says what the viewer may do in each container", async () => {
+    const world = await createAccessWorld();
+
+    const body = (await (await world.send("GET", "/boards")).json()) as {
+      items: (PublicContainer & { access: Record<string, boolean> })[];
+    };
+
+    expect(
+      body.items.find(item => item.id === ACCESS_BOARD.READERS)?.access,
+    ).toEqual({
+      canComment: false,
+      canDownloadAttachments: false,
+      canRead: false,
+      canView: true,
+    });
+  });
+
+  it.each([String(ACCESS_BOARD.VIP), `board-${ACCESS_BOARD.VIP}`])(
+    "is a 404 for %s, a container the viewer may not see",
+    async segment => {
+      const world = await createAccessWorld();
+
+      expect(
+        (await world.send("GET", `/boards/${segment}`, { user: USER.MEMBER }))
+          .status,
+      ).toBe(404);
     },
   );
 });

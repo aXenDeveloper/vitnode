@@ -7,6 +7,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { RegisteredContentType } from "@/content/registry";
 
 import { core_search_index } from "@/database/search";
+import { createAccessWorld, TOPIC, USER } from "@/tests/content-access";
 import {
   testBigintEventContentType,
   testLocalizedPageContentType,
@@ -533,5 +534,99 @@ describe("item ids under every strategy", () => {
     expect(searchItemIdFromKey(types, "forum.topic", "7")).toBe(7);
     expect(searchItemIdFromKey([], "forum.topic", "7")).toBe(7);
     expect(searchItemIdFromKey(types, "forum.topic", "abc")).toBe("abc");
+  });
+});
+
+describe("SearchModel access rules", () => {
+  const hit = (itemId: number) => ({
+    author: null,
+    authorId: null,
+    authorIds: [],
+    authors: [],
+    containerId: null,
+    containerType: null,
+    content: "",
+    createdAt: new Date("2026-01-01"),
+    id: itemId,
+    image: null,
+    imageId: null,
+    isHidden: false,
+    isPublic: true,
+    itemId: String(itemId),
+    itemType: "test.access-topic",
+    languageCode: "",
+    metadata: {},
+    pluginId: "@vitnode/example",
+    score: null,
+    title: `Topic ${itemId}`,
+    url: null,
+  });
+
+  const searchAs = async (
+    userId: null | number,
+    options: Parameters<typeof createAccessWorld>[0] = {},
+  ) => {
+    const world = await createAccessWorld(options);
+    const provider = createProvider();
+    const values = world.contextValues(userId);
+    const core = {
+      ...(values.core as object),
+      search: { adapter: provider },
+    };
+    const c = {
+      get: (key: string) => (key === "core" ? core : values[key]),
+    } as unknown as Context;
+
+    return { model: new SearchModel(c), provider };
+  };
+
+  it("adds no access filter while nothing is restricted", async () => {
+    const { model, provider } = await searchAs(null, { rules: {} });
+
+    await model.search({ term: "hello" });
+
+    expect(provider.search).toHaveBeenCalledWith(expect.anything(), {
+      term: "hello",
+    });
+  });
+
+  it("limits a restricted viewer to the scopes they may read", async () => {
+    const { model, provider } = await searchAs(null);
+
+    await model.search({ term: "hello" });
+
+    const [, params] = vi.mocked(provider.search).mock.calls[0];
+    expect([...(params.accessScopes ?? [])].sort()).toEqual([
+      "test.access-boards:1",
+      "test.access-boards:5",
+    ]);
+  });
+
+  it("lets a staff route skip the rules, and never trusts a caller's scopes", async () => {
+    const { model, provider } = await searchAs(null);
+
+    await model.search({ accessScopes: ["anything:1"], skipAccess: true });
+
+    expect(provider.search).toHaveBeenCalledWith(expect.anything(), {});
+  });
+
+  it("drops a hit the content tables no longer let the viewer read, and stops counting it", async () => {
+    const { model, provider } = await searchAs(USER.MEMBER);
+    vi.mocked(provider.search).mockResolvedValue({
+      edges: [hit(TOPIC.OPEN), hit(TOPIC.VIP)],
+      pageInfo: {
+        count: 2,
+        endCursor: null,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        startCursor: null,
+        totalCount: 10,
+      },
+    });
+
+    const result = await model.search({ term: "topic" });
+
+    expect(result.edges.map(edge => edge.itemId)).toEqual([String(TOPIC.OPEN)]);
+    expect(result.pageInfo).toMatchObject({ count: 1, totalCount: 9 });
   });
 });
