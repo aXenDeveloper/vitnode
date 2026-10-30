@@ -1,6 +1,6 @@
 {
   "title": "Moderation",
-  "description": "Reports, the Moderator CP and scoped moderator permissions",
+  "description": "Reports, warnings, the Moderator CP and scoped moderator permissions",
   "icon": "ShieldAlert",
   "pages": [
     "index",
@@ -10,6 +10,10 @@
     "configure-moderators",
     "process-reports",
     "review-approvals",
+    "warnings",
+    "configure-warnings",
+    "issue-warnings",
+    "warn-content",
     "reference"
   ]
 }

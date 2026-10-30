@@ -564,11 +564,13 @@ member is notified.
 
 ## Moderation events
 
-Eleven names, declared in `VitNodeEvents` in
+Twenty names, declared in `VitNodeEvents` in
 `packages/vitnode/src/api/models/events.ts` and emitted by core with
 `pluginId: "@vitnode/core"`. Each fires **after** its database write
 commits. The envelope's `actor` is the reporter for `created`, the
-administrator for `report_reason.*` and the moderator for the rest. Adding an internal note emits nothing. See
+administrator for `report_reason.*`, `warning_reason.*` and
+`warning_threshold.*`, and the moderator for the rest. No payload carries a
+staff note. Adding an internal note emits nothing. See
 [Moderation](/docs/dev/moderation).
 
 | Event                        | Payload                                                | Fires when                                                                  |
@@ -584,6 +586,15 @@ administrator for `report_reason.*` and the moderator for the rest. Adding an in
 | `moderation.report_reason.updated` | `{ reasonId, code }`                             | An admin edits a report reason                                              |
 | `moderation.report_reason.deleted` | `{ reasonId, code }`                             | An admin deletes a report reason. Its reports stay                          |
 | `moderation.report_reason.reordered` | `{ reasonIds }`                                | An admin saves a new order. `reasonIds` lists every reason in that order    |
+| `moderation.warning.issued` | `{ warningId, userId, issuedById, points, reasonId, reportId, pluginId, targetType, targetId }` | A moderator issues a [warning](/docs/dev/moderation/warnings). Not emitted again for a retried request |
+| `moderation.warning.revoked` | `{ warningId, userId, revokedById }` | A moderator revokes a warning |
+| `moderation.sanction.applied` | `{ sanctionId, userId, type, source, endsAt, thresholdId, warningId }` | A threshold suspends an account. `endsAt` is `null` for an indefinite suspension |
+| `moderation.sanction.revoked` | `{ sanctionId, userId, revokedById }` | A moderator lifts a suspension |
+| `moderation.warning_reason.created` | `{ reasonId }` | An admin adds a warning reason |
+| `moderation.warning_reason.updated` | `{ reasonId }` | An admin edits or disables a warning reason |
+| `moderation.warning_threshold.created` | `{ thresholdId }` | An admin adds a warning threshold |
+| `moderation.warning_threshold.updated` | `{ thresholdId }` | An admin edits, enables or disables a threshold |
+| `moderation.warning_threshold.deleted` | `{ thresholdId }` | An admin deletes a threshold |
 
 A hide or restore from the ModCP also emits the content type's own
 `content.{id}.hidden` or `unhidden` event, because it goes through the same

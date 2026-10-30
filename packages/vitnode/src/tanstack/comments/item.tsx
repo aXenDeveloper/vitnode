@@ -6,12 +6,11 @@ import {
   FlagIcon,
   PencilIcon,
   Trash2Icon,
+  TriangleAlertIcon,
 } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
-
-import type { ContentPublicPerson } from "@/content/public-person";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -29,13 +28,13 @@ import {
   PopoverTitle,
 } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { zodContentPublicPerson } from "@/content/public-person";
 
 import type { ContentCommentComposerFormProps } from "./composer-form";
 import type { ContentCommentHideFormProps } from "./hide-form";
 import type { ContentCommentNode } from "./thread";
 import type { ContentCommentEditable } from "./use-content-comments";
 
+import { contentCommentAuthor, contentCommentAuthorName } from "./author";
 import { useContentCommentErrorToast, useContentCommentsContext } from "./root";
 
 const loadComposer = async () => await import("./composer-form");
@@ -75,23 +74,7 @@ const LazyHideForm = (props: ContentCommentHideFormProps) => (
   </React.Suspense>
 );
 
-const zodAuthor = zodContentPublicPerson.nullable().catch(null);
-
-/**
- * The comment's author from its public record's `author` field, or `null`
- * for a deleted account or a content type without one. Pure.
- */
-export const contentCommentAuthor = (
-  record: unknown,
-): ContentPublicPerson | null =>
-  typeof record === "object" && record !== null && "author" in record
-    ? zodAuthor.parse(record.author)
-    : null;
-
-/** The name to show for a person, preferring a real name they share. Pure. */
-export const contentCommentAuthorName = (
-  person: ContentPublicPerson | null,
-): null | string => (person ? (person.fullName ?? person.name) : null);
+export { contentCommentAuthor, contentCommentAuthorName } from "./author";
 
 /**
  * The state one comment needs: what the visitor may do with it, whether an
@@ -142,6 +125,10 @@ export const useContentCommentItem = (node: ContentCommentNode<unknown>) => {
       canEdit: comments.features.edit && permissions.canEdit,
       canHide: comments.features.hide && permissions.canHide,
       canReport: comments.features.report && permissions.canReport,
+      canWarn:
+        comments.features.warn &&
+        permissions.canWarn &&
+        contentCommentAuthor(node.record) !== null,
     },
     setIsReplying,
     /** Loads the editable values, then opens the edit form. */
@@ -174,7 +161,7 @@ const HIDE_PROMPT_MORPH_CLASS =
   "[clip-path:inset(-2rem_round_var(--radius-lg))] transition-[opacity,scale,clip-path] duration-200 data-starting-style:scale-100 data-starting-style:[clip-path:inset(0_calc(100%-var(--menu-width,100%))_calc(100%-var(--menu-height,100%))_0_round_var(--radius-lg))] data-[side=top]:data-starting-style:[clip-path:inset(calc(100%-var(--menu-height,100%))_calc(100%-var(--menu-width,100%))_0_0_round_var(--radius-lg))]";
 
 /**
- * The **More actions** menu of one comment: Edit, Report, Hide or Unhide and
+ * The **More actions** menu of one comment: Edit, Report, Warn author, Hide or Unhide and
  * Delete, each shown only when the plugin wired it up and the server allows
  * it. Hiding asks for an optional reason in a popover; deleting asks for
  * confirmation. Renders nothing when no action is available.
@@ -194,7 +181,7 @@ export const ContentCommentActions = ({
   node: ContentCommentNode<unknown>;
 }) => {
   const t = useTranslations("core.comments");
-  const { comments, requestDelete, requestReport } =
+  const { comments, requestDelete, requestReport, requestWarn } =
     useContentCommentsContext();
   const showError = useContentCommentErrorToast();
   const menuRef = React.useRef<HTMLDivElement>(null);
@@ -202,13 +189,16 @@ export const ContentCommentActions = ({
   const [isHidePromptOpen, setIsHidePromptOpen] = React.useState(false);
   const [hidePromptOrigin, setHidePromptOrigin] =
     React.useState<MenuOrigin | null>(null);
-  const { canDelete, canEdit, canHide, canReport } = item.permissions;
+  const { canDelete, canEdit, canHide, canReport, canWarn } = item.permissions;
   const isHidden = node.hidden;
   const name =
     contentCommentAuthorName(contentCommentAuthor(node.record)) ??
     t("deleted_user");
 
-  if (!node.record || (!canEdit && !canReport && !canHide && !canDelete)) {
+  if (
+    !node.record ||
+    (!canEdit && !canReport && !canWarn && !canHide && !canDelete)
+  ) {
     return children ? (
       <DropdownMenuShell
         className={className}
@@ -284,7 +274,18 @@ export const ContentCommentActions = ({
               {t("report")}
             </DropdownMenuItem>
           ) : null}
-          {(canHide || canDelete) && (canEdit || canReport || children) ? (
+          {canWarn ? (
+            <DropdownMenuItem
+              onClick={() => {
+                requestWarn(node);
+              }}
+            >
+              <TriangleAlertIcon aria-hidden="true" />
+              {t("warn")}
+            </DropdownMenuItem>
+          ) : null}
+          {(canHide || canDelete) &&
+          (canEdit || canReport || canWarn || children) ? (
             <DropdownMenuSeparator />
           ) : null}
           {canHide ? (

@@ -39,7 +39,7 @@ export const requireModeratorRoute = (auth: AuthenticatedState): void => {
 };
 
 /** A serial id from the URL, or the route's 404. */
-const routeIdOf = (raw: string): number => {
+export const routeIdOf = (raw: string): number => {
   const id = /^[1-9]\d{0,9}$/.test(raw) ? Number(raw) : Number.NaN;
   if (!Number.isSafeInteger(id) || id > 2_147_483_647) {
     // oxlint-disable-next-line typescript/only-throw-error
@@ -50,7 +50,9 @@ const routeIdOf = (raw: string): number => {
 };
 
 /** Turns the API's 404 - which also covers "not in your scope" - into the route's. */
-const withNotFound = async (load: () => Promise<unknown>): Promise<void> => {
+export const withNotFound = async (
+  load: () => Promise<unknown>,
+): Promise<void> => {
   try {
     await load();
   } catch (error) {

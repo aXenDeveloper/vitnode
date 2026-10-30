@@ -1,0 +1,114 @@
+---
+title: Issue warnings
+description: Warn a VitNode member from their profile, a comment, a report or the Moderator CP, preview the consequences, and revoke warnings or lift suspensions.
+icon: TriangleAlert
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import form from "./warning-form.webp";
+import member from "./warning-member.webp";
+import memberLog from "./warning-member-log.webp";
+
+Moderators warn members with one shared form, opened from wherever the problem is. This guide warns a member for a blog comment, then revokes the warning and lifts the suspension it caused.
+
+## Before you begin
+
+Warnings need [warning reasons](/docs/dev/moderation/configure-warnings) and a moderator entry with the right permissions. Grant them in **AdminCP → Staff → Moderators**:
+
+| Permission | Where | Lets the moderator |
+| --- | --- | --- |
+| **Warn authors of this content** (`can_warn`) | The content type's module, for example **Comment** in the blog. Can be [scoped](/docs/dev/moderation/scoped-permissions) | Warn the author of that content |
+| **Warn members directly, without content** | Core → **Warnings** | Warn from a profile or the ModCP without content |
+| **Change a warning's points** / **Change when a warning's points expire** | Core → **Warnings** | Override the reason's defaults, with an explanation |
+| **View every member's warnings** | Core → **Warnings** | See all warnings, not only those in their scope, and a member's **Moderation log** |
+| **Read staff notes on warnings** | Core → **Warnings** | Read private notes and override explanations |
+| **Revoke warnings** | Core → **Warnings** | Revoke a warning |
+| **View suspensions** / **Lift suspensions** | Core → **Warnings** | See and lift suspensions |
+
+A moderator limited to one forum section can warn for content in that section only. Without **Warn members directly** they cannot warn from a profile, and without **View every member's warnings** they see only the warnings they issued or that belong to their scope. The member's total of active points is always shown, because a warning anywhere counts toward account-wide thresholds.
+
+<Steps>
+
+<Step>
+
+### Open the warn form
+
+Pick the entry point that matches what you are looking at:
+
+| From | How |
+| --- | --- |
+| A comment | **More actions** (`…`) → **Warn author** |
+| A report | **Warn author** under the status button in the ModCP report |
+| A profile | **Warn** next to **Warnings** on the member's profile |
+| The ModCP | **Moderator CP → Warnings → Find a member**, then **Warn member** |
+
+Each button appears only when the server says you may use it.
+
+</Step>
+
+<Step>
+
+### Fill in the warning
+
+Pick a reason. The points, expiry and message follow the reason; change the points or expiry only if you may, and say why in **Why the change?**.
+
+- **Message to the member** is what the member reads in the notification and on their account status page.
+- **Staff note** is private. The member never sees it, and only staff who can read notes do.
+
+**What happens** shows the member's active points now, this warning's points, the total after and the automatic action. It is a preview: the server calculates everything again when you submit, in case someone else warned the member meanwhile.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={form}
+  alt="The warn form for a comment's author: a notice that points count everywhere, the Spam reason, and a preview showing 6 active points now, plus 2, 8 after, and an automatic 1-day suspension"
+/>
+
+From a report, **Also close the report as action taken** closes it in the same step. If either part fails, neither happens. Without it, the report stays open and its timeline records the warning.
+
+</Step>
+
+<Step>
+
+### Submit
+
+Choose **Issue warning**. The toast says how many active points the member has now and whether their account was suspended, from the server's actual result. If that differs from the preview, the toast says so. Sending the same form twice, for example after a network error, issues it once.
+
+</Step>
+
+<Step>
+
+### Revoke a warning or lift a suspension
+
+Open the member in **Moderator CP → Warnings** (or **Warnings** on their profile). **Revoke** on a warning asks for a reason; its points stop counting at once and the member is notified. The warning stays in the history, marked **Revoked**.
+
+Revoking a warning never lifts the suspension it caused. Lift it separately with **Lift** on the suspension. Other active suspensions keep applying.
+
+The **Moderation log** at the bottom of the page lists who warned the member, revoked a warning or applied and lifted a suspension, newest first, with points before and after. It needs **View every member's warnings**, and suspension entries also need **View suspensions**.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={memberLog}
+  alt="The Moderation log of a member: a suspension lifted, a 5-point warning revoked, a warning that suspended the account at the 8-point threshold, and two warnings with points before and after, one noting that its points were changed from the reason's"
+/>
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={member}
+  alt="A member's standing in the Moderator CP: 11 active points, an active indefinite suspension with a Lift button, and the warnings with their points, status and Revoke buttons"
+/>
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Sign in as the warned member. A notification links to **Account status**, which lists the warning with your message and its points. If the warning crossed a threshold, every page shows the suspension notice and actions such as commenting answer like a signed-out visitor's.
+
+## Related
+
+- [Warnings](/docs/dev/moderation/warnings)
+- [Process reports](/docs/dev/moderation/process-reports)

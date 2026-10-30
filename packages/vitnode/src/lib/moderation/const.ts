@@ -5,6 +5,7 @@ export const MODERATION_PERMISSIONS = {
   deleteNotes: "can_delete_notes",
   viewHidden: "can_view_hidden",
   hide: "can_hide",
+  warn: "can_warn",
 } as const;
 
 export const MODERATION_DEFAULT_REPORT_REASONS = [
@@ -63,6 +64,7 @@ export const MODERATION_REPORT_EVENT_TYPES = [
   "action",
   "resolved",
   "reopened",
+  "warning",
 ] as const;
 
 export type ModerationReportEventType =

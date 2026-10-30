@@ -17,6 +17,8 @@ import { useLocale } from "../i18n/locale";
 import { intlQueryOptions } from "../i18n/query";
 import { getIntlRuntime } from "../i18n/runtime";
 import { ReportDialog } from "../moderation/report-button";
+import { WarnDialog } from "../moderation/warn-button";
+import { contentCommentAuthor } from "./author";
 
 /** The message namespaces the shared comments components render with. */
 export const CONTENT_COMMENTS_NAMESPACES = [
@@ -30,6 +32,8 @@ interface ContentCommentsContextValue {
   requestDelete: (node: ContentCommentNode<unknown>) => void;
   /** Opens the report dialog for one comment. */
   requestReport: (node: ContentCommentNode<unknown>) => void;
+  /** Opens the warn dialog for one comment's author. */
+  requestWarn: (node: ContentCommentNode<unknown>) => void;
 }
 
 /**
@@ -108,17 +112,23 @@ const RootDialogs = ({
   deleting,
   onDeleteClosed,
   onReportClosed,
+  onWarnClosed,
   reporting,
+  warning,
 }: {
   deleting: ContentCommentNode<unknown> | null;
   onDeleteClosed: () => void;
   onReportClosed: () => void;
+  onWarnClosed: () => void;
   reporting: ContentCommentNode<unknown> | null;
+  warning: ContentCommentNode<unknown> | null;
 }) => {
   const t = useTranslations("core.comments");
   const { comments } = useContentCommentsContext();
   const showError = useContentCommentErrorToast();
   const target = reporting ? comments.reportTarget(reporting.id) : null;
+  const warnTarget = warning ? comments.reportTarget(warning.id) : null;
+  const warnAuthor = warning ? contentCommentAuthor(warning.record) : null;
 
   return (
     <>
@@ -162,14 +172,25 @@ const RootDialogs = ({
           typeLabel={t("report_type")}
         />
       ) : null}
+
+      {warnTarget && warnAuthor ? (
+        <WarnDialog
+          content={warnTarget}
+          onOpenChange={open => {
+            if (!open) onWarnClosed();
+          }}
+          open
+          userId={warnAuthor.id}
+        />
+      ) : null}
     </>
   );
 };
 
 /**
  * Provides one comment thread to the shared comment components below it and
- * renders the dialogs they open: the delete confirmation and the report
- * dialog. Adds its own messages to the page's, so it works on any page and
+ * renders the dialogs they open: the delete confirmation, the report
+ * dialog and the warn dialog. Adds its own messages to the page's, so it works on any page and
  * your components inside keep their translations. Use it to lay out
  * comments your own way; `ContentComments` renders a complete section with
  * it.
@@ -204,6 +225,8 @@ export const ContentCommentsRoot = <TRecord, TId extends ContentId>({
     React.useState<ContentCommentNode<unknown> | null>(null);
   const [reporting, setReporting] =
     React.useState<ContentCommentNode<unknown> | null>(null);
+  const [warning, setWarning] =
+    React.useState<ContentCommentNode<unknown> | null>(null);
 
   const value = React.useMemo<ContentCommentsContextValue>(
     () => ({
@@ -211,6 +234,7 @@ export const ContentCommentsRoot = <TRecord, TId extends ContentId>({
       comments: comments as unknown as ContentCommentsController,
       requestDelete: setDeleting,
       requestReport: setReporting,
+      requestWarn: setWarning,
     }),
     [comments],
   );
@@ -228,7 +252,11 @@ export const ContentCommentsRoot = <TRecord, TId extends ContentId>({
             onReportClosed={() => {
               setReporting(null);
             }}
+            onWarnClosed={() => {
+              setWarning(null);
+            }}
             reporting={reporting}
+            warning={warning}
           />
         </ContentCommentsContext>
       </CommentsMessages>
