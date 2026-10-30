@@ -179,6 +179,8 @@ export const core_users_sso_operations = camelCase.table.withRLS(
       firstName: null | string;
       lastName: null | string;
     }>(),
+    codeVerifier: t.varchar({ length: 128 }),
+    nonce: t.varchar({ length: 128 }),
     createdAt: t.timestamp().notNull().defaultNow(),
     expiresAt: t.timestamp().notNull(),
   }),
@@ -193,6 +195,58 @@ export const core_users_sso_operations = camelCase.table.withRLS(
       sql`${t.intent} IN (${inList(SSO_OPERATION_INTENTS)})`,
     ),
   ],
+);
+
+/**
+ * A sign-in round trip to a provider: single use, short-lived, bound to the
+ * browser that started it (`bindingHash` is the hash of an HttpOnly cookie)
+ * and to one provider. Holds the PKCE verifier and OIDC nonce until the
+ * callback consumes the row.
+ */
+export const core_sso_attempts = camelCase.table.withRLS(
+  "core_sso_attempts",
+  t => ({
+    id: t.serial().primaryKey(),
+    stateHash: t.varchar({ length: 64 }).notNull().unique(),
+    bindingHash: t.varchar({ length: 64 }).notNull(),
+    providerId: t.varchar({ length: 255 }).notNull(),
+    codeVerifier: t.varchar({ length: 128 }).notNull(),
+    nonce: t.varchar({ length: 128 }).notNull(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+    expiresAt: t.timestamp().notNull(),
+  }),
+  t => [index("core_sso_attempts_expires_at_idx").on(t.expiresAt)],
+);
+
+/**
+ * A provider identity that authenticated but brought no trustworthy email.
+ * Waits, server-side, for the visitor to open the confirmation link emailed
+ * to the address they chose, before an account is created or linked. Single
+ * use; the browser holds only the token whose hash is `tokenHash`, in an
+ * HttpOnly cookie, and the email holds the one hashed as `confirmHash`.
+ */
+export const core_sso_pending = camelCase.table.withRLS(
+  "core_sso_pending",
+  t => ({
+    id: t.serial().primaryKey(),
+    tokenHash: t.varchar({ length: 64 }).notNull().unique(),
+    providerId: t.varchar({ length: 255 }).notNull(),
+    providerAccountId: t.varchar({ length: 255 }).notNull(),
+    providerUsername: t.varchar({ length: 255 }),
+    profile: t.jsonb().$type<{
+      avatarUrl: null | string;
+      firstName: null | string;
+      lastName: null | string;
+    }>(),
+    email: t.varchar({ length: 255 }),
+    confirmHash: t.varchar({ length: 64 }),
+    confirmExpiresAt: t.timestamp(),
+    confirmSends: t.integer().notNull().default(0),
+    confirmSentAt: t.timestamp(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+    expiresAt: t.timestamp().notNull(),
+  }),
+  t => [index("core_sso_pending_expires_at_idx").on(t.expiresAt)],
 );
 
 export const core_users_confirm_emails = camelCase.table.withRLS(

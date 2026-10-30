@@ -1,0 +1,158 @@
+---
+title: GitLab
+description: Add GitLab sign-in to VitNode for GitLab.com or a self-managed GitLab instance, using OpenID Connect with PKCE.
+icon: GitBranch
+---
+
+Add a **Continue with GitLab** button that signs people in with GitLab.com or with your own GitLab instance. The adapter uses OpenID Connect with PKCE and validates GitLab's ID token.
+
+## Before you begin
+
+- A running VitNode app. This page covers only the GitLab parts; [SSO setup](/docs/dev/sso#set-up-your-first-provider) explains the shared steps and [where the API's `.env` and config live](/docs/dev/sso#where-the-files-live).
+
+## Set up the application
+
+<Steps>
+<Step>
+
+### Create an application
+
+On GitLab.com open your avatar → **Edit profile → Access → Applications** (or a group's **Settings → Applications** to own it as a team), and press **Add new application**. On a self-managed instance, an administrator can also create an instance-wide one under **Admin → Applications**.
+
+</Step>
+
+<Step>
+
+### Fill in the redirect URI and scopes
+
+| Field        | Value                                                                        |
+| ------------ | ---------------------------------------------------------------------------- |
+| Name         | your site's name                                                             |
+| Redirect URI | `http://localhost:3000/login/sso/gitlab` and `https://your-domain.com/login/sso/gitlab`, one per line |
+| Confidential | ticked                                                                       |
+| Scopes       | `openid`, `profile`, `email`                                                 |
+
+VitNode builds the redirect URI from `VITNODE_WEB_URL` and the adapter `id`, so it must match exactly. Do not tick `api` or `read_user`; sign-in needs only the three OpenID scopes.
+
+</Step>
+
+<Step>
+
+### Copy the credentials
+
+Save the application and copy the **Application ID** and **Secret** into server-side variables. GitLab shows the secret only right after you create the application; **Renew secret** replaces it and breaks sign-in until you update `.env`.
+
+```bash title=".env"
+GITLAB_CLIENT_ID=0123456789abcdef0123456789abcdef # [!code ++]
+GITLAB_CLIENT_SECRET=gloas-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Add the adapter
+
+Add `GitLabSSOApiPlugin` to `authorization.ssoAdapters` in the API's `vitnode.api.config.ts` ([where it lives](/docs/dev/sso#where-the-files-live)), next to any adapters you already have. Keep the rest of the config as it is:
+
+```ts title="src/vitnode.api.config.ts (excerpt)"
+import { GitLabSSOApiPlugin } from '@vitnode/core/api/adapters/sso/gitlab' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  authorization: {
+    ssoAdapters: [
+      // ...
+      // [!code ++:4]
+      GitLabSSOApiPlugin({
+        clientId: process.env.GITLAB_CLIENT_ID,
+        clientSecret: process.env.GITLAB_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+No `authorization` block yet? Create one with just `ssoAdapters`, as in the [SSO setup](/docs/dev/sso#add-the-adapter-to-ssoadapters). Then restart the dev server, since `.env` and the API config are only read at start-up.
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login`, press the **GitLab** button under **Continue with** and authorize the application. You return to `/login/sso/gitlab` signed in.
+
+</Step>
+</Steps>
+
+## Use a self-managed instance
+
+Pass the instance URL as `issuer`. It must be HTTPS (plain HTTP is accepted only for `localhost`), and it is also the issuer VitNode expects in the ID token.
+
+```ts title="src/vitnode.api.config.ts"
+GitLabSSOApiPlugin({
+  clientId: process.env.GITLAB_CLIENT_ID,
+  clientSecret: process.env.GITLAB_CLIENT_SECRET,
+  issuer: 'https://gitlab.example.com', // [!code ++]
+}),
+```
+
+GitLab user IDs are unique only within one instance. For any issuer other than GitLab.com, VitNode stores the account as `gitlab.example.com:{id}`, so user `42` on your instance can never sign in as user `42` on GitLab.com.
+
+To offer GitLab.com and your instance side by side, register the adapter twice with different `id` and `name` values. Each `id` gets its own redirect URI:
+
+```ts title="src/vitnode.api.config.ts"
+ssoAdapters: [
+  GitLabSSOApiPlugin({
+    clientId: process.env.GITLAB_CLIENT_ID,
+    clientSecret: process.env.GITLAB_CLIENT_SECRET,
+  }),
+  GitLabSSOApiPlugin({
+    clientId: process.env.GITLAB_ACME_CLIENT_ID,
+    clientSecret: process.env.GITLAB_ACME_CLIENT_SECRET,
+    id: 'gitlab-acme', // redirect URI: /login/sso/gitlab-acme
+    issuer: 'https://gitlab.acme.example',
+    name: 'Acme GitLab',
+  }),
+],
+```
+
+Choose the `issuer` before people sign in. Changing it later changes every stored account ID, and existing members would no longer be recognized.
+
+## Options
+
+| Name           | Type                  | Required | Default              | Description                                      |
+| -------------- | --------------------- | -------- | -------------------- | ------------------------------------------------ |
+| `clientId`     | `string \| undefined` | Yes      | -                    | The Application ID                               |
+| `clientSecret` | `string \| undefined` | Yes      | -                    | The application Secret                           |
+| `issuer`       | `string`              | No       | `https://gitlab.com` | Instance URL; must be HTTPS                      |
+| `id`           | `string`              | No       | `gitlab`             | Provider id in URLs and stored accounts          |
+| `name`         | `string`              | No       | `GitLab`             | Name on the button                               |
+
+## Scopes and profile fields
+
+| Setting        | Value                                                   |
+| -------------- | ------------------------------------------------------- |
+| Scopes         | `openid profile email`                                  |
+| PKCE           | `S256`                                                  |
+| Account ID     | `sub`, prefixed with the instance for self-managed      |
+| Email trusted  | only with `email_verified: true`                        |
+| Profile fields | avatar, first name, last name                           |
+
+GitLab includes `email` and `email_verified` only when the user has a public email address. Without one, a new member [confirms an email](/docs/dev/sso/email-confirmation) first, which needs an [email adapter](/docs/dev/email#configuring-email-adapters).
+
+## Troubleshooting
+
+- **"The redirect URI included is not valid".** The URI on the application differs from `{VITNODE_WEB_URL}/login/sso/{id}`.
+- **"The requested scope is invalid".** The application is missing `openid`, `profile` or `email`.
+- **The server refuses to start with `Invalid GitLab issuer`.** The `issuer` is not an HTTPS URL, or it has a query string.
+- **Sign-in fails after the GitLab screen with a 400.** The ID token came from another issuer than `issuer`, for example the wrong instance URL.
+
+## Related
+
+<Cards>
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+  <Card title="Connected accounts" description="Import the avatar and name" href="/docs/dev/sso/connected-accounts" />
+</Cards>

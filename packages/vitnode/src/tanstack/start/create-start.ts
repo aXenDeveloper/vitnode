@@ -1,6 +1,10 @@
 import type { AnyRequestMiddleware } from "@tanstack/react-start";
 
-import { createCsrfMiddleware, createStart } from "@tanstack/react-start";
+import {
+  createCsrfMiddleware,
+  createMiddleware,
+  createStart,
+} from "@tanstack/react-start";
 
 import type { LocaleConfig } from "@/lib/i18n/types";
 import type { VitNodeConfig } from "@/vitnode.config";
@@ -11,6 +15,7 @@ import type { DocumentSecurityHeaders } from "./document-headers";
 
 import { resolveDocumentSecurityHeaders } from "./document-headers";
 import { createLocaleRequestMiddleware } from "./locale-middleware";
+import { runSsoFormPost } from "./sso-form-post";
 
 export interface VitNodeStartOptions<
   AppLocales extends LocaleConfig[] = LocaleConfig[],
@@ -30,7 +35,8 @@ export interface VitNodeStartOptions<
 
 /**
  * The app's TanStack Start instance with VitNode's request middleware: CSRF
- * protection for server functions; locale redirects and the locale cookie;
+ * protection for server functions; a provider's `form_post` sign-in callback
+ * (Apple) turned into the `GET` the callback page reads; locale redirects and the locale cookie;
  * `private, no-store` caching and security headers on HTML documents (the
  * page cache sets its own cache headers on pages it serves); then
  * `requestMiddleware`.
@@ -56,6 +62,7 @@ export const createVitNodeStart = <AppLocales extends LocaleConfig[]>({
   return createStart(() => ({
     requestMiddleware: [
       createCsrfMiddleware({ filter: ctx => ctx.handlerType === "serverFn" }),
+      createMiddleware().server(runSsoFormPost),
       createLocaleRequestMiddleware(localeRouting, documentHeaders),
       ...requestMiddleware,
     ],

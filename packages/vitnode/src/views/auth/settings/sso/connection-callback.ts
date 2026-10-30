@@ -10,6 +10,7 @@ export interface SsoConnectionCallbackSearch {
   code?: string;
   error?: string;
   state?: string;
+  user?: string;
 }
 
 export interface SsoConnectionCallbackTarget {
@@ -30,6 +31,7 @@ export const ssoConnectionCallbackTarget = async ({
     code: string;
     providerId: string;
     state: string;
+    user?: string;
   }) => Promise<CompleteSsoConnectionResult>;
   providerId: string;
   search: SsoConnectionCallbackSearch;
@@ -50,6 +52,7 @@ export const ssoConnectionCallbackTarget = async ({
     code: search.code,
     providerId,
     state: search.state,
+    ...(search.user ? { user: search.user } : {}),
   });
 
   if (!result.ok) return { error: result.failure, provider: providerId };

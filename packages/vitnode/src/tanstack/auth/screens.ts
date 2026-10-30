@@ -41,6 +41,12 @@ export const ssoCallbackResult = (
 ): SSOCallbackResult => {
   if (result.ok) return {};
 
+  if (result.reason === "email_required") {
+    return { emailSuggestion: result.email, failure: "email_required" };
+  }
+  if (result.reason === "email_unavailable") {
+    return { failure: "email_unavailable" };
+  }
   if (result.reason !== "email_exists") return { failure: "unknown" };
 
   return result.offer

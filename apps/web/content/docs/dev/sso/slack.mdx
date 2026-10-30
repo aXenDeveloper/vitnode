@@ -1,0 +1,134 @@
+---
+title: Slack
+description: Add Sign in with Slack to VitNode using OpenID Connect. Create a Slack app without a bot, register the redirect URL and optionally restrict sign-in to one workspace.
+icon: Hash
+---
+
+Add a **Continue with Slack** button using Sign in with Slack (OpenID Connect). No bot is installed and no workspace data is read. VitNode only learns who the person is and which workspace they signed in from.
+
+## Before you begin
+
+- A running VitNode app. This page covers only the Slack parts; [SSO setup](/docs/dev/sso#set-up-your-first-provider) explains the shared steps and [where the API's `.env` and config live](/docs/dev/sso#where-the-files-live).
+
+## Set up the app
+
+<Steps>
+<Step>
+
+### Create a Slack app
+
+Open [api.slack.com/apps](https://api.slack.com/apps), create a new app from scratch, name it and pick a development workspace.
+
+</Step>
+
+<Step>
+
+### Add the redirect URL
+
+Open **OAuth & Permissions**, add a URL under **Redirect URLs** and save:
+
+| Environment | Redirect URL                              |
+| ----------- | ----------------------------------------- |
+| Production  | `https://your-domain.com/login/sso/slack` |
+| Development | `https://forum-dev.example.com/login/sso/slack` (an HTTPS tunnel) |
+
+Slack expects HTTPS redirect URLs, so develop through a tunnel and set `VITNODE_WEB_URL` to its address. VitNode builds the URL as `{VITNODE_WEB_URL}/login/sso/slack`.
+
+</Step>
+
+<Step>
+
+### Add the OpenID scopes
+
+Still on **OAuth & Permissions**, under **User Token Scopes**, add `openid`, `profile` and `email`. Leave **Bot Token Scopes** empty, because Sign in with Slack does not install a bot.
+
+</Step>
+
+<Step>
+
+### Copy the credentials
+
+Open **Basic Information → App Credentials** and copy the **Client ID** and **Client Secret** into server-side variables:
+
+```bash title=".env"
+SLACK_CLIENT_ID=1234567890.1234567890123 # [!code ++]
+SLACK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Add the adapter
+
+Add `SlackSSOApiPlugin` to `authorization.ssoAdapters` in the API's `vitnode.api.config.ts` ([where it lives](/docs/dev/sso#where-the-files-live)), next to any adapters you already have. Keep the rest of the config as it is:
+
+```ts title="src/vitnode.api.config.ts (excerpt)"
+import { SlackSSOApiPlugin } from '@vitnode/core/api/adapters/sso/slack' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  authorization: {
+    ssoAdapters: [
+      // ...
+      // [!code ++:5]
+      SlackSSOApiPlugin({
+        clientId: process.env.SLACK_CLIENT_ID,
+        clientSecret: process.env.SLACK_CLIENT_SECRET,
+        teamId: process.env.SLACK_TEAM_ID,
+      }),
+    ],
+  },
+})
+```
+
+No `authorization` block yet? Create one with just `ssoAdapters`, as in the [SSO setup](/docs/dev/sso#add-the-adapter-to-ssoadapters). Then restart the dev server, since `.env` and the API config are only read at start-up.
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login`, press the **Slack** button under **Continue with**, choose the workspace and allow. You return to `/login/sso/slack` signed in.
+
+</Step>
+</Steps>
+
+## Restrict sign-in to one workspace
+
+Set `teamId` to the workspace ID (starts with `T`, or `E` for an Enterprise organization; it is in the workspace URL `app.slack.com/client/T0123ABCD`). VitNode then:
+
+1. sends `team=T0123ABCD` so Slack preselects the workspace, and
+2. checks the `https://slack.com/team_id` claim of the validated ID token and answers `403` for any other workspace.
+
+The second check is what makes the restriction real. Anyone can edit the authorize URL, but nobody can change the signed token.
+
+To let people outside your workspace sign in, turn on **Manage Distribution → Activate Public Distribution** for the app.
+
+## Scopes and profile fields
+
+| Setting        | Value                                                          |
+| -------------- | -------------------------------------------------------------- |
+| Scopes         | `openid profile email` (user scopes)                           |
+| ID token       | RS256 signature, issuer `https://slack.com`, audience, expiry, nonce |
+| Account ID     | `{team_id}:{user_id}`, since Slack user IDs are per workspace   |
+| Email trusted  | only with `email_verified: true`                               |
+| Profile fields | avatar, first name, last name                                  |
+
+The adapter reads the avatar from the ID token's `picture` claim. Slack documents `picture` on its UserInfo method but not in its ID token example, so a token may arrive without it, and the avatar then has nothing to import. First and last name come from `given_name` and `family_name`.
+
+## Troubleshooting
+
+- **A `bad_redirect_uri` or redirect mismatch error.** Add `{VITNODE_WEB_URL}/login/sso/slack` under **OAuth & Permissions**.
+- **Slack asks to install a bot.** The app has **Bot Token Scopes**. Remove them; sign-in needs only the user scopes above.
+- **403 after signing in.** The person signed in from a workspace other than `teamId`.
+- **Only your workspace can sign in.** Public distribution is off.
+
+## Related
+
+<Cards>
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+  <Card title="Connected accounts" description="Import the avatar and name" href="/docs/dev/sso/connected-accounts" />
+</Cards>

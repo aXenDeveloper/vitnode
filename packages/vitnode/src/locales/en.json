@@ -957,6 +957,48 @@
         },
         "connection": {
           "pending": "Finishing up with {provider}…"
+        },
+        "email_completion": {
+          "title": "Confirm your email",
+          "desc": "<provider></provider> didn't share a verified email address. Tell us which one to use and we'll send it a confirmation link.",
+          "email": {
+            "label": "Email",
+            "desc": "Nothing is created until you open the link we send.",
+            "invalid": "Please enter a valid email address.",
+            "submit": "Send confirmation link"
+          },
+          "sent": {
+            "title": "Check your email",
+            "desc": "We sent a confirmation link to <email></email>. Open it in this browser within 30 minutes to finish signing in.",
+            "resend": "Send a new link",
+            "resent": "A new link is on its way.",
+            "change_email": "Use a different email"
+          },
+          "errors": {
+            "too_many_emails": {
+              "title": "Slow down a little",
+              "desc": "Wait half a minute before asking for another link. In the meantime, check your spam folder."
+            },
+            "invalid_pending": {
+              "title": "This sign-in has expired",
+              "desc": "Sign in with <provider></provider> again to start over. Each attempt works once, for 30 minutes."
+            }
+          },
+          "start_again": "Back to sign in"
+        },
+        "email_unavailable": {
+          "title": "We need a verified email",
+          "desc": "<provider></provider> didn't share a verified email address, and this site can't send a confirmation link right now. Try another way to sign in."
+        },
+        "email_confirm": {
+          "other_browser": {
+            "title": "Open the link where you signed in",
+            "desc": "This link only works in the browser where you started signing in with <provider></provider>, and only for 30 minutes. Open it there, or sign in again to get a new one."
+          },
+          "invalid": {
+            "title": "This link doesn't work anymore",
+            "desc": "It has expired, was already used, or a newer link was sent. Sign in with <provider></provider> again to get a fresh one."
+          }
         }
       },
       "sign_up": {
@@ -1370,6 +1412,10 @@
             "nothing_to_sync": {
               "title": "Nothing to sync",
               "desc": "Check at least one field to keep up to date from {provider}."
+            },
+            "reauthentication_required": {
+              "title": "Please sign in again",
+              "desc": "For your security, connecting {provider} needs a recent sign-in. Sign out, sign back in, and connect it within the hour."
             }
           },
           "value_not_set": "Not set",

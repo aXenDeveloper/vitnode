@@ -651,6 +651,9 @@ importers:
       jiti:
         specifier: ^2.7.0
         version: 2.7.0
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
       motion:
         specifier: ^14.0.0
         version: 14.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)

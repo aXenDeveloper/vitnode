@@ -1,0 +1,127 @@
+---
+title: Atlassian
+description: Add Atlassian account sign-in to VitNode. Create an OAuth 2.0 (3LO) integration with only the User identity API and wire up the Atlassian SSO adapter.
+icon: Layers
+---
+
+Add a **Continue with Atlassian** button so people can sign in with the Atlassian account they use for Jira, Confluence or Trello. This is sign-in only. VitNode asks for the person's own profile and nothing from Jira, Confluence or any other product.
+
+## Before you begin
+
+- A running VitNode app. This page covers only the Atlassian parts; [SSO setup](/docs/dev/sso#set-up-your-first-provider) explains the shared steps and [where the API's `.env` and config live](/docs/dev/sso#where-the-files-live).
+- An [email adapter](/docs/dev/email#configuring-email-adapters), in case Atlassian does not mark the email verified (see [Scopes and profile fields](#scopes-and-profile-fields)).
+
+## Set up the integration
+
+<Steps>
+<Step>
+
+### Create an OAuth 2.0 integration
+
+Open the [Atlassian developer console](https://developer.atlassian.com/console/myapps/), press **Create** and choose **OAuth 2.0 integration**. Name it after your site, since people see the name on the consent screen.
+
+</Step>
+
+<Step>
+
+### Add only the User identity API
+
+Open **Permissions**, find **User identity API** and press **Add**, then **Configure** and enable **View user profile** (`read:me`). Leave every product API (Jira, Confluence, Bitbucket) alone. VitNode does not need them, and asking for them turns a sign-in button into a product integration.
+
+</Step>
+
+<Step>
+
+### Add the callback URL
+
+Open **Authorization**, select **Configure** next to **OAuth 2.0 (3LO)** and enter the callback URL:
+
+| Environment                           | Callback URL                                  |
+| ------------------------------------- | --------------------------------------------- |
+| Development (`VITNODE_WEB_URL` unset) | `http://localhost:3000/login/sso/atlassian`   |
+| Production                            | `https://your-domain.com/login/sso/atlassian` |
+
+VitNode builds it from `VITNODE_WEB_URL`, so it must match exactly.
+
+</Step>
+
+<Step>
+
+### Copy the credentials
+
+Open **Settings** and copy the **Client ID** and **Secret** into server-side variables (never `clientEnv`):
+
+```bash title=".env"
+ATLASSIAN_CLIENT_ID=AbCdEf123456 # [!code ++]
+ATLASSIAN_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Add the adapter
+
+Add `AtlassianSSOApiPlugin` to `authorization.ssoAdapters` in the API's `vitnode.api.config.ts` ([where it lives](/docs/dev/sso#where-the-files-live)), next to any adapters you already have. Keep the rest of the config as it is:
+
+```ts title="src/vitnode.api.config.ts (excerpt)"
+import { AtlassianSSOApiPlugin } from '@vitnode/core/api/adapters/sso/atlassian' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  authorization: {
+    ssoAdapters: [
+      // ...
+      // [!code ++:4]
+      AtlassianSSOApiPlugin({
+        clientId: process.env.ATLASSIAN_CLIENT_ID,
+        clientSecret: process.env.ATLASSIAN_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+No `authorization` block yet? Create one with just `ssoAdapters`, as in the [SSO setup](/docs/dev/sso#add-the-adapter-to-ssoadapters). Then restart the dev server, since `.env` and the API config are only read at start-up.
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login` and press the **Atlassian** button under **Continue with**. The consent screen should list only "View your user profile". After **Accept** you return to `/login/sso/atlassian` and are signed in, or asked to [confirm an email](/docs/dev/sso/email-confirmation) if Atlassian did not share a verified one.
+
+</Step>
+</Steps>
+
+## Share the integration
+
+A new integration works only for its owner. To let anyone sign in, open **Distribution**, set the status to **Sharing**, and fill in the vendor and privacy details Atlassian asks for.
+
+## Scopes and profile fields
+
+| Setting        | Value                                    |
+| -------------- | ---------------------------------------- |
+| Scopes         | `read:me`                                |
+| Account ID     | `account_id` (one per Atlassian account) |
+| Email trusted  | only with `email_verified: true`         |
+| Profile fields | avatar                                   |
+
+Atlassian has no separate first and last name, and VitNode does not split the display name.
+
+VitNode trusts the email only when `/me` returns `email_verified: true`. Atlassian's documented `/me` response has no `email_verified` field, so if your integration's responses don't include it, every new Atlassian member [confirms an email](/docs/dev/sso/email-confirmation) first. Configure an [email adapter](/docs/dev/email#configuring-email-adapters) before testing Atlassian sign-in.
+
+## Troubleshooting
+
+- **"Something went wrong" on Atlassian's page.** The callback URL is not on the **Authorization** page, or `VITNODE_WEB_URL` differs from it.
+- **Only you can sign in.** The integration is not shared yet; see [Share the integration](#share-the-integration).
+- **The consent screen asks for Jira or Confluence.** A product API was added under **Permissions**. Remove it; sign-in needs only `read:me`.
+
+## Related
+
+<Cards>
+  <Card title="Email confirmation" description="What happens without a verified email" href="/docs/dev/sso/email-confirmation" />
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+</Cards>

@@ -10,12 +10,15 @@ import { completeSsoConnectionInBrowser } from "@/views/auth/settings/sso/sso-co
 import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
 import { SSOCallbackContent } from "@/views/auth/sso/callback/sso-callback-content";
 import { useSSOCallback } from "@/views/auth/sso/callback/use-sso-callback";
+import { useSSOEmailConfirm } from "@/views/auth/sso/callback/use-sso-email-confirm";
 
 import { RouteMessages } from "../i18n/route-messages";
 import { ssoSettingsHref } from "../sso-connections/route-search";
 import {
   requestPasswordResetAction,
+  ssoEmailCompletionActions,
   useCompleteSsoAction,
+  useConfirmSsoEmailAction,
   useLinkSsoAction,
 } from "./actions";
 import { parseSsoCallback } from "./contract";
@@ -32,7 +35,14 @@ export interface SsoCallbackRouteProps {
   /** The "go back" / "go home" pair a host renders on a dead-end screen. */
   errorActions: React.ReactNode;
   providerId: string;
-  search: { code?: string; error?: string; state?: string };
+  search: {
+    code?: string;
+    /** The token of an emailed SSO confirmation link. */
+    confirm?: string;
+    error?: string;
+    state?: string;
+    user?: string;
+  };
 }
 
 const SsoConnectionCallbackPending = ({
@@ -125,8 +135,12 @@ const SsoConnectionCallbackRoute = ({
   );
 };
 
-export const SsoCallbackRouteContent = (props: SsoCallbackRouteProps) =>
-  ssoConnectionIntentOfState(props.search.state) ? (
+export const SsoCallbackRouteContent = (props: SsoCallbackRouteProps) => {
+  if (props.search.confirm) {
+    return <SsoEmailConfirmRoute {...props} token={props.search.confirm} />;
+  }
+
+  return ssoConnectionIntentOfState(props.search.state) ? (
     <SsoConnectionCallbackRoute
       providerId={props.providerId}
       search={props.search}
@@ -134,26 +148,64 @@ export const SsoCallbackRouteContent = (props: SsoCallbackRouteProps) =>
   ) : (
     <SsoSignInCallbackRoute {...props} />
   );
+};
+
+/** Where an SSO sign-in lands once it is complete. */
+const useSignedInDestination = () => {
+  const router = useRouter();
+
+  // The front page, through the same rule the login form uses. There is no
+  // `returnTo` to honour here and there must not be: this URL is built by the
+  // provider (or emailed) from what the API registered, so anything in its
+  // query came from outside.
+  return () => {
+    void router.navigate(
+      parseInternalDestination(postAuthDestination(undefined)),
+    );
+  };
+};
+
+const SsoEmailConfirmRoute = ({
+  errorActions,
+  providerId,
+  token,
+}: SsoCallbackRouteProps & { token: string }) => {
+  const { data: config } = useMiddlewareConfigQuery();
+  const onSignedIn = useSignedInDestination();
+  const linkSso = useLinkSsoAction({ onSignedIn, providerId });
+  const confirm = useConfirmSsoEmailAction(providerId);
+
+  const state = useSSOEmailConfirm({
+    onConfirm: confirm,
+    onSignedIn,
+    providerId,
+    token,
+  });
+
+  return (
+    <RouteMessages namespaces={SSO_CALLBACK_NAMESPACES}>
+      <SSOCallbackContent
+        errorActions={errorActions}
+        onLink={linkSso}
+        providerId={providerId}
+        providers={ssoProvidersOf(config)}
+        showResetPassword={authMethodsOf(config).resetPassword}
+        state={state}
+      />
+    </RouteMessages>
+  );
+};
 
 const SsoSignInCallbackRoute = ({
   errorActions,
   providerId,
   search,
 }: SsoCallbackRouteProps) => {
-  const router = useRouter();
   const { data: config } = useMiddlewareConfigQuery();
 
   const parsed = parseSsoCallback({ providerId, query: search });
   const completeSso = useCompleteSsoAction(parsed.ok ? parsed.params : null);
-  // The front page, through the same rule the login form uses. There is no
-  // `returnTo` to honour here and there must not be: this URL is built by the
-  // provider from what the API registered with it, so anything in its query
-  // came back from another origin.
-  const onSignedIn = () => {
-    void router.navigate(
-      parseInternalDestination(postAuthDestination(undefined)),
-    );
-  };
+  const onSignedIn = useSignedInDestination();
   const linkSso = useLinkSsoAction({ onSignedIn, providerId });
 
   const state = useSSOCallback({
@@ -168,6 +220,7 @@ const SsoSignInCallbackRoute = ({
     <RouteMessages namespaces={SSO_CALLBACK_NAMESPACES}>
       <SSOCallbackContent
         captcha={config.captcha}
+        emailCompletion={ssoEmailCompletionActions(providerId)}
         errorActions={errorActions}
         onLink={linkSso}
         onRequestReset={requestPasswordResetAction}

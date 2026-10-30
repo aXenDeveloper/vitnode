@@ -93,6 +93,24 @@ export class SessionModel {
     deleteAuthCookie(this.c, this.c.get("core").authorization.cookieName);
   }
 
+  /** When this browser's session was created - its last sign-in. `null` without a session. */
+  async getSessionCreatedAt(): Promise<Date | null> {
+    const token = getCookie(
+      this.c,
+      this.c.get("core").authorization.cookieName,
+    );
+    if (!token) return null;
+
+    const [row] = await this.c
+      .get("db")
+      .select({ createdAt: core_sessions.createdAt })
+      .from(core_sessions)
+      .where(eq(core_sessions.token, await hashSessionToken(token)))
+      .limit(1);
+
+    return row?.createdAt ?? null;
+  }
+
   async getUser() {
     const token = getCookie(
       this.c,

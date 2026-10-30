@@ -1,0 +1,122 @@
+---
+title: Email confirmation
+description: How VitNode signs people in when a provider such as Reddit, TikTok or Kick shares no verified email. The visitor confirms an address by opening an emailed link.
+icon: MailCheck
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+
+import emailStep from './email-confirmation/email-step.webp'
+import sentStep from './email-confirmation/sent-step.webp'
+
+Some providers never share an email address (Reddit, TikTok), share one without saying whether it is verified (Kick), or share one that is not always trustworthy (Microsoft, X without email access). VitNode still signs these people in. A returning member is recognized by their provider account, and a new visitor confirms an address of their own by opening an emailed link before any account exists, the same way password sign-ups [confirm their email](/docs/dev/email).
+
+## When VitNode trusts a provider email
+
+Signing in at the provider proves the visitor controls that provider account, not that they own the email it reports. So VitNode trusts an address only on the adapter's word, through the `emailVerified` field that `fetchUser` returns:
+
+- With `emailVerified: true`, the adapter asserts the provider verified the address, and VitNode trusts it.
+- With `emailVerified: false`, the address is not trusted, and a new identity confirms an email first.
+- With `emailVerified` omitted, VitNode treats it like `true`, so adapters written before the field existed keep working. A [custom adapter](/docs/dev/sso/custom-adapter) that cannot tell must return `false` instead.
+- With `email: null` or no `email`, there is nothing to trust, and a new identity confirms an email first.
+
+Each built-in adapter sets `emailVerified` from the provider's own flag, such as `email_verified`, Microsoft's `xms_edov` or X's `confirmed_email`; the [provider table](/docs/dev/sso#providers) lists them.
+
+A trusted email can create an account, match an existing account (which then needs its password before linking) and confirm an unconfirmed account. An untrusted email does none of these. It only pre-fills the confirmation form.
+
+## What the visitor sees
+
+<Steps>
+<Step>
+
+### The provider sign-in finishes
+
+The visitor signs in at the provider and lands on `/login/sso/{providerId}`. VitNode validates the round trip and asks the provider who they are.
+
+</Step>
+
+<Step>
+
+### Returning members go straight in
+
+If this provider account was linked before, the visitor is signed in. The email does not matter here, and an address stored earlier is kept even when the provider leaves it out this time.
+
+</Step>
+
+<Step>
+
+### New visitors enter an email
+
+Otherwise the page shows **Confirm your email**. The visitor types an address (pre-filled with the provider's unverified one, if there was any) and presses **Send confirmation link**. VitNode answers the same way whether or not the address has an account.
+
+<ImgDocs
+  src={emailStep}
+  alt="The Confirm your email card after a Reddit sign-in, with an Email field and a Send confirmation link button"
+/>
+
+</Step>
+
+<Step>
+
+### They open the link in the same browser
+
+The page switches to **Check your email**, with **Send a new link** and **Use a different email** if the message does not arrive. The visitor opens the link from the email, `/login/sso/{providerId}?confirm=...`, in the same browser. Then one of two things happens:
+
+- **The address is new.** VitNode creates the account with `emailVerified: true`, links the provider account and signs the visitor in.
+- **The address belongs to an account.** The page shows **Connect _Provider_ to your account** and asks for that account's password, exactly like a provider email that matches an account.
+
+<ImgDocs
+  src={sentStep}
+  alt="The Check your email state with a mail icon, the address the link was sent to, and Send a new link and Use a different email buttons"
+/>
+
+</Step>
+</Steps>
+
+## Why the link only works in the same browser
+
+Without that rule, someone could sign in with **their own** Reddit account, type **your** address, and wait for you to click the link out of curiosity. That would create an account under your email that their Reddit account can sign in to.
+
+So the pending sign-in is tied to the browser that started it through an HttpOnly cookie, and the link only finishes it there. Opened anywhere else, such as another browser or a phone, the page says **Open the link where you signed in** and signs nobody in.
+
+## Security rules
+
+- The pending sign-in lives on the server, in `core_sso_pending`. The browser holds only a random token in an HttpOnly cookie, and the database stores only hashes of that token and of the link's. Provider tokens are never stored.
+- A link works for 30 minutes and once. Sending a new link replaces the old one. The visitor can ask for one every 30 seconds, up to five times.
+- VitNode never makes up an address from a username, never treats a successful OAuth sign-in as proof of the email, and never links accounts by an untrusted email.
+
+## Requirements
+
+Confirmation needs an [email adapter](/docs/dev/email#configuring-email-adapters). Without one, VitNode cannot send the link. A new visitor from such a provider sees **We need a verified email**, and the callback answers `422 { "error": "email_unavailable" }`. Returning members are not affected.
+
+## Check the flow
+
+1. Configure an email adapter and a provider that never shares a trusted email, such as [Reddit](/docs/dev/sso/reddit), as the [SSO setup](/docs/dev/sso#set-up-your-first-provider) shows.
+2. In a private window, sign in with a provider account that has never been linked. **Confirm your email** appears.
+3. Enter an address you can read and open the link in the same window. You are signed in as a new member.
+4. Sign out and sign in with the same provider account again. You go straight in, with no email step.
+
+## API
+
+| Method | Path                                      | Body        | Answers                                                                                       |
+| ------ | ----------------------------------------- | ----------- | --------------------------------------------------------------------------------------------- |
+| `GET`  | `/users/sso/{providerId}/callback`        | -           | `202 { emailRequired: true, email }` when an address must be confirmed                       |
+| `POST` | `/users/sso/pending/{providerId}/email`   | `{ email }` | `201`, `400 invalid_pending`, `429 too_many_emails`                                           |
+| `POST` | `/users/sso/pending/{providerId}/confirm` | `{ token }` | `200 { id }` signed in, `409` link offer, `400 invalid_pending` (other browser) or `invalid_link` |
+
+The email uses the `core.auth.sso_confirm_email.email` translations, so it follows the visitor's language.
+
+## Related
+
+<Cards>
+  <Card
+    title="How SSO accounts link"
+    description="Returning members, matching emails and new visitors"
+    href="/docs/dev/sso#how-accounts-link"
+  />
+  <Card
+    title="Custom adapter"
+    description="Report email trust from your own provider"
+    href="/docs/dev/sso/custom-adapter"
+  />
+</Cards>

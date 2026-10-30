@@ -101,7 +101,7 @@ export const SSOButtonsContent = ({
               aria-describedby={isLastUsed ? lastUsedBadgeId : undefined}
               aria-label={t("continue_with", { provider: provider.name })}
               className={cn(
-                "h-10 w-full min-w-0 [&_img]:size-4.5 [&_svg]:size-4.5",
+                "h-10 w-full min-w-0 [&_img]:size-4.5 [&_svg]:size-4.5 [&>span[aria-hidden]]:size-4.5",
                 (isLastUsed ||
                   (hasUnpairedLast && index === ordered.length - 1)) &&
                   "col-span-2",

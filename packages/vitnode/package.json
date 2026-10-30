@@ -284,6 +284,7 @@
     "dotenv": "^18.0.6",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.5.0",
+    "jose": "^6.2.12",
     "jiti": "^2.7.0",
     "motion": "^14.0.0",
     "ocache": "^0.3.0",

@@ -17,7 +17,10 @@ import {
 export interface ActionLinkEmailProps extends DefaultTemplateEmailProps {
   actionUrl: string;
   expiryDate: Date;
-  namespace: "core.auth.reset_password.email" | "core.auth.verify_email.email";
+  namespace:
+    | "core.auth.reset_password.email"
+    | "core.auth.sso_confirm_email.email"
+    | "core.auth.verify_email.email";
   userIpAddress?: string;
 }
 

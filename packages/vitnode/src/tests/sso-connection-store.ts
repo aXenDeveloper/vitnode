@@ -200,8 +200,9 @@ export const createMemorySsoConnectionStore = (
     }) => {
       const connection = connectionOf(userId, providerId);
       if (connection) {
-        connection.providerEmail = providerEmail;
-        connection.providerUsername = providerUsername;
+        connection.providerEmail = providerEmail ?? connection.providerEmail;
+        connection.providerUsername =
+          providerUsername ?? connection.providerUsername;
       }
       await Promise.resolve();
     },
