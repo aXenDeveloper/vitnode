@@ -10,9 +10,6 @@ import {
   purchaseRoute,
 } from "./purchases.routes";
 
-// A side effect only. What a member owns is read from the stored payment,
-// never from this event: the default events adapter runs listeners in the
-// webhook request and does not retry them.
 const logPaidPurchase = buildEventListener({
   event: "payment.succeeded",
   name: "log-paid-purchase",

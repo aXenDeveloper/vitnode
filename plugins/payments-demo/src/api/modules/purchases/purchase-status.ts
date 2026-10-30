@@ -3,6 +3,7 @@ import type { Payment } from "@vitnode/core/api/models/payments";
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
+import { PAYMENT_STATUSES } from "@vitnode/core/database/payments";
 
 import { DEMO_ITEMS, type DemoItemId, purchaseReference } from "@/catalog";
 
@@ -19,13 +20,7 @@ export const zodPurchase = z.object({
       expiresAt: z.string(),
       id: z.string(),
       providerId: z.string(),
-      status: z.enum([
-        "pending",
-        "processing",
-        "succeeded",
-        "failed",
-        "expired",
-      ]),
+      status: z.enum(PAYMENT_STATUSES),
     })
     .nullable(),
   title: z.string(),

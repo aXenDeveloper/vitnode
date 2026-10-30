@@ -26,8 +26,6 @@ export const PAYMENT_STATUSES = [
 export const core_payments = camelCase.table.withRLS(
   "core_payments",
   t => ({
-    // Generated before the insert, so it can key the provider idempotency key
-    // and the checkout metadata.
     id: t.uuid().primaryKey(),
     pluginId: t.varchar({ length: 100 }).notNull(),
     reference: t.varchar({ length: 255 }).notNull(),

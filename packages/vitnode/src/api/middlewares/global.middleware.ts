@@ -555,8 +555,6 @@ export const globalMiddleware = ({
     ),
   );
 
-  // Refused at boot: a duplicated id would make two instances share stored
-  // payments and one webhook URL.
   const paymentsMetadata = {
     providers: validatePaymentProviders(payments?.providers ?? []),
     checkoutTtlMs:

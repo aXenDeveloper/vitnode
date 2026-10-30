@@ -68,8 +68,6 @@ const ShopPage = () => {
         providerId: selectedProvider,
       });
       if ("redirectUrl" in result) {
-        // Leaves the site for the provider's hosted page; keep the button
-        // busy until the browser navigates away.
         window.location.assign(result.redirectUrl);
 
         return;

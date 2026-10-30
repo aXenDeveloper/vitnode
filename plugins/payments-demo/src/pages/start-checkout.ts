@@ -1,25 +1,24 @@
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 
+import type { DemoItemId } from "@/catalog";
+
 import { manifest } from "@/manifest.gen";
 
-export type CheckoutError =
-  | "already_owned"
-  | "payment_in_progress"
-  | "payment_processing"
-  | "provider_not_found"
-  | "provider_rejected"
-  | "provider_unavailable"
-  | "unauthorized"
-  | "unknown";
-
-const KNOWN_ERRORS = new Set<string>([
+const SERVER_ERRORS = [
   "already_owned",
   "payment_in_progress",
   "payment_processing",
   "provider_not_found",
   "provider_rejected",
   "provider_unavailable",
-]);
+] as const;
+
+type ServerError = (typeof SERVER_ERRORS)[number];
+
+export type CheckoutError = "unauthorized" | "unknown" | ServerError;
+
+const isServerError = (code: string): code is ServerError =>
+  (SERVER_ERRORS as readonly string[]).includes(code);
 
 /**
  * Asks the server for a checkout and returns where to send the browser. Only
@@ -29,7 +28,7 @@ export const startCheckout = async ({
   itemId,
   providerId,
 }: {
-  itemId: "sticker-pack";
+  itemId: DemoItemId;
   providerId: string;
 }): Promise<{ error: CheckoutError } | { redirectUrl: string }> => {
   const res = await fetcher({
@@ -53,7 +52,5 @@ export const startCheckout = async ({
       ? String(body.error)
       : "";
 
-  return {
-    error: KNOWN_ERRORS.has(code) ? (code as CheckoutError) : "unknown",
-  };
+  return { error: isServerError(code) ? code : "unknown" };
 };

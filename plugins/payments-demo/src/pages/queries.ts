@@ -89,6 +89,5 @@ export const formatMinorUnits = (
   const decimal =
     digits === 0 ? raw : `${raw.slice(0, -digits)}.${raw.slice(-digits)}`;
 
-  // `format` takes decimal strings exactly (Intl.NumberFormat v3).
   return format.format(decimal as `${number}`);
 };

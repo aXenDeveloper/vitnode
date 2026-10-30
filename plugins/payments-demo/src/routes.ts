@@ -6,8 +6,6 @@ export const routes = definePluginRoutes([
     messages: ["payments-demo"],
   }),
 
-  // The success and cancel destination of the checkout. It shows the
-  // server's status, never the fact that the browser came back.
   page("/payments-demo/purchases/:purchaseId", {
     component: lazy(() => import("./pages/purchase-page")),
     messages: ["payments-demo"],
