@@ -1,0 +1,159 @@
+---
+title: Activity Logs reference
+description: Reference for c.get('audit').record(), auditDiff, withAuditContext, defineAuditActions, the core_audit_logs fields, the Activity Logs API routes and their limits.
+icon: BookOpen
+---
+
+This page lists every server-side Activity Logs API in `@vitnode/core`, plus
+the stored fields, the admin routes and their limits.
+
+## `c.get('audit').record(input, options?)`
+
+Writes one entry. Server-only. Returns the entry id, or `null` when a
+`withAuditContext` frame dropped it (an enclosing operation records it as a
+whole) or a best-effort write failed.
+
+| Name       | Type                                             | Required | Default            | Description                                                                                                                                                   |
+| ---------- | ------------------------------------------------ | -------- | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `action`   | `string`                                         | Yes      |                    | Lowercase letters, digits and `_`, joined by dots, at most 150 characters: `note.created`                                                                     |
+| `target`   | `{ type, id?, label? }`                          | Yes      |                    | `type` like `note` or `blog.category` (at most 100 characters); `id` a number or string, stored as text (cut at 64); `label` kept after deletion (cut at 255) |
+| `area`     | `'admin' \| 'moderator' \| 'public' \| 'system'` | No       | See below          | Which staff log the entry belongs to: `moderator` goes to the moderator log, every other area to the admin log                                                |
+| `changes`  | `Record<string, { from?, to?, redacted? }>`      | No       | `null`             | Usually from `diff()`; sanitized and capped at 50 fields and 16 KB                                                                                            |
+| `metadata` | `Record<string, unknown>`                        | No       | `{}`               | Small, non-personal facts; sanitized and capped at 16 KB                                                                                                      |
+| `pluginId` | `string`                                         | No       | The route's plugin | Which plugin the entry belongs to                                                                                                                             |
+| `scope`    | `{ family, id }`                                 | No       | `null`             | The moderation scope the action was about, such as `{ family: 'forum', id: 4 }`                                                                               |
+
+Without `area`, a `withAuditContext` frame's area applies, then `admin` on an
+AdminCP request, `public` for a signed-in member and `system` otherwise.
+
+| Option       | Type                | Default | Description                                                             |
+| ------------ | ------------------- | ------- | ----------------------------------------------------------------------- |
+| `tx`         | Drizzle transaction |         | Write with the change's transaction: both commit and roll back together |
+| `bestEffort` | `boolean`           | `false` | Without `tx`: log a database failure to `core_logs` instead of throwing |
+
+The actor, the actor's name, the IP address and the request id are always taken
+from the request (or a trusted `withAuditContext` frame), never from `input`. A
+member writing in the `moderator` area is recorded as staff. Malformed input
+throws `AuditLogError` from `@vitnode/core/api/lib/audit/write`, even with
+`bestEffort`.
+
+Values are sanitized before they are stored: strings are cut at 500
+characters, arrays and objects at 50 items, nesting at 4 levels, errors keep
+only their name, and sensitive keys are redacted.
+
+## `auditDiff({ before, after, include?, exclude? })`
+
+From `@vitnode/core/lib/audit/diff`, also `c.get('audit').diff()`. Universal.
+Returns only the fields whose value changed, or `null`.
+
+- `before: null` describes a creation, `after: null` a deletion. A missing
+  field counts as `null`.
+- Dates compare by instant; objects and arrays by value.
+- Rich-text documents become `"[rich text]"`.
+- Sensitive field names become `{ redacted: true }`: passwords, hashes, tokens,
+  secrets, credentials, cookies, API, access and private keys, recovery codes.
+- `include` compares only the listed fields; `exclude` skips fields.
+
+## `withAuditContext(c, frame, body)`
+
+From `@vitnode/core/api/lib/audit/context`. Server-only. Applies trusted
+context to every entry `body` writes on `c` and returns what `body` returns.
+Frames nest; the innermost wins.
+
+| Frame field     | Description                                                               |
+| --------------- | ------------------------------------------------------------------------- |
+| `actor`         | Attribute entries to this actor: `AUDIT_SYSTEM_ACTOR` for background work |
+| `area`          | Area for entries that do not name one                                     |
+| `correlationId` | Group the entries; defaults to one id per request                         |
+| `metadata`      | Merged into each entry's metadata; the entry's own keys win               |
+| `scope`         | Moderation scope for entries that do not name one                         |
+| `intercept`     | Rewrite each entry before it is written, or return `null` to drop it      |
+
+Cron jobs and queue tasks already run inside a system frame with
+`{ actor: AUDIT_SYSTEM_ACTOR, area: 'system' }` and a `trigger` in the metadata.
+
+```ts
+import {
+  AUDIT_SYSTEM_ACTOR,
+  withAuditContext,
+} from '@vitnode/core/api/lib/audit/context'
+
+await withAuditContext(
+  c,
+  {
+    actor: AUDIT_SYSTEM_ACTOR,
+    area: 'system',
+    metadata: { trigger: 'import' },
+  },
+  async () => await importNotes(c),
+)
+```
+
+## `defineAuditActions(actions)`
+
+From `@vitnode/core/lib/audit/actions`. Universal. Validates
+`{ action, targetType }[]` for `buildApiPlugin({ auditActions })` and throws
+when an action or target type is not a valid identifier, or an action is
+declared twice. Declaring is optional. It only adds the actions to the action
+filter. Labels come from `{pluginId}.audit.actions.{action}` in the plugin's
+messages.
+
+## Stored fields (`core_audit_logs`)
+
+| Column                                  | Notes                                                                                                          |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `pluginId`, `action`, `area`            | Plain text: readable after the plugin is removed                                                               |
+| `actorType`, `actorId`, `actorName`     | `staff`, `api` (a member) or `system`; `actorId` becomes `null` when the account is deleted, `actorName` stays |
+| `targetType`, `targetId`, `targetLabel` | No foreign key: entries outlive their target                                                                   |
+| `changes`, `metadata`                   | Sanitized JSON                                                                                                 |
+| `contentTypeId`, `revisionId`           | Content Engine entries                                                                                         |
+| `scopeFamily`, `scopeId`                | Moderation scope                                                                                               |
+| `ipAddress`, `correlationId`            | Sensitive; `ipAddress` is `null` for system entries                                                            |
+
+Indexed for newest-first paging, actor, plugin, action, area, one target's
+history and scope, each with `createdAt`.
+
+## API routes
+
+The admin routes live in core's `admin/activity-logs` module. Every one needs
+an AdminCP session.
+
+| Method and path | Permission                                    | Returns                                                                   |
+| --------------- | --------------------------------------------- | ------------------------------------------------------------------------- |
+| `GET /`         | `activity_logs` `can_view`                    | Keyset page, newest first                                                 |
+| `GET /{id}`     | `can_view`                                    | Entry with changes, revision diff and an AdminCP link; `404` when missing |
+| `GET /entity`   | `can_view`, or `can_view` on the content type | One target's history with changes; `403` otherwise                        |
+| `GET /filters`  | `can_view`                                    | Declared actions and installed plugins                                    |
+| `GET /export`   | `can_export`                                  | CSV, at most 10,000 rows                                                  |
+| `GET /settings` | `can_view`                                    | `{ retentionDays }`                                                       |
+| `PUT /settings` | `can_manage_retention`                        | `{ retentionDays }`: `0` (forever), 30, 90, 180, 365 or 730               |
+
+List filters: `staff` (`moderator` keeps the moderator area, `admin` every
+other area), `pluginId`, `area`, `actorId`, `action`, `targetType`, `targetId`,
+`from` and `to` (`YYYY-MM-DD`, UTC, inclusive), `search` (target label, action
+id and actor name), `cursor` and `first` (1-100, default 25). The export takes
+the same filters without `cursor` and `first`. `/entity` takes `pluginId`,
+`targetType` and `targetId` (all required), plus `cursor` and `first`.
+
+Read one record's history from an AdminCP screen with `fetcher`:
+
+```ts
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+const response = await fetcher({
+  plugin: '@vitnode/core',
+  method: 'get',
+  module: 'admin/activity-logs',
+  path: '/entity',
+  args: {
+    query: { pluginId: 'site-notes', targetType: 'note', targetId: '1' },
+  },
+})
+if (!response.ok)
+  throw new Error(`Activity history answered ${response.status}`)
+const { edges, pageInfo } = await response.json()
+```
+
+Pass `pageInfo.endCursor` as `cursor` to read older entries while
+`pageInfo.hasNextPage` is `true`. To show it in the AdminCP without writing the
+UI, render [`ActivityHistory`](/docs/content-engine/activity-logs#see-a-records-history-in-the-admincp).

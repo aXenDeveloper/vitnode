@@ -47,6 +47,11 @@
   "@vitnode/core:cron": "Cron Jobs",
   "@vitnode/core:cron:can_view": "View cron jobs",
   "@vitnode/core:cron:can_run": "Run cron jobs",
+  "@vitnode/core:activity_logs": "Activity Logs",
+  "@vitnode/core:activity_logs:can_view": "View activity logs",
+  "@vitnode/core:activity_logs:can_view_sensitive": "View IP addresses and technical details",
+  "@vitnode/core:activity_logs:can_export": "Export activity logs",
+  "@vitnode/core:activity_logs:can_manage_retention": "Change how long activity logs are kept",
   "@vitnode/core:report_reasons": "Report reasons",
   "@vitnode/core:report_reasons:can_view": "View report reasons",
   "@vitnode/core:report_reasons:can_create": "Create report reasons",
@@ -1760,7 +1765,8 @@
         "delete": "Delete",
         "duplicate": "Duplicate",
         "hide": "Hide",
-        "unhide": "Unhide"
+        "unhide": "Unhide",
+        "activity": "Activity"
       },
       "create": {
         "title": "Create {name}",
@@ -2850,6 +2856,208 @@
           }
         }
       }
+    },
+    "activity_logs": {
+      "columns": {
+        "date": "Date",
+        "actor": "Actor",
+        "area": "Area",
+        "plugin": "Plugin",
+        "action": "Action",
+        "target": "Target",
+        "details": "Details"
+      },
+      "areas": {
+        "admin": "AdminCP",
+        "moderator": "ModeratorCP",
+        "public": "Site",
+        "system": "System"
+      },
+      "actor_types": {
+        "staff": "Staff",
+        "api": "Member",
+        "system": "System"
+      },
+      "system_actor": "System",
+      "content_noun": "content",
+      "deleted_actor": "{name} (deleted account)",
+      "removed_plugin": "{plugin} (removed)",
+      "open_details": "Details of: {action}",
+      "filters": {
+        "label": "Filter activity",
+        "search": "Search",
+        "search_placeholder": "Search targets, actions and people",
+        "plugin": "Plugin",
+        "area": "Area",
+        "action": "Action",
+        "from": "From",
+        "to": "To",
+        "all": "All",
+        "actor": "Actor: {name}",
+        "clear_actor": "Show everyone",
+        "reset": "Clear filters"
+      },
+      "load_more": "Load older activity",
+      "loading": "Loading activity",
+      "empty_title": "No activity yet",
+      "empty_desc": "Nothing matches these filters. Try a wider date range, or clear the filters.",
+      "error_title": "Could not load activity",
+      "error_desc": "Something went wrong reading the log. Refresh the page to try again.",
+      "detail": {
+        "title": "Activity details",
+        "loading": "Loading details",
+        "actor": "Actor",
+        "date": "Date",
+        "area": "Area",
+        "plugin": "Plugin",
+        "action": "Action",
+        "target": "Target",
+        "scope": "Scope",
+        "changes": "Changes",
+        "no_changes": "No field values are recorded for this operation.",
+        "before": "Before",
+        "after": "After",
+        "empty_value": "Empty",
+        "redacted": "Changed, value not recorded",
+        "revision": "Revision",
+        "revision_version": "Version {version}",
+        "revision_unavailable": "This revision is no longer available. It was pruned, or you cannot view this content type.",
+        "metadata": "Details",
+        "technical": "Technical",
+        "ip_address": "IP address",
+        "correlation_id": "Request id",
+        "open_target": "Open",
+        "filter_actor": "Show this person's activity",
+        "not_found": "This entry does not exist, or you cannot see it."
+      },
+      "history": {
+        "title": "Activity",
+        "desc": "Everything recorded about this item, newest first.",
+        "empty": "Nothing has been recorded for this item yet.",
+        "load_more": "Load older activity"
+      },
+      "actions": {
+        "content": {
+          "created": "Created {type}",
+          "updated": "Updated {type}",
+          "deleted": "Deleted {type}",
+          "duplicated": "Duplicated {type}",
+          "published": "Published {type}",
+          "unpublished": "Unpublished {type}",
+          "hidden": "Hid {type}",
+          "unhidden": "Unhid {type}",
+          "restored": "Restored a revision of {type}",
+          "scheduled": "Scheduled {type}",
+          "schedule_cancelled": "Cancelled a schedule of {type}",
+          "translation_created": "Added a translation of {type}",
+          "translation_updated": "Updated a translation of {type}",
+          "translation_deleted": "Deleted a translation of {type}",
+          "translation_published": "Published a translation of {type}",
+          "translation_unpublished": "Unpublished a translation of {type}",
+          "translation_restored": "Restored a translation of {type}"
+        },
+        "role": {
+          "created": "Created role",
+          "updated": "Updated role",
+          "deleted": "Deleted role"
+        },
+        "admin_permissions": {
+          "created": "Added administrator permissions",
+          "updated": "Changed administrator permissions",
+          "deleted": "Removed administrator permissions"
+        },
+        "moderator_permissions": {
+          "created": "Added moderator permissions",
+          "updated": "Changed moderator permissions",
+          "deleted": "Removed moderator permissions"
+        },
+        "user": {
+          "updated": "Updated user",
+          "roles_changed": "Changed user roles",
+          "password_reset": "Reset password",
+          "email_verified": "Verified email address",
+          "device_revoked": "Signed out a device",
+          "devices_revoked": "Signed out all devices"
+        },
+        "settings": {
+          "updated": "Updated settings"
+        },
+        "audit_settings": {
+          "updated": "Changed log retention"
+        },
+        "audit_logs": {
+          "pruned": "Deleted expired log entries",
+          "exported": "Exported the activity log"
+        },
+        "ai_access": {
+          "role_updated": "Changed AI access of a role",
+          "user_override_saved": "Set an AI exception",
+          "user_override_removed": "Removed an AI exception"
+        },
+        "notifications": {
+          "type_updated": "Changed a notification type",
+          "paused": "Paused notifications",
+          "resumed": "Resumed notifications",
+          "emails_cancelled": "Cancelled queued notification emails",
+          "all_marked_read": "Marked every notification read",
+          "all_deleted": "Deleted every notification",
+          "member_preferences_reset": "Reset members' notification preferences"
+        },
+        "report_reason": {
+          "created": "Created report reason",
+          "updated": "Updated report reason",
+          "deleted": "Deleted report reason",
+          "reordered": "Reordered report reasons"
+        },
+        "report": {
+          "claimed": "Took report",
+          "assigned": "Assigned report",
+          "unassigned": "Unassigned report",
+          "note_added": "Added a note to a report",
+          "note_edited": "Edited a report note",
+          "note_deleted": "Deleted a report note",
+          "resolved": "Resolved report",
+          "reopened": "Reopened report",
+          "action_taken": "Acted on reported content"
+        },
+        "submission": {
+          "approved": "Approved a submission",
+          "rejected": "Rejected a submission"
+        },
+        "cron": {
+          "run": "Ran a cron job"
+        },
+        "payment": {
+          "created": "Started a payment",
+          "processing": "Payment awaiting confirmation",
+          "succeeded": "Payment succeeded",
+          "failed": "Payment failed",
+          "expired": "Payment expired"
+        }
+      },
+      "fields": {
+        "status": "Status",
+        "assigneeId": "Assignee",
+        "resolution": "Resolution",
+        "name": "Name",
+        "color": "Color",
+        "prefix": "Prefix",
+        "roleId": "Primary role",
+        "secondaryRoleIds": "Secondary roles",
+        "unrestricted": "Unrestricted",
+        "retentionDays": "Retention (days)",
+        "email": "Email",
+        "password": "Password",
+        "requiresDetails": "Requires details",
+        "title": "Title",
+        "amount": "Amount (minor units)",
+        "currency": "Currency",
+        "plugin": "Plugin",
+        "provider": "Provider",
+        "reference": "Reference",
+        "customerId": "Customer id",
+        "errorCode": "Error code"
+      }
     }
   },
   "admin": {
@@ -3691,6 +3899,31 @@
         "noResults": {
           "title": "No administrators found",
           "description": "Assign a role or user to grant administrator permissions."
+        }
+      },
+      "logs": {
+        "open": "Logs",
+        "title": {
+          "admin": "Admin logs",
+          "moderator": "Moderator logs"
+        },
+        "desc": {
+          "admin": "Who changed what in the AdminCP, plus what plugins, members and scheduled jobs did. Newest first.",
+          "moderator": "What moderators did: reports, approvals and content they hid or restored."
+        },
+        "export": "Export CSV",
+        "export_error": "Could not download the export. Try again in a moment.",
+        "settings": {
+          "title": "Retention",
+          "open": "Retention settings",
+          "desc": "Applies to both staff logs. A daily job deletes entries older than this. A shorter period keeps less personal data around, a longer one keeps more history.",
+          "retention": "Keep entries for",
+          "forever": "Forever",
+          "days": "{count, plural, one {# day} other {# days}}",
+          "saved": "Retention saved",
+          "saved_desc": "The next daily run deletes entries older than {period}.",
+          "saved_forever": "Entries stay until you change this.",
+          "error": "Could not save the retention period."
         }
       }
     },

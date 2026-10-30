@@ -35,6 +35,7 @@ import { ADMIN_SIGN_IN_NAMESPACES } from "./tanstack/admin/sign-in-route";
 import { normalizeAdminSignInSearch } from "./tanstack/admin/sign-in-search";
 import { ADMIN_STAFF_CREATE_NAMESPACES } from "./tanstack/admin/staff/create-route";
 import { ADMIN_STAFF_EDIT_NAMESPACES } from "./tanstack/admin/staff/edit-route";
+import { ADMIN_STAFF_LOGS_NAMESPACES } from "./tanstack/admin/staff/logs-route";
 import { ADMIN_STAFF_NAMESPACES } from "./tanstack/admin/staff/route";
 import { normalizeStaffRouteSearch } from "./tanstack/admin/staff/route-search";
 import { ADMIN_USER_NAMESPACES } from "./tanstack/admin/users/detail-route";
@@ -84,6 +85,7 @@ import {
 import { normalizeSearchRouteSearch } from "./tanstack/search/route-search";
 import { SETTINGS_NAMESPACES } from "./tanstack/settings/route";
 import { normalizeSsoSettingsSearch } from "./tanstack/sso-connections/route-search";
+import { normalizeActivitySearch } from "./views/activity-logs/activity-search";
 
 /**
  * Every URL `@vitnode/core` owns, as the same kind of declaration a plugin
@@ -414,6 +416,14 @@ export const routes = defineRoutes([
     pendingComponent: FormPendingSkeleton,
   }),
 
+  page("/admin/core/staff/admins/logs", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/staff/admins/logs")),
+    messages: ADMIN_STAFF_LOGS_NAMESPACES,
+    pendingComponent: TablePendingSkeleton,
+    search: normalizeActivitySearch,
+  }),
+
   page("/admin/core/staff/moderators", {
     area: "admin",
     component: lazy(() => import("./pages/admin/staff/moderators/index")),
@@ -434,6 +444,14 @@ export const routes = defineRoutes([
     component: lazy(() => import("./pages/admin/staff/moderators/edit")),
     messages: ADMIN_STAFF_EDIT_NAMESPACES,
     pendingComponent: FormPendingSkeleton,
+  }),
+
+  page("/admin/core/staff/moderators/logs", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/staff/moderators/logs")),
+    messages: ADMIN_STAFF_LOGS_NAMESPACES,
+    pendingComponent: TablePendingSkeleton,
+    search: normalizeActivitySearch,
   }),
 
   page("/admin/content/*", {

@@ -20,6 +20,7 @@ import { DEFAULT_SESSION_COOKIE_NAME } from "@/api/lib/auth-cookie";
 import { CacheModel } from "@/api/lib/cache";
 import { MemoryCacheStore } from "@/api/lib/cache-memory";
 import { AIModel } from "@/api/models/ai";
+import { AuditModel } from "@/api/models/audit";
 import { EmailModel } from "@/api/models/email";
 import { EventsModel } from "@/api/models/events";
 import { I18nModel } from "@/api/models/i18n";
@@ -57,6 +58,7 @@ import { manifest as coreManifest } from "@/manifest";
 import { realtime, runWithRealtimeKeepAlive } from "@/ws/registry";
 
 import type { AiActionRegistry } from "../lib/ai/registry";
+import type { RegisteredAuditAction } from "../lib/audit/registry";
 import type { BuildCronReturn } from "../lib/cron";
 import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventListenerConfig } from "../lib/events";
@@ -79,6 +81,7 @@ import type { SSOApiPlugin } from "../models/sso";
 
 import { assertAiModelPricing } from "../lib/ai/pricing";
 import { assertContentAiActions, collectAiActions } from "../lib/ai/registry";
+import { collectAuditActions } from "../lib/audit/registry";
 import { resolveClientIp } from "../lib/client-ip";
 import { collectCronJobs } from "../lib/cron";
 import {
@@ -166,6 +169,11 @@ export interface EnvVariablesVitNode {
   adminSessionExpiresAt: Date | null;
   /** The AI model registry and action runner: see {@link AIModel}. */
   ai: AIModel;
+  /**
+   * Records who did what to which resource in the central audit log (the
+   * AdminCP staff logs): see {@link AuditModel}.
+   */
+  audit: AuditModel;
   /** Plugin-scoped JSON cache, Redis-backed when the API config has `redis`, a no-op otherwise. */
   cache: CacheModel;
   /**
@@ -176,6 +184,8 @@ export interface EnvVariablesVitNode {
   core: {
     ai?: VitNodeApiConfig["ai"];
     aiActions: AiActionRegistry;
+    /** Every declared audit action - core's, the Content Engine's and each plugin's. */
+    auditActions: RegisteredAuditAction[];
     authorization: {
       adminCookieExpires: number;
       adminCookieName: string;
@@ -412,6 +422,8 @@ export const globalMiddleware = ({
 
   const aiActionsMetadata = collectAiActions(plugins);
 
+  const auditActionsMetadata = collectAuditActions(plugins);
+
   const eventsMetadata: EventListenerConfig[] = plugins.flatMap(plugin =>
     (plugin.events ?? []).map(listener => ({
       ...listener,
@@ -615,6 +627,7 @@ export const globalMiddleware = ({
     {
       ai,
       aiActions: aiActionsMetadata,
+      auditActions: auditActionsMetadata,
       i18n: i18nMetadata,
       metadata,
       email,
@@ -695,6 +708,7 @@ export const globalMiddleware = ({
     }
     c.set("db", dbProvider);
     c.set("ai", new AIModel(c));
+    c.set("audit", new AuditModel(c));
     c.set("cache", new CacheModel(cacheClient, c, memoryCache));
     c.set("email", new EmailModel(c));
     c.set("events", new EventsModel(c));

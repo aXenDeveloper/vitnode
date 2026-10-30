@@ -37,6 +37,11 @@ import {
   splitContentFieldPath,
 } from "../paths";
 import {
+  CONTENT_TRANSLATION_REVISION_AUDIT_ACTIONS,
+  contentAuditLabel,
+  recordContentAudit,
+} from "./audit";
+import {
   applyContentDeliveryWrite,
   contentSlugHistoryFor,
 } from "./delivery-writes";
@@ -342,8 +347,8 @@ export const createContentTranslationEditorialService = <
       row: ContentTranslationRow<TDefinition>;
       version: number;
     },
-  ): Promise<number> =>
-    await revisionsFor(languageId).capture(tx, {
+  ): Promise<number> => {
+    const revisionId = await revisionsFor(languageId).capture(tx, {
       actor,
       changedFields,
       itemId: row.itemId,
@@ -356,6 +361,29 @@ export const createContentTranslationEditorialService = <
       ),
       version,
     });
+
+    // In the transaction, beside the revision it points at - see the shared
+    // service's `capture`.
+    await recordContentAudit(c, tx, {
+      action: CONTENT_TRANSLATION_REVISION_AUDIT_ACTIONS[operation],
+      actor,
+      changedFields,
+      definition,
+      itemId: row.itemId,
+      label: contentAuditLabel(definition, row),
+      locale,
+      metadata: {
+        version,
+        ...(restoredFromRevisionId === undefined
+          ? {}
+          : { restoredFromRevisionId }),
+      },
+      pluginId,
+      revisionId,
+    });
+
+    return revisionId;
+  };
 
   const unchanged = (
     operation: ContentTranslationRevisionOperation,

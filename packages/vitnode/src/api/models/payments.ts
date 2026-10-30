@@ -5,6 +5,8 @@ import { randomUUID } from "node:crypto";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
+import { AUDIT_SYSTEM_ACTOR } from "@/api/lib/audit/context";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { isUniqueViolation } from "@/api/lib/db-errors";
 import {
   assertPaymentAmount,
@@ -25,6 +27,7 @@ import {
   core_payments,
   core_payments_webhook_events,
 } from "@/database/payments";
+import { AUDIT_CORE_PLUGIN_ID } from "@/lib/audit/const";
 import { CONFIG } from "@/lib/config";
 
 export type { PaymentStatus };
@@ -240,6 +243,47 @@ export class PaymentsModel {
     return after;
   }
 
+  /**
+   * Records a new attempt (`previous` is `null`) or a status move in the same
+   * transaction as the write. A move is the provider's doing, so it is the
+   * system's, whoever's request happened to notice it.
+   */
+  private async audit(
+    tx: Tx,
+    payment: PaymentRow,
+    previous: null | PaymentStatus,
+  ) {
+    await writeAuditLog(
+      this.c,
+      {
+        action: `payment.${previous === null ? "created" : payment.status}`,
+        ...(previous === null
+          ? { area: "public" as const }
+          : { actor: AUDIT_SYSTEM_ACTOR, area: "system" as const }),
+        changes:
+          previous === null
+            ? null
+            : { status: { from: previous, to: payment.status } },
+        metadata: {
+          amount: payment.amount,
+          currency: payment.currency,
+          plugin: payment.pluginId,
+          provider: payment.providerId,
+          reference: payment.reference,
+          ...(payment.userId === null ? {} : { customerId: payment.userId }),
+          ...(payment.errorCode ? { errorCode: payment.errorCode } : {}),
+        },
+        pluginId: AUDIT_CORE_PLUGIN_ID,
+        target: {
+          id: payment.id,
+          label: payment.description || payment.reference,
+          type: "payment",
+        },
+      },
+      tx,
+    );
+  }
+
   private checkoutMismatch(
     payment: PaymentRow,
     state: PaymentCheckoutState,
@@ -309,17 +353,22 @@ export class PaymentsModel {
   }
 
   private async expireUnstarted(row: PaymentRow, errorCode: string) {
-    const [expired] = await this.db
-      .update(core_payments)
-      .set({ status: "expired", errorCode })
-      .where(
-        and(
-          eq(core_payments.id, row.id),
-          eq(core_payments.status, "pending"),
-          isNull(core_payments.checkoutId),
-        ),
-      )
-      .returning();
+    const expired = await this.db.transaction(async tx => {
+      const [updated] = await tx
+        .update(core_payments)
+        .set({ status: "expired", errorCode })
+        .where(
+          and(
+            eq(core_payments.id, row.id),
+            eq(core_payments.status, "pending"),
+            isNull(core_payments.checkoutId),
+          ),
+        )
+        .returning();
+      if (updated) await this.audit(tx, updated, "pending");
+
+      return updated;
+    });
 
     if (expired) await this.emitStatusChange(expired);
   }
@@ -487,17 +536,22 @@ export class PaymentsModel {
       await this.logProviderError(provider, "createCheckout", error);
 
       if (error instanceof PaymentProviderError && error.kind === "rejected") {
-        const [failed] = await this.db
-          .update(core_payments)
-          .set({ status: "failed", errorCode: error.code.slice(0, 64) })
-          .where(
-            and(
-              eq(core_payments.id, row.id),
-              eq(core_payments.status, "pending"),
-              isNull(core_payments.checkoutId),
-            ),
-          )
-          .returning();
+        const failed = await this.db.transaction(async tx => {
+          const [updated] = await tx
+            .update(core_payments)
+            .set({ status: "failed", errorCode: error.code.slice(0, 64) })
+            .where(
+              and(
+                eq(core_payments.id, row.id),
+                eq(core_payments.status, "pending"),
+                isNull(core_payments.checkoutId),
+              ),
+            )
+            .returning();
+          if (updated) await this.audit(tx, updated, "pending");
+
+          return updated;
+        });
         if (failed) await this.emitStatusChange(failed);
 
         throw new PaymentError("provider_rejected", error.message);
@@ -602,9 +656,10 @@ export class PaymentsModel {
       )
       .returning();
 
-    if (!moves) return null;
+    if (!moves || !updated) return null;
+    await this.audit(tx, updated, payment.status);
 
-    return updated ?? null;
+    return updated;
   }
 
   /**
@@ -668,22 +723,29 @@ export class PaymentsModel {
     const id = randomUUID();
     let row: PaymentRow | undefined;
     try {
-      [row] = await this.db
-        .insert(core_payments)
-        .values({
-          id,
-          pluginId: this.pluginId,
-          reference,
-          userId: input.userId,
-          providerId: provider.id,
-          providerType: provider.type,
-          amount: input.amount,
-          currency,
-          description,
-          status: "pending",
-          expiresAt: new Date(now + this.c.get("core").payments.checkoutTtlMs),
-        })
-        .returning();
+      row = await this.db.transaction(async tx => {
+        const [inserted] = await tx
+          .insert(core_payments)
+          .values({
+            id,
+            pluginId: this.pluginId,
+            reference,
+            userId: input.userId,
+            providerId: provider.id,
+            providerType: provider.type,
+            amount: input.amount,
+            currency,
+            description,
+            status: "pending",
+            expiresAt: new Date(
+              now + this.c.get("core").payments.checkoutTtlMs,
+            ),
+          })
+          .returning();
+        if (inserted) await this.audit(tx, inserted, null);
+
+        return inserted;
+      });
     } catch (error) {
       if (isUniqueViolation(error)) {
         throw new PaymentError("payment_in_progress");

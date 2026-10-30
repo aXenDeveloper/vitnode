@@ -4,6 +4,8 @@ import { PgDialect } from "drizzle-orm/pg-core";
 
 import type { ContentTranslationRevisionSnapshot } from "@/content/revisions";
 
+import { createAuditRecorder } from "./audit-recorder";
+
 const dialect = new PgDialect();
 
 const boundValue = (condition: SQL | undefined, column: string): unknown => {
@@ -76,18 +78,21 @@ export const createTestRevisionsTable = () => {
     return query;
   };
 
-  const db = {
-    insert: () => ({
-      values: (values: RevisionWrite) => ({
-        returning: async () => {
-          nextId += 1;
-          written.push(values);
-          rows.push({ ...values, id: nextId });
+  const audit = createAuditRecorder();
 
-          return await Promise.resolve([{ id: nextId }]);
-        },
-      }),
-    }),
+  const db = {
+    insert: (table: unknown) =>
+      audit.insert(table) ?? {
+        values: (values: RevisionWrite) => ({
+          returning: async () => {
+            nextId += 1;
+            written.push(values);
+            rows.push({ ...values, id: nextId });
+
+            return await Promise.resolve([{ id: nextId }]);
+          },
+        }),
+      },
     select,
     transaction: async <T>(body: (tx: unknown) => Promise<T>) => await body(db),
   };
@@ -110,5 +115,5 @@ export const createTestRevisionsTable = () => {
     });
   };
 
-  return { db, seed, written };
+  return { audits: audit.entries, db, seed, written };
 };

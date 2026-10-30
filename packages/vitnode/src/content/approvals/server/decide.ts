@@ -12,6 +12,8 @@ import type { AnyContentTypeDefinition } from "../../types";
 import type { ContentSubmissionDecisionCode } from "../const";
 import type { ContentSubmissionRow } from "./submissions";
 
+import { withAuditContext } from "../../../api/lib/audit/context";
+import { writeAuditLog } from "../../../api/lib/audit/write";
 import { core_content_submissions } from "../../../database/content-submissions";
 import { CONTENT_PERMISSIONS } from "../../const";
 import { contentContainerSourceOf } from "../../containers/association";
@@ -21,6 +23,7 @@ import {
 } from "../../containers/server/policy";
 import { ContentInputError, ContentVersionConflict } from "../../errors";
 import { parseContentId } from "../../ids";
+import { contentAuditLabel } from "../../server/audit";
 import { contentDefinitionOf } from "../../server/model";
 import { recordContentModerationDecision } from "../../server/notifications/intents";
 import { publicationMethods } from "../../server/publication";
@@ -260,17 +263,26 @@ export const decideContentSubmission = async (
     });
     if (!allowed) throw new ContentSubmissionDecisionError("forbidden");
 
-    const applied: Applied =
-      decision === "approve"
-        ? await applyApproval(c, tx, {
-            actor,
-            id: itemId,
-            model,
-            pluginId: submission.pluginId,
-            row,
-            submission,
-          })
-        : { kind: "none" };
+    // A moderator's decision, in the container's moderation scope - for the
+    // decision's own entry and for the write that approving it performs.
+    const scope = container
+      ? { family: container.definition.id, id: String(container.container.id) }
+      : null;
+    const applied: Applied = await withAuditContext(
+      c,
+      { area: "moderator", scope },
+      async () =>
+        decision === "approve"
+          ? await applyApproval(c, tx, {
+              actor,
+              id: itemId,
+              model,
+              pluginId: submission.pluginId,
+              row,
+              submission,
+            })
+          : { kind: "none" },
+    );
 
     const [decided] = await tx
       .update(core_content_submissions)
@@ -292,6 +304,29 @@ export const decideContentSubmission = async (
     // In the deciding transaction, so the submitter is told exactly when the
     // decision commits.
     await recordContentModerationDecision(c, tx, decided);
+
+    await writeAuditLog(
+      c,
+      {
+        action: `submission.${decision === "approve" ? "approved" : "rejected"}`,
+        actor,
+        area: "moderator",
+        contentTypeId: definition.id,
+        metadata: {
+          contentId: submission.itemId,
+          kind: submission.kind,
+          ...(decision === "reject" ? { withReason: Boolean(reason) } : {}),
+        },
+        pluginId: submission.pluginId,
+        scope,
+        target: {
+          id: submission.id,
+          label: contentAuditLabel(definition, row),
+          type: "submission",
+        },
+      },
+      tx,
+    );
 
     return { applied, decided, kind: "decided" as const, model };
   });

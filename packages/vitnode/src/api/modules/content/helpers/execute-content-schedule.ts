@@ -5,6 +5,7 @@ import type { ContentEditorialOutcome } from "@/content/server/editorial-service
 import type { ContentScheduleEffectsPayload } from "@/content/server/schedule-effects";
 import type { AnyContentTypeDefinition } from "@/content/types";
 
+import { AUDIT_SYSTEM_ACTOR, withAuditContext } from "@/api/lib/audit/context";
 import { CONTENT_QUEUE_TASK_SCHEDULE_EFFECTS } from "@/content/const";
 import { contentIdFromKey } from "@/content/ids";
 import { CONTENT_SYSTEM_ACTOR } from "@/content/server/actor";
@@ -176,14 +177,30 @@ export const executeContentSchedule = async (
         return { kind: "skipped", reason: "not an identifier of this type" };
       }
 
-      const outcome = await editorialService(c, { pluginId })[claimed.action](
-        itemId,
+      // Executed by the system, and audited as such: whoever booked the
+      // schedule did not press the button now. Their id, the schedule and the
+      // trigger ride along in the entry's metadata. The entry is written in this
+      // transaction, so a rolled-back or retried run leaves none, and the claim
+      // above means a settled schedule never runs - or is audited - twice.
+      const outcome = await withAuditContext(
+        c,
         {
-          // No fake user id anywhere. Who *asked* for this is on the schedule
-          // row and travels in the event as `scheduledBy`.
-          actor: CONTENT_SYSTEM_ACTOR,
-          tx,
+          actor: AUDIT_SYSTEM_ACTOR,
+          area: "system",
+          correlationId: `schedule:${claimed.id}`,
+          metadata: {
+            scheduledByUserId: claimed.createdBy,
+            scheduleId: claimed.id,
+            trigger: "scheduled_task",
+          },
         },
+        async () =>
+          await editorialService(c, { pluginId })[claimed.action](itemId, {
+            // No fake user id anywhere. Who *asked* for this is on the schedule
+            // row and travels in the event as `scheduledBy`.
+            actor: CONTENT_SYSTEM_ACTOR,
+            tx,
+          }),
       );
 
       // Settled whatever happened. A record that was deleted first, or is

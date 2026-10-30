@@ -2,6 +2,7 @@ import { defineRelations } from "drizzle-orm";
 
 import * as admins from "./admins";
 import * as ai from "./ai";
+import * as audit from "./audit";
 import * as content from "./content";
 import * as contentContainers from "./content-containers";
 import * as contentSubmissions from "./content-submissions";
@@ -25,6 +26,7 @@ import * as users from "./users";
 export const coreSchema = {
   ...admins,
   ...ai,
+  ...audit,
   ...content,
   ...contentContainers,
   ...contentSubmissions,

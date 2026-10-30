@@ -7,6 +7,8 @@ import { newBuildPluginApiCore } from "./plugin";
 
 const ALLOWLIST = [
   "GET /admin/session",
+  // Activity Logs `can_view`, or `can_view` on the content type - see the route.
+  "GET /admin/activity-logs/entity",
   "GET /admin/staff/permission-catalog",
   "GET /admin/roles/list",
   "POST /admin/staff/entry/:type",

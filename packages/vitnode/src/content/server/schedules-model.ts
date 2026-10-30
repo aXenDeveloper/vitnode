@@ -17,6 +17,8 @@ import { CONTENT_QUEUE_TASK_SCHEDULE, CONTENT_SCHEDULE_CODES } from "../const";
 import { ContentScheduleError } from "../errors";
 import { contentIdKey } from "../ids";
 import { contentScheduleTimingError } from "../schedules";
+import { resolveContentActor } from "./actor";
+import { recordContentAudit } from "./audit";
 
 /** A schedule row claimed for execution, with everything the handler needs. */
 export interface ClaimedContentSchedule {
@@ -170,24 +172,41 @@ export const createContentSchedulesModel = ({
       .where(and(scope(itemId), eq(core_content_schedules.status, "pending")));
 
   return {
-    cancel: async (itemId, scheduleId) => {
-      const [row] = await c
-        .get("db")
-        .update(core_content_schedules)
-        .set({ status: "cancelled" })
-        .where(
-          and(
-            scope(itemId),
-            eq(core_content_schedules.id, scheduleId),
-            // Only a pending one can be cancelled. Re-cancelling a completed
-            // schedule would rewrite history to say it never ran.
-            eq(core_content_schedules.status, "pending"),
-          ),
-        )
-        .returning({ action: core_content_schedules.action });
+    cancel: async (itemId, scheduleId) =>
+      await c.get("db").transaction(async tx => {
+        const [row] = await tx
+          .update(core_content_schedules)
+          .set({ status: "cancelled" })
+          .where(
+            and(
+              scope(itemId),
+              eq(core_content_schedules.id, scheduleId),
+              // Only a pending one can be cancelled. Re-cancelling a completed
+              // schedule would rewrite history to say it never ran.
+              eq(core_content_schedules.status, "pending"),
+            ),
+          )
+          .returning({
+            action: core_content_schedules.action,
+            scheduledFor: core_content_schedules.scheduledFor,
+          });
+        if (!row) return null;
 
-      return row ?? null;
-    },
+        await recordContentAudit(c, tx, {
+          action: "schedule_cancelled",
+          actor: resolveContentActor(c),
+          definition,
+          itemId,
+          metadata: {
+            scheduleAction: row.action,
+            scheduledFor: row.scheduledFor,
+            scheduleId,
+          },
+          pluginId,
+        });
+
+        return { action: row.action };
+      }),
 
     listForItem: async itemId => {
       const rows = await c
@@ -299,6 +318,20 @@ export const createContentSchedulesModel = ({
           // the requesting plugin's id and nothing would ever claim it.
           pluginId: "@vitnode/core",
           tx,
+        });
+
+        await recordContentAudit(c, tx, {
+          action: "scheduled",
+          actor: resolveContentActor(c),
+          definition,
+          itemId,
+          metadata: {
+            ...(previous ? { replacedPending: true } : {}),
+            scheduleAction: action,
+            scheduledFor,
+            scheduleId: row.id,
+          },
+          pluginId,
         });
 
         return { generation, id: row.id, scheduledFor };

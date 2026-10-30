@@ -6,6 +6,7 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 
+import { createAuditRecorder } from "@/tests/audit-recorder";
 import {
   testArticleContentType,
   testCategoryContentType,
@@ -86,10 +87,17 @@ const createDbMock = (
     return chain(queue.shift() ?? []);
   };
 
+  // Audit entries are kept apart from the scripted statements: they are
+  // written inside every audited write, and asserted on their own.
+  const audit = createAuditRecorder();
+
   const db = {
     delete: start("delete"),
-    insert: start("insert"),
+    insert: (table: unknown) => audit.insert(table) ?? start("insert")(table),
     select: start("select"),
+    transaction: async <TResult>(
+      body: (tx: unknown) => Promise<TResult>,
+    ): Promise<TResult> => await body(db),
     update: start("update"),
   };
 
@@ -97,7 +105,7 @@ const createDbMock = (
     get: (key: string) => (key === "db" ? db : variables[key]),
   } as Context;
 
-  return { c, calls };
+  return { audits: audit.entries, c, calls };
 };
 
 const opsOf = (calls: RecordedCall[], op: string) =>
@@ -249,6 +257,83 @@ describe("content service", () => {
 
       expect(result?.changedFields).toEqual([]);
       expect(opsOf(calls, "update")).toHaveLength(0);
+    });
+  });
+
+  describe("audit", () => {
+    const auditedNotes = createContentModel(
+      defineContentType({
+        id: "test.audited-note",
+        tableName: "test_audited_notes",
+        fields: {
+          title: field.text({ required: true }),
+          body: field.textarea({ nullable: true }),
+          views: field.number({ integer: true, defaultValue: 0 }),
+        },
+        audit: { excludeFields: ["views"] },
+        admin: { titleField: "title" },
+      }),
+    );
+
+    it("records content.updated with bounded before/after values, without excluded fields", async () => {
+      const long = "x".repeat(600);
+      const { audits, c } = createDbMock(
+        [
+          [{ body: null, id: 7, title: "Old", views: 1 }],
+          [{ body: long, id: 7, title: "New", views: 2 }],
+        ],
+        { admin: { user: { id: 4, name: "Editor" } } },
+      );
+
+      await auditedNotes
+        .service(c)
+        .update(7, { body: long, title: "New", views: 2 });
+
+      expect(audits).toEqual([
+        expect.objectContaining({
+          action: "content.updated",
+          actorId: 4,
+          actorType: "staff",
+          changes: {
+            body: { from: null, to: `${"x".repeat(500)}…` },
+            title: { from: "Old", to: "New" },
+          },
+          contentTypeId: "test.audited-note",
+          metadata: { changedFields: ["title", "body"] },
+          targetId: "7",
+          targetLabel: "New",
+          targetType: "test.audited-note",
+        }),
+      ]);
+    });
+
+    it("records nothing when nothing moved", async () => {
+      const { audits, c } = createDbMock([
+        [{ body: null, id: 7, title: "Same", views: 1 }],
+      ]);
+
+      await auditedNotes.service(c).update(7, { title: "Same" });
+
+      expect(audits).toEqual([]);
+    });
+
+    it("records nothing for a content type with audit: false", async () => {
+      const silent = createContentModel(
+        defineContentType({
+          id: "test.silent",
+          tableName: "test_silent",
+          fields: { title: field.text({ required: true }) },
+          audit: false,
+        }),
+      );
+      const { audits, c } = createDbMock([
+        [{ id: 7, title: "Old" }],
+        [{ id: 7, title: "New" }],
+      ]);
+
+      await silent.service(c).update(7, { title: "New" });
+
+      expect(audits).toEqual([]);
     });
   });
 

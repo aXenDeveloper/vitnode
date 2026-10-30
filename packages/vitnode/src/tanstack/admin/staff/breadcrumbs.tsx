@@ -64,6 +64,19 @@ const StaffEditCrumb = ({ type }: StaffBreadcrumbProps) => {
   );
 };
 
+const StaffLogsCrumb = ({ type }: StaffBreadcrumbProps) => {
+  const labels = useStaffLabels(type);
+  const t = useTranslations("admin.staff.logs");
+
+  return (
+    <AdminBreadcrumb
+      labels={labels}
+      overrideLastLabel={t("open")}
+      segments={["core", "staff", STAFF_TYPE_SEGMENT[type], "logs"]}
+    />
+  );
+};
+
 export const AdminStaffBreadcrumbContent = (props: StaffBreadcrumbProps) => (
   <RouteMessages namespaces={STAFF_BREADCRUMB_NAMESPACES}>
     <StaffListCrumb {...props} />
@@ -83,5 +96,13 @@ export const AdminStaffEditBreadcrumbContent = (
 ) => (
   <RouteMessages namespaces={STAFF_BREADCRUMB_NAMESPACES}>
     <StaffEditCrumb {...props} />
+  </RouteMessages>
+);
+
+export const AdminStaffLogsBreadcrumbContent = (
+  props: StaffBreadcrumbProps,
+) => (
+  <RouteMessages namespaces={STAFF_BREADCRUMB_NAMESPACES}>
+    <StaffLogsCrumb {...props} />
   </RouteMessages>
 );

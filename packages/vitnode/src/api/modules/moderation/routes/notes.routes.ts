@@ -5,6 +5,7 @@ import { buildRoute } from "@/api/builders";
 import { requireModerator } from "@/api/lib/moderation/access";
 import { core_moderation_report_events } from "@/database/moderation";
 
+import { recordReportAudit } from "../lib/audit";
 import { canChangeNote, loadReportNote } from "../lib/notes";
 import {
   appendReportEvent,
@@ -80,6 +81,10 @@ export const editReportNoteRoute = buildRoute({
         reportId: report.id,
         type: "note_edited",
       });
+      await recordReportAudit(c, tx, report, {
+        action: "note_edited",
+        metadata: { noteAuthorId: note.actorId, noteId: note.id },
+      });
     });
 
     await c.get("events").emit("moderation.report.note_updated", {
@@ -118,6 +123,10 @@ export const deleteReportNoteRoute = buildRoute({
         data: { before: note.data.body ?? null, noteId: note.id },
         reportId: report.id,
         type: "note_deleted",
+      });
+      await recordReportAudit(c, tx, report, {
+        action: "note_deleted",
+        metadata: { noteAuthorId: note.actorId, noteId: note.id },
       });
     });
 

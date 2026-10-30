@@ -1,0 +1,172 @@
+---
+title: Record plugin events
+description: Record your plugin's own operations in the VitNode Activity Logs with c.get('audit').record(), inside the same transaction as the change, with before/after values and translated labels.
+icon: PenLine
+---
+
+The Content Engine audits its own writes. Your plugin's own tables are your
+job, but only barely: call `c.get('audit').record()` from the API route that
+makes the change. VitNode takes the actor, IP address and request id from the
+request. You describe the operation.
+
+In this guide, the `site-notes` plugin's **create note** route writes to the
+admin log.
+
+## Before you begin
+
+Finish [Permissions](/docs/dev/working-with-users/staff-permissions). It adds
+the `site_notes` table, the AdminCP route at `admin/notes` and a temporary
+**Create a test note** button. This guide changes that route.
+
+<Steps>
+<Step>
+
+### Record the operation in the same transaction
+
+Replace the handler of `createNoteRoute`. Write the entry in the same
+transaction as the change. A rolled-back insert then leaves no entry behind, and
+a failed audit write fails the insert instead of quietly losing the trail.
+
+```ts title="plugins/site-notes/src/api/modules/admin/notes/create.route.ts"
+export const createNoteRoute = buildRoute({
+  adminStaffPermission: { module: 'notes', permission: 'can_create' },
+  route: {
+    // unchanged
+  },
+  handler: async (c) => {
+    const values = c.req.valid('json')
+    const note = await c.get('db').transaction(async (tx) => {
+      const [created] = await tx.insert(site_notes).values(values).returning({
+        id: site_notes.id,
+        title: site_notes.title,
+        body: site_notes.body,
+      })
+
+      await c.get('audit').record(
+        {
+          action: 'note.created',
+          target: { type: 'note', id: created.id, label: created.title },
+          changes: c.get('audit').diff({
+            before: null,
+            after: created,
+            include: ['title', 'body'],
+          }),
+        },
+        { tx },
+      )
+
+      return created
+    })
+
+    return c.json(note, 201)
+  },
+})
+```
+
+`pluginId` defaults to the plugin of the route, so the entry is filed under
+`site-notes`. `area` defaults to `admin` on an AdminCP request, `public` for a
+signed-in member and `system` otherwise. Pass `area: 'moderator'` from
+moderator routes so the entry lands in the moderator log, and `scope` when the
+action belongs to a moderation scope.
+
+</Step>
+<Step>
+
+### Describe the changes
+
+`diff()` (also exported as `auditDiff` from `@vitnode/core/lib/audit/diff`)
+compares two objects and keeps only the fields that changed. `before: null`
+describes a creation, `after: null` a deletion:
+
+```ts
+c.get('audit').diff({
+  before: { title: 'News', slug: 'news', viewCount: 10 },
+  after: { title: 'Announcements', slug: 'announcements', viewCount: 11 },
+  exclude: ['viewCount'],
+})
+// { title: { from: 'News', to: 'Announcements' },
+//   slug: { from: 'news', to: 'announcements' } }
+```
+
+Prefer `include` for anything security-related. An allowlist cannot leak a
+column added later. Fields named like passwords, tokens, secrets, API keys,
+cookies or recovery codes are always stored as `{ redacted: true }`. The entry
+says they changed, never what to. Rich-text documents are stored as a marker,
+because their content belongs to [revisions](/docs/content-engine/editorial).
+
+</Step>
+<Step>
+
+### Declare the action and its label
+
+Declare your actions so the Activity Logs action filter offers them before they
+first happen. Create `src/api/audit-actions.ts`:
+
+```ts title="plugins/site-notes/src/api/audit-actions.ts"
+import { defineAuditActions } from '@vitnode/core/lib/audit/actions'
+
+export const siteNotesAuditActions = defineAuditActions([
+  { action: 'note.created', targetType: 'note' },
+])
+```
+
+Pass it to `buildApiPlugin` in `src/config.api.ts`. The snippet is an excerpt,
+so keep the rest of the file:
+
+```ts title="plugins/site-notes/src/config.api.ts"
+import { siteNotesAuditActions } from './api/audit-actions' // [!code ++]
+
+export const siteNotesApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    auditActions: siteNotesAuditActions, // [!code ++]
+    // ...
+  })
+```
+
+Add the label to `src/locales/en.json`, inside the `site-notes` object:
+
+```json title="plugins/site-notes/src/locales/en.json"
+{
+  "site-notes": {
+    "audit": {
+      "actions": {
+        "note": { "created": "Created note" }
+      }
+    }
+  }
+}
+```
+
+The label key is `{pluginId}.audit.actions.{action}`, with the dots of the
+action nesting. Without a label, the UI makes the action id readable
+("Note created"). An undeclared action is still recorded and listed. It just
+won't show up in the action filter.
+
+</Step>
+</Steps>
+
+## Check the result
+
+Press **Create a test note** as the unrestricted administrator, then open
+**AdminCP → Staff → Administrators → Logs**. The newest entry reads
+**Created note** under your plugin, with the note's title as the target. Click
+it, and **Changes** shows **Title** and **Body** going from **Empty** to the new
+values.
+
+## Background work and failures
+
+- In a cron job or queue task, entries are attributed to the **system**
+  automatically. To add context to your own block of work, wrap it in
+  `withAuditContext` from `@vitnode/core/api/lib/audit/context`, for example
+  with `{ metadata: { trigger: 'import' } }`.
+- A malformed action or target type throws `AuditLogError`. That is a bug in
+  your code, so VitNode never swallows it. For a non-critical operation outside
+  a transaction, pass
+  `{ bestEffort: true }` to log a failed database write to the technical log
+  instead of failing the request.
+
+## Related
+
+- [Activity Logs reference](/docs/dev/audit-logs/reference): every option and limit
+- [Access and retention](/docs/dev/audit-logs/access-and-retention): who can read the entries

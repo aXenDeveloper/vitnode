@@ -1,0 +1,11 @@
+{
+  "title": "Activity Logs",
+  "description": "Who changed what and when: one audit trail for admins, moderators, plugins and content",
+  "icon": "History",
+  "pages": [
+    "index",
+    "record-plugin-events",
+    "access-and-retention",
+    "reference"
+  ]
+}

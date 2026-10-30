@@ -2,6 +2,7 @@ import type { ContentIdStrategy } from "./ids";
 import type {
   AnyContentTypeDefinition,
   ContentAdminConfig,
+  ContentAuditInput,
   ContentDeliveryConfig,
   ContentDeliveryDescriptionField,
   ContentDeliveryEnabled,
@@ -37,6 +38,7 @@ import type {
   ContentSearchTitleField,
   ContentThreadInput,
   ContentTypeDefinition,
+  ResolvedContentAuditConfig,
   ResolvedContentDeliveryConfig,
   ResolvedContentDuplicationConfig,
   ResolvedContentEditorialConfig,
@@ -159,6 +161,38 @@ const assertIndexable = (
   }
 };
 
+const resolveContentAudit = (
+  id: string,
+  audit: ContentAuditInput | false | undefined,
+  fieldNames: readonly string[],
+): ResolvedContentAuditConfig => {
+  if (audit === false) {
+    return { enabled: false, excludeFields: [], trackChanges: false };
+  }
+  if (audit !== undefined && (typeof audit !== "object" || audit === null)) {
+    throw new ContentEngineError(
+      "audit is `false` or an options object. Omit it to keep the default.",
+      { contentTypeId: id },
+    );
+  }
+
+  const excludeFields = [...(audit?.excludeFields ?? [])];
+  for (const field of excludeFields) {
+    if (!fieldNames.includes(field)) {
+      throw new ContentEngineError(
+        `audit.excludeFields references unknown field "${field}".`,
+        { contentTypeId: id },
+      );
+    }
+  }
+
+  return {
+    enabled: true,
+    excludeFields,
+    trackChanges: audit?.trackChanges ?? true,
+  };
+};
+
 /**
  * Declares a Content Engine content type: its fields, its storage and the
  * capabilities (publication, localization, public API, editorial workflow,
@@ -268,6 +302,7 @@ export const defineContentType = <
   TPublicListField extends TPublicField = never,
 >({
   admin = {},
+  audit,
   delivery,
   duplication,
   editorial,
@@ -296,6 +331,14 @@ export const defineContentType = <
     TPublication,
     ContentEditorialEnabled<TEditorial>
   >;
+
+  /**
+   * Automatic audit logging: every create, edit, publication, visibility,
+   * schedule and translation write is recorded in the central audit log with
+   * its actor and changed fields. On by default; `false` turns it off, and
+   * `excludeFields` keeps noisy fields out of the recorded changes.
+   */
+  audit?: ContentAuditInput<Extract<keyof TFields, string>> | false;
 
   /**
    * Public delivery: canonical URLs (`/{publicApi.path}/:slug` by default), SEO
@@ -721,6 +764,7 @@ export const defineContentType = <
   > = {
     admin: resolvedAdmin,
     advanced: resolvedAdvanced,
+    audit: resolveContentAudit(id, audit, fieldNames),
     delivery: resolvedDelivery as ResolvedContentDeliveryConfig<
       ContentDeliveryEnabled<TDelivery>
     >,

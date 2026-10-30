@@ -4,6 +4,7 @@ export const CONTENT_ROW_ACTION_IDS = [
   "preview",
   "schedule",
   "history",
+  "activity",
   "delivery",
   "duplicate",
   "visibility",
@@ -92,6 +93,8 @@ const featureOf = (
   }: ContentRowActionInput,
 ): boolean => {
   switch (id) {
+    // Every content type is audited, so every one has a history to show.
+    case "activity":
     case "delete":
       return true;
     case "delivery":

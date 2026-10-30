@@ -37,13 +37,13 @@ status page (at most every 15 seconds per payment), and from the
 
 ## Statuses
 
-| Status       | Meaning                                                                            | Can change to                               |
-| ------------ | ---------------------------------------------------------------------------------- | ------------------------------------------- |
-| `pending`    | Stored; the checkout is being created or is open                                   | `processing`, `succeeded`, `failed`, `expired` |
-| `processing` | The customer finished, but a delayed payment method has not settled                | `succeeded`, `failed`                       |
-| `succeeded`  | The provider confirmed the money                                                   | nothing                                     |
-| `failed`     | The provider reported a final failure, or refused to create the checkout          | nothing                                     |
-| `expired`    | The checkout closed without payment, or was never created and nobody got its URL   | nothing                                     |
+| Status       | Meaning                                                                          | Can change to                                  |
+| ------------ | -------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `pending`    | Stored; the checkout is being created or is open                                 | `processing`, `succeeded`, `failed`, `expired` |
+| `processing` | The customer finished, but a delayed payment method has not settled              | `succeeded`, `failed`                          |
+| `succeeded`  | The provider confirmed the money                                                 | nothing                                        |
+| `failed`     | The provider reported a final failure, or refused to create the checkout         | nothing                                        |
+| `expired`    | The checkout closed without payment, or was never created and nobody got its URL | nothing                                        |
 
 Final statuses never change, so a late, duplicated or out-of-order webhook
 cannot undo a success. A declined card is not `failed`: the customer stays on
@@ -82,6 +82,16 @@ Core emits `payment.processing`, `payment.succeeded`, `payment.failed` and
 default events adapter runs listeners inside the request that changed the
 status (a webhook, a status refresh or the cron job) and never retries them, so
 do not grant anything from a listener alone: read the stored payment instead.
+
+## Activity Logs
+
+Every attempt and every status change lands in the
+[Activity Logs](/docs/dev/audit-logs) under **Admin logs**, written in the same
+transaction as the change. Starting a checkout is credited to the customer;
+a status move comes from the provider, so it is credited to the system. Each
+entry keeps the amount (in minor units), currency, provider, reference and the
+plugin that charged. Card details never reach VitNode, so they never reach the
+log either.
 
 ## Guides
 

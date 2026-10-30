@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 import { describe, expect, it } from "vitest";
 
+import { createAuditRecorder } from "@/tests/audit-recorder";
 import {
   testCategoryContentType,
   testEditorialNoteContentType,
@@ -75,9 +76,10 @@ const createDbMock = (
     return chain(queue.shift() ?? []);
   };
 
+  const audit = createAuditRecorder();
   const db = {
     delete: start("delete"),
-    insert: start("insert"),
+    insert: (table: unknown) => audit.insert(table) ?? start("insert")(table),
     select: start("select"),
     transaction: async <TResult>(
       body: (tx: unknown) => Promise<TResult>,

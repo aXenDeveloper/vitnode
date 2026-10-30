@@ -4,6 +4,7 @@ import type { Context } from "hono";
 
 import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 
+import type { AuditChanges } from "../../lib/audit/const";
 import type { ContentId, ContentIdOf } from "../ids";
 import type { ContentTranslationSchemas } from "../schemas";
 import type {
@@ -14,6 +15,7 @@ import type {
   ContentTranslationMeta,
   ContentTranslationRow,
 } from "../types";
+import type { ContentAuditAction } from "./audit";
 import type { ContentLanguage } from "./language-resolver";
 import type { ContentDatabase } from "./service";
 
@@ -34,6 +36,13 @@ import {
   contentStorageColumns,
   contentValuesToColumns,
 } from "../paths";
+import { resolveContentActor } from "./actor";
+import {
+  contentAuditChanges,
+  contentAuditLabel,
+  contentPluginIdOf,
+  recordContentAudit,
+} from "./audit";
 import {
   contentDatabase,
   findContentLanguage,
@@ -430,7 +439,44 @@ export const createContentTranslationModel = <
     }
   };
 
-  return {
+  // A translation of an editorial content type is audited by its revision
+  // capture; only a revisionless one is audited here.
+  const auditing = definition.audit.enabled && !definition.editorial.enabled;
+
+  const audited = async <TResult>(
+    options: ContentTranslationOptions | undefined,
+    body: (tx: ContentDatabase) => Promise<TResult>,
+  ): Promise<TResult> =>
+    options?.tx
+      ? await body(options.tx)
+      : await c.get("db").transaction(async tx => await body(tx));
+
+  const audit = async (
+    tx: ContentDatabase,
+    action: ContentAuditAction,
+    row: ContentTranslationRow<TDefinition>,
+    {
+      changedFields,
+      changes,
+    }: {
+      changedFields?: readonly string[];
+      changes?: AuditChanges | null;
+    } = {},
+  ): Promise<void> => {
+    await recordContentAudit(c, tx, {
+      action,
+      actor: resolveContentActor(c),
+      changedFields,
+      changes,
+      definition,
+      itemId: row.itemId,
+      label: contentAuditLabel(definition, row),
+      locale: row.locale,
+      pluginId: contentPluginIdOf(c, definition),
+    });
+  };
+
+  const methods: ContentTranslationModel<TDefinition> = {
     create: async (itemId, locale, values, options) => {
       const target = await language(locale, {
         requireEnabled: true,
@@ -786,13 +832,82 @@ export const createContentTranslationModel = <
 
       await touchItem(itemId, database);
 
+      const updated = toRow(row, target.locale);
+      if (auditing) {
+        await audit(database, "translation_updated", updated, {
+          changedFields,
+          changes: contentAuditChanges(definition, {
+            after: updated.values,
+            before: toRow(current, target.locale).values,
+            changedFields,
+            scope: "localized",
+          }),
+        });
+      }
+
       return {
         changed: true,
         changedFields,
-        row: toRow(row, target.locale),
+        row: updated,
         version: versionOf(row),
       };
     },
+  };
+  if (!auditing) return methods;
+
+  return {
+    ...methods,
+    create: async (itemId, locale, values, options) =>
+      await audited(options, async tx => {
+        const row = await methods.create(itemId, locale, values, {
+          ...options,
+          tx,
+        });
+        await audit(tx, "translation_created", row, {
+          changedFields: Object.keys(row.values),
+        });
+
+        return row;
+      }),
+    delete: async (itemId, locale, options) =>
+      await audited(options, async tx => {
+        const row = await methods.delete(itemId, locale, { ...options, tx });
+        if (row) await audit(tx, "translation_deleted", row);
+
+        return row;
+      }),
+    publish: async (itemId, locale, options) =>
+      await audited(options, async tx => {
+        const result = await methods.publish(itemId, locale, {
+          ...options,
+          tx,
+        });
+        if (result?.changed) {
+          await audit(tx, "translation_published", result.row);
+        }
+
+        return result;
+      }),
+    unpublish: async (itemId, locale, options) =>
+      await audited(options, async tx => {
+        const result = await methods.unpublish(itemId, locale, {
+          ...options,
+          tx,
+        });
+        if (result?.changed) {
+          await audit(tx, "translation_unpublished", result.row);
+        }
+
+        return result;
+      }),
+    // Audited where the row is read and written, so the entry costs no extra
+    // query; this only supplies the transaction.
+    update: async (itemId, locale, values, options) =>
+      await audited(
+        options,
+        async tx =>
+          await methods.update(itemId, locale, values, { ...options, tx }),
+      ),
   };
 };
 

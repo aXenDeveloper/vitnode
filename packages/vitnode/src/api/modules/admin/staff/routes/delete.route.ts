@@ -3,6 +3,11 @@ import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
+import {
+  staffEntryAuditLabel,
+  staffGrantsAuditDelta,
+} from "@/api/lib/audit/labels";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
 import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
 import { core_admin_permissions } from "@/database/admins";
@@ -93,7 +98,26 @@ export const deleteStaffAdminRoute = buildRoute({
     );
     await assertCanManageStaffEntry(c, { type, entry });
 
-    await c.get("db").delete(table).where(eq(table.id, entryId));
+    const label = await staffEntryAuditLabel(c, entry);
+    await c.get("db").transaction(async tx => {
+      await tx.delete(table).where(eq(table.id, entryId));
+      await writeAuditLog(
+        c,
+        {
+          action: `${type}_permissions.deleted`,
+          metadata: {
+            revoked: entry.unrestricted
+              ? ["*"]
+              : staffGrantsAuditDelta(entry.permissions, []).revoked,
+            ...(entry.roleId === null
+              ? { userId: entry.userId }
+              : { roleId: entry.roleId }),
+          },
+          target: { id: entryId, label, type: "staff_entry" },
+        },
+        tx,
+      );
+    });
 
     await invalidateStaffEntry(c, entry);
 

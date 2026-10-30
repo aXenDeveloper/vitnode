@@ -1,8 +1,11 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
+import { multiLangAuditLabel } from "@/api/lib/audit/labels";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { saveLanguageWords } from "@/api/lib/save-language-words";
 import { core_roles } from "@/database/roles";
+import { auditDiff } from "@/lib/audit/diff";
 import {
   EMOJI_ICON_MAX_LENGTH,
   parseEmojiIcon,
@@ -111,33 +114,54 @@ export const createRoleAdminRoute = buildRoute({
       maxCoverSize,
     } = c.req.valid("json");
 
-    const [role] = await c
-      .get("db")
-      .insert(core_roles)
-      .values({
-        color: color?.trim() ? color : null,
-        prefix: serializeEmojiIcon(parseEmojiIcon(prefix)) || null,
-        allowUploadFiles: allowUploadFiles ?? false,
-        totalMaxStorage: totalMaxStorage ?? null,
-        maxStorageForSubmit: maxStorageForSubmit ?? null,
-        ...(allowUploadAvatar === undefined ? {} : { allowUploadAvatar }),
-        ...(allowEditPersonalInfo === undefined
-          ? {}
-          : { allowEditPersonalInfo }),
-        ...(allowBrowseAnonymously === undefined
-          ? {}
-          : { allowBrowseAnonymously }),
-        forceBrowseAnonymously: forceBrowseAnonymously ?? false,
-        ...(allowEditOwnContent === undefined ? {} : { allowEditOwnContent }),
-        editOwnContentMinutes: editOwnContentMinutes ?? null,
-        allowDeleteOwnContent: allowDeleteOwnContent ?? false,
-        allowHideOwnContent: allowHideOwnContent ?? false,
-        ...(maxAvatarSize === undefined ? {} : { maxAvatarSize }),
-        ...(allowUploadCover === undefined ? {} : { allowUploadCover }),
-        ...(maxCoverSize === undefined ? {} : { maxCoverSize }),
-        updatedAt: new Date(),
-      })
-      .returning({ id: core_roles.id });
+    const role = await c.get("db").transaction(async tx => {
+      const [created] = await tx
+        .insert(core_roles)
+        .values({
+          color: color?.trim() ? color : null,
+          prefix: serializeEmojiIcon(parseEmojiIcon(prefix)) || null,
+          allowUploadFiles: allowUploadFiles ?? false,
+          totalMaxStorage: totalMaxStorage ?? null,
+          maxStorageForSubmit: maxStorageForSubmit ?? null,
+          ...(allowUploadAvatar === undefined ? {} : { allowUploadAvatar }),
+          ...(allowEditPersonalInfo === undefined
+            ? {}
+            : { allowEditPersonalInfo }),
+          ...(allowBrowseAnonymously === undefined
+            ? {}
+            : { allowBrowseAnonymously }),
+          forceBrowseAnonymously: forceBrowseAnonymously ?? false,
+          ...(allowEditOwnContent === undefined ? {} : { allowEditOwnContent }),
+          editOwnContentMinutes: editOwnContentMinutes ?? null,
+          allowDeleteOwnContent: allowDeleteOwnContent ?? false,
+          allowHideOwnContent: allowHideOwnContent ?? false,
+          ...(maxAvatarSize === undefined ? {} : { maxAvatarSize }),
+          ...(allowUploadCover === undefined ? {} : { allowUploadCover }),
+          ...(maxCoverSize === undefined ? {} : { maxCoverSize }),
+          updatedAt: new Date(),
+        })
+        .returning();
+
+      await writeAuditLog(
+        c,
+        {
+          action: "role.created",
+          changes: auditDiff({
+            after: { ...created, name: multiLangAuditLabel(name) },
+            before: null,
+            exclude: ["createdAt", "id", "updatedAt"],
+          }),
+          target: {
+            id: created.id,
+            label: multiLangAuditLabel(name),
+            type: "role",
+          },
+        },
+        tx,
+      );
+
+      return created;
+    });
 
     await saveLanguageWords(c, {
       pluginCode: "core",

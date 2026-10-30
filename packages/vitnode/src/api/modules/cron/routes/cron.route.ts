@@ -2,6 +2,7 @@ import { and, eq, gte, isNull, lt } from "drizzle-orm";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
+import { AUDIT_SYSTEM_ACTOR, withAuditContext } from "@/api/lib/audit/context";
 import { cronAuthMiddleware } from "@/api/middlewares/cron-auth.middleware";
 import { core_cron } from "@/database/cron";
 import { getNextCronRunDate } from "@/lib/api/get-next-cron-run-date";
@@ -123,7 +124,17 @@ export const runCronRoute = buildRoute({
           }
 
           try {
-            await job.handler(c);
+            await withAuditContext(
+              c,
+              {
+                actor: AUDIT_SYSTEM_ACTOR,
+                area: "system",
+                metadata: { cronJob: job.name, trigger: "cron" },
+              },
+              async () => {
+                await job.handler(c);
+              },
+            );
 
             return { success: true, jobName: job.name };
           } catch (error) {

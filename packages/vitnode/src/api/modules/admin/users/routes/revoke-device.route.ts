@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
+import { writeAuditLogBestEffort } from "@/api/lib/audit/write";
 import { revokeSessions } from "@/api/models/session-revoke";
 import { findUserDeviceId } from "@/api/models/user-devices";
 
@@ -62,6 +63,11 @@ export const revokeUserDeviceAdminRoute = buildRoute({
     }
 
     await revokeSessions(c, { deviceId, userId });
+    await writeAuditLogBestEffort(c, {
+      action: "user.device_revoked",
+      metadata: { deviceId },
+      target: { id: userId, type: "user" },
+    });
 
     return c.json({ ok: true as const }, 200);
   },

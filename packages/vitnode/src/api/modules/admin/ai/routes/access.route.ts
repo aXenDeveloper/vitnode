@@ -3,6 +3,8 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { formatDecimal, parseDecimal } from "@/api/lib/ai/decimal";
+import { roleAuditLabel, userAuditLabel } from "@/api/lib/audit/labels";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import {
   core_ai_role_permissions,
   core_ai_role_policies,
@@ -278,6 +280,28 @@ export const updateAiRoleAccessAdminRoute = buildRoute({
             ],
           });
       }
+
+      await writeAuditLog(
+        c,
+        {
+          action: "ai_access.role_updated",
+          metadata: {
+            grants: grants.map(grant => ({
+              dailyLimit: grant.dailyLimit,
+              granted: grant.granted,
+              permission: grant.permission,
+            })),
+            monthlyPoints,
+            unlimited,
+          },
+          target: {
+            id: roleId,
+            label: await roleAuditLabel(c, roleId),
+            type: "role",
+          },
+        },
+        tx,
+      );
     });
 
     return c.json({ ok: true as const }, 200);
@@ -317,14 +341,25 @@ export const updateAiUserOverrideAdminRoute = buildRoute({
   },
   handler: async c => {
     const { userId, ...values } = c.req.valid("json");
-    await c
-      .get("db")
-      .insert(core_ai_user_overrides)
-      .values({ userId, ...values })
-      .onConflictDoUpdate({
-        set: values,
-        target: core_ai_user_overrides.userId,
-      });
+    const label = await userAuditLabel(c, userId);
+    await c.get("db").transaction(async tx => {
+      await tx
+        .insert(core_ai_user_overrides)
+        .values({ userId, ...values })
+        .onConflictDoUpdate({
+          set: values,
+          target: core_ai_user_overrides.userId,
+        });
+      await writeAuditLog(
+        c,
+        {
+          action: "ai_access.user_override_saved",
+          metadata: values,
+          target: { id: userId, label, type: "user" },
+        },
+        tx,
+      );
+    });
 
     return c.json({ ok: true as const }, 200);
   },
@@ -348,10 +383,23 @@ export const deleteAiUserOverrideAdminRoute = buildRoute({
   },
   handler: async c => {
     const { userId } = c.req.valid("query");
-    await c
-      .get("db")
-      .delete(core_ai_user_overrides)
-      .where(eq(core_ai_user_overrides.userId, userId));
+    const label = await userAuditLabel(c, userId);
+    await c.get("db").transaction(async tx => {
+      const removed = await tx
+        .delete(core_ai_user_overrides)
+        .where(eq(core_ai_user_overrides.userId, userId))
+        .returning({ userId: core_ai_user_overrides.userId });
+      if (removed.length === 0) return;
+
+      await writeAuditLog(
+        c,
+        {
+          action: "ai_access.user_override_removed",
+          target: { id: userId, label, type: "user" },
+        },
+        tx,
+      );
+    });
 
     return c.json({ ok: true as const }, 200);
   },

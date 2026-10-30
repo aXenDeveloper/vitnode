@@ -2036,6 +2036,33 @@ export interface ContentLeafColumn {
 }
 
 /**
+ * How the Content Engine records a content type's writes in the central audit
+ * log. Present and on by default; `audit: false` turns it off.
+ */
+export interface ContentAuditInput<TFieldName extends string = string> {
+  /**
+   * Fields whose changes are never named or diffed in an audit entry -
+   * counters, cached totals, anything that changes on every write. The write
+   * itself is still recorded. Sensitive fields need no entry: they are always
+   * redacted.
+   */
+  excludeFields?: readonly TFieldName[];
+  /**
+   * Record which fields changed (and, without `editorial`, their bounded
+   * before/after values). Defaults to `true`; `false` records the operation
+   * only.
+   */
+  trackChanges?: boolean;
+}
+
+/** {@link ContentAuditInput} with every default applied. */
+export interface ResolvedContentAuditConfig {
+  enabled: boolean;
+  excludeFields: string[];
+  trackChanges: boolean;
+}
+
+/**
  * A **resolved** content type, as returned by `defineContentType()`.
  *
  * Every option is normalised (`enabled` flags, defaults filled in) and the
@@ -2067,6 +2094,8 @@ export interface ContentTypeDefinition<
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
   advanced: ResolvedContentAdvancedConfig;
+  /** Automatic audit logging of the content type's writes. */
+  audit: ResolvedContentAuditConfig;
 
   delivery: ResolvedContentDeliveryConfig<TDeliveryEnabled>;
   duplication: ResolvedContentDuplicationConfig<TDuplicationEnabled>;

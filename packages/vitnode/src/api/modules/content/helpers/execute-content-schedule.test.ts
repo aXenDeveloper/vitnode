@@ -5,7 +5,12 @@ import { getTableName } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 
+import type { ContentActor } from "@/content/revisions";
+import type { ContentDatabase } from "@/content/server/service";
+
+import { recordContentAudit } from "@/content/server/audit";
 import { core_content_schedules } from "@/database/content";
+import { createAuditRecorder } from "@/tests/audit-recorder";
 import { testEditorialPostContentType } from "@/tests/content-fixtures";
 
 import { executeContentSchedule } from "./execute-content-schedule";
@@ -106,7 +111,10 @@ const harness = ({
   const settlements: Settlement[] = [];
   let committed = false;
 
+  const audit = createAuditRecorder();
+
   const handleFor = (handle: Handle) => ({
+    insert: (table: unknown) => audit.insert(table),
     select: () => ({
       from: (table: typeof core_content_schedules) => ({
         where: (condition: SQL | undefined) => ({
@@ -171,6 +179,7 @@ const harness = ({
   } as unknown as Context;
 
   return {
+    audits: audit.entries,
     c,
     claims,
     committed: () => committed,
@@ -287,6 +296,46 @@ describe("executeContentSchedule", () => {
     expect(publish.mock.calls[0][1]).toMatchObject({
       actor: { type: "system", userId: null },
     });
+  });
+
+  it("audits the publish as the system, naming who booked it", async () => {
+    const { audits, c, publish } = harness();
+    // What the editorial capture does: record the transition in its own
+    // transaction, as the actor it was given.
+    publish.mockImplementation(
+      async (
+        itemId: number,
+        options: { actor: ContentActor; tx: ContentDatabase },
+      ) => {
+        await recordContentAudit(c, options.tx, {
+          action: "published",
+          actor: options.actor,
+          definition: testEditorialPostContentType,
+          itemId,
+          pluginId: PLUGIN_ID,
+        });
+
+        return outcome;
+      },
+    );
+
+    await executeContentSchedule(c, { generation: 1, scheduleId: 55 });
+
+    expect(audits).toEqual([
+      expect.objectContaining({
+        action: "content.published",
+        actorId: null,
+        actorType: "system",
+        area: "system",
+        correlationId: "schedule:55",
+        ipAddress: null,
+        metadata: {
+          scheduleId: 55,
+          scheduledByUserId: 3,
+          trigger: "scheduled_task",
+        },
+      }),
+    ]);
   });
 
   describe("the effects payload", () => {

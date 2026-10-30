@@ -28,6 +28,7 @@ import { CONTENT_LOCALE_MAX_LENGTH, CONTENT_PERMISSIONS } from "../const";
 import { zodContentFileReferenceRejection } from "../files";
 import { requireContentId } from "../ids";
 import { resolveContentActor } from "./actor";
+import { withContentSaveAudit } from "./audit";
 import { contentEditorialEffects } from "./editorial-effects";
 import { emitContentEvent } from "./emit";
 import { contentFileFields } from "./files";
@@ -328,35 +329,44 @@ export const buildContentLocalizedAdminRoutes = <
       const result = await withHttpErrors(
         "create",
         async () =>
-          await c.get("db").transaction(async tx => {
-            const outcome = editorial
-              ? await editorialService(c).create(body.values, {
-                  actor: resolveContentActor(c),
-                  tx,
-                })
-              : null;
-            const row =
-              outcome?.row ??
-              (await model.service(c).create(body.values, { tx }));
-
-            const written: ContentTranslationEditorialOutcome<TDefinition>[] =
-              [];
-            for (const entry of ordered) {
-              const translated = await writeTranslation(
+          await c.get("db").transaction(
+            async tx =>
+              await withContentSaveAudit(
                 c,
-                requireContentId(
-                  definition.idStrategy,
-                  (row as { id: unknown }).id,
-                  definition.id,
-                ) as ContentIdOf<TDefinition>,
-                entry,
+                definition,
                 tx,
-              );
-              if (translated) written.push(translated);
-            }
+                "create",
+                async () => {
+                  const outcome = editorial
+                    ? await editorialService(c).create(body.values, {
+                        actor: resolveContentActor(c),
+                        tx,
+                      })
+                    : null;
+                  const row =
+                    outcome?.row ??
+                    (await model.service(c).create(body.values, { tx }));
 
-            return { outcome, row, written };
-          }),
+                  const written: ContentTranslationEditorialOutcome<TDefinition>[] =
+                    [];
+                  for (const entry of ordered) {
+                    const translated = await writeTranslation(
+                      c,
+                      requireContentId(
+                        definition.idStrategy,
+                        (row as { id: unknown }).id,
+                        definition.id,
+                      ) as ContentIdOf<TDefinition>,
+                      entry,
+                      tx,
+                    );
+                    if (translated) written.push(translated);
+                  }
+
+                  return { outcome, row, written };
+                },
+              ),
+          ),
         { contentTypeId: definition.id, structured: editorial },
       );
 
@@ -413,51 +423,63 @@ export const buildContentLocalizedAdminRoutes = <
       const result = await withHttpErrors(
         "update",
         async () =>
-          await c.get("db").transaction(async tx => {
-            // Shared first, so a base version conflict costs nothing: the
-            // translations are never written and the transaction ends here.
-            let outcome: ContentEditorialOutcome<TDefinition> | null = null;
-            let changedFields: readonly string[] = [];
-            let row: ContentSelect<TDefinition> | null = null;
+          await c.get("db").transaction(
+            async tx =>
+              await withContentSaveAudit(
+                c,
+                definition,
+                tx,
+                "update",
+                async () => {
+                  // Shared first, so a base version conflict costs nothing: the
+                  // translations are never written and the transaction ends here.
+                  let outcome: ContentEditorialOutcome<TDefinition> | null =
+                    null;
+                  let changedFields: readonly string[] = [];
+                  let row: ContentSelect<TDefinition> | null = null;
 
-            if (shared !== undefined) {
-              if (editorial) {
-                outcome = await editorialService(c).update(id, shared, {
-                  actor: resolveContentActor(c),
-                  expectedVersion: body.expectedVersion ?? 0,
-                  tx,
-                });
-                if (!outcome) return null;
-                changedFields = outcome.changedFields;
-                row = outcome.row;
-              } else {
-                const plain = await model.service(c).update(id, shared, { tx });
-                if (!plain) return null;
-                changedFields = plain.changedFields;
-                row = plain.row;
-              }
-            }
+                  if (shared !== undefined) {
+                    if (editorial) {
+                      outcome = await editorialService(c).update(id, shared, {
+                        actor: resolveContentActor(c),
+                        expectedVersion: body.expectedVersion ?? 0,
+                        tx,
+                      });
+                      if (!outcome) return null;
+                      changedFields = outcome.changedFields;
+                      row = outcome.row;
+                    } else {
+                      const plain = await model
+                        .service(c)
+                        .update(id, shared, { tx });
+                      if (!plain) return null;
+                      changedFields = plain.changedFields;
+                      row = plain.row;
+                    }
+                  }
 
-            const written: ContentTranslationEditorialOutcome<TDefinition>[] =
-              [];
-            for (const entry of entries) {
-              const translated = await writeTranslation(c, id, entry, tx);
-              if (translated) written.push(translated);
-            }
+                  const written: ContentTranslationEditorialOutcome<TDefinition>[] =
+                    [];
+                  for (const entry of entries) {
+                    const translated = await writeTranslation(c, id, entry, tx);
+                    if (translated) written.push(translated);
+                  }
 
-            const current =
-              row ?? (await model.service(c).findById(id, { tx }));
+                  const current =
+                    row ?? (await model.service(c).findById(id, { tx }));
 
-            return current === null
-              ? null
-              : {
-                  changedFields,
-                  outcome,
-                  row: current,
-                  touched: row !== null,
-                  written,
-                };
-          }),
+                  return current === null
+                    ? null
+                    : {
+                        changedFields,
+                        outcome,
+                        row: current,
+                        touched: row !== null,
+                        written,
+                      };
+                },
+              ),
+          ),
         { contentTypeId: definition.id, itemId: id, structured: editorial },
       );
 

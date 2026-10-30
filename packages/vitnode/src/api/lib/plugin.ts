@@ -7,6 +7,7 @@ import type { RegisteredContentType } from "@/content/registry";
 import type { AnyContentModel } from "@/content/server/model";
 import type { ContentNotificationsConfig } from "@/content/server/notifications/define";
 import type { AnyContentTypeDefinition } from "@/content/types";
+import type { AuditActionDefinition } from "@/lib/audit/actions";
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
 import type { PluginManifest } from "@/lib/plugin-manifest";
@@ -66,6 +67,8 @@ export interface BuildPluginApiReturn<
     readonly BaseBuildModuleReturn<P>[],
 > {
   aiActions?: AnyAiActionDefinition[];
+  /** The audit actions the plugin records, for the Activity Logs filters. */
+  auditActions?: readonly AuditActionDefinition[];
   blocks?: BlockPluginSource;
   contentContainers?: AnyContentContainerDefinition[];
   contentModels?: AnyContentModel[];
@@ -147,6 +150,7 @@ export function buildApiPlugin<
   const Modules extends readonly BuildModuleReturn<P, string>[] = readonly [],
 >({
   aiActions,
+  auditActions,
   blocks,
   contentNotifications,
   editablePages,
@@ -163,6 +167,12 @@ export function buildApiPlugin<
    * `runAsSystem()`; admins configure them and grant their permission per role.
    */
   aiActions?: AnyAiActionDefinition[];
+  /**
+   * The audit actions the plugin records with `c.get("audit").record()`, from
+   * `defineAuditActions`. Optional: an undeclared action is still recorded and
+   * shown - declaring it only lists it in the Activity Logs action filter.
+   */
+  auditActions?: readonly AuditActionDefinition[];
   /** The object the plugin's own widgets (`blocks`) module exports; its `pluginId` must match. */
   blocks?: BlockPluginSource;
   /**
@@ -311,6 +321,7 @@ export function buildApiPlugin<
   return {
     pluginId,
     aiActions,
+    auditActions,
     blocks,
     editablePages: registeredPages.map(entry => entry.page),
     manifest,

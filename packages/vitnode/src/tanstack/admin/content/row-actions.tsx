@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
+  ActivityIcon,
   CalendarClockIcon,
   CopyPlusIcon,
   EllipsisIcon,
@@ -298,6 +299,7 @@ const ACTION_ICONS: Record<
   Exclude<ContentRowActionId, "visibility">,
   React.ReactNode
 > = {
+  activity: <ActivityIcon />,
   delete: <Trash2Icon />,
   delivery: <LinkIcon />,
   duplicate: <CopyPlusIcon />,
