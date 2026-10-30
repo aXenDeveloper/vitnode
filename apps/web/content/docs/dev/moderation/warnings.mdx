@@ -33,7 +33,7 @@ A temporary suspension ends at its own end time, even when the member still has 
 
 ## What a suspended member sees
 
-The server checks suspensions when it reads the session, for every request: core routes, plugin routes, server functions and WebSocket handshakes. A suspended account is treated as a guest everywhere, so it can browse public pages but cannot post, comment, report, moderate or open the AdminCP. Open WebSocket connections are closed when the suspension is applied.
+The server checks suspensions when it reads the session, for every request: core routes, plugin routes, server functions and WebSocket handshakes. The API treats a suspended account as a guest everywhere, so it can browse public pages but cannot post, comment, report, moderate or open the AdminCP. Applying a suspension also closes the member's open WebSocket connections.
 
 The member keeps their session. A strip under the header says the account is suspended and links to **Account status** at `/account-status`, which shows the suspension end time, active points and the warning history with each message. Members reach the same page from **Settings → Account status** at any time. It never shows staff notes or which moderator issued a warning.
 

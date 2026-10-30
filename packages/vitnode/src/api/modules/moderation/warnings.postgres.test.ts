@@ -59,6 +59,9 @@ describe.skipIf(!POSTGRES_TEST_URL)("issuing warnings on PostgreSQL", () => {
     c.set("notifications", {
       publish,
     } as unknown as Context["var"]["notifications"]);
+    c.set("realtime", {
+      closeUserConnections: () => undefined,
+    } as unknown as Context["var"]["realtime"]);
     c.set("core", {
       moderation: { scopes: [], targets: [] },
       permissionStaff: [],

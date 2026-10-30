@@ -159,6 +159,103 @@ const PersonOrDeleted = ({ person }: { person: null | ReportPerson }) => {
   return person ? <Person link person={person} /> : <>{t("deleted_user")}</>;
 };
 
+/** Who, when, what for: the facts of one warning. */
+const WarningFacts = ({
+  member,
+  warning,
+}: {
+  member?: null | ReportPerson;
+  warning: ModcpStaffWarning;
+}) => {
+  const t = useTranslations("core.moderation.warn");
+
+  return (
+    <dl className="grid gap-3 sm:grid-cols-2">
+      {member !== undefined ? (
+        <Detail label={t("list.member")}>
+          {member ? (
+            <Link
+              className="hover:bg-muted/50 focus-visible:ring-ring/50 -mx-1 inline-flex rounded-md px-1 outline-none focus-visible:ring-3"
+              to={`/modcp/members/${member.id}`}
+            >
+              <Person person={member} />
+            </Link>
+          ) : (
+            <PersonOrDeleted person={member} />
+          )}
+        </Detail>
+      ) : null}
+      <Detail label={t("list.issued_by")}>
+        <PersonOrDeleted person={warning.issuedBy} />
+      </Detail>
+      <Detail label={t("list.expires")}>
+        {warning.expiresAt ? (
+          <DateFormat date={warning.expiresAt} showFullDate />
+        ) : (
+          t("list.never")
+        )}
+      </Detail>
+      {warning.defaultPoints !== null &&
+      warning.defaultPoints !== warning.points ? (
+        <Detail label={t("list.default_points")}>
+          {t("points", { count: warning.defaultPoints })}
+        </Detail>
+      ) : null}
+      {warning.content ? (
+        <Detail label={t("list.content")}>
+          {warning.content.url ? (
+            <a
+              className="text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
+              href={warning.content.url}
+            >
+              {warning.content.title ?? t("list.untitled")}
+              <ExternalLinkIcon aria-hidden="true" className="size-3.5" />
+            </a>
+          ) : (
+            (warning.content.title ?? t("list.untitled"))
+          )}
+        </Detail>
+      ) : null}
+      {warning.reportId ? (
+        <Detail label={t("list.report")}>
+          <Link
+            className="text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
+            to={`/modcp/reports/${warning.reportId}`}
+          >
+            <FlagIcon aria-hidden="true" className="size-3.5" />
+            {t("list.report_link", { id: warning.reportId })}
+          </Link>
+        </Detail>
+      ) : null}
+    </dl>
+  );
+};
+
+/** Staff notes and override explanations - `null` from the API unless the moderator may read them. */
+const StaffNotes = ({ warning }: { warning: ModcpStaffWarning }) => {
+  const t = useTranslations("core.moderation.warn");
+  if (!warning.staffNote && !warning.overrideNote) return null;
+
+  return (
+    <div className="bg-muted/60 flex flex-col gap-3 rounded-lg p-3">
+      <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+        <LockIcon aria-hidden="true" className="size-3.5" />
+        {t("list.staff_only")}
+      </p>
+      {warning.staffNote ? (
+        <Detail label={t("list.staff_note")}>
+          <span className="whitespace-pre-wrap">{warning.staffNote}</span>
+        </Detail>
+      ) : null}
+      {warning.overrideNote ? (
+        <Detail label={t("list.override_note")}>
+          <span className="whitespace-pre-wrap">{warning.overrideNote}</span>
+        </Detail>
+      ) : null}
+    </div>
+  );
+};
+
 /** One warning as staff see it, with Revoke when allowed. */
 export const StaffWarningCard = ({
   canRevoke,
@@ -216,89 +313,13 @@ export const StaffWarningCard = ({
         </div>
       </header>
 
-      <dl className="grid gap-3 sm:grid-cols-2">
-        {member !== undefined ? (
-          <Detail label={t("list.member")}>
-            {member ? (
-              <Link
-                className="hover:bg-muted/50 focus-visible:ring-ring/50 -mx-1 inline-flex rounded-md px-1 outline-none focus-visible:ring-3"
-                to={`/modcp/members/${member.id}`}
-              >
-                <Person person={member} />
-              </Link>
-            ) : (
-              <PersonOrDeleted person={member} />
-            )}
-          </Detail>
-        ) : null}
-        <Detail label={t("list.issued_by")}>
-          <PersonOrDeleted person={warning.issuedBy} />
-        </Detail>
-        <Detail label={t("list.expires")}>
-          {warning.expiresAt ? (
-            <DateFormat date={warning.expiresAt} showFullDate />
-          ) : (
-            t("list.never")
-          )}
-        </Detail>
-        {warning.defaultPoints !== null &&
-        warning.defaultPoints !== warning.points ? (
-          <Detail label={t("list.default_points")}>
-            {t("points", { count: warning.defaultPoints })}
-          </Detail>
-        ) : null}
-        {warning.content ? (
-          <Detail label={t("list.content")}>
-            {warning.content.url ? (
-              <a
-                className="text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
-                href={warning.content.url}
-              >
-                {warning.content.title ?? t("list.untitled")}
-                <ExternalLinkIcon aria-hidden="true" className="size-3.5" />
-              </a>
-            ) : (
-              (warning.content.title ?? t("list.untitled"))
-            )}
-          </Detail>
-        ) : null}
-        {warning.reportId ? (
-          <Detail label={t("list.report")}>
-            <Link
-              className="text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
-              to={`/modcp/reports/${warning.reportId}`}
-            >
-              <FlagIcon aria-hidden="true" className="size-3.5" />
-              {t("list.report_link", { id: warning.reportId })}
-            </Link>
-          </Detail>
-        ) : null}
-      </dl>
+      <WarningFacts member={member} warning={warning} />
 
       <Detail label={t("list.message")}>
         <span className="whitespace-pre-wrap">{warning.message}</span>
       </Detail>
 
-      {warning.staffNote || warning.overrideNote ? (
-        <div className="bg-muted/60 flex flex-col gap-3 rounded-lg p-3">
-          <p className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
-            <LockIcon aria-hidden="true" className="size-3.5" />
-            {t("list.staff_only")}
-          </p>
-          {warning.staffNote ? (
-            <Detail label={t("list.staff_note")}>
-              <span className="whitespace-pre-wrap">{warning.staffNote}</span>
-            </Detail>
-          ) : null}
-          {warning.overrideNote ? (
-            <Detail label={t("list.override_note")}>
-              <span className="whitespace-pre-wrap">
-                {warning.overrideNote}
-              </span>
-            </Detail>
-          ) : null}
-        </div>
-      ) : null}
+      <StaffNotes warning={warning} />
 
       {revokedAt ? (
         <p className="text-muted-foreground text-sm leading-relaxed text-pretty">

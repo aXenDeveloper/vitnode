@@ -24,6 +24,23 @@ const reasonTextSchema = z
 
 const ACCOUNT_STATUS_PATH = "/account-status";
 
+const utcDateTimeFormats = new Map<string, Intl.DateTimeFormat>();
+
+/** Emails have no viewer time zone, so suspension ends are written in UTC. */
+const utcDateTimeFormat = (locale: string): Intl.DateTimeFormat => {
+  let format = utcDateTimeFormats.get(locale);
+  if (!format) {
+    format = new Intl.DateTimeFormat(locale, {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "UTC",
+    });
+    utcDateTimeFormats.set(locale, format);
+  }
+
+  return format;
+};
+
 /** Sent to a member when a moderator warns them. Never carries staff notes. */
 export const warningIssuedNotification = buildNotificationType({
   id: "core.warning_issued",
@@ -99,11 +116,7 @@ export const accountSuspendedNotification = buildNotificationType({
   present: ({ data, locale, t }) => ({
     body: data.endsAt
       ? t("core.notifications.types.account_suspended.body_until", {
-          endsAt: new Intl.DateTimeFormat(locale, {
-            dateStyle: "medium",
-            timeStyle: "short",
-            timeZone: "UTC",
-          }).format(new Date(data.endsAt)),
+          endsAt: utcDateTimeFormat(locale).format(new Date(data.endsAt)),
         })
       : t("core.notifications.types.account_suspended.body_indefinite"),
     target: ACCOUNT_STATUS_PATH,
