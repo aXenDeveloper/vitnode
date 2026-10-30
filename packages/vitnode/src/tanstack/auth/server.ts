@@ -30,7 +30,11 @@ const operations = createAuthOperations({
       allowSaveCookies: true,
       args: {
         params: { providerId: data.providerId },
-        query: { code: data.code, state: data.state },
+        query: {
+          code: data.code,
+          state: data.state,
+          ...(data.user ? { user: data.user } : {}),
+        },
       },
       method: "get",
       module: "users/sso",

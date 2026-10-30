@@ -10,6 +10,7 @@ import type {
 import type { SSOApiPlugin, SSOProviderUser } from "@/api/models/sso";
 import type { SsoProfilePolicy } from "@/api/models/sso-connection";
 
+import { pkceChallengeS256 } from "@/api/lib/sso-protocol";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
 import {
@@ -103,6 +104,7 @@ const harness = ({
   const discord = provider("discord", "Discord", ["avatar"], profiles);
   let adapters: SSOApiPlugin[] = [google, discord];
   let policy = OPEN_POLICY;
+  let signedInRecently = true;
 
   vi.spyOn(SsoConnectionModel.prototype, "store", "get").mockReturnValue(
     memory.store,
@@ -113,6 +115,10 @@ const harness = ({
   vi.spyOn(SsoConnectionModel.prototype, "refreshSessions").mockResolvedValue(
     undefined,
   );
+  vi.spyOn(
+    SsoConnectionModel.prototype,
+    "recentlyAuthenticated",
+  ).mockImplementation(async () => Promise.resolve(signedInRecently));
   const importAvatar = vi
     .spyOn(SsoConnectionModel.prototype, "importAvatar")
     .mockImplementation(async ({ url }) =>
@@ -214,6 +220,9 @@ const harness = ({
     setPolicy: (next: SsoProfilePolicy) => {
       policy = next;
     },
+    setSignedInRecently: (next: boolean) => {
+      signedInRecently = next;
+    },
     signInAs: (user: MemorySsoAccount | null) => {
       viewer = user;
     },
@@ -273,6 +282,61 @@ describe("connecting an account from settings", () => {
       providerId: "google",
       userId: ALICE.id,
     });
+  });
+
+  it("asks for a recent sign-in before connecting a new account", async () => {
+    const h = harness();
+    h.signInAs(ALICE);
+    h.setSignedInRecently(false);
+
+    const response = await h.request(
+      "/google/authorize",
+      json({ intent: "link" }),
+    );
+
+    expect(response.status).toBe(403);
+    expect(await response.json()).toEqual({
+      error: "reauthentication_required",
+    });
+    expect(h.operations()).toEqual([]);
+  });
+
+  it("connects a provider account that shares no email, by its id alone", async () => {
+    const h = harness();
+    h.signInAs(ALICE);
+
+    const response = await connectGoogle(h, {
+      email: null,
+      emailVerified: false,
+    });
+
+    expect(response.status).toBe(200);
+    expect(h.connections).toEqual([
+      expect.objectContaining({
+        providerAccountId: "google-alice",
+        providerEmail: null,
+        userId: ALICE.id,
+      }),
+    ]);
+  });
+
+  it("hands the provider the PKCE verifier and nonce of its own round trip", async () => {
+    const h = harness();
+    h.signInAs(ALICE);
+    const getUrl = vi.spyOn(h.google, "getUrl");
+
+    await connectGoogle(h);
+
+    const [request] = getUrl.mock.calls[0] ?? [];
+    const [, context] = h.google.fetchToken.mock.calls[0] ?? [];
+    expect(context).toEqual({
+      codeVerifier: expect.any(String),
+      nonce: request?.nonce,
+      params: {},
+    });
+    expect(pkceChallengeS256(String(context?.codeVerifier))).toBe(
+      request?.codeChallenge,
+    );
   });
 
   it("never signs anybody in, and never opens an AdminCP session", async () => {

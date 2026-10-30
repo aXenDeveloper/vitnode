@@ -1,0 +1,119 @@
+---
+title: Reddit
+description: Add Reddit sign-in to VitNode. Create a Reddit web app, register the redirect URI, set a User-Agent and confirm new members' email by link.
+icon: MessageCircle
+---
+
+Add a **Continue with Reddit** button that asks only for the `identity` scope, so it can't post, vote or moderate. Reddit never shares an email address, so new members confirm one by email.
+
+## Before you begin
+
+- A running VitNode app. This page covers only the Reddit parts; [SSO setup](/docs/dev/sso#set-up-your-first-provider) explains the shared steps and [where the API's `.env` and config live](/docs/dev/sso#where-the-files-live).
+- Approved access to Reddit's Data API. Under Reddit's [Responsible Builder Policy](https://support.reddithelp.com/hc/en-us/articles/42728983564564-Responsible-Builder-Policy) (November 2025), new OAuth tokens need Reddit's approval, so creating an app alone may not be enough. Check the policy for the current request process before you rely on Reddit sign-in.
+- An [email adapter](/docs/dev/email). Without one, VitNode cannot send the confirmation link and new Reddit visitors cannot register.
+
+## Set up the app
+
+<Steps>
+<Step>
+
+### Create a web app
+
+Sign in to Reddit, open [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) and press **create another app...**. Choose the **web app** type. The other types cannot keep a secret.
+
+</Step>
+
+<Step>
+
+### Add the redirect URI
+
+Fill in the name and description people will see, and set **redirect uri**:
+
+| Environment                           | Redirect URI                               |
+| ------------------------------------- | ------------------------------------------ |
+| Development (`VITNODE_WEB_URL` unset) | `http://localhost:3000/login/sso/reddit`   |
+| Production                            | `https://your-domain.com/login/sso/reddit` |
+
+Reddit's app form takes a single redirect URI, so use a separate app for development. VitNode builds the URI from `VITNODE_WEB_URL`, so it must match exactly. Press **create app**.
+
+</Step>
+
+<Step>
+
+### Copy the credentials
+
+The **client ID** is the short string under the app's name; the **secret** is next to **secret**. Keep both server-side, and set a descriptive User-Agent, because Reddit heavily rate-limits generic ones:
+
+```bash title=".env"
+REDDIT_CLIENT_ID=AbCdEfGhIjKlMnOpQrStUv # [!code ++]
+REDDIT_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+REDDIT_USER_AGENT="web:com.example.forum:1.0.0 (by /u/your_username)" # [!code ++]
+```
+
+Without `userAgent`, VitNode sends `web:{clientId}:1.0 (by VitNode)`.
+
+</Step>
+
+<Step>
+
+### Add the adapter
+
+Add `RedditSSOApiPlugin` to `authorization.ssoAdapters` in the API's `vitnode.api.config.ts` ([where it lives](/docs/dev/sso#where-the-files-live)), next to any adapters you already have. Keep the rest of the config as it is:
+
+```ts title="src/vitnode.api.config.ts (excerpt)"
+import { RedditSSOApiPlugin } from '@vitnode/core/api/adapters/sso/reddit' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  authorization: {
+    ssoAdapters: [
+      // ...
+      // [!code ++:5]
+      RedditSSOApiPlugin({
+        clientId: process.env.REDDIT_CLIENT_ID,
+        clientSecret: process.env.REDDIT_CLIENT_SECRET,
+        userAgent: process.env.REDDIT_USER_AGENT,
+      }),
+    ],
+  },
+})
+```
+
+No `authorization` block yet? Create one with just `ssoAdapters`, as in the [SSO setup](/docs/dev/sso#add-the-adapter-to-ssoadapters). Then restart the dev server, since `.env` and the API config are only read at start-up.
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login`, press the **Reddit** button under **Continue with** and press **Allow**. The first time, VitNode asks for an email and sends a confirmation link. Open it in the same browser. Next time, the same Reddit account signs straight in.
+
+</Step>
+</Steps>
+
+## Scopes and profile fields
+
+| Setting        | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Scopes         | `identity`, with `duration=temporary` (no refresh token) |
+| Token auth     | HTTP Basic, with the User-Agent                          |
+| Account ID     | `id` (Reddit's account ID, not the username)             |
+| Email          | never shared; [confirmed by email](/docs/dev/sso/email-confirmation) |
+| Profile fields | avatar                                                   |
+
+The username becomes the new account's display name. A renamed or deleted Reddit username does not change the stored account ID.
+
+## Troubleshooting
+
+- **Reddit shows a redirect URI error.** The app's redirect URI differs from `{VITNODE_WEB_URL}/login/sso/reddit`.
+- **Sign-in fails after Allow, with a provider error.** The app is not of the **web app** type, the secret is wrong, or Reddit is rate limiting a generic User-Agent.
+- **New visitors see "We need a verified email".** No email adapter is configured.
+
+## Related
+
+<Cards>
+  <Card title="Email confirmation" description="How new Reddit members confirm an address" href="/docs/dev/sso/email-confirmation" />
+  <Card title="How SSO works" description="Linking rules and the state" href="/docs/dev/sso" />
+</Cards>

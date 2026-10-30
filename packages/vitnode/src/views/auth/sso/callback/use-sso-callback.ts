@@ -4,8 +4,17 @@ import type { SSOLinkOffer } from "../link/schema";
 import type { SSOCallbackResult } from "./sso-callback-result";
 
 export type SSOCallbackState =
-  | { kind: "access_denied" | "error" | "pending" }
-  | { kind: "email_exists"; offer: null | SSOLinkOffer };
+  | { emailSuggestion: null | string; kind: "email_required" }
+  | { kind: "email_exists"; offer: null | SSOLinkOffer }
+  | {
+      kind:
+        | "access_denied"
+        | "confirm_invalid"
+        | "confirm_other_browser"
+        | "email_unavailable"
+        | "error"
+        | "pending";
+    };
 
 export const useSSOCallback = ({
   code,
@@ -38,6 +47,15 @@ export const useSSOCallback = ({
   if (isError) return { kind: "error" };
   if (data?.failure === "email_exists") {
     return { kind: "email_exists", offer: data.offer ?? null };
+  }
+  if (data?.failure === "email_required") {
+    return {
+      emailSuggestion: data.emailSuggestion ?? null,
+      kind: "email_required",
+    };
+  }
+  if (data?.failure === "email_unavailable") {
+    return { kind: "email_unavailable" };
   }
   if (data?.failure) return { kind: "error" };
 

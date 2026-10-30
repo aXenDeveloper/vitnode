@@ -8,6 +8,7 @@ import type { PasskeySignInSubmit } from "@/views/auth/sign-in/passkey/passkey-s
 import type { SignUpSubmit } from "@/views/auth/sign-up/form/sign-up-form-content";
 import type { SSOSelectProvider } from "@/views/auth/sso/buttons/sso-buttons-content";
 import type { SSOCallbackResult } from "@/views/auth/sso/callback/sso-callback-result";
+import type { SSOEmailCompletionActions } from "@/views/auth/sso/email/sso-email-completion";
 import type { SSOLinkSubmit } from "@/views/auth/sso/link/use-sso-link-form";
 import type {
   ConfirmEmailSubmit,
@@ -19,6 +20,11 @@ import {
   ssoSignInMethod,
 } from "@/views/auth/last-sign-in-method";
 import { getPasskeyInBrowser } from "@/views/auth/passkeys/webauthn";
+import {
+  confirmSsoEmailInBrowser,
+  sendSsoEmailLinkInBrowser,
+  type SSOConfirmEmailResult,
+} from "@/views/auth/sso/email/sso-email-mutations";
 
 import type { SsoCallbackInput } from "./contract";
 
@@ -174,6 +180,37 @@ export const useLinkSsoAction = ({
     onSignedIn();
 
     return undefined;
+  };
+};
+
+/**
+ * The email step of an SSO sign-in whose provider shared no verified address:
+ * email a confirmation link to the address the visitor types.
+ */
+export const ssoEmailCompletionActions = (
+  providerId: string,
+): SSOEmailCompletionActions => ({
+  sendLink: async email =>
+    await sendSsoEmailLinkInBrowser({ email, providerId }),
+});
+
+/**
+ * Confirms an emailed SSO link. A confirmation that signs the visitor in
+ * crosses the same identity boundary as any other sign-in.
+ */
+export const useConfirmSsoEmailAction = (providerId: string) => {
+  const queryClient = useQueryClient();
+
+  return async (token: string): Promise<SSOConfirmEmailResult> => {
+    const result = await confirmSsoEmailInBrowser({ providerId, token });
+
+    if (result.ok) {
+      removeAdminIdentityQueries(queryClient);
+      removeUserIdentityQueries(queryClient);
+      await invalidateSession(queryClient);
+    }
+
+    return result;
   };
 };
 

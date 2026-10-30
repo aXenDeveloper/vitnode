@@ -1,44 +1,16 @@
 ---
 title: Google
-description: Add Google sign-in to VitNode - create an OAuth client, set the exact redirect URI and register the Google SSO adapter in your API config.
+description: Add Google sign-in to VitNode. Create an OAuth client, set the exact redirect URI and register the Google SSO adapter in your API config.
 icon: BadgeCheck
 ---
 
-import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+Google is the provider most people want first. You create an OAuth client in
+the Google Auth Platform, give it the redirect URI VitNode already decided on,
+and pass the two credentials to `GoogleSSOApiPlugin`. That's the whole job.
 
-Google is the provider most people want first. The whole job is: create an OAuth
-client in the Google Auth Platform, give it the redirect URI VitNode already
-decided on, and pass the two credentials to `GoogleSSOApiPlugin`.
+## Before you begin
 
-## Quick start
-
-If you already have a client ID and secret, this is the entire integration.
-
-```bash title=".env"
-GOOGLE_CLIENT_ID=1234567890-abc.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxx
-```
-
-```ts title="src/vitnode.api.config.ts"
-import { GoogleSSOApiPlugin } from '@vitnode/core/api/adapters/sso/google' // [!code ++]
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
-
-export const vitNodeApiConfig = buildApiConfig({
-  plugins: [],
-  // [!code ++:8]
-  authorization: {
-    ssoAdapters: [
-      GoogleSSOApiPlugin({
-        clientId: process.env.GOOGLE_CLIENT_ID,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      }),
-    ],
-  },
-})
-```
-
-Restart the API and a **Google** button appears on `/login`. The rest of this
-page is how to get those two values.
+- A running VitNode app. This page covers only the Google parts; [SSO setup](/docs/dev/sso#set-up-your-first-provider) explains the shared steps and [where the API's `.env` and config live](/docs/dev/sso#where-the-files-live).
 
 ## Set up the OAuth client
 
@@ -58,7 +30,7 @@ account you sign in to your own site with.
 ### Pick or create a project
 
 An OAuth client belongs to a project, so select one from the project picker in
-the top bar - or create one if this is a fresh account. Name it after your site;
+the top bar, or create one if this is a fresh account. Name it after your site;
 the name is internal and never shown to visitors.
 
 {/* Image prompt: The Google Cloud Console project picker dialog open, showing the "Select a project" list with a "New project" button in the top right, light theme, 1200x700. */}
@@ -82,12 +54,13 @@ it is where both the consent details and the clients live.
 ### Fill in the consent details
 
 Google will not issue a client until it knows what to show on the consent
-screen. Provide the **App name** - this is the name visitors read in "Sign in to
-continue to ..." - and a **Support email**.
+screen. Provide the **App name** and a **Support email**. Google shows the app name on
+the consent screen only after your app is verified; until then visitors see your
+domain.
 
 Then, under **Audience**, choose **External** so anyone with a Google account can
 sign in. **Internal** restricts sign-in to a single Google Workspace
-organisation, which is almost never what a public site wants.
+organization, which is almost never what a public site wants.
 
 {/* Image prompt: The Google Auth Platform "Audience" step with the "External" radio option selected and the "Internal" option visible above it, light theme, 1000x600. */}
 
@@ -100,11 +73,11 @@ organisation, which is almost never what a public site wants.
 Go to **Clients** in the left navigation and press **Create client**.
 
 1. Application type: **Web application**.
-2. Name: anything - this one is internal too.
+2. Name: anything you like. This one is internal too.
 3. Under **Authorized redirect URIs**, add the URI for every origin you run.
 
 VitNode builds this URI itself, from `VITNODE_WEB_URL`, so it has to match
-character for character - no trailing slash, no locale prefix.
+character for character, with no trailing slash and no locale prefix.
 
 | Environment                           | Authorized redirect URI                    |
 | ------------------------------------- | ------------------------------------------ |
@@ -127,10 +100,12 @@ and prod is fine while you are getting started.
 
 ### Copy the client ID and secret
 
-Open the client you just created from the **Clients** list. The **Client ID** and
-**Client secret** are on the right-hand side of the detail panel. Copy both -
-Google will let you see the secret again, but you may as well paste it straight
-into `.env`.
+Google shows the full **Client secret** only once, when the client is created.
+Copy it and the **Client ID** straight into the API's `.env`. Later the console
+shows only the secret's last four characters; if you lose it, add a new secret
+to the client and delete the old one.
+
+Changes to the redirect URIs can take from 5 minutes to a few hours to apply.
 
 {/* Image prompt: The Google Auth Platform OAuth client detail panel with the "Client ID" and "Client secret" fields visible on the right, values redacted, light theme, 1100x600. */}
 
@@ -140,9 +115,9 @@ into `.env`.
 
 ### Set the environment variables
 
-These names are not magic - they are whatever you read in your config on the
+These names are not magic. They are whatever you read in your config on the
 next step. What matters is that they are server-side variables, so leave them
-out of `clientEnv`: that list is what publishes a value to the browser bundle,
+out of `clientEnv`. That list is what publishes a value to the browser bundle,
 and a client secret in the browser bundle is a client secret you have published.
 
 ```bash title=".env"
@@ -154,20 +129,20 @@ GOOGLE_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxx # [!code ++]
 
 <Step>
 
-### Register the adapter
+### Add the adapter
 
-Add `GoogleSSOApiPlugin` to `authorization.ssoAdapters` in your API config.
-Note that it is a plain factory function, not a class - there is no `new`.
+Add `GoogleSSOApiPlugin` to `authorization.ssoAdapters` in the API's `vitnode.api.config.ts` ([where it lives](/docs/dev/sso#where-the-files-live)), next to any adapters you already have. Keep the rest of the config as it is:
 
-```ts title="src/vitnode.api.config.ts"
+```ts title="src/vitnode.api.config.ts (excerpt)"
 import { GoogleSSOApiPlugin } from '@vitnode/core/api/adapters/sso/google' // [!code ++]
 import { buildApiConfig } from '@vitnode/core/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
-  plugins: [],
-  // [!code ++:8]
+  // ...
   authorization: {
     ssoAdapters: [
+      // ...
+      // [!code ++:4]
       GoogleSSOApiPlugin({
         clientId: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -177,44 +152,15 @@ export const vitNodeApiConfig = buildApiConfig({
 })
 ```
 
-The redirect URI is computed when this file is evaluated, so restart the API
-rather than relying on a hot reload:
-
-<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']}>
-
-```bash tab="bun"
-bun dev
-```
-
-```bash tab="pnpm"
-pnpm dev
-```
-
-```bash tab="npm"
-npm run dev
-```
-
-</Tabs>
+No `authorization` block yet? Create one with just `ssoAdapters`, as in the [SSO setup](/docs/dev/sso#add-the-adapter-to-ssoadapters). Then restart the dev server, since `.env` and the API config are only read at start-up.
 
 </Step>
 
 <Step>
 
-### Verify it works
+### Check the result
 
-Ask the API what it thinks it supports:
-
-```bash
-curl http://localhost:3000/api/@vitnode/core/middleware
-```
-
-The `sso` array in the response now lists the provider. Here it is abridged, with the SVG icon cut short:
-
-```json
-{ "sso": [{ "id": "google", "name": "Google", "icon": "<svg ...>" }] }
-```
-
-Then open `/login` and press the **Google** button under **Continue with**. You should be sent to Google's consent
+Open `/login` in a private window and press the **Google** button under **Continue with**. You should be sent to Google's consent
 screen, bounced back to `/login/sso/google?code=...&state=...`, and land on the
 front page signed in. Your account now has a row in `core_users_sso` with
 `providerId` `google`.
@@ -227,9 +173,11 @@ front page signed in. Your account now has a row in `core_users_sso` with
 
 ### Publish the app
 
-While the client is unpublished, Google restricts sign-in to the test users you
-listed and shows an "unverified app" warning. Once the round trip works, go to
-**Google Auth Platform → Audience** and press **Publish app**.
+While the app's publishing status is **Testing**, Google normally limits sign-in
+to the test users you listed. The adapter asks only for `openid profile email`,
+which Google exempts, so any Google account can sign in without the unverified-app
+warning. Publish anyway once the round trip works, so the app is ready for
+production. Go to **Google Auth Platform → Audience** and press **Publish app**.
 
 {/* Image prompt: The Google Auth Platform "Audience" page showing publishing status "Testing" with the "Publish app" button highlighted, light theme, 1000x500. */}
 
@@ -256,8 +204,8 @@ characters that cannot appear in a profile URL.
 
 `given_name`, `family_name` and `picture` come with the `profile` scope Google
 already asks for, so [Connected accounts](/docs/dev/sso/connected-accounts) can
-import all three with no extra permission. Google never guarantees them - an
-account without one simply has nothing to import for that field.
+import all three with no extra permission. Google never guarantees them, and an
+account without one has nothing to import for that field.
 
 ## Gotchas
 
@@ -269,17 +217,17 @@ account without one simply has nothing to import for that field.
 </Callout>
 
 <Callout type="warn" title="A missing key fails on click, not on boot">
-  A `GoogleSSOApiPlugin` whose `clientId` is `undefined` registers happily - the
-  button renders and the provider is listed - and throws `Missing Google client
+  A `GoogleSSOApiPlugin` whose `clientId` is `undefined` registers happily. The
+  button renders, the provider is listed, and it throws `Missing Google client
   ID` the moment somebody presses it. If the button is there but does nothing
   except raise an error toast, check the environment before you check the
   console.
 </Callout>
 
 <Callout type="info" title="An email that already has an account">
-  If someone already registered with the same address, Google sign-in asks for
-  that account's password once and then links the two. See [Linking an existing
-  account](/docs/dev/sso#how-accounts-link).
+  If someone already registered with the same address, by password or through
+  another provider, the callback asks for that account's password and then links the
+  two. See [how accounts link](/docs/dev/sso#how-accounts-link).
 </Callout>
 
 ## Related

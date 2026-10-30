@@ -18,6 +18,7 @@ import {
   restrictProfile,
   supportedProfileFields,
 } from "@/api/lib/sso-profile";
+import { pkceChallengeS256, randomSsoSecret } from "@/api/lib/sso-protocol";
 import { resolveUserImagePolicy } from "@/api/lib/user-images";
 import { CONFIG } from "@/lib/config";
 import { normalizeEmailAddress } from "@/lib/email-canonical";
@@ -27,7 +28,7 @@ import {
   ssoConnectionIntentOfState,
 } from "@/lib/sso-profile";
 
-import type { SSOApiPlugin } from "./sso";
+import type { SSOApiPlugin, SSOCallbackContext } from "./sso";
 import type {
   SsoAccountProfile,
   SsoConnectionRecord,
@@ -36,10 +37,18 @@ import type {
   SsoSignInFacts,
 } from "./sso-connection-store";
 
+import { SessionModel } from "./session";
 import { invalidateSessionCacheForUser } from "./session-revoke";
 import { drizzleSsoConnectionStore } from "./sso-connection-store";
 
 export const SSO_CONNECTION_STATE_TTL_MS = 10 * 60_000;
+
+/**
+ * How recently the member must have signed in to connect a new account. A
+ * stolen session cookie should not be enough to add a sign-in method the
+ * thief controls.
+ */
+export const SSO_CONNECTION_RECENT_AUTH_MS = 60 * 60_000;
 
 const SSO_IMPORT_PREVIEW_TTL_MS = 10 * 60_000;
 
@@ -55,9 +64,10 @@ export type SsoConnectionErrorCode =
   | "preview_not_found"
   | "provider_already_connected"
   | "provider_error"
-  | "provider_not_found";
+  | "provider_not_found"
+  | "reauthentication_required";
 
-type SsoConnectionErrorStatus = 400 | 404 | 409 | 502;
+type SsoConnectionErrorStatus = 400 | 403 | 404 | 409 | 502;
 
 export class SsoConnectionError extends Error {
   constructor(code: SsoConnectionErrorCode, status: SsoConnectionErrorStatus) {
@@ -99,7 +109,7 @@ type SsoSyncTrigger = "import" | "sign_in" | "sync";
 
 const PROVIDER_TEXT_MAX_LENGTH = 255;
 
-const boundedText = (value: unknown): null | string => {
+export const boundedText = (value: unknown): null | string => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
 
@@ -271,10 +281,14 @@ export class SsoConnectionModel {
   private async fetchIdentity(
     adapter: SSOApiPlugin,
     code: string,
+    context: SSOCallbackContext,
   ): Promise<SsoProviderIdentity> {
     let user: Awaited<ReturnType<SSOApiPlugin["fetchUser"]>>;
     try {
-      user = await adapter.fetchUser(await adapter.fetchToken(code));
+      user = await adapter.fetchUser(
+        await adapter.fetchToken(code, context),
+        context,
+      );
     } catch (error) {
       this.warn("provider request", error);
       throw new SsoConnectionError("provider_error", 502);
@@ -435,6 +449,9 @@ export class SsoConnectionModel {
       if (connection) {
         throw new SsoConnectionError("provider_already_connected", 409);
       }
+      if (!(await this.recentlyAuthenticated(now))) {
+        throw new SsoConnectionError("reauthentication_required", 403);
+      }
     } else if (intent === "sync") {
       if (!connection) throw new SsoConnectionError("not_connected", 404);
 
@@ -456,10 +473,14 @@ export class SsoConnectionModel {
     }
 
     const state = randomState(intent);
+    const codeVerifier = randomSsoSecret(48);
+    const nonce = randomSsoSecret();
     await this.store.saveOperation({
+      codeVerifier,
       expiresAt: new Date(now.getTime() + SSO_CONNECTION_STATE_TTL_MS),
       fields: bound,
       intent,
+      nonce,
       preview: null,
       providerAccountId: connection?.providerAccountId ?? null,
       providerId,
@@ -467,16 +488,25 @@ export class SsoConnectionModel {
       userId,
     });
 
-    return { url: adapter.getUrl({ state }) };
+    return {
+      url: adapter.getUrl({
+        codeChallenge: pkceChallengeS256(codeVerifier),
+        codeChallengeMethod: "S256",
+        nonce,
+        state,
+      }),
+    };
   }
 
   async callback({
     code,
+    params = {},
     providerId,
     state,
     user,
   }: {
     code: string;
+    params?: Readonly<Record<string, string>>;
     providerId: string;
     state: string;
     user: { email: string; id: number };
@@ -503,7 +533,14 @@ export class SsoConnectionModel {
     }
 
     const adapter = this.adapter(providerId);
-    const identity = await this.fetchIdentity(adapter, code);
+    if (!(operation.codeVerifier && operation.nonce)) {
+      throw new SsoConnectionError("invalid_state", 400);
+    }
+    const identity = await this.fetchIdentity(adapter, code, {
+      codeVerifier: operation.codeVerifier,
+      nonce: operation.nonce,
+      params,
+    });
 
     if (intent === "link") {
       const outcome = await this.store.link({
@@ -750,6 +787,19 @@ export class SsoConnectionModel {
       firstName: personal.canEdit && personal.fields.firstName,
       lastName: personal.canEdit && personal.fields.lastName,
     };
+  }
+
+  /**
+   * Whether this browser's session began within
+   * {@link SSO_CONNECTION_RECENT_AUTH_MS}.
+   */
+  async recentlyAuthenticated(now: Date): Promise<boolean> {
+    const signedInAt = await new SessionModel(this.c).getSessionCreatedAt();
+
+    return (
+      signedInAt !== null &&
+      now.getTime() - signedInAt.getTime() <= SSO_CONNECTION_RECENT_AUTH_MS
+    );
   }
 
   async refreshSessions(userId: number): Promise<void> {

@@ -2,27 +2,13 @@ import type { SsoConnectionIntent, SsoProfileField } from "@/lib/sso-profile";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { manifest } from "@/manifest";
+import { errorCodeOf } from "@/views/auth/sso/error-code-of";
 
 import type { SsoProfileSources } from "./sso-connections-query";
 
 const CREDENTIALS = { credentials: "include" } as const;
 
 const failed = <Failure>(failure: Failure) => ({ failure, ok: false as const });
-
-const errorCodeOf = async (response: Response): Promise<string | undefined> => {
-  try {
-    const body: unknown = await response.json();
-
-    return typeof body === "object" &&
-      body !== null &&
-      "error" in body &&
-      typeof body.error === "string"
-      ? body.error
-      : undefined;
-  } catch {
-    return undefined;
-  }
-};
 
 const providerParam = (providerId: string) => ({
   providerId: encodeURIComponent(providerId),
@@ -34,6 +20,7 @@ export type StartSsoConnectionFailure =
   | "nothing_to_sync"
   | "provider_already_connected"
   | "provider_not_found"
+  | "reauthentication_required"
   | "server_error";
 
 export type StartSsoConnectionResult =
@@ -52,6 +39,7 @@ const START_FAILURES: readonly StartSsoConnectionFailure[] = [
   "nothing_to_sync",
   "provider_already_connected",
   "provider_not_found",
+  "reauthentication_required",
 ];
 
 export const startSsoConnectionInBrowser: StartSsoConnection = async ({
@@ -114,15 +102,20 @@ export const completeSsoConnectionInBrowser = async ({
   code,
   providerId,
   state,
+  user,
 }: {
   code: string;
   providerId: string;
   state: string;
+  user?: string;
 }): Promise<CompleteSsoConnectionResult> => {
   try {
     const response = await fetcherClient({
       plugin: manifest.id,
-      args: { body: { code, state }, params: providerParam(providerId) },
+      args: {
+        body: { code, state, ...(user ? { user } : {}) },
+        params: providerParam(providerId),
+      },
       method: "post",
       module: "users/sso/connections",
       options: CREDENTIALS,

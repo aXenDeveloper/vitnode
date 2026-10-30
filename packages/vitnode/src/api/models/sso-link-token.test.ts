@@ -11,6 +11,7 @@ const SECRET = "test-secret";
 const offer = {
   email: "jan@example.com",
   providerAccountId: "fb-123",
+  providerEmail: "jan@example.com",
   providerId: "facebook",
   userId: 42,
 };
@@ -34,6 +35,23 @@ describe("an SSO link token", () => {
         token,
       }),
     ).toEqual(offer);
+  });
+
+  it("keeps an address confirmed by code apart from the provider's own", () => {
+    const { token } = createSsoLinkToken({
+      now,
+      offer: { ...offer, providerEmail: null },
+      secret: SECRET,
+    });
+
+    expect(
+      verifySsoLinkToken({
+        now,
+        providerId: "facebook",
+        secret: SECRET,
+        token,
+      }),
+    ).toEqual({ ...offer, providerEmail: null });
   });
 
   it("is only good for the provider that produced it", () => {

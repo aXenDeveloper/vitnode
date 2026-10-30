@@ -10,6 +10,8 @@ export const ssoConnectionFailure = (c: Context, error: unknown) => {
   switch (error.status) {
     case 400:
       return c.json(body, 400);
+    case 403:
+      return c.json(body, 403);
     case 404:
       return c.json(body, 404);
     case 409:

@@ -6,118 +6,198 @@ icon: Puzzle
 
 import { TypeTable } from "fumadocs-ui/components/type-table"
 
-VitNode ships SSO adapters for Google, Discord and Facebook. To connect any other OAuth2 provider, such as GitHub, write an object that implements `SSOApiPlugin`. VitNode handles the state cookie, account linking, sessions and the login button; your adapter only talks to the provider.
+VitNode includes [15 built-in SSO adapters](/docs/dev/sso#providers), from Apple to Twitter (X). You can connect any other OAuth 2.0 or OpenID Connect provider (for example GitHub, Bitbucket or Zoom) by implementing the `SSOApiPlugin` interface. VitNode handles the sign-in attempt (state, PKCE verifier, nonce), account linking, email confirmation and the login buttons.
 
 ## Before you begin
 
-- An OAuth app at the provider. For GitHub, create one under **Settings → Developer settings → OAuth Apps** with the callback URL `http://localhost:3000/login/sso/github` (your `VITNODE_WEB_URL` plus `login/sso/github`), and put its client ID and secret in the API's `.env` as `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`.
+- A VitNode app with SSO set up as on [SSO](/docs/dev/sso#set-up-your-first-provider), so you know which app holds your [API config and `.env`](/docs/dev/sso#where-the-files-live).
+- A GitHub OAuth app. Create one under **Settings → Developer settings → OAuth Apps → New OAuth App**, with the **Authorization callback URL** `http://localhost:3000/login/sso/github` (your `VITNODE_WEB_URL` plus `/login/sso/github`). Copy the **Client ID**, then generate a client secret.
+- An [email adapter](/docs/dev/email#configuring-email-adapters) if members may have no verified primary email on GitHub. They [confirm an address by email](/docs/dev/sso/email-confirmation) first.
 
 ## Build a GitHub adapter
 
-An adapter has three functions: `getUrl`, `fetchToken` and `fetchUser`.
+An adapter has three functions: `getUrl` sends the browser to the provider, `fetchToken` exchanges the code for an access token, and `fetchUser` turns that token into a provider account. Everything runs on the API server.
 
-### 1. Write the adapter
+<Steps>
+<Step>
 
-```ts title="apps/api/src/utils/sso/github.ts"
-import type { SSOApiPlugin } from "@vitnode/core/api/models/sso"
-import { getRedirectUri } from "@vitnode/core/api/models/sso"
-import { HTTPException } from "hono/http-exception"
+### Add the credentials
+
+Add the GitHub credentials to the API's `.env`:
+
+```bash title="apps/web/.env (Single App with Turborepo)"
+GITHUB_CLIENT_ID=Ov23lixxxxxxxxxxxxxx # [!code ++]
+GITHUB_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Create the adapter
+
+Create `src/utils/sso/github.ts` next to `vitnode.api.config.ts`, in the same app:
+
+```ts title="src/utils/sso/github.ts"
+import type { SSOApiPlugin } from "@vitnode/core/api/models/sso";
+
+import {
+  bearerAuth,
+  formPost,
+  requestSsoProviderJson,
+  requireSsoOption,
+} from "@vitnode/core/api/lib/sso-protocol";
+import { getRedirectUri } from "@vitnode/core/api/models/sso";
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
+
+const tokenSchema = z.union([
+  z.object({ access_token: z.string().min(1), token_type: z.string() }),
+  z.object({ error: z.string() }),
+]);
+
+const userSchema = z.object({
+  avatar_url: z.string().nullable().optional(),
+  id: z.number().int().positive(),
+  login: z.string(),
+});
+
+const emailsSchema = z.array(
+  z.object({ email: z.string(), primary: z.boolean(), verified: z.boolean() }),
+);
 
 export const GitHubSSOApiPlugin = ({
   clientId,
   clientSecret,
 }: {
-  clientId: string
-  clientSecret: string
+  clientId: string | undefined;
+  clientSecret: string | undefined;
 }): SSOApiPlugin => {
-  const id = "github"
-  const redirectUri = getRedirectUri(id)
+  const id = "github";
+  const redirectUri = getRedirectUri(id);
 
   return {
     id,
     name: "GitHub",
     profileFields: ["avatar"],
-    // 1. Send the browser to the provider
-    getUrl: ({ state }) =>
-      `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=read:user,user:email&state=${state}`,
+    getUrl: ({ codeChallenge, codeChallengeMethod, state }) => {
+      const url = new URL("https://github.com/login/oauth/authorize");
+      url.searchParams.set(
+        "client_id",
+        requireSsoOption(clientId, "GitHub", "client ID"),
+      );
+      url.searchParams.set("redirect_uri", redirectUri);
+      url.searchParams.set("scope", "user:email");
+      url.searchParams.set("state", state);
+      url.searchParams.set("code_challenge", codeChallenge);
+      url.searchParams.set("code_challenge_method", codeChallengeMethod);
 
-    // 2. Exchange the authorization code for a token
-    fetchToken: async (code) => {
-      const response = await fetch("https://github.com/login/oauth/access_token", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          client_id: clientId,
-          client_secret: clientSecret,
+      return url.toString();
+    },
+    fetchToken: async (code, { codeVerifier }) => {
+      const token = await requestSsoProviderJson({
+        init: formPost({
+          client_id: requireSsoOption(clientId, "GitHub", "client ID"),
+          client_secret: requireSsoOption(
+            clientSecret,
+            "GitHub",
+            "client secret",
+          ),
           code,
+          code_verifier: codeVerifier,
           redirect_uri: redirectUri,
         }),
-      })
-
-      const data = await response.json()
-      if (!data.access_token) {
-        throw new HTTPException(400, { message: "GitHub refused the code" })
+        schema: tokenSchema,
+        step: "token",
+        url: "https://github.com/login/oauth/access_token",
+      });
+      if ("error" in token) {
+        throw new HTTPException(400, { message: "GitHub refused the code" });
       }
 
-      return { access_token: data.access_token, token_type: data.token_type }
+      return token;
     },
-
-    // 3. Read the provider account
-    fetchUser: async ({ access_token, token_type }) => {
-      const headers = { Authorization: `${token_type} ${access_token}` }
-
-      // Fetch Profile
-      const userRes = await fetch("https://api.github.com/user", { headers })
-      const user = await userRes.json()
-
-      // Fetch Primary Email
-      const emailRes = await fetch("https://api.github.com/user/emails", { headers })
-      const emails: Array<{ email: string; primary: boolean; verified: boolean }> =
-        await emailRes.json()
-      const primaryEmail = emails.find((e) => e.primary && e.verified)?.email
-      if (!primaryEmail) {
-        throw new HTTPException(400, { message: "Email not verified" })
-      }
+    fetchUser: async ({ access_token }) => {
+      const init = {
+        headers: {
+          ...bearerAuth(access_token),
+          Accept: "application/vnd.github+json",
+        },
+      };
+      const user = await requestSsoProviderJson({
+        init,
+        schema: userSchema,
+        step: "profile",
+        url: "https://api.github.com/user",
+      });
+      const emails = await requestSsoProviderJson({
+        init,
+        schema: emailsSchema,
+        step: "email",
+        url: "https://api.github.com/user/emails",
+      });
+      const primary = emails.find(email => email.primary);
 
       return {
+        avatarUrl: user.avatar_url ?? null,
+        email: primary?.email ?? null,
+        emailVerified: primary?.verified === true,
         id: String(user.id),
-        email: primaryEmail,
-        emailVerified: true, // only a verified primary address gets this far
         username: user.login,
-        avatarUrl: user.avatar_url,
-      }
+      };
     },
-  }
-}
+  };
+};
 ```
 
-`getRedirectUri(id)` returns `{VITNODE_WEB_URL}login/sso/{id}`; send the same value from `getUrl` and `fetchToken`. Throw an `HTTPException` to fail a sign-in with a clear status; a plain `Error` becomes a `500`.
+What keeps it safe:
 
-### 2. Register it in the API config
+- **Failed or malformed responses.** `requestSsoProviderJson` adds a 10-second timeout, rejects redirects and non-2xx answers, and validates the JSON with the schema. Any failure becomes a `502` whose message never repeats the provider's body. GitHub reports a bad or expired code as an `error` field instead, which becomes a `400`.
+- **No leaked secrets.** The client secret and the access token stay inside these functions on the server. Nothing here logs them or puts them in an error message, and a missing option throws `Missing GitHub client ID` (or `client secret`) to the server log, not the visitor.
+- **A stable ID.** `id` is GitHub's numeric user ID, which never changes. The `login` can be renamed, so it is only the suggested username.
+- **A truthful email.** `user:email` lets `fetchUser` read the primary address and whether GitHub verified it. An unverified primary address returns `emailVerified: false`, and no primary address returns `email: null`. Either way a new member confirms an email first.
+- **PKCE.** GitHub supports `S256`, so `getUrl` sends VitNode's challenge and `fetchToken` sends the matching verifier.
 
-```ts title="apps/api/src/vitnode.api.config.ts"
-import { buildApiConfig } from "@vitnode/core/vitnode.config"
-import { GitHubSSOApiPlugin } from "./utils/sso/github"
+</Step>
+
+<Step>
+
+### Add it to `ssoAdapters`
+
+In `vitnode.api.config.ts`, import the adapter and add it to `authorization.ssoAdapters`. Keep everything else, including adapters you already have:
+
+```ts title="src/vitnode.api.config.ts (excerpt)"
+import { buildApiConfig } from "@vitnode/core/vitnode.config";
+
+import { GitHubSSOApiPlugin } from "./utils/sso/github"; // [!code ++]
 
 export const vitNodeApiConfig = buildApiConfig({
-  // [!code ++:8]
+  // ...
   authorization: {
     ssoAdapters: [
+      // ...
+      // [!code ++:4]
       GitHubSSOApiPlugin({
-        clientId: process.env.GITHUB_CLIENT_ID!,
-        clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+        clientId: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
       }),
     ],
   },
-})
+});
 ```
+
+No `authorization` block yet? Add it with just `ssoAdapters`, as in [SSO](/docs/dev/sso#add-the-adapter-to-ssoadapters).
+
+</Step>
+</Steps>
+
+`getRedirectUri(id)` returns `{VITNODE_WEB_URL}/login/sso/{id}`; send the same value from `getUrl` and `fetchToken`. Throw an `HTTPException` to fail a sign-in with a clear status; a plain `Error` becomes a `500`.
 
 ## Check the result
 
-Restart the API and open `/login`. A **Continue with GitHub** button appears on `/login` and `/register`; pressing it sends you to GitHub and back to `/login/sso/github`, signed in. It is a neutral, text-only button until you give the adapter an [icon and a brand color](/docs/dev/sso/icons).
+1. Restart the dev server and open `/login` in a private window. A **GitHub** button appears under **Continue with** on `/login` and `/register`. It is a neutral, text-only button until you give the adapter an [icon and a brand color](/docs/dev/sso/icons).
+2. Press it and authorize the app on GitHub. You return to `/login/sso/github` and are signed in as a new member. If your primary GitHub email is not verified, **Confirm your email** appears instead.
+3. Sign out and press the button again. The same GitHub account signs straight in.
 
 ## `SSOApiPlugin` reference
 
@@ -144,19 +224,19 @@ Restart the API and open `/login`. A **Continue with GitHub** button appears on 
       type: "string",
     },
     getUrl: {
-      description: "Returns the provider authorization redirect URL.",
+      description: "Returns the provider authorization URL. Pass state through unchanged; send codeChallenge (S256) and nonce when the provider supports PKCE and OpenID Connect.",
       required: true,
-      type: "({ state: string }) => string",
+      type: "(request: { state: string; codeChallenge: string; codeChallengeMethod: 'S256'; nonce: string }) => string",
     },
     fetchToken: {
-      description: "Exchanges code for access_token.",
+      description: "Exchanges the code for tokens. The context carries the attempt's PKCE verifier, nonce and any extra callback parameters (such as Apple's user). Extra token fields, like id_token, are kept for fetchUser.",
       required: true,
-      type: "(code: string) => Promise<{ access_token: string; token_type: string }>",
+      type: "(code: string, context: SSOCallbackContext) => Promise<SSOTokenResponse>",
     },
     fetchUser: {
-      description: "Fetches the user profile: id, email, username, and optionally emailVerified, avatarUrl, firstName and lastName. VitNode keys accounts on the email, so set emailVerified: false (or throw) for an address the provider has not confirmed - VitNode then refuses the sign-in with a 400 instead of creating, linking or verifying an account with it. Set it to true when the provider confirms the address. The built-in adapters only ever return confirmed addresses.",
+      description: "Returns the provider account: a stable id, and optionally email, emailVerified, username, avatarUrl, firstName and lastName. Validate the ID token here when the provider issues one. Set emailVerified: true only when the provider verified the address. Return emailVerified: false (or email: null) whenever you cannot verify ownership from the provider's response; VitNode then asks a new visitor to confirm an email. An omitted emailVerified counts as true, for older adapters. A returning member is always recognized by id.",
       required: true,
-      type: "(token: TokenResponse) => Promise<SSOProviderUser>",
+      type: "(token: SSOTokenResponse, context: SSOCallbackContext) => Promise<SSOProviderUser>",
     },
     profileFields: {
       description: "Which profile fields the provider can supply for Connected accounts: 'avatar', 'firstName', 'lastName'. Leave it out and nothing is ever imported from this adapter.",
@@ -165,6 +245,37 @@ Restart the API and open `/login`. A **Continue with GitHub** button appears on 
     },
   }}
 />
+
+Adapters written for older versions, with `getUrl({ state })`, `fetchToken(code)` and `fetchUser(token)`, still work, because JavaScript ignores the extra arguments.
+
+## PKCE, ID tokens and provider calls
+
+`@vitnode/core/api/lib/sso-protocol` has the small helpers the built-in adapters use. All of them are server-only:
+
+| Helper                     | Use it to                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------- |
+| `requestSsoProviderJson`   | Call a provider endpoint with a 10-second timeout, no redirects, and validate the JSON with a Zod schema (`502` otherwise) |
+| `requireSsoOption`         | Read a required option such as the client ID; a missing one throws to the server log, not the visitor |
+| `formPost`, `basicClientAuth`, `bearerAuth` | Build a form-encoded token request, HTTP Basic client auth or a bearer header        |
+| `verifySsoIdToken`         | Validate an ID token with `jose`: signature, algorithm, `iss`, `aud`, `exp`/`iat` and `nonce`      |
+| `remoteJwks`               | Fetch and cache the provider's signing keys                                                      |
+
+```ts title="src/utils/sso/acme.ts"
+import { remoteJwks, verifySsoIdToken } from '@vitnode/core/api/lib/sso-protocol'
+
+// inside the adapter
+fetchUser: async ({ id_token }, { nonce }) => {
+  const claims = await verifySsoIdToken({
+    audience: clientId,
+    idToken: id_token,
+    issuer: 'https://id.acme.example',
+    keys: remoteJwks('https://id.acme.example/.well-known/jwks.json'),
+    nonce,
+  })
+
+  return { id: String(claims.sub), email: null }
+},
+```
 
 See [Provider icons](/docs/dev/sso/icons) for the accepted `icon` and `brandColor` formats, and for registering a React component instead.
 
@@ -175,42 +286,31 @@ See [Provider icons](/docs/dev/sso/icons) for the accepted `icon` and `brandColo
 1. Declare what the provider can supply in `profileFields`.
 2. Return those values from `fetchUser` as `avatarUrl`, `firstName` and `lastName`.
 
-```ts
-fetchUser: async ({ access_token, token_type }) => {
-  // ...
-  return {
-    id: String(user.id),
-    email: primaryEmail,
-    username: user.login,
-    avatarUrl: user.avatar_url ?? null,
-  }
-},
-profileFields: ["avatar"],
-```
+The [GitHub adapter](#create-the-adapter) does both for the avatar: `profileFields: ["avatar"]`, and `avatarUrl: user.avatar_url ?? null`. GitHub has only a display name, so it supplies no first or last name.
 
-All three are optional, so adapters written before this still work - they just have nothing to import. A few rules keep imports honest:
+All three are optional, so older adapters still work and have nothing to import. A few rules keep imports honest:
 
 - Return `null` (or leave it out) when the provider has no value. VitNode never erases a member's value with an empty one.
-- Only send separate first and last names the provider actually has. Don't split a full name - `"Mary Ann Smith"` has no safe answer.
+- Only send separate first and last names the provider actually has. Don't split a full name. `"Mary Ann Smith"` has no safe answer.
 - `avatarUrl` must be `https`. VitNode downloads and re-stores it itself, with SSRF protection and size and type checks, so you don't have to.
 - Don't add scopes just for profile data. If a field needs extra permission, leave it out of `profileFields`.
 
-## Built-in adapters
+## Related
 
 <Cards>
   <Card
-    title="Google"
-    description="Configure Google OAuth credentials"
-    href="/docs/dev/sso/google"
+    title="How SSO accounts link"
+    description="When VitNode trusts the email your adapter returns"
+    href="/docs/dev/sso#when-an-email-is-trusted"
   />
   <Card
-    title="Discord"
-    description="Configure Discord OAuth credentials"
-    href="/docs/dev/sso/discord"
+    title="Email confirmation"
+    description="What a new member sees without a trusted email"
+    href="/docs/dev/sso/email-confirmation"
   />
   <Card
-    title="Facebook"
-    description="Configure Facebook OAuth credentials"
-    href="/docs/dev/sso/facebook"
+    title="Provider icons"
+    description="Give your adapter a brand mark and color"
+    href="/docs/dev/sso/icons"
   />
 </Cards>

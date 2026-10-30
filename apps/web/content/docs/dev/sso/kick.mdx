@@ -1,0 +1,115 @@
+---
+title: Kick
+description: Add Kick sign-in to VitNode. Create a Kick developer app, register the redirect URL and wire up the Kick SSO adapter with PKCE.
+icon: Zap
+---
+
+Add a **Continue with Kick** button for streamers and viewers. Kick requires OAuth 2.1 with PKCE, which the adapter handles for you, and asks only for `user:read`.
+
+## Before you begin
+
+- A running VitNode app. This page covers only the Kick parts; [SSO setup](/docs/dev/sso#set-up-your-first-provider) explains the shared steps and [where the API's `.env` and config live](/docs/dev/sso#where-the-files-live).
+- A Kick account with **two-factor authentication** turned on. Kick will not let you create an app without it.
+- An [email adapter](/docs/dev/email). Kick does not say whether an account's email is verified, so every new member [confirms an address by email](/docs/dev/sso/email-confirmation).
+
+## Set up the app
+
+<Steps>
+<Step>
+
+### Create a developer app
+
+On kick.com open your account settings and the **Developer** tab (`kick.com/settings/developer`), then create a new app. Give the app the name people will see when they authorize it.
+
+</Step>
+
+<Step>
+
+### Add the redirect URL and scope
+
+Enter the redirect URL and select only the user information scope (`user:read`):
+
+| Environment                           | Redirect URL                             |
+| ------------------------------------- | ---------------------------------------- |
+| Development (`VITNODE_WEB_URL` unset) | `http://localhost:3000/login/sso/kick`   |
+| Production                            | `https://your-domain.com/login/sso/kick` |
+
+VitNode builds it from `VITNODE_WEB_URL`, so it must match exactly. Use `localhost`, which Kick recommends. A known bug on Kick's side rewrites the first `127.0.0.1` in an authorization URL, so a `127.0.0.1` redirect URL no longer matches.
+
+</Step>
+
+<Step>
+
+### Copy the credentials
+
+Copy the **Client ID** and **Client Secret** into server-side variables:
+
+```bash title=".env"
+KICK_CLIENT_ID=01ABCDEFGHJKMNPQRSTVWXYZ # [!code ++]
+KICK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Add the adapter
+
+Add `KickSSOApiPlugin` to `authorization.ssoAdapters` in the API's `vitnode.api.config.ts` ([where it lives](/docs/dev/sso#where-the-files-live)), next to any adapters you already have. Keep the rest of the config as it is:
+
+```ts title="src/vitnode.api.config.ts (excerpt)"
+import { KickSSOApiPlugin } from '@vitnode/core/api/adapters/sso/kick' // [!code ++]
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  authorization: {
+    ssoAdapters: [
+      // ...
+      // [!code ++:4]
+      KickSSOApiPlugin({
+        clientId: process.env.KICK_CLIENT_ID,
+        clientSecret: process.env.KICK_CLIENT_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+No `authorization` block yet? Create one with just `ssoAdapters`, as in the [SSO setup](/docs/dev/sso#add-the-adapter-to-ssoadapters). Then restart the dev server, since `.env` and the API config are only read at start-up.
+
+</Step>
+
+<Step>
+
+### Check the result
+
+Open `/login`, press the **Kick** button under **Continue with** and allow access. The first time, VitNode asks for an email and sends a confirmation link. Open it in the same browser. After that, the same Kick account signs straight in.
+
+</Step>
+</Steps>
+
+## Scopes and profile fields
+
+| Setting        | Value                                                    |
+| -------------- | -------------------------------------------------------- |
+| Scopes         | `user:read`                                              |
+| PKCE           | `S256` (required by Kick)                                |
+| Account ID     | `user_id`                                                |
+| Email trusted  | never (Kick has no verification flag)                    |
+| Profile fields | avatar                                                   |
+
+Kick's email, when present, only pre-fills the confirmation form.
+
+## Troubleshooting
+
+- **Kick shows an invalid redirect error.** The redirect URL differs from `{VITNODE_WEB_URL}/login/sso/kick`, or uses `127.0.0.1`.
+- **New visitors see "We need a verified email".** No email adapter is configured, so VitNode cannot send the confirmation link.
+- **The Developer tab is missing.** Turn on two-factor authentication first.
+
+## Related
+
+<Cards>
+  <Card title="Email confirmation" description="How new Kick members confirm an address" href="/docs/dev/sso/email-confirmation" />
+  <Card title="Twitch" description="Another streaming provider" href="/docs/dev/sso/twitch" />
+</Cards>
