@@ -17,8 +17,8 @@ import {
 import { Skeleton } from "@vitnode/core/components/ui/skeleton";
 import { definePluginRoute } from "@vitnode/core/routing";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
-import { HrefLink } from "@vitnode/core/tanstack/link";
-import { CheckIcon, CreditCardIcon, LogInIcon } from "lucide-react";
+import { HrefLink, useHrefNavigate } from "@vitnode/core/tanstack/link";
+import { CheckIcon, CreditCardIcon } from "lucide-react";
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
@@ -41,6 +41,7 @@ const ShopPage = () => {
   const t = useTranslations("payments-demo");
   const locale = useLocale();
   const session = useSessionQuery();
+  const navigate = useHrefNavigate();
   const signedIn = !!session.data?.user;
   const catalog = useQuery(catalogQueryOptions());
   const purchases = useQuery({
@@ -57,6 +58,11 @@ const ShopPage = () => {
   const purchase = purchases.data?.purchases.find(
     entry => entry.itemId === item?.id,
   );
+
+  // A guest signs in first and comes back here to buy.
+  const onSignInToBuy = async () => {
+    await navigate("/login?returnTo=%2Fpayments-demo");
+  };
 
   const onBuy = async () => {
     if (!item || !selectedProvider) return;
@@ -156,25 +162,15 @@ const ShopPage = () => {
                 <CheckIcon aria-hidden="true" />
                 {t("shop.owned")}
               </Badge>
-            ) : signedIn ? (
+            ) : (
               <Button
                 disabled={!selectedProvider}
                 isLoading={isPending}
-                onClick={onBuy}
+                onClick={signedIn ? onBuy : onSignInToBuy}
               >
                 <CreditCardIcon aria-hidden="true" />
                 {t("shop.buy")}
               </Button>
-            ) : (
-              <HrefLink
-                className="text-primary font-medium underline-offset-4 hover:underline"
-                href="/login"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <LogInIcon aria-hidden="true" className="size-4" />
-                  {t("shop.sign_in")}
-                </span>
-              </HrefLink>
             )}
 
             {purchase && (
