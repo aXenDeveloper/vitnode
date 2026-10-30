@@ -20,6 +20,7 @@ the event map is global.
 | [Notifications](#notification-events)                | `notifications.*`                           |
 | [Moderation](#moderation-events)                     | `moderation.*`                              |
 | [AI](#ai-events)                                     | `ai.run.*`, `files.alt.updated`             |
+| [Payments](#payment-events)                          | `payment.*`                                 |
 | [Page layouts](#page-layout-events)                  | `core.page-layout.updated`                  |
 | [Content Engine](#content-engine-events)             | `content.<content type id>.<action>`        |
 | [Content containers](#content-container-events)      | `content.container.*`                       |
@@ -616,6 +617,34 @@ Removing a language's ALT text emits nothing.
 **A listener would** post a notice when an editor's AI suggestion fails, count
 AI usage per plugin in your own analytics, or purge cached pages that render an
 image whose ALT text just changed.
+
+## Payment events
+
+Declared in `VitNodeEvents` in `packages/vitnode/src/api/models/events.ts` and
+emitted by [payments](/docs/dev/payments) **after** the new status is
+committed, once per status change, whichever path found it: the webhook route,
+a customer's status refresh or the `reconcile-payments` cron job. Every event
+has the same payload.
+
+| Event                | Payload                                                                       | Fires when                                                                          |
+| -------------------- | ----------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `payment.processing` | `{ amount, currency, paymentId, pluginId, providerId, reference, userId }`    | The customer finished the checkout, but a delayed payment method has not settled    |
+| `payment.succeeded`  | same                                                                          | The provider confirmed the payment                                                  |
+| `payment.failed`     | same                                                                          | The provider reported a final failure, or refused to create the checkout            |
+| `payment.expired`    | same                                                                          | The checkout closed unpaid, or an attempt whose checkout was never created expired  |
+
+`amount` is in minor units, `pluginId` is the plugin that created the payment
+and `reference` is that plugin's own id, so filter on `pluginId` first. A
+checkout the provider refused to create also emits `payment.failed`; the
+stored payment then has an `errorCode` such as `amount_too_small`.
+
+With the default local adapter a listener runs inside the request that changed
+the status, and a failing listener is logged, not retried. Derive what a member
+owns from the stored payment (`c.get("payments").listByReference()`), and use
+these events for side effects such as a thank-you notification.
+
+**A listener would** send a receipt notification, post to a sales channel, or
+clear a cached page that shows the buyer's purchases.
 
 ## Page layout events
 

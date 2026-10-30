@@ -22,6 +22,7 @@ import { routes as pluginRoutes0 } from '@vitnode/blog/routes'
 import { routes as pluginRoutes1 } from '@vitnode/core/routes'
 import { routes as pluginRoutes2 } from '@vitnode/forum/routes'
 import { routes as pluginRoutes3 } from 'newsroom/routes'
+import { routes as pluginRoutes4 } from 'payments-demo/routes'
 
 
 export const pluginRouteSources = [
@@ -40,5 +41,9 @@ export const pluginRouteSources = [
   {
     pluginId: 'newsroom',
     routes: pluginRoutes3,
+  },
+  {
+    pluginId: 'payments-demo',
+    routes: pluginRoutes4,
   },
 ] as const satisfies readonly PluginRouteDeclarationSource[]

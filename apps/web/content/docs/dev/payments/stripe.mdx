@@ -1,0 +1,247 @@
+---
+title: Stripe
+description: Take one-time payments with Stripe Checkout in VitNode - install @vitnode/stripe, configure test keys, forward webhooks with the Stripe CLI and check a real test-mode payment.
+icon: CreditCard
+---
+
+`@vitnode/stripe` connects VitNode payments to
+[Stripe Checkout](https://docs.stripe.com/payments/checkout), Stripe's hosted
+payment page. This guide sets it up in test mode, so no real money moves, and
+ends with a test purchase through the `payments-demo` plugin.
+
+## Before you begin
+
+- A VitNode app with a database. The VitNode repository's `apps/web` already
+  includes the `payments-demo` plugin used in the check at the end.
+- A Stripe account. Everything below uses its test mode (a sandbox).
+- The [Stripe CLI](https://docs.stripe.com/stripe-cli), to forward webhooks to
+  your machine.
+
+## Set up Stripe
+
+<Steps>
+<Step>
+
+### Install the adapter
+
+The `stripe` SDK comes with the adapter.
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install the Stripe adapter'>
+
+```bash tab="bun"
+bun i @vitnode/stripe
+```
+
+```bash tab="pnpm"
+pnpm i @vitnode/stripe
+```
+
+```bash tab="npm"
+npm i @vitnode/stripe
+```
+
+</Tabs>
+
+</Step>
+<Step>
+
+### Register a provider instance
+
+Add the instance to `payments.providers` in your API config. Its `id` is stored
+on every payment and is the last segment of its webhook URL, so pick it once:
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { StripePaymentAdapter } from '@vitnode/stripe' // [!code ++]
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:9]
+  payments: {
+    providers: [
+      StripePaymentAdapter({
+        id: 'stripe-main',
+        secretKey: process.env.STRIPE_SECRET_KEY,
+        webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+      }),
+    ],
+  },
+})
+```
+
+The adapter refuses to start without both secrets, rather than running half
+configured. To keep the app bootable on machines without Stripe keys, add the
+instance only when `STRIPE_SECRET_KEY` is set, as `apps/web` does.
+
+</Step>
+<Step>
+
+### Add the secret key
+
+In the Stripe Dashboard, switch to test mode and copy the secret key, which
+starts with `sk_test_`. A restricted key (`rk_test_`) with write access to
+Checkout Sessions works too.
+
+```bash title=".env"
+STRIPE_SECRET_KEY=sk_test_your_key
+```
+
+The key decides the mode: `sk_test_` takes test payments and accepts only
+test-mode webhooks; `sk_live_` the opposite. A webhook from the other mode is
+answered `400`.
+
+</Step>
+<Step>
+
+### Forward webhooks with the Stripe CLI
+
+Log in once, then forward the four Checkout events to your instance's webhook
+URL. The URL is `{VITNODE_API_URL}/api/@vitnode/core/payments/webhooks/{id}`:
+
+```bash
+stripe login
+stripe listen \
+  --events checkout.session.completed,checkout.session.async_payment_succeeded,checkout.session.async_payment_failed,checkout.session.expired \
+  --forward-to localhost:3000/api/@vitnode/core/payments/webhooks/stripe-main
+```
+
+`stripe listen` prints a signing secret starting with `whsec_`. Put it in
+`.env`, then restart the app:
+
+```bash title=".env"
+STRIPE_WEBHOOK_SECRET=whsec_from_stripe_listen
+```
+
+Keep `stripe listen` running while you test. Its secret differs from the one a
+Dashboard endpoint gets, so production uses its own value.
+
+</Step>
+<Step>
+
+### Create the tables
+
+Payments add the `core_payments` and `core_payments_webhook_events` tables,
+and the demo plugin adds `payments_demo_purchases`. Apply the migration in the
+app that owns the database:
+
+```bash
+pnpm vitnode db migrate
+```
+
+</Step>
+</Steps>
+
+## Check the result
+
+1. Sign in, open `/payments-demo` and select **Buy now**. You land on Stripe's
+   hosted page with a $5.00 item.
+2. Pay with the test card `4242 4242 4242 4242`, any future expiry date and any
+   CVC. Stripe sends you back to `/payments-demo/purchases/{id}`.
+3. The page shows **Payment confirmed** once the webhook is processed, usually
+   within seconds. `stripe listen` logs a `200` response for
+   `checkout.session.completed`.
+4. Check a failure: start another purchase as a different member and pay with
+   `4000 0000 0000 0002`. Stripe declines the card on its page and the session
+   stays open, so VitNode keeps the payment `pending`, not `failed`.
+
+A redelivered event answers `{"outcome":"duplicate"}` and changes nothing, so
+resending one from the Dashboard is always safe.
+
+Events from `stripe trigger` are answered `{"outcome":"ignored"}`: they
+describe sessions VitNode did not create, so they carry no VitNode metadata.
+Test through the demo instead.
+
+## How Stripe events map to statuses
+
+| Stripe event                               | Session state                 | VitNode status |
+| ------------------------------------------ | ----------------------------- | -------------- |
+| `checkout.session.completed`               | `payment_status: "paid"`      | `succeeded`    |
+| `checkout.session.completed`               | `payment_status: "unpaid"`    | `processing`   |
+| `checkout.session.async_payment_succeeded` | paid                          | `succeeded`    |
+| `checkout.session.async_payment_failed`    | delayed payment failed        | `failed`       |
+| `checkout.session.expired`                 | closed without payment        | `expired`      |
+
+Delayed payment methods, such as bank debits, complete the session before the
+money settles. The customer sees **Payment processing** until Stripe sends the
+second event, which can take days. Card payments are `paid` at completion.
+
+Every other event type is acknowledged and ignored, as are sessions created by
+another instance that shares the Stripe account.
+
+## Options
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+<TypeTable
+  type={{
+    id: {
+      description:
+        'Instance id: 1-100 lowercase letters, digits, `-` or `_`. Unique across all providers. Never rename it while payments are open.',
+      type: 'string',
+      required: true,
+    },
+    secretKey: {
+      description: '`sk_test_`, `sk_live_`, `rk_test_` or `rk_live_` key. Decides test or live mode.',
+      type: 'string | undefined',
+      required: true,
+    },
+    webhookSecret: {
+      description: "The `whsec_` signing secret of this instance's webhook endpoint.",
+      type: 'string | undefined',
+      required: true,
+    },
+    name: {
+      description: 'Shown to buyers when several providers are offered.',
+      type: 'string',
+      default: '"Stripe"',
+    },
+  }}
+/>
+
+The adapter pins Stripe API version `STRIPE_API_VERSION` (exported from
+`@vitnode/stripe`), the version of its `stripe` SDK. Choose the same version
+for a Dashboard webhook endpoint.
+
+## Going live
+
+- Create a webhook endpoint in the Dashboard for
+  `https://your-site.example/api/@vitnode/core/payments/webhooks/stripe-main`
+  with the four events above, and use its signing secret.
+- Use live keys only in production, and test keys everywhere else. A second
+  instance id per account keeps test and live data apart in one database.
+- Run a [cron adapter or external cron](/docs/dev/cron) so
+  `reconcile-payments` can recover missed webhooks.
+- The webhook route spends only the [safety cap](/docs/dev/advanced/rate-limiter),
+  not the per-IP write budget, so a burst of Stripe deliveries is not refused.
+  Its signature check is what keeps other callers out.
+
+<Callout type="warn" title="Local tests are not production proof">
+  A green test purchase shows the wiring works. It does not prove your Stripe
+  account, payment methods, tax duties or live webhook endpoint are ready.
+</Callout>
+
+## Troubleshooting
+
+| Symptom                                       | Cause                                                                                     |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| API does not start: `needs secretKey`         | `STRIPE_SECRET_KEY` missing or not an `sk_`/`rk_` key                                     |
+| Webhook answers `400`                         | Wrong `STRIPE_WEBHOOK_SECRET`, a body changed by a proxy, or a live event on test keys    |
+| Webhook answers `404`                         | The last URL segment is not a configured instance id                                      |
+| Buy answers `provider_unavailable`            | Stripe unreachable or the key was rejected; the API log names the Stripe error            |
+| Page stays on **Waiting for payment**         | No webhook arrived; check `stripe listen`. The page re-checks Stripe every 15 seconds     |
+
+## Related
+
+<Cards>
+  <Card
+    title="Use payments in a plugin"
+    description="The code behind the demo: trusted prices, checkout and status"
+    href="/docs/dev/payments/plugin"
+  />
+  <Card
+    title="Payments overview"
+    description="Statuses, provider instances and limitations"
+    href="/docs/dev/payments"
+  />
+</Cards>

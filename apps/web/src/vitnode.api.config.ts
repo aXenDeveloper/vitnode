@@ -1,11 +1,14 @@
 import { blogApiPlugin } from '@vitnode/blog/config.api'
+import { FakePaymentAdapter } from '@vitnode/core/api/adapters/payments/fake'
 import { coreRelations } from '@vitnode/core/database/relations'
 import { buildApiConfig } from '@vitnode/core/vitnode.config'
 import { forumApiPlugin } from '@vitnode/forum/config.api'
+import { StripePaymentAdapter } from '@vitnode/stripe'
 import { SupabaseStorageAdapter } from '@vitnode/supabase-storage'
 import { config } from 'dotenv'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { newsroomApiPlugin } from 'newsroom/config.api'
+import { paymentsDemoApiPlugin } from 'payments-demo/config.api'
 
 import { contentModules } from './content-modules.gen'
 import { appMessages } from './locales/app'
@@ -28,7 +31,12 @@ export const POSTGRES_URL =
  * them - `buildApiConfig` treats all of them as optional.
  */
 export const vitNodeApiConfig = buildApiConfig({
-  plugins: [blogApiPlugin(), forumApiPlugin(), newsroomApiPlugin()],
+  plugins: [
+    blogApiPlugin(),
+    forumApiPlugin(),
+    newsroomApiPlugin(),
+    paymentsDemoApiPlugin(),
+  ],
   contentModules,
   frontendPlugins,
   storage: {
@@ -50,6 +58,34 @@ export const vitNodeApiConfig = buildApiConfig({
   i18n: { ...vitNodeConfig.i18n, messages: appMessages },
   authorization: {
     passkeys: true,
+  },
+  /**
+   * Hosted-checkout payments for the `payments-demo` plugin. Each provider is
+   * added only when its secrets are set, so the app runs without them.
+   */
+  payments: {
+    providers: [
+      ...(process.env.STRIPE_SECRET_KEY
+        ? [
+            StripePaymentAdapter({
+              id: 'stripe-main',
+              secretKey: process.env.STRIPE_SECRET_KEY,
+              webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+            }),
+          ]
+        : []),
+      // Development only: an in-memory second provider for trying provider
+      // selection. It moves no money and refuses to start in production.
+      ...(process.env.NODE_ENV !== 'production' &&
+      process.env.PAYMENTS_FAKE_WEBHOOK_SECRET
+        ? [
+            FakePaymentAdapter({
+              id: 'fake-test',
+              webhookSecret: process.env.PAYMENTS_FAKE_WEBHOOK_SECRET,
+            }),
+          ]
+        : []),
+    ],
   },
   dbProvider: drizzle({
     connection: POSTGRES_URL,

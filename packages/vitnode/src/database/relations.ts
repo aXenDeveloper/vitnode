@@ -14,6 +14,7 @@ import * as moderation from "./moderation";
 import * as moderators from "./moderators";
 import * as notifications from "./notifications";
 import * as passkeys from "./passkeys";
+import * as payments from "./payments";
 import * as queue from "./queue";
 import * as roles from "./roles";
 import * as search from "./search";
@@ -36,6 +37,7 @@ export const coreSchema = {
   ...moderators,
   ...notifications,
   ...passkeys,
+  ...payments,
   ...queue,
   ...roles,
   ...search,

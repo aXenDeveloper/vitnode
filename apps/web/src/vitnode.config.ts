@@ -12,6 +12,7 @@ import {
   SearchIcon,
 } from 'lucide-react'
 import { newsroomPlugin } from 'newsroom/config'
+import { paymentsDemoPlugin } from 'payments-demo/config'
 
 export const vitNodeConfig = buildConfig({
   editor: {
@@ -80,7 +81,12 @@ export const vitNodeConfig = buildConfig({
       { href: '/search', icon: SearchIcon, title: 'site.menu.search' },
     ],
   },
-  plugins: [blogPlugin(), forumPlugin(), newsroomPlugin()],
+  plugins: [
+    blogPlugin(),
+    forumPlugin(),
+    newsroomPlugin(),
+    paymentsDemoPlugin(),
+  ],
   theme: {
     defaultTheme: 'system',
   },

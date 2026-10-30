@@ -64,4 +64,17 @@ export const frontendPlugins: FrontendPluginInventory = [
       updates: null,
     },
   },
+  {
+    id: "payments-demo",
+    manifest: {
+      id: "payments-demo",
+      title: "Payments demo",
+      icon: "credit-card",
+      description: "Payments demo: buy one fixed-price item with a hosted checkout, to see VitNode payments end to end.",
+      author: null,
+      license: null,
+      version: "0.1.0",
+      updates: null,
+    },
+  },
 ]

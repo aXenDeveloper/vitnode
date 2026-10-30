@@ -13,6 +13,20 @@ export interface ContentContainerEventPayload {
   pluginId: string;
 }
 
+export interface PaymentEventPayload {
+  /** In minor units. */
+  amount: number;
+  currency: string;
+  paymentId: string;
+  /** The plugin that created the payment. */
+  pluginId: string;
+  /** The provider instance id. */
+  providerId: string;
+  /** The plugin's own reference, e.g. `order:42`. */
+  reference: string;
+  userId: null | number;
+}
+
 export interface ContentApprovalEventPayload {
   authorId: null | number;
   containerId: null | number;
@@ -159,6 +173,22 @@ export interface VitNodeEvents {
   "notifications.type.updated": {
     typeId: string;
   };
+  /**
+   * The provider let the checkout lapse without a payment, or core closed an
+   * attempt whose checkout was never created.
+   */
+  "payment.expired": PaymentEventPayload;
+  /** The provider reported a final failure for the checkout, or refused to create it. */
+  "payment.failed": PaymentEventPayload;
+  /** The customer finished the checkout; a delayed payment method is still settling. */
+  "payment.processing": PaymentEventPayload;
+  /**
+   * The provider confirmed the payment, and the status is committed. Emitted
+   * once per payment, after the commit, through the events adapter - with the
+   * default local adapter that is in-process and not retried, so derive what a
+   * customer owns from the stored payment, not from this event.
+   */
+  "payment.succeeded": PaymentEventPayload;
   "role.created": {
     roleId: number;
   };

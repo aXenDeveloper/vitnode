@@ -1,0 +1,89 @@
+{
+  "payments-demo": {
+    "title": "Payments demo",
+    "items": {
+      "sticker_pack": {
+        "title": "Demo sticker pack",
+        "desc": "A pretend pack of stickers. Buying it in test mode moves no real money and proves the whole payment flow."
+      }
+    },
+    "shop": {
+      "title": "Payments demo",
+      "desc": "Buy one fixed-price item with a hosted checkout. The price is set on the server, and the purchase counts only once the provider confirms the payment.",
+      "loading": "Loading the item",
+      "provider": "Pay with",
+      "no_providers": "No payment provider is configured yet, so this item cannot be bought.",
+      "buy": "Buy now",
+      "owned": "You own this item",
+      "sign_in": "Sign in to buy",
+      "view_purchase": "View purchase"
+    },
+    "purchase": {
+      "title": "Your purchase",
+      "loading": "Loading the purchase",
+      "continue": "Continue to checkout",
+      "try_again": "Try again",
+      "back": "Back to the shop",
+      "status": {
+        "paid": {
+          "title": "Payment confirmed",
+          "desc": "The payment provider confirmed your payment. The sticker pack is yours."
+        },
+        "pending": {
+          "title": "Waiting for payment",
+          "desc": "We have not received a confirmed payment yet. If you just paid, this page updates by itself in a few seconds."
+        },
+        "processing": {
+          "title": "Payment processing",
+          "desc": "Your payment method takes a while to settle. This page updates once the provider confirms it."
+        },
+        "failed": {
+          "title": "Payment failed",
+          "desc": "The provider could not complete the payment. Nothing was charged; you can try again."
+        },
+        "expired": {
+          "title": "Checkout expired",
+          "desc": "The checkout closed before a payment was made. You can start a new one."
+        },
+        "none": {
+          "title": "No payment yet",
+          "desc": "This purchase has no checkout yet. Go back to the shop to start one."
+        }
+      }
+    },
+    "errors": {
+      "already_owned": {
+        "title": "Already yours",
+        "desc": "You have already bought this item."
+      },
+      "payment_in_progress": {
+        "title": "A checkout is still open",
+        "desc": "An earlier checkout for this item is still open. Finish it, or try again in a moment."
+      },
+      "payment_processing": {
+        "title": "Payment processing",
+        "desc": "Your earlier payment is still settling. Wait for it before paying again."
+      },
+      "provider_not_found": {
+        "title": "Payment method unavailable",
+        "desc": "That payment provider is not available. Pick another one."
+      },
+      "provider_rejected": {
+        "title": "Checkout refused",
+        "desc": "The payment provider refused to start the checkout. Try again later."
+      },
+      "provider_unavailable": {
+        "title": "Provider unreachable",
+        "desc": "The payment provider did not answer. Nothing was charged; try again in a moment."
+      },
+      "unauthorized": {
+        "title": "Sign in first",
+        "desc": "Sign in to buy this item."
+      },
+      "unknown": {
+        "title": "Something went wrong",
+        "desc": "We could not load or start the purchase. Try again in a moment."
+      }
+    }
+  }
+}

@@ -22,6 +22,8 @@ Every request spends points from the budgets that apply to it, in this order, an
 
 So a sign-in spends the safety cap, the write budget and the sign-in budget. A `GET` spends only the safety cap and the read budget. Each budget is spent at most once per request.
 
+[Payment provider webhooks](/docs/dev/payments/custom-provider#webhooks) (`POST /api/@vitnode/core/payments/webhooks/{id}`) spend only the safety cap. They come in bursts from a few provider IPs and are authenticated by their signature, so the write budget would only refuse real deliveries.
+
 The sign-in budget covers:
 
 - `POST /users/sign_in` and `POST /users/sign_up`

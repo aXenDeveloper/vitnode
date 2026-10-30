@@ -56,7 +56,10 @@ export interface RateLimiterConfig {
    * per 60 s while the deprecated top-level options are used).
    */
   safety?: RateLimiterCategoryOptions;
-  /** Every request other than `GET`, `HEAD` and `OPTIONS`. Defaults to 60 per 60 s. */
+  /**
+   * Every request other than `GET`, `HEAD` and `OPTIONS`, except payment
+   * provider webhooks, which only spend `safety`. Defaults to 60 per 60 s.
+   */
   write?: RateLimiterCategoryOptions;
 }
 
