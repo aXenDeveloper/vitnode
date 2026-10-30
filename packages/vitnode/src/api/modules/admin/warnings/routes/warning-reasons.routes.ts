@@ -4,8 +4,9 @@ import { z } from "@hono/zod-openapi";
 import { count, eq, inArray, max, sql } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { multiLangAuditLabel } from "@/api/lib/audit/labels";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import {
-  appendModerationAudit,
   listWarningReasons,
   WARNING_REASON_WORDS,
   warningReasonSchema,
@@ -13,6 +14,7 @@ import {
 import { saveLanguageWords } from "@/api/lib/save-language-words";
 import { errorSchema, json } from "@/api/modules/moderation/lib/schema";
 import { core_moderation_warning_reasons } from "@/database/warnings";
+import { auditDiff } from "@/lib/audit/diff";
 import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 
 const wordsSchema = (maxLength: number) =>
@@ -138,11 +140,19 @@ export const createWarningReasonAdminRoute = buildRoute({
           position: (lastPosition ?? -1) + 1,
         })
         .returning({ id: core_moderation_warning_reasons.id });
-      await appendModerationAudit(tx, {
-        actorId: c.get("admin")?.user.id ?? null,
-        data: { reasonId: row.id, ...auditedSettings(body) },
-        type: "reason_created",
-      });
+      const label = multiLangAuditLabel(body.title);
+      await writeAuditLog(
+        c,
+        {
+          action: "warning_reason.created",
+          changes: auditDiff({
+            after: { ...auditedSettings(body), title: label },
+            before: null,
+          }),
+          target: { id: row.id, label, type: "warning_reason" },
+        },
+        tx,
+      );
 
       return row;
     });
@@ -190,7 +200,12 @@ export const updateWarningReasonAdminRoute = buildRoute({
 
     const found = await c.get("db").transaction(async tx => {
       const [row] = await tx
-        .select({ id: core_moderation_warning_reasons.id })
+        .select({
+          enabled: core_moderation_warning_reasons.enabled,
+          expiresAfterHours: core_moderation_warning_reasons.expiresAfterHours,
+          id: core_moderation_warning_reasons.id,
+          points: core_moderation_warning_reasons.points,
+        })
         .from(core_moderation_warning_reasons)
         .where(eq(core_moderation_warning_reasons.id, id))
         .limit(1);
@@ -201,15 +216,31 @@ export const updateWarningReasonAdminRoute = buildRoute({
           .set(patch)
           .where(eq(core_moderation_warning_reasons.id, id));
       }
-      await appendModerationAudit(tx, {
-        actorId: c.get("admin")?.user.id ?? null,
-        data: {
-          reasonId: id,
-          ...patch,
-          wordsChanged: body.title !== undefined,
+      const [stored] = await listWarningReasons(c, { ids: [id] });
+      const label = multiLangAuditLabel(body.title ?? stored?.title);
+      await writeAuditLog(
+        c,
+        {
+          action: "warning_reason.updated",
+          changes: auditDiff({
+            after: {
+              ...row,
+              ...patch,
+              ...(body.title === undefined ? {} : { title: label }),
+            },
+            before: row,
+            exclude: ["id"],
+          }),
+          metadata: {
+            ...(body.description === undefined
+              ? {}
+              : { descriptionChanged: true }),
+            ...(body.message === undefined ? {} : { messageChanged: true }),
+          },
+          target: { id, label, type: "warning_reason" },
         },
-        type: "reason_updated",
-      });
+        tx,
+      );
 
       return true;
     });
@@ -272,10 +303,21 @@ export const reorderWarningReasonsAdminRoute = buildRoute({
       ),
       sql` `,
     );
-    await db
-      .update(core_moderation_warning_reasons)
-      .set({ position: sql`case ${positionById} end` })
-      .where(inArray(core_moderation_warning_reasons.id, ids));
+    await db.transaction(async tx => {
+      await tx
+        .update(core_moderation_warning_reasons)
+        .set({ position: sql`case ${positionById} end` })
+        .where(inArray(core_moderation_warning_reasons.id, ids));
+      await writeAuditLog(
+        c,
+        {
+          action: "warning_reason.reordered",
+          metadata: { order: ids },
+          target: { type: "warning_reason" },
+        },
+        tx,
+      );
+    });
 
     return c.body(null, 200);
   },

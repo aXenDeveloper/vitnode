@@ -7,6 +7,7 @@ icon: TriangleAlert
 import { ImgDocs } from "@/components/fumadocs/img";
 import form from "./warning-form.webp";
 import member from "./warning-member.webp";
+import memberLog from "./warning-member-log.webp";
 
 Moderators warn members with one shared form, opened from wherever the problem is. This guide warns a member for a blog comment, then revokes the warning and lifts the suspension it caused.
 
@@ -19,7 +20,7 @@ Warnings need [warning reasons](/docs/dev/moderation/configure-warnings) and a m
 | **Warn authors of this content** (`can_warn`) | The content type's module, for example **Comment** in the blog. Can be [scoped](/docs/dev/moderation/scoped-permissions) | Warn the author of that content |
 | **Warn members directly, without content** | Core → **Warnings** | Warn from a profile or the ModCP without content |
 | **Change a warning's points** / **Change when a warning's points expire** | Core → **Warnings** | Override the reason's defaults, with an explanation |
-| **View every member's warnings** | Core → **Warnings** | See all warnings, not only those in their scope |
+| **View every member's warnings** | Core → **Warnings** | See all warnings, not only those in their scope, and a member's **Moderation log** |
 | **Read staff notes on warnings** | Core → **Warnings** | Read private notes and override explanations |
 | **Revoke warnings** | Core → **Warnings** | Revoke a warning |
 | **View suspensions** / **Lift suspensions** | Core → **Warnings** | See and lift suspensions |
@@ -82,6 +83,15 @@ Choose **Issue warning**. The toast says how many active points the member has n
 Open the member in **Moderator CP → Warnings** (or **Warnings** on their profile). **Revoke** on a warning asks for a reason; its points stop counting at once and the member is notified. The warning stays in the history, marked **Revoked**.
 
 Revoking a warning never lifts the suspension it caused. Lift it separately with **Lift** on the suspension. Other active suspensions keep applying.
+
+The **Moderation log** at the bottom of the page lists who warned the member, revoked a warning or applied and lifted a suspension, newest first, with points before and after. It needs **View every member's warnings**, and suspension entries also need **View suspensions**.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={memberLog}
+  alt="The Moderation log of a member: a suspension lifted, a 5-point warning revoked, a warning that suspended the account at the 8-point threshold, and two warnings with points before and after, one noting that its points were changed from the reason's"
+/>
 
 <ImgDocs
   withoutBackground

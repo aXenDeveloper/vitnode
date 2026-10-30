@@ -8,6 +8,7 @@ import { PageTitle } from "@/components/ui/page-title";
 import { WarnDialog } from "@/tanstack/moderation/warn-button";
 
 import { Person } from "../modcp/report-tone";
+import { MemberLog } from "./member-log";
 import { SanctionCard, StaffWarningCard } from "./warning-list";
 import { memberStandingQueryOptions } from "./warnings-api";
 
@@ -131,6 +132,8 @@ export const ModcpMemberContent = ({ userId }: { userId: number }) => {
           </ul>
         )}
       </Section>
+
+      {permissions.viewLog ? <MemberLog userId={userId} /> : null}
 
       <WarnDialog onOpenChange={setWarning} open={warning} userId={userId} />
     </div>

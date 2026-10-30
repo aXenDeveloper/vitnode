@@ -1,14 +1,13 @@
-import type { Context } from "hono";
-
 import { z } from "@hono/zod-openapi";
 import { and, asc, count, eq, ne, sql } from "drizzle-orm";
 
 import type { ContentDatabase } from "@/content/server/service";
 
 import { buildRoute } from "@/api/builders";
-import { appendModerationAudit } from "@/api/lib/moderation/warnings/reasons";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { errorSchema, json } from "@/api/modules/moderation/lib/schema";
 import { core_moderation_warning_thresholds } from "@/database/warnings";
+import { auditDiff } from "@/lib/audit/diff";
 import {
   WARNING_LIMITS,
   WARNING_THRESHOLD_ACTIONS,
@@ -72,7 +71,11 @@ const pointsTaken = async (
   return row !== undefined;
 };
 
-const actorOf = (c: Context) => c.get("admin")?.user.id ?? null;
+const TARGET = "warning_threshold";
+
+/** A threshold has no name; its points are what admins tell it apart by. */
+const thresholdLabel = ({ points }: { points: number }): string =>
+  String(points);
 
 const responses = {
   400: json(errorSchema, "A temporary suspension needs a duration"),
@@ -154,11 +157,15 @@ export const createWarningThresholdAdminRoute = buildRoute({
         .insert(table)
         .values(body)
         .returning({ id: table.id });
-      await appendModerationAudit(tx, {
-        actorId: actorOf(c),
-        data: { thresholdId: row.id, ...body },
-        type: "threshold_created",
-      });
+      await writeAuditLog(
+        c,
+        {
+          action: "warning_threshold.created",
+          changes: auditDiff({ after: body, before: null }),
+          target: { id: row.id, label: thresholdLabel(body), type: TARGET },
+        },
+        tx,
+      );
 
       return { id: row.id };
     });
@@ -202,7 +209,12 @@ export const updateWarningThresholdAdminRoute = buildRoute({
     const result = await c.get("db").transaction(async tx => {
       await tx.execute(LOCK_THRESHOLDS);
       const [existing] = await tx
-        .select({ id: table.id })
+        .select({
+          action: table.action,
+          durationHours: table.durationHours,
+          enabled: table.enabled,
+          points: table.points,
+        })
         .from(table)
         .where(eq(table.id, id))
         .limit(1);
@@ -212,11 +224,15 @@ export const updateWarningThresholdAdminRoute = buildRoute({
       }
 
       await tx.update(table).set(body).where(eq(table.id, id));
-      await appendModerationAudit(tx, {
-        actorId: actorOf(c),
-        data: { thresholdId: id, ...body },
-        type: "threshold_updated",
-      });
+      await writeAuditLog(
+        c,
+        {
+          action: "warning_threshold.updated",
+          changes: auditDiff({ after: body, before: existing }),
+          target: { id, label: thresholdLabel(body), type: TARGET },
+        },
+        tx,
+      );
 
       return { id };
     });
@@ -255,16 +271,22 @@ export const deleteWarningThresholdAdminRoute = buildRoute({
     const { id } = c.req.valid("param");
     const table = core_moderation_warning_thresholds;
     const deleted = await c.get("db").transaction(async tx => {
-      const [row] = await tx
-        .delete(table)
-        .where(eq(table.id, id))
-        .returning({ id: table.id, points: table.points });
-      if (!row) return false;
-      await appendModerationAudit(tx, {
-        actorId: actorOf(c),
-        data: { points: row.points, thresholdId: id },
-        type: "threshold_deleted",
+      const [row] = await tx.delete(table).where(eq(table.id, id)).returning({
+        action: table.action,
+        durationHours: table.durationHours,
+        enabled: table.enabled,
+        points: table.points,
       });
+      if (!row) return false;
+      await writeAuditLog(
+        c,
+        {
+          action: "warning_threshold.deleted",
+          changes: auditDiff({ after: null, before: row }),
+          target: { id, label: thresholdLabel(row), type: TARGET },
+        },
+        tx,
+      );
 
       return true;
     });

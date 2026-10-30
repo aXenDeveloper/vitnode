@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { resolveLangValue } from "@/lib/helpers/multi-lang";
+
 import { buildNotificationType } from "./registry";
 
 export const adminMessageNotification = buildNotificationType({
@@ -20,15 +22,6 @@ const reasonTextSchema = z
   .array(z.object({ languageCode: z.string(), value: z.string() }))
   .nullable();
 
-const pickText = (
-  values: null | { languageCode: string; value: string }[],
-  locale: string,
-): string =>
-  values?.find(item => item.languageCode === locale)?.value ??
-  values?.find(item => item.languageCode === "en")?.value ??
-  values?.[0]?.value ??
-  "";
-
 const ACCOUNT_STATUS_PATH = "/account-status";
 
 /** Sent to a member when a moderator warns them. Never carries staff notes. */
@@ -48,7 +41,7 @@ export const warningIssuedNotification = buildNotificationType({
   email: true,
   mandatory: true,
   present: ({ data, locale, t }) => {
-    const reason = pickText(data.reason, locale);
+    const reason = data.reason ? resolveLangValue(data.reason, { locale }) : "";
 
     return {
       body: data.message,

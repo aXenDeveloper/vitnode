@@ -3049,6 +3049,23 @@
           "source": "Source",
           "from_threshold": "Reached {points, plural, one {# point} other {# points}}",
           "manual": "Applied by staff"
+        },
+        "log": {
+          "title": "Moderation log",
+          "loading": "Loading the moderation log",
+          "error": "Could not load the moderation log.",
+          "empty": "Nothing has happened to this account yet.",
+          "load_more": "Show older",
+          "someone": "Someone",
+          "warning_issued": "<actor></actor> warned them for {points, plural, one {# point} other {# points}} ({before} → {after} active)",
+          "warning_revoked": "<actor></actor> revoked a warning of {points, plural, one {# point} other {# points}}",
+          "sanction_applied_until": "<actor></actor>'s warning suspended the account until {endsAt} (the {threshold}-point threshold)",
+          "sanction_applied_indefinite": "<actor></actor>'s warning suspended the account indefinitely (the {threshold}-point threshold)",
+          "sanction_revoked": "<actor></actor> lifted a suspension",
+          "other": "<actor></actor>: {action}",
+          "points_overridden": "Points changed from the reason's {points, plural, one {# point} other {# points}}",
+          "expiration_overridden": "Expiry changed",
+          "report": "From report #{id}"
         }
       },
       "account_status": {
@@ -3261,6 +3278,24 @@
           "succeeded": "Payment succeeded",
           "failed": "Payment failed",
           "expired": "Payment expired"
+        },
+        "warning": {
+          "issued": "Warned member",
+          "revoked": "Revoked a warning"
+        },
+        "sanction": {
+          "applied": "Suspended account",
+          "revoked": "Lifted a suspension"
+        },
+        "warning_reason": {
+          "created": "Created warning reason",
+          "updated": "Updated warning reason",
+          "reordered": "Reordered warning reasons"
+        },
+        "warning_threshold": {
+          "created": "Created warning threshold",
+          "updated": "Updated warning threshold",
+          "deleted": "Deleted warning threshold"
         }
       },
       "fields": {
@@ -3284,7 +3319,12 @@
         "provider": "Provider",
         "reference": "Reference",
         "customerId": "Customer id",
-        "errorCode": "Error code"
+        "errorCode": "Error code",
+        "points": "Points",
+        "expiresAfterHours": "Points expire after (hours)",
+        "enabled": "Enabled",
+        "action": "Action",
+        "durationHours": "Duration (hours)"
       }
     }
   },

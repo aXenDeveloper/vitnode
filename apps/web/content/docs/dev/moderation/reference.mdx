@@ -259,7 +259,8 @@ Under `/api/@vitnode/core/moderation`, using the user session.
 | `POST /warnings/{id}/revoke` | `can_revoke` | `{ reason }` |
 | `GET /warnings` | Moderators | Query `userId`, `reasonId`, `issuedById`, `status`, `pluginId`, `targetType`, `from`, `to`, `page`, `pageSize` |
 | `GET /members?search=` | `can_view` or `can_warn` | Up to 10 members |
-| `GET /members/{id}` | `can_view` or anyone who can warn | Active points, visible warnings, `hiddenWarnings`, sanctions with `can_view_sanctions` |
+| `GET /members/{id}` | `can_view` or anyone who can warn | Active points, visible warnings, `hiddenWarnings`, sanctions with `can_view_sanctions`, and `permissions.viewLog` |
+| `GET /members/{id}/log` | `can_view` | The member's moderation log from the Activity Logs, newest first, 20 per page with `cursor`. `sanction.*` entries need `can_view_sanctions` |
 | `POST /sanctions/{id}/revoke` | `can_manage_sanctions` | `{ reason }` |
 | `GET /account-status` | The member, also while suspended | Own suspension, active points, warnings and suspensions, never staff notes |
 
@@ -279,6 +280,21 @@ The AdminCP routes are under `/api/@vitnode/core/admin/warnings`: `GET`/`POST /r
 | Message to the member | 3 to 2000 characters |
 | Staff note, explanations, revocation reasons | Up to 2000 characters; explanations and reasons at least 3 |
 | Warning reasons / thresholds | 50 / 20 |
+
+### Warning activity log actions
+
+Recorded under `@vitnode/core` in `core_audit_logs`, in the same transaction as the change. See [Activity Logs](/docs/dev/audit-logs).
+
+| Action | Area | Target | Metadata |
+| --- | --- | --- | --- |
+| `warning.issued` | `moderator` | `user`, the warned member | `warningId`, `points`, `defaultPoints`, `pointsBefore`, `pointsAfter`, `pointsOverridden`, `expirationOverridden`, `expiresAt`, `reasonId`, `reportId`, the content's `contentPluginId`/`contentType`/`contentId`, `crossedThresholdIds`, `appliedThresholdId` |
+| `warning.revoked` | `moderator` | `user` | `warningId`, `points` |
+| `sanction.applied` | `moderator` | `user` | `sanctionId`, `warningId`, `thresholdId`, `thresholdPoints`, `thresholdAction`, `endsAt`, `source` |
+| `sanction.revoked` | `moderator` | `user` | `sanctionId`, `warningId`, `type` |
+| `warning_reason.created` / `.updated` / `.reordered` | `admin` | `warning_reason` | Changes of points, expiry, enabled and title |
+| `warning_threshold.created` / `.updated` / `.deleted` | `admin` | `warning_threshold` | Changes of points, action, duration and enabled |
+
+A content-linked warning carries the content's moderation scope. Staff notes, override explanations and revocation reasons are never recorded.
 
 ### Warning notifications
 
@@ -329,6 +345,6 @@ The migration `20261011193321_add_moderation_reports` adds `core_moderation_repo
 
 The migration `20261019161102_add_moderation_report_reasons` adds `core_moderation_report_reasons` with a unique `code`, `requiresDetails` and `position`. Titles and descriptions live in `core_languages_words`. `core_moderation_reports.reason` holds the reason's `code` without a foreign key, so deleting a reason keeps its reports. `db:prepare` and `db:migrate` add the four starter reasons only while the table is empty.
 
-The migration `20261028212551_add_moderation_warnings` adds `core_moderation_warning_reasons`, `core_moderation_warning_thresholds` (a partial unique index allows one enabled threshold per number of points), `core_moderation_warnings`, `core_moderation_sanctions` and `core_moderation_audit`. A warning keeps a copy of its reason's title, the points it was issued with and a short content snapshot; `(issuedById, idempotencyKey)` is unique, and so is a sanction's `warningId`. Warned users' rows cascade on account deletion; actors are `ON DELETE SET NULL`.
+The migration `20261030193055_add_moderation_warnings` adds `core_moderation_warning_reasons`, `core_moderation_warning_thresholds` (a partial unique index allows one enabled threshold per number of points), `core_moderation_warnings` and `core_moderation_sanctions`. Their history is in `core_audit_logs`. A warning keeps a copy of its reason's title, the points it was issued with and a short content snapshot; `(issuedById, idempotencyKey)` is unique, and so is a sanction's `warningId`. Warned users' rows cascade on account deletion; actors are `ON DELETE SET NULL`.
 
 Approvals live in `core_content_submissions`, one row per submission. Rows are never deleted with the content, author and reviewer are `ON DELETE SET NULL`, and a partial unique index allows one `pending` submission per record. Container policy overrides are stored in `core_content_containers.policies`.

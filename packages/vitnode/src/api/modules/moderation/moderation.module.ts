@@ -21,6 +21,7 @@ import {
   issueWarningRoute,
   listWarningReasonsRoute,
   listWarningsRoute,
+  memberLogRoute,
   memberStandingRoute,
   previewWarningRoute,
   revokeSanctionRoute,
@@ -67,6 +68,7 @@ export const moderationModule = buildModule({
     revokeSanctionRoute,
     searchMembersRoute,
     memberStandingRoute,
+    memberLogRoute,
     accountStatusRoute,
   ],
 });

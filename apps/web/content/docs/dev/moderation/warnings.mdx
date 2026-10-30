@@ -27,7 +27,7 @@ A **warning** records a moderator's decision about a member. It can carry **poin
 1. A moderator opens the warn form. It previews the member's active points before and after, and the suspension a threshold would apply.
 2. On submit, the server checks every permission again and locks that member's warnings for the length of one transaction. Two moderators warning the same member at once are handled one after the other, so the points add up and each threshold fires once.
 3. A threshold applies when the warning moves active points from below its number to its number or above. When one warning crosses several, only the highest applies: 6 → 11 points with thresholds at 8 and 10 gives only the 10-point suspension.
-4. The warning, the threshold decision, the suspension, the audit entries and the member's notifications commit together or not at all.
+4. The warning, the threshold decision, the suspension, the [activity log](/docs/dev/audit-logs) entries and the member's notifications commit together or not at all.
 
 A temporary suspension ends at its own end time, even when the member still has the points. Expired points or a changed threshold never create a new suspension on their own; only a new warning does. Points that later fall below a threshold let it fire again on a future crossing.
 
@@ -37,6 +37,10 @@ The server checks suspensions when it reads the session, for every request: core
 
 The member keeps their session. A strip under the header says the account is suspended and links to **Account status** at `/account-status`, which shows the suspension end time, active points and the warning history with each message. Members reach the same page from **Settings → Account status** at any time. It never shows staff notes or which moderator issued a warning.
 
+## Where the history lives
+
+Every warning, revocation and suspension is written to the [Activity Logs](/docs/dev/audit-logs), in the same transaction as the change. Administrators see them in **AdminCP → Staff → Moderators → Logs**. Moderators with **View every member's warnings** see one member's entries as the **Moderation log** on that member's ModCP page. The entries hold points, threshold decisions and links to reports, never staff notes, override explanations or revocation reasons. Changes to warning reasons and thresholds land in the administrators' log.
+
 ## Who is protected
 
 Nobody can warn themselves. A member who holds a root role cannot be warned at all, and other staff (admins and moderators) can only be warned by someone who holds a root role. These checks run before a threshold is evaluated, so a threshold can never suspend a protected account.
@@ -45,7 +49,6 @@ Nobody can warn themselves. A member who holds a root role cannot be warned at a
 
 - Suspensions are the only sanction. There is no manual "suspend without a warning" action, no appeal workflow and no posting restriction per plugin yet; the data model leaves room for them.
 - Suspension state is cached for up to a minute per member. Applying or lifting a suspension clears that cache, and with Redis every instance sees it at once. Without Redis, other instances may take up to a minute.
-- The audit trail is stored in `core_moderation_audit` but has no screen yet.
 
 ## Related
 

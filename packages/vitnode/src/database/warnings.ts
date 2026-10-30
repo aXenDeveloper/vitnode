@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import { camelCase, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
 
 import type {
-  ModerationAuditType,
   SanctionSource,
   SanctionThresholdSnapshot,
   SanctionType,
@@ -12,7 +11,6 @@ import type {
 } from "@/lib/moderation/warnings";
 
 import {
-  MODERATION_AUDIT_TYPES,
   SANCTION_SOURCES,
   SANCTION_TYPES,
   WARNING_THRESHOLD_ACTIONS,
@@ -179,40 +177,5 @@ export const core_moderation_sanctions = camelCase.table.withRLS(
       t.endsAt,
     ),
     index("core_moderation_sanctions_created_at_id_idx").on(t.createdAt, t.id),
-  ],
-);
-
-/**
- * The warning system's audit trail. Never holds staff notes or override
- * explanations - those stay on the warning, behind `can_view_notes`.
- */
-export const core_moderation_audit = camelCase.table.withRLS(
-  "core_moderation_audit",
-  t => ({
-    id: t.serial().primaryKey(),
-    type: t
-      .varchar({ enum: MODERATION_AUDIT_TYPES, length: 40 })
-      .$type<ModerationAuditType>()
-      .notNull(),
-    actorId: t.integer().references(() => core_users.id, {
-      onDelete: "set null",
-    }),
-    userId: t.integer().references(() => core_users.id, {
-      onDelete: "set null",
-    }),
-    warningId: t.integer().references(() => core_moderation_warnings.id, {
-      onDelete: "set null",
-    }),
-    sanctionId: t.integer().references(() => core_moderation_sanctions.id, {
-      onDelete: "set null",
-    }),
-    data: t.jsonb().$type<Record<string, unknown>>().notNull().default({}),
-    createdAt: t.timestamp().notNull().defaultNow(),
-  }),
-  t => [
-    index("core_moderation_audit_user_idx").on(t.userId, t.createdAt),
-    index("core_moderation_audit_created_at_id_idx").on(t.createdAt, t.id),
-    index("core_moderation_audit_warning_idx").on(t.warningId),
-    index("core_moderation_audit_sanction_idx").on(t.sanctionId),
   ],
 );

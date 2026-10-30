@@ -15,6 +15,7 @@ import {
   warningIssuedNotification,
 } from "@/api/lib/notifications/core-types";
 import { defineModerationScope, defineReportTarget } from "@/api/moderation";
+import { core_audit_logs } from "@/database/audit";
 import { core_languages_words } from "@/database/languages";
 import {
   core_moderation_report_events,
@@ -24,7 +25,6 @@ import {
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
 import {
-  core_moderation_audit,
   core_moderation_sanctions,
   core_moderation_warning_reasons,
   core_moderation_warning_thresholds,
@@ -408,7 +408,17 @@ interface StaffWarning {
 interface Standing {
   activePoints: number;
   hiddenWarnings: number;
+  permissions: { viewLog: boolean };
   warnings: StaffWarning[];
+}
+
+interface MemberLog {
+  edges: {
+    action: string;
+    actor: null | { id: number };
+    metadata: Record<string, unknown>;
+  }[];
+  pageInfo: { endCursor: null | string; hasNextPage: boolean };
 }
 
 interface AccountStatus {
@@ -500,9 +510,15 @@ describe("issuing a warning", () => {
     expect(
       (row.expiresAt as Date).getTime() - (row.issuedAt as Date).getTime(),
     ).toBe(48 * HOUR);
-    expect(h.memory.rows(core_moderation_audit).map(e => e.type)).toContain(
-      "warning_overridden",
-    );
+    expect(
+      h.memory
+        .rows(core_audit_logs)
+        .find(entry => entry.action === "warning.issued"),
+    ).toMatchObject({
+      area: "moderator",
+      metadata: { defaultPoints: 2, points: 4, pointsOverridden: true },
+      targetType: "user",
+    });
   });
 
   it("lets a root moderator warn other staff", async () => {
@@ -810,6 +826,80 @@ describe("revoking", () => {
   });
 });
 
+describe("member moderation log", () => {
+  it.each([
+    ["with can_view_sanctions", SENIOR, true],
+    ["without can_view_sanctions", VIEWER, false],
+  ])(
+    "lists the member's warning activity newest first %s",
+    async (_name, viewer, viewSanctions) => {
+      const h = await harness();
+      await h.seedPoints(MEMBER, 6);
+      const { sanction, warningId } = await h.issued(SENIOR);
+      await h.issued(SENIOR, { reasonId: REASON_ZERO, userId: OTHER_MEMBER });
+      expect((await h.revoke(SENIOR, "warnings", warningId)).status).toBe(200);
+      const sanctionId = sanction?.id ?? 0;
+      expect((await h.revoke(SENIOR, "sanctions", sanctionId)).status).toBe(
+        200,
+      );
+
+      const res = await h.call(viewer, "GET", `/members/${MEMBER}/log`);
+
+      expect(res.status).toBe(200);
+      const log = (await res.json()) as MemberLog;
+      expect(log.edges).toEqual(
+        [
+          { action: "sanction.revoked", metadata: { sanctionId, warningId } },
+          { action: "warning.revoked", metadata: { points: 2, warningId } },
+          {
+            action: "sanction.applied",
+            metadata: { sanctionId, thresholdId: THRESHOLD_EIGHT, warningId },
+          },
+          {
+            action: "warning.issued",
+            metadata: {
+              appliedThresholdId: THRESHOLD_EIGHT,
+              points: 2,
+              pointsAfter: 8,
+              pointsBefore: 6,
+            },
+          },
+        ]
+          .filter(entry => viewSanctions || entry.action.startsWith("warning."))
+          .map(({ action, metadata }) =>
+            expect.objectContaining({
+              action,
+              actor: expect.objectContaining({ id: SENIOR }),
+              metadata: expect.objectContaining(metadata),
+            }),
+          ),
+      );
+      expect(log.pageInfo).toEqual({
+        endCursor: expect.any(String),
+        hasNextPage: false,
+      });
+    },
+  );
+
+  it.each([
+    ["can_view", 200, VIEWER],
+    ["only core can_warn", 403, BASIC],
+    ["only content-scoped can_warn", 403, SCOPED],
+  ])(
+    "answers a moderator with %s with %i and says so in the standing",
+    async (_name, status, moderator) => {
+      const h = await harness();
+
+      const res = await h.call(moderator, "GET", `/members/${MEMBER}/log`);
+
+      expect(res.status).toBe(status);
+      expect((await h.standing(moderator)).permissions.viewLog).toBe(
+        status === 200,
+      );
+    },
+  );
+});
+
 describe("reports", () => {
   it("links a warning to a report and resolves it only when asked", async () => {
     const h = await harness();
@@ -911,7 +1001,7 @@ describe("staff notes", () => {
     expect(basic.hiddenWarnings).toBe(1);
   });
 
-  it("never reach the member's own status, notifications, events or audit trail", async () => {
+  it("never reach the member's own status, notifications, events, audit trail or moderation log", async () => {
     const h = await harness();
     await h.seedPoints(MEMBER, 6);
     const { sanction, warningId } = await h.issued(SENIOR, {
@@ -935,11 +1025,19 @@ describe("staff notes", () => {
       "moderation.warning.revoked",
       "moderation.sanction.revoked",
     ]);
+    const log = await h.call(SENIOR, "GET", `/members/${MEMBER}/log`);
+    expect(log.status).toBe(200);
+    const trail = JSON.stringify([
+      await log.text(),
+      h.memory.rows(core_audit_logs),
+    ]);
+    expect(trail).not.toContain("Issued by mistake");
+
     const leaked = JSON.stringify([
       status,
       h.emit.mock.calls,
       h.publish.mock.calls.map(([args]) => args.data),
-      h.memory.rows(core_moderation_audit),
+      trail,
     ]);
     expect(leaked).not.toContain(STAFF_NOTE);
     expect(leaked).not.toContain(OVERRIDE_NOTE);
