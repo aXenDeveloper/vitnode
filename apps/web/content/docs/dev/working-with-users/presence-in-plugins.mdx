@@ -131,7 +131,7 @@ export const listPostsRoute = buildRoute({
 })
 ```
 
-`getMany` costs one database query and one cache round trip, however many authors there are, and returns a `Map` keyed by user ID. Describe the new field in your response schema with `UserPresence` from `@vitnode/core/lib/user-presence`.
+`getMany` costs three database queries (the members, their secondary roles and the roles' anonymity settings) and one cache round trip, however many authors there are. It returns a `Map` keyed by user ID, with [role settings](/docs/dev/working-with-users/presence#role-settings) already applied. Describe the new field in your response schema with `UserPresence` from `@vitnode/core/lib/user-presence`.
 
 The answer belongs to the viewer, so the route must send `Cache-Control: private, no-store` and must not tag the response for the page cache. If the rest of the response is cacheable, fetch presence on the client instead.
 

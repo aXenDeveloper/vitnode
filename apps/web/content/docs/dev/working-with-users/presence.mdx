@@ -8,6 +8,8 @@ import { ImgDocs } from '@/components/fumadocs/img'
 import profileImg from './presence-profile.webp'
 import anonymousImg from './presence-browse-anonymously.webp'
 import adminCardImg from './presence-admincp-card.webp'
+import roleSettingsImg from './presence-role-settings.webp'
+import lockedImg from './presence-browse-anonymously-locked.webp'
 
 User presence tells you whether a signed-in member is **online** right now and when they were **last seen**. VitNode tracks it for every signed-in member out of the box, shows it on public profiles and in the AdminCP, and lets members hide it with **Browse anonymously**.
 
@@ -53,7 +55,7 @@ Each session expires on its own. A member with a laptop and a phone stays online
 
 ## Browse anonymously
 
-Members who'd rather lurk in peace open **Settings → Overview** (`/settings`) and turn on **Browse anonymously** under **Privacy**.
+Members who'd rather lurk in peace open **Settings → Overview** (`/settings`) and turn on **Browse anonymously** under **Privacy**, as long as their [roles allow it](#role-settings).
 
 <ImgDocs
   withoutBackground
@@ -68,6 +70,37 @@ Tracking does not stop. Anonymous mode changes **who may see** presence, not wha
 
 - the member themselves;
 - staff with the `users:can_view_hidden_presence` permission.
+
+## Role settings
+
+Two switches on the role dialog's **Profile** tab decide whether members of a role choose for themselves. Open **AdminCP → Core → Users → Roles** (`/admin/core/users/roles`) and edit a role:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={roleSettingsImg}
+  alt="Profile tab of the Edit role dialog with Allow browsing anonymously turned on and Always browse anonymously turned off"
+/>
+
+| Setting                        | Default | Effect                                                                                               |
+| :----------------------------- | :------ | :--------------------------------------------------------------------------------------------------- |
+| **Allow browsing anonymously** | On      | Members may turn **Browse anonymously** on. Off, they stay visible even if they turned it on earlier |
+| **Always browse anonymously**  | Off     | Members are hidden from other members, whatever they chose                                           |
+
+They are stored as `allowBrowseAnonymously` and `forceBrowseAnonymously` on `core_roles`.
+
+Every role a member holds counts, primary and secondary. One role with **Always browse anonymously** hides the member, even if another role doesn't allow it. Otherwise every role has to allow it, like the other self-service allowances. Presence reads the roles on every request, so saving a role changes what other members see on their next refresh.
+
+When the roles decide, the member still sees the switch, but disabled: on under a forcing role, off under a role that doesn't allow it. Hovering or focusing it explains why, for example "Your group always browses anonymously, so this can't be turned off."
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={lockedImg}
+  alt="Disabled Browse anonymously switch, turned on, with a tooltip saying the group always browses anonymously"
+/>
+
+The API enforces the same rule: `PUT /users/me/privacy` answers `403` while the roles decide, so an old tab can't get around the disabled switch. Staff with the permission below still see forced members, flagged `isHidden: true`.
 
 ## Staff permission
 
@@ -97,13 +130,14 @@ type UserPresence =
 
 All paths start with `/api/@vitnode/core`. Every presence read sends `Cache-Control: private, no-store`, because the answer depends on who is asking.
 
-| Method | Path                         | Who                         | Does                                                                                  |
-| :----- | :--------------------------- | :-------------------------- | :------------------------------------------------------------------------------------ |
-| `POST` | `/users/presence/heartbeat`  | Signed-in member            | Keeps the current session online. `204`, or `401` when signed out                     |
-| `GET`  | `/users/{id}/presence`       | Anyone                      | One member's `UserPresence`. `404` for an unknown member                              |
-| `POST` | `/users/presence/batch`      | Anyone                      | Body `{ userIds: number[] }` (1-100). Returns `{ presences: { userId, presence }[] }` |
-| `PUT`  | `/users/me/privacy`          | Signed-in member            | Body `{ hideOnlineStatus: boolean }`. Emits `user.updated`                            |
-| `GET`  | `/admin/users/{id}/presence` | Staff with `users:can_view` | One member's `UserPresence`, checked against admin permissions                        |
+| Method | Path                         | Who                         | Does                                                                                              |
+| :----- | :--------------------------- | :-------------------------- | :------------------------------------------------------------------------------------------------ |
+| `POST` | `/users/presence/heartbeat`  | Signed-in member            | Keeps the current session online. `204`, or `401` when signed out                                 |
+| `GET`  | `/users/{id}/presence`       | Anyone                      | One member's `UserPresence`. `404` for an unknown member                                          |
+| `POST` | `/users/presence/batch`      | Anyone                      | Body `{ userIds: number[] }` (1-100). Returns `{ presences: { userId, presence }[] }`             |
+| `PUT`  | `/users/me/privacy`          | Signed-in member            | Body `{ hideOnlineStatus: boolean }`. Emits `user.updated`. `403` while the member's roles decide |
+| `GET`  | `/users/me/policy`           | Signed-in member            | Includes `browseAnonymously`: `allowed`, `forced` or `disallowed`                                 |
+| `GET`  | `/admin/users/{id}/presence` | Staff with `users:can_view` | One member's `UserPresence`, checked against admin permissions                                    |
 
 The heartbeat reads the member and the session from the session cookie. It never accepts a user ID in the body, so nobody can keep somebody else online. The batch route leaves unknown IDs out of the result.
 
