@@ -188,8 +188,6 @@ export const checkoutRoute = buildRoute({
     const item = DEMO_ITEMS[itemId];
     const db = c.get("db");
 
-    // One purchase per member and item, reused when an earlier checkout
-    // expired or was abandoned.
     await db
       .insert(payments_demo_purchases)
       .values({ itemId, userId: user.id })

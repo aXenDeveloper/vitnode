@@ -122,12 +122,28 @@ Dashboard endpoint gets, so production uses its own value.
 ### Create the tables
 
 Payments add the `core_payments` and `core_payments_webhook_events` tables,
-and the demo plugin adds `payments_demo_purchases`. Apply the migration in the
-app that owns the database:
+and the demo plugin adds `payments_demo_purchases`. From the workspace root,
+generate and apply the migration:
 
-```bash
-pnpm vitnode db migrate
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Migrate the database'>
+
+```bash tab="bun"
+bun run db:migrate
 ```
+
+```bash tab="pnpm"
+pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run db:migrate
+```
+
+</Tabs>
+
+`db:migrate` writes the migration in the app that owns the database and applies
+it; commit that folder. `pnpm dev` does the same when it starts. See
+[database](/docs/dev/database) for the details.
 
 </Step>
 </Steps>
@@ -226,6 +242,7 @@ for a Dashboard webhook endpoint.
 | Symptom                                       | Cause                                                                                     |
 | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | API does not start: `needs secretKey`         | `STRIPE_SECRET_KEY` missing or not an `sk_`/`rk_` key                                     |
+| API does not start: `needs webhookSecret`     | `STRIPE_WEBHOOK_SECRET` missing or not a `whsec_` secret                                  |
 | Webhook answers `400`                         | Wrong `STRIPE_WEBHOOK_SECRET`, a body changed by a proxy, or a live event on test keys    |
 | Webhook answers `404`                         | The last URL segment is not a configured instance id                                      |
 | Buy answers `provider_unavailable`            | Stripe unreachable or the key was rejected; the API log names the Stripe error            |
@@ -235,7 +252,7 @@ for a Dashboard webhook endpoint.
 
 <Cards>
   <Card
-    title="Use payments in a plugin"
+    title="Plugin checkout"
     description="The code behind the demo: trusted prices, checkout and status"
     href="/docs/dev/payments/plugin"
   />

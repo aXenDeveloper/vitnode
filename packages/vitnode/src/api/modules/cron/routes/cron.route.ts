@@ -12,9 +12,6 @@ import {
   updateCronJobs,
 } from "../helpers/process-cron-jobs";
 
-// Postgres keeps microseconds; the `Date` read back keeps milliseconds. A row
-// written outside JavaScript (`now()` in SQL) would never equal the value read,
-// so the compare-and-set matches the millisecond it was read as.
 const sameMillisecond = (lastRun: Date) =>
   and(
     gte(core_cron.lastRun, lastRun),

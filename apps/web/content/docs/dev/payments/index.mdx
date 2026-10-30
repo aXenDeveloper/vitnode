@@ -1,6 +1,6 @@
 ---
 title: Payments
-description: How VitNode takes one-time payments through a provider's hosted checkout - provider instances, payment statuses, webhooks and what the MVP does not cover yet.
+description: How VitNode takes one-time payments through a provider's hosted checkout - provider instances, payment statuses, webhooks and what payments do not cover yet.
 icon: CreditCard
 ---
 
@@ -29,10 +29,11 @@ badge, access to a page.
    signature against the exact bytes received, then records the new status.
 5. Your plugin reads the stored payment to decide what the member owns.
 
-If a webhook never arrives, core asks the provider itself: when the customer
-looks at the status page (at most every 15 seconds) and from the
-`reconcile-payments` cron job (every 5 minutes, for payments quiet for 10
-minutes).
+If a webhook never arrives, core asks the provider itself: when your plugin
+reads the payment with `getForUser({ refresh: true })`, for example on its
+status page (at most every 15 seconds per payment), and from the
+`reconcile-payments` cron job (every 5 minutes, for open payments unchanged for
+10 minutes).
 
 ## Statuses
 
@@ -69,17 +70,18 @@ payments: {
 - With no providers, the rest of VitNode works and `createCheckout()` fails
   with `provider_not_found`.
 
-`payments.checkoutExpiresInMinutes` sets how long a checkout accepts payment:
-30 to 1380 minutes, 60 by default.
+`payments.checkoutExpiresInMinutes` sets how long a checkout accepts payment.
+It defaults to 60, and values outside 30 to 1380 minutes (23 hours) are clamped
+to that range.
 
 ## Events
 
 Core emits `payment.processing`, `payment.succeeded`, `payment.failed` and
 `payment.expired` after the status change is committed. See
 [built-in events](/docs/dev/events/built-in-events#payment-events). The
-default events adapter runs listeners inside the webhook request and never
-retries them, so do not grant anything from a listener alone: read the stored
-payment instead.
+default events adapter runs listeners inside the request that changed the
+status (a webhook, a status refresh or the cron job) and never retries them, so
+do not grant anything from a listener alone: read the stored payment instead.
 
 ## Guides
 
@@ -90,7 +92,7 @@ payment instead.
     href="/docs/dev/payments/stripe"
   />
   <Card
-    title="Use payments in a plugin"
+    title="Plugin checkout"
     description="Charge a fixed price and show a confirmed result"
     href="/docs/dev/payments/plugin"
   />

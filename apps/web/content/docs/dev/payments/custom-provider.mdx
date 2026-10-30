@@ -23,14 +23,14 @@ import type {
 
 | Member            | Required | Behavior                                                                                                          |
 | ----------------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
-| `id`              | Yes      | Instance id: 1-100 lowercase letters, digits, `-`, `_`. Unique; names the webhook URL                             |
+| `id`              | Yes      | Instance id: 1-100 lowercase letters, digits, `-`, `_`, starting with a letter or digit. Unique; names the webhook URL |
 | `type`            | Yes      | Adapter kind, e.g. `"stripe"`. Several instances may share it                                                    |
 | `name`            | Yes      | Display name, safe for the browser                                                                                |
 | `createCheckout`  | Yes      | Creates the hosted checkout; must be idempotent on `idempotencyKey`. Returns `PaymentCheckoutState & { url }`     |
 | `verifyWebhook`   | Yes      | Verifies `{ body: Uint8Array, headers: Headers }` and returns a `PaymentWebhookEvent`                              |
 | `retrieveCheckout`| No       | Reads a checkout's current state. Without it, a missed webhook is only fixed by a redelivery                      |
 | `expireCheckout`  | No       | Closes an open checkout and returns its state. Without it, an open checkout blocks a replacement until it expires |
-| `validateAmount`  | No       | Throws `PaymentProviderError` (kind `rejected`) for an amount the provider cannot charge                          |
+| `validateAmount`  | No       | Throws `PaymentProviderError` (kind `rejected`) for an amount the provider cannot charge. Core then answers `invalid_amount` and stores nothing |
 
 The factory should throw at startup when a required secret is missing, so an
 install never runs a half-configured provider.
@@ -48,8 +48,12 @@ install never runs a half-configured provider.
 | `cancelUrl`      | `string` | Absolute URL on `VITNODE_WEB_URL`                                                               |
 | `expiresAt`      | `Date`   | Pass it to the provider so the checkout never outlives its attempt                              |
 
-Core may call `createCheckout` again with identical arguments after a timeout or
-a lost response. The provider must answer with the same checkout, not a new one.
+Core may call `createCheckout` again for the same attempt after a timeout or a
+lost response, with the same `idempotencyKey`, amount, currency, description and
+`expiresAt`. The provider must answer with the same checkout, not a new one. The
+return URLs come from the latest call; if the provider refuses a reused key
+because they changed, throw kind `rejected`, and the next call starts a fresh
+attempt.
 Core only replays while more than 35 minutes remain before `expiresAt`, and
 `expiresAt` is at most 23 hours away, which keeps replays inside the 24-hour
 idempotency window most providers offer. After that, an attempt whose checkout
@@ -113,9 +117,13 @@ message.
 
 | `kind`          | Use for                                         | Core does                                                                 |
 | --------------- | ----------------------------------------------- | ------------------------------------------------------------------------- |
-| `unavailable`   | Network errors, timeouts, rate limits, outages | Keeps the attempt; the next call or the reconciler replays it             |
-| `rejected`      | Invalid parameters, unsupported currency        | Marks a new attempt `failed` with `code` as `errorCode`                   |
-| `configuration` | Missing or refused credentials                  | Same as `unavailable`, and logs it as an error                            |
+| `unavailable`   | Network errors, timeouts, rate limits, outages | Keeps the attempt `pending` and answers `provider_unavailable`. The next `createCheckout` for the same reference replays it |
+| `rejected`      | Invalid parameters, unsupported currency        | Marks the attempt `failed` with `code` as `errorCode` and answers `provider_rejected` |
+| `configuration` | Missing or refused credentials                  | Same as `unavailable`                                                     |
+
+Core logs `rejected` as a warning and the other kinds as errors. The reconciler
+never replays `createCheckout`: an attempt nobody retries is expired after 15
+minutes, as described under recovery.
 
 ## Recovery
 
@@ -147,7 +155,7 @@ page and refuses to start when `NODE_ENV=production`.
     href="/docs/dev/payments/stripe"
   />
   <Card
-    title="Use payments in a plugin"
+    title="Plugin checkout"
     description="createCheckout, getForUser and listByReference in practice"
     href="/docs/dev/payments/plugin"
   />

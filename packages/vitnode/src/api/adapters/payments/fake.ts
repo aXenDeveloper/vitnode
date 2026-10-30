@@ -131,7 +131,6 @@ export const FakePaymentAdapter = ({
     createCheckout: async args =>
       Promise.resolve().then(() => {
         assertAvailable();
-        // Idempotent like a real provider: the same key returns the same checkout.
         const checkoutId = `fake_cs_${createHash("sha256")
           .update(`${id}:${args.idempotencyKey}`)
           .digest("hex")

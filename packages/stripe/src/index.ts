@@ -16,9 +16,7 @@ import Stripe from "stripe";
  */
 export const STRIPE_API_VERSION = Stripe.API_VERSION;
 
-/** Currencies whose amounts Stripe takes with three decimals but only in tens. */
 const THREE_DECIMAL_CURRENCIES = new Set(["bhd", "jod", "kwd", "omr", "tnd"]);
-/** Stripe's largest charge is eight digits in minor units for most currencies. */
 const MAX_AMOUNT = 99_999_999;
 
 const KEY_PATTERN = /^(?:sk|rk)_(test|live)_[A-Za-z0-9]+$/;
@@ -51,9 +49,6 @@ const toProviderError = (error: unknown): PaymentProviderError => {
     });
   }
 
-  // Parameters that do not match the first request with this key: a new
-  // attempt is needed, retrying this one can never succeed. A request still
-  // running with the same key (409) is only a matter of waiting.
   if (
     error instanceof Stripe.errors.StripeIdempotencyError &&
     error.statusCode !== 409 &&
@@ -78,7 +73,6 @@ const toProviderError = (error: unknown): PaymentProviderError => {
     });
   }
 
-  // Connection errors, rate limits, lock timeouts and Stripe outages.
   return new PaymentProviderError({
     code: error.code ?? "stripe_unavailable",
     kind: "unavailable",
@@ -86,11 +80,6 @@ const toProviderError = (error: unknown): PaymentProviderError => {
   });
 };
 
-/**
- * A Checkout Session's normalized status. `complete` is only `succeeded` once
- * `payment_status` is `paid`; a delayed payment method leaves it `unpaid`,
- * which is `processing` until Stripe settles it.
- */
 const statusOf = (
   session: Session,
   paymentIntent: null | Stripe.PaymentIntent,
@@ -99,8 +88,6 @@ const statusOf = (
   if (session.status !== "complete") return "pending";
   if (session.payment_status === "paid") return "succeeded";
 
-  // A completed session whose delayed payment failed keeps
-  // `payment_status: "unpaid"`; only its PaymentIntent tells.
   if (
     paymentIntent?.status === "requires_payment_method" ||
     paymentIntent?.status === "canceled"
@@ -203,16 +190,20 @@ export const StripePaymentAdapter = ({
     return client;
   };
 
-  const retrieve = async (checkoutId: string) => {
-    const session = await stripe().checkout.sessions.retrieve(checkoutId, {
-      expand: ["payment_intent"],
-    });
-    const paymentIntent =
-      typeof session.payment_intent === "object"
-        ? session.payment_intent
-        : null;
+  const retrieveCheckout = async (checkoutId: string) => {
+    try {
+      const session = await stripe().checkout.sessions.retrieve(checkoutId, {
+        expand: ["payment_intent"],
+      });
+      const paymentIntent =
+        typeof session.payment_intent === "object"
+          ? session.payment_intent
+          : null;
 
-    return stateOf(session, statusOf(session, paymentIntent));
+      return stateOf(session, statusOf(session, paymentIntent));
+    } catch (error) {
+      throw toProviderError(error);
+    }
   };
 
   return {
@@ -252,8 +243,6 @@ export const StripePaymentAdapter = ({
                 },
               },
             ],
-            // The charged amount and currency must stay the ones VitNode
-            // stored; Adaptive Pricing would convert them.
             adaptive_pricing: { enabled: false },
             client_reference_id: args.paymentId,
             metadata: {
@@ -290,13 +279,7 @@ export const StripePaymentAdapter = ({
       }
     },
 
-    retrieveCheckout: async checkoutId => {
-      try {
-        return await retrieve(checkoutId);
-      } catch (error) {
-        throw toProviderError(error);
-      }
-    },
+    retrieveCheckout,
 
     expireCheckout: async checkoutId => {
       try {
@@ -304,14 +287,8 @@ export const StripePaymentAdapter = ({
 
         return stateOf(session, statusOf(session, null));
       } catch (error) {
-        // Only an open session can be expired. One the customer already
-        // completed (or that expired on its own) is read back instead.
         if (error instanceof Stripe.errors.StripeInvalidRequestError) {
-          try {
-            return await retrieve(checkoutId);
-          } catch (retrieveError) {
-            throw toProviderError(retrieveError);
-          }
+          return await retrieveCheckout(checkoutId);
         }
 
         throw toProviderError(error);
@@ -357,8 +334,6 @@ export const StripePaymentAdapter = ({
         case "checkout.session.completed":
         case "checkout.session.expired": {
           const session = event.data.object;
-          // Sessions created outside VitNode, or by another instance sharing
-          // this Stripe account, are not this instance's to handle.
           if (session.metadata?.[METADATA_PROVIDER_ID] !== id) return ignored;
 
           const status =

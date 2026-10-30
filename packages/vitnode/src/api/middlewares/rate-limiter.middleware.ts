@@ -87,12 +87,6 @@ const AUTH_RATE_LIMITED_PATHS = [
 
 const READ_METHODS = new Set(["GET", "HEAD"]);
 
-/**
- * Provider webhooks: server-to-server, authenticated by their signature, and
- * sent in bursts from a handful of provider IPs. Counting them against the
- * per-IP write budget would refuse legitimate deliveries, so only the safety
- * cap applies.
- */
 const PAYMENT_WEBHOOK_PATH = /\/@vitnode\/core\/payments\/webhooks\/[^/]+$/;
 
 export const rateLimiterCategoriesFor = (

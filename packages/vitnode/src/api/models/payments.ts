@@ -94,23 +94,11 @@ export type PaymentWebhookOutcome =
   | "processed"
   | "unmatched";
 
-interface PaymentTransition {
-  from: PaymentStatus;
-  payment: PaymentRow;
-  to: PaymentStatus;
-}
-
-/** Stripe's minimum lifetime for a hosted checkout is 30 minutes; a replayed create must stay above it. */
 const MIN_REPLAY_REMAINING_MS = 35 * 60 * 1000;
-/** A resumed checkout must leave the customer enough time to pay. */
 const MIN_RESUME_REMAINING_MS = 5 * 60 * 1000;
-/** A checkout that was never handed to anyone is abandoned after this long. */
 const ORPHAN_ATTEMPT_MS = 15 * 60 * 1000;
-/** How often a waiting customer may make core ask the provider for news. */
 const REFRESH_INTERVAL_MS = 15 * 1000;
-/** How long an open attempt is left alone before the reconciler asks the provider. */
 const RECONCILE_AFTER_MS = 10 * 60 * 1000;
-/** Provider events are kept this long, well past any provider's redelivery window. */
 const WEBHOOK_EVENT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const PAYMENT_DEFAULT_CHECKOUT_MINUTES = 60;
@@ -153,7 +141,6 @@ const UUID_PATTERN =
  */
 export const resolvePaymentReturnUrl = (path: string): string => {
   if (
-    typeof path !== "string" ||
     !path.startsWith("/") ||
     path.startsWith("//") ||
     path.includes("\\") ||
@@ -179,7 +166,7 @@ export const resolvePaymentReturnUrl = (path: string): string => {
 export const paymentIdempotencyKey = (paymentId: string): string =>
   `vitnode-payment-${paymentId}`;
 
-const describeProviderError = (error: unknown): string =>
+const describeError = (error: unknown): string =>
   error instanceof Error ? `${error.name}: ${error.message}` : String(error);
 
 /**
@@ -218,7 +205,6 @@ export class PaymentsModel {
     return this.c.get("core").payments.providers;
   }
 
-  /** Applies provider state outside a webhook, under a row lock. Returns the row afterwards. */
   private async applyCheckoutState(
     row: PaymentRow,
     state: PaymentCheckoutState,
@@ -232,29 +218,28 @@ export class PaymentsModel {
       return row;
     }
 
-    const { after, transition } = await this.db.transaction(async tx => {
+    const { after, moved } = await this.db.transaction(async tx => {
       const [locked] = await tx
         .select()
         .from(core_payments)
         .where(eq(core_payments.id, row.id))
         .for("update");
-      if (!locked) return { after: row, transition: null };
+      if (!locked) return { after: row, moved: null };
 
-      const transition = await this.writeCheckoutState(tx, locked, state);
+      const moved = await this.writeCheckoutState(tx, locked, state);
       const [after] = await tx
         .select()
         .from(core_payments)
         .where(eq(core_payments.id, row.id));
 
-      return { after: after ?? locked, transition };
+      return { after: after ?? locked, moved };
     });
 
-    if (transition) await this.emitTransitions([transition]);
+    if (moved) await this.emitStatusChange(moved);
 
     return after;
   }
 
-  /** Why provider state cannot belong to this payment, or `null` when it can. */
   private checkoutMismatch(
     payment: PaymentRow,
     state: PaymentCheckoutState,
@@ -273,8 +258,7 @@ export class PaymentsModel {
     }
     if (
       payment.livemode !== null &&
-      state.livemode !== null &&
-      state.livemode !== undefined &&
+      typeof state.livemode === "boolean" &&
       payment.livemode !== state.livemode
     ) {
       return "live and test mode differ";
@@ -283,24 +267,45 @@ export class PaymentsModel {
     return null;
   }
 
-  private async emitTransitions(transitions: PaymentTransition[]) {
-    for (const { from, payment, to } of transitions) {
-      if (to === "pending" || from === to) continue;
+  private async claimRefresh(
+    paymentId: string,
+  ): Promise<PaymentRow | undefined> {
+    const [claimed] = await this.db
+      .update(core_payments)
+      .set({ syncedAt: new Date() })
+      .where(
+        and(
+          eq(core_payments.id, paymentId),
+          or(
+            isNull(core_payments.syncedAt),
+            lt(
+              core_payments.syncedAt,
+              new Date(Date.now() - REFRESH_INTERVAL_MS),
+            ),
+          ),
+        ),
+      )
+      .returning();
 
-      await this.c.get("events").emit(
-        PAYMENT_EVENT_NAMES[to],
-        {
-          amount: payment.amount,
-          currency: payment.currency,
-          paymentId: payment.id,
-          pluginId: payment.pluginId,
-          providerId: payment.providerId,
-          reference: payment.reference,
-          userId: payment.userId,
-        },
-        { pluginId: "@vitnode/core" },
-      );
-    }
+    return claimed;
+  }
+
+  private async emitStatusChange(payment: PaymentRow) {
+    if (payment.status === "pending") return;
+
+    await this.c.get("events").emit(
+      PAYMENT_EVENT_NAMES[payment.status],
+      {
+        amount: payment.amount,
+        currency: payment.currency,
+        paymentId: payment.id,
+        pluginId: payment.pluginId,
+        providerId: payment.providerId,
+        reference: payment.reference,
+        userId: payment.userId,
+      },
+      { pluginId: "@vitnode/core" },
+    );
   }
 
   private async expireUnstarted(row: PaymentRow, errorCode: string) {
@@ -316,11 +321,7 @@ export class PaymentsModel {
       )
       .returning();
 
-    if (expired) {
-      await this.emitTransitions([
-        { from: "pending", payment: expired, to: "expired" },
-      ]);
-    }
+    if (expired) await this.emitStatusChange(expired);
   }
 
   private async lockPaymentForCheckout(
@@ -340,9 +341,6 @@ export class PaymentsModel {
       .for("update");
     if (byCheckout) return byCheckout;
 
-    // The event can beat the request that stores the checkout id. The payment
-    // id in the signed metadata finds the attempt, which must belong to this
-    // provider instance and not already hold a different checkout.
     if (!checkout.paymentId || !UUID_PATTERN.test(checkout.paymentId)) {
       return undefined;
     }
@@ -374,7 +372,7 @@ export class PaymentsModel {
     await this.c
       .get("log")
       [level](
-        `[payments] ${operation} on provider "${provider.id}" failed: ${describeProviderError(error)}`,
+        `[payments] ${operation} on provider "${provider.id}" failed: ${describeError(error)}`,
       );
   }
 
@@ -392,10 +390,6 @@ export class PaymentsModel {
     return provider;
   }
 
-  /**
-   * Returns the open attempt's checkout when it can be reused, or closes the
-   * attempt so a new one can start. Returns `null` once it is closed.
-   */
   private async resumeOrClose(
     open: PaymentRow,
     input: PaymentCreateCheckoutInput,
@@ -407,28 +401,28 @@ export class PaymentsModel {
       throw new PaymentError("payment_processing");
     }
 
-    const now = Date.now();
-    const remaining = open.expiresAt.getTime() - now;
+    const remaining = open.expiresAt.getTime() - Date.now();
     const compatible =
       open.providerId === input.providerId &&
       open.amount === input.amount &&
       open.currency === input.currency &&
       open.description === input.description;
 
-    if (compatible && open.checkoutId && open.checkoutUrl) {
-      if (remaining > MIN_RESUME_REMAINING_MS) {
-        return {
-          expiresAt: open.expiresAt,
-          paymentId: open.id,
-          redirectUrl: open.checkoutUrl,
-          resumed: true,
-        };
-      }
+    if (
+      compatible &&
+      open.checkoutId &&
+      open.checkoutUrl &&
+      remaining > MIN_RESUME_REMAINING_MS
+    ) {
+      return {
+        expiresAt: open.expiresAt,
+        paymentId: open.id,
+        redirectUrl: open.checkoutUrl,
+        resumed: true,
+      };
     }
 
     if (compatible && !open.checkoutId && remaining > MIN_REPLAY_REMAINING_MS) {
-      // The first call may have created the checkout and lost the response.
-      // The same idempotency key makes the provider return that checkout.
       return await this.startCheckout(open, this.provider(open.providerId), {
         cancelPath: input.cancelPath,
         successPath: input.successPath,
@@ -437,14 +431,11 @@ export class PaymentsModel {
     }
 
     if (!open.checkoutId) {
-      // Its checkout URL never left the server, so nobody can pay it.
       await this.expireUnstarted(open, "checkout_not_created");
 
       return null;
     }
 
-    // An open checkout the customer may still pay: close it at the provider
-    // first, and only start a new one once the provider agrees it is closed.
     const provider = this.provider(open.providerId);
     if (!provider.expireCheckout) {
       throw new PaymentError(
@@ -507,17 +498,11 @@ export class PaymentsModel {
             ),
           )
           .returning();
-        if (failed) {
-          await this.emitTransitions([
-            { from: "pending", payment: failed, to: "failed" },
-          ]);
-        }
+        if (failed) await this.emitStatusChange(failed);
 
         throw new PaymentError("provider_rejected", error.message);
       }
 
-      // Unknown outcome: the attempt stays `pending` without a checkout, and
-      // the next call or the reconciler replays it with the same key.
       throw new PaymentError("provider_unavailable");
     }
 
@@ -535,7 +520,6 @@ export class PaymentsModel {
 
     const after = await this.applyCheckoutState(row, created);
     if (after.status !== "pending" || after.checkoutId !== created.checkoutId) {
-      // The replayed checkout already finished or expired.
       throw new PaymentError(
         after.status === "processing"
           ? "payment_processing"
@@ -569,22 +553,16 @@ export class PaymentsModel {
     return await this.applyCheckoutState(row, state);
   }
 
-  /**
-   * Writes provider state to a locked row: attaches the checkout, and moves the
-   * status only along a legal transition. Returns the transition, if any.
-   */
   private async writeCheckoutState(
     tx: Tx,
     payment: PaymentRow,
     state: PaymentCheckoutState,
-  ): Promise<null | PaymentTransition> {
+  ): Promise<null | PaymentRow> {
     const to = state.status;
     const moves =
       to !== payment.status && canTransitionPayment(payment.status, to);
     const stillOpen = isOpenPaymentStatus(moves ? to : payment.status);
 
-    // A terminal payment keeps what it recorded; only a missing checkout id is
-    // filled in, so later events still match it.
     if (!moves && !isOpenPaymentStatus(payment.status)) {
       if (!payment.checkoutId) {
         await tx
@@ -624,9 +602,9 @@ export class PaymentsModel {
       )
       .returning();
 
-    if (!updated || !moves) return null;
+    if (!moves) return null;
 
-    return { from: payment.status, payment: updated, to };
+    return updated ?? null;
   }
 
   /**
@@ -662,7 +640,6 @@ export class PaymentsModel {
     if (!reference || reference.length > 255) {
       throw new Error("A payment reference is 1-255 characters.");
     }
-    // Validated now so a bad path never reaches the provider.
     resolvePaymentReturnUrl(input.successPath);
     resolvePaymentReturnUrl(input.cancelPath);
 
@@ -708,7 +685,6 @@ export class PaymentsModel {
         })
         .returning();
     } catch (error) {
-      // Another request opened an attempt for this reference first.
       if (isUniqueViolation(error)) {
         throw new PaymentError("payment_in_progress");
       }
@@ -765,21 +741,7 @@ export class PaymentsModel {
       return toPayment(row);
     }
 
-    // One refresh per interval per payment, whoever asks: claim it first.
-    const threshold = new Date(Date.now() - REFRESH_INTERVAL_MS);
-    const [claimed] = await this.db
-      .update(core_payments)
-      .set({ syncedAt: new Date() })
-      .where(
-        and(
-          eq(core_payments.id, row.id),
-          or(
-            isNull(core_payments.syncedAt),
-            lt(core_payments.syncedAt, threshold),
-          ),
-        ),
-      )
-      .returning();
+    const claimed = await this.claimRefresh(row.id);
     if (!claimed) return toPayment(row);
 
     return toPayment(await this.syncFromProvider(claimed));
@@ -850,17 +812,17 @@ export class PaymentsModel {
           ),
         );
 
-      const transition = await this.writeCheckoutState(tx, payment, checkout);
+      const moved = await this.writeCheckoutState(tx, payment, checkout);
 
       return {
+        moved,
         outcome: "processed" as const,
         paymentId: payment.id,
-        transition,
       };
     });
 
-    if ("transition" in result && result.transition) {
-      await this.emitTransitions([result.transition]);
+    if ("moved" in result && result.moved) {
+      await this.emitStatusChange(result.moved);
     }
     if (result.outcome === "unmatched") {
       await this.c
@@ -934,29 +896,13 @@ export class PaymentsModel {
           continue;
         }
 
-        // Claimed so that two instances do not both call the provider.
-        const [claimed] = await this.db
-          .update(core_payments)
-          .set({ syncedAt: new Date() })
-          .where(
-            and(
-              eq(core_payments.id, row.id),
-              or(
-                isNull(core_payments.syncedAt),
-                lt(
-                  core_payments.syncedAt,
-                  new Date(Date.now() - REFRESH_INTERVAL_MS),
-                ),
-              ),
-            ),
-          )
-          .returning();
+        const claimed = await this.claimRefresh(row.id);
         if (claimed) await this.syncFromProvider(claimed);
       } catch (error) {
         await this.c
           .get("log")
           .error(
-            `[payments] Reconciling payment ${row.id} failed: ${describeProviderError(error)}`,
+            `[payments] Reconciling payment ${row.id} failed: ${describeError(error)}`,
           );
       }
     }

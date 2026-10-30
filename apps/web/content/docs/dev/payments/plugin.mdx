@@ -1,5 +1,5 @@
 ---
-title: Use payments in a plugin
+title: Plugin checkout
 description: Charge a signed-in member a fixed, server-side price from your VitNode plugin, send them to a hosted checkout with the typed fetcher, and show a payment only once the provider confirmed it.
 icon: ShoppingCart
 ---
@@ -126,10 +126,14 @@ handler: async c => {
 
 `createCheckout()` stores the payment before calling the provider, so a timeout
 never loses track of it. Calling it again for the same reference returns the
-open checkout (`resumed: true`), or replaces it when the provider, amount or
-description changed. Errors are `PaymentError`s from
-`@vitnode/core/api/lib/payments/errors`; `provider_unavailable` is safe to
-retry.
+open checkout (`resumed: true`) while it has more than 5 minutes left. When the
+provider, amount, currency or description changed, or the checkout is about to
+close, core closes it at the provider and starts a new one. Another member's
+open payment for the reference answers `reference_in_use`, and one that is
+still settling answers `payment_processing`.
+
+Errors are `PaymentError`s from `@vitnode/core/api/lib/payments/errors`;
+`provider_unavailable` is safe to retry.
 
 The browser's `providerId` is only a choice among configured instances: an
 unknown id fails with `provider_not_found`.

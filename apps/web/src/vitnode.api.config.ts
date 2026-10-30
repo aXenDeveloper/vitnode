@@ -59,10 +59,6 @@ export const vitNodeApiConfig = buildApiConfig({
   authorization: {
     passkeys: true,
   },
-  /**
-   * Hosted-checkout payments for the `payments-demo` plugin. Each provider is
-   * added only when its secrets are set, so the app runs without them.
-   */
   payments: {
     providers: [
       ...(process.env.STRIPE_SECRET_KEY
@@ -74,8 +70,6 @@ export const vitNodeApiConfig = buildApiConfig({
             }),
           ]
         : []),
-      // Development only: an in-memory second provider for trying provider
-      // selection. It moves no money and refuses to start in production.
       ...(process.env.NODE_ENV !== 'production' &&
       process.env.PAYMENTS_FAKE_WEBHOOK_SECRET
         ? [

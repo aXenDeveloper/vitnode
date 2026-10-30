@@ -3,7 +3,6 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@/api/builders";
 import {
   PaymentError,
-  PaymentProviderError,
   PaymentWebhookVerificationError,
 } from "@/api/lib/payments/errors";
 
@@ -42,13 +41,11 @@ export const paymentWebhookRoute = buildRoute({
   },
   handler: async c => {
     const { providerId } = c.req.valid("param");
-    // The exact bytes received: signatures are computed over them, so the body
-    // must never be parsed and re-serialized before verification.
-    const body = new Uint8Array(await c.req.arrayBuffer());
+    const rawBody = new Uint8Array(await c.req.arrayBuffer());
 
     try {
       const result = await c.get("payments").handleWebhook({
-        body,
+        body: rawBody,
         headers: c.req.raw.headers,
         providerId,
       });
@@ -69,9 +66,7 @@ export const paymentWebhookRoute = buildRoute({
         .get("log")
         .error(
           `[payments] Webhook for provider "${providerId}" failed and will be redelivered: ${
-            error instanceof PaymentProviderError || error instanceof Error
-              ? error.message
-              : String(error)
+            error instanceof Error ? error.message : String(error)
           }`,
         );
 
