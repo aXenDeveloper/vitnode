@@ -15,7 +15,6 @@
       "no_providers": "No payment provider is configured yet, so this item cannot be bought.",
       "buy": "Buy now",
       "owned": "You own this item",
-      "sign_in": "Sign in to buy",
       "view_purchase": "View purchase"
     },
     "purchase": {
