@@ -25,8 +25,55 @@ export type UserPresence =
 
 export type UserPresenceStatus = UserPresence["status"];
 
+/**
+ * What a member's roles say about **Browse anonymously**: they choose
+ * (`allowed`), they are always hidden (`forced`), or they can't hide
+ * (`disallowed`).
+ */
+export type BrowseAnonymouslyPolicy = "allowed" | "disallowed" | "forced";
+
+export const BROWSE_ANONYMOUSLY_POLICIES = [
+  "allowed",
+  "disallowed",
+  "forced",
+] as const satisfies readonly BrowseAnonymouslyPolicy[];
+
+/** The two role settings that decide {@link BrowseAnonymouslyPolicy}. */
+export interface RoleBrowseAnonymouslyRules {
+  /** Members may turn Browse anonymously on themselves. Default `true`. */
+  allowBrowseAnonymously: boolean;
+  /** Members are always hidden, whatever they chose. Default `false`. */
+  forceBrowseAnonymously: boolean;
+}
+
+/**
+ * One member's policy from every role they hold, primary and secondary. A
+ * single forcing role wins; otherwise every role has to allow it, like the
+ * other self-service role settings. A member with no roles may choose.
+ */
+export const browseAnonymouslyPolicyOf = (
+  roles: readonly RoleBrowseAnonymouslyRules[],
+): BrowseAnonymouslyPolicy => {
+  if (roles.some(role => role.forceBrowseAnonymously)) return "forced";
+
+  return roles.every(role => role.allowBrowseAnonymously)
+    ? "allowed"
+    : "disallowed";
+};
+
+/**
+ * Whether a member's presence is hidden from other members: always when their
+ * roles force it, never when their roles disallow it, otherwise their own
+ * `hideOnlineStatus` choice.
+ */
+export const isPresenceHidden = (
+  policy: BrowseAnonymouslyPolicy,
+  hideOnlineStatus: boolean,
+): boolean => policy === "forced" || (policy === "allowed" && hideOnlineStatus);
+
 /** What the server knows about one member, before anyone is asked who is looking. */
 export interface UserPresenceSnapshot {
+  /** Hidden from other members - their choice, after their roles' policy. */
   hideOnlineStatus: boolean;
   lastSeenAt: Date | null;
   online: boolean;

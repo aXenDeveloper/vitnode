@@ -4,6 +4,7 @@ import type {
   PersonalInformationFields,
   UserPersonalInformation,
 } from "@/lib/user-personal-information";
+import type { BrowseAnonymouslyPolicy } from "@/lib/user-presence";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
@@ -11,6 +12,8 @@ import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface PersonalInfoPolicy {
+  /** Whether the member's roles let them choose Browse anonymously. */
+  browseAnonymously: BrowseAnonymouslyPolicy;
   canEdit: boolean;
   fields: PersonalInformationFields;
 }

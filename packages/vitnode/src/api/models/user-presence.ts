@@ -7,8 +7,12 @@ import type { PermissionStaffType } from "@/api/lib/permission-staff";
 
 import { checkStaffPermissionOfUser } from "@/api/lib/check-staff-permission";
 import { hashSessionToken } from "@/api/lib/session-token";
-import { core_users } from "@/database/users";
+import { core_roles } from "@/database/roles";
+import { core_users, core_users_secondary_roles } from "@/database/users";
 import {
+  type BrowseAnonymouslyPolicy,
+  browseAnonymouslyPolicyOf,
+  isPresenceHidden,
   PRESENCE_LEASE_TTL_SECONDS,
   PRESENCE_PERSIST_INTERVAL_SECONDS,
   presenceForViewer,
@@ -43,6 +47,66 @@ const persistLockKey = (userId: number): string => `presence:persist:${userId}`;
  */
 export const presenceSessionId = async (tokenHash: string): Promise<string> =>
   (await hashSessionToken(`presence:${tokenHash}`)).slice(0, 32);
+
+/**
+ * Each member's **Browse anonymously** policy from all of their roles, primary
+ * and secondary - two queries however many members. Server-only.
+ *
+ * @example
+ * ```ts
+ * const policies = await resolveBrowseAnonymouslyPolicies(c, [user]);
+ * policies.get(user.id); // "allowed" | "disallowed" | "forced"
+ * ```
+ */
+export const resolveBrowseAnonymouslyPolicies = async (
+  c: Context,
+  users: readonly { id: number; roleId: number }[],
+): Promise<Map<number, BrowseAnonymouslyPolicy>> => {
+  if (users.length === 0) return new Map();
+
+  const db = c.get("db");
+  const secondary = await db
+    .select({
+      roleId: core_users_secondary_roles.roleId,
+      userId: core_users_secondary_roles.userId,
+    })
+    .from(core_users_secondary_roles)
+    .where(
+      inArray(
+        core_users_secondary_roles.userId,
+        users.map(user => user.id),
+      ),
+    );
+
+  const roleIdsByUser = new Map(
+    users.map(user => [user.id, new Set([user.roleId])]),
+  );
+  for (const row of secondary) roleIdsByUser.get(row.userId)?.add(row.roleId);
+
+  const roleIds = [
+    ...new Set([...roleIdsByUser.values()].flatMap(ids => [...ids])),
+  ];
+  const roles = await db
+    .select({
+      allowBrowseAnonymously: core_roles.allowBrowseAnonymously,
+      forceBrowseAnonymously: core_roles.forceBrowseAnonymously,
+      id: core_roles.id,
+    })
+    .from(core_roles)
+    .where(inArray(core_roles.id, roleIds));
+  const rulesById = new Map(roles.map(role => [role.id, role]));
+
+  return new Map(
+    users.map(user => [
+      user.id,
+      browseAnonymouslyPolicyOf(
+        [...(roleIdsByUser.get(user.id) ?? [])].flatMap(
+          id => rulesById.get(id) ?? [],
+        ),
+      ),
+    ]),
+  );
+};
 
 export class UserPresenceModel {
   constructor(c: Context) {
@@ -103,9 +167,13 @@ export class UserPresenceModel {
         hideOnlineStatus: core_users.hideOnlineStatus,
         id: core_users.id,
         lastSeenAt: core_users.lastSeenAt,
+        roleId: core_users.roleId,
       })
       .from(core_users)
       .where(inArray(core_users.id, userIds));
+    // Read on every call rather than cached, so a role change applies to the
+    // very next presence read.
+    const policies = await resolveBrowseAnonymouslyPolicies(this.c, rows);
 
     const cache = this.c.get("cache");
     const leases = await cache.countLeases(rows.map(row => leaseKey(row.id)));
@@ -127,7 +195,10 @@ export class UserPresenceModel {
         return [
           row.id,
           {
-            hideOnlineStatus: row.hideOnlineStatus,
+            hideOnlineStatus: isPresenceHidden(
+              policies.get(row.id) ?? "allowed",
+              row.hideOnlineStatus,
+            ),
             lastSeenAt: row.lastSeenAt,
             online,
           },
@@ -161,8 +232,9 @@ export class UserPresenceModel {
   }
 
   /**
-   * Many members' presence in one database query and one cache round trip.
-   * Unknown IDs are left out of the result.
+   * Many members' presence in three database queries (members, their
+   * secondary roles, the roles' Browse anonymously rules) and one cache round
+   * trip, however many members. Unknown IDs are left out of the result.
    */
   async getMany({
     userIds,

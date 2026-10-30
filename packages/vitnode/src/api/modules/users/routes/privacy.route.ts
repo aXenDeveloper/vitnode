@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
+import { resolveBrowseAnonymouslyPolicies } from "@/api/models/user-presence";
 import { core_users } from "@/database/users";
 
 const zodPrivacy = z.object({
@@ -14,7 +15,7 @@ export const updateMyPrivacyRoute = buildRoute({
   route: {
     method: "put",
     description:
-      "Browse anonymously: hide the signed-in user's online status and last activity from other members. Staff with `users:can_view_hidden_presence` still see it. Takes effect on the next presence read.",
+      "Browse anonymously: hide the signed-in user's online status and last activity from other members. Staff with `users:can_view_hidden_presence` still see it. Takes effect on the next presence read. Refused with 403 when the user's roles force it on or don't allow it.",
     path: "/me/privacy",
     request: {
       body: {
@@ -28,6 +29,12 @@ export const updateMyPrivacyRoute = buildRoute({
         description: "Saved privacy settings",
       },
       401: { description: "Unauthorized" },
+      403: {
+        content: {
+          "application/json": { schema: z.object({ error: z.string() }) },
+        },
+        description: "The user's roles decide this setting",
+      },
     },
   },
   handler: async c => {
@@ -37,6 +44,20 @@ export const updateMyPrivacyRoute = buildRoute({
     }
 
     const { hideOnlineStatus } = c.req.valid("json");
+    const policy = (await resolveBrowseAnonymouslyPolicies(c, [user])).get(
+      user.id,
+    );
+    if (policy === "forced" || policy === "disallowed") {
+      return c.json(
+        {
+          error:
+            policy === "forced"
+              ? "Your role always browses anonymously."
+              : "Your role does not allow browsing anonymously.",
+        },
+        403,
+      );
+    }
 
     await c
       .get("db")

@@ -49,6 +49,8 @@ export const zodCreateRoleAdminSchema = z.object({
   maxStorageForSubmit: zodRoleStorageSchema.optional(),
   allowUploadAvatar: z.boolean().optional(),
   allowEditPersonalInfo: z.boolean().optional(),
+  allowBrowseAnonymously: z.boolean().optional(),
+  forceBrowseAnonymously: z.boolean().optional(),
   allowEditOwnContent: z.boolean().optional(),
   editOwnContentMinutes: zodRoleEditOwnContentMinutesSchema.optional(),
   allowDeleteOwnContent: z.boolean().optional(),
@@ -98,6 +100,8 @@ export const createRoleAdminRoute = buildRoute({
       maxStorageForSubmit,
       allowUploadAvatar,
       allowEditPersonalInfo,
+      allowBrowseAnonymously,
+      forceBrowseAnonymously,
       allowEditOwnContent,
       editOwnContentMinutes,
       allowDeleteOwnContent,
@@ -120,6 +124,10 @@ export const createRoleAdminRoute = buildRoute({
         ...(allowEditPersonalInfo === undefined
           ? {}
           : { allowEditPersonalInfo }),
+        ...(allowBrowseAnonymously === undefined
+          ? {}
+          : { allowBrowseAnonymously }),
+        forceBrowseAnonymously: forceBrowseAnonymously ?? false,
         ...(allowEditOwnContent === undefined ? {} : { allowEditOwnContent }),
         editOwnContentMinutes: editOwnContentMinutes ?? null,
         allowDeleteOwnContent: allowDeleteOwnContent ?? false,

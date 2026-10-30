@@ -1201,7 +1201,9 @@
           "browseAnonymouslyOn": "You're browsing anonymously",
           "browseAnonymouslyOnDesc": "Other members now see your activity as hidden.",
           "browseAnonymouslyOff": "Your activity is visible again",
-          "browseAnonymouslyOffDesc": "Other members can see when you're online and when you were last active."
+          "browseAnonymouslyOffDesc": "Other members can see when you're online and when you were last active.",
+          "browseAnonymouslyForced": "Your group always browses anonymously, so this can't be turned off.",
+          "browseAnonymouslyDisallowed": "Your group doesn't allow browsing anonymously."
         },
         "devices": {
           "title": "Devices",
@@ -3558,6 +3560,12 @@
           "daily_limit": "Daily limit",
           "action_default": "Use the action's limit",
           "per_day": "runs / day"
+        },
+        "browse_anonymously": {
+          "allow": "Allow browsing anonymously",
+          "allow_desc": "Members of this role can hide their online status and last activity from other members in their account settings.",
+          "force": "Always browse anonymously",
+          "force_desc": "Hide the online status and last activity of every member of this role, whatever they chose. Wins over the setting above, and over any other role."
         }
       }
     },

@@ -30,7 +30,10 @@ import {
   hasAiFeatures,
 } from "@/views/auth/settings/ai/ai-usage-query";
 import { OverviewSettingsContent } from "@/views/auth/settings/overview/overview";
-import { updatePersonalInformationInBrowser } from "@/views/auth/settings/overview/personal-update";
+import {
+  personalInfoPolicyQueryKey,
+  updatePersonalInformationInBrowser,
+} from "@/views/auth/settings/overview/personal-update";
 import { PrivacySettings } from "@/views/auth/settings/overview/privacy-settings";
 import { updatePrivacyInBrowser } from "@/views/auth/settings/overview/privacy-update";
 import { updateTimeZoneInBrowser } from "@/views/auth/settings/overview/time-zone-update";
@@ -142,6 +145,12 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
           queryClient.invalidateQueries({ queryKey: PRESENCE_QUERY_ROOT }),
         ]);
       }
+      // The roles took the choice away while this page was open.
+      if (result.error?.status === 403) {
+        await queryClient.invalidateQueries({
+          queryKey: personalInfoPolicyQueryKey(),
+        });
+      }
 
       return result;
     },
@@ -162,6 +171,7 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
         <PrivacySettings
           hideOnlineStatus={session.user.hideOnlineStatus}
           onUpdate={onPrivacyUpdate}
+          policy={policy.browseAnonymously}
         />
       }
       user={{
