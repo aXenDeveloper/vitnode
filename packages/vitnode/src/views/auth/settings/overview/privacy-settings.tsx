@@ -42,6 +42,7 @@ export const PrivacySettings = ({
       aria-describedby={lockedReason ? `${descId} ${reasonId}` : descId}
       aria-labelledby={labelId}
       checked={checked}
+      className={lockedReason ? "pointer-events-none" : undefined}
       disabled={isSaving || lockedReason !== null}
       onCheckedChange={async next => {
         setIsSaving(true);
