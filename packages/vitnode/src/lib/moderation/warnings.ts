@@ -1,3 +1,5 @@
+import type { MultiLangValue } from "@/lib/helpers/multi-lang";
+
 /** Moderator permissions of core's `warnings` module. */
 export const WARNING_PERMISSIONS = {
   view: "can_view",
@@ -46,33 +48,13 @@ export const SANCTION_TYPES = ["suspension"] as const;
 
 export type SanctionType = (typeof SANCTION_TYPES)[number];
 
-/** What created a sanction. */
 export const SANCTION_SOURCES = ["threshold", "manual"] as const;
 
 export type SanctionSource = (typeof SANCTION_SOURCES)[number];
 
-export const MODERATION_AUDIT_TYPES = [
-  "warning_issued",
-  "warning_overridden",
-  "warning_revoked",
-  "threshold_evaluated",
-  "sanction_applied",
-  "sanction_revoked",
-  "reason_created",
-  "reason_updated",
-  "threshold_created",
-  "threshold_updated",
-  "threshold_deleted",
-] as const;
-
-export type ModerationAuditType = (typeof MODERATION_AUDIT_TYPES)[number];
-
-/** A multi-language value, as stored in `core_languages_words`. */
-export type WarningReasonText = { languageCode: string; value: string }[];
-
 /** What a warning remembers about its reason, so renaming the reason never rewrites history. */
 export interface WarningReasonSnapshot {
-  title: WarningReasonText;
+  title: MultiLangValue;
 }
 
 /** What a warning remembers about the content it was issued for. */
@@ -181,13 +163,3 @@ export const isSanctionActiveAt = (
   !sanction.revokedAt &&
   sanction.startsAt.getTime() <= now.getTime() &&
   (sanction.endsAt === null || sanction.endsAt.getTime() > now.getTime());
-
-/** Picks the reason text in `locale`, else English, else the first one. Pure. */
-export const warningReasonText = (
-  values: null | undefined | WarningReasonText,
-  locale: string,
-): string =>
-  values?.find(item => item.languageCode === locale)?.value ??
-  values?.find(item => item.languageCode === "en")?.value ??
-  values?.[0]?.value ??
-  "";

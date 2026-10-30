@@ -110,5 +110,5 @@ export const forgetSuspension = async (
   { disconnect }: { disconnect: boolean },
 ): Promise<void> => {
   await c.get("cache").deleteSystem(suspensionCacheKey(userId));
-  if (disconnect) c.get("realtime")?.closeUserConnections(userId);
+  if (disconnect) c.get("realtime").closeUserConnections(userId);
 };

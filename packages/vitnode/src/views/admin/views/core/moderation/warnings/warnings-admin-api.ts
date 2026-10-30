@@ -94,7 +94,7 @@ export const saveAdminWarningReason = async ({
   values,
 }: {
   id?: number;
-  values: Partial<AdminWarningReasonInput>;
+  values: AdminWarningReasonInput;
 }): Promise<AdminMutationResult<{ id: number }>> =>
   await runAdminApiMutation({
     expected: id === undefined ? 201 : 200,
@@ -103,7 +103,7 @@ export const saveAdminWarningReason = async ({
       id === undefined
         ? await fetcherClient({
             plugin: manifest.id,
-            args: { body: values as AdminWarningReasonInput },
+            args: { body: values },
             method: "post",
             module: "admin/warnings",
             options,

@@ -11,6 +11,7 @@ import type {
   WarningThresholdAction,
 } from "@/lib/moderation/warnings";
 
+import { userAuditLabel } from "@/api/lib/audit/labels";
 import { isUniqueViolation } from "@/api/lib/db-errors";
 import { canOnReport } from "@/api/lib/moderation/access";
 import { findReportTarget } from "@/api/lib/moderation/registry";
@@ -20,10 +21,8 @@ import {
   hasWarningPermission,
   warningTargetRefusal,
 } from "@/api/lib/moderation/warnings/access";
-import {
-  appendModerationAudit,
-  listWarningReasons,
-} from "@/api/lib/moderation/warnings/reasons";
+import { recordWarningAudit } from "@/api/lib/moderation/warnings/audit";
+import { listWarningReasons } from "@/api/lib/moderation/warnings/reasons";
 import { forgetSuspension } from "@/api/lib/moderation/warnings/suspension";
 import {
   accountSuspendedNotification,
@@ -576,59 +575,38 @@ export const issueWarning = async (
         })
         .returning({ id: core_moderation_warnings.id });
 
-      await appendModerationAudit(tx, {
-        actorId: moderator.user.id,
-        data: {
-          content: draft.content
-            ? {
-                pluginId: draft.content.pluginId,
-                targetId: draft.content.targetId,
-                targetType: draft.content.targetType,
-              }
-            : null,
-          expiresAt: expiresAt?.toISOString() ?? null,
-          points: draft.points,
-          reasonId: draft.reason?.id ?? null,
-          reportId: report?.id ?? null,
-        },
-        type: "warning_issued",
-        userId: draft.user.id,
-        warningId: warning.id,
-      });
-      if (overridden) {
-        await appendModerationAudit(tx, {
-          actorId: moderator.user.id,
-          data: {
-            defaultExpiresAfterHours: draft.defaultExpiresAfterHours,
-            defaultPoints: draft.defaultPoints,
-            expiresAt: expiresAt?.toISOString() ?? null,
-            expiration: draft.overrides.expiration,
-            points: draft.points,
-            pointsOverridden: draft.overrides.points,
-          },
-          type: "warning_overridden",
-          userId: draft.user.id,
-          warningId: warning.id,
-        });
-      }
-
       const rules = await loadEnabledThresholds(tx);
       const { applied, crossed } = evaluateWarningThresholds({
         after,
         before,
         rules,
       });
-      await appendModerationAudit(tx, {
-        actorId: moderator.user.id,
-        data: {
-          after,
+      const scope =
+        draft.content?.scopeFamily && draft.content.scopeId
+          ? { family: draft.content.scopeFamily, id: draft.content.scopeId }
+          : null;
+      await recordWarningAudit(c, tx, {
+        action: "warning.issued",
+        metadata: {
           appliedThresholdId: applied?.id ?? null,
-          before,
+          contentId: draft.content?.targetId ?? null,
+          contentPluginId: draft.content?.pluginId ?? null,
+          contentType: draft.content?.targetType ?? null,
           crossedThresholdIds: crossed.map(rule => rule.id),
+          defaultExpiresAfterHours: draft.defaultExpiresAfterHours,
+          defaultPoints: draft.defaultPoints,
+          expirationOverridden: draft.overrides.expiration,
+          expiresAt: expiresAt?.toISOString() ?? null,
+          points: draft.points,
+          pointsAfter: after,
+          pointsBefore: before,
+          pointsOverridden: draft.overrides.points,
+          reasonId: draft.reason?.id ?? null,
+          reportId: report?.id ?? null,
+          warningId: warning.id,
         },
-        type: "threshold_evaluated",
-        userId: draft.user.id,
-        warningId: warning.id,
+        scope,
+        user: draft.user,
       });
 
       let sanction: IssuedWarning["sanction"] = null;
@@ -653,19 +631,19 @@ export const issueWarning = async (
           })
           .returning({ id: core_moderation_sanctions.id });
         sanction = { endsAt, id: row.id, thresholdId: applied.id };
-        await appendModerationAudit(tx, {
-          actorId: moderator.user.id,
-          data: {
-            action: applied.action,
+        await recordWarningAudit(c, tx, {
+          action: "sanction.applied",
+          metadata: {
             endsAt: endsAt?.toISOString() ?? null,
+            sanctionId: row.id,
             source: "threshold",
+            thresholdAction: applied.action,
             thresholdId: applied.id,
             thresholdPoints: applied.points,
+            warningId: warning.id,
           },
-          sanctionId: row.id,
-          type: "sanction_applied",
-          userId: draft.user.id,
-          warningId: warning.id,
+          scope,
+          user: draft.user,
         });
       }
 
@@ -823,12 +801,17 @@ export const revokeWarning = async (
       .returning({ id: core_moderation_warnings.id });
     if (!row) return false;
 
-    await appendModerationAudit(tx, {
-      actorId: moderator.user.id,
-      data: { points: warning.points },
-      type: "warning_revoked",
-      userId: warning.userId,
-      warningId: id,
+    await recordWarningAudit(c, tx, {
+      action: "warning.revoked",
+      metadata: { points: warning.points, warningId: id },
+      scope:
+        warning.scopeFamily && warning.scopeId
+          ? { family: warning.scopeFamily, id: warning.scopeId }
+          : null,
+      user: {
+        id: warning.userId,
+        name: await userAuditLabel(c, warning.userId),
+      },
     });
     await c.get("notifications").publish({
       actorId: null,
@@ -895,13 +878,17 @@ export const revokeSanction = async (
       .returning({ id: core_moderation_sanctions.id });
     if (!row) return false;
 
-    await appendModerationAudit(tx, {
-      actorId: moderator.user.id,
-      data: { type: sanction.type },
-      sanctionId: id,
-      type: "sanction_revoked",
-      userId: sanction.userId,
-      warningId: sanction.warningId,
+    await recordWarningAudit(c, tx, {
+      action: "sanction.revoked",
+      metadata: {
+        sanctionId: id,
+        type: sanction.type,
+        warningId: sanction.warningId,
+      },
+      user: {
+        id: sanction.userId,
+        name: await userAuditLabel(c, sanction.userId),
+      },
     });
     await c.get("notifications").publish({
       actorId: null,

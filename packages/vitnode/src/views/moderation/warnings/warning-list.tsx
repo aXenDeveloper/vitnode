@@ -177,6 +177,7 @@ export const StaffWarningCard = ({
     ? resolveReasonText(warning.reason, locale)
     : t("custom_reason");
   const titleId = React.useId();
+  const { revokedAt } = warning;
 
   return (
     <article
@@ -299,17 +300,17 @@ export const StaffWarningCard = ({
         </div>
       ) : null}
 
-      {warning.revokedAt ? (
+      {revokedAt ? (
         <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
           {t.rich("list.revoked", {
             by: () => <PersonOrDeleted person={warning.revokedBy} />,
-            date: () => <DateFormat date={warning.revokedAt ?? ""} />,
+            date: () => <DateFormat date={revokedAt} />,
           })}
           {warning.revokeReason ? ` ${warning.revokeReason}` : null}
         </p>
       ) : null}
 
-      {warning.sanctionId && warning.revokedAt ? (
+      {warning.sanctionId && revokedAt ? (
         <p className="text-muted-foreground text-sm text-pretty">
           {t("list.sanction_stays")}
         </p>
@@ -343,6 +344,7 @@ export const SanctionCard = ({
 }) => {
   const t = useTranslations("core.moderation.warn");
   const [lifting, setLifting] = React.useState(false);
+  const { revokedAt } = sanction;
 
   return (
     <article className="bg-card ring-foreground/5 flex flex-col gap-3 rounded-xl p-4 shadow-xs ring-1 dark:shadow-none">
@@ -410,11 +412,11 @@ export const SanctionCard = ({
           ) : null}
         </Detail>
       </dl>
-      {sanction.revokedAt ? (
+      {revokedAt ? (
         <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
           {t.rich("list.lifted", {
             by: () => <PersonOrDeleted person={sanction.revokedBy} />,
-            date: () => <DateFormat date={sanction.revokedAt ?? ""} />,
+            date: () => <DateFormat date={revokedAt} />,
           })}
           {sanction.revokeReason ? ` ${sanction.revokeReason}` : null}
         </p>

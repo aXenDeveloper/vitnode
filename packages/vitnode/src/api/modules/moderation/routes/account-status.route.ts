@@ -82,7 +82,8 @@ export const accountStatusRoute = buildRoute({
         pluginId: row.pluginId,
         type: row.targetType,
       });
-      // Link only to content that is still there and not hidden.
+      // Link only to content that is still there and not hidden. A plugin that
+      // fails to answer costs the member the link, never the page.
       const current = target
         ? await target.definition
             .current(c, { locale: null, targetId: row.targetId })

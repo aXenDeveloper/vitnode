@@ -1,4 +1,8 @@
-import { keepPreviousData, queryOptions } from "@tanstack/react-query";
+import {
+  infiniteQueryOptions,
+  keepPreviousData,
+  queryOptions,
+} from "@tanstack/react-query";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { manifest } from "@/manifest";
@@ -74,6 +78,39 @@ export const memberStandingQueryOptions = (userId: number) =>
   queryOptions({
     queryFn: async () => await fetchMemberStanding(userId),
     queryKey: [...WARNINGS_QUERY_ROOT, "member", userId],
+    retry: false,
+    staleTime: 10_000,
+  });
+
+const fetchMemberLog = async (userId: number, cursor: null | string) => {
+  const response = await fetcher({
+    plugin: manifest.id,
+    args: {
+      params: { id: userId },
+      query: cursor ? { cursor } : {},
+    },
+    method: "get",
+    module: "moderation",
+    path: "/members/{id}/log",
+  });
+  if (!response.ok) {
+    throw new ModcpRequestError(response.status, "the member's log");
+  }
+
+  return await response.json();
+};
+
+export type ModcpMemberLogEntry = Awaited<
+  ReturnType<typeof fetchMemberLog>
+>["edges"][number];
+
+export const memberLogQueryOptions = (userId: number) =>
+  infiniteQueryOptions({
+    getNextPageParam: (last: Awaited<ReturnType<typeof fetchMemberLog>>) =>
+      last.pageInfo.hasNextPage ? last.pageInfo.endCursor : undefined,
+    initialPageParam: null as null | string,
+    queryFn: async ({ pageParam }) => await fetchMemberLog(userId, pageParam),
+    queryKey: [...WARNINGS_QUERY_ROOT, "member-log", userId],
     retry: false,
     staleTime: 10_000,
   });

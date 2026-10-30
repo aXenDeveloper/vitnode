@@ -3,14 +3,8 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { and, asc, eq, inArray } from "drizzle-orm";
 
-import type { ContentDatabase } from "@/content/server/service";
-import type { ModerationAuditType } from "@/lib/moderation/warnings";
-
 import { core_languages_words } from "@/database/languages";
-import {
-  core_moderation_audit,
-  core_moderation_warning_reasons,
-} from "@/database/warnings";
+import { core_moderation_warning_reasons } from "@/database/warnings";
 
 export const WARNING_REASON_WORDS = {
   pluginCode: "core",
@@ -91,29 +85,4 @@ export const listWarningReasons = async (
     message: pick(row.id, "message"),
     title: pick(row.id, "title"),
   }));
-};
-
-/**
- * Appends one entry to the warning system's audit trail. Never pass staff
- * notes or override explanations in `data`.
- */
-export const appendModerationAudit = async (
-  db: ContentDatabase,
-  entry: {
-    actorId: null | number;
-    data?: Record<string, unknown>;
-    sanctionId?: null | number;
-    type: ModerationAuditType;
-    userId?: null | number;
-    warningId?: null | number;
-  },
-): Promise<void> => {
-  await db.insert(core_moderation_audit).values({
-    actorId: entry.actorId,
-    data: entry.data ?? {},
-    sanctionId: entry.sanctionId ?? null,
-    type: entry.type,
-    userId: entry.userId ?? null,
-    warningId: entry.warningId ?? null,
-  });
 };
