@@ -2970,7 +2970,9 @@
           "translation_deleted": "Deleted a translation of {type}",
           "translation_published": "Published a translation of {type}",
           "translation_unpublished": "Unpublished a translation of {type}",
-          "translation_restored": "Restored a translation of {type}"
+          "translation_restored": "Restored a translation of {type}",
+          "access_updated": "Changed access rules",
+          "access_files_protected": "Moved public files to private storage"
         },
         "role": {
           "created": "Created role",
@@ -3072,7 +3074,11 @@
         "provider": "Provider",
         "reference": "Reference",
         "customerId": "Customer id",
-        "errorCode": "Error code"
+        "errorCode": "Error code",
+        "access_view": "View access",
+        "access_read": "Read access",
+        "access_comment": "Comment access",
+        "access_downloadAttachments": "Download access"
       }
     },
     "access": {

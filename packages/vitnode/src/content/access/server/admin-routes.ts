@@ -35,6 +35,10 @@ import {
   zodContentAccessProtectResult,
 } from "../schemas";
 import { contentAccessAttachmentSupport } from "./attachments";
+import {
+  recordContentAccessFilesProtected,
+  recordContentAccessUpdate,
+} from "./audit";
 import { contentAccessRequirementsForScopes } from "./decide";
 import {
   findContentAccessFamily,
@@ -284,11 +288,27 @@ export const buildContentAccessAdminRoutes = <P extends string>({
       }
 
       const before = state.rules.get(id) ?? {};
+      const changedActions = CONTENT_ACCESS_ACTIONS.filter(action => {
+        const old = before[action];
+        const next = overrides[action];
+        if (!old || !next) return old !== next;
+
+        return !sameContentAccessAudience(old, next);
+      });
       try {
         await replaceContentAccessRules(c.get("db"), {
           family: family.id,
           overrides,
           scopeId: id,
+          within: async tx => {
+            await recordContentAccessUpdate(c, tx, {
+              after: overrides,
+              before,
+              changedActions,
+              family,
+              scopeId: id,
+            });
+          },
         });
       } catch (error) {
         if (error instanceof ContentAccessRoleError) {
@@ -300,14 +320,6 @@ export const buildContentAccessAdminRoutes = <P extends string>({
         }
         throw error;
       }
-
-      const changedActions = CONTENT_ACCESS_ACTIONS.filter(action => {
-        const old = before[action];
-        const next = overrides[action];
-        if (!old || !next) return old !== next;
-
-        return !sameContentAccessAudience(old, next);
-      });
 
       forgetContentAccessState(c);
       if (changedActions.length > 0) {
@@ -382,10 +394,10 @@ export const buildContentAccessAdminRoutes = <P extends string>({
         );
       }
 
+      const family = familyOf(c, familyId);
       const result = await protectContentAccessFiles(c, familyId);
-      if (result.moved > 0) {
-        await expireContentAccessFamily(c, familyOf(c, familyId));
-      }
+      if (result.moved > 0) await expireContentAccessFamily(c, family);
+      await recordContentAccessFilesProtected(c, { family, result });
 
       return c.json(result, 200);
     },

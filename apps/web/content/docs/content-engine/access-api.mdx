@@ -174,9 +174,15 @@ The routes answer `{ code, message }`:
 | `400`  | `unsupportedStorage` | A `downloadAttachments` rule other than `everyone`, or protecting files, without a private store |
 | `404`  | `notFound`           | No such scope, or the type has no access rules                          |
 
-## Event
+## Activity Logs and event
 
-`PUT /{id}/access` emits `content.access.updated` after saving:
+Every save that changes a rule records `content.access_updated` in
+**AdminCP → Staff → Administrators → Logs**, in the same transaction as the
+rules, with the old and new rule of each changed action. **Protect public
+files** records `content.access_files_protected` with the counts it returned.
+See [Activity logs](/docs/content-engine/activity-logs#access-rules).
+
+`PUT /{id}/access` also emits `content.access.updated` after saving:
 
 ```ts title="plugins/site-notes/src/api/lib/access.listener.ts"
 import { buildEventListener } from "@vitnode/core/api/lib/events";

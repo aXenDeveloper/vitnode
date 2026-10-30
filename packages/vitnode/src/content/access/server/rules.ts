@@ -140,6 +140,8 @@ export const unusableContentAccessRoleIds = async (
 /**
  * Replaces one scope's rules with `overrides` in one transaction. An action
  * left out inherits. Validated by the caller with `zodContentAccessOverrides`.
+ * `within` runs last inside the same transaction - the audit entry, which
+ * then commits or rolls back with the rules.
  *
  * @throws {ContentAccessRoleError} When an audience names a role that does not
  * exist or is the guest role.
@@ -150,7 +152,13 @@ export const replaceContentAccessRules = async (
     family,
     overrides,
     scopeId,
-  }: { family: string; overrides: ContentAccessOverrides; scopeId: string },
+    within,
+  }: {
+    family: string;
+    overrides: ContentAccessOverrides;
+    scopeId: string;
+    within?: (tx: ContentDatabase) => Promise<void>;
+  },
 ): Promise<void> => {
   const roleIds = [
     ...new Set(
@@ -178,34 +186,36 @@ export const replaceContentAccessRules = async (
 
       return audience ? [[action, audience] as const] : [];
     });
-    if (entries.length === 0) return;
+    if (entries.length > 0) {
+      const inserted = await tx
+        .insert(core_content_access_rules)
+        .values(
+          entries.map(([action, audience]) => ({
+            action,
+            family,
+            mode: audience.mode,
+            scopeId,
+          })),
+        )
+        .returning({
+          action: core_content_access_rules.action,
+          id: core_content_access_rules.id,
+        });
 
-    const inserted = await tx
-      .insert(core_content_access_rules)
-      .values(
-        entries.map(([action, audience]) => ({
-          action,
-          family,
-          mode: audience.mode,
-          scopeId,
-        })),
-      )
-      .returning({
-        action: core_content_access_rules.action,
-        id: core_content_access_rules.id,
+      const audienceOf = new Map<string, ContentAccessAudience>(entries);
+      const links = inserted.flatMap(rule => {
+        const audience = audienceOf.get(rule.action);
+
+        return audience?.mode === "roles"
+          ? audience.roleIds.map(roleId => ({ roleId, ruleId: rule.id }))
+          : [];
       });
-
-    const audienceOf = new Map<string, ContentAccessAudience>(entries);
-    const links = inserted.flatMap(rule => {
-      const audience = audienceOf.get(rule.action);
-
-      return audience?.mode === "roles"
-        ? audience.roleIds.map(roleId => ({ roleId, ruleId: rule.id }))
-        : [];
-    });
-    if (links.length > 0) {
-      await tx.insert(core_content_access_rule_roles).values(links);
+      if (links.length > 0) {
+        await tx.insert(core_content_access_rule_roles).values(links);
+      }
     }
+
+    await within?.(tx);
   });
 };
 
