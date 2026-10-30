@@ -47,6 +47,7 @@
       "categories": {
         "account": "Account",
         "content": "Content",
+        "moderation": "Moderation",
         "social": "Social",
         "system": "System"
       },

@@ -6,10 +6,15 @@ import { z } from "zod";
 
 import type { NotificationAccessArgs } from "../../../api/lib/notifications/registry";
 import type { EnvVitNode } from "../../../api/middlewares/global.middleware";
+import type { ContentSubmissionReviewScope } from "../../approvals/server/reviewers";
 import type { AnyContentTypeDefinition } from "../../types";
 import type { ContentNotificationAccessFilter } from "./define";
 
 import { core_content_submissions } from "../../../database/content-submissions";
+import {
+  filterContentSubmissionReviewers,
+  loadContentSubmissionReviewScope,
+} from "../../approvals/server/reviewers";
 import { contentIdFromKey } from "../../ids";
 import { contentDefinitionOf, findContentModel } from "../model";
 import { isContentBaseRowPublic } from "../visibility";
@@ -113,6 +118,36 @@ const cachedRow = async (
   return await row;
 };
 
+const scopeCache = new WeakMap<
+  object,
+  Map<
+    number,
+    { at: number; scope: Promise<ContentSubmissionReviewScope | null> }
+  >
+>();
+
+const cachedReviewScope = async (
+  c: Context<EnvVitNode>,
+  refs: { contentId: string; contentTypeId: string; submissionId: number },
+): Promise<ContentSubmissionReviewScope | null> => {
+  let cache = scopeCache.get(c);
+  if (!cache) {
+    cache = new Map();
+    scopeCache.set(c, cache);
+  }
+  const now = Date.now();
+  const cached = cache.get(refs.submissionId);
+  if (cached && now - cached.at < ROW_CACHE_MS) return await cached.scope;
+
+  const scope = loadContentSubmissionReviewScope(c, refs.submissionId, {
+    contentTypeId: refs.contentTypeId,
+    itemId: refs.contentId,
+  });
+  cache.set(refs.submissionId, { at: now, scope });
+
+  return await scope;
+};
+
 const rootTypeIdOf = (definition: AnyContentTypeDefinition): null | string => {
   if (!definition.thread.enabled) return null;
   const field = definition.fields[definition.thread.rootField];
@@ -148,6 +183,10 @@ const isRootPublic = async (
  *   carries that decision and the record exists. An approval also requires
  *   the record to be public; a rejection does not, so the author still hears
  *   about a draft that never went live. The thread root must stay public.
+ * - `"approval"`: only moderators who may review the submission now, while it
+ *   is pending and the record exists - `can_approve` for the container the
+ *   queue lists it in and the one the record is filed in today, read fresh
+ *   from the database. The record does not have to be public.
  *
  * `filter` narrows the result further for plugin-specific rules. Content
  * Engine reads are not role-based, so without it every recipient who passes
@@ -170,7 +209,7 @@ export const contentNotificationAccess =
     /** The content type the notifications are about. */
     content: AnyContentTypeDefinition;
     filter?: ContentNotificationAccessFilter;
-    policy: "content" | "submission";
+    policy: "approval" | "content" | "submission";
   }) =>
   async ({
     c,
@@ -191,6 +230,15 @@ export const contentNotificationAccess =
       if (refs.relation === "reply" && refs.parentId) {
         if (!(await cachedRow(c, content.id, refs.parentId))) return [];
       }
+    } else if (policy === "approval") {
+      if (refs.submissionId === undefined) return [];
+      const scope = await cachedReviewScope(c, {
+        contentId: refs.contentId,
+        contentTypeId: refs.contentTypeId,
+        submissionId: refs.submissionId,
+      });
+      if (!scope) return [];
+      allowed = await filterContentSubmissionReviewers(c, scope, allowed);
     } else {
       if (refs.submissionId === undefined) return [];
       const [submission] = await c
@@ -220,7 +268,13 @@ export const contentNotificationAccess =
     }
 
     if (allowed.length === 0) return [];
-    if (!(await isRootPublic(c, content, refs.rootId))) return [];
+    // Moderators review whatever the queue shows them, public thread or not.
+    if (
+      policy !== "approval" &&
+      !(await isRootPublic(c, content, refs.rootId))
+    ) {
+      return [];
+    }
 
     return filter
       ? await filter({

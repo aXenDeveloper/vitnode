@@ -25,12 +25,16 @@ import { ContentInputError, ContentVersionConflict } from "../../errors";
 import { parseContentId } from "../../ids";
 import { contentAuditLabel } from "../../server/audit";
 import { contentDefinitionOf } from "../../server/model";
-import { recordContentModerationDecision } from "../../server/notifications/intents";
+import {
+  recordContentApprovalResolved,
+  recordContentModerationDecision,
+} from "../../server/notifications/intents";
 import { publicationMethods } from "../../server/publication";
 import {
   contentEditorialWriteEffects,
   contentPlainWriteEffects,
 } from "../../server/write-effects";
+import { findSubmissionModel } from "./submissions";
 
 const STATUS: Record<ContentSubmissionDecisionCode, 403 | 404 | 409> = {
   decided: 409,
@@ -51,16 +55,6 @@ export class ContentSubmissionDecisionError extends Error {
   readonly code: ContentSubmissionDecisionCode;
   readonly status: 403 | 404 | 409;
 }
-
-export const findSubmissionModel = (
-  c: Context,
-  submission: Pick<ContentSubmissionRow, "contentTypeId" | "pluginId">,
-): AnyContentModel | null =>
-  (c.get("core")?.contentModels ?? []).find(
-    entry =>
-      entry.pluginId === submission.pluginId &&
-      entry.model.definition.id === submission.contentTypeId,
-  )?.model ?? null;
 
 const lockRecord = async (
   tx: ContentDatabase,
@@ -240,6 +234,7 @@ export const decideContentSubmission = async (
         .update(core_content_submissions)
         .set({ decidedAt: new Date(), status: "cancelled" })
         .where(eq(core_content_submissions.id, submission.id));
+      await recordContentApprovalResolved(c, tx, submission);
 
       return { kind: "gone" as const };
     };
@@ -302,8 +297,9 @@ export const decideContentSubmission = async (
       .where(eq(core_content_submissions.id, submission.id))
       .returning();
     // In the deciding transaction, so the submitter is told exactly when the
-    // decision commits.
+    // decision commits - and the moderators' "waiting" items go with it.
     await recordContentModerationDecision(c, tx, decided);
+    await recordContentApprovalResolved(c, tx, decided);
 
     await writeAuditLog(
       c,

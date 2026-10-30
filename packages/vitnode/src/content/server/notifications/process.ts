@@ -1,11 +1,12 @@
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, or, sql } from "drizzle-orm";
 
 import type { EnvVitNode } from "../../../api/middlewares/global.middleware";
 import type { AnyContentTypeDefinition } from "../../types";
 import type {
+  ContentApprovalPendingNotificationData,
   ContentModerationDecision,
   ContentNotificationRuntimeContext,
   ContentThreadNotificationData,
@@ -14,14 +15,21 @@ import type { ContentNotificationIntent } from "./intents";
 import type { RegisteredContentNotificationRule } from "./registry";
 
 import { detachNotificationEvents } from "../../../api/models/notifications/inbox";
+import { core_content_containers } from "../../../database/content-containers";
 import { core_content_submissions } from "../../../database/content-submissions";
 import { core_notification_events } from "../../../database/notifications";
+import {
+  CONTENT_SUBMISSION_REVIEWER_LIMIT,
+  findContentSubmissionReviewers,
+  loadContentSubmissionReviewScope,
+} from "../../approvals/server/reviewers";
 import { contentIdFromKey } from "../../ids";
 import { contentDefinitionOf, findContentModel } from "../model";
 import { isContentBaseRowPublic } from "../visibility";
 import { readContentNotificationRow } from "./access";
 import { contentNotificationText } from "./define";
 import {
+  contentApprovalPendingKey,
   contentNotificationIntentSchema,
   contentNotificationRegistryOf,
 } from "./intents";
@@ -40,6 +48,7 @@ export type ContentNotificationOutcome =
         | "no_rules"
         | "not_public"
         | "stale_decision"
+        | "stale_submission"
         | "unregistered";
       status: "skipped";
     }
@@ -235,6 +244,148 @@ const cleanUp = async (
   return { ...result, status: "cleaned" };
 };
 
+/** Removes the moderators' "waiting for approval" items of a submission that stopped waiting. */
+const cleanUpResolved = async (
+  c: Context<EnvVitNode>,
+  intent: Extract<ContentNotificationIntent, { trigger: "approvalResolved" }>,
+): Promise<ContentNotificationOutcome> => {
+  const registry = contentNotificationRegistryOf(c);
+  const entries = intent.ruleIds.flatMap(id => {
+    const entry = registry?.get(id);
+
+    return entry ? [entry] : [];
+  });
+  if (entries.length === 0)
+    return { removed: 0, status: "cleaned", updated: 0 };
+
+  const idempotencyKey = contentApprovalPendingKey({
+    contentTypeId: intent.contentTypeId,
+    id: intent.submissionId,
+  });
+  const rows = await c
+    .get("db")
+    .select({ id: core_notification_events.id })
+    .from(core_notification_events)
+    .where(
+      or(
+        ...entries.map(entry =>
+          and(
+            eq(core_notification_events.pluginId, entry.pluginId),
+            eq(core_notification_events.type, entry.rule.type.id),
+            eq(core_notification_events.idempotencyKey, idempotencyKey),
+          ),
+        ),
+      ),
+    );
+  const result = await detachNotificationEvents(
+    c,
+    rows.map(row => row.id),
+  );
+
+  return { ...result, status: "cleaned" };
+};
+
+/**
+ * Tells the moderators who may decide a pending submission that it waits for
+ * them. Recipients are resolved now, not when it was opened: whoever lost
+ * `can_approve` since then, or never covered the record's container, hears
+ * nothing.
+ */
+const processApprovalSubmitted = async (
+  c: Context<EnvVitNode>,
+  {
+    definition,
+    intent,
+    rules,
+  }: {
+    definition: AnyContentTypeDefinition;
+    intent: Extract<
+      ContentNotificationIntent,
+      { trigger: "approvalSubmitted" }
+    >;
+    rules: RegisteredContentNotificationRule[];
+  },
+): Promise<ContentNotificationOutcome> => {
+  const scope = await loadContentSubmissionReviewScope(
+    c,
+    intent.submissionId,
+    intent,
+  );
+  if (!scope) return { reason: "stale_submission", status: "skipped" };
+
+  const reviewers = await findContentSubmissionReviewers(c, scope);
+  if (reviewers.truncated) {
+    await warn(
+      c,
+      `More than ${CONTENT_SUBMISSION_REVIEWER_LIMIT} users may hold can_approve for "${intent.contentTypeId}"; submission ${intent.submissionId} only considered the first ${CONTENT_SUBMISSION_REVIEWER_LIMIT}.`,
+    );
+  }
+  const authorId = scope.submission.authorId;
+  const recipients = recipientsFrom(reviewers.userIds, [authorId]);
+  if (recipients.length === 0) return { published: 0, status: "processed" };
+
+  const [container] = scope.current
+    ? await c
+        .get("db")
+        .select({ name: core_content_containers.name })
+        .from(core_content_containers)
+        .where(eq(core_content_containers.id, scope.current.container.id))
+        .limit(1)
+    : [];
+  const rootDefinition =
+    rules.find(entry => entry.config.root)?.config.root ?? null;
+  const data: ContentApprovalPendingNotificationData = {
+    container: contentNotificationText(container?.name),
+    contentId: intent.itemId,
+    contentTypeId: intent.contentTypeId,
+    kind: scope.submission.kind,
+    rootId:
+      definition.thread.enabled && rootDefinition
+        ? keyOf(scope.row[definition.thread.rootField])
+        : null,
+    submissionId: intent.submissionId,
+  };
+  const idempotencyKey = contentApprovalPendingKey(scope.submission);
+  const types = rules.flatMap(({ rule }) =>
+    rule.kind === "approvalPending" ? [rule.type.id] : [],
+  );
+
+  const published = await c.get("db").transaction(async tx => {
+    // Holds off a decision, a newer proposal or a delete until the events
+    // exist, so the cleanup they store finds them. Only this row: locking the
+    // record too would take the two locks in the opposite order to a write.
+    const [locked] = await tx
+      .select({ status: core_content_submissions.status })
+      .from(core_content_submissions)
+      .where(eq(core_content_submissions.id, intent.submissionId))
+      .limit(1)
+      .for("share");
+    if (locked?.status !== "pending") return 0;
+
+    for (const type of types) {
+      await c.get("notifications").publish({
+        // The submitter, never a recipient - the queue names them anyway.
+        actorId: authorId,
+        allowSelf: false,
+        data,
+        idempotencyKey,
+        recipients,
+        subject: { id: intent.itemId, type: intent.contentTypeId },
+        tx,
+        type,
+      });
+    }
+
+    return types.length;
+  });
+
+  c.get("notifications").flushAfterResponse();
+
+  return published === 0
+    ? { reason: "stale_submission", status: "skipped" }
+    : { published, status: "processed" };
+};
+
 /**
  * Processes one stored intent: reloads the records, checks they are still
  * eligible, resolves recipients and publishes through the core notification
@@ -253,6 +404,9 @@ export const processContentNotificationIntent = async (
   }
   const intent = parsed.data;
   if (intent.trigger === "deleted") return await cleanUp(c, intent);
+  if (intent.trigger === "approvalResolved") {
+    return await cleanUpResolved(c, intent);
+  }
 
   const registry = contentNotificationRegistryOf(c);
   const rules = intent.ruleIds.flatMap(id => {
@@ -285,6 +439,9 @@ export const processContentNotificationIntent = async (
     return { reason: "unregistered", status: "skipped" };
   }
   const definition = contentDefinitionOf(entry.model);
+  if (intent.trigger === "approvalSubmitted") {
+    return await processApprovalSubmitted(c, { definition, intent, rules });
+  }
 
   const content = await readContentNotificationRow(
     c,

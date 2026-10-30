@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { core_admin_permissions } from "@/database/admins";
@@ -239,6 +239,167 @@ export const isStaff = async (
   rememberRequestStaffPermissions(c, args, resolved, { live: true });
 
   return resolved.staff;
+};
+
+const USERS_PER_PERMISSION_BATCH = 500;
+
+/**
+ * The effective staff permission sets of many users, read from the database in
+ * three queries per 500 users rather than one round trip per user. Resolves
+ * exactly like {@link resolveStaffPermissions} - root roles, unrestricted
+ * entries, merged role and user grants, scoped dependencies - but skips the
+ * cache, so a grant revoked a moment ago no longer counts. For background work
+ * that checks one permission for a list of recipients. Server-only.
+ *
+ * Users that do not exist are missing from the map.
+ */
+export const loadStaffPermissionsOfUsers = async (
+  c: Context,
+  { type, userIds }: { type: PermissionStaffType; userIds: readonly number[] },
+): Promise<Map<number, ResolvedStaffPermissionSet>> => {
+  const db = c.get("db");
+  const table = tableByType[type];
+  const result = new Map<number, ResolvedStaffPermissionSet>();
+  const ids = [...new Set(userIds)];
+
+  for (let start = 0; start < ids.length; start += USERS_PER_PERMISSION_BATCH) {
+    const chunk = ids.slice(start, start + USERS_PER_PERMISSION_BATCH);
+    const rows = await db
+      .select({
+        roleId: core_users.roleId,
+        secondaryRoleId: core_users_secondary_roles.roleId,
+        userId: core_users.id,
+      })
+      .from(core_users)
+      .leftJoin(
+        core_users_secondary_roles,
+        eq(core_users_secondary_roles.userId, core_users.id),
+      )
+      .where(inArray(core_users.id, chunk));
+
+    const rolesOf = new Map<number, Set<number>>();
+    for (const row of rows) {
+      const roles = rolesOf.get(row.userId) ?? new Set([row.roleId]);
+      if (typeof row.secondaryRoleId === "number") {
+        roles.add(row.secondaryRoleId);
+      }
+      rolesOf.set(row.userId, roles);
+    }
+    if (rolesOf.size === 0) continue;
+
+    const roleIds = [
+      ...new Set([...rolesOf.values()].flatMap(roles => [...roles])),
+    ];
+    const [rootRoles, entries] = await Promise.all([
+      db
+        .select({ id: core_roles.id })
+        .from(core_roles)
+        .where(and(inArray(core_roles.id, roleIds), eq(core_roles.root, true))),
+      db
+        .select({
+          permissions: table.permissions,
+          roleId: table.roleId,
+          unrestricted: table.unrestricted,
+          userId: table.userId,
+        })
+        .from(table)
+        .where(
+          or(
+            inArray(table.userId, [...rolesOf.keys()]),
+            inArray(table.roleId, roleIds),
+          ),
+        ),
+    ]);
+    const root = new Set(rootRoles.map(row => row.id));
+
+    for (const [userId, roles] of rolesOf) {
+      result.set(
+        userId,
+        [...roles].some(id => root.has(id))
+          ? rootStaffPermissions()
+          : toStaffPermissionSet(
+              c,
+              entries.filter(
+                entry =>
+                  entry.userId === userId ||
+                  (entry.roleId !== null && roles.has(entry.roleId)),
+              ),
+            ),
+      );
+    }
+  }
+
+  return result;
+};
+
+/**
+ * Users who may hold a staff permission: everyone with an entry - their own or
+ * one of their roles' - that is unrestricted or lists the permission, plus the
+ * members of root roles. A superset, since a scoped grant can still miss the
+ * resource in question: check each candidate with
+ * {@link loadStaffPermissionsOfUsers}. Lowest ids first, at most `limit`.
+ * Server-only.
+ */
+export const findStaffPermissionCandidates = async (
+  c: Context,
+  {
+    limit,
+    module,
+    permission,
+    plugin,
+    type,
+  }: Omit<PermissionsStaffArgs, "scope"> & {
+    limit: number;
+    type: PermissionStaffType;
+  },
+): Promise<number[]> => {
+  const db = c.get("db");
+  const table = tableByType[type];
+  const [entries, rootRoles] = await Promise.all([
+    db
+      .select({ roleId: table.roleId, userId: table.userId })
+      .from(table)
+      .where(
+        or(
+          eq(table.unrestricted, true),
+          sql`${table.permissions} @> ${JSON.stringify([{ module, permission, plugin }])}::jsonb`,
+        ),
+      ),
+    db
+      .select({ id: core_roles.id })
+      .from(core_roles)
+      .where(eq(core_roles.root, true)),
+  ]);
+
+  const userIds = [...new Set(entries.flatMap(entry => entry.userId ?? []))];
+  const roleIds = [
+    ...new Set([
+      ...entries.flatMap(entry => entry.roleId ?? []),
+      ...rootRoles.map(row => row.id),
+    ]),
+  ];
+  if (userIds.length === 0 && roleIds.length === 0) return [];
+
+  const rows = await db
+    .selectDistinct({ id: core_users.id })
+    .from(core_users)
+    .leftJoin(
+      core_users_secondary_roles,
+      eq(core_users_secondary_roles.userId, core_users.id),
+    )
+    .where(
+      or(
+        userIds.length > 0 ? inArray(core_users.id, userIds) : undefined,
+        roleIds.length > 0 ? inArray(core_users.roleId, roleIds) : undefined,
+        roleIds.length > 0
+          ? inArray(core_users_secondary_roles.roleId, roleIds)
+          : undefined,
+      ),
+    )
+    .orderBy(asc(core_users.id))
+    .limit(limit);
+
+  return rows.map(row => row.id);
 };
 
 export interface StaffFlags {

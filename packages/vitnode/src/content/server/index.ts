@@ -189,7 +189,10 @@ export {
 export type { ContentNotificationRefs } from "./notifications/access";
 export { buildContentNotifications } from "./notifications/define";
 export type {
+  ContentApprovalPendingNotificationData,
+  ContentApprovalPendingPreset,
   ContentCustomNotificationRule,
+  ContentCustomNotificationTrigger,
   ContentModerationDecision,
   ContentModerationDecisionPreset,
   ContentModerationDecisionStatus,

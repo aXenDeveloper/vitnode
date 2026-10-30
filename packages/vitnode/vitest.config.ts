@@ -41,6 +41,7 @@ const INTEGRATION = [
   "scripts/cli/dev/package-watch.test.ts",
   "scripts/watch-plugin-manifest.test.ts",
   "src/api/lib/updates/lock.postgres.test.ts",
+  "src/content/approvals/server/approval-notifications.postgres.test.ts",
   "src/content/server/notifications/content-notifications.postgres.test.ts",
 ];
 

@@ -68,6 +68,31 @@ Either way you land back in the queue with a short confirmation.
 
 </Steps>
 
+## Get notified
+
+When a plugin registers an [`approvalPending` notification](/docs/content-engine/notifications-api#approvalpending-preset), as the Forum plugin does for topics and comments, you hear about new work in the notification bell. The item reads, for example, **A new topic is waiting for approval in General**, or **An edit to a topic is waiting for approval in General**, and opens the submission in the Moderator CP, where you approve or reject it as above. You do not need AdminCP access.
+
+You get one notification per submission, and only when you could decide it:
+
+- Your `can_approve` for that content type covers the container the content is filed in, through your own moderator entry or one of your roles, for that container, its subtree or **All resources**. A root role counts too. `can_approve` for topics says nothing about comments.
+- You did not send it yourself.
+- Overlapping grants still give you one notification.
+
+What happens next:
+
+| Situation | Notification |
+| --- | --- |
+| Someone approves or rejects it | Leaves your inbox |
+| The author sends a newer version first | The old one leaves your inbox, and the newer version notifies again |
+| The author resubmits after a rejection | A new notification, since it is a new submission |
+| The content is deleted | Leaves your inbox |
+| You lose `can_approve` there | Not sent, or shows "This notification is no longer available" with no text or link. The submission itself answers **Submission not found** |
+| The content moves to another container before the notification goes out | Sent only to moderators who cover both the container it was submitted in and the new one |
+
+The queue keeps listing a moved submission under the container it was submitted in until someone decides it, and the decision checks the new container. That is why a move narrows who is notified rather than notifying the new container's moderators; they find it once it is decided or resubmitted. Notifications that already arrived are not re-sent after a move.
+
+Turn the type off or on under **Settings → Notifications**, in the **Moderation** group. It is in-app only: these notifications have no email.
+
 ## When a decision fails
 
 | Message | What happened |

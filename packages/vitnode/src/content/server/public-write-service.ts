@@ -488,7 +488,7 @@ export const createContentPublicWriteService = <
     if (via !== "owner" || policy.policy.publish !== "approve") return null;
     if (await canApprove(container)) return null;
 
-    return await openContentSubmission(tx, {
+    return await openContentSubmission(c, tx, {
       authorId: actor.userId,
       container,
       definition,
@@ -537,7 +537,7 @@ export const createContentPublicWriteService = <
         row: Record<string, unknown>,
         container: ContentRecordContainer | null,
       ) =>
-        await openContentSubmission(tx, {
+        await openContentSubmission(c, tx, {
           authorId: actor.userId,
           container,
           definition,
@@ -681,7 +681,7 @@ export const createContentPublicWriteService = <
           ]),
         );
 
-        const opened = await openContentSubmission(tx, {
+        const opened = await openContentSubmission(c, tx, {
           authorId: actor.userId,
           baseUpdatedAt: row.updatedAt as Date,
           baseValues: base,
