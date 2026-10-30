@@ -4,12 +4,17 @@ import { describe, expect, it } from "vitest";
 
 import type { AccessWorld, AccessWorldOptions } from "@/tests/content-access";
 
+import { core_audit_logs } from "@/database/audit";
+import { core_content_access_rules } from "@/database/content-access";
+import { core_languages_words } from "@/database/languages";
 import {
   ACCESS_PLUGIN_ID,
   BOARD,
+  CATEGORY,
   createAccessWorld,
   ROLE,
   testAccessBoards,
+  testAccessCategoryContentType,
   USER,
 } from "@/tests/content-access";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
@@ -19,18 +24,45 @@ import { buildContentAccessAdminRoutes } from "./admin-routes";
 
 const ADMIN = USER.ROOT;
 
-const harness = async (options?: AccessWorldOptions) => {
+const FAMILIES = {
+  boards: {
+    id: testAccessBoards.id,
+    permissionModule: testAccessBoards.admin.permissionModule,
+  },
+  categories: {
+    id: testAccessCategoryContentType.id,
+    permissionModule: testAccessCategoryContentType.permissionModule,
+  },
+};
+
+const harness = async (
+  options?: AccessWorldOptions,
+  family: (typeof FAMILIES)[keyof typeof FAMILIES] = FAMILIES.boards,
+) => {
   const world: AccessWorld = await createAccessWorld(options);
   await grantStaffPermissions(world.cache, {
     permissions: [CONTENT_PERMISSIONS.view, CONTENT_PERMISSIONS.edit].map(
       permission => ({
-        module: testAccessBoards.admin.permissionModule,
+        module: family.permissionModule,
         permission,
         plugin: ACCESS_PLUGIN_ID,
       }),
     ),
     userId: ADMIN,
   });
+  await world.memory.db.insert(core_languages_words).values(
+    [
+      [ROLE.MEMBER, "Member"],
+      [ROLE.VIP, "VIP"],
+    ].map(([itemId, value]) => ({
+      itemId: itemId as number,
+      languageCode: "en",
+      pluginCode: "core",
+      tableName: "core_roles",
+      value: value as string,
+      variable: "name",
+    })),
+  );
 
   const app = new OpenAPIHono();
   app.use("*", async (c, next) => {
@@ -46,8 +78,8 @@ const harness = async (options?: AccessWorldOptions) => {
       : c.json({ error: String(error) }, 500),
   );
   for (const { handler, hook, route } of buildContentAccessAdminRoutes({
-    familyId: testAccessBoards.id,
-    permissionModule: testAccessBoards.admin.permissionModule,
+    familyId: family.id,
+    permissionModule: family.permissionModule,
     pluginId: ACCESS_PLUGIN_ID,
   })) {
     app.openapi(route, handler, hook as never);
@@ -60,7 +92,11 @@ const harness = async (options?: AccessWorldOptions) => {
       method: "PUT",
     });
 
-  return { save, world };
+  return {
+    entries: () => world.memory.rows(core_audit_logs),
+    save,
+    world,
+  };
 };
 
 describe("PUT /{id}/access", () => {
@@ -101,13 +137,16 @@ describe("PUT /{id}/access", () => {
       "unsupportedStorage",
     ],
   ])("refuses %s", async (_label, scopeId, overrides, status, code) => {
-    const { save, world } = await harness({ privateStorage: false });
+    const { entries, save, world } = await harness({ privateStorage: false });
+    const rules = world.memory.rows(core_content_access_rules);
 
     const response = await save(scopeId, overrides);
 
     expect(response.status).toBe(status);
     await expect(response.json()).resolves.toMatchObject({ code });
     expect(world.emitted).toEqual([]);
+    expect(entries()).toEqual([]);
+    expect(world.memory.rows(core_content_access_rules)).toEqual(rules);
   });
 
   it("saves the rules, announces what changed, and applies them on the next request", async () => {
@@ -139,8 +178,64 @@ describe("PUT /{id}/access", () => {
     expect(boards.items.map(item => item.id)).toEqual([BOARD.READERS]);
   });
 
-  it("announces nothing when the saved rules equal the stored ones", async () => {
-    const { save, world } = await harness();
+  it.each([
+    [
+      "a board",
+      FAMILIES.boards,
+      BOARD.VIP,
+      {
+        read: { mode: "members" },
+        view: { mode: "roles", roleIds: [ROLE.MEMBER, ROLE.VIP] },
+      },
+      {
+        changes: {
+          access_read: { from: "inherit", to: "members" },
+          access_view: { from: "roles: VIP", to: "roles: Member, VIP" },
+        },
+        contentTypeId: null,
+        targetLabel: `Board ${BOARD.VIP}`,
+        targetType: testAccessBoards.id,
+      },
+    ],
+    [
+      "a category",
+      FAMILIES.categories,
+      CATEGORY.MEMBERS,
+      { view: { mode: "everyone" } },
+      {
+        changes: {
+          access_read: { from: "members", to: "inherit" },
+          access_view: { from: "inherit", to: "everyone" },
+        },
+        contentTypeId: testAccessCategoryContentType.id,
+        targetLabel: `Category ${CATEGORY.MEMBERS}`,
+        targetType: testAccessCategoryContentType.id,
+      },
+    ],
+  ])(
+    "records one content.access_updated entry for %s",
+    async (_label, family, scopeId, overrides, expected) => {
+      const { entries, save } = await harness(undefined, family);
+
+      const response = await save(scopeId, overrides);
+
+      expect(response.status).toBe(200);
+      expect(entries()).toEqual([
+        expect.objectContaining({
+          ...expected,
+          action: "content.access_updated",
+          actorId: ADMIN,
+          actorType: "staff",
+          area: "admin",
+          pluginId: ACCESS_PLUGIN_ID,
+          targetId: String(scopeId),
+        }),
+      ]);
+    },
+  );
+
+  it("announces and records nothing when the saved rules equal the stored ones", async () => {
+    const { entries, save, world } = await harness();
 
     const response = await save(BOARD.VIP, {
       view: { mode: "roles", roleIds: [ROLE.VIP] },
@@ -148,5 +243,6 @@ describe("PUT /{id}/access", () => {
 
     expect(response.status).toBe(200);
     expect(world.emitted).toEqual([]);
+    expect(entries()).toEqual([]);
   });
 });
