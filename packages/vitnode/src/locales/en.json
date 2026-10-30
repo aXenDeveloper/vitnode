@@ -1735,6 +1735,14 @@
         "name": "[deleted]",
         "by_author": "Comment deleted by user",
         "by_moderator": "Comment removed by a moderator"
+      },
+      "live": {
+        "new_comments": "New comments were posted.",
+        "show_new": "Show new comments",
+        "refresh_failed": "Could not refresh the comments, so some may be out of date.",
+        "retry": "Try again",
+        "edit_removed": "This comment was removed while you were editing it. Your text is still here, but it can no longer be saved.",
+        "reply_removed": "The comment you are replying to was removed. Your text is still here, but it can no longer be posted."
       }
     },
     "content": {
@@ -2109,6 +2117,11 @@
             "desc": "The form is back to the saved version."
           }
         }
+      },
+      "list_refresh": {
+        "title": "Could not refresh this list",
+        "desc": "Someone changed these records, but the latest rows did not load. You are looking at the rows loaded before.",
+        "retry": "Try again"
       }
     },
     "containers": {

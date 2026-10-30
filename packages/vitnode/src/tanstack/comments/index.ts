@@ -6,6 +6,7 @@ export {
   ContentCommentPlaceholder,
   ContentComments,
   ContentCommentsComposer,
+  ContentCommentsLiveStatus,
   ContentCommentsLoadMore,
 } from "./content-comments";
 export type { ContentCommentItemState } from "./item";
@@ -17,6 +18,7 @@ export {
   preloadContentCommentComposer,
   useContentCommentItem,
 } from "./item";
+export { ContentCommentsRequestError } from "./live";
 export {
   CONTENT_COMMENTS_NAMESPACES,
   ContentCommentsRoot,
@@ -25,6 +27,8 @@ export {
 } from "./root";
 export type {
   ContentCommentNode,
+  ContentCommentsBranch,
+  ContentCommentsBranches,
   ContentCommentsThreadPage,
   ContentCommentTreeNode,
   ContentCommentWriteOutcome,
@@ -33,6 +37,7 @@ export {
   buildContentCommentTree,
   contentCommentWriteOutcome,
   countContentCommentReplies,
+  shareContentCommentTree,
 } from "./thread";
 export type {
   ContentCommentActionResult,

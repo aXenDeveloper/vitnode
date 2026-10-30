@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { RotateCwIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
@@ -16,6 +17,8 @@ import type { ContentRowData } from "@/views/admin/views/content/table/cells";
 import { ContentDataTable } from "@/components/table/content";
 import { DataTableSkeleton } from "@/components/table/data-table-content";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import {
   buildContentColumnSpec,
   CONTENT_PERMISSIONS,
@@ -43,6 +46,7 @@ import { useLocale } from "../../i18n/locale";
 import { useAdminPermission } from "../permissions";
 import { ContentBulkActions } from "./bulk-actions";
 import { ContentCreateAction } from "./create-action";
+import { useContentListLiveRefresh } from "./list-live";
 import { contentListPageQuery } from "./query";
 import {
   contentListRouteParams,
@@ -87,9 +91,10 @@ const ContentListTable = ({
   const { definition, pluginId, registration } = entry;
   const t = useTranslations("core.content");
   const locale = useLocale();
-  const { data } = useSuspenseQuery(
+  const { data, isFetching, isRefetchError, refetch } = useSuspenseQuery(
     contentListPageQuery({ definition, locale, params, pluginId }),
   );
+  useContentListLiveRefresh(definition.id);
   const canDelete = useAdminPermission({
     module: definition.permissionModule,
     permission: CONTENT_PERMISSIONS.delete,
@@ -210,30 +215,51 @@ const ContentListTable = ({
 
   return (
     <DataTableNavigationProvider value={navigation}>
-      <ContentDataTable<ContentRowData>
-        bulkActions={
-          bulkActions.length > 0 ? (
-            <ContentBulkActions
-              actions={bulkActions}
-              entry={entry}
-              labels={labels}
-              rows={data.edges}
-            />
-          ) : undefined
-        }
-        columns={columns}
-        customNoResults={
-          isNarrowed
-            ? undefined
-            : { description: t("empty.desc"), title: t("empty.title") }
-        }
-        edges={data.edges}
-        filters={filters.length > 0 ? filters : undefined}
-        id={`content-${definition.id}`}
-        order={contentTableOrder(definition)}
-        pageInfo={data.pageInfo}
-        search={contentTableSearchEnabled(definition)}
-      />
+      <div aria-busy={isFetching} className="flex flex-col gap-4">
+        {isRefetchError ? (
+          <Alert variant="warning">
+            <AlertTitle>{t("list_refresh.title")}</AlertTitle>
+            <AlertDescription>{t("list_refresh.desc")}</AlertDescription>
+            <div>
+              <Button
+                isLoading={isFetching}
+                onClick={() => {
+                  void refetch();
+                }}
+                size="sm"
+                variant="outline"
+              >
+                <RotateCwIcon aria-hidden="true" />
+                {t("list_refresh.retry")}
+              </Button>
+            </div>
+          </Alert>
+        ) : null}
+        <ContentDataTable<ContentRowData>
+          bulkActions={
+            bulkActions.length > 0 ? (
+              <ContentBulkActions
+                actions={bulkActions}
+                entry={entry}
+                labels={labels}
+                rows={data.edges}
+              />
+            ) : undefined
+          }
+          columns={columns}
+          customNoResults={
+            isNarrowed
+              ? undefined
+              : { description: t("empty.desc"), title: t("empty.title") }
+          }
+          edges={data.edges}
+          filters={filters.length > 0 ? filters : undefined}
+          id={`content-${definition.id}`}
+          order={contentTableOrder(definition)}
+          pageInfo={data.pageInfo}
+          search={contentTableSearchEnabled(definition)}
+        />
+      </div>
 
       {duplicated && formDialog ? (
         <ContentFormDialogSlot

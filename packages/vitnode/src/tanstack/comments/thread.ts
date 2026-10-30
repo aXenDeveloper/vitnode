@@ -1,5 +1,8 @@
 import type { ContentId } from "@/content/ids";
 
+/** The `id` prefix of every comment element, for `#comment-...` links. */
+export const CONTENT_COMMENT_ANCHOR_PREFIX = "comment-";
+
 /**
  * One entry of a comment thread, as `GET /{publicApi.path}/thread` answers it:
  * a comment the reader may see, or a placeholder kept so its replies stay in
@@ -50,6 +53,28 @@ export interface ContentCommentsThreadPage<
   truncated: boolean;
 }
 
+/**
+ * One top-level branch as `GET /{publicApi.path}/thread/branches` answers it:
+ * the top-level comment and every reply below it, or `gone` when the reader no
+ * longer sees it.
+ */
+export type ContentCommentsBranch<TRecord, TId extends ContentId = ContentId> =
+  | { id: TId; items: ContentCommentNode<TRecord, TId>[]; status: "ok" }
+  | { id: TId; status: "gone" };
+
+/** The answer of `GET /{publicApi.path}/thread/branches`. */
+export interface ContentCommentsBranches<
+  TRecord,
+  TId extends ContentId = ContentId,
+> {
+  branches: ContentCommentsBranch<TRecord, TId>[];
+  pageInfo: { totalCount: number };
+  /** Every public comment in the thread, at any depth. */
+  replyCount: number;
+  /** `true` when the branches held more nested replies than one answer carries. */
+  truncated: boolean;
+}
+
 /** A thread entry with the replies loaded below it. */
 export interface ContentCommentTreeNode<
   TRecord,
@@ -83,6 +108,63 @@ export const buildContentCommentTree = <TRecord, TId extends ContentId>(
   }
 
   return roots;
+};
+
+const sameNode = <TRecord, TId extends ContentId>(
+  a: ContentCommentNode<TRecord, TId>,
+  b: ContentCommentNode<TRecord, TId>,
+): boolean =>
+  a.id === b.id &&
+  a.depth === b.depth &&
+  a.deleted === b.deleted &&
+  a.hidden === b.hidden &&
+  a.hiddenReason === b.hiddenReason &&
+  a.parentId === b.parentId &&
+  a.record === b.record &&
+  a.removed === b.removed;
+
+/**
+ * Reuses the nodes of `previous` wherever a node and everything below it is
+ * unchanged, so memoized comment components skip re-rendering when one
+ * branch of a long thread changes. Relies on the query cache's structural
+ * sharing, which keeps unchanged records the same objects. Pure.
+ */
+export const shareContentCommentTree = <TRecord, TId extends ContentId>(
+  previous: ContentCommentTreeNode<TRecord, TId>[],
+  next: ContentCommentTreeNode<TRecord, TId>[],
+): ContentCommentTreeNode<TRecord, TId>[] => {
+  if (previous.length === 0) return next;
+  const before = new Map<string, ContentCommentTreeNode<TRecord, TId>>();
+  const index = (nodes: ContentCommentTreeNode<TRecord, TId>[]) => {
+    for (const node of nodes) {
+      before.set(String(node.id), node);
+      index(node.children);
+    }
+  };
+  index(previous);
+
+  const share = (
+    node: ContentCommentTreeNode<TRecord, TId>,
+  ): ContentCommentTreeNode<TRecord, TId> => {
+    const children = node.children.map(share);
+    const old = before.get(String(node.id));
+    if (
+      old &&
+      sameNode(old, node) &&
+      old.children.length === children.length &&
+      old.children.every((child, position) => child === children[position])
+    ) {
+      return old;
+    }
+
+    return { ...node, children };
+  };
+  const shared = next.map(share);
+
+  return shared.length === previous.length &&
+    shared.every((node, position) => node === previous[position])
+    ? previous
+    : shared;
 };
 
 /** Every reply below `node`, at any depth. Pure. */

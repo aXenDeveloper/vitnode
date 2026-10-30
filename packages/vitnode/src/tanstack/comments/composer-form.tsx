@@ -37,6 +37,12 @@ export type ContentCommentComposerFormProps = {
   onCancel?: () => void;
   /** Called after the server accepted the comment, with what it became. */
   onDone?: (outcome: ContentCommentWriteOutcome) => void;
+  /**
+   * Why this form can no longer be sent, already translated - e.g. the
+   * comment it edits or answers was removed meanwhile. Keeps the editor and
+   * its text, shows the reason and hides the submit button.
+   */
+  unavailable?: string;
 } & (
   | { editable: ContentCommentEditable; id: ContentId; mode: "edit" }
   | { mode: "create"; parentId: ContentId | null }
@@ -59,7 +65,7 @@ const useBodySchema = (defaultBody: RichTextDocument) => {
  * shows the version-conflict alert. Lazy-loaded by `ContentCommentComposer`.
  */
 const ContentCommentComposerForm = (props: ContentCommentComposerFormProps) => {
-  const { autoFocus, label, onCancel, onDone } = props;
+  const { autoFocus, label, onCancel, onDone, unavailable } = props;
   const t = useTranslations("core.comments");
   const { comments } = useContentCommentsContext();
   const editId = props.mode === "edit" ? props.id : null;
@@ -112,6 +118,11 @@ const ContentCommentComposerForm = (props: ContentCommentComposerFormProps) => {
 
   return (
     <div className="flex flex-col gap-3">
+      {unavailable ? (
+        <Alert variant="destructive">
+          <AlertDescription>{unavailable}</AlertDescription>
+        </Alert>
+      ) : null}
       {write.conflict}
       {props.mode === "edit" && props.editable.proposed ? (
         <Alert>
@@ -146,14 +157,16 @@ const ContentCommentComposerForm = (props: ContentCommentComposerFormProps) => {
         onSubmit={onSubmit}
       >
         <div className="flex flex-wrap items-center gap-2">
-          <AutoFormSubmitButton>
-            {props.mode === "edit" ? (
-              <CheckIcon aria-hidden="true" />
-            ) : (
-              <SendHorizontalIcon aria-hidden="true" />
-            )}
-            {props.mode === "edit" ? t("form.save") : t("form.submit")}
-          </AutoFormSubmitButton>
+          {unavailable ? null : (
+            <AutoFormSubmitButton>
+              {props.mode === "edit" ? (
+                <CheckIcon aria-hidden="true" />
+              ) : (
+                <SendHorizontalIcon aria-hidden="true" />
+              )}
+              {props.mode === "edit" ? t("form.save") : t("form.submit")}
+            </AutoFormSubmitButton>
+          )}
           {onCancel ? (
             <Button onClick={onCancel} type="button" variant="ghost">
               {t("form.cancel")}

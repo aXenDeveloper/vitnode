@@ -103,6 +103,12 @@ The **More actions** menu of each row collects the less frequent actions. Two of
 
 Each action asks for confirmation, refreshes the list and shows a toast. On the edit page, `ContentFormActions` adds a **Hide** or **Unhide** button next to **Save changes**, and `ContentFormStatus` shows the same **Hidden** badge with a short explanation.
 
+## Live updates
+
+Every generated list stays current while it's open, with no configuration. When a record of the same type changes in another tab or session, such as another admin's edit, a member's post or a scheduled publish, the page on screen reads again with its filters, search, sort and page. Selected rows that are still on the page stay ticked, and a burst of changes costs one read. If that read fails, the list keeps its rows and shows **Could not refresh this list** with **Try again**.
+
+Live updates need the app to serve the [WebSocket](/docs/dev/websocket/setup). [Live refresh](/docs/content-engine/live-refresh) explains who receives what.
+
 ## Group form fields into sections
 
 By default the form shows every field except `field.blocks()`, one after another, in a dialog:

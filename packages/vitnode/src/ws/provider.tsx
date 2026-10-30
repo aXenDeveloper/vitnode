@@ -20,6 +20,13 @@ interface VitNodeWebSocketContextValue {
 const VitNodeWebSocketContext =
   React.createContext<null | VitNodeWebSocketContextValue>(null);
 
+/**
+ * The shared connection, or `null` outside `<VitNodeWebSocketProvider>` - for
+ * features that should simply stay offline without one.
+ */
+export const useOptionalVitNodeWebSocketContext =
+  (): null | VitNodeWebSocketContextValue => React.use(VitNodeWebSocketContext);
+
 export const useVitNodeWebSocketContext = (): VitNodeWebSocketContextValue => {
   const context = React.use(VitNodeWebSocketContext);
   if (!context) {

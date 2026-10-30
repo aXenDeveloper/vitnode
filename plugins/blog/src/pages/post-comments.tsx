@@ -26,6 +26,7 @@ import {
   ContentCommentComposer,
   ContentCommentPlaceholder,
   ContentCommentsComposer,
+  ContentCommentsLiveStatus,
   ContentCommentsLoadMore,
   ContentCommentsRoot,
   type ContentCommentTreeNode,
@@ -197,6 +198,7 @@ const CommentEntry = ({
           mode="edit"
           onCancel={item.stopEditing}
           onDone={item.stopEditing}
+          unavailable={item.isRemoved ? tc("live.edit_removed") : undefined}
         />
       ) : (
         <article
@@ -327,6 +329,7 @@ const CommentEntry = ({
               item.setIsReplying(false);
             }}
             parentId={comment.id}
+            unavailable={item.isRemoved ? tc("live.reply_removed") : undefined}
           />
         </div>
       ) : null}
@@ -473,35 +476,37 @@ const CommentBranch = ({
     </div>
   );
 
-  if (!hasReplies) return row;
-
+  // Always the same element tree, so a comment that gets its first reply
+  // while the reader types an answer keeps its form - and what was typed.
   return (
     <Collapsible onOpenChange={setOpen} open={open}>
       {row}
-      <CollapsibleContent
-        className="ease-fluid h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-[opacity]"
-        keepMounted
-      >
-        <ol
-          className={cn(
-            "flex flex-col",
-            level === "top" ? "ms-11" : "ms-8",
-            flattening === "always" && "ms-0",
-            flattening === "mobile" && "max-md:ms-0",
-          )}
+      {hasReplies ? (
+        <CollapsibleContent
+          className="ease-fluid h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-[opacity]"
+          keepMounted
         >
-          {node.children.map(child => (
-            <ReplyNodeView
-              actions={actions}
-              flattening={flattening}
-              key={child.id}
-              node={child}
-              parentLevel={level}
-              parentName={parentName}
-            />
-          ))}
-        </ol>
-      </CollapsibleContent>
+          <ol
+            className={cn(
+              "flex flex-col",
+              level === "top" ? "ms-11" : "ms-8",
+              flattening === "always" && "ms-0",
+              flattening === "mobile" && "max-md:ms-0",
+            )}
+          >
+            {node.children.map(child => (
+              <ReplyNodeView
+                actions={actions}
+                flattening={flattening}
+                key={child.id}
+                node={child}
+                parentLevel={level}
+                parentName={parentName}
+              />
+            ))}
+          </ol>
+        </CollapsibleContent>
+      ) : null}
     </Collapsible>
   );
 };
@@ -781,6 +786,8 @@ const PostCommentsThread = ({
           {t("truncated")}
         </p>
       ) : null}
+
+      <ContentCommentsLiveStatus />
 
       <ContentCommentsLoadMore />
 

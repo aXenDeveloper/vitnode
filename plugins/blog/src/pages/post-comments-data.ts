@@ -39,7 +39,8 @@ export type PostComment = z.infer<typeof zodPostComment>;
 
 /**
  * The comment thread under one article, wired to the blog's typed comment
- * routes: replies, editing with revisions, deleting, hiding and reports.
+ * routes: replies, editing with revisions, deleting, hiding and reports - and
+ * kept current live, re-reading only the branches that changed.
  */
 export const usePostComments = (articleId: number) =>
   useContentComments({
@@ -60,6 +61,20 @@ export const usePostComments = (articleId: number) =>
           },
         },
       }),
+    branches: async ids =>
+      await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "content/comments",
+        path: "/thread/branches",
+        args: {
+          query: {
+            root: String(articleId),
+            ...(ids.length > 0 ? { ids: ids.join(",") } : {}),
+          },
+        },
+      }),
+    live: { contentTypeId: blogCommentContentType.id, rootId: articleId },
     permissions: async ids =>
       await fetcher({
         plugin: manifest.id,

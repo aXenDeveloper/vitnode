@@ -3377,6 +3377,14 @@
         "name": "[usunięty]",
         "by_author": "Komentarz usunięty przez użytkownika",
         "by_moderator": "Komentarz usunięty przez moderatora"
+      },
+      "live": {
+        "new_comments": "Pojawiły się nowe komentarze.",
+        "show_new": "Pokaż nowe komentarze",
+        "refresh_failed": "Nie udało się odświeżyć komentarzy, więc część z nich może być nieaktualna.",
+        "retry": "Spróbuj ponownie",
+        "edit_removed": "Ten komentarz został usunięty w trakcie edycji. Twój tekst nadal tu jest, ale nie da się go już zapisać.",
+        "reply_removed": "Komentarz, na który odpowiadasz, został usunięty. Twój tekst nadal tu jest, ale nie da się go już opublikować."
       }
     }
   },

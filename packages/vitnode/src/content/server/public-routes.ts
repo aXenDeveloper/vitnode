@@ -10,7 +10,7 @@ import { z } from "@hono/zod-openapi";
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
-import type { ContentIdOf } from "../ids";
+import type { ContentId, ContentIdOf } from "../ids";
 import type {
   AnyContentTypeDefinition,
   ContentPublicFilterInput,
@@ -19,6 +19,7 @@ import type {
 import type { ContentModel } from "./model";
 import type { ContentPreviewTokenPayload } from "./preview-token";
 import type { ContentPublicService } from "./public-service";
+import type { ContentThreadNode } from "./thread";
 
 import { setPageCacheTags } from "../../api/lib/page-cache";
 import { buildRoute } from "../../api/lib/route";
@@ -37,6 +38,7 @@ import { contentContainerFieldOf } from "../containers/association";
 import { createContentContainerService } from "../containers/server/service";
 import { ContentEngineError } from "../errors";
 import { parseContentId } from "../ids";
+import { CONTENT_THREAD_BRANCHES_MAX } from "../live/refresh";
 import { partitionContentFields } from "../localization";
 import {
   contentColumnsToValues,
@@ -47,7 +49,6 @@ import { publicOrderableColumns } from "../registry";
 import { buildContentDeliveryRoutes } from "./delivery-routes";
 import { resolveContentPublicRowFiles } from "./files";
 import {
-  canViewHiddenContentRecord,
   contentListHiddenAccess,
   contentThreadHiddenAccess,
   findViewableHiddenBySlug,
@@ -79,7 +80,8 @@ import {
   contentSnapshotRow,
   projectTranslationRevisionSnapshot,
 } from "./revision-snapshot";
-import { readContentThread } from "./thread";
+import { readContentThread, readContentThreadBranches } from "./thread";
+import { resolveContentThreadRoot } from "./thread-access";
 
 /**
  * The public routes of one content type: list and detail, plus preview,
@@ -524,6 +526,38 @@ export const buildContentPublicRoutes = <
     },
   });
 
+  /** Rows for a thread read: public ones, plus hidden ones this reader may see. */
+  const threadProjector =
+    (c: Context, hiddenParents: boolean) =>
+    async (ids: ContentId[], { hiddenIds }: { hiddenIds: ContentId[] }) => {
+      const read = service(c).findManyByIds;
+      const rows = read
+        ? await read(ids as never, {
+            hidden: hiddenIds.length > 0,
+            hiddenParents,
+          })
+        : [];
+
+      return new Map(
+        rows.map(row => [String((row as unknown as { id: unknown }).id), row]),
+      );
+    };
+
+  const serializeThreadNode = <
+    T extends { deleted: ContentThreadNode<unknown>["deleted"] },
+  >({
+    deleted,
+    ...item
+  }: T) => ({
+    ...item,
+    deleted: deleted
+      ? {
+          byAuthor: deleted.byAuthor,
+          createdAt: deleted.createdAt.toISOString(),
+        }
+      : null,
+  });
+
   const threadNode = z.object({
     deleted: z
       .object({ byAuthor: z.boolean(), createdAt: z.string() })
@@ -578,42 +612,11 @@ export const buildContentPublicRoutes = <
     },
     handler: async c => {
       const { after, first, root } = c.req.valid("query");
-      const rootField = definition.fields[definition.thread.rootField];
-      const target =
-        rootField?.kind === "relation" ? rootField.target() : undefined;
-      const rootModel = (c.get("core")?.contentModels ?? []).find(
-        entry => entry.model.definition.id === target?.id,
-      )?.model;
-      const rootId = target ? parseContentId(target.idStrategy, root) : null;
-      // An existence check: `select: []` reads the same published, visible row
-      // without hydrating a single field of it.
-      const findReadableRoot = async () => {
-        const rootService = rootModel?.publicService?.(c);
-        if (rootId === null || !target || !rootService) return null;
-
-        if (await rootService.findById(rootId, { select: [] })) {
-          return { hidden: false };
-        }
-
-        const hidden = await rootService.findById(rootId, {
-          hidden: true,
-          select: [],
-        });
-
-        return hidden &&
-          (await canViewHiddenContentRecord(c, {
-            contentTypeId: target.id,
-            itemId: rootId,
-          }))
-          ? { hidden: true }
-          : null;
-      };
-      const readable = await findReadableRoot();
-      if (!readable || rootId === null) {
+      const readable = await resolveContentThreadRoot(c, definition, root);
+      if (!readable) {
         throw new HTTPException(404, { message: "Thread not found." });
       }
 
-      const read = service(c).findManyByIds;
       const hiddenAccess = await contentThreadHiddenAccess(c, {
         model,
         pluginId,
@@ -622,35 +625,13 @@ export const buildContentPublicRoutes = <
         after,
         first,
         hiddenAccess,
-        project: async (ids, { hiddenIds }) => {
-          const rows = read
-            ? await read(ids as never, {
-                hidden: hiddenIds.length > 0,
-                hiddenParents: readable.hidden,
-              })
-            : [];
-
-          return new Map(
-            rows.map(row => [
-              String((row as unknown as { id: unknown }).id),
-              row,
-            ]),
-          );
-        },
-        root: rootId,
+        project: threadProjector(c, readable.hidden),
+        root: readable.rootId,
       });
 
       const body = {
         ...page,
-        items: page.items.map(({ deleted, ...item }) => ({
-          ...item,
-          deleted: deleted
-            ? {
-                byAuthor: deleted.byAuthor,
-                createdAt: deleted.createdAt.toISOString(),
-              }
-            : null,
-        })),
+        items: page.items.map(serializeThreadNode),
       };
 
       if (hiddenAccess || readable.hidden) {
@@ -659,10 +640,134 @@ export const buildContentPublicRoutes = <
 
       setPageCacheTags(c, [
         ...contentListPageCacheTags(definition),
-        ...(target ? contentListPageCacheTags(target) : []),
+        ...contentListPageCacheTags(readable.target),
       ]);
 
       return c.json(body, 200);
+    },
+  });
+
+  const threadBranch = z.discriminatedUnion("status", [
+    z.object({
+      id: schemas.params.shape.id,
+      items: z.array(threadNode),
+      status: z.literal("ok"),
+    }),
+    z.object({ id: schemas.params.shape.id, status: z.literal("gone") }),
+  ]);
+
+  /**
+   * The current state of a few top-level branches already on a reader's
+   * screen, so a live update re-reads one branch instead of every page. The
+   * same root check, visibility, placeholders, depth and truncation as
+   * `/thread`. Guests and readers with no hidden access get the same answer,
+   * so it is read through the public read cache that every comment write
+   * expires before it is announced; anyone else's answer is private.
+   */
+  const threadBranches = buildRoute({
+    pluginId,
+    route: {
+      method: "get",
+      path: "/thread/branches",
+      description: `Re-read some top-level ${name} branches of one thread, each with every answer below it`,
+      request: {
+        query: z.object({
+          root: z.string().min(1).max(64),
+          ids: z
+            .string()
+            .max(CONTENT_THREAD_BRANCHES_MAX * 65)
+            .optional(),
+        }),
+      },
+      responses: {
+        200: {
+          content: {
+            "application/json": {
+              schema: z.object({
+                branches: z.array(threadBranch),
+                pageInfo: z.object({ totalCount: z.number() }),
+                replyCount: z.number(),
+                truncated: z.boolean(),
+              }),
+            },
+          },
+          description:
+            "Each requested branch, in the order asked, or `gone` when the reader no longer sees it. Without `ids`, only the counts",
+        },
+        400: { description: "Malformed or too many ids" },
+        404: { description: "The root record does not exist or is not public" },
+      },
+    },
+    handler: async c => {
+      const query = c.req.valid("query");
+      const unique = new Map<string, ContentId>();
+      for (const raw of (query.ids ?? "").split(",")) {
+        const trimmed = raw.trim();
+        if (trimmed === "") continue;
+        const id = parseContentId(definition.idStrategy, trimmed);
+        if (id === null) {
+          throw new HTTPException(400, { message: "Invalid branch id." });
+        }
+        if (!unique.has(String(id))) unique.set(String(id), id);
+      }
+      const ids = [...unique.values()];
+      if (ids.length > CONTENT_THREAD_BRANCHES_MAX) {
+        throw new HTTPException(400, {
+          message: `Ask for at most ${CONTENT_THREAD_BRANCHES_MAX} branches at once.`,
+        });
+      }
+
+      const readable = await resolveContentThreadRoot(
+        c,
+        definition,
+        query.root,
+      );
+      if (!readable) {
+        throw new HTTPException(404, { message: "Thread not found." });
+      }
+
+      const hiddenAccess = await contentThreadHiddenAccess(c, {
+        model,
+        pluginId,
+      });
+      const load = async () => {
+        const result = await readContentThreadBranches(c, model, {
+          hiddenAccess,
+          ids,
+          project: threadProjector(c, readable.hidden),
+          root: readable.rootId,
+        });
+
+        return {
+          ...result,
+          branches: result.branches.map(branch =>
+            branch.status === "ok"
+              ? { ...branch, items: branch.items.map(serializeThreadNode) }
+              : branch,
+          ),
+        };
+      };
+
+      if (hiddenAccess || readable.hidden) {
+        return c.json(await load(), 200, {
+          "Cache-Control": "private, no-store",
+        });
+      }
+
+      const body = await rememberContentPublicRead(c, {
+        contentTypeId: definition.id,
+        key: {
+          ids: ids.map(String),
+          root: String(readable.rootId),
+          route: "thread-branches",
+        },
+        load,
+      });
+
+      // Every viewer of a busy thread asks for the same branch after one
+      // signal: the read cache above answers them, and no shared HTTP cache
+      // may hold a copy that outlives the next write.
+      return c.json(body, 200, { "Cache-Control": "no-cache" });
     },
   });
 
@@ -755,7 +860,7 @@ export const buildContentPublicRoutes = <
     ...(definition.delivery.enabled
       ? buildContentDeliveryRoutes(model, { pluginId })
       : []),
-    ...(definition.thread.enabled ? [thread] : []),
+    ...(definition.thread.enabled ? [thread, threadBranches] : []),
     ...(definition.publicWrite.enabled ||
     definition.reports.enabled ||
     definition.visibility.enabled

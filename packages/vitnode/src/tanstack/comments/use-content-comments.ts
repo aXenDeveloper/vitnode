@@ -1,6 +1,7 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
 
 import {
+  hashKey,
   infiniteQueryOptions,
   useInfiniteQuery,
   useQueryClient,
@@ -11,6 +12,7 @@ import { z } from "zod";
 import type { ContentId } from "@/content/ids";
 import type { RichTextDocument } from "@/content/rich-text";
 import type { ContentTarget } from "@/content/target";
+import type { ContentLiveRefreshStatus } from "@/tanstack/content/live-refresh";
 
 import { zodRichTextDocument } from "@/content/rich-text";
 
@@ -18,16 +20,25 @@ import type {
   ContentPermissions,
   ContentPermissionsResponse,
 } from "../content/permissions";
+import type { ContentCommentsLive } from "./live";
 import type {
   ContentCommentNode,
+  ContentCommentsBranches,
   ContentCommentsThreadPage,
   ContentCommentTreeNode,
   ContentCommentWriteOutcome,
 } from "./thread";
 
 import { useSessionQuery } from "../auth/session-query";
+import { useContentLiveRefresh } from "../content/live-refresh";
 import { useContentPermissions } from "../content/permissions";
-import { buildContentCommentTree, contentCommentWriteOutcome } from "./thread";
+import { ContentCommentsRequestError, createContentCommentsLive } from "./live";
+import {
+  buildContentCommentTree,
+  CONTENT_COMMENT_ANCHOR_PREFIX,
+  contentCommentWriteOutcome,
+  shareContentCommentTree,
+} from "./thread";
 
 /** The response of a typed `fetcher` call, as the comments hook reads it. */
 export interface ContentCommentsApiResponse {
@@ -86,6 +97,16 @@ export interface ContentCommentsConfig<
   TRecord = ContentCommentRecordOf<R>,
 > {
   /**
+   * Re-reads a few top-level branches - `GET /thread/branches` with `root`
+   * and `ids` joined by commas (left out when there are none). With it, a
+   * write refreshes only the branch it touched instead of every loaded page,
+   * and `live` can keep the thread current. Without it, a write re-reads
+   * every loaded page.
+   */
+  branches?: (
+    ids: ContentCommentIdOf<R>[],
+  ) => Promise<ContentCommentsApiResponse>;
+  /**
    * Opens a new top-level comment or a reply - `POST /` with the root record,
    * `body` and `parent: parentId`. Without it nobody can comment here.
    */
@@ -114,6 +135,19 @@ export interface ContentCommentsConfig<
    * public record and in `GET /{id}/edit`'s `values`. Defaults to `"body"`.
    */
   field?: string;
+  /**
+   * Keeps the thread current while it is on screen, over the shared
+   * WebSocket: changed branches are re-read with `branches` (required) and
+   * merged in place, new comments at the end wait behind **Show new
+   * comments**, and a reconnect re-reads the loaded pages. Leave it out for a
+   * thread that only changes on reload.
+   */
+  live?: {
+    /** The comment content type's id, e.g. `blogCommentContentType.id`. */
+    contentTypeId: string;
+    /** The root record the thread hangs off. */
+    rootId: ContentId;
+  };
   /**
    * The deepest level a reply may sit at - the content type's
    * `thread.maxDepth`. Leave it out for flat comments: **Reply** never shows.
@@ -169,6 +203,14 @@ export interface ContentCommentsConfig<
 
 const DEFAULT_PAGE_SIZE = 20;
 
+type WriteTarget<TId> = { id: TId } | { parentId: null | TId };
+
+const noopSubscribe = () => () => undefined;
+
+const EMPTY_LIVE_SNAPSHOT = { hasNew: false, refreshError: false };
+
+const emptySnapshot = () => EMPTY_LIVE_SNAPSHOT;
+
 const zodWrittenRecord = z.object({
   approval: z.object({ status: z.string() }).nullable(),
   status: z.string(),
@@ -180,8 +222,8 @@ const zodWrittenRecord = z.object({
  * the page's HTML. `useContentComments` reads the same cache entry.
  * Universal.
  *
- * @throws An `Error` from `queryFn` when the thread route answers anything
- * but `2xx`.
+ * @throws A `ContentCommentsRequestError` from `queryFn`, carrying the
+ * `status`, when the thread route answers anything but `2xx`.
  */
 export const contentCommentsQueryOptions = <
   R extends ContentCommentsApiResponse,
@@ -200,30 +242,57 @@ export const contentCommentsQueryOptions = <
       last: ContentCommentsThreadPage<TRecord, ContentCommentIdOf<R>>,
     ) => (last.pageInfo.hasNextPage ? last.pageInfo.endCursor : null),
     initialPageParam: null as null | string,
-    queryFn: async ({ pageParam }) => {
-      const res = await thread({ after: pageParam, first: pageSize });
-      if (!res.ok) {
-        throw new Error(`Loading the comments answered ${res.status}.`);
-      }
-
-      // The typed response's `2xx` member is the thread route's answer, and
-      // without `record` its records keep the type the route gives them.
-      const page = (await res.json()) as ContentCommentsThreadPage<
-        TRecord,
-        ContentCommentIdOf<R>
-      >;
-      if (!record) return page;
-
-      return {
-        ...page,
-        items: page.items.map(item => ({
-          ...item,
-          record: item.record === null ? null : record.parse(item.record),
-        })),
-      };
-    },
+    queryFn: async ({ pageParam }) =>
+      await readContentCommentsPage({
+        after: pageParam,
+        first: pageSize,
+        record,
+        thread,
+      }),
     queryKey: [...queryKey, "thread"],
   });
+
+/** Validates each record of thread nodes with `record`, when given. */
+const parseNodes = <TRecord, TId extends ContentId>(
+  items: ContentCommentNode<TRecord, TId>[],
+  record: undefined | z.ZodType<TRecord>,
+): ContentCommentNode<TRecord, TId>[] =>
+  record
+    ? items.map(item => ({
+        ...item,
+        record: item.record === null ? null : record.parse(item.record),
+      }))
+    : items;
+
+const readContentCommentsPage = async <
+  R extends ContentCommentsApiResponse,
+  TRecord,
+>({
+  after,
+  first,
+  record,
+  thread,
+}: Pick<ContentCommentsConfig<R, TRecord>, "record" | "thread"> & {
+  after: null | string;
+  first: number;
+}): Promise<ContentCommentsThreadPage<TRecord, ContentCommentIdOf<R>>> => {
+  const res = await thread({ after, first });
+  if (!res.ok) {
+    throw new ContentCommentsRequestError(
+      res.status,
+      `Loading the comments answered ${res.status}.`,
+    );
+  }
+
+  // The typed response's `2xx` member is the thread route's answer, and
+  // without `record` its records keep the type the route gives them.
+  const page = (await res.json()) as ContentCommentsThreadPage<
+    TRecord,
+    ContentCommentIdOf<R>
+  >;
+
+  return { ...page, items: parseNodes(page.items, record) };
+};
 
 const readEditable = (
   body: unknown,
@@ -267,7 +336,7 @@ export interface ContentCommentsController<
   busy: ContentCommentBusy<TId> | null;
   /** Whether the visitor may write a new comment here: signed in, with `create` given. */
   canComment: boolean;
-  /** Whether **Reply** shows under `node`: replies allowed, under `maxDepth` and not hidden. */
+  /** Whether **Reply** shows under `node`: replies allowed, under `maxDepth`, not hidden or removed. */
   canReply: (node: ContentCommentNode<TRecord, TId>) => boolean;
   /** Which actions the plugin wired up. A button also needs the server's `can*` answer. */
   features: {
@@ -282,16 +351,23 @@ export interface ContentCommentsController<
   field: string;
   /** Whether more top-level comments wait on the server. */
   hasMore: boolean;
+  /**
+   * Live only: comments appeared after the last loaded one, at the end of the
+   * thread. They stay off screen until `showNewComments()`.
+   */
+  hasNewComments: boolean;
   /** Hides one comment, with an optional reason of at most 500 characters. */
   hide: (id: TId, reason: null | string) => Promise<ContentCommentActionResult>;
   /** `true` while the next page loads. */
   isLoadingMore: boolean;
-  /** `true` while a refetch runs over comments already on screen. */
+  /** `true` while comments already on screen are read again - not while loading more. */
   isRefreshing: boolean;
   /** `true` while the session is unknown, so the composer can wait for it. */
   isSessionPending: boolean;
   /** Every loaded entry, flat and depth first. */
   items: ContentCommentNode<TRecord, TId>[];
+  /** Where the live subscription stands; `off` without `live`. */
+  liveStatus: ContentLiveRefreshStatus;
   /** Reads what an edit form opens with: the public text, or the author's pending proposal. */
   loadEditable: (
     id: TId,
@@ -302,8 +378,13 @@ export interface ContentCommentsController<
   loadMore: () => Promise<boolean>;
   /** The visitor's permissions for one comment, all `false` until known or after a failure. */
   permissionsOf: (id: TId) => ContentPermissions;
-  /** Refreshes the thread, its permissions and `onChanged`'s queries. */
+  /** Re-reads every loaded page, its permissions and `onChanged`'s queries. */
   refresh: () => Promise<void>;
+  /**
+   * A background read of comments already on screen failed. They stay, as
+   * they were; `retryRefresh()` asks again.
+   */
+  refreshError: boolean;
   /** Deletes one comment. One with replies stays as an anonymous placeholder. */
   remove: (id: TId) => Promise<ContentCommentActionResult>;
   /** Every public comment in the thread, at any depth. */
@@ -322,10 +403,27 @@ export interface ContentCommentsController<
   ) => Promise<ContentCommentsApiResponse>;
   /** Retries the first load after an error. */
   retry: () => Promise<unknown>;
+  /** Asks again for what a failed background refresh missed; resolves when done. */
+  retryRefresh: () => Promise<void>;
   /** Marks one comment busy while its editor loads, so its menu waits. */
   setEditing: (id: null | TId) => void;
-  /** `pending` before the first page, `error` when it failed, then `success`. */
+  /**
+   * Live only: reads the comments that appeared at the end of the thread and
+   * appends them below the loaded ones. Resolves to `false` when that failed.
+   */
+  showNewComments: () => Promise<boolean>;
+  /**
+   * `pending` before the first page, `error` when it failed, then `success` -
+   * also after a failed background refresh, which `refreshError` reports.
+   */
   status: "error" | "pending" | "success";
+  /**
+   * Call with `true` while an edit or reply form is open on `id`, and `false`
+   * when it closes. If a live update removes that comment meanwhile, it stays
+   * on screen with `removed: true` and its text, so the form keeps what was
+   * typed and can say why it can no longer be sent.
+   */
+  trackDraft: (id: TId, open: boolean) => void;
   /** The loaded comments as a tree, replies under their parents. */
   tree: ContentCommentTreeNode<TRecord, TId>[];
   /** `true` when a page held more nested replies than one answer carries. */
@@ -343,12 +441,136 @@ export interface ContentCommentsController<
 }
 
 /**
+ * Keeps what the reader is reading in place when comments above the viewport
+ * change: `capture` (called right before the change) remembers the first
+ * comment whose top is on screen; after the next commit the page scrolls by
+ * however far it moved. Browser scroll anchoring alone misses changes it does
+ * not attribute to the anchor, and does nothing in some browsers.
+ */
+const useScrollAnchor = (pages: unknown): (() => void) => {
+  const anchorRef = React.useRef<null | { element: Element; top: number }>(
+    null,
+  );
+
+  React.useLayoutEffect(() => {
+    const captured = anchorRef.current;
+    anchorRef.current = null;
+    if (!captured?.element.isConnected) return;
+    const shift = captured.element.getBoundingClientRect().top - captured.top;
+    if (Math.abs(shift) >= 1) window.scrollBy(0, shift);
+  }, [pages]);
+
+  return React.useCallback(() => {
+    if (typeof document === "undefined") return;
+    for (const element of document.querySelectorAll(
+      `[id^="${CONTENT_COMMENT_ANCHOR_PREFIX}"]`,
+    )) {
+      const { top } = element.getBoundingClientRect();
+      if (top >= 0) {
+        anchorRef.current = { element, top };
+
+        return;
+      }
+    }
+  }, []);
+};
+
+/**
+ * The live controller of one thread, when `branches` is wired: rebuilt when
+ * the thread's key changes, following the query cache while mounted, and
+ * always reading through the latest callbacks.
+ */
+const useLiveThread = <R extends ContentCommentsApiResponse, TRecord>({
+  beforeChange,
+  branches,
+  pageSize,
+  queryClient,
+  queryKey,
+  record,
+  thread,
+}: Pick<ContentCommentsConfig<R, TRecord>, "branches" | "record" | "thread"> & {
+  beforeChange: () => void;
+  pageSize: number;
+  queryClient: QueryClient;
+  queryKey: QueryKey;
+}): ContentCommentsLive<TRecord, ContentCommentIdOf<R>> | null => {
+  type TId = ContentCommentIdOf<R>;
+
+  const enabled = Boolean(branches);
+  const key = `${hashKey(queryKey)}|${enabled ? "live" : "off"}`;
+  const create = () =>
+    enabled
+      ? createContentCommentsLive<TRecord, TId>({
+          permissionsKey: [...queryKey, "permissions"],
+          queryClient,
+          threadKey: [...queryKey, "thread"],
+        })
+      : null;
+  const [state, setState] = React.useState(() => ({
+    key,
+    live: create(),
+    queryClient,
+  }));
+  let { live } = state;
+  if (state.key !== key || state.queryClient !== queryClient) {
+    live = create();
+    setState({ key, live, queryClient });
+  }
+
+  React.useEffect(() => {
+    live?.setSource({
+      beforeChange,
+      readBranches: async ids => {
+        if (!branches) {
+          throw new ContentCommentsRequestError(0, "No `branches`.");
+        }
+        const res = await branches(ids);
+        if (!res.ok) {
+          throw new ContentCommentsRequestError(
+            res.status,
+            `Refreshing the comments answered ${res.status}.`,
+          );
+        }
+        // The typed response's `2xx` member is the branches route's answer.
+        const body = (await res.json()) as ContentCommentsBranches<
+          TRecord,
+          TId
+        >;
+
+        return {
+          ...body,
+          branches: body.branches.map(branch =>
+            branch.status === "ok"
+              ? { ...branch, items: parseNodes(branch.items, record) }
+              : branch,
+          ),
+        };
+      },
+      readPage: async after =>
+        await readContentCommentsPage({
+          after,
+          first: pageSize,
+          record,
+          thread,
+        }),
+    });
+  });
+  React.useEffect(() => live?.attach(), [live]);
+
+  return live;
+};
+
+/**
  * The state and actions of one comment thread under a Content Engine record:
  * paginated loading, the reply tree, batched permissions for the comments on
  * screen, and create, edit, delete, hide and restore through the plugin's own
  * typed callbacks. A write refreshes the thread and its permissions only after
- * the server accepted it, and a second action on the same thread waits until
- * the first one settles.
+ * the server accepted it - only the branch it touched when `branches` is
+ * given - and a second action on the same thread waits until the first one
+ * settles. With `live`, other readers' changes arrive over the shared
+ * WebSocket: changed branches are re-read and merged in place, new comments
+ * wait for `showNewComments()`, and a failed background read keeps the
+ * comments on screen and sets `refreshError`.
  *
  * It renders nothing and shows no messages: hand it to `ContentComments` for
  * the default section, or to `ContentCommentsRoot` to lay out your own. The
@@ -395,9 +617,11 @@ export const useContentComments = <
   const queryClient = useQueryClient();
   const session = useSessionQuery();
   const {
+    branches: requestBranches,
     create,
     delete: remove,
     edit,
+    live: liveConfig,
     maxDepth,
     onChanged,
     pageSize,
@@ -418,7 +642,71 @@ export const useContentComments = <
     () => pages?.flatMap(page => page.items) ?? [],
     [pages],
   );
-  const tree = React.useMemo(() => buildContentCommentTree(items), [items]);
+  // Hands back the previous tree's nodes for unchanged branches, so one live
+  // update re-renders only the branch it touched.
+  const [shareTree] = React.useState(() => {
+    let previous: ContentCommentTreeNode<TRecord, TId>[] = [];
+
+    return (next: ContentCommentTreeNode<TRecord, TId>[]) => {
+      previous = shareContentCommentTree(previous, next);
+
+      return previous;
+    };
+  });
+  const tree = React.useMemo(
+    () => shareTree(buildContentCommentTree(items)),
+    [items, shareTree],
+  );
+
+  const captureScrollAnchor = useScrollAnchor(pages);
+  const live = useLiveThread<R, TRecord>({
+    beforeChange: captureScrollAnchor,
+    branches: requestBranches,
+    pageSize: pageSize ?? DEFAULT_PAGE_SIZE,
+    queryClient,
+    queryKey,
+    record,
+    thread,
+  });
+  const liveSnapshot = React.useSyncExternalStore(
+    live?.subscribe ?? noopSubscribe,
+    live?.getSnapshot ?? emptySnapshot,
+    live?.getSnapshot ?? emptySnapshot,
+  );
+
+  const liveContentTypeId = liveConfig?.contentTypeId;
+  const liveRootId = liveConfig?.rootId;
+  const liveScope = React.useMemo(
+    () =>
+      live && liveContentTypeId !== undefined && liveRootId !== undefined
+        ? {
+            contentTypeId: liveContentTypeId,
+            kind: "thread" as const,
+            rootId: liveRootId,
+          }
+        : null,
+    [live, liveContentTypeId, liveRootId],
+  );
+  const liveStatus = useContentLiveRefresh(liveScope, {
+    onDenied: () => {
+      live?.reconcile();
+    },
+    onSignal: signal => {
+      live?.signal(signal);
+    },
+    onSubscribed: ({ reconnect }) => {
+      live?.reconcile({ jitter: reconnect });
+    },
+  });
+  const trackDraft = React.useCallback(
+    (id: TId, open: boolean) => {
+      live?.trackDraft(id, open);
+    },
+    [live],
+  );
+
+  // Where the last write landed, so `written` refreshes only that branch.
+  const lastWriteRef = React.useRef<null | WriteTarget<TId>>(null);
 
   const requestPermissions = config.permissions;
   const permissions = useContentPermissions<TId>({
@@ -452,6 +740,23 @@ export const useContentComments = <
     ]);
   };
 
+  // After a write: only the branch it touched, when `branches` is wired.
+  const refreshAfterWrite = async (target: null | WriteTarget<TId>) => {
+    if (!live || !target) {
+      await refresh();
+
+      return;
+    }
+    await Promise.all([
+      "id" in target
+        ? live.refresh([target.id])
+        : target.parentId === null
+          ? live.refreshTail()
+          : live.refresh([target.parentId]),
+      onChanged?.(queryClient),
+    ]);
+  };
+
   const run = async (
     id: TId,
     action: ContentCommentBusy<TId>["action"],
@@ -463,7 +768,7 @@ export const useContentComments = <
       const res = await request().catch(() => null);
       if (!res) return { ok: false, status: 0 };
       if (!res.ok) return { ok: false, status: res.status };
-      await refresh();
+      await refreshAfterWrite({ id });
 
       return { ok: true };
     } finally {
@@ -481,6 +786,7 @@ export const useContentComments = <
       signedIn &&
       maxDepth !== undefined &&
       !node.hidden &&
+      !node.removed &&
       node.depth < maxDepth,
     features: {
       create: Boolean(create),
@@ -492,6 +798,7 @@ export const useContentComments = <
     },
     field,
     hasMore: comments.hasNextPage,
+    hasNewComments: liveSnapshot.hasNew,
     hide: async (id, reason) =>
       visibility
         ? await run(
@@ -501,9 +808,13 @@ export const useContentComments = <
           )
         : missing,
     isLoadingMore: comments.isFetchingNextPage,
-    isRefreshing: comments.isFetching && !comments.isPending,
+    isRefreshing:
+      comments.isFetching &&
+      !comments.isPending &&
+      !comments.isFetchingNextPage,
     isSessionPending: session.isPending,
     items,
+    liveStatus,
     loadEditable: async id => {
       if (!edit) return missing;
       const res = await edit.load(id).catch(() => null);
@@ -520,25 +831,38 @@ export const useContentComments = <
     },
     permissionsOf: permissions.of,
     refresh,
+    refreshError: comments.isRefetchError || liveSnapshot.refreshError,
     remove: async id =>
       remove ? await run(id, "delete", async () => await remove(id)) : missing,
     replyCount: pages?.at(-1)?.replyCount ?? 0,
     reportTarget: id => report?.(id) ?? null,
     requestCreate: async input => {
       if (!create) throw new Error("This thread has no `create`.");
+      lastWriteRef.current = { parentId: input.parentId };
 
       return await create(input);
     },
     requestSave: async (id, input) => {
       if (!edit) throw new Error("This thread has no `edit`.");
+      lastWriteRef.current = { id };
 
       return await edit.save(id, input);
     },
     retry: async () => await comments.refetch(),
+    retryRefresh: async () => {
+      if (comments.isRefetchError) {
+        await comments.refetch();
+
+        return;
+      }
+      await live?.retry();
+    },
     setEditing: id => {
       markBusy(id === null ? null : { action: "edit", id });
     },
-    status: comments.status,
+    showNewComments: async () => (live ? await live.showNew() : false),
+    status: comments.data ? "success" : comments.status,
+    trackDraft,
     tree,
     truncated: pages?.some(page => page.truncated) ?? false,
     unhide: async id =>
@@ -547,7 +871,9 @@ export const useContentComments = <
         : missing,
     userId: session.data?.user?.id ?? null,
     written: async record => {
-      await refresh();
+      const target = lastWriteRef.current;
+      lastWriteRef.current = null;
+      await refreshAfterWrite(target);
       const parsed = zodWrittenRecord.safeParse(record);
 
       return parsed.success ? contentCommentWriteOutcome(parsed.data) : "draft";

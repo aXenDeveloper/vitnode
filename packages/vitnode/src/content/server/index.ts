@@ -214,8 +214,10 @@ export type {
 } from "./notifications/registry";
 export {
   contentListPageCacheTags,
+  contentPublicStateOf,
   contentRecordPageCacheTags,
 } from "./page-cache";
+export type { ContentPublicState } from "./page-cache";
 export {
   assertContentPreviewIsServable,
   contentPreviewSecret,
@@ -303,6 +305,11 @@ export {
 } from "./query";
 export { LABEL_PREFIX, resolveReferenceTargets, toLabel } from "./references";
 export type { ReferenceTarget } from "./references";
+export {
+  onContentRefreshRootChanged,
+  publishContentRefresh,
+} from "./refresh/publish";
+export type { ContentRefreshChange } from "./refresh/publish";
 export {
   contentLocaleHeaders,
   resolveContentRequestLocale,
@@ -396,8 +403,16 @@ export {
   assertContentThreadPlacement,
   ContentThreadPlacementError,
   readContentThread,
+  readContentThreadBranches,
 } from "./thread";
-export type { ContentThreadNode, ContentThreadPage } from "./thread";
+export type {
+  ContentThreadBranch,
+  ContentThreadBranches,
+  ContentThreadNode,
+  ContentThreadPage,
+} from "./thread";
+export { resolveContentThreadRoot } from "./thread-access";
+export type { ContentThreadRootAccess } from "./thread-access";
 export { createContentTranslationEditorialService } from "./translation-editorial-service";
 export type {
   ContentRevisionDetailForLocale,
