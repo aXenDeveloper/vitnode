@@ -2883,7 +2883,7 @@
         "title": "Warn {name}",
         "title_loading": "Warn member",
         "desc": "The member gets your message in a notification. Points count across the whole site.",
-        "no_reasons": "No warning reasons are set up yet - an administrator can add them in the AdminCP.",
+        "no_reasons": "No warning reasons are set up yet. An administrator can add them in the AdminCP.",
         "cancel": "Cancel",
         "submit": "Issue warning",
         "points": "{count, plural, one {# point} other {# points}}",
@@ -2942,7 +2942,7 @@
           "suspended_until": "Their account is suspended until {endsAt}.",
           "suspended_indefinitely": "Their account is suspended indefinitely.",
           "report_resolved": "The report is closed.",
-          "differs": "That's different from the preview - their points changed in the meantime."
+          "differs": "Their points changed after you opened the form, so this differs from the preview."
         },
         "errors": {
           "title": "Could not issue the warning",
@@ -3084,7 +3084,7 @@
         "points_title": "Active points",
         "points_desc": "Points from warnings that haven't expired or been revoked. Reaching a limit can suspend your account.",
         "warnings_title": "Your warnings",
-        "no_warnings": "You haven't received any warnings. Keep it up!",
+        "no_warnings": "You haven't received any warnings.",
         "expires": "Points expire:",
         "never": "Never",
         "content": "About:",

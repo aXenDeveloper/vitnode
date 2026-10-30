@@ -61,16 +61,18 @@ const saveReasonWords = async (
   reasonId: number,
   body: Partial<z.infer<typeof reasonBody>>,
 ) => {
-  for (const variable of ["title", "description", "message"] as const) {
-    const values = body[variable];
-    if (values === undefined) continue;
-    await saveLanguageWords(c, {
-      ...WARNING_REASON_WORDS,
-      itemId: reasonId,
-      values: values.filter(item => item.value.length > 0),
-      variable,
-    });
-  }
+  await Promise.all(
+    (["title", "description", "message"] as const).map(async variable => {
+      const values = body[variable];
+      if (values === undefined) return;
+      await saveLanguageWords(c, {
+        ...WARNING_REASON_WORDS,
+        itemId: reasonId,
+        values: values.filter(item => item.value.length > 0),
+        variable,
+      });
+    }),
+  );
 };
 
 /** What an audit entry keeps of a reason: settings, never the words. */
