@@ -1,0 +1,146 @@
+---
+title: Live refresh
+description: How VitNode Content Engine keeps AdminCP lists and comment threads current over the shared WebSocket. Covers which writes send a signal, who may subscribe, reconnects, several server instances and custom write routes.
+icon: RefreshCw
+---
+
+Live refresh keeps screens that show Content Engine records current without a reload. Every generated AdminCP list takes part on its own, and a comment section joins in with [Live comments](/docs/content-engine/threads-live). Both use the app's one [WebSocket](/docs/dev/websocket) connection; nothing opens a second one.
+
+The WebSocket only carries small hints, such as "this list changed" or "this branch of this thread changed". Each open screen then reads the data again over HTTP with the viewer's own session. That costs one extra request per change, and buys a simple rule: what a reader sees always comes from the same routes and checks as a first load.
+
+## AdminCP lists
+
+Every generated list joins its content type's room while it's on screen, with no configuration. When a record of that type changes in another tab or session (created, edited, published, hidden, deleted, duplicated, scheduled, or one of its translations changed), the list:
+
+- reads the page on screen again, with its filters, search, sorting and page number, and keeps the old rows on screen meanwhile;
+- forgets the cached pages nobody is looking at, so opening one later reads it fresh;
+- keeps selected rows that are still on the page and drops the ones that left it;
+- collects a burst of changes into one read, 0.4 seconds after the last change and never more than 2 seconds after the first;
+- shows **Could not refresh this list** with **Try again** when that read fails, and keeps the rows.
+
+A delete can push the current page past the end. The list route answers with the last page instead, so the list doesn't end up empty.
+
+## What sends a signal
+
+Signals come from `emitContentEvent`, which every generated route and service effect calls once a write has committed. It works in this order:
+
+1. The transaction commits. A write that rolls back never gets further.
+2. The content event is emitted, and the content type's cached pages and public reads are expired.
+3. The signals are published.
+
+So whoever reads again because of a signal gets the new state, never a cached copy.
+
+| Room | Who may join | Sent for |
+| --- | --- | --- |
+| AdminCP list of one content type | An AdminCP session with the content type's `can_view`, the permission of the list route | Every content event of that type |
+| Thread of one comment type under one root record | Anyone who may read that thread: guests for a public article; authors, editors and moderators for a hidden one | Changes to comments that were or are public, naming the top-level branch they sit in |
+| The same thread room | The same | The root record being hidden, unhidden, published, unpublished, restored or deleted |
+
+A thread signal never carries text, authors or reasons. It is sent only for a comment that was or is public, so a draft, a comment waiting for a moderator, or an edit of a hidden comment sends nothing to the thread. The AdminCP list still hears about it.
+
+### Custom write routes
+
+A custom route that writes through `model.service(c)` or `model.editorialService(c)` emits nothing by itself, so open screens don't hear about it. After the write commits, call `contentEditorialEffects` for an editorial write, or `emitContentEvent` for a plain one, as the generated routes do. Pass the row whenever you have it. For a delete of a threaded record it's required, because the deleted record can't be read back to find its thread:
+
+```ts title="plugins/newsroom/src/api/modules/comments/routes/remove.route.ts (excerpt)"
+import {
+  contentPublicStateOf,
+  emitContentEvent,
+} from "@vitnode/core/content/server";
+
+import { commentContentType } from "@/content/comment";
+import { commentContent } from "@/database/comments";
+import { manifest } from "@/manifest.gen";
+
+// Inside your route handler, after the write:
+const row = await commentContent.service(c).delete(id);
+if (row) {
+  await emitContentEvent(
+    c,
+    commentContentType,
+    "deleted",
+    { contentId: row.id },
+    {
+      pluginId: manifest.id,
+      publicState: contentPublicStateOf(commentContentType, row, null),
+      row,
+    },
+  );
+}
+```
+
+For a change that has no content event, `publishContentRefresh(c, { action, contentId, definition, publicState, row })` from the same import sends only the signals. Call it after the caches are expired.
+
+## Who stays subscribed
+
+A room name is only an address. The server checks every join with the rules above and answers `FORBIDDEN` or `NOT_FOUND` without adding the connection. After that:
+
+- **A revoked session** (signing out a device, a password change or reset, an admin revoke) closes the user's WebSocket connections on every instance. **Signing out or in** within a tab reconnects the shared connection under the new identity. Either way, the tabs join their rooms again and the server checks them again.
+- **A lost permission or an ended session**, including an AdminCP session that expired or signed out, is caught within about 80 seconds: the server checks every subscription again once it's a minute old. A thread subscription opened while signed in fails that check once its session is gone, even on a public article.
+- **A thread root that becomes hidden, unpublished or deleted** is checked at once. Readers who lost access are removed from the room, and their open thread reads again, gets `404` and clears.
+
+Tabs of one browser share the connection, but each tab joins for itself and acts only on its own confirmed joins. A tab with the comments closed doesn't react to a signal another tab asked for.
+
+## Reconnects and missed changes
+
+Delivery is best effort and nothing is replayed. A signal sent while a tab was disconnected is lost, so every join is followed by one read that covers the gap:
+
+- an AdminCP list reads its page once;
+- a comment section reads its loaded pages once.
+
+After a reconnect, that read waits a random moment of up to 1.5 seconds, so a server restart doesn't make every open tab read at the same time.
+
+## Several server instances
+
+With `REDIS_URL` set, a signal published on one instance reaches subscribers on every instance, and a root change re-checks their rooms there too. Without Redis, only tabs connected to the instance that handled the write hear about it, which is fine for a single server. See [Rooms on several instances](/docs/dev/websocket/rooms#rooms-on-several-instances).
+
+## Cost of a busy thread
+
+A popular article can have hundreds of readers with its thread open, and every signal reaches all of them, so each one has to stay cheap. Per open section:
+
+| Event | Requests |
+| --- | --- |
+| A change in a loaded branch | One `GET /thread/branches` for that branch |
+| Five quick changes to the same branch | One, within 2 seconds |
+| Changes to several loaded branches at once | One per 10 branches, at most 2 running at once |
+| A new top-level comment | None until **Show new comments**, then one `GET /thread` for what follows the last loaded comment |
+| A change in a branch that isn't loaded | None |
+| A join or reconnect | One read of every loaded page |
+
+Guests and readers without hidden access all get the same branch answer, so the API serves it from its [public read cache](/docs/content-engine/caching), which the write expired before the signal went out. Readers who may see hidden comments get a private answer that is never shared.
+
+Limits: one connection holds at most 64 subscriptions across all of its tabs and may send 120 joins a minute, and `/thread/branches` reads at most 10 branches per request. These are limits in the code, not benchmark results.
+
+## Follow a scope from your own screen
+
+`useContentLiveRefresh` from `@vitnode/core/tanstack/content` is the hook behind both features. Use it when your own screen shows Content Engine data, such as a custom admin page. Pass a scope and re-read on every signal and every join:
+
+```tsx title="plugins/newsroom/src/views/story-board.tsx (excerpt)"
+import { useContentLiveRefresh } from "@vitnode/core/tanstack/content";
+
+import { storyContentType } from "@/content/story";
+
+// Inside the component, next to the query that loads the board:
+const status = useContentLiveRefresh(
+  { contentTypeId: storyContentType.id, kind: "admin" },
+  {
+    onSignal: () => void refetch(),
+    onSubscribed: () => void refetch(),
+  },
+);
+```
+
+`refetch` is the refetch of the screen's own TanStack Query. A scope is `{ contentTypeId, kind: "admin" }` or `{ contentTypeId, kind: "thread", rootId }`, with the same join rules as the table above. Pass `null` to stay off. The hook returns `"off"` (no scope or no open connection), `"joining"`, `"live"` or `"denied"` (refused or revoked), and calls `onDenied` when the server refuses or revokes the subscription.
+
+## Limitations
+
+- Signals are hints, not a durable log. A reader who was offline catches up on the next join, not change by change.
+- Moderators don't get live updates for changes the public can't see, such as a new comment waiting for approval. They see them on the next read.
+- A subscription the server refused or revoked stays off until the connection reconnects or the screen is opened again.
+- The Forum plugin draws its own topic thread and doesn't use live comments yet.
+
+## Related
+
+- [Live comments](/docs/content-engine/threads-live): turn it on for a comment section.
+- [Events](/docs/content-engine/events): the content events behind the signals.
+- [Reconnects](/docs/dev/websocket/reconnects): what a WebSocket reconnect keeps and loses.

@@ -107,6 +107,18 @@ export const useContentCommentItem = (node: ContentCommentNode<unknown>) => {
   const [isReplying, setIsReplying] = React.useState(false);
   const permissions = comments.permissionsOf(node.id);
   const isBusy = comments.busy !== null && comments.busy.id === node.id;
+  const hasDraft = editing !== null || isReplying;
+  const { trackDraft } = comments;
+
+  // A live update must not unmount a form the reader is typing in.
+  React.useEffect(() => {
+    if (!hasDraft) return;
+    trackDraft(node.id, true);
+
+    return () => {
+      trackDraft(node.id, false);
+    };
+  }, [hasDraft, node.id, trackDraft]);
 
   return {
     /** Whether **Reply** shows: the visitor may write, under `maxDepth`, not hidden. */
@@ -118,6 +130,12 @@ export const useContentCommentItem = (node: ContentCommentNode<unknown>) => {
     /** `true` while an action runs on this comment. */
     isBusy,
     isReplying,
+    /**
+     * The comment was removed, or is no longer visible to this reader, while
+     * a form was open on it: it stays only so the typed text is not lost, and
+     * can no longer be saved or answered.
+     */
+    isRemoved: node.removed && node.record !== null,
     /** The server's answers, limited to the actions the plugin wired up. */
     permissions: {
       canDelete: comments.features.delete && permissions.canDelete,

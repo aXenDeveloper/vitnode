@@ -233,43 +233,37 @@ interface NodeRow extends Record<string, unknown> {
   status: string;
 }
 
+interface ThreadReadOptions<TRecord> {
+  /**
+   * Hidden replies this reader may see, from `contentThreadHiddenAccess`.
+   * They are kept with `hidden: true`; omit it for the public thread.
+   */
+  hiddenAccess?: ContentPublicHiddenAccess;
+  /**
+   * Rows for these ids, in any order: public ones, plus the hidden ones in
+   * `hiddenIds` the reader may see.
+   */
+  project: (
+    ids: ContentId[],
+    options: { hiddenIds: ContentId[] },
+  ) => Promise<Map<string, TRecord>>;
+  root: ContentId;
+}
+
 /**
- * Pages a thread oldest first: a page is a run of top-level replies plus every
- * answer below them, flattened depth first. A reply that is not public is left
- * out - unless a public answer sits below it, in which case it is returned as
- * `removed` with no values, so the tree keeps its shape.
+ * Everything a thread read needs, built once per request: the top-level
+ * selection, the counts and the tree below a set of top-level rows. Shared by
+ * the page read and the branch read so both answer with the same visibility,
+ * placeholders, depth and truncation.
  */
-export const readContentThread = async <
+const createThreadReader = <
   TDefinition extends AnyContentTypeDefinition,
   TRecord,
 >(
   c: Context,
   model: ContentModel<TDefinition>,
-  {
-    first,
-    after,
-    hiddenAccess,
-    project,
-    root,
-  }: {
-    after?: string;
-    first: number;
-    /**
-     * Hidden replies this reader may see, from `contentThreadHiddenAccess`.
-     * They are kept with `hidden: true`; omit it for the public thread.
-     */
-    hiddenAccess?: ContentPublicHiddenAccess;
-    /**
-     * Rows for these ids, in any order: public ones, plus the hidden ones in
-     * `hiddenIds` the reader may see.
-     */
-    project: (
-      ids: ContentId[],
-      options: { hiddenIds: ContentId[] },
-    ) => Promise<Map<string, TRecord>>;
-    root: ContentId;
-  },
-): Promise<ContentThreadPage<TRecord>> => {
+  { hiddenAccess, project, root }: ThreadReadOptions<TRecord>,
+) => {
   const { definition } = model;
   const { maxDepth, parentField, rootField } = definition.thread;
   const columns = model.columns as Record<string, PgColumn>;
@@ -325,12 +319,30 @@ export const readContentThread = async <
   };
 
   /**
-   * A top-level reply that is not public earns a place on the page only when
-   * something answers it - otherwise it would be pruned and leave a page short,
-   * or empty with `hasNextPage` still set. Skipped ones are read past in a few
-   * bounded rounds.
+   * A top-level reply that is not public earns a place only when something
+   * answers it - otherwise it would be pruned and leave a page short.
    */
-  const readTops = async (): Promise<NodeRow[]> => {
+  const keepTops = async (batch: NodeRow[]): Promise<NodeRow[]> => {
+    const hidden = batch.filter(row => !isReadable(row)).map(row => row.id);
+    const answered = new Set(
+      hidden.length === 0
+        ? []
+        : (
+            await db
+              .select({ parent: parentColumn })
+              .from(table)
+              .where(inArray(parentColumn, hidden))
+          ).map(row => String(row.parent)),
+    );
+
+    return batch.filter(row => isReadable(row) || answered.has(String(row.id)));
+  };
+
+  /** Skipped top-level replies are read past in a few bounded rounds. */
+  const readTops = async (
+    after: string | undefined,
+    first: number,
+  ): Promise<NodeRow[]> => {
     const collected: NodeRow[] = [];
     let position = decodeCursor(after);
 
@@ -343,20 +355,7 @@ export const readContentThread = async <
         .limit(first + 1)) as NodeRow[];
       if (batch.length === 0) break;
 
-      const hidden = batch.filter(row => !isReadable(row)).map(row => row.id);
-      const answered = new Set(
-        hidden.length === 0
-          ? []
-          : (
-              await db
-                .select({ parent: parentColumn })
-                .from(table)
-                .where(inArray(parentColumn, hidden))
-            ).map(row => String(row.parent)),
-      );
-      collected.push(
-        ...batch.filter(row => isReadable(row) || answered.has(String(row.id))),
-      );
+      collected.push(...(await keepTops(batch)));
 
       const last = batch.at(-1);
       if (!last || batch.length <= first) break;
@@ -366,122 +365,177 @@ export const readContentThread = async <
     return collected;
   };
 
-  const [tops, [topTotal], [replyTotal]] = await Promise.all([
-    readTops(),
-    db
-      .select({ value: count() })
-      .from(table)
-      .where(and(topLevel, publicCondition)),
-    db
-      .select({ value: count() })
-      .from(table)
-      .where(and(eq(rootColumn, root), publicCondition)),
+  /** The given top-level replies of this root, oldest first. */
+  const readBranchTops = async (ids: ContentId[]): Promise<NodeRow[]> =>
+    ids.length === 0
+      ? []
+      : await keepTops(
+          (await db
+            .select(nodeSelection)
+            .from(table)
+            .where(and(topLevel, inArray(columns.id, ids)))
+            .orderBy(asc(columns.createdAt), asc(columns.id))) as NodeRow[],
+        );
+
+  const counts = async (): Promise<{
+    replyCount: number;
+    totalCount: number;
+  }> => {
+    const [[topTotal], [replyTotal]] = await Promise.all([
+      db
+        .select({ value: count() })
+        .from(table)
+        .where(and(topLevel, publicCondition)),
+      db
+        .select({ value: count() })
+        .from(table)
+        .where(and(eq(rootColumn, root), publicCondition)),
+    ]);
+
+    return {
+      replyCount: replyTotal?.value ?? 0,
+      totalCount: topTotal?.value ?? 0,
+    };
+  };
+
+  /** Every reader-visible entry below `page`, flattened depth first. */
+  const build = async (
+    page: NodeRow[],
+  ): Promise<{ items: ContentThreadNode<TRecord>[]; truncated: boolean }> => {
+    const nodes = new Map<string, NodeRow>();
+    const children = new Map<string, NodeRow[]>();
+    for (const row of page) nodes.set(String(row.id), row);
+
+    let frontier = page.map(row => row.id);
+    let truncated = false;
+    for (let level = 2; level <= maxDepth && frontier.length > 0; level++) {
+      if (nodes.size >= CONTENT_THREAD_MAX_NODES) {
+        truncated = true;
+        break;
+      }
+      const rows = (await db
+        .select(nodeSelection)
+        .from(table)
+        .where(and(eq(rootColumn, root), inArray(parentColumn, frontier)))
+        .orderBy(asc(columns.createdAt), asc(columns.id))
+        .limit(CONTENT_THREAD_MAX_NODES - nodes.size + 1)) as NodeRow[];
+      if (rows.length > CONTENT_THREAD_MAX_NODES - nodes.size) {
+        truncated = true;
+        rows.length = CONTENT_THREAD_MAX_NODES - nodes.size;
+      }
+
+      for (const row of rows) {
+        nodes.set(String(row.id), row);
+        const key = String(row.parent);
+        children.set(key, [...(children.get(key) ?? []), row]);
+      }
+      frontier = rows.map(row => row.id);
+    }
+
+    const kept = new Set<string>();
+    const keep = (row: NodeRow): boolean => {
+      let any = false;
+      for (const child of children.get(String(row.id)) ?? []) {
+        if (keep(child)) any = true;
+      }
+      if (any || isReadable(row)) {
+        kept.add(String(row.id));
+
+        return true;
+      }
+
+      return false;
+    };
+    for (const row of page) keep(row);
+
+    const readable = [...kept]
+      .map(key => nodes.get(key))
+      .filter((row): row is NodeRow => row !== undefined)
+      .filter(row => isReadable(row));
+    const records = await project(
+      readable.map(row => row.id),
+      {
+        hiddenIds: readable
+          .filter(row => !isContentBaseRowPublic(row))
+          .map(row => row.id),
+      },
+    );
+
+    const placeholderOf = (
+      row: NodeRow,
+      owner: null | number,
+    ): ContentThreadNode<TRecord>["deleted"] => {
+      const removedBy =
+        row.deletedAt instanceof Date
+          ? row.deletedBy
+          : row.hiddenAt instanceof Date
+            ? row.hiddenBy
+            : undefined;
+      if (removedBy === undefined) return null;
+
+      return {
+        byAuthor: owner !== null && removedBy === owner,
+        createdAt: row.createdAt,
+      };
+    };
+
+    const items: ContentThreadNode<TRecord>[] = [];
+    const walk = (row: NodeRow, depth: number): void => {
+      const key = String(row.id);
+      if (!kept.has(key)) return;
+      const record = records.get(key) ?? null;
+      const owner = typeof row.owner === "number" ? row.owner : null;
+      const hidden = record !== null && isViewableHidden(row);
+      items.push({
+        deleted: record === null ? placeholderOf(row, owner) : null,
+        depth,
+        hidden,
+        hiddenReason:
+          hidden && typeof row.hiddenReason === "string"
+            ? row.hiddenReason
+            : null,
+        id: row.id,
+        parentId: row.parent,
+        record,
+        removed: record === null,
+      });
+      for (const child of children.get(key) ?? []) walk(child, depth + 1);
+    };
+    for (const row of page) walk(row, 1);
+
+    return { items, truncated };
+  };
+
+  return { build, counts, readBranchTops, readTops };
+};
+
+/**
+ * Pages a thread oldest first: a page is a run of top-level replies plus every
+ * answer below them, flattened depth first. A reply that is not public is left
+ * out - unless a public answer sits below it, in which case it is returned as
+ * `removed` with no values, so the tree keeps its shape.
+ */
+export const readContentThread = async <
+  TDefinition extends AnyContentTypeDefinition,
+  TRecord,
+>(
+  c: Context,
+  model: ContentModel<TDefinition>,
+  {
+    first,
+    after,
+    ...options
+  }: ThreadReadOptions<TRecord> & { after?: string; first: number },
+): Promise<ContentThreadPage<TRecord>> => {
+  const reader = createThreadReader(c, model, options);
+  const [tops, { replyCount, totalCount }] = await Promise.all([
+    reader.readTops(after, first),
+    reader.counts(),
   ]);
 
   const hasNextPage = tops.length > first;
   const page = tops.slice(0, first);
-
-  const nodes = new Map<string, NodeRow>();
-  const children = new Map<string, NodeRow[]>();
-  for (const row of page) nodes.set(String(row.id), row);
-
-  let frontier = page.map(row => row.id);
-  let truncated = false;
-  for (let level = 2; level <= maxDepth && frontier.length > 0; level++) {
-    if (nodes.size >= CONTENT_THREAD_MAX_NODES) {
-      truncated = true;
-      break;
-    }
-    const rows = (await db
-      .select(nodeSelection)
-      .from(table)
-      .where(and(eq(rootColumn, root), inArray(parentColumn, frontier)))
-      .orderBy(asc(columns.createdAt), asc(columns.id))
-      .limit(CONTENT_THREAD_MAX_NODES - nodes.size + 1)) as NodeRow[];
-    if (rows.length > CONTENT_THREAD_MAX_NODES - nodes.size) {
-      truncated = true;
-      rows.length = CONTENT_THREAD_MAX_NODES - nodes.size;
-    }
-
-    for (const row of rows) {
-      nodes.set(String(row.id), row);
-      const key = String(row.parent);
-      children.set(key, [...(children.get(key) ?? []), row]);
-    }
-    frontier = rows.map(row => row.id);
-  }
-
-  const kept = new Set<string>();
-  const keep = (row: NodeRow): boolean => {
-    let any = false;
-    for (const child of children.get(String(row.id)) ?? []) {
-      if (keep(child)) any = true;
-    }
-    if (any || isReadable(row)) {
-      kept.add(String(row.id));
-
-      return true;
-    }
-
-    return false;
-  };
-  for (const row of page) keep(row);
-
-  const readable = [...kept]
-    .map(key => nodes.get(key))
-    .filter((row): row is NodeRow => row !== undefined)
-    .filter(row => isReadable(row));
-  const records = await project(
-    readable.map(row => row.id),
-    {
-      hiddenIds: readable
-        .filter(row => !isContentBaseRowPublic(row))
-        .map(row => row.id),
-    },
-  );
-
-  const placeholderOf = (
-    row: NodeRow,
-    owner: null | number,
-  ): ContentThreadNode<TRecord>["deleted"] => {
-    const removedBy =
-      row.deletedAt instanceof Date
-        ? row.deletedBy
-        : row.hiddenAt instanceof Date
-          ? row.hiddenBy
-          : undefined;
-    if (removedBy === undefined) return null;
-
-    return {
-      byAuthor: owner !== null && removedBy === owner,
-      createdAt: row.createdAt,
-    };
-  };
-
-  const items: ContentThreadNode<TRecord>[] = [];
-  const walk = (row: NodeRow, depth: number): void => {
-    const key = String(row.id);
-    if (!kept.has(key)) return;
-    const record = records.get(key) ?? null;
-    const owner = typeof row.owner === "number" ? row.owner : null;
-    const hidden = record !== null && isViewableHidden(row);
-    items.push({
-      deleted: record === null ? placeholderOf(row, owner) : null,
-      depth,
-      hidden,
-      hiddenReason:
-        hidden && typeof row.hiddenReason === "string"
-          ? row.hiddenReason
-          : null,
-      id: row.id,
-      parentId: row.parent,
-      record,
-      removed: record === null,
-    });
-    for (const child of children.get(key) ?? []) walk(child, depth + 1);
-  };
-  for (const row of page) walk(row, 1);
-
+  const { items, truncated } = await reader.build(page);
   const last = page.at(-1);
 
   return {
@@ -491,9 +545,74 @@ export const readContentThread = async <
         ? encodeCursor({ createdAt: last.createdAtText, id: last.id })
         : null,
       hasNextPage,
-      totalCount: topTotal?.value ?? 0,
+      totalCount,
     },
-    replyCount: replyTotal?.value ?? 0,
+    replyCount,
+    truncated,
+  };
+};
+
+/**
+ * One top-level branch as {@link readContentThreadBranches} answers it:
+ * `items` holds the top-level reply first, then every answer below it, exactly
+ * as `readContentThread` would place them on a page. `gone` when this reader
+ * no longer sees the branch at all - deleted, hidden or unpublished with no
+ * public answer left, not top-level, or not under this root.
+ */
+export type ContentThreadBranch<TRecord> =
+  | { id: ContentId; items: ContentThreadNode<TRecord>[]; status: "ok" }
+  | { id: ContentId; status: "gone" };
+
+export interface ContentThreadBranches<TRecord> {
+  branches: ContentThreadBranch<TRecord>[];
+  pageInfo: { totalCount: number };
+  replyCount: number;
+  truncated: boolean;
+}
+
+/**
+ * Reads the current state of some top-level branches of one thread, with the
+ * same visibility, placeholder, depth and truncation rules as
+ * {@link readContentThread} - for refreshing branches already on screen
+ * without reading every page again. Answers every requested id, in the order
+ * given; one that is not a top-level reply of `root` is `gone`, whether it
+ * exists elsewhere or not. Server-only.
+ */
+export const readContentThreadBranches = async <
+  TDefinition extends AnyContentTypeDefinition,
+  TRecord,
+>(
+  c: Context,
+  model: ContentModel<TDefinition>,
+  { ids, ...options }: ThreadReadOptions<TRecord> & { ids: ContentId[] },
+): Promise<ContentThreadBranches<TRecord>> => {
+  const reader = createThreadReader(c, model, options);
+  const [tops, { replyCount, totalCount }] = await Promise.all([
+    reader.readBranchTops(ids),
+    reader.counts(),
+  ]);
+  const { items, truncated } = await reader.build(tops);
+
+  const byBranch = new Map<string, ContentThreadNode<TRecord>[]>();
+  let current: ContentThreadNode<TRecord>[] | undefined;
+  for (const item of items) {
+    if (item.depth === 1) {
+      current = [];
+      byBranch.set(String(item.id), current);
+    }
+    current?.push(item);
+  }
+
+  return {
+    branches: ids.map(id => {
+      const branch = byBranch.get(String(id));
+
+      return branch
+        ? { id: branch[0]?.id ?? id, items: branch, status: "ok" as const }
+        : { id, status: "gone" as const };
+    }),
+    pageInfo: { totalCount },
+    replyCount,
     truncated,
   };
 };

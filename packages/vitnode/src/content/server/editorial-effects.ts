@@ -167,7 +167,11 @@ export const contentEditorialEffects = async (
       // be handling the request. Passed on every path, interactive and
       // scheduled, so the envelope's owner is a property of the event rather
       // than of how it was triggered.
-      { pluginId, publicState: outcome.publicState },
+      {
+        pluginId,
+        publicState: outcome.publicState,
+        row: outcome.row,
+      },
     );
 
     // Logged here rather than left to each caller. The scheduled path

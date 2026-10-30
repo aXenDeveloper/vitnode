@@ -33,6 +33,8 @@ const comments = useContentComments({ queryKey, thread, ...actions })
 | `record`      | `ZodType<TRecord>`                                  | No       | Validates every loaded comment's public record and gives it a type. The thread route types records loosely, so pass it when your own rendering reads their fields                                                                                                  |
 | `field`       | `string`                                            | No       | The rich-text field with the comment's text. Defaults to `"body"`                                                                                                                                                                                                  |
 | `onChanged`   | `(queryClient) => void \| Promise<void>`            | No       | Refreshes your other queries after a successful write, such as a comment count elsewhere on the page                                                                                                                                                               |
+| `branches`    | `(ids) => Promise<Response>`                        | No       | [`GET /thread/branches`](#get-threadbranches) with `root`, plus `ids` joined by commas only when there are any. Writes then re-read only the branch they touched instead of every loaded page. `live` needs it |
+| `live`        | `{ contentTypeId, rootId }`                         | No       | The comment content type's `id` and the root record's id. Keeps the thread current over the WebSocket while it is mounted; ignored without `branches`. See [Live comments](/docs/content-engine/threads-live) |
 
 ### Callback contract
 
@@ -48,16 +50,20 @@ const comments = useContentComments({ queryKey, thread, ...actions })
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `tree`                                         | The loaded comments as a tree: `ContentCommentTreeNode[]`, replies in `children`                                                                                                     |
 | `items`                                        | The same entries, flat and depth first                                                                                                                                               |
-| `status`                                       | `"pending"` before the first page, `"error"` when it failed, then `"success"`                                                                                                        |
+| `status`                                       | `"pending"` before the first page, `"error"` when it failed, then `"success"` - also after a failed background refresh, which `refreshError` reports                              |
 | `hasMore`, `loadMore()`, `isLoadingMore`       | The next page of top-level comments. `loadMore` resolves to `false` when it failed                                                                                                   |
-| `isRefreshing`, `retry()`                      | A refetch over data on screen, and retrying a failed first load                                                                                                                      |
+| `isRefreshing`, `retry()`                      | A refetch over data on screen (not **Load more**), and retrying a failed first load                                                                                                  |
+| `refreshError`, `retryRefresh()`               | A background read of the comments on screen failed, and they stayed as they were. `retryRefresh()` asks again for what it missed and resolves when done                                                  |
+| `hasNewComments`, `showNewComments()`          | With `live`: comments appeared after the last loaded one, at the end of the thread. `showNewComments()` reads only those and adds them below; it resolves to `false` when that failed |
+| `liveStatus`                                   | `"off"` (no `live`, or no open WebSocket), `"joining"`, `"live"`, or `"denied"` when the server refused or revoked the subscription                                               |
+| `trackDraft(id, open)`                         | Call with `true` while an edit or reply form is open on `id` and `false` when it closes. A live update that removes that comment keeps it on screen with `removed: true` and its record until then. `useContentCommentItem` calls it for you |
 | `replyCount`, `truncated`                      | Every public comment at any depth, and whether a page held more replies than one answer carries                                                                                      |
 | `permissionsOf(id)`                            | `{ canDelete, canEdit, canHide, canReport }`, all `false` until known or after a failed batch                                                                                        |
 | `canComment`, `canReply(node)`                 | Whether the composer and **Reply** show: signed in, `create` given, under `maxDepth`, not hidden                                                                                     |
 | `features`                                     | Which actions you wired up                                                                                                                                                           |
 | `busy`                                         | The action running right now, `{ action, id }` or `null`. A second action waits for it                                                                                               |
-| `remove(id)`, `hide(id, reason)`, `unhide(id)` | Run an action and refresh after success. Resolve to `{ ok: true }` or `{ ok: false, status }`; `status` is `409` when another action was still running and `0` for a network failure |
-| `refresh()`                                    | Refreshes the thread, its permissions and `onChanged`'s queries                                                                                                                      |
+| `remove(id)`, `hide(id, reason)`, `unhide(id)` | Run an action and refresh after success - only that comment's branch with `branches`. Resolve to `{ ok: true }` or `{ ok: false, status }`; `status` is `409` when another action was still running and `0` for a network failure |
+| `refresh()`                                    | Re-reads every loaded page, its permissions and `onChanged`'s queries                                                                                                               |
 | `userId`                                       | The signed-in visitor's id, or `null`                                                                                                                                                |
 
 ### Thread entries
@@ -158,9 +164,10 @@ const MyComment = ({ node }) => {
 | Export                                                             | What it is                                                                                                                                                                            |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ContentCommentsRoot`                                              | Provides `comments` to the components below; takes a `fallback` shown while the messages load                                                                                         |
-| `useContentCommentItem(node)`                                      | One comment's state: `permissions` (the server's answers limited to wired actions), `canReply`, `editing`, `startEditing()`, `stopEditing()`, `isReplying`, `setIsReplying`, `isBusy` |
+| `useContentCommentItem(node)`                                      | One comment's state: `permissions` (the server's answers limited to wired actions), `canReply`, `editing`, `startEditing()`, `stopEditing()`, `isReplying`, `setIsReplying`, `isBusy`, and `isRemoved` when a live update removed the comment under an open form |
 | `ContentCommentActions`                                            | The **More actions** menu with the hide-reason prompt. `children` adds your own menu items                                                                                            |
-| `ContentCommentComposer`                                           | The comment form, lazy-loaded: `mode="create"` with `parentId`, or `mode="edit"` with `id` and `editable`                                                                             |
+| `ContentCommentComposer`                                           | The comment form, lazy-loaded: `mode="create"` with `parentId`, or `mode="edit"` with `id` and `editable`. `unavailable` (a translated reason) keeps the text but hides the submit button |
+| `ContentCommentsLiveStatus`                                        | **Show new comments** and the refresh-failed notice, with a polite screen reader announcement. Renders nothing while there is nothing to say                                           |
 | `ContentCommentItem`                                               | One comment as the default section draws it                                                                                                                                           |
 | `ContentCommentPlaceholder`                                        | The anonymous stand-in for a removed comment                                                                                                                                          |
 | `ContentCommentsComposer`, `ContentCommentsLoadMore`               | The new-comment card and the load-more button                                                                                                                                         |
@@ -173,7 +180,30 @@ The Blog plugin's `plugins/blog/src/pages/post-comments.tsx` is a complete custo
 
 - **Writes.** The composer posts through [`useContentPublicWrite`](/docs/content-engine/public-write-form-api): a refused write keeps the text and shows the reason, and with `editorial` a stale edit shows the version-conflict alert. A success reads the answer's `status` and `approval`: **Comment posted** only when it is public, **saved as a draft** or **waiting for a moderator** otherwise.
 - **Actions.** Delete, hide and unhide show **Comment deleted**, **Comment hidden** or **Comment visible again** after the server accepts them. When it refuses, the section shows one message for the cause: signed out, not allowed, gone, busy or unknown.
-- **Loading.** A failed first load shows **Try again**; a failed **Load more** keeps the loaded comments and says it failed.
+- **Loading.** A failed first load shows **Try again**; a failed **Load more** keeps the loaded comments and says it failed. A failed background refresh keeps them too; `ContentCommentsLiveStatus` offers **Try again**.
+
+## `GET /thread/branches`
+
+Every content type with `thread` also gets `GET /{publicApi.path}/thread/branches`. It re-reads a few top-level comments already on screen, each with every reply below it, using the same root check, visibility, placeholders, depth and truncation as `/thread`. `useContentComments` calls it through `branches`.
+
+```txt
+GET /api/newsroom/content/article-comments/thread/branches?root=1&ids=4,9
+```
+
+| Query  | Required | Description                                                                                  |
+| ------ | -------- | -------------------------------------------------------------------------------------------- |
+| `root` | Yes      | The root record's id                                                                         |
+| `ids`  | No       | Up to 10 top-level comment ids, joined by commas. Duplicates are ignored. Without it, only the counts are read |
+
+| Response field                                 | Description                                                                                                                       |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `branches`                                     | One entry per requested id, in the order asked: `{ id, status: "ok", items }` or `{ id, status: "gone" }`                         |
+| `items`                                        | The top-level comment first, then every reply below it, as [thread entries](#thread-entries)                                     |
+| `pageInfo.totalCount`, `replyCount`, `truncated` | The thread's current counts, as on `/thread`                                                                                    |
+
+`gone` means this reader no longer sees the branch: deleted, hidden or unpublished with no visible reply left, not a top-level comment, or under another root. An unreadable root answers `404`, as on `/thread`; more than 10 or malformed ids answer `400`.
+
+Guests and readers who can't see hidden comments get the same answer, served from the [public read cache](/docs/content-engine/caching) with `Cache-Control: no-cache`. Readers who may see hidden comments, and readers of a hidden root, get a `private, no-store` answer.
 
 ## Related
 

@@ -32,6 +32,20 @@ export const ArticleComments = ({ articleId }: { articleId: number }) => {
   const comments = useContentComments({
     ...articleCommentsThread(articleId),
     maxDepth: COMMENT_MAX_DEPTH,
+    branches: async ids =>
+      await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "content/article-comments",
+        path: "/thread/branches",
+        args: {
+          query: {
+            root: String(articleId),
+            ...(ids.length > 0 ? { ids: ids.join(",") } : {}),
+          },
+        },
+      }),
+    live: { contentTypeId: commentContentType.id, rootId: articleId },
     permissions: async ids =>
       await fetcher({
         plugin: manifest.id,

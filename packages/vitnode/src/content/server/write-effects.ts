@@ -43,7 +43,11 @@ export const contentPlainWriteEffects = async <
       definition,
       "created",
       { contentId: id },
-      { pluginId, publicState: contentPublicStateOf(definition, null, row) },
+      {
+        pluginId,
+        publicState: contentPublicStateOf(definition, null, row),
+        row,
+      },
     );
   } else if (operation === "update" && changedFields.length > 0) {
     await emitContentEvent(
@@ -52,7 +56,11 @@ export const contentPlainWriteEffects = async <
       "updated",
       { changedFields, contentId: id },
       // An edit cannot move publication, so the row after it says both.
-      { pluginId, publicState: contentPublicStateOf(definition, row, row) },
+      {
+        pluginId,
+        publicState: contentPublicStateOf(definition, row, row),
+        row,
+      },
     );
   }
 

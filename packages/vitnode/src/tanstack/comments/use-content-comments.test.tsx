@@ -331,6 +331,102 @@ describe("useContentComments", () => {
     },
   );
 
+  it("keeps the loaded comments and reports refreshError when a background refetch fails", async () => {
+    const { result, thread } = await mountLoaded();
+    thread.mockResolvedValue(respond(500) as ThreadResponse);
+
+    await act(async () => {
+      await result.current.refresh();
+    });
+
+    await waitFor(() => {
+      expect(result.current.refreshError).toBe(true);
+    });
+    expect(result.current.status).toBe("success");
+    expect(result.current.items.map(item => item.id)).toStrictEqual([1, 2]);
+  });
+
+  it("is loading more, not refreshing, while the next page loads", async () => {
+    const { result, thread } = await mountLoaded();
+    let answer: () => void = () => undefined;
+    thread.mockImplementationOnce(
+      async () =>
+        await new Promise<ThreadResponse>(resolve => {
+          answer = () => {
+            resolve(respond(200, PAGES["cursor-1"]) as ThreadResponse);
+          };
+        }),
+    );
+
+    let loading: Promise<boolean> = Promise.resolve(true);
+    act(() => {
+      loading = result.current.loadMore();
+    });
+
+    await waitFor(() => {
+      expect(result.current.isLoadingMore).toBe(true);
+    });
+    expect(result.current.isRefreshing).toBe(false);
+
+    await act(async () => {
+      answer();
+      await loading;
+    });
+  });
+
+  it.each([
+    {
+      name: "a delete",
+      run: async (comments: Comments) => await comments.remove(2),
+    },
+    {
+      name: "an edit",
+      run: async (comments: Comments) => {
+        await comments.requestSave(2, {
+          body: doc("edited"),
+          expectedVersion: undefined,
+        });
+        await comments.written({ approval: null, status: "published" });
+      },
+    },
+  ])(
+    "re-reads only the touched branch after $name when `branches` is wired",
+    async ({ run }) => {
+      const branches = vi.fn(
+        async (ids: number[]) =>
+          await Promise.resolve(
+            respond(200, {
+              branches: ids.map(id => ({
+                id,
+                items: [comment(1), comment(2, 1, { record: { text: "new" } })],
+                status: "ok",
+              })),
+              pageInfo: { totalCount: 2 },
+              replyCount: 3,
+              truncated: false,
+            }),
+          ),
+      );
+      const save = vi.fn(async () => await Promise.resolve(respond(200)));
+      const { result, thread } = await mountLoaded({
+        branches,
+        delete: save,
+        edit: { load: vi.fn(), save },
+      });
+
+      await act(async () => {
+        await run(result.current);
+      });
+
+      await waitFor(() => {
+        expect(result.current.items[1].record).toStrictEqual({ text: "new" });
+      });
+      expect(save).toHaveBeenCalledOnce();
+      expect(branches).toHaveBeenCalledExactlyOnceWith([1]);
+      expect(thread).toHaveBeenCalledOnce();
+    },
+  );
+
   it("refuses a second action while one runs, without calling it", async () => {
     let settle: (() => void) | undefined;
     const remove = vi.fn(

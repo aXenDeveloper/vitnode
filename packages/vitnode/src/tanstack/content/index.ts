@@ -29,6 +29,11 @@ export {
   useContentListSearchInput,
 } from "./list-ui";
 export type {
+  ContentLiveRefreshHandlers,
+  ContentLiveRefreshStatus,
+} from "./live-refresh";
+export { useContentLiveRefresh } from "./live-refresh";
+export type {
   ContentPermissions,
   ContentPermissionsResponse,
 } from "./permissions";

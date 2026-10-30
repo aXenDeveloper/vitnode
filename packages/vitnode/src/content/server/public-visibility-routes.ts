@@ -286,6 +286,7 @@ export const contentPublicDeleteRoute = <
           {
             pluginId,
             publicState: contentPublicStateOf(definition, deleted, null),
+            row: deleted,
           },
         );
         await syncContentSearch(c, definition, {
@@ -309,6 +310,7 @@ export const contentPublicDeleteRoute = <
           {
             pluginId,
             publicState: contentPublicStateOf(definition, row, null),
+            row,
           },
         );
         await syncContentSearch(c, definition, {

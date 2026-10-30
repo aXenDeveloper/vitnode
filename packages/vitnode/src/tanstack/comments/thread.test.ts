@@ -6,6 +6,7 @@ import {
   buildContentCommentTree,
   contentCommentWriteOutcome,
   countContentCommentReplies,
+  shareContentCommentTree,
 } from "./thread";
 
 const node = <TId extends number | string>(
@@ -76,6 +77,37 @@ describe("buildContentCommentTree", () => {
       { children: [], id: 2 },
     ]);
     expect(tree[1].record).toStrictEqual({ text: "7" });
+  });
+});
+
+describe("shareContentCommentTree", () => {
+  // Records keep their identity across reads, as the query cache's
+  // structural sharing hands them back.
+  const items = [node(1, null), node(2, 1, 2), node(3, null), node(4, 3, 2)];
+
+  it("reuses every node of a branch that did not change", () => {
+    const previous = buildContentCommentTree(items);
+    const changed = [...items];
+    changed[3] = { ...changed[3], record: { text: "edited" } };
+
+    const shared = shareContentCommentTree(
+      previous,
+      buildContentCommentTree(changed),
+    );
+
+    expect(shared).not.toBe(previous);
+    expect(shared[0]).toBe(previous[0]);
+    expect(shared[0].children[0]).toBe(previous[0].children[0]);
+    expect(shared[1]).not.toBe(previous[1]);
+    expect(shared[1].children[0].record).toStrictEqual({ text: "edited" });
+  });
+
+  it("hands back the previous tree when nothing changed", () => {
+    const previous = buildContentCommentTree(items);
+
+    expect(
+      shareContentCommentTree(previous, buildContentCommentTree([...items])),
+    ).toBe(previous);
   });
 });
 

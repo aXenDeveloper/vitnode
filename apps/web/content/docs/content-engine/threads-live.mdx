@@ -1,0 +1,122 @@
+---
+title: Live comments
+description: Keep a VitNode Content Engine comment section current while people read it. Add branches and live to useContentComments, and replies, edits and removals from other readers arrive over the shared WebSocket without a reload and without losing a half-written reply.
+icon: Radio
+implementation:
+  objective: Make an existing shared comment section update live over the app's WebSocket.
+  decisions:
+    - Which comment section should update live? Offer the components in the project that call `useContentComments`.
+  constraints:
+    - Add `branches` (`GET /thread/branches` with `root`, plus `ids` joined by commas only when there are any) and `live` (the comment content type's `id` and the root record's id) to the existing `useContentComments` call; `live` does nothing without `branches`.
+    - "The app must serve the WebSocket (`vitnode({ webSocket: true })` or a standalone API); without it the section keeps working, just without live updates."
+    - Set `REDIS_URL` when the API runs on more than one instance.
+  related:
+    - title: Live refresh
+      href: /docs/content-engine/live-refresh
+    - title: Comments API
+      href: /docs/content-engine/comments-api
+    - title: WebSocket setup
+      href: /docs/dev/websocket/setup
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import newComments from "./threads-live-new-comments.webp";
+
+Live comments keep a comment section current while people read it. When someone replies, edits, hides or deletes a comment, every open copy of the article re-reads only the branch that changed. New top-level comments wait behind a **Show new comments** button, because nobody enjoys a page that rearranges itself mid-sentence. Loaded pages, open reply forms and the reading position stay where they were.
+
+## Before you begin
+
+- The working comment section from [Comments](/docs/content-engine/threads). [Replies](/docs/content-engine/threads-frontend) and [Comment actions](/docs/content-engine/threads-editing) are optional; live updates cover whatever the section already does.
+- The app's [WebSocket endpoint](/docs/dev/websocket/setup). Without it, the section works as before, just without live updates.
+
+<Steps>
+
+<Step>
+
+### Read single branches
+
+Add `branches` to the `useContentComments` call in `src/pages/article-comments.tsx`. It calls `/thread/branches`, which the Content Engine adds to every content type with `thread`, so there is nothing to change on the comment type. This is an excerpt:
+
+```tsx title="plugins/newsroom/src/pages/article-comments.tsx"
+  const comments = useContentComments({
+    ...articleCommentsThread(articleId),
+    branches: async ids => // [!code ++:13]
+      await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "content/article-comments",
+        path: "/thread/branches",
+        args: {
+          query: {
+            root: String(articleId),
+            ...(ids.length > 0 ? { ids: ids.join(",") } : {}),
+          },
+        },
+      }),
+```
+
+A branch is one top-level comment with every reply below it. `branches` already makes the reader's own writes cheaper: a reply, edit, hide or delete re-reads only its branch instead of every loaded page.
+
+</Step>
+
+<Step>
+
+### Subscribe to the thread
+
+Add `live` to the same call, with the comment type's id and the article's id. Import `commentContentType` unless [Comment actions](/docs/content-engine/threads-editing) already did for reports:
+
+```tsx title="plugins/newsroom/src/pages/article-comments.tsx"
+import { commentContentType } from "@/content/comment"; // [!code ++]
+
+    live: { contentTypeId: commentContentType.id, rootId: articleId }, // [!code ++]
+```
+
+That's the whole change. `live` needs `branches` and is ignored without it. `ContentComments` shows **Show new comments** and refresh errors on its own. A custom layout renders `ContentCommentsLiveStatus` inside its `ContentCommentsRoot`, as the Blog plugin does; see [Comments API](/docs/content-engine/comments-api#your-own-layout).
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Use two browser windows, one of them private, so they hold different sessions. Sign in as a different member in each, and open the same article with at most 20 top-level comments, so its only page is loaded:
+
+1. In window A, reply to a comment. Window B shows the reply within a second or two, without a reload.
+2. In window B, click **Reply** under a comment and type a few words without sending. In window A, reply to the same comment. Window B shows the new reply and keeps your unsent text.
+3. In window A, post a new top-level comment. Window B shows **New comments were posted.** at the end of the thread. Click **Show new comments** to add it below the others.
+
+A signed-out window gets the same updates; it just can't reply.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={newComments}
+  alt="The end of a Blog plugin comment thread with a 'New comments were posted.' notice and a Show new comments button above the composer"
+/>
+
+## What arrives live
+
+| Change in another session | What an open section does |
+| --- | --- |
+| A reply, edit, hide, unhide or delete in a loaded branch | Re-reads that branch and puts it back in place |
+| A burst of changes to one branch | Re-reads it once, 0.4 seconds after the last change and never more than 2 seconds after the first |
+| A new top-level comment, with every page loaded | Shows **Show new comments**; clicking it reads only what follows the last loaded comment |
+| A new top-level comment, with more pages on the server | Nothing yet. Comments are oldest first, so **Load more comments** reaches it |
+| A change in a branch that isn't loaded | Nothing; it's read fresh when its page loads |
+| A comment that is a draft or waits for a moderator | Nothing. It isn't public, so other readers aren't told |
+| The article is hidden, unpublished or deleted | Readers who lost access see the thread disappear |
+
+Each reader's own session decides what they see, exactly as on the first load. A hidden comment still shows to its author and moderators, and becomes a placeholder for everybody else when it has replies.
+
+### Open forms keep their text
+
+If a comment is removed while someone edits it or replies to it, the form stays open with the text. It says "This comment was removed while you were editing it" or "The comment you are replying to was removed", and hides the submit button so the text can be copied elsewhere. Closing the form re-reads the branch, and the comment leaves the screen or turns into a placeholder.
+
+### Failed refreshes
+
+When a live refresh fails, the comments on screen stay and the section says "Could not refresh the comments, so some may be out of date." with **Try again**. A comment that was hidden, unpublished or deleted still leaves the screen, or turns into a placeholder when it has replies. When the article itself becomes unreadable, the thread is cleared rather than left on screen.
+
+## Related
+
+- [Live refresh](/docs/content-engine/live-refresh): which writes send a signal, who may subscribe, reconnects, several instances and custom write routes.
+- [Comments API](/docs/content-engine/comments-api): every `useContentComments` option and controller field.

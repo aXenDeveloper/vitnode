@@ -29,6 +29,7 @@ import type { ContentPublicState } from "./page-cache";
 
 import { contentEventName } from "../events";
 import { invalidateContentPages } from "./page-cache";
+import { publishContentRefresh } from "./refresh/publish";
 
 type ContentPayload =
   | ContentCreatedPayload<ContentId>
@@ -56,10 +57,15 @@ interface ContentEventEmitter {
 }
 
 /**
- * Emits `content.{definition.id}.{action}` on the request's event bus and then
- * invalidates the cached pages that show the content type. Call it after the
- * write's transaction has committed. The generated routes already emit every
- * built-in event; use this from custom write paths. Server-only.
+ * Emits `content.{definition.id}.{action}` on the request's event bus,
+ * invalidates the cached pages and public reads that show the content type,
+ * and only then sends the live refresh signals (`publishContentRefresh`) to
+ * open AdminCP lists and threads - so a client that reacts reads the new
+ * state. Call it after the write's transaction has committed, never inside
+ * it: a rolled-back write must not be announced. The generated routes already
+ * emit every built-in event; use this from custom write paths. A plain
+ * `model.service(c)` or `model.editorialService(c)` write emits nothing on
+ * its own. Server-only.
  *
  * @returns The event bus result, with a page-cache invalidation failure, if
  * any, appended to `failures` rather than thrown.
@@ -77,6 +83,12 @@ export const emitContentEvent = async (
      * the content type's cached lists.
      */
     publicState?: ContentPublicState;
+    /**
+     * The record after the write, or as it was just before a delete. Live
+     * refresh routes a threaded record to its thread with it; a deleted one
+     * cannot be read back, so pass it on every delete of a threaded type.
+     */
+    row?: null | Record<string, unknown>;
   },
 ): Promise<EventEmitResult> => {
   const name = contentEventName(definition.id, action) as VitNodeEventName;
@@ -98,6 +110,15 @@ export const emitContentEvent = async (
       options?.publicState,
     ),
   ]);
+
+  // After the caches above, so whoever reads again on this signal misses them.
+  await publishContentRefresh(c, {
+    action,
+    contentId: payload.contentId,
+    definition,
+    publicState: options?.publicState,
+    row: options?.row,
+  });
 
   return pageCacheFailure === null
     ? result

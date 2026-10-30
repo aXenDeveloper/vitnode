@@ -914,7 +914,11 @@ export const buildContentRoutes = <
         definition,
         "created",
         { contentId: row.id },
-        { pluginId, publicState: contentPublicStateOf(definition, null, row) },
+        {
+          pluginId,
+          publicState: contentPublicStateOf(definition, null, row),
+          row,
+        },
       );
 
       // A new record is a draft, so this normally indexes a private document -
@@ -2046,7 +2050,11 @@ export const buildContentRoutes = <
         definition,
         "deleted",
         { contentId: row.id },
-        { pluginId, publicState: contentPublicStateOf(definition, row, null) },
+        {
+          pluginId,
+          publicState: contentPublicStateOf(definition, row, null),
+          row,
+        },
       );
 
       // Drafts are indexed as private documents, so every delete removes one - a

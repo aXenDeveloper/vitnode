@@ -44,11 +44,11 @@ import {
   useContentCommentItem,
 } from "./item";
 import { ContentCommentsRoot, useContentCommentsContext } from "./root";
+import { CONTENT_COMMENT_ANCHOR_PREFIX } from "./thread";
 
 const EDITED_AFTER_MS = 60_000;
 
-/** The `id` prefix of every comment element, for `#comment-...` links. */
-export const CONTENT_COMMENT_ANCHOR_PREFIX = "comment-";
+export { CONTENT_COMMENT_ANCHOR_PREFIX };
 
 /** How the default comments section links, labels and renders comments. */
 export interface ContentCommentsDisplay<TRecord> {
@@ -202,6 +202,7 @@ export const ContentCommentItem = <TRecord,>({
         mode="edit"
         onCancel={item.stopEditing}
         onDone={item.stopEditing}
+        unavailable={item.isRemoved ? t("live.edit_removed") : undefined}
       />
     );
   }
@@ -321,6 +322,7 @@ export const ContentCommentItem = <TRecord,>({
                 item.setIsReplying(false);
               }}
               parentId={node.id}
+              unavailable={item.isRemoved ? t("live.reply_removed") : undefined}
             />
           </div>
         ) : null}
@@ -423,6 +425,97 @@ export const ContentCommentsLoadMore = ({
       <ChevronDownIcon aria-hidden="true" />
       {t("load_more")}
     </Button>
+  );
+};
+
+/**
+ * The live state of the thread, for a section that renders its own layout:
+ * **Show new comments** when comments appeared after the loaded ones, and a
+ * notice with **Try again** when a background refresh failed - the comments
+ * on screen stay. Both are announced politely to screen readers. Renders
+ * nothing while there is nothing to say.
+ */
+export const ContentCommentsLiveStatus = ({
+  className,
+}: {
+  className?: string;
+}) => {
+  const t = useTranslations("core.comments");
+  const { comments } = useContentCommentsContext();
+  const [isShowing, setIsShowing] = React.useState(false);
+  const [isRetrying, setIsRetrying] = React.useState(false);
+  const announcement = [
+    comments.hasNewComments ? t("live.new_comments") : null,
+    comments.refreshError ? t("live.refresh_failed") : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return (
+    <>
+      {/* Always mounted, so a screen reader hears what is added to it. */}
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
+      {comments.hasNewComments ? (
+        <div
+          className={cn(
+            "bg-muted text-foreground flex flex-wrap items-center gap-3 self-start rounded-2xl px-4 py-2.5",
+            className,
+          )}
+        >
+          <p aria-hidden="true" className="text-sm leading-relaxed">
+            {t("live.new_comments")}
+          </p>
+          <Button
+            isLoading={isShowing}
+            onClick={async () => {
+              setIsShowing(true);
+              try {
+                if (!(await comments.showNewComments())) {
+                  toast.error(t("load_failed.title"), {
+                    description: t("load_failed.desc"),
+                  });
+                }
+              } finally {
+                setIsShowing(false);
+              }
+            }}
+            size="sm"
+            variant="outline"
+          >
+            <ChevronDownIcon aria-hidden="true" />
+            {t("live.show_new")}
+          </Button>
+        </div>
+      ) : null}
+      {comments.refreshError ? (
+        <div className={cn("flex flex-wrap items-center gap-3", className)}>
+          <p
+            aria-hidden="true"
+            className="text-muted-foreground text-sm leading-relaxed text-pretty"
+          >
+            {t("live.refresh_failed")}
+          </p>
+          <Button
+            isLoading={isRetrying || comments.isRefreshing}
+            onClick={async () => {
+              setIsRetrying(true);
+              try {
+                await comments.retryRefresh();
+              } finally {
+                setIsRetrying(false);
+              }
+            }}
+            size="sm"
+            variant="ghost"
+          >
+            <RotateCwIcon aria-hidden="true" />
+            {t("live.retry")}
+          </Button>
+        </div>
+      ) : null}
+    </>
   );
 };
 
@@ -598,6 +691,7 @@ const ContentCommentsSection = ({
           {t("truncated")}
         </p>
       ) : null}
+      <ContentCommentsLiveStatus />
       <ContentCommentsLoadMore />
       <ContentCommentsComposer />
     </section>
