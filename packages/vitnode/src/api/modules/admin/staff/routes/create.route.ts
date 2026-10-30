@@ -2,6 +2,8 @@ import { z } from "@hono/zod-openapi";
 import { eq, or } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { staffEntryAuditLabel } from "@/api/lib/audit/labels";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
 import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
 import { core_admin_permissions } from "@/database/admins";
@@ -112,14 +114,28 @@ export const createStaffAdminRoute = buildRoute({
       return c.json({ error: "Staff entry already exists" }, 409);
     }
 
-    const [created] = await c
-      .get("db")
-      .insert(table)
-      .values({
-        roleId: roleId ?? null,
-        userId: userId ?? null,
-      })
-      .returning({ id: table.id });
+    const label = await staffEntryAuditLabel(c, { roleId, userId });
+    const created = await c.get("db").transaction(async tx => {
+      const [inserted] = await tx
+        .insert(table)
+        .values({
+          roleId: roleId ?? null,
+          userId: userId ?? null,
+        })
+        .returning({ id: table.id });
+
+      await writeAuditLog(
+        c,
+        {
+          action: `${type}_permissions.created`,
+          metadata: roleId ? { roleId } : { userId },
+          target: { id: inserted.id, label, type: "staff_entry" },
+        },
+        tx,
+      );
+
+      return inserted;
+    });
 
     await invalidateStaffEntry(c, { roleId, userId });
 

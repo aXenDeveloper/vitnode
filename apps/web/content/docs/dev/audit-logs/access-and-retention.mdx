@@ -1,0 +1,76 @@
+---
+title: Access and retention
+description: Who may read the VitNode admin and moderator logs in AdminCP Staff, how long entries are kept, and how to export them as CSV.
+icon: ShieldCheck
+---
+
+The Activity Logs know a lot about who did what, so reading them takes an
+admin permission of its own, and entries expire after a retention period you
+pick. The API enforces every rule on this page. The UI only hides what you could
+not open anyway.
+
+## Permissions
+
+Grant them in **AdminCP → Staff → Administrators**, in the **Activity Logs**
+module, like any other [staff permission](/docs/dev/working-with-users/staff-permissions).
+Every permission except `can_view` depends on `can_view`.
+
+| Permission (module `activity_logs`) | Label in the editor                     | Allows                                                                                                       |
+| ----------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `can_view`                          | View activity logs                      | The **Logs** buttons, both staff logs, entry details, the retention period (read-only), any record's history |
+| `can_view_sensitive`                | View IP addresses and technical details | IP addresses and request ids in entry details, and the IP address column in exports                          |
+| `can_export`                        | Export activity logs                    | **Export CSV** with the current filters                                                                      |
+| `can_manage_retention`              | Change how long activity logs are kept  | Saving a new retention period                                                                                |
+
+An unrestricted administrator holds them all. An admin without `can_view` can
+still open the **Activity** panel of a content record when they hold
+`can_view` on that content type.
+
+## Two logs, one table
+
+Both staff logs read the same entries, split by the area they were recorded in:
+
+| Page                                           | Shows                                                                                                          |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Admin logs** (Staff → Administrators → Logs) | The `admin`, `public` and `system` areas: AdminCP changes, member writes, scheduled jobs, cron and queue work  |
+| **Moderator logs** (Staff → Moderators → Logs) | The `moderator` area: report workflow steps, approved and rejected submissions, content acted on from a report |
+
+Only the admin log has an **Area** filter. Both logs show the **Area** column
+only when the entries on screen come from more than one area, so the moderator
+log never shows it. Moderators do not get a log in the ModeratorCP. What staff
+did is for the admins who manage them to read.
+
+## Retention
+
+Open **Logs → Retention settings** on either staff log and pick how long
+entries are kept: 30, 90, 180, 365 (the default) or 730 days, or **Forever**.
+One period applies to both logs, and only `can_manage_retention` can save it.
+
+The `audit-retention` cron job runs once a day (`40 3 * * *`) and deletes
+older entries oldest first, in batches of 5,000 and at most 100 batches per
+run. A bigger backlog waits for the next day. When it removes anything, it
+records one **Deleted expired log entries** entry. No route deletes or edits an
+entry, so the log is append-only.
+
+## Export
+
+**Export CSV** downloads up to 10,000 entries matching the current filters of
+the log you are on, newest first, as `activity-logs-YYYY-MM-DD.csv`. Values a
+spreadsheet would run as a formula (starting with `=`, `+`, `-` or `@`) are
+prefixed with `'`. The IP address column needs `can_view_sensitive`. Every
+export is logged too, as **Exported the activity log**, because sooner or later
+someone asks who downloaded the log.
+
+## Privacy
+
+Entries keep the minimum needed to answer "who did what": the actor's id and
+name, the target's id and label, and bounded field changes. When an admin edits
+a user, email addresses, birthdays and other personal fields show up as changed,
+without their values. Passwords and secrets never have their values stored
+either. IP addresses are stored for staff and member actions only, never for
+system entries, and expire with the rest of the entry.
+
+## Related
+
+- [Activity Logs](/docs/dev/audit-logs): what is recorded and where to read it
+- [Activity Logs reference](/docs/dev/audit-logs/reference): routes, filters and limits

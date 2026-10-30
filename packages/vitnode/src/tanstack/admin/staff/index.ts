@@ -3,6 +3,7 @@ export {
   AdminStaffBreadcrumbContent,
   AdminStaffCreateBreadcrumbContent,
   AdminStaffEditBreadcrumbContent,
+  AdminStaffLogsBreadcrumbContent,
 } from "./breadcrumbs";
 
 export type { AdminStaffCreateRouteData } from "./create-route";
@@ -23,6 +24,13 @@ export {
 } from "./edit-route";
 export type { AdminStaffEditRouteProps } from "./edit-screen";
 export { AdminStaffEditRouteContent } from "./edit-screen";
+export type { AdminStaffLogsRouteData } from "./logs-route";
+export {
+  ADMIN_STAFF_LOGS_NAMESPACES,
+  loadAdminStaffLogsRoute,
+} from "./logs-route";
+export type { AdminStaffLogsRouteProps } from "./logs-screen";
+export { AdminStaffLogsRouteContent } from "./logs-screen";
 export {
   adminStaffCatalogQuery,
   adminStaffEntryQuery,
@@ -59,6 +67,7 @@ export {
   staffCreateHref,
   staffEditHref,
   staffListHref,
+  staffLogsHref,
   staffPermissionsForSubmit,
   staffTypeFromSegment,
 } from "@/views/admin/views/core/staff/staff-model";

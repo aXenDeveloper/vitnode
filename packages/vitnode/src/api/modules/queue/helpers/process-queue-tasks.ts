@@ -16,6 +16,7 @@ import {
 import type { QueueTaskConfig } from "@/api/lib/queue";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
+import { AUDIT_SYSTEM_ACTOR, withAuditContext } from "@/api/lib/audit/context";
 import { QueueDeferError } from "@/api/lib/queue";
 import { core_queue } from "@/database/queue";
 import { resolveQueueTaskOutcome } from "@/lib/api/resolve-queue-task-outcome";
@@ -165,7 +166,18 @@ const runQueueTask = async (
     await c.get("log").warn(error);
   } else {
     try {
-      await registered.handler(c, task.payload);
+      // A task runs as the system, whichever request happened to drain it.
+      await withAuditContext(
+        c,
+        {
+          actor: AUDIT_SYSTEM_ACTOR,
+          area: "system",
+          metadata: { queueTask: key, trigger: "queue_task" },
+        },
+        async () => {
+          await registered.handler(c, task.payload);
+        },
+      );
     } catch (err) {
       if (err instanceof QueueDeferError) {
         return {

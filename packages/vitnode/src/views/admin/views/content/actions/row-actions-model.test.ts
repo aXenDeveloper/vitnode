@@ -37,6 +37,7 @@ describe("contentRowActionIds", () => {
       "preview",
       "schedule",
       "history",
+      "activity",
       "delivery",
       "delete",
     ]);
@@ -144,6 +145,7 @@ describe("duplicate and visibility", () => {
       "preview",
       "schedule",
       "history",
+      "activity",
       "delivery",
       "duplicate",
       "visibility",
@@ -171,7 +173,7 @@ describe("duplicate and visibility", () => {
         canView: true,
         duplication: true,
       }),
-    ).toEqual(["duplicate"]);
+    ).toEqual(["activity", "duplicate"]);
   });
 
   it("gates hiding on can_hide alone - not on can_publish", () => {

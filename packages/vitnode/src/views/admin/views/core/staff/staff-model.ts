@@ -35,6 +35,10 @@ export const staffTypeFromSegment = (
 export const staffListHref = (type: PermissionStaffType): string =>
   `/admin/core/staff/${STAFF_TYPE_SEGMENT[type]}`;
 
+/** `/admin/core/staff/admins/logs` - what that kind of staff did. */
+export const staffLogsHref = (type: PermissionStaffType): string =>
+  `${staffListHref(type)}/logs`;
+
 /** `/admin/core/staff/admins/create`. */
 export const staffCreateHref = (type: PermissionStaffType): string =>
   `${staffListHref(type)}/create`;

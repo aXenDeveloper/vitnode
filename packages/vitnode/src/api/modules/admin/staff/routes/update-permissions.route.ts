@@ -5,10 +5,16 @@ import { HTTPException } from "hono/http-exception";
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
 import { buildRoute } from "@/api/builders";
+import {
+  staffEntryAuditLabel,
+  staffGrantsAuditDelta,
+} from "@/api/lib/audit/labels";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
 import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
+import { auditDiff } from "@/lib/audit/diff";
 import { manifest } from "@/manifest";
 
 import {
@@ -149,12 +155,42 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
       ? []
       : await sanitizeStaffGrants(c, { permissions, type });
 
-    const [updated] = await c
-      .get("db")
-      .update(table)
-      .set({ unrestricted, permissions: sanitized })
-      .where(eq(table.id, entryId))
-      .returning({ id: table.id });
+    const label = await staffEntryAuditLabel(c, entry);
+    const updated = await c.get("db").transaction(async tx => {
+      const [row] = await tx
+        .update(table)
+        .set({ unrestricted, permissions: sanitized })
+        .where(eq(table.id, entryId))
+        .returning({ id: table.id });
+      if (!row) return null;
+
+      // The grants that moved, never the whole list: what an auditor asks is
+      // "who was given what, and by whom".
+      const delta = staffGrantsAuditDelta(entry.permissions, sanitized);
+      const changes = auditDiff({
+        after: { unrestricted },
+        before: { unrestricted: entry.unrestricted },
+      });
+      if (changes || delta.granted.length > 0 || delta.revoked.length > 0) {
+        await writeAuditLog(
+          c,
+          {
+            action: `${type}_permissions.updated`,
+            changes,
+            metadata: {
+              ...delta,
+              ...(entry.roleId === null
+                ? { userId: entry.userId }
+                : { roleId: entry.roleId }),
+            },
+            target: { id: entryId, label, type: "staff_entry" },
+          },
+          tx,
+        );
+      }
+
+      return row;
+    });
 
     if (!updated) {
       return c.json({ error: "Staff entry not found" }, 404);

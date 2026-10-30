@@ -1,6 +1,9 @@
+import type { Context } from "hono";
+
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
+import { writeAuditLogBestEffort } from "@/api/lib/audit/write";
 import {
   cancelQueuedNotificationEmails,
   deleteAllNotifications,
@@ -9,6 +12,14 @@ import {
   resetMemberNotificationPreferences,
   resumeNotifications,
 } from "@/api/models/notifications/danger";
+
+/** The danger-zone operations act on every member at once, so each is recorded. */
+const auditDanger = async (c: Context, operation: string): Promise<void> => {
+  await writeAuditLogBestEffort(c, {
+    action: `notifications.${operation}`,
+    target: { label: "Notifications", type: "settings", id: "notifications" },
+  });
+};
 
 const canManageNotifications = {
   module: "notifications",
@@ -32,6 +43,7 @@ export const pauseNotificationsRoute = buildRoute({
   },
   handler: async c => {
     await pauseNotifications(c);
+    await auditDanger(c, "paused");
 
     return c.json({ success: true });
   },
@@ -49,7 +61,12 @@ export const resumeNotificationsRoute = buildRoute({
       "Resumed",
     ),
   },
-  handler: async c => c.json(await resumeNotifications(c)),
+  handler: async c => {
+    const result = await resumeNotifications(c);
+    await auditDanger(c, "resumed");
+
+    return c.json(result);
+  },
 });
 
 export const cancelQueuedNotificationEmailsRoute = buildRoute({
@@ -64,7 +81,12 @@ export const cancelQueuedNotificationEmailsRoute = buildRoute({
       "Cancelled",
     ),
   },
-  handler: async c => c.json(await cancelQueuedNotificationEmails(c)),
+  handler: async c => {
+    const result = await cancelQueuedNotificationEmails(c);
+    await auditDanger(c, "emails_cancelled");
+
+    return c.json(result);
+  },
 });
 
 export const markEverythingReadRoute = buildRoute({
@@ -79,7 +101,12 @@ export const markEverythingReadRoute = buildRoute({
       "Marked as read",
     ),
   },
-  handler: async c => c.json(await markEverythingRead(c)),
+  handler: async c => {
+    const result = await markEverythingRead(c);
+    await auditDanger(c, "all_marked_read");
+
+    return c.json(result);
+  },
 });
 
 export const deleteAllNotificationsRoute = buildRoute({
@@ -94,7 +121,12 @@ export const deleteAllNotificationsRoute = buildRoute({
       "Deleted",
     ),
   },
-  handler: async c => c.json(await deleteAllNotifications(c)),
+  handler: async c => {
+    const result = await deleteAllNotifications(c);
+    await auditDanger(c, "all_deleted");
+
+    return c.json(result);
+  },
 });
 
 export const resetMemberNotificationPreferencesRoute = buildRoute({
@@ -106,5 +138,10 @@ export const resetMemberNotificationPreferencesRoute = buildRoute({
     path: "/members/reset-preferences",
     responses: dangerResponses(z.object({ members: z.number() }), "Reset"),
   },
-  handler: async c => c.json(await resetMemberNotificationPreferences(c)),
+  handler: async c => {
+    const result = await resetMemberNotificationPreferences(c);
+    await auditDanger(c, "member_preferences_reset");
+
+    return c.json(result);
+  },
 });

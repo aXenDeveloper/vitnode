@@ -5,7 +5,7 @@ import { core_ai_settings } from "../../../database/ai";
 export type AiSettingsRow = typeof core_ai_settings.$inferInsert;
 
 export const saveAiSettings = async (
-  db: AiDatabase,
+  db: Omit<AiDatabase, "$client">,
   values: Omit<AiSettingsRow, "id" | "updatedAt">,
 ): Promise<void> => {
   await db

@@ -1,5 +1,6 @@
 import { buildModule } from "@/api/builders";
 
+import { activityLogsAdminModule } from "./activity-logs/activity-logs.admin.module";
 import { advancedAdminModule } from "./advanced/advanced.admin.module";
 import { aiAdminModule } from "./ai/ai.admin.module";
 import { dashboardAdminModule } from "./dashboard/dashboard.admin.module";
@@ -18,6 +19,7 @@ export const adminModule = buildModule({
   name: "admin",
   routes: [sessionAdminRoute, sendNotificationRoute],
   modules: [
+    activityLogsAdminModule,
     aiAdminModule,
     usersAdminModule,
     rolesAdminModule,

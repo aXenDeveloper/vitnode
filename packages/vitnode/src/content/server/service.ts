@@ -10,6 +10,7 @@ import type { Context } from "hono";
 import { and, eq, inArray, ne, or, sql } from "drizzle-orm";
 
 import type { PaginationCursorColumn } from "../../api/lib/with-pagination";
+import type { AuditChanges } from "../../lib/audit/const";
 import type { ContentId, ContentIdOf } from "../ids";
 import type { ContentSchemas } from "../schemas";
 import type {
@@ -36,6 +37,7 @@ import type {
 } from "../types";
 import type { ContentVisibilityAction } from "../visibility";
 import type { ContentAdvancedStore } from "./advanced-store";
+import type { ContentAuditAction } from "./audit";
 import type {
   ContentDuplicateTranslationSource,
   ContentDuplicationMethods,
@@ -65,6 +67,15 @@ import { contentRelationStrategy, requireContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import { orderableColumns } from "../registry";
+import { resolveContentActor } from "./actor";
+import {
+  contentAuditChanges,
+  contentAuditLabel,
+  contentPluginIdOf,
+  recordContentAudit,
+  resolveContentAuditLabel,
+  withContentDuplicateAudit,
+} from "./audit";
 import {
   buildContentRelationOperations,
   buildContentRepeatableOperations,
@@ -562,6 +573,73 @@ export const createContentService = <
   const db = (options?: ContentServiceOptions): ContentDatabase =>
     options?.tx ?? c.get("db");
 
+  // An editorial content type is audited by its revision captures, so only a
+  // content type without one is audited here - never both.
+  const auditing = definition.audit.enabled && !definition.editorial.enabled;
+
+  const auditLabel = async (
+    tx: ContentDatabase,
+    itemId: ContentId,
+    row: null | Record<string, unknown>,
+  ): Promise<null | string> => {
+    const translationModel = translation?.model;
+
+    return await resolveContentAuditLabel(
+      definition,
+      row,
+      translationModel
+        ? async () =>
+            await translationModel().findByLocale(
+              itemId as ContentIdOf<TDefinition>,
+              definition.localization.defaultLocale,
+              { tx },
+            )
+        : undefined,
+    );
+  };
+
+  /** Records one plain write, in its transaction. */
+  const audit = async (
+    tx: ContentDatabase,
+    {
+      action,
+      changedFields,
+      changes,
+      itemId,
+      label,
+      row,
+    }: {
+      action: ContentAuditAction;
+      changedFields?: readonly string[];
+      changes?: AuditChanges | null;
+      itemId: ContentId;
+      label?: null | string;
+      row: null | Record<string, unknown>;
+    },
+  ): Promise<void> => {
+    if (!auditing) return;
+
+    await recordContentAudit(c, tx, {
+      action,
+      actor: resolveContentActor(c),
+      changedFields,
+      changes,
+      definition,
+      itemId,
+      label: label === undefined ? await auditLabel(tx, itemId, row) : label,
+      pluginId: contentPluginIdOf(c, definition),
+    });
+  };
+
+  /** A transaction whenever the write is audited, so the entry is atomic with it. */
+  const auditedTransaction = async <TResult>(
+    options: ContentServiceOptions | undefined,
+    body: (tx: ContentDatabase) => Promise<TResult>,
+  ): Promise<TResult> =>
+    options?.tx || !auditing
+      ? await body(db(options))
+      : await c.get("db").transaction(async tx => await body(tx));
+
   const ownSelection = (): Record<string, PgColumn> =>
     Object.fromEntries(ownColumnNames.map(name => [name, columns[name]]));
 
@@ -738,32 +816,38 @@ export const createContentService = <
     options: ContentServiceOptions | undefined,
     values: Record<string, unknown>,
     guard: SQL,
-  ): Promise<ContentPublicationResult<TDefinition> | null> => {
-    const database = db(options);
+  ): Promise<ContentPublicationResult<TDefinition> | null> =>
+    await auditedTransaction(options, async database => {
+      const [row] = await database
+        .update(table)
+        .set(values)
+        .where(and(eq(primaryCursor, id), guard))
+        .returning(ownSelection());
 
-    const [row] = await database
-      .update(table)
-      .set(values)
-      .where(and(eq(primaryCursor, id), guard))
-      .returning(ownSelection());
+      if (row) {
+        await audit(database, {
+          action: values.status === "published" ? "published" : "unpublished",
+          itemId: id,
+          row,
+        });
 
-    if (row)
-      return {
-        changed: true,
-        publishedAt: publishedAtOf(row),
-        row: toRow(row),
-      };
+        return {
+          changed: true,
+          publishedAt: publishedAtOf(row),
+          row: toRow(row),
+        };
+      }
 
-    const current = await readOne(id, database);
+      const current = await readOne(id, database);
 
-    return current
-      ? {
-          changed: false,
-          publishedAt: publishedAtOf(current),
-          row: toRow(current),
-        }
-      : null;
-  };
+      return current
+        ? {
+            changed: false,
+            publishedAt: publishedAtOf(current),
+            row: toRow(current),
+          }
+        : null;
+    });
 
   const publish = async (
     id: ContentId,
@@ -857,6 +941,12 @@ export const createContentService = <
         .returning(ownSelection());
       if (!row) return null;
 
+      await audit(tx, {
+        action: action === "hide" ? "hidden" : "unhidden",
+        itemId: id,
+        row,
+      });
+
       return {
         changed: true,
         ...visibilityStateOf(row),
@@ -889,7 +979,8 @@ export const createContentService = <
     body: (tx: ContentDatabase) => Promise<TResult>,
   ): Promise<TResult> => {
     if (options?.tx) return await body(options.tx);
-    if (!store?.enabled) return await body(c.get("db"));
+    // An audited write opens one too: its entry has to commit with it.
+    if (!store?.enabled && !auditing) return await body(c.get("db"));
 
     return await c.get("db").transaction(async tx => await body(tx));
   };
@@ -977,39 +1068,58 @@ export const createContentService = <
         // In the same transaction as the row it belongs to: a create that
         // committed its categories and rolled back its article would leave
         // junction rows pointing at nothing.
-        if (store?.enabled) {
-          await store.write(
-            tx,
-            requireContentId(definition.idStrategy, row.id, contentTypeId),
-            parsed,
-          );
-        }
+        const itemId = requireContentId(
+          definition.idStrategy,
+          row.id,
+          contentTypeId,
+        );
+        if (store?.enabled) await store.write(tx, itemId, parsed);
+
+        await audit(tx, {
+          action: "created",
+          changedFields: Object.keys(parsed),
+          itemId,
+          // Never the translation's: a record's translations are written after it.
+          label: contentAuditLabel(definition, row),
+          row,
+        });
 
         return toRow(row);
       }),
 
     delete: async (id, options) => {
       const remove = async (database: ContentDatabase) => {
+        // Read first: a localized title goes with the translation rows.
+        const translated =
+          auditing && definition.localization.enabled
+            ? await auditLabel(database, id, null)
+            : null;
         const [row] = await database
           .delete(table)
           .where(eq(primaryCursor, id))
           .returning(ownSelection());
-        if (row) {
-          await cancelContentSubmissions(database, definition, id);
-          await recordContentNotificationCleanup(c, database, {
-            definition,
-            itemId: id,
-          });
-        }
+        if (!row) return null;
 
-        return row ? toRow(row) : null;
+        await cancelContentSubmissions(database, definition, id);
+        await recordContentNotificationCleanup(c, database, {
+          definition,
+          itemId: id,
+        });
+        await audit(database, {
+          action: "deleted",
+          itemId: id,
+          label: translated ?? contentAuditLabel(definition, row),
+          row,
+        });
+
+        return toRow(row);
       };
 
       // The cleanup intent must commit with the delete, so a type with
       // content notifications always deletes in a transaction.
       return hasContentNotificationDependents(c, definition)
         ? await inTransaction(options, remove)
-        : await remove(db(options));
+        : await auditedTransaction(options, remove);
     },
 
     findById: async (id, options) => {
@@ -1330,6 +1440,20 @@ export const createContentService = <
         .where(eq(primaryCursor, id))
         .returning(ownSelection());
 
+      await audit(tx, {
+        action: "updated",
+        changedFields,
+        changes: auditing
+          ? contentAuditChanges(definition, {
+              after: projectRow(row),
+              before: projectRow(current),
+              changedFields: changedPaths,
+            })
+          : null,
+        itemId: id,
+        row,
+      });
+
       return {
         changedFields: changedFields as ContentChangedPath<TDefinition>[],
         row: toRow(row),
@@ -1427,52 +1551,61 @@ export const createContentService = <
   const duplicationMethods: ContentDuplicationMethods<TDefinition> = {
     duplicate: async (sourceId, options = {}) => {
       const translationModel = translation?.model;
-      const result = await runContentDuplicate(
-        {
-          advanced: store,
-          c,
-          columns,
-          definition,
-          table,
-          translation:
-            translation && translationModel
-              ? {
-                  columns: translation.columns,
-                  model:
-                    translationModel as unknown as () => ContentDuplicateTranslationSource,
-                  table: translation.table,
-                }
-              : undefined,
-        },
+      const result = await withContentDuplicateAudit(
+        c,
+        definition,
         sourceId,
-        options,
-        {
-          base: async (values, tx) =>
-            await service.create(values as ContentCreateInput<TDefinition>, {
-              tx,
-            }),
-          idOf: row =>
-            requireContentId(
-              definition.idStrategy,
-              (row as { id: unknown }).id,
-              contentTypeId,
-            ),
-          translation: async (itemId, locale, values, tx) => {
-            if (!translationModel) {
-              throw new ContentEngineError(
-                "Duplicating a translation needs the translation model.",
-                { contentTypeId },
-              );
-            }
+        async () =>
+          await runContentDuplicate(
+            {
+              advanced: store,
+              c,
+              columns,
+              definition,
+              table,
+              translation:
+                translation && translationModel
+                  ? {
+                      columns: translation.columns,
+                      model:
+                        translationModel as unknown as () => ContentDuplicateTranslationSource,
+                      table: translation.table,
+                    }
+                  : undefined,
+            },
+            sourceId,
+            options,
+            {
+              base: async (values, tx) =>
+                await service.create(
+                  values as ContentCreateInput<TDefinition>,
+                  {
+                    tx,
+                  },
+                ),
+              idOf: row =>
+                requireContentId(
+                  definition.idStrategy,
+                  (row as { id: unknown }).id,
+                  contentTypeId,
+                ),
+              translation: async (itemId, locale, values, tx) => {
+                if (!translationModel) {
+                  throw new ContentEngineError(
+                    "Duplicating a translation needs the translation model.",
+                    { contentTypeId },
+                  );
+                }
 
-            return await translationModel().create(
-              itemId as ContentIdOf<TDefinition>,
-              locale,
-              values as ContentLocalizedValues<TDefinition>,
-              { tx },
-            );
-          },
-        },
+                return await translationModel().create(
+                  itemId as ContentIdOf<TDefinition>,
+                  locale,
+                  values as ContentLocalizedValues<TDefinition>,
+                  { tx },
+                );
+              },
+            },
+          ),
       );
 
       return result

@@ -12,6 +12,7 @@ import type { buildRoute } from "@/api/lib/route";
 
 import { normalizePermissionStaffModules } from "@/api/lib/permission-staff";
 import { core_admin_permissions } from "@/database/admins";
+import { core_audit_logs } from "@/database/audit";
 import { core_moderators_permissions } from "@/database/moderators";
 import { core_roles } from "@/database/roles";
 import { core_users_secondary_roles } from "@/database/users";
@@ -160,7 +161,9 @@ const appFor = async (
   const storedEntries = (type: PermissionStaffType = "admin") =>
     memory.rows(tableByType[type]);
 
-  return { app, storedEntries };
+  const auditEntries = () => memory.rows(core_audit_logs);
+
+  return { app, auditEntries, storedEntries };
 };
 
 const patch = async (
@@ -404,6 +407,57 @@ describe("updating a staff entry", () => {
 
 const remove = async (app: OpenAPIHono, type: PermissionStaffType = "admin") =>
   await app.request(`/entry/${type}/5`, { method: "DELETE" });
+
+describe("auditing a staff entry update", () => {
+  it("records the granted and revoked grants, never the whole list", async () => {
+    const { app, auditEntries } = await appFor(
+      updatePermissionsStaffAdminRoute,
+      {
+        entry: entryFor({ permissions: [VIEW_ADMINS, DELETE_ADMINS] }),
+        grants: { admin: MANAGE_ADMINS },
+      },
+    );
+
+    const res = await patch(app, {
+      permissions: [VIEW_ADMINS, CREATE_ADMINS],
+      unrestricted: false,
+    });
+
+    expect(res.status).toBe(200);
+    expect(auditEntries()).toEqual([
+      expect.objectContaining({
+        action: "admin_permissions.updated",
+        actorId: CALLER.id,
+        changes: null,
+        metadata: {
+          granted: [`${CORE}:staff_admins:can_create`],
+          revoked: [`${CORE}:staff_admins:can_delete`],
+          roleId: TARGET_ROLE_ID,
+        },
+        targetId: String(entryFor().id),
+        targetType: "staff_entry",
+      }),
+    ]);
+  });
+
+  it("records nothing when the grants did not move", async () => {
+    const { app, auditEntries } = await appFor(
+      updatePermissionsStaffAdminRoute,
+      {
+        entry: entryFor({ permissions: [VIEW_ADMINS] }),
+        grants: { admin: MANAGE_ADMINS },
+      },
+    );
+
+    const res = await patch(app, {
+      permissions: [VIEW_ADMINS],
+      unrestricted: false,
+    });
+
+    expect(res.status).toBe(200);
+    expect(auditEntries()).toEqual([]);
+  });
+});
 
 describe("removing a staff entry", () => {
   it("removes an entry within the caller's own permissions", async () => {

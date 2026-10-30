@@ -7,6 +7,7 @@ import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { ModerationCaptureResult } from "@/api/moderation";
 
 import { defineModerationScope, defineReportTarget } from "@/api/moderation";
+import { core_audit_logs } from "@/database/audit";
 import { core_files } from "@/database/files";
 import {
   core_moderation_report_events,
@@ -550,6 +551,39 @@ describe("working a report", () => {
     expect(taken.status).toBe(409);
     expect(await taken.json()).toEqual(
       expect.objectContaining({ error: "already_claimed" }),
+    );
+  });
+
+  it("records a claim in the activity log next to the report's own timeline", async () => {
+    const h = await harness();
+    const id = await h.reportId(REPORTER, "1");
+
+    const res = await h.call(MOD_A, "POST", `/reports/${id}/claim`, {
+      expectedVersion: 1,
+    });
+
+    expect(res.status).toBe(200);
+    expect(
+      h.memory
+        .rows(core_audit_logs)
+        .filter(entry => entry.action === "report.claimed"),
+    ).toEqual([
+      expect.objectContaining({
+        actorId: MOD_A,
+        actorType: "staff",
+        area: "moderator",
+        changes: {
+          assigneeId: { from: null, to: MOD_A },
+          status: { from: "new", to: "in_progress" },
+        },
+        scopeFamily: FAMILY,
+        scopeId: SECTION_A,
+        targetId: String(id),
+        targetType: "report",
+      }),
+    ]);
+    expect(h.eventsOf(id).map(event => event.type)).toEqual(
+      expect.arrayContaining(["assigned", "status_changed"]),
     );
   });
 

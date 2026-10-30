@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
 import { revokeAccountRecoveryTokens } from "@/api/lib/recovery-tokens";
 import { invalidateStaffPermissionsForUser } from "@/api/lib/staff-permission-cache";
@@ -25,6 +26,7 @@ import {
   assertCanAssignRoles,
   assertCanEditAdminTarget,
 } from "../lib/assert-edit-user-permission";
+import { adminUserAuditChanges } from "../lib/audit-changes";
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 const CALENDAR_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -173,7 +175,22 @@ export const updateUserAdminRoute = buildRoute({
     }
 
     const [user] = await db
-      .select({ id: core_users.id, roleId: core_users.roleId })
+      .select({
+        birthday: core_users.birthday,
+        email: core_users.email,
+        firstName: core_users.firstName,
+        headline: core_users.headline,
+        id: core_users.id,
+        language: core_users.language,
+        lastName: core_users.lastName,
+        name: core_users.name,
+        nameCode: core_users.nameCode,
+        newsletter: core_users.newsletter,
+        phone: core_users.phone,
+        roleId: core_users.roleId,
+        showRealName: core_users.showRealName,
+        timeZone: core_users.timeZone,
+      })
       .from(core_users)
       .where(eq(core_users.id, userId))
       .limit(1);
@@ -309,20 +326,77 @@ export const updateUserAdminRoute = buildRoute({
       values.roleId = body.roleId;
     }
 
-    if (secondaryRoleIds !== undefined) {
-      await db
-        .delete(core_users_secondary_roles)
-        .where(eq(core_users_secondary_roles.userId, user.id));
+    const previousSecondaryRoleIds =
+      secondaryRoleIds === undefined
+        ? []
+        : (
+            await db
+              .select({ roleId: core_users_secondary_roles.roleId })
+              .from(core_users_secondary_roles)
+              .where(eq(core_users_secondary_roles.userId, user.id))
+          ).map(row => row.roleId);
 
-      if (secondaryRoleIds.length > 0) {
-        await db.insert(core_users_secondary_roles).values(
-          secondaryRoleIds.map(roleId => ({
-            userId: user.id,
-            roleId,
-          })),
+    // The role writes, the profile write and their audit entry commit together:
+    // a role change is exactly what an audit trail is for.
+    const updated = await db.transaction(async tx => {
+      if (secondaryRoleIds !== undefined) {
+        await tx
+          .delete(core_users_secondary_roles)
+          .where(eq(core_users_secondary_roles.userId, user.id));
+
+        if (secondaryRoleIds.length > 0) {
+          await tx.insert(core_users_secondary_roles).values(
+            secondaryRoleIds.map(roleId => ({
+              userId: user.id,
+              roleId,
+            })),
+          );
+        }
+      }
+
+      const [row] =
+        Object.keys(values).length > 0
+          ? await tx
+              .update(core_users)
+              .set(values)
+              .where(eq(core_users.id, user.id))
+              .returning({
+                id: core_users.id,
+                name: core_users.name,
+                email: core_users.email,
+                nameCode: core_users.nameCode,
+              })
+          : [];
+
+      const changes = adminUserAuditChanges({
+        after: values,
+        before: user,
+        secondaryRoleIds:
+          secondaryRoleIds === undefined
+            ? undefined
+            : { after: secondaryRoleIds, before: previousSecondaryRoleIds },
+      });
+      if (changes) {
+        await writeAuditLog(
+          c,
+          {
+            action:
+              changes.roleId || changes.secondaryRoleIds
+                ? "user.roles_changed"
+                : "user.updated",
+            changes,
+            target: {
+              id: user.id,
+              label: row?.name ?? user.name,
+              type: "user",
+            },
+          },
+          tx,
         );
       }
-    }
+
+      return row ?? null;
+    });
 
     // A role change moves which staff entries apply to this user, so their
     // cached permission set has to go. Only this user's - the roles themselves
@@ -330,18 +404,7 @@ export const updateUserAdminRoute = buildRoute({
     const rolesChanged =
       body.roleId !== undefined || secondaryRoleIds !== undefined;
 
-    if (Object.keys(values).length > 0) {
-      const [updated] = await db
-        .update(core_users)
-        .set(values)
-        .where(eq(core_users.id, user.id))
-        .returning({
-          id: core_users.id,
-          name: core_users.name,
-          email: core_users.email,
-          nameCode: core_users.nameCode,
-        });
-
+    if (updated) {
       if (values.email !== undefined) {
         await revokeAccountRecoveryTokens(c, user.id);
       }

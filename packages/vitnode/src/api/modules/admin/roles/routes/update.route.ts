@@ -2,9 +2,12 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { multiLangAuditLabel, roleAuditLabel } from "@/api/lib/audit/labels";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { saveLanguageWords } from "@/api/lib/save-language-words";
 import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { core_roles } from "@/database/roles";
+import { auditDiff } from "@/lib/audit/diff";
 import { parseEmojiIcon, serializeEmojiIcon } from "@/lib/emoji-icon";
 
 import { assertCanManageAdminRole } from "../lib/assert-manage-admin-role";
@@ -93,7 +96,7 @@ export const updateRoleAdminRoute = buildRoute({
     }
 
     const [role] = await db
-      .select({ id: core_roles.id })
+      .select()
       .from(core_roles)
       .where(eq(core_roles.id, roleId))
       .limit(1);
@@ -159,7 +162,30 @@ export const updateRoleAdminRoute = buildRoute({
       values.maxCoverSize = body.maxCoverSize;
     }
 
-    await db.update(core_roles).set(values).where(eq(core_roles.id, roleId));
+    const label = await roleAuditLabel(c, roleId);
+    const renamed =
+      body.name === undefined ? label : multiLangAuditLabel(body.name);
+
+    await db.transaction(async tx => {
+      await tx.update(core_roles).set(values).where(eq(core_roles.id, roleId));
+
+      const changes = auditDiff({
+        after: { ...role, ...values, name: renamed },
+        before: { ...role, name: label },
+        exclude: ["createdAt", "id", "updatedAt"],
+      });
+      if (changes) {
+        await writeAuditLog(
+          c,
+          {
+            action: "role.updated",
+            changes,
+            target: { id: roleId, label: renamed, type: "role" },
+          },
+          tx,
+        );
+      }
+    });
 
     if (body.name !== undefined) {
       await saveLanguageWords(c, {

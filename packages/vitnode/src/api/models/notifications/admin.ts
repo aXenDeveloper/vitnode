@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 
 import type { NotificationTypePolicy } from "@/api/lib/notifications/preferences";
 
+import { writeAuditLogBestEffort } from "@/api/lib/audit/write";
 import {
   isNotificationEmailAvailable,
   isNotificationInAppAvailable,
@@ -17,6 +18,7 @@ import {
   core_notifications,
 } from "@/database/notifications";
 import { core_queue } from "@/database/queue";
+import { auditDiff } from "@/lib/audit/diff";
 
 import type { NotificationsContext } from "./shared";
 
@@ -236,6 +238,11 @@ export const updateNotificationTypePolicy = async (
   }
 
   await upsertNotificationSetting(c, typeSettingsKey(typeId), { ...merged });
+  await writeAuditLogBestEffort(c, {
+    action: "notifications.type_updated",
+    changes: auditDiff({ after: merged, before: policies.get(typeId) ?? {} }),
+    target: { id: typeId, label: typeId, type: "notification_type" },
+  });
   await c.get("events").emit("notifications.type.updated", { typeId });
 
   return merged;

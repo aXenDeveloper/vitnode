@@ -2,6 +2,8 @@ import { z } from "@hono/zod-openapi";
 import { and, count, eq, inArray } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { roleAuditLabel } from "@/api/lib/audit/labels";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { assertCanAssignPrimaryRole } from "@/api/modules/admin/users/lib/assert-edit-user-permission";
@@ -132,6 +134,8 @@ export const deleteRoleAdminRoute = buildRoute({
       await assertCanAssignPrimaryRole(c, targetRoleId);
     }
 
+    const label = await roleAuditLabel(c, roleId);
+
     const affectedUserIds = await db.transaction(async tx => {
       const members = await tx
         .select({ id: core_users.id })
@@ -177,6 +181,19 @@ export const deleteRoleAdminRoute = buildRoute({
         );
 
       await tx.delete(core_roles).where(eq(core_roles.id, roleId));
+
+      await writeAuditLog(
+        c,
+        {
+          action: "role.deleted",
+          metadata: {
+            movedMembers: memberIds.length,
+            ...(targetRoleId === null ? {} : { movedToRoleId: targetRoleId }),
+          },
+          target: { id: roleId, label, type: "role" },
+        },
+        tx,
+      );
 
       return [
         ...new Set([

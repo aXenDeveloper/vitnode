@@ -5,6 +5,8 @@ import { and, count, eq, inArray, max, sql } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
 import { buildRoute } from "@/api/builders";
+import { multiLangAuditLabel } from "@/api/lib/audit/labels";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import {
   listReportReasons,
   REPORT_REASON_WORDS,
@@ -14,6 +16,7 @@ import { saveLanguageWords } from "@/api/lib/save-language-words";
 import { errorSchema, json } from "@/api/modules/moderation/lib/schema";
 import { core_languages_words } from "@/database/languages";
 import { core_moderation_report_reasons } from "@/database/moderation";
+import { auditDiff } from "@/lib/audit/diff";
 import { MODERATION_LIMITS } from "@/lib/moderation/const";
 
 const titleSchema = z
@@ -80,6 +83,7 @@ const findReasonRow = async (c: Context, id: number) => {
     .select({
       code: core_moderation_report_reasons.code,
       id: core_moderation_report_reasons.id,
+      requiresDetails: core_moderation_report_reasons.requiresDetails,
     })
     .from(core_moderation_report_reasons)
     .where(eq(core_moderation_report_reasons.id, id))
@@ -149,6 +153,26 @@ export const createReportReasonAdminRoute = buildRoute({
         })
         .returning({ id: core_moderation_report_reasons.id });
 
+      await writeAuditLog(
+        c,
+        {
+          action: "report_reason.created",
+          changes: auditDiff({
+            after: {
+              requiresDetails: body.requiresDetails,
+              title: multiLangAuditLabel(body.title),
+            },
+            before: null,
+          }),
+          target: {
+            id: row.id,
+            label: multiLangAuditLabel(body.title),
+            type: "report_reason",
+          },
+        },
+        tx,
+      );
+
       return row;
     });
     if (!created) return c.json({ error: "limit_reached" }, 409);
@@ -188,13 +212,37 @@ export const updateReportReasonAdminRoute = buildRoute({
     const row = await findReasonRow(c, id);
     if (!row) return c.json({ error: "not_found" }, 404);
 
-    if (body.requiresDetails !== undefined) {
-      await c
-        .get("db")
-        .update(core_moderation_report_reasons)
-        .set({ requiresDetails: body.requiresDetails })
-        .where(eq(core_moderation_report_reasons.id, id));
-    }
+    await c.get("db").transaction(async tx => {
+      if (body.requiresDetails !== undefined) {
+        await tx
+          .update(core_moderation_report_reasons)
+          .set({ requiresDetails: body.requiresDetails })
+          .where(eq(core_moderation_report_reasons.id, id));
+      }
+      await writeAuditLog(
+        c,
+        {
+          action: "report_reason.updated",
+          changes: auditDiff({
+            after: {
+              requiresDetails: body.requiresDetails ?? row.requiresDetails,
+              ...(body.title === undefined
+                ? {}
+                : { title: multiLangAuditLabel(body.title) }),
+            },
+            before: { requiresDetails: row.requiresDetails },
+          }),
+          metadata:
+            body.description === undefined ? {} : { descriptionChanged: true },
+          target: {
+            id,
+            label: multiLangAuditLabel(body.title) ?? row.code,
+            type: "report_reason",
+          },
+        },
+        tx,
+      );
+    });
     await saveReasonWords(c, id, body);
     await c.get("events").emit("moderation.report_reason.updated", {
       code: row.code,
@@ -244,6 +292,14 @@ export const deleteReportReasonAdminRoute = buildRoute({
       await tx
         .delete(core_moderation_report_reasons)
         .where(eq(core_moderation_report_reasons.id, id));
+      await writeAuditLog(
+        c,
+        {
+          action: "report_reason.deleted",
+          target: { id, label: row.code, type: "report_reason" },
+        },
+        tx,
+      );
 
       return true;
     });
@@ -303,10 +359,21 @@ export const reorderReportReasonsAdminRoute = buildRoute({
       ),
       sql` `,
     );
-    await db
-      .update(core_moderation_report_reasons)
-      .set({ position: sql`case ${positionById} end` })
-      .where(inArray(core_moderation_report_reasons.id, ids));
+    await db.transaction(async tx => {
+      await tx
+        .update(core_moderation_report_reasons)
+        .set({ position: sql`case ${positionById} end` })
+        .where(inArray(core_moderation_report_reasons.id, ids));
+      await writeAuditLog(
+        c,
+        {
+          action: "report_reason.reordered",
+          metadata: { order: ids },
+          target: { type: "report_reason" },
+        },
+        tx,
+      );
+    });
     await c
       .get("events")
       .emit("moderation.report_reason.reordered", { reasonIds: ids });

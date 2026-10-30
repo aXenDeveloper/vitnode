@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
+import { writeAuditLogBestEffort } from "@/api/lib/audit/write";
 import { revokeSessions } from "@/api/models/session-revoke";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
@@ -44,6 +45,10 @@ export const revokeUserDevicesAdminRoute = buildRoute({
     await assertCanEditAdminTarget(c, userId);
 
     await revokeSessions(c, { userId });
+    await writeAuditLogBestEffort(c, {
+      action: "user.devices_revoked",
+      target: { id: userId, type: "user" },
+    });
 
     return c.json({ ok: true as const }, 200);
   },

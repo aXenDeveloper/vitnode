@@ -4,6 +4,8 @@ import { z } from "zod";
 import type { CronJobConfig } from "@/api/lib/cron";
 
 import { buildRoute } from "@/api/builders";
+import { AUDIT_SYSTEM_ACTOR, withAuditContext } from "@/api/lib/audit/context";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { core_cron } from "@/database/cron";
 import { getNextCronRunDate } from "@/lib/api/get-next-cron-run-date";
 
@@ -86,7 +88,31 @@ export const runCronRoute = buildRoute({
       const now = new Date();
 
       try {
-        await job.handler(c);
+        // The job itself runs as the system - what it writes was not done by
+        // hand - while the admin who started it is named on its entries and
+        // recorded for starting it.
+        await withAuditContext(
+          c,
+          {
+            actor: AUDIT_SYSTEM_ACTOR,
+            area: "system",
+            metadata: {
+              cronJob: job.name,
+              trigger: "cron_manual",
+              triggeredByUserId: c.get("admin")?.user.id ?? null,
+            },
+          },
+          async () => {
+            await job.handler(c);
+          },
+        );
+
+        await writeAuditLog(c, {
+          action: "cron.run",
+          metadata: { module: job.module },
+          pluginId: job.pluginId,
+          target: { id: dbCron.id, label: job.name, type: "cron_job" },
+        });
 
         await db
           .update(core_cron)

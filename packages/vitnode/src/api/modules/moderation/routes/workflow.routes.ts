@@ -6,8 +6,10 @@ import { resolveStaffPermissions } from "@/api/lib/check-staff-permission";
 import { canOnReport, requireModerator } from "@/api/lib/moderation/access";
 import { core_moderation_reports } from "@/database/moderation";
 import { core_users } from "@/database/users";
+import { auditDiff } from "@/lib/audit/diff";
 import { MODERATION_PERMISSIONS } from "@/lib/moderation/const";
 
+import { recordReportAudit, withReportAudit } from "../lib/audit";
 import { listModeratorCandidates } from "../lib/candidates";
 import { loadReportPeople } from "../lib/people";
 import {
@@ -87,6 +89,13 @@ export const claimReportRoute = buildRoute({
       const next = await updateReport(tx, report, {
         assigneeId: moderator.user.id,
         status: "in_progress",
+      });
+      await recordReportAudit(c, tx, report, {
+        action: "claimed",
+        changes: auditDiff({
+          after: { assigneeId: moderator.user.id, status: "in_progress" },
+          before: { assigneeId: report.assigneeId, status: report.status },
+        }),
       });
       if (report.assigneeId !== moderator.user.id) {
         await appendReportEvent(tx, {
@@ -180,6 +189,13 @@ export const assignReportRoute = buildRoute({
     const status = assigneeId === null ? "new" : "in_progress";
     const updated = await c.get("db").transaction(async tx => {
       const next = await updateReport(tx, report, { assigneeId, status });
+      await recordReportAudit(c, tx, report, {
+        action: assigneeId === null ? "unassigned" : "assigned",
+        changes: auditDiff({
+          after: { assigneeId, status },
+          before: { assigneeId: report.assigneeId, status: report.status },
+        }),
+      });
       await appendReportEvent(tx, {
         actorId: moderator.user.id,
         data: { assigneeId, previousAssigneeId: report.assigneeId },
@@ -234,11 +250,16 @@ export const noteReportRoute = buildRoute({
       manage: true,
     });
 
-    await appendReportEvent(c.get("db"), {
-      actorId: moderator.user.id,
-      data: { body: note },
-      reportId: report.id,
-      type: "note",
+    await c.get("db").transaction(async tx => {
+      await appendReportEvent(tx, {
+        actorId: moderator.user.id,
+        data: { body: note },
+        reportId: report.id,
+        type: "note",
+      });
+      // That a note was added - its text stays in the report's own timeline,
+      // behind the report's own permissions.
+      await recordReportAudit(c, tx, report, { action: "note_added" });
     });
 
     return c.json({ ok: true }, 201);
@@ -283,6 +304,14 @@ export const resolveReportRoute = buildRoute({
         resolvedAt: new Date(),
         resolvedById: moderator.user.id,
         status: "done",
+      });
+      await recordReportAudit(c, tx, report, {
+        action: "resolved",
+        changes: auditDiff({
+          after: { resolution, status: "done" },
+          before: { resolution: report.resolution, status: report.status },
+        }),
+        metadata: { withExplanation: Boolean(explanation) },
       });
       await appendReportEvent(tx, {
         actorId: moderator.user.id,
@@ -354,6 +383,13 @@ export const reopenReportRoute = buildRoute({
         resolvedById: null,
         status,
       });
+      await recordReportAudit(c, tx, report, {
+        action: "reopened",
+        changes: auditDiff({
+          after: { resolution: null, status },
+          before: { resolution: report.resolution, status: report.status },
+        }),
+      });
       await appendReportEvent(tx, {
         actorId: moderator.user.id,
         data: {
@@ -416,11 +452,19 @@ export const reportActionRoute = buildRoute({
     }
 
     const result = await c.get("db").transaction(async tx => {
-      const outcome = await definition.run(c, {
-        actorUserId: moderator.user.id,
-        targetId: report.targetId,
-        tx,
-      });
+      // The content write the action performs is audited by its own owner (the
+      // Content Engine's `content.hidden`) - as a moderator's, in the report's
+      // scope.
+      const outcome = await withReportAudit(
+        c,
+        report,
+        async () =>
+          await definition.run(c, {
+            actorUserId: moderator.user.id,
+            targetId: report.targetId,
+            tx,
+          }),
+      );
       if (!outcome) return null;
       if (!outcome.changed) {
         return { outcome, state: stateOf(report) };
@@ -432,6 +476,10 @@ export const reportActionRoute = buildRoute({
         data: { action },
         reportId: report.id,
         type: "action",
+      });
+      await recordReportAudit(c, tx, report, {
+        action: "action_taken",
+        metadata: { action },
       });
 
       return { outcome, state: stateOf(next) };

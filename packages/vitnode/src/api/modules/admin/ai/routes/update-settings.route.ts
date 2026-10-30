@@ -1,8 +1,12 @@
+import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { saveAiSettings } from "@/api/lib/ai/settings-store";
+import { writeAuditLog } from "@/api/lib/audit/write";
+import { core_ai_settings } from "@/database/ai";
+import { auditDiff } from "@/lib/audit/diff";
 
 import { zodAiSettings } from "../schemas";
 
@@ -37,7 +41,31 @@ export const updateAiSettingsAdminRoute = buildRoute({
       });
     }
 
-    await saveAiSettings(c.get("db"), body);
+    await c.get("db").transaction(async tx => {
+      const [before] = await tx
+        .select()
+        .from(core_ai_settings)
+        .where(eq(core_ai_settings.id, 1))
+        .limit(1);
+      await saveAiSettings(tx, body);
+
+      const changes = auditDiff({
+        after: body,
+        before: before ?? null,
+        include: Object.keys(body) as (keyof typeof body)[],
+      });
+      if (changes) {
+        await writeAuditLog(
+          c,
+          {
+            action: "settings.updated",
+            changes,
+            target: { id: "ai", label: "AI", type: "settings" },
+          },
+          tx,
+        );
+      }
+    });
 
     return c.json({ ok: true as const }, 200);
   },

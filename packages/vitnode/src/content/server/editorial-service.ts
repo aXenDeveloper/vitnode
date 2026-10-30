@@ -66,6 +66,15 @@ import { contentRelationStrategy, requireContentId } from "../ids";
 import { partitionContentFields } from "../localization";
 import { contentColumnsToValues, contentStorageColumns } from "../paths";
 import {
+  collectContentTranslationAudit,
+  CONTENT_REVISION_AUDIT_ACTIONS,
+  contentAuditLocales,
+  recordContentAudit,
+  resolveContentAuditLabel,
+  withContentDuplicateAudit,
+  writeContentAuditEntries,
+} from "./audit";
+import {
   buildContentRelationOperations,
   buildContentRepeatableOperations,
   contentCollectionKinds,
@@ -524,10 +533,37 @@ export const createContentEditorialService = <
     return await c.get("db").transaction(async tx => await body(tx));
   };
 
+  /**
+   * The record's title for its audit entry. A localized title lives on the
+   * default translation, read in this transaction - before a delete, since the
+   * translations go with the row.
+   */
+  const auditLabel = async (
+    tx: ContentDatabase,
+    itemId: ContentId,
+    row: null | Record<string, unknown>,
+  ): Promise<null | string> =>
+    await resolveContentAuditLabel(
+      definition,
+      row,
+      translations && definition.localization.enabled
+        ? async () =>
+            await translations
+              .model()
+              .findByLocale(
+                itemId as ContentIdOf<TDefinition>,
+                definition.localization.defaultLocale,
+                { tx },
+              )
+        : undefined,
+    );
+
   const capture = async (
     tx: ContentDatabase,
     {
       actor,
+      auditLabel: knownLabel,
+      auditMetadata,
       changedFields,
       operation,
       restoredFromRevisionId,
@@ -535,6 +571,9 @@ export const createContentEditorialService = <
       version,
     }: {
       actor: ContentActor;
+      /** Read before a delete, while the translations still exist. */
+      auditLabel?: null | string;
+      auditMetadata?: Record<string, unknown>;
       changedFields: readonly string[];
       operation: ContentRevisionOperation;
       restoredFromRevisionId?: number;
@@ -562,7 +601,7 @@ export const createContentEditorialService = <
       version,
     });
 
-    return await revisions.capture(tx, {
+    const revisionId = await revisions.capture(tx, {
       actor,
       changedFields,
       // Pinned in the same statement batch as the revision: a snapshot naming a
@@ -578,6 +617,29 @@ export const createContentEditorialService = <
       snapshot,
       version,
     });
+
+    // One revision, one audit entry, one transaction: the entry exists exactly
+    // when the write does. It points at the revision rather than copying the
+    // values, which the revision already holds.
+    await recordContentAudit(c, tx, {
+      action: CONTENT_REVISION_AUDIT_ACTIONS[operation],
+      actor,
+      changedFields,
+      definition,
+      itemId,
+      label: knownLabel ?? (await auditLabel(tx, itemId, row)),
+      metadata: {
+        version,
+        ...(restoredFromRevisionId === undefined
+          ? {}
+          : { restoredFromRevisionId }),
+        ...auditMetadata,
+      },
+      pluginId,
+      revisionId,
+    });
+
+    return revisionId;
   };
 
   /**
@@ -710,6 +772,15 @@ export const createContentEditorialService = <
         .where(and(...conditions))
         .returning(ownSelection());
 
+      // Each language the record moves with it is part of this one operation,
+      // so its audit entry is held back and folded into the record's own.
+      const cascadeAudited = async () =>
+        await collectContentTranslationAudit(
+          c,
+          definition,
+          async () => await cascade(tx, id, operation, options.actor),
+        );
+
       if (!row) {
         const current = await readOne(id, tx);
         if (!current) return null;
@@ -735,7 +806,10 @@ export const createContentEditorialService = <
         // reconcile them: the transition is guarded on the base row, so it would
         // short-circuit here for ever. Publishing means "make this published",
         // and each language's own guard keeps it a no-op once it is.
-        const moved = await cascade(tx, id, operation, options.actor);
+        const { entries, result: moved } = await cascadeAudited();
+        // The record did not move, so there is no entry to fold into: each
+        // language that did move is its own operation after all.
+        await writeContentAuditEntries(c, tx, entries);
 
         return {
           changed: false,
@@ -765,11 +839,13 @@ export const createContentEditorialService = <
       // After the base row moves and before this record's own revision, so each
       // language's delivery reservation is taken against a record that is already
       // publicly visible: a localized address is only public when both halves are.
-      const moved = await cascade(tx, id, operation, options.actor);
+      const { entries, result: moved } = await cascadeAudited();
+      const locales = contentAuditLocales(entries);
 
       const version = versionOf(row);
       const revisionId = await capture(tx, {
         actor: options.actor,
+        ...(locales.length > 0 ? { auditMetadata: { locales } } : {}),
         changedFields: [],
         operation,
         row,
@@ -1076,6 +1152,10 @@ export const createContentEditorialService = <
         // child rows with the record, so this is the last moment the history can
         // record what the record was related to.
         const collections = (await store?.load(id, tx)) ?? {};
+        // Likewise the title: a localized one goes with the translation rows.
+        const label = definition.localization.enabled
+          ? await auditLabel(tx, id, null)
+          : null;
 
         // Same guard as `guardedWrite`, in a `DELETE` - the version has to be
         // part of the statement that removes the row, not checked before it.
@@ -1115,6 +1195,7 @@ export const createContentEditorialService = <
         const version = versionOf(row) + 1;
         const revisionId = await capture(tx, {
           actor: options.actor,
+          auditLabel: label,
           changedFields: [],
           operation: "delete",
           row: { ...row, __collections: collections },
@@ -1446,49 +1527,58 @@ export const createContentEditorialService = <
 
   const duplication: ContentEditorialDuplicationMethods<TDefinition> = {
     duplicate: async (sourceId, options) => {
-      const result = await runContentDuplicate(
-        {
-          advanced: store,
-          c,
-          columns,
-          definition,
-          pluginId,
-          table,
-          translation:
-            translations as ContentDuplicateDependencies["translation"],
-        },
+      const result = await withContentDuplicateAudit(
+        c,
+        definition,
         sourceId,
-        options,
-        {
-          base: async (values, tx) =>
-            await editorial.create(values as ContentCreateInput<TDefinition>, {
-              actor: options.actor,
-              tx,
-            }),
-          idOf: outcome =>
-            requireContentId(
-              definition.idStrategy,
-              (outcome.row as { id: unknown }).id,
-              contentTypeId,
-            ),
-          translation: async (itemId, locale, values, tx) => {
-            if (!translations) {
-              throw new ContentEngineError(
-                "Duplicating a translation needs the translation editorial service.",
-                { contentTypeId },
-              );
-            }
+        async () =>
+          await runContentDuplicate(
+            {
+              advanced: store,
+              c,
+              columns,
+              definition,
+              pluginId,
+              table,
+              translation:
+                translations as ContentDuplicateDependencies["translation"],
+            },
+            sourceId,
+            options,
+            {
+              base: async (values, tx) =>
+                await editorial.create(
+                  values as ContentCreateInput<TDefinition>,
+                  {
+                    actor: options.actor,
+                    tx,
+                  },
+                ),
+              idOf: outcome =>
+                requireContentId(
+                  definition.idStrategy,
+                  (outcome.row as { id: unknown }).id,
+                  contentTypeId,
+                ),
+              translation: async (itemId, locale, values, tx) => {
+                if (!translations) {
+                  throw new ContentEngineError(
+                    "Duplicating a translation needs the translation editorial service.",
+                    { contentTypeId },
+                  );
+                }
 
-            return await translations
-              .editorial()
-              .create(
-                itemId as ContentIdOf<TDefinition>,
-                locale,
-                values as ContentLocalizedValues<TDefinition>,
-                { actor: options.actor, tx },
-              );
-          },
-        },
+                return await translations
+                  .editorial()
+                  .create(
+                    itemId as ContentIdOf<TDefinition>,
+                    locale,
+                    values as ContentLocalizedValues<TDefinition>,
+                    { actor: options.actor, tx },
+                  );
+              },
+            },
+          ),
       );
 
       return result

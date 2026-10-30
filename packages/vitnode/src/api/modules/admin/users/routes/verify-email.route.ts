@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { writeAuditLog } from "@/api/lib/audit/write";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { core_users, core_users_confirm_emails } from "@/database/users";
 
@@ -66,19 +67,34 @@ export const verifyEmailUserAdminRoute = buildRoute({
 
     await assertCanEditAdminTarget(c, userId);
 
-    const [updated] = await db
-      .update(core_users)
-      .set({ emailVerified: true })
-      .where(eq(core_users.id, user.id))
-      .returning({
-        email: core_users.email,
-        name: core_users.name,
-        emailVerified: core_users.emailVerified,
-      });
+    const updated = await db.transaction(async tx => {
+      const [row] = await tx
+        .update(core_users)
+        .set({ emailVerified: true })
+        .where(eq(core_users.id, user.id))
+        .returning({
+          email: core_users.email,
+          name: core_users.name,
+          emailVerified: core_users.emailVerified,
+        });
 
-    await db
-      .delete(core_users_confirm_emails)
-      .where(eq(core_users_confirm_emails.userId, user.id));
+      await tx
+        .delete(core_users_confirm_emails)
+        .where(eq(core_users_confirm_emails.userId, user.id));
+
+      if (!user.emailVerified) {
+        await writeAuditLog(
+          c,
+          {
+            action: "user.email_verified",
+            target: { id: user.id, label: row.name, type: "user" },
+          },
+          tx,
+        );
+      }
+
+      return row;
+    });
     if (!user.emailVerified) {
       await invalidateSessionCacheForUser(c, user.id);
       await c
