@@ -1,9 +1,11 @@
 import type { Context } from "hono";
 
+import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { type CacheClient, CacheModel } from "@/api/lib/cache";
-import { core_users } from "@/database/users";
+import { core_roles } from "@/database/roles";
+import { core_users, core_users_secondary_roles } from "@/database/users";
 import { createTestCache, createTestCacheClient } from "@/tests/cache";
 import { createMemoryDb, type MemoryRow } from "@/tests/memory-db";
 
@@ -15,6 +17,8 @@ import {
 
 const T0 = new Date("2026-10-17T12:00:00.000Z").getTime();
 const MEMBER_ROLE = 2;
+const FORCING_ROLE = 3;
+const DISALLOWING_ROLE = 4;
 const SECOND = 1000;
 
 const GUEST: PresenceViewer = { type: "moderator", user: null };
@@ -29,15 +33,33 @@ const userRow = (id: number, overrides: MemoryRow = {}): MemoryRow => ({
   ...overrides,
 });
 
+const roleRow = (
+  id: number,
+  allowBrowseAnonymously: boolean,
+  forceBrowseAnonymously: boolean,
+): MemoryRow => ({ allowBrowseAnonymously, forceBrowseAnonymously, id });
+
+const ROLES = [
+  roleRow(MEMBER_ROLE, true, false),
+  roleRow(FORCING_ROLE, true, true),
+  roleRow(DISALLOWING_ROLE, false, false),
+];
+
 const setup = ({
   client = createTestCacheClient(),
+  secondaryRoles = [],
   users = [userRow(7)],
 }: {
   /** `null` runs without Redis. */
   client?: CacheClient | null;
+  secondaryRoles?: { roleId: number; userId: number }[];
   users?: MemoryRow[];
 } = {}) => {
-  const { db, rows } = createMemoryDb([[core_users, users]]);
+  const { db, rows } = createMemoryDb([
+    [core_users, users],
+    [core_roles, ROLES],
+    [core_users_secondary_roles, secondaryRoles],
+  ]);
   const cache = client
     ? createTestCache(client)
     : new CacheModel(null, {
@@ -174,20 +196,34 @@ describe("UserPresenceModel lastSeenAt", () => {
 });
 
 describe("UserPresenceModel.getMany", () => {
-  it("answers many members with one users query, one lease read and no permission lookup", async () => {
+  it("answers many members with the same three queries as one, one lease read and no permission lookup", async () => {
     const { cache, db, presence } = setup({
+      secondaryRoles: [
+        { roleId: MEMBER_ROLE, userId: 8 },
+        { roleId: MEMBER_ROLE, userId: 9 },
+      ],
       users: [
         userRow(7),
         userRow(8, { hideOnlineStatus: true }),
         userRow(9, { lastSeenAt: new Date(T0 - 60 * SECOND) }),
       ],
     });
+    const viewer: PresenceViewer = {
+      type: "moderator",
+      user: { id: 8, roleId: MEMBER_ROLE },
+    };
     const select = vi.spyOn(db, "select");
     const countLeases = vi.spyOn(cache, "countLeases");
 
+    await presence.getMany({ userIds: [7], viewer });
+    // Members, their secondary roles and the roles' rules.
+    expect(select).toHaveBeenCalledTimes(3);
+    select.mockClear();
+    countLeases.mockClear();
+
     const presences = await presence.getMany({
       userIds: [7, 8, 9, 404, 7],
-      viewer: { type: "moderator", user: { id: 8, roleId: MEMBER_ROLE } },
+      viewer,
     });
 
     expect(Object.fromEntries(presences)).toEqual({
@@ -198,8 +234,77 @@ describe("UserPresenceModel.getMany", () => {
         status: "offline",
       },
     });
-    expect(select).toHaveBeenCalledTimes(1);
+    expect(select).toHaveBeenCalledTimes(3);
     expect(countLeases).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("UserPresenceModel role policy", () => {
+  const VISIBLE = { lastSeenAt: null, status: "offline" };
+  const HIDDEN = { status: "hidden" };
+
+  it.each([
+    [
+      "a forcing role hides a member who chose to be seen",
+      FORCING_ROLE,
+      [],
+      false,
+      HIDDEN,
+    ],
+    [
+      "a disallowing role shows a member who chose to hide",
+      DISALLOWING_ROLE,
+      [],
+      true,
+      VISIBLE,
+    ],
+    [
+      "a forcing secondary role hides a member",
+      MEMBER_ROLE,
+      [FORCING_ROLE],
+      false,
+      HIDDEN,
+    ],
+    [
+      "a disallowing secondary role shows a member",
+      MEMBER_ROLE,
+      [DISALLOWING_ROLE],
+      true,
+      VISIBLE,
+    ],
+    [
+      "a forcing role wins over a disallowing one",
+      DISALLOWING_ROLE,
+      [FORCING_ROLE],
+      false,
+      HIDDEN,
+    ],
+    [
+      "allowing roles leave it to the member",
+      MEMBER_ROLE,
+      [MEMBER_ROLE],
+      true,
+      HIDDEN,
+    ],
+  ])("%s", async (_, roleId, secondary, hideOnlineStatus, expected) => {
+    const { read } = setup({
+      secondaryRoles: secondary.map(id => ({ roleId: id, userId: 7 })),
+      users: [userRow(7, { hideOnlineStatus, roleId })],
+    });
+
+    expect(await read(7)).toStrictEqual(expected);
+  });
+
+  it("applies a role change to the very next read", async () => {
+    const { db, read } = setup();
+    expect(await read(7)).toStrictEqual(VISIBLE);
+
+    await db
+      .update(core_roles)
+      .set({ forceBrowseAnonymously: true })
+      .where(eq(core_roles.id, MEMBER_ROLE));
+
+    expect(await read(7)).toStrictEqual(HIDDEN);
   });
 });
 

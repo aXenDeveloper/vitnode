@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MemoryRow } from "@/tests/memory-db";
 
 import { VIEW_HIDDEN_PRESENCE_PERMISSION } from "@/api/models/user-presence";
-import { core_users } from "@/database/users";
+import { core_roles } from "@/database/roles";
+import { core_users, core_users_secondary_roles } from "@/database/users";
+import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
 import {
   createSessionWorld,
   type FakeSession,
@@ -12,6 +14,7 @@ import {
 } from "@/tests/sessions";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
 
+import { mePolicyRoute } from "./me-policy.route";
 import { presenceBatchRoute } from "./presence-batch.route";
 import { presenceHeartbeatRoute } from "./presence-heartbeat.route";
 import { presenceRoute } from "./presence.route";
@@ -34,8 +37,38 @@ const adminWatcher = fakeSession(11, LAPTOP);
 
 const TARGET_ID = targetOnLaptop.userId;
 
-const setup = async (users: Record<number, MemoryRow> = {}) => {
+const MEMBER_ROLE = 2;
+const FORCING_ROLE = 3;
+const DISALLOWING_ROLE = 4;
+
+const roleRow = (
+  id: number,
+  allowBrowseAnonymously: boolean,
+  forceBrowseAnonymously: boolean,
+) => ({
+  allowBrowseAnonymously,
+  allowEditPersonalInfo: true,
+  forceBrowseAnonymously,
+  id,
+  root: false,
+});
+
+const setup = async (
+  users: Record<number, MemoryRow> = {},
+  secondaryRoles: { roleId: number; userId: number }[] = [],
+) => {
   const world = await createSessionWorld({
+    extraTables: [
+      [
+        core_roles,
+        [
+          roleRow(MEMBER_ROLE, true, false),
+          roleRow(FORCING_ROLE, true, true),
+          roleRow(DISALLOWING_ROLE, false, false),
+        ],
+      ],
+      [core_users_secondary_roles, secondaryRoles],
+    ],
     sessions: [
       targetOnLaptop,
       targetOnPhone,
@@ -46,7 +79,15 @@ const setup = async (users: Record<number, MemoryRow> = {}) => {
     ],
     users,
   });
+  world.app.use("*", async (c, next) => {
+    c.set("core", {
+      ...c.get("core"),
+      personalInformationFields: resolvePersonalInformationFields(),
+    });
+    await next();
+  });
   for (const route of [
+    mePolicyRoute,
     presenceHeartbeatRoute,
     presenceBatchRoute,
     presenceRoute,
@@ -277,6 +318,49 @@ describe("PUT /users/me/privacy", () => {
 
     expect((await save(world, true, null)).status).toBe(401);
   });
+
+  it.each([
+    ["forces it on", { roleId: FORCING_ROLE }, [], true],
+    ["don't allow it", { roleId: DISALLOWING_ROLE }, [], false],
+    ["force it on through a secondary role", {}, [FORCING_ROLE], true],
+  ])(
+    "refuses a member whose roles %s, and saves nothing",
+    async (_, target, secondary, hideOnlineStatus) => {
+      const world = await setup(
+        { [TARGET_ID]: target },
+        secondary.map(roleId => ({ roleId, userId: TARGET_ID })),
+      );
+
+      const response = await save(world, hideOnlineStatus);
+
+      expect(response.status).toBe(403);
+      expect(
+        world.rows(core_users).find(row => row.id === TARGET_ID)
+          ?.hideOnlineStatus,
+      ).toBe(false);
+      expect(world.emit).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("GET /users/me/policy", () => {
+  it.each([
+    ["allowing", MEMBER_ROLE, "allowed"],
+    ["forcing", FORCING_ROLE, "forced"],
+    ["disallowing", DISALLOWING_ROLE, "disallowed"],
+  ])(
+    "reports Browse anonymously for a member of a %s role as %s",
+    async (_, roleId, browseAnonymously) => {
+      const world = await setup({ [TARGET_ID]: { roleId } });
+
+      const response = await world.app.request("/me/policy", {
+        headers: world.headersOf(targetOnLaptop),
+      });
+
+      expect(response.status).toBe(200);
+      expect(await response.json()).toMatchObject({ browseAnonymously });
+    },
+  );
 });
 
 describe("POST /users/presence/batch", () => {

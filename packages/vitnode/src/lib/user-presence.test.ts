@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { presenceForViewer, type UserPresenceSnapshot } from "./user-presence";
+import {
+  type BrowseAnonymouslyPolicy,
+  browseAnonymouslyPolicyOf,
+  isPresenceHidden,
+  presenceForViewer,
+  type UserPresenceSnapshot,
+} from "./user-presence";
 
 const NOW = new Date("2026-10-17T12:00:00.000Z");
 const SEEN = new Date("2026-10-17T11:30:00.000Z");
@@ -71,4 +77,44 @@ describe("presenceForViewer", () => {
   ])("reads %s", (_, input, viewer, expected) => {
     expect(presenceForViewer(input, viewer, NOW)).toStrictEqual(expected);
   });
+});
+
+const ALLOWS = { allowBrowseAnonymously: true, forceBrowseAnonymously: false };
+const DISALLOWS = {
+  allowBrowseAnonymously: false,
+  forceBrowseAnonymously: false,
+};
+const FORCES = { allowBrowseAnonymously: false, forceBrowseAnonymously: true };
+
+describe("browseAnonymouslyPolicyOf", () => {
+  it.each([
+    ["no roles", [], "allowed"],
+    ["one allowing role", [ALLOWS], "allowed"],
+    ["every role allowing", [ALLOWS, ALLOWS], "allowed"],
+    [
+      "one disallowing role among allowing ones",
+      [ALLOWS, DISALLOWS],
+      "disallowed",
+    ],
+    ["one forcing role among allowing ones", [ALLOWS, FORCES], "forced"],
+    ["a forcing and a disallowing role", [DISALLOWS, FORCES], "forced"],
+  ] as const)("decides %s as %s", (_, roles, expected) => {
+    expect(browseAnonymouslyPolicyOf(roles)).toBe(expected);
+  });
+});
+
+describe("isPresenceHidden", () => {
+  it.each<[BrowseAnonymouslyPolicy, boolean, boolean]>([
+    ["forced", false, true],
+    ["forced", true, true],
+    ["disallowed", true, false],
+    ["disallowed", false, false],
+    ["allowed", true, true],
+    ["allowed", false, false],
+  ])(
+    "with the policy %s and hideOnlineStatus %s is %s",
+    (policy, hideOnlineStatus, expected) => {
+      expect(isPresenceHidden(policy, hideOnlineStatus)).toBe(expected);
+    },
+  );
 });
