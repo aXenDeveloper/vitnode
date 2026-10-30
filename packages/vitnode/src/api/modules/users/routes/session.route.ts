@@ -26,6 +26,7 @@ export const sessionRoute = buildRoute({
                   phone: z.string().nullable(),
                   headline: z.string().nullable(),
                   showRealName: z.boolean(),
+                  hideOnlineStatus: z.boolean(),
                   timeZone: z.string().nullable(),
                   createdAt: z.date(),
                   newsletter: z.boolean(),

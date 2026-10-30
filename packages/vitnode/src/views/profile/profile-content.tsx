@@ -76,6 +76,8 @@ export interface ProfileContentProps {
   /** Rendered beside the About card on large screens - a feed, posts, anything the host adds. */
   children?: React.ReactNode;
   editor?: UserImageEditor;
+  /** Shown beside the username - the screen fetches it so the profile itself stays cacheable. */
+  presence?: React.ReactNode;
   user: UserProfile;
 }
 
@@ -83,6 +85,7 @@ export const ProfileContent = ({
   action,
   children,
   editor,
+  presence,
   user,
 }: ProfileContentProps) => {
   const t = useTranslations("core.profile");
@@ -145,6 +148,7 @@ export const ProfileContent = ({
               <p className="text-muted-foreground truncate text-sm">
                 @{user.nameCode}
               </p>
+              {presence}
             </div>
 
             <ul className="text-muted-foreground flex max-w-full flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-sm sm:justify-start">

@@ -131,9 +131,7 @@ export const SSOCallbackContent = ({
 
   if (state.kind === "email_required" && emailCompletion) {
     return (
-      <SSOCallbackCard
-        footer={otherAccountFooter}
-      >
+      <SSOCallbackCard footer={otherAccountFooter}>
         <SSOEmailCompletion
           actions={emailCompletion}
           emailSuggestion={state.emailSuggestion}

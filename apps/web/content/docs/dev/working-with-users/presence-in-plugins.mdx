@@ -1,0 +1,160 @@
+---
+title: Show Presence in a Plugin
+description: Show a member's online status and last activity in a VitNode plugin with userPresenceQueryOptions, UserPresenceStatus and UserPresenceModel.
+icon: CircleDot
+---
+
+Show whether a member is online next to their name in your plugin: on a post byline, in a member list, or inside your own API response. Core already sends the heartbeat for every signed-in visitor, so a plugin only reads presence. It never has to mount `useUserPresenceHeartbeat` itself.
+
+How presence is tracked, and who may see a hidden member, is covered in [User Presence](/docs/dev/working-with-users/presence).
+
+## Show one member
+
+Query the member with `userPresenceQueryOptions` and render the answer with `UserPresenceStatus`:
+
+```tsx title="plugins/blog/src/views/author-presence.tsx"
+import { useQuery } from '@tanstack/react-query'
+import { UserPresenceStatus } from '@vitnode/core/components/user-presence-status'
+import { useSessionQuery } from '@vitnode/core/tanstack/auth'
+import { userPresenceQueryOptions } from '@vitnode/core/views/presence/presence-query'
+
+export const AuthorPresence = ({ authorId }: { authorId: number }) => {
+  const { data: session, isPending } = useSessionQuery()
+  const { data } = useQuery({
+    ...userPresenceQueryOptions({
+      userId: authorId,
+      viewerId: session?.user?.id ?? null,
+    }),
+    enabled: !isPending,
+  })
+
+  if (!data) return null
+
+  return <UserPresenceStatus presence={data} variant="full" />
+}
+```
+
+The query refetches every 60 seconds and pauses while the tab is hidden. `viewerId` is part of the query key, because the same member reads differently to a guest, to themselves and to a moderator. `enabled: !isPending` waits for the session, so a guest's answer is never fetched first and then thrown away.
+
+<Callout type="warn" title="Fetch presence in the browser only">
+  Never warm a presence query in a route `loader`. Presence depends on the
+  viewer and changes every minute, so it must stay out of SSR output and the
+  page cache.
+</Callout>
+
+## Show a member list
+
+For a list, use `userPresencesQueryOptions`. It asks for every member in one request (one per 100 members for longer lists) and returns a record keyed by user ID:
+
+```tsx title="plugins/blog/src/views/author-list.tsx"
+import { useQuery } from '@tanstack/react-query'
+import { UserPresenceStatus } from '@vitnode/core/components/user-presence-status'
+import { useSessionQuery } from '@vitnode/core/tanstack/auth'
+import { userPresencesQueryOptions } from '@vitnode/core/views/presence/presence-query'
+
+export const AuthorList = ({
+  authors,
+}: {
+  authors: { id: number; name: string }[]
+}) => {
+  const { data: session, isPending } = useSessionQuery()
+  const { data: presences } = useQuery({
+    ...userPresencesQueryOptions({
+      userIds: authors.map((author) => author.id),
+      viewerId: session?.user?.id ?? null,
+    }),
+    enabled: !isPending && authors.length > 0,
+  })
+
+  return (
+    <ul className="flex flex-col gap-2">
+      {authors.map((author) => {
+        const presence = presences?.[author.id]
+
+        return (
+          <li className="flex items-center gap-2" key={author.id}>
+            {presence ? (
+              <UserPresenceStatus presence={presence} variant="dot" />
+            ) : null}
+            <span>{author.name}</span>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+```
+
+Spreading the options and passing your own `enabled` replaces theirs, so keep the empty-list check. Unknown IDs are simply missing from the record.
+
+## Pick a variant
+
+`UserPresenceStatus` only renders. The API has already decided what the viewer may see.
+
+| `variant`           | Online                 | Offline                             | Hidden                        |
+| :------------------ | :--------------------- | :---------------------------------- | :---------------------------- |
+| `dot`               | Green dot              | Grey dot                            | Nothing                       |
+| `compact` (default) | Dot and **Online**     | Dot and **Offline**                 | Eye icon, **Activity hidden** |
+| `full`              | Dot and **Online now** | Dot and **Last seen 5 minutes ago** | Eye icon, **Activity hidden** |
+
+The `dot` variant carries its label as `aria-label`, so screen readers still hear "Online" next to an avatar. `full` wraps the last-seen time in a `<time>` element and updates it every minute. Pass `className` to place it.
+
+## Read presence on the server
+
+When your own API route needs presence, for example to return each post with its author's status, use `UserPresenceModel`. Add it to a route that already loads posts:
+
+```ts title="plugins/blog/src/api/modules/posts/routes/list.route.ts"
+import { UserPresenceModel } from '@vitnode/core/api/models/user-presence'
+
+export const listPostsRoute = buildRoute({
+  route: {
+    // your existing method, path and responses
+  },
+  handler: async (c) => {
+    const posts = await getPosts(c) // your existing query
+    // [!code ++:3]
+    const presences = await new UserPresenceModel(c).getMany({
+      userIds: posts.map((post) => post.authorId),
+    })
+
+    return c.json(
+      {
+        items: posts.map((post) => ({
+          ...post,
+          authorPresence: presences.get(post.authorId) ?? null, // [!code ++]
+        })),
+      },
+      200,
+      { 'Cache-Control': 'private, no-store' }, // [!code ++]
+    )
+  },
+})
+```
+
+`getMany` costs three database queries (the members, their secondary roles and the roles' anonymity settings) and one cache round trip, however many authors there are. It returns a `Map` keyed by user ID, with [role settings](/docs/dev/working-with-users/presence#role-settings) already applied. Describe the new field in your response schema with `UserPresence` from `@vitnode/core/lib/user-presence`.
+
+The answer belongs to the viewer, so the route must send `Cache-Control: private, no-store` and must not tag the response for the page cache. If the rest of the response is cacheable, fetch presence on the client instead.
+
+### `UserPresenceModel` methods
+
+| Method                                    | Returns                              | Behavior                                                                         |
+| :---------------------------------------- | :----------------------------------- | :------------------------------------------------------------------------------- |
+| `get({ userId, viewer? })`                | `Promise<UserPresence \| null>`      | One member as `viewer` may see them. `null` for an unknown member                |
+| `getMany({ userIds, viewer? })`           | `Promise<Map<number, UserPresence>>` | Many members at once. Unknown IDs are left out                                   |
+| `heartbeat({ userId, sessionId })`        | `Promise<void>`                      | Renews one session's lease and moves `lastSeenAt` forward, at most once a minute |
+| `removeSessions({ userId, tokenHashes })` | `Promise<void>`                      | Ends the given sessions' leases. Core calls it on sign-out and device revocation |
+
+`viewer` defaults to the signed-in member of the request, checked against moderator permissions. In an AdminCP route, pass the AdminCP session so admin permissions apply:
+
+```ts
+const presence = await new UserPresenceModel(c).get({
+  userId,
+  viewer: { type: 'admin', user: c.get('admin')?.user ?? null },
+})
+```
+
+You rarely need `heartbeat` or `removeSessions`: core's heartbeat route and session code already call them.
+
+## Check the result
+
+Sign in as one member in one browser and open your page as another member in a second browser. The first member shows as **Online**. Close their tab and, within 150 seconds, they switch to **Offline** with a last-seen time. Turn on **Browse anonymously** for the first member and the second browser shows **Activity hidden** on its next refresh.

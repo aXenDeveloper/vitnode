@@ -31,6 +31,7 @@ export const getUserById = async ({ id, c }: { c: Context; id: number }) => {
       birthday: core_users.birthday,
       language: core_users.language,
       timeZone: core_users.timeZone,
+      hideOnlineStatus: core_users.hideOnlineStatus,
       avatarKey: avatarFile.key,
       coverKey: coverFile.key,
     })

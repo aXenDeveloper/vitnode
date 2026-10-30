@@ -81,6 +81,8 @@ export const useAdminRoleMutations = (): {
           allowEditOwnContent: values.allowEditOwnContent,
           allowHideOwnContent: values.allowHideOwnContent,
           allowEditPersonalInfo: values.allowEditPersonalInfo,
+          allowBrowseAnonymously: values.allowBrowseAnonymously,
+          forceBrowseAnonymously: values.forceBrowseAnonymously,
           allowUploadAvatar: values.allowUploadAvatar,
           allowUploadCover: values.allowUploadCover,
           allowUploadFiles: values.allowUploadFiles,

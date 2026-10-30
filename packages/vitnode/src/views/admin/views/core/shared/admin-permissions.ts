@@ -17,6 +17,7 @@ export const ADMIN_USER_PERMISSIONS = {
   edit: core("users", "can_edit"),
   editAdmin: core("users", "can_edit_admin"),
   view: core("users", "can_view"),
+  viewHiddenPresence: core("users", "can_view_hidden_presence"),
 } as const;
 
 export const ADMIN_DEBUG_PERMISSIONS = {

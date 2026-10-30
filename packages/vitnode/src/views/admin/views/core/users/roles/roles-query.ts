@@ -50,6 +50,7 @@ export const normalizeAdminRolesParams = (
 
 /** One row of the roles table - everything the edit dialog re-opens with. */
 export interface AdminRoleRow {
+  allowBrowseAnonymously: boolean;
   allowDeleteOwnContent: boolean;
   allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;
@@ -61,6 +62,7 @@ export interface AdminRoleRow {
   createdAt: Date | string;
   default: boolean;
   editOwnContentMinutes: null | number;
+  forceBrowseAnonymously: boolean;
   /** The role has a row in `core_admin_permissions`, so editing it is elevated. */
   grantsAdmin: boolean;
   guest: boolean;

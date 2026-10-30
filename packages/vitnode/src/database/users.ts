@@ -60,6 +60,8 @@ export const core_users = camelCase.table.withRLS(
     coverId: t.integer().references((): AnyPgColumn => core_files.id, {
       onDelete: "set null",
     }),
+    lastSeenAt: t.timestamp(),
+    hideOnlineStatus: t.boolean().notNull().default(false),
   }),
   t => [
     index("core_users_avatar_id_idx").on(t.avatarId),

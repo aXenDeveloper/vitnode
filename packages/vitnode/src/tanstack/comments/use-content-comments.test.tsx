@@ -77,6 +77,7 @@ const user: AuthUser = {
   emailVerified: true,
   firstName: null,
   headline: null,
+  hideOnlineStatus: false,
   id: 7,
   isAdmin: false,
   isModerator: false,

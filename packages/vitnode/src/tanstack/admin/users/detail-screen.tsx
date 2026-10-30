@@ -15,6 +15,7 @@ import { UserConnectedAccountsCard } from "@/views/admin/views/core/users/detail
 import { UserDetailContent } from "@/views/admin/views/core/users/detail/user-detail-content";
 import { UserDevicesCard } from "@/views/admin/views/core/users/detail/user-devices";
 import { UserNotificationsPanel } from "@/views/admin/views/core/users/detail/user-notifications";
+import { UserPresenceCard } from "@/views/admin/views/core/users/detail/user-presence";
 import { canEditAdminUser } from "@/views/admin/views/core/users/detail/user-query";
 import { UserSecurityPanel } from "@/views/admin/views/core/users/detail/user-security";
 import { adminUserTimelineQueryOptions } from "@/views/admin/views/core/users/detail/user-timeline-query";
@@ -131,6 +132,9 @@ const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
           });
         }}
         onVerifyEmail={onVerifyEmail}
+        presence={
+          <UserPresenceCard adminUserId={adminUserId} userId={user.id} />
+        }
         searchRoles={searchAdminRolesInBrowser}
         security={
           <UserSecurityPanel

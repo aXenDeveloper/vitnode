@@ -82,9 +82,12 @@ export const sessionCookies = (
 export const createSessionWorld = async ({
   extraTables = [],
   sessions,
+  users = {},
 }: {
   extraTables?: [Table, readonly object[]][];
   sessions: FakeSession[];
+  /** Extra `core_users` columns per user ID, e.g. `{ 7: { hideOnlineStatus: true } }`. */
+  users?: Record<number, MemoryRow>;
 }) => {
   const expiresAt = new Date(Date.now() + 1000 * 60 * 30);
   const hashed = await Promise.all(
@@ -113,9 +116,12 @@ export const createSessionWorld = async ({
       core_users,
       userIds.map(id => ({
         email: `${id}@test.com`,
+        hideOnlineStatus: false,
         id,
+        lastSeenAt: null,
         name: `user-${id}`,
         roleId: MEMBER_ROLE_ID,
+        ...users[id],
       })),
     ],
     [
@@ -222,5 +228,5 @@ export const createSessionWorld = async ({
     };
   };
 
-  return { app, cache, emit, isCached, probe, rows, rowsFor };
+  return { app, cache, db, emit, isCached, probe, rows, rowsFor };
 };

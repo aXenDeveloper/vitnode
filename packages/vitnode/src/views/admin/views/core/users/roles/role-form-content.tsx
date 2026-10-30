@@ -58,6 +58,7 @@ export type AdminRoleAiValues = Omit<AdminAiRoleAccessInput, "roleId">;
 /** The shape the roles API takes, as the form produces it. */
 export interface AdminRoleFormValues {
   ai?: AdminRoleAiValues;
+  allowBrowseAnonymously: boolean;
   allowDeleteOwnContent: boolean;
   allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;
@@ -67,6 +68,7 @@ export interface AdminRoleFormValues {
   allowUploadFiles: boolean;
   color: string;
   editOwnContentMinutes: null | number;
+  forceBrowseAnonymously: boolean;
   maxAvatarSize: number;
   maxCoverSize: number;
   maxStorageForSubmit: null | number;
@@ -77,6 +79,7 @@ export interface AdminRoleFormValues {
 
 /** The row an edit re-opens with. Absent for a create. */
 export interface AdminRoleFormData {
+  allowBrowseAnonymously: boolean;
   allowDeleteOwnContent: boolean;
   allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;
@@ -86,6 +89,7 @@ export interface AdminRoleFormData {
   allowUploadFiles: boolean;
   color: null | string;
   editOwnContentMinutes: null | number;
+  forceBrowseAnonymously: boolean;
   id: number;
   maxAvatarSize: number;
   maxCoverSize: number;
@@ -284,6 +288,12 @@ export const AdminRoleFormContent = ({
     allowEditPersonalInfo: z
       .boolean()
       .default(data?.allowEditPersonalInfo ?? true),
+    allowBrowseAnonymously: z
+      .boolean()
+      .default(data?.allowBrowseAnonymously ?? true),
+    forceBrowseAnonymously: z
+      .boolean()
+      .default(data?.forceBrowseAnonymously ?? false),
     allowUploadAvatar: z.boolean().default(data?.allowUploadAvatar ?? true),
     allowUploadCover: z.boolean().default(data?.allowUploadCover ?? true),
     allowUploadFiles: z.boolean().default(data?.allowUploadFiles ?? false),
@@ -470,6 +480,28 @@ export const AdminRoleFormContent = ({
             />
           ),
           id: "allowEditPersonalInfo",
+          tab: "profile",
+        },
+        {
+          component: props => (
+            <AutoFormSwitch
+              {...props}
+              description={t("form.browse_anonymously.allow_desc")}
+              label={t("form.browse_anonymously.allow")}
+            />
+          ),
+          id: "allowBrowseAnonymously",
+          tab: "profile",
+        },
+        {
+          component: props => (
+            <AutoFormSwitch
+              {...props}
+              description={t("form.browse_anonymously.force_desc")}
+              label={t("form.browse_anonymously.force")}
+            />
+          ),
+          id: "forceBrowseAnonymously",
           tab: "profile",
         },
         {
