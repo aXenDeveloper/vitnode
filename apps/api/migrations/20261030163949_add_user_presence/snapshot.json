@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "da3fd45d-3e43-4203-b3b3-4bf3476777f5",
+  "id": "4f7f60d7-9030-4dba-af3c-549a3ec2fa80",
   "prevIds": [
-    "50263672-7a4f-48ea-9374-78b5474879d5"
+    "2ab8ec9e-8d1a-4774-8f8c-b04d780efaaf"
   ],
   "ddl": [
     {
@@ -327,6 +327,18 @@
     {
       "isRlsEnabled": true,
       "name": "core_update_sources",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_sso_attempts",
+      "entityType": "tables",
+      "schema": "public"
+    },
+    {
+      "isRlsEnabled": true,
+      "name": "core_sso_pending",
       "entityType": "tables",
       "schema": "public"
     },
@@ -6909,6 +6921,32 @@
       "default": "true",
       "generated": null,
       "identity": null,
+      "name": "allowBrowseAnonymously",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_roles"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "false",
+      "generated": null,
+      "identity": null,
+      "name": "forceBrowseAnonymously",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_roles"
+    },
+    {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "true",
+      "generated": null,
+      "identity": null,
       "name": "allowEditOwnContent",
       "entityType": "columns",
       "schema": "public",
@@ -7760,6 +7798,279 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
+      "table": "core_sso_attempts"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "stateHash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_attempts"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "bindingHash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_attempts"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "providerId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_attempts"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "codeVerifier",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_attempts"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "nonce",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_attempts"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_attempts"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expiresAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_attempts"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "tokenHash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "providerId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "providerAccountId",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "providerUsername",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "profile",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "varchar(255)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "email",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "varchar(64)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "confirmHash",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "confirmExpiresAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "integer",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "0",
+      "generated": null,
+      "identity": null,
+      "name": "confirmSends",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "confirmSentAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "now()",
+      "generated": null,
+      "identity": null,
+      "name": "createdAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "expiresAt",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "type": "serial",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "id",
+      "entityType": "columns",
+      "schema": "public",
       "table": "core_users"
     },
     {
@@ -8486,6 +8797,32 @@
       "generated": null,
       "identity": null,
       "name": "preview",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_users_sso_operations"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "codeVerifier",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "core_users_sso_operations"
+    },
+    {
+      "type": "varchar(128)",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "nonce",
       "entityType": "columns",
       "schema": "public",
       "table": "core_users_sso_operations"
@@ -15205,6 +15542,48 @@
       "nameExplicit": true,
       "columns": [
         {
+          "value": "expiresAt",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_sso_attempts_expires_at_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_sso_attempts"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
+          "value": "expiresAt",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "with": "",
+      "method": "btree",
+      "concurrently": false,
+      "name": "core_sso_pending_expires_at_idx",
+      "entityType": "indexes",
+      "schema": "public",
+      "table": "core_sso_pending"
+    },
+    {
+      "nameExplicit": true,
+      "columns": [
+        {
           "value": "avatarId",
           "isExpression": false,
           "asc": true,
@@ -21376,6 +21755,26 @@
         "id"
       ],
       "nameExplicit": false,
+      "name": "core_sso_attempts_pkey",
+      "schema": "public",
+      "table": "core_sso_attempts",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "name": "core_sso_pending_pkey",
+      "schema": "public",
+      "table": "core_sso_pending",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
       "name": "core_users_pkey",
       "schema": "public",
       "table": "core_users",
@@ -21737,6 +22136,28 @@
       "name": "core_sessions_known_devices_publicId_unique",
       "schema": "public",
       "table": "core_sessions_known_devices",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "stateHash"
+      ],
+      "nullsNotDistinct": false,
+      "name": "core_sso_attempts_stateHash_key",
+      "schema": "public",
+      "table": "core_sso_attempts",
+      "entityType": "uniques"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "tokenHash"
+      ],
+      "nullsNotDistinct": false,
+      "name": "core_sso_pending_tokenHash_key",
+      "schema": "public",
+      "table": "core_sso_pending",
       "entityType": "uniques"
     },
     {
