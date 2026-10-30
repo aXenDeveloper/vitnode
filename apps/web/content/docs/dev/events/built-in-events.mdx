@@ -24,6 +24,7 @@ the event map is global.
 | [Page layouts](#page-layout-events)                  | `core.page-layout.updated`                  |
 | [Content Engine](#content-engine-events)             | `content.<content type id>.<action>`        |
 | [Content containers](#content-container-events)      | `content.container.*`                       |
+| [Content access](#content-access-events)             | `content.access.updated`                    |
 | [Content approvals](#content-approval-events)        | `content.approval.*`                        |
 | [Blog](#blog-events-vitnodeblog)                     | `blog.post.*`, `blog.category.*`            |
 
@@ -1277,6 +1278,64 @@ export const deskDeletedListener = buildEventListener({
     if (payload.definitionId !== 'newsroom.desks') return
 
     await c.get('log').warn(`Desk ${payload.containerId} was deleted`)
+  },
+})
+```
+
+</Accordion>
+</Accordions>
+
+## Content access events
+
+| Event                    | Payload                                                         | Emitted when                                                      |
+| ------------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `content.access.updated` | `{ family, scopeId, pluginId, changedActions, userId }`         | An administrator saved [access rules](/docs/content-engine/access) that changed at least one action of a container, a blog category or another scope |
+
+<Accordions>
+<Accordion title="content.access.updated">
+
+Emitted by the AdminCP access routes after the new rules are saved and every
+cache they decide has been expired. Saving the same rules again emits nothing.
+
+<TypeTable
+  type={{
+    family: {
+      description:
+        'The scope family: a container collection such as `forum.forums`, or a scope content type such as `blog.category`.',
+      type: 'string',
+    },
+    scopeId: {
+      description: 'The scope whose rules changed, as text: `"12"`.',
+      type: 'string',
+    },
+    pluginId: {
+      description: 'The plugin that registered the family.',
+      type: 'string',
+    },
+    changedActions: {
+      description:
+        'The actions whose rule this scope now sets differently, or stopped setting: `view`, `read`, `comment`, `downloadAttachments`.',
+      type: 'string[]',
+    },
+    userId: {
+      description: 'The administrator who saved them, or `null`.',
+      type: 'number | null',
+    },
+  }}
+/>
+
+```ts title="plugins/forum/src/api/lib/events.ts"
+import { buildEventListener } from '@vitnode/core/api/lib/events'
+
+export const logForumAccess = buildEventListener({
+  event: 'content.access.updated',
+  name: 'log-forum-access',
+  handler: async (c, payload) => {
+    if (payload.family !== 'forum.forums') return
+
+    await c
+      .get('log')
+      .info(`Forum ${payload.scopeId}: ${payload.changedActions.join(', ')}`)
   },
 })
 ```

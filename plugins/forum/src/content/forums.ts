@@ -9,6 +9,11 @@ export const forumContainers = defineContentContainer({
   },
 
   hierarchy: { maxDepth: 4 },
+
+  // Per-forum view, read, reply and download rules, set in the AdminCP. Every
+  // action starts open to everyone; replying still needs a signed-in member,
+  // as it always did.
+  access: true,
   ordering: { mode: "manual" },
 
   policies: {

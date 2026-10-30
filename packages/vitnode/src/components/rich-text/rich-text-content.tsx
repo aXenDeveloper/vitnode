@@ -16,7 +16,12 @@ import {
 } from "@/content/rich-text/elements";
 import { richTextToHtml } from "@/content/rich-text/html";
 
-import { DeletedUpload, isDeletedUploadNode } from "./deleted-upload";
+import {
+  DeletedUpload,
+  isDeletedUploadNode,
+  isRestrictedUploadNode,
+  RestrictedUpload,
+} from "./deleted-upload";
 
 export interface RichTextNodeRendererProps {
   children?: React.ReactNode;
@@ -165,6 +170,8 @@ const renderNode = (
   if (isDeletedUploadNode(node)) {
     return <DeletedUpload attrs={node.attrs} key={key} type={node.type} />;
   }
+
+  if (isRestrictedUploadNode(node)) return <RestrictedUpload key={key} />;
 
   const element = richTextNodeElement(node);
 

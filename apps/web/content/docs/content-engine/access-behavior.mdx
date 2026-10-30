@@ -1,0 +1,71 @@
+---
+title: How access is enforced
+description: How VitNode Content Engine access rules apply to public reads and writes, search and Discover, caches, notifications, sitemaps, moderators and root roles, and what to check when somebody cannot see what they should.
+icon: ShieldQuestionMark
+---
+
+Access rules are enforced on the server, on every request, from the current rules, the current scope tree and the reader's current roles. This page explains where they apply, so you can predict what a member sees and debug when it is not what you expected.
+
+## How a decision is made
+
+For one scope and one action, the server collects every requirement and lets the reader in only when all of them pass:
+
+- the scope's own rule for the action and for each action it needs (**Read** needs **View**);
+- the **View** rule of every ancestor, because a container inside a hidden one is hidden;
+- for **Read** and what needs it, the **Read** rule of every ancestor, because a child can be stricter than its parent but never more open.
+
+A rule left on **Inherit** comes from the nearest ancestor that sets it, then the collection's `defaults`, then **Everyone**. A record filed under several scopes, such as an article in two categories, needs every scope's requirements. Comments and replies follow their parent record.
+
+Roles are read from the database for each request, never from a cached session. Taking a role away, moving a container under a restricted parent or changing a rule applies from the next request, including to forms a member already has open.
+
+## Where the rules apply
+
+| Path                                   | Behavior                                                                                       |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Public lists, detail, thread, delivery | Records the reader may not read are left out before pagination, so pages, cursors and totals never count them |
+| Detail of a record in a hidden scope   | `404`, the same as a record that never existed                                                 |
+| Detail in a scope the reader may see   | `403` with `{ accessRequired: true, code: "CONTENT_ACCESS_REQUIRED" }` and nothing else         |
+| Container list and detail              | Hidden containers are left out, children included; every container carries `access` flags     |
+| Writes, edits, hide, delete, reports   | Checked again on the server: a reply needs **Comment**, anything else **Read**                 |
+| `GET /permissions`                     | Leaves out records the reader may not read; adds `canView`, `canRead`, `canComment`, `canDownloadAttachments` |
+| Sitemaps                               | Only what a guest may read, in every language                                                  |
+| Notifications and emails               | Each recipient must be able to read the record when it is sent and every time the inbox loads  |
+
+Staff permissions grant nothing here. A moderator reads a restricted forum on the public site only when an access rule lets one of their roles in; give your moderator role access explicitly. A **root role** passes every rule. The AdminCP and ModCP are staff areas behind their own permissions, so moderators keep reviewing reports and approvals there. A pending approval follows its record to its new container when the record moves, so it reaches that container's moderators.
+
+Preview links are signed by staff for one revision. They show that revision whatever its scope's rules, as before, but protected files inside it still need a reader the rules let in.
+
+## Search and Discover
+
+Search, suggestions, Discover, popular items, facets, author lists and profile timelines all use the same rules, with every supported adapter:
+
+1. Each search document stores the scopes its record is filed in, such as `forum.forums:12` or `blog.category:3`. They are read from the content tables whenever the document is written.
+2. A query keeps only documents whose every scope the reader may read. Postgres compares arrays; Elasticsearch uses a `terms_set` query.
+3. Each result is checked against the content tables before it is returned. A document indexed before its record moved into a restricted scope is dropped, re-stamped, and left out of the total.
+
+The index never grants access on its own. While a stale document waits for its fix, totals are an upper bound that never includes a result the reader was shown. An hourly job, `content-search-access`, re-stamps any document that drifted, so failed or delayed indexing heals without a rebuild.
+
+## Caching
+
+A response is cached for everybody only when no access rule can change it: the family has no restriction at all. As soon as one forum or category is restricted, every response that depends on the reader is sent `private, no-store`, skips the API's shared public-read cache and stays out of the page cache. Pages for guests and members are then rendered per request.
+
+Changing a rule, moving or deleting a container expires every cache the family decides: shared pages (hard), cached public reads, the container tree and sitemaps. Signing in, signing out or switching accounts clears the browser's cached queries, except translations.
+
+External search engines may keep showing pages they crawled while they were public. Making a scope private removes it from your sitemap and makes its pages answer `404` or `403`; ask the search engine to recrawl or remove the URLs if it matters.
+
+## Troubleshooting
+
+**Who changed a rule, and when?** Open **AdminCP → Staff → Administrators → Logs** and filter by **Changed access rules**. Each entry names the forum or category and shows the rule before and after.
+
+**A member cannot see a forum they should.** Open the forum's **Access** sheet. **Effective access** lists every requirement, including the ones a parent adds. A **Read** rule on a parent hides every child's topics, even when the child is open.
+
+**Nobody can open a forum.** A **Selected roles** rule whose roles were all deleted lets nobody in; the sheet warns about it. Deleting a role removes it from every rule, so a restricted scope stays restricted instead of opening up. Pick the roles again, or choose another audience.
+
+**Attachments still download for everyone.** The files are probably still public. See [Protected attachments](/docs/content-engine/access-attachments#move-the-files-that-are-still-public).
+
+**A custom route shows restricted content.** A plugin route that queries content tables directly ignores the rules. Read through the public service, or add `await createContentAccess(c).condition(model, "read")` to its `where`. See the [Access rules API](/docs/content-engine/access-api#createcontentaccess).
+
+## Related
+
+- [Access rules](/docs/content-engine/access)
+- [Access rules API](/docs/content-engine/access-api)

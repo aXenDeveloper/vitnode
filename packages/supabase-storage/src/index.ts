@@ -52,10 +52,16 @@ const readCapped = async (
 // sent verbatim as the `apikey`/`Authorization` header.
 export const SupabaseStorageAdapter = ({
   bucket = "",
+  privateBucket,
   secretKey = "",
   url = "",
 }: {
   bucket: string | undefined;
+  /**
+   * A second, **private** bucket for protected attachments, read with the
+   * secret key. Leave it out and attachment downloads cannot be restricted.
+   */
+  privateBucket?: string;
   secretKey: string | undefined;
   url: string | undefined;
 }): StorageApiPlugin => {
@@ -78,6 +84,35 @@ export const SupabaseStorageAdapter = ({
     getClient().from(bucket).getPublicUrl(key).data.publicUrl;
 
   return {
+    ...(privateBucket
+      ? {
+          private: {
+            delete: async (key: string): Promise<void> => {
+              const { error } = await getClient()
+                .from(privateBucket)
+                .remove([key]);
+              if (error) throw error;
+            },
+            read: async (key: string) => {
+              const { data, error } = await getClient()
+                .from(privateBucket)
+                .download(key)
+                .asStream();
+              if (error) return null;
+
+              return { body: data as ReadableStream<Uint8Array> };
+            },
+            upload: async ({ body, contentType, key }: StorageUploadArgs) => {
+              const { error } = await getClient()
+                .from(privateBucket)
+                .upload(key, body, { contentType, upsert: true });
+              if (error) throw error;
+
+              return { key };
+            },
+          },
+        }
+      : {}),
     read: async (key: string, { maxBytes }: { maxBytes: number }) => {
       const { data, error } = await getClient()
         .from(bucket)

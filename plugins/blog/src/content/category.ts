@@ -15,6 +15,11 @@ export const blogCategoryContentType = defineContentType({
   id: "blog.category",
   tableName: "blog_categories",
 
+  // Every category is an access scope: who may see it, read its articles,
+  // comment on them and download their attachments. All open to everyone
+  // until an administrator restricts a category.
+  access: { scope: true },
+
   localization: {
     // The language every category is first written in. `en` is the locale
     // VitNode installs seed, and the boot guard says so loudly if an install

@@ -34,6 +34,9 @@ export const timelineUserAdminRoute = buildRoute({
     const result = await searchTimeline(c, {
       authorId: Number(c.req.valid("param").id),
       includePrivate: true,
+      // A staff route behind `users:can_view`: the AdminCP sees every item,
+      // whatever the scopes it is filed in allow on the public site.
+      skipAccess: true,
       query: c.req.valid("query"),
     });
 

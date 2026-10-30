@@ -12,6 +12,7 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@vitnode/core/components/ui/alert";
+import { buttonVariants } from "@vitnode/core/components/ui/button";
 import { TooltipWithContent } from "@vitnode/core/components/ui/tooltip";
 import { UserFormat } from "@vitnode/core/components/user-format";
 import { contentTarget } from "@vitnode/core/content";
@@ -19,6 +20,7 @@ import { richTextNodeElement } from "@vitnode/core/content/rich-text";
 import { resolveImageAlt } from "@vitnode/core/lib/files/resolve-alt";
 import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import {
+  ContentAccessRequired,
   contentDeliveryPage,
   contentDeliveryPageHead,
 } from "@vitnode/core/tanstack/content";
@@ -74,12 +76,31 @@ const loadBlogPost = async (
       .catch((): BlogCategories => ({ items: [], total: 0 })),
   ]);
 
-  return { ...contentDeliveryPage(answer), categories: categories.items };
+  if (answer.accessRequired) return { accessRequired: true as const };
+
+  const page = contentDeliveryPage(answer);
+  // Only the article's own categories count, all of them: commenting needs
+  // every one to allow it. A category missing from the list is one the reader
+  // may not see, and then the article would not have loaded at all.
+  const canComment = page.item.categoryId.every(
+    id =>
+      categories.items.find(category => category.id === id)?.access
+        .canComment === true,
+  );
+
+  return {
+    ...page,
+    accessRequired: false as const,
+    canComment,
+    categories: categories.items,
+  };
 };
 
 type BlogPostPageData = Awaited<ReturnType<typeof loadBlogPost>>;
 
-type BlogPostItem = BlogPostPageData["item"];
+type BlogPostArticleData = Extract<BlogPostPageData, { accessRequired: false }>;
+
+type BlogPostItem = BlogPostArticleData["item"];
 
 export const route = defineRoute({
   load: async ({ context, params }) =>
@@ -88,10 +109,15 @@ export const route = defineRoute({
       slug: params.slug,
     }),
 
-  head: ({ loaderData }) =>
-    contentDeliveryPageHead(loaderData?.metadata, {
-      title: loaderData?.item.title,
-    }),
+  head: ({ loaderData, t }) =>
+    loaderData?.accessRequired
+      ? {
+          robots: "noindex, nofollow",
+          title: t("@vitnode/blog.post.access_required"),
+        }
+      : contentDeliveryPageHead(loaderData?.metadata, {
+          title: loaderData?.item.title,
+        }),
 });
 
 const headingRenderer =
@@ -222,9 +248,38 @@ const PostDates = ({ item }: { item: BlogPostItem }) => {
   );
 };
 
+const BlogPostAccessRequired = () => {
+  const t = useTranslations("@vitnode/blog.post");
+
+  return (
+    <div className="container mx-auto flex max-w-3xl px-4 py-8 md:py-12">
+      <ContentAccessRequired>
+        <HrefLink
+          className={buttonVariants({ variant: "outline" })}
+          href={BLOG_HREF}
+        >
+          <ArrowLeftIcon aria-hidden="true" />
+          {t("back")}
+        </HrefLink>
+      </ContentAccessRequired>
+    </div>
+  );
+};
+
 const BlogPostPage = ({
-  loaderData: { categories, item, metadata },
-}: PluginRoutePageProps<BlogPostPageData>) => {
+  loaderData,
+}: PluginRoutePageProps<BlogPostPageData>) =>
+  loaderData.accessRequired ? (
+    <BlogPostAccessRequired />
+  ) : (
+    <BlogPostArticle loaderData={loaderData} />
+  );
+
+const BlogPostArticle = ({
+  loaderData: { canComment, categories, item, metadata },
+}: {
+  loaderData: BlogPostArticleData;
+}) => {
   const t = useTranslations("@vitnode/blog.post");
   const format = useFormatter();
   const router = useRouter();
@@ -409,6 +464,7 @@ const BlogPostPage = ({
               articleHref={blogPostHref(item.friendlyUrl)}
               articleId={item.id}
               articleTitle={item.title}
+              canComment={canComment}
             />
           </div>
         ) : null}

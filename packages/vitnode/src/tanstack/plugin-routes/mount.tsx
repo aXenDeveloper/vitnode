@@ -28,6 +28,7 @@ import {
 } from "./collision";
 import {
   pluginLayoutComponent,
+  pluginNotFoundComponent,
   pluginPageComponent,
   pluginRouteBreadcrumb,
 } from "./components";
@@ -185,13 +186,13 @@ const pluginRouteNotFound = (spec: PluginRouteSpec) =>
     const { route } = await spec.module();
 
     return {
-      default:
-        route.notFound ??
-        function PluginRouteNotFoundFallback(props: NotFoundRouteProps) {
-          const Default = useRouter().options.defaultNotFoundComponent;
+      default: route.notFound
+        ? pluginNotFoundComponent(route.notFound, spec.namespaces)
+        : function PluginRouteNotFoundFallback(props: NotFoundRouteProps) {
+            const Default = useRouter().options.defaultNotFoundComponent;
 
-          return Default ? <Default {...props} /> : null;
-        },
+            return Default ? <Default {...props} /> : null;
+          },
     };
   });
 

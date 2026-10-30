@@ -26,11 +26,14 @@ export const searchTimeline = async (
     hiddenAccess,
     includePrivate,
     query,
+    skipAccess,
   }: {
     authorId: number;
     hiddenAccess?: SearchHiddenAccess;
     includePrivate: boolean;
     query: z.infer<typeof zodSearchTimelineQuery>;
+    /** Only for staff routes - see `SearchQueryParams.skipAccess`. */
+    skipAccess?: boolean;
   },
 ) =>
   await c.get("search").search({
@@ -40,6 +43,7 @@ export const searchTimeline = async (
     hiddenAccess,
     includePrivate,
     languageCode: query.lang,
+    skipAccess,
     sort: "newest",
   });
 

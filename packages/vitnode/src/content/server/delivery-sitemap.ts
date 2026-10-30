@@ -11,6 +11,8 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDeliverySitemapArgs } from "./delivery-service";
 import type { ContentModel } from "./model";
 
+import { CONTENT_ACCESS_GUEST } from "../access/server/actor";
+import { contentPublicAccessCondition } from "../access/server/source";
 import {
   CONTENT_SITEMAP_DEFAULT_PAGE_SIZE,
   CONTENT_SITEMAP_MAX_URLS,
@@ -95,6 +97,11 @@ export const readContentDeliverySitemapPage = async <
 
   const conditions: (SQL | undefined)[] = [
     publishedCondition(base),
+    // A sitemap is public, so it lists only what a guest may read - whoever
+    // happens to be asking for it.
+    await contentPublicAccessCondition(c, definition, {
+      actor: CONTENT_ACCESS_GUEST,
+    }),
     cursor === null ? undefined : gt(columns.id, cursor),
     // `IS DISTINCT FROM TRUE`, which is the only spelling that agrees with the
     // metadata. `contentDeliveryRobots` reads `value !== true`, so a `noIndex` of

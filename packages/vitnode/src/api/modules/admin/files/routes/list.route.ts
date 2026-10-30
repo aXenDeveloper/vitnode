@@ -8,6 +8,7 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
+import { contentPrivateAdminFileUrl } from "@/content/access/server/files";
 import { core_files } from "@/database/files";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
@@ -97,6 +98,7 @@ export const listFilesAdminRoute = buildRoute({
             id: core_files.id,
             name: core_files.name,
             key: core_files.key,
+            visibility: core_files.visibility,
             folder: core_files.folder,
             mimeType: core_files.mimeType,
             size: core_files.size,
@@ -137,6 +139,7 @@ export const listFilesAdminRoute = buildRoute({
       edges: data.edges.map(
         ({
           key,
+          visibility,
           userId,
           userName,
           userNameCode,
@@ -146,7 +149,13 @@ export const listFilesAdminRoute = buildRoute({
           ...file
         }) => ({
           ...file,
-          url: hasAdapter ? storage.getUrl(key) : null,
+          // A private file has no public address: the list shows it through the
+          // session's own download route.
+          url: hasAdapter
+            ? visibility === "private"
+              ? contentPrivateAdminFileUrl(file.id)
+              : storage.getUrl(key)
+            : null,
           dimensions: parseImageDimensions(file.metadata),
           user:
             userId != null && userName != null

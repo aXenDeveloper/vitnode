@@ -32,6 +32,10 @@ export const blogPostContentType = defineContentType({
 
   publication: true,
 
+  // An article is readable only when every one of its categories allows it.
+  // Comments under it follow the article without an option of their own.
+  access: { from: "categoryId" },
+
   duplication: true,
 
   visibility: true,

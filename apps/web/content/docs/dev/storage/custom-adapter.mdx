@@ -185,6 +185,28 @@ error message in it.
   keys](/docs/dev/storage#storage-keys).
 </Callout>
 
+## The optional private store
+
+An adapter that can keep objects where no public URL reaches them adds
+`private`. VitNode then stores [protected
+attachments](/docs/content-engine/access-attachments) there and streams them
+through routes that check the reader:
+
+```ts
+export interface StoragePrivateStore {
+  upload: (args: StorageUploadArgs) => Promise<{ key: string }>
+  read: (
+    key: string,
+  ) => Promise<null | { body: ReadableStream<Uint8Array>; size?: number }>
+  delete: (key: string) => Promise<void>
+}
+```
+
+`read` returns `null` for a missing object. Leave `private` out when the
+adapter cannot guarantee privacy, such as a bucket whose policy makes every
+object public: the AdminCP then refuses to restrict attachment downloads
+instead of promising something storage cannot keep.
+
 ## The optional static descriptor
 
 Disk-backed adapters can expose a fourth field, and only they should:

@@ -16,6 +16,10 @@ export const downloadUserFileRoute = buildRoute({
       params: z.object({
         id: z.string().openapi({ example: "1" }),
       }),
+      query: z.object({
+        /** `true` shows an image in the page instead of downloading it. */
+        inline: z.enum(["true", "false"]).optional(),
+      }),
     },
     responses: {
       200: {
@@ -57,6 +61,7 @@ export const downloadUserFileRoute = buildRoute({
         name: core_files.name,
         key: core_files.key,
         mimeType: core_files.mimeType,
+        visibility: core_files.visibility,
       })
       .from(core_files)
       .where(and(eq(core_files.id, fileId), eq(core_files.userId, user.id)))
@@ -67,8 +72,9 @@ export const downloadUserFileRoute = buildRoute({
     }
 
     return (
-      (await attachStoredFile(c, file)) ??
-      c.json({ error: "File not found" }, 404)
+      (await attachStoredFile(c, file, {
+        inline: c.req.valid("query").inline === "true",
+      })) ?? c.json({ error: "File not found" }, 404)
     );
   },
 });

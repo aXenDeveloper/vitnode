@@ -19,6 +19,7 @@ import { requireAdminPermission } from "../screen";
 
 export const ADMIN_CONTAINERS_NAMESPACES = [
   "core.global",
+  "core.access",
   "core.containers",
 ] as const;
 

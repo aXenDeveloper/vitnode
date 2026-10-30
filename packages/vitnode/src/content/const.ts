@@ -273,6 +273,8 @@ export const CONTENT_PUBLIC_WRITABLE_KINDS = [
  * use, and `invalid_json` a body that is not JSON.
  */
 export const CONTENT_PUBLIC_WRITE_ISSUE_CODES = {
+  /** The scope's access rules keep this member from reading or replying there. */
+  accessDenied: "access_denied",
   editWindowClosed: "edit_window_closed",
   invalidJson: "invalid_json",
   moderatorsOnly: "moderators_only",

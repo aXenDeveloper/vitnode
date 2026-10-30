@@ -17,6 +17,7 @@ import type {
   ContentPublicOrderableFieldName,
 } from "../types";
 import type { ContentModel } from "./model";
+import type { AnyContentModel } from "./model";
 import type { ContentPreviewTokenPayload } from "./preview-token";
 import type { ContentPublicService } from "./public-service";
 import type { ContentThreadNode } from "./thread";
@@ -27,6 +28,18 @@ import {
   zodPaginationPageInfo,
   zodPaginationQuery,
 } from "../../api/lib/with-pagination";
+import { decideContentAccessForScopes } from "../access/server/decide";
+import { contentFileDownloadRoute } from "../access/server/download-route";
+import {
+  CONTENT_ACCESS_PRIVATE_HEADERS,
+  CONTENT_ACCESS_SYSTEM_ACTOR,
+  contentAccessMissReason,
+  contentAccessPageCacheTags,
+  contentAccessRequiredResponse,
+  isContentAccessShareable,
+  zodContentAccessRequired,
+} from "../access/server/http";
+import { contentAccessSourceOf } from "../access/server/source";
 import { contentTypeName } from "../admin/labels";
 import { contentContainerTag } from "../cache";
 import {
@@ -150,6 +163,49 @@ export const buildContentPublicRoutes = <
     });
 
   const project = createContentPublicProjector(definition);
+  const accessModel = model as unknown as AnyContentModel;
+
+  /**
+   * A list filtered by the scope its records are filed in (a container, or an
+   * `access.from` scope): `"notFound"` when the viewer may not see that scope,
+   * `"accessRequired"` when they may see it but not read inside it.
+   */
+  const filterScopeRefusal = async (
+    c: Context,
+    filters: Record<string, unknown>,
+  ): Promise<"accessRequired" | "notFound" | null> => {
+    const source = contentAccessSourceOf(c, accessModel);
+    if (!source || source.kind === "parent") return null;
+
+    const requested = filters[source.field];
+    const ids = (
+      typeof requested === "object" && requested !== null && "in" in requested
+        ? (requested as { in: unknown[] }).in
+        : [requested]
+    ).filter(
+      (value): value is number | string =>
+        typeof value === "number" || typeof value === "string",
+    );
+    if (ids.length === 0) return null;
+
+    for (const id of ids) {
+      const scopes = [{ family: source.family.id, scopeId: String(id) }];
+      if (
+        !(await decideContentAccessForScopes(c, { action: "view", scopes }))
+          .allowed
+      ) {
+        return "notFound";
+      }
+      if (
+        !(await decideContentAccessForScopes(c, { action: "read", scopes }))
+          .allowed
+      ) {
+        return "accessRequired";
+      }
+    }
+
+    return null;
+  };
 
   /**
    * Which language this request is for, or `null` - always a 404. An explicit
@@ -331,6 +387,13 @@ export const buildContentPublicRoutes = <
           description: `Up to ${CONTENT_PUBLIC_MAX_PAGE_SIZE} published ${name} records`,
         },
         400: { description: "Invalid query parameters" },
+        403: {
+          content: {
+            "application/json": { schema: zodContentAccessRequired },
+          },
+          description:
+            "The filter names a scope the viewer may see but not read",
+        },
         404: {
           description:
             "The requested locale is not served, or the container filter names a container that does not exist",
@@ -370,6 +433,12 @@ export const buildContentPublicRoutes = <
         }
       }
 
+      const refusal = await filterScopeRefusal(c, filters);
+      if (refusal === "notFound") {
+        throw new HTTPException(404, { message: "Container not found." });
+      }
+      if (refusal === "accessRequired") return contentAccessRequiredResponse(c);
+
       // An explicit locale naming no language this install serves is the same
       // 404 the detail route answers, not an empty list: an empty list would say
       // "this language has no articles", which is a different and untrue thing.
@@ -377,6 +446,7 @@ export const buildContentPublicRoutes = <
       if (!resolved) throw notFound();
 
       const hidden = await contentListHiddenAccess(c, { model, pluginId });
+      const shareable = await isContentAccessShareable(c, accessModel);
       const readPage = async () =>
         await service(c).findMany({
           filters,
@@ -394,9 +464,9 @@ export const buildContentPublicRoutes = <
           query: { cursor, first, last, page, search },
         });
 
-      if (hidden) {
+      if (hidden || !shareable) {
         return c.json(await readPage(), 200, {
-          "Cache-Control": "private, no-store",
+          ...CONTENT_ACCESS_PRIVATE_HEADERS,
           ...contentLocaleHeaders(resolved),
         });
       }
@@ -418,6 +488,7 @@ export const buildContentPublicRoutes = <
 
       setPageCacheTags(c, [
         ...contentListPageCacheTags(definition),
+        ...contentAccessPageCacheTags(c, accessModel),
         ...(containerFilter
           ? [contentContainerTag(containerFilter.field.definition.id)]
           : []),
@@ -634,12 +705,17 @@ export const buildContentPublicRoutes = <
         items: page.items.map(serializeThreadNode),
       };
 
-      if (hiddenAccess || readable.hidden) {
-        return c.json(body, 200, { "Cache-Control": "private, no-store" });
+      if (
+        hiddenAccess ||
+        readable.hidden ||
+        !(await isContentAccessShareable(c, accessModel))
+      ) {
+        return c.json(body, 200, CONTENT_ACCESS_PRIVATE_HEADERS);
       }
 
       setPageCacheTags(c, [
         ...contentListPageCacheTags(definition),
+        ...contentAccessPageCacheTags(c, accessModel),
         ...contentListPageCacheTags(readable.target),
       ]);
 
@@ -788,45 +864,62 @@ export const buildContentPublicRoutes = <
           },
           description: `${name} found`,
         },
+        403: {
+          content: {
+            "application/json": { schema: zodContentAccessRequired },
+          },
+          description: `${name} is in a scope the viewer may see but not read. The body says only that`,
+        },
         404: { description: `${name} not found` },
       },
     },
     handler: async c => {
       const resolved = await localeFor(c);
       if (!resolved) throw notFound();
+      const shareable = await isContentAccessShareable(c, accessModel);
 
       // A draft, an unpublished row, a cleared publication date, a translation
       // that is not published in this language and a typo are all the same 404.
       // A 403 would confirm the record exists, which is the one thing a draft
       // URL must not do - and so would a 404 that only some of them produced.
       const slug = c.req.param("slug");
-      // Only the published read is cached - it is the same for every reader.
-      // The hidden fallback below depends on who is asking and never is.
-      const row = await rememberContentPublicRead(c, {
-        contentTypeId: definition.id,
-        key: {
-          locale: resolved.locale ?? null,
-          route: "detail",
-          slug,
-          source: resolved.source,
-        },
-        load: async () =>
-          await service(c).findBySlug(slug, {
-            fallback: true,
-            locale: resolved.locale,
-          }),
-      });
+      const readRow = async () =>
+        await service(c).findBySlug(slug, {
+          fallback: true,
+          locale: resolved.locale,
+        });
+      // Only a read no access rule can change is cached - it is the same for
+      // every reader. The hidden fallback below depends on who is asking and
+      // never is.
+      const row = shareable
+        ? await rememberContentPublicRead(c, {
+            contentTypeId: definition.id,
+            key: {
+              locale: resolved.locale ?? null,
+              route: "detail",
+              slug,
+              source: resolved.source,
+            },
+            load: readRow,
+          })
+        : await readRow();
+      if (row && !shareable) {
+        return c.json(row, 200, {
+          ...CONTENT_ACCESS_PRIVATE_HEADERS,
+          ...contentLocaleHeaders(resolved),
+        });
+      }
       if (row) {
-        setPageCacheTags(
-          c,
-          contentRecordPageCacheTags(
+        setPageCacheTags(c, [
+          ...contentRecordPageCacheTags(
             definition,
             parseContentId(
               definition.idStrategy,
               (row as Record<string, unknown>).id,
             ),
           ),
-        );
+          ...contentAccessPageCacheTags(c, accessModel),
+        ]);
 
         return c.json(row, 200, contentLocaleHeaders(resolved));
       }
@@ -837,7 +930,33 @@ export const buildContentPublicRoutes = <
         pluginId,
         slug,
       });
-      if (!hidden) throw notFound();
+      if (!hidden) {
+        if (shareable) throw notFound();
+
+        // Published, but outside what this viewer may read: say so only when
+        // they may see where it is filed, and say nothing else about it.
+        const existing = await service(c).findBySlug(slug, {
+          actor: CONTENT_ACCESS_SYSTEM_ACTOR,
+          fallback: true,
+          locale: resolved.locale,
+          select: ["id"],
+        });
+        const id = existing
+          ? parseContentId(
+              definition.idStrategy,
+              (existing as Record<string, unknown>).id,
+            )
+          : null;
+        if (
+          id !== null &&
+          (await contentAccessMissReason(c, accessModel, id)) ===
+            "accessRequired"
+        ) {
+          return contentAccessRequiredResponse(c);
+        }
+
+        throw notFound();
+      }
 
       return c.json(hidden, 200, {
         "Cache-Control": "private, no-store",
@@ -872,6 +991,16 @@ export const buildContentPublicRoutes = <
       : []),
     ...(definition.publicWrite.enabled
       ? [contentPublicDeleteRoute(model, { pluginId })]
+      : []),
+    // Three segments, so it never shadows `/{slug}`. Mounted for every type
+    // that exposes a file or a rich-text document, which is where protected
+    // files and their authorized URLs come from.
+    ...(definition.publicApi.fields.some(field => {
+      const kind = definition.fields[field]?.kind;
+
+      return kind === "file" || kind === "richText";
+    })
+      ? [contentFileDownloadRoute(model, { pluginId })]
       : []),
     detail,
     ...contentPublicWriteRoutes(model, { pluginId }),

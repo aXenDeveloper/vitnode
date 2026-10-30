@@ -77,6 +77,11 @@ export interface ContentFormFieldSpec {
   targetIdStrategy?: ContentIdStrategy;
   /** `richText` fields only: the editor accepts image uploads. */
   uploads?: true;
+  /**
+   * `richText` fields with `uploads`: the content type the uploads belong to,
+   * so one with access rules stores them privately.
+   */
+  uploadsFor?: string;
 }
 
 export interface ContentFormSectionSpec {
@@ -313,9 +318,18 @@ export const buildContentFormSpec = ({
     // One form, shared and localized fields alike, in the order they were
     // declared. Where a value is *stored* is settled by `spec.localized` on the
     // way back out - it is not a reason to split the screen in two.
-    fields: formFieldNames.map(name =>
-      projectFormField(name, fields[name], labelEnum, labelField),
-    ),
+    fields: formFieldNames.map(name => {
+      const projected = projectFormField(
+        name,
+        fields[name],
+        labelEnum,
+        labelField,
+      );
+
+      return projected.uploads
+        ? { ...projected, uploadsFor: definition.id }
+        : projected;
+    }),
     sections: definition.admin.form.sections.flatMap(section => {
       const sectionFields = section.fields.filter(name => rendered.has(name));
       if (sectionFields.length === 0) return [];

@@ -1,5 +1,6 @@
 import type { z } from "zod";
 
+import type { ResolvedContentAccessScope } from "../access/policy";
 import type {
   ContentBooleanField,
   ContentEnumField,
@@ -96,6 +97,8 @@ export interface ContentContainerDefinition<
   TPublicEnabled extends boolean = boolean,
   TPublicPath extends string = string,
 > {
+  /** Per-container access rules, or the disabled default. */
+  access: ResolvedContentAccessScope;
   admin: {
     navigation: { enabled: boolean };
     path: string;

@@ -1,0 +1,220 @@
+---
+title: Access rules API
+description: Reference for VitNode Content Engine access rules - the access option of defineContentContainer and defineContentType, actions and audiences, createContentAccess, access flags, the 403 access-required body, AdminCP routes, errors, the content.access.updated event and the private storage store.
+icon: FileBraces
+---
+
+Exact names, values and behavior of Content Engine access rules. For a guided setup, follow [Access rules](/docs/content-engine/access) or [Category access](/docs/content-engine/access-categories). [How access is enforced](/docs/content-engine/access-behavior) explains where the rules apply.
+
+## `access` option
+
+### Container collection
+
+`defineContentContainer({ access })` from `@vitnode/core/content`:
+
+| Value                    | Behavior                                                                  |
+| ------------------------ | ------------------------------------------------------------------------- |
+| omitted or `false`       | No access rules. The collection behaves as before                         |
+| `true`                   | Every container gets rules; every action starts open to everyone          |
+| `{ defaults }`           | Same, with collection defaults for some actions                           |
+
+`defaults` is a partial `Record<action, { mode: "everyone" } | { mode: "members" }>`. Role ids belong to one installation, so roles are chosen only in the AdminCP.
+
+Content filed with a `field.container()` into the collection, and records under them (`container: true` relations, thread replies), follow the container's rules.
+
+### Content type
+
+`defineContentType({ access })` takes exactly one of:
+
+| Value                              | Behavior                                                                                      |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| `{ scope: true }`                  | Each record of this type is an access scope with its own rules, like a Blog category          |
+| `{ scope: { defaults } }`          | Same, with defaults as above                                                                  |
+| `{ from: "<relation field>" }`     | Records are filed under the scope records the relation points at. Every one of them must allow the action |
+
+`from` must name a shared (not localized) `field.relation()` whose target has `access: { scope }`. Anything else throws a `ContentEngineError` when the plugin loads.
+
+## Actions and audiences
+
+| Action                | Needs  | Checked for                                                        |
+| --------------------- | ------ | ------------------------------------------------------------------ |
+| `view`                | -      | Containers in lists, trees and breadcrumbs; the scope's own page   |
+| `read`                | `view` | Records: lists, detail, search, Discover, profiles, notifications  |
+| `comment`             | `read` | Replies in a thread                                                |
+| `downloadAttachments` | `read` | Files other than images through the download route                 |
+
+| Audience                                 | Passes                                                         |
+| ---------------------------------------- | -------------------------------------------------------------- |
+| `{ mode: "everyone" }`                   | Guests and members                                             |
+| `{ mode: "members" }`                    | Signed-in members                                              |
+| `{ mode: "roles", roleIds: number[] }`   | Members holding any of the roles, primary or secondary. Up to 100 roles |
+
+A member with a root role passes every audience. A rule whose roles were all deleted, or that cannot be read, lets nobody in. Stored rules are per scope and action; an action without one inherits from the nearest ancestor, then the defaults, then `everyone`.
+
+The constants are exported from `@vitnode/core/content`: `CONTENT_ACCESS_ACTIONS`, `CONTENT_ACCESS_MODES`, `CONTENT_ACCESS_PREREQUISITES`, `CONTENT_ACCESS_MAX_ROLES` and `CONTENT_ACCESS_REQUIRED_CODE`.
+
+## `createContentAccess`
+
+`createContentAccess(c)` from `@vitnode/core/content/server` checks the current viewer inside a Hono route. Roles are read from the database once per request; the results are memoized for that request.
+
+```ts title="plugins/forum/src/api/modules/forum/stats.routes.ts"
+import { createContentAccess } from "@vitnode/core/content/server";
+
+const access = createContentAccess(c);
+const [row] = await c
+  .get("db")
+  .select({ id: topics.id, slug: topics.slug })
+  .from(topics)
+  .where(
+    and(
+      eq(topics.id, id),
+      publicTopic(),
+      await access.condition(topicContent, "read"), // [!code highlight]
+    ),
+  )
+  .limit(1);
+
+if (!(await access.isOpen(topicContent))) {
+  return c.json(row, 200, { "Cache-Control": "private, no-store" });
+}
+```
+
+| Method                                   | Returns                                  | Behavior                                                                                     |
+| ---------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `actor()`                                | `ContentAccessActor`                     | `{ kind: "guest" }` or `{ kind: "member", userId, roleIds, root }`                            |
+| `condition(model, action)`               | `SQL \| undefined`                       | A `WHERE` condition keeping only rows the viewer may act on. `undefined` when nothing is restricted |
+| `canRecord(model, id, action)`           | `boolean`                                | One record, from its current scopes. A missing record is `false`                             |
+| `canScope(familyId, scopeId, action)`    | `boolean`                                | One container or scope record. An unknown scope is `false`                                    |
+| `flags(model, ids)`                      | `Map<idKey, ContentAccessFlags>`         | The four flags per record                                                                    |
+| `allowedScopes(familyId, action)`        | `{ all: boolean; ids: string[] }`        | The scopes of a family that allow the action. `all` when every scope does                    |
+| `isOpen(model)`                          | `boolean`                                | `true` when no rule restricts anything in the model's family: the response may be shared     |
+| `scopesFor(model, values)`               | `ContentAccessScopeRef[] \| null`        | The scopes a record would be in with these values, before it is saved                        |
+
+`model` is the content model from `createContentModel`. Records of a model without access are always allowed. Put `condition` in the query before `limit` and `offset`, so pages and counts never include what the viewer may not read.
+
+Lower-level helpers are exported from the same path for plugin authors who build their own scope checks: `contentAccessCondition`, `canAccessContentRecord`, `contentRecordAccessFlags`, `decideContentAccessForScopes`, `contentAccessFlagsForScopes`, `contentAccessRequirementsForScopes`, `contentRecordAccessScopes`, `contentAccessAllowedScopes`, `isContentAccessOpen`, `resolveContentAccessActor` and `expireContentAccessFamily`.
+
+## Response fields
+
+### Access flags
+
+```ts
+interface ContentAccessFlags {
+  canView: boolean;
+  canRead: boolean;
+  canComment: boolean;
+  canDownloadAttachments: boolean;
+}
+```
+
+- Every record of the public container routes carries `access: ContentAccessFlags`. Collections without access answer every flag `true`.
+- `GET /permissions` of a content type adds the four flags to each record it returns, and leaves out records the viewer may not read.
+
+Flags tell the UI what to offer. The server checks again on every request.
+
+### Access required
+
+A detail route answers `404` when the record is in a scope the viewer may not see, and `403` with this body when the viewer may see the scope but not read it:
+
+```json title="GET /api/@vitnode/forum/content/topics/42 → 403"
+{ "accessRequired": true, "code": "CONTENT_ACCESS_REQUIRED" }
+```
+
+The body never holds the record. Render it with `ContentAccessRequired` from `@vitnode/core/tanstack/content`:
+
+| Prop           | Type                         | Default  | Description                                       |
+| -------------- | ---------------------------- | -------- | ------------------------------------------------- |
+| `kind`         | `"read"` \| `"comment"`      | `"read"` | What is locked: the page, or replying             |
+| `headingLevel` | `"h1"` \| `"h2"` \| `"h3"`   | `"h1"`   | The title's level                                 |
+| `children`     | `ReactNode`                  | -        | Rendered under the message, such as a link back   |
+
+Guests get a sign-in link that returns to the page. Members get the message only.
+
+### Download route
+
+`GET /api/{pluginId}/content/{publicApi.path}/{id}/files/{fileId}` is mounted for every content type with access rules. It answers `200` with the file, `403` when the viewer may read the record but not download attachments, and `404` otherwise. See [Protected attachments](/docs/content-engine/access-attachments).
+
+## AdminCP routes
+
+Mounted under the scope family's admin module, `/api/{pluginId}/admin/content/{admin.permissionModule}`. For Forum that is `/api/@vitnode/forum/admin/content/forum_forums`; for Blog categories `/api/@vitnode/blog/admin/content/categories`.
+
+| Route                              | Permission | Behavior                                                                                 |
+| ---------------------------------- | ---------- | ---------------------------------------------------------------------------------------- |
+| `GET /{id}/access`                 | `can_view` | The scope's report: own rules, inherited rules and their source, every requirement, warnings, descendants |
+| `POST /{id}/access/preview`        | `can_view` | The same report for `{ overrides }` without saving                                       |
+| `PUT /{id}/access`                 | `can_edit` | Replaces the scope's rules with `{ overrides }` and expires the family's caches          |
+| `GET /access/files`                | `can_view` | `{ privateStorage, private, public }`: the family's files by visibility                  |
+| `POST /access/files/protect`       | `can_edit` | Moves up to 100 public files to private storage: `{ moved, remaining, shared }`          |
+
+A content type filed under scopes gets `POST /access/effective` in its own module, such as `/api/@vitnode/blog/admin/content/posts/access/effective`. It takes `{ scopeIds }` (up to 50) and answers what readers need for each action across all of them, plus `missing` scope ids. `ContentAccessEffectiveNotice` from `@vitnode/core/views/admin/views/access/effective-notice` renders it in an editor.
+
+`overrides` is a partial `Record<action, audience>`. An action left out inherits. Call these routes with `rawFetcher`:
+
+```ts
+import { rawFetcher } from "@vitnode/core/tanstack/fetcher";
+
+await rawFetcher({
+  method: "put",
+  pluginId: "@vitnode/forum",
+  prefixPath: "/admin",
+  module: "content/forum_forums",
+  path: "/3/access",
+  body: { overrides: { read: { mode: "roles", roleIds: [4] } } },
+});
+```
+
+### Errors
+
+The routes answer `{ code, message }`:
+
+| Status | `code`               | When                                                                    |
+| ------ | -------------------- | ----------------------------------------------------------------------- |
+| `400`  | `invalidAccess`      | The body does not match the schema, such as `roles` with no `roleIds`   |
+| `400`  | `unknownRole`        | A role does not exist, or is the guest role                             |
+| `400`  | `unsupportedStorage` | A `downloadAttachments` rule other than `everyone`, or protecting files, without a private store |
+| `404`  | `notFound`           | No such scope, or the type has no access rules                          |
+
+## Activity Logs and event
+
+Every save that changes a rule records `content.access_updated` in
+**AdminCP → Staff → Administrators → Logs**, in the same transaction as the
+rules, with the old and new rule of each changed action. **Protect public
+files** records `content.access_files_protected` with the counts it returned.
+See [Activity logs](/docs/content-engine/activity-logs#access-rules).
+
+`PUT /{id}/access` also emits `content.access.updated` after saving:
+
+```ts title="plugins/site-notes/src/api/lib/access.listener.ts"
+import { buildEventListener } from "@vitnode/core/api/lib/events";
+
+export const accessListener = buildEventListener({
+  event: "content.access.updated",
+  name: "log-access-change",
+  handler: async (c, { changedActions, family, scopeId, userId }) => {
+    await c
+      .get("log")
+      .debug(`${family}:${scopeId} ${changedActions.join(", ")} by ${userId}`);
+  },
+});
+```
+
+See [Built-in events](/docs/dev/events/built-in-events#content-access-events).
+
+## Private storage store
+
+A storage adapter opts into private files with `private` on its `StorageApiPlugin`:
+
+```ts
+interface StoragePrivateStore {
+  upload: (args: StorageUploadArgs) => Promise<{ key: string }>;
+  read: (key: string) => Promise<null | { body: ReadableStream<Uint8Array>; size?: number }>;
+  delete: (key: string) => Promise<void>;
+}
+```
+
+Objects in it have no URL; VitNode serves them only through routes that check the viewer. Leave `private` out when the adapter cannot guarantee that nothing public reaches it. The Local adapter, and S3 or Supabase with `privateBucket`, provide one.
+
+## Related
+
+- [How access is enforced](/docs/content-engine/access-behavior)
+- [Protected attachments](/docs/content-engine/access-attachments)

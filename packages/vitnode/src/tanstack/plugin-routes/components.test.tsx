@@ -1,12 +1,21 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  createMemoryHistory,
+  createRootRoute,
+  createRouter,
+  RouterProvider,
+} from "@tanstack/react-router";
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { useMessages } from "use-intl";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
   RouteBreadcrumbDeferred,
   RouteBreadcrumbProps,
 } from "../breadcrumb/model";
 
-import { pluginRouteBreadcrumb } from "./components";
+import { configureIntl, resetIntlRuntime } from "../i18n";
+import { pluginNotFoundComponent, pluginRouteBreadcrumb } from "./components";
 import { pluginRouteModuleRef } from "./module-ref";
 
 const moduleWith = (route: Record<string, unknown>) => {
@@ -103,6 +112,21 @@ describe("pluginRouteBreadcrumb", () => {
     ]);
   });
 
+  it("draws nothing for a route that has no loader data, such as a not-found one", async () => {
+    const { load, ready, ref } = moduleWith({
+      breadcrumb: () => "MacBook Pro",
+    });
+    const deferred = pluginRouteBreadcrumb(ref, []);
+
+    ready();
+    await load();
+
+    const Crumb = crumbOf(deferred);
+    const { container } = render(<Crumb {...props} loaderData={undefined} />);
+
+    expect(container.innerHTML).toBe("");
+  });
+
   it("resolves to one component however often it is asked", async () => {
     const { load, ready, ref } = moduleWith({
       breadcrumb: () => "MacBook Pro",
@@ -133,5 +157,47 @@ describe("pluginRouteBreadcrumb", () => {
     await load();
 
     expect(deferred.resolve()).toBeUndefined();
+  });
+});
+
+describe("pluginNotFoundComponent", () => {
+  afterEach(() => {
+    resetIntlRuntime();
+  });
+
+  it("renders the module's not-found screen inside the route's messages", async () => {
+    const fetchMessages = vi.fn(async () => {
+      return await Promise.resolve({
+        locale: "en",
+        messages: { "@vitnode/forum": { not_found: "Forum not found" } },
+      });
+    });
+    configureIntl({
+      fetchMessages,
+      i18n: { defaultLocale: "en", locales: [{ code: "en", name: "English" }] },
+    });
+    const NotFound = () => {
+      const messages: Record<string, unknown> = useMessages();
+      const forum = messages["@vitnode/forum"] as { not_found: string };
+
+      return <h1>{forum.not_found}</h1>;
+    };
+    const Screen = pluginNotFoundComponent(NotFound, ["@vitnode/forum"]);
+    const router = createRouter({
+      history: createMemoryHistory({ initialEntries: ["/forum/missing"] }),
+      routeTree: createRootRoute({ component: Screen }),
+    });
+
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByRole("heading", { name: "Forum not found" });
+    expect(fetchMessages).toHaveBeenCalledWith({
+      locale: "en",
+      namespaces: ["@vitnode/forum"],
+    });
   });
 });

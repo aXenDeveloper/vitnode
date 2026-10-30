@@ -55,6 +55,18 @@ operation the person asked for:
 | Duplicate a record                              | One `content.duplicated` on the copy, with the source id                                  |
 | Save shared fields and a translation together   | One entry per part that moved, sharing a request id                                       |
 
+## Access rules
+
+Saving a forum's or a category's [access rules](/docs/content-engine/access)
+records `content.access_updated` under the plugin that owns them, labelled
+with the forum or category name. Its changes hold the old and new rule of each
+action that moved, as `inherit`, `everyone`, `members` or `roles: VIP, Staff`
+with the role names of that moment. A save that changes nothing records
+nothing, and a save that fails leaves no entry.
+
+**Protect public files** records `content.access_files_protected` with how
+many files moved, how many other content still uses and how many are left.
+
 ## Scheduled publishing
 
 The system runs a scheduled publish or unpublish, so its entry has the

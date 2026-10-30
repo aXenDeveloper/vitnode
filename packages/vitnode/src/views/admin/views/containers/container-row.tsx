@@ -9,6 +9,7 @@ import {
   CornerLeftUpIcon,
   FolderIcon,
   GripVerticalIcon,
+  LockIcon,
   MoreHorizontalIcon,
   PencilIcon,
   PlusIcon,
@@ -42,6 +43,8 @@ export interface ContainerRowPermissions {
 }
 
 export interface ContainerRowActions {
+  /** Opens the access rules; absent when the collection has no access rules. */
+  onAccess?: (id: number) => void;
   onAddChild: (parentId: number) => void;
   onDelete: (id: number) => void;
   onEdit: (id: number) => void;
@@ -92,8 +95,9 @@ const ContainerRowMenu = ({
 }) => {
   const t = useTranslations("core.containers.list");
   const tPolicies = useTranslations("core.containers.policies");
+  const tAccess = useTranslations("core.access.admin");
   const { id, name } = container;
-  const { onPolicies } = actions;
+  const { onAccess, onPolicies } = actions;
   const showMoves =
     permissions.canMove &&
     (moves.canMoveUp ||
@@ -135,6 +139,16 @@ const ContainerRowMenu = ({
           >
             <ShieldCheckIcon />
             {tPolicies("action")}
+          </DropdownMenuItem>
+        ) : null}
+        {permissions.canEdit && onAccess ? (
+          <DropdownMenuItem
+            onClick={() => {
+              onAccess(id);
+            }}
+          >
+            <LockIcon />
+            {tAccess("action")}
           </DropdownMenuItem>
         ) : null}
         {moves.canAddChild ? (

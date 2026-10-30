@@ -13,6 +13,7 @@ import {
 import { contentTarget, zodRichTextDocument } from "@vitnode/core/content";
 import { useRevealHashTarget } from "@vitnode/core/hooks/use-reveal-hash-target";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
+import { ContentAccessRequired } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
@@ -363,10 +364,16 @@ const ThreadNodeView = memo(
 );
 
 export const ForumThread = ({
+  canReply = true,
   initial,
   topicId,
   topicSlug,
 }: {
+  /**
+   * Whether the forum's access rules let this viewer reply, as the server
+   * reported it. The server checks again on every reply.
+   */
+  canReply?: boolean;
   initial: ThreadPage;
   topicId: number;
   topicSlug: string;
@@ -450,7 +457,7 @@ export const ForumThread = ({
 
   const actions = useMemo<ThreadActions>(
     () => ({
-      canComment: currentUserId !== null,
+      canComment: currentUserId !== null && canReply,
       highlightedId,
       onChanged,
       permissionsOf: permissions.of,
@@ -458,6 +465,7 @@ export const ForumThread = ({
       topicSlug,
     }),
     [
+      canReply,
       currentUserId,
       highlightedId,
       onChanged,
@@ -542,7 +550,12 @@ export const ForumThread = ({
               {t("compose.sign_in")}
             </HrefLink>
           </p>
-        ) : composer === "closed" ? (
+        ) : canReply ? null : (
+          <ContentAccessRequired headingLevel="h3" kind="comment" />
+        )}
+        {isSessionPending ||
+        currentUserId === null ||
+        !canReply ? null : composer === "closed" ? (
           // The editor is a heavy chunk most readers never need, so it waits
           // for intent: hovering or focusing this starts the download, and a
           // click swaps it in with the caret already inside.

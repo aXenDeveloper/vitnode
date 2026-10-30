@@ -43,6 +43,8 @@ const kitchenSink = defineContentType({
     scheduling: true,
   },
   liveEditing: true,
+  // Each record is an access scope, so the access editor's routes are audited.
+  access: { scope: true },
   fields: {
     title: field.text({ localized: true, required: true, maxLength: 200 }),
     slug: field.slug({ localized: true, source: "title" }),
@@ -267,6 +269,13 @@ describe("the generated permission matrix", () => {
     "POST /{id}/draft/discard": "can_edit",
     "POST /{id}/locks": "can_edit",
     "PUT /{id}/draft": "can_edit",
+    // The access editor: reading a scope's rules, previewing a change and
+    // counting its files only look; saving rules and moving files write.
+    "GET /{id}/access": "can_view",
+    "POST /{id}/access/preview": "can_view",
+    "PUT /{id}/access": "can_edit",
+    "GET /access/files": "can_view",
+    "POST /access/files/protect": "can_edit",
   };
 
   it("gates every route on a staff permission", async () => {

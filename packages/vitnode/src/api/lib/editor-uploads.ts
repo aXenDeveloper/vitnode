@@ -4,7 +4,13 @@ import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
+import type { AnyContentModel } from "@/content/server/model";
 
+import {
+  contentPrivateAdminFileUrl,
+  contentUploadVisibility,
+} from "@/content/access/server/files";
+import { CONFIG } from "@/lib/config";
 import {
   EDITOR_ATTACHMENT_MAX_BYTES,
   EDITOR_ATTACHMENT_MIME_TYPES,
@@ -18,6 +24,11 @@ import {
 } from "@/lib/editor-uploads";
 
 const zodEditorUploadForm = z.object({
+  /**
+   * The content type the document belongs to. One with access rules (and an
+   * adapter with a private store) gets the file stored privately.
+   */
+  contentType: z.string().max(100).optional(),
   file: z.instanceof(File).openapi({ format: "binary", type: "string" }),
 });
 
@@ -100,9 +111,19 @@ export const storeEditorUpload = async (
   c: Context<EnvVitNode>,
   {
     attachments,
+    contentType,
     file,
+    session = "admin",
     userId,
-  }: { attachments: boolean; file: File; userId: number },
+  }: {
+    attachments: boolean;
+    /** The content type the document belongs to, when it is content. */
+    contentType?: string;
+    file: File;
+    /** Which session uploads, for the URL a private file is shown from. */
+    session?: "admin" | "member";
+    userId: number;
+  },
 ): Promise<EditorUploadOutcome> => {
   const isImage = isEditorImageMimeType(file.type);
   const isAttachment =
@@ -125,6 +146,13 @@ export const storeEditorUpload = async (
     }
   }
 
+  const model = contentType
+    ? (
+        (c.get("core")?.contentModels ?? []) as { model: AnyContentModel }[]
+      ).find(entry => entry.model.definition.id === contentType)?.model
+    : undefined;
+  const visibility = model ? contentUploadVisibility(c, model) : "public";
+
   try {
     const stored = await c.get("storage").upload({
       allowedMimeTypes: isImage
@@ -133,8 +161,12 @@ export const storeEditorUpload = async (
       file,
       folder: EDITOR_UPLOAD_FOLDER,
       maxBytes: isImage ? EDITOR_IMAGE_MAX_BYTES : EDITOR_ATTACHMENT_MAX_BYTES,
-      metadata: { source: "editor" },
+      metadata: {
+        source: "editor",
+        ...(model ? { contentTypeId: model.definition.id } : {}),
+      },
       userId,
+      visibility,
     });
     const kind = isImage ? "image" : "attachment";
 
@@ -150,7 +182,15 @@ export const storeEditorUpload = async (
         mimeType: stored.mimeType,
         name: stored.name,
         size: stored.size,
-        url: stored.url,
+        // A private file has no public URL: the uploader sees it through the
+        // download route of their own session until the document is saved,
+        // and readers through the record's authorized route.
+        url:
+          visibility === "private"
+            ? session === "admin"
+              ? contentPrivateAdminFileUrl(stored.id)
+              : `${CONFIG.api.origin.replace(/\/$/, "")}/api/@vitnode/core/users/files/${stored.id}/download?inline=true`
+            : stored.url,
         width: stored.dimensions?.width ?? null,
       },
       status: 200,

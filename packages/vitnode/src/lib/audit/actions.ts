@@ -91,6 +91,8 @@ export const CONTENT_AUDIT_ACTIONS = [
   "content.translation_published",
   "content.translation_unpublished",
   "content.translation_restored",
+  "content.access_updated",
+  "content.access_files_protected",
 ] as const;
 
 /** Everything core records under `@vitnode/core`. */

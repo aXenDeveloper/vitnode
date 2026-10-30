@@ -357,7 +357,9 @@
             "insert": "Insert {name}",
             "insert_all": "Insert all ({count})",
             "image": "Image"
-          }
+          },
+          "restricted_title": "An attachment is available.",
+          "restricted_desc": "You do not have permission to download it."
         },
         "table": {
           "label": "Table",
@@ -1774,6 +1776,7 @@
         "duplicate": "Duplicate",
         "hide": "Hide",
         "unhide": "Unhide",
+        "access": "Access",
         "activity": "Activity"
       },
       "create": {
@@ -2967,7 +2970,9 @@
           "translation_deleted": "Deleted a translation of {type}",
           "translation_published": "Published a translation of {type}",
           "translation_unpublished": "Unpublished a translation of {type}",
-          "translation_restored": "Restored a translation of {type}"
+          "translation_restored": "Restored a translation of {type}",
+          "access_updated": "Changed access rules",
+          "access_files_protected": "Moved public files to private storage"
         },
         "role": {
           "created": "Created role",
@@ -3069,7 +3074,126 @@
         "provider": "Provider",
         "reference": "Reference",
         "customerId": "Customer id",
-        "errorCode": "Error code"
+        "errorCode": "Error code",
+        "access_view": "View access",
+        "access_read": "Read access",
+        "access_comment": "Comment access",
+        "access_downloadAttachments": "Download access"
+      }
+    },
+    "access": {
+      "loading": "Checking your access",
+      "sign_in": "Sign in",
+      "read": {
+        "guest": {
+          "title": "Sign in to read this",
+          "desc": "This part of the community is open to signed-in members only. Sign in and it might just open up for you."
+        },
+        "member": {
+          "title": "You don't have access here",
+          "desc": "Your account can't read this yet. If you think it should, ask an administrator."
+        }
+      },
+      "comment": {
+        "guest": {
+          "title": "Sign in to reply",
+          "desc": "Replies are for signed-in members. Sign in to join the conversation."
+        },
+        "member": {
+          "title": "Replies are closed to you here",
+          "desc": "You can read this, but your account can't reply in this place."
+        }
+      },
+      "attachment": {
+        "title": "An attachment is available",
+        "desc": "You do not have permission to download it."
+      },
+      "admin": {
+        "action": "Access",
+        "title": "Access",
+        "desc": "Who may see {name}, read what is inside, reply and download attachments. Each rule can inherit from the parent - a child can be stricter than its parent, never more open.",
+        "submit": "Save access",
+        "success": "Access saved",
+        "successDesc": "New rules for {name} apply from the next request.",
+        "loadError": "The access rules could not be loaded.",
+        "retry": "Try again",
+        "inherit": "Inherit ({value})",
+        "this_scope": "this one",
+        "deleted_role": "a deleted role",
+        "roles_label": "Roles that may {action}",
+        "roles_desc": "Members with any of these roles, as a primary or secondary role. Pick at least one.",
+        "modes": {
+          "roles": "Selected roles"
+        },
+        "audience": {
+          "everyone": "Everyone",
+          "members": "Signed-in members",
+          "roles": "Members with {roles}",
+          "nobody": "Nobody (no role left)"
+        },
+        "actions": {
+          "view": {
+            "label": "View",
+            "desc": "See that it exists - its name and description in lists and breadcrumbs."
+          },
+          "read": {
+            "label": "Read",
+            "desc": "Open and read what is filed in it, find it in search and Discover."
+          },
+          "comment": {
+            "label": "Comment",
+            "desc": "Reply to what is filed in it. Signing in and every moderation rule still apply."
+          },
+          "downloadAttachments": {
+            "label": "Download attachments",
+            "desc": "Download protected attachments of what readers can read."
+          }
+        },
+        "source": {
+          "scope": "Inherit follows {name}.",
+          "default": "Inherit follows the collection's default.",
+          "fallback": "Inherit means everyone - nothing above sets this."
+        },
+        "effective": {
+          "title": "Effective access",
+          "open": "Everyone",
+          "self": "{audience} - set here or inherited for {scope}",
+          "ancestor": "{audience} for {action} - required by {scope}, a parent",
+          "prerequisite": "{audience} for {action} - needed first",
+          "needs": "Needs {action} first, so it is never wider than that.",
+          "loading": "Checking who can read this"
+        },
+        "warnings": {
+          "nobody": "Nobody but a root role can {action} here: the rule on {scope} has no role left."
+        },
+        "descendants": "{count, plural, one {# scope inside follows these rules too.} other {# scopes inside follow these rules too.}}",
+        "attachments": {
+          "unsupported": "The storage adapter keeps files public, so downloads stay open to everyone. Configure private storage to restrict them."
+        },
+        "errors": {
+          "invalidAccess": "One of the rules is not valid.",
+          "notFound": "It no longer exists.",
+          "unknownRole": "One of the roles no longer exists. Pick the roles again.",
+          "unsupportedStorage": "Downloads can't be restricted: the storage adapter keeps files public.",
+          "unknown": "Something went wrong. Try again in a moment."
+        },
+        "files": {
+          "title": "Files",
+          "loading": "Counting files",
+          "desc": "{private, plural, =0 {No file is stored privately} one {# file is stored privately} other {# files are stored privately}}; {public, plural, =0 {none still has a public address.} one {# still has a public address anybody holding it can open.} other {# still have a public address anybody holding it can open.}}",
+          "protect": "Protect public files",
+          "success": "Files protected",
+          "successDesc": "{moved} moved to private storage, {remaining} left for another run, {shared} used elsewhere too and kept public - upload those again where they should be private.",
+          "failed": "The files could not be moved. Try again in a moment.",
+          "unsupported": "The storage adapter keeps every file public, so these stay reachable by address whatever the rules say. Configure a private store to protect them."
+        },
+        "notice": {
+          "title": "Who can see this",
+          "open": "Everyone can read this, comment on it and download its attachments - none of its categories restricts it.",
+          "and": ", and also ",
+          "intersection": "A reader has to meet the rule of every category it is in, so two restricted categories together let in fewer people than either one alone.",
+          "missing": "One of the selected categories no longer exists. Nobody but a root role can read a record filed there."
+        }
       }
     }
   },

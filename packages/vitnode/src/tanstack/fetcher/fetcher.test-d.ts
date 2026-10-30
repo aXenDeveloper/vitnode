@@ -197,8 +197,8 @@ describe("the universal fetcher resolves a route from the plugin id", () => {
       path: "/{slug}",
     });
 
-    expectTypeOf(list.status).toEqualTypeOf<200 | 400 | 404>();
-    expectTypeOf(detail.status).toEqualTypeOf<200 | 404>();
+    expectTypeOf(list.status).toEqualTypeOf<200 | 400 | 403 | 404>();
+    expectTypeOf(detail.status).toEqualTypeOf<200 | 403 | 404>();
   });
 
   it("types the routes a content type's publicWrite generates", async () => {

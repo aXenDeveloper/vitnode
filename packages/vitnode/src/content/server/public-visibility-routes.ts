@@ -11,6 +11,7 @@ import type { ContentVisibilityAction } from "../visibility";
 import type { AnyContentModel, ContentModel } from "./model";
 
 import { buildRoute } from "../../api/lib/route";
+import { canAccessContentRecord } from "../access/server/decide";
 import { contentTypeName } from "../admin/labels";
 import { CONTENT_HIDDEN_REASON_MAX_LENGTH } from "../const";
 import { contentIdKey } from "../ids";
@@ -29,9 +30,15 @@ import { contentIdentifier, jsonBody, readOptionalJson } from "./route-helpers";
 import { syncContentSearch } from "./search-sync";
 import { isContentBaseRowPublic } from "./visibility";
 
+/**
+ * The row, but only when the viewer may read it under the access rules of its
+ * scopes: an action on a record somebody may not read is the same 404 as on
+ * one that does not exist - moderators included, who act from the site with
+ * their own roles.
+ */
 const readRow = async (
   c: Context,
-  model: { columns: { id: unknown }; table: PgTable },
+  model: AnyContentModel,
   id: ContentId,
 ): Promise<Record<string, unknown> | undefined> => {
   const [row] = (await c
@@ -40,8 +47,11 @@ const readRow = async (
     .from(model.table)
     .where(eq(model.columns.id as never, id))
     .limit(1)) as Record<string, unknown>[];
+  if (!row) return undefined;
 
-  return row;
+  return (await canAccessContentRecord(c, { action: "read", id, model }))
+    ? row
+    : undefined;
 };
 
 /**
@@ -90,7 +100,7 @@ export const contentPublicVisibilityRoutes = <
     if (!user) throw new HTTPException(401, { message: "Sign in first." });
 
     const id = contentIdentifier(c, definition);
-    const row = await readRow(c, model, id);
+    const row = await readRow(c, anyModel, id);
     if (!row || !isContentBaseRowPublic({ ...row, hiddenAt: null })) {
       throw new HTTPException(404, { message: `${name} not found.` });
     }

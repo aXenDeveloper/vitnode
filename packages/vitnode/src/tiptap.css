@@ -225,6 +225,11 @@
     .tiptap-attachment-name {
       @apply text-muted-foreground line-through;
     }
+
+    /* Restricted, not gone: the file is there for readers with access. */
+    &[data-restricted] .tiptap-attachment-name {
+      @apply text-foreground no-underline;
+    }
   }
 
   .tiptap-upload-deleted-icon {

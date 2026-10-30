@@ -28,6 +28,11 @@ import {
   zodPaginationQuery,
 } from "../../api/lib/with-pagination";
 import { StorageImageUnprocessableError } from "../../api/models/storage";
+import {
+  buildContentAccessAdminRoutes,
+  buildContentAccessEffectiveRoute,
+} from "../access/server/admin-routes";
+import { contentUploadVisibility } from "../access/server/files";
 import { contentTypeName } from "../admin/labels";
 import {
   zodContentConflict,
@@ -774,6 +779,9 @@ export const buildContentRoutes = <
             : {}),
           maxBytes: constraints.maxBytes,
           metadata: { contentTypeId: definition.id, field },
+          // Behind access rules, and the adapter can keep it private: never a
+          // public URL, only the record's authorized download route.
+          visibility: contentUploadVisibility(c, model),
         });
       } catch (error) {
         // `StorageModel` speaks in `HTTPException`s, whose messages are exactly
@@ -2100,6 +2108,25 @@ export const buildContentRoutes = <
       : []),
     // Mounted under the same module and the same permissions, so a localized
     // content type gets its translation routes without a second registration.
+    // A scope content type (a blog category) gets the same access editor
+    // routes a container collection has; one filed under scopes gets the
+    // effective-access check its editor shows.
+    ...(definition.access.scope.enabled
+      ? buildContentAccessAdminRoutes({
+          familyId: definition.id,
+          permissionModule: definition.permissionModule,
+          pluginId,
+        })
+      : []),
+    ...(definition.access.from
+      ? [
+          buildContentAccessEffectiveRoute({
+            contentTypeId: definition.id,
+            permissionModule: definition.permissionModule,
+            pluginId,
+          }),
+        ]
+      : []),
     ...(definition.localization.enabled
       ? [
           ...buildContentTranslationRoutes(model, { pluginId }),

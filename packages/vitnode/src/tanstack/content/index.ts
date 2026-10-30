@@ -1,3 +1,8 @@
+export type { ContentAccessRequiredProps } from "./access-required";
+export {
+  CONTENT_ACCESS_NAMESPACES,
+  ContentAccessRequired,
+} from "./access-required";
 export type {
   ContentDeliveryPageAlternate,
   ContentDeliveryPageMetadata,

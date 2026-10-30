@@ -8,6 +8,7 @@ export const CONTENT_ROW_ACTION_IDS = [
   "delivery",
   "duplicate",
   "visibility",
+  "access",
   "delete",
 ] as const;
 
@@ -16,6 +17,7 @@ export type ContentRowActionId = (typeof CONTENT_ROW_ACTION_IDS)[number];
 export const CONTENT_LIST_ACTION_IDS = [
   "duplicate",
   "visibility",
+  "access",
   "delete",
 ] as const satisfies readonly ContentRowActionId[];
 
@@ -38,8 +40,11 @@ export const isDestructiveContentRowAction = (
 ): boolean => id === "delete";
 
 export interface ContentRowActionInput {
+  /** `definition.access.scope.enabled` - each record is an access scope. */
+  access?: boolean;
   canCreate?: boolean;
   canDelete: boolean;
+  canEdit?: boolean;
   canHide?: boolean;
   canPublish: boolean;
   canView: boolean;
@@ -62,12 +67,15 @@ const gateOf = (
   {
     canCreate = false,
     canDelete,
+    canEdit = false,
     canHide = false,
     canPublish,
     canView,
   }: ContentRowActionInput,
 ): boolean => {
   switch (id) {
+    case "access":
+      return canEdit && canView;
     case "delete":
       return canDelete;
     case "duplicate":
@@ -84,6 +92,7 @@ const gateOf = (
 const featureOf = (
   id: ContentRowActionId,
   {
+    access = false,
     delivery,
     duplication = false,
     editorial,
@@ -93,6 +102,8 @@ const featureOf = (
   }: ContentRowActionInput,
 ): boolean => {
   switch (id) {
+    case "access":
+      return access;
     // Every content type is audited, so every one has a history to show.
     case "activity":
     case "delete":
