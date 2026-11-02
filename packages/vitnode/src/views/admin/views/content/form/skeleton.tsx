@@ -11,6 +11,7 @@ import type { ContentFormHeaderValue } from "./context";
 
 import { ContentFormProvider } from "./context";
 import { ContentFormHeader, ContentFormSection } from "./layout-primitives";
+import { useContentFormSurface } from "./surface";
 
 export type ContentFormSkeletonControl =
   | "editor"
@@ -178,9 +179,10 @@ const ContentFormSkeletonSections = ({
 }) => {
   const placed = new Set(sections.flatMap(section => section.fields));
   const remaining = Object.keys(fields).filter(name => !placed.has(name));
+  const surface = useContentFormSurface();
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-4">
       {publication ? <ContentFormStatusSkeleton /> : null}
 
       {sections.map(section => (
@@ -202,7 +204,13 @@ const ContentFormSkeletonSections = ({
         </div>
       ) : null}
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div
+        className={cn(
+          "flex flex-wrap items-center justify-end gap-2",
+          surface === "sheet" &&
+            "bg-popover sticky bottom-0 -mx-4 mt-auto border-t px-4 py-4",
+        )}
+      >
         <ContentFormButtonSkeleton />
       </div>
     </div>

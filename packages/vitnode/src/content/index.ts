@@ -1,4 +1,33 @@
 export {
+  CONTENT_ACCESS_ACTIONS,
+  CONTENT_ACCESS_MODES,
+  CONTENT_ACCESS_PREREQUISITES,
+  CONTENT_ACCESS_REQUIRED_CODE,
+} from "./access/const";
+export {
+  CONTENT_ACCESS_OPEN_FLAGS,
+  contentAccessActionChain,
+  contentAccessAudienceMatches,
+  contentAccessRequirements,
+  decideContentAccess,
+  resolveContentAccessRules,
+  zodContentAccessAudience,
+  zodContentAccessFlags,
+  zodContentAccessOverrides,
+} from "./access/policy";
+export type {
+  ContentAccessAction,
+  ContentAccessActor,
+  ContentAccessAudience,
+  ContentAccessDecision,
+  ContentAccessDefaultsInput,
+  ContentAccessFlags,
+  ContentAccessOverrides,
+  ContentAccessPolicy,
+  ContentAccessRequirement,
+  ContentAccessScopeInput,
+} from "./access/policy";
+export {
   contentContainerAdminHref,
   contentContainerI18nKeys,
   contentContainerLabelsFrom,
@@ -27,8 +56,8 @@ export type {
   RegisteredFrontendContentContainer,
   RegisteredFrontendContentType,
 } from "./admin/registry";
-
 export { resolveContentAdminRoute } from "./admin/route";
+
 export type {
   ContentAdminAction,
   ContentAdminRoute,
@@ -74,6 +103,7 @@ export type {
 export { zodContentApprovalState } from "./approvals/schema";
 export type { ContentApprovalState } from "./approvals/schema";
 export {
+  contentAccessTag,
   contentContainerTag,
   contentDeliveryRedirectTag,
   contentDeliverySitemapTag,
@@ -298,6 +328,7 @@ export type {
   ContentContainerUpdateInput,
 } from "./containers/types";
 export { defineContentType } from "./define";
+export type { ContentAccessInput } from "./define-access";
 export {
   contentDeliveryAlternateHref,
   contentDeliveryDisabled,

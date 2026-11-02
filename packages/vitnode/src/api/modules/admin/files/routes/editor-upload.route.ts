@@ -21,8 +21,10 @@ export const uploadEditorFileAdminRoute = buildRoute({
     const admin = c.get("admin");
     if (!admin) throw new HTTPException(403);
 
-    const { file } = c.req.valid("form");
+    const { contentType, file } = c.req.valid("form");
     const outcome = await storeEditorUpload(c, {
+      contentType,
+      session: "admin",
       attachments: true,
       file,
       userId: admin.user.id,

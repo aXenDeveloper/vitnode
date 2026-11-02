@@ -3,6 +3,7 @@ import {
   LaptopIcon,
   LogOutIcon,
   MonitorSmartphoneIcon,
+  RotateCwIcon,
   SmartphoneIcon,
   TabletIcon,
 } from "lucide-react";
@@ -22,6 +23,14 @@ import {
   CardContent,
   CardHeader,
 } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -226,6 +235,7 @@ export const UserDevicesCard = ({
   user: AdminUserDetail;
 }) => {
   const t = useTranslations("admin.user.show.devices");
+  const tError = useTranslations("core.global.errors");
   const queryClient = useQueryClient();
   const deviceName = useDeviceName();
   const showFailure = useFailureToast();
@@ -233,7 +243,9 @@ export const UserDevicesCard = ({
   const {
     data: devices,
     isError,
+    isFetching,
     isPending,
+    refetch,
   } = useQuery(adminUserDevicesQueryOptions(key));
 
   const refresh = async () => {
@@ -294,9 +306,28 @@ export const UserDevicesCard = ({
             <Skeleton className="h-10 w-full" />
           </div>
         ) : isError ? (
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            {t("loadError")}
-          </p>
+          <Empty className="md:p-6" role="alert">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <MonitorSmartphoneIcon aria-hidden="true" />
+              </EmptyMedia>
+              <EmptyTitle>{t("loadError.title")}</EmptyTitle>
+              <EmptyDescription>{t("loadError.desc")}</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button
+                isLoading={isFetching}
+                onClick={() => {
+                  void refetch();
+                }}
+                size="sm"
+                variant="outline"
+              >
+                <RotateCwIcon aria-hidden="true" />
+                {tError("try_again")}
+              </Button>
+            </EmptyContent>
+          </Empty>
         ) : devices.length === 0 ? (
           <p className="text-muted-foreground text-sm leading-relaxed">
             {t("empty")}

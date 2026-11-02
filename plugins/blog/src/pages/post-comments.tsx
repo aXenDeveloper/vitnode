@@ -11,6 +11,7 @@ import {
 } from "@vitnode/core/components/ui/collapsible";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -41,6 +42,7 @@ import {
   CornerDownRightIcon,
   EyeOffIcon,
   MessageSquareIcon,
+  MessageSquareWarningIcon,
   PencilIcon,
   PenLineIcon,
   ReplyIcon,
@@ -739,21 +741,27 @@ const PostCommentsThread = ({
       {comments.status === "pending" ? (
         <CommentsPendingSkeleton label={t("loading")} />
       ) : comments.status === "error" ? (
-        <div className="flex flex-col items-start gap-3" role="alert">
-          <p className="text-muted-foreground leading-relaxed text-pretty">
-            {t("load_failed.title")}. {t("load_failed.desc")}
-          </p>
-          <Button
-            isLoading={comments.isRefreshing}
-            onClick={() => {
-              void comments.retry();
-            }}
-            variant="outline"
-          >
-            <RotateCwIcon aria-hidden="true" />
-            {t("load_failed.retry")}
-          </Button>
-        </div>
+        <Empty className="border" role="alert">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <MessageSquareWarningIcon aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle render={<h3 />}>{t("load_failed.title")}</EmptyTitle>
+            <EmptyDescription>{t("load_failed.desc")}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              isLoading={comments.isRefreshing}
+              onClick={() => {
+                void comments.retry();
+              }}
+              variant="outline"
+            >
+              <RotateCwIcon aria-hidden="true" />
+              {t("load_failed.retry")}
+            </Button>
+          </EmptyContent>
+        </Empty>
       ) : tree.length === 0 ? (
         <Empty className="border">
           <EmptyHeader>
@@ -806,14 +814,17 @@ export const PostComments = ({
   articleHref,
   articleId,
   articleTitle,
+  canComment = true,
 }: {
   articleAuthorIds: readonly number[];
   articleHref: string;
   articleId: number;
   articleTitle: string;
+  /** Whether the article's categories let this reader comment. */
+  canComment?: boolean;
 }) => {
   const t = useTranslations("core.global");
-  const comments = usePostComments(articleId);
+  const comments = usePostComments(articleId, canComment);
 
   return (
     <section

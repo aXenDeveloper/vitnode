@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import type { ContentAccessScopeInput } from "../access/policy";
 import type { ContentFieldDescriptor, ContentFieldMap } from "../types";
 import type { ContentContainerPoliciesInput } from "./policies";
 import type {
@@ -12,6 +13,7 @@ import type {
   ContentContainerSchemas,
 } from "./types";
 
+import { resolveContentAccessScopeInput } from "../access/policy";
 import {
   CONTENT_ADMIN_PATH_SEGMENT_PATTERN,
   CONTENT_FIELD_NAME_PATTERN,
@@ -361,6 +363,7 @@ export const defineContentContainer = <
     | false
     | undefined = undefined,
 >({
+  access,
   admin,
   fields = {} as TFields,
   hierarchy,
@@ -369,6 +372,20 @@ export const defineContentContainer = <
   policies,
   publicApi,
 }: {
+  /**
+   * Per-container access rules: who may see a container (`view`), read what is
+   * filed in it (`read`), reply to it (`comment`) and download its protected
+   * attachments (`downloadAttachments`). Containers inherit from their parent
+   * and never open up what a parent hides. `true` starts every action open to
+   * everyone; `defaults` sets `{ mode: "members" }` for some. Omit it and the
+   * collection has no access rules at all.
+   *
+   * Only turn it on when every custom route of the plugin that reads content
+   * filed here goes through the Content Engine's public services or
+   * `createContentAccess(c)` - a route that queries the table directly would
+   * ignore the rules.
+   */
+  access?: boolean | ContentAccessScopeInput;
   admin?: ContentContainerAdminInput;
   fields?: TFields;
   hierarchy?: ContentContainerHierarchyInput;
@@ -409,7 +426,15 @@ export const defineContentContainer = <
 
   const resolvedPublicApi = resolvePublicApi(id, fields, publicApi);
 
+  let resolvedAccess;
+  try {
+    resolvedAccess = resolveContentAccessScopeInput(access);
+  } catch (error) {
+    return fail(id, (error as Error).message);
+  }
+
   return {
+    access: resolvedAccess,
     admin: resolveAdmin(id, admin),
     fields,
     hierarchy: resolveHierarchy(id, hierarchy),

@@ -1,11 +1,18 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { BellIcon, CheckCheckIcon, Settings2Icon } from "lucide-react";
+import {
+  BellIcon,
+  BellOffIcon,
+  CheckCheckIcon,
+  RotateCwIcon,
+  Settings2Icon,
+} from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -78,17 +85,25 @@ const NotificationsList = ({
 
   if (query.isError) {
     return (
-      <div
-        className="flex flex-col items-center gap-3 rounded-lg border p-6 text-center"
-        role="alert"
-      >
-        <p className="text-muted-foreground leading-relaxed">
-          {t("load_error")}
-        </p>
-        <Button onClick={() => void query.refetch()} variant="outline">
-          {t("retry")}
-        </Button>
-      </div>
+      <Empty className="rounded-lg border" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <BellOffIcon aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t("load_error.title")}</EmptyTitle>
+          <EmptyDescription>{t("load_error.desc")}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            isLoading={query.isFetching}
+            onClick={() => void query.refetch()}
+            variant="outline"
+          >
+            <RotateCwIcon aria-hidden="true" />
+            {t("retry")}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 

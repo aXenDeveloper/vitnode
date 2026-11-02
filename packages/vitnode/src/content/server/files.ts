@@ -14,6 +14,10 @@ import type { ContentDatabase } from "./service";
 
 import { core_files, core_files_alt } from "../../database/files";
 import { parseImageDimensions } from "../../lib/api/upload";
+import {
+  contentPrivateAdminFileUrl,
+  protectContentPublicRowFiles,
+} from "../access/server/files";
 import { CONTENT_FILE_CODES } from "../const";
 import { ContentInputError } from "../errors";
 import { contentFileConstraints, validateContentFile } from "../files";
@@ -60,6 +64,7 @@ const fileSelection = {
   mimeType: core_files.mimeType,
   name: core_files.name,
   size: core_files.size,
+  visibility: core_files.visibility,
 };
 
 interface ContentFileRow {
@@ -70,6 +75,7 @@ interface ContentFileRow {
   mimeType: null | string;
   name: string;
   size: number;
+  visibility?: "private" | "public";
 }
 
 interface ContentFileOriginRow extends ContentFileRow {
@@ -78,7 +84,7 @@ interface ContentFileOriginRow extends ContentFileRow {
 
 const toDescriptor = (
   row: ContentFileRow,
-  url: (key: string) => string,
+  url: (row: ContentFileRow) => string,
 ): ContentFileDescriptor => {
   const dimensions = parseImageDimensions(row.metadata);
 
@@ -87,7 +93,7 @@ const toDescriptor = (
     mimeType: row.mimeType,
     name: row.name,
     size: row.size,
-    url: url(row.key),
+    url: url(row),
     ...(row.alts && row.mimeType?.startsWith("image/")
       ? { alts: row.alts }
       : {}),
@@ -117,7 +123,15 @@ const descriptorsByIdOf = (
 ): Map<number, ContentFileDescriptor> => {
   const hasAdapter = !!c.get("core").storage?.adapter;
   const storage = c.get("storage");
-  const url = (key: string): string => (hasAdapter ? storage.getUrl(key) : "");
+  // A private file has no public URL. Here it is the AdminCP's own download
+  // route (staff only); public reads swap it for the content type's
+  // authorized route.
+  const url = (row: ContentFileRow): string => {
+    if (!hasAdapter) return "";
+    if (row.visibility === "private") return contentPrivateAdminFileUrl(row.id);
+
+    return storage.getUrl(row.key);
+  };
 
   return new Map(rows.map(row => [row.id, toDescriptor(row, url)]));
 };
@@ -199,7 +213,24 @@ export const withContentRowFiles = async <TRow extends object>(
   });
 };
 
+/**
+ * The public rows with every file field turned into descriptors, then
+ * adjusted for the reader: private files point at the authorized download
+ * route, and attachments the reader may not download are stripped - in
+ * rich-text documents too.
+ */
 export const resolveContentPublicRowFiles = async (
+  c: Context,
+  definition: AnyContentTypeDefinition,
+  rows: Record<string, unknown>[],
+): Promise<Record<string, unknown>[]> =>
+  await protectContentPublicRowFiles(
+    c,
+    definition,
+    await describeContentPublicRowFiles(c, definition, rows),
+  );
+
+const describeContentPublicRowFiles = async (
   c: Context,
   definition: AnyContentTypeDefinition,
   rows: Record<string, unknown>[],
@@ -401,7 +432,9 @@ export const contentFileDescriptorFromUpload = (
   mimeType: result.mimeType,
   name: result.name,
   size: result.size,
-  url: result.url,
+  // A private upload has no public URL; the AdminCP shows it through its own
+  // staff-only route.
+  url: result.url === "" ? contentPrivateAdminFileUrl(result.id) : result.url,
   ...(result.dimensions
     ? { height: result.dimensions.height, width: result.dimensions.width }
     : {}),

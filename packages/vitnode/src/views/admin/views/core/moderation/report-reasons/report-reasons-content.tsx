@@ -6,17 +6,9 @@ import { useLocale, useTranslations } from "use-intl";
 import type { DataTableNavigation } from "@/components/table/navigation";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
+import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { ContentDataTable } from "@/components/table/content";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -66,57 +58,35 @@ const DeleteReasonDialog = ({
 }) => {
   const t = useTranslations("admin.moderation.report_reasons.delete");
   const locale = useLocale();
-  const [isPending, startTransition] = React.useTransition();
   const title = reason ? resolveReasonText(reason.title, locale) : "";
 
   return (
-    <AlertDialog
+    <ConfirmActionAlertDialog
+      description={t("desc")}
+      icon={<Trash2Icon />}
       onOpenChange={open => {
         if (!open) onClose();
       }}
-      open={reason !== null}
-    >
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle className="text-balance">
-            {t("title", { reason: title })}
-          </AlertDialogTitle>
-          <AlertDialogDescription className="text-pretty">
-            {t("desc")}
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-          <Button
-            isLoading={isPending}
-            onClick={() => {
-              if (!reason) return;
-              startTransition(async () => {
-                const result = await onDelete(reason.id);
-                if ("error" in result) {
-                  toast.error(t("error"), {
-                    description:
-                      result.error.status === 409
-                        ? t("last_reason")
-                        : t("unknown"),
-                  });
+      onSubmit={async () => {
+        if (!reason) return;
+        const result = await onDelete(reason.id);
+        if ("error" in result) {
+          toast.error(t("error"), {
+            description:
+              result.error.status === 409 ? t("last_reason") : t("unknown"),
+          });
 
-                  return;
-                }
-                toast.success(t("success"), {
-                  description: t("success_desc", { reason: title }),
-                });
-                onClose();
-              });
-            }}
-            type="button"
-            variant="destructive"
-          >
-            {t("confirm")}
-          </Button>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+          return;
+        }
+        toast.success(t("success"), {
+          description: t("success_desc", { reason: title }),
+        });
+        onClose();
+      }}
+      open={reason !== null}
+      textSubmit={t("confirm")}
+      title={t("title", { reason: title })}
+    />
   );
 };
 

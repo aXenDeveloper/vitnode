@@ -1,10 +1,17 @@
 import { Link } from "@tanstack/react-router";
-import { BellIcon, CheckCheckIcon, Settings2Icon } from "lucide-react";
+import {
+  BellIcon,
+  BellOffIcon,
+  CheckCheckIcon,
+  RotateCwIcon,
+  Settings2Icon,
+} from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -40,6 +47,7 @@ export interface NotificationsBellContentProps {
   open: boolean;
   recent: {
     isError: boolean;
+    isFetching: boolean;
     isPending: boolean;
     items: NotificationItemView[] | undefined;
   };
@@ -115,15 +123,26 @@ export const NotificationsBellContent = ({
               ))}
             </div>
           ) : recent.isError ? (
-            <div
-              className="flex flex-col items-center gap-2 p-4 text-center"
-              role="alert"
-            >
-              <p className="text-muted-foreground text-sm">{t("load_error")}</p>
-              <Button onClick={onRetry} size="sm" variant="outline">
-                {t("retry")}
-              </Button>
-            </div>
+            <Empty className="p-6" role="alert">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <BellOffIcon aria-hidden="true" />
+                </EmptyMedia>
+                <EmptyTitle>{t("load_error.title")}</EmptyTitle>
+                <EmptyDescription>{t("load_error.desc")}</EmptyDescription>
+              </EmptyHeader>
+              <EmptyContent>
+                <Button
+                  isLoading={recent.isFetching}
+                  onClick={onRetry}
+                  size="sm"
+                  variant="outline"
+                >
+                  <RotateCwIcon aria-hidden="true" />
+                  {t("retry")}
+                </Button>
+              </EmptyContent>
+            </Empty>
           ) : recent.items && recent.items.length > 0 ? (
             <ul aria-label={t("recent")} className="flex flex-col gap-1">
               {recent.items.map(item => (

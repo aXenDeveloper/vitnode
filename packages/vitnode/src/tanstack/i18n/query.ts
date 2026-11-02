@@ -18,7 +18,7 @@ export { MAX_NAMESPACE_DEPTH, MAX_NAMESPACE_LENGTH, MAX_NAMESPACES };
 export const GLOBAL_NAMESPACE = "core.global";
 
 /** Everything a message entry's key starts with, before the language. */
-const INTL_QUERY_SCOPE = ["vitnode", "intl"] as const;
+export const INTL_QUERY_SCOPE = ["vitnode", "intl"] as const;
 
 const intlQueryPrefix = (locale: string) => [...INTL_QUERY_SCOPE, locale];
 

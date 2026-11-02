@@ -444,7 +444,7 @@ export class ContentPublicWriteDenied extends ContentEngineError {
   }: {
     contentTypeId: string;
     /** Why, when the reason alone would leave the member guessing. */
-    issue?: "edit_window_closed" | "moderators_only" | null;
+    issue?: "access_denied" | "edit_window_closed" | "moderators_only" | null;
     reason: ContentPublicWriteDenial;
   }) {
     super(`Public write denied: ${reason}.`, { contentTypeId });
@@ -454,7 +454,11 @@ export class ContentPublicWriteDenied extends ContentEngineError {
     this.reason = reason;
   }
 
-  readonly issue: "edit_window_closed" | "moderators_only" | null;
+  readonly issue:
+    | "access_denied"
+    | "edit_window_closed"
+    | "moderators_only"
+    | null;
   readonly reason: ContentPublicWriteDenial;
 }
 

@@ -11,7 +11,12 @@ import { portal } from "@tanstack/charts/tooltip/portal";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { cn } from "cn";
 import { curveMonotoneX } from "d3-shape";
-import { ArrowDownRightIcon, ArrowUpRightIcon } from "lucide-react";
+import {
+  ArrowDownRightIcon,
+  ArrowUpRightIcon,
+  ChartColumnIcon,
+  RotateCwIcon,
+} from "lucide-react";
 import {
   AnimatePresence,
   cubicBezier,
@@ -25,11 +30,18 @@ import { useFormatter, useTimeZone, useTranslations } from "use-intl";
 
 import type { ChartConfig } from "@/components/ui/chart";
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
 import { chartTooltipMotion } from "@/components/ui/chart-utils";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -479,21 +491,28 @@ export const NotificationsActivity = () => {
           />
         </div>
       ) : query.isError ? (
-        <Alert variant="destructive">
-          <AlertTitle>{tPage("title")}</AlertTitle>
-          <AlertDescription className="flex flex-col items-start gap-2">
-            <p>{tPage("desc")}</p>
+        <Empty className="border" role="alert">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <ChartColumnIcon aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle>{tPage("title")}</EmptyTitle>
+            <EmptyDescription>{tPage("desc")}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <Button
+              isLoading={query.isFetching}
               onClick={() => {
                 void query.refetch();
               }}
               size="sm"
               variant="outline"
             >
+              <RotateCwIcon aria-hidden="true" />
               {tError("try_again")}
             </Button>
-          </AlertDescription>
-        </Alert>
+          </EmptyContent>
+        </Empty>
       ) : (
         <TilesSkeleton />
       )}

@@ -9,6 +9,7 @@ import {
   FileClockIcon,
   HistoryIcon,
   LinkIcon,
+  LockIcon,
   PencilIcon,
   SendIcon,
   Trash2Icon,
@@ -38,10 +39,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Tooltip,
-  TooltipContent,
+  TooltipGroup,
+  TooltipGroupTrigger,
   TooltipProvider,
-  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
   CONTENT_PERMISSIONS,
@@ -52,12 +52,13 @@ import {
   contentVisibilityTransition,
   isContentHidden,
 } from "@/content/visibility";
+import { ContentAccessDialog } from "@/views/admin/views/access/access-dialog";
 import { ContentDuplicateDialog } from "@/views/admin/views/content/actions/duplicate-dialog";
 import {
   CONTENT_EDITORIAL_ACTION_IDS,
   CONTENT_LIST_ACTION_IDS,
   contentRowActionIds,
-  contentRowActionsAreInline,
+  contentRowActionLayout,
   isDestructiveContentRowAction,
 } from "@/views/admin/views/content/actions/row-actions-model";
 import {
@@ -165,55 +166,49 @@ const PublishRowAction = ({
   });
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <ConfirmActionAlertDialog
-          description={
-            action === "publish" &&
-            isContentHidden({ hiddenAt: row.hiddenAt }) ? (
-              <>
-                {description} {tVisibility("publish_note")}
-              </>
-            ) : (
-              description
-            )
-          }
-          icon={<Icon />}
-          onSubmit={async ({ onClose }) => {
-            const result = await setContentPublication(queryClient, {
-              action,
-              contentTypeId: definition.id,
-              id: row.id,
-              target: contentApiTarget(definition, pluginId),
-            });
+    <ConfirmActionAlertDialog
+      description={
+        action === "publish" && isContentHidden({ hiddenAt: row.hiddenAt }) ? (
+          <>
+            {description} {tVisibility("publish_note")}
+          </>
+        ) : (
+          description
+        )
+      }
+      icon={<Icon />}
+      onSubmit={async ({ onClose }) => {
+        const result = await setContentPublication(queryClient, {
+          action,
+          contentTypeId: definition.id,
+          id: row.id,
+          target: contentApiTarget(definition, pluginId),
+        });
 
-            if (result.error !== undefined) {
-              showError(result);
+        if (result.error !== undefined) {
+          showError(result);
 
-              return;
-            }
+          return;
+        }
 
-            toast.success(t("success", { name: singular }), {
-              description: title,
-            });
-            onClose();
-          }}
-          submitVariant={published ? "destructive" : "default"}
-          textSubmit={t("confirm")}
-          title={t("title", { name: singular })}
-        >
-          <TooltipTrigger
-            render={
-              <Button aria-label={label} size="icon" variant="ghost">
-                <Icon className="size-4" />
-              </Button>
-            }
-          />
-        </ConfirmActionAlertDialog>
-
-        <TooltipContent>{label}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+        toast.success(t("success", { name: singular }), {
+          description: title,
+        });
+        onClose();
+      }}
+      submitVariant={published ? "destructive" : "default"}
+      textSubmit={t("confirm")}
+      title={t("title", { name: singular })}
+    >
+      <TooltipGroupTrigger
+        content={label}
+        render={
+          <Button aria-label={label} size="icon" variant="ghost">
+            <Icon className="size-4" />
+          </Button>
+        }
+      />
+    </ConfirmActionAlertDialog>
   );
 };
 
@@ -247,25 +242,20 @@ const EditRowAction = ({
 
   if (definition.admin.edit.mode === "page") {
     return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger
-            render={
-              <Button
-                aria-label={label}
-                nativeButton={false}
-                render={<Link to={contentEditHref(definition, row.id)} />}
-                size="icon"
-                variant="ghost"
-              >
-                <PencilIcon className="size-4" />
-              </Button>
-            }
-          />
-
-          <TooltipContent>{label}</TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+      <TooltipGroupTrigger
+        content={label}
+        render={
+          <Button
+            aria-label={label}
+            nativeButton={false}
+            render={<Link to={contentEditHref(definition, row.id)} />}
+            size="icon"
+            variant="ghost"
+          >
+            <PencilIcon className="size-4" />
+          </Button>
+        }
+      />
     );
   }
 
@@ -275,22 +265,16 @@ const EditRowAction = ({
   if (!formDialog) return null;
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <ContentFormDialogSlot
-          action="edit"
-          dialog={formDialog}
-          entry={entry}
-          row={row}
-          singular={singular}
-          title={title}
-        >
-          <TooltipTrigger render={button} />
-        </ContentFormDialogSlot>
-
-        <TooltipContent>{label}</TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <ContentFormDialogSlot
+      action="edit"
+      dialog={formDialog}
+      entry={entry}
+      row={row}
+      singular={singular}
+      title={title}
+    >
+      <TooltipGroupTrigger content={label} render={button} />
+    </ContentFormDialogSlot>
   );
 };
 
@@ -299,6 +283,7 @@ const ACTION_ICONS: Record<
   Exclude<ContentRowActionId, "visibility">,
   React.ReactNode
 > = {
+  access: <LockIcon />,
   activity: <ActivityIcon />,
   delete: <Trash2Icon />,
   delivery: <LinkIcon />,
@@ -477,6 +462,7 @@ const ContentRowActionsMenu = ({
   const queryClient = useQueryClient();
   const showError = useMutationToast();
   const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const menuTriggerRef = React.useRef<HTMLButtonElement>(null);
   const [panel, setPanel] = React.useState<null | {
     id: ContentRowActionId;
     open: boolean;
@@ -508,6 +494,11 @@ const ContentRowActionsMenu = ({
     permission: CONTENT_PERMISSIONS.delete,
     plugin: pluginId,
   });
+  const canEdit = useAdminPermission({
+    module,
+    permission: CONTENT_PERMISSIONS.edit,
+    plugin: pluginId,
+  });
 
   const target = contentApiTarget(definition, pluginId);
   const visibility = contentVisibilityTransition({
@@ -515,8 +506,10 @@ const ContentRowActionsMenu = ({
   });
   const slots = contentAdminSlots();
   const items = contentRowActionIds({
+    access: definition.access.scope.enabled,
     canCreate,
     canDelete,
+    canEdit,
     canHide,
     canPublish,
     canView,
@@ -542,6 +535,12 @@ const ContentRowActionsMenu = ({
 
   if (items.length === 0) return null;
 
+  const ids = contentRowActionLayout(items.map(item => item.id));
+  const layout = {
+    inline: items.filter(item => ids.inline.includes(item.id)),
+    menu: items.filter(item => ids.menu.includes(item.id)),
+  };
+
   const closePanel = (open: boolean) => {
     if (open) return;
 
@@ -561,36 +560,37 @@ const ContentRowActionsMenu = ({
 
   return (
     <>
-      {contentRowActionsAreInline(items.length) ? (
-        items.map(item => (
-          <TooltipProvider key={item.id}>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    aria-label={item.label}
-                    onClick={openInline(item.id)}
-                    size="icon"
-                    variant={item.destructive ? "destructive" : "ghost"}
-                  >
-                    {item.icon}
-                  </Button>
-                }
-              />
+      {layout.inline.map(item => (
+        <TooltipGroupTrigger
+          content={item.label}
+          key={item.id}
+          render={
+            <Button
+              aria-label={item.label}
+              onClick={openInline(item.id)}
+              size="icon"
+              variant={item.destructive ? "destructive" : "ghost"}
+            />
+          }
+        >
+          {item.icon}
+        </TooltipGroupTrigger>
+      ))}
 
-              <TooltipContent>{item.label}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ))
-      ) : (
+      {layout.menu.length > 0 ? (
         <DropdownMenu>
           <DropdownMenuTrigger
-            ref={triggerRef}
+            ref={menuTriggerRef}
             render={
-              <Button
-                aria-label={t("table.more_actions")}
-                size="icon"
-                variant="ghost"
+              <TooltipGroupTrigger
+                content={t("table.more_actions")}
+                render={
+                  <Button
+                    aria-label={t("table.more_actions")}
+                    size="icon"
+                    variant="ghost"
+                  />
+                }
               />
             }
           >
@@ -598,7 +598,7 @@ const ContentRowActionsMenu = ({
           </DropdownMenuTrigger>
 
           <DropdownMenuContent align="end" className="w-64">
-            {items.map((item, index) => (
+            {layout.menu.map((item, index) => (
               <React.Fragment key={item.id}>
                 {item.destructive && index > 0 ? (
                   <DropdownMenuSeparator />
@@ -606,6 +606,7 @@ const ContentRowActionsMenu = ({
 
                 <DropdownMenuItem
                   onClick={() => {
+                    triggerRef.current = menuTriggerRef.current;
                     setPanel({ id: item.id, open: true });
                   }}
                   variant={item.destructive ? "destructive" : "default"}
@@ -617,7 +618,7 @@ const ContentRowActionsMenu = ({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-      )}
+      ) : null}
 
       {panel?.id === "duplicate" ? (
         <DuplicateRowPanel
@@ -644,6 +645,25 @@ const ContentRowActionsMenu = ({
           row={row}
           singular={singular}
           title={title}
+        />
+      ) : null}
+
+      {panel?.id === "access" ? (
+        <ContentAccessDialog
+          formKey={0}
+          onOpenChange={closePanel}
+          onSaved={async () => {
+            await invalidateContentList(queryClient, definition.id);
+          }}
+          open={panel.open}
+          scopeId={String(row.id)}
+          scopeName={title}
+          scopeNames={new Map([[String(row.id), title]])}
+          target={{
+            family: definition.id,
+            module: `content/${definition.permissionModule}`,
+            pluginId,
+          }}
         />
       ) : null}
 
@@ -723,28 +743,30 @@ export const ContentRowActions = ({
   const title = contentRowTitle(entry.definition, row);
 
   return (
-    <>
-      <PublishRowAction
-        entry={entry}
-        row={row}
-        singular={singular}
-        title={title}
-      />
-      <EditRowAction
-        entry={entry}
-        row={row}
-        singular={singular}
-        title={title}
-      />
-      <ContentRowActionsMenu
-        entry={entry}
-        labelField={labelField}
-        locale={locale}
-        onDuplicated={onDuplicated}
-        row={row}
-        singular={singular}
-        title={title}
-      />
-    </>
+    <TooltipProvider>
+      <TooltipGroup>
+        <PublishRowAction
+          entry={entry}
+          row={row}
+          singular={singular}
+          title={title}
+        />
+        <EditRowAction
+          entry={entry}
+          row={row}
+          singular={singular}
+          title={title}
+        />
+        <ContentRowActionsMenu
+          entry={entry}
+          labelField={labelField}
+          locale={locale}
+          onDuplicated={onDuplicated}
+          row={row}
+          singular={singular}
+          title={title}
+        />
+      </TooltipGroup>
+    </TooltipProvider>
   );
 };

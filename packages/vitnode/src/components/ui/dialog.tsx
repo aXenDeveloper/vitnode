@@ -1,19 +1,10 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog";
 import { cn } from "cn";
-import { XIcon } from "lucide-react";
+import { LogOutIcon, XIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "./alert-dialog";
+import { ConfirmActionAlertDialog } from "../confirm-action/confirm-action-alert-dialog";
 import { Button } from "./button";
 import { modalScrimClassName } from "./modal-scrim";
 
@@ -112,34 +103,20 @@ function Dialog({
         {...props}
       />
 
-      <AlertDialog
+      <ConfirmActionAlertDialog
+        description={t("are_you_sure_want_to_leave_form.desc")}
+        finalFocus={alwaysRestoreFocus}
+        icon={<LogOutIcon />}
         onOpenChange={setOpenAlertDialogBeforeClose}
+        onSubmit={({ onClose }) => {
+          setIsDirty(false);
+          onClose();
+          changeOpen(false);
+        }}
         open={openAlertDialogBeforeClose}
-      >
-        <AlertDialogContent finalFocus={alwaysRestoreFocus}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("are_you_sure_want_to_leave_form.title")}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {t("are_you_sure_want_to_leave_form.desc")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              {t("are_you_sure_want_to_leave_form.cancel")}
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                setIsDirty(false);
-                changeOpen(false);
-              }}
-            >
-              {t("are_you_sure_want_to_leave_form.confirm")}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        textSubmit={t("are_you_sure_want_to_leave_form.confirm")}
+        title={t("are_you_sure_want_to_leave_form.title")}
+      />
     </DialogContext>
   );
 }

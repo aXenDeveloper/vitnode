@@ -1,5 +1,49 @@
 export { escapeLikePattern } from "../../lib/api/like-pattern";
 export {
+  CONTENT_ACCESS_GUEST,
+  loadContentAccessActors,
+  resolveContentAccessActor,
+} from "../access/server/actor";
+export { buildContentAccessAdminRoutes } from "../access/server/admin-routes";
+export {
+  canAccessContentRecord,
+  contentAccessFlagsForScopes,
+  contentAccessRequirementsForScopes,
+  contentRecordAccessFlags,
+  createContentAccess,
+  decideContentAccessForScopes,
+} from "../access/server/decide";
+export type { ContentAccess } from "../access/server/decide";
+export {
+  contentAccessAllowedScopes,
+  findContentAccessFamily,
+  isContentAccessFamilyOpen,
+  listContentAccessFamilies,
+} from "../access/server/families";
+export type {
+  ContentAccessAllowedScopes,
+  ContentAccessFamily,
+} from "../access/server/families";
+export {
+  contentModelsInAccessFamily,
+  expireContentAccessFamily,
+} from "../access/server/invalidate";
+export { contentAccessScopeReport } from "../access/server/report";
+export type { ContentAccessScopeReport } from "../access/server/report";
+export { deleteContentAccessRules } from "../access/server/rules";
+export {
+  contentAccessCondition,
+  contentAccessFamilyOf,
+  contentAccessScopesForValues,
+  contentAccessSourceOf,
+  contentRecordAccessScopes,
+  isContentAccessOpen,
+} from "../access/server/source";
+export type {
+  ContentAccessScopeRef,
+  ContentAccessSource,
+} from "../access/server/source";
+export {
   ContentSubmissionDecisionError,
   decideContentSubmission,
 } from "../approvals/server/decide";

@@ -8,6 +8,7 @@ export const CONTENT_ROW_ACTION_IDS = [
   "delivery",
   "duplicate",
   "visibility",
+  "access",
   "delete",
 ] as const;
 
@@ -16,6 +17,7 @@ export type ContentRowActionId = (typeof CONTENT_ROW_ACTION_IDS)[number];
 export const CONTENT_LIST_ACTION_IDS = [
   "duplicate",
   "visibility",
+  "access",
   "delete",
 ] as const satisfies readonly ContentRowActionId[];
 
@@ -38,8 +40,11 @@ export const isDestructiveContentRowAction = (
 ): boolean => id === "delete";
 
 export interface ContentRowActionInput {
+  /** `definition.access.scope.enabled` - each record is an access scope. */
+  access?: boolean;
   canCreate?: boolean;
   canDelete: boolean;
+  canEdit?: boolean;
   canHide?: boolean;
   canPublish: boolean;
   canView: boolean;
@@ -62,12 +67,15 @@ const gateOf = (
   {
     canCreate = false,
     canDelete,
+    canEdit = false,
     canHide = false,
     canPublish,
     canView,
   }: ContentRowActionInput,
 ): boolean => {
   switch (id) {
+    case "access":
+      return canEdit && canView;
     case "delete":
       return canDelete;
     case "duplicate":
@@ -84,6 +92,7 @@ const gateOf = (
 const featureOf = (
   id: ContentRowActionId,
   {
+    access = false,
     delivery,
     duplication = false,
     editorial,
@@ -93,6 +102,8 @@ const featureOf = (
   }: ContentRowActionInput,
 ): boolean => {
   switch (id) {
+    case "access":
+      return access;
     // Every content type is audited, so every one has a history to show.
     case "activity":
     case "delete":
@@ -125,3 +136,30 @@ export const contentRowActionIds = (
 
 export const contentRowActionsAreInline = (count: number): boolean =>
   count > 0 && count <= CONTENT_ROW_INLINE_ACTION_LIMIT;
+
+/** Actions kept as their own button beside the row's ⋯ menu. */
+export const CONTENT_ROW_PINNED_ACTION_IDS = [
+  "access",
+] as const satisfies readonly ContentRowActionId[];
+
+/**
+ * Which of a row's actions render as buttons and which go in its ⋯ menu.
+ * A pinned action (Access, on a type whose records are access scopes) stays a
+ * button and sends every other action to the menu. Otherwise up to
+ * {@link CONTENT_ROW_INLINE_ACTION_LIMIT} actions render inline, more all go
+ * in the menu.
+ */
+export const contentRowActionLayout = <T extends ContentRowActionId>(
+  ids: readonly T[],
+): { inline: T[]; menu: T[] } => {
+  const pinned = ids.filter(id =>
+    (CONTENT_ROW_PINNED_ACTION_IDS as readonly string[]).includes(id),
+  );
+  if (pinned.length > 0) {
+    return { inline: pinned, menu: ids.filter(id => !pinned.includes(id)) };
+  }
+
+  return contentRowActionsAreInline(ids.length)
+    ? { inline: [...ids], menu: [] }
+    : { inline: [], menu: [...ids] };
+};

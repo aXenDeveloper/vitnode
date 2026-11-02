@@ -29,9 +29,11 @@ const requestUpload = async (
 export const uploadEditorFile = async (
   session: "admin" | "member",
   file: File,
+  { contentType }: { contentType?: string } = {},
 ): Promise<EditorUploadResult> => {
   const formData = new FormData();
   formData.append("file", file);
+  if (contentType) formData.append("contentType", contentType);
 
   const response = await requestUpload(session, formData);
   if (!response.ok) {

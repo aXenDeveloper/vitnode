@@ -5,10 +5,15 @@ import { HTTPException } from "hono/http-exception";
 
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDeliveryService } from "./delivery-service";
-import type { ContentModel } from "./model";
+import type { AnyContentModel, ContentModel } from "./model";
 
 import { setPageCacheTags } from "../../api/lib/page-cache";
 import { buildRoute } from "../../api/lib/route";
+import {
+  CONTENT_ACCESS_PRIVATE_HEADERS,
+  contentAccessPageCacheTags,
+  isContentAccessShareable,
+} from "../access/server/http";
 import { contentTypeName } from "../admin/labels";
 import {
   CONTENT_DELIVERY_REDIRECT_STATUS,
@@ -36,6 +41,7 @@ export const buildContentDeliveryRoutes = <
   { pluginId }: { pluginId: P },
 ) => {
   const { definition } = model;
+  const accessModel = model as unknown as AnyContentModel;
   const name = contentTypeName(definition.id);
   const localized = definition.localization.enabled;
 
@@ -171,11 +177,23 @@ export const buildContentDeliveryRoutes = <
         locale: resolved.locale,
       });
 
+      // A resolution depends on what this viewer may read once any access
+      // rule applies, so it is then nobody else's.
+      const shareable = await isContentAccessShareable(c, accessModel);
+      if (!shareable) {
+        return c.json(resolution, 200, {
+          ...CONTENT_ACCESS_PRIVATE_HEADERS,
+          ...(resolution.type === "content" && resolution.hidden
+            ? { "X-Robots-Tag": "noindex, nofollow" }
+            : {}),
+        });
+      }
+
       if (resolution.type === "content" && !resolution.hidden) {
-        setPageCacheTags(
-          c,
-          contentRecordPageCacheTags(definition, resolution.itemId),
-        );
+        setPageCacheTags(c, [
+          ...contentRecordPageCacheTags(definition, resolution.itemId),
+          ...contentAccessPageCacheTags(c, accessModel),
+        ]);
       }
 
       return resolution.type === "content" && resolution.hidden
@@ -219,7 +237,14 @@ export const buildContentDeliveryRoutes = <
       });
       if (!metadata) throw notFound(name);
 
-      setPageCacheTags(c, contentRecordPageCacheTags(definition, id));
+      if (!(await isContentAccessShareable(c, accessModel))) {
+        return c.json(metadata, 200, CONTENT_ACCESS_PRIVATE_HEADERS);
+      }
+
+      setPageCacheTags(c, [
+        ...contentRecordPageCacheTags(definition, id),
+        ...contentAccessPageCacheTags(c, accessModel),
+      ]);
 
       return c.json(metadata, 200);
     },

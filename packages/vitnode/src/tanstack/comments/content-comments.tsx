@@ -5,6 +5,7 @@ import {
   EyeOffIcon,
   LogInIcon,
   MessageSquareIcon,
+  MessageSquareWarningIcon,
   PencilIcon,
   ReplyIcon,
   RotateCwIcon,
@@ -21,6 +22,7 @@ import { RichTextContent } from "@/components/rich-text/rich-text-content";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -35,6 +37,7 @@ import type { ContentCommentNode, ContentCommentTreeNode } from "./thread";
 import type { ContentCommentsController } from "./use-content-comments";
 
 import { LOGIN_PATH, returnToFor } from "../auth/redirects";
+import { ContentAccessRequired } from "../content/access-required";
 import {
   ContentCommentActions,
   contentCommentAuthor,
@@ -549,6 +552,8 @@ export const ContentCommentsComposer = ({
       <h3 className="font-semibold text-balance">{t("compose.title")}</h3>
       {comments.isSessionPending ? (
         <Skeleton aria-hidden="true" className="h-12 w-full rounded-lg" />
+      ) : comments.commentLocked ? (
+        <ContentAccessRequired headingLevel="h3" kind="comment" />
       ) : comments.canComment ? (
         state === "closed" ? (
           <Button
@@ -640,21 +645,27 @@ const ContentCommentsSection = ({
       {comments.status === "pending" ? (
         <CommentsSkeleton label={t("loading")} />
       ) : comments.status === "error" ? (
-        <div className="flex flex-col items-start gap-3" role="alert">
-          <p className="text-muted-foreground leading-relaxed text-pretty">
-            {t("load_failed.title")}. {t("load_failed.desc")}
-          </p>
-          <Button
-            isLoading={comments.isRefreshing}
-            onClick={() => {
-              void comments.retry();
-            }}
-            variant="outline"
-          >
-            <RotateCwIcon aria-hidden="true" />
-            {t("load_failed.retry")}
-          </Button>
-        </div>
+        <Empty className="border" role="alert">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <MessageSquareWarningIcon aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle render={<h3 />}>{t("load_failed.title")}</EmptyTitle>
+            <EmptyDescription>{t("load_failed.desc")}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              isLoading={comments.isRefreshing}
+              onClick={() => {
+                void comments.retry();
+              }}
+              variant="outline"
+            >
+              <RotateCwIcon aria-hidden="true" />
+              {t("load_failed.retry")}
+            </Button>
+          </EmptyContent>
+        </Empty>
       ) : comments.tree.length === 0 ? (
         <Empty className="border">
           <EmptyHeader>

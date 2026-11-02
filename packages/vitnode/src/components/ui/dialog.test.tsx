@@ -45,7 +45,7 @@ describe("Dialog with unsaved changes", () => {
 
     fireEvent.click(
       screen.getByRole("button", {
-        name: "core.global.are_you_sure_want_to_leave_form.cancel",
+        name: "core.global.confirm_action.cancel",
       }),
     );
 
@@ -55,7 +55,7 @@ describe("Dialog with unsaved changes", () => {
     expect(screen.getByText("Unsaved form")).toBeTruthy();
   });
 
-  it("closes the dialog right away once leaving is confirmed", async () => {
+  it("closes the dialog once leaving is confirmed", async () => {
     await renderDirtyDialog();
 
     fireEvent.click(
@@ -64,7 +64,9 @@ describe("Dialog with unsaved changes", () => {
       }),
     );
 
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
     expect(screen.queryByText("Unsaved form")).toBeNull();
     await waitFor(() => {
       expect(document.activeElement).toBe(

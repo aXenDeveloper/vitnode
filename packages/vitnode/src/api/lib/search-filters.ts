@@ -125,6 +125,13 @@ export const searchIndexFilters = (
   }
   const visible = visibleCondition(core_search_index, params);
   if (visible) conditions.push(visible);
+  // Every scope the item is filed in has to be one the viewer may read. An
+  // empty list (nothing readable) still keeps items filed in no scope.
+  if (params.accessScopes) {
+    conditions.push(
+      sql`${core_search_index.accessScopes} <@ ${sql.param([...params.accessScopes])}::text[]`,
+    );
+  }
 
   return conditions.length ? and(...conditions) : undefined;
 };

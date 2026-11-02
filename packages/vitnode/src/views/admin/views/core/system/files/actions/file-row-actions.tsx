@@ -103,7 +103,7 @@ export const FileRowActions = ({
         module: "admin/files",
         path: "/{id}/download",
         method: "get",
-        args: { params: { id: String(id) } },
+        args: { params: { id: String(id) }, query: {} },
         options: { credentials: "include" },
       });
       if (!res.ok) throw new Error(await res.text());

@@ -5,16 +5,7 @@ import { useLocale, useTranslations } from "use-intl";
 
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
-import {
-  AlertDialog,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -99,7 +90,6 @@ export const AiUserOverrideCardContent = ({
 }: AiUserOverrideCardProps) => {
   const t = useTranslations("admin.user.ai");
   const tError = useTranslations("core.global.errors");
-  const [isDeleting, setIsDeleting] = React.useState(false);
   const [removeOpen, setRemoveOpen] = React.useState(false);
 
   return (
@@ -149,58 +139,42 @@ export const AiUserOverrideCardContent = ({
               </DialogContent>
             </Dialog>
             {override ? (
-              <AlertDialog onOpenChange={setRemoveOpen} open={removeOpen}>
+              <>
                 <TooltipWithContent text={t("remove.title")}>
-                  <AlertDialogTrigger
-                    render={
-                      <Button
-                        aria-label={t("remove.title")}
-                        size="icon"
-                        variant="ghost"
-                      />
-                    }
+                  <Button
+                    aria-label={t("remove.title")}
+                    onClick={() => {
+                      setRemoveOpen(true);
+                    }}
+                    size="icon"
+                    variant="ghost"
                   >
                     <Trash2Icon />
-                  </AlertDialogTrigger>
+                  </Button>
                 </TooltipWithContent>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t("remove.title")}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t("remove.desc")}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t("remove.cancel")}</AlertDialogCancel>
-                    <Button
-                      isLoading={isDeleting}
-                      onClick={async () => {
-                        setIsDeleting(true);
-                        let result: Awaited<ReturnType<typeof onDelete>>;
-                        try {
-                          result = await onDelete(userId);
-                        } finally {
-                          setIsDeleting(false);
-                        }
-                        if ("error" in result) {
-                          toast.error(tError("title"), {
-                            description: tError("internal_server_error"),
-                          });
+                <ConfirmActionAlertDialog
+                  description={t("remove.desc")}
+                  icon={<Trash2Icon />}
+                  onOpenChange={setRemoveOpen}
+                  onSubmit={async ({ onClose }) => {
+                    const result = await onDelete(userId);
+                    if ("error" in result) {
+                      toast.error(tError("title"), {
+                        description: tError("internal_server_error"),
+                      });
 
-                          return;
-                        }
-                        toast.success(t("remove.success"), {
-                          description: t("remove.success_desc"),
-                        });
-                        setRemoveOpen(false);
-                      }}
-                      variant="destructive"
-                    >
-                      {t("remove.confirm")}
-                    </Button>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                      return;
+                    }
+                    toast.success(t("remove.success"), {
+                      description: t("remove.success_desc"),
+                    });
+                    onClose();
+                  }}
+                  open={removeOpen}
+                  textSubmit={t("remove.confirm")}
+                  title={t("remove.title")}
+                />
+              </>
             ) : null}
           </CardAction>
         ) : null}

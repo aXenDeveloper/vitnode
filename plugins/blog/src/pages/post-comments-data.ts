@@ -42,8 +42,11 @@ export type PostComment = z.infer<typeof zodPostComment>;
  * routes: replies, editing with revisions, deleting, hiding and reports - and
  * kept current live, re-reading only the branches that changed.
  */
-export const usePostComments = (articleId: number) =>
+export const usePostComments = (articleId: number, canComment = true) =>
   useContentComments({
+    // Every category of the article has to allow comments; the server checks
+    // again when one is posted.
+    allowed: canComment,
     queryKey: blogQueryKeys.comments(articleId),
     maxDepth: BLOG_COMMENT_MAX_DEPTH,
     record: zodPostComment,

@@ -8,14 +8,21 @@ import type { NotificationAccessArgs } from "../../../api/lib/notifications/regi
 import type { EnvVitNode } from "../../../api/middlewares/global.middleware";
 import type { ContentSubmissionReviewScope } from "../../approvals/server/reviewers";
 import type { AnyContentTypeDefinition } from "../../types";
+import type { AnyContentModel } from "../model";
 import type { ContentNotificationAccessFilter } from "./define";
 
 import { core_content_submissions } from "../../../database/content-submissions";
+import { loadContentAccessActors } from "../../access/server/actor";
+import { decideContentAccessForScopes } from "../../access/server/decide";
+import {
+  contentAccessSourceOf,
+  contentRecordAccessScopes,
+} from "../../access/server/source";
 import {
   filterContentSubmissionReviewers,
   loadContentSubmissionReviewScope,
 } from "../../approvals/server/reviewers";
-import { contentIdFromKey } from "../../ids";
+import { contentIdFromKey, contentIdKey, parseContentId } from "../../ids";
 import { contentDefinitionOf, findContentModel } from "../model";
 import { isContentBaseRowPublic } from "../visibility";
 
@@ -170,6 +177,48 @@ const isRootPublic = async (
 };
 
 /**
+ * The recipients the record's access rules let read it now, with their roles
+ * read from the database for this check - a member who lost a role stops
+ * getting the notification, and stops seeing it in the inbox, at once.
+ */
+const readersOf = async (
+  c: Context<EnvVitNode>,
+  content: AnyContentTypeDefinition,
+  contentId: number | string,
+  userIds: number[],
+): Promise<number[]> => {
+  const model = (
+    (c.get("core")?.contentModels ?? []) as { model: AnyContentModel }[]
+  ).find(entry => entry.model.definition.id === content.id)?.model;
+  if (!model || !contentAccessSourceOf(c, model)) return userIds;
+
+  const itemId = parseContentId(content.idStrategy, contentId);
+  if (itemId === null) return [];
+  const scopes = (await contentRecordAccessScopes(c, model, [itemId])).get(
+    contentIdKey(itemId),
+  );
+  if (!scopes) return [];
+
+  const actors = await loadContentAccessActors(c, userIds);
+  const decisions = await Promise.all(
+    userIds.map(async userId => {
+      const actor = actors.get(userId);
+      if (!actor) return false;
+
+      return (
+        await decideContentAccessForScopes(c, {
+          action: "read",
+          actor,
+          scopes,
+        })
+      ).allowed;
+    }),
+  );
+
+  return userIds.filter((_, index) => decisions[index]);
+};
+
+/**
  * Builds a notification type's `access` hook from Content Engine state, for
  * notifications whose `data` carries {@link ContentNotificationRefs}. Core
  * calls it before delivery, before each immediate or digest email and each
@@ -188,9 +237,10 @@ const isRootPublic = async (
  *   queue lists it in and the one the record is filed in today, read fresh
  *   from the database. The record does not have to be public.
  *
- * `filter` narrows the result further for plugin-specific rules. Content
- * Engine reads are not role-based, so without it every recipient who passes
- * the state checks may see the notification. Server-only.
+ * Either way, a recipient also has to be allowed to read the record under the
+ * access rules of its scopes (a forum, a blog category) - checked live, so a
+ * revoked role hides the notification too. `filter` narrows the result
+ * further for plugin-specific rules. Server-only.
  *
  * @example
  * ```ts
@@ -275,6 +325,9 @@ export const contentNotificationAccess =
     ) {
       return [];
     }
+
+    allowed = await readersOf(c, content, refs.contentId, allowed);
+    if (allowed.length === 0) return [];
 
     return filter
       ? await filter({

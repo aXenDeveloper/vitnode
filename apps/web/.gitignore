@@ -12,3 +12,6 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+
+# Local storage adapter private files
+/storage/private

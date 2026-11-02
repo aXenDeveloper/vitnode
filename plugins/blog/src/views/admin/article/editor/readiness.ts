@@ -32,6 +32,7 @@ export type ArticleTextField = Exclude<TranslatedField, "content">;
 export type ArticleValues = Partial<
   Record<ArticleTextField, MultiLangValue>
 > & {
+  categoryId?: unknown;
   content?: MultiLangValue<null | RichTextDocument>;
   coverImage?: unknown;
 };

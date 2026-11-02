@@ -101,6 +101,18 @@ export const pluginLayoutComponent = (
   };
 };
 
+/**
+ * A module's `notFound` screen, inside the route's own messages - it is
+ * rendered by the router in place of the page, so outside the page's provider.
+ */
+export const pluginNotFoundComponent = (
+  NotFound: React.ComponentType,
+  namespaces: readonly string[],
+): React.FunctionComponent =>
+  function PluginRouteNotFound() {
+    return withMessages(namespaces, createElement(NotFound));
+  };
+
 /** A crumb the module actually draws: the component half of either spelling. */
 type DeclaredBreadcrumb = React.ComponentType<
   PluginRouteBreadcrumbProps<unknown>
@@ -128,12 +140,17 @@ export const pluginRouteBreadcrumb = (
     if (built?.declared !== declared) {
       built = {
         component: function PluginRouteBreadcrumb(props: RouteBreadcrumbProps) {
+          // A route that answered `notFound()` (or failed) has no data to
+          // draw its crumb from; the trail stops at its parent instead.
+          const loaderData = pluginRouteLoaderData(props.loaderData);
+          if (loaderData === undefined) return null;
+
           return (
             <Suspense>
               {withMessages(
                 namespaces,
                 createElement(declared, {
-                  loaderData: pluginRouteLoaderData(props.loaderData),
+                  loaderData,
                   params: props.params,
                   search: pluginRouteSearch(props.loaderData),
                 }),

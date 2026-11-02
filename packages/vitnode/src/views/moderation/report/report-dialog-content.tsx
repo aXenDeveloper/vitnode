@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { FlagIcon, RotateCwIcon } from "lucide-react";
 import { AnimatePresence, MotionConfig } from "motion/react";
 import * as m from "motion/react-m";
 import React from "react";
@@ -13,6 +14,14 @@ import { AutoFormTextarea } from "@/components/form/fields/textarea";
 import { MotionFeatures } from "@/components/motion-features";
 import { Button } from "@/components/ui/button";
 import { DialogTitle, useDialog } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MODERATION_LIMITS } from "@/lib/moderation/const";
@@ -348,21 +357,28 @@ const ReasonStep = (
   if (!reasonsQuery.isError) return <ReasonSkeleton />;
 
   return (
-    <div className="flex flex-col items-start gap-3">
-      <p className="text-muted-foreground text-sm leading-relaxed">
-        {t("load_error")}
-      </p>
-      <Button
-        isLoading={reasonsQuery.isFetching}
-        onClick={async () => {
-          await reasonsQuery.refetch();
-        }}
-        size="sm"
-        variant="outline"
-      >
-        {t("retry")}
-      </Button>
-    </div>
+    <Empty className="border" role="alert">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <FlagIcon aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>{t("load_error.title")}</EmptyTitle>
+        <EmptyDescription>{t("load_error.desc")}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button
+          isLoading={reasonsQuery.isFetching}
+          onClick={async () => {
+            await reasonsQuery.refetch();
+          }}
+          size="sm"
+          variant="outline"
+        >
+          <RotateCwIcon aria-hidden="true" />
+          {t("retry")}
+        </Button>
+      </EmptyContent>
+    </Empty>
   );
 };
 

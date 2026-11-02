@@ -278,7 +278,9 @@ describe("UserSecurityPanel", () => {
     mount(panel, () => {});
 
     expect(
-      await screen.findByText("admin.user.show.security.passkeysLoadError"),
+      await screen.findByText(
+        "admin.user.show.security.passkeysLoadError.title",
+      ),
     ).not.toBeNull();
     expect(
       screen.getByText("admin.user.show.security.passwordLoadError"),

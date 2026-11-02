@@ -13,10 +13,21 @@ import {
   ContentFormRemainingFields,
   ContentFormSubmit,
 } from "./primitives";
+import { useContentFormSurface } from "./surface";
 
 const ContentFormSectionsFooter = () => {
   const t = useTranslations("core.global");
   const { setIsDirty } = useDialog();
+  const surface = useContentFormSurface();
+
+  if (surface === "sheet") {
+    return (
+      <div className="bg-popover sticky bottom-0 -mx-4 mt-auto flex items-center justify-end gap-2 border-t px-4 py-4 pb-[max(--spacing(4),env(safe-area-inset-bottom))]">
+        <DialogClose render={<Button variant="ghost">{t("cancel")}</Button>} />
+        <ContentFormSubmit />
+      </div>
+    );
+  }
 
   if (!setIsDirty) {
     return (
@@ -44,7 +55,7 @@ export const ContentFormSections = ({
   const hasRemaining = fieldNames.some(name => !placed.has(name));
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-4">
       {sections.map(section => (
         <ContentFormSection
           desc={section.desc}
