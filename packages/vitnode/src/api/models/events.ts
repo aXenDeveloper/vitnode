@@ -66,6 +66,15 @@ export interface VitNodeEvents {
     runId: number;
     userId: null | number;
   };
+  "content.access.updated": {
+    /** The actions whose rule this scope now sets, inherits or changed. */
+    changedActions: string[];
+    /** The container collection or scope content type id. */
+    family: string;
+    pluginId: string;
+    scopeId: string;
+    userId: null | number;
+  };
   "content.approval.approved": ContentApprovalEventPayload & {
     reviewerId: number;
   };

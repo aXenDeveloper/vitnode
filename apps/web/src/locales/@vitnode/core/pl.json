@@ -792,7 +792,6 @@
           "title": "Usunąć „{reason}”?",
           "desc": "Członkowie nie będą mogli go wybrać. Wysłane już zgłoszenia zostają, ale zamiast tytułu pokazują „Usunięty powód”.",
           "confirm": "Usuń powód",
-          "cancel": "Anuluj",
           "success": "Powód usunięty",
           "success_desc": "„{reason}” nie pojawia się już w oknie zgłoszenia.",
           "error": "Nie udało się usunąć powodu",
@@ -1322,7 +1321,10 @@
           "syncsBadge": "Synchronizuje przy logowaniu",
           "lastMethod": "Nie można usunąć ostatniego sposobu logowania",
           "lastMethodDesc": "Najpierw ustaw hasło lub dodaj inny sposób logowania.",
-          "loadError": "Nie udało się wczytać połączonych kont. Odśwież, aby spróbować ponownie.",
+          "loadError": {
+            "title": "Nie udało się wczytać połączonych kont",
+            "desc": "Coś poszło nie tak podczas pobierania połączonych kont tego użytkownika. Spróbuj ponownie."
+          },
           "empty": "Brak połączonych kont. Ten członek loguje się hasłem lub kluczem dostępu."
         },
         "devices": {
@@ -1344,7 +1346,10 @@
           "admincp": "AdminCP",
           "showAll": "Pokaż wszystkie ({count})",
           "showFewer": "Pokaż mniej",
-          "loadError": "Nie udało się wczytać urządzeń. Odśwież, aby spróbować ponownie.",
+          "loadError": {
+            "title": "Nie udało się wczytać urządzeń",
+            "desc": "Coś poszło nie tak podczas pobierania urządzeń tego użytkownika. Spróbuj ponownie."
+          },
           "empty": "Nie jest zalogowany na żadnym urządzeniu."
         },
         "security": {
@@ -1368,7 +1373,10 @@
           "passkeys": "Klucze dostępu",
           "passkeysEmpty": "Brak kluczy dostępu.",
           "passkeysDisabled": "Klucze dostępu są wyłączone w tej witrynie.",
-          "passkeysLoadError": "Nie udało się wczytać kluczy dostępu. Odśwież, aby spróbować ponownie.",
+          "passkeysLoadError": {
+            "title": "Nie udało się wczytać kluczy dostępu",
+            "desc": "Coś poszło nie tak podczas pobierania kluczy dostępu tego użytkownika. Spróbuj ponownie."
+          },
           "passkeySynced": "Synchronizowany",
           "passkeyDeviceOnly": "Tylko to urządzenie",
           "passkeyUsed": "Użyty",
@@ -1395,7 +1403,10 @@
           "empty": "W tej witrynie nie włączono żadnych typów powiadomień.",
           "saved": "Preferencja powiadomień zapisana",
           "savedDesc": "Dotyczy tylko użytkownika {name}.",
-          "loadError": "Nie udało się wczytać preferencji powiadomień. Odśwież, aby spróbować ponownie."
+          "loadError": {
+            "title": "Nie udało się wczytać preferencji powiadomień",
+            "desc": "Coś poszło nie tak podczas pobierania preferencji tego użytkownika. Spróbuj ponownie."
+          }
         }
       },
       "verify_email": {
@@ -1414,7 +1425,6 @@
         "remove": {
           "title": "Usuń wyjątek AI",
           "desc": "Użytkownik wróci do tego, na co pozwalają role.",
-          "cancel": "Anuluj",
           "confirm": "Usuń",
           "success": "Usunięto wyjątek",
           "success_desc": "Użytkownik znów korzysta z ustawień ról."
@@ -2099,7 +2109,6 @@
               "title": "E-mail",
               "stop_title": "Wyłączyć wszystkie e-maile z powiadomieniami?",
               "stop_desc": "Nie dostaniesz już e-maili z powiadomieniami ani podsumowań. Alerty bezpieczeństwa nadal przyjdą e-mailem - chronią Twoje konto. Lista powiadomień się nie zmienia.",
-              "stop_cancel": "Zostaw e-maile",
               "stop_submit": "Wyłącz wszystkie e-maile",
               "stopped_toast_desc": "Koniec e-maili z powiadomieniami. Alerty bezpieczeństwa nadal do Ciebie trafią.",
               "restored_toast_desc": "E-maile wróciły do poprzednich ustawień.",
@@ -2202,7 +2211,10 @@
             "charge": "{points} pkt",
             "no_charge": "Bez opłaty",
             "charging": "Naliczanie…",
-            "runs_error": "Nie udało się wczytać użyć tej funkcji.",
+            "runs_error": {
+              "title": "Nie udało się wczytać użyć",
+              "desc": "Coś poszło nie tak podczas pobierania użyć tej funkcji. Spróbuj ponownie."
+            },
             "retry": "Spróbuj ponownie"
           },
           "overview": {
@@ -2466,7 +2478,6 @@
     },
     "global": {
       "are_you_sure_want_to_leave_form": {
-        "cancel": "Anuluj",
         "confirm": "Tak, opuść",
         "desc": "Twoje zmiany nie zostaną zapisane.",
         "title": "Czy na pewno chcesz opuścić ten formularz?"
@@ -2918,7 +2929,10 @@
         "archived": "Powiadomienie zarchiwizowane",
         "unread": "Nieprzeczytane",
         "loading": "Wczytywanie powiadomień…",
-        "load_error": "Nie udało się wczytać powiadomień.",
+        "load_error": {
+          "title": "Nie udało się wczytać powiadomień",
+          "desc": "Sprawdź połączenie i spróbuj ponownie."
+        },
         "retry": "Spróbuj ponownie",
         "empty_title": "Jesteś na bieżąco",
         "empty_desc": "Tutaj pojawi się nowa aktywność.",
@@ -3240,7 +3254,10 @@
       "settings": "Ustawienia powiadomień",
       "loading": "Wczytywanie…",
       "load_more": "Wczytaj więcej",
-      "load_error": "Nie udało się wczytać powiadomień. Sprawdź połączenie i spróbuj ponownie.",
+      "load_error": {
+        "title": "Nie udało się wczytać powiadomień",
+        "desc": "Coś poszło nie tak podczas pobierania. Sprawdź połączenie i spróbuj ponownie."
+      },
       "retry": "Spróbuj ponownie",
       "empty_title": "Na razie pusto",
       "empty_unread_title": "Brak nieprzeczytanych powiadomień",

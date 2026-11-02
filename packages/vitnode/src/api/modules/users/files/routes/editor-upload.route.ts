@@ -25,8 +25,10 @@ export const uploadEditorFileRoute = buildRoute({
       throw new HTTPException(401, { message: "Unauthorized" });
     }
 
-    const { file } = c.req.valid("form");
+    const { contentType, file } = c.req.valid("form");
     const outcome = await storeEditorUpload(c, {
+      contentType,
+      session: "member",
       attachments: false,
       file,
       userId: user.id,

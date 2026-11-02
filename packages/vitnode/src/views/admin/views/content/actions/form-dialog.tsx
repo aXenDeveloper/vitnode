@@ -8,6 +8,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+
+import type { ContentFormSurface } from "../form/surface";
+
+import { ContentFormSurfaceContext } from "../form/surface";
 
 export const ContentFormDialog = ({
   children,
@@ -16,6 +26,7 @@ export const ContentFormDialog = ({
   onOpenChange,
   open,
   skeleton,
+  surface = "dialog",
   title,
 }: {
   children?: React.ReactElement;
@@ -25,18 +36,40 @@ export const ContentFormDialog = ({
   onOpenChange?: (open: boolean) => void;
   open?: boolean;
   skeleton: React.ReactNode;
+  /** A centred `dialog` (the default) or a `sheet` from the right. */
+  surface?: ContentFormSurface;
   title: React.ReactNode;
 }) => (
   <Dialog onOpenChange={onOpenChange} open={open}>
     {children ? <DialogTrigger render={children} /> : null}
 
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
+    <ContentFormSurfaceContext value={surface}>
+      {surface === "sheet" ? (
+        <SheetContent
+          className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-lg"
+          side="right"
+        >
+          <SheetHeader className="border-b pe-12">
+            <SheetTitle className="text-balance">{title}</SheetTitle>
+            <SheetDescription className="text-pretty">
+              {description}
+            </SheetDescription>
+          </SheetHeader>
 
-      <React.Suspense fallback={skeleton}>{form}</React.Suspense>
-    </DialogContent>
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4 pt-5 *:last:flex-1">
+            <React.Suspense fallback={skeleton}>{form}</React.Suspense>
+          </div>
+        </SheetContent>
+      ) : (
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <DialogDescription>{description}</DialogDescription>
+          </DialogHeader>
+
+          <React.Suspense fallback={skeleton}>{form}</React.Suspense>
+        </DialogContent>
+      )}
+    </ContentFormSurfaceContext>
   </Dialog>
 );

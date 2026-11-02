@@ -65,6 +65,9 @@ export const ContentAdminFormDialog = ({
           />
         </ContentFormHost>
       }
+      surface={
+        entry.definition.admin[action].mode === "sheet" ? "sheet" : "dialog"
+      }
       title={t("title", { name: singular })}
     >
       {React.isValidElement(children) ? children : undefined}

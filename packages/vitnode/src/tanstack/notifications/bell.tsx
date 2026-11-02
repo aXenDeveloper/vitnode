@@ -37,6 +37,7 @@ const SignedInBell = ({
       open={open}
       recent={{
         isError: recent.isError,
+        isFetching: recent.isFetching,
         isPending: recent.isPending,
         items: recent.data?.items,
       }}

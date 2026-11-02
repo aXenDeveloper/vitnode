@@ -95,7 +95,9 @@
           "parent_unavailable": "That comment can no longer be answered. Reply higher up in the thread.",
           "topic_unavailable": "This topic no longer accepts comments."
         }
-      }
+      },
+      "access_required": "Members only",
+      "members_only": "Restricted"
     },
     "topics": {
       "form": {

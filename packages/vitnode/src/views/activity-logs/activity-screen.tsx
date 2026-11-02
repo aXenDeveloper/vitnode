@@ -1,12 +1,14 @@
 import { useInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
-import { CircleAlertIcon } from "lucide-react";
+import { HistoryIcon, RotateCwIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { AuditStaffLog } from "@/lib/audit/const";
 
+import { Button } from "@/components/ui/button";
 import {
   Empty,
+  EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
@@ -67,6 +69,7 @@ export const ActivityScreen = ({
   staff,
 }: ActivityScreenProps) => {
   const t = useTranslations("core.activity_logs");
+  const tError = useTranslations("core.global.errors");
   const { data: options } = useSuspenseQuery(
     activityFilterOptionsQueryOptions(),
   );
@@ -108,11 +111,23 @@ export const ActivityScreen = ({
         <Empty className="border" role="alert">
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <CircleAlertIcon aria-hidden />
+              <HistoryIcon aria-hidden="true" />
             </EmptyMedia>
             <EmptyTitle>{t("error_title")}</EmptyTitle>
             <EmptyDescription>{t("error_desc")}</EmptyDescription>
           </EmptyHeader>
+          <EmptyContent>
+            <Button
+              isLoading={list.isFetching}
+              onClick={() => {
+                void list.refetch();
+              }}
+              variant="outline"
+            >
+              <RotateCwIcon aria-hidden="true" />
+              {tError("try_again")}
+            </Button>
+          </EmptyContent>
         </Empty>
       ) : null}
       {list.data ? (

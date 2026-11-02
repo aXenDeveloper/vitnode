@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { BellOffIcon, RotateCwIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -6,6 +7,15 @@ import { useTranslations } from "use-intl";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { NotificationPreferenceTypeView } from "@/views/notifications/notifications-query";
 
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { NotificationTypeItem } from "@/views/notifications/settings/type-item";
 
@@ -50,11 +60,12 @@ export const UserNotificationsPanel = ({
   user: AdminUserDetail;
 }) => {
   const t = useTranslations("admin.user.show.notifications");
+  const tError = useTranslations("core.global.errors");
   const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const key = { adminUserId, userId: user.id };
   const queryKey = adminUserNotificationsQueryKey(key);
-  const { data, isError, isPending } = useQuery(
+  const { data, isError, isFetching, isPending, refetch } = useQuery(
     adminUserNotificationsQueryOptions(key),
   );
   const [openId, setOpenId] = React.useState<null | string>(null);
@@ -100,9 +111,28 @@ export const UserNotificationsPanel = ({
 
   if (isError) {
     return (
-      <p className="text-muted-foreground text-sm leading-relaxed">
-        {t("loadError")}
-      </p>
+      <Empty className="md:p-6" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <BellOffIcon aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t("loadError.title")}</EmptyTitle>
+          <EmptyDescription>{t("loadError.desc")}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            isLoading={isFetching}
+            onClick={() => {
+              void refetch();
+            }}
+            size="sm"
+            variant="outline"
+          >
+            <RotateCwIcon aria-hidden="true" />
+            {tError("try_again")}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 

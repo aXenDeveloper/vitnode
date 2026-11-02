@@ -24,6 +24,13 @@ export const core_files = camelCase.table.withRLS(
       .varchar({ enum: ["automatic", "manual", "disabled"], length: 16 })
       .notNull()
       .default("automatic"),
+    // `private` objects live in the storage adapter's private store and are
+    // served only through an authorized route; `public` ones have a public
+    // URL anybody holding it can open.
+    visibility: t
+      .varchar({ enum: ["public", "private"], length: 16 })
+      .notNull()
+      .default("public"),
     createdAt: t.timestamp().notNull().defaultNow(),
   }),
   t => [

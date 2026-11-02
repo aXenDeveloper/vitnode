@@ -45,6 +45,42 @@ Pick one indicator per piece of pending work, by what is pending:
 - **Actions → the control's own loading state.** Submissions and mutations use `<Button isLoading>` (disables the button, keeps its width, sets `aria-busy`); `AutoForm` and `ConfirmAction` already do it. Track pending for every async handler (`isPending`, `useActionState`, or a `try/finally` flag) and disable sibling actions that would conflict, so nothing can be sent twice. No page-level overlay for an action.
 - **Accessibility and motion.** A loading region has `aria-busy` and one sr-only `role="status"` label (`PendingFrame` does both); decorative skeleton blocks are `aria-hidden` (`Skeleton` is by default) and a spinner inside labelled text is `aria-hidden`. Animate only `transform`/`opacity` and respect `prefers-reduced-motion` (`motion-safe:`/`motion-reduce:`).
 
+### Error feedback
+
+Pick the error view by what failed:
+
+- **First load failed → an empty state.** When a section, sheet, dialog, popover list or page has nothing to show because its query failed, render `Empty` from `@vitnode/core/components/ui/empty` with `role="alert"`, never a bare paragraph:
+
+```typescriptreact
+<Empty className="border" role="alert">
+  <EmptyHeader>
+    <EmptyMedia variant="icon">
+      <BellOffIcon aria-hidden="true" />
+    </EmptyMedia>
+    <EmptyTitle>{t("load_error.title")}</EmptyTitle>
+    <EmptyDescription>{t("load_error.desc")}</EmptyDescription>
+  </EmptyHeader>
+  <EmptyContent>
+    <Button
+      isLoading={query.isFetching}
+      onClick={() => void query.refetch()}
+      variant="outline"
+    >
+      <RotateCwIcon aria-hidden="true" />
+      {t("retry")}
+    </Button>
+  </EmptyContent>
+</Empty>
+```
+
+- The icon names the thing that failed (`BellOffIcon`, `MonitorSmartphoneIcon`, `MessageSquareWarningIcon`), not a generic warning.
+- Copy is a `title` + `desc` key pair: a short title ("Devices didn't load") and a description that says what to do. Reuse the namespace's `retry` key or `core.global.errors.try_again`.
+- The retry button refetches in place - never "refresh the page" - and shows `isLoading` while it runs. Drop it for a `403`, where retrying can't help, and say why in the description.
+- Match the surface: `className="border"` (or `rounded-lg border`) on a page or section, no border inside a `Card` or `Sheet` that already frames it, `p-6` in a popover.
+- **Refetch failed → keep the data.** A failed background refetch over data already on screen gets an `Alert variant="warning"` with a retry above the content, never an empty state that hides it.
+- **One field failed → an inline message.** A form field whose options did not load shows its error inside the field (`role="alert"`), so the rest of the form stays usable.
+- Small summary tiles that link to a full page (dashboard widgets, header pills) may keep a one-line message pointing there.
+
 ### Fetching APIs
 
 - `fetcher` from `@vitnode/core/tanstack/fetcher` is universal - one call, SSR and browser. Never hand-write `createIsomorphicFn().server(...).client(...)` for a fetch.

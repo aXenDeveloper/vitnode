@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   KeyRoundIcon,
   RefreshCwIcon,
+  RotateCwIcon,
   Settings2Icon,
   UnplugIcon,
 } from "lucide-react";
@@ -23,6 +24,14 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -271,10 +280,13 @@ export const UserConnectedAccountsCard = ({
 }) => {
   const t = useTranslations("admin.user.show.sso");
   const tSso = useTranslations("core.auth.settings.sso");
+  const tError = useTranslations("core.global.errors");
   const showFailure = useFailureToast();
   const queryClient = useQueryClient();
   const key = { adminUserId, userId: user.id };
-  const { data, isError, isPending } = useQuery(adminUserSsoQueryOptions(key));
+  const { data, isError, isFetching, isPending, refetch } = useQuery(
+    adminUserSsoQueryOptions(key),
+  );
 
   const refresh = async () => {
     await queryClient.invalidateQueries({
@@ -307,9 +319,28 @@ export const UserConnectedAccountsCard = ({
             <Skeleton className="h-12 w-full" />
           </div>
         ) : isError ? (
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            {t("loadError")}
-          </p>
+          <Empty className="md:p-6" role="alert">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <UnplugIcon aria-hidden="true" />
+              </EmptyMedia>
+              <EmptyTitle>{t("loadError.title")}</EmptyTitle>
+              <EmptyDescription>{t("loadError.desc")}</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button
+                isLoading={isFetching}
+                onClick={() => {
+                  void refetch();
+                }}
+                size="sm"
+                variant="outline"
+              >
+                <RotateCwIcon aria-hidden="true" />
+                {tError("try_again")}
+              </Button>
+            </EmptyContent>
+          </Empty>
         ) : connected.length === 0 ? (
           <p className="text-muted-foreground text-sm leading-relaxed">
             {t("empty")}

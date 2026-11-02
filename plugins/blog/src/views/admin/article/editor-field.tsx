@@ -21,7 +21,7 @@ export const BlogArticleEditorField = (props: ItemAutoFormComponentProps) => {
         disableScroll
         format="json"
         label={t("content.label")}
-        uploads={{ files: true, session: "admin" }}
+        uploads={{ contentType: "blog.post", files: true, session: "admin" }}
         {...props}
       />
     </React.Suspense>

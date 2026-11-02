@@ -4,11 +4,15 @@ import type { Context } from "hono";
 import { z } from "@hono/zod-openapi";
 import { inArray } from "drizzle-orm";
 
+import type { ContentAccessFlags } from "../access/policy";
 import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentModel } from "./model";
 
 import { buildRoute } from "../../api/lib/route";
+import { CONTENT_ACCESS_OPEN_FLAGS } from "../access/policy";
+import { contentRecordAccessFlags } from "../access/server/decide";
+import { contentAccessSourceOf } from "../access/server/source";
 import { contentTypeName } from "../admin/labels";
 import { CONTENT_PUBLIC_MAX_PAGE_SIZE } from "../const";
 import {
@@ -27,7 +31,7 @@ import {
 import { isContentBaseRowPublic } from "./visibility";
 
 /** What the current visitor may do with one record. */
-export interface ContentViewerPermissions {
+export interface ContentViewerPermissions extends ContentAccessFlags {
   /**
    * `POST /{id}/delete` will accept this visitor: a moderator with
    * `can_delete`, or the author when one of their roles allows deleting own
@@ -90,10 +94,29 @@ export const resolveContentViewerPermissions = async (
     .from(table)
     .where(inArray(columns.id, ids))) as Record<string, unknown>[];
   const user = c.get("user");
+  const accessModel = model as unknown as Parameters<
+    typeof contentRecordAccessFlags
+  >[1];
+  // Replies are written under their parent's `comment` rule, everything else
+  // under the scope's `read` rule.
+  const writeFlag: keyof ContentAccessFlags =
+    contentAccessSourceOf(c, accessModel)?.kind === "parent"
+      ? "canComment"
+      : "canRead";
+  const accessFlags = await contentRecordAccessFlags(
+    c,
+    accessModel,
+    rows.map(row => row.id as ContentId),
+  );
 
   const decided = await Promise.all(
     rows.map(async row => {
       const id = row.id as ContentId;
+      const access =
+        accessFlags.get(contentIdKey(id)) ?? CONTENT_ACCESS_OPEN_FLAGS;
+      // A record the viewer may not read is not described at all - not even
+      // to its author, whose access may have been taken away since.
+      if (!access.canRead) return null;
       const isPublic = isContentBaseRowPublic(row);
       const ownerId = contentPublicWriteOwnerOf(definition, row);
       const isOwner = user !== null && ownerId === user.id;
@@ -115,7 +138,7 @@ export const resolveContentViewerPermissions = async (
           policy: effectiveContentPolicy(definition, container),
           row,
         });
-        canEdit = decision.allowed;
+        canEdit = decision.allowed && access[writeFlag];
       }
 
       const isPublished = isContentBaseRowPublic({ ...row, hiddenAt: null });
@@ -131,6 +154,7 @@ export const resolveContentViewerPermissions = async (
       if (!isPublic && !canEdit && !canHide && !canDelete) return null;
 
       return {
+        ...access,
         canDelete,
         canEdit,
         canHide,
@@ -176,7 +200,7 @@ export const contentPermissionsRoute = <
     route: {
       method: "get",
       path: "/permissions",
-      description: `What the current visitor may do with each listed ${name}: edit, delete, hide or report it`,
+      description: `What the current visitor may do with each listed ${name}: read, comment on, download from, edit, delete, hide or report it`,
       request: {
         query: z.object({
           ids: z
@@ -192,10 +216,14 @@ export const contentPermissionsRoute = <
               schema: z.object({
                 items: z.array(
                   z.object({
+                    canComment: z.boolean(),
                     canDelete: z.boolean(),
+                    canDownloadAttachments: z.boolean(),
                     canEdit: z.boolean(),
                     canHide: z.boolean(),
+                    canRead: z.boolean(),
                     canReport: z.boolean(),
+                    canView: z.boolean(),
                     id: schemas.params.shape.id,
                   }),
                 ),

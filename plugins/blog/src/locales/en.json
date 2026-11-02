@@ -225,7 +225,8 @@
       "by": "By",
       "edited": "Edited",
       "reading_time": "{minutes} min read",
-      "on_this_page": "On this page"
+      "on_this_page": "On this page",
+      "access_required": "Members only"
     },
     "comments": {
       "article_author": "Author",

@@ -22,6 +22,7 @@ import type {
   CONTENT_VISIBILITY_FILTERS,
 } from "./const";
 import type { AnyContentContainerDefinition } from "./containers/types";
+import type { ResolvedContentTypeAccess } from "./define-access";
 import type { ContentFileDescriptor } from "./files";
 import type {
   ContentId,
@@ -811,9 +812,12 @@ export interface ContentAdminConfig<
    * whose whole point is that they are colour-coded.
    */
   colorField?: null | string;
-  /** Presentation of the create form. Defaults to `{ mode: "dialog" }`. */
+  /**
+   * Presentation of the create form: a centred `"dialog"`, a `"sheet"` sliding
+   * in from the right, or its own `"page"`. Defaults to `{ mode: "dialog" }`.
+   */
   create?: ContentAdminActionConfig;
-  /** Presentation of the edit form. Defaults to `{ mode: "dialog" }`. */
+  /** Presentation of the edit form, like `create`. Defaults to `{ mode: "dialog" }`. */
   edit?: ContentAdminActionConfig;
   /**
    * Which fields the generated form renders, in order, and how they are grouped.
@@ -2091,6 +2095,8 @@ export interface ContentTypeDefinition<
   TPublicPeople extends string = string,
   TPublicListField extends string = string,
 > {
+  /** Role-based access rules, or the disabled default when `access` is omitted. */
+  access: ResolvedContentTypeAccess;
   admin: ResolvedContentAdminConfig;
   /** Generated junction tables, child tables and the leaf-path mapping. */
   advanced: ResolvedContentAdvancedConfig;

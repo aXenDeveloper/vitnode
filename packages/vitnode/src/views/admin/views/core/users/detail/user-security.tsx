@@ -7,6 +7,7 @@ import {
   FingerprintIcon,
   LockIcon,
   PencilIcon,
+  RotateCwIcon,
   Trash2Icon,
 } from "lucide-react";
 import React from "react";
@@ -21,6 +22,14 @@ import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Tooltip,
@@ -268,6 +277,8 @@ const PasskeysSection = ({
   enabled,
   isCapabilityError,
   isLastMethod,
+  isRetrying,
+  onRetry,
   onSaved,
   query,
   user,
@@ -276,11 +287,14 @@ const PasskeysSection = ({
   enabled: boolean;
   isCapabilityError: boolean;
   isLastMethod: boolean;
+  isRetrying: boolean;
+  onRetry: () => void;
   onSaved: () => Promise<void>;
   query: UseQueryResult<AdminUserPasskey[]>;
   user: AdminUserDetail;
 }) => {
   const t = useTranslations("admin.user.show.security");
+  const tError = useTranslations("core.global.errors");
 
   return (
     <section className="flex flex-col gap-2">
@@ -290,9 +304,26 @@ const PasskeysSection = ({
           {t("passkeysDisabled")}
         </p>
       ) : isCapabilityError || query.isError ? (
-        <p className="text-muted-foreground text-sm">
-          {t("passkeysLoadError")}
-        </p>
+        <Empty className="md:p-6" role="alert">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <FingerprintIcon aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle>{t("passkeysLoadError.title")}</EmptyTitle>
+            <EmptyDescription>{t("passkeysLoadError.desc")}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              isLoading={isRetrying}
+              onClick={onRetry}
+              size="sm"
+              variant="outline"
+            >
+              <RotateCwIcon aria-hidden="true" />
+              {tError("try_again")}
+            </Button>
+          </EmptyContent>
+        </Empty>
       ) : query.isPending ? (
         <div className="flex flex-col gap-3">
           <Skeleton className="h-10 w-full" />
@@ -367,6 +398,10 @@ export const UserSecurityPanel = ({
           enabled={!sso.isSuccess || passkeysEnabled}
           isCapabilityError={sso.isError}
           isLastMethod={isLastMethod}
+          isRetrying={sso.isFetching || passkeys.isFetching}
+          onRetry={() => {
+            void (sso.isError ? sso.refetch() : passkeys.refetch());
+          }}
           onSaved={refresh}
           query={passkeys}
           user={user}

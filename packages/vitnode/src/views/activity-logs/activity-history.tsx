@@ -1,18 +1,31 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { HistoryIcon } from "lucide-react";
+import { ChevronRightIcon, HistoryIcon, RotateCwIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 
 import {
   activityChangedFields,
   activityChangeRows,
   ActivityChanges,
 } from "./activity-changes";
+import { ActivityHistoryPending } from "./activity-history-pending";
 import {
   ActivityActor,
   ActivityAreaBadge,
@@ -28,27 +41,6 @@ export interface ActivityHistoryProps {
   /** The recorded target type - a content type id such as `blog.category` for content. */
   targetType: string;
 }
-
-const HistoryPending = () => {
-  const t = useTranslations("core.activity_logs");
-
-  return (
-    <div aria-busy className="flex flex-col gap-4">
-      <span className="sr-only" role="status">
-        {t("loading")}
-      </span>
-      {Array.from({ length: 4 }, (_, index) => (
-        <div className="flex gap-3" key={index}>
-          <Skeleton className="size-8 shrink-0 rounded-full" />
-          <div className="flex flex-1 flex-col gap-2">
-            <Skeleton className="h-4 w-48" />
-            <Skeleton className="h-3 w-32" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 /**
  * The activity history of one resource, newest first - who created, changed,
@@ -70,6 +62,7 @@ export const ActivityHistory = ({
   targetType,
 }: ActivityHistoryProps) => {
   const t = useTranslations("core.activity_logs");
+  const tError = useTranslations("core.global.errors");
   const labels = useActivityLabels();
   const query = useInfiniteQuery(
     activityEntityQueryOptions({
@@ -83,12 +76,31 @@ export const ActivityHistory = ({
     [query.data],
   );
 
-  if (query.isPending) return <HistoryPending />;
+  if (query.isPending) return <ActivityHistoryPending label={t("loading")} />;
   if (query.isError) {
     return (
-      <p className="text-muted-foreground text-sm leading-relaxed" role="alert">
-        {t("error_desc")}
-      </p>
+      <Empty className="border" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <HistoryIcon aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t("error_title")}</EmptyTitle>
+          <EmptyDescription>{t("error_desc")}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            isLoading={query.isFetching}
+            onClick={() => {
+              void query.refetch();
+            }}
+            size="sm"
+            variant="outline"
+          >
+            <RotateCwIcon aria-hidden="true" />
+            {tError("try_again")}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
   if (entries.length === 0) {
@@ -139,14 +151,23 @@ export const ActivityHistory = ({
                   <DateFormat date={entry.createdAt} />
                 </div>
                 {rows.length > 0 ? (
-                  <details className="group">
-                    <summary className="text-muted-foreground hover:text-foreground cursor-pointer text-xs">
+                  <Collapsible>
+                    <CollapsibleTrigger className="group/changes text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 -mx-1 inline-flex items-center gap-1 rounded-sm px-1 py-0.5 text-xs transition-colors duration-150 outline-none focus-visible:ring-3">
+                      <ChevronRightIcon
+                        aria-hidden="true"
+                        className="ease-fluid size-3.5 transition-transform duration-200 group-data-panel-open/changes:rotate-90 motion-reduce:transition-none"
+                      />
                       {t("detail.changes")}
-                    </summary>
-                    <div className="pt-2">
-                      <ActivityChanges rows={rows} />
-                    </div>
-                  </details>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent
+                      className="group/changes-panel ease-fluid h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 data-ending-style:h-0 data-ending-style:opacity-0 data-ending-style:duration-150 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-none"
+                      keepMounted
+                    >
+                      <div className="ease-fluid pt-2 transition-transform duration-200 group-data-ending-style/changes-panel:-translate-y-1 group-data-ending-style/changes-panel:duration-150 group-data-starting-style/changes-panel:-translate-y-1 motion-reduce:transition-none">
+                        <ActivityChanges rows={rows} />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
                 ) : null}
                 {rows.length === 0 && changedFields.length > 0 ? (
                   <ul className="flex flex-wrap gap-1">

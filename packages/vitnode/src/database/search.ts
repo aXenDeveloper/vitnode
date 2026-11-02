@@ -101,6 +101,16 @@ export const core_search_index = camelCase.table.withRLS(
       ),
     containerType: t.varchar({ length: 100 }),
     containerId: t.integer(),
+    // The access scopes the item was filed in when it was indexed, as
+    // `family:scopeId` (`forum.forums:12`, `blog.category:3`). A query keeps a
+    // row only when every scope is one the viewer may read; the content
+    // tables are still checked before a result is returned, so a stale row
+    // never grants anything.
+    accessScopes: t
+      .text()
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
     url: t.text(),
     isPublic: t.boolean().notNull().default(true),
     isHidden: t.boolean().notNull().default(false),
@@ -130,6 +140,7 @@ export const core_search_index = camelCase.table.withRLS(
     index("core_search_index_is_public_idx").on(t.isPublic),
     index("core_search_index_image_id_idx").on(t.imageId),
     index("core_search_index_container_idx").on(t.containerType, t.containerId),
+    index("core_search_index_access_scopes_idx").using("gin", t.accessScopes),
   ],
 );
 

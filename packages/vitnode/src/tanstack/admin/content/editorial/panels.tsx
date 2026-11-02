@@ -116,7 +116,8 @@ const DeliveryPanel = ({
 
 /**
  * The record's audit trail - for every content type, editorial or not. Its own
- * messages, because the content screen does not load the Activity Logs ones.
+ * messages, because the content screen does not load the Activity Logs ones;
+ * they load inside the sheet, behind its skeleton.
  */
 const ActivityPanel = ({
   entry,
@@ -126,23 +127,26 @@ const ActivityPanel = ({
   open,
   singular,
 }: ContentRowPanelProps) => (
-  <RouteMessages
-    namespaces={[
-      "core.activity_logs",
-      "core.global",
-      `${entry.pluginId}.content`,
-    ]}
-  >
-    <ActivityContentPanel
-      contentTypeId={entry.definition.id}
-      finalFocus={finalFocus}
-      id={itemId}
-      onOpenChange={onOpenChange}
-      open={open}
-      pluginId={entry.pluginId}
-      singular={singular}
-    />
-  </RouteMessages>
+  <ActivityContentPanel
+    contentTypeId={entry.definition.id}
+    finalFocus={finalFocus}
+    id={itemId}
+    onOpenChange={onOpenChange}
+    open={open}
+    pluginId={entry.pluginId}
+    singular={singular}
+    wrapBody={body => (
+      <RouteMessages
+        namespaces={[
+          "core.activity_logs",
+          "core.global",
+          `${entry.pluginId}.content`,
+        ]}
+      >
+        {body}
+      </RouteMessages>
+    )}
+  />
 );
 
 export const contentEditorialRowPanels = {

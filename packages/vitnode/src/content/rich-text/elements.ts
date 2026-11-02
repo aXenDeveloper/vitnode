@@ -296,6 +296,27 @@ const imageElement = (node: RichTextNode): null | RichTextElement => {
 };
 
 const attachmentElement = (node: RichTextNode): null | RichTextElement => {
+  // Stripped by the server for a reader who may not download it: say only
+  // that there is one.
+  if (node.attrs?.restricted === true) {
+    return {
+      attrs: { class: "tiptap-attachment", "data-restricted": "true" },
+      children: [
+        {
+          attrs: { class: "tiptap-attachment-name" },
+          children: ["An attachment is available."],
+          tag: "span",
+        },
+        {
+          attrs: { class: "tiptap-attachment-meta" },
+          children: ["You do not have permission to download it."],
+          tag: "span",
+        },
+      ],
+      tag: "span",
+    };
+  }
+
   const href = sanitizeRichTextSrc(node.attrs?.src);
   if (href === null) return null;
 

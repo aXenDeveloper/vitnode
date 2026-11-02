@@ -262,6 +262,13 @@ outside the API's own base path strips nothing and every file answers `404`.
   the table (or `deleteFile`) so the row and the bytes go together.
 </Callout>
 
+<Callout type="info" title="Private files live outside `public/uploads`">
+  Files of [protected attachments](/docs/content-engine/access-attachments) go
+  to `storage/private`, also under `process.cwd()`. Nothing serves that folder;
+  VitNode streams its files through a route that checks the reader. Never mount
+  it as static files, and back it up with `public/uploads`.
+</Callout>
+
 <Callout type="info" title="Back it up like a database">
   `public/uploads` is state. A container that recreates its filesystem on deploy
   loses every upload, and no `core_files` row can bring the bytes back. Mount a

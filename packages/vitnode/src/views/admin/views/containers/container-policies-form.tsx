@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { RotateCwIcon } from "lucide-react";
+import { RotateCwIcon, ShieldAlertIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -23,6 +23,14 @@ import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number
 import { AutoFormSelect } from "@/components/form/fields/select";
 import { Button } from "@/components/ui/button";
 import { useDialog } from "@/components/ui/dialog";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
 import { contentNouns } from "@/content/admin/labels";
 import {
@@ -349,23 +357,27 @@ export const ContentContainerPoliciesFormContent = ({
 
   if (!query.data) {
     return (
-      <div
-        className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center"
-        role="alert"
-      >
-        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-          {t("loadError")}
-        </p>
-        <Button
-          onClick={() => {
-            void query.refetch();
-          }}
-          variant="outline"
-        >
-          <RotateCwIcon />
-          {t("retry")}
-        </Button>
-      </div>
+      <Empty role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <ShieldAlertIcon aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t("loadError.title")}</EmptyTitle>
+          <EmptyDescription>{t("loadError.desc")}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            isLoading={query.isFetching}
+            onClick={() => {
+              void query.refetch();
+            }}
+            variant="outline"
+          >
+            <RotateCwIcon aria-hidden="true" />
+            {t("retry")}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 

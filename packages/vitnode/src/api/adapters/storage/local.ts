@@ -1,5 +1,7 @@
+import { createReadStream } from "node:fs";
 import { mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { Readable } from "node:stream";
 
 import type {
   StorageApiPlugin,
@@ -16,7 +18,9 @@ import { CONFIG } from "@/lib/config";
  * ephemeral filesystem.
  *
  * Files are served only once the app mounts `serveStatic` from the adapter's
- * `static` descriptor in its server entry. Server-only.
+ * `static` descriptor in its server entry. Private files (protected
+ * attachments) go to `storage/private`, which no static mount reaches - keep
+ * it that way. Server-only.
  *
  * @example
  * ```ts
@@ -34,6 +38,9 @@ export const LocalStorageAdapter = ({
   /** The URL path files are served under. Defaults to `/api/uploads`. */
   publicPath?: string;
 } = {}): StorageApiPlugin => {
+  // Outside `public/` on purpose: nothing serves this folder statically.
+  const resolvePrivatePath = (key: string): string =>
+    join(process.cwd(), "storage", "private", key);
   // Static path segments (not a variable) so Next's file tracer can scope the
   // trace to `public/uploads` instead of the whole project.
   const resolvePath = (key: string): string =>
@@ -62,6 +69,33 @@ export const LocalStorageAdapter = ({
       } catch {
         return null;
       }
+    },
+    private: {
+      delete: async (key: string): Promise<void> => {
+        await rm(resolvePrivatePath(key), { force: true });
+      },
+      read: async (key: string) => {
+        const filePath = resolvePrivatePath(key);
+        try {
+          const { size } = await stat(filePath);
+
+          return {
+            body: Readable.toWeb(
+              createReadStream(filePath),
+            ) as ReadableStream<Uint8Array>,
+            size,
+          };
+        } catch {
+          return null;
+        }
+      },
+      upload: async ({ body, key }: StorageUploadArgs) => {
+        const filePath = resolvePrivatePath(key);
+        await mkdir(dirname(filePath), { recursive: true });
+        await writeFile(filePath, body);
+
+        return { key };
+      },
     },
     static: {
       mountPath,

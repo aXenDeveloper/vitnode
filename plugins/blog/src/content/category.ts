@@ -5,7 +5,7 @@ import { defineContentType, field } from "@vitnode/core/content";
  * name, with `en` as the fallback translation, and a shared colour.
  *
  * Deliberately minimal - no publication lifecycle and no `publicApi`, so
- * categories are managed only in the AdminCP (in dialogs) and reach readers
+ * categories are managed only in the AdminCP (in sheets) and reach readers
  * only through an article's `categoryId`.
  *
  * Browser-safe: the server model is `categoryContent` in
@@ -14,6 +14,11 @@ import { defineContentType, field } from "@vitnode/core/content";
 export const blogCategoryContentType = defineContentType({
   id: "blog.category",
   tableName: "blog_categories",
+
+  // Every category is an access scope: who may see it, read its articles,
+  // comment on them and download their attachments. All open to everyone
+  // until an administrator restricts a category.
+  access: { scope: true },
 
   localization: {
     // The language every category is first written in. `en` is the locale
@@ -44,10 +49,10 @@ export const blogCategoryContentType = defineContentType({
     path: "blog/categories",
     colorField: "color",
     titleField: "name",
-    // Dialogs, deliberately: a name and a colour do not need a page, and this is
+    // A sheet, deliberately: a name and a colour do not need a page, and this is
     // the half of the blog that proves page mode is opt-in.
-    create: { mode: "dialog" },
-    edit: { mode: "dialog" },
+    create: { mode: "sheet" },
+    edit: { mode: "sheet" },
     list: {
       // `name` first, because it is what a category *is*. It comes off the
       // translation the list resolved for the reader's own language, so there is

@@ -76,6 +76,14 @@ export const contentDeliverySitemapTag = (
   locale?: string,
 ): string => tag(contentTypeId, "sitemap", ...localeParts(locale));
 
+/**
+ * Every public read that an access scope family decides: the family's own
+ * scopes and every record filed in them. Expired whenever the family's rules
+ * or its tree change.
+ */
+export const contentAccessTag = (familyId: string): string =>
+  tag(familyId, "access");
+
 /** Every public read of a content container definition's containers. */
 export const contentContainerTag = (definitionId: string): string =>
   tag(definitionId, "containers");

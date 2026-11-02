@@ -11,6 +11,7 @@ import {
 } from "@/api/lib/with-pagination";
 import { core_files } from "@/database/files";
 import { parseImageDimensions } from "@/lib/api/upload";
+import { CONFIG } from "@/lib/config";
 
 export const listUserFilesRoute = buildRoute({
   route: {
@@ -82,6 +83,7 @@ export const listUserFilesRoute = buildRoute({
             id: core_files.id,
             name: core_files.name,
             key: core_files.key,
+            visibility: core_files.visibility,
             folder: core_files.folder,
             mimeType: core_files.mimeType,
             size: core_files.size,
@@ -104,9 +106,15 @@ export const listUserFilesRoute = buildRoute({
 
     return c.json({
       ...data,
-      edges: data.edges.map(({ key, ...file }) => ({
+      edges: data.edges.map(({ key, visibility, ...file }) => ({
         ...file,
-        url: hasAdapter ? storage.getUrl(key) : null,
+        // A private file has no public address: the list shows it through the
+        // session's own download route.
+        url: hasAdapter
+          ? visibility === "private"
+            ? `${CONFIG.api.origin.replace(/\/$/, "")}/api/@vitnode/core/users/files/${file.id}/download?inline=true`
+            : storage.getUrl(key)
+          : null,
         dimensions: parseImageDimensions(file.metadata),
       })),
     });

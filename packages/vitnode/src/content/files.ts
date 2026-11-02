@@ -36,6 +36,12 @@ export interface ContentFileDescriptor {
   mimeType: null | string;
   /** The original file name. */
   name: string;
+  /**
+   * `true` when the reader may not download this attachment: `name`, `size`,
+   * `mimeType` and `url` are then empty, and a page says only that there is
+   * one.
+   */
+  restricted?: true;
   /** Bytes. */
   size: number;
   /** Where the browser downloads or displays the file from. */
@@ -51,6 +57,7 @@ export const zodContentFileDescriptor = z.strictObject({
   id: z.number().int().positive(),
   mimeType: z.string().nullable(),
   name: z.string(),
+  restricted: z.literal(true).optional(),
   size: z.number().int().nonnegative(),
   url: z.string(),
   width: z.number().int().positive().optional(),

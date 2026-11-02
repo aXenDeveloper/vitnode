@@ -4,6 +4,7 @@ import {
   CONTENT_LOCALE_MAX_LENGTH,
   contentPublicListTag,
 } from "@vitnode/core/content";
+import { createContentAccess } from "@vitnode/core/content/server";
 import { HTTPException } from "hono/http-exception";
 
 import { buildModule, buildRoute } from "@/api/builders";
@@ -45,6 +46,12 @@ const postSlugRoute = buildRoute({
 
     const post = await service.findById(id, { locale });
     if (!post) throw new HTTPException(404, { message: "Article not found." });
+
+    if (!(await createContentAccess(c).isOpen(postContent))) {
+      return c.json({ id: post.id, slug: post.friendlyUrl }, 200, {
+        "Cache-Control": "private, no-store",
+      });
+    }
 
     setPageCacheTags(c, [contentPublicListTag(postContent.definition.id)]);
 

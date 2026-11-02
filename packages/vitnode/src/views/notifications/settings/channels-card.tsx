@@ -3,20 +3,14 @@ import {
   InboxIcon,
   type LucideIcon,
   MailIcon,
+  MailXIcon,
   SmartphoneIcon,
 } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import {
-  AlertDialog,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -239,37 +233,19 @@ export const NotificationChannelsGroup = ({
       </ul>
       <FrameFooter>{t("channels.push.soon")}</FrameFooter>
 
-      <AlertDialog onOpenChange={setConfirmOpen} open={confirmOpen}>
-        <AlertDialogContent finalFocus={emailSwitchRef}>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {t("channels.email.stop_title")}
-            </AlertDialogTitle>
-            <AlertDialogDescription className="leading-relaxed text-pretty">
-              {t("channels.email.stop_desc")}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <Button
-              onClick={() => {
-                setConfirmOpen(false);
-              }}
-              variant="outline"
-            >
-              {t("channels.email.stop_cancel")}
-            </Button>
-            <Button
-              onClick={() => {
-                setConfirmOpen(false);
-                onEmailChange(false);
-              }}
-              variant="destructive"
-            >
-              {t("channels.email.stop_submit")}
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmActionAlertDialog
+        description={t("channels.email.stop_desc")}
+        finalFocus={emailSwitchRef}
+        icon={<MailXIcon />}
+        onOpenChange={setConfirmOpen}
+        onSubmit={({ onClose }) => {
+          onClose();
+          onEmailChange(false);
+        }}
+        open={confirmOpen}
+        textSubmit={t("channels.email.stop_submit")}
+        title={t("channels.email.stop_title")}
+      />
     </Frame>
   );
 };

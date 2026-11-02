@@ -89,7 +89,7 @@ Each action asks for confirmation and then sends one request per record to the s
 
 ## Duplicate and hide records
 
-The **More actions** menu of each row collects the less frequent actions. Two of them come from options in the definition:
+The **More actions** menu of each row collects the less frequent actions. On a type whose records have [access rules](/docs/content-engine/access-categories), such as blog categories, **Access** stays a button beside **Edit**, and **Activity** and **Delete** move into the menu. Two of the menu's actions come from options in the definition:
 
 - **Duplicate** appears with [`duplication`](/docs/content-engine/duplicate-content), for staff with `can_create` and `can_view`. It makes a draft copy and opens it.
 - **Hide** or **Unhide** appears with [`visibility`](/docs/content-engine/content-visibility), for staff with `can_hide`. A hidden record gets an eye-off icon before its title, with a tooltip such as **Article hidden**, and the toolbar gets a **Visibility** filter with **All**, **Visible** and **Hidden**.
@@ -157,7 +157,7 @@ The heading and an optional description come from the plugin's locale file, at `
 
 ## Open forms on their own page
 
-Forms open in a dialog. A long form reads better on a page, which is what the blog does for its articles:
+Forms open in a dialog. A short form, like the blog's categories (a name and a color), can slide in from the right instead with `create: { mode: "sheet" }` and `edit: { mode: "sheet" }`, so the list stays in view beside it. A long form reads better on a page, which is what the blog does for its articles:
 
 ```ts title="plugins/blog/src/content/post.ts"
 admin: {

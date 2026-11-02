@@ -258,7 +258,9 @@ describe("AiUsageContent", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Generate excerpt/ }));
 
-    expect(await screen.findByText(`${FEATURES}.runs_error`)).toBeTruthy();
+    expect(
+      await screen.findByText(`${FEATURES}.runs_error.title`),
+    ).toBeTruthy();
     expect(screen.queryByText(`${FEATURES}.runs_empty`)).toBeNull();
   });
 });

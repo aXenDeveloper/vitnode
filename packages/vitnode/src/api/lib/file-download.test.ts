@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvVitNode } from "../middlewares/global.middleware";
 
+import { StorageModel } from "../models/storage";
 import { attachStoredFile } from "./file-download";
 
 const STORAGE_URL = "https://storage.example/bucket/key-1";
@@ -13,16 +14,19 @@ const getUrl = vi.fn(() => STORAGE_URL);
 /** The parts of the request context this helper is allowed to touch. */
 const context = () => {
   const headers = new Headers();
+  const c = {
+    body: (body: BodyInit, status: number) =>
+      new Response(body, { headers, status }),
+    get: (key: string) => {
+      if (key === "core") return { storage: { adapter: { getUrl } } };
+      if (key === "storage") return new StorageModel(c);
 
-  return {
-    context: {
-      body: (body: BodyInit, status: number) =>
-        new Response(body, { headers, status }),
-      get: (key: string) => (key === "storage" ? { getUrl } : undefined),
-      header: (name: string, value: string) => headers.set(name, value),
-    } as unknown as Context<EnvVitNode>,
-    headers,
-  };
+      return undefined;
+    },
+    header: (name: string, value: string) => headers.set(name, value),
+  } as unknown as Context<EnvVitNode>;
+
+  return { context: c, headers };
 };
 
 const upstreamFetch = vi.fn<(url: string) => Promise<Response>>();

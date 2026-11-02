@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { HistoryIcon, RotateCwIcon } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "use-intl";
 
 import { AiActionIcon } from "@/components/ai/action-icon";
@@ -12,6 +13,14 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import {
   Frame,
   FrameHeader,
@@ -231,18 +240,28 @@ const AiFeatureRunsContent = ({
 
   if (runs.isError) {
     return (
-      <div className="flex flex-wrap items-center gap-3">
-        <p className="text-muted-foreground">{t("runs_error")}</p>
-        <Button
-          onClick={() => {
-            void runs.refetch();
-          }}
-          size="sm"
-          variant="outline"
-        >
-          {t("retry")}
-        </Button>
-      </div>
+      <Empty className="border" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <HistoryIcon aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t("runs_error.title")}</EmptyTitle>
+          <EmptyDescription>{t("runs_error.desc")}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            isLoading={runs.isFetching}
+            onClick={() => {
+              void runs.refetch();
+            }}
+            size="sm"
+            variant="outline"
+          >
+            <RotateCwIcon aria-hidden="true" />
+            {t("retry")}
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
 

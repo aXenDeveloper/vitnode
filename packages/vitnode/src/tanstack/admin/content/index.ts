@@ -103,7 +103,9 @@ export {
   CONTENT_LIST_ACTION_IDS,
   CONTENT_ROW_ACTION_IDS,
   CONTENT_ROW_INLINE_ACTION_LIMIT,
+  CONTENT_ROW_PINNED_ACTION_IDS,
   contentRowActionIds,
+  contentRowActionLayout,
   contentRowActionsAreInline,
   isDestructiveContentRowAction,
 } from "@/views/admin/views/content/actions/row-actions-model";

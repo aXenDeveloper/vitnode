@@ -192,16 +192,13 @@ describe("removeUserIdentityQueries", () => {
   });
 
   /**
-   * A list of prefixes, never `queryClient.clear()`.
-   *
-   * The session is the one worth spelling out: a sign-out *writes* the anonymous
-   * session and then invalidates it, so an entry has to be there to write. The
-   * messages, the middleware config and the public feed are the same data for
-   * every visitor and re-fetching them because somebody signed in is the blunt
-   * version of this. The AdminCP entry is not this function's either - it has
-   * its own list, and the two are called side by side rather than merged.
+   * Never `queryClient.clear()`: a sign-out *writes* the anonymous session and
+   * then invalidates it, so an entry has to be there to write. The messages and
+   * the middleware config say the same thing to every visitor. Everything else
+   * - search, plugin content, AdminCP screens - may depend on whose roles asked
+   * once access rules restrict anything, so it goes.
    */
-  it("leaves the session, the public caches and the AdminCP's own list", () => {
+  it("keeps only the session, translations and the middleware config", () => {
     const queryClient = seeded();
 
     removeUserIdentityQueries(queryClient);
@@ -209,8 +206,8 @@ describe("removeUserIdentityQueries", () => {
     expect(held(queryClient, SESSION)).toBe(true);
     expect(held(queryClient, INTL)).toBe(true);
     expect(held(queryClient, MIDDLEWARE)).toBe(true);
-    expect(held(queryClient, PUBLIC_FEED)).toBe(true);
-    expect(held(queryClient, ADMIN_SCREEN)).toBe(true);
-    expect(held(queryClient, PLUGIN)).toBe(true);
+    expect(held(queryClient, PUBLIC_FEED)).toBe(false);
+    expect(held(queryClient, ADMIN_SCREEN)).toBe(false);
+    expect(held(queryClient, PLUGIN)).toBe(false);
   });
 });

@@ -1,3 +1,4 @@
+import type { ContentAccessInput } from "./define-access";
 import type { ContentIdStrategy } from "./ids";
 import type {
   AnyContentTypeDefinition,
@@ -58,6 +59,7 @@ import {
   CONTENT_IDENTIFIER_MAX_LENGTH,
   CONTENT_TABLE_NAME_PATTERN,
 } from "./const";
+import { resolveContentTypeAccess } from "./define-access";
 import { resolveAdmin } from "./define-admin";
 import { resolveEditorial } from "./define-editorial";
 import {
@@ -301,6 +303,7 @@ export const defineContentType = <
   TPublicPeople extends ContentPublicPersonField<TFields> = never,
   TPublicListField extends TPublicField = never,
 >({
+  access,
   admin = {},
   audit,
   delivery,
@@ -321,6 +324,15 @@ export const defineContentType = <
   thread,
   visibility,
 }: {
+  /**
+   * Role-based access rules. `{ scope: true }` makes every record of this type
+   * an access scope with its own view, read, comment and download rules (a
+   * blog category); `{ from: "categoryId" }` files records under the scopes a
+   * relation points at, and a record is readable only when every one of them
+   * allows it. Records that answer a parent (thread replies, comments) inherit
+   * their parent's access without any option. Omit it and nothing changes.
+   */
+  access?: ContentAccessInput<keyof TFields & string> | false;
   /**
    * How the generated AdminCP screens present the content type: list columns,
    * form layout, dialog or page mode, title field, URL path and the staff
@@ -762,6 +774,7 @@ export const defineContentType = <
     ContentPublicPeopleResolved<TPublicPeople>,
     ContentPublicListFieldsResolved<TPublicListField>
   > = {
+    access: resolveContentTypeAccess(id, fieldMap, access),
     admin: resolvedAdmin,
     advanced: resolvedAdvanced,
     audit: resolveContentAudit(id, audit, fieldNames),
