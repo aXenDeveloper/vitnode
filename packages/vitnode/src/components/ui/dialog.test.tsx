@@ -65,9 +65,9 @@ describe("Dialog with unsaved changes", () => {
     );
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.queryByRole("dialog", { hidden: true })).toBeNull();
+      expect(screen.queryByText("Unsaved form")).toBeNull();
     });
-    expect(screen.queryByText("Unsaved form")).toBeNull();
     await waitFor(() => {
       expect(document.activeElement).toBe(
         screen.getByRole("button", { name: "Open" }),
