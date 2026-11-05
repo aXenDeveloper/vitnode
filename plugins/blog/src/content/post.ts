@@ -44,7 +44,7 @@ export const blogPostContentType = defineContentType({
 
   editorial: {
     revisions: { retention: 20 },
-    preview: { expiresInMinutes: 30 },
+    preview: { expiresInMinutes: 30, pathTemplate: "/blog/preview/{token}" },
     scheduling: true,
   },
   liveEditing: true,

@@ -10,6 +10,7 @@ import {
   getContentRevisionInBrowser,
   listContentRevisionsInBrowser,
   listContentSchedulesInBrowser,
+  loadContentLivePreviewPeopleInBrowser,
   readContentDeliveryInBrowser,
   restoreContentRevisionInBrowser,
   scheduleContentInBrowser,
@@ -36,8 +37,12 @@ export const contentEditorialTransport = (
       scheduleId,
     ),
 
-  createPreview: async (contentTypeId, itemId) =>
-    await createContentPreviewInBrowser(targetFor(contentTypeId), itemId),
+  createPreview: async (contentTypeId, itemId, locale) =>
+    await createContentPreviewInBrowser(
+      targetFor(contentTypeId),
+      itemId,
+      locale,
+    ),
 
   getRevision: async (contentTypeId, itemId, revisionId) =>
     await getContentRevisionInBrowser(
@@ -45,6 +50,9 @@ export const contentEditorialTransport = (
       itemId,
       revisionId,
     ),
+
+  livePreviewPeople: async (contentTypeId, ids) =>
+    await loadContentLivePreviewPeopleInBrowser(targetFor(contentTypeId), ids),
 
   listRevisions: async (contentTypeId, itemId, cursor) =>
     await listContentRevisionsInBrowser(

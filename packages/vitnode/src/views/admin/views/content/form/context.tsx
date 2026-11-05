@@ -1,7 +1,10 @@
 import React from "react";
 
 import type { PageTitleBack } from "@/components/ui/page-title";
-import type { ContentFileFieldValue } from "@/content/files";
+import type {
+  ContentFileDescriptor,
+  ContentFileFieldValue,
+} from "@/content/files";
 import type { ContentId } from "@/content/ids";
 import type { ContentVisibilityAction } from "@/content/visibility";
 
@@ -59,6 +62,10 @@ export interface ContentFormContextValue {
   skeleton?: boolean;
   title?: string;
   translations?: readonly ContentFormTranslationMeta[];
+  /** Files uploaded since the form opened, saved or not, oldest first. */
+  uploadedFiles?: readonly ContentFileDescriptor[];
+  /** The `field.user()` fields, by name. */
+  userFieldNames?: string[];
   visibility?: {
     canHide: boolean;
     enabled: boolean;

@@ -5,6 +5,7 @@ icon: Eye
 ---
 
 import { ImgDocs } from "@/components/fumadocs/img";
+import livePreview from "./editorial-live-preview.webp";
 import previewLink from "./editorial-preview-link.webp";
 
 A preview link lets a reviewer read a draft without signing in. It needs [`editorial`](/docs/content-engine/editorial) and a [public API](/docs/content-engine/public-api), and a page that knows how to load the draft. The examples use `newsroom.story` from the newsroom plugin.
@@ -34,7 +35,7 @@ In the AdminCP, open **More actions** and choose **Preview**. Creating a link ne
   alt="Preview link dialog with a signed link to the Spring menu launches Monday story at /stories/spring-menu-launches-monday, a copy button, an Open button and an Expires in 30 minutes note"
 />
 
-The link is HMAC-signed, expires after `expiresInMinutes` and cannot be revoked early, so treat it like a password. It is pinned to the last saved version, so it shows what **Save** committed, not unsaved [live editing](/docs/content-engine/live-editing) drafts.
+The link is HMAC-signed, expires after `expiresInMinutes` and cannot be revoked early, so treat it like a password. It is pinned to the last saved version, so it shows what **Save** committed, not unsaved [live editing](/docs/content-engine/live-editing) drafts. Want those too? Use the [live preview](#live-preview).
 
 The link points to the first of these that exists:
 
@@ -58,3 +59,88 @@ The route returns the record's public fields, and the same `404` for a forged, e
 
 VitNode builds links from `VITNODE_WEB_URL` and `VITNODE_API_URL`. When either is not an absolute URL, the API logs a warning at startup and the **Preview** button answers `503`.
 
+## Live preview
+
+The live preview puts the real page next to the form, and it updates as you type, before anything is saved. In the blog's article editor, click **Live preview** (the eye icon) in the header, and the page slides in from the right:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={livePreview}
+  alt="Blog article editor split in two: the form with the cover, title and categories on the left, and the article as readers see it on the right, under a toolbar with screen size buttons, reload, open in a new tab and close"
+/>
+
+- The screen size buttons switch between **Fit to panel**, **Mobile**, **Tablet** and **Desktop**. Fixed sizes shrink to fit the panel, so a desktop page still fits on a laptop.
+- **Open in a new tab** pops the preview out, and that tab keeps following your edits.
+- On phones, the preview takes the whole screen. Click the eye again to get back to the form.
+
+### Add it to your editor
+
+`ContentLivePreview` comes from `@vitnode/core/content/admin-form`. Render it in your [custom form layout](/docs/content-engine/admincp):
+
+```tsx title="A custom form layout (excerpt)"
+import type { ContentFormLayoutProps } from "@vitnode/core/lib/plugin";
+
+import { Button } from "@vitnode/core/components/ui/button";
+import { ContentLivePreview } from "@vitnode/core/content/admin-form";
+import { EyeIcon } from "lucide-react";
+import React from "react";
+
+export const StoryFormLayout = ({
+  contentTypeId,
+  itemId,
+}: ContentFormLayoutProps) => {
+  const [open, setOpen] = React.useState(false);
+
+  return (
+    <>
+      <Button
+        aria-pressed={open}
+        onClick={() => {
+          setOpen(current => !current);
+        }}
+        type="button"
+        variant="ghost"
+      >
+        <EyeIcon aria-hidden />
+        Live preview
+      </Button>
+      {open && itemId !== undefined ? (
+        <ContentLivePreview
+          className="h-dvh"
+          contentTypeId={contentTypeId}
+          itemId={itemId}
+          locale="en"
+          onClose={() => {
+            setOpen(false);
+          }}
+        />
+      ) : null}
+    </>
+  );
+};
+```
+
+`ContentLivePreview` creates a preview link for `locale` (falling back to the default language when that translation was never saved), opens it in an iframe and sends the unsaved form values to it with `postMessage`. It renews the link before it expires, so a long writing session doesn't end in a 404.
+
+### Follow the edits in your page
+
+The page behind the link reads the values with `useContentLivePreview` from `@vitnode/core/tanstack/content` and lays them over the record it loaded:
+
+```tsx title="The preview page (excerpt)"
+import type { MultiLangValue } from "@vitnode/core/lib/helpers/multi-lang";
+
+import { getLangValue } from "@vitnode/core/lib/helpers/multi-lang";
+import { useContentLivePreview } from "@vitnode/core/tanstack/content";
+
+const StoryTitle = ({ saved }: { saved: string }) => {
+  const live = useContentLivePreview();
+  const values = live?.values as { title?: MultiLangValue } | undefined;
+
+  return <h1>{getLangValue(values?.title, live?.locale ?? "en") || saved}</h1>;
+};
+```
+
+The values come exactly as the AdminCP form holds them: a localized field is `{ languageCode, value }[]`, and relations, users and files are ids. For users and files, `live.references.people` and `live.references.files` hold the full objects, including an author picked or a cover uploaded a second ago, so look each id up there first, then in the record the page loaded. Relations stay ids, so map those to the objects the page already loaded. The hook returns `null` until the editor sends something, which is all it ever returns when someone opens the link on its own. It only reads messages from the same origin, sent by the window that embeds or opened the page.
+
+The blog does this in `plugins/blog/src/pages/post-preview-page.tsx`, with `pathTemplate: "/blog/preview/{token}"`.

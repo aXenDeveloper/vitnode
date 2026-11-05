@@ -1,11 +1,25 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { CircleCheckIcon, LockIcon, TriangleAlertIcon } from "lucide-react";
+import { cn } from "cn";
+import {
+  ChevronDownIcon,
+  CircleCheckIcon,
+  GlobeIcon,
+  LockIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
 import type { ContentAccessAudience } from "@/content/access/policy";
 import type { ContentAccessEffectiveResponse } from "@/content/access/schemas";
 
 import { roleOptionName } from "@/components/form/fields/roles";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CONTENT_ACCESS_ACTIONS } from "@/content/access/const";
 import { sameContentAccessAudience } from "@/content/access/policy";
@@ -45,6 +59,7 @@ const fetchEffective = async ({
 const Notice = (props: ContentAccessEffectiveNoticeProps) => {
   const t = useTranslations("core.access.admin");
   const locale = useLocale();
+  const labelId = React.useId();
   const ids = [...new Set(props.scopeIds.map(String))].sort();
   const query = useQuery({
     placeholderData: keepPreviousData,
@@ -62,15 +77,11 @@ const Notice = (props: ContentAccessEffectiveNoticeProps) => {
 
   if (query.isPending) {
     return (
-      <div
-        aria-busy="true"
-        className="flex flex-col gap-2 rounded-lg border p-4"
-      >
+      <div aria-busy="true" className="flex h-8 items-center">
         <span className="sr-only" role="status">
           {t("effective.loading")}
         </span>
-        <Skeleton className="h-4 w-1/3" />
-        <Skeleton className="h-4 w-2/3" />
+        <Skeleton className="h-4 w-48" />
       </div>
     );
   }
@@ -95,67 +106,98 @@ const Notice = (props: ContentAccessEffectiveNoticeProps) => {
       }
     }
   };
-  const restricted = CONTENT_ACCESS_ACTIONS.some(
-    action => actions[action].requirements.length > 0,
-  );
+  const rows = CONTENT_ACCESS_ACTIONS.map(action => {
+    // One line per distinct audience: a reader has to be in every
+    // one of them, whichever category set it.
+    const audiences = actions[action].requirements
+      .map(requirement => requirement.audience)
+      .filter(
+        (audience, index, all) =>
+          all.findIndex(other => sameContentAccessAudience(other, audience)) ===
+          index,
+      );
+
+    return { action, audiences };
+  });
+  const restricted = rows.some(row => row.audiences.length > 0);
 
   return (
-    <section
-      aria-busy={query.isFetching}
-      aria-labelledby="content-access-notice"
-      className="flex flex-col gap-3 rounded-lg border p-4 aria-busy:opacity-60"
-    >
-      <h3
-        className="flex items-center gap-2 text-sm font-semibold text-balance"
-        id="content-access-notice"
-      >
-        {restricted ? (
-          <LockIcon aria-hidden="true" className="size-4" />
-        ) : (
-          <CircleCheckIcon aria-hidden="true" className="size-4" />
-        )}
-        {t("notice.title")}
-      </h3>
-      {restricted ? (
-        <>
-          <dl className="flex flex-col gap-2 text-sm">
-            {CONTENT_ACCESS_ACTIONS.map(action => {
-              // One line per distinct audience: a reader has to be in every
-              // one of them, whichever category set it.
-              const audiences = actions[action].requirements
-                .map(requirement => requirement.audience)
-                .filter(
-                  (audience, index, all) =>
-                    all.findIndex(other =>
-                      sameContentAccessAudience(other, audience),
-                    ) === index,
-                );
-
-              return (
-                <div className="flex flex-col gap-0.5" key={action}>
-                  <dt className="font-medium">
-                    {t(`actions.${action}.label`)}
-                  </dt>
-                  <dd className="text-muted-foreground leading-relaxed text-pretty">
-                    {audiences.length === 0
-                      ? t("effective.open")
-                      : audiences.map(audienceText).join(t("notice.and"))}
-                  </dd>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="text-muted-foreground" id={labelId}>
+          {t("notice.label")}
+        </span>
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button
+                aria-busy={query.isFetching}
+                aria-describedby={labelId}
+                className="aria-busy:opacity-60"
+                size="sm"
+                type="button"
+                variant="outline"
+              />
+            }
+          >
+            {restricted ? (
+              <LockIcon aria-hidden="true" />
+            ) : (
+              <GlobeIcon aria-hidden="true" />
+            )}
+            {restricted ? t("notice.restricted") : t("notice.public")}
+            <ChevronDownIcon aria-hidden="true" />
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            aria-label={t("notice.title")}
+            className="w-80"
+          >
+            <dl className="flex flex-col gap-1.5 text-sm">
+              {rows.map(({ action, audiences }) => (
+                <div className="flex items-start gap-2" key={action}>
+                  {audiences.length === 0 ? (
+                    <CircleCheckIcon
+                      aria-hidden="true"
+                      className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                    />
+                  ) : (
+                    <LockIcon
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0"
+                    />
+                  )}
+                  <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3">
+                    <dt className="font-medium">
+                      {t(`actions.${action}.label`)}
+                    </dt>
+                    <dd
+                      className={cn(
+                        "leading-relaxed text-pretty",
+                        audiences.length === 0 && "text-muted-foreground",
+                      )}
+                    >
+                      {audiences.length === 0
+                        ? t("effective.open")
+                        : audiences.map(audienceText).join(t("notice.and"))}
+                    </dd>
+                  </div>
                 </div>
-              );
-            })}
-          </dl>
-          <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-            {t("notice.intersection")}
-          </p>
-        </>
-      ) : (
-        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-          {t("notice.open")}
-        </p>
-      )}
+              ))}
+            </dl>
+            {restricted ? (
+              <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+                {t("notice.intersection")}
+              </p>
+            ) : null}
+          </PopoverContent>
+        </Popover>
+      </div>
       {missing.length > 0 ? (
-        <p className="bg-destructive/10 text-destructive flex items-start gap-2 rounded-md p-3 text-sm leading-relaxed text-pretty">
+        <p
+          className="bg-destructive/10 text-destructive flex items-start gap-2 rounded-md p-3 text-sm leading-relaxed text-pretty"
+          role="alert"
+        >
           <TriangleAlertIcon
             aria-hidden="true"
             className="mt-0.5 size-4 shrink-0"
@@ -163,7 +205,7 @@ const Notice = (props: ContentAccessEffectiveNoticeProps) => {
           {t("notice.missing")}
         </p>
       ) : null}
-    </section>
+    </div>
   );
 };
 
@@ -171,7 +213,9 @@ const Notice = (props: ContentAccessEffectiveNoticeProps) => {
  * Who may read, comment on and download from a record filed under several
  * scopes (an article in its categories), as the server computes it for the
  * scopes the editor holds right now: a reader has to meet every scope's rule.
- * Shown in an editor before saving; the server decides again on every read.
+ * Renders a Public / Restricted badge that opens the per-action breakdown, and
+ * a warning when a selected scope no longer exists. Shown in an editor before
+ * saving; the server decides again on every read.
  */
 export const ContentAccessEffectiveNotice = (
   props: ContentAccessEffectiveNoticeProps,

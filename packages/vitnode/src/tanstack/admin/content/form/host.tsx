@@ -4,9 +4,11 @@ import React from "react";
 
 import type { ContentFormNavigation } from "@/views/admin/views/content/form/navigation";
 
+import { ContentEditorialTransportProvider } from "@/views/admin/views/content/actions/editorial-transport";
 import { ContentFormNavigationProvider } from "@/views/admin/views/content/form/navigation";
 import { ContentFormTransportProvider } from "@/views/admin/views/content/form/transport";
 
+import { contentEditorialTransport } from "../editorial/transport";
 import { contentFormTransport } from "./transport";
 
 export const ContentFormHost = ({
@@ -19,6 +21,10 @@ export const ContentFormHost = ({
 
   const transport = React.useMemo(
     () => contentFormTransport(queryClient),
+    [queryClient],
+  );
+  const editorial = React.useMemo(
+    () => contentEditorialTransport(queryClient),
     [queryClient],
   );
 
@@ -36,9 +42,11 @@ export const ContentFormHost = ({
 
   return (
     <ContentFormTransportProvider value={transport}>
-      <ContentFormNavigationProvider value={navigation}>
-        {children}
-      </ContentFormNavigationProvider>
+      <ContentEditorialTransportProvider value={editorial}>
+        <ContentFormNavigationProvider value={navigation}>
+          {children}
+        </ContentFormNavigationProvider>
+      </ContentEditorialTransportProvider>
     </ContentFormTransportProvider>
   );
 };

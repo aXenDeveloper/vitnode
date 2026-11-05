@@ -166,6 +166,11 @@
             "url_missing": "No URL in this language yet.",
             "cover_cropped": "The cover, cropped to fit social cards.",
             "alt_edit": "Edit under the cover"
+          },
+          "shared_fields": "Same in every language",
+          "live_preview": {
+            "open": "Live preview",
+            "close": "Hide live preview"
           }
         }
       },
@@ -226,7 +231,10 @@
       "edited": "Edited",
       "reading_time": "{minutes} min read",
       "on_this_page": "On this page",
-      "access_required": "Members only"
+      "access_required": "Members only",
+      "preview": {
+        "title": "Preview of {title}"
+      }
     },
     "comments": {
       "article_author": "Author",

@@ -110,6 +110,11 @@
             "url_missing": "Brak adresu URL w tym języku.",
             "cover_cropped": "Obraz wyróżniający przycięty do kart społecznościowych.",
             "alt_edit": "Edytuj pod obrazem"
+          },
+          "shared_fields": "Takie samo w każdym języku",
+          "live_preview": {
+            "open": "Podgląd na żywo",
+            "close": "Ukryj podgląd na żywo"
           }
         }
       },
@@ -179,7 +184,10 @@
       "by": "Autorzy:",
       "edited": "Edytowano",
       "reading_time": "{minutes} min czytania",
-      "on_this_page": "Na tej stronie"
+      "on_this_page": "Na tej stronie",
+      "preview": {
+        "title": "Podgląd: {title}"
+      }
     },
     "list": {
       "title": "Blog",
