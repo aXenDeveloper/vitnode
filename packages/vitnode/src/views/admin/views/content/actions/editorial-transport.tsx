@@ -1,6 +1,7 @@
 import React from "react";
 
 import type { ContentId } from "@/content/ids";
+import type { ContentPublicPerson } from "@/content/public-person";
 import type { ContentRevisionDetail } from "@/content/revisions";
 import type { ContentScheduleAction } from "@/content/schedules";
 
@@ -31,6 +32,7 @@ export interface ContentEditorialTransport {
   createPreview: (
     contentTypeId: string,
     itemId: ContentId,
+    locale?: string,
   ) => Promise<ContentPreviewResult>;
   /** One revision's snapshot, read when a row is expanded and not before. */
   getRevision: (
@@ -49,6 +51,12 @@ export interface ContentEditorialTransport {
     contentTypeId: string,
     itemId: ContentId,
   ) => Promise<ContentScheduleListResult>;
+
+  /** Public summaries of these users, for a live preview of unsaved authors. */
+  livePreviewPeople: (
+    contentTypeId: string,
+    ids: readonly number[],
+  ) => Promise<ContentPublicPerson[]>;
 
   readDelivery: (
     contentTypeId: string,

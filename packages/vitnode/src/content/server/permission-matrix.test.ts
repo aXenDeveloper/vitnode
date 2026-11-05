@@ -224,6 +224,7 @@ describe("the generated permission matrix", () => {
     "DELETE /{id}": "can_delete",
     "DELETE /{id}/translations/{locale}": "can_delete",
     "GET /": "can_view",
+    "GET /live-preview/people": "can_view",
     "GET /options/{field}": "can_view",
     "GET /{id}": "can_view",
     // Read-only: it reports what the slug mutations already did, so the

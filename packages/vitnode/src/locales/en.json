@@ -1992,6 +1992,26 @@
         "unavailable": "Preview links cannot be built on this deployment. Check that VITNODE_WEB_URL and VITNODE_API_URL are absolute URLs, then restart the API.",
         "live": "This record has no saved version yet, so the link shows it live - it will follow any edits made before the reviewer opens it."
       },
+      "live_preview": {
+        "title": "Live preview",
+        "loading": "Creating a preview link…",
+        "frame": "Live preview of the page",
+        "device": "Screen size",
+        "devices": {
+          "responsive": "Fit to panel",
+          "mobile": "Mobile",
+          "tablet": "Tablet",
+          "desktop": "Desktop"
+        },
+        "size": "{width} × {height}",
+        "reload": "Reload preview",
+        "open": "Open in a new tab",
+        "close": "Close preview",
+        "load_error": {
+          "title": "Preview didn't load",
+          "desc": "We couldn't create a preview link for this page. Try again in a moment."
+        }
+      },
       "delivery": {
         "title": "Delivery for this {name}",
         "desc": "Where this record lives on the public site, and where it used to.",
@@ -3238,7 +3258,9 @@
         },
         "notice": {
           "title": "Who can see this",
-          "open": "Everyone can read this, comment on it and download its attachments - none of its categories restricts it.",
+          "label": "Who can see this:",
+          "public": "Public",
+          "restricted": "Restricted",
           "and": ", and also ",
           "intersection": "A reader has to meet the rule of every category it is in, so two restricted categories together let in fewer people than either one alone.",
           "missing": "One of the selected categories no longer exists. Nobody can read a record filed there."

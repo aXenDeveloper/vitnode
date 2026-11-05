@@ -32,6 +32,7 @@ export {
   ContentFormSection,
   ContentFormSidebar,
 } from "./layout-primitives";
+export { ContentLivePreview } from "./live-preview";
 export {
   ContentFormActions,
   ContentFormField,

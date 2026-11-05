@@ -23,6 +23,7 @@ import {
   ContentFormPublicationLabel,
   ContentFormSaveMenu,
   ContentLivePresence,
+  ContentLivePreview,
   ContentLiveStatus,
   useContentForm,
   useContentFormValues,
@@ -38,7 +39,7 @@ import {
 } from "@vitnode/core/lib/helpers/multi-lang";
 import { ContentAccessEffectiveNotice } from "@vitnode/core/views/admin/views/access/effective-notice";
 import { cn } from "cn";
-import { ArrowLeftIcon, SearchIcon, SparklesIcon } from "lucide-react";
+import { ArrowLeftIcon, EyeIcon, SearchIcon, SparklesIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
@@ -101,6 +102,8 @@ export const ArticleEditor = ({
   const [contentRevision, setContentRevision] = React.useState(0);
   const [dismissed, setDismissed] = React.useState<string[]>([]);
   const [sheet, setSheet] = React.useState<"review" | "seo" | null>(null);
+  const [previewOpen, setPreviewOpen] = React.useState(false);
+  const [previewMounted, setPreviewMounted] = React.useState(false);
   const reviewAvailable = useArticleReviewAvailable();
 
   markHeaderRendered?.();
@@ -260,6 +263,7 @@ export const ArticleEditor = ({
   };
 
   const fieldLocale = target ?? source;
+  const showPreview = previewOpen && itemId !== undefined;
   const unready =
     checks.length -
     ready +
@@ -314,25 +318,40 @@ export const ArticleEditor = ({
       outdated: outdated.includes(language.code),
     }));
 
-  const sharedFields = (
-    <div className="grid grid-cols-1 gap-4 border-y py-4 md:grid-cols-2">
-      <div className="flex flex-col gap-2">
-        <ContentFormField name="categoryId" />
-        <ContentAccessEffectiveNotice
-          permissionModule={blogPostContentType.permissionModule}
-          pluginId={manifest.id}
-          scopeIds={
-            Array.isArray(values.categoryId)
-              ? values.categoryId.filter(
-                  (id): id is number | string =>
-                    typeof id === "number" || typeof id === "string",
-                )
-              : []
-          }
-        />
+  const heroFields = ({
+    alt,
+    lead,
+  }: {
+    alt?: React.ReactNode;
+    lead: React.ReactNode;
+  }) => (
+    <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,1fr)_18rem]">
+      <div className="flex min-w-0 flex-col gap-4">
+        {lead}
+        <div className="flex flex-col gap-2">
+          <ContentFormField name="categoryId" />
+          <ContentAccessEffectiveNotice
+            permissionModule={blogPostContentType.permissionModule}
+            pluginId={manifest.id}
+            scopeIds={
+              Array.isArray(values.categoryId)
+                ? values.categoryId.filter(
+                    (id): id is number | string =>
+                      typeof id === "number" || typeof id === "string",
+                  )
+                : []
+            }
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <ContentFormField name="authorId" />
+        </div>
       </div>
-      <div className="flex flex-col gap-2">
-        <ContentFormField name="authorId" />
+      <div className="flex min-w-0 flex-col gap-3 max-md:order-first">
+        <AutoFormFileDisplayContext value="cover">
+          <ContentFormField name="coverImage" />
+        </AutoFormFileDisplayContext>
+        {alt}
       </div>
     </div>
   );
@@ -409,6 +428,27 @@ export const ArticleEditor = ({
             <span className="max-sm:sr-only">{t("review.open")}</span>
           </Button>
         ) : null}
+        {itemId === undefined ? null : (
+          <TooltipWithContent
+            text={
+              previewOpen ? t("live_preview.close") : t("live_preview.open")
+            }
+          >
+            <Button
+              aria-pressed={previewOpen}
+              onClick={() => {
+                setPreviewMounted(true);
+                setPreviewOpen(open => !open);
+              }}
+              size="sm"
+              type="button"
+              variant={previewOpen ? "secondary" : "ghost"}
+            >
+              <EyeIcon aria-hidden />
+              <span className="max-2xl:sr-only">{t("live_preview.open")}</span>
+            </Button>
+          </TooltipWithContent>
+        )}
         <div className="ms-auto flex items-center gap-2">
           <ContentFormPublicationLabel className="me-2" />
           <ContentLiveStatus />
@@ -417,168 +457,195 @@ export const ArticleEditor = ({
         </div>
       </header>
 
-      <div className="px-4 py-8 sm:px-6">
-        <div
-          className={cn(
-            "mx-auto flex w-full min-w-0 flex-col gap-6",
-            !target && "max-w-3xl",
-          )}
-        >
-          <ContentFormHiddenNotice />
-          <div className="mx-auto flex w-full max-w-3xl flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <AutoFormFileDisplayContext value="cover">
-                <ContentFormField name="coverImage" />
-              </AutoFormFileDisplayContext>
-            </div>
-            {target ? null : (
-              <MultiLangLanguageContext value={source}>
-                <div className="flex flex-col gap-2">
-                  <ContentFormField name="coverImageAlt" />
+      <div
+        className={cn(
+          "lg:ease-fluid @container flex flex-1 flex-col motion-reduce:transition-none lg:grid lg:transition-[grid-template-columns]",
+          showPreview
+            ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:duration-300"
+            : "lg:grid-cols-[minmax(0,1fr)_minmax(0,0fr)] lg:duration-200",
+        )}
+      >
+        <div className="min-w-0 px-4 py-8 sm:px-6">
+          <div
+            className={cn(
+              "mx-auto flex w-full min-w-0 flex-col gap-6",
+              !target && "max-w-3xl",
+            )}
+          >
+            <ContentFormHiddenNotice />
+            {target ? (
+              <>
+                {outdated.includes(target) && !dismissed.includes(target) ? (
+                  <OutdatedBanner
+                    action={
+                      <>
+                        {ai.available &&
+                        aiUpdatableFields(target).length > 0 ? (
+                          <AiButton
+                            label={t("translate.update_changed")}
+                            onClick={() => {
+                              void translateFields(
+                                target,
+                                aiUpdatableFields(target),
+                              );
+                            }}
+                            pending={AI_TRANSLATED_FIELDS.some(field =>
+                              ai.isPending(`${field}:${target}`),
+                            )}
+                            pendingLabel={t("ai.translating")}
+                          />
+                        ) : null}
+                        <Button
+                          onClick={() => {
+                            freshness.markReviewed(
+                              target,
+                              freshness.outdatedFields(target),
+                            );
+                            setDismissed(current => [...current, target]);
+                          }}
+                          size="xs"
+                          type="button"
+                          variant="ghost"
+                        >
+                          {t("translate.mark_reviewed")}
+                        </Button>
+                      </>
+                    }
+                    fields={freshness
+                      .outdatedFields(target)
+                      .map(field => t(`translate.fields.${field}`))}
+                    onDismiss={() => {
+                      setDismissed(current => [...current, target]);
+                    }}
+                    sourceName={sourceName}
+                  />
+                ) : null}
+
+                {ai.available && missingFields(target).length > 0 ? (
+                  <div className="flex justify-end">
+                    <AiButton
+                      label={t("translate.missing_fields")}
+                      onClick={() => {
+                        void translateFields(target, missingFields(target));
+                      }}
+                      pending={AI_TRANSLATED_FIELDS.some(field =>
+                        ai.isPending(`${field}:${target}`),
+                      )}
+                      pendingLabel={t("ai.translating")}
+                    />
+                  </div>
+                ) : null}
+
+                <div className="border-b pb-6">
+                  {heroFields({
+                    lead: (
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        {t("shared_fields")}
+                      </p>
+                    ),
+                  })}
                 </div>
+
+                <MultiLangLanguageContext value={target}>
+                  <PairRow
+                    action={fieldAction("coverImageAlt", target)}
+                    source={
+                      <p className="pt-7 text-sm leading-relaxed" lang={source}>
+                        {getLangValue(values.coverImageAlt, source) ||
+                          t("translate.empty_source", { language: sourceName })}
+                      </p>
+                    }
+                    sourceName={sourceName}
+                    status={statusOf("coverImageAlt", target)}
+                    targetName={languageName(target)}
+                  >
+                    <ContentFormField name="coverImageAlt" />
+                  </PairRow>
+                  <PairRow
+                    action={fieldAction("title", target)}
+                    source={
+                      <p
+                        className="text-2xl leading-tight font-bold tracking-tight text-balance"
+                        lang={source}
+                      >
+                        {getLangValue(values.title, source) ||
+                          t("translate.empty_source", { language: sourceName })}
+                      </p>
+                    }
+                    sourceName={sourceName}
+                    status={statusOf("title", target)}
+                    targetName={languageName(target)}
+                  >
+                    <ContentFormField name="title" />
+                  </PairRow>
+                  <PairRow
+                    action={fieldAction("friendlyUrl", target)}
+                    source={
+                      <p className="truncate text-sm" lang={source}>
+                        /blog/{getLangValue(values.friendlyUrl, source)}
+                      </p>
+                    }
+                    sourceName={sourceName}
+                    status={statusOf("friendlyUrl", target)}
+                    targetName={languageName(target)}
+                  >
+                    <ContentFormField name="friendlyUrl" />
+                  </PairRow>
+                  <PairRow
+                    action={fieldAction("content", target)}
+                    source={
+                      <div className="pt-16" lang={source}>
+                        <RichTextContent
+                          content={articleContent(values, source)}
+                        />
+                      </div>
+                    }
+                    sourceName={sourceName}
+                    status={statusOf("content", target)}
+                    targetName={languageName(target)}
+                  >
+                    {contentField}
+                  </PairRow>
+                </MultiLangLanguageContext>
+              </>
+            ) : (
+              <MultiLangLanguageContext value={source}>
+                {heroFields({
+                  alt: <ContentFormField name="coverImageAlt" />,
+                  lead: (
+                    <div className="flex flex-col gap-2">
+                      <ContentFormField name="title" />
+                      <ContentFormField name="friendlyUrl" />
+                    </div>
+                  ),
+                })}
+                <div className="border-t pt-6">{contentField}</div>
               </MultiLangLanguageContext>
             )}
           </div>
-          {target ? (
-            <>
-              {outdated.includes(target) && !dismissed.includes(target) ? (
-                <OutdatedBanner
-                  action={
-                    <>
-                      {ai.available && aiUpdatableFields(target).length > 0 ? (
-                        <AiButton
-                          label={t("translate.update_changed")}
-                          onClick={() => {
-                            void translateFields(
-                              target,
-                              aiUpdatableFields(target),
-                            );
-                          }}
-                          pending={AI_TRANSLATED_FIELDS.some(field =>
-                            ai.isPending(`${field}:${target}`),
-                          )}
-                          pendingLabel={t("ai.translating")}
-                        />
-                      ) : null}
-                      <Button
-                        onClick={() => {
-                          freshness.markReviewed(
-                            target,
-                            freshness.outdatedFields(target),
-                          );
-                          setDismissed(current => [...current, target]);
-                        }}
-                        size="xs"
-                        type="button"
-                        variant="ghost"
-                      >
-                        {t("translate.mark_reviewed")}
-                      </Button>
-                    </>
-                  }
-                  fields={freshness
-                    .outdatedFields(target)
-                    .map(field => t(`translate.fields.${field}`))}
-                  onDismiss={() => {
-                    setDismissed(current => [...current, target]);
-                  }}
-                  sourceName={sourceName}
-                />
-              ) : null}
-
-              {ai.available && missingFields(target).length > 0 ? (
-                <div className="flex justify-end">
-                  <AiButton
-                    label={t("translate.missing_fields")}
-                    onClick={() => {
-                      void translateFields(target, missingFields(target));
-                    }}
-                    pending={AI_TRANSLATED_FIELDS.some(field =>
-                      ai.isPending(`${field}:${target}`),
-                    )}
-                    pendingLabel={t("ai.translating")}
-                  />
-                </div>
-              ) : null}
-
-              <MultiLangLanguageContext value={target}>
-                <PairRow
-                  action={fieldAction("coverImageAlt", target)}
-                  source={
-                    <p className="pt-7 text-sm leading-relaxed" lang={source}>
-                      {getLangValue(values.coverImageAlt, source) ||
-                        t("translate.empty_source", { language: sourceName })}
-                    </p>
-                  }
-                  sourceName={sourceName}
-                  status={statusOf("coverImageAlt", target)}
-                  targetName={languageName(target)}
-                >
-                  <ContentFormField name="coverImageAlt" />
-                </PairRow>
-                <PairRow
-                  action={fieldAction("title", target)}
-                  source={
-                    <p
-                      className="text-2xl leading-tight font-bold tracking-tight text-balance"
-                      lang={source}
-                    >
-                      {getLangValue(values.title, source) ||
-                        t("translate.empty_source", { language: sourceName })}
-                    </p>
-                  }
-                  sourceName={sourceName}
-                  status={statusOf("title", target)}
-                  targetName={languageName(target)}
-                >
-                  <ContentFormField name="title" />
-                </PairRow>
-                <PairRow
-                  action={fieldAction("friendlyUrl", target)}
-                  source={
-                    <p className="truncate text-sm" lang={source}>
-                      /blog/{getLangValue(values.friendlyUrl, source)}
-                    </p>
-                  }
-                  sourceName={sourceName}
-                  status={statusOf("friendlyUrl", target)}
-                  targetName={languageName(target)}
-                >
-                  <ContentFormField name="friendlyUrl" />
-                </PairRow>
-              </MultiLangLanguageContext>
-
-              {sharedFields}
-
-              <MultiLangLanguageContext value={target}>
-                <PairRow
-                  action={fieldAction("content", target)}
-                  source={
-                    <div className="pt-16" lang={source}>
-                      <RichTextContent
-                        content={articleContent(values, source)}
-                      />
-                    </div>
-                  }
-                  sourceName={sourceName}
-                  status={statusOf("content", target)}
-                  targetName={languageName(target)}
-                >
-                  {contentField}
-                </PairRow>
-              </MultiLangLanguageContext>
-            </>
-          ) : (
-            <MultiLangLanguageContext value={source}>
-              <div className="flex flex-col gap-2">
-                <ContentFormField name="title" />
-                <ContentFormField name="friendlyUrl" />
-              </div>
-              {sharedFields}
-              {contentField}
-            </MultiLangLanguageContext>
-          )}
         </div>
+
+        {previewMounted && itemId !== undefined ? (
+          <div
+            className={cn(
+              "bg-background max-lg:ease-fluid min-w-0 overflow-hidden motion-reduce:transition-none max-lg:fixed max-lg:inset-0 max-lg:z-40 max-lg:transition-[translate] lg:sticky lg:top-14 lg:h-dvh lg:pb-14",
+              showPreview
+                ? "max-lg:translate-x-0 max-lg:duration-300 max-lg:starting:translate-x-full"
+                : "max-lg:translate-x-full max-lg:duration-200",
+            )}
+            inert={!showPreview}
+          >
+            <ContentLivePreview
+              className="h-full lg:w-[50cqw] lg:border-s"
+              contentTypeId={contentTypeId}
+              itemId={itemId}
+              locale={fieldLocale}
+              onClose={() => {
+                setPreviewOpen(false);
+              }}
+            />
+          </div>
+        ) : null}
       </div>
 
       <Sheet

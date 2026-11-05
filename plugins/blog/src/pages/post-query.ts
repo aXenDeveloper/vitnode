@@ -77,6 +77,8 @@ const fetchBlogPost = async ({
  */
 export type BlogPostAnswer = Awaited<ReturnType<typeof fetchBlogPost>>;
 
+export type BlogPostDetail = NonNullable<BlogPostAnswer["item"]>;
+
 const isSharedAnswer = ({ item, resolution }: BlogPostAnswer): boolean =>
   resolution.type === "redirect" ||
   (resolution.type === "content" && !resolution.hidden && item !== null);

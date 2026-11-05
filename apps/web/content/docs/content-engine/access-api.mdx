@@ -146,7 +146,7 @@ Mounted under the scope family's admin module, `/api/{pluginId}/admin/content/{a
 | `GET /access/files`                | `can_view` | `{ privateStorage, private, public }`: the family's files by visibility                  |
 | `POST /access/files/protect`       | `can_edit` | Moves up to 100 public files to private storage: `{ moved, remaining, shared }`          |
 
-A content type filed under scopes gets `POST /access/effective` in its own module, such as `/api/@vitnode/blog/admin/content/posts/access/effective`. It takes `{ scopeIds }` (up to 50) and answers what readers need for each action across all of them, plus `missing` scope ids. `ContentAccessEffectiveNotice` from `@vitnode/core/views/admin/views/access/effective-notice` renders it in an editor.
+A content type filed under scopes gets `POST /access/effective` in its own module, such as `/api/@vitnode/blog/admin/content/posts/access/effective`. It takes `{ scopeIds }` (up to 50) and answers what readers need for each action across all of them, plus `missing` scope ids. `ContentAccessEffectiveNotice` from `@vitnode/core/views/admin/views/access/effective-notice` renders it in an editor as a **Public** or **Restricted** badge; click it for who can view, read, comment and download.
 
 `overrides` is a partial `Record<action, audience>`. An action left out inherits. Call these routes with `rawFetcher`:
 

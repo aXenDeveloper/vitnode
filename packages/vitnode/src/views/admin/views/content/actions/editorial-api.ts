@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { ContentId } from "@/content/ids";
+import type { ContentPublicPerson } from "@/content/public-person";
 import type {
   ContentRevisionDetail,
   ContentRevisionMeta,
@@ -11,6 +12,7 @@ import type {
 } from "@/content/schedules";
 
 import { contentAnyIdSchema } from "@/content/ids";
+import { zodContentPublicPerson } from "@/content/public-person";
 
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentApiTarget } from "../content-request";
@@ -42,6 +44,10 @@ const zodPreview = z.object({
   token: z.string(),
   url: z.string(),
   version: z.number(),
+});
+
+const zodLivePreviewPeople = z.object({
+  items: z.array(zodContentPublicPerson),
 });
 
 const zodScheduleList = z.object({
@@ -184,9 +190,17 @@ export const restoreContentRevisionInBrowser = async (
 export const createContentPreviewInBrowser = async (
   target: ContentApiTarget,
   id: ContentId,
+  locale?: string,
 ): Promise<ContentPreviewResult> => {
   const result = await sendContentApiRequest(
-    { method: "post", path: `/${id}/preview`, target },
+    {
+      method: "post",
+      path:
+        locale === undefined
+          ? `/${id}/preview`
+          : `/${id}/translations/${encodeURIComponent(locale)}/preview`,
+      target,
+    },
     zodPreview,
   );
 
@@ -199,6 +213,29 @@ export const createContentPreviewInBrowser = async (
   // The token itself is deliberately not returned: it is already inside `url`,
   // and a second copy is a second thing to leak.
   return { preview: { expiresAt, revisionId, url, version } };
+};
+
+export const loadContentLivePreviewPeopleInBrowser = async (
+  target: ContentApiTarget,
+  ids: readonly number[],
+): Promise<ContentPublicPerson[]> => {
+  if (ids.length === 0) return [];
+
+  const result = await sendContentApiRequest(
+    {
+      method: "get",
+      path: "/live-preview/people",
+      query: { ids: ids.join(",") },
+      target,
+    },
+    zodLivePreviewPeople,
+  );
+
+  if (!contentWriteSucceeded(result, 200) || !result.data) {
+    throw new Error(result.error ?? "");
+  }
+
+  return result.data.items;
 };
 
 export const listContentSchedulesInBrowser = async (

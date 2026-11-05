@@ -5,6 +5,7 @@ import {
   BlogCategoryPendingSkeleton,
   BlogPendingSkeleton,
 } from "./pages/blog-skeleton";
+import { blogPostPreviewSearch } from "./pages/post-preview";
 
 /**
  * The blog's public pages: the `/blog` index, one page per category at
@@ -43,6 +44,12 @@ export const routes = definePluginRoutes([
     cache: { maxAge: 300, staleWhileRevalidate: 60 },
     component: lazy(() => import("./pages/post-page")),
     messages: ["@vitnode/blog.post", "@vitnode/blog.comments", "core.comments"],
+  }),
+
+  page("/blog/preview/:token", {
+    component: lazy(() => import("./pages/post-preview-page")),
+    messages: ["@vitnode/blog.post"],
+    search: blogPostPreviewSearch,
   }),
 
   page("/blog/comments/:slug", {

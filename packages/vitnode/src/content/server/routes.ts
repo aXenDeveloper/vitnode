@@ -22,6 +22,7 @@ import type { AnyContentModel, ContentModel } from "./model";
 import type { ContentPreviewTarget } from "./preview-target";
 
 import { checkStaffPermission } from "../../api/lib/check-staff-permission";
+import { loadPublicPeople, zodPublicPerson } from "../../api/lib/public-people";
 import { buildRoute } from "../../api/lib/route";
 import {
   zodPaginationPageInfo,
@@ -1671,6 +1672,46 @@ export const buildContentRoutes = <
    * a table of 25 rows must not be 25 live bearer tokens for unpublished
    * records sitting in a browser's memory.
    */
+  const livePreviewPeople = buildRoute({
+    pluginId,
+    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    route: {
+      method: "get",
+      path: "/live-preview/people",
+      description: `Public summaries of the people a ${name} live preview names`,
+      request: {
+        query: z.object({
+          ids: z.string().optional(),
+        }),
+      },
+      responses: {
+        200: jsonResponse(
+          z.object({ items: z.array(zodPublicPerson) }),
+          "The people found, in the order asked",
+        ),
+      },
+    },
+    handler: async c => {
+      const ids = (c.req.valid("query").ids ?? "")
+        .split(",")
+        .map(Number)
+        .filter(id => Number.isSafeInteger(id) && id > 0)
+        .slice(0, CONTENT_OPTIONS_LIMIT);
+      const people = await loadPublicPeople(c, ids);
+
+      return c.json(
+        {
+          items: ids.flatMap(id => {
+            const person = people.get(id);
+
+            return person ? [person] : [];
+          }),
+        },
+        200,
+      );
+    },
+  });
+
   const previewToken = buildRoute({
     pluginId,
     adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
@@ -2101,7 +2142,7 @@ export const buildContentRoutes = <
     // Mounted only for a content type that declares a file field, so nothing
     // else gains a binary endpoint it has no use for.
     ...(hasFileFields ? [upload] : []),
-    ...(previewEnabled ? [previewToken] : []),
+    ...(previewEnabled ? [previewToken, livePreviewPeople] : []),
     ...(definition.delivery.enabled ? [deliveryDetail] : []),
     ...(definition.editorial.scheduling.enabled
       ? [scheduleList, scheduleCreate, scheduleCancel]

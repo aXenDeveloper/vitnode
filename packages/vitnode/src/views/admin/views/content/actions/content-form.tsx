@@ -4,7 +4,10 @@ import { useLocale, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentFileFieldValue } from "@/content/files";
+import type {
+  ContentFileDescriptor,
+  ContentFileFieldValue,
+} from "@/content/files";
 import type { ContentId } from "@/content/ids";
 import type { ContentVisibilityAction } from "@/content/visibility";
 import type { ContentFormLayout } from "@/lib/plugin";
@@ -279,6 +282,16 @@ const ContentFormFields = ({
   const files = data?.files as
     | Record<string, ContentFileFieldValue>
     | undefined;
+  const [uploadedFiles, setUploadedFiles] = React.useState<
+    ContentFileDescriptor[]
+  >([]);
+  const userFieldNames = React.useMemo(
+    () =>
+      spec.fields
+        .filter(fieldSpec => fieldSpec.kind === "user")
+        .map(fieldSpec => fieldSpec.name),
+    [spec],
+  );
 
   const localizedFields = React.useMemo(
     () => contentLocalizedFieldNames(spec),
@@ -587,9 +600,16 @@ const ContentFormFields = ({
                 files={files}
                 loadOptions={loadOptions}
                 spec={fieldSpec}
-                uploadFile={async ({ field, file }) =>
-                  await uploadContentFile({ field, file, spec })
-                }
+                uploadFile={async ({ field, file }) => {
+                  const uploaded = await uploadContentFile({
+                    field,
+                    file,
+                    spec,
+                  });
+                  setUploadedFiles(current => [...current, uploaded]);
+
+                  return uploaded;
+                }}
                 {...props}
               />
             )}
@@ -644,6 +664,8 @@ const ContentFormFields = ({
                   status: row.status,
                   updatedAt: row.updatedAt,
                 })),
+                uploadedFiles,
+                userFieldNames,
                 visibility: {
                   canHide,
                   enabled: visibility,
