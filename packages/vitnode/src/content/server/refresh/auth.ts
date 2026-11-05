@@ -3,8 +3,10 @@ import type { Context } from "hono";
 import type { ContentRefreshScope } from "@/content/live/refresh";
 
 import { checkStaffPermissionOfUser } from "@/api/lib/check-staff-permission";
+import { forgetRequestStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
+import { forgetContentAccessState } from "@/content/access/server/invalidate";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentRefreshRoom } from "@/content/live/refresh";
 
@@ -29,6 +31,8 @@ export const authorizeContentRefresh = async (
   c: Context,
   scope: ContentRefreshScope,
 ): Promise<ContentRefreshAuthorization> => {
+  forgetContentAccessState(c);
+  forgetRequestStaffPermissions(c);
   const entry = (c.get("core")?.contentTypes ?? []).find(
     candidate => candidate.definition.id === scope.contentTypeId,
   );

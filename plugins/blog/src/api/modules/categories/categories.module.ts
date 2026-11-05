@@ -20,6 +20,7 @@ import {
   findContentAccessFamily,
   isContentAccessFamilyOpen,
   listContentLanguages,
+  pinContentPublicGeneration,
   rememberContentPublicRead,
   resolveContentRequestLocale,
 } from "@vitnode/core/content/server";
@@ -216,6 +217,10 @@ const publicCategoriesRoute = buildRoute({
     },
   },
   handler: async c => {
+    await Promise.all([
+      pinContentPublicGeneration(c, definition.id),
+      pinContentPublicGeneration(c, postContent.definition.id),
+    ]);
     const resolved = await resolveContentRequestLocale(c, definition);
     if (!resolved) {
       throw new HTTPException(404, { message: "Locale not found." });

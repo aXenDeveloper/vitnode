@@ -102,6 +102,7 @@ export const useHrefNavigate = () => {
   return useCallback(
     async (href: string, { replace }: { replace?: boolean } = {}) => {
       if (isExternalHref(href)) {
+        if (!/^(?:https?|mailto):/i.test(href)) return;
         if (replace) window.location.replace(href);
         else window.location.assign(href);
 

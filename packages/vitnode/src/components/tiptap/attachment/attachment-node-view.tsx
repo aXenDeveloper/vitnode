@@ -12,6 +12,7 @@ import { useTranslations } from "use-intl";
 import { DeletedUpload } from "@/components/rich-text/deleted-upload";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { sanitizeRichTextHref } from "@/content/rich-text/elements";
 import {
   type EditorAttachmentKind,
   editorAttachmentKindOf,
@@ -40,7 +41,7 @@ export const EditorAttachmentNodeView = ({
   const t = useTranslations("core.global.editor.attachment");
   const name = typeof node.attrs.name === "string" ? node.attrs.name : "";
   const size = typeof node.attrs.size === "number" ? node.attrs.size : null;
-  const src = typeof node.attrs.src === "string" ? node.attrs.src : null;
+  const src = sanitizeRichTextHref(node.attrs.src);
   const uploadId =
     typeof node.attrs.uploadId === "string" ? node.attrs.uploadId : null;
   const isUploading =

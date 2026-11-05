@@ -31,6 +31,7 @@ import type {
 
 import { defaultPasskeyName, normalizePasskeyName } from "./passkey-names";
 import { drizzlePasskeyStore } from "./passkey-store";
+import { SessionModel } from "./session";
 import { SessionAdminModel } from "./session-admin";
 
 export const PASSKEY_CHALLENGE_TTL_MS = 5 * 60_000;
@@ -58,6 +59,8 @@ const TRANSPORTS: readonly string[] = [
 ];
 
 const isTransport = (value: string): boolean => TRANSPORTS.includes(value);
+
+export const PASSKEY_ENROLLMENT_RECENT_AUTH_MS = 60 * 60_000;
 
 export type PasskeyErrorStatus = 400 | 403 | 404 | 409;
 
@@ -113,8 +116,18 @@ export class PasskeyModel {
 
   protected readonly c: Context;
 
-  private async assertStaffEnrollmentAllowed(userId: number) {
-    if (!(await isStaff(this.c, { live: true, type: "admin", userId }))) return;
+  private async assertEnrollmentAllowed(userId: number) {
+    if (!(await isStaff(this.c, { live: true, type: "admin", userId }))) {
+      const signedInAt = await new SessionModel(this.c).getSessionCreatedAt();
+      if (
+        signedInAt === null ||
+        Date.now() - signedInAt.getTime() > PASSKEY_ENROLLMENT_RECENT_AUTH_MS
+      ) {
+        throw new PasskeyError("reauthentication_required", 403);
+      }
+
+      return;
+    }
 
     const adminSession = await new SessionAdminModel(this.c).getSession({
       extend: true,
@@ -253,7 +266,7 @@ export class PasskeyModel {
 
   async registrationOptions(user: { email: string; id: number; name: string }) {
     const { rpId, rpName } = this.enabledConfig();
-    await this.assertStaffEnrollmentAllowed(user.id);
+    await this.assertEnrollmentAllowed(user.id);
     const store = this.store;
     const now = new Date();
 
@@ -384,7 +397,7 @@ export class PasskeyModel {
   }): Promise<PublicPasskey> {
     const { origins, rpId } = this.enabledConfig();
     const challenge = await this.consumeChallenge("registration", userId);
-    await this.assertStaffEnrollmentAllowed(userId);
+    await this.assertEnrollmentAllowed(userId);
 
     if (!challenge.webauthnUserId) {
       throw new PasskeyError("invalid_challenge", 400);

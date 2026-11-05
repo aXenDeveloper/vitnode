@@ -52,7 +52,7 @@
     "tailwindcss": "^4.3.3",
     "tslib": "^2.8.1",
     "use-intl": "^4.14.9",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@tanstack/devtools-vite": "^0.8.5",

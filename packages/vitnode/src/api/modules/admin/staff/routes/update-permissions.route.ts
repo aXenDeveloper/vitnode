@@ -11,7 +11,7 @@ import {
 } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
-import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
+import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 import { auditDiff } from "@/lib/audit/diff";
@@ -196,7 +196,7 @@ export const updatePermissionsStaffAdminRoute = buildRoute({
       return c.json({ error: "Staff entry not found" }, 404);
     }
 
-    await invalidateStaffEntry(c, entry);
+    await invalidateAllStaffPermissions(c);
 
     return c.json({ unrestricted, permissions: sanitized }, 200);
   },

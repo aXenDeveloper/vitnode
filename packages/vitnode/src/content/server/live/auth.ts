@@ -7,7 +7,9 @@ import type {
 import type { RegisteredContentType } from "@/content/registry";
 
 import { checkStaffPermissionOfUser } from "@/api/lib/check-staff-permission";
+import { forgetRequestStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { SessionAdminModel } from "@/api/models/session-admin";
+import { forgetContentAccessState } from "@/content/access/server/invalidate";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { parseContentId } from "@/content/ids";
 import { contentLiveRoom } from "@/content/live/protocol";
@@ -55,6 +57,8 @@ export const authorizeContentLive = async (
   c: Context,
   room: ContentLiveRoomRef,
 ): Promise<ContentLiveAuthorization> => {
+  forgetContentAccessState(c);
+  forgetRequestStaffPermissions(c);
   const entry = findLiveContentType(c, room.contentTypeId);
   if (!entry) return { code: "NOT_FOUND", ok: false };
 

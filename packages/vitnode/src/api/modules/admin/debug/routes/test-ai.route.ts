@@ -4,6 +4,8 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 
+const TEST_AI_MAX_OUTPUT_TOKENS = 512;
+
 export const zodTestAiSchema = z.object({
   // A configured model id (see `ai.models`). Omit for the default (first) model.
   model: z.string().optional(),
@@ -56,6 +58,7 @@ export const testAiDebugAdminRoute = buildRoute({
     const { model, prompt } = c.req.valid("json");
 
     const result = streamText({
+      maxOutputTokens: TEST_AI_MAX_OUTPUT_TOKENS,
       model: c.get("ai").model(model),
       prompt,
       onError: ({ error }) => {

@@ -5,6 +5,7 @@ import { HTTPException } from "hono/http-exception";
 
 import type { ModeratorContext } from "@/api/lib/moderation/access";
 import type { RegisteredReportTarget } from "@/api/lib/moderation/targets";
+import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 import type { ContentDatabase } from "@/content/server/service";
 import type { ModerationReportEventType } from "@/lib/moderation/const";
 
@@ -166,9 +167,9 @@ export const authorizeReport = async (
 export const countRecentReports = async (
   c: Context,
   reporterId: number,
+  db: Pick<EnvVariablesVitNode["db"], "select"> = c.get("db"),
 ): Promise<number> => {
-  const [row] = await c
-    .get("db")
+  const [row] = await db
     .select({ value: count() })
     .from(core_moderation_reports)
     .where(

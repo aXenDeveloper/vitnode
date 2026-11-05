@@ -238,6 +238,7 @@ const connectGoogle = async (
 ) => {
   h.profiles.set("code-google", {
     email: "alice.personal@gmail.test",
+    emailVerified: true,
     id: "google-alice",
     username: "Alice Personal",
     ...profile,
@@ -402,6 +403,7 @@ describe("connecting an account from settings", () => {
     h.signInAs(ALICE);
     h.profiles.set("code-google", {
       email: "a@gmail.test",
+      emailVerified: true,
       id: "google-alice",
       username: "A",
     });
@@ -433,6 +435,7 @@ describe("the state of a settings round trip", () => {
     h.signInAs(ALICE);
     h.profiles.set("code-google", {
       email: "a@gmail.test",
+      emailVerified: true,
       id: "google-alice",
       username: "A",
     });
@@ -773,6 +776,7 @@ describe("importing a profile now", () => {
     h.profiles.set("code-import", {
       avatarUrl: "https://lh3.googleusercontent.test/a/new.png",
       email: "alice.personal@gmail.test",
+      emailVerified: true,
       firstName: "Alice",
       id: "google-alice",
       lastName: "Smith",
@@ -988,6 +992,7 @@ describe("updating the profile on sign-in", () => {
     const adapter = h.google;
     const user: SSOProviderUser = {
       email: "Alice.Personal@gmail.test",
+      emailVerified: true,
       id: "google-alice",
       username: "Alice Smith",
       ...profile,
@@ -1110,6 +1115,7 @@ describe("syncing now, without signing out", () => {
   const syncFrom = async (h: Harness, profile: Partial<SSOProviderUser>) => {
     h.profiles.set("code-sync", {
       email: "alice.personal@gmail.test",
+      emailVerified: true,
       id: "google-alice",
       username: "Alice Smith",
       ...profile,
@@ -1177,6 +1183,7 @@ describe("syncing now, without signing out", () => {
     const h = prepare();
     h.profiles.set("code-sync", {
       email: "a@gmail.test",
+      emailVerified: true,
       firstName: "Alice",
       id: "google-alice",
       lastName: "Smith",
@@ -1199,6 +1206,7 @@ describe("syncing now, without signing out", () => {
     const h = prepare();
     h.profiles.set("code-sync", {
       email: "a@gmail.test",
+      emailVerified: true,
       firstName: "Alice",
       id: "google-alice",
       username: "A",

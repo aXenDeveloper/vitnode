@@ -126,12 +126,14 @@ export const deliveredCostUsd = (
 };
 
 export const settlementCharge = ({
+  canceled = false,
   chargedUsd,
   delivered,
   deliveredUsd,
   outputSent = false,
   unit,
 }: {
+  canceled?: boolean;
   chargedUsd: Decimal;
   delivered: boolean;
   deliveredUsd: Decimal;
@@ -139,7 +141,7 @@ export const settlementCharge = ({
   unit: AiBudgetUnit;
 }): Decimal => {
   if (unit === "usd") return chargedUsd;
-  if (!delivered && !outputSent) return 0n;
+  if (!delivered && !outputSent && !canceled) return 0n;
   if (unit === "points") {
     return usdToPoints(delivered ? deliveredUsd : chargedUsd);
   }

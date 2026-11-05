@@ -76,6 +76,7 @@ export const EditorAttachment = Node.create({
     const size = typeof node.attrs.size === "number" ? node.attrs.size : null;
     const mimeType =
       typeof node.attrs.mimeType === "string" ? node.attrs.mimeType : null;
+    const href = sanitizeRichTextHref(node.attrs.src);
 
     return [
       "a",
@@ -84,7 +85,7 @@ export const EditorAttachment = Node.create({
         "data-kind": editorAttachmentKindOf(mimeType) ?? "file",
         rel: "noopener noreferrer nofollow",
         target: "_blank",
-        ...(typeof node.attrs.src === "string" ? { href: node.attrs.src } : {}),
+        ...(href ? { href } : {}),
         ...(typeof node.attrs.fileId === "number"
           ? { "data-file-id": node.attrs.fileId }
           : {}),

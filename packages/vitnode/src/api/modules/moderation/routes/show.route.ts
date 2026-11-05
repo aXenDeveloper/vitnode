@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
 import { canOnReport, requireModerator } from "@/api/lib/moderation/access";
+import { safeReportTargetUrl } from "@/api/lib/moderation/snapshot";
 import { core_moderation_report_events } from "@/database/moderation";
 import {
   MODERATION_PERMISSIONS,
@@ -212,7 +213,7 @@ export const showReportRoute = buildRoute({
         current: {
           exists: current !== null,
           hidden: current?.hidden ?? false,
-          url: current?.url ?? null,
+          url: safeReportTargetUrl(current?.url),
           registered: target !== undefined,
         },
         permissions: {

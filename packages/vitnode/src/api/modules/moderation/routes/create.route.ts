@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
@@ -153,6 +153,17 @@ export const createReportRoute = buildRoute({
     let reportId: number;
     try {
       reportId = await c.get("db").transaction(async tx => {
+        await tx.execute(
+          sql`select pg_advisory_xact_lock(hashtext(${`moderation-report:${user.id}`}))`,
+        );
+        if (
+          (await countRecentReports(c, user.id, tx)) >=
+          MODERATION_LIMITS.reportsPerUserPerHour
+        ) {
+          c.header("Retry-After", "3600");
+          throw reportError(429, { error: "rate_limited" });
+        }
+
         const [created] = await tx
           .insert(core_moderation_reports)
           .values({

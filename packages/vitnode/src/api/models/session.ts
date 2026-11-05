@@ -6,6 +6,7 @@ import { getCookie } from "hono/cookie";
 import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
 import { hashSessionToken } from "@/api/lib/session-token";
 import { core_sessions } from "@/database/sessions";
+import { realtime } from "@/ws/registry";
 
 import { DeviceModel } from "./device";
 import {
@@ -91,6 +92,10 @@ export class SessionModel {
     await this.c
       .get("cache")
       .deleteSystem(sessionCacheKey(hashedToken, device.id));
+
+    for (const { userId } of deleted) {
+      realtime.closeUserConnections(userId, device.id);
+    }
 
     // Only this session goes offline; the member's other devices stay online.
     await Promise.all(

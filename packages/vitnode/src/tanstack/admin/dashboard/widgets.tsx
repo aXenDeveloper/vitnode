@@ -56,5 +56,6 @@ export const coreDashboardBrowserWidgets: AdminDashboardWidget[] = [
     minSpan: 2,
     defaultEnabled: true,
     allowMultiple: true,
+    permission: { module: "notifications", permission: "can_manage" },
   },
 ];

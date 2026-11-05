@@ -5,7 +5,7 @@ import { buildRoute } from "@/api/builders";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
 import { revokeAccountRecoveryTokens } from "@/api/lib/recovery-tokens";
-import { invalidateStaffPermissionsForUser } from "@/api/lib/staff-permission-cache";
+import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { matchesEmail } from "@/api/lib/user-email-lookup";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
@@ -422,7 +422,7 @@ export const updateUserAdminRoute = buildRoute({
         // from a stale `roleId` reaches the same answer it just discarded - and
         // a demotion applied here would not take effect for another minute.
         await Promise.all([
-          invalidateStaffPermissionsForUser(c, user.id),
+          invalidateAllStaffPermissions(c),
           invalidateSessionCacheForUser(c, user.id),
         ]);
       } else {
@@ -454,7 +454,7 @@ export const updateUserAdminRoute = buildRoute({
       // The same pair as above - and this is the likelier path of the two, since
       // a request that changes only roles never reaches the `values` branch.
       await Promise.all([
-        invalidateStaffPermissionsForUser(c, user.id),
+        invalidateAllStaffPermissions(c),
         invalidateSessionCacheForUser(c, user.id),
       ]);
     }

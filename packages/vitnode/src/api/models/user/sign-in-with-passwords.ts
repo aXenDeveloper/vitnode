@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 
+import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { matchesEmail, pickAccountForEmail } from "@/api/lib/user-email-lookup";
@@ -47,5 +48,24 @@ export const signInWithPassword = async ({
     throw new HTTPException(403);
   }
 
-  return { id: user.id, email: user.email, emailVerified: user.emailVerified };
+  return {
+    id: user.id,
+    email: user.email,
+    emailVerified: user.emailVerified,
+    passwordHash: user.password,
+  };
+};
+
+export const isPasswordStillCurrent = async (
+  c: Context,
+  { id, passwordHash }: { id: number; passwordHash: string },
+): Promise<boolean> => {
+  const [row] = await c
+    .get("db")
+    .select({ password: core_users.password })
+    .from(core_users)
+    .where(eq(core_users.id, id))
+    .limit(1);
+
+  return row?.password === passwordHash;
 };

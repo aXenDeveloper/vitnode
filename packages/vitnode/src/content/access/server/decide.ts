@@ -191,13 +191,13 @@ export const createContentAccess = (c: Context) => ({
   /** The current viewer, resolved once per request. */
   actor: async (): Promise<ContentAccessActor> =>
     await resolveContentAccessActor(c),
-  /** The scopes of one family that allow `action`. */
+  /** The scopes of one family that allow `action`. An unknown family allows none. */
   allowedScopes: async (
     familyId: string,
     action: ContentAccessAction,
   ): Promise<ContentAccessAllowedScopes> => {
     const family = findContentAccessFamily(c, familyId);
-    if (!family) return { all: true, ids: [] };
+    if (!family) return { all: false, ids: [] };
 
     return await contentAccessAllowedScopes(c, {
       action,

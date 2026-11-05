@@ -36,7 +36,7 @@
     "react-dom": "^19.3.0",
     "use-intl": "^4.14.9",
     "ws": "^8.22.0",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@hono/node-server": "^2.1.4",

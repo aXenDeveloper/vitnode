@@ -28,10 +28,21 @@ const formatterFor = (timeZone: string): Intl.DateTimeFormat => {
       weekday: "short",
       year: "numeric",
     });
-    formatters.set(timeZone, formatter);
+    const canonical = formatter.resolvedOptions().timeZone;
+    const cached = formatters.get(canonical);
+    if (cached) return cached;
+    formatters.set(canonical, formatter);
   }
 
   return formatter;
+};
+
+export const canonicalTimeZone = (timeZone: string): null | string => {
+  try {
+    return formatterFor(timeZone).resolvedOptions().timeZone;
+  } catch {
+    return null;
+  }
 };
 
 export const isValidTimeZone = (timeZone: string): boolean => {

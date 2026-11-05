@@ -118,15 +118,15 @@ export const searchRoute = buildRoute({
     path: "/",
     request: {
       query: zodPaginationQuery.extend({
-        search: z.string().optional(),
-        types: z.string().optional(),
+        search: z.string().max(200).optional(),
+        types: z.string().max(512).optional(),
         authorId: z.string().optional(),
         authorIds: z.string().max(512).optional(),
         containerId: z.string().optional(),
         sort: z.enum(["newest", "oldest", "relevance"]).optional(),
         from: z.string().optional(),
         to: z.string().optional(),
-        lang: z.string().optional(),
+        lang: z.string().max(32).optional(),
       }),
     },
     responses: {

@@ -501,6 +501,9 @@ export class PaymentsModel {
       throw new PaymentError("provider_unavailable");
     }
     const after = await this.applyCheckoutState(open, state);
+    if (after.status === "succeeded") {
+      throw new PaymentError("already_paid");
+    }
     if (after.status === "processing") {
       throw new PaymentError("payment_processing");
     }
@@ -673,7 +676,7 @@ export class PaymentsModel {
    *
    * @throws `PaymentError` - `provider_not_found`, `invalid_amount`,
    * `invalid_currency`, `invalid_return_path`, `reference_in_use`,
-   * `payment_processing`, `payment_in_progress`, `provider_rejected` or
+   * `already_paid`, `payment_processing`, `payment_in_progress`, `provider_rejected` or
    * `provider_unavailable` (safe to retry).
    */
   async createCheckout(

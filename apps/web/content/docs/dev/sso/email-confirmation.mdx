@@ -17,7 +17,7 @@ Signing in at the provider proves the visitor controls that provider account, no
 
 - With `emailVerified: true`, the adapter asserts the provider verified the address, and VitNode trusts it.
 - With `emailVerified: false`, the address is not trusted, and a new identity confirms an email first.
-- With `emailVerified` omitted, VitNode treats it like `true`, so adapters written before the field existed keep working. A [custom adapter](/docs/dev/sso/custom-adapter) that cannot tell must return `false` instead.
+- With `emailVerified` omitted, VitNode treats it like `false`. A [custom adapter](/docs/dev/sso/custom-adapter) written before the field existed now sends new visitors through email confirmation until it returns `true` for addresses the provider verified.
 - With `email: null` or no `email`, there is nothing to trust, and a new identity confirms an email first.
 
 Each built-in adapter sets `emailVerified` from the provider's own flag, such as `email_verified`, Microsoft's `xms_edov` or X's `confirmed_email`; the [provider table](/docs/dev/sso#providers) lists them.

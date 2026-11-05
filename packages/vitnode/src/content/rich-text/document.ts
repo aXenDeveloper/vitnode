@@ -60,15 +60,33 @@ const zodMark = z.strictObject({
   type: zodType,
 });
 
-const zodNode: z.ZodType<RichTextNode> = z.strictObject({
-  attrs: zodAttrs.optional(),
-  get content(): z.ZodOptional<z.ZodArray<z.ZodType<RichTextNode>>> {
-    return z.array(zodNode).optional();
-  },
-  marks: z.array(zodMark).optional(),
-  text: z.string().optional(),
-  type: zodType,
-});
+export const RICH_TEXT_SPAN_LIMITS = {
+  colspan: 1000,
+  rowspan: 65_534,
+} as const;
+
+const zodNode: z.ZodType<RichTextNode> = z
+  .strictObject({
+    attrs: zodAttrs.optional(),
+    get content(): z.ZodOptional<z.ZodArray<z.ZodType<RichTextNode>>> {
+      return z.array(zodNode).optional();
+    },
+    marks: z.array(zodMark).optional(),
+    text: z.string().optional(),
+    type: zodType,
+  })
+  .superRefine((node, ctx) => {
+    for (const [name, max] of Object.entries(RICH_TEXT_SPAN_LIMITS)) {
+      const value = node.attrs?.[name];
+      if (typeof value === "number" && value > max) {
+        ctx.addIssue({
+          code: "custom",
+          message: `A table cell's ${name} is at most ${String(max)}.`,
+          path: ["attrs", name],
+        });
+      }
+    }
+  });
 
 const zodDocumentShape = z.strictObject({
   attrs: zodAttrs.optional(),

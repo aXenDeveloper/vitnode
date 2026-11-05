@@ -101,6 +101,9 @@ const harness = ({
   const createSession = vi
     .spyOn(SessionModel.prototype, "createSessionByUserId")
     .mockResolvedValue({ token: "session-token" });
+  vi.spyOn(SessionModel.prototype, "getSessionCreatedAt").mockImplementation(
+    async () => await Promise.resolve(new Date()),
+  );
   const createAdminSession = vi
     .spyOn(SessionAdminModel.prototype, "createSessionByUserId")
     .mockResolvedValue({ token: "admin-token" });

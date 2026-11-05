@@ -1,5 +1,5 @@
 /** Characters a spreadsheet reads as the start of a formula. */
-const FORMULA_START = /^[=+\-@\t\r]/;
+const FORMULA_START = /^\s*[=+\-@\t\r\uFF1D\uFF0B\uFF0D\uFF20]/;
 
 /**
  * One CSV cell: `null` and `undefined` are empty, objects are JSON, and a

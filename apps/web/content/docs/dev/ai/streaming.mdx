@@ -174,8 +174,7 @@ A failure after the stream started arrives as a last line `{"e":{"code":"AI_TIME
 
 A stream makes one attempt on the primary model, with no retries and no fallback model. When the reader stops it, the run settles as `canceled`:
 
-- If no text had reached the reader yet, they pay nothing.
-- If some text had arrived, Core charges their points and daily count as for a delivered run.
+- Core charges their points and daily count as for a delivered run, whether or not any text had arrived. The provider bills the call either way, so a free cancel would be a free way to spend the site's budget.
 
 ## Related
 

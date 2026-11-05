@@ -91,7 +91,7 @@ describe("member timeline", () => {
     );
   });
 
-  it("shows members their own drafts", async () => {
+  it("shows members their own hidden documents, never every private one", async () => {
     const { app, search } = await appFor(timelineRoute, { id: 1 });
 
     await app.request("/timeline/1?cursor=42");
@@ -100,7 +100,8 @@ describe("member timeline", () => {
       expect.objectContaining({
         authorId: 1,
         cursor: "42",
-        includePrivate: true,
+        hiddenAccess: expect.objectContaining({ authorId: 1 }),
+        includePrivate: false,
       }),
     );
   });

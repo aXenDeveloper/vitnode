@@ -1,12 +1,13 @@
 import type { Context } from "hono";
 
-import { getColumns, inArray, sql } from "drizzle-orm";
+import { getColumns, inArray, or, sql } from "drizzle-orm";
 import { type PgColumn, PgTable } from "drizzle-orm/pg-core";
 
 import type { AnyContentModel } from "../../server/model";
 import type { ContentFieldMap } from "../../types";
 
 import { core_files } from "../../../database/files";
+import { core_users } from "../../../database/users";
 import { contentPrivateAdminFileUrl } from "./files";
 import { contentModelsInAccessFamily } from "./invalidate";
 
@@ -199,11 +200,42 @@ export const protectContentAccessFiles = async (
       ? []
       : await c
           .get("db")
-          .select({ id: core_files.id, visibility: core_files.visibility })
+          .select({
+            id: core_files.id,
+            metadata: core_files.metadata,
+            visibility: core_files.visibility,
+          })
           .from(core_files)
           .where(inArray(core_files.id, [...ids]));
+  const candidateIds = candidates.map(row => row.id);
+  const familyTypes = new Set(inside.map(model => model.definition.id));
+  const userImageIds = new Set(
+    candidateIds.length === 0
+      ? []
+      : (
+          await c
+            .get("db")
+            .select({
+              avatarId: core_users.avatarId,
+              coverId: core_users.coverId,
+            })
+            .from(core_users)
+            .where(
+              or(
+                inArray(core_users.avatarId, candidateIds),
+                inArray(core_users.coverId, candidateIds),
+              ),
+            )
+        ).flatMap(row => [row.avatarId, row.coverId]),
+  );
+  const ownedByFamily = (row: (typeof candidates)[number]): boolean => {
+    if (userImageIds.has(row.id)) return false;
+    const type = row.metadata.contentTypeId;
+
+    return typeof type !== "string" || familyTypes.has(type);
+  };
   const publicIds = candidates
-    .filter(row => row.visibility === "public")
+    .filter(row => row.visibility === "public" && ownedByFamily(row))
     .map(row => row.id);
   const shared = publicIds.filter(id => elsewhere.has(id));
   const movable = publicIds.filter(id => !elsewhere.has(id));

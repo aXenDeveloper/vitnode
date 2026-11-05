@@ -2,7 +2,10 @@ import type { RequestServerOptions } from "@tanstack/react-start";
 
 import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 
-import { PAGE_CACHE_RENDER_HEADER } from "@/page-cache/tags";
+import {
+  isPageCacheRenderMarker,
+  PAGE_CACHE_RENDER_HEADER,
+} from "@/page-cache/tags";
 
 import { handleLocaleRequest } from "../i18n/request";
 import {
@@ -36,7 +39,7 @@ export const runLocaleRequest = async (
   // A shared render is stored and served to everybody, so the visitor's own
   // locale cookie and the no-store default are the page cache's to apply -
   // once it knows whether this response may be shared at all.
-  if (request.headers.has(PAGE_CACHE_RENDER_HEADER)) {
+  if (isPageCacheRenderMarker(request.headers.get(PAGE_CACHE_RENDER_HEADER))) {
     applyDocumentSecurityHeaders(result.response, securityHeaders);
 
     return result;

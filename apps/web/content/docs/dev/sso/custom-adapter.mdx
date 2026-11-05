@@ -234,7 +234,7 @@ No `authorization` block yet? Add it with just `ssoAdapters`, as in [SSO](/docs/
       type: "(code: string, context: SSOCallbackContext) => Promise<SSOTokenResponse>",
     },
     fetchUser: {
-      description: "Returns the provider account: a stable id, and optionally email, emailVerified, username, avatarUrl, firstName and lastName. Validate the ID token here when the provider issues one. Set emailVerified: true only when the provider verified the address. Return emailVerified: false (or email: null) whenever you cannot verify ownership from the provider's response; VitNode then asks a new visitor to confirm an email. An omitted emailVerified counts as true, for older adapters. A returning member is always recognized by id.",
+      description: "Returns the provider account: a stable id, and optionally email, emailVerified, username, avatarUrl, firstName and lastName. Validate the ID token here when the provider issues one. Set emailVerified: true only when the provider verified the address. Return emailVerified: false (or email: null) whenever you cannot verify ownership from the provider's response; VitNode then asks a new visitor to confirm an email. An omitted emailVerified counts as false, so an adapter that forgets it cannot make VitNode trust an unconfirmed address. A returning member is always recognized by id.",
       required: true,
       type: "(token: SSOTokenResponse, context: SSOCallbackContext) => Promise<SSOProviderUser>",
     },

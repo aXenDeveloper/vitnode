@@ -86,7 +86,7 @@ export class SessionAdminModel {
 
   async createSessionByUserId(userId: number) {
     if (!(await isStaff(this.c, { live: true, type: "admin", userId }))) {
-      throw new HTTPException(403, { message: "Forbidden" });
+      throw new HTTPException(403);
     }
 
     const randomBytes = new Uint8Array(64);

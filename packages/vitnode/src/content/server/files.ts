@@ -273,11 +273,12 @@ const isContentFileOriginAllowed = (
   {
     callerId,
     contentTypeId,
-  }: { callerId: null | number; contentTypeId: string },
+    staff,
+  }: { callerId: null | number; contentTypeId: string; staff: boolean },
 ): boolean =>
   callerId === null ||
-  row.metadata?.contentTypeId === contentTypeId ||
-  row.userId === callerId;
+  row.userId === callerId ||
+  (staff && row.metadata?.contentTypeId === contentTypeId);
 
 export const assertContentFileReferences = async (
   c: Context,
@@ -305,9 +306,11 @@ export const assertContentFileReferences = async (
     named.map(entry => entry.id),
     tx,
   );
+  const actor = resolveContentActor(c);
   const origin = {
-    callerId: resolveContentActor(c).userId,
+    callerId: actor.userId,
     contentTypeId: definition.id,
+    staff: actor.type === "staff",
   };
   const foreign = new Set(
     rows

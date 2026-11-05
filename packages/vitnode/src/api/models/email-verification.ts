@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import crypto from "node:crypto";
 import { createTranslator } from "use-intl";
 
@@ -51,23 +51,27 @@ export class EmailVerificationModel {
     { respectCooldown = false }: { respectCooldown?: boolean } = {},
   ): Promise<boolean> {
     const db = this.c.get("db");
-
-    if (respectCooldown) {
-      const issued = await db
-        .select({ createdAt: core_users_confirm_emails.createdAt })
-        .from(core_users_confirm_emails)
-        .where(eq(core_users_confirm_emails.userId, user.id));
-      const cooldownStart = Date.now() - EMAIL_VERIFICATION_RESEND_COOLDOWN_MS;
-
-      if (issued.some(row => row.createdAt.getTime() > cooldownStart)) {
-        return false;
-      }
-    }
-
     const token = this.generateToken();
     const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
 
-    await db.transaction(async tx => {
+    const issuedNow = await db.transaction(async tx => {
+      await tx.execute(
+        sql`select pg_advisory_xact_lock(hashtext(${`verify-email:${user.id}`}))`,
+      );
+
+      if (respectCooldown) {
+        const issued = await tx
+          .select({ createdAt: core_users_confirm_emails.createdAt })
+          .from(core_users_confirm_emails)
+          .where(eq(core_users_confirm_emails.userId, user.id));
+        const cooldownStart =
+          Date.now() - EMAIL_VERIFICATION_RESEND_COOLDOWN_MS;
+
+        if (issued.some(row => row.createdAt.getTime() > cooldownStart)) {
+          return false;
+        }
+      }
+
       await tx
         .delete(core_users_confirm_emails)
         .where(eq(core_users_confirm_emails.userId, user.id));
@@ -77,7 +81,10 @@ export class EmailVerificationModel {
         expiresAt,
         ipAddress: this.c.get("ipAddress"),
       });
+
+      return true;
     });
+    if (!issuedNow) return false;
 
     const verifyUrl = new URL(
       `login/verify-email?token=${encodeURIComponent(token)}`,

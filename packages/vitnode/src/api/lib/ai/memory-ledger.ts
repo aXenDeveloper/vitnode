@@ -312,6 +312,7 @@ export class MemoryAiLedger implements AiLedger {
       const row = this.budgets.get(hold.key);
       if (!row) continue;
       const charge = settlementCharge({
+        canceled: settlement.status === "canceled",
         chargedUsd,
         deliveredUsd,
         delivered: settlement.delivered,

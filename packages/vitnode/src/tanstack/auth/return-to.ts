@@ -22,6 +22,8 @@ const normalize = (value: string): null | string => {
   // navigates to what was actually validated. The locale prefix rides along in
   // the pathname untouched: `/pl/discover` is just a path here, which is why
   // this needs to know nothing about languages.
+  if (url.pathname.startsWith("//")) return null;
+
   return `${url.pathname}${url.search}${url.hash}`;
 };
 

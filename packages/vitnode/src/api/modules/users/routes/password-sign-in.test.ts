@@ -160,7 +160,7 @@ describe("authorization.password on (the default)", () => {
     const response = await app.request("/sign_in", post(CREDENTIALS));
 
     expect(response.status).toBe(201);
-    expect(selects).toHaveBeenCalledOnce();
+    expect(selects).toHaveBeenCalledTimes(2);
     expect(createSession).toHaveBeenCalledWith(1);
   });
 });

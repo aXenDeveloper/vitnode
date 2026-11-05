@@ -15,6 +15,21 @@ export const PAGE_CACHE_TAGS_HEADER = "x-vitnode-cache-tags";
  */
 export const PAGE_CACHE_RENDER_HEADER = "x-vitnode-shared-render";
 
+const RENDER_TOKEN_KEY = Symbol.for("vitnode.page-cache.render-token");
+
+export const pageCacheRenderToken = (): string => {
+  const holder = globalThis as typeof globalThis & {
+    [RENDER_TOKEN_KEY]?: string;
+  };
+  holder[RENDER_TOKEN_KEY] ??= crypto.randomUUID();
+
+  return holder[RENDER_TOKEN_KEY];
+};
+
+export const isPageCacheRenderMarker = (
+  value: null | string | undefined,
+): boolean => value === pageCacheRenderToken();
+
 /** `HIT`, `STALE`, `MISS`, `REVALIDATED` or `BYPASS` - for checking it works. */
 export const PAGE_CACHE_STATUS_HEADER = "x-vitnode-cache";
 

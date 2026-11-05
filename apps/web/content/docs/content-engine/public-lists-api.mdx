@@ -119,4 +119,5 @@ These live in `@vitnode/core/content/server` and are server-only. Use them in a 
 | `resolveContentRequestLocale(c, definition)`                 | The request's locale - `?locale=`, then `Accept-Language`, then the default - or `null` for an explicit locale the install does not serve |
 | `contentLocaleHeaders(resolved)`                             | `Content-Language`, plus `Vary: Accept-Language` when the header decided the locale                                                       |
 | `rememberContentPublicRead(c, { contentTypeId, key, load })` | Caches a read that is the same for every reader until the content type's next write                                                       |
+| `pinContentPublicGeneration(c, contentTypeId)` | Call first in a handler that caches: an access rule changed mid-request then never lands in the cache |
 | `contentListPageCacheTags(definition)`                       | The tags a cached page that read the content type's records needs, for `setPageCacheTags`                                                 |

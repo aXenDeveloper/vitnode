@@ -5,6 +5,8 @@ import { createHash } from "node:crypto";
 
 import { buildRoute } from "@/api/builders";
 import { resolveClientIp } from "@/api/lib/client-ip";
+import { rateLimitKey } from "@/api/middlewares/rate-limiter.middleware";
+import { verifyContentSearchHits } from "@/content/access/server/search";
 import { CONTENT_ID_KEY_LENGTH } from "@/content/const";
 
 const SEARCH_POPULARITY_REPEAT_WINDOW_SECONDS = 30 * 60;
@@ -13,7 +15,10 @@ const viewerKey = (c: Context): string => {
   const user = c.get("user");
   if (user) return `user:${user.id}`;
 
-  return `ip:${createHash("sha256").update(resolveClientIp(c)).digest("hex").slice(0, 32)}`;
+  return `ip:${createHash("sha256")
+    .update(rateLimitKey(resolveClientIp(c)))
+    .digest("hex")
+    .slice(0, 32)}`;
 };
 
 export const popularityRoute = buildRoute({
@@ -54,6 +59,8 @@ export const popularityRoute = buildRoute({
     if (!(await search.isListed(itemType, itemId))) {
       return c.json({ recorded: false });
     }
+    const { kept } = await verifyContentSearchHits(c, [{ itemId, itemType }]);
+    if (kept.length === 0) return c.json({ recorded: false });
 
     const isFirstInWindow = await c
       .get("cache")

@@ -71,13 +71,10 @@ export const timelineRoute = buildRoute({
   handler: async c => {
     const authorId = Number(c.req.valid("param").userId);
 
-    const includePrivate = c.get("user")?.id === authorId;
     const result = await searchTimeline(c, {
       authorId,
-      hiddenAccess: includePrivate
-        ? undefined
-        : await contentSearchHiddenAccess(c),
-      includePrivate,
+      hiddenAccess: await contentSearchHiddenAccess(c),
+      includePrivate: false,
       query: c.req.valid("query"),
     });
 

@@ -3,6 +3,7 @@ import type {
   ModerationSnapshotField,
 } from "@/lib/moderation/snapshot";
 
+import { safeNotificationTarget } from "@/api/lib/notifications/safe";
 import { richTextToPlainText } from "@/content/rich-text/plain-text";
 import {
   MODERATION_LIMITS,
@@ -10,6 +11,18 @@ import {
 } from "@/lib/moderation/const";
 
 import type { ModerationCaptureResult } from "./targets";
+
+export const safeReportTargetUrl = (value: unknown): null | string => {
+  const path = safeNotificationTarget(value);
+  if (path !== null) return path;
+  if (typeof value !== "string") return null;
+
+  try {
+    return new URL(value).protocol === "https:" ? value : null;
+  } catch {
+    return null;
+  }
+};
 
 const byteLength = (value: unknown): number =>
   Buffer.byteLength(JSON.stringify(value), "utf8");
@@ -51,6 +64,7 @@ export const sealReportSnapshot = ({
     target,
     title,
     truncated,
+    url: safeReportTargetUrl(capture.url),
     version: MODERATION_SNAPSHOT_VERSION,
   };
 
