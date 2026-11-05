@@ -40,6 +40,10 @@ const memoKey = (
   live: boolean,
 ): string => `${live ? "live" : "cached"}:${type}:${userId}`;
 
+export const forgetRequestStaffPermissions = (c: Context): void => {
+  requestMemos.delete(c);
+};
+
 export const readRequestStaffPermissions = (
   c: Context,
   args: { type: PermissionStaffType; userId: number },
@@ -61,7 +65,9 @@ const fetchEpoch = async (c: Context): Promise<string> =>
 
 // The memo holds the promise, set before awaiting, so an invalidation that
 // lands while the read is in flight clears it and the next read starts over.
-const readEpoch = async (c: Context): Promise<string> => {
+export const readStaffPermissionsGeneration = async (
+  c: Context,
+): Promise<string> => {
   const memo = memoOf(c);
   memo.epoch ??= fetchEpoch(c);
 
@@ -81,10 +87,10 @@ export const readStaffPermissions = async (
   await c
     .get("cache")
     .getSystem<ResolvedStaffPermissionSet>(
-      permissionsKey(await readEpoch(c), args),
+      permissionsKey(await readStaffPermissionsGeneration(c), args),
     );
 
-const writeStaffPermissionsInEpoch = async (
+export const writeStaffPermissionsInGeneration = async (
   c: Context,
   epoch: string,
   args: { type: PermissionStaffType; userId: number },
@@ -105,7 +111,12 @@ export const writeStaffPermissions = async (
   args: { type: PermissionStaffType; userId: number },
   value: ResolvedStaffPermissionSet,
 ): Promise<void> => {
-  await writeStaffPermissionsInEpoch(c, await readEpoch(c), args, value);
+  await writeStaffPermissionsInGeneration(
+    c,
+    await readStaffPermissionsGeneration(c),
+    args,
+    value,
+  );
 };
 
 export interface CachedStaffPermissionsOfUser {
@@ -120,7 +131,7 @@ export const readStaffPermissionsOfUser = async (
   c: Context,
   userId: number,
 ): Promise<CachedStaffPermissionsOfUser> => {
-  const epoch = await readEpoch(c);
+  const epoch = await readStaffPermissionsGeneration(c);
   const [admin = null, moderator = null] = await c
     .get("cache")
     .getSystemMany<ResolvedStaffPermissionSet>([
@@ -131,7 +142,12 @@ export const readStaffPermissionsOfUser = async (
   return {
     sets: { admin, moderator },
     write: async (type, value) => {
-      await writeStaffPermissionsInEpoch(c, epoch, { type, userId }, value);
+      await writeStaffPermissionsInGeneration(
+        c,
+        epoch,
+        { type, userId },
+        value,
+      );
     },
   };
 };
@@ -139,12 +155,11 @@ export const readStaffPermissionsOfUser = async (
 /**
  * Expires **every** cached permission set, for every user, at once.
  *
- * By moving the generation rather than deleting keys, because the mutations that
- * need this are the role-shaped ones - a role gaining `root`, a role being
- * deleted and its members reassigned - and those change the answer for every
- * member of that role. Enumerating them would be a query plus one delete per
- * user; moving the stamp is a single write, and the entries it orphans fall out
- * on their own TTL.
+ * Every staff change goes through here, a single user's included. Moving the
+ * generation is one write, and it cannot lose a race the way a delete does: a
+ * request that read the old grants before the change committed writes them
+ * under the old generation, where nobody reads any more. The orphaned entries
+ * fall out on their own TTL.
  *
  * The new stamp is a random id rather than a timestamp. Two app instances with
  * skewed clocks could otherwise write a *lower* stamp than the one already
@@ -158,54 +173,4 @@ export const invalidateAllStaffPermissions = async (
   memo.epoch = undefined;
   memo.sets.clear();
   await c.get("cache").setSystem(EPOCH_KEY, randomUUID());
-};
-
-/**
- * Expires one user's cached permission sets - both kinds, since a role
- * reassignment moves admin and moderator permissions together.
- *
- * Used where the mutation names a single user, so the rest of the staff keep
- * their warm entries.
- */
-export const invalidateStaffPermissionsForUser = async (
-  c: Context,
-  userId: number,
-): Promise<void> => {
-  const memo = memoOf(c);
-  for (const type of STAFF_TYPES) {
-    memo.sets.delete(memoKey({ type, userId }, true));
-    memo.sets.delete(memoKey({ type, userId }, false));
-  }
-  // Read fresh, not from the memo: deleting under a generation another request
-  // has since moved past would leave the live entries in place.
-  memo.epoch = fetchEpoch(c);
-  const epoch = await memo.epoch;
-
-  await c
-    .get("cache")
-    .deleteSystem(
-      STAFF_TYPES.map(type => permissionsKey(epoch, { type, userId })),
-    );
-};
-
-/**
- * Expires whatever one staff entry governs.
- *
- * A staff entry hangs off *either* a user or a role, and the two are worth
- * different amounts of cache: a user entry affects exactly that person, while a
- * role entry affects everyone who holds the role - a set this route has no cheap
- * way to enumerate. So one gets a targeted delete and the other moves the
- * generation.
- */
-export const invalidateStaffEntry = async (
-  c: Context,
-  entry: { roleId?: null | number; userId?: null | number },
-): Promise<void> => {
-  if (entry.userId != null) {
-    await invalidateStaffPermissionsForUser(c, entry.userId);
-
-    return;
-  }
-
-  await invalidateAllStaffPermissions(c);
 };

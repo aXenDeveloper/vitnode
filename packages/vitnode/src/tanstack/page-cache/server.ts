@@ -24,6 +24,7 @@ import {
   encodePageCacheTags,
   PAGE_CACHE_RENDER_HEADER,
   PAGE_CACHE_STATUS_HEADER,
+  pageCacheRenderToken,
 } from "@/page-cache/tags";
 
 import type { PageCacheRouteTable } from "../../page-cache/policy";
@@ -238,7 +239,7 @@ export const createPageCacheHandler = <AppLocales extends LocaleConfig[]>(
     rest: never[],
   ): Promise<Response> => {
     const headers = new Headers(event.req.headers);
-    headers.set(PAGE_CACHE_RENDER_HEADER, "1");
+    headers.set(PAGE_CACHE_RENDER_HEADER, pageCacheRenderToken());
     const request = new Request(event.req.url, {
       headers,
       method: event.req.method,

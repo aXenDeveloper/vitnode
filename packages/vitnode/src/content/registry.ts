@@ -291,6 +291,23 @@ export const validateContentTypes = (
     }
   }
 
+  for (const entry of entries) {
+    const { definition } = entry;
+    const from = definition.access?.from;
+    if (!from) continue;
+
+    const descriptor = definition.fields[from];
+    const targetId =
+      descriptor?.kind === "relation" ? descriptor.target().id : undefined;
+    const target = targetId === undefined ? undefined : byId.get(targetId);
+    if (!target?.definition.access?.scope.enabled) {
+      throw new ContentEngineError(
+        `${describe(entry)} takes its access from "${from}", but ${targetId === undefined ? "that field is not a relation" : `"${targetId}" is not a registered content type with \`access: { scope }\``}. Its records would be readable by everyone - point \`access.from\` at a scope content type.`,
+        { contentTypeId: definition.id },
+      );
+    }
+  }
+
   return [...entries].sort((a, b) =>
     a.definition.id.localeCompare(b.definition.id),
   );

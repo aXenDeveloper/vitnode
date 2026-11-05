@@ -39,6 +39,7 @@ const isPrivateResponse = (cacheControl: null | string): boolean =>
  */
 export const recordPageCacheApiResponse = (response: {
   headers: Headers;
+  status: number;
 }): void => {
   const state = storage().getStore();
   if (state === undefined) return;
@@ -49,7 +50,11 @@ export const recordPageCacheApiResponse = (response: {
     state.tags.add(tag);
   }
 
-  if (isPrivateResponse(response.headers.get("cache-control"))) {
+  if (
+    isPrivateResponse(response.headers.get("cache-control")) ||
+    response.status === 429 ||
+    response.status >= 500
+  ) {
     state.isPrivate = true;
   }
 };

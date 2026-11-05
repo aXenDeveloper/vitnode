@@ -1,5 +1,3 @@
-import type { RichTextAttrs, RichTextMark, RichTextNode } from "./document";
-
 import {
   EDITOR_IMAGE_MAX_ALT_LENGTH,
   editorAttachmentKindOf,
@@ -7,6 +5,12 @@ import {
   isEditorImageWrap,
   normalizeEditorImageWidth,
 } from "../../lib/editor-uploads";
+import {
+  RICH_TEXT_SPAN_LIMITS,
+  type RichTextAttrs,
+  type RichTextMark,
+  type RichTextNode,
+} from "./document";
 import { richTextToPlainText } from "./plain-text";
 
 export const RICH_TEXT_SLOT = 0;
@@ -122,10 +126,24 @@ const withStyle = (
   style: Record<string, string> | undefined,
 ): RichTextElement => (style ? { ...element, style } : element);
 
+const MAX_TABLE_COLUMNS = 1000;
+
+const clampedSpan = (value: unknown, max: number): null | number => {
+  const span = positiveInteger(value);
+
+  return span === null ? null : Math.min(span, max);
+};
+
 const cellElement = (tag: "td" | "th", node: RichTextNode): RichTextElement => {
   const attrs: Record<string, RichTextElementAttrValue> = {};
-  const colspan = positiveInteger(node.attrs?.colspan);
-  const rowspan = positiveInteger(node.attrs?.rowspan);
+  const colspan = clampedSpan(
+    node.attrs?.colspan,
+    RICH_TEXT_SPAN_LIMITS.colspan,
+  );
+  const rowspan = clampedSpan(
+    node.attrs?.rowspan,
+    RICH_TEXT_SPAN_LIMITS.rowspan,
+  );
   if (colspan !== null && colspan > 1) attrs.colspan = colspan;
   if (rowspan !== null && rowspan > 1) attrs.rowspan = rowspan;
 
@@ -137,12 +155,14 @@ const columnWidths = (table: RichTextNode): (null | number)[] => {
   const widths: (null | number)[] = [];
 
   for (const cell of firstRow?.content ?? []) {
-    const colspan = positiveInteger(cell.attrs?.colspan) ?? 1;
+    const colspan =
+      clampedSpan(cell.attrs?.colspan, RICH_TEXT_SPAN_LIMITS.colspan) ?? 1;
     const colwidth = Array.isArray(cell.attrs?.colwidth)
       ? cell.attrs.colwidth
       : [];
 
     for (let index = 0; index < colspan; index += 1) {
+      if (widths.length >= MAX_TABLE_COLUMNS) return widths;
       widths.push(positiveInteger(colwidth[index]));
     }
   }

@@ -5,7 +5,7 @@ import { buildRoute } from "@/api/builders";
 import { staffEntryAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
-import { invalidateStaffEntry } from "@/api/lib/staff-permission-cache";
+import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 import { manifest } from "@/manifest";
@@ -137,7 +137,7 @@ export const createStaffAdminRoute = buildRoute({
       return inserted;
     });
 
-    await invalidateStaffEntry(c, { roleId, userId });
+    await invalidateAllStaffPermissions(c);
 
     return c.json({ id: created.id }, 201);
   },

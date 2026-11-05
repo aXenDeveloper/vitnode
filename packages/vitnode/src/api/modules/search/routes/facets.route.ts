@@ -17,12 +17,12 @@ export const facetsRoute = buildRoute({
     path: "/facets",
     request: {
       query: z.object({
-        search: z.string().optional(),
+        search: z.string().max(200).optional(),
         authorIds: z.string().max(512).optional(),
         containerId: z.string().optional(),
         from: z.string().optional(),
         to: z.string().optional(),
-        lang: z.string().optional(),
+        lang: z.string().max(32).optional(),
       }),
     },
     responses: {

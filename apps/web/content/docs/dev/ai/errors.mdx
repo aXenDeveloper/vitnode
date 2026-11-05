@@ -62,7 +62,7 @@ HTTP/1.1 403
 | `AI_PROVIDER_FAILED`     | 502    | The provider returned an error.                                         | Try again; check the provider key and status.                       |
 | `AI_INVALID_OUTPUT`      | 502    | The answer was empty or failed `parseText()` / `outputSchema`.          | Try again; loosen the schema or tighten the prompt if it repeats.   |
 | `AI_TIMEOUT`             | 504    | The provider took longer than `timeoutMs`.                              | Try again, or raise `timeoutMs`.                                    |
-| `AI_CANCELED`            | 408    | The `signal` aborted the run.                                           | Nothing; the reader stopped it.                                     |
+| `AI_CANCELED`            | 408    | The `signal` aborted the run.                                           | Points and +1 run; the provider still billed it.                    |
 
 VitNode charges a user only when they received output, meaning a valid result or streamed text that reached them before they stopped it. When the provider fails, times out or answers unusably, the site budget pays whatever the provider billed. [Who pays what](/docs/dev/ai/costs-and-limits#who-pays-what) has the full table.
 

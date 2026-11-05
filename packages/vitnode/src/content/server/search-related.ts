@@ -9,6 +9,7 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentSearchContext } from "./search-document";
 
 import { core_content_containers } from "../../database/content-containers";
+import { isContentPubliclyVisible } from "../cache";
 import { contentIdKey, parseContentId } from "../ids";
 import {
   contentSearchContextSource,
@@ -21,6 +22,8 @@ import { findContentModel } from "./model";
 import { isContentRowPublic } from "./search-document";
 
 const RELATED_PUBLICATION_COLUMNS = ["status", "publishedAt", "hiddenAt"];
+const TRANSLATION_STATUS = "__translationStatus";
+const TRANSLATION_PUBLISHED_AT = "__translationPublishedAt";
 
 const contextIdOf = (
   source: ContentSearchContextSource,
@@ -126,6 +129,12 @@ const loadRelatedTranslations = async (
     const column = columns[name];
     if (column) selection[name] = column;
   }
+  const translationStatus = columns.status;
+  const translationPublishedAt = columns.publishedAt;
+  if (translationStatus) selection[TRANSLATION_STATUS] = translationStatus;
+  if (translationPublishedAt) {
+    selection[TRANSLATION_PUBLISHED_AT] = translationPublishedAt;
+  }
 
   const [rows, languages] = await Promise.all([
     c
@@ -143,12 +152,30 @@ const loadRelatedTranslations = async (
   for (const row of rows) {
     const locale = localeOf.get(row.languageId as number);
     if (locale === undefined) continue;
+    if (
+      (translationStatus || translationPublishedAt) &&
+      !isContentPubliclyVisible({
+        publishedAt: translationPublishedAt
+          ? (row[TRANSLATION_PUBLISHED_AT] as Date | null | string)
+          : new Date(0),
+        status: translationStatus
+          ? (row[TRANSLATION_STATUS] as string | undefined)
+          : "published",
+      })
+    ) {
+      continue;
+    }
+    const {
+      [TRANSLATION_PUBLISHED_AT]: _publishedAt,
+      [TRANSLATION_STATUS]: _status,
+      ...values
+    } = row;
 
     const key = contentIdKey(row.itemId as number | string);
     const current = picked.get(key);
     if (current && current.locale === defaultLocale) continue;
     if (!current || locale === defaultLocale) {
-      picked.set(key, { locale, values: row });
+      picked.set(key, { locale, values });
     }
   }
 
@@ -213,16 +240,19 @@ const loadRelatedContexts = async (
 
     const key = contentIdKey(id);
     const translation = translations.get(key);
+    const context = toRelatedSearchContext(
+      target,
+      translation ? { ...row, ...translation.values } : row,
+      routing,
+      translation?.locale,
+    );
 
     return [
       [
         key,
-        toRelatedSearchContext(
-          target,
-          translation ? { ...row, ...translation.values } : row,
-          routing,
-          translation?.locale,
-        ),
+        translated.length > 0 && !translation
+          ? { ...context, isPublic: false }
+          : context,
       ],
     ];
   });

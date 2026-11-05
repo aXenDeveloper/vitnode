@@ -34,18 +34,20 @@ const CONTENT_EXCERPT_LENGTH = 1000;
  * The rows after the cursor in `(createdAt, id)` order - the order the page is
  * sorted by. The cursor is a row id, so the boundary's `createdAt` is read
  * back from that row, as `::text` to keep its microseconds.
- * A cursor whose row has since gone falls back to the id alone.
+ * A cursor whose row has since gone - or that this viewer may not see - falls
+ * back to the id alone, so a cursor can't probe when a hidden row was created.
  */
 const keysetAfter = async (
   c: Context,
   cursor: number,
   oldest: boolean,
+  filters: SQL | undefined,
 ): Promise<SQL> => {
   const [boundary] = await c
     .get("db")
     .select({ createdAt: sql<string>`${core_search_index.createdAt}::text` })
     .from(core_search_index)
-    .where(eq(core_search_index.id, cursor))
+    .where(and(eq(core_search_index.id, cursor), filters))
     .limit(1);
   if (!boundary) {
     return oldest
@@ -150,7 +152,7 @@ export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
         oldest ? asc(core_search_index.id) : desc(core_search_index.id),
       );
       if (cursorValue) {
-        const cond = await keysetAfter(c, cursorValue, oldest);
+        const cond = await keysetAfter(c, cursorValue, oldest, filters);
         where = where ? and(where, cond) : cond;
       }
     }

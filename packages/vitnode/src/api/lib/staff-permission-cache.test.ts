@@ -7,8 +7,6 @@ import type { ResolvedStaffPermissionSet } from "./permission-staff";
 import { resolveStaffPermissions } from "./check-staff-permission";
 import {
   invalidateAllStaffPermissions,
-  invalidateStaffEntry,
-  invalidateStaffPermissionsForUser,
   readStaffPermissions,
   writeStaffPermissions,
 } from "./staff-permission-cache";
@@ -155,77 +153,6 @@ describe("staff permission cache", () => {
       ).toBeNull();
     }
   });
-
-  it("a per-user invalidation leaves everyone else warm", async () => {
-    const c = context(cache);
-
-    for (const userId of [1, 2]) {
-      await writeStaffPermissions(
-        c,
-        { type: "admin", userId },
-        { root: true, permissions: [], staff: true },
-      );
-      await writeStaffPermissions(
-        c,
-        { type: "moderator", userId },
-        { root: true, permissions: [], staff: true },
-      );
-    }
-
-    await invalidateStaffPermissionsForUser(c, 1);
-
-    expect(
-      await readStaffPermissions(c, { type: "admin", userId: 1 }),
-    ).toBeNull();
-    expect(
-      await readStaffPermissions(c, { type: "moderator", userId: 1 }),
-    ).toBeNull();
-    expect(
-      await readStaffPermissions(c, { type: "admin", userId: 2 }),
-    ).not.toBeNull();
-  });
-
-  describe("invalidateStaffEntry", () => {
-    it("expires only the named user for a user-scoped entry", async () => {
-      const c = context(cache);
-
-      await writeStaffPermissions(
-        c,
-        { type: "admin", userId: 1 },
-        { root: true, permissions: [], staff: true },
-      );
-      await writeStaffPermissions(
-        c,
-        { type: "admin", userId: 2 },
-        { root: true, permissions: [], staff: true },
-      );
-
-      await invalidateStaffEntry(c, { roleId: null, userId: 1 });
-
-      expect(
-        await readStaffPermissions(c, { type: "admin", userId: 1 }),
-      ).toBeNull();
-      expect(
-        await readStaffPermissions(c, { type: "admin", userId: 2 }),
-      ).not.toBeNull();
-    });
-
-    it("expires everyone for a role-scoped entry", async () => {
-      const c = context(cache);
-
-      await writeStaffPermissions(
-        c,
-        { type: "admin", userId: 2 },
-        { root: true, permissions: [], staff: true },
-      );
-
-      await invalidateStaffEntry(c, { roleId: 5, userId: null });
-
-      expect(
-        await readStaffPermissions(c, { type: "admin", userId: 2 }),
-      ).toBeNull();
-    });
-  });
 });
 
 describe("resolveStaffPermissions", () => {
@@ -265,7 +192,7 @@ describe("resolveStaffPermissions", () => {
       user: USER,
     });
 
-    await invalidateStaffPermissionsForUser(context(cache), USER.id);
+    await invalidateAllStaffPermissions(context(cache));
 
     const after = fakeDb(oneStaffEntry());
     await resolveStaffPermissions(context(cache, after.db), {

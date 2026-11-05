@@ -56,6 +56,26 @@ const richTextFileIds = (value: unknown, into: Set<number>): void => {
   if (Array.isArray(value.content)) richTextFileIds(value.content, into);
 };
 
+export const richTextFileIdsOf = (value: unknown): Set<number> => {
+  const into = new Set<number>();
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item);
+
+      return;
+    }
+    if (!isRecord(node)) return;
+    if (isRecord(node.attrs)) {
+      const id = positiveId(node.attrs.fileId);
+      if (id !== null) into.add(id);
+    }
+    for (const child of Object.values(node)) walk(child);
+  };
+  walk(value);
+
+  return into;
+};
+
 const registeredOf = (
   c: Context,
   contentTypeId: string,

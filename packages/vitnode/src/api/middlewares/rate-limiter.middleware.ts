@@ -85,6 +85,11 @@ const AUTH_RATE_LIMITED_PATHS = [
   "/@vitnode/core/users/passkeys/admin-sign-in",
 ] as const;
 
+const AUTH_RATE_LIMITED_PATTERNS = [
+  /\/@vitnode\/core\/users\/sso\/[^/]+\/link$/,
+  /\/@vitnode\/core\/users\/sso\/pending\/[^/]+\/(?:email|confirm)$/,
+] as const;
+
 const READ_METHODS = new Set(["GET", "HEAD"]);
 
 const PAYMENT_WEBHOOK_PATH = /\/@vitnode\/core\/payments\/webhooks\/[^/]+$/;
@@ -100,7 +105,8 @@ export const rateLimiterCategoriesFor = (
   const categories: RateLimiterCategory[] = ["safety", "write"];
   if (
     method === "POST" &&
-    AUTH_RATE_LIMITED_PATHS.some(authPath => path.endsWith(authPath))
+    (AUTH_RATE_LIMITED_PATHS.some(authPath => path.endsWith(authPath)) ||
+      AUTH_RATE_LIMITED_PATTERNS.some(pattern => pattern.test(path)))
   ) {
     categories.push("auth");
   }

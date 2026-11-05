@@ -55,6 +55,10 @@
         "title": "Already yours",
         "desc": "You have already bought this item."
       },
+      "already_paid": {
+        "title": "Already paid",
+        "desc": "Your earlier payment for this item went through. It will show as yours in a moment."
+      },
       "payment_in_progress": {
         "title": "A checkout is still open",
         "desc": "An earlier checkout for this item is still open. Finish it, or try again in a moment."

@@ -130,7 +130,7 @@ open checkout (`resumed: true`) while it has more than 5 minutes left. When the
 provider, amount, currency or description changed, or the checkout is about to
 close, core closes it at the provider and starts a new one. Another member's
 open payment for the reference answers `reference_in_use`, and one that is
-still settling answers `payment_processing`.
+still settling answers `payment_processing`. When closing the old checkout finds it already paid (its webhook had not arrived yet), it answers `already_paid` instead of charging again.
 
 Errors are `PaymentError`s from `@vitnode/core/api/lib/payments/errors`;
 `provider_unavailable` is safe to retry.

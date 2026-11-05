@@ -61,6 +61,12 @@ const EXTENSIONS_BY_MIME: Record<string, readonly string[]> = {
   "video/webm": [".webm"],
 };
 
+export const storedContentType = (mimeType?: null | string): string => {
+  const type = mimeType?.toLowerCase().split(";")[0]?.trim();
+
+  return type && type in EXTENSIONS_BY_MIME ? type : "application/octet-stream";
+};
+
 const ACTIVE_CONTENT_EXTENSIONS = new Set([
   ".asp",
   ".aspx",

@@ -14,6 +14,11 @@ export const PAYMENT_ERROR_STATUS = {
   payment_in_progress: 409,
   /** The customer finished a checkout that the provider has not settled yet. */
   payment_processing: 409,
+  /**
+   * The open attempt being replaced turned out to be paid already. Starting a
+   * new checkout would charge the customer twice for the same reference.
+   */
+  already_paid: 409,
   /** The provider refused to create the checkout; the attempt is `failed`. */
   provider_rejected: 502,
   /** The provider could not be reached or is misconfigured. Safe to retry. */

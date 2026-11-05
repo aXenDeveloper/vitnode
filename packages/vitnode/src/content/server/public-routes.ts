@@ -73,7 +73,10 @@ import {
 } from "./page-cache";
 import { contentPreviewSecret } from "./preview-link";
 import { verifyContentPreviewToken } from "./preview-token";
-import { rememberContentPublicRead } from "./public-cache";
+import {
+  pinContentPublicGeneration,
+  rememberContentPublicRead,
+} from "./public-cache";
 import { contentPermissionsRoute } from "./public-permissions";
 import { resolveContentPublicRowPeople } from "./public-row-hydration";
 import {
@@ -401,6 +404,7 @@ export const buildContentPublicRoutes = <
       },
     },
     handler: async c => {
+      await pinContentPublicGeneration(c, definition.id);
       // The whole query string goes through both schemas, each reading only the
       // keys it owns, and neither is strict - so a stale bookmark or a tracking
       // parameter is ignored rather than turned into a 400. `orderBy` is the
@@ -775,6 +779,7 @@ export const buildContentPublicRoutes = <
       },
     },
     handler: async c => {
+      await pinContentPublicGeneration(c, definition.id);
       const query = c.req.valid("query");
       const unique = new Map<string, ContentId>();
       for (const raw of (query.ids ?? "").split(",")) {
@@ -824,7 +829,11 @@ export const buildContentPublicRoutes = <
         };
       };
 
-      if (hiddenAccess || readable.hidden) {
+      if (
+        hiddenAccess ||
+        readable.hidden ||
+        !(await isContentAccessShareable(c, accessModel))
+      ) {
         return c.json(await load(), 200, {
           "Cache-Control": "private, no-store",
         });
@@ -874,6 +883,7 @@ export const buildContentPublicRoutes = <
       },
     },
     handler: async c => {
+      await pinContentPublicGeneration(c, definition.id);
       const resolved = await localeFor(c);
       if (!resolved) throw notFound();
       const shareable = await isContentAccessShareable(c, accessModel);

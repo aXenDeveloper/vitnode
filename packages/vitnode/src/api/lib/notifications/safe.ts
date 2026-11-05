@@ -17,7 +17,10 @@ export const safeNotificationTarget = (target: unknown): null | string => {
     const url = new URL(target, base);
     if (url.origin !== base) return null;
 
-    return `${url.pathname}${url.search}${url.hash}`;
+    const safe = `${url.pathname}${url.search}${url.hash}`;
+    if (safe.startsWith("//") || safe.includes("\\")) return null;
+
+    return safe;
   } catch {
     return null;
   }

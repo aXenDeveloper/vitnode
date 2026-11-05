@@ -6,6 +6,7 @@ import { manifest } from "@/manifest.gen";
 
 const SERVER_ERRORS = [
   "already_owned",
+  "already_paid",
   "payment_in_progress",
   "payment_processing",
   "provider_not_found",

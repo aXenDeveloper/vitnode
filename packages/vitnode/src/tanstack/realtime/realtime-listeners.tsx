@@ -5,6 +5,7 @@ import { useUserPresenceHeartbeat } from "@/hooks/use-user-presence-heartbeat";
 import { NotificationListener } from "@/views/layouts/theme/notification-listener";
 import { WebSocketAuthSync } from "@/views/layouts/theme/web-socket-auth-sync";
 
+import { removeUserIdentityQueries } from "../auth/queries";
 import { invalidateSession, useSessionQuery } from "../auth/session-query";
 import { NotificationStateSync } from "../notifications/state-sync";
 import { socketUserIdFromSession } from "./session";
@@ -18,6 +19,7 @@ export const RealtimeListeners = () => {
   const { data: session } = useSessionQuery();
   const queryClient = useQueryClient();
   const onSignedOut = React.useCallback(() => {
+    removeUserIdentityQueries(queryClient);
     void invalidateSession(queryClient);
   }, [queryClient]);
 

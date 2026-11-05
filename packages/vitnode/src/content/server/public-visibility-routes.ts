@@ -25,6 +25,7 @@ import { emitContentEvent } from "./emit";
 import { withHttpErrors } from "./http-errors";
 import { resetContentLiveRecord } from "./live/hooks";
 import { contentPublicStateOf } from "./page-cache";
+import { contentPublicWriteRefusal } from "./public-write-authorization";
 import { visibilityAction } from "./report-target";
 import { contentIdentifier, jsonBody, readOptionalJson } from "./route-helpers";
 import { syncContentSearch } from "./search-sync";
@@ -105,6 +106,9 @@ export const contentPublicVisibilityRoutes = <
       throw new HTTPException(404, { message: `${name} not found.` });
     }
     if (!(await canHideContentRecord(c, { action, model, pluginId, row }))) {
+      if (row.hiddenAt != null) {
+        throw new HTTPException(404, { message: `${name} not found.` });
+      }
       throw new HTTPException(403, {
         message: `You cannot ${action} this ${name}.`,
       });
@@ -119,7 +123,7 @@ export const contentPublicVisibilityRoutes = <
         targetId: contentIdKey(id),
         tx,
       });
-      if (result && reason) {
+      if (result?.changed && reason) {
         await tx
           .update(table)
           .set({ hiddenReason: reason })
@@ -228,6 +232,9 @@ export const contentPublicDeleteRoute = <
       const row = await readRow(c, model, id);
       if (!row) throw new HTTPException(404, { message: `${name} not found.` });
       if (!(await canDeleteContentRecord(c, { model, pluginId, row }))) {
+        if (contentPublicWriteRefusal(row) === "notFound") {
+          throw new HTTPException(404, { message: `${name} not found.` });
+        }
         throw new HTTPException(403, {
           message: `You cannot delete this ${name}.`,
         });

@@ -600,6 +600,7 @@ export class PostgresAiLedger implements AiLedger {
       let chargedPoints = 0n;
       for (const hold of holds) {
         const charge = settlementCharge({
+          canceled: settlement.status === "canceled",
           chargedUsd,
           deliveredUsd,
           delivered: settlement.delivered,

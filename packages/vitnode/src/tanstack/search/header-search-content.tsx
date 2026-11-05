@@ -103,7 +103,7 @@ interface SearchSourceGroup {
 }
 
 const isInternalPath = (url: string): boolean =>
-  url.startsWith("/") && !url.startsWith("//");
+  url.startsWith("/") && !/^[\\/][\\/]/.test(url) && !url.includes("\\");
 
 const searchPageHref = (term: string): string =>
   `/search?${new URLSearchParams({ search: term }).toString()}`;

@@ -55,7 +55,7 @@
     "react-email": "^6.11.1",
     "sonner": "^2.0.8",
     "use-intl": "^4.14.9",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@react-email/ui": "^6.11.1",

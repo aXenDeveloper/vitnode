@@ -58,10 +58,11 @@ export interface SSOProviderUser {
    */
   email?: null | string;
   /**
-   * Whether the provider confirmed the user owns `email`. `false` means core
-   * never trusts the address: a returning member still signs in by `id`, and a
-   * new one confirms an address of their own by email link. Leave it unset only
-   * when the provider never returns an unconfirmed address.
+   * Whether the provider confirmed the user owns `email`. Only `true` makes
+   * core trust the address. Unset or `false` means core never trusts it: a
+   * returning member still signs in by `id`, and a new one confirms an address
+   * of their own by email link. Set `true` only when the provider vouches for
+   * the address.
    */
   emailVerified?: boolean;
   firstName?: null | string;
@@ -138,9 +139,8 @@ export interface SSOApiPlugin {
   ) => Promise<SSOTokenResponse>;
   /**
    * Reads the provider account with the tokens. Validate an ID token here when
-   * the provider issues one. Report an address the provider has not confirmed
-   * with `emailVerified: false` - an unconfirmed email must never reach core
-   * as a trusted one.
+   * the provider issues one. Set `emailVerified: true` only for an address
+   * the provider confirmed - anything else is treated as unconfirmed.
    */
   fetchUser: (
     token: SSOTokenResponse,

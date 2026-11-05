@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/frame";
 import { debugTabPath } from "@/tanstack/admin/debug/route-search";
 
+import { safeHttpsHref } from "../../system/plugins/plugin-update-status";
 import { coreSecurityUpdate } from "../health/health";
 
 const SECURITY_SURFACE =
@@ -125,7 +126,7 @@ export const SecurityUpdatePanel = ({
         <Row label={t("panel.details")}>
           <a
             className="text-primary inline-flex items-center gap-1 hover:underline"
-            href={securityUpdate.url}
+            href={safeHttpsHref(securityUpdate.url) ?? undefined}
             rel="noreferrer"
             target="_blank"
           >
@@ -165,7 +166,7 @@ export const SecurityUpdatePanel = ({
           <div className="flex flex-wrap gap-2 px-4 py-3">
             <a
               className={buttonVariants({ size: "sm", variant: "outline" })}
-              href={latest.url}
+              href={safeHttpsHref(latest.url) ?? undefined}
               rel="noreferrer"
               target="_blank"
             >

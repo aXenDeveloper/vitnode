@@ -51,6 +51,7 @@ const REQUIRED_COLUMNS = [
 const requiredColumns = (definition: AnyContentTypeDefinition): string[] => [
   ...REQUIRED_COLUMNS,
   ...(definition.visibility.enabled ? ["hiddenAt"] : []),
+  ...(definition.thread.enabled ? ["deletedAt"] : []),
 ];
 
 interface ContentSearchSources {

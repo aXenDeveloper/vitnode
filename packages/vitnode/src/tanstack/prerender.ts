@@ -1,7 +1,10 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 
-import { PAGE_CACHE_RENDER_HEADER } from "@/page-cache/tags";
+import {
+  isPageCacheRenderMarker,
+  PAGE_CACHE_RENDER_HEADER,
+} from "@/page-cache/tags";
 
 const PRERENDER_REQUEST_HEADER = "x-nitro-prerender";
 
@@ -26,7 +29,7 @@ export const isSharedRenderRequest = createIsomorphicFn()
     try {
       return (
         getRequestHeader(PRERENDER_REQUEST_HEADER) !== undefined ||
-        getRequestHeader(PAGE_CACHE_RENDER_HEADER) !== undefined
+        isPageCacheRenderMarker(getRequestHeader(PAGE_CACHE_RENDER_HEADER))
       );
     } catch {
       return false;

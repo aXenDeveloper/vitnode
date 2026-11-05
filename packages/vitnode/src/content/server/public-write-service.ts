@@ -5,7 +5,7 @@ import type {
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { eq, getColumns, getColumnTable, inArray } from "drizzle-orm";
+import { and, eq, getColumns, getColumnTable, inArray } from "drizzle-orm";
 import { getTableConfig } from "drizzle-orm/pg-core";
 
 import type { ContentAccessAction } from "../access/policy";
@@ -25,7 +25,12 @@ import type { AnyContentModel, ContentModel } from "./model";
 import type { ContentPublicWriteActor } from "./public-write-authorization";
 import type { ContentDatabase } from "./service";
 
+import { core_files } from "../../database/files";
 import { decideContentAccessForScopes } from "../access/server/decide";
+import {
+  contentRecordHasFile,
+  richTextFileIdsOf,
+} from "../access/server/files";
 import {
   contentAccessScopesForValues,
   contentAccessSourceOf,
@@ -314,6 +319,9 @@ export const createContentPublicWriteService = <
           ...(targetColumns.hiddenAt
             ? { hiddenAt: targetColumns.hiddenAt }
             : {}),
+          ...(targetColumns.deletedAt
+            ? { deletedAt: targetColumns.deletedAt }
+            : {}),
         })
         .from(targetTable)
         .where(inArray(target, ids));
@@ -358,6 +366,46 @@ export const createContentPublicWriteService = <
     }
   };
 
+  const assertRichTextFileOrigins = async (
+    tx: ContentDatabase,
+    values: Record<string, unknown>,
+    { itemId, userId }: { itemId?: ContentId; userId: number },
+  ): Promise<void> => {
+    for (const [field, value] of Object.entries(values)) {
+      if (definition.fields[field]?.kind !== "richText") continue;
+
+      const ids = [...richTextFileIdsOf(value)];
+      if (ids.length === 0) continue;
+
+      const owned = new Set(
+        (
+          await tx
+            .select({ id: core_files.id })
+            .from(core_files)
+            .where(
+              and(inArray(core_files.id, ids), eq(core_files.userId, userId)),
+            )
+        ).map(row => row.id),
+      );
+
+      for (const fileId of ids) {
+        if (owned.has(fileId)) continue;
+        if (
+          itemId !== undefined &&
+          (await contentRecordHasFile(c, accessModel, itemId, fileId))
+        ) {
+          continue;
+        }
+
+        throw new ContentPublicWriteInputError({
+          contentTypeId,
+          field,
+          message: "The document references a file that is not available.",
+        });
+      }
+    }
+  };
+
   const asInputError = async <T>(run: () => Promise<T>): Promise<T> => {
     try {
       return await run();
@@ -386,6 +434,7 @@ export const createContentPublicWriteService = <
     ...(editorial ? { version: columns.version } : {}),
     ...(ownerField === null ? {} : { [ownerField]: columns[ownerField] }),
     ...(definition.visibility.enabled ? { hiddenAt: columns.hiddenAt } : {}),
+    ...(columns.deletedAt ? { deletedAt: columns.deletedAt } : {}),
     ...(containerSource && columns[containerSource.name]
       ? { [containerSource.name]: columns[containerSource.name] }
       : {}),
@@ -563,6 +612,7 @@ export const createContentPublicWriteService = <
 
       const prepare = async (tx: ContentDatabase) => {
         await assertPublicRelationTargets(tx, parsed);
+        await assertRichTextFileOrigins(tx, parsed, { userId: actor.userId });
         await assertWriteAccess(
           await contentAccessScopesForValues(c, accessModel, parsed),
         );
@@ -763,6 +813,13 @@ export const createContentPublicWriteService = <
         const result = await c.get("db").transaction(async tx => {
           const access = await authorize(tx, actor, await lockRow(tx, id));
           await assertPublicRelationTargets(tx, values);
+          await assertRichTextFileOrigins(tx, values, {
+            itemId: id,
+            userId: actor.userId,
+          });
+          await assertWriteAccess(
+            await contentAccessScopesForValues(c, accessModel, values),
+          );
 
           if (await needsReview(access)) {
             return {
@@ -808,6 +865,13 @@ export const createContentPublicWriteService = <
       const result = await c.get("db").transaction(async tx => {
         const access = await authorize(tx, actor, await lockRow(tx, id));
         await assertPublicRelationTargets(tx, values);
+        await assertRichTextFileOrigins(tx, values, {
+          itemId: id,
+          userId: actor.userId,
+        });
+        await assertWriteAccess(
+          await contentAccessScopesForValues(c, accessModel, values),
+        );
 
         if (await needsReview(access)) {
           return { kind: "proposal" as const, ...(await propose(tx, access)) };

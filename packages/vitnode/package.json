@@ -91,7 +91,7 @@
     "typescript": "^6.0.3",
     "vite": "^8.3.4",
     "vitest": "^5.0.3",
-    "zod": "^4.6.5"
+    "zod": "^4.6.6"
   },
   "bin": {
     "vitnode": "./cli.mjs"
@@ -295,7 +295,7 @@
     "react-day-picker": "^10.0.2",
     "react-resizable-panels": "^4.14.3",
     "redis": "^6.3.0",
-    "sanitize-html": "^2.18.0",
+    "sanitize-html": "^2.18.1",
     "semver": "^7.8.5",
     "shadcn": "^4.21.4",
     "sharp": "^0.35.5",

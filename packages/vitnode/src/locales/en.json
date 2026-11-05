@@ -1304,6 +1304,10 @@
             "admin_session_required": {
               "title": "Open the AdminCP first",
               "desc": "Your account has AdminCP access, so adding a passkey needs one extra check. Sign in to the AdminCP with your password in this browser, then try again."
+            },
+            "reauthentication_required": {
+              "title": "Please sign in again",
+              "desc": "For your security, adding a passkey needs a recent sign-in. Sign out, sign back in, and add it within the hour."
             }
           }
         },

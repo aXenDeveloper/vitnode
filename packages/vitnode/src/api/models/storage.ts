@@ -21,6 +21,7 @@ import {
   buildStorageKey,
   generateStorageFileName,
   replaceFileExtension,
+  storedContentType,
 } from "@/lib/api/upload";
 import { STORAGE_FILE_IN_USE } from "@/lib/files/in-use";
 import { formatBytes } from "@/lib/format-bytes";
@@ -609,7 +610,7 @@ export class StorageModel {
 
     await store.upload({
       body: bytes,
-      contentType: row.mimeType ?? undefined,
+      contentType: storedContentType(row.mimeType),
       key: row.key,
     });
     await db
@@ -758,7 +759,7 @@ export class StorageModel {
     const stored = {
       key,
       body: processed.body,
-      contentType: processed.mimeType || undefined,
+      contentType: storedContentType(processed.mimeType),
     };
     // A private object has no URL: whoever serves it builds the route to it.
     const result: StorageUploadResult = privateStore

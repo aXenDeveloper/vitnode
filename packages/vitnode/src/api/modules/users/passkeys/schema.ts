@@ -113,6 +113,7 @@ export const zodPasskeyErrorSchema = z.object({
     "last_recovery_method",
     "not_found",
     "not_staff",
+    "reauthentication_required",
     "passkeys_disabled",
     "verification_failed",
   ]),

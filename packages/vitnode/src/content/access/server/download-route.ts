@@ -6,6 +6,7 @@ import { and, eq } from "drizzle-orm";
 import type { AnyContentModel, ContentModel } from "../../server/model";
 import type { AnyContentTypeDefinition } from "../../types";
 
+import { isStaff } from "../../../api/lib/check-staff-permission";
 import { attachStoredFile } from "../../../api/lib/file-download";
 import { buildRoute } from "../../../api/lib/route";
 import { core_files } from "../../../database/files";
@@ -131,12 +132,35 @@ export const contentFileDownloadRoute = <
           key: core_files.key,
           mimeType: core_files.mimeType,
           name: core_files.name,
+          userId: core_files.userId,
           visibility: core_files.visibility,
         })
         .from(core_files)
         .where(eq(core_files.id, fileId))
         .limit(1);
       if (!file || !c.get("core").storage?.adapter) return missing();
+
+      const ownerField = definition.publicWrite.enabled
+        ? definition.publicWrite.ownerField
+        : null;
+      if (ownerField) {
+        const ownerColumn = columns[ownerField];
+        const [record] = ownerColumn
+          ? await c
+              .get("db")
+              .select({ owner: ownerColumn })
+              .from(table)
+              .where(eq(columns.id, itemId))
+              .limit(1)
+          : [];
+        const byAuthor = file.userId !== null && record?.owner === file.userId;
+        const byStaff =
+          !byAuthor &&
+          file.userId !== null &&
+          ((await isStaff(c, { type: "admin", userId: file.userId })) ||
+            (await isStaff(c, { type: "moderator", userId: file.userId })));
+        if (!byAuthor && !byStaff) return missing();
+      }
 
       const isImage = file.mimeType?.startsWith("image/") === true;
       if (

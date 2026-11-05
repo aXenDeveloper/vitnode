@@ -36,6 +36,8 @@ export interface ContentDocumentStore {
   ) => Promise<void>;
 }
 
+export const CONTENT_LIVE_MAX_DOCUMENT_BYTES = 16 * 1024 * 1024;
+
 export type ContentDocumentResult = "INVALID_MESSAGE" | "NOT_JOINED" | "ok";
 
 const REMOTE_ORIGIN = Symbol("content-live-remote");
@@ -58,6 +60,7 @@ interface LoadedDoc<TConnection> {
   ref: ContentLiveDocRef;
   room: string;
   seeder: null | string;
+  sizeUpperBound: number;
   store: ContentDocumentStore;
   updatedBy: null | number;
 }
@@ -158,6 +161,7 @@ export const createContentDocuments = <TConnection>({
         ref,
         room,
         seeder: null,
+        sizeUpperBound: state?.byteLength ?? 0,
         store,
         updatedBy: null,
       };
@@ -182,7 +186,9 @@ export const createContentDocuments = <TConnection>({
 
     entry.dirty = false;
     try {
-      await entry.store.save(entry.ref, Y.encodeStateAsUpdate(entry.doc), {
+      const state = Y.encodeStateAsUpdate(entry.doc);
+      entry.sizeUpperBound = state.byteLength;
+      await entry.store.save(entry.ref, state, {
         baseVersion: entry.baseVersion,
         userId: entry.updatedBy,
       });
@@ -310,6 +316,7 @@ export const createContentDocuments = <TConnection>({
         const bytes = decodeContentLiveBytes(message.update);
         if (message.type === "doc:update") {
           Y.applyUpdate(entry.doc, bytes, REMOTE_ORIGIN);
+          entry.sizeUpperBound += bytes.byteLength;
           markSeeded(entry);
           schedulePersist(entry);
         } else if (message.type === "doc:awareness") {
@@ -510,12 +517,25 @@ export const createContentDocuments = <TConnection>({
       if (!entry) return "NOT_JOINED";
       const bytes = decode(update);
       if (!bytes) return "INVALID_MESSAGE";
+      if (
+        entry.sizeUpperBound + bytes.byteLength >
+        CONTENT_LIVE_MAX_DOCUMENT_BYTES
+      ) {
+        entry.sizeUpperBound = Y.encodeStateAsUpdate(entry.doc).byteLength;
+        if (
+          entry.sizeUpperBound + bytes.byteLength >
+          CONTENT_LIVE_MAX_DOCUMENT_BYTES
+        ) {
+          return "INVALID_MESSAGE";
+        }
+      }
 
       try {
         Y.applyUpdate(entry.doc, bytes, clientId);
       } catch {
         return "INVALID_MESSAGE";
       }
+      entry.sizeUpperBound += bytes.byteLength;
       markSeeded(entry);
       entry.updatedBy = userId;
       relay(entry.room, {

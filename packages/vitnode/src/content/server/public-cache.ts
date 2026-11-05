@@ -51,6 +51,27 @@ const bumpGeneration = async (
 
 const inflight = new Map<string, Promise<unknown>>();
 
+const pinnedGenerations = new WeakMap<Context, Map<string, Promise<string>>>();
+
+const pinnedGeneration = async (
+  c: Context,
+  cache: CacheModel,
+  generationKey: string,
+): Promise<string> => {
+  let pins = pinnedGenerations.get(c);
+  if (!pins) {
+    pins = new Map();
+    pinnedGenerations.set(c, pins);
+  }
+  let pin = pins.get(generationKey);
+  if (!pin) {
+    pin = readGeneration(cache, generationKey);
+    pins.set(generationKey, pin);
+  }
+
+  return await pin;
+};
+
 /**
  * A generation-keyed read-through: `<prefix>:g<generation>:<sha256(key)>`.
  *
@@ -77,7 +98,7 @@ const rememberInGeneration = async <T>(
   const cache: CacheModel | undefined = c.get("cache");
   if (!cache) return await load();
 
-  const generation = await readGeneration(cache, generationKey);
+  const generation = await pinnedGeneration(c, cache, generationKey);
   const fullKey = `${prefix}:g${generation}:${createHash("sha256")
     .update(stableJson(key))
     .digest("base64url")}`;
@@ -90,7 +111,9 @@ const rememberInGeneration = async <T>(
 
   const loading = (async () => {
     const value = await load();
-    await cache.setSystem(fullKey, { value }, ttlSeconds);
+    if ((await readGeneration(cache, generationKey)) === generation) {
+      await cache.setSystem(fullKey, { value }, ttlSeconds);
+    }
 
     return value;
   })();
@@ -120,6 +143,21 @@ export const bumpContentPublicGeneration = async (
   // Strict: the page-cache invalidation retries a failure it can see, and a
   // bump that failed silently would keep readers on the old generation.
   await bumpGeneration(c, publicGenerationKey(contentTypeId), { strict: true });
+};
+
+/**
+ * Pins the content type's cache generation for this request. Call it at the
+ * start of a handler, before any access rule or visibility state is read, so a
+ * later `rememberContentPublicRead` cannot store a response built from rules
+ * that changed while the request ran.
+ */
+export const pinContentPublicGeneration = async (
+  c: Context,
+  contentTypeId: string,
+): Promise<void> => {
+  const cache: CacheModel | undefined = c.get("cache");
+  if (cache)
+    await pinnedGeneration(c, cache, publicGenerationKey(contentTypeId));
 };
 
 /**

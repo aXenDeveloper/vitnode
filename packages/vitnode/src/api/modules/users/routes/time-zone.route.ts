@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
-import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
+import { canonicalTimeZone } from "@/api/lib/notifications/digest-period";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { core_users } from "@/database/users";
 
@@ -48,8 +48,9 @@ export const updateMyTimeZoneRoute = buildRoute({
       throw new HTTPException(401, { message: "Unauthorized" });
     }
 
-    const { timeZone } = c.req.valid("json");
-    if (timeZone !== null && !isValidTimeZone(timeZone)) {
+    const requested = c.req.valid("json").timeZone;
+    const timeZone = requested === null ? null : canonicalTimeZone(requested);
+    if (requested !== null && timeZone === null) {
       throw new HTTPException(400, { message: "Unknown time zone." });
     }
 

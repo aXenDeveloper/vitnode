@@ -70,6 +70,7 @@ const isContentRowHidden = (row: object): boolean => {
 
 export const isContentRowPublic = (row: object): boolean => {
   const values = row as Record<string, unknown>;
+  if (values.deletedAt != null) return false;
 
   return isContentPubliclyVisible({
     hiddenAt: toTimestamp(values.hiddenAt),

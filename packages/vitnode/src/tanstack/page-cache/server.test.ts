@@ -11,6 +11,7 @@ import {
   resetPageCacheStore,
 } from "@/page-cache/store.server";
 import {
+  isPageCacheRenderMarker,
   PAGE_CACHE_RENDER_HEADER,
   PAGE_CACHE_STATUS_HEADER,
   PAGE_CACHE_TAGS_HEADER,
@@ -84,7 +85,9 @@ const setup = ({
       authorization: request.headers.get("authorization"),
       cookie: request.headers.get("cookie"),
       method: request.method,
-      shared: request.headers.get(PAGE_CACHE_RENDER_HEADER) === "1",
+      shared: isPageCacheRenderMarker(
+        request.headers.get(PAGE_CACHE_RENDER_HEADER),
+      ),
       url: request.url,
     };
     seen.push(current);
@@ -92,6 +95,7 @@ const setup = ({
     // What the server-side fetcher does for every API response it reads.
     recordPageCacheApiResponse({
       headers: new Headers({ [PAGE_CACHE_TAGS_HEADER]: tags.join(",") }),
+      status: 200,
     });
     await gate;
 
@@ -263,6 +267,7 @@ describe("sessions never leak into shared HTML", () => {
       (_, count) => {
         recordPageCacheApiResponse({
           headers: new Headers({ "cache-control": "private, no-store" }),
+          status: 200,
         });
 
         return html(`render #${String(count)}`);

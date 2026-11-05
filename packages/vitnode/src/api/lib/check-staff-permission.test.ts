@@ -21,10 +21,7 @@ import {
   resolveStaffPermissions,
 } from "./check-staff-permission";
 import { normalizePermissionStaffModules } from "./permission-staff";
-import {
-  invalidateAllStaffPermissions,
-  invalidateStaffEntry,
-} from "./staff-permission-cache";
+import { invalidateAllStaffPermissions } from "./staff-permission-cache";
 
 const ROOT_ROLE = 1;
 const MEMBER_ROLE = 3;
@@ -226,7 +223,7 @@ describe("getStaffFlags", () => {
     expect((await getStaffFlags(c, USER)).isModerator).toBe(true);
 
     await c.db.delete(core_moderators_permissions);
-    await invalidateStaffEntry(c, { userId: USER.id });
+    await invalidateAllStaffPermissions(c);
 
     expect((await getStaffFlags(c, USER)).isModerator).toBe(false);
   });
@@ -241,7 +238,7 @@ describe("getStaffFlags", () => {
     expect((await getStaffFlags(c, USER)).isAdmin).toBe(true);
 
     await c.db.delete(core_admin_permissions);
-    await invalidateStaffEntry(c, { roleId: STAFF_ROLE });
+    await invalidateAllStaffPermissions(c);
 
     expect((await getStaffFlags(c, USER)).isAdmin).toBe(false);
   });
@@ -362,7 +359,7 @@ describe("resolveStaffPermissions with scoped grants", () => {
       .set({ permissions: [reports("can_view_reports", ["b"])] });
     expect(await resolve()).toEqual([reports("can_view_reports", ["a"])]);
 
-    await invalidateStaffEntry(c, { userId: USER.id });
+    await invalidateAllStaffPermissions(c);
     expect(await resolve()).toEqual([reports("can_view_reports", ["b"])]);
   });
 });

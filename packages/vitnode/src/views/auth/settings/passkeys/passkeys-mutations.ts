@@ -9,6 +9,7 @@ import { createPasskeyInBrowser } from "../../passkeys/webauthn";
 export type AddPasskeyFailure =
   | "admin_session_required"
   | "expired"
+  | "reauthentication_required"
   | "server_error"
   | "unavailable"
   | PasskeyCeremonyFailure;
@@ -43,6 +44,19 @@ const CREDENTIALS = { credentials: "include" } as const;
 
 const failed = <Failure>(failure: Failure) => ({ failure, ok: false as const });
 
+const forbiddenReason = async (
+  response: Response,
+): Promise<"admin_session_required" | "reauthentication_required"> => {
+  const body: unknown = await response.json().catch(() => null);
+
+  return body !== null &&
+    typeof body === "object" &&
+    "error" in body &&
+    body.error === "reauthentication_required"
+    ? "reauthentication_required"
+    : "admin_session_required";
+};
+
 export const addPasskeyInBrowser: AddPasskey = async () => {
   try {
     const optionsResponse = await fetcherClient({
@@ -55,7 +69,7 @@ export const addPasskeyInBrowser: AddPasskey = async () => {
 
     if (optionsResponse.status === 404) return failed("unavailable");
     if (optionsResponse.status === 403) {
-      return failed("admin_session_required");
+      return failed(await forbiddenReason(optionsResponse));
     }
     if (optionsResponse.status !== 200) return failed("server_error");
 
@@ -76,7 +90,7 @@ export const addPasskeyInBrowser: AddPasskey = async () => {
 
     if (verifyResponse.status === 409) return failed("already_registered");
     if (verifyResponse.status === 403) {
-      return failed("admin_session_required");
+      return failed(await forbiddenReason(verifyResponse));
     }
     if (verifyResponse.status === 400) return failed("expired");
     if (verifyResponse.status !== 201) return failed("server_error");

@@ -28,6 +28,7 @@ const LINK_SECRET = "link-secret";
 const PROVIDER_USER: SSOProviderUser = {
   avatarUrl: "https://lh3.googleusercontent.test/a/photo.png",
   email: "Alice@Example.test",
+  emailVerified: true,
   firstName: "Alice",
   id: "google-alice",
   lastName: "Smith",

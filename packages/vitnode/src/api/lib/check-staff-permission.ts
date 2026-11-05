@@ -23,10 +23,11 @@ import {
 import {
   readRequestStaffPermissions,
   readStaffPermissions,
+  readStaffPermissionsGeneration,
   readStaffPermissionsOfUser,
   rememberRequestStaffPermissions,
   STAFF_TYPES,
-  writeStaffPermissions,
+  writeStaffPermissionsInGeneration,
 } from "./staff-permission-cache";
 
 const tableByType = {
@@ -140,9 +141,11 @@ const loadAndCacheStaffPermissions = async (
   c: Context,
   args: { type: PermissionStaffType; user: StaffUser },
 ): Promise<ResolvedStaffPermissionSet> => {
+  const generation = await readStaffPermissionsGeneration(c);
   const resolved = await loadStaffPermissions(c, args);
-  await writeStaffPermissions(
+  await writeStaffPermissionsInGeneration(
     c,
+    generation,
     { type: args.type, userId: args.user.id },
     resolved,
   );
@@ -227,6 +230,7 @@ export const isStaff = async (
     }
   }
 
+  const generation = live ? null : await readStaffPermissionsGeneration(c);
   const roleIds = await findStaffUserRoleIds(c, userId);
   if (!roleIds) return false;
 
@@ -235,7 +239,9 @@ export const isStaff = async (
     type,
     userId,
   });
-  if (!live) await writeStaffPermissions(c, args, resolved);
+  if (generation !== null) {
+    await writeStaffPermissionsInGeneration(c, generation, args, resolved);
+  }
   rememberRequestStaffPermissions(c, args, resolved, { live: true });
 
   return resolved.staff;

@@ -26,6 +26,7 @@ import { contentIdParamSchema, contentIdSchema } from "../ids";
 import { resolveContentPublicLocale } from "../locale";
 import { listContentLanguages } from "./language-resolver";
 import { contentRecordPageCacheTags } from "./page-cache";
+import { contentLocaleHeaders } from "./request-locale";
 import { contentIdentifier } from "./route-helpers";
 
 /**
@@ -201,7 +202,7 @@ export const buildContentDeliveryRoutes = <
             "Cache-Control": "private, no-store",
             "X-Robots-Tag": "noindex, nofollow",
           })
-        : c.json(resolution, 200);
+        : c.json(resolution, 200, contentLocaleHeaders(resolved));
     },
   });
 
@@ -246,7 +247,7 @@ export const buildContentDeliveryRoutes = <
         ...contentAccessPageCacheTags(c, accessModel),
       ]);
 
-      return c.json(metadata, 200);
+      return c.json(metadata, 200, contentLocaleHeaders(resolved));
     },
   });
 

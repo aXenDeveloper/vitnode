@@ -29,7 +29,10 @@ const formatterFor = (timeZone: string): Intl.DateTimeFormat => {
       timeZone,
       year: "numeric",
     });
-    formatterCache.set(timeZone, formatter);
+    const canonical = formatter.resolvedOptions().timeZone;
+    const cached = formatterCache.get(canonical);
+    if (cached) return cached;
+    formatterCache.set(canonical, formatter);
   }
 
   return formatter;

@@ -286,7 +286,10 @@ export type {
   ContentPreviewToken,
   ContentPreviewTokenPayload,
 } from "./preview-token";
-export { rememberContentPublicRead } from "./public-cache";
+export {
+  pinContentPublicGeneration,
+  rememberContentPublicRead,
+} from "./public-cache";
 export { contentPublicLocaleStates } from "./public-locales";
 export { buildContentPublicModule } from "./public-module";
 export type {
