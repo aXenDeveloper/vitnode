@@ -26,6 +26,7 @@ import {
 import { FEEDBACK_TONE_TEXT } from "@/components/ui/feedback-tone";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SlidingNumber } from "@/components/ui/sliding-number";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { WarnDialog } from "@/tanstack/moderation/warn-button";
 import { ModcpRequestError } from "@/views/moderation/modcp/modcp-query";
@@ -287,6 +288,7 @@ const StandingCard = ({
   const entries = standingEntries(standing);
   const visible = entries.slice(0, VISIBLE_ENTRIES);
   const showLift = standing.can.lift && suspension;
+  const showHistory = visible.length > 0 || standing.hiddenWarnings > 0;
 
   return (
     <Card aria-labelledby={titleId} className="h-fit" role="region">
@@ -296,7 +298,10 @@ const StandingCard = ({
             className="text-foreground text-2xl font-semibold text-balance tabular-nums"
             id={titleId}
           >
-            {t("points", { count: standing.activePoints })}
+            {t.rich("points_animated", {
+              count: standing.activePoints,
+              n: () => <SlidingNumber value={standing.activePoints} />,
+            })}
           </h2>
           <StatusLine standing={standing} />
         </div>
@@ -330,35 +335,33 @@ const StandingCard = ({
         ) : null}
       </CardContent>
 
-      <CardContent className="border-t pt-6">
-        {visible.length === 0 ? (
-          <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-            {standing.own ? t("empty_own") : t("empty")}
-          </p>
-        ) : (
-          <ol aria-label={t("history")} className="flex flex-col">
-            {visible.map((entry, index) => (
-              <EntryRow
-                entry={entry}
-                key={
-                  entry.kind === "warning"
-                    ? `w-${entry.warning.id}`
-                    : `s-${entry.suspension.id}`
-                }
-                last={index === visible.length - 1}
-                onConfirm={setConfirm}
-                onOpen={setTarget}
-                standing={standing}
-              />
-            ))}
-          </ol>
-        )}
-        {standing.hiddenWarnings > 0 ? (
-          <p className="text-muted-foreground pt-4 text-xs leading-relaxed text-pretty">
-            {t("hidden", { count: standing.hiddenWarnings })}
-          </p>
-        ) : null}
-      </CardContent>
+      {showHistory ? (
+        <CardContent className="border-t pt-6">
+          {visible.length > 0 ? (
+            <ol aria-label={t("history")} className="flex flex-col">
+              {visible.map((entry, index) => (
+                <EntryRow
+                  entry={entry}
+                  key={
+                    entry.kind === "warning"
+                      ? `w-${entry.warning.id}`
+                      : `s-${entry.suspension.id}`
+                  }
+                  last={index === visible.length - 1}
+                  onConfirm={setConfirm}
+                  onOpen={setTarget}
+                  standing={standing}
+                />
+              ))}
+            </ol>
+          ) : null}
+          {standing.hiddenWarnings > 0 ? (
+            <p className="text-muted-foreground pt-4 text-xs leading-relaxed text-pretty">
+              {t("hidden", { count: standing.hiddenWarnings })}
+            </p>
+          ) : null}
+        </CardContent>
+      ) : null}
 
       {entries.length > 0 ? (
         <CardFooter className="justify-end py-3">
@@ -367,9 +370,10 @@ const StandingCard = ({
             to={standing.seeAllHref}
           >
             {t("see_all")}
-            <span className="text-muted-foreground tabular-nums">
-              {entries.length}
-            </span>
+            <SlidingNumber
+              className="text-muted-foreground"
+              value={entries.length}
+            />
             <ChevronRightIcon
               aria-hidden="true"
               className="size-4 rtl:-scale-x-100"

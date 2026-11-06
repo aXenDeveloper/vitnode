@@ -255,7 +255,7 @@ Under `/api/@vitnode/core/moderation`, using the user session.
 | --- | --- | --- |
 | `GET /warnings/reasons` | Anyone who can warn | Enabled reasons in display order |
 | `POST /warnings/preview` | Anyone who can warn | `{ userId, reasonId, points?, expiration?, content?, reportId? }`. Runs every check and answers points before and after and the projected `sanction` |
-| `POST /warnings` | Anyone who can warn | The preview body plus `{ message, staffNote?, overrideNote?, resolveReport?, idempotencyKey }` |
+| `POST /warnings` | Anyone who can warn | The preview body plus `{ message, staffNote?, overrideNote?, resolveReport?, idempotencyKey }`. `message` is `{ languageCode, value }[]`, one non-empty rich-text document per language, each 3-2000 characters as plain text. `staffNote` is one rich-text document or `null` |
 | `POST /warnings/{id}/revoke` | `can_revoke` | `{ reason }` |
 | `GET /warnings` | Moderators | Query `userId`, `reasonId`, `issuedById`, `status`, `pluginId`, `targetType`, `from`, `to`, `page`, `pageSize` |
 | `GET /members?search=` | `can_view` or `can_warn` | Up to 10 members |
@@ -298,7 +298,7 @@ A content-linked warning carries the content's moderation scope. Staff notes, ov
 
 ### Warning notifications
 
-`core.warning_issued`, `core.warning_revoked`, `core.account_suspended` and `core.suspension_revoked`, in the **Account** category. They are mandatory in the inbox, link to `/account-status`, and are published inside the warning's transaction, so a rolled-back warning notifies nobody. They carry the member's message and points, never staff notes or the moderator's name.
+`core.warning_issued`, `core.warning_revoked`, `core.account_suspended` and `core.suspension_revoked`, in the **Account** category. They are mandatory in the inbox, link to `/account-status`, and are published inside the warning's transaction, so a rolled-back warning notifies nobody. They carry the member's message as plain text per language, and points, never staff notes or the moderator's name.
 
 ## Snapshot format
 

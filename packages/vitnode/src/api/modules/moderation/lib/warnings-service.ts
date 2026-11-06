@@ -5,9 +5,11 @@ import { and, eq, isNull, sql } from "drizzle-orm";
 import type { ModeratorContext } from "@/api/lib/moderation/access";
 import type { RegisteredReportTarget } from "@/api/lib/moderation/targets";
 import type { WarningReason } from "@/api/lib/moderation/warnings/reasons";
+import type { RichTextDocument } from "@/content/rich-text/document";
 import type { ContentDatabase } from "@/content/server/service";
 import type {
   WarningContentSnapshot,
+  WarningMessage,
   WarningThresholdAction,
 } from "@/lib/moderation/warnings";
 
@@ -22,6 +24,7 @@ import {
   warningTargetRefusal,
 } from "@/api/lib/moderation/warnings/access";
 import { recordWarningAudit } from "@/api/lib/moderation/warnings/audit";
+import { warningMessagePreview } from "@/api/lib/moderation/warnings/message";
 import { listWarningReasons } from "@/api/lib/moderation/warnings/reasons";
 import { forgetSuspension } from "@/api/lib/moderation/warnings/suspension";
 import {
@@ -84,10 +87,10 @@ export interface WarningDraftInput {
 
 export interface IssueWarningInput extends WarningDraftInput {
   idempotencyKey: string;
-  message: string;
+  message: WarningMessage;
   overrideNote?: null | string;
   resolveReport?: boolean;
-  staffNote?: null | string;
+  staffNote?: null | RichTextDocument;
 }
 
 export interface WarningTargetUser {
@@ -513,7 +516,6 @@ export const issueWarning = async (
   const draft = await resolveWarningDraft(c, moderator, input);
   const overridden = draft.overrides.points || draft.overrides.expiration;
   const overrideNote = input.overrideNote?.trim() ?? "";
-  const staffNote = input.staffNote?.trim() ?? "";
   if (overridden && overrideNote.length < WARNING_LIMITS.explanationMinLength) {
     throw warningError(400, { error: "override_note_required" });
   }
@@ -557,7 +559,7 @@ export const issueWarning = async (
           idempotencyKey: input.idempotencyKey,
           issuedAt: now,
           issuedById: moderator.user.id,
-          message: input.message.trim(),
+          message: input.message,
           overrideNote: overridden ? overrideNote : null,
           pluginId: draft.content?.pluginId ?? null,
           points: draft.points,
@@ -568,7 +570,7 @@ export const issueWarning = async (
           reportId: report?.id ?? null,
           scopeFamily: draft.content?.scopeFamily ?? null,
           scopeId: draft.content?.scopeId ?? null,
-          staffNote: staffNote === "" ? null : staffNote,
+          staffNote: input.staffNote ?? null,
           targetId: draft.content?.targetId ?? null,
           targetType: draft.content?.targetType ?? null,
           userId: draft.user.id,
@@ -679,7 +681,7 @@ export const issueWarning = async (
       await notifications.publish({
         actorId: null,
         data: {
-          message: input.message.trim(),
+          message: warningMessagePreview(input.message),
           points: draft.points,
           reason: draft.reason?.title ?? null,
           warningId: warning.id,

@@ -7,16 +7,14 @@ import {
 import { ShieldAlertIcon, TriangleAlertIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
-import { useFormatter, useLocale, useTranslations } from "use-intl";
+import { useFormatter, useTranslations } from "use-intl";
 import { z } from "zod";
 
-import type {
-  AutoFormOnSubmit,
-  ItemAutoFormComponentProps,
-} from "@/components/form/auto-form";
+import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 
 import { AutoForm, AutoFormSubmitButton } from "@/components/form/auto-form";
 import { AutoFormDateTime } from "@/components/form/fields/date-time";
+import { AutoFormEditor } from "@/components/form/fields/editor";
 import { AutoFormNumber } from "@/components/form/fields/number";
 import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
@@ -32,8 +30,14 @@ import {
 } from "@/components/ui/dialog";
 import { useFormApi } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  isRichTextDocument,
+  isRichTextEmpty,
+} from "@/content/rich-text/document";
+import { richTextToPlainText } from "@/content/rich-text/plain-text";
 import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 
+import type { DocumentDraft, MessageDraft } from "./warn-dialog-parts";
 import type {
   IssuedWarning,
   ModcpWarningReason,
@@ -43,8 +47,16 @@ import type {
 } from "./warnings-api";
 
 import { ModcpRequestError } from "../modcp/modcp-query";
-import { resolveReasonText } from "../report-reasons-query";
-import { WarningDuration } from "./warning-format";
+import {
+  filledMessage,
+  MemberPanel,
+  messageText,
+  NO_REASON,
+  OutcomeSummary,
+  reasonMessage,
+  ReasonPicker,
+  Reveal,
+} from "./warn-dialog-parts";
 import {
   ACCOUNT_STATUS_QUERY_KEY,
   issueWarning,
@@ -69,24 +81,32 @@ export interface WarnDialogContentProps {
   userId: number;
 }
 
-const NO_REASON = "none";
 const EXPIRATION_MODES = ["default", "never", "hours", "at"] as const;
 
 interface FormValues {
   expirationAt?: null | string;
   expirationHours?: number;
   expirationMode?: (typeof EXPIRATION_MODES)[number];
-  message?: string;
+  message?: MessageDraft;
   overrideNote?: string;
   points?: number;
   reasonId?: string;
   resolveReport?: boolean;
-  staffNote?: string;
+  staffNote?: DocumentDraft | null;
 }
+
+type WarnBase = Pick<WarningDraft, "content" | "reportId" | "userId">;
+
+const documentSchema = z
+  .looseObject({
+    content: z.array(z.unknown()).optional(),
+    type: z.literal("doc"),
+  })
+  .nullable();
 
 const draftOf = (
   values: FormValues,
-  base: Pick<WarningDraft, "content" | "reportId" | "userId">,
+  base: WarnBase,
   canOverridePoints: boolean,
 ): WarningDraft => {
   const mode = values.expirationMode ?? "default";
@@ -124,61 +144,15 @@ const useFailureMessage = () => {
     failure === "unknown" || failure === "conflict" ? t("unknown") : t(failure);
 };
 
-const PointsLine = ({
-  label,
-  strong,
-  value,
-}: {
-  label: string;
-  strong?: boolean;
-  value: React.ReactNode;
-}) => (
-  <div className="flex items-center justify-between gap-4">
-    <dt className="text-muted-foreground">{label}</dt>
-    <dd
-      className={
-        strong ? "text-foreground font-semibold tabular-nums" : "tabular-nums"
-      }
-    >
-      {value}
-    </dd>
-  </div>
-);
-
-/** The sanction a warning leads to, in words. */
-export const SanctionSummary = ({
-  sanction,
-}: {
-  sanction: { durationHours?: null | number; endsAt: Date | null | string };
-}) => {
-  const t = useTranslations("core.moderation.warn");
-  const format = useFormatter();
-  if (sanction.endsAt === null) return <>{t("sanction.indefinite")}</>;
-  const endsAt = format.dateTime(new Date(sanction.endsAt), {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-
-  return sanction.durationHours ? (
-    <>
-      {t("sanction.for")} <WarningDuration hours={sanction.durationHours} />{" "}
-      {t("sanction.until", { endsAt })}
-    </>
-  ) : (
-    <>{t("sanction.suspended_until", { endsAt })}</>
-  );
-};
-
-const Consequences = ({
+const LiveOutcome = ({
   base,
   canOverridePoints,
   initial,
 }: {
-  base: Pick<WarningDraft, "content" | "reportId" | "userId">;
+  base: WarnBase;
   canOverridePoints: boolean;
   initial: WarningPreview;
 }) => {
-  const t = useTranslations("core.moderation.warn");
   const { form } = useFormApi();
   const values = useSelector(form.store, state => state.values as FormValues);
   const draft = React.useDeferredValue(
@@ -196,101 +170,20 @@ const Consequences = ({
     retry: false,
     staleTime: 5_000,
   });
-  const data = preview.data ?? initial;
   const failure = useFailureMessage();
 
   return (
-    <section
-      aria-busy={preview.isFetching}
-      aria-labelledby="warn-consequences-title"
-      className="bg-muted/50 flex flex-col gap-3 rounded-xl p-4 text-sm leading-relaxed"
-    >
-      <h3 className="text-foreground font-medium" id="warn-consequences-title">
-        {t("consequences.title")}
-      </h3>
-      <dl
-        className={
-          preview.isFetching
-            ? "flex flex-col gap-1 opacity-60 motion-safe:transition-opacity"
-            : "flex flex-col gap-1 motion-safe:transition-opacity"
-        }
-      >
-        <PointsLine
-          label={t("consequences.current")}
-          value={data.points.current}
-        />
-        <PointsLine
-          label={t("consequences.warning")}
-          value={`+${data.points.warning}`}
-        />
-        <PointsLine
-          label={t("consequences.projected")}
-          strong
-          value={data.points.projected}
-        />
-      </dl>
-      <p className="text-pretty">
-        <span className="font-medium">{t("consequences.action")} </span>
-        {data.sanction ? (
-          <SanctionSummary sanction={data.sanction} />
-        ) : (
-          t("consequences.no_action")
-        )}
-      </p>
+    <div className="flex min-w-0 flex-col gap-1">
+      <OutcomeSummary
+        isFetching={preview.isFetching}
+        preview={preview.data ?? initial}
+      />
       {preview.isError ? (
-        <p className="text-destructive" role="alert">
+        <p className="text-destructive text-sm" role="alert">
           {failure(preview.error.message as WarningFailure)}
         </p>
       ) : null}
-      {data.suspendedUntil ? (
-        <p className="text-muted-foreground text-pretty">
-          {t("consequences.already_suspended")}
-        </p>
-      ) : null}
-      {data.related.length > 0 ? (
-        <p className="text-muted-foreground text-pretty">
-          {t("consequences.related", { count: data.related.length })}
-        </p>
-      ) : null}
-      <p className="text-muted-foreground text-xs text-pretty">
-        {t("consequences.advisory")}
-      </p>
-    </section>
-  );
-};
-
-/**
- * The reason dropdown. Picking a reason resets the points to its default and
- * swaps in its message, unless the moderator already wrote their own.
- */
-const ReasonSelect = ({
-  labels,
-  messageOf,
-  reasonOf,
-  ...props
-}: ItemAutoFormComponentProps & {
-  labels: { label: string; value: string }[];
-  messageOf: (reason: ModcpWarningReason | undefined) => string;
-  reasonOf: (id: string | undefined) => ModcpWarningReason | undefined;
-}) => {
-  const t = useTranslations("core.moderation.warn");
-  const { form } = useFormApi();
-
-  return (
-    <AutoFormSelect
-      {...props}
-      label={t("form.reason")}
-      labels={labels}
-      onValueChange={value => {
-        const values = form.state.values as FormValues;
-        const previous = reasonOf(values.reasonId);
-        const next = reasonOf(String(value));
-        form.setFieldValue("points", next?.points ?? 0);
-        if (!values.message || values.message === messageOf(previous)) {
-          form.setFieldValue("message", messageOf(next));
-        }
-      }}
-    />
+    </div>
   );
 };
 
@@ -301,24 +194,29 @@ const WarnForm = ({
   onIssued,
   reasons,
 }: {
-  base: Pick<WarningDraft, "content" | "reportId" | "userId">;
+  base: WarnBase;
   initial: WarningPreview;
   onClose: () => void;
   onIssued?: (result: IssuedWarning) => void;
   reasons: ModcpWarningReason[];
 }) => {
   const t = useTranslations("core.moderation.warn");
-  const locale = useLocale();
   const format = useFormatter();
   const queryClient = useQueryClient();
   const failure = useFailureMessage();
   const [idempotencyKey] = React.useState(() => crypto.randomUUID());
+  const [messageRevision, setMessageRevision] = React.useState(0);
   const { permissions } = initial;
   const reasonOf = (id: string | undefined) =>
     reasons.find(reason => String(reason.id) === id);
-  const messageOf = (reason: ModcpWarningReason | undefined) =>
-    reason ? resolveReasonText(reason.message, locale) : "";
   const first = reasons[0];
+  const templates = new Set(
+    reasons.map(reason => messageText(reasonMessage(reason))),
+  );
+  const isOverridden = (values: FormValues) =>
+    (permissions.overridePoints &&
+      values.points !== (reasonOf(values.reasonId)?.points ?? 0)) ||
+    (values.expirationMode ?? "default") !== "default";
 
   const formSchema = z
     .object({
@@ -345,25 +243,53 @@ const WarnForm = ({
         .max(WARNING_LIMITS.noteMaxLength)
         .default(""),
       message: z
-        .string()
-        .trim()
-        .min(WARNING_LIMITS.messageMinLength)
-        .max(WARNING_LIMITS.messageMaxLength)
-        .default(messageOf(first)),
-      staffNote: z
-        .string()
-        .trim()
-        .max(WARNING_LIMITS.noteMaxLength)
-        .default(""),
+        .array(z.object({ languageCode: z.string(), value: documentSchema }))
+        .default(reasonMessage(first))
+        .superRefine((message, ctx) => {
+          const filled = filledMessage(message);
+          if (filled.length === 0) {
+            ctx.addIssue({
+              code: "custom",
+              message: t("form.message_required"),
+            });
+
+            return;
+          }
+          const outOfRange = filled.some(item => {
+            const length = richTextToPlainText(item.value).length;
+
+            return (
+              length < WARNING_LIMITS.messageMinLength ||
+              length > WARNING_LIMITS.messageMaxLength
+            );
+          });
+          if (outOfRange) {
+            ctx.addIssue({
+              code: "custom",
+              message: t("form.message_length", {
+                max: WARNING_LIMITS.messageMaxLength,
+                min: WARNING_LIMITS.messageMinLength,
+              }),
+            });
+          }
+        }),
+      staffNote: documentSchema
+        .default(null)
+        .refine(
+          note =>
+            !isRichTextDocument(note) ||
+            richTextToPlainText(note).length <= WARNING_LIMITS.noteMaxLength,
+          {
+            message: t("form.staff_note_length", {
+              max: WARNING_LIMITS.noteMaxLength,
+            }),
+          },
+        ),
       resolveReport: z.boolean().default(false),
     })
     .superRefine((values, ctx) => {
-      const defaultPoints = reasonOf(values.reasonId)?.points ?? 0;
-      const overridden =
-        (permissions.overridePoints && values.points !== defaultPoints) ||
-        values.expirationMode !== "default";
       if (
-        overridden &&
+        isOverridden(values) &&
         values.overrideNote.length < WARNING_LIMITS.explanationMinLength
       ) {
         ctx.addIssue({
@@ -386,10 +312,14 @@ const WarnForm = ({
     const result = await issueWarning({
       ...draft,
       idempotencyKey,
-      message: values.message,
+      message: filledMessage(values.message),
       overrideNote: values.overrideNote || null,
       resolveReport: values.resolveReport,
-      staffNote: values.staffNote || null,
+      staffNote:
+        isRichTextDocument(values.staffNote) &&
+        !isRichTextEmpty(values.staffNote)
+          ? values.staffNote
+          : null,
     });
     if (!result.ok) {
       toast.error(t("errors.title"), { description: failure(result.failure) });
@@ -412,7 +342,6 @@ const WarnForm = ({
           })
         : t("done.suspended_indefinitely")
       : null;
-    // Someone else warned the member after the form opened.
     const differs =
       !data.duplicate && data.points.before !== initial.points.current;
     toast.success(t("done.title"), {
@@ -436,14 +365,6 @@ const WarnForm = ({
     onClose();
   };
 
-  const reasonLabels = [
-    ...reasons.map(reason => ({
-      label: `${resolveReasonText(reason.title, locale)} (${t("points", { count: reason.points })})`,
-      value: String(reason.id),
-    })),
-    { label: t("form.no_reason"), value: NO_REASON },
-  ];
-
   return (
     <AutoForm
       className="flex min-h-0 flex-1 flex-col gap-0"
@@ -451,11 +372,14 @@ const WarnForm = ({
         {
           id: "reasonId",
           component: props => (
-            <ReasonSelect
+            <ReasonPickerField
               {...props}
-              labels={reasonLabels}
-              messageOf={messageOf}
-              reasonOf={reasonOf}
+              label={t("form.reason")}
+              onTemplateSwap={() => {
+                setMessageRevision(revision => revision + 1);
+              }}
+              reasons={reasons}
+              templates={templates}
             />
           ),
         },
@@ -465,8 +389,9 @@ const WarnForm = ({
           component: props => (
             <AutoFormNumber
               {...props}
-              description={t("form.points_desc")}
               label={t("form.points")}
+              max={WARNING_LIMITS.maxPoints}
+              min={0}
             />
           ),
         },
@@ -486,30 +411,24 @@ const WarnForm = ({
         },
         {
           id: "expirationHours",
-          hidden: values => values.expirationMode !== "hours",
           component: props => (
             <AutoFormNumber
               {...props}
               label={t("form.expiration_hours")}
+              max={WARNING_LIMITS.maxDurationHours}
+              min={1}
               unitLabel={t("form.hours_unit")}
             />
           ),
         },
         {
           id: "expirationAt",
-          hidden: values => values.expirationMode !== "at",
           component: props => (
             <AutoFormDateTime {...props} label={t("form.expiration_at")} />
           ),
         },
         {
           id: "overrideNote",
-          hidden: values =>
-            !(
-              (permissions.overridePoints &&
-                values.points !== (reasonOf(values.reasonId)?.points ?? 0)) ||
-              (values.expirationMode ?? "default") !== "default"
-            ),
           component: props => (
             <AutoFormTextarea
               {...props}
@@ -521,20 +440,30 @@ const WarnForm = ({
         {
           id: "message",
           component: props => (
-            <AutoFormTextarea
+            <AutoFormEditor
+              key={messageRevision}
               {...props}
+              className="min-h-32"
+              collapsed
               description={t("form.message_desc")}
+              format="json"
               label={t("form.message")}
+              multiLang
+              placeholder={t("form.message_placeholder")}
             />
           ),
         },
         {
           id: "staffNote",
           component: props => (
-            <AutoFormTextarea
+            <AutoFormEditor
               {...props}
+              className="min-h-24"
+              collapsed
               description={t("form.staff_note_desc")}
+              format="json"
               label={t("form.staff_note")}
+              placeholder={t("form.staff_note_placeholder")}
             />
           ),
         },
@@ -553,38 +482,66 @@ const WarnForm = ({
       formSchema={formSchema}
       layout={rendered => (
         <>
-          <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-5">
-            {base.content || base.reportId ? (
-              <Alert icon={<ShieldAlertIcon />} variant="warning">
-                <AlertTitle>{t("global.title")}</AlertTitle>
-                <AlertDescription className="text-pretty">
-                  {t("global.desc")}
-                </AlertDescription>
-              </Alert>
-            ) : null}
-            {rendered.reasonId}
-            {rendered.points}
-            {rendered.expirationMode}
-            {rendered.expirationHours}
-            {rendered.expirationAt}
-            {rendered.overrideNote}
-            <Consequences
+          <div className="grid min-h-0 flex-1 overflow-y-auto md:grid-cols-[17rem_minmax(0,1fr)]">
+            <MemberPanel preview={initial} />
+            <div className="flex min-w-0 flex-col gap-5 p-6">
+              <DialogHeader>
+                <DialogTitle className="pe-10 text-balance">
+                  {t("title", { name: initial.user.name })}
+                </DialogTitle>
+                <DialogDescription className="text-pretty">
+                  {t("desc")}
+                  {first ? null : ` ${t("no_reasons")}`}
+                </DialogDescription>
+              </DialogHeader>
+              {base.content || base.reportId ? (
+                <Alert icon={<ShieldAlertIcon />} variant="warning">
+                  <AlertTitle>{t("global.title")}</AlertTitle>
+                  <AlertDescription className="text-pretty">
+                    {t("global.desc")}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              {rendered.reasonId}
+              {permissions.overridePoints || permissions.overrideExpiration ? (
+                <div className="flex flex-col">
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    {rendered.points}
+                    {rendered.expirationMode}
+                  </div>
+                  <RevealWhen
+                    when={values => values.expirationMode === "hours"}
+                  >
+                    {rendered.expirationHours}
+                  </RevealWhen>
+                  <RevealWhen when={values => values.expirationMode === "at"}>
+                    {rendered.expirationAt}
+                  </RevealWhen>
+                  <RevealWhen when={isOverridden}>
+                    {rendered.overrideNote}
+                  </RevealWhen>
+                </div>
+              ) : null}
+              {rendered.message}
+              {rendered.staffNote}
+              {rendered.resolveReport}
+            </div>
+          </div>
+          <DialogFooter className="m-0 items-stretch gap-4 sm:items-center sm:justify-between">
+            <LiveOutcome
               base={base}
               canOverridePoints={permissions.overridePoints}
               initial={initial}
             />
-            {rendered.message}
-            {rendered.staffNote}
-            {rendered.resolveReport}
-          </div>
-          <DialogFooter className="m-0">
-            <DialogClose render={<Button variant="ghost" />}>
-              {t("cancel")}
-            </DialogClose>
-            <AutoFormSubmitButton variant="destructive">
-              <TriangleAlertIcon aria-hidden="true" />
-              {t("submit")}
-            </AutoFormSubmitButton>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row">
+              <DialogClose render={<Button variant="ghost" />}>
+                {t("cancel")}
+              </DialogClose>
+              <AutoFormSubmitButton variant="destructive">
+                <TriangleAlertIcon aria-hidden="true" />
+                {t("submit")}
+              </AutoFormSubmitButton>
+            </div>
           </DialogFooter>
         </>
       )}
@@ -593,19 +550,79 @@ const WarnForm = ({
   );
 };
 
+const RevealWhen = ({
+  children,
+  when,
+}: {
+  children: React.ReactNode;
+  when: (values: FormValues) => boolean;
+}) => {
+  const { form } = useFormApi();
+  const open = useSelector(form.store, state =>
+    when(state.values as FormValues),
+  );
+
+  return <Reveal open={open}>{children}</Reveal>;
+};
+
+const ReasonPickerField = ({
+  onTemplateSwap,
+  templates,
+  ...props
+}: Omit<React.ComponentProps<typeof ReasonPicker>, "onReason"> & {
+  onTemplateSwap: () => void;
+  templates: Set<string>;
+}) => {
+  const { form } = useFormApi();
+
+  return (
+    <ReasonPicker
+      {...props}
+      onReason={reason => {
+        const { message } = form.state.values as FormValues;
+        const current = messageText(message);
+        form.setFieldValue("points", reason?.points ?? 0);
+        if (current === "" || templates.has(current)) {
+          form.setFieldValue("message", reasonMessage(reason));
+          onTemplateSwap();
+        }
+      }}
+    />
+  );
+};
+
 const DialogSkeleton = () => (
-  <div aria-busy="true" className="flex flex-col gap-5 p-6" role="status">
-    <Skeleton className="h-6 w-1/2" />
-    <Skeleton className="h-10 w-full" />
-    <Skeleton className="h-28 w-full" />
-    <Skeleton className="h-24 w-full" />
+  <div
+    aria-busy="true"
+    className="grid md:grid-cols-[17rem_minmax(0,1fr)]"
+    role="status"
+  >
+    <div className="bg-muted/50 flex flex-col gap-6 border-b p-6 md:border-e md:border-b-0">
+      <div className="flex items-center gap-3">
+        <Skeleton className="size-12 rounded-full" />
+        <div className="flex flex-1 flex-col gap-1.5">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-3 w-16" />
+        </div>
+      </div>
+      <Skeleton className="h-7 w-40" />
+      <Skeleton className="h-16 w-full" />
+    </div>
+    <div className="flex flex-col gap-5 p-6">
+      <Skeleton className="h-6 w-1/2" />
+      <Skeleton className="h-14 w-full" />
+      <Skeleton className="h-9 w-full" />
+      <Skeleton className="h-32 w-full" />
+    </div>
   </div>
 );
 
 /**
- * The shared warn form: reason, points, expiry, the message the member reads,
- * a private staff note and a live preview of the consequences. Loads lazily
- * inside `WarnDialog`; every check runs again on the server when it submits.
+ * The shared warn form: who the member is and their recent warnings, the
+ * reason, points, expiry, the rich-text message the member reads (one per
+ * language), a private rich-text staff note and a live preview of the
+ * consequences. Loads lazily inside `WarnDialog`; every check runs again on
+ * the server when it submits.
  */
 export const WarnDialogContent = ({
   content = null,
@@ -682,24 +699,13 @@ export const WarnDialogContent = ({
   }
 
   return (
-    <>
-      <DialogHeader className="border-b px-6 pt-6 pb-4">
-        <DialogTitle className="pe-10 text-balance">
-          {t("title", { name: initial.data.user.name })}
-        </DialogTitle>
-        <DialogDescription className="text-pretty">
-          {t("desc")}
-          {first ? null : ` ${t("no_reasons")}`}
-        </DialogDescription>
-      </DialogHeader>
-      <WarnForm
-        base={base}
-        initial={initial.data}
-        onClose={onClose}
-        onIssued={onIssued}
-        reasons={reasons.data}
-      />
-    </>
+    <WarnForm
+      base={base}
+      initial={initial.data}
+      onClose={onClose}
+      onIssued={onIssued}
+      reasons={reasons.data}
+    />
   );
 };
 

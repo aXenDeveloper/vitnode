@@ -9,7 +9,7 @@ import {
   warningStatusAt,
 } from "@/lib/moderation/warnings";
 
-import { json } from "../lib/schema";
+import { json, warningMessageSchema } from "../lib/schema";
 import { loadActivePoints } from "../lib/warnings-service";
 import { loadUserSanctions, loadUserWarnings } from "../lib/warnings-view";
 
@@ -27,7 +27,7 @@ const ownWarningSchema = z.object({
   status: z.enum(WARNING_STATUSES),
   points: z.number(),
   reason: textSchema.nullable(),
-  message: z.string(),
+  message: warningMessageSchema,
   issuedAt: z.date(),
   expiresAt: z.date().nullable(),
   content: z

@@ -44,9 +44,13 @@ const utcDateTimeFormat = (locale: string): Intl.DateTimeFormat => {
 /** Sent to a member when a moderator warns them. Never carries staff notes. */
 export const warningIssuedNotification = buildNotificationType({
   id: "core.warning_issued",
-  version: 1,
+  version: 2,
   schema: z.object({
-    message: z.string().max(2000),
+    message: z
+      .array(
+        z.object({ languageCode: z.string(), value: z.string().max(2000) }),
+      )
+      .min(1),
     points: z.number().int().min(0),
     reason: reasonTextSchema,
     warningId: z.number().int(),
@@ -61,7 +65,7 @@ export const warningIssuedNotification = buildNotificationType({
     const reason = data.reason ? resolveLangValue(data.reason, { locale }) : "";
 
     return {
-      body: data.message,
+      body: resolveLangValue(data.message, { locale }),
       target: ACCOUNT_STATUS_PATH,
       title: reason
         ? t("core.notifications.types.warning_issued.title_reason", {

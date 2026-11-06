@@ -77,6 +77,13 @@ const HOUR = 60 * 60 * 1000;
 const STAFF_NOTE = "staff-only-note";
 const OVERRIDE_NOTE = "override-explanation";
 
+const doc = (text: string) => ({
+  content: [{ content: [{ text, type: "text" }], type: "paragraph" }],
+  type: "doc",
+});
+
+const message = (text: string) => [{ languageCode: "en", value: doc(text) }];
+
 const warnings = (...permissions: string[]): PermissionsStaffArgs[] =>
   permissions.map(permission => ({
     module: WARNING_PERMISSION_MODULE,
@@ -298,7 +305,7 @@ const harness = async () => {
   const issue = async (userId: number, body: Record<string, unknown> = {}) =>
     await call(userId, "POST", "/warnings", {
       idempotencyKey: nextKey(),
-      message: "Please keep to the topic.",
+      message: message("Please keep to the topic."),
       reasonId: REASON_TWO,
       userId: MEMBER,
       ...body,
@@ -324,7 +331,7 @@ const harness = async () => {
   const seedPoints = async (userId: number, points: number) => {
     await memory.db.insert(core_moderation_warnings).values({
       issuedById: SENIOR,
-      message: "Earlier warning",
+      message: message("Earlier warning"),
       points,
       userId,
     });
@@ -401,7 +408,7 @@ interface StaffWarning {
   overrideNote: null | string;
   reason: null | { languageCode: string; value: string }[];
   revokeReason: null | string;
-  staffNote: null | string;
+  staffNote: unknown;
   status: string;
 }
 
@@ -974,16 +981,16 @@ describe("staff notes", () => {
     await h.issued(SENIOR, {
       overrideNote: OVERRIDE_NOTE,
       points: 1,
-      staffNote: STAFF_NOTE,
+      staffNote: doc(STAFF_NOTE),
     });
-    await h.issued(BASIC, { staffNote: "basic-note" });
+    await h.issued(BASIC, { staffNote: doc("basic-note") });
 
     const notesOf = (list: StaffWarning[]) =>
       list.map(warning => [warning.staffNote, warning.overrideNote]);
 
     expect(notesOf((await h.standing(SENIOR)).warnings)).toEqual([
-      ["basic-note", null],
-      [STAFF_NOTE, OVERRIDE_NOTE],
+      [doc("basic-note"), null],
+      [doc(STAFF_NOTE), OVERRIDE_NOTE],
     ]);
     expect(notesOf((await h.standing(VIEWER)).warnings)).toEqual([
       [null, null],
@@ -997,7 +1004,7 @@ describe("staff notes", () => {
       [null, null],
     ]);
     const basic = await h.standing(BASIC);
-    expect(notesOf(basic.warnings)).toEqual([["basic-note", null]]);
+    expect(notesOf(basic.warnings)).toEqual([[doc("basic-note"), null]]);
     expect(basic.hiddenWarnings).toBe(1);
   });
 
@@ -1007,7 +1014,7 @@ describe("staff notes", () => {
     const { sanction, warningId } = await h.issued(SENIOR, {
       overrideNote: OVERRIDE_NOTE,
       points: 3,
-      staffNote: STAFF_NOTE,
+      staffNote: doc(STAFF_NOTE),
     });
     await h.revoke(SENIOR, "warnings", warningId);
     await h.revoke(SENIOR, "sanctions", sanction?.id ?? 0);

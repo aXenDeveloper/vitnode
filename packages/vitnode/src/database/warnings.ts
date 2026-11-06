@@ -1,11 +1,13 @@
 import { sql } from "drizzle-orm";
 import { camelCase, index, unique, uniqueIndex } from "drizzle-orm/pg-core";
 
+import type { RichTextDocument } from "@/content/rich-text/document";
 import type {
   SanctionSource,
   SanctionThresholdSnapshot,
   SanctionType,
   WarningContentSnapshot,
+  WarningMessage,
   WarningReasonSnapshot,
   WarningThresholdAction,
 } from "@/lib/moderation/warnings";
@@ -86,10 +88,10 @@ export const core_moderation_warnings = camelCase.table.withRLS(
     defaultPoints: t.integer(),
     /** Staff-only explanation of a points or expiration override. */
     overrideNote: t.text(),
-    /** Shown to the warned member. */
-    message: t.text().notNull(),
+    /** Shown to the warned member, one rich-text document per language. */
+    message: t.jsonb().$type<WarningMessage>().notNull(),
     /** Shown to staff with `can_view_notes` only. */
-    staffNote: t.text(),
+    staffNote: t.jsonb().$type<RichTextDocument>(),
     issuedAt: t.timestamp().notNull().defaultNow(),
     /** When the points stop counting; `null` never. */
     expiresAt: t.timestamp(),

@@ -2927,22 +2927,25 @@
         "cancel": "Cancel",
         "submit": "Issue warning",
         "points": "{count, plural, one {# point} other {# points}}",
+        "points_animated": "{count, plural, one {<n>#</n> point} other {<n>#</n> points}}",
         "custom_reason": "Custom warning",
         "deleted_user": "Deleted account",
         "global": {
           "title": "Points count everywhere",
           "desc": "This warning is about content in one place, but its points count toward account-wide limits that can suspend the whole account."
         },
+        "dossier": {
+          "label": "About {name}",
+          "recent": "Recent warnings",
+          "first": "First warning for this member.",
+          "older": "{count, plural, one {# older warning} other {# older warnings}}",
+          "unavailable": "Their earlier warnings aren't visible to you."
+        },
         "consequences": {
           "title": "What happens",
-          "current": "Active points now",
-          "warning": "This warning",
-          "projected": "Active points after",
-          "action": "Automatic action:",
-          "no_action": "None.",
+          "no_action": "No automatic action",
           "already_suspended": "This account is already suspended.",
-          "related": "{count, plural, one {# warning was} other {# warnings were}} already issued for this content.",
-          "advisory": "A preview. The server checks again when you send it, in case someone else warned this member in the meantime."
+          "related": "{count, plural, one {# warning was} other {# warnings were}} already issued for this content."
         },
         "sanction": {
           "indefinite": "Account suspended indefinitely.",
@@ -2952,9 +2955,10 @@
         },
         "form": {
           "reason": "Reason",
-          "no_reason": "No reason (custom warning)",
+          "custom_reason_desc": "Write your own message and set the points",
+          "expires_after": "Expires after <duration></duration>",
+          "never_expires": "Never expires",
           "points": "Points",
-          "points_desc": "Starts at the reason's points. Changing them needs an explanation.",
           "expiration": "Points expire",
           "expiration_modes": {
             "default": "As the reason says",
@@ -2971,8 +2975,13 @@
           "expiration_at_required": "Pick when the points expire.",
           "message": "Message to the member",
           "message_desc": "The member reads this in the notification and on their account status page.",
+          "message_placeholder": "Add a message…",
+          "message_required": "Write a message for the member.",
+          "message_length": "Keep each language between {min} and {max} characters.",
           "staff_note": "Staff note",
           "staff_note_desc": "Only staff who can read notes see this. The member never does.",
+          "staff_note_placeholder": "Add a note…",
+          "staff_note_length": "Keep the staff note under {max} characters.",
           "resolve_report": "Also close the report as action taken",
           "resolve_report_desc": "Closes the report in the same step. If either one fails, neither happens."
         },
@@ -3144,6 +3153,7 @@
       "profile_card": {
         "label": "Warnings",
         "points": "{count, plural, one {# warning point} other {# warning points}}",
+        "points_animated": "{count, plural, one {<n>#</n> warning point} other {<n>#</n> warning points}}",
         "no_restrictions": "No restrictions being applied",
         "suspended_until": "Suspended · ends {relative}",
         "suspended_indefinitely": "Suspended indefinitely",
@@ -3153,8 +3163,6 @@
         "revoke_label": "Revoke warning: {reason}",
         "see_all": "See all",
         "history": "Warnings and suspensions",
-        "empty": "No warnings yet. Anything issued shows up here, newest first.",
-        "empty_own": "You have no warnings. Keep it up!",
         "hidden": "{count, plural, one {# more warning is} other {# more warnings are}} outside your moderation scope.",
         "loading": "Loading warnings",
         "load_error": {

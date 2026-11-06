@@ -15,6 +15,7 @@ import type { AccountStatus } from "./warnings-api";
 
 import { resolveReasonText } from "../report-reasons-query";
 import { WarningStatusBadge } from "./warning-format";
+import { WarningMessageContent } from "./warning-message";
 import { accountStatusQueryOptions } from "./warnings-api";
 
 const SuspensionAlert = ({
@@ -82,9 +83,10 @@ const OwnWarning = ({
           <WarningStatusBadge status={warning.status} />
         </div>
       </header>
-      <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
-        {warning.message}
-      </p>
+      <WarningMessageContent
+        className="text-foreground"
+        message={warning.message}
+      />
       <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
         <div className="flex gap-1.5">
           <dt>{t("expires")}</dt>

@@ -1,6 +1,6 @@
 ---
 title: User Format
-description: Show a member's name in their role color, with the role's icon or emoji in front and an optional link to their profile.
+description: Show a member's name in their role color, with the role's icon or emoji in front, an optional avatar and an optional link to their profile.
 icon: UserCheck
 ---
 
@@ -24,6 +24,27 @@ import { UserFormat } from '@vitnode/core/components/user-format'
 `format` paints the name in the role's color and puts the role's prefix icon or
 emoji in front. `link` turns the name into a link to the member's profile at
 `/users/<nameCode>`. Without either, you get the plain name.
+
+## Avatar
+
+Add `avatar` to put the member's face in front of the name. It's off by
+default, so names in running text stay plain.
+
+```tsx
+<UserFormat avatar format link user={user} />
+```
+
+The avatar is 20px; set `avatarSize` for another size, such as `40` next to a
+page heading. It comes from `user.avatarUrl`. Without an upload, it's the
+first letter of `nameCode` on `user.avatarColor` (a hex color without `#`), and
+slate when the color is missing too. Most API responses about people already
+send both fields.
+
+The avatar takes the place of the role's prefix icon or emoji, so a name never
+has both. With `format`, the name keeps the role color.
+
+The image is decorative (`alt=""`), since the name right after it says who it
+is. With `link`, the avatar is part of the link.
 
 ## Where the user comes from
 
@@ -83,12 +104,14 @@ words around it:
 
 ## Props
 
-| Name        | Type                                                       | Required | Default | Description                                 |
-| ----------- | ---------------------------------------------------------- | -------- | ------- | ------------------------------------------- |
-| `user`      | `{ name, fullName?, nameCode?, role: { color, prefix? } }` | Yes      | -       | The member to show                          |
-| `format`    | `boolean`                                                  | No       | `false` | Adds the role color and prefix              |
-| `link`      | `boolean`                                                  | No       | `false` | Links to `/users/<nameCode>` when it is set |
-| `className` | `string`                                                   | No       | -       | Extra classes on the outer element          |
+| Name         | Type                                                                                 | Required | Default | Description                                                  |
+| ------------ | ------------------------------------------------------------------------------------ | -------- | ------- | ------------------------------------------------------------ |
+| `user`       | `{ name, fullName?, nameCode?, avatarColor?, avatarUrl?, role: { color, prefix? } }` | Yes      | -       | The member to show                                           |
+| `avatar`     | `boolean`                                                                            | No       | `false` | Puts the avatar before the name, in place of the role prefix |
+| `avatarSize` | `number`                                                                             | No       | `20`    | The avatar's width and height in pixels                      |
+| `format`     | `boolean`                                                                            | No       | `false` | Adds the role color and prefix                               |
+| `link`       | `boolean`                                                                            | No       | `false` | Links to `/users/<nameCode>` when it is set                  |
+| `className`  | `string`                                                                             | No       | -       | Extra classes on the outer element                           |
 
 Other `<span>` props go to the outer `<span>`. With `link`, only `className`,
 `style` and `title` reach the link.

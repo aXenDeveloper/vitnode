@@ -5,6 +5,7 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import { PageTitle } from "@/components/ui/page-title";
+import { SlidingNumber } from "@/components/ui/sliding-number";
 import { WarnDialog } from "@/tanstack/moderation/warn-button";
 
 import { Person } from "../modcp/report-tone";
@@ -74,7 +75,7 @@ export const ModcpMemberContent = ({ userId }: { userId: number }) => {
               {t("member.active_points")}
             </dt>
             <dd className="text-foreground text-2xl font-semibold tabular-nums">
-              {data.activePoints}
+              <SlidingNumber value={data.activePoints} />
             </dd>
           </div>
           {data.sanctions ? (

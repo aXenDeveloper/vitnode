@@ -25,6 +25,10 @@ import {
 } from "@/components/ui/sheet";
 import { Person, PersonName } from "@/views/moderation/modcp/report-tone";
 import { WarningStatusBadge } from "@/views/moderation/warnings/warning-format";
+import {
+  WarningMessageContent,
+  WarningNoteContent,
+} from "@/views/moderation/warnings/warning-message";
 
 import type {
   ProfileStanding,
@@ -155,8 +159,11 @@ const WarningBody = ({
   return (
     <>
       <Section title={standing.own ? t("message_own") : t("message")}>
-        <blockquote className="text-foreground border-warn/40 border-s-2 ps-3 text-sm leading-relaxed whitespace-pre-wrap">
-          {warning.message}
+        <blockquote className="border-warn/40 border-s-2 ps-3">
+          <WarningMessageContent
+            className="text-foreground"
+            message={warning.message}
+          />
         </blockquote>
       </Section>
 
@@ -252,9 +259,10 @@ const WarningBody = ({
               {t("staff_only")}
             </p>
             {warning.staffNote ? (
-              <p className="text-foreground text-sm leading-relaxed whitespace-pre-wrap">
-                {warning.staffNote}
-              </p>
+              <WarningNoteContent
+                className="text-foreground"
+                note={warning.staffNote}
+              />
             ) : null}
             {warning.overrideNote ? (
               <div className="flex flex-col gap-0.5">

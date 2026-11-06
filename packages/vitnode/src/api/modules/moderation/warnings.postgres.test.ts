@@ -75,7 +75,22 @@ describe.skipIf(!POSTGRES_TEST_URL)("issuing warnings on PostgreSQL", () => {
     const res = await app.request("/warnings", {
       body: JSON.stringify({
         idempotencyKey,
-        message: "Please keep to the topic.",
+        message: [
+          {
+            languageCode: "en",
+            value: {
+              content: [
+                {
+                  content: [
+                    { text: "Please keep to the topic.", type: "text" },
+                  ],
+                  type: "paragraph",
+                },
+              ],
+              type: "doc",
+            },
+          },
+        ],
         reasonId,
         userId,
       }),

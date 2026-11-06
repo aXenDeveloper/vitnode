@@ -1,3 +1,4 @@
+import type { RichTextDocument } from "@/content/rich-text/document";
 import type { MultiLangValue } from "@/lib/helpers/multi-lang";
 
 /** Moderator permissions of core's `warnings` module. */
@@ -24,6 +25,8 @@ export const WARNING_LIMITS = {
   maxDurationHours: 24 * 365 * 5,
   messageMinLength: 3,
   messageMaxLength: 2000,
+  /** The largest rich-text document a message or staff note may serialize to. */
+  documentMaxBytes: 64 * 1024,
   noteMaxLength: 2000,
   explanationMinLength: 3,
   reasonTitleMaxLength: 100,
@@ -51,6 +54,9 @@ export type SanctionType = (typeof SANCTION_TYPES)[number];
 export const SANCTION_SOURCES = ["threshold", "manual"] as const;
 
 export type SanctionSource = (typeof SANCTION_SOURCES)[number];
+
+/** The message a warned member reads: one rich-text document per language. */
+export type WarningMessage = MultiLangValue<RichTextDocument>;
 
 /** What a warning remembers about its reason, so renaming the reason never rewrites history. */
 export interface WarningReasonSnapshot {

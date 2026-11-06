@@ -36,14 +36,23 @@ export interface WarnDialogProps {
 
 const WarnDialogInner = ({ onOpenChange, open, ...props }: WarnDialogProps) => (
   <Dialog onOpenChange={onOpenChange} open={open}>
-    <DialogContent className="flex flex-col gap-0 p-0 sm:max-w-lg">
+    <DialogContent className="flex flex-col gap-0 p-0 sm:max-w-4xl">
       {open ? (
         <React.Suspense
           fallback={
-            <div aria-busy="true" className="flex flex-col gap-5 p-6">
-              <Skeleton className="h-6 w-1/2" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-28 w-full" />
+            <div
+              aria-busy="true"
+              className="grid md:grid-cols-[17rem_minmax(0,1fr)]"
+            >
+              <div className="bg-muted/50 flex flex-col gap-6 border-b p-6 md:border-e md:border-b-0">
+                <Skeleton className="size-12 rounded-full" />
+                <Skeleton className="h-7 w-40" />
+              </div>
+              <div className="flex flex-col gap-5 p-6">
+                <Skeleton className="h-6 w-1/2" />
+                <Skeleton className="h-14 w-full" />
+                <Skeleton className="h-32 w-full" />
+              </div>
             </div>
           }
         >
@@ -61,8 +70,9 @@ const WarnDialogInner = ({ onOpenChange, open, ...props }: WarnDialogProps) => (
 
 /**
  * The warn dialog on its own, for a menu item or any trigger you already
- * have. Shows the reason, points, expiry, the member's message, a staff note
- * and a live preview of the consequences; the form loads lazily.
+ * have. Shows the member and their recent warnings beside the reason, points,
+ * expiry, a rich-text message for the member (one per language), a rich-text
+ * staff note and a live preview of the consequences; the form loads lazily.
  *
  * @example
  * ```tsx

@@ -11,6 +11,7 @@ import {
   canSeeWarningNotes,
   hasWarningPermission,
 } from "@/api/lib/moderation/warnings/access";
+import { zodRichTextDocument } from "@/content/rich-text/document";
 import {
   core_moderation_sanctions,
   core_moderation_warnings,
@@ -26,7 +27,7 @@ import {
 } from "@/lib/moderation/warnings";
 
 import { loadReportPeople } from "./people";
-import { reportPersonSchema } from "./schema";
+import { reportPersonSchema, warningMessageSchema } from "./schema";
 
 const textSchema = z.array(
   z.object({ languageCode: z.string(), value: z.string() }),
@@ -50,8 +51,8 @@ export const staffWarningSchema = z.object({
   defaultPoints: z.number().nullable(),
   reasonId: z.number().nullable(),
   reason: textSchema.nullable(),
-  message: z.string(),
-  staffNote: z.string().nullable(),
+  message: warningMessageSchema,
+  staffNote: zodRichTextDocument.nullable(),
   overrideNote: z.string().nullable(),
   issuedAt: z.date(),
   expiresAt: z.date().nullable(),

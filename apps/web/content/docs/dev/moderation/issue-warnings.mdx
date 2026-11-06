@@ -50,18 +50,20 @@ Each button appears only when the server says you may use it.
 
 ### Fill in the warning
 
-Pick a reason. The points, expiry and message follow the reason; change the points or expiry only if you may, and say why in **Why the change?**.
+The left side shows who you're warning: their active points, whether they're suspended and their last few warnings. No need to open their profile in another tab.
 
-- **Message to the member** is what the member reads in the notification and on their account status page.
-- **Staff note** is private. The member never sees it, and only staff who can read notes do.
+Pick a reason. Each one shows its points, when they expire and the admin's description of when to use it. The points, expiry and message follow the reason; change the points or expiry only if you may, and say why in **Why the change?**. Points can't go below zero.
 
-**What happens** shows the member's active points now, this warning's points, the total after and the automatic action. It is a preview: the server calculates everything again when you submit, in case someone else warned the member meanwhile.
+- **Message to the member** is a rich-text editor: bold, lists and links all work. It starts as a one-line preview; click it to open the editor. With more than one language enabled, a language switch lets you write a version for each, and the member reads the one in their language. A reason's default message fills in every language it has.
+- **Staff note** is rich text too, opens on click, and is private. The member never sees it, and only staff who can read notes do.
+
+The footer shows the active points before and after this warning, plus any automatic action, such as a suspension. It is a preview: the server calculates everything again when you submit, in case someone else warned the member meanwhile.
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={form}
-  alt="The warn form for a comment's author: a notice that points count everywhere, the Spam reason, and a preview showing 6 active points now, plus 2, 8 after, and an automatic 1-day suspension"
+  alt="The warn form: the member's 4 active points and recent warnings on the left, the Spam reason worth 2 points, the message and staff note as one-line fields that open the editor on click, and a footer showing 4 to 6 points and an automatic 3-day suspension"
 />
 
 From a report, **Also close the report as action taken** closes it in the same step. If either part fails, neither happens. Without it, the report stays open and its timeline records the warning.

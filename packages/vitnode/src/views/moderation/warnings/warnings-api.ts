@@ -4,6 +4,9 @@ import {
   queryOptions,
 } from "@tanstack/react-query";
 
+import type { RichTextDocument } from "@/content/rich-text/document";
+import type { WarningMessage } from "@/lib/moderation/warnings";
+
 import { fetcherClient } from "@/lib/fetcher-client";
 import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
@@ -315,10 +318,10 @@ export const previewWarning = async (draft: WarningDraft) =>
 
 export interface IssueWarningInput extends WarningDraft {
   idempotencyKey: string;
-  message: string;
+  message: WarningMessage;
   overrideNote?: null | string;
   resolveReport: boolean;
-  staffNote?: null | string;
+  staffNote: null | RichTextDocument;
 }
 
 export interface IssuedWarning {

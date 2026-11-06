@@ -37,8 +37,9 @@ import type {
 
 import { Person } from "../modcp/report-tone";
 import { resolveReasonText } from "../report-reasons-query";
-import { SanctionSummary } from "./warn-dialog-content";
 import { WarningDuration, WarningStatusBadge } from "./warning-format";
+import { WarningMessageContent, WarningNoteContent } from "./warning-message";
+import { SanctionSummary } from "./warning-sanction";
 import {
   ACCOUNT_STATUS_QUERY_KEY,
   revokeSanction,
@@ -244,7 +245,7 @@ const StaffNotes = ({ warning }: { warning: ModcpStaffWarning }) => {
       </p>
       {warning.staffNote ? (
         <Detail label={t("list.staff_note")}>
-          <span className="whitespace-pre-wrap">{warning.staffNote}</span>
+          <WarningNoteContent note={warning.staffNote} />
         </Detail>
       ) : null}
       {warning.overrideNote ? (
@@ -316,7 +317,7 @@ export const StaffWarningCard = ({
       <WarningFacts member={member} warning={warning} />
 
       <Detail label={t("list.message")}>
-        <span className="whitespace-pre-wrap">{warning.message}</span>
+        <WarningMessageContent message={warning.message} />
       </Detail>
 
       <StaffNotes warning={warning} />

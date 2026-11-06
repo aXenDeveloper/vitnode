@@ -1,4 +1,5 @@
-import type { WarningStatus } from "@/lib/moderation/warnings";
+import type { RichTextDocument } from "@/content/rich-text/document";
+import type { WarningMessage, WarningStatus } from "@/lib/moderation/warnings";
 import type { ReportPerson } from "@/views/moderation/modcp/report-tone";
 import type {
   AccountStatus,
@@ -11,7 +12,7 @@ export interface StandingWarning {
   id: number;
   issuedAt: Date;
   issuedBy: null | ReportPerson | undefined;
-  message: string;
+  message: WarningMessage;
   overrideNote: null | string;
   points: number;
   reason: AccountStatus["warnings"][number]["reason"];
@@ -19,7 +20,7 @@ export interface StandingWarning {
   revokedAt: Date | null;
   revokedBy: null | ReportPerson | undefined;
   revokeReason: null | string;
-  staffNote: null | string;
+  staffNote: null | RichTextDocument;
   status: WarningStatus;
 }
 

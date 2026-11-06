@@ -44,7 +44,13 @@ import {
 import type { WarningDraftInput } from "../lib/warnings-service";
 
 import { loadReportPeople } from "../lib/people";
-import { errorSchema, json, reportPersonSchema } from "../lib/schema";
+import {
+  errorSchema,
+  json,
+  reportPersonSchema,
+  warningMessageInputSchema,
+  warningStaffNoteInputSchema,
+} from "../lib/schema";
 import {
   issueWarning,
   loadActivePoints,
@@ -96,12 +102,8 @@ const draftSchema = z.object({
 });
 
 const issueSchema = draftSchema.extend({
-  message: z
-    .string()
-    .trim()
-    .min(WARNING_LIMITS.messageMinLength)
-    .max(WARNING_LIMITS.messageMaxLength),
-  staffNote: z.string().trim().max(WARNING_LIMITS.noteMaxLength).nullish(),
+  message: warningMessageInputSchema,
+  staffNote: warningStaffNoteInputSchema,
   overrideNote: z.string().trim().max(WARNING_LIMITS.noteMaxLength).nullish(),
   resolveReport: z.boolean().default(false),
   idempotencyKey: z
@@ -336,7 +338,7 @@ export const issueWarningRoute = buildRoute({
       message: input.message,
       overrideNote: input.overrideNote ?? null,
       resolveReport: input.resolveReport,
-      staffNote: input.staffNote ?? null,
+      staffNote: input.staffNote,
     });
 
     return c.json(result, 200);
