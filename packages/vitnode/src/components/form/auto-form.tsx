@@ -243,11 +243,14 @@ type SubmitButtonProps =
 export const AutoFormSubmitButton = ({
   children,
   className,
+  disabled,
   intent,
   variant,
 }: {
   children?: React.ReactNode;
   className?: string;
+  /** Blocks submitting, e.g. while a required field is still empty. */
+  disabled?: boolean;
   intent?: string;
   variant?: React.ComponentProps<typeof Button>["variant"];
 }) => {
@@ -258,6 +261,7 @@ export const AutoFormSubmitButton = ({
   return (
     <Button
       className={className}
+      disabled={disabled}
       isLoading={isSubmitting}
       type="submit"
       value={intent}

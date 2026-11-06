@@ -26,6 +26,7 @@ import {
 import { loadSession } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
+import { redirectSuspendedSession } from "../moderation/suspension-gate";
 import { NotificationsBell } from "../notifications/bell";
 import { isSharedRenderRequest } from "../prerender";
 import { HeaderSearch } from "../search/header-search";
@@ -148,13 +149,18 @@ const loadNavigationMessages = async ({
  * deployment configuration and the session so the shell renders without
  * waterfalls. During a shared (prerendered or page-cached) render it loads only
  * the navigation messages: it skips the session and puts a deferred placeholder
- * in place of the deployment configuration.
+ * in place of the deployment configuration. Pass `location` to send a
+ * suspended session to the home page from any other page; `MainHeader` does
+ * the same for prerendered pages, in the browser.
+ *
+ * @throws A router redirect to `/` for a suspended session given `location`.
  *
  * @example
  * ```ts
  * // src/routes/_main.tsx
  * export const Route = createFileRoute("/_main")({
- *   loader: async ({ context }) => await loadMainShell(context),
+ *   loader: async ({ context, location }) =>
+ *     await loadMainShell(context, { location }),
  *   component: MainLayout,
  * });
  * ```
@@ -163,7 +169,15 @@ export const loadMainShell = async (
   context: { locale: string; queryClient: QueryClient },
   {
     isPrerendering = isSharedRenderRequest,
-  }: { isPrerendering?: () => boolean } = {},
+    location,
+  }: {
+    isPrerendering?: () => boolean;
+    /**
+     * The route's location. With it, a suspended session is redirected to the
+     * home page from anywhere else.
+     */
+    location?: { pathname: string };
+  } = {},
 ): Promise<void> => {
   if (isPrerendering()) {
     context.queryClient.setQueryData(
@@ -183,4 +197,6 @@ export const loadMainShell = async (
     }),
     loadSession(context.queryClient),
   ]);
+  if (location)
+    redirectSuspendedSession(context.queryClient, location.pathname);
 };

@@ -11,10 +11,10 @@ import { getDocsPageTree } from '@/docs/transport'
 import { withoutHmrTimestamp } from '@/lib/without-hmr-timestamp'
 
 export const Route = createFileRoute('/_docs')({
-  loader: async ({ context }) => {
+  loader: async ({ context, location }) => {
     const [{ icons, pageTree }] = await Promise.all([
       getDocsPageTree(),
-      loadMainShell(context),
+      loadMainShell(context, { location }),
     ])
 
     return { icons, pageTree }

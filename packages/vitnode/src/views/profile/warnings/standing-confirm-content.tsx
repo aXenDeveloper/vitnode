@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { WARNING_LIMITS } from "@/lib/moderation/warnings";
+import { ReasonFormFooter } from "@/views/moderation/warnings/reason-form-footer";
 import {
   ACCOUNT_STATUS_QUERY_KEY,
   revokeSanction,
@@ -157,20 +158,25 @@ const StandingConfirmContent = ({
           },
         ]}
         formSchema={formSchema}
+        layout={fields => (
+          <>
+            {fields.reason}
+            <ReasonFormFooter>
+              {revoking ? (
+                <>
+                  <RotateCcwIcon aria-hidden="true" />
+                  {tWarn("revoke.button")}
+                </>
+              ) : (
+                <>
+                  <ShieldOffIcon aria-hidden="true" />
+                  {tWarn("sanctions.lift")}
+                </>
+              )}
+            </ReasonFormFooter>
+          </>
+        )}
         onSubmit={onSubmit}
-        submitButtonProps={{
-          children: revoking ? (
-            <>
-              <RotateCcwIcon aria-hidden="true" />
-              {tWarn("revoke.button")}
-            </>
-          ) : (
-            <>
-              <ShieldOffIcon aria-hidden="true" />
-              {tWarn("sanctions.lift")}
-            </>
-          ),
-        }}
       />
     </>
   );

@@ -3144,10 +3144,23 @@
         "sanction_active": "Active",
         "sanction_lifted": "Lifted",
         "sanction_ended": "Ended",
-        "notice": {
-          "until": "Your account is suspended until {endsAt}.",
-          "indefinite": "Your account is suspended.",
-          "details": "See details"
+        "dialog": {
+          "title": "Your account is suspended",
+          "because": "Because of a warning for {reason}.",
+          "because_unknown": "A moderator suspended your account.",
+          "loading": "Loading the details of your suspension",
+          "time_left": "Time left",
+          "days": "{count, plural, one {day} other {days}}",
+          "hours": "{count, plural, one {hour} other {hours}}",
+          "minutes": "min",
+          "seconds": "sec",
+          "no_end": "No end date. It stays until a moderator lifts it.",
+          "why": "Why",
+          "points": "{count, plural, one {# active warning point} other {# active warning points}}",
+          "started": "Started",
+          "ends": "Ends",
+          "never": "Never",
+          "sign_out": "Sign out"
         }
       },
       "profile_card": {

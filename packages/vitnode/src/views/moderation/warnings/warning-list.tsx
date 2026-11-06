@@ -37,6 +37,7 @@ import type {
 
 import { Person } from "../modcp/report-tone";
 import { resolveReasonText } from "../report-reasons-query";
+import { ReasonFormFooter } from "./reason-form-footer";
 import { WarningDuration, WarningStatusBadge } from "./warning-format";
 import { WarningMessageContent, WarningNoteContent } from "./warning-message";
 import { SanctionSummary } from "./warning-sanction";
@@ -124,15 +125,16 @@ const RevokeDialog = ({
             },
           ]}
           formSchema={formSchema}
-          onSubmit={onSubmit}
-          submitButtonProps={{
-            children: (
-              <>
+          layout={fields => (
+            <>
+              {fields.reason}
+              <ReasonFormFooter>
                 <Undo2Icon aria-hidden="true" />
                 {submitLabel}
-              </>
-            ),
-          }}
+              </ReasonFormFooter>
+            </>
+          )}
+          onSubmit={onSubmit}
         />
       </DialogContent>
     </Dialog>
