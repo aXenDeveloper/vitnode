@@ -3140,6 +3140,63 @@
           "indefinite": "Your account is suspended.",
           "details": "See details"
         }
+      },
+      "profile_card": {
+        "label": "Warnings",
+        "points": "{count, plural, one {# warning point} other {# warning points}}",
+        "no_restrictions": "No restrictions being applied",
+        "suspended_until": "Suspended · ends {relative}",
+        "suspended_indefinitely": "Suspended indefinitely",
+        "warn": "Warn member",
+        "lift": "Lift suspension",
+        "revoke": "Revoke warning",
+        "revoke_label": "Revoke warning: {reason}",
+        "see_all": "See all",
+        "history": "Warnings and suspensions",
+        "empty": "No warnings yet. Anything issued shows up here, newest first.",
+        "empty_own": "You have no warnings. Keep it up!",
+        "hidden": "{count, plural, one {# more warning is} other {# more warnings are}} outside your moderation scope.",
+        "loading": "Loading warnings",
+        "load_error": {
+          "title": "Warnings didn't load",
+          "desc": "Check your connection, then try again."
+        },
+        "retry": "Try again",
+        "ends": "ends {relative}",
+        "sheet": {
+          "warning_desc": "Warning · issued {relative}",
+          "suspension_desc": "Suspension · started {relative}",
+          "message": "Message to the member",
+          "message_own": "Message from the moderators",
+          "points": "Points",
+          "not_counting": "not counting",
+          "issued": "Issued",
+          "expires": "Expires",
+          "expired": "Expired",
+          "never": "Never",
+          "stops_counting": "Stops counting {relative}",
+          "staff_note": "Staff note",
+          "staff_only": "Only staff can see this",
+          "led_to": "Led to",
+          "caused_by": "Caused by",
+          "revoked": "Revoked",
+          "time_served": "Time served",
+          "served": "{percent}% served",
+          "no_end_desc": "The account stays suspended until a moderator lifts it.",
+          "started": "Started",
+          "ended": "Ended",
+          "why": "Why",
+          "blocks": "What it blocks",
+          "blocks_desc": "The member can browse like a visitor, but can't post, comment or change anything on their account."
+        },
+        "confirm": {
+          "reason_desc": "Staff only. Saved in the moderation log.",
+          "reason_required": "Add a short reason so other staff know why.",
+          "reason_min": "Use at least {count} characters.",
+          "reason_max": "Keep it under {count} characters.",
+          "revoke_failed": "Could not revoke the warning",
+          "lift_failed": "Could not lift the suspension"
+        }
       }
     },
     "activity_logs": {
