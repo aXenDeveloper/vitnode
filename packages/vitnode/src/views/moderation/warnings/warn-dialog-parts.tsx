@@ -54,7 +54,7 @@ export type MessageDraft = MultiLangValue<DocumentDraft | null>;
 
 const RECENT_WARNINGS = 3;
 
-const textToDocument =(text: string): DocumentDraft => ({
+const textToDocument = (text: string): DocumentDraft => ({
   content: text
     .split(/\n{2,}/)
     .map(block => block.trim())

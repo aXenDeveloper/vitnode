@@ -1,48 +1,22 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
-import { findReportTarget } from "@/api/lib/moderation/registry";
 import { findActiveSuspension } from "@/api/lib/moderation/warnings/suspension";
-import {
-  isSanctionActiveAt,
-  WARNING_STATUSES,
-  warningStatusAt,
-} from "@/lib/moderation/warnings";
 
-import { json, warningMessageSchema } from "../lib/schema";
+import {
+  loadOwnHistoryPage,
+  OWN_HISTORY_KINDS,
+  OWN_HISTORY_PAGE_SIZE,
+  OWN_HISTORY_STATUSES,
+  ownHistoryItemSchema,
+  ownSanctionSchema,
+  ownWarningSchema,
+  serializeOwnSanction,
+  serializeOwnWarnings,
+} from "../lib/own-standing";
+import { json } from "../lib/schema";
 import { loadActivePoints } from "../lib/warnings-service";
 import { loadUserSanctions, loadUserWarnings } from "../lib/warnings-view";
-
-const textSchema = z.array(
-  z.object({ languageCode: z.string(), value: z.string() }),
-);
-
-/**
- * What a member may read about their own warnings. Built field by field so
- * staff notes, override explanations, revocation reasons and the issuing
- * moderator never leave the server.
- */
-const ownWarningSchema = z.object({
-  id: z.number(),
-  status: z.enum(WARNING_STATUSES),
-  points: z.number(),
-  reason: textSchema.nullable(),
-  message: warningMessageSchema,
-  issuedAt: z.date(),
-  expiresAt: z.date().nullable(),
-  content: z
-    .object({ title: z.string().nullable(), url: z.string().nullable() })
-    .nullable(),
-});
-
-const ownSanctionSchema = z.object({
-  id: z.number(),
-  active: z.boolean(),
-  startsAt: z.date(),
-  endsAt: z.date().nullable(),
-  revoked: z.boolean(),
-  warningId: z.number().nullable(),
-});
 
 export const accountStatusRoute = buildRoute({
   route: {
@@ -74,54 +48,83 @@ export const accountStatusRoute = buildRoute({
       loadActivePoints(c.get("db"), userId, now),
       findActiveSuspension(c, userId, now),
     ]);
-    const registry = c.get("core").moderation;
-
-    const contentOf = async (row: (typeof warnings)[number]) => {
-      if (!row.pluginId || !row.targetType || !row.targetId) return null;
-      const target = findReportTarget(registry, {
-        pluginId: row.pluginId,
-        type: row.targetType,
-      });
-      // Link only to content that is still there and not hidden. A plugin that
-      // fails to answer costs the member the link, never the page.
-      const current = target
-        ? await target.definition
-            .current(c, { locale: null, targetId: row.targetId })
-            .catch(() => null)
-        : null;
-
-      return {
-        title: row.contentSnapshot?.title ?? null,
-        url: current && !current.hidden ? current.url : null,
-      };
-    };
 
     return c.json(
       {
         suspension: suspension ? { endsAt: suspension.endsAt } : null,
         activePoints,
-        warnings: await Promise.all(
-          warnings.map(async row => ({
-            id: row.id,
-            status: warningStatusAt(row, now),
-            points: row.points,
-            reason: row.reasonSnapshot?.title ?? null,
-            message: row.message,
-            issuedAt: row.issuedAt,
-            expiresAt: row.expiresAt,
-            content: await contentOf(row),
-          })),
-        ),
-        sanctions: sanctions.map(row => ({
-          id: row.id,
-          active: isSanctionActiveAt(row, now),
-          startsAt: row.startsAt,
-          endsAt: row.endsAt,
-          revoked: row.revokedAt !== null,
-          warningId: row.warningId,
-        })),
+        warnings: await serializeOwnWarnings(c, warnings, now),
+        sanctions: sanctions.map(row => serializeOwnSanction(row, now)),
       },
       200,
     );
+  },
+});
+
+const listOf = <T extends string>(
+  value: string | undefined,
+  allowed: readonly T[],
+): T[] =>
+  (value ?? "")
+    .split(",")
+    .map(item => item.trim())
+    .filter((item): item is T => allowed.includes(item as T));
+
+export const accountStatusHistoryRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/account-status/history",
+    description:
+      "One page of the signed-in member's own warnings and suspensions, newest first by default. Filters by kind and status, sorts by date or points and searches reason titles and messages. A page past the end answers with the last page. Never includes staff notes",
+    request: {
+      query: z.object({
+        page: z.coerce.number().int().positive().max(10_000).default(1),
+        pageSize: z.coerce
+          .number()
+          .int()
+          .positive()
+          .max(100)
+          .default(OWN_HISTORY_PAGE_SIZE),
+        search: z.string().trim().max(100).optional(),
+        kind: z.string().max(200).optional(),
+        status: z.string().max(200).optional(),
+        orderBy: z.enum(["issuedAt", "points"]).default("issuedAt"),
+        order: z.enum(["asc", "desc"]).default("desc"),
+      }),
+    },
+    responses: {
+      200: json(
+        z.object({
+          items: z.array(ownHistoryItemSchema),
+          page: z.number(),
+          pageSize: z.number(),
+          total: z.number(),
+        }),
+        "One page of the account's history",
+      ),
+      401: { description: "Sign in first" },
+    },
+  },
+  handler: async c => {
+    const userId = c.get("user")?.id ?? c.get("suspension")?.userId;
+    if (!userId) return c.json({ error: "unauthenticated" }, 401);
+
+    const query = c.req.valid("query");
+    const { items, page, total } = await loadOwnHistoryPage(
+      c,
+      userId,
+      {
+        kinds: listOf(query.kind, OWN_HISTORY_KINDS),
+        order: query.order,
+        orderBy: query.orderBy,
+        page: query.page,
+        pageSize: query.pageSize,
+        search: query.search,
+        statuses: listOf(query.status, OWN_HISTORY_STATUSES),
+      },
+      new Date(),
+    );
+
+    return c.json({ items, page, pageSize: query.pageSize, total }, 200);
   },
 });

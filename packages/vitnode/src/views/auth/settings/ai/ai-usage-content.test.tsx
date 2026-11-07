@@ -87,20 +87,6 @@ describe("AiUsageContent", () => {
     expect(screen.queryByText(`${NOTICE}.exhausted.title`)).toBeNull();
   });
 
-  it("tells a member with no allowance to ask, without a bar", () => {
-    renderUsage(
-      usage({
-        actions: [],
-        notice: "no_allowance",
-        points: { available: "0", reserved: "0", total: "0", used: "0" },
-      }),
-    );
-
-    expect(screen.getByText(`${NOTICE}.no_allowance.title`)).toBeTruthy();
-    expect(screen.queryByRole("progressbar")).toBeNull();
-    expect(screen.getByText(`${FEATURES}.empty_title`)).toBeTruthy();
-  });
-
   it("shows the share of points used next to an accessible bar", () => {
     renderUsage(
       usage({

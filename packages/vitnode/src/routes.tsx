@@ -1,5 +1,4 @@
 import { defineRoutes, index, layout, lazy, page } from "./routing";
-import { ACCOUNT_STATUS_NAMESPACES } from "./tanstack/account-status/route";
 import { ADMIN_AI_NAMESPACES } from "./tanstack/admin/ai/route";
 import {
   normalizeAiHistoryRouteSearch,
@@ -86,6 +85,10 @@ import {
   SEARCH_NAMESPACES,
 } from "./tanstack/search/namespaces";
 import { normalizeSearchRouteSearch } from "./tanstack/search/route-search";
+import {
+  normalizeStandingSearch,
+  STANDING_NAMESPACES,
+} from "./tanstack/settings-standing/route";
 import { SETTINGS_NAMESPACES } from "./tanstack/settings/route";
 import { normalizeSsoSettingsSearch } from "./tanstack/sso-connections/route-search";
 import { normalizeActivitySearch } from "./views/activity-logs/activity-search";
@@ -204,6 +207,13 @@ export const routes = defineRoutes([
         component: lazy(() => import("./pages/settings/ai")),
         pendingComponent: () => <FeedPendingSkeleton rows={4} />,
       }),
+
+      page("standing", {
+        component: lazy(() => import("./pages/settings/standing")),
+        messages: STANDING_NAMESPACES,
+        pendingComponent: () => <FeedPendingSkeleton rows={3} />,
+        search: normalizeStandingSearch,
+      }),
     ],
   }),
 
@@ -252,12 +262,6 @@ export const routes = defineRoutes([
         pendingComponent: () => <FeedPendingSkeleton rows={4} />,
       }),
     ],
-  }),
-
-  page("/account-status", {
-    component: lazy(() => import("./pages/account-status")),
-    messages: ACCOUNT_STATUS_NAMESPACES,
-    pendingComponent: () => <FeedPendingSkeleton rows={3} />,
   }),
 
   page("/notifications", {

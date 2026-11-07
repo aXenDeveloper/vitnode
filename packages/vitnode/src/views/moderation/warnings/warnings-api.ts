@@ -203,6 +203,48 @@ export const accountStatusQueryOptions = () =>
     staleTime: 10_000,
   });
 
+export interface AccountStatusHistoryParams {
+  kind?: string;
+  order: "asc" | "desc";
+  orderBy: "issuedAt" | "points";
+  page: number;
+  pageSize: number;
+  search?: string;
+  status?: string;
+}
+
+const fetchAccountStatusHistory = async (
+  params: AccountStatusHistoryParams,
+) => {
+  const response = await fetcher({
+    plugin: manifest.id,
+    args: { query: params },
+    method: "get",
+    module: "moderation",
+    path: "/account-status/history",
+  });
+  if (!response.ok) {
+    throw new ModcpRequestError(response.status, "the account history");
+  }
+
+  return await response.json();
+};
+
+export type AccountStatusHistory = Awaited<
+  ReturnType<typeof fetchAccountStatusHistory>
+>;
+
+export const accountStatusHistoryQueryOptions = (
+  params: AccountStatusHistoryParams,
+) =>
+  queryOptions({
+    placeholderData: keepPreviousData,
+    queryFn: async () => await fetchAccountStatusHistory(params),
+    queryKey: [...ACCOUNT_STATUS_QUERY_KEY, "history", params],
+    retry: false,
+    staleTime: 10_000,
+  });
+
 const WARNING_FAILURES = [
   "already_revoked",
   "author_mismatch",

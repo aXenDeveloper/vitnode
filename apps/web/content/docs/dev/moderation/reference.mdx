@@ -263,6 +263,7 @@ Under `/api/@vitnode/core/moderation`, using the user session.
 | `GET /members/{id}/log` | `can_view` | The member's moderation log from the Activity Logs, newest first, 20 per page with `cursor`. `sanction.*` entries need `can_view_sanctions` |
 | `POST /sanctions/{id}/revoke` | `can_manage_sanctions` | `{ reason }` |
 | `GET /account-status` | The member, also while suspended | Own suspension, active points, warnings and suspensions, never staff notes |
+| `GET /account-status/history` | The member, also while suspended | One page of their own warnings and suspensions, interleaved by date. Query `page`, `pageSize` (max 100, default 10), `search` (reason titles and messages; leaves out suspensions), `kind` (`warning`, `suspension`, comma-separated), `status` (`active`, `expired`, `revoked`, `lifted`, `ended`, comma-separated), `orderBy` (`issuedAt` or `points`) and `order`. Answers `items`, `page` (a page past the end is clamped onto the last one), `pageSize` and `total`, never staff notes |
 
 `expiration` is `{ mode: "default" }`, `{ mode: "never" }`, `{ mode: "hours", hours }` or `{ mode: "at", at }` (an ISO date in the future). `content` is `{ pluginId, targetType, targetId }`; with `reportId`, the content comes from the report. A retry with the same `idempotencyKey` from the same moderator answers the first result with `duplicate: true`.
 
@@ -298,7 +299,7 @@ A content-linked warning carries the content's moderation scope. Staff notes, ov
 
 ### Warning notifications
 
-`core.warning_issued`, `core.warning_revoked`, `core.account_suspended` and `core.suspension_revoked`, in the **Account** category. They are mandatory in the inbox, link to `/account-status`, and are published inside the warning's transaction, so a rolled-back warning notifies nobody. They carry the member's message as plain text per language, and points, never staff notes or the moderator's name.
+`core.warning_issued`, `core.warning_revoked`, `core.account_suspended` and `core.suspension_revoked`, in the **Account** category. They are mandatory in the inbox, link to **Settings → Account status** at `/settings/standing`, and are published inside the warning's transaction, so a rolled-back warning notifies nobody. They carry the member's message as plain text per language, and points, never staff notes or the moderator's name.
 
 ## Snapshot format
 

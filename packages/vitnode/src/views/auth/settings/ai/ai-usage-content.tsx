@@ -72,15 +72,6 @@ const AiUsageNoticeContent = ({ usage }: { usage: AiUsage }) => {
     );
   }
 
-  if (usage.notice === "no_allowance") {
-    return (
-      <Alert variant="info">
-        <AlertTitle>{t("no_allowance.title")}</AlertTitle>
-        <AlertDescription>{t("no_allowance.desc")}</AlertDescription>
-      </Alert>
-    );
-  }
-
   if (usage.notice === "exhausted") {
     return (
       <Alert variant="destructive">

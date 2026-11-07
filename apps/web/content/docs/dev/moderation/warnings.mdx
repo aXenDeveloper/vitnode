@@ -45,6 +45,16 @@ When the countdown reaches zero, the session refreshes and the member can use th
 
 Main layouts opt in by passing the route's `location` to `loadMainShell` (see [Search external](/docs/dev/search-external) for the docs layout); `MainHeader` applies the same rule in the browser for prerendered pages.
 
+## Account status in settings
+
+Members check their own record in **Settings → Account status** at `/settings/standing`. Warning and suspension notifications link there too.
+
+A summary card at the top says where they stand: a green shield when no points count against them, an amber one with how many points they hold, from how many warnings, and when the next ones stop counting (or that they never expire). A member who has never been warned sees just that card.
+
+Below it, a table lists every warning and suspension, newest first, 10 per page. Members can search the reasons and the moderators' messages, filter by type (warnings or suspensions) and status (active, expired, revoked, lifted, ended), and sort by date or points. Clicking a row opens the full details in a side sheet, the same one the profile card uses. The page never shows staff notes or which moderator issued a warning.
+
+A suspended member never reaches this page; the suspension dialog on the home page tells them everything instead.
+
 ## On a member's profile
 
 The profile's side column shows a warnings card with the member's active points, any active suspension and their latest warnings and suspensions. Click any of them to read the full details in a side sheet.

@@ -1,6 +1,9 @@
 import { buildModule } from "@/api/builders";
 
-import { accountStatusRoute } from "./routes/account-status.route";
+import {
+  accountStatusHistoryRoute,
+  accountStatusRoute,
+} from "./routes/account-status.route";
 import {
   approvalFiltersRoute,
   approveApprovalRoute,
@@ -70,5 +73,6 @@ export const moderationModule = buildModule({
     memberStandingRoute,
     memberLogRoute,
     accountStatusRoute,
+    accountStatusHistoryRoute,
   ],
 });

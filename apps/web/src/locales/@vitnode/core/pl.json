@@ -2166,10 +2166,6 @@
             "near_limit": {
               "title": "Wykorzystano ponad 80% punktów AI",
               "desc": "Gospodaruj resztą rozważnie - limit odnowi się {resetsAt}."
-            },
-            "no_allowance": {
-              "title": "Twoja rola nie obejmuje jeszcze punktów AI",
-              "desc": "Funkcje AI wymagają miesięcznego limitu punktów, a Twój wynosi obecnie zero. Jeśli chcesz je wypróbować, zapytaj administratora."
             }
           },
           "status": {

@@ -1558,10 +1558,6 @@
             "near_limit": {
               "title": "You've used over 80% of your AI points",
               "desc": "Spend the rest wisely - your allowance refills on {resetsAt}."
-            },
-            "no_allowance": {
-              "title": "Your role doesn't include AI points yet",
-              "desc": "AI features need a monthly allowance, and yours is currently zero. Ask an administrator if you'd like to try them."
             }
           },
           "status": {
@@ -3121,26 +3117,10 @@
         "title": "Account status",
         "desc": "Your warnings and whether anything restricts your account.",
         "loading": "Loading your account status",
-        "signed_out": "Sign in to see your account status.",
-        "sign_in": "Sign in",
-        "suspended_title": "Your account is suspended",
-        "suspended_until": "You can use your account again after {endsAt}.",
-        "suspended_indefinite": "Your account stays suspended until a moderator lifts the suspension.",
         "suspended_restrictions": "Until then you can browse like a visitor, but you can't post, comment or change anything on your account.",
         "contact": "Think this is a mistake? Contact the site's administrators.",
         "good_title": "Your account is in good standing",
-        "good_desc": "Nothing restricts your account.",
         "points_title": "Active points",
-        "points_desc": "Points from warnings that haven't expired or been revoked. Reaching a limit can suspend your account.",
-        "warnings_title": "Your warnings",
-        "no_warnings": "You haven't received any warnings.",
-        "expires": "Points expire:",
-        "never": "Never",
-        "content": "About:",
-        "untitled": "Untitled",
-        "sanctions_title": "Suspensions",
-        "sanction_temporary": "Temporary suspension",
-        "sanction_indefinite": "Indefinite suspension",
         "sanction_active": "Active",
         "sanction_lifted": "Lifted",
         "sanction_ended": "Ended",
@@ -3161,7 +3141,39 @@
           "ends": "Ends",
           "never": "Never",
           "sign_out": "Sign out"
-        }
+        },
+        "summary": "Summary",
+        "hero_clean": "You've never been warned. Keep it up!",
+        "hero_cleared": "No points count against you right now. Your past warnings stay listed below.",
+        "hero_points": "You have <b>{points, plural, one {# point} other {# points}}</b> from {warnings, plural, one {# warning} other {# warnings}}.",
+        "hero_next": "The next ones stop counting {relative}, on {date}.",
+        "hero_never": "None of them expire.",
+        "history": {
+          "label": "Warnings and suspensions",
+          "item": "Item",
+          "date": "Date",
+          "points": "Points",
+          "status": "Status",
+          "warning": "Warning",
+          "search": "Search reasons and messages",
+          "type": "Type",
+          "type_warnings": "Warnings",
+          "type_suspensions": "Suspensions",
+          "status_active": "Active",
+          "status_expired": "Expired",
+          "status_revoked": "Revoked",
+          "status_lifted": "Lifted",
+          "status_ended": "Ended",
+          "no_results": {
+            "title": "Nothing matches",
+            "desc": "Try another word, or clear the filters."
+          }
+        },
+        "load_error": {
+          "title": "Your account status didn't load",
+          "desc": "Check your connection, then try again."
+        },
+        "retry": "Try again"
       },
       "profile_card": {
         "label": "Warnings",

@@ -22,7 +22,7 @@ const reasonTextSchema = z
   .array(z.object({ languageCode: z.string(), value: z.string() }))
   .nullable();
 
-const ACCOUNT_STATUS_PATH = "/account-status";
+const ACCOUNT_STATUS_PATH = "/settings/standing";
 
 const utcDateTimeFormats = new Map<string, Intl.DateTimeFormat>();
 

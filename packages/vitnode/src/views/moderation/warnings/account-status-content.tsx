@@ -1,266 +1,515 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
-import { ExternalLinkIcon, LogInIcon, ShieldAlertIcon } from "lucide-react";
+import { cn } from "cn";
+import {
+  MessageSquareWarningIcon,
+  RotateCwIcon,
+  ShieldCheckIcon,
+  ShieldIcon,
+} from "lucide-react";
 import React from "react";
-import { useFormatter, useLocale, useTranslations } from "use-intl";
+import { useFormatter, useLocale, useNow, useTranslations } from "use-intl";
 
-import { DateFormat } from "@/components/date-format";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import type { ColumnDef } from "@/components/table/data-table-content";
+import type {
+  ProfileStanding,
+  StandingSuspension,
+  StandingTarget,
+  StandingWarning,
+} from "@/views/profile/warnings/standing";
+
+import { ContentDataTable } from "@/components/table/content";
+import { DataTableSkeleton } from "@/components/table/data-table-content";
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { FEEDBACK_TONE_TEXT } from "@/components/ui/feedback-tone";
 import { PageTitle } from "@/components/ui/page-title";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { standingFromAccountStatus } from "@/views/profile/warnings/standing";
+import {
+  reasonTextOf,
+  SuspensionLength,
+  SuspensionNode,
+  SuspensionTitle,
+  WarningNode,
+} from "@/views/profile/warnings/standing-parts";
 
-import type { AccountStatus } from "./warnings-api";
+import type {
+  AccountStatus,
+  AccountStatusHistory,
+  AccountStatusHistoryParams,
+} from "./warnings-api";
 
-import { resolveReasonText } from "../report-reasons-query";
+import { SuspensionStatusBadge } from "./suspension-status-badge";
 import { WarningStatusBadge } from "./warning-format";
-import { WarningMessageContent } from "./warning-message";
-import { accountStatusQueryOptions } from "./warnings-api";
+import {
+  accountStatusHistoryQueryOptions,
+  accountStatusQueryOptions,
+} from "./warnings-api";
 
-const SuspensionAlert = ({
-  suspension,
-}: {
-  suspension: NonNullable<AccountStatus["suspension"]>;
-}) => {
-  const t = useTranslations("core.moderation.account_status");
-  const format = useFormatter();
-
-  return (
-    <Alert icon={<ShieldAlertIcon />} variant="destructive">
-      <AlertTitle className="text-balance">{t("suspended_title")}</AlertTitle>
-      <AlertDescription className="flex flex-col gap-2 text-pretty">
-        <p>
-          {suspension.endsAt
-            ? t("suspended_until", {
-                endsAt: format.dateTime(new Date(suspension.endsAt), {
-                  dateStyle: "full",
-                  timeStyle: "short",
-                }),
-              })
-            : t("suspended_indefinite")}
-        </p>
-        <p>{t("suspended_restrictions")}</p>
-        <p>{t("contact")}</p>
-      </AlertDescription>
-    </Alert>
-  );
-};
-
-const OwnWarning = ({
-  warning,
-}: {
-  warning: AccountStatus["warnings"][number];
-}) => {
-  const t = useTranslations("core.moderation.account_status");
-  const tWarn = useTranslations("core.moderation.warn");
-  const locale = useLocale();
-  const titleId = React.useId();
-
-  return (
-    <article
-      aria-labelledby={titleId}
-      className="bg-card ring-foreground/5 flex flex-col gap-3 rounded-xl p-4 shadow-xs ring-1 dark:shadow-none"
-    >
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h3
-            className="text-foreground font-semibold text-balance"
-            id={titleId}
-          >
-            {warning.reason
-              ? resolveReasonText(warning.reason, locale)
-              : tWarn("custom_reason")}
-          </h3>
-          <p className="text-muted-foreground text-sm">
-            <DateFormat date={warning.issuedAt} />
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">
-            {tWarn("points", { count: warning.points })}
-          </Badge>
-          <WarningStatusBadge status={warning.status} />
-        </div>
-      </header>
-      <WarningMessageContent
-        className="text-foreground"
-        message={warning.message}
-      />
-      <dl className="text-muted-foreground flex flex-wrap gap-x-6 gap-y-1 text-sm">
-        <div className="flex gap-1.5">
-          <dt>{t("expires")}</dt>
-          <dd className="text-foreground">
-            {warning.expiresAt ? (
-              <DateFormat date={warning.expiresAt} showFullDate />
-            ) : (
-              t("never")
-            )}
-          </dd>
-        </div>
-        {warning.content ? (
-          <div className="flex gap-1.5">
-            <dt>{t("content")}</dt>
-            <dd className="text-foreground">
-              {warning.content.url ? (
-                <a
-                  className="text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
-                  href={warning.content.url}
-                >
-                  {warning.content.title ?? t("untitled")}
-                  <ExternalLinkIcon aria-hidden="true" className="size-3.5" />
-                </a>
-              ) : (
-                (warning.content.title ?? t("untitled"))
-              )}
-            </dd>
-          </div>
-        ) : null}
-      </dl>
-    </article>
-  );
-};
-
-const Pending = ({ label }: { label: string }) => (
-  <div aria-busy="true" className="flex flex-col gap-4">
-    <span className="sr-only" role="status">
-      {label}
-    </span>
-    <Skeleton className="h-24 w-full" />
-    <Skeleton className="h-32 w-full" />
-    <Skeleton className="h-32 w-full" />
-  </div>
+const StandingSheetContent = React.lazy(
+  async () => await import("@/views/profile/warnings/standing-sheet-content"),
 );
 
-/**
- * The member's own standing: an active suspension, if any, active points and
- * warning history. Works for a suspended account too. Never shows staff notes
- * or who issued a warning.
- */
-export const AccountStatusContent = () => {
+type HistoryRow =
+  | {
+      at: Date;
+      id: string;
+      kind: "suspension";
+      points: number;
+      suspension: StandingSuspension;
+    }
+  | {
+      at: Date;
+      id: string;
+      kind: "warning";
+      points: number;
+      warning: StandingWarning;
+    };
+
+const rowsOf = (items: AccountStatusHistory["items"]): HistoryRow[] => {
+  const page = standingFromAccountStatus({
+    activePoints: 0,
+    sanctions: items.flatMap(item =>
+      item.kind === "suspension" ? [item.suspension] : [],
+    ),
+    suspension: null,
+    warnings: items.flatMap(item =>
+      item.kind === "warning" ? [item.warning] : [],
+    ),
+  });
+
+  return items.flatMap((item): HistoryRow[] => {
+    if (item.kind === "warning") {
+      const warning = page.warnings.find(w => w.id === item.warning.id);
+
+      return warning
+        ? [
+            {
+              at: warning.issuedAt,
+              id: `w-${warning.id}`,
+              kind: "warning",
+              points: warning.points,
+              warning,
+            },
+          ]
+        : [];
+    }
+    const suspension = page.suspensions.find(s => s.id === item.suspension.id);
+
+    return suspension
+      ? [
+          {
+            at: suspension.startsAt,
+            id: `s-${suspension.id}`,
+            kind: "suspension",
+            points: 0,
+            suspension,
+          },
+        ]
+      : [];
+  });
+};
+
+const nextExpiryOf = (standing: ProfileStanding) =>
+  standing.warnings
+    .flatMap(w =>
+      w.status === "active" && w.points > 0 && w.expiresAt ? [w.expiresAt] : [],
+    )
+    .sort((a, b) => a.getTime() - b.getTime())[0] ?? null;
+
+const Hero = ({ standing }: { standing: ProfileStanding }) => {
   const t = useTranslations("core.moderation.account_status");
-  const { data, isPending } = useQuery(accountStatusQueryOptions());
+  const format = useFormatter();
+  const now = useNow({ updateInterval: 60_000 });
+  const counting = standing.warnings.filter(
+    w => w.status === "active" && w.points > 0,
+  ).length;
+  const hasHistory =
+    standing.warnings.length > 0 || standing.suspensions.length > 0;
+  const withPoints = standing.activePoints > 0;
+  const next = nextExpiryOf(standing);
+  const Icon = withPoints ? ShieldIcon : ShieldCheckIcon;
 
   return (
-    <div className="container mx-auto flex max-w-3xl flex-col gap-6 p-4">
-      <PageTitle desc={t("desc")} h1={t("title")} />
-      {isPending ? (
-        <Pending label={t("loading")} />
-      ) : !data ? (
-        <div className="bg-card ring-foreground/5 flex flex-col items-start gap-3 rounded-xl p-4 ring-1">
-          <p className="text-sm leading-relaxed">{t("signed_out")}</p>
-          <Link className={buttonVariants()} to="/login">
-            <LogInIcon aria-hidden="true" />
-            {t("sign_in")}
-          </Link>
-        </div>
-      ) : (
-        <>
-          {data.suspension ? (
-            <SuspensionAlert suspension={data.suspension} />
-          ) : (
-            <Alert variant="success">
-              <AlertTitle>{t("good_title")}</AlertTitle>
-              <AlertDescription className="text-pretty">
-                {t("good_desc")}
-              </AlertDescription>
-            </Alert>
+    <section
+      aria-label={t("summary")}
+      className="bg-card ring-foreground/10 flex flex-col gap-5 rounded-xl p-5 shadow-xs ring-1 sm:flex-row sm:items-center"
+    >
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex size-14 shrink-0 items-center justify-center rounded-full",
+          withPoints ? "bg-warn/15" : "bg-success/10",
+        )}
+      >
+        <Icon
+          className={cn(
+            "size-7",
+            withPoints
+              ? FEEDBACK_TONE_TEXT.warning
+              : FEEDBACK_TONE_TEXT.success,
           )}
+        />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <h2 className="text-foreground text-lg font-semibold text-balance">
+          {t("good_title")}
+        </h2>
+        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+          {withPoints ? (
+            <>
+              {t.rich("hero_points", {
+                b: chunks => (
+                  <span className="text-foreground font-medium tabular-nums">
+                    {chunks}
+                  </span>
+                ),
+                points: standing.activePoints,
+                warnings: counting,
+              })}{" "}
+              {next
+                ? t("hero_next", {
+                    date: format.dateTime(next, { dateStyle: "long" }),
+                    relative: format.relativeTime(next, now),
+                  })
+                : t("hero_never")}
+            </>
+          ) : hasHistory ? (
+            t("hero_cleared")
+          ) : (
+            t("hero_clean")
+          )}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-col items-start sm:items-end">
+        <span
+          className={cn(
+            "text-4xl font-semibold tabular-nums",
+            withPoints ? "text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {standing.activePoints}
+        </span>
+        <span className="text-muted-foreground text-xs">
+          {t("points_title")}
+        </span>
+      </div>
+    </section>
+  );
+};
 
-          <div className="bg-card ring-foreground/5 flex items-center justify-between gap-4 rounded-xl p-4 ring-1">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-foreground font-semibold">
-                {t("points_title")}
-              </h2>
-              <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-                {t("points_desc")}
-              </p>
-            </div>
-            <p className="text-foreground text-3xl font-semibold tabular-nums">
-              {data.activePoints}
-            </p>
-          </div>
+const ItemCell = ({ row }: { row: HistoryRow }) => {
+  const t = useTranslations("core.moderation.account_status.history");
+  const tWarn = useTranslations("core.moderation.warn");
+  const locale = useLocale();
 
-          <section
-            aria-labelledby="own-warnings"
-            className="flex flex-col gap-3"
-          >
-            <h2
-              className="text-foreground text-lg font-semibold"
-              id="own-warnings"
-            >
-              {t("warnings_title")}
-            </h2>
-            {data.warnings.length === 0 ? (
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                {t("no_warnings")}
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-3">
-                {data.warnings.map(warning => (
-                  <li key={warning.id}>
-                    <OwnWarning warning={warning} />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {data.sanctions.length > 0 ? (
-            <section
-              aria-labelledby="own-sanctions"
-              className="flex flex-col gap-3"
-            >
-              <h2
-                className="text-foreground text-lg font-semibold"
-                id="own-sanctions"
-              >
-                {t("sanctions_title")}
-              </h2>
-              <ul className="flex flex-col gap-2">
-                {data.sanctions.map(sanction => (
-                  <li
-                    className="bg-card ring-foreground/5 flex flex-wrap items-center justify-between gap-3 rounded-xl p-4 text-sm ring-1"
-                    key={sanction.id}
-                  >
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-foreground font-medium">
-                        {sanction.endsAt
-                          ? t("sanction_temporary")
-                          : t("sanction_indefinite")}
-                      </span>
-                      <span className="text-muted-foreground">
-                        <DateFormat date={sanction.startsAt} showFullDate />
-                        {sanction.endsAt ? (
-                          <>
-                            {" – "}
-                            <DateFormat date={sanction.endsAt} showFullDate />
-                          </>
-                        ) : null}
-                      </span>
-                    </span>
-                    <Badge
-                      variant={
-                        sanction.active
-                          ? "destructive"
-                          : sanction.revoked
-                            ? "outline"
-                            : "secondary"
-                      }
-                    >
-                      {sanction.active
-                        ? t("sanction_active")
-                        : sanction.revoked
-                          ? t("sanction_lifted")
-                          : t("sanction_ended")}
-                    </Badge>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
-        </>
+  return (
+    <span className="flex min-w-0 items-center gap-3">
+      {row.kind === "warning" ? (
+        <WarningNode size="sm" warning={row.warning} />
+      ) : (
+        <SuspensionNode active={row.suspension.active} size="sm" />
       )}
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span
+          className={cn(
+            "truncate text-sm font-medium",
+            row.kind === "warning" && row.warning.status === "revoked"
+              ? "text-muted-foreground line-through"
+              : "text-foreground",
+          )}
+        >
+          {row.kind === "warning" ? (
+            reasonTextOf(row.warning, locale, tWarn("custom_reason"))
+          ) : (
+            <SuspensionTitle suspension={row.suspension} />
+          )}
+        </span>
+        <span className="text-muted-foreground text-xs">
+          {row.kind === "warning" ? (
+            t("warning")
+          ) : (
+            <SuspensionLength suspension={row.suspension} />
+          )}
+        </span>
+      </span>
+    </span>
+  );
+};
+
+const LoadError = ({
+  isFetching,
+  onRetry,
+}: {
+  isFetching: boolean;
+  onRetry: () => void;
+}) => {
+  const t = useTranslations("core.moderation.account_status");
+
+  return (
+    <Empty className="border" role="alert">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <MessageSquareWarningIcon aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>{t("load_error.title")}</EmptyTitle>
+        <EmptyDescription>{t("load_error.desc")}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button isLoading={isFetching} onClick={onRetry} variant="outline">
+          <RotateCwIcon aria-hidden="true" />
+          {t("retry")}
+        </Button>
+      </EmptyContent>
+    </Empty>
+  );
+};
+
+const HistoryTable = ({
+  onOpen,
+  params,
+}: {
+  onOpen: (target: NonNullable<StandingTarget>) => void;
+  params: AccountStatusHistoryParams;
+}) => {
+  const t = useTranslations("core.moderation.account_status.history");
+  const format = useFormatter();
+  const query = useQuery(accountStatusHistoryQueryOptions(params));
+
+  if (query.isPending) return <DataTableSkeleton columns={4} toolbar />;
+  if (!query.data) {
+    return (
+      <LoadError
+        isFetching={query.isFetching}
+        onRetry={() => void query.refetch()}
+      />
+    );
+  }
+
+  const { page, pageSize, total } = query.data;
+  const edges = rowsOf(query.data.items);
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const columns: ColumnDef<HistoryRow>[] = [
+    {
+      cell: ({ row }) => <ItemCell row={row} />,
+      header: t("item"),
+      id: "item",
+    },
+    {
+      accessorKey: "at",
+      cell: ({ row }) => (
+        <span className="text-muted-foreground tabular-nums">
+          {format.dateTime(row.at, { dateStyle: "medium" })}
+        </span>
+      ),
+      className: "w-36",
+      header: t("date"),
+    },
+    {
+      accessorKey: "points",
+      align: "right",
+      cell: ({ row }) =>
+        row.kind === "warning" ? (
+          <span className="tabular-nums">{row.points}</span>
+        ) : (
+          <span aria-hidden="true" className="text-muted-foreground">
+            -
+          </span>
+        ),
+      className: "w-20",
+      header: t("points"),
+    },
+    {
+      cell: ({ row }) =>
+        row.kind === "warning" ? (
+          <WarningStatusBadge status={row.warning.status} />
+        ) : (
+          <SuspensionStatusBadge suspension={row.suspension} />
+        ),
+      className: "w-28",
+      header: t("status"),
+      id: "status",
+    },
+  ];
+
+  return (
+    <div
+      aria-busy={query.isFetching}
+      className={cn(
+        "motion-safe:transition-opacity",
+        query.isFetching ? "opacity-60" : null,
+      )}
+    >
+      <ContentDataTable<HistoryRow>
+        aria-label={t("label")}
+        columns={columns}
+        customNoResults={{
+          description: t("no_results.desc"),
+          title: t("no_results.title"),
+        }}
+        edges={edges}
+        filters={[
+          {
+            id: "type",
+            label: t("type"),
+            options: [
+              { label: t("type_warnings"), value: "warning" },
+              { label: t("type_suspensions"), value: "suspension" },
+            ],
+          },
+          {
+            id: "status",
+            label: t("status"),
+            options: [
+              { label: t("status_active"), value: "active" },
+              { label: t("status_expired"), value: "expired" },
+              { label: t("status_revoked"), value: "revoked" },
+              { label: t("status_lifted"), value: "lifted" },
+              { label: t("status_ended"), value: "ended" },
+            ],
+          },
+        ]}
+        id="account-status-history"
+        order={{
+          columns: ["at", "points"],
+          defaultOrder: { column: "at", order: "desc" },
+        }}
+        pageInfo={{
+          count: edges.length,
+          currentPage: page,
+          endCursor: null,
+          hasNextPage: page < totalPages,
+          hasPreviousPage: page > 1,
+          pageSize,
+          startCursor: null,
+          totalCount: total,
+          totalPages,
+        }}
+        rowOpens={row => {
+          onOpen(
+            row.kind === "warning"
+              ? { id: row.warning.id, kind: "warning" }
+              : { id: row.suspension.id, kind: "suspension" },
+          );
+        }}
+        search
+        searchPlaceholder={t("search")}
+      />
     </div>
+  );
+};
+
+const DetailSheet = ({
+  onTarget,
+  standing,
+  target,
+}: {
+  onTarget: (target: StandingTarget) => void;
+  standing: ProfileStanding;
+  target: StandingTarget;
+}) => {
+  const [shown, setShown] = React.useState(target);
+  if (target && target !== shown) setShown(target);
+
+  return (
+    <Sheet
+      onOpenChange={open => {
+        if (!open) onTarget(null);
+      }}
+      open={target !== null}
+    >
+      <SheetContent className="gap-0 sm:max-w-md">
+        {shown ? (
+          <React.Suspense
+            fallback={
+              <div aria-busy="true" className="flex flex-col gap-4 p-6">
+                <Skeleton className="size-12 rounded-full" />
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            }
+          >
+            <StandingSheetContent
+              onConfirm={() => {}}
+              onSelect={onTarget}
+              standing={standing}
+              target={shown}
+            />
+          </React.Suspense>
+        ) : null}
+      </SheetContent>
+    </Sheet>
+  );
+};
+
+const Heading = () => {
+  const t = useTranslations("core.moderation.account_status");
+  const tSettings = useTranslations("core.auth.settings");
+
+  return (
+    <PageTitle
+      className="mb-0"
+      desc={t("desc")}
+      h1={t("title")}
+      subtitle={tSettings("title")}
+    />
+  );
+};
+
+const hasHistoryOf = (status: AccountStatus) =>
+  status.warnings.length > 0 || status.sanctions.length > 0;
+
+export const AccountStatusContent = ({
+  params,
+}: {
+  params: AccountStatusHistoryParams;
+}) => {
+  const t = useTranslations("core.moderation.account_status");
+  const status = useQuery(accountStatusQueryOptions());
+  const [target, setTarget] = React.useState<StandingTarget>(null);
+
+  if (status.isPending) {
+    return (
+      <>
+        <Heading />
+        <div aria-busy="true" role="status">
+          <span className="sr-only">{t("loading")}</span>
+          <Skeleton className="h-24 w-full rounded-xl" />
+        </div>
+      </>
+    );
+  }
+
+  if (!status.data) {
+    return (
+      <>
+        <Heading />
+        <LoadError
+          isFetching={status.isFetching}
+          onRetry={() => void status.refetch()}
+        />
+      </>
+    );
+  }
+
+  const standing = standingFromAccountStatus(status.data);
+
+  return (
+    <>
+      <Heading />
+      <Hero standing={standing} />
+      {hasHistoryOf(status.data) ? (
+        <HistoryTable onOpen={setTarget} params={params} />
+      ) : null}
+      <DetailSheet onTarget={setTarget} standing={standing} target={target} />
+    </>
   );
 };
