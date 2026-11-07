@@ -14,6 +14,7 @@ import { sendNotificationRoute } from "./routes/notifications.route";
 import { sessionAdminRoute } from "./routes/session.route";
 import { staffAdminModule } from "./staff/staff.admin.module";
 import { usersAdminModule } from "./users/users.admin.module";
+import { warningsAdminModule } from "./warnings/warnings.admin.module";
 
 export const adminModule = buildModule({
   name: "admin",
@@ -31,6 +32,7 @@ export const adminModule = buildModule({
     notificationsAdminModule,
     pluginsAdminModule,
     reportReasonsAdminModule,
+    warningsAdminModule,
   ],
   cronJobs: [],
 });

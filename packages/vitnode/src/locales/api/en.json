@@ -55,6 +55,31 @@
         "admin_message": {
           "label": "Messages from administrators",
           "description": "Announcements an administrator sends you directly."
+        },
+        "warning_issued": {
+          "label": "Warnings from moderators",
+          "description": "When a moderator warns you. Always on, so you never miss one.",
+          "title": "You received a warning ({points, plural, one {# point} other {# points}})",
+          "title_reason": "You received a warning for {reason} ({points, plural, one {# point} other {# points}})"
+        },
+        "warning_revoked": {
+          "label": "Revoked warnings",
+          "description": "When a moderator takes back a warning you received.",
+          "title": "A warning was revoked",
+          "body": "Its {points, plural, one {# point no longer counts} other {# points no longer count}} against your account."
+        },
+        "account_suspended": {
+          "label": "Account suspensions",
+          "description": "When your account is suspended after reaching a warning limit.",
+          "title": "Your account is suspended",
+          "body_until": "You can use your account again after {endsAt} (UTC).",
+          "body_indefinite": "Your account is suspended until a moderator lifts it."
+        },
+        "suspension_revoked": {
+          "label": "Lifted suspensions",
+          "description": "When a moderator lifts a suspension of your account.",
+          "title": "A suspension was lifted",
+          "body": "A moderator lifted a suspension of your account. Check your account status to see if anything else still applies."
         }
       },
       "email": {

@@ -110,8 +110,12 @@ export const Person = ({
   person: ReportPerson;
   size?: number;
 }) => (
-  <span className="flex min-w-0 items-center gap-2">
-    <PersonAvatar person={person} size={size} />
-    <PersonName link={link} person={person} />
-  </span>
+  <UserFormat
+    avatar
+    avatarSize={size}
+    className="min-w-0 gap-2"
+    format
+    link={link}
+    user={person}
+  />
 );

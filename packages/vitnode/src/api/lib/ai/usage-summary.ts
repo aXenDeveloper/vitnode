@@ -183,8 +183,8 @@ export const loadUserAiUsage = async (
   }
 
   let notice: AiUserUsage["notice"] = "none";
-  if (sitePaused) notice = "site_paused";
-  else if (total === 0n) notice = "no_allowance";
+  if (total === 0n) notice = "no_allowance";
+  else if (sitePaused) notice = "site_paused";
   else if (total !== null && available === 0n) notice = "exhausted";
   else if (
     total !== null &&

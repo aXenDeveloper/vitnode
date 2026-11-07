@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
-import { ClipboardCheckIcon, FlagIcon } from "lucide-react";
+import { ClipboardCheckIcon, FlagIcon, TriangleAlertIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { SideNav, SideNavLink, SideNavList } from "@/components/side-nav";
@@ -11,7 +11,7 @@ import {
   modcpReportsQueryOptions,
 } from "./modcp-query";
 
-export type ModcpNavKey = "approvals" | "reports";
+export type ModcpNavKey = "approvals" | "reports" | "warnings";
 
 interface ModcpNavItem {
   href: string;
@@ -22,6 +22,7 @@ interface ModcpNavItem {
 export const MODCP_NAV_ITEMS: readonly ModcpNavItem[] = [
   { href: "/modcp/reports", icon: FlagIcon, key: "reports" },
   { href: "/modcp/approvals", icon: ClipboardCheckIcon, key: "approvals" },
+  { href: "/modcp/warnings", icon: TriangleAlertIcon, key: "warnings" },
 ];
 
 const OPEN_REPORTS_FILTER = {

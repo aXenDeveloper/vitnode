@@ -1,0 +1,2 @@
+ALTER TABLE "core_moderation_warnings" ALTER COLUMN "message" SET DATA TYPE jsonb USING "message"::jsonb;--> statement-breakpoint
+ALTER TABLE "core_moderation_warnings" ALTER COLUMN "staffNote" SET DATA TYPE jsonb USING "staffNote"::jsonb;

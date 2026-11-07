@@ -4,7 +4,10 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
-import { modalScrimClassName } from "@/components/ui/modal-scrim";
+import {
+  dialogPopupMotionClassName,
+  dialogScrimClassName,
+} from "@/components/ui/modal-scrim";
 
 const AlertDialogContext = React.createContext<{
   open: boolean;
@@ -79,11 +82,7 @@ function AlertDialogOverlay({
 }: AlertDialogPrimitive.Backdrop.Props) {
   return (
     <AlertDialogPrimitive.Backdrop
-      className={cn(
-        modalScrimClassName,
-        "duration-200 data-ending-style:duration-150",
-        className,
-      )}
+      className={cn(dialogScrimClassName, className)}
       data-slot="alert-dialog-overlay"
       {...props}
     />
@@ -106,7 +105,8 @@ function AlertDialogContent({
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Popup
         className={cn(
-          "group/alert-dialog-content bg-popover text-popover-foreground ease-fluid fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border p-6 shadow-xl transition-[opacity,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-150 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none data-[size=default]:sm:max-w-lg data-[size=sm]:sm:max-w-sm starting:scale-95 starting:opacity-0",
+          "group/alert-dialog-content bg-popover text-popover-foreground fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border p-6 shadow-xl data-[size=default]:sm:max-w-lg data-[size=sm]:sm:max-w-sm",
+          dialogPopupMotionClassName,
           className,
         )}
         data-size={size}

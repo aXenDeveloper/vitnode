@@ -355,6 +355,8 @@ export interface ContentCommentsController<
     hide: boolean;
     replies: boolean;
     report: boolean;
+    /** Warning authors reuses `report`'s target, so it is on whenever `report` is. */
+    warn: boolean;
   };
   /** The rich-text field that holds a comment's text. */
   field: string;
@@ -807,6 +809,7 @@ export const useContentComments = <
       hide: Boolean(visibility),
       replies: maxDepth !== undefined,
       report: Boolean(report),
+      warn: Boolean(report),
     },
     field,
     hasMore: comments.hasNextPage,

@@ -20,7 +20,8 @@ const MainLayout = () => (
 )
 
 export const Route = createFileRoute('/_main')({
-  loader: async ({ context }) => await loadMainShell(context),
+  loader: async ({ context, location }) =>
+    await loadMainShell(context, { location }),
   // Marketing-only keyframes and layouts stay out of the global stylesheet,
   // so admin and docs never download them.
   head: () => ({

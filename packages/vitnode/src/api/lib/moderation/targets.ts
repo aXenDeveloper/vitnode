@@ -14,6 +14,14 @@ export interface ModerationTargetState {
   url: null | string;
 }
 
+/** What {@link ModerationReportTargetDefinition.resolveAuthors} returns. */
+export interface ModerationTargetAuthors {
+  /** Every user who wrote the target; a warning can only name one of them. */
+  authorIds: number[];
+  /** A short plain-text title kept with the warning, or `null`. */
+  title: null | string;
+}
+
 export interface ModerationCaptureArgs {
   locale: null | string;
   targetId: string;
@@ -84,6 +92,17 @@ export interface ModerationReportTargetDefinition {
   parseId: (value: string) => null | string;
   /** Moderator permission module the report permissions are added to. */
   permissionModule: string;
+  /**
+   * The target's current authors and a short plain-text title, or `null` once
+   * it is deleted. Server-only; runs as the moderator, so hidden content still
+   * resolves. Setting it makes the target warnable: moderators with
+   * `can_warn` in `permissionModule` (limited by `scope`) can warn its
+   * authors. Content Engine types with `reports` provide it automatically.
+   */
+  resolveAuthors?: (
+    c: Context,
+    args: { targetId: string },
+  ) => Promise<ModerationTargetAuthors | null>;
   /**
    * The target's resource id in the `scope` family: `""` for none,
    * `undefined` once the target is deleted. Required with `scope`.

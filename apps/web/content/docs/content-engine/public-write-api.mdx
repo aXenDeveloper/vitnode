@@ -74,7 +74,7 @@ The routes live in the public module, under `/api/{pluginId}/content/{publicApi.
 | `POST /`         | `create`   | `{ values }`                  | `201` with the record                                                      |
 | `GET /{id}/edit` | `update`   |                               | `200` with the record, drafts included, `Cache-Control: private, no-store` |
 | `PATCH /{id}`    | `update`   | `{ values, expectedVersion }` | `200` with the record                                                      |
-| `GET /permissions?ids=1,2` | `publicWrite`, `reports` or `visibility` |                 | `200` with `{ items: [{ id, canDelete, canEdit, canHide, canReport }] }`, `Cache-Control: private, no-store` |
+| `GET /permissions?ids=1,2` | `publicWrite`, `reports` or `visibility` |                 | `200` with `{ items: [{ id, canDelete, canEdit, canHide, canReport, canWarn }] }`, `Cache-Control: private, no-store` |
 
 `GET /{id}/edit` and `PATCH /{id}` answer only for the owner and for moderators. There is no public delete, publish or hide route.
 
