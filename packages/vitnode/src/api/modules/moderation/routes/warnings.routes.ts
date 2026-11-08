@@ -447,6 +447,10 @@ export const listWarningsRoute = buildRoute({
           page: z.number(),
           pageSize: z.number(),
           total: z.number(),
+          permissions: z.object({
+            revoke: z.boolean(),
+            warn: z.boolean(),
+          }),
         }),
         "One page of warnings",
       ),
@@ -499,6 +503,13 @@ export const listWarningsRoute = buildRoute({
         page: query.page,
         pageSize: query.pageSize,
         total: totalRow?.value ?? 0,
+        permissions: {
+          revoke: hasWarningPermission(
+            moderator.set,
+            WARNING_PERMISSIONS.revoke,
+          ),
+          warn: hasWarningPermission(moderator.set, WARNING_PERMISSIONS.warn),
+        },
       },
       200,
     );

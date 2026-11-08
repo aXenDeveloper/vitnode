@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { WARNING_LIMITS } from "@/lib/moderation/warnings";
+import { PersonName } from "@/views/moderation/modcp/report-tone";
 import { ReasonFormFooter } from "@/views/moderation/warnings/reason-form-footer";
 import {
   ACCOUNT_STATUS_QUERY_KEY,
@@ -50,7 +51,12 @@ const Subject = ({ confirm }: { confirm: NonNullable<StandingConfirm> }) => {
           </p>
           <p className="text-muted-foreground text-xs">
             {tWarn("points", { count: warning.points })}
-            {warning.issuedBy ? ` · ${warning.issuedBy.name}` : null}
+            {warning.issuedBy ? (
+              <>
+                {" · "}
+                <PersonName person={warning.issuedBy} />
+              </>
+            ) : null}
             {` · ${format.relativeTime(warning.issuedAt, now)}`}
           </p>
         </div>

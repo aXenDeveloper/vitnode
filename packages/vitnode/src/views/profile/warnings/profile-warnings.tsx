@@ -30,6 +30,7 @@ import { SlidingNumber } from "@/components/ui/sliding-number";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { WarnDialog } from "@/tanstack/moderation/warn-button";
 import { ModcpRequestError } from "@/views/moderation/modcp/modcp-query";
+import { PersonName } from "@/views/moderation/modcp/report-tone";
 import {
   accountStatusQueryOptions,
   memberStandingQueryOptions,
@@ -202,10 +203,10 @@ const EntryRow = ({
             </span>
           ) : null}
           <span className="text-muted-foreground flex min-w-0 gap-1 text-sm">
-            <span className="truncate">
+            <span className="flex min-w-0">
               {entry.kind === "warning" ? (
                 entry.warning.issuedBy ? (
-                  entry.warning.issuedBy.name
+                  <PersonName person={entry.warning.issuedBy} />
                 ) : (
                   tWarn("points", { count: entry.warning.points })
                 )
@@ -295,12 +296,25 @@ const StandingCard = ({
       <CardContent className="flex flex-col gap-5">
         <div className="flex flex-col gap-1">
           <h2
-            className="text-foreground text-2xl font-semibold text-balance tabular-nums"
+            className="text-foreground flex items-center gap-3 text-2xl font-semibold text-balance tabular-nums"
             id={titleId}
           >
             {t.rich("points_animated", {
               count: standing.activePoints,
-              n: () => <SlidingNumber value={standing.activePoints} />,
+              n: () => (
+                <span
+                  className={cn(
+                    "flex h-12 min-w-12 shrink-0 items-center justify-center rounded-full px-3",
+                    suspension
+                      ? ["bg-destructive/15", FEEDBACK_TONE_TEXT.destructive]
+                      : standing.activePoints > 0
+                        ? ["bg-warn/15", FEEDBACK_TONE_TEXT.warning]
+                        : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  <SlidingNumber value={standing.activePoints} />
+                </span>
+              ),
             })}
           </h2>
           <StatusLine standing={standing} />

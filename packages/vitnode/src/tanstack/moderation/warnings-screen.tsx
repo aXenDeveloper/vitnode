@@ -3,7 +3,6 @@ import React from "react";
 import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
-import { ModcpMemberContent } from "@/views/moderation/warnings/modcp-member-content";
 import { ModcpWarningsContent } from "@/views/moderation/warnings/modcp-warnings-content";
 
 import type { ModcpRouteData } from "./route";
@@ -54,9 +53,3 @@ export const ModcpWarningsRouteContent = ({
     </RouteMessages>
   );
 };
-
-export const ModcpMemberRouteContent = ({ id }: { id: number }) => (
-  <RouteMessages namespaces={MODCP_NAMESPACES}>
-    <ModcpMemberContent userId={id} />
-  </RouteMessages>
-);

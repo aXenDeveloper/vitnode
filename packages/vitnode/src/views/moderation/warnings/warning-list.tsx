@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { cn } from "cn";
 import {
   ExternalLinkIcon,
   FlagIcon,
@@ -9,7 +10,7 @@ import {
 } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
-import { useLocale, useTranslations } from "use-intl";
+import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
@@ -17,7 +18,6 @@ import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 import { DateFormat } from "@/components/date-format";
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,12 +35,9 @@ import type {
   WarningResult,
 } from "./warnings-api";
 
-import { Person } from "../modcp/report-tone";
-import { resolveReasonText } from "../report-reasons-query";
+import { Person, PersonAvatar, PersonName } from "../modcp/report-tone";
 import { ReasonFormFooter } from "./reason-form-footer";
-import { WarningDuration, WarningStatusBadge } from "./warning-format";
-import { WarningMessageContent, WarningNoteContent } from "./warning-message";
-import { SanctionSummary } from "./warning-sanction";
+import { WarningNoteContent } from "./warning-message";
 import {
   ACCOUNT_STATUS_QUERY_KEY,
   revokeSanction,
@@ -162,32 +159,34 @@ const PersonOrDeleted = ({ person }: { person: null | ReportPerson }) => {
   return person ? <Person link person={person} /> : <>{t("deleted_user")}</>;
 };
 
+const InlinePersonOrDeleted = ({ person }: { person: null | ReportPerson }) => {
+  const t = useTranslations("core.moderation.warn");
+  if (!person) return <>{t("deleted_user")}</>;
+
+  return (
+    <span className="whitespace-nowrap">
+      <PersonAvatar
+        className="me-1 inline align-text-bottom"
+        person={person}
+        size={16}
+      />
+      <PersonName className="items-baseline gap-1" link person={person} />
+    </span>
+  );
+};
+
 /** Who, when, what for: the facts of one warning. */
-const WarningFacts = ({
-  member,
+export const WarningFacts = ({
+  className,
   warning,
 }: {
-  member?: null | ReportPerson;
+  className?: string;
   warning: ModcpStaffWarning;
 }) => {
   const t = useTranslations("core.moderation.warn");
 
   return (
-    <dl className="grid gap-3 sm:grid-cols-2">
-      {member !== undefined ? (
-        <Detail label={t("list.member")}>
-          {member ? (
-            <Link
-              className="hover:bg-muted/50 focus-visible:ring-ring/50 -mx-1 inline-flex rounded-md px-1 outline-none focus-visible:ring-3"
-              to={`/modcp/members/${member.id}`}
-            >
-              <Person person={member} />
-            </Link>
-          ) : (
-            <PersonOrDeleted person={member} />
-          )}
-        </Detail>
-      ) : null}
+    <dl className={cn("grid gap-3 sm:grid-cols-2", className)}>
       <Detail label={t("list.issued_by")}>
         <PersonOrDeleted person={warning.issuedBy} />
       </Detail>
@@ -235,7 +234,7 @@ const WarningFacts = ({
 };
 
 /** Staff notes and override explanations - `null` from the API unless the moderator may read them. */
-const StaffNotes = ({ warning }: { warning: ModcpStaffWarning }) => {
+export const StaffNotes = ({ warning }: { warning: ModcpStaffWarning }) => {
   const t = useTranslations("core.moderation.warn");
   if (!warning.staffNote && !warning.overrideNote) return null;
 
@@ -259,87 +258,54 @@ const StaffNotes = ({ warning }: { warning: ModcpStaffWarning }) => {
   );
 };
 
-/** One warning as staff see it, with Revoke when allowed. */
-export const StaffWarningCard = ({
-  canRevoke,
-  member,
+export const WarningRevokedNote = ({
   warning,
 }: {
-  canRevoke: boolean;
-  /** Shown in lists that mix members. */
-  member?: null | ReportPerson;
   warning: ModcpStaffWarning;
 }) => {
   const t = useTranslations("core.moderation.warn");
-  const locale = useLocale();
-  const [revoking, setRevoking] = React.useState(false);
-  const reason = warning.reason
-    ? resolveReasonText(warning.reason, locale)
-    : t("custom_reason");
-  const titleId = React.useId();
   const { revokedAt } = warning;
+  if (!revokedAt) return null;
 
   return (
-    <article
-      aria-labelledby={titleId}
-      className="bg-card ring-foreground/5 flex flex-col gap-4 rounded-xl p-4 shadow-xs ring-1 dark:shadow-none"
-    >
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h3
-            className="text-foreground font-semibold text-balance"
-            id={titleId}
-          >
-            {reason}
-          </h3>
-          <p className="text-muted-foreground text-sm">
-            <DateFormat date={warning.issuedAt} />
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="outline">
-            {t("points", { count: warning.points })}
-          </Badge>
-          <WarningStatusBadge status={warning.status} />
-          {canRevoke && warning.status !== "revoked" ? (
-            <Button
-              onClick={() => {
-                setRevoking(true);
-              }}
-              size="sm"
-              variant="outline"
-            >
-              <Undo2Icon aria-hidden="true" />
-              {t("revoke.button")}
-            </Button>
-          ) : null}
-        </div>
-      </header>
-
-      <WarningFacts member={member} warning={warning} />
-
-      <Detail label={t("list.message")}>
-        <WarningMessageContent message={warning.message} />
-      </Detail>
-
-      <StaffNotes warning={warning} />
-
-      {revokedAt ? (
-        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-          {t.rich("list.revoked", {
-            by: () => <PersonOrDeleted person={warning.revokedBy} />,
-            date: () => <DateFormat date={revokedAt} />,
-          })}
-          {warning.revokeReason ? ` ${warning.revokeReason}` : null}
-        </p>
-      ) : null}
-
-      {warning.sanctionId && revokedAt ? (
+    <div className="flex flex-col gap-1">
+      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+        {t.rich("list.revoked", {
+          by: () => <InlinePersonOrDeleted person={warning.revokedBy} />,
+          date: () => <DateFormat date={revokedAt} />,
+        })}
+        {warning.revokeReason ? ` ${warning.revokeReason}` : null}
+      </p>
+      {warning.sanctionId ? (
         <p className="text-muted-foreground text-sm text-pretty">
           {t("list.sanction_stays")}
         </p>
       ) : null}
+    </div>
+  );
+};
 
+export const RevokeWarningButton = ({
+  warning,
+}: {
+  warning: ModcpStaffWarning;
+}) => {
+  const t = useTranslations("core.moderation.warn");
+  const [revoking, setRevoking] = React.useState(false);
+  if (warning.status === "revoked") return null;
+
+  return (
+    <>
+      <Button
+        onClick={() => {
+          setRevoking(true);
+        }}
+        size="sm"
+        variant="outline"
+      >
+        <Undo2Icon aria-hidden="true" />
+        {t("revoke.button")}
+      </Button>
       <RevokeDialog
         description={t("revoke.desc")}
         onClose={() => {
@@ -354,97 +320,30 @@ export const StaffWarningCard = ({
         successDesc={t("revoke.done_desc")}
         title={t("revoke.title")}
       />
-    </article>
+    </>
   );
 };
 
-/** One suspension, with Lift when allowed. */
-export const SanctionCard = ({
-  canManage,
+export const LiftSanctionButton = ({
   sanction,
 }: {
-  canManage: boolean;
   sanction: ModcpSanction;
 }) => {
   const t = useTranslations("core.moderation.warn");
   const [lifting, setLifting] = React.useState(false);
-  const { revokedAt } = sanction;
 
   return (
-    <article className="bg-card ring-foreground/5 flex flex-col gap-3 rounded-xl p-4 shadow-xs ring-1 dark:shadow-none">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <h3 className="text-foreground font-semibold text-balance">
-            {sanction.endsAt
-              ? t("sanctions.temporary")
-              : t("sanctions.indefinite")}
-          </h3>
-          <p className="text-muted-foreground text-sm">
-            <DateFormat date={sanction.startsAt} />
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Badge
-            variant={
-              sanction.active
-                ? "destructive"
-                : sanction.revokedAt
-                  ? "outline"
-                  : "secondary"
-            }
-          >
-            {sanction.active
-              ? t("sanctions.active")
-              : sanction.revokedAt
-                ? t("sanctions.lifted")
-                : t("sanctions.ended")}
-          </Badge>
-          {canManage && sanction.active ? (
-            <Button
-              onClick={() => {
-                setLifting(true);
-              }}
-              size="sm"
-              variant="outline"
-            >
-              <ShieldOffIcon aria-hidden="true" />
-              {t("sanctions.lift")}
-            </Button>
-          ) : null}
-        </div>
-      </header>
-      <dl className="grid gap-3 sm:grid-cols-2">
-        <Detail label={t("sanctions.ends")}>
-          <SanctionSummary
-            sanction={{
-              durationHours: sanction.threshold?.durationHours,
-              endsAt: sanction.endsAt,
-            }}
-          />
-        </Detail>
-        <Detail label={t("sanctions.source")}>
-          {sanction.threshold
-            ? t("sanctions.from_threshold", {
-                points: sanction.threshold.points,
-              })
-            : t("sanctions.manual")}
-          {sanction.threshold?.durationHours ? (
-            <>
-              {" "}
-              (<WarningDuration hours={sanction.threshold.durationHours} />)
-            </>
-          ) : null}
-        </Detail>
-      </dl>
-      {revokedAt ? (
-        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-          {t.rich("list.lifted", {
-            by: () => <PersonOrDeleted person={sanction.revokedBy} />,
-            date: () => <DateFormat date={revokedAt} />,
-          })}
-          {sanction.revokeReason ? ` ${sanction.revokeReason}` : null}
-        </p>
-      ) : null}
+    <>
+      <Button
+        onClick={() => {
+          setLifting(true);
+        }}
+        size="sm"
+        variant="outline"
+      >
+        <ShieldOffIcon aria-hidden="true" />
+        {t("sanctions.lift")}
+      </Button>
       <RevokeDialog
         description={t("sanctions.lift_desc")}
         onClose={() => {
@@ -459,6 +358,6 @@ export const SanctionCard = ({
         successDesc={t("sanctions.lifted_done_desc")}
         title={t("sanctions.lift_title")}
       />
-    </article>
+    </>
   );
 };

@@ -149,7 +149,7 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
           </>
         )}
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-56 p-0">
+      <PopoverContent align="start" className="w-max max-w-sm min-w-56 p-0">
         <Command shouldFilter={!isAsync}>
           <CommandInput
             onValueChange={isAsync ? debouncedSearch : undefined}

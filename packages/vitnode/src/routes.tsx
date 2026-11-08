@@ -256,11 +256,6 @@ export const routes = defineRoutes([
         pendingComponent: () => <FeedPendingSkeleton rows={5} />,
         search: normalizeModcpWarningsSearch,
       }),
-
-      page("members/:id", {
-        component: lazy(() => import("./pages/modcp/member")),
-        pendingComponent: () => <FeedPendingSkeleton rows={4} />,
-      }),
     ],
   }),
 

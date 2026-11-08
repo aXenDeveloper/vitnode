@@ -60,7 +60,6 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/forum/topics/:slug', maxAge: 60, staleWhileRevalidate: 30 },
   { path: '/login/sso/:providerId' },
   { path: '/modcp/approvals/:id' },
-  { path: '/modcp/members/:id' },
   { path: '/modcp/reports/:id' },
   { path: '/news/comments/:slug' },
   { path: '/newsroom/guide/:topic' },

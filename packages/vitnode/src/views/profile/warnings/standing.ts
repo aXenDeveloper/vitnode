@@ -68,7 +68,7 @@ export const standingFromModcp = (
   },
   hiddenWarnings: data.hiddenWarnings,
   own: false,
-  seeAllHref: `/modcp/members/${data.user.id}`,
+  seeAllHref: `/modcp/warnings?user=${data.user.id}`,
   suspensions: (data.sanctions ?? []).map(sanction => ({
     active: sanction.active,
     endsAt: toOptionalDate(sanction.endsAt),

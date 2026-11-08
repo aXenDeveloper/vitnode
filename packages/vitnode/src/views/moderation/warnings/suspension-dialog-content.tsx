@@ -9,7 +9,7 @@ import { useFormatter, useLocale, useNow, useTranslations } from "use-intl";
 
 import { MotionFeatures } from "@/components/motion-features";
 import { Button } from "@/components/ui/button";
-import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { DialogTitle } from "@/components/ui/dialog";
 import { FEEDBACK_TONE_TEXT } from "@/components/ui/feedback-tone";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SlidingNumber } from "@/components/ui/sliding-number";
@@ -184,7 +184,6 @@ export const SuspensionDialogContent = ({
   endsAt: Date | null;
 }) => {
   const t = useTranslations("core.moderation.account_status.dialog");
-  const tStatus = useTranslations("core.moderation.account_status");
   const format = useFormatter();
   const locale = useLocale();
   const now = useNow({ updateInterval: 60 * SECOND });
@@ -208,12 +207,7 @@ export const SuspensionDialogContent = ({
     <div className="flex flex-col items-center gap-6 p-6 text-center sm:p-8">
       <ProgressIcon served={servedShare(startsAt, endsAt, now)} />
 
-      <div className="flex flex-col gap-1">
-        <DialogTitle className="text-xl text-balance">{t("title")}</DialogTitle>
-        <DialogDescription className="text-pretty">
-          {reason ? t("because", { reason }) : t("because_unknown")}
-        </DialogDescription>
-      </div>
+      <DialogTitle className="text-xl text-balance">{t("title")}</DialogTitle>
 
       {endsAt ? (
         <Countdown endsAt={endsAt} />
@@ -270,12 +264,11 @@ export const SuspensionDialogContent = ({
         </div>
       )}
 
-      <div className="flex w-full flex-col items-center gap-3">
-        {import.meta.env.DEV ? <DevSignOut /> : null}
-        <p className="text-muted-foreground text-xs leading-relaxed text-pretty">
-          {tStatus("contact")}
-        </p>
-      </div>
+      {import.meta.env.DEV ? (
+        <div className="flex w-full flex-col items-center">
+          <DevSignOut />
+        </div>
+      ) : null}
     </div>
   );
 };

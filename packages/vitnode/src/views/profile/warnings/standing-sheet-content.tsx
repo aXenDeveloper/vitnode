@@ -427,7 +427,12 @@ const SuspensionBody = ({
             icon={<WarningNode size="sm" warning={cause} />}
             meta={
               <>
-                {cause.issuedBy ? `${cause.issuedBy.name} · ` : null}
+                {cause.issuedBy ? (
+                  <>
+                    <PersonName person={cause.issuedBy} />
+                    {" · "}
+                  </>
+                ) : null}
                 {format.relativeTime(cause.issuedAt, now)}
               </>
             }

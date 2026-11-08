@@ -257,7 +257,7 @@ Under `/api/@vitnode/core/moderation`, using the user session.
 | `POST /warnings/preview` | Anyone who can warn | `{ userId, reasonId, points?, expiration?, content?, reportId? }`. Runs every check and answers points before and after and the projected `sanction` |
 | `POST /warnings` | Anyone who can warn | The preview body plus `{ message, staffNote?, overrideNote?, resolveReport?, idempotencyKey }`. `message` is `{ languageCode, value }[]`, one non-empty rich-text document per language, each 3-2000 characters as plain text. `staffNote` is one rich-text document or `null` |
 | `POST /warnings/{id}/revoke` | `can_revoke` | `{ reason }` |
-| `GET /warnings` | Moderators | Query `userId`, `reasonId`, `issuedById`, `status`, `pluginId`, `targetType`, `from`, `to`, `page`, `pageSize` |
+| `GET /warnings` | Moderators | Query `userId`, `reasonId`, `issuedById`, `status`, `pluginId`, `targetType`, `from`, `to`, `page`, `pageSize`. Answers `items`, `page`, `pageSize`, `total` and `permissions: { revoke, warn }` for the moderator asking |
 | `GET /members?search=` | `can_view` or `can_warn` | Up to 10 members |
 | `GET /members/{id}` | `can_view` or anyone who can warn | Active points, visible warnings, `hiddenWarnings`, sanctions with `can_view_sanctions`, and `permissions.viewLog` |
 | `GET /members/{id}/log` | `can_view` | The member's moderation log from the Activity Logs, newest first, 20 per page with `cursor`. `sanction.*` entries need `can_view_sanctions` |

@@ -3037,6 +3037,10 @@
           "status_label": "Filter by status",
           "all": "All",
           "reason_filter": "Reason",
+          "reason": "Reason",
+          "points": "Points",
+          "status": "Status",
+          "issued": "Issued",
           "all_reasons": "All reasons",
           "empty_title": "No warnings here",
           "empty_desc": "Nothing matches these filters. Peaceful.",
@@ -3055,29 +3059,24 @@
           "override_note": "Why the points or expiry changed",
           "revoked": "Revoked by <by></by> <date></date>.",
           "lifted": "Lifted by <by></by> <date></date>.",
-          "sanction_stays": "The suspension this warning led to was not lifted with it."
+          "sanction_stays": "The suspension this warning led to was not lifted with it.",
+          "show_member": "Show warnings for {name}"
         },
         "lookup": {
-          "title": "Find a member",
           "label": "Member name",
-          "placeholder": "Search by name",
-          "results": "{count, plural, =0 {No members found} one {# member found} other {# members found}}",
-          "empty": "No members match that name.",
-          "forbidden": "You can't look up members."
+          "placeholder": "Search by name"
         },
         "member": {
-          "title": "{name}'s standing",
-          "breadcrumb": "Member",
-          "desc": "Active points, warnings and suspensions.",
           "active_points": "Active points",
-          "status": "Status",
-          "suspended": "Suspended",
-          "in_good_standing": "In good standing",
-          "sanctions": "Suspensions",
-          "no_sanctions": "No suspensions.",
-          "warnings": "Warnings",
-          "no_warnings": "No warnings you can see.",
-          "hidden_warnings": "{count, plural, one {# more warning is} other {# more warnings are}} outside your moderation scope."
+          "hidden_warnings": "{count, plural, one {# more warning is} other {# more warnings are}} outside your moderation scope.",
+          "active_warnings": "Active warnings",
+          "clear": "Show every member",
+          "profile": "Profile",
+          "loading": "Loading the member…",
+          "load_error": {
+            "title": "This member didn't load",
+            "desc": "They may be gone, or outside what you can see. Try again, or clear the member filter."
+          }
         },
         "sanctions": {
           "temporary": "Temporary suspension",
@@ -3095,22 +3094,9 @@
           "from_threshold": "Reached {points, plural, one {# point} other {# points}}",
           "manual": "Applied by staff"
         },
-        "log": {
-          "title": "Moderation log",
-          "loading": "Loading the moderation log",
-          "error": "Could not load the moderation log.",
-          "empty": "Nothing has happened to this account yet.",
-          "load_more": "Show older",
-          "someone": "Someone",
-          "warning_issued": "<actor></actor> warned them for {points, plural, one {# point} other {# points}} ({before} → {after} active)",
-          "warning_revoked": "<actor></actor> revoked a warning of {points, plural, one {# point} other {# points}}",
-          "sanction_applied_until": "<actor></actor>'s warning suspended the account until {endsAt} (the {threshold}-point threshold)",
-          "sanction_applied_indefinite": "<actor></actor>'s warning suspended the account indefinitely (the {threshold}-point threshold)",
-          "sanction_revoked": "<actor></actor> lifted a suspension",
-          "other": "<actor></actor>: {action}",
-          "points_overridden": "Points changed from the reason's {points, plural, one {# point} other {# points}}",
-          "expiration_overridden": "Expiry changed",
-          "report": "From report #{id}"
+        "pick": {
+          "desc": "Pick the member, then choose a reason.",
+          "continue": "Continue"
         }
       },
       "account_status": {
@@ -3118,7 +3104,6 @@
         "desc": "Your warnings and whether anything restricts your account.",
         "loading": "Loading your account status",
         "suspended_restrictions": "Until then you can browse like a visitor, but you can't post, comment or change anything on your account.",
-        "contact": "Think this is a mistake? Contact the site's administrators.",
         "good_title": "Your account is in good standing",
         "points_title": "Active points",
         "sanction_active": "Active",
@@ -3126,7 +3111,6 @@
         "sanction_ended": "Ended",
         "dialog": {
           "title": "Your account is suspended",
-          "because": "Because of a warning for {reason}.",
           "because_unknown": "A moderator suspended your account.",
           "loading": "Loading the details of your suspension",
           "time_left": "Time left",
