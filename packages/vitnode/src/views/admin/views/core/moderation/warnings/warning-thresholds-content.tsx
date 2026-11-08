@@ -21,7 +21,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { WARNING_LIMITS } from "@/lib/moderation/warnings";
-import { WarningDuration } from "@/views/moderation/warnings/warning-format";
+import { SuspensionDuration } from "@/views/moderation/warnings/warning-format";
 
 import type { WarningThresholdFormProps } from "./warning-threshold-form";
 import type { AdminWarningThreshold } from "./warnings-admin-api";
@@ -104,10 +104,10 @@ export const WarningThresholdsContent = ({
             {
               accessorKey: "action",
               cell: ({ row }) =>
-                row.action === "suspend_temporary" && row.durationHours ? (
+                row.action === "suspend_temporary" && row.durationMinutes ? (
                   <span>
                     {t("suspend_for")}{" "}
-                    <WarningDuration hours={row.durationHours} />
+                    <SuspensionDuration minutes={row.durationMinutes} />
                   </span>
                 ) : (
                   <span>{t("suspend_indefinitely")}</span>

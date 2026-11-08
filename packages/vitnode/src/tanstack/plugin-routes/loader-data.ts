@@ -15,6 +15,10 @@ export type RuntimePluginRoutePageProps = PluginRoutePageProps<
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
+export const hasPluginRouteLoaderData = (
+  loaderData: unknown,
+): loaderData is Partial<PluginRouteLoaderData> => isRecord(loaderData);
+
 export const pluginRouteLoaderData = (loaderData: unknown): unknown =>
   isRecord(loaderData)
     ? (loaderData as Partial<PluginRouteLoaderData>).data

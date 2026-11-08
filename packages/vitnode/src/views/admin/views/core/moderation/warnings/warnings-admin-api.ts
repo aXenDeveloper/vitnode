@@ -138,7 +138,7 @@ export const reorderAdminWarningReasons = async (
 
 export interface AdminWarningThresholdInput {
   action: WarningThresholdAction;
-  durationHours: null | number;
+  durationMinutes: null | number;
   enabled: boolean;
   points: number;
 }

@@ -1,12 +1,12 @@
 import { useFormatter, useTranslations } from "use-intl";
 
-import { WarningDuration } from "./warning-format";
+import { SuspensionDuration } from "./warning-format";
 
 /** The sanction a warning leads to, in words. */
 export const SanctionSummary = ({
   sanction,
 }: {
-  sanction: { durationHours?: null | number; endsAt: Date | null | string };
+  sanction: { durationMinutes?: null | number; endsAt: Date | null | string };
 }) => {
   const t = useTranslations("core.moderation.warn");
   const format = useFormatter();
@@ -16,9 +16,10 @@ export const SanctionSummary = ({
     timeStyle: "short",
   });
 
-  return sanction.durationHours ? (
+  return sanction.durationMinutes ? (
     <>
-      {t("sanction.for")} <WarningDuration hours={sanction.durationHours} />{" "}
+      {t("sanction.for")}{" "}
+      <SuspensionDuration minutes={sanction.durationMinutes} />{" "}
       {t("sanction.until", { endsAt })}
     </>
   ) : (

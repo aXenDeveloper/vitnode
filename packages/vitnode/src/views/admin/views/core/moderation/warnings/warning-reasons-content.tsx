@@ -22,7 +22,10 @@ import { resolveReasonText } from "@/views/moderation/report-reasons-query";
 import { WarningDuration } from "@/views/moderation/warnings/warning-format";
 
 import type { WarningReasonFormProps } from "./warning-reason-form";
-import type { AdminWarningReason } from "./warnings-admin-api";
+import type {
+  AdminWarningReason,
+  AdminWarningThreshold,
+} from "./warnings-admin-api";
 
 const WarningReasonForm = React.lazy(
   async () => await import("./warning-reason-form"),
@@ -70,6 +73,7 @@ export const WarningReasonsContent = ({
   reasons,
   sheet,
   sheetOpen,
+  thresholds,
 }: {
   canEdit: boolean;
   onOpenSheet: (state: WarningReasonSheetState) => void;
@@ -79,6 +83,7 @@ export const WarningReasonsContent = ({
   reasons: AdminWarningReason[];
   sheet: WarningReasonSheetState;
   sheetOpen: boolean;
+  thresholds: AdminWarningThreshold[];
 }) => {
   const t = useTranslations("admin.moderation.warning_reasons");
   const locale = useLocale();
@@ -189,9 +194,11 @@ export const WarningReasonsContent = ({
                 ? t("form.edit_title")
                 : t("form.create_title")}
             </SheetTitle>
-            <SheetDescription className="leading-relaxed text-pretty">
-              {t("form.sheet_desc")}
-            </SheetDescription>
+            {sheet.mode === "edit" ? (
+              <SheetDescription className="leading-relaxed text-pretty">
+                {t("form.sheet_desc")}
+              </SheetDescription>
+            ) : null}
           </SheetHeader>
           <React.Suspense
             fallback={
@@ -207,6 +214,7 @@ export const WarningReasonsContent = ({
                 onSheetOpenChange(false);
               }}
               reason={sheet.mode === "edit" ? sheet.reason : undefined}
+              thresholds={thresholds}
             />
           </React.Suspense>
         </SheetContent>

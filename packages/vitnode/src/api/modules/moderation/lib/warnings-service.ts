@@ -368,7 +368,7 @@ export const loadEnabledThresholds = async (db: Db) =>
   await db
     .select({
       action: core_moderation_warning_thresholds.action,
-      durationHours: core_moderation_warning_thresholds.durationHours,
+      durationMinutes: core_moderation_warning_thresholds.durationMinutes,
       enabled: core_moderation_warning_thresholds.enabled,
       id: core_moderation_warning_thresholds.id,
       points: core_moderation_warning_thresholds.points,
@@ -378,7 +378,7 @@ export const loadEnabledThresholds = async (db: Db) =>
 
 export interface ProjectedSanction {
   action: WarningThresholdAction;
-  durationHours: null | number;
+  durationMinutes: null | number;
   endsAt: Date | null;
   points: number;
   thresholdId: number;
@@ -417,7 +417,7 @@ export const projectWarning = async (
     sanction: applied
       ? {
           action: applied.action,
-          durationHours: applied.durationHours,
+          durationMinutes: applied.durationMinutes,
           endsAt: thresholdSuspensionEnd(applied, now),
           points: applied.points,
           thresholdId: applied.id,
@@ -624,7 +624,7 @@ export const issueWarning = async (
             thresholdId: applied.id,
             thresholdSnapshot: {
               action: applied.action,
-              durationHours: applied.durationHours,
+              durationMinutes: applied.durationMinutes,
               points: applied.points,
             },
             type: "suspension",

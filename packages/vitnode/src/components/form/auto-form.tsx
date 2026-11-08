@@ -37,6 +37,7 @@ import {
   TabsPanels,
   TabsTrigger,
 } from "../ui/tabs";
+import { AutoFormFieldCollapse } from "./common/field-collapse";
 import { AUTO_FORM_TIP_SLOT } from "./common/tip";
 
 export type { AnyFormFieldApi, FormFieldApi } from "../ui/form";
@@ -48,7 +49,12 @@ interface ItemAutoFormSharedProps<T extends z.ZodObject<z.ZodRawShape>> {
    * `children` - e.g. extra inputs inside a group.
    */
   children?: ItemAutoFormProps<T>[];
-  /** Hides the field while it returns `true`; re-evaluated on every change. */
+  /**
+   * Hides the field while it returns `true`; re-evaluated on every change. In
+   * the default and tabbed layouts the field slides closed and open (instant
+   * under reduced motion) and unmounts once closed; with a custom `layout` it
+   * just leaves the `rendered` map.
+   */
   hidden?: (values: z.input<T>) => boolean;
   /** The `value` of the {@link AutoFormTab} the field shows in. Defaults to the first tab. */
   tab?: string;
@@ -596,6 +602,22 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
     );
   };
 
+  const renderAnimatedField = (
+    item: ItemAutoFormProps<T>,
+    spacing: "form" | "tab",
+  ) =>
+    item.hidden ? (
+      <AutoFormFieldCollapse
+        key={item.id}
+        open={isFieldVisible(item)}
+        spacing={spacing}
+      >
+        {renderField(item)}
+      </AutoFormFieldCollapse>
+    ) : (
+      renderField(item)
+    );
+
   const submitButton = (
     <Button
       {...submitButtonProps}
@@ -662,14 +684,13 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
               >
                 {fields
                   .filter(item => (item.tab ?? tabs[0].value) === tab.value)
-                  .filter(isFieldVisible)
-                  .map(renderField)}
+                  .map(item => renderAnimatedField(item, "tab"))}
               </TabsContent>
             ))}
           </TabsPanels>
         </Tabs>
       ) : (
-        fields.filter(isFieldVisible).map(renderField)
+        fields.map(item => renderAnimatedField(item, "form"))
       )}
 
       {children}

@@ -23,6 +23,8 @@ export const WARNING_LIMITS = {
   maxThresholds: 20,
   /** Five years, the longest expiration or suspension a form accepts. */
   maxDurationHours: 24 * 365 * 5,
+  /** Five years, the longest automatic suspension a warning action sets. */
+  maxDurationMinutes: 60 * 24 * 365 * 5,
   messageMinLength: 3,
   messageMaxLength: 2000,
   /** The largest rich-text document a message or staff note may serialize to. */
@@ -72,7 +74,7 @@ export interface WarningContentSnapshot {
 /** What a threshold sanction remembers about the rule that created it. */
 export interface SanctionThresholdSnapshot {
   action: WarningThresholdAction;
-  durationHours: null | number;
+  durationMinutes: null | number;
   points: number;
 }
 
@@ -114,7 +116,7 @@ export const activeWarningPoints = (
 
 export interface WarningThresholdRule {
   action: WarningThresholdAction;
-  durationHours: null | number;
+  durationMinutes: null | number;
   enabled: boolean;
   id: number;
   points: number;
@@ -154,11 +156,11 @@ export const evaluateWarningThresholds = <T extends WarningThresholdRule>({
 
 /** When a suspension created by `rule` at `now` ends; `null` for indefinite. Pure. */
 export const thresholdSuspensionEnd = (
-  rule: Pick<WarningThresholdRule, "action" | "durationHours">,
+  rule: Pick<WarningThresholdRule, "action" | "durationMinutes">,
   now: Date,
 ): Date | null =>
-  rule.action === "suspend_temporary" && rule.durationHours
-    ? new Date(now.getTime() + rule.durationHours * 60 * 60 * 1000)
+  rule.action === "suspend_temporary" && rule.durationMinutes
+    ? new Date(now.getTime() + rule.durationMinutes * 60 * 1000)
     : null;
 
 /** Whether a sanction applies at `now`: not revoked, started and not ended. Pure. */

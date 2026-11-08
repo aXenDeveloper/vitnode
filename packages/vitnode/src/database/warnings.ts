@@ -50,8 +50,8 @@ export const core_moderation_warning_thresholds = camelCase.table.withRLS(
       .varchar({ enum: WARNING_THRESHOLD_ACTIONS, length: 32 })
       .$type<WarningThresholdAction>()
       .notNull(),
-    /** Length of a temporary suspension; `null` for an indefinite one. */
-    durationHours: t.integer(),
+    /** Length of a temporary suspension in minutes; `null` for an indefinite one. */
+    durationMinutes: t.integer(),
     enabled: t.boolean().notNull().default(true),
     createdAt: t.timestamp().notNull().defaultNow(),
     updatedAt: t

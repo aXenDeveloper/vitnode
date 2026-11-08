@@ -17,7 +17,7 @@ const thresholdSchema = z.object({
   id: z.number(),
   points: z.number(),
   action: z.enum(WARNING_THRESHOLD_ACTIONS),
-  durationHours: z.number().nullable(),
+  durationMinutes: z.number().nullable(),
   enabled: z.boolean(),
   updatedAt: z.date(),
 });
@@ -25,11 +25,11 @@ const thresholdSchema = z.object({
 const thresholdFields = z.object({
   points: z.number().int().min(1).max(WARNING_LIMITS.maxThresholdPoints),
   action: z.enum(WARNING_THRESHOLD_ACTIONS),
-  durationHours: z
+  durationMinutes: z
     .number()
     .int()
     .min(1)
-    .max(WARNING_LIMITS.maxDurationHours)
+    .max(WARNING_LIMITS.maxDurationMinutes)
     .nullable(),
   enabled: z.boolean(),
 });
@@ -38,9 +38,9 @@ const thresholdFields = z.object({
 const thresholdBody = thresholdFields.refine(
   value =>
     value.action === "suspend_temporary"
-      ? value.durationHours !== null
-      : value.durationHours === null,
-  { message: "duration_mismatch", path: ["durationHours"] },
+      ? value.durationMinutes !== null
+      : value.durationMinutes === null,
+  { message: "duration_mismatch", path: ["durationMinutes"] },
 );
 
 const idParams = z.object({
@@ -106,7 +106,7 @@ export const listWarningThresholdsAdminRoute = buildRoute({
       .get("db")
       .select({
         action: table.action,
-        durationHours: table.durationHours,
+        durationMinutes: table.durationMinutes,
         enabled: table.enabled,
         id: table.id,
         points: table.points,
@@ -211,7 +211,7 @@ export const updateWarningThresholdAdminRoute = buildRoute({
       const [existing] = await tx
         .select({
           action: table.action,
-          durationHours: table.durationHours,
+          durationMinutes: table.durationMinutes,
           enabled: table.enabled,
           points: table.points,
         })
@@ -273,7 +273,7 @@ export const deleteWarningThresholdAdminRoute = buildRoute({
     const deleted = await c.get("db").transaction(async tx => {
       const [row] = await tx.delete(table).where(eq(table.id, id)).returning({
         action: table.action,
-        durationHours: table.durationHours,
+        durationMinutes: table.durationMinutes,
         enabled: table.enabled,
         points: table.points,
       });

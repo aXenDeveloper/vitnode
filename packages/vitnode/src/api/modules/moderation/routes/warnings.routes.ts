@@ -177,7 +177,7 @@ export const listWarningReasonsRoute = buildRoute({
 
 const projectedSanctionSchema = z.object({
   action: z.enum(WARNING_THRESHOLD_ACTIONS),
-  durationHours: z.number().nullable(),
+  durationMinutes: z.number().nullable(),
   endsAt: z.date().nullable(),
   points: z.number(),
   thresholdId: z.number(),

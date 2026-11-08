@@ -15,11 +15,52 @@ import { AutoFormTextarea } from "@/components/form/fields/textarea";
 import { multiLangValueSchema } from "@/lib/helpers/multi-lang";
 import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 import { resolveReasonText } from "@/views/moderation/report-reasons-query";
+import { splitSuspensionMinutes } from "@/views/moderation/warnings/warning-format";
 
 import type {
   AdminWarningReason,
   AdminWarningReasonInput,
+  AdminWarningThreshold,
 } from "./warnings-admin-api";
+
+const PointsEffect = ({
+  points,
+  thresholds,
+}: {
+  points: number;
+  thresholds: AdminWarningThreshold[];
+}) => {
+  const t = useTranslations("admin.moderation.warning_reasons.form");
+  const tDuration = useTranslations("core.moderation.warn.duration");
+  const steps = thresholds
+    .filter(threshold => threshold.enabled)
+    .toSorted((a, b) => a.points - b.points);
+  const actionOf = (threshold: AdminWarningThreshold) => {
+    if (
+      threshold.action !== "suspend_temporary" ||
+      !threshold.durationMinutes
+    ) {
+      return t("action_suspend_indefinitely");
+    }
+    const { count, unit } = splitSuspensionMinutes(threshold.durationMinutes);
+
+    return t("action_suspend_for", { duration: tDuration(unit, { count }) });
+  };
+
+  if (points <= 0) return t("points_effect.none");
+  const reached = steps.filter(step => step.points <= points).at(-1);
+  if (reached) {
+    return t("points_effect.alone", { action: actionOf(reached) });
+  }
+  const first = steps.at(0);
+  if (!first) return t("points_effect.no_thresholds");
+
+  return t("points_effect.repeat", {
+    action: actionOf(first),
+    count: Math.ceil(first.points / points),
+    points: first.points,
+  });
+};
 
 export interface WarningReasonFormProps {
   onSave: (args: {
@@ -28,12 +69,14 @@ export interface WarningReasonFormProps {
   }) => Promise<AdminMutationResult<{ id: number }>>;
   onSaved: () => void;
   reason?: AdminWarningReason;
+  thresholds: AdminWarningThreshold[];
 }
 
 export const WarningReasonForm = ({
   onSave,
   onSaved,
   reason,
+  thresholds,
 }: WarningReasonFormProps) => {
   const t = useTranslations("admin.moderation.warning_reasons.form");
   const locale = useLocale();
@@ -114,12 +157,7 @@ export const WarningReasonForm = ({
         {
           id: "title",
           component: props => (
-            <AutoFormInput
-              {...props}
-              description={t("title_desc")}
-              label={t("title")}
-              multiLang
-            />
+            <AutoFormInput {...props} label={t("title")} multiLang />
           ),
         },
         {
@@ -138,9 +176,13 @@ export const WarningReasonForm = ({
           component: props => (
             <AutoFormNumber
               {...props}
-              description={t("points_desc")}
+              description={
+                <PointsEffect
+                  points={Number(props.field.value) || 0}
+                  thresholds={thresholds}
+                />
+              }
               label={t("points")}
-              unitLabel={t("points_unit")}
             />
           ),
         },

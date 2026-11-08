@@ -76,7 +76,7 @@ export const sanctionSchema = z.object({
   threshold: z
     .object({
       action: z.enum(WARNING_THRESHOLD_ACTIONS),
-      durationHours: z.number().nullable(),
+      durationMinutes: z.number().nullable(),
       points: z.number(),
     })
     .nullable(),

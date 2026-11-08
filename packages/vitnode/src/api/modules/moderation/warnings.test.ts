@@ -227,14 +227,14 @@ const harness = async () => {
       [
         {
           action: "suspend_temporary",
-          durationHours: 24,
+          durationMinutes: 24 * 60,
           enabled: true,
           id: THRESHOLD_EIGHT,
           points: 8,
         },
         {
           action: "suspend_indefinite",
-          durationHours: null,
+          durationMinutes: null,
           enabled: true,
           id: THRESHOLD_TEN,
           points: 10,

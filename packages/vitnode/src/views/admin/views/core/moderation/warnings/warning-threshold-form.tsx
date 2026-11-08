@@ -1,3 +1,4 @@
+import { useSelector } from "@tanstack/react-form";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
@@ -7,18 +8,68 @@ import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-
 
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormSheetFooter } from "@/components/form/auto-form-sheet-footer";
+import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number";
 import { AutoFormNumber } from "@/components/form/fields/number";
-import { AutoFormRadioGroup } from "@/components/form/fields/radio-group";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
+import { useFormApi } from "@/components/ui/form";
 import {
-  WARNING_LIMITS,
-  WARNING_THRESHOLD_ACTIONS,
-} from "@/lib/moderation/warnings";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { WARNING_LIMITS } from "@/lib/moderation/warnings";
+import {
+  MINUTES_PER_UNIT,
+  splitSuspensionMinutes,
+  SUSPENSION_DURATION_UNITS,
+} from "@/views/moderation/warnings/warning-format";
 
 import type {
   AdminWarningThreshold,
   AdminWarningThresholdInput,
 } from "./warnings-admin-api";
+
+const DurationUnitSelect = ({
+  accessibleLabel,
+}: {
+  accessibleLabel: string;
+}) => {
+  const t = useTranslations("admin.moderation.warning_thresholds.form.units");
+  const { form } = useFormApi();
+  const unit = useSelector(form.store, state => state.values.durationUnit);
+  const isIndefinite = useSelector(
+    form.store,
+    state => state.values.durationValue === null,
+  );
+  const items = SUSPENSION_DURATION_UNITS.map(value => ({
+    label: t(value),
+    value,
+  }));
+
+  return (
+    <Select
+      disabled={isIndefinite}
+      items={items}
+      onValueChange={value => {
+        form.setFieldValue("durationUnit", value);
+      }}
+      value={unit ?? null}
+    >
+      <SelectTrigger aria-label={accessibleLabel}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map(item => (
+          <SelectItem key={item.value} value={item.value}>
+            {item.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
 
 export interface WarningThresholdFormProps {
   onSave: (args: {
@@ -35,6 +86,10 @@ export const WarningThresholdForm = ({
   threshold,
 }: WarningThresholdFormProps) => {
   const t = useTranslations("admin.moderation.warning_thresholds.form");
+  const savedDuration = threshold?.durationMinutes
+    ? splitSuspensionMinutes(threshold.durationMinutes)
+    : { count: 1, unit: "days" as const };
+  const isSavedIndefinite = threshold?.action === "suspend_indefinite";
 
   const formSchema = z.object({
     points: z
@@ -43,25 +98,42 @@ export const WarningThresholdForm = ({
       .min(1)
       .max(WARNING_LIMITS.maxThresholdPoints)
       .default(threshold?.points ?? 10),
-    action: z
-      .enum(WARNING_THRESHOLD_ACTIONS)
-      .default(threshold?.action ?? "suspend_temporary"),
-    durationHours: z
+    durationValue: z
       .number()
       .int()
       .min(1)
-      .max(WARNING_LIMITS.maxDurationHours)
-      .default(threshold?.durationHours ?? 24),
+      .max(WARNING_LIMITS.maxDurationMinutes)
+      .nullable()
+      .default(isSavedIndefinite ? null : savedDuration.count),
+    durationUnit: z.enum(SUSPENSION_DURATION_UNITS).default(savedDuration.unit),
     enabled: z.boolean().default(threshold?.enabled ?? true),
   });
 
-  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
+  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async ({
+    durationUnit,
+    durationValue,
+    ...values
+  }) => {
+    const durationMinutes =
+      durationValue === null
+        ? null
+        : durationValue * MINUTES_PER_UNIT[durationUnit];
+    if (
+      durationMinutes !== null &&
+      durationMinutes > WARNING_LIMITS.maxDurationMinutes
+    ) {
+      toast.error(t("error"), { description: t("duration_too_long") });
+
+      return;
+    }
+
     const result = await onSave({
       id: threshold?.id,
       values: {
         ...values,
-        durationHours:
-          values.action === "suspend_temporary" ? values.durationHours : null,
+        action:
+          durationMinutes === null ? "suspend_indefinite" : "suspend_temporary",
+        durationMinutes,
       },
     });
 
@@ -90,38 +162,20 @@ export const WarningThresholdForm = ({
       fields={[
         {
           id: "points",
-          component: props => (
-            <AutoFormNumber
-              {...props}
-              description={t("points_desc")}
-              label={t("points")}
-              unitLabel={t("points_unit")}
-            />
-          ),
+          component: props => <AutoFormNumber {...props} label={t("points")} />,
         },
         {
-          id: "action",
+          id: "durationValue",
           component: props => (
-            <AutoFormRadioGroup
+            <AutoFormNullableNumber
               {...props}
-              label={t("action")}
-              labels={WARNING_THRESHOLD_ACTIONS.map(action => ({
-                description: t(`actions.${action}_desc`),
-                label: t(`actions.${action}`),
-                value: action,
-              }))}
-            />
-          ),
-        },
-        {
-          id: "durationHours",
-          hidden: values => values.action !== "suspend_temporary",
-          component: props => (
-            <AutoFormNumber
-              {...props}
-              description={t("duration_desc")}
-              label={t("duration")}
-              unitLabel={t("hours_unit")}
+              label={t("suspend_for")}
+              orLabel={t("or")}
+              resumeValue={savedDuration.count}
+              toggleLabel={t("indefinitely")}
+              unitLabel={
+                <DurationUnitSelect accessibleLabel={t("duration_unit")} />
+              }
             />
           ),
         },
@@ -145,12 +199,8 @@ export const WarningThresholdForm = ({
       layout={rendered => (
         <>
           <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-5">
-            <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-              {t("future_only")}
-            </p>
             {rendered.points}
-            {rendered.action}
-            {rendered.durationHours}
+            {rendered.durationValue}
             {rendered.enabled}
           </div>
           <AutoFormSheetFooter

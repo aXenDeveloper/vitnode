@@ -3,23 +3,47 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "cn";
 import React from "react";
 
-/** Tabbed content (Base UI `Tabs`); `orientation` defaults to `horizontal`. */
+const INDICATOR_SWITCH_MS = 300;
+
+const TabsSelectionContext = React.createContext<unknown>(undefined);
+
+/**
+ * Tabbed content (Base UI `Tabs`); `orientation` defaults to `horizontal`.
+ * The indicator slides only when the selected tab changes; a tab that resizes
+ * on its own (a count that grows) moves it instantly.
+ */
 function Tabs({
   className,
+  defaultValue,
+  onValueChange,
   orientation = "horizontal",
+  value,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Root>) {
+  const [uncontrolledValue, setUncontrolledValue] =
+    React.useState<unknown>(defaultValue);
+
   return (
-    <TabsPrimitive.Root
-      className={cn(
-        "group/tabs flex gap-2 data-[orientation=horizontal]:flex-col",
-        className,
-      )}
-      data-orientation={orientation}
-      data-slot="tabs"
-      orientation={orientation}
-      {...props}
-    />
+    <TabsSelectionContext
+      value={value === undefined ? uncontrolledValue : value}
+    >
+      <TabsPrimitive.Root
+        className={cn(
+          "group/tabs flex gap-2 data-[orientation=horizontal]:flex-col",
+          className,
+        )}
+        data-orientation={orientation}
+        data-slot="tabs"
+        defaultValue={defaultValue}
+        onValueChange={(nextValue, eventDetails) => {
+          setUncontrolledValue(nextValue);
+          onValueChange?.(nextValue, eventDetails);
+        }}
+        orientation={orientation}
+        value={value}
+        {...props}
+      />
+    </TabsSelectionContext>
   );
 }
 
@@ -42,11 +66,32 @@ function TabsIndicator({
   className,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.Indicator>) {
+  const selectedValue = React.use(TabsSelectionContext);
+  const [previousValue, setPreviousValue] = React.useState(selectedValue);
+  const [isSwitching, setIsSwitching] = React.useState(false);
+
+  if (!Object.is(previousValue, selectedValue)) {
+    setPreviousValue(selectedValue);
+    setIsSwitching(true);
+  }
+
+  React.useEffect(() => {
+    if (!isSwitching) return;
+    const timeout = window.setTimeout(() => {
+      setIsSwitching(false);
+    }, INDICATOR_SWITCH_MS);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [isSwitching, previousValue]);
+
   return (
     <TabsPrimitive.Indicator
       className={cn(
         "pointer-events-none absolute top-0 left-0 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) translate-y-(--active-tab-top) rounded-md",
-        "ease-fluid transition-[translate,width,height] duration-300 motion-reduce:transition-none",
+        "ease-fluid duration-300 motion-reduce:transition-none",
+        isSwitching ? "transition-[translate,width,height]" : "transition-none",
         "group-data-[variant=default]/tabs-list:bg-card dark:group-data-[variant=default]/tabs-list:bg-background group-data-[variant=default]/tabs-list:shadow-xs",
         "after:bg-foreground after:absolute after:opacity-0 group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:-bottom-1.25 group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-end-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:after:opacity-100",
         className,

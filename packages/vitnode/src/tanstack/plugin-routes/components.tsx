@@ -18,6 +18,7 @@ import { breadcrumbDeferred } from "../breadcrumb/model";
 import { RouteMessages } from "../i18n/route-messages";
 import { PendingOutlet } from "../pending/guard-pending";
 import {
+  hasPluginRouteLoaderData,
   pluginRouteLoaderData,
   pluginRoutePageProps,
   pluginRouteSearch,
@@ -142,8 +143,8 @@ export const pluginRouteBreadcrumb = (
         component: function PluginRouteBreadcrumb(props: RouteBreadcrumbProps) {
           // A route that answered `notFound()` (or failed) has no data to
           // draw its crumb from; the trail stops at its parent instead.
+          if (!hasPluginRouteLoaderData(props.loaderData)) return null;
           const loaderData = pluginRouteLoaderData(props.loaderData);
-          if (loaderData === undefined) return null;
 
           return (
             <Suspense>

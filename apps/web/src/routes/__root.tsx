@@ -1,84 +1,75 @@
-import type { QueryClient } from '@tanstack/react-query'
+import type { QueryClient } from "@tanstack/react-query";
 
-import { TanStackDevtools } from '@tanstack/react-devtools'
-import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools'
-import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
-import { ThemeScript } from '@vitnode/core/components/theme-script'
+import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
+import { ThemeScript } from "@vitnode/core/components/theme-script";
 import {
   intlQueryOptions,
   publicPathnameOf,
   resolveLocale,
-  useLocale,
-} from '@vitnode/core/tanstack/i18n'
-import {
-  DocumentHead,
-  DocumentScripts,
-  VitNodeRootProviders,
-} from '@vitnode/core/tanstack/layout'
+  useLocale
+} from "@vitnode/core/tanstack/i18n";
+import { DocumentHead, DocumentScripts, VitNodeRootProviders } from "@vitnode/core/tanstack/layout";
 
-import type { Locale } from '@/vitnode.config'
+import type { Locale } from "@/vitnode.config";
 
-import { isDocsRouteId, STYLESHEET_ORDER_ANCHOR } from '@/docs/stylesheet'
-import { withoutHmrTimestamp } from '@/lib/without-hmr-timestamp'
-import { vitNodeConfig } from '@/vitnode.config'
+import { isDocsRouteId, STYLESHEET_ORDER_ANCHOR } from "@/docs/stylesheet";
+import { withoutHmrTimestamp } from "@/lib/without-hmr-timestamp";
+import { vitNodeConfig } from "@/vitnode.config";
 
-import appCss from '../styles.css?url'
+import appCss from "../styles.css?url";
 
-const { editor, i18n, logo, metadata, theme } = vitNodeConfig
+const { editor, i18n, logo, metadata, theme } = vitNodeConfig;
 
 export interface RootRouterContext {
-  queryClient: QueryClient
+  queryClient: QueryClient;
 }
 
 export const Route = createRootRouteWithContext<RootRouterContext>()({
   beforeLoad: ({ location }) => ({
-    locale: resolveLocale<Locale>(publicPathnameOf(location)),
+    locale: resolveLocale<Locale>(publicPathnameOf(location))
   }),
   component: RootComponent,
   loader: async ({ context }) => {
     await context.queryClient.query({
       ...intlQueryOptions({ locale: context.locale }),
-      staleTime: 'static',
-    })
+      staleTime: "static"
+    });
   },
   head: ({ matches }) => ({
     links: [
       ...(matches.some(({ routeId }) => isDocsRouteId(routeId))
         ? []
-        : [{ href: withoutHmrTimestamp(appCss), rel: 'stylesheet' }]),
+        : [{ href: withoutHmrTimestamp(appCss), rel: "stylesheet" }]),
 
       {
-        href: '/favicon.ico',
-        rel: 'icon',
-        sizes: '32x32',
-        type: 'image/x-icon',
-      },
+        href: "/favicon.ico",
+        rel: "icon",
+        sizes: "32x32",
+        type: "image/x-icon"
+      }
     ],
     meta: [
-      { charSet: 'utf-8' },
+      { charSet: "utf-8" },
       {
-        content: 'width=device-width, initial-scale=1, viewport-fit=cover',
-        name: 'viewport',
+        content: "width=device-width, initial-scale=1, viewport-fit=cover",
+        name: "viewport"
       },
-      { title: metadata.title },
-    ],
+      { title: metadata.title }
+    ]
   }),
-  shellComponent: RootDocument,
-})
+  shellComponent: RootDocument
+});
 
 function RootComponent() {
   return (
-    <VitNodeRootProviders
-      config={{ editor, locales: i18n.locales, logo, theme }}
-    >
+    <VitNodeRootProviders config={{ editor, locales: i18n.locales, logo, theme }}>
       <Outlet />
     </VitNodeRootProviders>
-  )
+  );
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const locale = useLocale()
+  const locale = useLocale();
 
   return (
     <html dir="ltr" lang={locale} suppressHydrationWarning>
@@ -90,28 +81,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
       <body suppressHydrationWarning>
         {children}
-
-        {import.meta.env.DEV ? (
-          <TanStackDevtools
-            config={{
-              position: 'bottom-left',
-              triggerMode: 'fixed',
-            }}
-            plugins={[
-              {
-                name: 'TanStack Router',
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              {
-                name: 'TanStack Query',
-                render: <ReactQueryDevtoolsPanel />,
-              },
-            ]}
-          />
-        ) : null}
-
         <DocumentScripts />
       </body>
     </html>
-  )
+  );
 }

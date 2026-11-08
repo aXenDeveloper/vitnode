@@ -267,9 +267,6 @@ const singleAppDeps = {
 
 const tanstackWebDevDeps = {
   "@tanstack/devtools-vite": versionsPackageJson.tanstackDevtoolsVite,
-  "@tanstack/react-devtools": versionsPackageJson.tanstackReactDevtools,
-  "@tanstack/react-query-devtools": versionsPackageJson.tanstackQueryDevtools,
-  "@tanstack/react-router-devtools": versionsPackageJson.tanstackRouterDevtools,
   "@types/node": versionsPackageJson.typesNode,
   "@types/react": versionsPackageJson.typesReact,
   "@types/react-dom": versionsPackageJson.typesReactDom,

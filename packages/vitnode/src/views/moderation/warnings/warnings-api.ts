@@ -299,7 +299,7 @@ export interface WarningPreview {
   related: ModcpStaffWarning[];
   sanction: null | {
     action: "suspend_indefinite" | "suspend_temporary";
-    durationHours: null | number;
+    durationMinutes: null | number;
     endsAt: null | string;
     points: number;
     thresholdId: number;

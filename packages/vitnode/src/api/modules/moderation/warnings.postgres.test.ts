@@ -141,8 +141,8 @@ describe.skipIf(!POSTGRES_TEST_URL)("issuing warnings on PostgreSQL", () => {
     const rows = await schema.db
       .insert(core_moderation_warning_thresholds)
       .values([
-        { action: "suspend_temporary", durationHours: 24, points: 8 },
-        { action: "suspend_indefinite", durationHours: null, points: 10 },
+        { action: "suspend_temporary", durationMinutes: 24 * 60, points: 8 },
+        { action: "suspend_indefinite", durationMinutes: null, points: 10 },
       ])
       .returning({ id: core_moderation_warning_thresholds.id });
     thresholds.eight = rows[0]?.id ?? 0;

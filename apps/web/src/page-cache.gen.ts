@@ -21,6 +21,7 @@ export const pageCacheBuildId: string = import.meta.env.VITNODE_BUILD_ID
 export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/admin/core/staff/admins/edit/:id' },
   { path: '/admin/core/staff/moderators/edit/:id' },
+  { path: '/admin/core/moderation/warnings/actions' },
   { path: '/admin/core/staff/admins/create' },
   { path: '/admin/core/staff/admins/logs' },
   { path: '/admin/core/staff/moderators/create' },
@@ -36,8 +37,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/admin/core/debug/services' },
   { path: '/admin/core/debug/vitnode' },
   { path: '/admin/core/moderation/report-reasons' },
-  { path: '/admin/core/moderation/warning-reasons' },
-  { path: '/admin/core/moderation/warning-thresholds' },
+  { path: '/admin/core/moderation/warnings' },
   { path: '/admin/core/staff/admins' },
   { path: '/admin/core/staff/moderators' },
   { path: '/admin/core/system/files' },

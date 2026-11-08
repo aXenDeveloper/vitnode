@@ -390,20 +390,24 @@ export const routes = defineRoutes([
     pendingComponent: TablePendingSkeleton,
   }),
 
-  page("/admin/core/moderation/warning-reasons", {
+  layout("/admin/core/moderation/warnings", {
     area: "admin",
-    component: lazy(() => import("./pages/admin/moderation/warning-reasons")),
+    component: lazy(() => import("./pages/admin/moderation/warnings/layout")),
     messages: ADMIN_WARNINGS_NAMESPACES,
-    pendingComponent: TablePendingSkeleton,
-  }),
-
-  page("/admin/core/moderation/warning-thresholds", {
-    area: "admin",
-    component: lazy(
-      () => import("./pages/admin/moderation/warning-thresholds"),
-    ),
-    messages: ADMIN_WARNINGS_NAMESPACES,
-    pendingComponent: TablePendingSkeleton,
+    children: [
+      index({
+        component: lazy(
+          () => import("./pages/admin/moderation/warnings/index"),
+        ),
+        pendingComponent: TablePendingSkeleton,
+      }),
+      page("actions", {
+        component: lazy(
+          () => import("./pages/admin/moderation/warnings/actions"),
+        ),
+        pendingComponent: TablePendingSkeleton,
+      }),
+    ],
   }),
 
   page("/admin/core/users", {

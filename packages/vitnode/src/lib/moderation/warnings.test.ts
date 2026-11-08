@@ -19,7 +19,7 @@ const rule = (
   extra: Partial<WarningThresholdRule> = {},
 ): WarningThresholdRule => ({
   action: "suspend_temporary",
-  durationHours: 24,
+  durationMinutes: 24 * 60,
   enabled: true,
   id,
   points,
@@ -49,7 +49,7 @@ describe("evaluateWarningThresholds", () => {
   const eight = rule(1, 8);
   const ten = rule(2, 10, {
     action: "suspend_indefinite",
-    durationHours: null,
+    durationMinutes: null,
   });
   const twelveOff = rule(3, 12, { enabled: false });
   const rules = [ten, twelveOff, eight];
@@ -74,10 +74,10 @@ describe("evaluateWarningThresholds", () => {
 
 describe("thresholdSuspensionEnd", () => {
   it.each([
-    ["after its duration", rule(1, 8, { durationHours: 24 }), at(24)],
+    ["after its duration", rule(1, 8, { durationMinutes: 24 * 60 }), at(24)],
     [
       "never for an indefinite one",
-      rule(2, 10, { action: "suspend_indefinite", durationHours: null }),
+      rule(2, 10, { action: "suspend_indefinite", durationMinutes: null }),
       null,
     ],
   ])("ends a suspension %s", (_name, threshold, end) => {

@@ -1,6 +1,6 @@
 ---
 title: Configure warnings
-description: Set up VitNode warning reasons with default points and expiry, and warning thresholds that suspend an account automatically, in the AdminCP.
+description: Set up VitNode warning reasons with default points and expiry, and warning actions that suspend an account automatically, in the AdminCP.
 icon: Settings2
 ---
 
@@ -8,11 +8,11 @@ import { ImgDocs } from "@/components/fumadocs/img";
 import reasons from "./warning-reasons.webp";
 import thresholds from "./warning-thresholds.webp";
 
-Warning reasons give moderators consistent points and messages, and thresholds decide when points turn into a suspension. This guide sets up the example from [Warnings](/docs/dev/moderation/warnings): a 2-point **Spam** reason and suspensions at 8 and 10 points.
+Warning reasons give moderators consistent points and messages, and actions decide when points turn into a suspension. This guide sets up the example from [Warnings](/docs/dev/moderation/warnings): a 2-point **Spam** reason and suspensions at 8 and 10 points.
 
 ## Before you begin
 
-You need an AdminCP account with the **Warning settings** permissions: **View warning reasons and thresholds**, and **Manage warning reasons and thresholds** to change them. Admins with a root role have both.
+You need an AdminCP account with the **Warning settings** permissions: **View warning reasons and actions**, and **Manage warning reasons and actions** to change them. Admins with a root role have both.
 
 <Steps>
 
@@ -20,7 +20,7 @@ You need an AdminCP account with the **Warning settings** permissions: **View wa
 
 ### Add a warning reason
 
-Open **AdminCP → Moderation → Warning reasons** and choose **Add reason**. Fill in:
+Open **AdminCP → Moderation → Warnings**, stay on the **Reasons** tab and choose **Add reason**. Fill in:
 
 | Field | Example | What it does |
 | --- | --- | --- |
@@ -46,23 +46,23 @@ Reasons are never deleted, only disabled. Every warning keeps a copy of its reas
 
 <Step>
 
-### Add thresholds
+### Add actions
 
-Open **AdminCP → Moderation → Warning thresholds** and choose **Add threshold** twice:
+On the same page, switch to the **Actions** tab (`/admin/core/moderation/warnings/actions`) and choose **Add action** twice:
 
-| Active points | Action | Duration |
-| --- | --- | --- |
-| 8 | Temporary suspension | 24 hours |
-| 10 | Indefinite suspension | None |
+| Active points | Suspend for |
+| --- | --- |
+| 8 | 1 day |
+| 10 | Check **Indefinitely** |
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={thresholds}
-  alt="Warning thresholds in the AdminCP: at 8 points suspend for 1 day, at 10 points suspend indefinitely, both enabled"
+  alt="Warning actions in the AdminCP: at 8 points suspend for 1 day, at 10 points suspend indefinitely, both enabled"
 />
 
-Only one enabled threshold can use each number of points; saving a second one answers **Another enabled threshold already uses this number of points**. Disable or delete a threshold to stop it. Suspensions it already created keep a copy of the rule and stay until they end or are lifted.
+Only one enabled action can use each number of points; saving a second one answers **Another enabled action already uses this number of points**. Disable or delete an action to stop it. A suspension can last minutes, hours or days, or check **Indefinitely** to keep it until a moderator lifts it. Suspensions it already created keep a copy of the rule and stay until they end or are lifted.
 
 </Step>
 
@@ -72,9 +72,9 @@ Only one enabled threshold can use each number of points; saving a second one an
 
 Warn a test member twice with **Spam** (4 points), then preview a third time in the warn form: **Automatic action** says nothing. Change the points to 4 (with an explanation) and the preview shows **Account suspended for 1 day**. See [Issue warnings](/docs/dev/moderation/issue-warnings).
 
-Changes apply to warnings issued from now on. Saving a lower threshold does not suspend members who are already above it, and raising one does not lift anything.
+Changes apply to warnings issued from now on. Saving a lower action does not suspend members who are already above it, and raising one does not lift anything.
 
-Every change to a reason or threshold, with its values before and after, is recorded in **AdminCP → Staff → Administrators → Logs**.
+Every change to a reason or action, with its values before and after, is recorded in **AdminCP → Staff → Administrators → Logs**.
 
 ## Related
 

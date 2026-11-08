@@ -17,6 +17,36 @@ export const WarningDuration = ({ hours }: { hours: number }) => {
   );
 };
 
+export const SUSPENSION_DURATION_UNITS = ["minutes", "hours", "days"] as const;
+
+export type SuspensionDurationUnit = (typeof SUSPENSION_DURATION_UNITS)[number];
+
+export const MINUTES_PER_UNIT: Record<SuspensionDurationUnit, number> = {
+  days: 60 * 24,
+  hours: 60,
+  minutes: 1,
+};
+
+/** The largest whole unit a number of minutes divides into. Pure. */
+export const splitSuspensionMinutes = (
+  minutes: number,
+): { count: number; unit: SuspensionDurationUnit } => {
+  const unit =
+    SUSPENSION_DURATION_UNITS.toReversed().find(
+      candidate => minutes % MINUTES_PER_UNIT[candidate] === 0,
+    ) ?? "minutes";
+
+  return { count: minutes / MINUTES_PER_UNIT[unit], unit };
+};
+
+/** A suspension length in minutes, as days, hours or minutes. */
+export const SuspensionDuration = ({ minutes }: { minutes: number }) => {
+  const t = useTranslations("core.moderation.warn.duration");
+  const { count, unit } = splitSuspensionMinutes(minutes);
+
+  return <>{t(unit, { count })}</>;
+};
+
 const STATUS_VARIANT = {
   active: "warning",
   expired: "secondary",

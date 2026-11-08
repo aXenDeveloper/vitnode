@@ -1,21 +1,14 @@
 import type { QueryClient } from "@tanstack/react-query";
 
-import { TanStackDevtools } from "@tanstack/react-devtools";
-import { ReactQueryDevtoolsPanel } from "@tanstack/react-query-devtools";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { ThemeScript } from "@vitnode/core/components/theme-script";
 import {
   intlQueryOptions,
   publicPathnameOf,
   resolveLocale,
-  useLocale,
+  useLocale
 } from "@vitnode/core/tanstack/i18n";
-import {
-  DocumentHead,
-  DocumentScripts,
-  VitNodeRootProviders,
-} from "@vitnode/core/tanstack/layout";
+import { DocumentHead, DocumentScripts, VitNodeRootProviders } from "@vitnode/core/tanstack/layout";
 
 import type { Locale } from "@/vitnode.config";
 
@@ -31,7 +24,7 @@ export interface RootRouterContext {
 
 export const Route = createRootRouteWithContext<RootRouterContext>()({
   beforeLoad: ({ location }) => ({
-    locale: resolveLocale<Locale>(publicPathnameOf(location)),
+    locale: resolveLocale<Locale>(publicPathnameOf(location))
   }),
   component: RootComponent,
   head: () => ({
@@ -42,29 +35,27 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
         href: "/favicon.ico",
         rel: "icon",
         sizes: "32x32",
-        type: "image/x-icon",
-      },
+        type: "image/x-icon"
+      }
     ],
     meta: [
       { charSet: "utf-8" },
       { content: "width=device-width, initial-scale=1, viewport-fit=cover", name: "viewport" },
-      { title: metadata.title },
-    ],
+      { title: metadata.title }
+    ]
   }),
   loader: async ({ context }) => {
     await context.queryClient.query({
       ...intlQueryOptions({ locale: context.locale }),
-      staleTime: "static",
+      staleTime: "static"
     });
   },
-  shellComponent: RootDocument,
+  shellComponent: RootDocument
 });
 
 function RootComponent() {
   return (
-    <VitNodeRootProviders
-      config={{ editor, locales: i18n.locales, logo, theme }}
-    >
+    <VitNodeRootProviders config={{ editor, locales: i18n.locales, logo, theme }}>
       <Outlet />
     </VitNodeRootProviders>
   );
@@ -82,24 +73,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
       <body suppressHydrationWarning>
         {children}
-
-        {import.meta.env.DEV ? (
-          <TanStackDevtools
-            config={{
-              position: "bottom-right",
-            }}
-            plugins={[
-              {
-                name: "TanStack Router",
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              {
-                name: "TanStack Query",
-                render: <ReactQueryDevtoolsPanel />,
-              },
-            ]}
-          />
-        ) : null}
 
         <DocumentScripts />
       </body>

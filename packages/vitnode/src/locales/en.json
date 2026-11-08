@@ -3015,7 +3015,8 @@
         },
         "duration": {
           "days": "{count, plural, one {# day} other {# days}}",
-          "hours": "{count, plural, one {# hour} other {# hours}}"
+          "hours": "{count, plural, one {# hour} other {# hours}}",
+            "minutes": "{count, plural, one {# minute} other {# minutes}}"
         },
         "statuses": {
           "active": "Active",
@@ -3409,9 +3410,9 @@
           "reordered": "Reordered warning reasons"
         },
         "warning_threshold": {
-          "created": "Created warning threshold",
-          "updated": "Updated warning threshold",
-          "deleted": "Deleted warning threshold"
+          "created": "Created warning action",
+          "updated": "Updated warning action",
+          "deleted": "Deleted warning action"
         }
       },
       "fields": {
@@ -3444,7 +3445,7 @@
         "expiresAfterHours": "Points expire after (hours)",
         "enabled": "Enabled",
         "action": "Action",
-        "durationHours": "Duration (hours)"
+        "durationMinutes": "Duration (minutes)"
       }
     },
     "access": {
@@ -3775,8 +3776,7 @@
         "moderation": {
           "title": "Moderation",
           "report_reasons": "Report reasons",
-          "warning_reasons": "Warning reasons",
-          "warning_thresholds": "Warning thresholds"
+          "warnings": "Warnings"
         },
         "user_bar": {
           "home_page": "Home Page",
@@ -4533,9 +4533,15 @@
           "unknown": "Something went wrong. Try again in a moment."
         }
       },
+      "warnings": {
+        "title": "Warnings",
+        "desc": "Each reason adds points to a member. When their active points reach an action, it runs on its own.",
+        "tabs": {
+          "reasons": "Reasons",
+          "thresholds": "Actions"
+        }
+      },
       "warning_reasons": {
-        "title": "Warning reasons",
-        "desc": "The reasons moderators pick when they warn someone, with their default points and expiry. Drag to change the order.",
         "create": "Add reason",
         "limit": "You can have up to {max} reasons. Disable one you no longer use.",
         "columns": {
@@ -4557,23 +4563,28 @@
         "form": {
           "create_title": "Add warning reason",
           "edit_title": "Edit warning reason",
-          "sheet_desc": "Changes apply to new warnings only. Warnings already issued keep their points, expiry and title.",
+          "sheet_desc": "Only new warnings use these changes. Issued ones keep the points, expiry and title they got.",
           "title": "Title",
-          "title_desc": "Short and specific, like “Spam” or “Harassment”.",
           "description": "Description",
-          "description_desc": "Helps moderators pick the right reason. Members don't see it.",
+          "description_desc": "Only moderators see this.",
           "points": "Points",
-          "points_desc": "How many points a warning adds. 0 makes it an official warning that adds none.",
-          "points_unit": "points",
+          "points_effect": {
+            "none": "An official warning with no points.",
+            "alone": "One warning alone triggers {action}.",
+            "repeat": "{count} warnings like this reach {points} points and trigger {action}.",
+            "no_thresholds": "No actions are on, so points never suspend anyone."
+          },
+          "action_suspend_for": "a suspension for {duration}",
+          "action_suspend_indefinitely": "an indefinite suspension",
           "expires": "Points expire after",
-          "expires_desc": "After this, the points stop counting. The warning stays in the history.",
+          "expires_desc": "The warning itself stays in the member's history.",
           "or": "or",
           "never_expires": "Never expire",
           "days_unit": "days",
           "message": "Default message",
-          "message_desc": "Prefilled in the warn form. Moderators can edit it before sending.",
+          "message_desc": "Sent to the member. Moderators can change it before sending.",
           "enabled": "Enabled",
-          "enabled_desc": "Disabled reasons can't be picked for new warnings. Old warnings stay as they are.",
+          "enabled_desc": "When it's off, moderators can't pick it. Issued warnings stay.",
           "submit_create": "Add reason",
           "submit_edit": "Save changes",
           "created": "Reason added",
@@ -4586,13 +4597,11 @@
         }
       },
       "warning_thresholds": {
-        "title": "Warning thresholds",
-        "desc": "What happens automatically when a warning brings a member's active points up to a limit.",
-        "create": "Add threshold",
-        "limit": "You can have up to {max} thresholds.",
+        "create": "Add action",
+        "limit": "You can have up to {max} actions.",
         "columns": {
           "points": "Active points",
-          "action": "Action",
+          "action": "What happens",
           "status": "Status"
         },
         "at_points": "At {points, plural, one {# point} other {# points}}",
@@ -4601,46 +4610,43 @@
         "enabled": "Enabled",
         "disabled": "Disabled",
         "edit": "Edit",
-        "actions_label": "Actions for the threshold at {points} points",
-        "empty_title": "No thresholds yet",
+        "actions_label": "Options for the action at {points} points",
+        "empty_title": "No actions yet",
         "empty_desc": "Without one, warnings never suspend anyone automatically.",
         "delete": {
           "button": "Delete",
-          "title": "Delete the threshold at {points} points?",
+          "title": "Delete the action at {points} points?",
           "desc": "New warnings won't trigger it anymore. Suspensions it already created stay until they end or are lifted.",
-          "error": "Could not delete the threshold",
-          "success": "Threshold deleted",
+          "error": "Could not delete the action",
+          "success": "Action deleted",
           "success_desc": "Reaching {points} points no longer suspends anyone."
         },
         "form": {
-          "create_title": "Add threshold",
-          "edit_title": "Edit threshold",
-          "sheet_desc": "When a warning brings active points from below this number to it or above, the action runs once.",
-          "future_only": "Changes apply to warnings issued from now on. Nobody is suspended or unsuspended just because you saved this.",
+          "create_title": "Add action",
+          "edit_title": "Edit action",
+          "sheet_desc": "Runs once when a member's points reach this number. Current suspensions stay as they are.",
           "points": "Active points",
-          "points_desc": "Only one enabled threshold can use each number.",
-          "points_unit": "points",
-          "action": "Action",
-          "actions": {
-            "suspend_temporary": "Temporary suspension",
-            "suspend_temporary_desc": "Ends on its own after the duration, even if the points are still there.",
-            "suspend_indefinite": "Indefinite suspension",
-            "suspend_indefinite_desc": "Lasts until a moderator lifts it."
+          "suspend_for": "Suspend for",
+          "or": "or",
+          "indefinitely": "Indefinitely",
+          "duration_unit": "Unit",
+          "units": {
+            "minutes": "minutes",
+            "hours": "hours",
+            "days": "days"
           },
-          "duration": "Duration",
-          "duration_desc": "How long the suspension lasts. 24 is a day, 168 a week.",
-          "hours_unit": "hours",
+          "duration_too_long": "Keep it under 5 years.",
           "enabled": "Enabled",
-          "enabled_desc": "Disabled thresholds never run.",
-          "submit_create": "Add threshold",
+          "enabled_desc": "When off, it never runs.",
+          "submit_create": "Add action",
           "submit_edit": "Save changes",
-          "created": "Threshold added",
-          "updated": "Threshold saved",
+          "created": "Action added",
+          "updated": "Action saved",
           "saved_desc": "It applies to the next warnings.",
-          "error": "Could not save the threshold",
+          "error": "Could not save the action",
           "error_desc": "Check the fields and try again.",
-          "duplicate_points": "Another enabled threshold already uses this number of points.",
-          "limit_reached": "You can have up to {max} thresholds."
+          "duplicate_points": "Another enabled action already uses this number of points.",
+          "limit_reached": "You can have up to {max} actions."
         }
       }
     },
@@ -5709,7 +5715,7 @@
   "@vitnode/core:warnings:can_view_sanctions": "View suspensions",
   "@vitnode/core:warnings:can_manage_sanctions": "Lift suspensions",
   "@vitnode/core:warning_settings": "Warning settings",
-  "@vitnode/core:warning_settings:can_view": "View warning reasons and thresholds",
-  "@vitnode/core:warning_settings:can_manage": "Manage warning reasons and thresholds",
+  "@vitnode/core:warning_settings:can_view": "View warning reasons and actions",
+  "@vitnode/core:warning_settings:can_manage": "Manage warning reasons and actions",
   "@vitnode/core:moderation:can_warn": "Warn authors of this content"
 }

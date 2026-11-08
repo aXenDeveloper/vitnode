@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/combobox";
 import { FormMessage } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useValueSwapEnter, valueSwapKey } from "@/components/ui/value-swap";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 import type { ComboboxItemGroup, ComboboxOption } from "./combobox-groups";
@@ -382,6 +383,8 @@ export const AutoFormCombobox = ({
     searchPlaceholder,
   });
   const comboboxValue = toComboboxValue(field.value, multiple);
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  useValueSwapEnter(inputRef, multiple ? "" : valueSwapKey(comboboxValue));
   const invalid = otherProps?.["aria-invalid"] ?? false;
   const onComboboxValueChange: ComboboxOnValueChange = (value, event) => {
     field.onChange(value);
@@ -451,6 +454,7 @@ export const AutoFormCombobox = ({
               className={className}
               disabled={disabled}
               placeholder={source.inputPlaceholder}
+              ref={inputRef}
               showClear={showClear}
             />
             {popupContent}

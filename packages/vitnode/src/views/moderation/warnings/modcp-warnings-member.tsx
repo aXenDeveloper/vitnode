@@ -327,7 +327,7 @@ const SuspensionNotice = ({ standing }: { standing: ModcpMemberStanding }) => {
                 {" · "}
                 <SanctionSummary
                   sanction={{
-                    durationHours: sanction.threshold?.durationHours,
+                    durationMinutes: sanction.threshold?.durationMinutes,
                     endsAt: sanction.endsAt,
                   }}
                 />
