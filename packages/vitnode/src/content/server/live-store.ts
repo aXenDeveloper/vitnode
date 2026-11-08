@@ -278,7 +278,7 @@ export const writeContentDraft = async (
         baseVersion,
         updatedAt: now,
         updatedBy: userId,
-        values: sql`${drafts.values} || ${JSON.stringify(values)}::jsonb`,
+        values: sql`${drafts.values} || ${sql.param(values)}::jsonb`,
       },
       target: [drafts.contentTypeId, drafts.itemId, drafts.language],
     });

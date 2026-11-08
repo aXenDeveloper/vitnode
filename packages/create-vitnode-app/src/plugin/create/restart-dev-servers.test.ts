@@ -31,7 +31,7 @@ describe("devCommandFor", () => {
     ["pnpm", "pnpm dev"],
     ["bun", "bun dev"],
     ["npm", "npm run dev"],
-    ["pnpm@11.9.0", "pnpm dev"],
+    ["pnpm@12.18.0", "pnpm dev"],
   ])("spells the dev command for %s", (packageManager, expected) => {
     expect(devCommandFor(packageManager)).toBe(expected);
   });

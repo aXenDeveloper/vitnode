@@ -118,7 +118,6 @@ export const ThemeProvider = ({
   value,
   defaultTheme = enableSystem ? "system" : "light",
 }: ThemeProviderProps) => {
-  // oxlint-disable-next-line @eslint-react/use-state
   const [theme, setThemeState] = React.useState<string | undefined>(() =>
     getStoredTheme(storageKey, defaultTheme),
   );

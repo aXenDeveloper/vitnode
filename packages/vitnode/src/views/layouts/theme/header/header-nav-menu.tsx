@@ -260,7 +260,6 @@ const useVisibleNavCount = (navigation: HeaderNavItem[]) => {
       const count = measureVisibleCount();
       if (count === null) return;
 
-      // oxlint-disable-next-line @eslint-react/dom-no-flush-sync
       flushSync(() => {
         setVisibleCount(count);
       });

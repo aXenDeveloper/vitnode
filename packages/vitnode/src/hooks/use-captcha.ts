@@ -1,5 +1,5 @@
 /* oxlint-disable react-you-might-not-need-an-effect/no-external-store-subscription */
-/* oxlint-disable @eslint-react/set-state-in-effect */
+/* oxlint-disable react/set-state-in-effect */
 /* oxlint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
 import type { z } from "zod";
 
@@ -139,7 +139,7 @@ export const useCaptcha = (
         widget.innerHTML = "";
       }
     };
-    // oxlint-disable-next-line @eslint-react/exhaustive-deps
+    // oxlint-disable-next-line react/exhaustive-deps
   }, [locale, captcha?.type, captcha?.siteKey]);
 
   const getToken = async (): Promise<string> => {

@@ -12,7 +12,7 @@
   },
   "type": "module",
   "engines": {
-    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
+    "node": "^22.22.0 || ^24.11.0 || >=26.0.0"
   },
   "bin": {
     "create-vitnode-app": "dist/src/index.js"
@@ -38,20 +38,20 @@
     "typescript"
   ],
   "dependencies": {
-    "@inquirer/prompts": "^8.7.3",
-    "commander": "^15.0.0",
-    "ora": "^9.4.1",
+    "@inquirer/prompts": "^8.7.5",
+    "commander": "^15.1.0",
+    "ora": "^10.0.0",
     "picocolors": "^1.1.1",
     "validate-npm-package-name": "^8.0.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.6",
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/config": "workspace:*",
-    "oxlint": "^1.87.0",
-    "oxlint-tsgolint": "^7.0.2003",
-    "typescript": "^6.0.3",
-    "vitest": "^5.0.3"
+    "oxlint": "^1.92.0",
+    "oxlint-tsgolint": "^7.0.2006",
+    "typescript": "7.1.0-beta",
+    "vitest": "^5.1.0"
   }
 }

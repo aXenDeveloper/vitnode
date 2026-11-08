@@ -200,7 +200,7 @@ export const updateNotificationPreferences = async (
     await tx
       .update(core_notification_user_state)
       .set({
-        preferences: sql`${JSON.stringify(merged)}::jsonb`,
+        preferences: sql`${sql.param(merged)}::jsonb`,
         updatedAt: new Date(),
       })
       .where(eq(core_notification_user_state.userId, userId));

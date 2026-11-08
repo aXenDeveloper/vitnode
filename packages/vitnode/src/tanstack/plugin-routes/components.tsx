@@ -94,7 +94,7 @@ export const pluginLayoutComponent = (
       // displace the outlet.
       createElement(Layout, {
         ...usePluginRoutePageProps(),
-        // oxlint-disable-next-line @eslint-react/jsx-no-children-prop
+        // oxlint-disable-next-line react/no-children-prop
         children: <PendingOutlet />,
       }),
     );

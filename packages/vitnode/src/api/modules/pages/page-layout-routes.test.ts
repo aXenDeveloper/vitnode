@@ -1,6 +1,7 @@
 import type { MiddlewareHandler } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
+import { is, Param } from "drizzle-orm";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
@@ -136,8 +137,8 @@ interface StoredRow {
 
 const pageIdOf = (condition: unknown): string =>
   String(
-    (condition as { queryChunks: { value?: unknown }[] }).queryChunks.find(
-      chunk => typeof chunk.value === "string",
+    (condition as { queryChunks: unknown[] }).queryChunks.find(chunk =>
+      is(chunk, Param),
     )?.value,
   );
 

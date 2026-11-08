@@ -30,15 +30,15 @@
     "lint:fix": "oxlint --type-aware --fix"
   },
   "dependencies": {
-    "nodemailer": "^10.0.16"
+    "nodemailer": "^10.3.1"
   },
   "devDependencies": {
     "@types/nodemailer": "^8.0.2",
     "@vitnode/config": "workspace:*",
     "@vitnode/core": "workspace:*",
-    "oxlint": "^1.87.0",
-    "oxlint-tsgolint": "^7.0.2003",
-    "tsdown": "^0.23.0",
-    "typescript": "^6.0.3"
+    "oxlint": "^1.92.0",
+    "oxlint-tsgolint": "^7.0.2006",
+    "tsdown": "^0.23.7",
+    "typescript": "7.1.0-beta"
   }
 }

@@ -103,7 +103,10 @@ describe("ReportDialog", () => {
       </>,
     );
     // Both load the same messages, so the button showing means the dialog has too.
-    await screen.findByRole("button", { name: "core.moderation.report.title" });
+    await screen.findByRole("button", {
+      hidden: true,
+      name: "core.moderation.report.title",
+    });
     if (open) await screen.findByRole("dialog");
 
     expect(screen.queryAllByRole("dialog")).toHaveLength(dialogs);

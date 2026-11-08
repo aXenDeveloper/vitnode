@@ -157,7 +157,7 @@ export const ContentLiveRichTextEditor = ({
       user: opener,
       ydoc,
     });
-    // eslint-disable-next-line @eslint-react/set-state-in-effect, react-you-might-not-need-an-effect/no-adjust-state-on-prop-change, react-you-might-not-need-an-effect/no-external-store-subscription -- a resource with a lifetime, not derived state
+    // eslint-disable-next-line react/set-state-in-effect, react-you-might-not-need-an-effect/no-adjust-state-on-prop-change, react-you-might-not-need-an-effect/no-external-store-subscription -- a resource with a lifetime, not derived state
     setBinding({ provider, user: opener, ydoc });
 
     return () => {

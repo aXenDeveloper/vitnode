@@ -368,7 +368,7 @@ export const findStaffPermissionCandidates = async (
       .where(
         or(
           eq(table.unrestricted, true),
-          sql`${table.permissions} @> ${JSON.stringify([{ module, permission, plugin }])}::jsonb`,
+          sql`${table.permissions} @> ${sql.param([{ module, permission, plugin }])}::jsonb`,
         ),
       ),
     db

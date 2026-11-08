@@ -63,7 +63,7 @@ const CommentsMessages = ({ children }: { children: React.ReactNode }) => {
 
   return React.createElement(hostIntlProvider, {
     ...intlProps,
-    // oxlint-disable-next-line @eslint-react/jsx-no-children-prop
+    // oxlint-disable-next-line react/no-children-prop
     children: provided,
   });
 };

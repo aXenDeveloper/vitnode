@@ -11,7 +11,7 @@
     "jsx": "preserve",
     "incremental": true,
     "composite": false,
-    "removeComments": true,
+    "removeComments": false,
     "noImplicitAny": false,
     "strictNullChecks": true,
     "strictPropertyInitialization": false,

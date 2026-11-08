@@ -1,8 +1,8 @@
-export const supportedNodeRange = "^22.18.0 || ^24.11.0 || >=26.0.0";
+export const supportedNodeRange = "^22.22.0 || ^24.11.0 || >=26.0.0";
 
-export const supportedNodeRangeLabel = "22.18+, 24.11+ or 26+";
+export const supportedNodeRangeLabel = "22.22+, 24.11+ or 26+";
 
-const minimumMinorByMajor: Record<number, number> = { 22: 18, 24: 11 };
+const minimumMinorByMajor: Record<number, number> = { 22: 22, 24: 11 };
 
 export const isSupportedNodeVersion = (version: string) => {
   const [major = 0, minor = 0] = version

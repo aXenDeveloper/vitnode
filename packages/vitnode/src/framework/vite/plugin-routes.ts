@@ -342,8 +342,8 @@ const hostRoutesConfigFor = (
 
 /** Every file under a directory, relative to it, in a deterministic order. */
 const filesUnder = (directory: string, prefix = ""): string[] => {
-  const entries = readdirSync(directory, { withFileTypes: true }).sort(
-    (a, b) => (a.name < b.name ? -1 : 1),
+  const entries = readdirSync(directory, { withFileTypes: true }).sort((a, b) =>
+    a.name < b.name ? -1 : 1,
   );
 
   return entries.flatMap(entry => {

@@ -98,7 +98,7 @@ export interface VitNodeWebSocketHooksOptions {
    * Loads the app's server bundle when no API has registered yet - a cold
    * instance whose first request is a WebSocket upgrade. Receives a plain
    * `GET` for the same URL; its response is ignored. In a Nitro app pass
-   * `request => fetchViteEnv("ssr", request)` from `nitro/vite/runtime`.
+   * `request => fetchService("ssr", request)` from `nitro/services`.
    */
   warmup?: (request: Request) => Promise<unknown>;
 }
@@ -185,9 +185,9 @@ const finish = (
  * ```ts
  * // a custom Nitro route, registered through `vitnode({ nitro: { handlers } })`
  * import { defineWebSocketHandler } from "nitro";
- * import { fetchViteEnv } from "nitro/vite/runtime";
+ * import { fetchService } from "nitro/services";
  *
- * const warmup = async (request: Request) => fetchViteEnv("ssr", request);
+ * const warmup = async (request: Request) => fetchService("ssr", request);
  *
  * export default defineWebSocketHandler(async event => {
  *   await warmup(new Request(event.req.url));

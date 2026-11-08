@@ -22,7 +22,7 @@ const HeadTag = ({
   isDataScript(tag) && typeof tag.children === "string" ? (
     <script
       {...tag.attrs}
-      // oxlint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
+      // oxlint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: tag.children }}
       suppressHydrationWarning
     />

@@ -89,7 +89,7 @@ const releaseInTable = async (
 
     for (const row of rows) {
       await db.execute(
-        sql`UPDATE ${table} SET ${sql.identifier(column.name)} = ${JSON.stringify(
+        sql`UPDATE ${table} SET ${sql.identifier(column.name)} = ${sql.param(
           markEditorFileDeleted(row.document, fileId),
         )}::jsonb WHERE ctid = ${row.ctid}::tid`,
       );

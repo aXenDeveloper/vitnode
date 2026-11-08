@@ -182,6 +182,7 @@ export type ContentTranslationTable<
     ContentTranslationColumnBuilders<TFields, TPublication, TStrategy>
   >;
   dialect: "pg";
+  isAlias: false;
   name: TName;
   schema: undefined;
 }>;
@@ -236,6 +237,7 @@ export type ContentTable<
     >
   >;
   dialect: "pg";
+  isAlias: false;
   name: TName;
   schema: undefined;
 }>;
@@ -389,6 +391,7 @@ export type ContentJunctionTable<
     }
   >;
   dialect: "pg";
+  isAlias: false;
   name: string;
   schema: undefined;
 }>;
@@ -410,6 +413,7 @@ export type ContentRepeatableChildTable<
     }
   >;
   dialect: "pg";
+  isAlias: false;
   name: string;
   schema: undefined;
 }>;

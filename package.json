@@ -26,19 +26,19 @@
     "doctor": "npx react-doctor@latest"
   },
   "devDependencies": {
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.6",
     "@vitnode/config": "workspace:*",
-    "oxfmt": "^0.72.0",
-    "react-doctor": "^0.9.17",
+    "oxfmt": "^0.77.0",
+    "react-doctor": "^0.9.22",
     "tsx": "^4.23.15",
-    "turbo": "^2.11.7",
-    "typescript": "^6.0.3",
+    "turbo": "^2.11.10",
+    "typescript": "7.1.0-beta",
     "zod": "^4.6.6"
   },
   "engines": {
-    "node": "^22.18.0 || ^24.11.0 || >=26.0.0"
+    "node": "^22.22.0 || ^24.11.0 || >=26.0.0"
   },
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@12.18.0",
   "workspaces": [
     "apps/*",
     "packages/*",

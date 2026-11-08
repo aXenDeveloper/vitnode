@@ -102,7 +102,7 @@ const tokenizeText = (text: string): Token[] => {
 const tokenize = (chunk: unknown): Token[] => {
   if (is(chunk, SQL)) return chunk.queryChunks.flatMap(tokenize);
   if (is(chunk, SQL.Aliased)) return tokenize(chunk.sql);
-  if (is(chunk, StringChunk)) return tokenizeText(chunk.value.join(""));
+  if (is(chunk, StringChunk)) return tokenizeText(chunk.value);
   if (is(chunk, Column)) return [{ column: chunk, kind: "column" }];
   if (is(chunk, Param)) return [{ kind: "value", value: chunk.value }];
   if (Array.isArray(chunk)) {
@@ -675,9 +675,7 @@ const isRandomUuid = (column: Column) =>
   column.columnType === "PgUUID" &&
   is(column.default, SQL) &&
   column.default.queryChunks.some(
-    chunk =>
-      is(chunk, StringChunk) &&
-      chunk.value.join("").includes("gen_random_uuid"),
+    chunk => is(chunk, StringChunk) && chunk.value.includes("gen_random_uuid"),
   );
 
 const uniqueViolation = (table: Table, key: string) =>

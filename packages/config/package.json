@@ -40,20 +40,19 @@
     }
   },
   "peerDependencies": {
-    "oxfmt": "^0.72.0",
-    "oxlint": "^1.87.0",
-    "oxlint-tsgolint": "^7.0.2003",
-    "typescript": "6.0.x"
+    "oxfmt": "^0.77.0",
+    "oxlint": "^1.92.0",
+    "oxlint-tsgolint": "^7.0.2006",
+    "typescript": "^6.0.0 || ^7.1.0-beta"
   },
   "devDependencies": {
-    "oxfmt": "^0.72.0",
-    "oxlint": "^1.87.0",
-    "oxlint-tsgolint": "^7.0.2003",
-    "typescript": "^6.0.3"
+    "oxfmt": "^0.77.0",
+    "oxlint": "^1.92.0",
+    "oxlint-tsgolint": "^7.0.2006",
+    "typescript": "7.1.0-beta"
   },
   "dependencies": {
-    "@eslint-react/eslint-plugin": "^5.24.9",
-    "eslint-plugin-perfectionist": "^5.12.1",
-    "eslint-plugin-react-you-might-not-need-an-effect": "^1.0.2"
+    "eslint-plugin-perfectionist": "^5.13.0",
+    "eslint-plugin-react-you-might-not-need-an-effect": "^1.1.0"
   }
 }
