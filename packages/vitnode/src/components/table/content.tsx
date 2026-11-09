@@ -18,6 +18,7 @@ import {
   useRowExpansionDataTable,
 } from "./expansion";
 import { FiltersDataTable } from "./filters";
+import { FiltersPanelDataTable, FiltersPanelToggle } from "./filters-panel";
 import { GroupHeadingRowDataTable, groupRowsDataTable } from "./group";
 import { useDataTableUrl } from "./navigation";
 import { PaginationDataTable } from "./pagination";
@@ -104,14 +105,46 @@ const withControlColumns = <T extends DataTableTMin>({
 
 const ToolbarDataTable = ({
   filters,
+  filtersLayout = "inline",
   search,
   searchPlaceholder,
 }: Pick<
   DataTableProps<DataTableTMin>,
-  "filters" | "search" | "searchPlaceholder"
+  "filters" | "filtersLayout" | "search" | "searchPlaceholder"
 >) => {
+  const [isPanelOpen, setIsPanelOpen] = React.useState(false);
+  const panelId = React.useId();
+
   if (!search && !filters?.length) {
     return null;
+  }
+
+  if (filtersLayout === "panel" && filters?.length) {
+    return (
+      <div className="border-foreground/10 border-b px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            {search && (
+              <SearchDataTable searchPlaceholder={searchPlaceholder} />
+            )}
+          </div>
+          <FiltersPanelToggle
+            controls={panelId}
+            filters={filters}
+            isOpen={isPanelOpen}
+            onOpenChange={setIsPanelOpen}
+          />
+        </div>
+        <FiltersPanelDataTable
+          filters={filters}
+          id={panelId}
+          isOpen={isPanelOpen}
+          onApplied={() => {
+            setIsPanelOpen(false);
+          }}
+        />
+      </div>
+    );
   }
 
   return (
@@ -158,6 +191,7 @@ export function ContentDataTable<T extends DataTableTMin>({
   search,
   searchPlaceholder,
   filters,
+  filtersLayout,
   ...props
 }: DataTableProps<T>) {
   const { searchParams } = useDataTableUrl();
@@ -280,6 +314,7 @@ export function ContentDataTable<T extends DataTableTMin>({
 
       <ToolbarDataTable
         filters={filters}
+        filtersLayout={filtersLayout}
         search={search}
         searchPlaceholder={searchPlaceholder}
       />

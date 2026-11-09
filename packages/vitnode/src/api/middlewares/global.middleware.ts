@@ -83,6 +83,7 @@ import type { SSOApiPlugin } from "../models/sso";
 import { assertAiModelPricing } from "../lib/ai/pricing";
 import { assertContentAiActions, collectAiActions } from "../lib/ai/registry";
 import { collectAuditActions } from "../lib/audit/registry";
+import { resolveAuditRetentionDays } from "../lib/audit/settings";
 import { resolveClientIp } from "../lib/client-ip";
 import { collectCronJobs } from "../lib/cron";
 import {
@@ -187,6 +188,8 @@ export interface EnvVariablesVitNode {
     aiActions: AiActionRegistry;
     /** Every declared audit action - core's, the Content Engine's and each plugin's. */
     auditActions: RegisteredAuditAction[];
+    /** Days an Activity Logs entry is kept (`activityLogs.retentionDays`); `0` keeps everything. */
+    auditRetentionDays: number;
     authorization: {
       adminCookieExpires: number;
       adminCookieName: string;
@@ -343,6 +346,7 @@ type CoreVariables = EnvVariablesVitNode["core"];
  * moderation targets and scopes).
  */
 export const globalMiddleware = ({
+  activityLogs,
   ai,
   authorization,
   content,
@@ -364,6 +368,7 @@ export const globalMiddleware = ({
   cacheClient,
 }: Pick<
   VitNodeApiConfig,
+  | "activityLogs"
   | "ai"
   | "authorization"
   | "captcha"
@@ -386,6 +391,7 @@ export const globalMiddleware = ({
     cacheClient: CacheClient | null;
   }) => {
   const notificationWorkers = resolveNotificationWorkerSettings(notifications);
+  const auditRetentionDays = resolveAuditRetentionDays(activityLogs);
   const pluginsMetadata = plugins.map(plugin => ({
     id: plugin.pluginId,
   }));
@@ -640,6 +646,7 @@ export const globalMiddleware = ({
       ai,
       aiActions: aiActionsMetadata,
       auditActions: auditActionsMetadata,
+      auditRetentionDays,
       i18n: i18nMetadata,
       metadata,
       email,

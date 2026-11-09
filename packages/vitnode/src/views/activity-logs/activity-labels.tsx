@@ -15,7 +15,14 @@ import {
 } from "@/content/admin/labels";
 import { AUDIT_CORE_PLUGIN_ID } from "@/lib/audit/const";
 
-import type { ActivityEntry, ActivityFilterOptions } from "./activity-query";
+import type {
+  ActivityEntry,
+  ActivityFilterOptions,
+  ActivityStaffFilters,
+} from "./activity-query";
+import type { ActivityRouteSearch } from "./activity-search";
+
+import { activityFiltersOf, activitySearchActions } from "./activity-search";
 
 /** The namespaces every Activity Logs screen reads. */
 export const ACTIVITY_NAMESPACES = [
@@ -126,6 +133,28 @@ export const useActivityLabels = (
 
     return { action, area, field, plugin, target };
   }, [t, tAll, titles]);
+};
+
+export const useActivityStaffFilters = ({
+  options,
+  search,
+  staff,
+}: {
+  options: ActivityFilterOptions;
+  search: ActivityRouteSearch;
+  staff: ActivityStaffFilters["staff"];
+}): ActivityStaffFilters => {
+  const labels = useActivityLabels(options.plugins);
+  const filters = activityFiltersOf(search);
+  const searchActions = activitySearchActions(
+    filters.search,
+    options.actions,
+    action => labels.action({ ...action, contentTypeId: null }),
+  );
+
+  return searchActions
+    ? { ...filters, searchActions, staff }
+    : { ...filters, staff };
 };
 
 const AREA_VARIANTS = {

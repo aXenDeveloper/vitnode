@@ -51,7 +51,6 @@
   "@vitnode/core:activity_logs:can_view": "View activity logs",
   "@vitnode/core:activity_logs:can_view_sensitive": "View IP addresses and technical details",
   "@vitnode/core:activity_logs:can_export": "Export activity logs",
-  "@vitnode/core:activity_logs:can_manage_retention": "Change how long activity logs are kept",
   "@vitnode/core:report_reasons": "Report reasons",
   "@vitnode/core:report_reasons:can_view": "View report reasons",
   "@vitnode/core:report_reasons:can_create": "Create report reasons",
@@ -504,6 +503,13 @@
       "results_not_found": "No results found",
       "selected_count": "<number>{count}</number> selected",
       "clear_filters": "Clear filters",
+      "filters_panel": {
+        "toggle": "Filters",
+        "toggle_active": "Filters, {count} active",
+        "all": "All",
+        "clear_all": "Clear all",
+        "apply": "Show results"
+      },
       "data_table": {
         "select_all": "Select all rows",
         "select_row": "Select row",
@@ -3243,21 +3249,40 @@
       "deleted_actor": "{name} (deleted account)",
       "removed_plugin": "{plugin} (removed)",
       "open_details": "Details of: {action}",
+      "hide_details": "Hide details of: {action}",
+      "table_label": "Activity",
       "filters": {
         "label": "Filter activity",
-        "search": "Search",
         "search_placeholder": "Search targets, actions and people",
         "plugin": "Plugin",
         "area": "Area",
         "action": "Action",
-        "from": "From",
-        "to": "To",
+        "actor_filter": "Actor",
+        "everyone": "Everyone",
+        "date": "Date",
+        "any_time": "Any time",
+        "custom_range": "Custom range",
+        "ranges": {
+          "today": "Today",
+          "7d": "Last 7 days",
+          "30d": "Last 30 days",
+          "90d": "Last 90 days",
+          "180d": "Last 180 days",
+          "this_month": "This month",
+          "last_month": "Last month",
+          "this_year": "This year",
+          "last_year": "Last year"
+        },
         "all": "All",
-        "actor": "Actor: {name}",
-        "clear_actor": "Show everyone",
-        "reset": "Clear filters"
+        "open": "Filters",
+        "open_active": "{count, plural, one {Filters, # active} other {Filters, # active}}",
+        "clear_all": "Clear all",
+        "search_in": "Search {filter}",
+        "no_options": "Nothing found.",
+        "show_all": "Show all {count}",
+        "show_results": "Show results",
+        "show_count": "{count, plural, =0 {No results} one {Show # result} other {Show # results}}"
       },
-      "load_more": "Load older activity",
       "loading": "Loading activity",
       "empty_title": "No activity yet",
       "empty_desc": "Nothing matches these filters. Try a wider date range, or clear the filters.",
@@ -3266,6 +3291,8 @@
       "detail": {
         "title": "Activity details",
         "loading": "Loading details",
+        "field": "Field",
+        "locale": "Language",
         "actor": "Actor",
         "date": "Date",
         "area": "Area",
@@ -4466,19 +4493,7 @@
           "moderator": "What moderators did: reports, approvals and content they hid or restored."
         },
         "export": "Export CSV",
-        "export_error": "Could not download the export. Try again in a moment.",
-        "settings": {
-          "title": "Retention",
-          "open": "Retention settings",
-          "desc": "Applies to both staff logs. A daily job deletes entries older than this. A shorter period keeps less personal data around, a longer one keeps more history.",
-          "retention": "Keep entries for",
-          "forever": "Forever",
-          "days": "{count, plural, one {# day} other {# days}}",
-          "saved": "Retention saved",
-          "saved_desc": "The next daily run deletes entries older than {period}.",
-          "saved_forever": "Entries stay until you change this.",
-          "error": "Could not save the retention period."
-        }
+        "export_error": "Could not download the export. Try again in a moment."
       }
     },
     "moderation": {

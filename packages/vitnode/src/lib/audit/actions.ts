@@ -113,7 +113,6 @@ export const CORE_AUDIT_ACTIONS = defineAuditActions([
   { action: "user.device_revoked", targetType: "user" },
   { action: "user.devices_revoked", targetType: "user" },
   { action: "settings.updated", targetType: "settings" },
-  { action: "audit_settings.updated", targetType: "settings" },
   { action: "ai_access.role_updated", targetType: "role" },
   { action: "ai_access.user_override_saved", targetType: "user" },
   { action: "ai_access.user_override_removed", targetType: "user" },

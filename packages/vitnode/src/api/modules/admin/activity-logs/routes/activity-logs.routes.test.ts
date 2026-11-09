@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
-import { core_audit_logs, core_audit_settings } from "@/database/audit";
+import { core_audit_logs } from "@/database/audit";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
 import { createTestCache } from "@/tests/cache";
@@ -17,7 +17,6 @@ import { activityLogDetailAdminRoute } from "./detail.route";
 import { activityLogEntityAdminRoute } from "./entity.route";
 import { exportActivityLogsAdminRoute } from "./export.route";
 import { listActivityLogsAdminRoute } from "./list.route";
-import { updateActivityLogSettingsAdminRoute } from "./settings.route";
 
 const BLOG = "@vitnode/blog";
 const MEMBER_ROLE = 3;
@@ -40,7 +39,6 @@ const ADMINS = {
   nobody: [
     { module: "users", permission: "can_view", plugin: "@vitnode/core" },
   ],
-  retention: [log("can_manage_retention")],
   sensitive: [log("can_view"), log("can_view_sensitive"), log("can_export")],
   viewer: [log("can_view")],
 } satisfies Record<string, PermissionsStaffArgs[]>;
@@ -133,7 +131,6 @@ const harness = async () => {
     ],
     [core_roles, [{ color: null, id: MEMBER_ROLE, prefix: null }]],
     [core_audit_logs, ENTRIES],
-    [core_audit_settings, []],
   ]);
 
   const app = new OpenAPIHono();
@@ -154,7 +151,6 @@ const harness = async () => {
   for (const built of [
     exportActivityLogsAdminRoute,
     activityLogEntityAdminRoute,
-    updateActivityLogSettingsAdminRoute,
     activityLogDetailAdminRoute,
     listActivityLogsAdminRoute,
   ]) {
@@ -282,53 +278,6 @@ describe("Activity Logs admin routes", () => {
 
       expect(csv.split("\r\n")[0]).toContain('"ipAddress"');
       expect(csv).toContain("203.0.113.7");
-    });
-  });
-
-  describe("PUT /settings", () => {
-    const put = async (
-      h: Awaited<ReturnType<typeof harness>>,
-      admin: Admin,
-      retentionDays: number,
-    ) =>
-      await h.request(admin, "/settings", {
-        body: JSON.stringify({ retentionDays }),
-        method: "PUT",
-      });
-
-    it("saves an offered retention period and records the change", async () => {
-      const h = await harness();
-
-      const res = await put(h, "retention", 90);
-
-      expect(res.status).toBe(200);
-      expect(h.memory.rows(core_audit_settings)).toEqual([
-        expect.objectContaining({ id: 1, retentionDays: 90 }),
-      ]);
-      expect(h.audits("audit_settings.updated")).toEqual([
-        expect.objectContaining({
-          changes: { retentionDays: { from: 365, to: 90 } },
-        }),
-      ]);
-    });
-
-    it.each([
-      ["a period that is not offered", "retention", 45, 400],
-      ["an admin without can_manage_retention", "viewer", 90, 403],
-    ] as const)("refuses %s", async (_label, admin, days, status) => {
-      const h = await harness();
-
-      expect((await put(h, admin, days)).status).toBe(status);
-      expect(h.memory.rows(core_audit_settings)).toEqual([]);
-      expect(h.audits("audit_settings.updated")).toEqual([]);
-    });
-
-    it("records nothing when the period does not change", async () => {
-      const h = await harness();
-
-      await put(h, "retention", 365);
-
-      expect(h.audits("audit_settings.updated")).toEqual([]);
     });
   });
 });

@@ -45,12 +45,24 @@ const nextCursor = (last: {
     : undefined;
 
 /** The filters of one staff log, as the API reads them. */
-export type ActivityStaffFilters = ActivityFilters & { staff: AuditStaffLog };
+export type ActivityStaffFilters = ActivityFilters & {
+  searchActions?: string;
+  staff: AuditStaffLog;
+};
 
-const fetchPage = async (filters: ActivityStaffFilters, cursor?: string) => {
+/** Which page of a staff log, and how many entries a page holds. */
+export interface ActivityPagination {
+  page: number;
+  pageSize: number;
+}
+
+const fetchPage = async (
+  filters: ActivityStaffFilters,
+  { page, pageSize }: ActivityPagination,
+) => {
   const response = await fetcher({
     plugin: manifest.id,
-    args: { query: { ...filters, ...(cursor ? { cursor } : {}) } },
+    args: { query: { ...filters, first: `${pageSize}`, page: `${page}` } },
     method: "get",
     module: "admin/activity-logs",
     path: "/",
@@ -67,17 +79,18 @@ export type ActivityPage = Awaited<ReturnType<typeof fetchPage>>;
 export type ActivityEntry = ActivityPage["edges"][number];
 
 /**
- * The list, page by page: a keyset cursor newest-first, so "Load more" is as
- * cheap on the hundredth page as on the first. Keyed on the filters, and keeps
- * the previous result on screen while a new filter loads.
+ * One numbered page of a staff log, newest first, with the total count the
+ * table's pagination shows. Keyed on the filters and the page, and keeps the
+ * previous page on screen while the next one loads.
  */
-export const activityListQueryOptions = (filters: ActivityStaffFilters) =>
-  infiniteQueryOptions({
-    getNextPageParam: nextCursor,
-    initialPageParam: undefined as string | undefined,
+export const activityListQueryOptions = (
+  filters: ActivityStaffFilters,
+  pagination: ActivityPagination,
+) =>
+  queryOptions({
     placeholderData: keepPreviousData,
-    queryFn: async ({ pageParam }) => await fetchPage(filters, pageParam),
-    queryKey: [...ACTIVITY_QUERY_ROOT, "list", filters],
+    queryFn: async () => await fetchPage(filters, pagination),
+    queryKey: [...ACTIVITY_QUERY_ROOT, "list", filters, pagination],
     retry: false,
     staleTime: OPERATIONAL_STALE_TIME,
   });
@@ -171,44 +184,6 @@ export const activityEntityQueryOptions = (target: {
     staleTime: OPERATIONAL_STALE_TIME,
   });
 
-const fetchSettings = async () => {
-  const response = await fetcher({
-    plugin: manifest.id,
-    method: "get",
-    module: "admin/activity-logs",
-    path: "/settings",
-  });
-  if (!response.ok) {
-    throw new ActivityRequestError(response.status, "activity settings");
-  }
-
-  return await response.json();
-};
-
-export const activitySettingsQueryOptions = () =>
-  queryOptions({
-    queryFn: fetchSettings,
-    queryKey: [...ACTIVITY_QUERY_ROOT, "settings"],
-    retry: false,
-    staleTime: OPERATIONAL_STALE_TIME,
-  });
-
-/** Saves the retention period; the caller invalidates and toasts. */
-export const saveActivitySettings = async (retentionDays: number) => {
-  const response = await fetcher({
-    plugin: manifest.id,
-    args: { body: { retentionDays } },
-    method: "put",
-    module: "admin/activity-logs",
-    path: "/settings",
-  });
-  if (!response.ok) {
-    throw new ActivityRequestError(response.status, "activity settings");
-  }
-
-  return await response.json();
-};
-
 /**
  * Downloads the CSV export of the current filters - the existing download
  * pattern: fetched with the AdminCP session, saved through an object URL. The
@@ -238,4 +213,26 @@ export const downloadActivityExport = async (
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(objectUrl);
+};
+
+/** Accounts that acted in a staff log whose name matches `search`, for the actor filter. */
+export const searchActivityActors = async ({
+  search,
+  staff,
+}: {
+  search: string;
+  staff: AuditStaffLog;
+}) => {
+  const response = await fetcher({
+    plugin: manifest.id,
+    args: { query: { staff, ...(search ? { search } : {}) } },
+    method: "get",
+    module: "admin/activity-logs",
+    path: "/actors",
+  });
+  if (!response.ok) {
+    throw new ActivityRequestError(response.status, "activity actors");
+  }
+
+  return (await response.json()).edges;
 };

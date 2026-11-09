@@ -11,15 +11,22 @@ import type {
   AuditChanges,
 } from "@/lib/audit/const";
 
+import {
+  withPagination,
+  zodPaginationPageInfo,
+  zodPaginationQuery,
+} from "@/api/lib/with-pagination";
 import { core_audit_logs } from "@/database/audit";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
 import { containsLikePattern } from "@/lib/api/like-pattern";
 import {
   AUDIT_ACTION_MAX_LENGTH,
+  AUDIT_ACTION_PATTERN,
   AUDIT_ACTOR_TYPES,
   AUDIT_AREAS,
   AUDIT_PLUGIN_ID_MAX_LENGTH,
+  AUDIT_SEARCH_ACTIONS_MAX,
   AUDIT_STAFF_LOGS,
   AUDIT_TARGET_ID_MAX_LENGTH,
   AUDIT_TARGET_TYPE_MAX_LENGTH,
@@ -28,6 +35,28 @@ import {
 export const AUDIT_DEFAULT_PAGE_SIZE = 25;
 export const AUDIT_MAX_PAGE_SIZE = 100;
 const AUDIT_SEARCH_MAX_LENGTH = 100;
+const AUDIT_SEARCH_ACTIONS_MAX_LENGTH =
+  AUDIT_SEARCH_ACTIONS_MAX *
+  (AUDIT_PLUGIN_ID_MAX_LENGTH + AUDIT_ACTION_MAX_LENGTH + 2);
+
+export const parseAuditSearchActions = (
+  value: string | undefined,
+): { action: string; pluginId: string }[] =>
+  (value ?? "")
+    .split(",")
+    .flatMap(entry => {
+      const separator = entry.indexOf(":");
+      const pluginId = entry.slice(0, separator).trim();
+      const action = entry.slice(separator + 1).trim();
+      const isValid =
+        separator > 0 &&
+        pluginId.length <= AUDIT_PLUGIN_ID_MAX_LENGTH &&
+        action.length <= AUDIT_ACTION_MAX_LENGTH &&
+        AUDIT_ACTION_PATTERN.test(action);
+
+      return isValid ? [{ action, pluginId }] : [];
+    })
+    .slice(0, AUDIT_SEARCH_ACTIONS_MAX);
 
 const day = z
   .string()
@@ -44,6 +73,7 @@ export const zodAuditFilters = z.object({
   pluginId: z.string().max(AUDIT_PLUGIN_ID_MAX_LENGTH).optional(),
   /** Matches the target's label, the action and the actor's name. */
   search: z.string().trim().max(AUDIT_SEARCH_MAX_LENGTH).optional(),
+  searchActions: z.string().max(AUDIT_SEARCH_ACTIONS_MAX_LENGTH).optional(),
   targetId: z.string().max(AUDIT_TARGET_ID_MAX_LENGTH).optional(),
   targetType: z.string().max(AUDIT_TARGET_TYPE_MAX_LENGTH).optional(),
   /** Last day included, in UTC. */
@@ -57,10 +87,12 @@ export const zodAuditFilters = z.object({
 
 export type AuditFilters = z.infer<typeof zodAuditFilters>;
 
-export const zodAuditPageQuery = zodAuditFilters.extend({
-  cursor: z.string().max(200).optional(),
-  first: z.coerce.number().int().min(1).max(AUDIT_MAX_PAGE_SIZE).optional(),
-});
+/** The staff log list's query: the filters plus `page`/`first` (or `cursor`). */
+export const zodAuditListQuery = zodPaginationQuery.extend(
+  zodAuditFilters.shape,
+);
+
+export type AuditListQuery = z.infer<typeof zodAuditListQuery>;
 
 const zodAuditActor = z
   .object({
@@ -114,7 +146,7 @@ export type AuditListEntry = z.infer<typeof zodAuditListEntry>;
 
 export const zodAuditPage = z.object({
   edges: z.array(zodAuditListEntry),
-  pageInfo: zodAuditPageInfo,
+  pageInfo: zodPaginationPageInfo,
 });
 
 /** One resource's history: list entries plus their recorded changes and metadata. */
@@ -199,6 +231,13 @@ export const auditFilterConditions = (filters: AuditFilters): SQL[] => {
         ilike(core_audit_logs.targetLabel, pattern),
         ilike(core_audit_logs.action, pattern),
         ilike(core_audit_logs.actorName, pattern),
+        ...parseAuditSearchActions(filters.searchActions).map(
+          ({ action, pluginId }) =>
+            and(
+              eq(core_audit_logs.pluginId, pluginId),
+              eq(core_audit_logs.action, action),
+            ),
+        ),
       ),
     );
   }
@@ -307,6 +346,46 @@ const toListEntry = (row: ListRow): AuditListEntry => ({
   },
 });
 
+/**
+ * One page of a staff log, newest first, by page number with a total count -
+ * the AdminCP table pages by number. Ordered by `(createdAt, id)`, the index
+ * the table leads with. `first` defaults to {@link AUDIT_DEFAULT_PAGE_SIZE}.
+ */
+export const listAuditLogs = async (
+  c: Context,
+  { cursor, first, last, page, ...filters }: AuditListQuery,
+): Promise<z.infer<typeof zodAuditPage>> => {
+  const conditions = auditFilterConditions(filters);
+  const { edges, pageInfo } = await withPagination({
+    c,
+    orderBy: { column: core_audit_logs.createdAt, order: "desc" },
+    params: {
+      query: {
+        cursor,
+        first: last ? undefined : (first ?? `${AUDIT_DEFAULT_PAGE_SIZE}`),
+        last,
+        page,
+      },
+    },
+    primaryCursor: core_audit_logs.id,
+    query: async ({ cursorSelection, limit, offset, orderBy, where }) =>
+      await c
+        .get("db")
+        .select({ ...listSelection, ...cursorSelection })
+        .from(core_audit_logs)
+        .leftJoin(core_users, eq(core_users.id, core_audit_logs.actorId))
+        .leftJoin(core_roles, eq(core_roles.id, core_users.roleId))
+        .where(where)
+        .orderBy(orderBy)
+        .limit(limit)
+        .offset(offset),
+    table: core_audit_logs,
+    where: conditions.length ? and(...conditions) : undefined,
+  });
+
+  return { edges: edges.map(toListEntry), pageInfo };
+};
+
 interface AuditPageArgs {
   cursor?: string;
   filters: AuditFilters;
@@ -314,28 +393,10 @@ interface AuditPageArgs {
 }
 
 /**
- * One page of entries, newest first, by keyset on `(createdAt, id)` - the
- * index the table leads with - so a deep page costs what the first one does
- * and nothing ever counts the whole table.
- */
-export const listAuditLogs = async (
-  c: Context,
-  args: AuditPageArgs,
-): Promise<z.infer<typeof zodAuditPage>> => {
-  const { edges, pageInfo } = await listAuditLogsWithDetails(c, args);
-
-  return {
-    edges: edges.map(
-      ({ changes: _changes, metadata: _metadata, ...entry }) => entry,
-    ),
-    pageInfo,
-  };
-};
-
-/**
- * {@link listAuditLogs}, with each entry's changes and metadata - already
+ * One page of entries with each entry's changes and metadata - already
  * sanitized and bounded when written, so a short history can show them
- * inline. Never the IP address or the correlation id.
+ * inline. Keyset-paged on `(createdAt, id)` for "Load older activity". Never
+ * the IP address or the correlation id.
  */
 export const listAuditLogsWithDetails = async (
   c: Context,
@@ -377,6 +438,43 @@ export const listAuditLogsWithDetails = async (
       hasNextPage: rows.length > first,
     },
   };
+};
+
+export const AUDIT_ACTOR_SEARCH_LIMIT = 20;
+
+export const zodAuditActorsQuery = z.object({
+  /** Matches the account's current name. */
+  search: z.string().trim().max(AUDIT_SEARCH_MAX_LENGTH).optional(),
+  staff: z.enum(AUDIT_STAFF_LOGS).optional(),
+});
+
+export const zodAuditActors = z.object({
+  edges: z.array(z.object({ id: z.number(), name: z.string() })),
+});
+
+/**
+ * The accounts that appear as actors in a staff log, by their current name -
+ * what the log's actor filter offers. Deleted accounts and the system are left
+ * out; at most {@link AUDIT_ACTOR_SEARCH_LIMIT}.
+ */
+export const listAuditActors = async (
+  c: Context,
+  { search, staff }: z.infer<typeof zodAuditActorsQuery>,
+): Promise<z.infer<typeof zodAuditActors>> => {
+  const conditions = auditFilterConditions({ staff });
+  const term = search?.trim();
+  if (term) conditions.push(ilike(core_users.name, containsLikePattern(term)));
+
+  const edges = await c
+    .get("db")
+    .selectDistinct({ id: core_users.id, name: core_users.name })
+    .from(core_audit_logs)
+    .innerJoin(core_users, eq(core_users.id, core_audit_logs.actorId))
+    .where(and(...conditions))
+    .orderBy(core_users.name)
+    .limit(AUDIT_ACTOR_SEARCH_LIMIT);
+
+  return { edges };
 };
 
 /** Rows for an export, newest first, bounded by `limit`. */

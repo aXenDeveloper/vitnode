@@ -122,7 +122,6 @@ export const newBuildPluginApiCore = buildApiPlugin({
         "can_view",
         { permission: "can_view_sensitive", dependsOn: ["can_view"] },
         { permission: "can_export", dependsOn: ["can_view"] },
-        { permission: "can_manage_retention", dependsOn: ["can_view"] },
       ],
       report_reasons: [
         "can_view",

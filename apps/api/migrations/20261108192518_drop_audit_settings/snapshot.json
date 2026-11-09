@@ -1,0 +1,51 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d570f1d0-d1f8-46f1-8f78-6723845cfb49",
+  "prevIds": [
+    "5813f899-b4ab-4c93-a75e-2f9ce9dcd2bd"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_audit_settings"
+      ],
+      "writes": [
+        "s|tbl|public.core_audit_settings",
+        "n|tbl|public.core_audit_settings",
+        "e|tbl|public.core_audit_settings",
+        "n|rel|public.core_audit_settings",
+        "n|type|public.core_audit_settings"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"core_audit_settings\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"core_audit_settings\",\"id\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"core_audit_settings\",\"retentionDays\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"core_audit_settings\",\"updatedAt\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"core_audit_settings\",\"core_audit_settings_pkey\"]"
+    }
+  ]
+}

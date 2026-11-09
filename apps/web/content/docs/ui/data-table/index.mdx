@@ -242,6 +242,12 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
       description: 'Faceted filters.',
       type: 'FilterDataTable[]',
     },
+    filtersLayout: {
+      description:
+        'How filters show: a dropdown each next to the search, or one Filters button that opens a panel.',
+      type: `'inline' | 'panel'`,
+      default: `'inline'`,
+    },
     bulkActions: {
       description: 'Turns on row selection.',
       type: 'ReactNode',

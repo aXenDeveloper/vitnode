@@ -7,7 +7,7 @@ icon: History
 import { ImgDocs } from '@/components/fumadocs/img'
 
 import adminList from './activity-logs-admin-list.webp'
-import detailSheet from './activity-logs-detail-sheet.webp'
+import entryDetails from './activity-logs-entry-details.webp'
 
 Activity Logs (audit logs) are where VitNode answers "wait, who changed
 this?". They record administrative, moderation, plugin and content operations
@@ -27,19 +27,32 @@ Each staff list has a **Logs** button that opens its log.
 
 <ImgDocs
   src={adminList}
-  alt="Admin logs page in AdminCP Staff with search, plugin, area, action and date filters, Export CSV and Retention settings buttons, and a table of entries showing date, actor, plugin, action and target"
+  alt="Admin logs page in AdminCP Staff with an Export CSV button next to the title, a search box, a Filters button and an Any time date picker above the table, and the filters panel open with Plugin, Area, Action and Actor selects, Clear all and Show results"
   withoutBackground
 />
 
-Filter by plugin, action, date range or free text (target, action and actor
-name). The admin log also filters by area, and shows an **Area** column only
-when the entries on screen come from more than one area. Click an entry to open
-its details: the actor, the plugin, the target, each changed field before and
-after, an **Open** link to the target and **Show this person's activity**.
+Search the target, action and actor name from the box above the table. Actions
+match by the label you see, in your language, with or without accents - so
+"zawieszono" finds "Zawieszono konto". To narrow
+the list, open **Filters**: a panel with a **Plugin**, **Action** and **Actor**
+select (plus **Area** in the admin log). Pick what you need and press
+**Show results**. **Date** sits beside it and offers today, the last 7 or 30
+days, or your own from-to range picked in a calendar. On a phone, the filters
+and dates open in a drawer from the **Filters** button instead. The admin log
+shows an **Area** column only when the entries on screen come from more than
+one area. **Export CSV** sits next to the page title. The log is paged: pick a page or a page size under the table, and the URL
+keeps the filters, the page and the page size.
+
+Click an entry to open its details right under its row, one entry at a time:
+each changed field before and after, anything else the operation recorded (such
+as a warning's points and expiry), an **Open** link to the target, **Show this
+person's activity**, and the date, plugin, IP address and request id. Click it
+again, or press Escape, to close it. The open entry is in the URL too, so you
+can share a link to it.
 
 <ImgDocs
-  src={detailSheet}
-  alt="Detail sheet of an Updated a translation of Category entry, showing the actor, date, AdminCP area, Blog plugin, the Announcements target, the Name field changing from News to Announcements and the technical IP address and request id"
+  src={entryDetails}
+  alt="Moderator logs with a Warned member entry opened under its row, showing Points changing from 6 to 16, the warning's recorded details such as points, reason and expiry date, the Open and Show this person's activity buttons, and the date, plugin, IP address and request id"
   withoutBackground
 />
 
@@ -50,7 +63,7 @@ after, an **Open** link to the target and **Show this person's activity**.
 | Content Engine  | Create, edit, delete, duplicate, publish, unpublish, hide, unhide, restore, schedule and every translation change of every content type; access rule changes and protected files |
 | Roles and staff | Roles created, edited and deleted; administrator and moderator permissions added, changed and removed                                   |
 | Users           | Profile and role changes made in the AdminCP, password resets, email verification, signed-out devices                                   |
-| Settings        | AI settings and access, notification types and danger-zone actions, report reasons, warning reasons and thresholds, log retention and log exports |
+| Settings        | AI settings and access, notification types and danger-zone actions, report reasons, warning reasons and thresholds, and log exports |
 | Moderation      | Taking, assigning, resolving and reopening reports, report notes, acting on reported content, approving and rejecting submissions, [warnings and suspensions](/docs/dev/moderation/warnings) |
 | Background work | Scheduled publishing, cron jobs and queue tasks, attributed to the system; manual cron runs, attributed to the admin who started them   |
 | Payments        | Checkouts started by members, and every status change the provider reports (processing, succeeded, failed, expired)                     |
@@ -70,8 +83,8 @@ question.
 | [Technical logs](/docs/dev/debugging/logging)       | Warnings and errors for whoever debugs the server | `core_logs`              |
 
 For an editorial content type, the audit entry points at the revision it
-created instead of copying the content. The detail sheet then shows what changed
-since the previous revision.
+created instead of copying the content. The entry's details then show what
+changed since the previous revision.
 
 ## Choose a guide
 

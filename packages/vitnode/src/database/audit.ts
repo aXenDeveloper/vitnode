@@ -6,7 +6,6 @@ import {
   AUDIT_ACTION_MAX_LENGTH,
   AUDIT_ACTOR_TYPES,
   AUDIT_AREAS,
-  AUDIT_DEFAULT_RETENTION_DAYS,
   AUDIT_PLUGIN_ID_MAX_LENGTH,
   AUDIT_SCOPE_FAMILY_MAX_LENGTH,
   AUDIT_SCOPE_ID_MAX_LENGTH,
@@ -78,22 +77,4 @@ export const core_audit_logs = camelCase.table.withRLS(
       t.createdAt,
     ),
   ],
-);
-
-/**
- * The Activity Logs settings, one row (`id = 1`). Absent until an admin first
- * saves them, so every reader falls back to the defaults.
- */
-export const core_audit_settings = camelCase.table.withRLS(
-  "core_audit_settings",
-  t => ({
-    id: t.integer().primaryKey().default(1),
-    /** Days an entry is kept. `0` keeps everything. */
-    retentionDays: t.integer().notNull().default(AUDIT_DEFAULT_RETENTION_DAYS),
-    updatedAt: t
-      .timestamp()
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  }),
 );
