@@ -37,6 +37,39 @@ filter returns to page one.
 
 Static `options` are searched on the client.
 
+## Panel layout
+
+With several filters, set `filtersLayout="panel"`. The toolbar keeps the search
+and one **Filters** button that shows how many filters are on. It opens a panel
+under the toolbar with a select per filter. Pick values, then press
+**Show results** to apply them together and go back to page one. **Clear all**
+empties the selects.
+
+<Preview name="data-table-filters-panel" withoutBackground />
+
+```tsx
+<ContentDataTable
+  id="users-table"
+  filters={filters}
+  // [!code ++]
+  filtersLayout="panel"
+  columns={columns}
+  edges={data.edges}
+  pageInfo={data.pageInfo}
+  order={{ defaultOrder: { column: 'name', order: 'asc' } }}
+/>
+```
+
+The URL works the same as the dropdowns: one query parameter per filter. A
+filter with `single` gets an "all" option at the top of its select. An
+`onSearch` filter lists what `onSearch('')` returns, so return the most useful
+options first.
+
+A custom table can use the same panel. Render `FiltersPanelToggle` in your
+toolbar and `FiltersPanelDataTable` under it, both from
+`@vitnode/core/components/table/filters-panel`, inside your
+`DataTableNavigationProvider`.
+
 ## Async options
 
 For long lists, pass `onSearch` instead. It runs when the dropdown opens and

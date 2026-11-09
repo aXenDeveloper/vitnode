@@ -8,9 +8,6 @@
     "rootDir": "./",
     "outDir": "./dist",
     "jsx": "react-jsx",
-    "emitDeclarationOnly": true,
-    "declaration": true,
-    "declarationMap": true,
     "paths": {
       "@/*": ["./src/*"]
     }

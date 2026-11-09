@@ -64,7 +64,7 @@ export const ItemNavAdminContent = ({
 
   useEffect(() => {
     if (hasActiveChild) {
-      // oxlint-disable-next-line react/set-state-in-effect, @eslint-react/set-state-in-effect
+      // oxlint-disable-next-line react/set-state-in-effect
       setOpen(true);
     }
   }, [hasActiveChild]);

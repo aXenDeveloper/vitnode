@@ -243,6 +243,11 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           href: "/admin/core/moderation/report-reasons",
           permission: core("report_reasons"),
         },
+        {
+          title: key("admin.global.nav.moderation.warnings"),
+          href: "/admin/core/moderation/warnings",
+          permission: core("warning_settings"),
+        },
       ],
     },
     {

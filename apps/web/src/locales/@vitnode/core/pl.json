@@ -484,13 +484,15 @@
         },
         "moderation": {
           "title": "Moderacja",
-          "report_reasons": "Powody zgłoszeń"
+          "report_reasons": "Powody zgłoszeń",
+          "warnings": "Ostrzeżenia"
         },
         "system": {
           "files": "Pliki",
           "integrations": "Integracje",
           "plugins": "Wtyczki",
-          "title": "System"
+          "title": "System",
+          "notifications": "Powiadomienia"
         },
         "user_bar": {
           "debug": "Panel debugowania",
@@ -635,6 +637,12 @@
           "daily_limit": "Dzienny limit",
           "action_default": "Limit akcji",
           "per_day": "użyć / dzień"
+        },
+        "browse_anonymously": {
+          "allow": "Zezwalaj na anonimowe przeglądanie",
+          "allow_desc": "Członkowie tej roli mogą w ustawieniach konta ukryć przed innymi członkami swój status online i ostatnią aktywność.",
+          "force": "Zawsze przeglądaj anonimowo",
+          "force_desc": "Ukrywa status online i ostatnią aktywność każdego członka tej roli, niezależnie od jego wyboru. Ma pierwszeństwo przed ustawieniem powyżej i przed każdą inną rolą."
         }
       },
       "list": {
@@ -719,7 +727,41 @@
         "self": "Nie możesz edytować własnych uprawnień zespołu, w tym wpisu dla swojej roli głównej.",
         "subject": "Dla",
         "success": "Uprawnienia zostały pomyślnie zaktualizowane.",
-        "title": "Edytuj uprawnienia"
+        "title": "Edytuj uprawnienia",
+        "scope": {
+          "all": "Wszystkie zasoby",
+          "all_desc": "Obejmuje również zasoby utworzone później.",
+          "selected": "{count, plural, one {# wybrany} few {# wybrane} many {# wybranych} other {# wybranych}}",
+          "selected_label": "Wybrane zasoby",
+          "selected_desc": "Tylko zasoby, które wybierzesz.",
+          "legend": "Gdzie obowiązuje to uprawnienie",
+          "change": "Zmień",
+          "choose": "Wybierz miejsce",
+          "title": "Gdzie obowiązuje uprawnienie „{permission}”?",
+          "desc": "Ogranicz to uprawnienie do: {family}. Pozostałe uprawnienia zachowują własny zakres.",
+          "search": "Szukaj: {family}",
+          "load_more": "Wczytaj więcej",
+          "loading": "Wczytywanie…",
+          "empty": "Nic nie pasuje do wyszukiwania.",
+          "removed": "Usunięty",
+          "removed_desc": "Ten zasób już nie istnieje. Usuń go przed zapisaniem.",
+          "remove": "Usuń {name}",
+          "apply": "Zastosuj",
+          "apply_module": "Zastosuj do każdego uprawnienia z zakresem w tym module",
+          "cancel": "Anuluj",
+          "selection_title": "Wybrane ({count})",
+          "none_selected": "Wybierz co najmniej jeden zasób.",
+          "issues": {
+            "title": "Niektóre zakresy wymagają uwagi",
+            "missing_scope": "Wybierz, gdzie obowiązuje uprawnienie „{permission}”.",
+            "empty_selection": "Wybierz co najmniej jeden zasób dla uprawnienia „{permission}”.",
+            "dependency_scope": "Uprawnienie „{permission}” sięga dalej niż „{dependency}”. Zawęź je albo najpierw rozszerz „{dependency}”.",
+            "invalid_resource": "Uprawnienie „{permission}” wskazuje zasób z nieprawidłowym ID.",
+            "unknown_resource": "Uprawnienie „{permission}” wskazuje zasoby, które już nie istnieją. Usuń je i zapisz ponownie.",
+            "unexpected_scope": "Uprawnienia „{permission}” nie można ograniczyć zakresem.",
+            "wrong_family": "Uprawnienie „{permission}” używa innego rodzaju zasobu. Odśwież stronę i spróbuj ponownie."
+          }
+        }
       },
       "moderators": {
         "create": "Dodaj moderatora",
@@ -745,7 +787,20 @@
         "admins": "Administratorzy",
         "moderators": "Moderatorzy"
       },
-      "title": "Zespół"
+      "title": "Zespół",
+      "logs": {
+        "open": "Logi",
+        "title": {
+          "admin": "Logi administratorów",
+          "moderator": "Logi moderatorów"
+        },
+        "desc": {
+          "admin": "Kto co zmienił w AdminCP oraz co zrobiły wtyczki, członkowie i zaplanowane zadania. Od najnowszych.",
+          "moderator": "Co zrobili moderatorzy: zgłoszenia, zatwierdzenia oraz ukryte lub przywrócone treści."
+        },
+        "export": "Eksportuj CSV",
+        "export_error": "Nie udało się pobrać eksportu. Spróbuj ponownie za chwilę."
+      }
     },
     "moderation": {
       "report_reasons": {
@@ -797,6 +852,122 @@
           "error": "Nie udało się usunąć powodu",
           "last_reason": "Zostaw co najmniej jeden powód - członkowie muszą mieć z czego wybierać.",
           "unknown": "Coś poszło nie tak. Spróbuj ponownie za chwilę."
+        }
+      },
+      "warnings": {
+        "title": "Ostrzeżenia",
+        "desc": "Każdy powód dodaje członkowi punkty. Gdy jego aktywne punkty osiągną próg akcji, zostanie ona wykonana automatycznie.",
+        "tabs": {
+          "reasons": "Powody",
+          "thresholds": "Akcje"
+        }
+      },
+      "warning_reasons": {
+        "create": "Dodaj powód",
+        "limit": "Możesz mieć maksymalnie {max} powodów. Wyłącz jeden, którego już nie używasz.",
+        "columns": {
+          "reason": "Powód",
+          "points": "Punkty",
+          "expires": "Wygasanie punktów",
+          "status": "Status"
+        },
+        "never": "Nigdy",
+        "enabled": "Włączony",
+        "disabled": "Wyłączony",
+        "edit": "Edytuj",
+        "empty_title": "Brak powodów ostrzeżeń",
+        "empty_desc": "Dodaj powód, aby moderatorzy mogli ostrzegać ze spójną liczbą punktów.",
+        "reorder": {
+          "success": "Kolejność zapisana",
+          "success_desc": "Moderatorzy widzą powody w nowej kolejności."
+        },
+        "form": {
+          "create_title": "Dodaj powód ostrzeżenia",
+          "edit_title": "Edytuj powód ostrzeżenia",
+          "sheet_desc": "Zmiany dotyczą tylko nowych ostrzeżeń. Wydane ostrzeżenia zachowują swoje punkty, termin wygaśnięcia i tytuł.",
+          "title": "Tytuł",
+          "description": "Opis",
+          "description_desc": "Widzą go tylko moderatorzy.",
+          "points": "Punkty",
+          "points_effect": {
+            "none": "Oficjalne ostrzeżenie bez punktów.",
+            "alone": "Jedno takie ostrzeżenie wystarczy, aby uruchomić: {action}.",
+            "repeat": "{count} takich ostrzeżeń daje {points} pkt i uruchamia: {action}.",
+            "no_thresholds": "Żadna akcja nie jest włączona, więc punkty nigdy nikogo nie zawieszą."
+          },
+          "action_suspend_for": "zawieszenie na {duration}",
+          "action_suspend_indefinitely": "zawieszenie bezterminowe",
+          "expires": "Punkty wygasają po",
+          "expires_desc": "Samo ostrzeżenie pozostaje w historii członka.",
+          "or": "lub",
+          "never_expires": "Nigdy nie wygasają",
+          "days_unit": "dni",
+          "message": "Domyślna wiadomość",
+          "message_desc": "Wysyłana do członka. Moderatorzy mogą ją zmienić przed wysłaniem.",
+          "enabled": "Włączony",
+          "enabled_desc": "Gdy jest wyłączony, moderatorzy nie mogą go wybrać. Wydane ostrzeżenia pozostają.",
+          "submit_create": "Dodaj powód",
+          "submit_edit": "Zapisz zmiany",
+          "created": "Powód dodany",
+          "created_desc": "Moderatorzy mogą wybrać „{reason}”, gdy kogoś ostrzegają.",
+          "updated": "Powód zapisany",
+          "updated_desc": "Nowe ostrzeżenia używają nowych ustawień.",
+          "error": "Nie udało się zapisać powodu",
+          "error_desc": "Sprawdź pola i spróbuj ponownie.",
+          "limit_reached": "Możesz mieć maksymalnie {max} powodów."
+        }
+      },
+      "warning_thresholds": {
+        "create": "Dodaj akcję",
+        "limit": "Możesz mieć maksymalnie {max} akcji.",
+        "columns": {
+          "points": "Aktywne punkty",
+          "action": "Co się stanie",
+          "status": "Status"
+        },
+        "at_points": "{points, plural, one {Przy # punkcie} few {Przy # punktach} many {Przy # punktach} other {Przy # punktu}}",
+        "suspend_for": "Zawieś na",
+        "suspend_indefinitely": "Zawieś bezterminowo",
+        "enabled": "Włączona",
+        "disabled": "Wyłączona",
+        "edit": "Edytuj",
+        "actions_label": "Opcje akcji przy {points} pkt",
+        "empty_title": "Brak akcji",
+        "empty_desc": "Bez nich ostrzeżenia nigdy nikogo nie zawieszą automatycznie.",
+        "delete": {
+          "button": "Usuń",
+          "title": "Usunąć akcję przy {points} pkt?",
+          "desc": "Nowe ostrzeżenia nie będą jej już uruchamiać. Utworzone przez nią zawieszenia pozostają, dopóki się nie skończą lub nie zostaną zniesione.",
+          "error": "Nie udało się usunąć akcji",
+          "success": "Akcja usunięta",
+          "success_desc": "Osiągnięcie {points} pkt nie zawiesza już nikogo."
+        },
+        "form": {
+          "create_title": "Dodaj akcję",
+          "edit_title": "Edytuj akcję",
+          "sheet_desc": "Uruchamia się raz, gdy punkty członka osiągną tę liczbę. Obecne zawieszenia pozostają bez zmian.",
+          "points": "Aktywne punkty",
+          "suspend_for": "Zawieś na",
+          "or": "lub",
+          "indefinitely": "Bezterminowo",
+          "duration_unit": "Jednostka",
+          "units": {
+            "minutes": "minuty",
+            "hours": "godziny",
+            "days": "dni"
+          },
+          "duration_too_long": "Maksymalnie 5 lat.",
+          "enabled": "Włączona",
+          "enabled_desc": "Gdy jest wyłączona, nigdy się nie uruchamia.",
+          "submit_create": "Dodaj akcję",
+          "submit_edit": "Zapisz zmiany",
+          "created": "Akcja dodana",
+          "updated": "Akcja zapisana",
+          "saved_desc": "Obowiązuje dla kolejnych ostrzeżeń.",
+          "error": "Nie udało się zapisać akcji",
+          "error_desc": "Sprawdź pola i spróbuj ponownie.",
+          "duplicate_points": "Inna włączona akcja używa już tej liczby punktów.",
+          "limit_reached": "Możesz mieć maksymalnie {max} akcji."
         }
       }
     },
@@ -1006,6 +1177,12 @@
         "websocket": {
           "desc": "Aktualizacje na żywo i powiadomienia wysyłane do połączonych klientów w czasie rzeczywistym.",
           "title": "WebSocket"
+        },
+        "content_preview": {
+          "title": "Podgląd treści",
+          "desc": "Podpisane, wygasające linki, dzięki którym recenzent może przeczytać nieopublikowany wpis bez konta.",
+          "not_configured": "Żaden typ treści nie ma włączonego podglądu.",
+          "content_types": "{count, plural, =0 {Brak typów treści} one {# typ treści} few {# typy treści} many {# typów treści} other {# typu treści}}"
         }
       },
       "plugins": {
@@ -1146,6 +1323,201 @@
             "frontend": "aplikacja webowa"
           },
           "version_on_side": "{version} ({side})"
+        }
+      },
+      "notifications": {
+        "title": "Powiadomienia",
+        "desc": "Sprawdź, jak radzą sobie powiadomienia, zdecyduj, co członkowie dostają domyślnie, i posprzątaj, gdy zajdzie potrzeba.",
+        "load_error": {
+          "title": "Nie udało się wczytać tej sekcji",
+          "desc": "Serwer nie odpowiedział tak, jak liczyliśmy. Spróbuj ponownie za chwilę."
+        },
+        "paused": {
+          "title": "Powiadomienia są wstrzymane",
+          "desc": "Nic nie dociera do członków, dopóki nie wznowisz ich w Ustawieniach, w sekcji Strefa zagrożenia."
+        },
+        "activity": {
+          "title": "Aktywność",
+          "range_label": "Zakres czasu",
+          "ranges": {
+            "24h": "Ostatnie 24 godziny",
+            "7d": "Ostatnie 7 dni",
+            "30d": "Ostatnie 30 dni"
+          },
+          "ranges_short": {
+            "24h": "24 godz.",
+            "7d": "7 dni",
+            "30d": "30 dni"
+          },
+          "sent": "Dostarczone e-maile",
+          "failure_rate": "Odsetek błędów",
+          "events": "Opublikowane zdarzenia",
+          "skipped": "Pominięte e-maile",
+          "vs_previous": "w porównaniu z poprzednim okresem",
+          "no_previous": "Na razie nie ma z czym porównać",
+          "trend": "{label} w wybranym zakresie",
+          "tooltip": {
+            "sent": "{count, plural, =0 {Brak dostarczonych e-maili} one {# dostarczony e-mail} few {# dostarczone e-maile} many {# dostarczonych e-maili} other {# dostarczonego e-maila}}",
+            "events": "{count, plural, =0 {Brak opublikowanych zdarzeń} one {# opublikowane zdarzenie} few {# opublikowane zdarzenia} many {# opublikowanych zdarzeń} other {# opublikowanego zdarzenia}}",
+            "skipped": "{count, plural, =0 {Brak pominiętych e-maili} one {# pominięty e-mail} few {# pominięte e-maile} many {# pominiętych e-maili} other {# pominiętego e-maila}}",
+            "failure": "Nieudane: {rate} - {failed} z {total, plural, one {# e-maila} few {# e-maili} many {# e-maili} other {# e-maila}}",
+            "failure_none": "Nie wysłano żadnych e-maili"
+          }
+        },
+        "types": {
+          "title": "Typy powiadomień",
+          "desc": "Co członkowie dostają domyślnie i czy mogą to zmienić. Zmiany zapisują się same i dotyczą tylko członków, którzy nigdy nie zmieniali własnych preferencji.",
+          "empty": {
+            "title": "Nie ma jeszcze typów powiadomień",
+            "desc": "Rdzeń i wtyczki rejestrują tutaj swoje typy. Na razie nic się nie zgłosiło."
+          },
+          "read_only": "Zmiana zasad typów wymaga uprawnienia \"Edycja ustawień powiadomień\".",
+          "badges": {
+            "mandatory": "Zawsze włączone",
+            "locked": "Zablokowane dla członków",
+            "nowhere": "Nigdzie nie wysyłane",
+            "no_template": "Brak szablonu e-maila",
+            "grouped": "Grupowane"
+          },
+          "summary": {
+            "label": "Domyślne ustawienia: {type}",
+            "list": "Lista powiadomień",
+            "push": "Push",
+            "email": "E-mail",
+            "on": "Włączone",
+            "off": "Wyłączone",
+            "available": "Dostępne",
+            "disabled": "Wyłączone",
+            "unsupported": "Nieobsługiwane"
+          },
+          "member_can_edit": {
+            "label": "Członek może edytować",
+            "desc": "Wyłączenie blokuje ten typ na ustawieniach domyślnych poniżej. Członkowie nadal go dostają, tylko nie mogą go zmienić.",
+            "mandatory": "Typy obowiązkowe są zawsze włączone i członkowie nie mogą ich zmienić."
+          },
+          "list": {
+            "legend": "Lista powiadomień",
+            "default_on": {
+              "label": "Domyślnie włączone",
+              "hint": "Członkowie dostają je, chyba że je wyłączą."
+            },
+            "default_off": {
+              "label": "Domyślnie wyłączone",
+              "hint": "Członkowie dostają je dopiero po włączeniu."
+            },
+            "disabled": {
+              "label": "Wyłączone",
+              "hint": "Nikt go nie dostaje, a opcja jest ukryta."
+            },
+            "mandatory": "Typy obowiązkowe zawsze pojawiają się na liście powiadomień."
+          },
+          "push": {
+            "legend": "Push",
+            "available": {
+              "label": "Dostępne",
+              "hint": "Mogą je dostać członkowie, którzy zezwolili na push."
+            },
+            "disabled": {
+              "label": "Wyłączone",
+              "hint": "Nigdy nie jest wysyłane jako powiadomienie push."
+            },
+            "note": "Wysyłka push nie jest jeszcze gotowa. Ten wybór zapiszemy na czas, gdy ruszy."
+          },
+          "email": {
+            "legend": "E-mail",
+            "default_on": {
+              "label": "Domyślnie włączone",
+              "hint": "Członkowie dostają e-mail, chyba że go wyłączą."
+            },
+            "default_off": {
+              "label": "Domyślnie wyłączone",
+              "hint": "Członkowie dostają e-mail dopiero po włączeniu."
+            },
+            "disabled": {
+              "label": "Wyłączone",
+              "hint": "Nigdy nie jest wysyłane e-mailem, a opcja jest ukryta."
+            },
+            "unsupported": "Ten typ nie ma wersji e-mail, więc nie można go wysłać e-mailem."
+          },
+          "success": "Zapisano",
+          "success_desc": "\"{type}\" korzysta z nowych ustawień domyślnych u członków, którzy nigdy nie wybrali niczego sami."
+        },
+        "reset_members": {
+          "button": "Przywróć wszystkim członkom ustawienia domyślne",
+          "title": "Zresetować preferencje powiadomień wszystkich członków?",
+          "desc": "{count, plural, =0 {Żaden członek nie zmienił jeszcze swoich preferencji powiadomień.} one {# członek wybrał własne ustawienia powiadomień.} few {# członków wybrało własne ustawienia powiadomień.} many {# członków wybrało własne ustawienia powiadomień.} other {# członka wybrało własne ustawienia powiadomień.}} Ich wybory dla listy, push i e-maila zostaną zastąpione ustawieniami domyślnymi z tej strony.",
+          "warning": "Tej operacji nie można cofnąć.",
+          "submit": "Zresetuj wszystkich członków",
+          "success": "Preferencje zresetowane",
+          "success_desc": "{count, plural, =0 {Wszyscy już korzystali z ustawień domyślnych.} one {# członek korzysta teraz z ustawień domyślnych.} few {# członków korzysta teraz z ustawień domyślnych.} many {# członków korzysta teraz z ustawień domyślnych.} other {# członka korzysta teraz z ustawień domyślnych.}}"
+        },
+        "settings": {
+          "button": "Ustawienia",
+          "title": "Ustawienia powiadomień",
+          "desc": "Narzędzia i akcje, które dotyczą wszystkich członków.",
+          "groups": {
+            "tools": "Narzędzia",
+            "danger": "Strefa zagrożenia"
+          },
+          "config_note": "Powiadomienia są przechowywane przez {days, plural, one {# dzień} few {# dni} many {# dni} other {# dnia}}. Okres przechowywania i rozmiary partii workera ustawisz w konfiguracji API (vitnode.api.config.ts), w sekcji notifications."
+        },
+        "tools": {
+          "run": "Uruchom",
+          "run_label": "Uruchom: {label}",
+          "test_email": {
+            "label": "Wyślij do mnie testowy e-mail",
+            "desc": "Trafia na Twój własny adres i tylko na niego.",
+            "success": "Testowy e-mail w kolejce",
+            "success_desc": "Wysyłka #{id} trafi na Twój własny adres.",
+            "not_configured": "E-mail powiadomień nie jest jeszcze skonfigurowany, więc nie ma czego testować."
+          }
+        },
+        "danger": {
+          "intro": "Te akcje dotyczą wszystkich członków naraz. Każda pyta o potwierdzenie przed uruchomieniem.",
+          "paused_badge": "Wstrzymane",
+          "pause": {
+            "title": "Wstrzymaj wszystkie powiadomienia",
+            "desc": "Wstrzymaj na jakiś czas całą wysyłkę, na przykład podczas migracji albo fali spamu.",
+            "confirm_desc": "Członkowie nie dostają niczego - ani na liście powiadomień, ani e-mailem - dopóki nie wznowisz. Nowe zdarzenia czekają w kolejce, nic nie przepada.",
+            "submit": "Wstrzymaj powiadomienia",
+            "success": "Powiadomienia wstrzymane",
+            "success_desc": "Nowe zdarzenia czekają w kolejce do czasu wznowienia."
+          },
+          "resume": {
+            "title": "Wznów wszystkie powiadomienia",
+            "desc": "Powiadomienia są wstrzymane. Wznów je, aby wysłać wszystko, co czekało.",
+            "confirm_desc": "Wszystko, co trafiło do kolejki podczas wstrzymania, zostanie wysłane w kilku najbliższych przebiegach workera.",
+            "submit": "Wznów powiadomienia",
+            "success": "Powiadomienia wznowione",
+            "success_desc": "{count, plural, =0 {Nic nie czekało.} one {# oczekujące zdarzenie jest w drodze.} few {# oczekujące zdarzenia są w drodze.} many {# oczekujących zdarzeń jest w drodze.} other {# oczekującego zdarzenia jest w drodze.}}"
+          },
+          "cancel_emails": {
+            "title": "Anuluj wszystkie e-maile w kolejce",
+            "desc": "Odrzuć e-maile czekające na wysłanie, w tym najbliższe podsumowania.",
+            "confirm_desc": "{count, plural, =0 {Żadne e-maile nie czekają w tej chwili.} one {# niewysłany jeszcze e-mail zostanie odrzucony razem z oczekującymi podsumowaniami.} few {# niewysłane jeszcze e-maile zostaną odrzucone razem z oczekującymi podsumowaniami.} many {# niewysłanych jeszcze e-maili zostanie odrzuconych razem z oczekującymi podsumowaniami.} other {# niewysłanego jeszcze e-maila zostanie odrzucone razem z oczekującymi podsumowaniami.}} Powiadomienia w aplikacji zostają.",
+            "submit": "Anuluj e-maile w kolejce",
+            "success": "Kolejka e-maili wyczyszczona",
+            "success_desc": "{count, plural, =0 {Nic nie czekało.} one {# e-mail z kolejki został odrzucony.} few {# e-maile z kolejki zostały odrzucone.} many {# e-maili z kolejki zostało odrzuconych.} other {# e-maila z kolejki zostało odrzucone.}}"
+          },
+          "read_all": {
+            "title": "Oznacz wszystko jako przeczytane dla wszystkich",
+            "desc": "Wyczyść licznik nieprzeczytanych u wszystkich członków naraz.",
+            "confirm_desc": "{count, plural, =0 {W tej chwili nic nie jest nieprzeczytane.} one {# nieprzeczytane powiadomienie zostanie oznaczone jako przeczytane} few {# nieprzeczytane powiadomienia zostaną oznaczone jako przeczytane} many {# nieprzeczytanych powiadomień zostanie oznaczonych jako przeczytane} other {# nieprzeczytanego powiadomienia zostanie oznaczone jako przeczytane}}, a każdy licznik nieprzeczytanych spadnie do zera.",
+            "submit": "Oznacz wszystko jako przeczytane",
+            "success": "Wszystko oznaczone jako przeczytane",
+            "success_desc": "{count, plural, =0 {Nic nie było nieprzeczytane.} one {# powiadomienie jest teraz przeczytane.} few {# powiadomienia są teraz przeczytane.} many {# powiadomień jest teraz przeczytanych.} other {# powiadomienia jest teraz przeczytane.}}"
+          },
+          "delete_all": {
+            "title": "Usuń wszystkie powiadomienia",
+            "desc": "Opróżnij listę powiadomień każdego członka. Typy, preferencje i ustawienia zostają.",
+            "confirm_desc": "{count, plural, =0 {Nie ma powiadomień do usunięcia.} one {# powiadomienie zostanie usunięte u każdego członka.} few {# powiadomienia zostaną usunięte u każdego członka.} many {# powiadomień zostanie usuniętych u każdego członka.} other {# powiadomienia zostanie usunięte u każdego członka.}} Wysłane już e-maile zostają w skrzynkach odbiorców. Tej operacji nie można cofnąć.",
+            "phrase": "usuń wszystkie powiadomienia",
+            "phrase_label": "Wpisz <phrase></phrase>, aby potwierdzić",
+            "phrase_error": "Wpisz frazę dokładnie tak, jak jest pokazana.",
+            "submit": "Usuń wszystkie powiadomienia",
+            "success": "Wszystkie powiadomienia usunięte",
+            "success_desc": "{count, plural, =0 {Nie było nic do usunięcia.} one {# powiadomienie zostało usunięte.} few {# powiadomienia zostały usunięte.} many {# powiadomień zostało usuniętych.} other {# powiadomienia zostało usunięte.}}"
+          }
         }
       }
     },
@@ -1407,6 +1779,16 @@
             "title": "Nie udało się wczytać preferencji powiadomień",
             "desc": "Coś poszło nie tak podczas pobierania preferencji tego użytkownika. Spróbuj ponownie."
           }
+        },
+        "presence": {
+          "title": "Obecność",
+          "status": "Status",
+          "lastActivity": "Ostatnia aktywność",
+          "never": "Brak aktywności",
+          "visibility": "Widoczność obecności",
+          "visible": "Widoczna dla członków",
+          "hiddenFromPublic": "Ukryta przed członkami",
+          "unknown": "Ukryta - potrzebujesz uprawnienia, aby ją zobaczyć"
         }
       },
       "verify_email": {
@@ -1817,7 +2199,8 @@
           "security": "Bezpieczeństwo",
           "sso": "Połączone konta",
           "notifications": "Powiadomienia",
-          "ai": "Użycie AI"
+          "ai": "Użycie AI",
+          "standing": "Status konta"
         },
         "overview": {
           "accountTitle": "Konto",
@@ -1853,7 +2236,16 @@
           "timeZoneAuto": "Automatycznie - z Twojego języka",
           "timeZoneAutoBadge": "Auto",
           "emailVerified": "Zweryfikowany",
-          "timeZoneUseDevice": "Użyj strefy tego urządzenia ({timeZone})"
+          "timeZoneUseDevice": "Użyj strefy tego urządzenia ({timeZone})",
+          "privacyTitle": "Prywatność",
+          "browseAnonymously": "Przeglądaj anonimowo",
+          "browseAnonymouslyDesc": "Ukryj swój status online i ostatnią aktywność przed innymi użytkownikami. Uprawnieni członkowie zespołu nadal mogą widzieć Twoją aktywność.",
+          "browseAnonymouslyOn": "Przeglądasz anonimowo",
+          "browseAnonymouslyOnDesc": "Inni użytkownicy widzą teraz Twoją aktywność jako ukrytą.",
+          "browseAnonymouslyOff": "Twoja aktywność jest znowu widoczna",
+          "browseAnonymouslyOffDesc": "Inni użytkownicy widzą, kiedy jesteś online i kiedy była Twoja ostatnia aktywność.",
+          "browseAnonymouslyForced": "Twoja grupa zawsze przegląda anonimowo, więc nie można tego wyłączyć.",
+          "browseAnonymouslyDisallowed": "Twoja grupa nie pozwala na anonimowe przeglądanie."
         },
         "passkeys": {
           "add": "Dodaj klucz dostępu",
@@ -1910,6 +2302,10 @@
             "admin_session_required": {
               "title": "Najpierw otwórz AdminCP",
               "desc": "Twoje konto ma dostęp do AdminCP, więc dodanie klucza dostępu wymaga dodatkowego potwierdzenia. Zaloguj się do AdminCP hasłem w tej przeglądarce i spróbuj ponownie."
+            },
+            "reauthentication_required": {
+              "title": "Zaloguj się ponownie",
+              "desc": "Ze względów bezpieczeństwa dodanie klucza dostępu wymaga niedawnego logowania. Wyloguj się, zaloguj ponownie i dodaj klucz w ciągu godziny."
             }
           },
           "last_used": "Ostatnio użyty",
@@ -2059,6 +2455,10 @@
             "nothing_to_sync": {
               "title": "Nic do synchronizacji",
               "desc": "Zaznacz co najmniej jedno pole do aktualizacji z {provider}."
+            },
+            "reauthentication_required": {
+              "title": "Zaloguj się ponownie",
+              "desc": "Ze względów bezpieczeństwa połączenie z {provider} wymaga niedawnego logowania. Wyloguj się, zaloguj ponownie i połącz konto w ciągu godziny."
             }
           },
           "value_not_set": "Nie ustawiono",
@@ -2166,10 +2566,6 @@
             "near_limit": {
               "title": "Wykorzystano ponad 80% punktów AI",
               "desc": "Gospodaruj resztą rozważnie - limit odnowi się {resetsAt}."
-            },
-            "no_allowance": {
-              "title": "Twoja rola nie obejmuje jeszcze punktów AI",
-              "desc": "Funkcje AI wymagają miesięcznego limitu punktów, a Twój wynosi obecnie zero. Jeśli chcesz je wypróbować, zapytaj administratora."
             }
           },
           "status": {
@@ -2376,6 +2772,48 @@
         "continue_with": "Kontynuuj przez {provider}",
         "connection": {
           "pending": "Kończymy z {provider}…"
+        },
+        "email_completion": {
+          "title": "Potwierdź swój adres e-mail",
+          "desc": "<provider></provider> nie udostępnił zweryfikowanego adresu e-mail. Podaj adres, którego chcesz użyć, a wyślemy na niego link potwierdzający.",
+          "email": {
+            "label": "Adres e-mail",
+            "desc": "Nic nie zostanie utworzone, dopóki nie otworzysz wysłanego przez nas linku.",
+            "invalid": "Wprowadź prawidłowy adres e-mail.",
+            "submit": "Wyślij link potwierdzający"
+          },
+          "sent": {
+            "title": "Sprawdź skrzynkę e-mail",
+            "desc": "Wysłaliśmy link potwierdzający na adres <email></email>. Otwórz go w tej przeglądarce w ciągu 30 minut, aby dokończyć logowanie.",
+            "resend": "Wyślij nowy link",
+            "resent": "Nowy link jest już w drodze.",
+            "change_email": "Użyj innego adresu e-mail"
+          },
+          "errors": {
+            "too_many_emails": {
+              "title": "Nie tak szybko",
+              "desc": "Odczekaj pół minuty, zanim poprosisz o kolejny link. W międzyczasie sprawdź folder spam."
+            },
+            "invalid_pending": {
+              "title": "To logowanie wygasło",
+              "desc": "Zaloguj się ponownie przez <provider></provider>, aby zacząć od nowa. Każda próba działa raz, przez 30 minut."
+            }
+          },
+          "start_again": "Wróć do logowania"
+        },
+        "email_unavailable": {
+          "title": "Potrzebujemy zweryfikowanego adresu e-mail",
+          "desc": "<provider></provider> nie udostępnił zweryfikowanego adresu e-mail, a ta witryna nie może teraz wysłać linku potwierdzającego. Spróbuj zalogować się w inny sposób."
+        },
+        "email_confirm": {
+          "other_browser": {
+            "title": "Otwórz link tam, gdzie się logujesz",
+            "desc": "Ten link działa tylko w przeglądarce, w której rozpoczęto logowanie przez <provider></provider>, i tylko przez 30 minut. Otwórz go tam lub zaloguj się ponownie, aby otrzymać nowy."
+          },
+          "invalid": {
+            "title": "Ten link już nie działa",
+            "desc": "Wygasł, został już użyty lub wysłano nowszy link. Zaloguj się ponownie przez <provider></provider>, aby otrzymać nowy."
+          }
         }
       },
       "verify_email": {
@@ -2415,12 +2853,201 @@
           "help": "Jeśli masz problem z powyższym przyciskiem, skopiuj i wklej poniższy adres URL do przeglądarki:",
           "expire_time": "Ten link wygaśnie {date}"
         }
+      },
+      "sso_confirm_email": {
+        "email": {
+          "subject": "Potwierdź adres e-mail, aby dokończyć logowanie",
+          "greeting": "Witaj {name}!",
+          "intro": "Ktoś zalogował się kontem, które nie udostępniło zweryfikowanego adresu e-mail, i poprosił o użycie tego adresu. Potwierdź, że należy do Ciebie, aby dokończyć logowanie.",
+          "button": "Potwierdź e-mail i zaloguj się",
+          "instructions": "Otwórz link w tej samej przeglądarce, w której rozpoczęto logowanie. Nigdzie indziej nie zadziała.",
+          "no_action": "Jeśli to nie Ty, zignoruj tę wiadomość. Nikt nie użyje Twojego adresu bez tego linku.",
+          "security_note": "Ze względów bezpieczeństwa: to żądanie zostało wysłane z adresu IP: {ip}",
+          "help": "Jeśli masz problem z powyższym przyciskiem, skopiuj i wklej poniższy adres URL do tej samej przeglądarki:",
+          "expire_time": "Ten link wygaśnie {date}"
+        }
       }
     },
     "editor": {
       "edit": "Edytuj",
-      "move": "Przenieś",
-      "remove": "Usuń"
+      "remove": "Usuń",
+      "title": "Edycja strony",
+      "available_blocks": "Widżety",
+      "finish": "Zakończ edycję",
+      "back_to_editing": "Wróć do edycji",
+      "back_to_widgets": "Wróć do widżetów",
+      "insert_for": "Dodawanie do: {zone}",
+      "insert_for_area": "Dodawanie do obszaru w: {zone}",
+      "insert_clear": "Wyczyść strefę docelową",
+      "preview": "Podgląd",
+      "save": "Zapisz",
+      "saving": "Zapisywanie…",
+      "saved": "Zapisano",
+      "save_failed": "Zapisywanie nie powiodło się",
+      "unsaved": "Niezapisane zmiany",
+      "discard": "Odrzuć zmiany",
+      "discard_confirm": "Każdy dodany, przeniesiony lub edytowany widżet wróci do stanu z chwili wczytania strony. Tej operacji nie można cofnąć.",
+      "duplicate": "Duplikuj",
+      "properties": "Właściwości",
+      "no_selection": "Zaznacz widżet na stronie, aby edytować go tutaj.",
+      "group_enabled": "Ma wartość",
+      "no_value": "Brak wartości",
+      "invalid_block": "Dane zapisane dla tego widżetu nie pasują do tego, co widżet deklaruje, więc nie można go tu edytować.",
+      "zone": {
+        "label": "Strefa treści",
+        "drop_here": "Przeciągnij i upuść tutaj widżety",
+        "targeted": "Czeka na widżet, który wybierzesz jako następny",
+        "add_block": "Dodaj widżet",
+        "rejected": "Ta strefa nie przyjmuje przeciąganego widżetu.",
+        "not_registered": "Żadna zainstalowana tu wtyczka nie dostarcza tego widżetu, więc ta strefa nie może go wyświetlić.",
+        "invalid": {
+          "title": "Ta strefa zawiera treść, której edytor nie potrafi odczytać",
+          "description": "Te wpisy są tu zapisane, ale edytor ich nie rozumie, więc nie może ich ani wyświetlić, ani edytować. Nic nie zostało usunięte: są dokładnie takie, jak je zapisano, a zapisywanie pozostaje zablokowane, dopóki świadomie nie usuniesz każdego z nich.",
+          "remove": "Usuń nieprawidłowy wpis"
+        },
+        "full": "Ta strefa zawiera już maksymalną liczbę widżetów.",
+        "min": "Ten widżet nie może opuścić swojej strefy, która musi zachować swoje widżety."
+      },
+      "block": {
+        "select": "Zaznacz widżet {name}",
+        "move": "Przenieś widżet {name}",
+        "edit": "Edytuj widżet {name}",
+        "duplicate": "Duplikuj widżet {name}",
+        "remove": "Usuń widżet {name}",
+        "issue": {
+          "unknown_type": "Dla tego typu nie zainstalowano żadnego widżetu.",
+          "not_allowed": "Ta strefa nie zezwala na ten widżet.",
+          "invalid_data": "Zapisane dane nie pasują do pól zadeklarowanych przez ten widżet.",
+          "unknown_variant": "Zapisany wariant nie jest oferowany przez ten widżet."
+        },
+        "invalid": {
+          "title": "Dane widżetu wymagają poprawy",
+          "description": "Zapisane dane widżetu {name} nie pasują już do zadeklarowanych przez niego pól, więc nie jest tu wyświetlany. Popraw je w panelu właściwości albo usuń widżet.",
+          "detail": "Co się nie zgadza: {issue}"
+        },
+        "unknown": {
+          "title": "Nieznany widżet",
+          "description": "Nic zainstalowanego na tej stronie nie dostarcza widżetu typu {type}, więc nie można go wyświetlić."
+        }
+      },
+      "dnd": {
+        "instructions": "Naciśnij Spację, aby podnieść widżet. Przesuwaj go strzałkami między pozycjami i strefami, upuść Spacją w podświetlonym miejscu, a Escape odłoży go z powrotem.",
+        "picked_up": "Podniesiono: {name}.",
+        "drop_slot": "Upuść tutaj: {name}",
+        "outside": "{name} nie znajduje się nad strefą treści.",
+        "rejected": "Strefa {zone} nie przyjmuje: {name}.",
+        "unchanged": "{name} jest nad strefą {zone}, w której już się znajduje.",
+        "over": "{name} jest nad strefą {zone}, pozycja {position} z {total}.",
+        "dropped": "Upuszczono {name} w strefie {zone}, pozycja {position} z {total}.",
+        "not_dropped": "Nie upuszczono nigdzie: {name}. Nic się nie zmieniło.",
+        "cancelled": "Anulowano przeciąganie: {name}. Nic się nie zmieniło.",
+        "area_over": "{name} jest nad obszarem w strefie {zone}, pozycja {position} z {total}.",
+        "area_dropped": "Upuszczono {name} w obszarze w strefie {zone}, pozycja {position} z {total}.",
+        "area_rejected": "Obszar nie może zawierać innego obszaru.",
+        "area_full": "Obszar jest pełny, więc nie zmieści się w nim: {name}.",
+        "not_registered": "Żadna wtyczka nie dostarcza {name} w strefie {zone}, więc nie może tam trafić.",
+        "zone_full": "Strefa {zone} jest pełna, więc nie zmieści się w niej: {name}.",
+        "zone_min": "{name} nie może opuścić swojej strefy, która musi zachować swoje widżety."
+      },
+      "picker": {
+        "search": "Szukaj widżetów…",
+        "hint": "Kliknij, aby dodać, albo przeciągnij na stronę.",
+        "clear": "Wyczyść wyszukiwanie",
+        "empty": "Ta strefa nie przyjmuje żadnego z zainstalowanych widżetów.",
+        "no_results": "Żaden widżet nie pasuje do wyszukiwania.",
+        "add": "Dodaj widżet {name}",
+        "none_installed": "Na tej stronie nie zainstalowano jeszcze żadnych widżetów.",
+        "layout_group": "Układ",
+        "add_area": "Dodaj obszar"
+      },
+      "leave": {
+        "title": "Wyjść bez zapisywania?",
+        "desc": "Na tej stronie masz niezapisane zmiany. Jeśli teraz wyjdziesz, przepadną.",
+        "cancel": "Kontynuuj edycję",
+        "confirm": "Wyjdź bez zapisywania",
+        "save": "Zapisz i zakończ",
+        "choice_title": "Masz niezapisane zmiany",
+        "choice_desc": "Zapisz je przed zakończeniem, porzuć je albo kontynuuj edycję tej strony."
+      },
+      "saved_toast": {
+        "title": "Zapisano stronę",
+        "desc": "Każda strefa na tej stronie odpowiada teraz temu, co widzisz."
+      },
+      "save_error": {
+        "title": "Zmiany nie zostały zapisane",
+        "desc": "Coś poszło nie tak po drodze do serwera. Nic z tego, co ułożono, nie przepadło - spróbuj ponownie."
+      },
+      "save_refused": {
+        "title": "Odrzucono to zapisanie"
+      },
+      "save_conflict": {
+        "title": "Ktoś inny zapisał tę stronę wcześniej",
+        "desc": "Ten układ zmienił się od otwarcia edytora. Wczytaj go ponownie lub odrzuć zmiany, zanim zapiszesz ponownie."
+      },
+      "no_adapter": {
+        "title": "Brak miejsca do zapisu",
+        "desc": "Ta strona otworzyła edytor bez adaptera zapisu, więc nie ma gdzie przechować zmian."
+      },
+      "unsafe": {
+        "title": "Tej strony nie można jeszcze zapisać",
+        "desc": "Ta strefa zawiera nieprawidłową lub przestarzałą treść, której Visual Editor nie może bezpiecznie zapisać. Napraw lub świadomie usuń nieprawidłową treść przed zapisaniem."
+      },
+      "dropped": {
+        "desc": "Te strefy zniknęły ze strony podczas edycji, więc wprowadzone w nich zmiany przepadły i nigdy nie zostały zapisane: {zones}.",
+        "dismiss": "Rozumiem"
+      },
+      "variant": {
+        "label": "Wariant",
+        "hint": "Sposób prezentacji tego widżetu. Zmienia wygląd, nigdy treść.",
+        "unknown": "Zapisany wariant „{variant}” nie jest już oferowany przez ten widżet, więc nie można go wyświetlić. Wybierz wariant poniżej albo usuń widżet.",
+        "placeholder": "Ten widżet jest zapisany z wariantem „{variant}”, którego już nie oferuje, więc nie jest tu wyświetlany. Wybierz wariant w panelu właściwości albo usuń widżet.",
+        "clear": "Użyj domyślnego wariantu widżetu",
+        "clear_hint": "Nie zapisuje wariantu, więc widżet korzysta z zadeklarowanego przez siebie wariantu domyślnego."
+      },
+      "area": {
+        "name": "Obszar",
+        "description": "Rozmieść widżety obok siebie w maksymalnie czterech kolumnach.",
+        "summary": "Obszar · {columns, plural, one {# kolumna} few {# kolumny} many {# kolumn} other {# kolumny}}",
+        "select": "Zaznacz ten obszar",
+        "properties": "Właściwości obszaru",
+        "section_layout": "Układ",
+        "section_spacing": "Odstępy",
+        "drop_here": "Upuść tutaj widżety",
+        "add_block": "Dodaj widżet",
+        "rejected": "Ten obszar nie przyjmuje przeciąganego widżetu.",
+        "not_registered": "Żadna zainstalowana tu wtyczka nie dostarcza tego widżetu, więc ten obszar nie może go zawierać.",
+        "nested_rejected": "Obszar nie może zawierać innego obszaru.",
+        "columns": "Kolumny",
+        "columns_value": "{columns, plural, one {# kolumna} few {# kolumny} many {# kolumn} other {# kolumny}}",
+        "gap": "Odstęp",
+        "margin_y": "Odstęp nad i pod",
+        "margin_x": "Odstęp z lewej i prawej",
+        "spacing_px": "{px}px",
+        "align": "Wyrównanie",
+        "justify": "Rozmieszczenie",
+        "settings": "Ustawienia",
+        "ungroup": "Rozgrupuj",
+        "duplicate": "Duplikuj obszar",
+        "remove": "Usuń obszar",
+        "align_option": {
+          "start": "Do góry",
+          "center": "Do środka",
+          "stretch": "Rozciągnij"
+        },
+        "justify_option": {
+          "start": "Do początku",
+          "center": "Do środka",
+          "stretch": "Wypełnij kolumnę"
+        },
+        "delete": {
+          "title": "Usunąć ten obszar?",
+          "empty": "Ten obszar nie zawiera widżetów, więc jego usunięcie usuwa tylko układ.",
+          "desc": "{count, plural, one {W tym obszarze jest # widżet} few {W tym obszarze są # widżety} many {W tym obszarze jest # widżetów} other {W tym obszarze jest # widżetu}}. Usunięcie obszaru usunie również jego zawartość. Zamiast tego rozgrupuj, aby zachować widżety na stronie.",
+          "confirm": "Usuń obszar i widżety",
+          "ungroup": "Rozgrupuj, zachowaj widżety"
+        },
+        "full": "Ten obszar zawiera już maksymalną liczbę widżetów."
+      }
     },
     "files": {
       "actions": {
@@ -2635,7 +3262,9 @@
             "insert": "Wstaw {name}",
             "insert_all": "Wstaw wszystkie ({count})",
             "image": "Obraz"
-          }
+          },
+          "restricted_title": "Dostępny jest załącznik.",
+          "restricted_desc": "Nie masz uprawnień do jego pobrania."
         },
         "blocks": {
           "bullet_list": {
@@ -2818,7 +3447,9 @@
         "errors": {
           "too_large": "Ten plik ma {size}. Maksimum to {max}.",
           "wrong_format": "\"{value}\" nie jest akceptowanym formatem. Akceptowane: {formats}.",
-          "upload_failed": "Przesyłanie nie zostało ukończone. Sprawdź połączenie i spróbuj ponownie."
+          "upload_failed": "Przesyłanie nie zostało ukończone. Sprawdź połączenie i spróbuj ponownie.",
+          "named": "{name}: {message}",
+          "too_many": "Nie dodano „{name}” - to pole mieści maksymalnie {max} plików."
         },
         "max_size": "Maksymalny rozmiar pliku: {size}",
         "remove": "Usuń plik",
@@ -2832,7 +3463,19 @@
         "dismiss_named": "Odrzuć {name}",
         "removed": "Plik usunięty",
         "removed_desc": "{name} zniknął z tego pola. Zmiana planów? Cofnij to.",
-        "undo": "Cofnij"
+        "undo": "Cofnij",
+        "count": "{used} z {max} plików",
+        "drop_many": "Upuść pliki tutaj",
+        "choose_many": "Wybierz pliki",
+        "remove_named": "Usuń {name}",
+        "reorder": "Zmień kolejność: {name}",
+        "reorder_instructions": "Naciśnij Spację lub Enter, aby podnieść plik. Przesuwaj go strzałkami. Naciśnij ponownie Spację lub Enter, aby upuścić go w nowym miejscu, albo Escape, aby anulować.",
+        "reorder_started": "Podniesiono {name}. Pozycja {position} z {total}.",
+        "reorder_over": "Przeniesiono {name} na pozycję {position} z {total}.",
+        "reorder_ended": "Upuszczono {name} na pozycji {position} z {total}.",
+        "reorder_cancelled": "Anulowano zmianę kolejności. {name} wraca na pozycję {position} z {total}.",
+        "stored": "Zapisany plik",
+        "full": "To pole mieści maksymalnie {max} plików. Usuń jeden, aby dodać kolejny."
       },
       "go_back": "Wróć",
       "go_to_next_page": "Przejdź do następnej strony",
@@ -3057,6 +3700,24 @@
             "desc": "Zapisz ponownie, aby zastąpić tamtą zmianę swoją."
           }
         }
+      },
+      "filters_panel": {
+        "toggle": "Filtry",
+        "toggle_active": "Filtry, aktywne: {count}",
+        "all": "Wszystkie",
+        "clear_all": "Wyczyść wszystkie",
+        "apply": "Pokaż wyniki"
+      },
+      "showing_range": "Wyświetlanie {from}–{to} z {total}",
+      "rows_per_page": "Wierszy na stronę",
+      "page_of": "Strona {page} z {total}",
+      "presence": {
+        "online": "Online",
+        "online_now": "Teraz online",
+        "offline": "Offline",
+        "last_seen": "Ostatnia aktywność: {time}",
+        "hidden": "Aktywność ukryta",
+        "status": "Status online"
       }
     },
     "profile": {
@@ -3103,7 +3764,10 @@
       "role": "Rola",
       "secondaryRoles": "Role dodatkowe",
       "timeline": "Oś czasu",
-      "title": "{name} (@{nameCode})"
+      "title": "{name} (@{nameCode})",
+      "presence": "Status online",
+      "warn": "Ostrzeż",
+      "view_warnings": "Ostrzeżenia ({points, plural, one {# punkt} few {# punkty} many {# punktów} other {# punktu}})"
     },
     "search": {
       "admin": {
@@ -3122,9 +3786,18 @@
           "status": {
             "empty": "Niezindeksowane",
             "indexed": "Zindeksowane",
-            "stale": "Nieaktualne"
+            "stale": "Nieaktualne",
+            "unmanaged": "Niezarządzana"
           },
-          "title": "Zindeksowane kolekcje"
+          "title": "Zindeksowane kolekcje",
+          "noIndexer": "Brak indeksera przebudowy",
+          "noIndexerDesc": "Nie zarejestrowano indeksera przebudowy. Dokumenty mogą nadal być aktualizowane przez bieżące zapisy wtyczek.",
+          "removeDocuments": "Usuń dokumenty",
+          "removeConfirmTitle": "Usunąć zaindeksowane dokumenty kolekcji „{collection}”?",
+          "removeConfirmDescription": "Dla tej kolekcji nie zarejestrowano indeksera przebudowy. Jej dokumenty mogą nadal być aktualizowane przez bieżące zapisy wtyczek. Spowoduje to usunięcie ich obecnego stanu w indeksie, a kolejne zapisy mogą dodać je ponownie.",
+          "removeSuccess": "Usunięto zaindeksowane dokumenty kolekcji {collection}.",
+          "removeSuccessDesc": "Bieżące zapisy wtyczek mogą utworzyć je ponownie.",
+          "removeError": "Nie udało się usunąć zaindeksowanych dokumentów."
         },
         "cron": {
           "desc": "Przebudowa nie zostanie uruchomiona, dopóki cron nie będzie aktywny. Skonfiguruj adapter w Integracjach, aby włączyć zaplanowane ponowne indeksowanie. <docs>Przeczytaj przewodnik konfiguracji cron</docs>.",
@@ -3149,7 +3822,11 @@
           "statusHealthy": "Wszystkie systemy działają poprawnie",
           "statusUnhealthy": "Wyszukiwarka niedostępna"
         },
-        "unhealthy": "Niedostępny"
+        "unhealthy": "Niedostępny",
+        "syncErrors": {
+          "title": "Ostatnie błędy synchronizacji",
+          "desc": "Te rekordy zostały zapisane, ale ich dokumenty wyszukiwania nie zostały zaktualizowane. Przebuduj indeks, aby je naprawić."
+        }
       },
       "desc": "Przeszukaj wszystko w społeczności.",
       "discoverDesc": "Zobacz najnowszą aktywność w społeczności.",
@@ -3274,6 +3951,31 @@
         "admin_message": {
           "label": "Wiadomości od administratorów",
           "description": "Ogłoszenia, które administrator wysyła bezpośrednio do Ciebie."
+        },
+        "warning_issued": {
+          "label": "Ostrzeżenia od moderatorów",
+          "description": "Gdy moderator udzieli Ci ostrzeżenia. Zawsze włączone, żeby żadne Ci nie umknęło.",
+          "title": "Otrzymujesz ostrzeżenie ({points, plural, one {# punkt} few {# punkty} many {# punktów} other {# punktu}})",
+          "title_reason": "Otrzymujesz ostrzeżenie za: {reason} ({points, plural, one {# punkt} few {# punkty} many {# punktów} other {# punktu}})"
+        },
+        "warning_revoked": {
+          "label": "Cofnięte ostrzeżenia",
+          "description": "Gdy moderator cofnie otrzymane przez Ciebie ostrzeżenie.",
+          "title": "Ostrzeżenie zostało cofnięte",
+          "body": "{points, plural, one {Jego # punkt nie jest już doliczany} few {Jego # punkty nie są już doliczane} many {Jego # punktów nie jest już doliczanych} other {Jego # punktu nie jest już doliczane}} do Twojego konta."
+        },
+        "account_suspended": {
+          "label": "Zawieszenia konta",
+          "description": "Gdy Twoje konto zostanie zawieszone po osiągnięciu limitu ostrzeżeń.",
+          "title": "Twoje konto jest zawieszone",
+          "body_until": "Z konta możesz ponownie korzystać po {endsAt} (UTC).",
+          "body_indefinite": "Twoje konto pozostaje zawieszone, dopóki moderator nie zdejmie zawieszenia."
+        },
+        "suspension_revoked": {
+          "label": "Zdjęte zawieszenia",
+          "description": "Gdy moderator zdejmie zawieszenie Twojego konta.",
+          "title": "Zawieszenie zostało zdjęte",
+          "body": "Moderator zdjął zawieszenie Twojego konta. Sprawdź status konta, aby zobaczyć, czy obowiązują jeszcze inne ograniczenia."
         }
       },
       "email": {
@@ -3287,7 +3989,8 @@
         "test_subject": "Testowy e-mail z powiadomieniem",
         "test_title": "E-maile z powiadomieniami działają",
         "test_body": "Jeśli to czytasz, e-maile z powiadomieniami z tej strony docierają do Twojej skrzynki. Nic nie musisz robić."
-      }
+      },
+      "someone": "Ktoś"
     },
     "comments": {
       "title": "{count, plural, =0 {Komentarze} one {# komentarz} few {# komentarze} many {# komentarzy} other {# komentarza}}",
@@ -3402,6 +4105,1673 @@
         "retry": "Spróbuj ponownie",
         "edit_removed": "Ten komentarz został usunięty w trakcie edycji. Twój tekst nadal tu jest, ale nie da się go już zapisać.",
         "reply_removed": "Komentarz, na który odpowiadasz, został usunięty. Twój tekst nadal tu jest, ale nie da się go już opublikować."
+      },
+      "warn": "Ostrzeż autora"
+    },
+    "content": {
+      "empty": {
+        "title": "Jeszcze nic tu nie ma",
+        "desc": "Utwórz pierwszy wpis, aby zacząć."
+      },
+      "table": {
+        "id": "ID",
+        "created_at": "Utworzono",
+        "updated_at": "Zaktualizowano",
+        "actions": "Akcje",
+        "empty_value": "—",
+        "published_at": "Opublikowano",
+        "more_actions": "Więcej akcji"
+      },
+      "filters": {
+        "all": "Wszystkie"
+      },
+      "actions": {
+        "edit": "Edytuj",
+        "publish": "Opublikuj",
+        "unpublish": "Cofnij publikację",
+        "preview": "Podgląd",
+        "schedule": "Zaplanuj",
+        "history": "Historia",
+        "delivery": "Dostarczanie",
+        "delete": "Usuń",
+        "duplicate": "Duplikuj",
+        "hide": "Ukryj",
+        "unhide": "Pokaż",
+        "access": "Dostęp",
+        "activity": "Aktywność"
+      },
+      "create": {
+        "title": "Utwórz: {name}",
+        "desc": "Dodaj nowy element: {name}.",
+        "submit": "Utwórz",
+        "save_draft": "Zapisz jako szkic",
+        "publish": "Opublikuj",
+        "success": "Utworzono: {name}."
+      },
+      "edit": {
+        "title": "Edytuj: {name}",
+        "desc": "Zmień szczegóły elementu: {name}.",
+        "submit": "Zapisz zmiany",
+        "publish": "Opublikuj",
+        "unpublish": "Zamień na szkic",
+        "success": "Zaktualizowano: {name}.",
+        "unchanged": "Brak zmian do zapisania."
+      },
+      "page": {
+        "back": "Wróć do listy: {name}"
+      },
+      "delete": {
+        "title": "Usuń: {name}",
+        "desc": "Czy na pewno chcesz usunąć <title></title>? Tej operacji nie można cofnąć.",
+        "confirm": "Tak, usuń",
+        "success": "Usunięto: {name}.",
+        "conflict": {
+          "title": "Ten rekord się zmienił",
+          "desc": "Ktoś zapisał go po wczytaniu tej strony, więc nie został usunięty. Odśwież listę, sprawdź, co się zmieniło, i usuń go ponownie, jeśli nadal chcesz."
+        }
+      },
+      "duplicate": {
+        "title": "Duplikuj: {name}",
+        "desc": "Utworzyć szkic kopii <title></title>? Kopiowane są wszystkie pola i tłumaczenia, a kopia nie jest publiczna, dopóki jej nie opublikujesz.",
+        "confirm": "Tak, duplikuj",
+        "success": "Zduplikowano jako szkic: {name}.",
+        "skipped_title": "Niektóre języki zostały pominięte",
+        "skipped": "Nie skopiowano: {locales}. Te języki są wyłączone w tej witrynie.",
+        "errors": {
+          "slug_conflict": "Kopia potrzebuje własnego pola {field}, a wszystkie adresy oparte na \"{slug}\" są zajęte. Zmień pole {field} w oryginale, a potem zduplikuj go ponownie.",
+          "unique_required": "{count, plural, one {{fields} musi być unikalne} few {{fields} muszą być unikalne} many {{fields} muszą być unikalne} other {{fields} muszą być unikalne}}, więc kopia nie może użyć wartości z oryginału. Zamiast tego utwórz nowy rekord albo najpierw zmień wartość w oryginale."
+        },
+        "title_suffix": "(kopia)"
+      },
+      "bulk": {
+        "publish": {
+          "title": "Opublikuj {count} {name}",
+          "desc": "{count, plural, one {Wpis stanie się widoczny} few {Wpisy staną się widoczne} many {Wpisy staną się widoczne} other {Wpisy staną się widoczne}} dla wszystkich.",
+          "confirm": "Tak, opublikuj",
+          "success": "Opublikowano {count} {name}."
+        },
+        "unpublish": {
+          "title": "Cofnij publikację {count} {name}",
+          "desc": "{count, plural, one {Wpis zniknie ze stron publicznych, ale nie zostanie} few {Wpisy znikną ze stron publicznych, ale nie zostaną} many {Wpisy znikną ze stron publicznych, ale nie zostaną} other {Wpisy znikną ze stron publicznych, ale nie zostaną}} usunięte.",
+          "confirm": "Tak, cofnij publikację",
+          "success": "Cofnięto publikację {count} {name}."
+        },
+        "hide": {
+          "title": "Ukryj {count} {name}",
+          "desc": "{count, plural, one {Wpis od razu zniknie} few {Wpisy od razu znikną} many {Wpisy od razu znikną} other {Wpisy od razu znikną}} z publicznej witryny, wyszukiwarki i mapy witryny. Publikacja nie zostanie cofnięta - możesz je ponownie pokazać w dowolnej chwili.",
+          "confirm": "Tak, ukryj",
+          "success": "Ukryto {count} {name}."
+        },
+        "unhide": {
+          "title": "Pokaż {count} {name}",
+          "desc": "Czytelnicy znów będą mieć dostęp do {count, plural, one {tego wpisu} few {tych wpisów} many {tych wpisów} other {tych wpisów}} - szkice pozostaną prywatne, dopóki ich nie opublikujesz.",
+          "confirm": "Tak, pokaż",
+          "success": "{count} {name} znów widoczne."
+        },
+        "delete": {
+          "title": "Usuń {count} {name}",
+          "desc": "{count, plural, one {Wpis zostanie usunięty} few {Wpisy zostaną usunięte} many {Wpisy zostaną usunięte} other {Wpisy zostaną usunięte}} na zawsze. Tej operacji nie można cofnąć.",
+          "confirm": "Tak, usuń",
+          "success": "Usunięto {count} {name}."
+        },
+        "conflict": "{count, plural, one {Pominięto # wpis: ktoś go zmienił albo inna treść nadal go potrzebuje.} few {Pominięto # wpisy: ktoś je zmienił albo inna treść nadal ich potrzebuje.} many {Pominięto # wpisów: ktoś je zmienił albo inna treść nadal ich potrzebuje.} other {Pominięto # wpisu: ktoś je zmienił albo inna treść nadal ich potrzebuje.}}",
+        "failed": "Nie udało się zaktualizować: {count}. Spróbuj ponownie.",
+        "more": "+{count} więcej",
+        "applies": "{count} z {total}"
+      },
+      "publish": {
+        "title": "Opublikuj: {name}",
+        "desc": "Opublikować <title></title>? Stanie się widoczne dla wszystkich.",
+        "confirm": "Tak, opublikuj",
+        "success": "Opublikowano: {name}.",
+        "action": "Opublikuj"
+      },
+      "unpublish": {
+        "title": "Cofnij publikację: {name}",
+        "desc": "Cofnąć publikację <title></title>? Zniknie ze stron publicznych, ale nie zostanie usunięte.",
+        "confirm": "Tak, cofnij publikację",
+        "success": "Cofnięto publikację: {name}.",
+        "action": "Cofnij publikację"
+      },
+      "hide": {
+        "title": "Ukryj: {name}",
+        "desc": "Ukryć <title></title>? Od razu zniknie z publicznej witryny, wyszukiwarki i mapy witryny. Publikacja nie zostanie cofnięta - możesz to ponownie pokazać w dowolnej chwili.",
+        "confirm": "Tak, ukryj",
+        "success": "Ukryto: {name}."
+      },
+      "unhide": {
+        "title": "Pokaż: {name}",
+        "desc": "Pokazać <title></title>? Czytelnicy znów będą mieć dostęp tylko wtedy, gdy jest opublikowane - szkic pozostaje prywatny.",
+        "confirm": "Tak, pokaż",
+        "success": "Znów widoczne: {name}."
+      },
+      "visibility": {
+        "label": "Widoczność",
+        "hidden": "Ukryte",
+        "visible": "Widoczne",
+        "hidden_since": "Ukryte od {date}",
+        "hidden_record": "Ukryto: {name}",
+        "hidden_desc": "Ukryte w publicznej witrynie, wyszukiwarce i mapie witryny. Opublikowanie ukrytego rekordu nie sprawi, że stanie się publiczny.",
+        "publish_note": "Opublikowanie ukrytego rekordu nie sprawi, że stanie się publiczny.",
+        "conflict": {
+          "title": "Ten rekord się zmienił",
+          "desc": "Ktoś zapisał go po wczytaniu tej strony, więc jego widoczność nie została zmieniona. Lista została odświeżona - sprawdź, co się zmieniło, i spróbuj ponownie."
+        }
+      },
+      "status": {
+        "label": "Status",
+        "draft": "Szkic",
+        "published": "Opublikowano",
+        "published_on": "Opublikowano {date}",
+        "never_published": "Jeszcze nieopublikowane"
+      },
+      "form": {
+        "relation": {
+          "placeholder": "Wybierz…",
+          "search_placeholder": "Szukaj…",
+          "empty": "Brak wyników."
+        },
+        "boolean": {
+          "on": "Tak",
+          "off": "Nie"
+        },
+        "group": {
+          "enabled": "Ma wartość"
+        },
+        "file": {
+          "unavailable": "Przesyłanie plików nie jest dostępne w tym formularzu."
+        },
+        "list": {
+          "add": "Dodaj: {label}",
+          "empty": "Jeszcze nic tu nie ma.",
+          "move_down": "Przesuń wpis {position} w dół",
+          "move_up": "Przesuń wpis {position} w górę",
+          "position": "{label} {position} z {total}",
+          "remove": "Usuń wpis {position}"
+        },
+        "container": {
+          "placeholder": "Wybierz miejsce…",
+          "none": "Brak",
+          "empty": "Nie ma jeszcze miejsca, w którym można to umieścić. Utwórz pierwsze w jego kolekcji, a potem wróć tutaj.",
+          "loadFailed": "Nie udało się wczytać listy miejsc. Sprawdź połączenie i spróbuj ponownie.",
+          "forbidden": "Nie widzisz tej kolekcji, więc nie możesz wybrać w niej miejsca. Poproś administratora o uprawnienia do jej wyświetlania.",
+          "unregistered": "To pole wskazuje kolekcję, której nie rejestruje żadna zainstalowana wtyczka, więc nie ma z czego wybierać.",
+          "retry": "Spróbuj ponownie"
+        }
+      },
+      "conflict": {
+        "title": "Ktoś inny zapisał to pierwszy",
+        "desc": "{name} przeszło do wersji {version} podczas Twojej edycji, więc Twój zapis nie został wykonany. Nic, co wpisano, nie zostało utracone.",
+        "reload": "Pokaż, co się zmieniło",
+        "reloaded": "Teraz wersja {version}. Zapisanie zastąpi poniższe zmiany Twoimi."
+      },
+      "history": {
+        "title": "Historia: {name}",
+        "desc": "Wszystkie wersje tego rekordu, od najnowszej.",
+        "empty": "Brak wersji. Pierwsza edycja pojawi się tutaj.",
+        "current": "Bieżąca",
+        "system_actor": "System",
+        "changed_fields": "Zmieniono: {fields}",
+        "changed_to": "zmieniono na",
+        "show_changes": "Pokaż zmiany",
+        "hide_changes": "Ukryj zmiany",
+        "no_changes": "Żadna wartość pola się nie zmieniła.",
+        "load_failed": "Nie udało się wczytać tej wersji.",
+        "load_more": "Wczytaj starsze wersje",
+        "loading_more": "Wczytywanie…",
+        "operations": {
+          "create": "Utworzono",
+          "update": "Edytowano",
+          "publish": "Opublikowano",
+          "unpublish": "Cofnięto publikację",
+          "restore": "Przywrócono",
+          "delete": "Usunięto",
+          "hide": "Ukryto",
+          "unhide": "Pokazano"
+        },
+        "restore": {
+          "action": "Przywróć",
+          "title": "Przywrócić wersję {version}?",
+          "desc": "Wartości pól z wersji {version} zostaną przywrócone w <title></title> jako nowa wersja {nextVersion}. Nic nie zostanie usunięte - wszystkie wersje pośrednie pozostaną w historii - a stan publikacji się nie zmieni.",
+          "confirm": "Przywróć tę wersję",
+          "success": "Przywrócono: {name}",
+          "success_desc": "Przywrócono z wersji {version}."
+        }
+      },
+      "preview": {
+        "title": "Link podglądu",
+        "desc": "Podpisany link do {title} w obecnym stanie, łącznie z nieopublikowanymi zmianami. Każdy, kto ma ten link, może go otworzyć - konto nie jest potrzebne.",
+        "loading": "Tworzenie linku…",
+        "link": "Link podglądu",
+        "copy": "Kopiuj link",
+        "open": "Otwórz",
+        "expires": "Wygasa <when></when>",
+        "warning": "Traktuj go jak hasło: działa dla każdego aż do wygaśnięcia i nie można go wcześniej unieważnić. Jest przypięty do tej wersji, więc przy intensywnej edycji może wypaść z historii, zanim wygaśnie.",
+        "unavailable": "W tym wdrożeniu nie można tworzyć linków podglądu. Sprawdź, czy VITNODE_WEB_URL i VITNODE_API_URL są bezwzględnymi adresami URL, a potem uruchom ponownie API.",
+        "live": "Ten rekord nie ma jeszcze zapisanej wersji, więc link pokazuje go na żywo - będzie uwzględniał wszystkie zmiany wprowadzone, zanim recenzent go otworzy."
+      },
+      "live_preview": {
+        "title": "Podgląd na żywo",
+        "loading": "Tworzenie linku podglądu…",
+        "frame": "Podgląd strony na żywo",
+        "device": "Rozmiar ekranu",
+        "devices": {
+          "responsive": "Dopasuj do panelu",
+          "mobile": "Telefon",
+          "tablet": "Tablet",
+          "desktop": "Komputer"
+        },
+        "size": "{width} × {height}",
+        "reload": "Odśwież podgląd",
+        "open": "Otwórz w nowej karcie",
+        "close": "Zamknij podgląd",
+        "load_error": {
+          "title": "Nie udało się wczytać podglądu",
+          "desc": "Nie udało się utworzyć linku podglądu tej strony. Spróbuj ponownie za chwilę."
+        }
+      },
+      "delivery": {
+        "title": "Dostarczanie: {name}",
+        "desc": "Gdzie ten rekord znajduje się w publicznej witrynie i gdzie był wcześniej.",
+        "canonical": "Kanoniczny URL",
+        "no_canonical": "Ten rekord nie ma jeszcze publicznego adresu URL. Otrzyma go po opublikowaniu.",
+        "historical": "Historyczne adresy URL",
+        "no_history": "Brak poprzednich adresów URL. Zmiana adresu opublikowanego rekordu dodaje tu wpis.",
+        "redirect_active": "przekierowuje na bieżący URL",
+        "redirect_inactive": "nie przekierowuje, dopóki rekord jest nieopublikowany",
+        "retired_at": "Zastąpiono",
+        "inactive_note": "Te adresy URL znów zaczną przekierowywać, gdy tylko rekord zostanie opublikowany.",
+        "load_failed": "Nie udało się odczytać stanu dostarczania tego rekordu.",
+        "states": {
+          "published": "Opublikowano",
+          "not_published": "Nieopublikowane"
+        }
+      },
+      "schedule": {
+        "title": "Zaplanuj: {name}",
+        "desc": "Opublikuj <title></title> lub cofnij publikację o ustalonej godzinie. Zaplanowanie niczego teraz nie zmienia.",
+        "empty": "Nic jeszcze nie zaplanowano.",
+        "submit": "Zaplanuj",
+        "cancel": "Anuluj",
+        "cancelled": "Anulowano harmonogram",
+        "success": "Zaplanowano: {name}",
+        "overdue": "Zaległe - nie zostało wykonane",
+        "precision": "Zaplanowane zadania są uruchamiane co minutę, więc licz się z opóźnieniem do minuty. Publikowana jest treść rekordu z tamtej chwili, a nie obecna.",
+        "actions": {
+          "publish": "Opublikuj",
+          "unpublish": "Cofnij publikację"
+        },
+        "status": {
+          "pending": "Oczekuje",
+          "completed": "Gotowe",
+          "cancelled": "Anulowano"
+        },
+        "field": {
+          "action": "Co ma się stać",
+          "when": "Kiedy",
+          "when_desc": "W Twojej strefie czasowej ({zone})."
+        },
+        "no_cron": {
+          "title": "Żaden harmonogram nie działa",
+          "desc": "Harmonogramy zostaną zapisane, ale nigdy się nie uruchomią, ponieważ ta instalacja nie ma skonfigurowanego adaptera cron. Skonfiguruj go albo wywołuj endpoint cron z zewnątrz."
+        },
+        "errors": {
+          "in_past": "Ta godzina już minęła. Wybierz moment w przyszłości.",
+          "order": "Cofnięcie publikacji musi nastąpić po już zaplanowanej publikacji.",
+          "unsupported": "Tego typu treści nie można planować."
+        },
+        "effects_failed": "Opublikowano, ale powiadomienia jeszcze nie zostały wysłane - ponawianie."
+      },
+      "permissions": {
+        "can_view": "Wyświetlanie listy",
+        "can_create": "Tworzenie",
+        "can_edit": "Edytowanie",
+        "can_delete": "Usuwanie",
+        "can_publish": "Publikowanie i cofanie publikacji",
+        "can_hide": "Ukrywanie i pokazywanie",
+        "can_restore": "Przywracanie wcześniejszej wersji"
+      },
+      "errors": {
+        "not_found": "Ten rekord już nie istnieje. Odśwież listę i spróbuj ponownie.",
+        "validation": "Niektóre wartości są nieprawidłowe. Sprawdź formularz i spróbuj ponownie.",
+        "conflict": "Inne treści nadal odwołują się do tego rekordu.",
+        "forbidden": "Nie masz uprawnień, aby to zrobić.",
+        "version_conflict": "Ktoś inny zapisał to podczas Twojej edycji. Twoje zmiany nadal tu są.",
+        "unique_conflict": "Rekord z tymi wartościami już istnieje.",
+        "not_restorable": "Nie można przywrócić tej wersji: {fields} nie pasują już do tego typu treści.",
+        "slug_reserved": "Ten adres jest zarezerwowany: inny rekord używał go publicznie i nadal na niego przekierowuje. Wybierz inny.",
+        "missing_fields": "Uzupełnij {fields}, a potem zapisz ponownie.",
+        "invalid_fields": "Sprawdź {fields}, a potem zapisz ponownie.",
+        "field_in_language": "{field} ({language})"
+      },
+      "translations": {
+        "states": {
+          "missing": "Brak"
+        },
+        "incomplete": {
+          "title": "Nie zapisano: {language}",
+          "desc": "Uzupełnij {fields} w tym języku, aby go zapisać. Wszystko inne zostało zapisane."
+        },
+        "errors": {
+          "version_conflict": "Ktoś inny zapisał ten język podczas Twojej edycji."
+        }
+      },
+      "live": {
+        "is_editing": "edytuje",
+        "locked_desc": "Tylko do odczytu podczas ich edycji. Ich zmiany pojawiają się tutaj na bieżąco.",
+        "presence": {
+          "label": "{count, plural, one {# inna osoba jest} few {# inne osoby są} many {# innych osób jest} other {# innej osoby jest}} w tym rekordzie",
+          "more": "i jeszcze {count, plural, one {# osoba} few {# osoby} many {# osób} other {# osoby}}: {names}",
+          "viewing": "przegląda",
+          "in_language": "pracuje w języku: {language}",
+          "editing_field": "edytuje {field} ({language})",
+          "editing_shared": "edytuje {field}",
+          "field": "W tym polu także: {names}",
+          "language": "{count, plural, one {{names} pracuje w tym języku} few {{names} pracują w tym języku} many {{names} pracują w tym języku} other {{names} pracują w tym języku}}"
+        },
+        "status": {
+          "saving": "Zapisywanie…",
+          "saved": "Zapisano automatycznie {time}",
+          "saved_just_now": "Zapisano automatycznie przed chwilą",
+          "saved_at": "Zapisano automatycznie o {time}",
+          "autosaved": "Zapisano automatycznie",
+          "autosaved_hint": "Twoje zmiany zapisują się automatycznie, ale czytelnicy zobaczą je dopiero po zapisaniu zmian.",
+          "failed": "Autozapis nie powiódł się",
+          "discard": "Odrzuć",
+          "discard_label": "Odrzuć automatycznie zapisane zmiany",
+          "discard_title": "Odrzucić automatycznie zapisane zmiany?",
+          "discard_desc": "Rekord wróci do ostatnio zapisanego stanu. Automatycznie zapisane zmiany wszystkich osób, które go edytują, również zostaną odrzucone.",
+          "discard_confirm": "Odrzuć zmiany",
+          "discard_failed": "Nie udało się odrzucić zmian. Spróbuj ponownie."
+        },
+        "reset": {
+          "restored": {
+            "title": "Ten rekord został przywrócony",
+            "desc": "Ktoś przywrócił wcześniejszą wersję, więc formularz pokazuje ją teraz. Niezapisane szkice zostały wyczyszczone."
+          },
+          "deleted": {
+            "title": "Ten rekord został usunięty",
+            "desc": "Ktoś usunął go podczas Twojej edycji. Nie można już nic tu zapisać."
+          },
+          "discarded": {
+            "title": "Niezapisane zmiany zostały odrzucone",
+            "desc": "Ktoś, kto edytuje ten rekord, przywrócił zapisaną wersję."
+          },
+          "discarded_own": {
+            "title": "Odrzucono zmiany",
+            "desc": "Formularz wrócił do zapisanej wersji."
+          }
+        }
+      },
+      "list_refresh": {
+        "title": "Nie udało się odświeżyć tej listy",
+        "desc": "Ktoś zmienił te rekordy, ale najnowsze wiersze się nie wczytały. Widzisz wiersze wczytane wcześniej.",
+        "retry": "Spróbuj ponownie"
+      }
+    },
+    "containers": {
+      "list": {
+        "label": "Drzewo: {name}",
+        "summary": "{count, plural, one {# element} few {# elementy} many {# elementów} other {# elementu}}",
+        "depth": "do {max} poziomów zagnieżdżenia",
+        "flat": "jeden poziom",
+        "sorted": "sortowanie A–Z",
+        "collapseAll": "Zwiń wszystko",
+        "expandAll": "Rozwiń wszystko",
+        "showChildren": "Pokaż zawartość: {name}",
+        "hideChildren": "Ukryj zawartość: {name}",
+        "actions": "Więcej akcji: {name}",
+        "dragHandle": "Przeciągnij, aby przenieść: {name}",
+        "edit": "Edytuj",
+        "addChild": "Dodaj wewnątrz",
+        "moveUp": "Przenieś wyżej",
+        "moveDown": "Przenieś niżej",
+        "moveToTop": "Przenieś na najwyższy poziom",
+        "moveInside": "Przenieś do…",
+        "delete": "Usuń",
+        "moveSuccess": "Przeniesiono",
+        "moveSuccessDesc": "„{name}” jest w nowym miejscu.",
+        "moveFailed": "Nie udało się przenieść „{name}”"
+      },
+      "dnd": {
+        "instructions": "Naciśnij spację lub Enter, aby podnieść element. Przesuwaj go strzałkami w górę i w dół, a strzałkami w lewo i w prawo zmieniaj poziom zagnieżdżenia. Naciśnij ponownie spację lub Enter, aby go upuścić, albo Escape, aby anulować.",
+        "started": "Podniesiono: {name}.",
+        "overRoot": "{name} trafi na najwyższy poziom{sorted, select, true {} other {, pozycja {position}}}.",
+        "overInside": "{name} trafi do: {parent}{sorted, select, true {} other {, pozycja {position}}}.",
+        "overInvalid": "{name} nie może się tu znaleźć. {reason}",
+        "droppedRoot": "Upuszczono {name} na najwyższym poziomie{sorted, select, true {} other {, pozycja {position}}}.",
+        "droppedInside": "Upuszczono {name} w: {parent}{sorted, select, true {} other {, pozycja {position}}}.",
+        "droppedInvalid": "{name} nie może się tam znaleźć, więc zostaje na swoim miejscu. {reason}",
+        "unchanged": "{name} zostaje na swoim miejscu.",
+        "cancelled": "Anulowano przenoszenie. {name} wraca na swoje miejsce."
+      },
+      "empty": {
+        "title": "Brak elementów: {name}",
+        "desc": "Utwórz pierwszy element, a potem zagnieżdżaj w nim kolejne, aby zbudować strukturę."
+      },
+      "error": {
+        "title": "Nie udało się wczytać: {name}",
+        "desc": "Coś poszło nie tak podczas odczytu listy. Sprawdź połączenie i spróbuj ponownie.",
+        "forbidden": "Nie masz uprawnień do wyświetlania tej kolekcji.",
+        "retry": "Spróbuj ponownie"
+      },
+      "form": {
+        "name": "Nazwa",
+        "slug": "Slug",
+        "slugDesc": "Fragment adresu. Zostaw puste, a zostanie utworzony z nazwy.",
+        "parent": "Umieść w",
+        "parentDesc": "Drzewo może mieć do {max} poziomów zagnieżdżenia.",
+        "parentRoot": "Najwyższy poziom",
+        "fields": "Szczegóły"
+      },
+      "create": {
+        "title": "Utwórz: {name}",
+        "desc": "Dodaj nowy element do drzewa: {name}.",
+        "submit": "Utwórz",
+        "success": "Utworzono",
+        "successDesc": "„{name}” jest w drzewie."
+      },
+      "edit": {
+        "title": "Edytuj: {name}",
+        "submit": "Zapisz zmiany",
+        "success": "Zapisano",
+        "successDesc": "Zaktualizowano „{name}”."
+      },
+      "delete": {
+        "title": "Usuń: {name}",
+        "desc": "Usunąć „{name}”? Tej operacji nie można cofnąć.",
+        "confirm": "Usuń",
+        "cancel": "Anuluj",
+        "success": "Usunięto: {name}",
+        "successDesc": "Usunięto „{name}” z drzewa.",
+        "failed": "Nie udało się usunąć „{name}”"
+      },
+      "errors": {
+        "cycle": "Element nie może trafić do samego siebie ani do niczego, co zawiera.",
+        "definitionMismatch": "To należy do innej kolekcji.",
+        "hasChildren": "Wewnątrz nadal są elementy. Najpierw je przenieś lub usuń.",
+        "hasContent": "Nadal jest tu przypisana treść. Najpierw ją przenieś lub usuń.",
+        "invalidInput": "Niektóre wartości są nieprawidłowe. Sprawdź formularz i spróbuj ponownie.",
+        "invalidMetadata": "Niektóre szczegóły nie pasują do tego, czego oczekuje ta kolekcja.",
+        "invalidPolicy": "Niektóre ustawienia publikowania są nieprawidłowe dla tej kolekcji.",
+        "invalidPosition": "Ta pozycja jest poza listą. Odśwież i spróbuj ponownie.",
+        "limitReached": "Ta kolekcja jest pełna. Usuń coś, zanim dodasz więcej.",
+        "maxDepth": "Zagnieżdżenie byłoby głębsze, niż pozwala ta kolekcja.",
+        "notFound": "Ten element już nie istnieje - ktoś mógł go usunąć. Odśwież listę.",
+        "parentNotFound": "Wybrane miejsce już nie istnieje. Odśwież listę.",
+        "slugEmpty": "Slug musi zawierać co najmniej jedną literę lub cyfrę.",
+        "slugTaken": "Inny element w tej kolekcji używa już tego sluga.",
+        "forbidden": "Nie masz uprawnień, aby to zrobić.",
+        "unknown": "Coś poszło nie tak. Spróbuj ponownie za chwilę."
+      },
+      "policies": {
+        "action": "Publikowanie",
+        "title": "Zasady publikowania",
+        "desc": "Wybierz, kto może publikować w „{name}” i czy posty czekają na zatwierdzenie. Opcje ustawione na Dziedzicz korzystają z ustawień nadrzędnego elementu lub domyślnych ustawień kolekcji.",
+        "submit": "Zapisz zasady",
+        "success": "Zapisano zasady publikowania",
+        "successDesc": "„{name}” korzysta teraz z nowych zasad.",
+        "loadError": {
+          "title": "Nie udało się wczytać zasad publikowania",
+          "desc": "Coś poszło nie tak podczas ich pobierania. Sprawdź połączenie i spróbuj ponownie."
+        },
+        "retry": "Spróbuj ponownie",
+        "empty": "W tej kolekcji nie ma jeszcze żadnego typu treści, więc nie ma czego ustawiać.",
+        "inherit": "Dziedzicz (obecnie: {value})",
+        "inheritMinutes": "Dziedzicz (obecnie: {count, plural, one {# minuta} few {# minuty} many {# minut} other {# minuty}})",
+        "source": {
+          "self": "Ustawione dla tego elementu: {name}.",
+          "container": "Dziedziczone z „{name}”.",
+          "contentType": "Dziedziczone z domyślnych ustawień kolekcji dla tego typu.",
+          "default": "Dziedziczone z domyślnych ustawień kolekcji.",
+          "fallback": "Dziedziczone z domyślnych ustawień typu treści."
+        },
+        "create": {
+          "label": "Kto może zaczynać",
+          "desc": "Kto może tworzyć tu nowe posty.",
+          "members": "Członkowie",
+          "moderators": "Tylko moderatorzy"
+        },
+        "publish": {
+          "label": "Nowe posty",
+          "desc": "Czy nowe posty pojawiają się od razu, czy czekają na moderatora.",
+          "immediate": "Publikuj od razu",
+          "approve": "Czekaj na zatwierdzenie"
+        },
+        "edits": {
+          "label": "Edycje opublikowanych postów",
+          "desc": "Czy zmiany autora w opublikowanym poście pojawiają się od razu.",
+          "immediate": "Stosuj od razu",
+          "approve": "Czekaj na zatwierdzenie"
+        },
+        "authorEdit": {
+          "label": "Edycja przez autora",
+          "desc": "Jak długo autorzy mogą edytować własne posty.",
+          "always": "Zawsze",
+          "never": "Nigdy",
+          "window": "Przez ograniczony czas"
+        },
+        "authorEditMinutes": {
+          "label": "Czas na edycję",
+          "desc": "Ile minut po opublikowaniu autor może jeszcze edytować post.",
+          "unit": "minuty"
+        }
+      }
+    },
+    "moderation": {
+      "reason_removed": "Usunięty powód",
+      "statuses": {
+        "new": "Nowe",
+        "in_progress": "W toku",
+        "done": "Zamknięte"
+      },
+      "resolutions": {
+        "no_violation": "Brak naruszenia",
+        "action_taken": "Podjęto działania",
+        "duplicate": "Duplikat"
+      },
+      "resolution_descs": {
+        "no_violation": "Sprawdzono - treść może zostać.",
+        "action_taken": "Treść łamała zasady i podjęto działania.",
+        "duplicate": "Inne zgłoszenie już tego dotyczy."
+      },
+      "report": {
+        "button": "Zgłoś",
+        "title": "Zgłoś: {type}",
+        "pick_title": "Co jest nie tak z tą treścią ({type})?",
+        "review_title": "Gotowe do wysłania?",
+        "sent_title": "Zgłoszenie wysłane",
+        "reasons_label": "Powód",
+        "change": "Zmień",
+        "change_label": "Zmień powód, obecnie: {reason}",
+        "details_required_label": "Co powinni wiedzieć moderatorzy?",
+        "details_optional_label": "Chcesz coś dodać?",
+        "required": "Wymagane",
+        "details_placeholder": "Linki, znaczniki czasu lub co dokładnie jest nie tak",
+        "details_note": "Czytają to tylko moderatorzy, autor tego nie widzi.",
+        "chars_left": "Pozostało: {count}",
+        "submit": "Wyślij zgłoszenie",
+        "sent_stamp": "Wysłano do moderatorów przed chwilą",
+        "sent_desc": "Moderator zobaczy tę treść ({type}) dokładnie tak, jak ją widzisz, nawet jeśli później się zmieni. Jeśli łamie zasady, może ją ukryć.",
+        "done": "Gotowe",
+        "signed_out": "Zaloguj się, aby zgłosić treść.",
+        "sign_in": "Zaloguj się",
+        "load_error": {
+          "title": "Nie udało się wczytać powodów",
+          "desc": "Są potrzebne do wysłania zgłoszenia. Sprawdź połączenie i spróbuj ponownie."
+        },
+        "retry": "Spróbuj ponownie",
+        "errors": {
+          "title": "Nie udało się wysłać zgłoszenia",
+          "duplicate": "Już to zgłaszasz, a Twoje zgłoszenie jest nadal otwarte.",
+          "not_found": "Tej treści nie można już zgłosić.",
+          "rate_limited": "Wysłano ostatnio dużo zgłoszeń. Spróbuj ponownie później.",
+          "unauthenticated": "Twoja sesja wygasła. Zaloguj się ponownie, aby wysłać zgłoszenie.",
+          "validation": "Sprawdź powód i szczegóły, a potem spróbuj ponownie.",
+          "unknown": "Coś poszło nie tak. Spróbuj ponownie za chwilę.",
+          "details_required": "Napisz moderatorom trochę więcej - co najmniej {min} znaków.",
+          "reason_not_found": "Ten powód został właśnie usunięty. Wybierz inny."
+        }
+      },
+      "modcp": {
+        "title": "Panel moderatora",
+        "nav": "Panel moderatora",
+        "approvals": {
+          "title": "Zatwierdzanie",
+          "desc": "Nowe treści i zmiany, które czekają na moderatora, zanim pojawią się na stronie.",
+          "status_label": "Filtruj według statusu",
+          "statuses": {
+            "pending": "Oczekujące",
+            "approved": "Zatwierdzone",
+            "rejected": "Odrzucone",
+            "superseded": "Zastąpione",
+            "cancelled": "Anulowane"
+          },
+          "kinds": {
+            "create": "Nowe",
+            "edit": "Edycja"
+          },
+          "filters": {
+            "type": "Typ",
+            "all_types": "Wszystkie typy",
+            "container": "Miejsce",
+            "all_containers": "Wszędzie"
+          },
+          "untitled": "Bez tytułu",
+          "deleted_user": "Usunięte konto",
+          "reason_preview": "Powód: {reason}",
+          "empty": {
+            "pending_title": "Wszystko załatwione",
+            "pending_desc": "Nic nie czeka na zatwierdzenie. Czas na kawę.",
+            "title": "Nic tu nie ma",
+            "desc": "Żadne zgłoszone treści nie pasują do tych filtrów."
+          },
+          "approve": {
+            "button": "Zatwierdź",
+            "success": "Zatwierdzono",
+            "success_desc": "„{title}” jest już na stronie."
+          },
+          "reject": {
+            "button": "Odrzuć",
+            "title": "Odrzucić tę propozycję?",
+            "desc": "Na stronie nic się nie zmieni. Autor zobaczy Twój powód i będzie mógł spróbować ponownie.",
+            "reason": "Powód",
+            "reason_desc": "Opcjonalny i widoczny dla autora - napisz go uprzejmie i konkretnie.",
+            "submit": "Odrzuć propozycję",
+            "success": "Odrzucono",
+            "success_desc": "„{title}” pozostaje bez zmian."
+          },
+          "errors": {
+            "decided": {
+              "title": "Już zdecydowano",
+              "desc": "Inny moderator był szybszy. Kolejka pokazuje jego decyzję."
+            },
+            "stale": {
+              "title": "Rekord się zmienił",
+              "desc": "Rekord zmienił się od czasu tej propozycji - odrzuć ją i poproś autora o ponowne przesłanie."
+            },
+            "gone": {
+              "title": "Treść zniknęła",
+              "desc": "Usunięto ją, zanim ktokolwiek podjął decyzję, więc propozycję anulowano."
+            },
+            "forbidden": {
+              "title": "Poza Twoim zasięgiem",
+              "desc": "Treść przeniesiono w miejsce, w którym nie możesz zatwierdzać."
+            },
+            "notFound": {
+              "title": "Nie znaleziono propozycji",
+              "desc": "Już nie istnieje albo jest poza zakresem Twojej moderacji."
+            },
+            "rate_limited": {
+              "title": "Spokojnie",
+              "desc": "To było dużo decyzji naraz. Spróbuj ponownie za chwilę."
+            },
+            "unknown": {
+              "title": "Coś poszło nie tak",
+              "desc": "Decyzja nie została zapisana. Spróbuj ponownie."
+            }
+          },
+          "detail": {
+            "title": "Propozycja #{id}",
+            "subtitle": "{type}",
+            "subtitle_in": "{type} w: {container}",
+            "sections": {
+              "proposed": "Proponowana treść",
+              "changes": "Zmiany",
+              "history": "Historia"
+            },
+            "history_empty": "To pierwsza propozycja dla tej treści.",
+            "empty": "(puste)",
+            "yes": "Tak",
+            "no": "Nie",
+            "changed": "Zmieniono",
+            "live": "Obecna wersja",
+            "proposed": "Proponowana",
+            "no_changes": "Propozycja jest taka sama jak obecna wersja, więc nic by się nie zmieniło.",
+            "unchanged": "{count, plural, one {# niezmienione pole} few {# niezmienione pola} many {# niezmienionych pól} other {# niezmienionego pola}}",
+            "view_live": "Zobacz na stronie",
+            "view_draft": "Otwórz szkic",
+            "new_tab": "(otwiera się w nowej karcie)",
+            "details": {
+              "title": "Szczegóły",
+              "author": "Autor",
+              "deleted_user": "Usunięte konto",
+              "type": "Typ",
+              "container": "Miejsce",
+              "kind": "Rodzaj",
+              "status": "Status",
+              "reviewer": "Weryfikujący",
+              "submitted": "Przesłano",
+              "decided": "Zdecydowano"
+            },
+            "decided": {
+              "approved": {
+                "title": "Zatwierdzono",
+                "desc": "Ta propozycja pojawiła się na stronie."
+              },
+              "rejected": {
+                "title": "Odrzucono",
+                "desc": "Rekord pozostał bez zmian."
+              },
+              "superseded": {
+                "title": "Zastąpiono",
+                "desc": "Autor przesłał nowszą wersję, która zajęła miejsce tej."
+              },
+              "cancelled": {
+                "title": "Anulowano",
+                "desc": "Treść usunięto, zanim ktokolwiek podjął decyzję."
+              },
+              "reason": "Powód: {reason}"
+            },
+            "warnings": {
+              "gone_title": "Treść zniknęła",
+              "gone_desc": "Usunięto ją po przesłaniu tej propozycji, więc można ją tylko odrzucić.",
+              "stale_title": "Obecna wersja się zmieniła",
+              "stale_desc": "Ktoś edytował rekord po złożeniu tej propozycji - odrzuć ją i poproś autora o ponowne przesłanie."
+            }
+          }
+        },
+        "reports": {
+          "title": "Zgłoszenia",
+          "desc": "Zgłoszenia, którymi możesz się zająć. Przeciągnij kartę do innej kolumny, aby ją przejąć, zamknąć lub odesłać z powrotem.",
+          "search_placeholder": "Szukaj po tytule lub #id",
+          "filters": {
+            "assigned": "Przypisane",
+            "any": "Ktokolwiek",
+            "me": "Przypisane do mnie",
+            "unassigned": "Nieprzypisane"
+          },
+          "untitled": "Bez tytułu",
+          "empty_title": "Nic do przejrzenia",
+          "empty_desc": "Żadne zgłoszenia nie pasują do tych filtrów.",
+          "unassigned": "Nieprzypisane",
+          "board": {
+            "actions": "Akcje dla zgłoszenia #{id}",
+            "drag": "Przenieś zgłoszenie #{id}",
+            "extra_reports": "{count, plural, one {Jeszcze # zgłoszenie tej treści} few {Jeszcze # zgłoszenia tej treści} many {Jeszcze # zgłoszeń tej treści} other {Jeszcze # zgłoszenia tej treści}}",
+            "hint_take": "Upuść, aby przejąć - zostanie przypisane do Ciebie",
+            "hint_unassign": "Upuść, aby usunąć przypisanie",
+            "hint_close": "Upuść, aby zamknąć - wybierz wynik",
+            "hint_reopen": "Upuść, aby otworzyć ponownie",
+            "nothing_here": "Nic tu nie ma.",
+            "show_more": "Pokaż więcej",
+            "unassigned": "Przeniesiono z powrotem do kolumny Nowe",
+            "unassigned_desc": "Nie jest przypisane, więc każdy może je przejąć.",
+            "dnd": {
+              "instructions": "Naciśnij Space, aby podnieść zgłoszenie. Strzałkami przenieś je do innej kolumny, naciśnij Space, aby je tam upuścić, albo Escape, aby odłożyć je z powrotem. Każdą kartę można też przenieść z jej menu.",
+              "picked_up": "Podniesiono zgłoszenie #{id}.",
+              "over": "Zgłoszenie #{id} jest nad kolumną {column}.",
+              "outside": "Zgłoszenie #{id} nie jest nad żadną kolumną.",
+              "dropped": "Zgłoszenie #{id} upuszczono w kolumnie {column}.",
+              "cancelled": "Zgłoszenie #{id} nie zostało przeniesione."
+            }
+          }
+        },
+        "detail": {
+          "title": "Zgłoszenie #{id}",
+          "snapshot": {
+            "title": "Zgłoszona treść",
+            "badge": "Migawka",
+            "desc": "Zapisano {date}. Tak widziała to osoba zgłaszająca i to się nie zmieni.",
+            "locale": "Język: {served}",
+            "fallback": "Język: {served} (żądano: {requested})",
+            "version": "Wersja {version}",
+            "truncated": "Część tej treści była za długa i została przycięta.",
+            "by": "Autorzy: {names}",
+            "file": "Tylko odwołanie do pliku - sam plik nie jest przechowywany ze zgłoszeniem.",
+            "file_missing": "Plik bez nazwy",
+            "empty": "(puste)",
+            "fallback_renderer": "Wyświetlono w podglądzie ogólnym."
+          },
+          "current": {
+            "open": "Otwórz obecną treść",
+            "hidden": "Ukryta",
+            "visible": "Widoczna",
+            "deleted": "Treść została usunięta. Pozostała tylko powyższa migawka.",
+            "unregistered": "Wtyczka, do której należała ta treść, nie jest zainstalowana. Pozostała tylko powyższa migawka."
+          },
+          "report": {
+            "reason": "Powód",
+            "description": "Szczegóły od zgłaszającego",
+            "no_description": "Nie podano szczegółów.",
+            "deleted_user": "Usunięte konto",
+            "created": "Zgłoszono"
+          },
+          "assignment": {
+            "claim": "Przejmij zgłoszenie",
+            "claimed": "Zgłoszenie przejęte",
+            "claimed_desc": "Jest przypisane do Ciebie i w toku.",
+            "assigned": "Przypisanie zaktualizowane",
+            "assigned_desc": "Zmiana została zapisana na osi czasu."
+          },
+          "actions": {
+            "title": "Działania na treści",
+            "hide": "Ukryj treść",
+            "unhide": "Przywróć treść",
+            "hide_desc": "Usuń ją z publicznej strony. Autorzy i moderatorzy nadal mogą ją otworzyć.",
+            "unhide_desc": "Przywróć ją na publiczną stronę.",
+            "confirm_hide": "Ukryć tę treść?",
+            "confirm_unhide": "Przywrócić tę treść?",
+            "confirm": "Potwierdź",
+            "hidden": "Treść ukryta",
+            "unhidden": "Treść przywrócona",
+            "recorded": "Zapisano na osi czasu zgłoszenia.",
+            "unchanged": "Nic się nie zmieniło - treść była już w tym stanie.",
+            "menu": "Akcje"
+          },
+          "resolve": {
+            "resolution": "Wynik",
+            "explanation": "Wyjaśnienie",
+            "explanation_desc": "Krótka notatka dla innych moderatorów. Niewidoczna dla zgłaszającego.",
+            "submit": "Zamknij zgłoszenie",
+            "success": "Zgłoszenie zamknięte",
+            "success_desc": "Powiązane zgłoszenia pozostają otwarte, dopóki ktoś ich nie zamknie.",
+            "dialog_title": "Zamknij zgłoszenie #{id}"
+          },
+          "reopen": {
+            "reason": "Dlaczego otwierasz je ponownie?",
+            "submit": "Otwórz zgłoszenie ponownie",
+            "success": "Zgłoszenie otwarte ponownie",
+            "dialog_title": "Otwórz ponownie zgłoszenie #{id}",
+            "dialog_desc": "Wróci do kolejki. Napisz zespołowi dlaczego."
+          },
+          "notes": {
+            "desc": "Widoczne tylko dla moderatorów.",
+            "submit": "Dodaj notatkę",
+            "success": "Notatka dodana",
+            "edit": "Edytuj",
+            "delete": "Usuń",
+            "save": "Zapisz",
+            "edited": "edytowano",
+            "updated": "Notatka zaktualizowana",
+            "deleted": "Notatka usunięta",
+            "confirm_delete": "Usunąć tę notatkę?",
+            "confirm_delete_desc": "Zniknie z aktywności dla wszystkich moderatorów. Tej czynności nie można cofnąć.",
+            "menu": "Akcje notatki"
+          },
+          "timeline": {
+            "title": "Oś czasu",
+            "system": "System",
+            "someone": "Ktoś"
+          },
+          "related": {
+            "empty": "Brak innych zgłoszeń, które możesz zobaczyć."
+          },
+          "read_only": "Możesz czytać to zgłoszenie. Zarządzanie nim wymaga innego uprawnienia.",
+          "errors": {
+            "conflict": "Ktoś inny zmienił już to zgłoszenie. Teraz widać jego najnowszy stan.",
+            "already_claimed": "Inny moderator przejął to zgłoszenie wcześniej.",
+            "report_closed": "To zgłoszenie jest już zamknięte.",
+            "report_open": "To zgłoszenie jest już otwarte.",
+            "assignee_not_eligible": "Ten moderator nie może zarządzać tym zgłoszeniem.",
+            "target_gone": "Ta treść już nie istnieje.",
+            "forbidden": "Nie masz uprawnień, aby to zrobić.",
+            "unknown": "Coś poszło nie tak. Spróbuj ponownie za chwilę.",
+            "note_not_found": "Ta notatka już nie istnieje. Ktoś mógł ją usunąć."
+          },
+          "heading": "{type}, autor: <author></author>",
+          "sections": {
+            "description": "Opis",
+            "snapshot": "Migawka",
+            "linked": "Powiązane zgłoszenia",
+            "activity": "Aktywność"
+          },
+          "snapshot_card": {
+            "meta": "{type}, autor: <author></author> · zapisano <date></date>",
+            "view": "Zobacz pełną migawkę",
+            "sheet_title": "Co widział zgłaszający",
+            "sheet_desc": "Zgłoszenie #{id} · zapisane w chwili zgłoszenia"
+          },
+          "status": {
+            "move_to": "Przenieś do",
+            "start": "Rozpocznij pracę",
+            "close": "Zamknij zgłoszenie",
+            "stop": "Wstrzymaj pracę",
+            "reopen": "Otwórz ponownie"
+          },
+          "details": {
+            "title": "Szczegóły",
+            "plugin": "Wtyczka",
+            "assignee": "Przypisany",
+            "reporter": "Zgłaszający",
+            "author": "Autor",
+            "reason": "Powód",
+            "visibility": "Widoczność",
+            "resolution": "Wynik",
+            "created": "Utworzono",
+            "updated": "Zaktualizowano",
+            "resolved": "Rozwiązano",
+            "assign_to_me": "Przypisz do mnie",
+            "unassigned": "Nieprzypisane",
+            "you": "Ty"
+          },
+          "content_card": {
+            "untitled": "Bez tytułu"
+          },
+          "linked": {
+            "no_details": "Nie podano szczegółów"
+          },
+          "activity": {
+            "all": "Wszystko",
+            "notes": "Notatki",
+            "history": "Historia",
+            "empty": "Jeszcze nic tu nie ma.",
+            "placeholder": "Dodaj notatkę wewnętrzną…",
+            "editor_placeholder": "Napisz notatkę dla innych moderatorów… Wpisz /, aby wstawić blok",
+            "hint": "Notatki widzą tylko moderatorzy · ⌘ Enter, aby zapisać",
+            "cancel": "Anuluj",
+            "events": {
+              "created": "zgłosił to",
+              "note": "dodał notatkę",
+              "assigned": "przypisał to do <assignee></assignee>",
+              "took": "przejął zgłoszenie",
+              "unassigned": "usunął przypisanie <assignee></assignee>",
+              "lost_access": "- przypisanie usunięte po utracie dostępu",
+              "status_changed": "przeniósł to do <status></status>",
+              "action_hide": "ukrył treść",
+              "action_unhide": "przywrócił treść",
+              "resolved": "zamknął to z wynikiem: {resolution}",
+              "reopened": "otworzył to ponownie",
+              "note_edited": "edytował notatkę",
+              "note_deleted": "usunął notatkę",
+              "warning": "ostrzegł <member></member> ({points, plural, one {# punkt} few {# punkty} many {# punktów} other {# punktu}})"
+            },
+            "note_required": "Napisz coś, zanim dodasz notatkę.",
+            "before": "Przed",
+            "after": "Po"
+          }
+        },
+        "warnings": {
+          "title": "Ostrzeżenia"
+        }
+      },
+      "warn": {
+        "button": "Ostrzeż autora",
+        "button_member": "Ostrzeż członka",
+        "title": "Ostrzeż: {name}",
+        "title_loading": "Ostrzeż członka",
+        "desc": "Członek otrzyma Twoją wiadomość w powiadomieniu. Punkty liczą się w całej witrynie.",
+        "no_reasons": "Nie skonfigurowano jeszcze powodów ostrzeżeń. Administrator może je dodać w AdminCP.",
+        "cancel": "Anuluj",
+        "submit": "Udziel ostrzeżenia",
+        "points": "{count, plural, one {# punkt} few {# punkty} many {# punktów} other {# punktu}}",
+        "points_animated": "{count, plural, one {<n>#</n> punkt} few {<n>#</n> punkty} many {<n>#</n> punktów} other {<n>#</n> punktu}}",
+        "custom_reason": "Własne ostrzeżenie",
+        "deleted_user": "Usunięte konto",
+        "global": {
+          "title": "Punkty liczą się wszędzie",
+          "desc": "To ostrzeżenie dotyczy treści w jednym miejscu, ale jego punkty wliczają się do limitów całego konta, które mogą zawiesić całe konto."
+        },
+        "dossier": {
+          "label": "O członku {name}",
+          "recent": "Ostatnie ostrzeżenia",
+          "first": "Pierwsze ostrzeżenie dla tego członka.",
+          "older": "{count, plural, one {# starsze ostrzeżenie} few {# starsze ostrzeżenia} many {# starszych ostrzeżeń} other {# starszego ostrzeżenia}}",
+          "unavailable": "Nie widzisz wcześniejszych ostrzeżeń tego członka."
+        },
+        "consequences": {
+          "title": "Co się stanie",
+          "no_action": "Brak automatycznych działań",
+          "already_suspended": "To konto jest już zawieszone.",
+          "related": "Za tę treść {count, plural, one {udzielono już # ostrzeżenia} few {udzielono już # ostrzeżeń} many {udzielono już # ostrzeżeń} other {udzielono już # ostrzeżenia}}."
+        },
+        "sanction": {
+          "indefinite": "Konto zawieszone bezterminowo.",
+          "for": "Konto zawieszone na okres:",
+          "until": "(do {endsAt}).",
+          "suspended_until": "Konto zawieszone do {endsAt}."
+        },
+        "form": {
+          "reason": "Powód",
+          "custom_reason_desc": "Napisz własną wiadomość i ustaw punkty",
+          "expires_after": "Wygasa po upływie: <duration></duration>",
+          "never_expires": "Nigdy nie wygasa",
+          "points": "Punkty",
+          "expiration": "Wygaśnięcie punktów",
+          "expiration_modes": {
+            "default": "Zgodnie z powodem",
+            "never": "Nigdy",
+            "hours": "Po określonej liczbie godzin",
+            "at": "W wybranym dniu"
+          },
+          "expiration_hours": "Wygasa po",
+          "hours_unit": "godz.",
+          "expiration_at": "Wygasa dnia",
+          "override_note": "Dlaczego ta zmiana?",
+          "override_note_desc": "Tylko dla zespołu. Wymagane, gdy zmieniasz punkty lub termin wygaśnięcia.",
+          "override_note_required": "Wyjaśnij, dlaczego zmieniono punkty lub termin wygaśnięcia.",
+          "expiration_at_required": "Wybierz, kiedy punkty wygasną.",
+          "message": "Wiadomość do członka",
+          "message_desc": "Członek przeczyta ją w powiadomieniu i na stronie statusu swojego konta.",
+          "message_placeholder": "Dodaj wiadomość…",
+          "message_required": "Napisz wiadomość do członka.",
+          "message_length": "W każdym języku wpisz od {min} do {max} znaków.",
+          "staff_note": "Notatka zespołu",
+          "staff_note_desc": "Widzą ją tylko członkowie zespołu, którzy mogą czytać notatki. Członek nigdy jej nie zobaczy.",
+          "staff_note_placeholder": "Dodaj notatkę…",
+          "staff_note_length": "Notatka zespołu może mieć maksymalnie {max} znaków.",
+          "resolve_report": "Zamknij też zgłoszenie z wynikiem „Podjęto działania”",
+          "resolve_report_desc": "Zamyka zgłoszenie w tym samym kroku. Jeśli któraś z operacji się nie powiedzie, żadna nie zostanie wykonana."
+        },
+        "done": {
+          "title": "Ostrzeżenie udzielone",
+          "points": "{name} ma teraz {after, plural, one {# aktywny punkt} few {# aktywne punkty} many {# aktywnych punktów} other {# aktywnego punktu}}.",
+          "suspended_until": "Konto jest zawieszone do {endsAt}.",
+          "suspended_indefinitely": "Konto jest zawieszone bezterminowo.",
+          "report_resolved": "Zgłoszenie zostało zamknięte.",
+          "differs": "Punkty tego członka zmieniły się po otwarciu formularza, więc wynik różni się od podglądu."
+        },
+        "errors": {
+          "title": "Nie udało się udzielić ostrzeżenia",
+          "unknown": "Coś poszło nie tak. Spróbuj ponownie za chwilę.",
+          "unauthenticated": "Twoja sesja wygasła. Zaloguj się ponownie.",
+          "validation": "Sprawdź pola i spróbuj ponownie.",
+          "forbidden": "Nie możesz tutaj ostrzec tego członka.",
+          "not_found": "To już nie istnieje.",
+          "already_revoked": "To zostało już cofnięte lub zdjęte.",
+          "author_mismatch": "Ten członek nie jest autorem tej treści.",
+          "content_not_found": "Ta treść zniknęła, więc ostrzeżenie nie może się do niej odnosić.",
+          "expiration_override_forbidden": "Nie możesz zmieniać terminu wygaśnięcia punktów.",
+          "idempotency_conflict": "Otwórz formularz ponownie i spróbuj jeszcze raz.",
+          "invalid_expiration": "Wybierz termin wygaśnięcia w przyszłości, najwyżej za pięć lat.",
+          "invalid_points": "Punkty muszą być liczbą całkowitą od 0 do 100.",
+          "override_note_required": "Wyjaśnij, dlaczego zmieniono punkty lub termin wygaśnięcia.",
+          "points_override_forbidden": "Nie możesz zmieniać punktów.",
+          "protected": "Kont członków zespołu nie można tutaj ostrzegać.",
+          "reason_disabled": "Ten powód został właśnie wyłączony. Wybierz inny.",
+          "reason_not_found": "Ten powód został usunięty. Wybierz inny.",
+          "report_closed": "Zgłoszenie jest już zamknięte. Udziel ostrzeżenia bez zamykania go.",
+          "report_mismatch": "Zgłoszenie dotyczy innej treści.",
+          "self": "Nie możesz ostrzec samego siebie.",
+          "user_not_found": "Ten członek już nie istnieje."
+        },
+        "duration": {
+          "days": "{count, plural, one {# dzień} few {# dni} many {# dni} other {# dnia}}",
+          "hours": "{count, plural, one {# godzina} few {# godziny} many {# godzin} other {# godziny}}",
+          "minutes": "{count, plural, one {# minuta} few {# minuty} many {# minut} other {# minuty}}"
+        },
+        "statuses": {
+          "active": "Aktywne",
+          "expired": "Wygasłe",
+          "revoked": "Cofnięte"
+        },
+        "revoke": {
+          "button": "Cofnij",
+          "title": "Cofnąć to ostrzeżenie?",
+          "desc": "Jego punkty od razu przestaną się liczyć. Ostrzeżenie zostanie w historii, a zawieszenie, do którego doprowadziło, obowiązuje, dopóki nie zdejmiesz go osobno.",
+          "reason": "Powód",
+          "reason_desc": "Zapisywany przy ostrzeżeniu dla zespołu.",
+          "done": "Ostrzeżenie cofnięte",
+          "done_desc": "Członek został powiadomiony."
+        },
+        "list": {
+          "title": "Ostrzeżenia",
+          "desc": "Wszystkie ostrzeżenia, które możesz zobaczyć, od najnowszych.",
+          "status_label": "Filtruj według statusu",
+          "all": "Wszystkie",
+          "reason_filter": "Powód",
+          "reason": "Powód",
+          "points": "Punkty",
+          "status": "Status",
+          "issued": "Udzielono",
+          "all_reasons": "Wszystkie powody",
+          "empty_title": "Brak ostrzeżeń",
+          "empty_desc": "Nic nie pasuje do tych filtrów. Cisza i spokój.",
+          "member": "Członek",
+          "issued_by": "Udzielone przez",
+          "expires": "Wygaśnięcie punktów",
+          "never": "Nigdy",
+          "default_points": "Punkty z powodu",
+          "content": "Treść",
+          "untitled": "Bez tytułu",
+          "report": "Zgłoszenie",
+          "report_link": "Zgłoszenie #{id}",
+          "message": "Wiadomość do członka",
+          "staff_only": "Tylko dla zespołu",
+          "staff_note": "Notatka zespołu",
+          "override_note": "Dlaczego zmieniono punkty lub termin wygaśnięcia",
+          "revoked": "Cofnięte przez <by></by> <date></date>.",
+          "lifted": "Zdjęte przez <by></by> <date></date>.",
+          "sanction_stays": "Zawieszenie, do którego doprowadziło to ostrzeżenie, nie zostało zdjęte razem z nim.",
+          "show_member": "Pokaż ostrzeżenia członka {name}"
+        },
+        "lookup": {
+          "label": "Nazwa członka",
+          "placeholder": "Szukaj po nazwie"
+        },
+        "member": {
+          "active_points": "Aktywne punkty",
+          "hidden_warnings": "{count, plural, one {# kolejne ostrzeżenie jest} few {# kolejne ostrzeżenia są} many {# kolejnych ostrzeżeń jest} other {# kolejnego ostrzeżenia jest}} poza zakresem Twojej moderacji.",
+          "active_warnings": "Aktywne ostrzeżenia",
+          "clear": "Pokaż wszystkich członków",
+          "profile": "Profil",
+          "loading": "Wczytywanie członka…",
+          "load_error": {
+            "title": "Nie udało się wczytać członka",
+            "desc": "Może już nie istnieć albo być poza tym, co możesz zobaczyć. Spróbuj ponownie lub wyczyść filtr członka."
+          }
+        },
+        "sanctions": {
+          "temporary": "Zawieszenie tymczasowe",
+          "indefinite": "Zawieszenie bezterminowe",
+          "active": "Aktywne",
+          "lifted": "Zdjęte",
+          "ended": "Zakończone",
+          "lift": "Zdejmij",
+          "lift_title": "Zdjąć to zawieszenie?",
+          "lift_desc": "Konto znowu będzie działać, chyba że obowiązuje jeszcze inne zawieszenie.",
+          "lifted_done": "Zawieszenie zdjęte",
+          "lifted_done_desc": "Inne aktywne zawieszenia nadal obowiązują.",
+          "ends": "Koniec",
+          "source": "Źródło",
+          "from_threshold": "Osiągnięto {points, plural, one {# punkt} few {# punkty} many {# punktów} other {# punktu}}",
+          "manual": "Nałożone przez zespół"
+        },
+        "pick": {
+          "desc": "Wybierz członka, a potem powód.",
+          "continue": "Dalej"
+        }
+      },
+      "account_status": {
+        "title": "Status konta",
+        "desc": "Twoje ostrzeżenia i informacja, czy coś ogranicza Twoje konto.",
+        "loading": "Wczytywanie statusu konta",
+        "suspended_restrictions": "Do tego czasu możesz przeglądać stronę jak gość, ale nie możesz publikować, komentować ani niczego zmieniać na swoim koncie.",
+        "good_title": "Twoje konto ma dobrą reputację",
+        "points_title": "Aktywne punkty",
+        "sanction_active": "Aktywne",
+        "sanction_lifted": "Zdjęte",
+        "sanction_ended": "Zakończone",
+        "dialog": {
+          "title": "Twoje konto jest zawieszone",
+          "because_unknown": "Moderator zawiesił Twoje konto.",
+          "loading": "Wczytywanie szczegółów zawieszenia",
+          "time_left": "Pozostały czas",
+          "days": "{count, plural, one {dzień} few {dni} many {dni} other {dnia}}",
+          "hours": "{count, plural, one {godzina} few {godziny} many {godzin} other {godziny}}",
+          "minutes": "min",
+          "seconds": "s",
+          "no_end": "Bez daty końcowej. Obowiązuje, dopóki moderator go nie zdejmie.",
+          "why": "Powód",
+          "points": "{count, plural, one {# aktywny punkt ostrzeżeń} few {# aktywne punkty ostrzeżeń} many {# aktywnych punktów ostrzeżeń} other {# aktywnego punktu ostrzeżeń}}",
+          "started": "Początek",
+          "ends": "Koniec",
+          "never": "Nigdy",
+          "sign_out": "Wyloguj się"
+        },
+        "summary": "Podsumowanie",
+        "hero_clean": "Nie masz żadnych ostrzeżeń. Tak trzymaj!",
+        "hero_cleared": "Obecnie nie liczą się przeciwko Tobie żadne punkty. Wcześniejsze ostrzeżenia pozostają na liście poniżej.",
+        "hero_points": "Masz <b>{points, plural, one {# punkt} few {# punkty} many {# punktów} other {# punktu}}</b> z {warnings, plural, one {# ostrzeżenia} few {# ostrzeżeń} many {# ostrzeżeń} other {# ostrzeżenia}}.",
+        "hero_next": "Najbliższe przestaną się liczyć {relative} ({date}).",
+        "hero_never": "Żadne z nich nie wygasa.",
+        "history": {
+          "label": "Ostrzeżenia i zawieszenia",
+          "item": "Element",
+          "date": "Data",
+          "points": "Punkty",
+          "status": "Status",
+          "warning": "Ostrzeżenie",
+          "search": "Szukaj w powodach i wiadomościach",
+          "type": "Typ",
+          "type_warnings": "Ostrzeżenia",
+          "type_suspensions": "Zawieszenia",
+          "status_active": "Aktywne",
+          "status_expired": "Wygasłe",
+          "status_revoked": "Cofnięte",
+          "status_lifted": "Zdjęte",
+          "status_ended": "Zakończone",
+          "no_results": {
+            "title": "Nic nie pasuje",
+            "desc": "Spróbuj innego słowa lub wyczyść filtry."
+          }
+        },
+        "load_error": {
+          "title": "Nie udało się wczytać statusu konta",
+          "desc": "Sprawdź połączenie i spróbuj ponownie."
+        },
+        "retry": "Spróbuj ponownie"
+      },
+      "profile_card": {
+        "label": "Ostrzeżenia",
+        "points": "{count, plural, one {# punkt ostrzeżeń} few {# punkty ostrzeżeń} many {# punktów ostrzeżeń} other {# punktu ostrzeżeń}}",
+        "points_animated": "{count, plural, one {<n>#</n> punkt ostrzeżeń} few {<n>#</n> punkty ostrzeżeń} many {<n>#</n> punktów ostrzeżeń} other {<n>#</n> punktu ostrzeżeń}}",
+        "no_restrictions": "Brak nałożonych ograniczeń",
+        "suspended_until": "Zawieszone · kończy się {relative}",
+        "suspended_indefinitely": "Zawieszone bezterminowo",
+        "warn": "Ostrzeż członka",
+        "lift": "Zdejmij zawieszenie",
+        "revoke": "Cofnij ostrzeżenie",
+        "revoke_label": "Cofnij ostrzeżenie: {reason}",
+        "see_all": "Zobacz wszystkie",
+        "history": "Ostrzeżenia i zawieszenia",
+        "hidden": "{count, plural, one {# kolejne ostrzeżenie jest} few {# kolejne ostrzeżenia są} many {# kolejnych ostrzeżeń jest} other {# kolejnego ostrzeżenia jest}} poza zakresem Twojej moderacji.",
+        "loading": "Wczytywanie ostrzeżeń",
+        "load_error": {
+          "title": "Nie udało się wczytać ostrzeżeń",
+          "desc": "Sprawdź połączenie i spróbuj ponownie."
+        },
+        "retry": "Spróbuj ponownie",
+        "ends": "kończy się {relative}",
+        "sheet": {
+          "warning_desc": "Ostrzeżenie · udzielone {relative}",
+          "suspension_desc": "Zawieszenie · rozpoczęte {relative}",
+          "message": "Wiadomość do członka",
+          "message_own": "Wiadomość od moderatorów",
+          "points": "Punkty",
+          "not_counting": "nie liczą się",
+          "issued": "Udzielono",
+          "expires": "Wygasa",
+          "expired": "Wygasło",
+          "never": "Nigdy",
+          "stops_counting": "Przestaje się liczyć {relative}",
+          "staff_note": "Notatka zespołu",
+          "staff_only": "Widoczne tylko dla zespołu",
+          "led_to": "Doprowadziło do",
+          "caused_by": "Spowodowane przez",
+          "revoked": "Cofnięte",
+          "time_served": "Odbyty czas",
+          "served": "Odbyto {percent}%",
+          "no_end_desc": "Konto pozostaje zawieszone, dopóki moderator nie zdejmie zawieszenia.",
+          "started": "Początek",
+          "ended": "Koniec",
+          "why": "Powód",
+          "blocks": "Co blokuje",
+          "blocks_desc": "Członek może przeglądać stronę jak gość, ale nie może publikować, komentować ani niczego zmieniać na swoim koncie."
+        },
+        "confirm": {
+          "reason_desc": "Tylko dla zespołu. Zapisywany w dzienniku moderacji.",
+          "reason_required": "Dodaj krótki powód, aby inni członkowie zespołu wiedzieli dlaczego.",
+          "reason_min": "Wpisz co najmniej {count} znaków.",
+          "reason_max": "Wpisz mniej niż {count} znaków.",
+          "revoke_failed": "Nie udało się cofnąć ostrzeżenia",
+          "lift_failed": "Nie udało się zdjąć zawieszenia"
+        }
+      }
+    },
+    "activity_logs": {
+      "columns": {
+        "date": "Data",
+        "actor": "Wykonawca",
+        "area": "Obszar",
+        "plugin": "Wtyczka",
+        "action": "Akcja",
+        "target": "Obiekt",
+        "details": "Szczegóły"
+      },
+      "areas": {
+        "admin": "AdminCP",
+        "moderator": "ModeratorCP",
+        "public": "Strona",
+        "system": "System"
+      },
+      "actor_types": {
+        "staff": "Zespół",
+        "api": "Członek",
+        "system": "System"
+      },
+      "system_actor": "System",
+      "content_noun": "treść",
+      "deleted_actor": "{name} (konto usunięte)",
+      "removed_plugin": "{plugin} (usunięta)",
+      "open_details": "Szczegóły: {action}",
+      "hide_details": "Ukryj szczegóły: {action}",
+      "table_label": "Aktywność",
+      "filters": {
+        "label": "Filtruj aktywność",
+        "search_placeholder": "Szukaj obiektów, akcji i osób",
+        "plugin": "Wtyczka",
+        "area": "Obszar",
+        "action": "Akcja",
+        "actor_filter": "Wykonawca",
+        "everyone": "Wszyscy",
+        "date": "Data",
+        "any_time": "Dowolny czas",
+        "custom_range": "Własny zakres",
+        "ranges": {
+          "today": "Dzisiaj",
+          "7d": "Ostatnie 7 dni",
+          "30d": "Ostatnie 30 dni",
+          "90d": "Ostatnie 90 dni",
+          "180d": "Ostatnie 180 dni",
+          "this_month": "Ten miesiąc",
+          "last_month": "Poprzedni miesiąc",
+          "this_year": "Ten rok",
+          "last_year": "Poprzedni rok"
+        },
+        "all": "Wszystkie",
+        "open": "Filtry",
+        "open_active": "{count, plural, one {Filtry, # aktywny} few {Filtry, # aktywne} many {Filtry, # aktywnych} other {Filtry, # aktywnego}}",
+        "clear_all": "Wyczyść wszystkie",
+        "search_in": "Szukaj: {filter}",
+        "no_options": "Nic nie znaleziono.",
+        "show_all": "Pokaż wszystkie ({count})",
+        "show_results": "Pokaż wyniki",
+        "show_count": "{count, plural, =0 {Brak wyników} one {Pokaż # wynik} few {Pokaż # wyniki} many {Pokaż # wyników} other {Pokaż # wyniku}}"
+      },
+      "loading": "Wczytywanie aktywności",
+      "empty_title": "Brak aktywności",
+      "empty_desc": "Nic nie pasuje do tych filtrów. Spróbuj szerszego zakresu dat lub wyczyść filtry.",
+      "error_title": "Nie udało się wczytać aktywności",
+      "error_desc": "Coś poszło nie tak podczas odczytu dziennika. Spróbuj jeszcze raz.",
+      "detail": {
+        "title": "Szczegóły aktywności",
+        "loading": "Wczytywanie szczegółów",
+        "field": "Pole",
+        "locale": "Język",
+        "actor": "Wykonawca",
+        "date": "Data",
+        "area": "Obszar",
+        "plugin": "Wtyczka",
+        "action": "Akcja",
+        "target": "Obiekt",
+        "scope": "Zakres",
+        "changes": "Zmiany",
+        "no_changes": "Dla tej operacji nie zapisano wartości pól.",
+        "before": "Przed",
+        "after": "Po",
+        "empty_value": "Puste",
+        "redacted": "Zmieniono, wartość nie została zapisana",
+        "revision": "Wersja",
+        "revision_version": "Wersja {version}",
+        "revision_unavailable": "Ta wersja nie jest już dostępna. Została usunięta lub nie możesz wyświetlać tego typu treści.",
+        "metadata": "Szczegóły",
+        "technical": "Dane techniczne",
+        "ip_address": "Adres IP",
+        "correlation_id": "Id żądania",
+        "open_target": "Otwórz",
+        "filter_actor": "Pokaż aktywność tej osoby",
+        "not_found": "Ten wpis nie istnieje lub nie masz do niego dostępu."
+      },
+      "history": {
+        "title": "Aktywność",
+        "desc": "Wszystko, co zapisano o tym elemencie, od najnowszych.",
+        "empty": "Dla tego elementu nic jeszcze nie zapisano.",
+        "load_more": "Wczytaj starszą aktywność"
+      },
+      "actions": {
+        "content": {
+          "created": "Utworzono: {type}",
+          "updated": "Zaktualizowano: {type}",
+          "deleted": "Usunięto: {type}",
+          "duplicated": "Zduplikowano: {type}",
+          "published": "Opublikowano: {type}",
+          "unpublished": "Wycofano publikację: {type}",
+          "hidden": "Ukryto: {type}",
+          "unhidden": "Pokazano: {type}",
+          "restored": "Przywrócono wersję: {type}",
+          "scheduled": "Zaplanowano: {type}",
+          "schedule_cancelled": "Anulowano harmonogram: {type}",
+          "translation_created": "Dodano tłumaczenie: {type}",
+          "translation_updated": "Zaktualizowano tłumaczenie: {type}",
+          "translation_deleted": "Usunięto tłumaczenie: {type}",
+          "translation_published": "Opublikowano tłumaczenie: {type}",
+          "translation_unpublished": "Wycofano publikację tłumaczenia: {type}",
+          "translation_restored": "Przywrócono tłumaczenie: {type}",
+          "access_updated": "Zmieniono reguły dostępu",
+          "access_files_protected": "Przeniesiono publiczne pliki do prywatnego magazynu"
+        },
+        "role": {
+          "created": "Utworzono rolę",
+          "updated": "Zaktualizowano rolę",
+          "deleted": "Usunięto rolę"
+        },
+        "admin_permissions": {
+          "created": "Dodano uprawnienia administratora",
+          "updated": "Zmieniono uprawnienia administratora",
+          "deleted": "Usunięto uprawnienia administratora"
+        },
+        "moderator_permissions": {
+          "created": "Dodano uprawnienia moderatora",
+          "updated": "Zmieniono uprawnienia moderatora",
+          "deleted": "Usunięto uprawnienia moderatora"
+        },
+        "user": {
+          "updated": "Zaktualizowano użytkownika",
+          "roles_changed": "Zmieniono role użytkownika",
+          "password_reset": "Zresetowano hasło",
+          "email_verified": "Zweryfikowano adres e-mail",
+          "device_revoked": "Wylogowano urządzenie",
+          "devices_revoked": "Wylogowano wszystkie urządzenia"
+        },
+        "settings": {
+          "updated": "Zaktualizowano ustawienia"
+        },
+        "audit_settings": {
+          "updated": "Zmieniono okres przechowywania dziennika"
+        },
+        "audit_logs": {
+          "pruned": "Usunięto wygasłe wpisy dziennika",
+          "exported": "Wyeksportowano dziennik aktywności"
+        },
+        "ai_access": {
+          "role_updated": "Zmieniono dostęp roli do AI",
+          "user_override_saved": "Ustawiono wyjątek AI",
+          "user_override_removed": "Usunięto wyjątek AI"
+        },
+        "notifications": {
+          "type_updated": "Zmieniono typ powiadomienia",
+          "paused": "Wstrzymano powiadomienia",
+          "resumed": "Wznowiono powiadomienia",
+          "emails_cancelled": "Anulowano oczekujące e-maile z powiadomieniami",
+          "all_marked_read": "Oznaczono wszystkie powiadomienia jako przeczytane",
+          "all_deleted": "Usunięto wszystkie powiadomienia",
+          "member_preferences_reset": "Zresetowano preferencje powiadomień członków"
+        },
+        "report_reason": {
+          "created": "Utworzono powód zgłoszenia",
+          "updated": "Zaktualizowano powód zgłoszenia",
+          "deleted": "Usunięto powód zgłoszenia",
+          "reordered": "Zmieniono kolejność powodów zgłoszeń"
+        },
+        "report": {
+          "claimed": "Przejęto zgłoszenie",
+          "assigned": "Przypisano zgłoszenie",
+          "unassigned": "Cofnięto przypisanie zgłoszenia",
+          "note_added": "Dodano notatkę do zgłoszenia",
+          "note_edited": "Edytowano notatkę zgłoszenia",
+          "note_deleted": "Usunięto notatkę zgłoszenia",
+          "resolved": "Rozwiązano zgłoszenie",
+          "reopened": "Ponownie otwarto zgłoszenie",
+          "action_taken": "Podjęto działanie wobec zgłoszonej treści"
+        },
+        "submission": {
+          "approved": "Zatwierdzono zgłoszenie treści",
+          "rejected": "Odrzucono zgłoszenie treści"
+        },
+        "cron": {
+          "run": "Uruchomiono zadanie cron"
+        },
+        "payment": {
+          "created": "Rozpoczęto płatność",
+          "processing": "Płatność oczekuje na potwierdzenie",
+          "succeeded": "Płatność zakończona powodzeniem",
+          "failed": "Płatność nieudana",
+          "expired": "Płatność wygasła"
+        },
+        "warning": {
+          "issued": "Ostrzeżono członka",
+          "revoked": "Cofnięto ostrzeżenie"
+        },
+        "sanction": {
+          "applied": "Zawieszono konto",
+          "revoked": "Zniesiono zawieszenie"
+        },
+        "warning_reason": {
+          "created": "Utworzono powód ostrzeżenia",
+          "updated": "Zaktualizowano powód ostrzeżenia",
+          "reordered": "Zmieniono kolejność powodów ostrzeżeń"
+        },
+        "warning_threshold": {
+          "created": "Utworzono akcję ostrzeżeń",
+          "updated": "Zaktualizowano akcję ostrzeżeń",
+          "deleted": "Usunięto akcję ostrzeżeń"
+        }
+      },
+      "fields": {
+        "status": "Status",
+        "assigneeId": "Osoba przypisana",
+        "resolution": "Rozstrzygnięcie",
+        "name": "Nazwa",
+        "color": "Kolor",
+        "prefix": "Prefiks",
+        "roleId": "Rola główna",
+        "secondaryRoleIds": "Role dodatkowe",
+        "unrestricted": "Bez ograniczeń",
+        "retentionDays": "Okres przechowywania (dni)",
+        "email": "E-mail",
+        "password": "Hasło",
+        "requiresDetails": "Wymaga szczegółów",
+        "title": "Tytuł",
+        "amount": "Kwota (w najmniejszych jednostkach waluty)",
+        "currency": "Waluta",
+        "plugin": "Wtyczka",
+        "provider": "Dostawca",
+        "reference": "Numer referencyjny",
+        "customerId": "Id klienta",
+        "errorCode": "Kod błędu",
+        "access_view": "Dostęp do wyświetlania",
+        "access_read": "Dostęp do czytania",
+        "access_comment": "Dostęp do komentowania",
+        "access_downloadAttachments": "Dostęp do pobierania",
+        "points": "Punkty",
+        "expiresAfterHours": "Punkty wygasają po (godz.)",
+        "enabled": "Włączone",
+        "action": "Akcja",
+        "durationMinutes": "Czas trwania (minuty)"
+      }
+    },
+    "access": {
+      "loading": "Sprawdzamy Twój dostęp",
+      "sign_in": "Zaloguj się",
+      "read": {
+        "guest": {
+          "title": "Zaloguj się, aby to przeczytać",
+          "desc": "Ta część społeczności jest dostępna tylko dla zalogowanych członków. Zaloguj się, a może stanie przed Tobą otworem."
+        },
+        "member": {
+          "title": "Nie masz tu dostępu",
+          "desc": "Twoje konto nie może jeszcze tego czytać. Jeśli uważasz, że powinno, zapytaj administratora."
+        }
+      },
+      "comment": {
+        "guest": {
+          "title": "Zaloguj się, aby odpowiedzieć",
+          "desc": "Odpowiedzi są dla zalogowanych członków. Zaloguj się, aby dołączyć do rozmowy."
+        },
+        "member": {
+          "title": "Nie możesz tu odpowiadać",
+          "desc": "Możesz to czytać, ale Twoje konto nie może odpowiadać w tym miejscu."
+        }
+      },
+      "attachment": {
+        "title": "Dostępny jest załącznik",
+        "desc": "Nie masz uprawnień, aby go pobrać."
+      },
+      "admin": {
+        "action": "Dostęp",
+        "title": "Dostęp",
+        "submit": "Zapisz dostęp",
+        "success": "Dostęp zapisany",
+        "successDesc": "Nowe reguły dla {name} obowiązują od następnego żądania.",
+        "loadError": {
+          "title": "Nie udało się wczytać reguł dostępu",
+          "desc": "Coś poszło nie tak podczas pobierania informacji, kto może to widzieć i z tego korzystać. Spróbuj jeszcze raz."
+        },
+        "retry": "Spróbuj ponownie",
+        "deleted_role": "usunięta rola",
+        "this_scope": "ten element",
+        "audience": {
+          "everyone": "Wszyscy",
+          "members": "Zalogowani członkowie",
+          "roles": "Członkowie z rolami: {roles}",
+          "nobody": "Nikt (nie została żadna rola)"
+        },
+        "actions": {
+          "view": {
+            "label": "Wyświetlanie",
+            "desc": "Widoczność samego istnienia - nazwy i opisu na listach i w ścieżce nawigacji."
+          },
+          "read": {
+            "label": "Czytanie",
+            "desc": "Otwieranie i czytanie tego, co jest w nim umieszczone, oraz znajdowanie tego w wyszukiwarce i w sekcji Odkrywaj."
+          },
+          "comment": {
+            "label": "Komentowanie",
+            "desc": "Odpowiadanie na to, co jest w nim umieszczone. Logowanie i wszystkie reguły moderacji nadal obowiązują."
+          },
+          "downloadAttachments": {
+            "label": "Pobieranie załączników",
+            "desc": "Pobieranie chronionych załączników z treści, które czytelnicy mogą czytać."
+          }
+        },
+        "matrix": {
+          "caption": "Które grupy mogą wyświetlać, czytać, komentować i pobierać załączniki",
+          "group": "Grupa",
+          "columns": {
+            "view": "Wyświetlanie",
+            "read": "Czytanie",
+            "comment": "Komentowanie",
+            "downloadAttachments": "Pobieranie"
+          },
+          "cell": "{group}: {action}",
+          "inherit": {
+            "label": "Dziedzicz",
+            "desc": "Włączone: używa reguły z poziomu wyżej. Wyłączone: zaznacz grupy poniżej.",
+            "toggle": "Dziedzicz: {action}",
+            "set_here": "Ustawione tutaj",
+            "from_scope": "z {name}",
+            "from_default": "domyślne dla kolekcji",
+            "fallback": "brak reguły wyżej"
+          },
+          "short": {
+            "everyone": "Wszyscy",
+            "members": "Członkowie",
+            "roles": "{count, plural, =0 {Nikt} one {# rola} few {# role} many {# ról} other {# roli}}"
+          },
+          "guests": {
+            "label": "Goście",
+            "desc": "Niezalogowani"
+          },
+          "members": {
+            "label": "Zalogowani członkowie",
+            "desc": "Dowolne konto"
+          },
+          "roles": {
+            "label": "Role",
+            "count": "{count, plural, one {# rola} few {# role} many {# ról} other {# roli}}",
+            "all": "Wszystkie",
+            "none": "Żadna",
+            "some": "{count} z {total}",
+            "toggle_all": "Wszystkie role: {action}",
+            "search": "Znajdź rolę",
+            "no_match": "Żadna rola nie pasuje do „{query}”."
+          },
+          "blocked": {
+            "ancestor_title": "Zablokowane przez {scope}",
+            "ancestor_desc": "{scope} (element nadrzędny) zezwala na „{action}” tylko dla: {audience}. Reguła może być bardziej restrykcyjna niż nadrzędna, ale nigdy bardziej otwarta.",
+            "prerequisite_title": "Najpierw wymaga: {action}",
+            "prerequisite_desc": "Bez uprawnienia „{action}” w tym miejscu {group} nie może też z tego korzystać. Zaznacz dla tej grupy również „{action}”."
+          },
+          "pick_group": "{actions}: zaznacz co najmniej jedną grupę."
+        },
+        "effective": {
+          "open": "Wszyscy",
+          "loading": "Sprawdzamy, kto może to czytać"
+        },
+        "warnings": {
+          "nobody": "Nikt nie ma tu uprawnienia „{action}”. W regule na {scope} nie została żadna rola."
+        },
+        "descendants": "{count, plural, one {# zagnieżdżony element również podlega tym regułom.} few {# zagnieżdżone elementy również podlegają tym regułom.} many {# zagnieżdżonych elementów również podlega tym regułom.} other {# zagnieżdżonego elementu również podlega tym regułom.}}",
+        "attachments": {
+          "unsupported": "Adapter magazynu przechowuje pliki publicznie, więc pobieranie pozostaje otwarte dla wszystkich. <docs>Skonfiguruj prywatny magazyn</docs>, aby je ograniczyć."
+        },
+        "errors": {
+          "invalidAccess": "Jedna z reguł jest nieprawidłowa.",
+          "notFound": "To już nie istnieje.",
+          "unknownRole": "Jedna z ról już nie istnieje. Wybierz role ponownie.",
+          "unsupportedStorage": "Nie można ograniczyć pobierania: adapter magazynu przechowuje pliki publicznie.",
+          "unknown": "Coś poszło nie tak. Spróbuj ponownie za chwilę."
+        },
+        "files": {
+          "loading": "Liczymy pliki",
+          "public_title": "{count, plural, one {# załącznik jest nadal publiczny.} few {# załączniki są nadal publiczne.} many {# załączników jest nadal publicznych.} other {# załącznika jest nadal publicznego.}}",
+          "public_desc": "Każdy, kto ma do nich link, może je otworzyć, niezależnie od powyższych reguł. Ustaw je jako prywatne, aby mogły je otwierać tylko osoby z uprawnieniem do pobierania.",
+          "protect": "Ustaw jako prywatne ({count})",
+          "success": "Pliki zabezpieczone",
+          "successDesc": "Przeniesione do prywatnego magazynu: {moved}, pozostawione na kolejne uruchomienie: {remaining}, używane także gdzie indziej i pozostawione jako publiczne: {shared} - prześlij je ponownie tam, gdzie mają być prywatne.",
+          "failed": "Nie udało się przenieść plików. Spróbuj ponownie za chwilę.",
+          "unsupported": "Adapter magazynu przechowuje wszystkie pliki publicznie, więc pozostają one dostępne pod swoim adresem niezależnie od reguł. <docs>Skonfiguruj prywatny magazyn</docs>, aby je zabezpieczyć."
+        },
+        "notice": {
+          "title": "Kto może to zobaczyć",
+          "label": "Kto może to zobaczyć:",
+          "public": "Publiczne",
+          "restricted": "Ograniczone",
+          "and": ", a także ",
+          "intersection": "Czytelnik musi spełniać regułę każdej kategorii, do której należy treść, więc dwie ograniczone kategorie razem wpuszczają mniej osób niż każda z nich osobno.",
+          "missing": "Jedna z wybranych kategorii już nie istnieje. Nikt nie może czytać umieszczonej w niej treści."
+        }
       }
     }
   },
@@ -3426,5 +5796,29 @@
       }
     }
   },
-  "@vitnode/core:plugins:can_check_updates": "Sprawdzanie aktualizacji wtyczek i rdzenia na żądanie"
+  "@vitnode/core:plugins:can_check_updates": "Sprawdzanie aktualizacji wtyczek i rdzenia na żądanie",
+  "@vitnode/core:users:can_view_hidden_presence": "Wyświetlanie statusu online i ostatniej aktywności użytkowników przeglądających anonimowo",
+  "@vitnode/core:activity_logs": "Dziennik aktywności",
+  "@vitnode/core:activity_logs:can_view": "Wyświetlanie dziennika aktywności",
+  "@vitnode/core:activity_logs:can_view_sensitive": "Wyświetlanie adresów IP i szczegółów technicznych",
+  "@vitnode/core:activity_logs:can_export": "Eksportowanie dziennika aktywności",
+  "@vitnode/core:moderation:can_view_reports": "Wyświetlanie zgłoszeń",
+  "@vitnode/core:moderation:can_manage_reports": "Przejmowanie, przydzielanie, opisywanie i rozwiązywanie zgłoszeń",
+  "@vitnode/core:moderation:can_edit_notes": "Edytowanie notatek dowolnego moderatora",
+  "@vitnode/core:moderation:can_delete_notes": "Usuwanie notatek dowolnego moderatora",
+  "@vitnode/core:moderation:can_view_hidden": "Otwieranie ukrytych treści",
+  "@vitnode/core:moderation:can_hide": "Ukrywanie i przywracanie treści",
+  "@vitnode/core:warnings": "Ostrzeżenia",
+  "@vitnode/core:warnings:can_view": "Wyświetlanie ostrzeżeń wszystkich członków",
+  "@vitnode/core:warnings:can_warn": "Ostrzeganie członków bezpośrednio, bez powiązanej treści",
+  "@vitnode/core:warnings:can_override_points": "Zmiana punktów ostrzeżenia",
+  "@vitnode/core:warnings:can_override_expiration": "Zmiana terminu wygaśnięcia punktów ostrzeżenia",
+  "@vitnode/core:warnings:can_view_notes": "Odczytywanie notatek zespołu przy ostrzeżeniach",
+  "@vitnode/core:warnings:can_revoke": "Cofanie ostrzeżeń",
+  "@vitnode/core:warnings:can_view_sanctions": "Wyświetlanie zawieszeń",
+  "@vitnode/core:warnings:can_manage_sanctions": "Znoszenie zawieszeń",
+  "@vitnode/core:warning_settings": "Ustawienia ostrzeżeń",
+  "@vitnode/core:warning_settings:can_view": "Wyświetlanie powodów i działań ostrzeżeń",
+  "@vitnode/core:warning_settings:can_manage": "Zarządzanie powodami i działaniami ostrzeżeń",
+  "@vitnode/core:moderation:can_warn": "Ostrzeganie autorów tej treści"
 }

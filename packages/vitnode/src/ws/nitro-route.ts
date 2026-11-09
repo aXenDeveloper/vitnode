@@ -1,9 +1,9 @@
 import type { EventHandler } from "nitro/h3";
 
 import { defineWebSocketHandler } from "nitro";
-import { fetchViteEnv } from "nitro/vite/runtime";
+import { fetchService } from "nitro/services";
 
-const warmup = async (request: Request) => fetchViteEnv("ssr", request);
+const warmup = async (request: Request) => fetchService("ssr", request);
 
 const loadHooks = async (url: string) => {
   await warmup(new Request(url));

@@ -1,9 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 
-import { TanStackDevtools } from '@tanstack/react-devtools'
-import { ReactQueryDevtoolsPanel } from '@tanstack/react-query-devtools'
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
-import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { ThemeScript } from '@vitnode/core/components/theme-script'
 import {
   intlQueryOptions,
@@ -90,26 +87,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 
       <body suppressHydrationWarning>
         {children}
-
-        {import.meta.env.DEV ? (
-          <TanStackDevtools
-            config={{
-              position: 'bottom-left',
-              triggerMode: 'fixed',
-            }}
-            plugins={[
-              {
-                name: 'TanStack Router',
-                render: <TanStackRouterDevtoolsPanel />,
-              },
-              {
-                name: 'TanStack Query',
-                render: <ReactQueryDevtoolsPanel />,
-              },
-            ]}
-          />
-        ) : null}
-
         <DocumentScripts />
       </body>
     </html>

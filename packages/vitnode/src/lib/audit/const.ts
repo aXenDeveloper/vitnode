@@ -32,6 +32,7 @@ export const AUDIT_ACTION_MAX_LENGTH = 150;
 export const AUDIT_TARGET_TYPE_MAX_LENGTH = 100;
 export const AUDIT_TARGET_ID_MAX_LENGTH = 64;
 export const AUDIT_TARGET_LABEL_MAX_LENGTH = 255;
+export const AUDIT_SEARCH_ACTIONS_MAX = 100;
 export const AUDIT_SCOPE_FAMILY_MAX_LENGTH = 100;
 export const AUDIT_SCOPE_ID_MAX_LENGTH = 64;
 
@@ -67,8 +68,7 @@ export const AUDIT_TRUNCATED = "[truncated]";
 /** What a rich-text document is stored as: the revision has the document. */
 export const AUDIT_RICH_TEXT = "[rich text]";
 
-/** Retention choices offered in the AdminCP, in days. `0` keeps everything. */
-export const AUDIT_RETENTION_DAYS_OPTIONS = [0, 30, 90, 180, 365, 730] as const;
+/** Days an entry is kept while `activityLogs.retentionDays` is unset. */
 export const AUDIT_DEFAULT_RETENTION_DAYS = 365;
 /** Rows the retention job deletes per statement, so a backlog never locks the table. */
 export const AUDIT_RETENTION_BATCH_SIZE = 5_000;

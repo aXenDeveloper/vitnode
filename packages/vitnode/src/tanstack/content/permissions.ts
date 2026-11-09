@@ -26,11 +26,19 @@ export interface ContentPermissions {
    * the visitor's - unless `reports.selfReport` lets authors report their own.
    */
   canReport: boolean;
+  /**
+   * A **Warn author** action makes sense: the visitor is a moderator with
+   * `can_warn` for the record's scope and did not write it.
+   */
+  canWarn: boolean;
 }
 
 /** The permissions route's answer, as `fetch` returns it. */
 export interface ContentPermissionsResponse<TId extends number | string> {
-  items: (ContentPermissions & { id: TId })[];
+  items: (Omit<ContentPermissions, "canWarn"> & {
+    canWarn?: boolean;
+    id: TId;
+  })[];
 }
 
 const NO_PERMISSIONS: ContentPermissions = {
@@ -38,6 +46,7 @@ const NO_PERMISSIONS: ContentPermissions = {
   canEdit: false,
   canHide: false,
   canReport: false,
+  canWarn: false,
 };
 
 /** Batches in flight at once for one hook. */
@@ -194,6 +203,7 @@ export const useContentPermissions = <TId extends number | string>({
             canEdit: item.canEdit,
             canHide: item.canHide,
             canReport: item.canReport,
+            canWarn: item.canWarn ?? false,
           }
         : NO_PERMISSIONS;
     },

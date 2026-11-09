@@ -108,6 +108,15 @@ export interface VitNodeServerConfig<
  * {@link buildApiConfig}. Server-only: it holds the database and secrets.
  */
 export interface VitNodeApiConfig {
+  /** The Activity Logs (audit log) the AdminCP shows under Staff. */
+  activityLogs?: {
+    /**
+     * How many days an entry is kept. A daily job deletes older entries, in
+     * batches. `0` keeps everything. A whole number from `0`; anything else
+     * falls back to the default. Defaults to `365`.
+     */
+    retentionDays?: number;
+  };
   /** AI models and providers, resolved through `c.get("ai")`. AI features are off without it. */
   ai?: AIConfig;
   /** Sessions, cookies and sign-in methods. */

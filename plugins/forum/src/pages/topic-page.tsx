@@ -299,7 +299,7 @@ const TopicJsonLd = ({
 
   return (
     <script
-      // oxlint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml -- JSON-LD has to be raw JSON; `<` is escaped so it cannot close the tag
+      // oxlint-disable-next-line react/no-danger -- JSON-LD has to be raw JSON; `<` is escaped so it cannot close the tag
       dangerouslySetInnerHTML={{
         __html: JSON.stringify(json).replaceAll("<", "\\u003c"),
       }}

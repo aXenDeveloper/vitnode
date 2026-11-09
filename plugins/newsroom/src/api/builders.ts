@@ -3,6 +3,12 @@ import { bindContentPlugin } from "@vitnode/core/content/server";
 
 import { manifest } from "@/manifest.gen";
 
-export const { buildModule, buildRoute } = bindApiPlugin(manifest);
-export const { buildContentAdminModule, buildContentPublicModule } =
-  bindContentPlugin(manifest);
+const apiBuilders = bindApiPlugin(manifest);
+
+export const buildModule = apiBuilders.buildModule;
+export const buildRoute = apiBuilders.buildRoute;
+const contentBuilders = bindContentPlugin(manifest);
+
+export const buildContentAdminModule = contentBuilders.buildContentAdminModule;
+export const buildContentPublicModule =
+  contentBuilders.buildContentPublicModule;

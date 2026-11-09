@@ -1,0 +1,39 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "5813f899-b4ab-4c93-a75e-2f9ce9dcd2bd",
+  "prevIds": [
+    "4821b844-f167-4596-9539-fc95a47b0e4d"
+  ],
+  "footprints": [
+    {
+      "statementType": "rename_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_moderation_warning_thresholds",
+        "durationHours"
+      ],
+      "writes": [
+        "s|col|public.core_moderation_warning_thresholds.durationHours",
+        "n|col|public.core_moderation_warning_thresholds.durationHours",
+        "s|col|public.core_moderation_warning_thresholds.durationMinutes",
+        "n|col|public.core_moderation_warning_thresholds.durationMinutes"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warning_thresholds",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "rename",
+      "key": "columns\u0000[\"public\",\"core_moderation_warning_thresholds\",\"durationHours\"]",
+      "set": {
+        "name": "durationMinutes"
+      }
+    }
+  ]
+}

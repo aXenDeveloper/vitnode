@@ -8,7 +8,6 @@ export const AUDIT_PERMISSION_MODULE = "activity_logs";
 
 export const AUDIT_PERMISSIONS = {
   export: "can_export",
-  manageRetention: "can_manage_retention",
   view: "can_view",
   viewSensitive: "can_view_sensitive",
 } as const;

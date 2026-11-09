@@ -73,6 +73,8 @@ const SecondaryRoles = ({ roles }: { roles: ProfileRole[] }) => {
 
 export interface ProfileContentProps {
   action?: React.ReactNode;
+  /** Rendered at the top of the side column, above the About card - the warnings card, for example. */
+  aside?: React.ReactNode;
   /** Rendered beside the About card on large screens - a feed, posts, anything the host adds. */
   children?: React.ReactNode;
   editor?: UserImageEditor;
@@ -83,6 +85,7 @@ export interface ProfileContentProps {
 
 export const ProfileContent = ({
   action,
+  aside,
   children,
   editor,
   presence,
@@ -97,7 +100,7 @@ export const ProfileContent = ({
     year: "numeric",
   });
   const joinedIso = joinedAt.toISOString();
-  const hasAside = user.secondaryRoles.length > 0;
+  const hasAside = Boolean(aside) || user.secondaryRoles.length > 0;
 
   return (
     <div className="container mx-auto flex flex-col gap-4 p-4 sm:gap-6">
@@ -183,12 +186,17 @@ export const ProfileContent = ({
             hasAside && children ? "lg:grid-cols-3" : null,
           )}
         >
-          <SecondaryRoles roles={user.secondaryRoles} />
+          {hasAside ? (
+            <div className="flex min-w-0 flex-col gap-4 sm:gap-6 lg:col-span-1">
+              {aside}
+              <SecondaryRoles roles={user.secondaryRoles} />
+            </div>
+          ) : null}
 
           {children ? (
             <div
               className={cn(
-                "flex flex-col gap-4 sm:gap-6",
+                "flex min-w-0 flex-col gap-4 sm:gap-6",
                 hasAside ? "lg:col-span-2" : null,
               )}
             >

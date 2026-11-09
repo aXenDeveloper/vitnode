@@ -17,11 +17,16 @@ import { userPresenceQueryOptions } from "@/views/presence/presence-query";
 import { ProfileContent } from "@/views/profile/profile-content";
 import { userProfileQueryKey } from "@/views/profile/profile-query";
 import { profileTimelineQueryOptions } from "@/views/profile/profile-timeline-query";
+import {
+  ProfileWarnings,
+  ProfileWarningsSkeleton,
+} from "@/views/profile/warnings/profile-warnings";
 import { SearchFeedList } from "@/views/search/search-feed-content";
 
 import { useSessionQuery } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { RouteMessages } from "../i18n/route-messages";
+import { REPORT_NAMESPACES } from "../moderation/report-button";
 import { useOwnUserImageEditor } from "./own-image-editor";
 import { userProfileQuery } from "./query";
 import { PROFILE_NAMESPACES } from "./route";
@@ -72,6 +77,20 @@ const ProfilePresence = ({
   );
 };
 
+const ProfileWarningsSlot = ({
+  isOwner,
+  userId,
+}: {
+  isOwner: boolean;
+  userId: number;
+}) => (
+  <React.Suspense fallback={<ProfileWarningsSkeleton />}>
+    <RouteMessages namespaces={REPORT_NAMESPACES}>
+      <ProfileWarnings isOwner={isOwner} userId={userId} />
+    </RouteMessages>
+  </React.Suspense>
+);
+
 const ProfileTimeline = ({
   userId,
   viewerId,
@@ -117,6 +136,11 @@ const ProfileScreen = ({ children, nameCode }: ProfileRouteProps) => {
   return (
     <ProfileContent
       action={isOwner ? <EditProfileAction /> : null}
+      aside={
+        isOwner || session?.user?.isModerator ? (
+          <ProfileWarningsSlot isOwner={isOwner} userId={user.id} />
+        ) : null
+      }
       editor={editor}
       presence={
         <ProfilePresence

@@ -41,6 +41,13 @@ export const sessionRoute = buildRoute({
                   notifications: zodNotificationState,
                 })
                 .nullable(),
+              suspension: z
+                .object({ endsAt: z.date().nullable() })
+                .nullable()
+                .optional()
+                .describe(
+                  "Set while the session's account is suspended; `user` is then `null`",
+                ),
             }),
           },
         },
@@ -50,7 +57,14 @@ export const sessionRoute = buildRoute({
   },
   handler: async c => {
     const user = c.get("user");
-    if (!user) return c.json({ user: null });
+    if (!user) {
+      const suspension = c.get("suspension");
+
+      return c.json({
+        user: null,
+        suspension: suspension ? { endsAt: suspension.endsAt } : null,
+      });
+    }
 
     const [{ isAdmin, isModerator }, notifications] = await Promise.all([
       getStaffFlags(c, user),

@@ -86,6 +86,9 @@ describe("GET /users/session", () => {
   });
 
   it("answers with no user when signed out", async () => {
-    expect(await readSession(null)).toEqual({ user: null });
+    expect(await readSession(null)).toEqual({
+      suspension: null,
+      user: null,
+    });
   });
 });

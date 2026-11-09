@@ -9,7 +9,8 @@ import {
 import { MainFooter } from "@/components/main-footer";
 
 export const Route = createFileRoute("/_main")({
-  loader: async ({ context }) => await loadMainShell(context),
+  loader: async ({ context, location }) =>
+    await loadMainShell(context, { location }),
   component: MainLayout,
 });
 

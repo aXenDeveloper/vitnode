@@ -3,6 +3,8 @@ import "@tanstack/react-start/server-only";
 
 import { fetcher } from "@/tanstack/fetcher/server";
 
+import type { SessionApi } from "./session-api";
+
 import { createAuthOperations } from "./transport-operations";
 
 /**
@@ -14,7 +16,7 @@ import { createAuthOperations } from "./transport-operations";
  * and both email confirmation calls never mint a session, so none of them
  * relays a cookie.
  */
-const operations = createAuthOperations({
+const operations = createAuthOperations<SessionApi>({
   changePasswordFromReset: async data =>
     await fetcher({
       plugin: manifest.id,

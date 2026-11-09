@@ -264,9 +264,20 @@ switches there, and tabs hiding an error get a red dot.
 }
 ```
 
+The field slides closed and open instead of popping in and out, and the fields
+below glide along with it. People who prefer reduced motion get an instant
+swap. With a custom [`layout`](#layout) the field simply leaves `rendered`, so
+any animation there is yours to add.
+
 <Callout type="warn">
   Hidden fields still submit. Make them `.optional()` or give them a
   `.default()`, or an invisible error blocks the form.
+</Callout>
+
+<Callout>
+  The slide keeps the form's own spacing between fields. If you change that
+  spacing with `className` (say `gap-4`), conditional fields land a few pixels
+  off, so keep the default gap or switch to `layout`.
 </Callout>
 
 ### Nested fields

@@ -19,6 +19,7 @@ import { runAfterResponse } from "@/api/lib/after-response";
 import { DEFAULT_SESSION_COOKIE_NAME } from "@/api/lib/auth-cookie";
 import { CacheModel } from "@/api/lib/cache";
 import { MemoryCacheStore } from "@/api/lib/cache-memory";
+import { findActiveSuspension } from "@/api/lib/moderation/warnings/suspension";
 import { AIModel } from "@/api/models/ai";
 import { AuditModel } from "@/api/models/audit";
 import { EmailModel } from "@/api/models/email";
@@ -82,6 +83,7 @@ import type { SSOApiPlugin } from "../models/sso";
 import { assertAiModelPricing } from "../lib/ai/pricing";
 import { assertContentAiActions, collectAiActions } from "../lib/ai/registry";
 import { collectAuditActions } from "../lib/audit/registry";
+import { resolveAuditRetentionDays } from "../lib/audit/settings";
 import { resolveClientIp } from "../lib/client-ip";
 import { collectCronJobs } from "../lib/cron";
 import {
@@ -186,6 +188,8 @@ export interface EnvVariablesVitNode {
     aiActions: AiActionRegistry;
     /** Every declared audit action - core's, the Content Engine's and each plugin's. */
     auditActions: RegisteredAuditAction[];
+    /** Days an Activity Logs entry is kept (`activityLogs.retentionDays`); `0` keeps everything. */
+    auditRetentionDays: number;
     authorization: {
       adminCookieExpires: number;
       adminCookieName: string;
@@ -295,6 +299,17 @@ export interface EnvVariablesVitNode {
   search: SearchModel;
   /** Uploads, reads and deletes files through the storage adapter: see {@link StorageModel}. */
   storage: StorageModel;
+  /**
+   * Set when the session belongs to a suspended account. `user` is then
+   * `null`, so every route - core's and every plugin's - treats the request as
+   * a guest's. Only routes built for the suspended experience (the account
+   * status page, sign-out) read this.
+   */
+  suspension: null | {
+    /** The latest end among active suspensions; `null` while any is indefinite. */
+    endsAt: Date | null;
+    userId: number;
+  };
   /** The signed-in user from the session cookie, or `null` for a guest. */
   user: null | {
     avatarColor: string;
@@ -331,6 +346,7 @@ type CoreVariables = EnvVariablesVitNode["core"];
  * moderation targets and scopes).
  */
 export const globalMiddleware = ({
+  activityLogs,
   ai,
   authorization,
   content,
@@ -352,6 +368,7 @@ export const globalMiddleware = ({
   cacheClient,
 }: Pick<
   VitNodeApiConfig,
+  | "activityLogs"
   | "ai"
   | "authorization"
   | "captcha"
@@ -374,6 +391,7 @@ export const globalMiddleware = ({
     cacheClient: CacheClient | null;
   }) => {
   const notificationWorkers = resolveNotificationWorkerSettings(notifications);
+  const auditRetentionDays = resolveAuditRetentionDays(activityLogs);
   const pluginsMetadata = plugins.map(plugin => ({
     id: plugin.pluginId,
   }));
@@ -628,6 +646,7 @@ export const globalMiddleware = ({
       ai,
       aiActions: aiActionsMetadata,
       auditActions: auditActionsMetadata,
+      auditRetentionDays,
       i18n: i18nMetadata,
       metadata,
       email,
@@ -739,8 +758,17 @@ export const globalMiddleware = ({
       await ensureContentLocalizationLanguages(c, contentTypesMetadata);
     }
 
-    const user = await new SessionModel(c).getUser();
-    c.set("user", user);
+    const sessionUser = await new SessionModel(c).getUser();
+    const suspension = sessionUser
+      ? await findActiveSuspension(c, sessionUser.id)
+      : null;
+    c.set("user", suspension ? null : sessionUser);
+    c.set(
+      "suspension",
+      sessionUser && suspension
+        ? { endsAt: suspension.endsAt, userId: sessionUser.id }
+        : null,
+    );
     c.set("admin", null);
     c.set("adminSessionExpiresAt", null);
     c.set("log", loggerMiddleware(c));
@@ -775,6 +803,9 @@ export const globalAdminMiddleware = () => {
       extend: c.req.query("passive") !== "true",
     });
     if (!session) throw new HTTPException(403);
+    if (await findActiveSuspension(c, session.user.id)) {
+      throw new HTTPException(403);
+    }
     c.set("admin", {
       user: session.user,
     });

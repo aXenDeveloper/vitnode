@@ -38,8 +38,10 @@ export interface AiUsage {
   sitePaused: boolean;
 }
 
-export const hasAiFeatures = (usage: Pick<AiUsage, "actions" | "enabled">) =>
-  usage.enabled && usage.actions.length > 0;
+export const hasAiFeatures = (
+  usage: Pick<AiUsage, "actions" | "enabled" | "notice">,
+) =>
+  usage.enabled && usage.actions.length > 0 && usage.notice !== "no_allowance";
 
 export interface AiHistoryItem {
   accepted: boolean | null;

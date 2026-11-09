@@ -20,3 +20,5 @@ export const ADMIN_ROLES_SCREEN = "roles";
 export const ADMIN_STAFF_SCREEN = "staff";
 export const ADMIN_DASHBOARD_SCREEN = "dashboard";
 export const ADMIN_REPORT_REASONS_SCREEN = "report-reasons";
+export const ADMIN_WARNING_REASONS_SCREEN = "warning-reasons";
+export const ADMIN_WARNING_THRESHOLDS_SCREEN = "warning-thresholds";

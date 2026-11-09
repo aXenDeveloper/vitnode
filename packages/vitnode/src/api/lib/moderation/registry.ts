@@ -30,7 +30,10 @@ export interface ModerationRegistry {
 }
 
 export const moderationPermissionEntries = (
-  target: Pick<ModerationReportTargetDefinition, "actions" | "scope">,
+  target: Pick<
+    ModerationReportTargetDefinition,
+    "actions" | "resolveAuthors" | "scope"
+  >,
 ): PermissionStaffEntryInput[] => {
   const scope = target.scope ? { scope: target.scope } : {};
   const hideable = Boolean(target.actions?.hide ?? target.actions?.unhide);
@@ -52,6 +55,9 @@ export const moderationPermissionEntries = (
       permission: MODERATION_PERMISSIONS.deleteNotes,
       ...scope,
     },
+    ...(target.resolveAuthors
+      ? [{ permission: MODERATION_PERMISSIONS.warn, ...scope }]
+      : []),
     ...(hideable
       ? [
           { permission: MODERATION_PERMISSIONS.viewHidden, ...scope },

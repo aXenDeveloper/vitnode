@@ -32,10 +32,17 @@ import { bindContentPlugin } from "@vitnode/core/content/server"; // [!code ++]
 
 import { manifest } from "@/manifest.gen";
 
-export const { buildModule, buildRoute } = bindApiPlugin(manifest);
-// [!code ++:2]
-export const { buildContentAdminModule, buildContentPublicModule } =
-  bindContentPlugin(manifest);
+const apiBuilders = bindApiPlugin(manifest);
+
+export const buildModule = apiBuilders.buildModule;
+export const buildRoute = apiBuilders.buildRoute;
+// [!code ++:6]
+const contentBuilders = bindContentPlugin(manifest);
+
+export const buildContentAdminModule =
+  contentBuilders.buildContentAdminModule;
+export const buildContentPublicModule =
+  contentBuilders.buildContentPublicModule;
 ```
 
 `vitnode dev` and `vitnode build` write `src/manifest.gen.ts` from your `package.json`, and `manifest.id` is the plugin id.

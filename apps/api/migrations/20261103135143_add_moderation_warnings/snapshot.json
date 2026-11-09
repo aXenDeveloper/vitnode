@@ -1,0 +1,1982 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "2cc93fc1-e03a-4dd4-876e-89f6875a47f8",
+  "prevIds": [
+    "2d32a353-3dc9-4b47-8d67-0bca5da5a89e"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_sanctions"
+      ],
+      "writes": [
+        "s|tbl|public.core_moderation_sanctions",
+        "n|tbl|public.core_moderation_sanctions",
+        "e|tbl|public.core_moderation_sanctions",
+        "n|rel|public.core_moderation_sanctions",
+        "n|type|public.core_moderation_sanctions",
+        "n|rel|public.core_moderation_sanctions_pkey",
+        "n|rel|public.core_moderation_sanctions_warningId_key"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_warning_reasons"
+      ],
+      "writes": [
+        "s|tbl|public.core_moderation_warning_reasons",
+        "n|tbl|public.core_moderation_warning_reasons",
+        "e|tbl|public.core_moderation_warning_reasons",
+        "n|rel|public.core_moderation_warning_reasons",
+        "n|type|public.core_moderation_warning_reasons",
+        "n|rel|public.core_moderation_warning_reasons_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_warning_thresholds"
+      ],
+      "writes": [
+        "s|tbl|public.core_moderation_warning_thresholds",
+        "n|tbl|public.core_moderation_warning_thresholds",
+        "e|tbl|public.core_moderation_warning_thresholds",
+        "n|rel|public.core_moderation_warning_thresholds",
+        "n|type|public.core_moderation_warning_thresholds",
+        "n|rel|public.core_moderation_warning_thresholds_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_warnings"
+      ],
+      "writes": [
+        "s|tbl|public.core_moderation_warnings",
+        "n|tbl|public.core_moderation_warnings",
+        "e|tbl|public.core_moderation_warnings",
+        "n|rel|public.core_moderation_warnings",
+        "n|type|public.core_moderation_warnings",
+        "n|rel|public.core_moderation_warnings_pkey",
+        "n|rel|public.core_moderation_warnings_idempotency_key"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_moderation_sanctions",
+        "core_moderation_sanctions_user_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_moderation_sanctions_user_idx",
+        "n|idx|public.core_moderation_sanctions_user_idx",
+        "e|idx|public.core_moderation_sanctions_user_idx",
+        "n|rel|public.core_moderation_sanctions_user_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_sanctions",
+        "n|sch|public",
+        "n|col|public.core_moderation_sanctions.userId",
+        "n|col|public.core_moderation_sanctions.revokedAt",
+        "n|col|public.core_moderation_sanctions.endsAt"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_moderation_sanctions",
+        "core_moderation_sanctions_created_at_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_moderation_sanctions_created_at_id_idx",
+        "n|idx|public.core_moderation_sanctions_created_at_id_idx",
+        "e|idx|public.core_moderation_sanctions_created_at_id_idx",
+        "n|rel|public.core_moderation_sanctions_created_at_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_sanctions",
+        "n|sch|public",
+        "n|col|public.core_moderation_sanctions.createdAt",
+        "n|col|public.core_moderation_sanctions.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_moderation_warning_reasons",
+        "core_moderation_warning_reasons_position_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_moderation_warning_reasons_position_idx",
+        "n|idx|public.core_moderation_warning_reasons_position_idx",
+        "e|idx|public.core_moderation_warning_reasons_position_idx",
+        "n|rel|public.core_moderation_warning_reasons_position_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warning_reasons",
+        "n|sch|public",
+        "n|col|public.core_moderation_warning_reasons.position"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_moderation_warning_thresholds",
+        "core_moderation_warning_thresholds_enabled_points_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_moderation_warning_thresholds_enabled_points_idx",
+        "n|idx|public.core_moderation_warning_thresholds_enabled_points_idx",
+        "e|idx|public.core_moderation_warning_thresholds_enabled_points_idx",
+        "n|rel|public.core_moderation_warning_thresholds_enabled_points_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warning_thresholds",
+        "n|sch|public",
+        "n|col|public.core_moderation_warning_thresholds.points"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_moderation_warnings",
+        "core_moderation_warnings_user_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_moderation_warnings_user_idx",
+        "n|idx|public.core_moderation_warnings_user_idx",
+        "e|idx|public.core_moderation_warnings_user_idx",
+        "n|rel|public.core_moderation_warnings_user_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.userId",
+        "n|col|public.core_moderation_warnings.issuedAt"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_moderation_warnings",
+        "core_moderation_warnings_issued_at_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_moderation_warnings_issued_at_id_idx",
+        "n|idx|public.core_moderation_warnings_issued_at_id_idx",
+        "e|idx|public.core_moderation_warnings_issued_at_id_idx",
+        "n|rel|public.core_moderation_warnings_issued_at_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.issuedAt",
+        "n|col|public.core_moderation_warnings.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_moderation_warnings",
+        "core_moderation_warnings_issued_by_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_moderation_warnings_issued_by_idx",
+        "n|idx|public.core_moderation_warnings_issued_by_idx",
+        "e|idx|public.core_moderation_warnings_issued_by_idx",
+        "n|rel|public.core_moderation_warnings_issued_by_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.issuedById"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_moderation_warnings",
+        "core_moderation_warnings_reason_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_moderation_warnings_reason_idx",
+        "n|idx|public.core_moderation_warnings_reason_idx",
+        "e|idx|public.core_moderation_warnings_reason_idx",
+        "n|rel|public.core_moderation_warnings_reason_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.reasonId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_moderation_warnings",
+        "core_moderation_warnings_target_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_moderation_warnings_target_idx",
+        "n|idx|public.core_moderation_warnings_target_idx",
+        "e|idx|public.core_moderation_warnings_target_idx",
+        "n|rel|public.core_moderation_warnings_target_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.pluginId",
+        "n|col|public.core_moderation_warnings.targetType",
+        "n|col|public.core_moderation_warnings.targetId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_moderation_warnings",
+        "core_moderation_warnings_report_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_moderation_warnings_report_idx",
+        "n|idx|public.core_moderation_warnings_report_idx",
+        "e|idx|public.core_moderation_warnings_report_idx",
+        "n|rel|public.core_moderation_warnings_report_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.reportId"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_sanctions"
+      ],
+      "writes": [
+        "s|fk|public.core_moderation_sanctions.core_moderation_sanctions_userId_core_users_id_fkey",
+        "n|fk|public.core_moderation_sanctions.core_moderation_sanctions_userId_core_users_id_fkey",
+        "e|fk|public.core_moderation_sanctions.core_moderation_sanctions_userId_core_users_id_fkey",
+        "n|con|public.core_moderation_sanctions.core_moderation_sanctions_userId_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_sanctions",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_moderation_sanctions.userId",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_sanctions"
+      ],
+      "writes": [
+        "s|fk|public.core_moderation_sanctions.core_moderation_sanctions_rlFetAHphSkc_fkey",
+        "n|fk|public.core_moderation_sanctions.core_moderation_sanctions_rlFetAHphSkc_fkey",
+        "e|fk|public.core_moderation_sanctions.core_moderation_sanctions_rlFetAHphSkc_fkey",
+        "n|con|public.core_moderation_sanctions.core_moderation_sanctions_rlFetAHphSkc_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_sanctions",
+        "n|sch|public",
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|col|public.core_moderation_sanctions.warningId",
+        "n|col|public.core_moderation_warnings.id",
+        "e|uniqueness|public.core_moderation_warnings.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_sanctions"
+      ],
+      "writes": [
+        "s|fk|public.core_moderation_sanctions.core_moderation_sanctions_ejX3lH3GN7oz_fkey",
+        "n|fk|public.core_moderation_sanctions.core_moderation_sanctions_ejX3lH3GN7oz_fkey",
+        "e|fk|public.core_moderation_sanctions.core_moderation_sanctions_ejX3lH3GN7oz_fkey",
+        "n|con|public.core_moderation_sanctions.core_moderation_sanctions_ejX3lH3GN7oz_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_sanctions",
+        "n|sch|public",
+        "n|tbl|public.core_moderation_warning_thresholds",
+        "n|sch|public",
+        "n|col|public.core_moderation_sanctions.thresholdId",
+        "n|col|public.core_moderation_warning_thresholds.id",
+        "e|uniqueness|public.core_moderation_warning_thresholds.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_sanctions"
+      ],
+      "writes": [
+        "s|fk|public.core_moderation_sanctions.core_moderation_sanctions_createdById_core_users_id_fkey",
+        "n|fk|public.core_moderation_sanctions.core_moderation_sanctions_createdById_core_users_id_fkey",
+        "e|fk|public.core_moderation_sanctions.core_moderation_sanctions_createdById_core_users_id_fkey",
+        "n|con|public.core_moderation_sanctions.core_moderation_sanctions_createdById_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_sanctions",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_moderation_sanctions.createdById",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_sanctions"
+      ],
+      "writes": [
+        "s|fk|public.core_moderation_sanctions.core_moderation_sanctions_revokedById_core_users_id_fkey",
+        "n|fk|public.core_moderation_sanctions.core_moderation_sanctions_revokedById_core_users_id_fkey",
+        "e|fk|public.core_moderation_sanctions.core_moderation_sanctions_revokedById_core_users_id_fkey",
+        "n|con|public.core_moderation_sanctions.core_moderation_sanctions_revokedById_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_sanctions",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_moderation_sanctions.revokedById",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_warnings"
+      ],
+      "writes": [
+        "s|fk|public.core_moderation_warnings.core_moderation_warnings_userId_core_users_id_fkey",
+        "n|fk|public.core_moderation_warnings.core_moderation_warnings_userId_core_users_id_fkey",
+        "e|fk|public.core_moderation_warnings.core_moderation_warnings_userId_core_users_id_fkey",
+        "n|con|public.core_moderation_warnings.core_moderation_warnings_userId_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.userId",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_warnings"
+      ],
+      "writes": [
+        "s|fk|public.core_moderation_warnings.core_moderation_warnings_issuedById_core_users_id_fkey",
+        "n|fk|public.core_moderation_warnings.core_moderation_warnings_issuedById_core_users_id_fkey",
+        "e|fk|public.core_moderation_warnings.core_moderation_warnings_issuedById_core_users_id_fkey",
+        "n|con|public.core_moderation_warnings.core_moderation_warnings_issuedById_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.issuedById",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_warnings"
+      ],
+      "writes": [
+        "s|fk|public.core_moderation_warnings.core_moderation_warnings_J1JvecLI20Z2_fkey",
+        "n|fk|public.core_moderation_warnings.core_moderation_warnings_J1JvecLI20Z2_fkey",
+        "e|fk|public.core_moderation_warnings.core_moderation_warnings_J1JvecLI20Z2_fkey",
+        "n|con|public.core_moderation_warnings.core_moderation_warnings_J1JvecLI20Z2_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|tbl|public.core_moderation_warning_reasons",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.reasonId",
+        "n|col|public.core_moderation_warning_reasons.id",
+        "e|uniqueness|public.core_moderation_warning_reasons.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_warnings"
+      ],
+      "writes": [
+        "s|fk|public.core_moderation_warnings.core_moderation_warnings_0vlCswFpT46n_fkey",
+        "n|fk|public.core_moderation_warnings.core_moderation_warnings_0vlCswFpT46n_fkey",
+        "e|fk|public.core_moderation_warnings.core_moderation_warnings_0vlCswFpT46n_fkey",
+        "n|con|public.core_moderation_warnings.core_moderation_warnings_0vlCswFpT46n_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|tbl|public.core_moderation_reports",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.reportId",
+        "n|col|public.core_moderation_reports.id",
+        "e|uniqueness|public.core_moderation_reports.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_moderation_warnings"
+      ],
+      "writes": [
+        "s|fk|public.core_moderation_warnings.core_moderation_warnings_revokedById_core_users_id_fkey",
+        "n|fk|public.core_moderation_warnings.core_moderation_warnings_revokedById_core_users_id_fkey",
+        "e|fk|public.core_moderation_warnings.core_moderation_warnings_revokedById_core_users_id_fkey",
+        "n|con|public.core_moderation_warnings.core_moderation_warnings_revokedById_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.revokedById",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_moderation_sanctions",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_moderation_warning_reasons",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_moderation_warning_thresholds",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_moderation_warnings",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "userId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "type",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "source",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "startsAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "endsAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "warningId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "thresholdId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "thresholdSnapshot",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "createdById",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "createdAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "revokedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "revokedById",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "revokeReason",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_reasons",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_reasons",
+        "name": "points",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_reasons",
+        "name": "expiresAfterHours",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_reasons",
+        "name": "enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_reasons",
+        "name": "position",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_reasons",
+        "name": "createdAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_reasons",
+        "name": "updatedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_thresholds",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_thresholds",
+        "name": "points",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_thresholds",
+        "name": "action",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_thresholds",
+        "name": "durationHours",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_thresholds",
+        "name": "enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_thresholds",
+        "name": "createdAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_thresholds",
+        "name": "updatedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "userId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "issuedById",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "reasonId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "reasonSnapshot",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "points",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "defaultPoints",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "overrideNote",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "message",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "staffNote",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "issuedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "expiresAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "pointsBefore",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "pointsAfter",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "pluginId",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "targetType",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "targetId",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "scopeFamily",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "scopeId",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "contentSnapshot",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "reportId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "idempotencyKey",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "revokedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "revokedById",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "revokeReason",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "core_moderation_sanctions_user_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "userId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "revokedAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "endsAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "core_moderation_sanctions_created_at_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "createdAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_reasons",
+        "name": "core_moderation_warning_reasons_position_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "position",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_thresholds",
+        "name": "core_moderation_warning_thresholds_enabled_points_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "points",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"enabled\" = true",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_user_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "userId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "issuedAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_issued_at_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "issuedAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_issued_by_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "issuedById",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_reason_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "reasonId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_target_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "pluginId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "targetType",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "targetId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_report_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "reportId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "core_moderation_sanctions_userId_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "userId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "core_moderation_sanctions_rlFetAHphSkc_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "warningId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_moderation_warnings",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "core_moderation_sanctions_ejX3lH3GN7oz_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "thresholdId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_moderation_warning_thresholds",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "core_moderation_sanctions_createdById_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "createdById"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "core_moderation_sanctions_revokedById_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "revokedById"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_userId_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "userId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_issuedById_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "issuedById"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_J1JvecLI20Z2_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "reasonId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_moderation_warning_reasons",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_0vlCswFpT46n_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "reportId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_moderation_reports",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_revokedById_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "revokedById"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "core_moderation_sanctions_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_reasons",
+        "name": "core_moderation_warning_reasons_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warning_thresholds",
+        "name": "core_moderation_warning_thresholds_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_warnings",
+        "name": "core_moderation_warnings_idempotency_key",
+        "nameExplicit": true,
+        "columns": [
+          "issuedById",
+          "idempotencyKey"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_moderation_sanctions",
+        "name": "core_moderation_sanctions_warningId_key",
+        "nameExplicit": false,
+        "columns": [
+          "warningId"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    }
+  ]
+}

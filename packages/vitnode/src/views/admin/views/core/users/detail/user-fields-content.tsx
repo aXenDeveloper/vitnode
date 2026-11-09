@@ -25,6 +25,7 @@ export const EditUserFieldContent = ({
   canEdit = true,
   field,
   id,
+  inline = false,
   label,
   onUpdate,
   showUnverified = false,
@@ -36,6 +37,7 @@ export const EditUserFieldContent = ({
   canEdit?: boolean;
   field: "email" | "name";
   id: number;
+  inline?: boolean;
   label: string;
   onUpdate: UpdateAdminUser;
   showUnverified?: boolean;
@@ -85,7 +87,7 @@ export const EditUserFieldContent = ({
   if (isEditing) {
     return (
       <form
-        className="flex items-center gap-2"
+        className="flex w-full items-center gap-2"
         onSubmit={event => {
           event.preventDefault();
           onSave();
@@ -136,8 +138,34 @@ export const EditUserFieldContent = ({
     );
   }
 
+  const editButton = canEdit && (
+    <TooltipWithContent text={label}>
+      <Button
+        aria-label={label}
+        className={inline ? "ms-1 align-middle" : undefined}
+        onClick={() => {
+          setDraft(value);
+          setIsEditing(true);
+        }}
+        size={inline ? "icon-xs" : "icon-sm"}
+        variant={inline ? "ghost" : "secondary"}
+      >
+        <PencilIcon />
+      </Button>
+    </TooltipWithContent>
+  );
+
+  if (inline) {
+    return (
+      <div className="max-w-full text-balance wrap-anywhere">
+        <Tag className={valueClassName}>{value}</Tag>
+        {editButton}
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center justify-between gap-2">
+    <div className="flex max-w-full min-w-0 items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2">
         <Tag className={valueClassName}>{value}</Tag>
         {showUnverified && (
@@ -146,21 +174,7 @@ export const EditUserFieldContent = ({
           </TooltipWithContent>
         )}
       </div>
-      {canEdit && (
-        <TooltipWithContent text={label}>
-          <Button
-            aria-label={label}
-            onClick={() => {
-              setDraft(value);
-              setIsEditing(true);
-            }}
-            size="icon-sm"
-            variant="secondary"
-          >
-            <PencilIcon />
-          </Button>
-        </TooltipWithContent>
-      )}
+      {editButton}
     </div>
   );
 };
