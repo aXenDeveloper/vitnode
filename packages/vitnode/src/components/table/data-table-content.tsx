@@ -80,6 +80,12 @@ export type DataTableProps<T extends DataTableTMin> = Omit<
     expandable?: ExpandableDataTable<T>;
     /** Faceted filters in the toolbar, kept in the URL. */
     filters?: FilterDataTable[];
+    /**
+     * How `filters` are shown. `"inline"` (default): a dropdown per filter next
+     * to the search. `"panel"`: one "Filters" button that opens an inline
+     * panel with a select per filter, applied together with "Show results".
+     */
+    filtersLayout?: "inline" | "panel";
     groupBy?: GroupByDataTable<T>;
     /** A band above the table, e.g. a count or an action button. */
     header?: React.ReactNode;

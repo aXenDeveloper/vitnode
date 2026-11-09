@@ -117,6 +117,7 @@ Pick the error view by what failed:
 - If you override a background color, you MUST override its text color for contrast.
 - Prefer semantic design tokens (`bg-background`, `text-foreground`).
 - Every action button gets a `lucide-react` icon before its label (`aria-hidden`) - Save, Delete, Reply, Share, Try again, Sign in, submit buttons and confirm buttons in dialogs. The only exception is Cancel (and other dismiss buttons that just close something).
+- Text links underline on hover (`underline-offset-4 hover:underline`), never just a color change. Links styled as buttons (`buttonVariants`) are the exception.
 - Use the Tailwind spacing scale (`p-4`, `mx-2`) - never arbitrary values (`p-[16px]`).
 - Use `gap-*` classes for spacing. Never use `space-*`, and never mix margin/padding with gap on the same element.
 - Use semantic (`items-center`, `justify-between`) and responsive (`md:grid-cols-2`) classes.

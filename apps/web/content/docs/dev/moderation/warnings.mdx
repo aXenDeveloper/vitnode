@@ -1,0 +1,84 @@
+---
+title: Warnings
+description: How VitNode warnings, active points, thresholds and account suspensions fit together, who can do what, and what a suspended member sees.
+icon: TriangleAlert
+---
+
+A **warning** records a moderator's decision about a member. It can carry **points**, and when a warning brings a member's **active points** up to an administrator's **threshold**, VitNode suspends the account automatically. Warnings, points and suspensions are separate records, so revoking one never silently rewrites another.
+
+| Concept | What it is |
+| --- | --- |
+| Warning | Who was warned, by whom, why, how many points, the rich-text message the member reads (one per language), a private rich-text staff note, and optionally the content or report it is about |
+| Active points | The sum of points on warnings that are not revoked and whose expiry is still in the future, computed from timestamps on every read |
+| Threshold | An administrator's rule, like "at 8 active points, suspend for 24 hours". The AdminCP lists them as **Actions** |
+| Sanction | A consequence on the account. This version has temporary and indefinite **suspensions** |
+
+## Choose a guide
+
+| You want to | Read |
+| --- | --- |
+| Set up warning reasons and automatic suspensions | [Configure warnings](/docs/dev/moderation/configure-warnings) |
+| Warn a member, revoke a warning or lift a suspension | [Issue warnings](/docs/dev/moderation/issue-warnings) |
+| Add **Warn author** to your plugin's content | [Warn content authors](/docs/dev/moderation/warn-content) |
+| Look up routes, permissions and events | [Moderation reference](/docs/dev/moderation/reference#warnings) |
+
+## How a warning becomes a suspension
+
+1. A moderator opens the warn form. It previews the member's active points before and after, and the suspension a threshold would apply.
+2. On submit, the server checks every permission again and locks that member's warnings for the length of one transaction. Two moderators warning the same member at once are handled one after the other, so the points add up and each threshold fires once.
+3. A threshold applies when the warning moves active points from below its number to its number or above. When one warning crosses several, only the highest applies: 6 → 11 points with thresholds at 8 and 10 gives only the 10-point suspension.
+4. The warning, the threshold decision, the suspension, the [activity log](/docs/dev/audit-logs) entries and the member's notifications commit together or not at all.
+
+A temporary suspension ends at its own end time, even when the member still has the points. Expired points or a changed threshold never create a new suspension on their own. Only a new warning does. Points that later fall below a threshold let it fire again on a future crossing.
+
+## What a suspended member sees
+
+The server checks suspensions when it reads the session, for every request: core routes, plugin routes, server functions and WebSocket handshakes. The API treats a suspended account as a guest everywhere, so it cannot post, comment, report, moderate or open the AdminCP. Applying a suspension also closes the member's open WebSocket connections.
+
+The member keeps their session and can still sign in, but the site keeps them on the home page: every other page sends them back there. On the home page a dialog they can't close explains the suspension:
+
+- A ring around a lock fills with how much of the suspension has passed, and a countdown ticks down to the end, second by second.
+- The warning's reason, their active points and the moderator's message, under **Why**.
+- When the suspension started and when it ends, or that it has no end date.
+
+When the countdown reaches zero, the session refreshes and the member can use the whole site again without reloading. The dialog never shows staff notes or which moderator issued a warning. In development it also has a **Sign out** button, so you can switch accounts while testing.
+
+Main layouts opt in by passing the route's `location` to `loadMainShell`. [Search external](/docs/dev/search-external) shows how the docs layout does it. For prerendered pages, `MainHeader` applies the same rule in the browser.
+
+## Account status in settings
+
+Members check their own record in **Settings → Account status** at `/settings/standing`. Warning and suspension notifications link there too.
+
+A summary card at the top says where they stand: a green shield when no points count against them, an amber one with how many points they hold, from how many warnings, and when the next ones stop counting (or that they never expire). A member who has never been warned sees just that card.
+
+Below it, a table lists every warning and suspension, newest first, 10 per page. Members can search the reasons and the moderators' messages, filter by type (warnings or suspensions) and status (active, expired, revoked, lifted, ended), and sort by date or points. Clicking a row opens the full details in a side sheet, the same one the profile card uses. The page never shows staff notes or which moderator issued a warning.
+
+A suspended member never reaches this page. The suspension dialog on the home page tells them everything instead.
+
+## On a member's profile
+
+The profile's side column shows a warnings card with the member's active points, any active suspension and their latest warnings and suspensions. Click any of them to read the full details in a side sheet.
+
+Who sees it:
+
+- **The member**, on their own profile. They see their messages, points and suspensions, never staff notes or which moderator warned them.
+- **Moderators** who may view or issue warnings, on every member's profile. They also get **Warn member**, revoke and lift buttons, each shown only when their permissions allow it.
+- **Everyone else** sees nothing. The card isn't part of the cached page, so a warning never leaks to visitors.
+
+## Where the history lives
+
+VitNode writes every warning, revocation and suspension to the [Activity Logs](/docs/dev/audit-logs) in the same transaction as the change. Administrators see them in **AdminCP → Staff → Moderators → Logs**. The entries hold points, threshold decisions and links to reports, never staff notes, override explanations or revocation reasons. Changes to warning reasons and thresholds land in the administrators' log.
+
+## Who is protected
+
+Nobody can warn themselves. A member who holds a root role cannot be warned at all, and other staff (admins and moderators) can only be warned by someone who holds a root role. These checks run before a threshold is evaluated, so a threshold can never suspend a protected account.
+
+## Limits of this version
+
+- Suspensions are the only sanction. There is no manual "suspend without a warning" action, no appeal workflow and no per-plugin posting restriction yet. The data model leaves room for them.
+- Suspension state is cached for up to a minute per member. Applying or lifting a suspension clears that cache, and with Redis every instance sees it at once. Without Redis, other instances may take up to a minute.
+
+## Related
+
+- [Scoped permissions](/docs/dev/moderation/scoped-permissions)
+- [Configure moderators](/docs/dev/moderation/configure-moderators)

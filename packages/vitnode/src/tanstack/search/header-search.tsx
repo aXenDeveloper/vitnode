@@ -109,7 +109,7 @@ export const HeaderSearch = ({ firstSourceId }: { firstSourceId?: string }) => {
   const [isApple, setIsApple] = React.useState<boolean | undefined>(undefined);
 
   React.useEffect(() => {
-    // oxlint-disable-next-line react/set-state-in-effect, react-you-might-not-need-an-effect/no-initialize-state, @eslint-react/set-state-in-effect
+    // oxlint-disable-next-line react/set-state-in-effect, react-you-might-not-need-an-effect/no-initialize-state
     setIsApple(/Mac|iPhone|iPad|iPod/.test(navigator.userAgent));
   }, []);
 
@@ -128,12 +128,10 @@ export const HeaderSearch = ({ firstSourceId }: { firstSourceId?: string }) => {
 
   const morph = (nextOpen: boolean) => {
     const root = document.documentElement;
-    // oxlint-disable-next-line @eslint-react/dom-no-flush-sync
     flushSync(() => setMorphTarget(nextOpen ? "trigger" : "dialog"));
     root.setAttribute(MORPH_DIRECTION_ATTRIBUTE, nextOpen ? "open" : "close");
 
     const transition = document.startViewTransition(() => {
-      // oxlint-disable-next-line @eslint-react/dom-no-flush-sync
       flushSync(() => {
         setMorphTarget(nextOpen ? "dialog" : "trigger");
         setOpen(nextOpen);

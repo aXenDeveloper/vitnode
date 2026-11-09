@@ -293,7 +293,7 @@ const PreviewFrame = ({
             className="bg-background shrink-0 origin-top border-0"
             key={frameKey}
             ref={frameRef}
-            // oxlint-disable-next-line @eslint-react/dom-no-unsafe-iframe-sandbox -- the preview reads the editor's origin and session
+            // oxlint-disable-next-line react/iframe-missing-sandbox -- the preview reads the editor's origin and session
             sandbox="allow-forms allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
             src={url}
             style={{ height, transform: `scale(${scale})`, width }}

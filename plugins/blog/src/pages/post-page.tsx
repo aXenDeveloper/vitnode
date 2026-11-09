@@ -105,9 +105,7 @@ const BlogPostAccessRequired = () => {
   );
 };
 
-const BlogPostPage = ({
-  loaderData,
-}: PluginRoutePageProps<BlogPostPageData>) =>
+const BlogPostPage = ({ loaderData }: PluginRoutePageProps<BlogPostPageData>) =>
   loaderData.accessRequired ? (
     <BlogPostAccessRequired />
   ) : (

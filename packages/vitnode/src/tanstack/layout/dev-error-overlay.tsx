@@ -74,6 +74,7 @@ export const DevErrorOverlay = ({ error }: { error: unknown }) => {
         if (dialog && !dialog.open) dialog.showModal();
       }}
     >
+      {/* oxlint-disable react/iframe-missing-sandbox */}
       {/* react-doctor-disable-next-line react-doctor/iframe-missing-sandbox */}
       <iframe
         allow="clipboard-write"
@@ -85,6 +86,7 @@ export const DevErrorOverlay = ({ error }: { error: unknown }) => {
         srcDoc={html}
         title="Error details"
       />
+      {/* oxlint-enable react/iframe-missing-sandbox */}
     </dialog>
   );
 };

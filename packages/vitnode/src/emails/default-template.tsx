@@ -156,7 +156,7 @@ export default function DefaultTemplateEmail({
             <Section className="my-8 text-center text-sm">
               <Link className="text-muted-foreground" href={metadata.url}>
                 {metadata.shortTitle ?? metadata.title} ©{" "}
-                {/* oxlint-disable-next-line @eslint-react/purity */}
+                {/* oxlint-disable-next-line react/purity */}
                 {new Date().getFullYear()}
               </Link>
             </Section>

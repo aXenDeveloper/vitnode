@@ -120,20 +120,24 @@ an AdminCP session.
 
 | Method and path | Permission                                    | Returns                                                                   |
 | --------------- | --------------------------------------------- | ------------------------------------------------------------------------- |
-| `GET /`         | `activity_logs` `can_view`                    | Keyset page, newest first                                                 |
+| `GET /`         | `activity_logs` `can_view`                    | Numbered page, newest first, with `totalCount` and `totalPages`           |
 | `GET /{id}`     | `can_view`                                    | Entry with changes, revision diff and an AdminCP link; `404` when missing |
 | `GET /entity`   | `can_view`, or `can_view` on the content type | One target's history with changes; `403` otherwise                        |
 | `GET /filters`  | `can_view`                                    | Declared actions and installed plugins                                    |
+| `GET /actors`   | `can_view`                                    | Up to 20 accounts that acted in the log, by current name (`search`, `staff`) |
 | `GET /export`   | `can_export`                                  | CSV, at most 10,000 rows                                                  |
-| `GET /settings` | `can_view`                                    | `{ retentionDays }`                                                       |
-| `PUT /settings` | `can_manage_retention`                        | `{ retentionDays }`: `0` (forever), 30, 90, 180, 365 or 730               |
 
 List filters: `staff` (`moderator` keeps the moderator area, `admin` every
 other area), `pluginId`, `area`, `actorId`, `action`, `targetType`, `targetId`,
 `from` and `to` (`YYYY-MM-DD`, UTC, inclusive), `search` (target label, action
-id and actor name), `cursor` and `first` (1-100, default 25). The export takes
-the same filters without `cursor` and `first`. `/entity` takes `pluginId`,
-`targetType` and `targetId` (all required), plus `cursor` and `first`.
+id and actor name), `searchActions` (comma-separated `pluginId:action` pairs that
+also match `search` - the AdminCP sends the actions whose label, in the reader's
+language, contains the term), `page` (from 1) and `first` (page size, 1-100, default
+25). The list answers `{ edges, pageInfo }` with the AdminCP tables' page info:
+`currentPage`, `totalPages`, `totalCount`, `pageSize` and `hasNextPage`. The
+export takes the same filters without `page` and `first`. `/entity` takes
+`pluginId`, `targetType` and `targetId` (all required), plus `cursor` and
+`first`.
 
 Read one record's history from an AdminCP screen with `fetcher`:
 

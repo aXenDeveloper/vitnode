@@ -6,7 +6,10 @@ import { useTranslations } from "use-intl";
 
 import { ConfirmActionAlertDialog } from "../confirm-action/confirm-action-alert-dialog";
 import { Button } from "./button";
-import { modalScrimClassName } from "./modal-scrim";
+import {
+  dialogPopupMotionClassName,
+  dialogScrimClassName,
+} from "./modal-scrim";
 
 const DialogContext = React.createContext<{
   isDirty?: boolean;
@@ -141,11 +144,7 @@ function DialogOverlay({
 }: DialogPrimitive.Backdrop.Props) {
   return (
     <DialogPrimitive.Backdrop
-      className={cn(
-        modalScrimClassName,
-        "duration-200 data-ending-style:duration-150",
-        className,
-      )}
+      className={cn(dialogScrimClassName, className)}
       data-slot="dialog-overlay"
       {...props}
     />
@@ -172,7 +171,8 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         className={cn(
-          "bg-popover text-popover-foreground ease-fluid fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 grid-cols-[minmax(0,1fr)] gap-4 rounded-xl border p-6 shadow-xl transition-[opacity,scale] duration-200 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-150 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none sm:max-w-lg starting:scale-95 starting:opacity-0",
+          "bg-popover text-popover-foreground fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 grid-cols-[minmax(0,1fr)] gap-4 rounded-xl border p-6 shadow-xl sm:max-w-lg",
+          dialogPopupMotionClassName,
           "max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-5rem)]",
           className,
         )}

@@ -91,9 +91,9 @@ function Carousel({
 
   const onSelect = React.useCallback((api: CarouselApi) => {
     if (!api) return;
-    // oxlint-disable-next-line @eslint-react/set-state-in-effect
+    // oxlint-disable-next-line react/set-state-in-effect
     setCanScrollPrev(api.canScrollPrev());
-    // oxlint-disable-next-line @eslint-react/set-state-in-effect
+    // oxlint-disable-next-line react/set-state-in-effect
     setCanScrollNext(api.canScrollNext());
   }, []);
 

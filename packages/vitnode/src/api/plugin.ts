@@ -54,6 +54,19 @@ export const newBuildPluginApiCore = buildApiPlugin({
     moderator: {
       users: ["can_edit", "can_view_hidden_presence"],
       widgets: ["can_edit"],
+      warnings: [
+        "can_view",
+        "can_warn",
+        "can_override_points",
+        "can_override_expiration",
+        { permission: "can_view_notes", dependsOn: ["can_view"] },
+        { permission: "can_revoke", dependsOn: ["can_view"] },
+        "can_view_sanctions",
+        {
+          permission: "can_manage_sanctions",
+          dependsOn: ["can_view_sanctions"],
+        },
+      ],
     },
     admin: {
       dashboard: [
@@ -109,13 +122,16 @@ export const newBuildPluginApiCore = buildApiPlugin({
         "can_view",
         { permission: "can_view_sensitive", dependsOn: ["can_view"] },
         { permission: "can_export", dependsOn: ["can_view"] },
-        { permission: "can_manage_retention", dependsOn: ["can_view"] },
       ],
       report_reasons: [
         "can_view",
         { permission: "can_create", dependsOn: ["can_view"] },
         { permission: "can_edit", dependsOn: ["can_view"] },
         { permission: "can_delete", dependsOn: ["can_view"] },
+      ],
+      warning_settings: [
+        "can_view",
+        { permission: "can_manage", dependsOn: ["can_view"] },
       ],
       staff_moderators: [
         "can_view",

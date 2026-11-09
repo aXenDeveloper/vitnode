@@ -17,16 +17,16 @@ export const activityChangedFields = (
       )
     : [];
 
-const isEmpty = (value: unknown): boolean =>
+export const isEmptyActivityValue = (value: unknown): boolean =>
   value === null ||
   value === undefined ||
   value === "" ||
   (Array.isArray(value) && value.length === 0);
 
-const ChangeValue = ({ value }: { value: unknown }) => {
+export const ActivityChangeValue = ({ value }: { value: unknown }) => {
   const t = useTranslations("core.activity_logs.detail");
 
-  if (isEmpty(value)) {
+  if (isEmptyActivityValue(value)) {
     return (
       <span className="text-muted-foreground italic">{t("empty_value")}</span>
     );
@@ -59,6 +59,34 @@ export const activityChangeRows = (
     name,
     redacted: change.redacted === true,
   }));
+
+/**
+ * Changes an operation recorded as metadata pairs - `pointsBefore` and
+ * `pointsAfter` become one `points` row - and the keys they used, so the
+ * remaining metadata can be listed apart from them.
+ */
+export const activityMetadataChangeRows = (
+  metadata: Record<string, unknown>,
+  label: (name: string) => string,
+): { keys: Set<string>; rows: ActivityChangeRow[] } => {
+  const keys = new Set<string>();
+  const rows: ActivityChangeRow[] = [];
+  for (const key of Object.keys(metadata)) {
+    const name = /^(.+)Before$/.exec(key)?.[1];
+    const afterKey = `${name}After`;
+    if (!name || !(afterKey in metadata)) continue;
+    keys.add(key);
+    keys.add(afterKey);
+    rows.push({
+      after: metadata[afterKey],
+      before: metadata[key],
+      label: label(name),
+      name,
+    });
+  }
+
+  return { keys, rows };
+};
 
 /**
  * Before/after pairs, one field per row. Stacked on a phone, side by side
@@ -94,13 +122,13 @@ export const ActivityChanges = ({ rows }: { rows: ActivityChangeRow[] }) => {
                 <span className="text-muted-foreground text-xs font-medium uppercase">
                   {t("before")}
                 </span>
-                <ChangeValue value={row.before} />
+                <ActivityChangeValue value={row.before} />
               </div>
               <div className="flex min-w-0 flex-col gap-1">
                 <span className="text-muted-foreground text-xs font-medium uppercase">
                   {t("after")}
                 </span>
-                <ChangeValue value={row.after} />
+                <ActivityChangeValue value={row.after} />
               </div>
             </dd>
           )}

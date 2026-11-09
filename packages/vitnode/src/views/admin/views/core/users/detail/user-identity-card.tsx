@@ -133,10 +133,11 @@ export const UserIdentityCard = ({
             canEdit={canEdit}
             field="name"
             id={user.id}
+            inline
             label={t("editName")}
             onUpdate={onUpdate}
             value={user.name}
-            valueClassName="text-foreground truncate text-2xl font-semibold"
+            valueClassName="text-foreground inline text-2xl font-semibold"
           />
           <div className="flex min-w-0 items-center gap-1">
             <span className="text-muted-foreground truncate text-sm">

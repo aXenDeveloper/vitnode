@@ -1,7 +1,13 @@
 import type { ResponseFormat } from "hono/types";
 import type { StatusCode, SuccessStatusCode } from "hono/utils/http-status";
-import type { JSONParsed } from "hono/utils/types";
+import type {
+  InvalidJSONValue,
+  JSONPrimitive,
+  JSONValue,
+} from "hono/utils/types";
 import type { z } from "zod";
+
+import type { RichTextNode } from "@/content/rich-text/document";
 
 import type { ApiEndpoint, ApiModuleContract } from "./contract";
 import type { ApiPluginRegistry } from "./registry";
@@ -231,6 +237,68 @@ export type FetcherArgs<RouteCfg> = keyof BuildArgsType<RouteCfg> extends never
   ? { args?: undefined }
   : { args: BuildArgsType<RouteCfg> };
 
+type InvalidToNull<T> = T extends InvalidJSONValue ? null : T;
+
+type IsInvalidJson<T> = T extends InvalidJSONValue ? true : false;
+
+type OmitSymbolKeys<T> = {
+  [K in keyof T as K extends symbol ? never : K]: T[K];
+};
+
+type UnserializableJson = bigint | readonly bigint[];
+
+type IsRichTextNode<T> = T extends RichTextNode
+  ? [Exclude<keyof T, keyof RichTextNode>] extends [never]
+    ? true
+    : false
+  : false;
+
+type JsonParsedMember<T> =
+  IsRichTextNode<T> extends true
+    ? T
+    : T extends { toJSON: () => infer J }
+      ? (() => J) extends () => JSONPrimitive
+        ? J
+        : (() => J) extends () => { toJSON: () => unknown }
+          ? Record<never, never>
+          : JsonParsed<J>
+      : T extends JSONPrimitive
+        ? T
+        : T extends InvalidJSONValue
+          ? never
+          : T extends readonly unknown[]
+            ? {
+                [K in keyof T]: JsonParsed<InvalidToNull<T[K]>>;
+              } extends infer A
+              ? A extends readonly unknown[]
+                ? A
+                : JsonParsed<InvalidToNull<T[number]>>[]
+              : never
+            : T extends
+                  | Map<unknown, unknown>
+                  | Record<string, never>
+                  | Set<unknown>
+              ? Record<never, never>
+              : T extends object
+                ? T[keyof T] extends UnserializableJson
+                  ? never
+                  : {
+                      [
+                        K in keyof OmitSymbolKeys<T> as IsInvalidJson<
+                          T[K]
+                        > extends true
+                          ? never
+                          : K
+                      ]: boolean extends IsInvalidJson<T[K]>
+                        ? JsonParsed<T[K]> | undefined
+                        : JsonParsed<T[K]>;
+                    }
+                : T extends UnserializableJson
+                  ? never
+                  : JSONValue;
+
+type JsonParsed<T> = T extends unknown ? JsonParsedMember<T> : never;
+
 type InferStatusCode<K> = K extends `${infer N extends number}`
   ? N
   : K extends number
@@ -250,7 +318,7 @@ export type InferResponseType<RouteCfg> = RouteCfg extends {
                     // value - a `Date` arrives as its ISO string - which is
                     // exactly what Hono types `c.json()` as on the server.
                     Fmt extends "application/json"
-                    ? JSONParsed<ExtractZodType<Schema>>
+                    ? JsonParsed<ExtractZodType<Schema>>
                     : ExtractZodType<Schema>
                   : never,
                 InferStatusCode<K>,

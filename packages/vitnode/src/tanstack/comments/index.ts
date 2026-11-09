@@ -1,3 +1,4 @@
+export { contentCommentAuthor, contentCommentAuthorName } from "./author";
 export type { ContentCommentComposerFormProps as ContentCommentComposerProps } from "./composer-form";
 export type { ContentCommentsDisplay } from "./content-comments";
 export {
@@ -12,8 +13,6 @@ export {
 export type { ContentCommentItemState } from "./item";
 export {
   ContentCommentActions,
-  contentCommentAuthor,
-  contentCommentAuthorName,
   ContentCommentComposer,
   preloadContentCommentComposer,
   useContentCommentItem,

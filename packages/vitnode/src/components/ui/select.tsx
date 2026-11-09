@@ -3,6 +3,8 @@ import { cn } from "cn";
 import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import React from "react";
 
+import { ValueSwap, valueSwapKey } from "@/components/ui/value-swap";
+
 /** A dropdown to pick one option (Base UI `Select`). */
 function Select({
   ...props
@@ -27,7 +29,27 @@ function SelectGroup({
 function SelectValue({
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Value>) {
-  return <SelectPrimitive.Value data-slot="select-value" {...props} />;
+  return (
+    <SelectPrimitive.Value
+      data-slot="select-value"
+      render={(valueProps, state) => {
+        const { children, ...rest } = valueProps;
+
+        return (
+          <span {...rest}>
+            <ValueSwap
+              swapKey={
+                state.placeholder ? "placeholder" : valueSwapKey(state.value)
+              }
+            >
+              {children}
+            </ValueSwap>
+          </span>
+        );
+      }}
+      {...props}
+    />
+  );
 }
 
 /** The button that opens the {@link Select}. `size`: `default` or `sm`. */

@@ -6,7 +6,10 @@ import {
   activityFilterOptionsQueryOptions,
   activityListQueryOptions,
 } from "@/views/activity-logs/activity-query";
-import { activityFiltersOf } from "@/views/activity-logs/activity-search";
+import {
+  activityFiltersOf,
+  activityPaginationOf,
+} from "@/views/activity-logs/activity-search";
 
 import type { AdminScreenContext } from "../screen";
 
@@ -50,15 +53,17 @@ export const loadAdminStaffLogsRoute = async ({
       ...activityFilterOptionsQueryOptions(),
       staleTime: "static",
     }),
-    queryClient
-      .infiniteQuery({
-        ...activityListQueryOptions({
-          ...activityFiltersOf(search),
-          staff: type,
-        }),
-        staleTime: "static",
-      })
-      .catch(() => undefined),
+    search.search
+      ? undefined
+      : queryClient
+          .query({
+            ...activityListQueryOptions(
+              { ...activityFiltersOf(search), staff: type },
+              activityPaginationOf(search),
+            ),
+            staleTime: "static",
+          })
+          .catch(() => undefined),
   ]);
 
   return {

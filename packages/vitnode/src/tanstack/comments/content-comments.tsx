@@ -38,10 +38,9 @@ import type { ContentCommentsController } from "./use-content-comments";
 
 import { LOGIN_PATH, returnToFor } from "../auth/redirects";
 import { ContentAccessRequired } from "../content/access-required";
+import { contentCommentAuthor, contentCommentAuthorName } from "./author";
 import {
   ContentCommentActions,
-  contentCommentAuthor,
-  contentCommentAuthorName,
   ContentCommentComposer,
   preloadContentCommentComposer,
   useContentCommentItem,

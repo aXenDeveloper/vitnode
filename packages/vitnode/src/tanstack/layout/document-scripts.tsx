@@ -128,7 +128,7 @@ const DeferredScripts = () => {
         ))}
       {loader ? (
         <script
-          // oxlint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
+          // oxlint-disable-next-line react/no-danger
           dangerouslySetInnerHTML={{ __html: loader }}
           nonce={typeof window === "undefined" ? nonce : ""}
           suppressHydrationWarning

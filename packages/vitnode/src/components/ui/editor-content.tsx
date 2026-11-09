@@ -11,7 +11,7 @@ export const EditorContent = ({ content }: { content: string }) => {
   return (
     <div
       className="tiptap"
-      // oxlint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
+      // oxlint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

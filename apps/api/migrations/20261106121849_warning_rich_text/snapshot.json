@@ -1,0 +1,65 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "4821b844-f167-4596-9539-fc95a47b0e4d",
+  "prevIds": [
+    "2cc93fc1-e03a-4dd4-876e-89f6875a47f8"
+  ],
+  "footprints": [
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_moderation_warnings",
+        "message"
+      ],
+      "writes": [
+        "s|colprop|public.core_moderation_warnings.message.type",
+        "s|colprop|public.core_moderation_warnings.message.default"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.message"
+      ],
+      "sqlHash": "82647ee733298c95"
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_moderation_warnings",
+        "staffNote"
+      ],
+      "writes": [
+        "s|colprop|public.core_moderation_warnings.staffNote.type",
+        "s|colprop|public.core_moderation_warnings.staffNote.default"
+      ],
+      "reads": [
+        "n|tbl|public.core_moderation_warnings",
+        "n|sch|public",
+        "n|col|public.core_moderation_warnings.staffNote"
+      ],
+      "sqlHash": "dc423e3242219537"
+    }
+  ],
+  "deltas": [
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"core_moderation_warnings\",\"message\"]",
+      "set": {
+        "type": "jsonb"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"core_moderation_warnings\",\"staffNote\"]",
+      "set": {
+        "type": "jsonb"
+      }
+    }
+  ]
+}

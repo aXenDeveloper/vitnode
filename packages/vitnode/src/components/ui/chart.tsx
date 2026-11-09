@@ -112,7 +112,7 @@ const ChartStyle = ({ id, config }: { config: ChartConfig; id: string }) => {
 
   return (
     <style
-      // oxlint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
+      // oxlint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(

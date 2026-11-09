@@ -7,6 +7,7 @@ import type {
   ModerationCaptureResult,
   ModerationReportTargetDefinition,
   ModerationTargetActionDefinition,
+  ModerationTargetAuthors,
   ModerationTargetState,
 } from "../../api/lib/moderation/targets";
 import type {
@@ -410,6 +411,35 @@ const currentContent = async (
   };
 };
 
+const contentAuthors = async (
+  c: Context,
+  model: AnyContentModel,
+  targetId: string,
+): Promise<ModerationTargetAuthors | null> => {
+  const definition = contentDefinitionOf(model);
+  const itemId = parseContentId(definition.idStrategy, targetId);
+  if (itemId === null) return null;
+
+  const db = c.get("db");
+  const base = await readBaseRow(db, model, itemId);
+  if (!base) return null;
+
+  const titleField = definition.reports.titleField;
+  let rawTitle: unknown = titleField ? base[titleField] : null;
+  if (titleField && rawTitle === undefined && definition.localization.enabled) {
+    const translation = await readTranslationRow(c, db, model, {
+      itemId,
+      locale: definition.localization.defaultLocale,
+    });
+    rawTitle = translation?.[titleField] ?? null;
+  }
+
+  return {
+    authorIds: await contentAuthorIds(c, model, itemId),
+    title: reportTitleOf(rawTitle),
+  };
+};
+
 export const visibilityAction = (
   model: AnyContentModel,
   pluginId: string,
@@ -485,6 +515,8 @@ export const contentReportTarget = (
       return id === null ? null : contentIdKey(id);
     },
     permissionModule: definition.permissionModule,
+    resolveAuthors: async (c, { targetId }) =>
+      await contentAuthors(c, model, targetId),
     ...(scope && scopeColumn
       ? {
           resolveScope: async (c: Context, targetId: string) => {

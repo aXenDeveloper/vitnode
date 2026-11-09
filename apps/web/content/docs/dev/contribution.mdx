@@ -8,8 +8,8 @@ Contributions to VitNode are always welcome, whether it's a bug fix, a new featu
 
 ## Before you begin
 
-- **Node.js** `^22.18.0`, `^24.11.0` or `26` and later (the `engines` range in the root `package.json`).
-- **pnpm**. The repository is a pnpm workspace (`packageManager: pnpm@11.9.0`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`), and CI uses pnpm too, so use it rather than bun or npm here. With Corepack, `corepack enable` picks the right version.
+- **Node.js** `^22.22.0`, `^24.11.0` or `26` and later (the `engines` range in the root `package.json`).
+- **pnpm**. The repository is a pnpm workspace (`packageManager: pnpm@12.18.0`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`), and CI uses pnpm too, so use it rather than bun or npm here. With Corepack, `corepack enable` picks the right version.
 - **Docker**, for the local PostgreSQL and Redis containers. Without Docker, point `POSTGRES_URL` in `apps/api/.env` and `apps/web/.env` at your own database.
 
 ## Set up the repository
@@ -54,31 +54,31 @@ Open `http://localhost:3000` for the website, the AdminCP at `/admin` and the li
 
 ## Repository layout
 
-| Directory                    | Role                                                                                          |
-| :--------------------------- | :-------------------------------------------------------------------------------------------- |
-| `packages/vitnode`           | `@vitnode/core`: routing, auth, models, UI primitives and the `vitnode` CLI                   |
-| `packages/create-vitnode-app`| The project and plugin generator (`create-vitnode-app`)                                       |
-| `packages/config`            | `@vitnode/config`, shared TypeScript and lint configuration                                   |
-| `packages/resend`, `packages/nodemailer` | Email adapters                                                                    |
-| `packages/s3`, `packages/supabase-storage` | Storage adapters                                                                |
-| `packages/node-cron`         | In-process cron adapter                                                                       |
-| `packages/elasticsearch`     | Search provider adapter                                                                       |
-| `apps/web`                   | The TanStack Start website, AdminCP and this documentation                                    |
-| `apps/api`                   | The standalone Hono API server                                                                |
-| `plugins/*`                  | First-party plugins (`@vitnode/blog`, `@vitnode/forum`, `newsroom`)                           |
+| Directory                                  | Role                                                                        |
+| :----------------------------------------- | :-------------------------------------------------------------------------- |
+| `packages/vitnode`                         | `@vitnode/core`: routing, auth, models, UI primitives and the `vitnode` CLI |
+| `packages/create-vitnode-app`              | The project and plugin generator (`create-vitnode-app`)                     |
+| `packages/config`                          | `@vitnode/config`, shared TypeScript and lint configuration                 |
+| `packages/resend`, `packages/nodemailer`   | Email adapters                                                              |
+| `packages/s3`, `packages/supabase-storage` | Storage adapters                                                            |
+| `packages/node-cron`                       | In-process cron adapter                                                     |
+| `packages/elasticsearch`                   | Search provider adapter                                                     |
+| `apps/web`                                 | The TanStack Start website, AdminCP and this documentation                  |
+| `apps/api`                                 | The standalone Hono API server                                              |
+| `plugins/*`                                | First-party plugins (`@vitnode/blog`, `@vitnode/forum`, `newsroom`)         |
 
 ## Run the checks
 
 Before opening a pull request, run what GitHub Actions runs, from the repository root:
 
-| Command                    | What it checks                                                                 |
-| :------------------------- | :----------------------------------------------------------------------------- |
-| `pnpm build:scripts`       | Builds the `vitnode` CLI (`packages/vitnode/dist/scripts`)                     |
-| `pnpm build:plugins`       | Builds every plugin and adapter package with tsdown, with type checking        |
-| `pnpm build`               | Builds every app                                                               |
-| `pnpm lint`                | Runs oxlint in every package and checks formatting with oxfmt                  |
-| `pnpm test`                | Runs every package's tests                                                     |
-| `pnpm test:types`          | Runs the type tests                                                            |
+| Command              | What it checks                                                          |
+| :------------------- | :---------------------------------------------------------------------- |
+| `pnpm build:scripts` | Builds the `vitnode` CLI (`packages/vitnode/dist/scripts`)              |
+| `pnpm build:plugins` | Builds every plugin and adapter package with tsdown, with type checking |
+| `pnpm build`         | Builds every app                                                        |
+| `pnpm lint`          | Runs oxlint in every package and checks formatting with oxfmt           |
+| `pnpm test`          | Runs every package's tests                                              |
+| `pnpm test:types`    | Runs the type tests                                                     |
 
 CI runs the build steps in that order, because the apps and tests read the built CLI and plugins. `pnpm lint:fix` fixes formatting and most lint errors for you; run it before you commit.
 
@@ -86,11 +86,11 @@ CI runs the build steps in that order, because the apps and tests read the built
 
 The documentation portal in `apps/web` speaks Markdown as well as HTML, so agents and LLM tools can read it without scraping:
 
-| URL | What you get |
-| :--- | :--- |
-| `/llms.txt` | An index of every docs page with its title, URL and description |
-| `/llms-full.txt` | The whole documentation as one Markdown document |
-| `/docs/<page>.md` | A single page as Markdown, for example `/docs/dev/setup.md` |
+| URL               | What you get                                                    |
+| :---------------- | :-------------------------------------------------------------- |
+| `/llms.txt`       | An index of every docs page with its title, URL and description |
+| `/llms-full.txt`  | The whole documentation as one Markdown document                |
+| `/docs/<page>.md` | A single page as Markdown, for example `/docs/dev/setup.md`     |
 
 Requesting a docs page with an `Accept: text/markdown` header redirects to its `.md` twin, so a curious agent gets Markdown without asking twice. Every page also has a **Copy Markdown** button and an **Open in** menu for ChatGPT, Claude and friends.
 

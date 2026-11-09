@@ -12,7 +12,8 @@
           },
           "alt": {
             "placeholder": "Co przedstawia obraz",
-            "hint": "Czytany przez czytniki ekranu zamiast obrazu."
+            "hint": "Czytany przez czytniki ekranu zamiast obrazu.",
+            "file_default": "Jeśli zostawisz to pole puste, użyty zostanie domyślny tekst ALT obrazu widoczny powyżej."
           },
           "counter": {
             "title": "Wyniki wyszukiwania pokazują około {max} znaków.",
@@ -41,6 +42,15 @@
               "done": "Przetłumaczone",
               "missing": "Brak",
               "unavailable": "Nie ma czego tłumaczyć"
+            },
+            "outdated_fields": "Zmienione w języku {language} od czasu tłumaczenia: {fields}.",
+            "update_changed": "Zaktualizuj zmienione pola z AI",
+            "mark_reviewed": "Oznacz jako aktualne",
+            "fields": {
+              "title": "tytuł",
+              "content": "treść",
+              "coverImageAlt": "tekst ALT obrazu",
+              "friendlyUrl": "URL"
             }
           },
           "ai": {
@@ -187,7 +197,9 @@
       "on_this_page": "Na tej stronie",
       "preview": {
         "title": "Podgląd: {title}"
-      }
+      },
+      "report_type": "artykuł",
+      "access_required": "Tylko dla członków"
     },
     "list": {
       "title": "Blog",
@@ -232,6 +244,14 @@
       },
       "replying_to": "W odpowiedzi: {name}",
       "removed_comment": "usunięty komentarz"
+    },
+    "notifications": {
+      "comment_reply": {
+        "label": "Odpowiedzi na Twoje komentarze",
+        "description": "Ktoś odpowiada na Twój komentarz pod artykułem.",
+        "comment": "{actor} komentuje artykuł",
+        "reply": "{actor} odpowiada na Twój komentarz"
+      }
     }
   },
   "@vitnode/blog:categories": "Kategorie",
@@ -268,5 +288,9 @@
   "@vitnode/blog:comment:can_restore": "Przywracanie wcześniejszej wersji komentarza",
   "@vitnode/blog:comment:can_view_reports": "Przeglądanie zgłoszeń komentarzy",
   "@vitnode/blog:comment:can_manage_reports": "Przejmowanie, przydzielanie i zamykanie zgłoszeń komentarzy",
-  "@vitnode/blog:comment:can_view_hidden": "Otwieranie ukrytych komentarzy"
+  "@vitnode/blog:comment:can_view_hidden": "Otwieranie ukrytych komentarzy",
+  "@vitnode/blog:posts:can_hide": "Ukrywanie i pokazywanie artykułów",
+  "@vitnode/blog:posts:can_view_reports": "Przeglądanie zgłoszeń artykułów",
+  "@vitnode/blog:posts:can_manage_reports": "Przejmowanie, przydzielanie i zamykanie zgłoszeń artykułów",
+  "@vitnode/blog:posts:can_view_hidden": "Otwieranie ukrytych artykułów"
 }

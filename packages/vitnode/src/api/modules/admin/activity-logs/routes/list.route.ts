@@ -1,8 +1,8 @@
 import { buildRoute } from "@/api/builders";
 import {
   listAuditLogs,
+  zodAuditListQuery,
   zodAuditPage,
-  zodAuditPageQuery,
 } from "@/api/lib/audit/query";
 
 export const listActivityLogsAdminRoute = buildRoute({
@@ -11,8 +11,8 @@ export const listActivityLogsAdminRoute = buildRoute({
     method: "get",
     path: "/",
     description:
-      "Activity Logs: who did what to which resource, newest first, cursor-paginated and filtered",
-    request: { query: zodAuditPageQuery },
+      "Activity Logs: who did what to which resource, newest first, paginated by page number and filtered",
+    request: { query: zodAuditListQuery },
     responses: {
       200: {
         content: { "application/json": { schema: zodAuditPage } },
@@ -22,8 +22,6 @@ export const listActivityLogsAdminRoute = buildRoute({
     },
   },
   handler: async c => {
-    const { cursor, first, ...filters } = c.req.valid("query");
-
-    return c.json(await listAuditLogs(c, { cursor, filters, first }), 200);
+    return c.json(await listAuditLogs(c, c.req.valid("query")), 200);
   },
 });

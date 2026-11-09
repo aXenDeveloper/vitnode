@@ -223,7 +223,7 @@ describe("the generated config", () => {
 describe("the generated builders", () => {
   it("binds the API builders to the generated manifest", () => {
     expect(pluginApiBuildersTemplate()).toContain(
-      "export const { buildModule, buildRoute } = bindApiPlugin(manifest);",
+      "const apiBuilders = bindApiPlugin(manifest);",
     );
   });
 

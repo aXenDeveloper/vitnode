@@ -1,6 +1,8 @@
 import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
+import type { SessionApi } from "./session-api";
+
 import { createAuthOperations } from "./transport-operations";
 
 /**
@@ -10,7 +12,7 @@ import { createAuthOperations } from "./transport-operations";
  * the cookie is set on. `allowSaveCookies` is the server adapter's concern, and
  * it is the only difference between the two.
  */
-const operations = createAuthOperations({
+const operations = createAuthOperations<SessionApi>({
   changePasswordFromReset: async data =>
     await fetcher({
       plugin: manifest.id,

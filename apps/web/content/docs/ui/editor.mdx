@@ -143,6 +143,22 @@ like its submit button. Outside a form it does nothing.
 - A same-size placeholder holds the spot while the editor loads, so the page
   doesn't jump.
 
+## Click to activate
+
+A form with several editors gets tall fast, and each one loads Tiptap. Add `collapsed` to show a one-line field instead. Clicking it swaps in the full editor with the cursor at the end, and if the field already holds content, the one-line field previews it as plain text.
+
+```tsx
+<AutoFormEditor
+  {...props}
+  collapsed
+  format="json"
+  label="Note for moderators"
+  placeholder="Add a note…"
+/>
+```
+
+The `placeholder` shows on the one-line field and inside the editor while it's empty. Once opened, the editor stays open until the form unmounts.
+
 ## Multi-language
 
 Add `multiLang` to edit the content in every enabled language. A language select
@@ -215,6 +231,12 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
     className: {
       description: 'Extra classes for the editor wrapper.',
       type: 'string',
+    },
+    collapsed: {
+      description:
+        'AutoFormEditor only. Starts as a one-line field (placeholder or a plain-text preview) and loads the editor, focused, when clicked.',
+      type: 'boolean',
+      default: 'false',
     },
     multiLang: {
       description:

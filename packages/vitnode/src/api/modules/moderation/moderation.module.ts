@@ -1,6 +1,10 @@
 import { buildModule } from "@/api/builders";
 
 import {
+  accountStatusHistoryRoute,
+  accountStatusRoute,
+} from "./routes/account-status.route";
+import {
   approvalFiltersRoute,
   approveApprovalRoute,
   listApprovalsRoute,
@@ -16,6 +20,17 @@ import {
 } from "./routes/notes.routes";
 import { listReportReasonsRoute } from "./routes/reasons.route";
 import { showReportRoute } from "./routes/show.route";
+import {
+  issueWarningRoute,
+  listWarningReasonsRoute,
+  listWarningsRoute,
+  memberLogRoute,
+  memberStandingRoute,
+  previewWarningRoute,
+  revokeSanctionRoute,
+  revokeWarningRoute,
+  searchMembersRoute,
+} from "./routes/warnings.routes";
 import {
   assignReportRoute,
   claimReportRoute,
@@ -48,5 +63,16 @@ export const moderationModule = buildModule({
     showApprovalRoute,
     approveApprovalRoute,
     rejectApprovalRoute,
+    listWarningReasonsRoute,
+    previewWarningRoute,
+    issueWarningRoute,
+    listWarningsRoute,
+    revokeWarningRoute,
+    revokeSanctionRoute,
+    searchMembersRoute,
+    memberStandingRoute,
+    memberLogRoute,
+    accountStatusRoute,
+    accountStatusHistoryRoute,
   ],
 });

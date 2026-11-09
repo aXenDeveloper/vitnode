@@ -1,0 +1,1 @@
+ALTER TABLE "core_moderation_warning_thresholds" RENAME COLUMN "durationHours" TO "durationMinutes";

@@ -24,7 +24,10 @@ export const pluginApiBuildersTemplate = (): string =>
 
 import { manifest } from "@/manifest.gen";
 
-export const { buildModule, buildRoute } = bindApiPlugin(manifest);
+const apiBuilders = bindApiPlugin(manifest);
+
+export const buildModule = apiBuilders.buildModule;
+export const buildRoute = apiBuilders.buildRoute;
 `;
 
 export const pluginRoutesTemplate = (pluginName: string): string => {

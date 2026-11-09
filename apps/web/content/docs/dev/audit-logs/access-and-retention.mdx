@@ -5,9 +5,9 @@ icon: ShieldCheck
 ---
 
 The Activity Logs know a lot about who did what, so reading them takes an
-admin permission of its own, and entries expire after a retention period you
-pick. The API enforces every rule on this page. The UI only hides what you could
-not open anyway.
+admin permission of its own, and entries expire after a retention period set
+in your API config. The API enforces every rule on this page. The UI only hides
+what you could not open anyway.
 
 ## Permissions
 
@@ -17,10 +17,9 @@ Every permission except `can_view` depends on `can_view`.
 
 | Permission (module `activity_logs`) | Label in the editor                     | Allows                                                                                                       |
 | ----------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `can_view`                          | View activity logs                      | The **Logs** buttons, both staff logs, entry details, the retention period (read-only), any record's history |
+| `can_view`                          | View activity logs                      | The **Logs** buttons, both staff logs, entry details, any record's history                                   |
 | `can_view_sensitive`                | View IP addresses and technical details | IP addresses and request ids in entry details, and the IP address column in exports                          |
 | `can_export`                        | Export activity logs                    | **Export CSV** with the current filters                                                                      |
-| `can_manage_retention`              | Change how long activity logs are kept  | Saving a new retention period                                                                                |
 
 An unrestricted administrator holds them all. An admin without `can_view` can
 still open the **Activity** panel of a content record when they hold
@@ -42,9 +41,27 @@ did is for the admins who manage them to read.
 
 ## Retention
 
-Open **Logs → Retention settings** on either staff log and pick how long
-entries are kept: 30, 90, 180, 365 (the default) or 730 days, or **Forever**.
-One period applies to both logs, and only `can_manage_retention` can save it.
+How long entries are kept is a deployment setting, so it lives in your API
+config, not in the AdminCP. Add an `activityLogs` block to `buildApiConfig`:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/core/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // other options unchanged
+  // [!code ++:3]
+  activityLogs: {
+    retentionDays: 90,
+  },
+})
+```
+
+| Name            | Type     | Required | Default | Description                                                     |
+| --------------- | -------- | -------- | ------- | --------------------------------------------------------------- |
+| `retentionDays` | `number` | No       | `365`   | Days an entry is kept. `0` keeps everything. A whole number from `0` |
+
+One period applies to both logs. A value that is not a whole number from `0`
+falls back to `365`. Restart the API after changing it.
 
 The `audit-retention` cron job runs once a day (`40 3 * * *`) and deletes
 older entries oldest first, in batches of 5,000 and at most 100 batches per

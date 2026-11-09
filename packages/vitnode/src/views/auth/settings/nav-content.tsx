@@ -4,6 +4,7 @@ import {
   LinkIcon,
   MenuIcon,
   MonitorSmartphoneIcon,
+  ShieldCheckIcon,
   SparklesIcon,
   UserRoundIcon,
   XIcon,
@@ -35,6 +36,7 @@ const ICONS: Record<
   overview: UserRoundIcon,
   security: KeyRoundIcon,
   sso: LinkIcon,
+  standing: ShieldCheckIcon,
 };
 
 const SettingsNavList = ({

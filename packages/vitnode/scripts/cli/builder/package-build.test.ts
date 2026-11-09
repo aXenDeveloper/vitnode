@@ -6,6 +6,7 @@ import {
   mkdtempSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -125,7 +126,7 @@ const fixture = () => {
 };
 
 const createPackage = () => {
-  root = mkdtempSync(join(tmpdir(), "vitnode-package-build-"));
+  root = realpathSync(mkdtempSync(join(tmpdir(), "vitnode-package-build-")));
   // The package's own node_modules, as an install would leave it: tsdown,
   // TypeScript and React's types resolve from there. The sources themselves
   // must not live under a node_modules folder - an import resolving into one

@@ -5,6 +5,7 @@ import {
   existsSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmdirSync,
   rmSync,
   statSync,
@@ -304,58 +305,59 @@ export const packageTsdownConfig = ({
   logger,
   mode,
   output = "all",
-  root,
+  root: packageRoot,
 }: {
   logger: Logger;
   mode: PackageBuildMode;
   output?: PackageOutput;
   root: string;
-}): InlineConfig => ({
-  checks: { bundlerTimings: false },
-  clean: false,
-  config: false,
-  customLogger: logger,
-  cwd: root,
-  deps: { neverBundle: true },
-  dts:
-    output === "javascript"
-      ? false
-      : {
-          // The shared tsconfig sets `removeComments`, which would strip the
-          // JSDoc an IDE shows on hover from every published declaration.
-          compilerOptions: { removeComments: false },
-          eager: true,
-          emitDtsOnly: output === "declarations",
-        },
-  entry: listPackageEntries(root),
-  fixedExtension: false,
-  format: "esm",
-  globImport: false,
-  inputOptions: options => ({
-    ...options,
-    transform: { ...options.transform, jsx: "react-jsx" },
-  }),
-  logLevel: "warn",
-  minify: mode === "build",
-  outDir: PACKAGE_OUT_DIR,
-  // The helper rolldown emits for `import * as ns` stays inside `dist/src`.
-  outputOptions: options => ({
-    ...options,
-    virtualDirname: `${OUTPUT_ROOT}/_virtual`,
-  }),
-  platform: "neutral",
-  plugins: [
-    packageOutputPlugin({ output, root, sourcemaps: mode === "watch" }),
-  ],
-  report: false,
-  root: ".",
-  sourcemap: mode === "watch",
-  target: "esnext",
-  treeshake: false,
-  tsconfig: PACKAGE_TSCONFIG,
-  unbundle: true,
-  watch: mode === "watch",
-});
+}): InlineConfig => {
+  const root = realpathSync(packageRoot);
+
+  return {
+    checks: { bundlerTimings: false },
+    clean: false,
+    config: false,
+    customLogger: logger,
+    cwd: root,
+    deps: { neverBundle: true },
+    dts:
+      output === "javascript"
+        ? false
+        : {
+            dtsOnly: output === "declarations",
+            tsc: { eager: true },
+          },
+    entry: listPackageEntries(root),
+    fixedExtension: false,
+    format: "esm",
+    globImport: false,
+    inputOptions: options => ({
+      ...options,
+      transform: { ...options.transform, jsx: "react-jsx" },
+    }),
+    logLevel: "warn",
+    minify: mode === "build",
+    outDir: PACKAGE_OUT_DIR,
+    // The helper rolldown emits for `import * as ns` stays inside `dist/src`.
+    outputOptions: options => ({
+      ...options,
+      virtualDirname: `${OUTPUT_ROOT}/_virtual`,
+    }),
+    platform: "neutral",
+    plugins: [
+      packageOutputPlugin({ output, root, sourcemaps: mode === "watch" }),
+    ],
+    report: false,
+    root: ".",
+    sourcemap: mode === "watch",
+    target: "esnext",
+    treeshake: false,
+    tsconfig: PACKAGE_TSCONFIG,
+    unbundle: true,
+    watch: mode === "watch",
+  };
+};
 
 /** How long `watchPackage` waits for a burst of file changes - a branch switch - to settle. */
 const SETTLE_MS = 200;

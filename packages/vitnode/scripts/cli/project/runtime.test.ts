@@ -49,11 +49,11 @@ describe("detectRuntime", () => {
   it("is Node for a pnpm, npm or Yarn project", () => {
     writeFileSync(
       join(root, "package.json"),
-      JSON.stringify({ packageManager: "pnpm@11.9.0" }),
+      JSON.stringify({ packageManager: "pnpm@12.18.0" }),
     );
 
     expect(
-      detectRuntime(api(), { npm_config_user_agent: "pnpm/11.9.0" }, node),
+      detectRuntime(api(), { npm_config_user_agent: "pnpm/12.18.0" }, node),
     ).toBe("node");
   });
 

@@ -53,6 +53,11 @@ export const ADMIN_REPORT_REASON_PERMISSIONS = {
   view: core("report_reasons", "can_view"),
 } as const;
 
+export const ADMIN_WARNING_PERMISSIONS = {
+  manage: core("warning_settings", "can_manage"),
+  view: core("warning_settings", "can_view"),
+} as const;
+
 export const staffPermissionModuleFor = (
   type: PermissionStaffType,
 ): "staff_admins" | "staff_moderators" =>

@@ -125,7 +125,7 @@ const rewriteStoredFileSrc = async (
         );
       for (const row of rows) {
         await db.execute(
-          sql`UPDATE ${table} SET ${sql.identifier(column.name)} = ${JSON.stringify(
+          sql`UPDATE ${table} SET ${sql.identifier(column.name)} = ${sql.param(
             withFileSrc(row.document, fileId, src),
           )}::jsonb WHERE ctid = ${row.ctid}::tid`,
         );
