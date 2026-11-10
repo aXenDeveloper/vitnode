@@ -70,7 +70,7 @@ export const vitNodeApiConfig = buildApiConfig({
 
   i18n,
   dbProvider: drizzle({
-    connection: POSTGRES_URL,
+    connection: { url: POSTGRES_URL, onnotice: () => undefined },
     relations: coreRelations,
   }),
   cron: NodeCronAdapter(),

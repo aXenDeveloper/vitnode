@@ -20,7 +20,7 @@ export const vitNodeApiConfig = buildApiConfig({
   
   i18n: vitNodeConfig.i18n,
   dbProvider: drizzle({
-    connection: POSTGRES_URL,
+    connection: { url: POSTGRES_URL, onnotice: () => undefined },
     relations: coreRelations,
   }),
   // Redis is opt-in: only enabled when REDIS_URL is set. Without it the cache

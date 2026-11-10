@@ -82,7 +82,7 @@ export const vitNodeApiConfig = buildApiConfig({
     ],
   },
   dbProvider: drizzle({
-    connection: POSTGRES_URL,
+    connection: { url: POSTGRES_URL, onnotice: () => undefined },
     relations: coreRelations,
   }),
   redis: process.env.REDIS_URL
