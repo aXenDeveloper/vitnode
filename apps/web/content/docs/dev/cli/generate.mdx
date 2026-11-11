@@ -1,0 +1,236 @@
+---
+title: Generate commands
+description: Reference for vitnode generate - scaffold plugin API modules, typed routes, admin routes, services and API resources, with dry runs, collision checks and explicit registration.
+icon: Wand
+---
+
+`vitnode generate` (alias `vitnode g`) writes plugin API code and registers it where VitNode reads it: a new module goes into `buildApiPlugin({ modules })` or its parent module's `modules`, and a new route goes into its module's `routes`. Nothing is discovered at runtime, so `src/config.api.ts` still shows every module the plugin serves.
+
+| Command                                    | Creates                                                            | Guide                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------ | --------------------------------------------------------------- |
+| `vitnode g module <path>`                  | `<name>/<name>.module.ts`, registered in `config.api.ts` or a parent | [Generate a module](/docs/dev/plugins/api/generate-module)      |
+| `vitnode g route <module>/<name>`          | `routes/<name>.route.ts`, added to the module's `routes`           | [Generate an endpoint](/docs/dev/plugins/api/generate-route)    |
+| `vitnode g route admin/...`                | The same, guarded by a staff permission                            | [Protect an admin endpoint](/docs/dev/plugins/api/admin-routes) |
+| `vitnode g service <module>`               | `<module>.service.ts`, an empty service factory                    | [Add a service](/docs/dev/plugins/api/services)                 |
+| `vitnode g resource <name> --kind api`     | A module, schemas, a service and five CRUD routes in `routes/`     | [Generate an API resource](/docs/dev/plugins/api/resources)     |
+| `vitnode g resource <name> --kind content` | An administrative Content Engine content type, wired in            | [Generate a content type](/docs/content-engine/generate)        |
+
+## Where to run it
+
+Run it inside the plugin, through the plugin's own `vitnode`:
+
+```bash
+cd plugins/site-notes
+pnpm vitnode g module notes
+```
+
+The workspace root does not depend on `@vitnode/core`, so `pnpm vitnode` is not found there. From the root, point pnpm at the plugin:
+
+```bash
+pnpm --filter site-notes exec vitnode g module notes
+```
+
+### Which plugin it writes to
+
+| You run it                              | Target                                                                          |
+| --------------------------------------- | ------------------------------------------------------------------------------- |
+| With `--project <name or path>`         | The workspace plugin with exactly that package name, or the plugin in that folder |
+| Inside a plugin                         | That plugin                                                                     |
+| Anywhere else in the workspace (an app) | The only plugin with a `src/config.api.ts`, or a choice when there are several  |
+
+When several plugins qualify and there is no terminal to ask (CI, a script), the command lists them and exits with code `2`. Pass `--project` to choose.
+
+Only plugins can be targets. The plugin needs `src/config.api.ts` and the plugin-bound builders in `src/api/builders.ts`; `create-vitnode-app --plugin` writes both. When `builders.ts` is missing, the generator creates it from `src/manifest.gen.ts`. When that file is missing too, run `vitnode build` in the plugin once to write it.
+
+## Options
+
+Every generate command accepts:
+
+| Option                   | Description                                                            |
+| ------------------------ | ---------------------------------------------------------------------- |
+| `--project <name\|path>` | The plugin to write into, by exact package name or folder              |
+| `--dry-run`              | Print the full diff of every planned change and write nothing          |
+| `--plain`, `--verbose`   | Output style, as for every command. See [Output](/docs/dev/cli/output) |
+
+In an interactive terminal, the command asks for anything it cannot work out, such as a missing parent module or a route's method. Without one (CI, a script), it stops and names the flag to pass.
+
+### `g module`
+
+`vitnode g module <path>`:
+
+| Option      | Description                                                       |
+| ----------- | ----------------------------------------------------------------- |
+| `--admin`   | Create it in the admin module tree: `notes` becomes `admin/notes` |
+| `--parents` | Also create missing parent modules instead of asking              |
+
+### `g route`
+
+`vitnode g route <module path>/<route name>`:
+
+| Option                             | Default       | Description                                                                                                   |
+| ---------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------- |
+| `-m, --method <method>`            | From the name | `get`, `post`, `put`, `patch` or `delete`                                                                     |
+| `--path <path>`                    | From the name | Path relative to the module, in OpenAPI syntax: `/`, `/{id}`, `/{id}/archive`                                 |
+| `--id-type <type>`                 | `string`      | Schema of every path parameter: `string`, or `number` for positive integers                                   |
+| `--admin`                          | -             | Put the route in the admin module tree                                                                        |
+| `--permission <module.permission>` | -             | Required for admin routes, such as `notes.can_create`. An interactive terminal offers the declared ones       |
+| `--declare-permission`             | -             | Declare that permission, and add its AdminCP labels, when the plugin does not declare it yet                  |
+| `--parents`                        | -             | Also create missing modules instead of asking                                                                 |
+
+`--permission` and `--declare-permission` only apply to routes in the admin module tree. On any other route they stop the command.
+
+### `g service`
+
+`vitnode g service <module path>` takes `--admin`, with the same meaning as for modules. The module must already exist.
+
+### `g resource --kind api`
+
+`vitnode g resource <name> --kind api`:
+
+| Option                         | Default                                  | Description                                                                                          |
+| ------------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `--kind <kind>`                | -                                        | Required: `api`, or `content` (below)                                                                |
+| `--fields <fields>`            | Asked, or none                           | Comma-separated `name:type` pairs with `string`, `number`, `int` or `boolean`; `name?:type` is optional |
+| `--id-type <type>`             | `string`                                 | `string` or `number`                                                                                 |
+| `--admin`                      | -                                        | Generate it in the admin module tree                                                                 |
+| `--permission-module <module>` | Asked; required when nothing can prompt  | Admin resources only. `can_view` guards list and show; `can_create`, `can_edit` and `can_delete` guard the rest |
+| `--declare-permission`         | -                                        | Declare the missing permissions and their labels                                                     |
+| `--parents`                    | -                                        | Also create missing parent modules instead of asking                                                 |
+
+The resource's module must be new or have no routes yet. The generator creates no table, migration or storage, so every operation answers `501` until you implement the service.
+
+### `g resource --kind content`
+
+`vitnode g resource <name> --kind content` takes:
+
+| Option                | Default                 | Description                                                                                      |
+| --------------------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `--fields <fields>`   | Asked; required when nothing can prompt | `name:type` pairs with `text`, `richText`, `boolean`, `int` or `number`. The first required `text` field is the title |
+| `--id-type <type>`    | `serial`                | `serial`, `uuid` or `bigint`                                                                     |
+| `--content-id <id>`   | Derived                 | The content type id, as `plugin.entity`                                                          |
+| `--table <name>`      | `<plugin>_<name>`       | The table name, in snake_case                                                                    |
+| `--singular <label>`  | The plural label        | Singular label, such as `Article`                                                                |
+
+The name is a single segment, such as `articles`; `--admin` and `--permission-module` do not apply. The result is administrative only, with no public API, member writes or publication, and the command never writes or applies a migration. See [Generate a content type](/docs/content-engine/generate) for the files it writes and how it handles permissions.
+
+## Route names and paths
+
+Every route gets its own file in the module's `routes/` folder. `notes/list` writes `src/api/modules/notes/routes/list.route.ts`, and `notes.module.ts` imports it from `./routes/list.route`.
+
+A route's file name and its URL are separate. These five names imply a method and a path:
+
+| Name     | Method   | Path    |
+| -------- | -------- | ------- |
+| `list`   | `GET`    | `/`     |
+| `show`   | `GET`    | `/{id}` |
+| `create` | `POST`   | `/`     |
+| `update` | `PATCH`  | `/{id}` |
+| `delete` | `DELETE` | `/{id}` |
+
+Any other name needs `--method` and `--path`, or answers to the prompts in an interactive terminal. `archive.route.ts` is not served at `/archive` unless you say so.
+
+## What a generated route does
+
+- **`GET`** answers `200` with sample data, `{ "sample": true, "message": "..." }` plus any path parameters, and a response schema that matches it exactly. Replace both.
+- **`POST`, `PUT` and `PATCH`** validate their path parameters and a JSON body, an empty `z.object({})` for you to fill in. **`DELETE`** validates only its path parameters. All four answer `501 Not Implemented`, so a client never sees a fake success.
+- **Admin routes** add `adminStaffPermission` and a `403` response. The permission must be declared, or added with `--declare-permission`. When the plugin's `admin` module mounts Content Engine modules and the permission module is not declared, `g route` only warns, because a content type may declare it. `g resource --admin` always requires declared permissions.
+
+A staff permission decides who may call a route. It does not check access to a particular record, so do that in the handler when it matters.
+
+## Safety rules
+
+- **Dry run first.** `--dry-run` resolves, validates and formats everything, then prints the exact diff instead of writing.
+- **No overwrites.** An existing file, an identifier the target file already declares, or a module name already registered stops the command before anything is written. There is no `--force`.
+- **No duplicate endpoints.** A new route is checked against every route the plugin's module tree reaches, and against the other routes of the same command, such as a resource's five. Full paths are joined the way Hono mounts modules, so a `notes` route `GET /drafts` and a `notes/drafts` route `GET /` are both `GET /notes/drafts`. Parameter names don't count (`/{id}` and `/{noteId}` are the same route), but a trailing slash does, because routing is strict. The error names the method and path, the route that already answers it, and where the new one would go:
+
+  ```txt
+  ✖ GET /notes/drafts already exists.
+    listDraftsRoute in src/api/modules/notes/drafts/routes/list.route.ts (module "notes/drafts") answers GET /notes/drafts.
+    Destination: showDraftsNotesRoute in src/api/modules/notes/routes/show-drafts.route.ts (module "notes", path /drafts).
+    Nothing was written.
+  ```
+
+  A module registered under several parents is checked at every mount. If `first` and `second` both list `notesModule`, its `GET /items` answers both `GET /first/notes/items` and `GET /second/notes/items`, and a new route on either path is refused.
+
+  The generator cannot check parts of the tree it cannot read: the Content Engine modules under `/admin/content`, a module entry it cannot resolve, or a module that mounts itself through its own children. A new route under one of them is still written, with a warning that the check is incomplete.
+
+- **Names are kept, not rewritten.** Module and route names are lower-case kebab-case, because a module name is its URL segment. `myNotes` is refused with a suggestion (`my-notes`). `..`, absolute paths and backslashes are refused outright.
+- **Edits are surgical.** The generator parses your files and inserts text at exact positions, so comments, options and the `VitNodeApiPlugin` type stay as they were. New imports go in alphabetical order within their group.
+- **Formatting follows the project.** New and changed files are formatted with the project's own oxfmt and config. A file you edited earlier is formatted only if it was already formatted, so the diff never touches code the generator did not add. Without oxfmt in the project, the summary says the code was not formatted.
+- **Writes are checked and rolled back.** Every file is re-read just before writing; if one changed in the meantime, nothing is written. If a write fails halfway, the files already written are restored. A crash during the final renames can still leave some files written, which is why the summary lists every file.
+
+## Supported source patterns
+
+The generator reads your source and never runs it. It follows these patterns:
+
+```ts title="src/config.api.ts"
+buildApiPlugin({
+  manifest,
+  modules: [notesModule, adminModule],
+  permissionStaff: { admin: { notes: ["can_create"] } },
+});
+```
+
+```ts title="src/api/modules/admin/admin.module.ts"
+import { adminNotesModule } from "./notes/notes.module";
+
+export const adminModule = buildModule({
+  name: "admin",
+  routes: [],
+  modules: [adminNotesModule],
+});
+```
+
+- `modules` and `routes` are array literals, and `name` is a string literal.
+- Each array entry is an identifier that resolves to a `const x = buildModule({...})` or `buildRoute({...})` in the plugin, declared in the same file or imported with `@/` or a relative path.
+- `buildContentAdminModule(...)` and `buildContentPublicModule(...)` are recognized as the generated `content` module. They take no hand-written routes or child modules.
+- `permissionStaff` is an object literal with array literals inside, or `staffPermissions.config`, where `staffPermissions` is a `defineStaffPermissions({...})` call in the plugin. With the second form, the generator reads and declares permissions in that call, and generated routes use typed references such as `staffPermissions.admin.notes.canCreate`. See [Typed permission references](/docs/dev/working-with-users/staff-permission-refs).
+
+Other shapes, such as a spread inside `modules`, a variable holding the array, or a module from another package, stop the command when it has to search or edit that array. It writes nothing and prints the lines to add by hand. Elsewhere in the tree such entries only limit the duplicate-endpoint check, with a warning. A route whose method or path cannot be read also gets a warning, since the check could not cover it.
+
+### Which property the generator edits
+
+An object literal can name the same property twice or merge in a spread, and JavaScript keeps the value that comes last. The generator reads and edits only that effective property. This applies to `modules`, `routes`, `permissionStaff`, its `admin` entry and each module entry in it, and the `contentTypes` of `buildContentAdminModule(...)` and `adminNav`:
+
+| Source                                                                                  | What the generator does                                                                        |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| The property written twice                                                              | Edits the last one, which is the one that runs                                                 |
+| The property after a spread or an unknown computed key: `{ ...shared, modules: [...] }` | Edits it: nothing after it can replace it                                                      |
+| A string-literal computed key: `{ ["modules"]: [...] }`                                 | Reads it as `modules`                                                                          |
+| A spread of an object literal without the key: `{ ...{ manifest }, modules: [...] }`    | Ignores the spread                                                                             |
+| A spread or an unknown computed key after the property: `{ modules: [...], ...shared }` | Stops: the spread may replace it                                                               |
+| A getter, setter or method with that name                                               | Stops: its value comes from running code                                                       |
+| No such property, but a spread or an unknown computed key in the object                 | Stops: the spread may supply it, and adding the property would override or be overridden by it |
+
+When it stops, it names the line that decides and what to change by hand:
+
+```txt
+✖ The modules of buildApiPlugin cannot be read or edited safely.
+  At src/config.api.ts:15: a spread after modules may replace it.
+  Nothing was written.
+  To wire it by hand:
+    Create notes/notes.module.ts next to the parent module (src/api/modules/ for a top-level one):
+      export const notesModule = buildModule({ name: "notes", routes: [] });
+    Import notesModule in src/config.api.ts and add it to buildApiPlugin({ modules }).
+```
+
+## After generating
+
+- **Types.** The plugin's own pages see new routes at once: its `types/api-registry.gen.d.ts` imports `VitNodeApiPlugin` from `src/config.api.ts`, so nothing needs regenerating. An app sees them once the plugin's declarations are rebuilt, which `vitnode dev` does on save; otherwise run `vitnode build` in the plugin. See [How the fetcher knows your routes](/docs/dev/plugins/api/modules#how-the-fetcher-knows-your-routes).
+- **URLs.** A plugin is mounted at `/{plugin id}` under the app's API base path, `/api` in the starter apps. `notes/list` in `site-notes` answers `GET /api/site-notes/notes`.
+- **Checks.** After a build, run `vitnode plugin validate` to load the plugin the way an app does, and [`vitnode doctor`](/docs/dev/cli/doctor) to find unregistered modules, undeclared permissions and duplicate endpoints.
+
+## Related
+
+<Cards>
+  <Card
+    title="Generate an endpoint"
+    description="Add a typed route and call it with the fetcher"
+    href="/docs/dev/plugins/api/generate-route"
+  />
+  <Card
+    title="Doctor and inspect"
+    description="Check plugins and list what they register"
+    href="/docs/dev/cli/doctor"
+  />
+</Cards>

@@ -226,7 +226,7 @@ TypeScript infers `output` as `string` from the action's `outputSchema`. When a 
 
 Create an `ai` module for the route:
 
-```ts title="plugins/forum/src/api/modules/admin/ai/ai.admin.module.ts"
+```ts title="plugins/forum/src/api/modules/admin/ai/ai.module.ts"
 import { buildModule } from '@/api/builders'
 
 import { summarizeTopicRoute } from './routes/summarize.route'
@@ -240,7 +240,7 @@ export const aiAdminModule = buildModule({
 Then add it to the forum's existing `admin` module:
 
 ```ts title="plugins/forum/src/api/modules/admin/admin.module.ts (excerpt)"
-import { aiAdminModule } from './ai/ai.admin.module' // [!code ++]
+import { aiAdminModule } from './ai/ai.module' // [!code ++]
 
 export const adminModule = buildModule({
   name: 'admin',

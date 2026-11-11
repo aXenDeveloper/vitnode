@@ -35,8 +35,11 @@ describe("vitnode", () => {
         dev                Start the development environment
         build              Build for production
         start              Start the production server
+        generate <kind>    Generate plugin API modules, routes, services and resources
         plugin list        List plugins
         plugin validate    Validate plugins
+        doctor             Check plugins for configuration problems
+        inspect <what>     Show what plugins register: routes, jobs or events
         db generate        Generate a migration
         db migrate         Run pending migrations
         db push            Push schema changes (development)
@@ -46,6 +49,8 @@ describe("vitnode", () => {
       Examples
         vitnode dev
         vitnode build --analyze
+        vitnode g route notes/list --dry-run
+        vitnode doctor
         vitnode db migrate --yes
 
       Run vitnode <command> --help for a command's options.

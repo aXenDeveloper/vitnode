@@ -30,7 +30,7 @@ export const matchesPlugin = (plugin: DiscoveredPlugin, query: string) =>
   shortNameOf(plugin.id) === query ||
   (plugin.root !== null && basename(plugin.root) === query);
 
-const renderCheck = (ui: Ui, check: PluginCheck) => {
+export const renderCheck = (ui: Ui, check: PluginCheck) => {
   const summary = check.summary ?? "";
 
   switch (check.status) {

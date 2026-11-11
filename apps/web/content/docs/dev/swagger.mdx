@@ -50,12 +50,12 @@ route of the `site-notes` plugin.
 
 ### Describe the route
 
-In `src/api/modules/notes/show.route.ts`, add a `description` and an `example`
+In `src/api/modules/notes/routes/show.route.ts`, add a `description` and an `example`
 for the parameter. `description` becomes the operation's summary line, and every
 schema field can carry an `example`. This is the whole difference between a
 spec people use and a spec people ignore:
 
-```ts title="plugins/site-notes/src/api/modules/notes/show.route.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
 export const showNoteRoute = buildRoute({
   route: {
     method: 'get',

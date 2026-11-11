@@ -1,36 +1,10 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
-import { MAX_SEARCH_SUGGESTIONS } from "@/api/lib/search-suggestions";
 import { contentSearchHiddenAccess } from "@/content/server/hidden-access";
 
-import { positiveIntOrUndefined } from "./search.route";
-
-const DEFAULT_SEARCH_SUGGESTIONS = 6;
-
-export const zodSearchSuggestion = z.object({
-  context: z.string().nullable(),
-  createdAt: z.date(),
-  excerpt: z.string(),
-  id: z.number(),
-  image: z
-    .object({
-      height: z.number().optional(),
-      url: z.string(),
-      width: z.number().optional(),
-    })
-    .nullable(),
-  itemId: z.string(),
-  itemType: z.string(),
-  title: z.string(),
-  url: z.string(),
-});
-
-export const searchSuggestionsLimit = (first: string | undefined): number =>
-  Math.min(
-    positiveIntOrUndefined(first) ?? DEFAULT_SEARCH_SUGGESTIONS,
-    MAX_SEARCH_SUGGESTIONS,
-  );
+import { searchSuggestionsLimit } from "../lib/query-params";
+import { zodSearchSuggestion } from "../search.schema";
 
 export const suggestRoute = buildRoute({
   route: {

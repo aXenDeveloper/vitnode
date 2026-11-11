@@ -4,7 +4,7 @@ import type {
   PasskeyErrorCode,
   zodPasskeyAuthenticationOptionsSchema,
   zodPasskeyAuthenticationResponseSchema,
-} from "@/api/modules/users/passkeys/schema";
+} from "@/api/modules/users/passkeys/passkeys.schema";
 
 import { RATE_LIMIT_STATUS } from "@/lib/fetcher/rate-limit";
 import { signUpConflictReason } from "@/views/auth/sign-up/form/schema";

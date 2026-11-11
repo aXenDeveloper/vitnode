@@ -7,7 +7,7 @@ import { render, toPlainText } from "react-email";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
 import { runAfterResponse } from "@/api/lib/after-response";
-import { processQueueTasksByIds } from "@/api/modules/queue/helpers/process-queue-tasks";
+import { processQueueTasksByIds } from "@/api/modules/queue/lib/process-queue-tasks";
 
 import type { DefaultTemplateEmailProps } from "../../emails/default-template";
 

@@ -2,7 +2,7 @@ import type { z } from "zod";
 
 import { queryOptions, useQuery } from "@tanstack/react-query";
 
-import type { updatesSummarySchema } from "@/api/modules/admin/plugins/routes/updates.schema";
+import type { updatesSummarySchema } from "@/api/modules/admin/plugins/updates.schema";
 
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { manifest } from "@/manifest";

@@ -115,9 +115,9 @@ export default function NewNoteEmail({ note, user, ...props }: NewNoteEmailProps
 
 ### Send it from a route
 
-Create `src/api/modules/admin/notes/email.route.tsx`. The `.tsx` extension lets the handler render the template with JSX:
+Create `src/api/modules/admin/notes/routes/email.route.tsx`. The `.tsx` extension lets the handler render the template with JSX:
 
-```tsx title="plugins/site-notes/src/api/modules/admin/notes/email.route.tsx"
+```tsx title="plugins/site-notes/src/api/modules/admin/notes/routes/email.route.tsx"
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { createTranslator } from "use-intl";

@@ -7,7 +7,7 @@ import {
   presenceResponseHeaders,
   zodPresenceUserId,
   zodUserPresence,
-} from "../presence-schema";
+} from "../presence.schema";
 
 export const presenceRoute = buildRoute({
   route: {

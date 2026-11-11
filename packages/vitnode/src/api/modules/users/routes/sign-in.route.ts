@@ -22,7 +22,7 @@ import { core_sessions } from "@/database/sessions";
 import {
   USER_EMAIL_MAX_LENGTH,
   USER_PASSWORD_MAX_LENGTH,
-} from "../credential-limits";
+} from "../lib/credential-limits";
 
 export const zodSignInSchema = z.object({
   email: z.email().max(USER_EMAIL_MAX_LENGTH).toLowerCase().openapi({

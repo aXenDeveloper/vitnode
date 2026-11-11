@@ -132,6 +132,8 @@ interface EventsApiPlugin {
 | `delivered`       | How many listeners succeeded.                                                                       |
 | `failures`        | `{ pluginId, module, listener, error }` for each listener, or the adapter, that failed.            |
 
+For a [schema-defined event](/docs/dev/events/schema-events), `emit()` validates the payload before calling `publish`, and `envelope.payload` holds the schema's output. Serialize it yourself, as for any event; keep such schemas free of transforms when events leave the process, so the receiver can parse the payload with the same definition.
+
 `emit()` catches an adapter that throws, logs it, and reports it as one failure with `module: "adapter"`. To run listeners yourself, read them from `c.get("core").events.listeners`, as `LocalEventsAdapter` does.
 
 ## Related

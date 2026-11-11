@@ -5,7 +5,7 @@ import { eq, lt, notExists, sql } from "drizzle-orm";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
 import { buildCron } from "@/api/lib/cron";
-import { deleteExpiredQueueTasks } from "@/api/modules/queue/helpers/process-queue-tasks";
+import { deleteExpiredQueueTasks } from "@/api/modules/queue/lib/process-queue-tasks";
 import { core_admin_sessions } from "@/database/admins";
 import {
   core_sessions,

@@ -22,7 +22,7 @@ icon: Search
 
 `zodPaginationQuery` has no `search` key, so extend it in the route's `request`:
 
-```ts title="plugins/site-notes/src/api/modules/notes/paged.route.ts (excerpt)"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/paged.route.ts (excerpt)"
 request: {
   query: zodPaginationQuery.extend({
     search: z.string().max(100).optional(), // [!code ++]
@@ -37,7 +37,7 @@ request: {
 
 Pass the columns in `search`. Keep everything else from the pagination route, including `offset`:
 
-```ts title="plugins/site-notes/src/api/modules/notes/paged.route.ts (excerpt)"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/paged.route.ts (excerpt)"
 const data = await withPagination({
   c,
   params: { query: c.req.valid('query') },

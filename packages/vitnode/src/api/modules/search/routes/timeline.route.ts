@@ -1,51 +1,14 @@
-import type { Context } from "hono";
-
 import { z } from "@hono/zod-openapi";
-
-import type { SearchHiddenAccess } from "@/api/models/search";
 
 import { buildRoute } from "@/api/builders";
 import { contentSearchHiddenAccess } from "@/content/server/hidden-access";
 
-import { zodPaginationQuery } from "../../../lib/with-pagination";
-import { positiveIntOrUndefined, zodSearchResultSchema } from "./search.route";
-
-export const zodSearchTimelineQuery = zodPaginationQuery.extend({
-  lang: z.string().optional(),
-});
-
-export const zodSearchTimelineUserId = z
-  .string()
-  .regex(/^\d+$/, "Must be a whole number.")
-  .openapi({ example: "1" });
-
-export const searchTimeline = async (
-  c: Context,
-  {
-    authorId,
-    hiddenAccess,
-    includePrivate,
-    query,
-    skipAccess,
-  }: {
-    authorId: number;
-    hiddenAccess?: SearchHiddenAccess;
-    includePrivate: boolean;
-    query: z.infer<typeof zodSearchTimelineQuery>;
-    /** Only for staff routes - see `SearchQueryParams.skipAccess`. */
-    skipAccess?: boolean;
-  },
-) =>
-  await c.get("search").search({
-    authorId,
-    cursor: query.cursor,
-    first: positiveIntOrUndefined(query.first),
-    hiddenAccess,
-    includePrivate,
-    languageCode: query.lang,
-    skipAccess,
-    sort: "newest",
-  });
+import { searchTimeline } from "../lib/timeline";
+import {
+  zodSearchResultSchema,
+  zodSearchTimelineQuery,
+  zodSearchTimelineUserId,
+} from "../search.schema";
 
 export const timelineRoute = buildRoute({
   route: {

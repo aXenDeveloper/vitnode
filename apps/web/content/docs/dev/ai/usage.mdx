@@ -43,7 +43,7 @@ Without an `id`, each resolver returns the first model of its list in the [AI co
 
 Generate text in a staff-only API route. This one belongs to the `site-notes` plugin from the [learning path](/docs/dev/working-with-users/staff-permissions); add it to the plugin's admin `notes` module like any other route:
 
-```ts title="plugins/site-notes/src/api/modules/admin/notes/summarize.route.ts"
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/summarize.route.ts"
 import { generateText } from 'ai'
 import { z } from 'zod'
 

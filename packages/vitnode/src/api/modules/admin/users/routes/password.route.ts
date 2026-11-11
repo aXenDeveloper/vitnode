@@ -7,7 +7,7 @@ import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { revokeAccountRecoveryTokens } from "@/api/lib/recovery-tokens";
 import { PasswordModel } from "@/api/models/password";
 import { revokeSessions } from "@/api/models/session-revoke";
-import { USER_PASSWORD_MAX_LENGTH } from "@/api/modules/users/credential-limits";
+import { USER_PASSWORD_MAX_LENGTH } from "@/api/modules/users/lib/credential-limits";
 import { core_users } from "@/database/users";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";

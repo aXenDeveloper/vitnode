@@ -1,0 +1,91 @@
+---
+title: Return only allowed fields
+description: Send only the fields a VitNode route's response schema declares with respondJson, so a database row's extra columns never reach the client and the fetcher keeps its types.
+icon: ListFilter
+implementation:
+  objective: Make API routes answer with only the fields their response schema declares.
+  decisions:
+    - Which plugin? Offer plugins in the project with a `src/config.api.ts`.
+    - Which routes? Offer handlers in the chosen plugin that pass database rows or other wide objects to `c.json`.
+  constraints:
+    - Answer with `respondJson(c, status, schema, value)` from `@vitnode/core/api/lib/respond-json`, using the same schema the route declares for that status.
+    - Response schemas must be plain JSON schemas, without transforms, pipes, defaults, catch, lazy or intersections.
+    - Check access before building the value. Projection removes undeclared fields; it does not authorize declared ones.
+  related:
+    - title: API routes
+      href: /docs/dev/plugins/api/routes
+---
+
+`c.json(row, 200)` sends every property of `row`, including columns the response schema never mentions. `respondJson` from `@vitnode/core/api/lib/respond-json` copies only the fields the schema declares, at every depth, and then validates the result. In this guide the `site-notes` detail route selects whole rows and still answers with only `id`, `title` and `body`.
+
+## Before you begin
+
+- The `GET /notes/{id}` route reading the `site_notes` table, from [Database](/docs/dev/database).
+
+<Steps>
+
+<Step>
+
+### Answer with `respondJson`
+
+In `src/api/modules/notes/routes/show.route.ts`, select the whole row and pass the response schema the route already declares for `200`:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
+import { respondJson } from "@vitnode/core/api/lib/respond-json"; // [!code ++]
+
+  handler: async c => {
+    const { id } = c.req.valid("param");
+    const [note] = await c
+      .get("db")
+      .select({ id: site_notes.id, title: site_notes.title, body: site_notes.body }) // [!code --]
+      .select() // [!code ++]
+      .from(site_notes)
+      .where(eq(site_notes.id, id));
+    if (!note) return c.body(null, 404);
+
+    return c.json(note, 200); // [!code --]
+    return respondJson(c, 200, zodNote, note); // [!code ++]
+  },
+```
+
+The row now carries `createdAt`, which `zodNote` does not declare, so `respondJson` leaves it out. Pass the same schema as the route's `responses[200]`. The handler's return type then stays exactly what `c.json(note, 200)` gave, and pages that call this route with `fetcher` keep the same inferred body. Headers and cookies set on `c` are sent as usual.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Open `http://localhost:3000/api/site-notes/notes/2` in the browser. The body is `{"id":2,"title":"Office closed on Friday","body":"..."}`, without `createdAt`. A column you add to `site_notes` later also stays out of this response until you add it to `zodNote`.
+
+## How fields are chosen
+
+- **Objects** keep only the keys in their shape, even with `z.looseObject()` or `.catchall()`. Nested objects, arrays, records and tuples are projected the same way. An object schema accepts only plain objects and `Object.create(null)` objects. A class instance is refused rather than copied, so map it to a plain object first.
+- **Optional and nullable** fields: a missing or `undefined` value stays missing and `null` stays `null`. Nothing is filled in.
+- **Unions** use the first option that accepts the projected value, so a discriminated union keeps only the fields of the matching branch. When no option accepts its projected value, the response is refused. The original value is never sent.
+- **Plain JSON schemas only.** A schema with `.transform()`, `.pipe()`, `.default()`, `.catch()`, `z.lazy()`, an intersection, or a `bigint`, `map` or `set` is refused, because its output is computed rather than copied. `z.date()` is accepted and sent as an ISO string, as with `c.json`.
+
+## When the value does not match
+
+After projecting, `respondJson` validates the result. A required field that is missing or has the wrong type throws `ResponseProjectionError`, and VitNode answers `500`. The server broke its own contract, so the client is not told its request was wrong. The logged message names the path and issue code, such as `response.title: invalid_type (expected string)`, never the value.
+
+<Callout type="warn" title="Projection is not authorization">
+  `respondJson` removes fields the schema does not declare. It does not decide
+  who may see the fields it does declare. Check access first, and give viewers
+  who may see less their own response schema.
+</Callout>
+
+## Reference
+
+All exports of `@vitnode/core/api/lib/respond-json`:
+
+| Export                    | Signature                                     | Behavior                                                                               |
+| ------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `respondJson`             | `(c, status, schema, value) => TypedResponse` | `c.json(projectResponse(schema, value), status)`, typed like `c.json` for that status. |
+| `projectResponse`         | `(schema, value) => z.output<typeof schema>`  | Projects and validates without sending, for example inside a service. Universal.       |
+| `ResponseProjectionError` | `Error` with `reason`                         | Thrown for a mismatch or an unsupported schema.                                        |
+
+## Related
+
+- [API routes](/docs/dev/plugins/api/routes): declaring a route's responses.
+- [Fetcher](/docs/dev/fetcher): calling the route from a page.

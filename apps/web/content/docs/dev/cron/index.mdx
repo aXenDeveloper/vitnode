@@ -56,8 +56,8 @@ Add the job to the `cronJobs` array of a module passed to `buildApiPlugin({ modu
 import { buildModule } from '@/api/builders'
 import { countNotesCron } from '@/api/cron/count-notes.cron' // [!code ++]
 
-import { listNotesRoute } from './list.route'
-import { showNoteRoute } from './show.route'
+import { listNotesRoute } from './routes/list.route'
+import { showNoteRoute } from './routes/show.route'
 
 export const notesModule = buildModule({
   name: 'notes',
@@ -68,7 +68,7 @@ export const notesModule = buildModule({
 
 Keep any other keys your module already has, such as `queueTasks` or `events`.
 
-Only top-level modules are read. A job on a nested module, such as `admin/notes`, is never registered.
+Only top-level modules are read. A job on a nested module, such as `admin/notes`, is never registered: `buildApiPlugin` throws in development to say so, and [`vitnode doctor`](/docs/dev/cli/doctor) reports it.
 
 </Step>
 <Step>

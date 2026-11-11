@@ -11,6 +11,7 @@ import { captchaMiddleware } from "../middlewares/captcha.middleware";
 import { pluginMiddleware } from "../middlewares/plugin.middleware";
 import { assertStaffPermission } from "./check-staff-permission";
 import { pluginTag } from "./openapi-tags";
+import { isAdminApiPath, setRouteStaffPermissions } from "./route-metadata";
 
 /**
  * Runs after request validation, as `@hono/zod-openapi`'s hook. Return a
@@ -75,7 +76,7 @@ export const findAdminRoutesWithoutStaffPermission = (hono: {
   const guarded = new Map<string, boolean>();
 
   for (const { handler, method, path } of hono.routes) {
-    if (method === "ALL" || !/(^|\/)admin(\/|$)/.test(path)) continue;
+    if (method === "ALL" || !isAdminApiPath(path)) continue;
 
     const label = `${method} ${path}`;
     const handlerFn = unwrapHandler(handler);
@@ -200,7 +201,7 @@ export const buildRoute = <
     middleware.push(route.middleware);
   }
 
-  return {
+  const built: Route<Plugin, R & { path: P }> = {
     route: createRouteHono({
       // `route` is spread first on purpose: `tags` and `middleware` already
       // merge the route's own values, so letting the spread win would drop
@@ -213,6 +214,15 @@ export const buildRoute = <
     ...(hook ? { hook } : {}),
     pluginId,
   };
+
+  if (adminStaffPermission || moderatorStaffPermission) {
+    setRouteStaffPermissions(built, {
+      admin: adminStaffPermission,
+      moderator: moderatorStaffPermission,
+    });
+  }
+
+  return built;
 };
 
 /** A built route, ready for `buildModule`'s `routes`. */

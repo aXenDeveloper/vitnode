@@ -57,7 +57,7 @@ The constants are exported from `@vitnode/core/content`: `CONTENT_ACCESS_ACTIONS
 
 `createContentAccess(c)` from `@vitnode/core/content/server` checks the current viewer inside a Hono route. Roles are read from the database once per request; the results are memoized for that request.
 
-```ts title="plugins/forum/src/api/modules/forum/stats.routes.ts"
+```ts title="plugins/forum/src/api/modules/forum/routes/show-topic-slug.route.ts"
 import { createContentAccess } from "@vitnode/core/content/server";
 
 const access = createContentAccess(c);

@@ -11,7 +11,7 @@ import { SessionAdminModel } from "@/api/models/session-admin";
 
 import { linkRoute } from "../sso/routes/link.route";
 import { changePasswordRoute } from "./change-password.route";
-import { resetPasswordRoute } from "./reset-passowrd.route";
+import { resetPasswordRoute } from "./reset-password.route";
 import { signInRoute } from "./sign-in.route";
 import { signUpRoute } from "./sign-up.route";
 

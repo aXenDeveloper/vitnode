@@ -121,6 +121,49 @@ export const createProgram = (hooks: ProgramHooks): Command => {
       ),
     );
 
+  registerGenerateCommands(program, run);
+
+  outputOptions(program.command("doctor"))
+    .description(describe("doctor"))
+    .argument(
+      "[name]",
+      "plugin package name or folder (default: all, or the one you are in)",
+    )
+    .action(
+      run(
+        async () => (await import("./commands/doctor")).runDoctorCommand,
+        ([name]) => ({ name: name as string | undefined }),
+      ),
+    );
+
+  const inspect = program
+    .command("inspect")
+    .helpCommand(false)
+    .description(describe("inspect <what>"));
+  const inspectHandlers = async () => import("./commands/inspect");
+  for (const [kind, description, handler] of [
+    [
+      "routes",
+      "Routes, their paths and declared staff permissions",
+      "runInspectRoutesCommand",
+    ],
+    ["jobs", "Cron jobs and queue tasks", "runInspectJobsCommand"],
+    ["events", "Event listeners and WebSockets", "runInspectEventsCommand"],
+  ] as const) {
+    outputOptions(inspect.command(kind))
+      .description(description)
+      .argument(
+        "[name]",
+        "plugin package name or folder (default: all, or the one you are in)",
+      )
+      .action(
+        run(
+          async () => (await inspectHandlers())[handler],
+          ([name]) => ({ name: name as string | undefined }),
+        ),
+      );
+  }
+
   const db = program
     .command("db")
     .description("Generate, apply and inspect database migrations");
@@ -263,4 +306,119 @@ const registerLegacyCommands = (program: Command, run: Run) => {
     .description("Same as db:prepare; --generate only generates")
     .option("--generate", "only generate migrations")
     .action(run(async () => (await legacy()).runMigrateCommand));
+};
+
+const registerGenerateCommands = (program: Command, run: Run) => {
+  const handlers = async () => import("./commands/generate");
+  const generate = program
+    .command("generate")
+    .alias("g")
+    .helpCommand(false)
+    .description(describeCommand("generate <kind>"))
+    .addHelpText(
+      "after",
+      "\nExamples:\n  vitnode g module notes\n  vitnode g route notes/show --path '/{id}'\n  vitnode g route admin/notes/create --permission notes.can_create --declare-permission\n  vitnode g resource notes --kind api --fields title:string,body:string\n  vitnode g module notes --dry-run",
+    );
+
+  const common = (command: Command): Command =>
+    outputOptions(command)
+      .option(
+        "--project <name|path>",
+        "plugin to generate into: exact package name or folder (default: the plugin you are in)",
+      )
+      .option("--dry-run", "show the planned diff without writing anything");
+
+  common(generate.command("module"))
+    .description("Create an API module and register it")
+    .argument("<name>", "module path, e.g. notes or admin/notes")
+    .option("--admin", "create it in the admin module tree (admin/<name>)")
+    .option("--parents", "also create missing parent modules")
+    .action(
+      run(
+        async () => (await handlers()).runGenerateModuleCommand,
+        ([name]) => ({ name: name as string }),
+      ),
+    );
+
+  common(generate.command("route"))
+    .description("Create a typed route and add it to its module")
+    .argument("<target>", "<module path>/<route name>, e.g. notes/list")
+    .option("-m, --method <method>", "get, post, put, patch or delete")
+    .option("--path <path>", "path relative to the module, e.g. / or /{id}")
+    .option(
+      "--id-type <type>",
+      "schema of path parameters: string or number",
+      "string",
+    )
+    .option(
+      "--admin",
+      "put the route in the admin module tree (admin/<module>)",
+    )
+    .option(
+      "--permission <module.permission>",
+      "admin staff permission that guards the route",
+    )
+    .option(
+      "--declare-permission",
+      "declare the permission in config.api.ts when it is missing",
+    )
+    .option("--parents", "also create missing modules")
+    .action(
+      run(
+        async () => (await handlers()).runGenerateRouteCommand,
+        ([target]) => ({ target: target as string }),
+      ),
+    );
+
+  common(generate.command("resource"))
+    .description("Create a module with schemas, a service and CRUD routes")
+    .argument("<name>", "module path for the resource, e.g. notes")
+    .option("--kind <kind>", "what to generate: api or content")
+    .option(
+      "--fields <fields>",
+      "fields as name:type, e.g. title:string,pinned?:boolean",
+    )
+    .option(
+      "--id-type <type>",
+      "api: string or number (default string); content: serial, uuid or bigint (default serial)",
+    )
+    .option("--admin", "api: create it in the admin module tree (admin/<name>)")
+    .option(
+      "--content-id <id>",
+      "content: the content type id, plugin.entity (default: derived)",
+    )
+    .option(
+      "--table <name>",
+      "content: the table name (default: <plugin>_<name>)",
+    )
+    .option("--singular <label>", "content: singular label, e.g. Article")
+    .option(
+      "--permission-module <module>",
+      "admin resources: permission module for can_view, can_create, can_edit and can_delete",
+    )
+    .option(
+      "--declare-permission",
+      "declare missing permissions in config.api.ts",
+    )
+    .option("--parents", "also create missing parent modules")
+    .action(
+      run(
+        async () => (await handlers()).runGenerateResourceCommand,
+        ([name]) => ({ name: name as string }),
+      ),
+    );
+
+  common(generate.command("service"))
+    .description("Create an empty service factory in a module")
+    .argument("<module>", "module path, e.g. notes")
+    .option(
+      "--admin",
+      "the module is in the admin module tree (admin/<module>)",
+    )
+    .action(
+      run(
+        async () => (await handlers()).runGenerateServiceCommand,
+        ([name]) => ({ name: name as string }),
+      ),
+    );
 };

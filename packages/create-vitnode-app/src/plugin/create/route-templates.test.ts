@@ -271,7 +271,9 @@ describe("the generated API module", () => {
   it("registers the route's own export, not a second copy", () => {
     const module = pluginApiModuleTemplate();
 
-    expect(module).toContain('import { helloRoute } from "./hello.route";');
+    expect(module).toContain(
+      'import { helloRoute } from "./routes/hello.route";',
+    );
     expect(module).toContain("routes: [helloRoute],");
   });
 });
@@ -418,7 +420,7 @@ describe("the scaffold as a whole", () => {
       "src/api/modules/hello/hello.module.ts",
     );
     expect(Object.keys(files)).toContain(
-      "src/api/modules/hello/hello.route.ts",
+      "src/api/modules/hello/routes/hello.route.ts",
     );
     expect(Object.keys(files)).toContain("src/config.api.ts");
     expect(Object.keys(files)).toContain("src/api/builders.ts");

@@ -3,7 +3,7 @@ import type { z } from "zod";
 import type {
   zodAiActionSettingsInput,
   zodAiSettings,
-} from "@/api/modules/admin/ai/schemas";
+} from "@/api/modules/admin/ai/ai.schema";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { manifest } from "@/manifest";

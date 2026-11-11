@@ -235,7 +235,7 @@ export const helloRoute = buildRoute({
 export const pluginApiModuleTemplate = (): string =>
   `import { buildModule } from "@/api/builders";
 
-import { helloRoute } from "./hello.route";
+import { helloRoute } from "./routes/hello.route";
 
 export const helloModule = buildModule({
   name: "hello",
@@ -363,7 +363,7 @@ export const pluginRouteScaffold = (
   "src/api/modules/hello/hello.module.test.ts":
     pluginApiModuleTestTemplate(pluginName),
   "src/api/modules/hello/hello.module.ts": pluginApiModuleTemplate(),
-  "src/api/modules/hello/hello.route.ts": pluginApiRouteTemplate(),
+  "src/api/modules/hello/routes/hello.route.ts": pluginApiRouteTemplate(),
   "src/config.api.ts": pluginApiConfigTemplate(pluginName),
   "src/config.tsx": pluginConfigTemplate(pluginName),
   "src/locales/en.json": pluginMessagesTemplate(pluginName),

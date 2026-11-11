@@ -1,6 +1,6 @@
 import type { z } from "zod";
 
-import type { zodSendNotificationSchema } from "@/api/modules/admin/routes/notifications.route";
+import type { zodSendNotificationSchema } from "@/api/modules/admin/routes/send-notification.route";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { manifest } from "@/manifest";

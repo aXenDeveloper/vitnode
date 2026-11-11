@@ -4,7 +4,7 @@ import { buildRoute } from "@/api/builders";
 import { DEFAULT_AI_MODEL_CAPABILITIES } from "@/api/lib/ai/capabilities";
 import { providerIdOf, providerModelIdOf } from "@/api/lib/ai/runner";
 
-import { zodAiModel } from "../schemas";
+import { zodAiModel } from "../ai.schema";
 
 export const listAiModelsAdminRoute = buildRoute({
   adminStaffPermission: { module: "ai", permission: "can_view" },

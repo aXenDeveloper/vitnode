@@ -1,0 +1,147 @@
+---
+title: Generate a module
+description: Create a VitNode API module with vitnode generate module, preview the change with a dry run, and nest a child module inside a parent.
+icon: Box
+---
+
+`vitnode g module` creates an API module and registers it for you: a top-level module in `buildApiPlugin({ modules })`, a child module in its parent's `modules`. Use it whenever a plugin needs a new URL segment, such as `/notes`, for a group of routes.
+
+## Before you begin
+
+- A fresh plugin made with [Create plugin](/docs/dev/plugins/create), such as `site-notes`.
+- A terminal in `plugins/site-notes`. From the workspace root, run `pnpm --filter site-notes exec vitnode ...` instead of `pnpm vitnode ...`.
+
+The generator guides, from this page to [Generate an API resource](/docs/dev/plugins/api/resources), build the same `notes` module as the hand-written lessons from [API modules](/docs/dev/plugins/api/modules) to [Permissions](/docs/dev/working-with-users/staff-permissions). Follow one track per plugin: where the lessons' `notes` module already exists, these commands stop with "already exists".
+
+<Steps>
+
+<Step>
+
+### Preview the change
+
+Add `--dry-run` to print the exact changes without writing them:
+
+```bash
+pnpm vitnode g module notes --dry-run
+```
+
+```txt
+--- /dev/null
++++ b/src/api/modules/notes/notes.module.ts
+@@ -0,0 +1,6 @@
++import { buildModule } from "@/api/builders";
++
++export const notesModule = buildModule({
++  name: "notes",
++  routes: [],
++});
+
+--- a/src/config.api.ts
++++ b/src/config.api.ts
+@@ -5,11 +5,12 @@
+ import { manifest } from "@/manifest.gen";
+
+ import { helloModule } from "./api/modules/hello/hello.module";
++import { notesModule } from "./api/modules/notes/notes.module";
+
+ export const siteNotesApiPlugin = () =>
+   buildApiPlugin({
+     manifest,
+-    modules: [helloModule],
++    modules: [helloModule, notesModule],
+   });
+
+Dry run: 1 file to create, 1 to update. Nothing was written.
+```
+
+The new import follows the style the file already uses, here a relative path. The rest of `config.api.ts`, including the `VitNodeApiPlugin` type, stays as it was.
+
+</Step>
+
+<Step>
+
+### Generate the module
+
+Run the same command without `--dry-run`:
+
+```bash
+pnpm vitnode g module notes
+```
+
+```txt
+◆ VitNode
+  Generate a module
+
+  Plugin   site-notes  .
+
+  ✓ created      src/api/modules/notes/notes.module.ts  module "notes"
+  ✓ updated      src/config.api.ts  register notesModule in buildApiPlugin
+
+  Module notes is mounted at /site-notes/notes under the app's API base path (/api in the starter apps).
+  It has no routes yet, so there is nothing to call. Add one with:
+  vitnode g route notes/list
+```
+
+An empty module has no endpoint: `/api/site-notes/notes` answers `404` until you add a route.
+
+</Step>
+
+<Step>
+
+### Nest a child module
+
+A module path with a slash creates a child module inside its parent. Pass `--parents` to create a missing parent too:
+
+```bash
+pnpm vitnode g module reports/weekly --parents
+```
+
+This creates `src/api/modules/reports/reports.module.ts`, registered in `config.api.ts`, and `src/api/modules/reports/weekly/weekly.module.ts`, registered only in its parent:
+
+```ts title="plugins/site-notes/src/api/modules/reports/reports.module.ts"
+import { buildModule } from "@/api/builders";
+
+import { reportsWeeklyModule } from "./weekly/weekly.module";
+
+export const reportsModule = buildModule({
+  name: "reports",
+  routes: [],
+  modules: [reportsWeeklyModule],
+});
+```
+
+Routes of the child module are served under `/api/site-notes/reports/weekly`, and the fetcher calls them with `module: "reports/weekly"`. Without `--parents`, an interactive terminal asks whether to create a missing parent. Without a terminal, as in CI, the command stops with a hint.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Run the generator for the same module again. It refuses, because the module is now registered:
+
+```bash
+pnpm vitnode g module notes
+```
+
+```txt
+✖ Module "notes" already exists.
+  Declared as notesModule in src/api/modules/notes/notes.module.ts.
+```
+
+The generator never overwrites a file or a registration. Admin modules work the same way under `admin/`. [Protect an admin endpoint](/docs/dev/plugins/api/admin-routes) creates them together with a guarded route.
+
+## Related
+
+<Cards>
+  <Card
+    title="Generate an endpoint"
+    description="Add the first route to the module"
+    href="/docs/dev/plugins/api/generate-route"
+  />
+  <Card
+    title="Generate commands"
+    description="Every option, project selection and safety rule"
+    href="/docs/dev/cli/generate"
+  />
+</Cards>

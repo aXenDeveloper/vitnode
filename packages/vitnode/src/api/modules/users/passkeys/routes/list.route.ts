@@ -3,8 +3,8 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@/api/builders";
 import { PasskeyModel } from "@/api/models/passkey";
 
-import { passkeyFailure, requireSignedInUser } from "../failure";
-import { PASSKEY_ERROR_RESPONSES, zodPasskeySchema } from "../schema";
+import { passkeyFailure, requireSignedInUser } from "../lib/failure";
+import { PASSKEY_ERROR_RESPONSES, zodPasskeySchema } from "../passkeys.schema";
 
 export const listPasskeysRoute = buildRoute({
   route: {

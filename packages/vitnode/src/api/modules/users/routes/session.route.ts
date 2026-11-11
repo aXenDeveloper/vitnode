@@ -3,7 +3,7 @@ import { z } from "zod";
 import { buildRoute } from "@/api/builders";
 import { getStaffFlags } from "@/api/lib/check-staff-permission";
 import { getNotificationState } from "@/api/models/notifications/inbox";
-import { zodNotificationState } from "@/api/modules/notifications/schema";
+import { zodNotificationState } from "@/api/modules/notifications/notifications.schema";
 
 export const sessionRoute = buildRoute({
   route: {

@@ -27,7 +27,7 @@ import { SESSION_AUTHORIZATION } from "@/tests/sessions";
 
 import { changePasswordRoute } from "./change-password.route";
 import { resendVerificationRoute } from "./resend-verification.route";
-import { resetPasswordRoute } from "./reset-passowrd.route";
+import { resetPasswordRoute } from "./reset-password.route";
 import { signInRoute } from "./sign-in.route";
 import { signUpRoute } from "./sign-up.route";
 import { verifyEmailRoute } from "./verify-email.route";

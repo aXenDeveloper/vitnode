@@ -5,7 +5,7 @@ import { queryOptions } from "@tanstack/react-query";
 import type {
   componentUpdateSchema,
   updatesOverviewSchema,
-} from "@/api/modules/admin/plugins/routes/updates.schema";
+} from "@/api/modules/admin/plugins/updates.schema";
 
 import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";

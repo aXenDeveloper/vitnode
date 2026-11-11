@@ -4,112 +4,12 @@ import { buildRoute } from "@/api/builders";
 import { contentSearchHiddenAccess } from "@/content/server/hidden-access";
 
 import { zodPaginationQuery } from "../../../lib/with-pagination";
-
-const zodSearchPageInfo = z.object({
-  totalCount: z.number(),
-  count: z.number(),
-  hasNextPage: z.boolean(),
-  hasPreviousPage: z.boolean(),
-  startCursor: z.number().nullable(),
-  endCursor: z.number().nullable(),
-});
-
-export const zodSearchHitAuthor = z.object({
-  id: z.number(),
-  name: z.string(),
-  nameCode: z.string(),
-  avatarColor: z.string(),
-  avatarUrl: z.string().nullable(),
-});
-
-export const zodSearchHitSchema = z.object({
-  id: z.number(),
-  pluginId: z.string(),
-  itemType: z.string(),
-  itemId: z.union([z.number().int(), z.string().max(64)]),
-  languageCode: z.string(),
-  authorId: z.number().nullable(),
-  title: z.string(),
-  content: z.string(),
-  containerType: z.string().nullable(),
-  containerId: z.number().nullable(),
-  url: z.string().nullable(),
-  isPublic: z.boolean(),
-  isHidden: z.boolean(),
-  image: z
-    .object({
-      url: z.string(),
-      width: z.number().optional(),
-      height: z.number().optional(),
-    })
-    .nullable(),
-  imageId: z.number().nullable(),
-  metadata: z.record(z.string(), z.unknown()),
-  createdAt: z.date(),
-  score: z.number().nullable(),
-  author: zodSearchHitAuthor.nullable(),
-  authorIds: z.array(z.number()),
-  authors: z.array(zodSearchHitAuthor),
-});
-
-/**
- * A query parameter as a positive integer, or nothing.
- *
- * `Number("abc")` is `NaN` and `new Date("abc")` is an Invalid Date, and both
- * used to travel straight into the query builder - where Postgres rejects them,
- * which reaches the caller as a `500` and writes a `core_logs` row on the way.
- * This is a public, unauthenticated endpoint, so that was a log-flooding
- * primitive as much as it was a bad status code. A filter nobody can parse is
- * not an error; it is a filter that was not asked for.
- */
-export const positiveIntOrUndefined = (
-  value: string | undefined,
-): number | undefined => {
-  if (value === undefined || value === "") return undefined;
-
-  const parsed = Number(value);
-
-  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
-};
-
-export const MAX_SEARCH_AUTHOR_IDS = 20;
-
-export const positiveIntListOrUndefined = (
-  value: string | undefined,
-): number[] | undefined => {
-  if (!value) return undefined;
-
-  const ids = [
-    ...new Set(
-      value
-        .split(",")
-        .map(entry => positiveIntOrUndefined(entry.trim()))
-        .filter(id => id !== undefined),
-    ),
-  ].slice(0, MAX_SEARCH_AUTHOR_IDS);
-
-  return ids.length > 0 ? ids : undefined;
-};
-
-/** A query parameter as a real date, or nothing. See above. */
-export const dateOrUndefined = (
-  value: string | undefined,
-): Date | undefined => {
-  if (value === undefined || value === "") return undefined;
-
-  const parsed = new Date(value);
-
-  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
-};
-
-export const zodSearchResultSchema = z.object({
-  edges: z.array(zodSearchHitSchema),
-  // The search index has its own pagination - a relevance-sorted page walks by
-  // offset, and an ordinary one by row id - so it keeps the numeric cursors it
-  // has always had rather than the opaque keyset cursor `withPagination` mints
-  // for a table.
-  pageInfo: zodSearchPageInfo,
-});
+import {
+  dateOrUndefined,
+  positiveIntListOrUndefined,
+  positiveIntOrUndefined,
+} from "../lib/query-params";
+import { zodSearchResultSchema } from "../search.schema";
 
 export const searchRoute = buildRoute({
   route: {

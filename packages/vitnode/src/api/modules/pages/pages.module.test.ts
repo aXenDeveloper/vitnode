@@ -1,0 +1,666 @@
+import type { MiddlewareHandler } from "hono";
+
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { is, Param } from "drizzle-orm";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+
+import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+import type { AnyEditablePageDefinition } from "@/content/editor/types";
+import type { PageLayoutZones } from "@/database/page-layouts";
+
+import { registerEditablePage } from "@/api/lib/editable-pages";
+import { defineBlock } from "@/blocks/define";
+import {
+  createBlockRegistry,
+  setDefaultBlockRegistry,
+} from "@/blocks/registry";
+import { defineEditablePage } from "@/content/editor/define";
+import { field } from "@/content/fields";
+import { createTestCache } from "@/tests/cache";
+import { grantStaffPermissions } from "@/tests/staff-permissions";
+
+import { buildPageLayoutRoutes } from "./pages.module";
+
+const Noop = () => null;
+
+const heroBlock = defineBlock({
+  component: Noop,
+  fields: { title: field.text({ maxLength: 40, required: true }) },
+  id: "hero",
+  variants: [{ id: "wide" }],
+});
+
+const quoteBlock = defineBlock({
+  component: Noop,
+  fields: { text: field.text({ maxLength: 80, required: true }) },
+  id: "quote",
+});
+
+const textBlock = defineBlock({
+  component: Noop,
+  fields: {
+    body: field.text({ maxLength: 80, required: true }),
+    width: field.enum({ defaultValue: "prose", values: ["prose", "wide"] }),
+  },
+  id: "text",
+});
+
+beforeAll(() => {
+  setDefaultBlockRegistry(
+    createBlockRegistry([
+      {
+        blocks: [heroBlock, quoteBlock, textBlock],
+        namespace: "core",
+        pluginId: "@vitnode/core",
+      },
+    ]),
+  );
+});
+
+const PLUGIN_ID = "@vitnode/core";
+
+const MODERATOR = { id: 1, roleId: 1 };
+
+const canEdit = (
+  module: string,
+  plugin: string = PLUGIN_ID,
+): PermissionsStaffArgs => ({ module, permission: "can_edit", plugin });
+
+const EDITOR_PERMISSIONS = [canEdit("widgets"), canEdit("forum")];
+
+const hero = (id: string, title: string, variant?: string) => ({
+  data: { title },
+  id,
+  type: "core:hero",
+  ...(variant === undefined ? {} : { variant }),
+});
+
+const quote = (id: string, text: string) => ({
+  data: { text },
+  id,
+  type: "core:quote",
+});
+
+const text = (id: string, body: string, width?: string) => ({
+  data: { body, ...(width === undefined ? {} : { width }) },
+  id,
+  type: "core:text",
+});
+
+const area = (id: string, children: unknown[]) => ({
+  children,
+  id,
+  kind: "area",
+  layout: { columns: 2 },
+});
+
+const settingsPage = defineEditablePage({
+  id: "example:settings",
+  permission: { module: "widgets", permission: "can_edit" },
+  zones: {
+    "before-profile": {
+      allowed: ["core:hero", "core:quote"],
+      default: [hero("shipped", "Shipped default")],
+      max: 3,
+    },
+    intro: {
+      allowed: ["core:text"],
+      default: [text("intro-shipped", "Shipped intro")],
+    },
+    sidebar: { allowed: ["core:quote"], max: 20 },
+    "after-profile": {
+      allowed: ["core:quote"],
+      default: [quote("after-shipped", "Shipped after")],
+      min: 1,
+    },
+  },
+});
+
+const otherPage = defineEditablePage({
+  id: "example:forum",
+  permission: { module: "forum", permission: "can_edit" },
+  zones: { header: { allowed: ["core:quote"] } },
+});
+
+const STORED_AT = new Date("2026-01-01T00:00:00Z");
+
+interface EmittedEvent {
+  name: string;
+  payload: Record<string, unknown>;
+}
+
+interface StoredRow {
+  pageId: string;
+  updatedAt: Date;
+  zones: PageLayoutZones;
+}
+
+const pageIdOf = (condition: unknown): string =>
+  String(
+    (condition as { queryChunks: unknown[] }).queryChunks.find(chunk =>
+      is(chunk, Param),
+    )?.value,
+  );
+
+const harness = async ({
+  pages = [settingsPage, otherPage],
+  permissions = EDITOR_PERMISSIONS,
+  readFails = false,
+  rows = {},
+}: {
+  pages?: readonly AnyEditablePageDefinition[];
+  permissions?: PermissionsStaffArgs[];
+  readFails?: boolean;
+  rows?: Record<string, PageLayoutZones>;
+} = {}) => {
+  const cache = createTestCache();
+  const grant = async (granted: PermissionsStaffArgs[]) => {
+    await grantStaffPermissions(cache, {
+      permissions: granted,
+      type: "moderator",
+      userId: MODERATOR.id,
+    });
+  };
+  await grant(permissions);
+
+  const store = new Map<string, StoredRow>(
+    Object.entries(rows).map(([pageId, zones]) => [
+      pageId,
+      { pageId, updatedAt: STORED_AT, zones },
+    ]),
+  );
+  const events: EmittedEvent[] = [];
+  const writes: string[] = [];
+
+  const db = {
+    execute: async () => await Promise.resolve([]),
+    transaction: async <TResult>(
+      body: (tx: typeof db) => Promise<TResult>,
+    ): Promise<TResult> => {
+      return await body(db);
+    },
+    delete: () => ({
+      where: async (condition: unknown) => {
+        const pageId = pageIdOf(condition);
+        writes.push(`delete ${pageId}`);
+        store.delete(pageId);
+
+        return await Promise.resolve([]);
+      },
+    }),
+    insert: () => ({
+      values: (values: StoredRow) => ({
+        onConflictDoUpdate: () => ({
+          returning: async () => {
+            writes.push(`upsert ${values.pageId}`);
+            store.set(values.pageId, values);
+
+            return await Promise.resolve([values]);
+          },
+        }),
+      }),
+    }),
+    select: () => ({
+      from: () => ({
+        where: (condition: unknown) => ({
+          limit: async () => {
+            if (readFails) throw new Error("connection terminated");
+            const row = store.get(pageIdOf(condition));
+
+            return await Promise.resolve(row === undefined ? [] : [row]);
+          },
+        }),
+      }),
+    }),
+  };
+
+  const app = new OpenAPIHono();
+  const context: MiddlewareHandler = async (c, next) => {
+    c.set("user", MODERATOR as never);
+    c.set("cache", cache);
+    c.set("core", {
+      editablePages: pages.map(page => registerEditablePage(page, PLUGIN_ID)),
+    } as never);
+    c.set("events", {
+      emit: async (name: string, payload: Record<string, unknown>) => {
+        events.push({ name, payload });
+
+        return await Promise.resolve({ failures: [], listeners: 0 });
+      },
+    } as never);
+    c.set("db", db as never);
+    await next();
+  };
+  app.use("*", context);
+
+  const [read, write] = buildPageLayoutRoutes({ pluginId: PLUGIN_ID });
+  app.openapi(read.route, read.handler);
+  app.openapi(write.route, write.handler);
+
+  return { app, events, grant, store, writes };
+};
+
+const save = async (app: OpenAPIHono, body: unknown) =>
+  await app.request("/layout", {
+    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    method: "PUT",
+  });
+
+const read = async (app: OpenAPIHono, pageId: string) =>
+  await app.request(`/layout?pageId=${encodeURIComponent(pageId)}`);
+
+describe("GET /layout", () => {
+  it("answers the effective layout without asking for a permission", async () => {
+    const { app } = await harness({
+      permissions: [],
+      rows: { "example:settings": { sidebar: [quote("s1", "Stored")] } },
+    });
+
+    const response = await read(app, "example:settings");
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      pageId: "example:settings",
+      updatedAt: STORED_AT.toISOString(),
+      zones: {
+        "after-profile": [quote("after-shipped", "Shipped after")],
+        "before-profile": [hero("shipped", "Shipped default")],
+        intro: [text("intro-shipped", "Shipped intro", "prose")],
+        sidebar: [quote("s1", "Stored")],
+      },
+    });
+  });
+
+  it("is a 404 for a page id nothing registered", async () => {
+    const { app } = await harness();
+
+    expect((await read(app, "example:nowhere")).status).toBe(404);
+  });
+
+  it("fails rather than answering defaults when the read fails", async () => {
+    const { app } = await harness({ readFails: true });
+    const logged = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    expect((await read(app, "example:settings")).status).toBe(500);
+    expect(logged).toHaveBeenCalled();
+    logged.mockRestore();
+  });
+
+  it("answers the saved layout on the next read after a save", async () => {
+    const { app } = await harness();
+
+    const before = await read(app, "example:settings");
+    expect(await before.json()).toMatchObject({
+      updatedAt: null,
+      zones: { sidebar: [] },
+    });
+
+    const saved = await save(app, {
+      expectedZones: { sidebar: [] },
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "Saved")] },
+    });
+    expect(saved.status).toBe(200);
+
+    const after = await read(app, "example:settings");
+    const body = (await after.json()) as {
+      updatedAt: null | string;
+      zones: Record<string, unknown>;
+    };
+
+    expect(body.zones.sidebar).toEqual([quote("s1", "Saved")]);
+    expect(body.updatedAt).not.toBeNull();
+  });
+});
+
+describe("PUT /layout", () => {
+  it("answers canonically for the submitted zones only, and says so once", async () => {
+    const { app, events, writes } = await harness({
+      rows: { "example:settings": { sidebar: [quote("s1", "Old")] } },
+    });
+
+    const response = await save(app, {
+      expectedZones: { sidebar: [quote("s1", "Old")] },
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "New")] },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "New")] },
+    });
+    expect(writes).toEqual(["upsert example:settings"]);
+    expect(events).toEqual([
+      {
+        name: "core.page-layout.updated",
+        payload: {
+          changedZones: ["sidebar"],
+          pageId: "example:settings",
+        },
+      },
+    ]);
+  });
+
+  it("writes nothing and emits nothing when the save changes nothing", async () => {
+    const { app, events, writes } = await harness({
+      rows: { "example:settings": { sidebar: [quote("s1", "Same")] } },
+    });
+
+    const response = await save(app, {
+      expectedZones: { sidebar: [quote("s1", "Same")] },
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "Same")] },
+    });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      updatedAt: STORED_AT.toISOString(),
+      zones: { sidebar: [quote("s1", "Same")] },
+    });
+    expect(writes).toEqual([]);
+    expect(events).toEqual([]);
+  });
+
+  it("keeps an area and counts the blocks inside it", async () => {
+    const { app, store } = await harness();
+
+    const response = await save(app, {
+      expectedZones: { "before-profile": [hero("shipped", "Shipped default")] },
+      pageId: "example:settings",
+      zones: {
+        "before-profile": [
+          area("a1", [hero("h1", "One"), hero("h2", "Two")]),
+          hero("h3", "Three"),
+        ],
+      },
+    });
+
+    expect(response.status).toBe(200);
+    expect(store.get("example:settings")?.zones["before-profile"]).toEqual([
+      area("a1", [hero("h1", "One"), hero("h2", "Two")]),
+      hero("h3", "Three"),
+    ]);
+  });
+
+  it("keeps a variant the block declares", async () => {
+    const { app, store } = await harness();
+
+    const response = await save(app, {
+      expectedZones: { "before-profile": [hero("shipped", "Shipped default")] },
+      pageId: "example:settings",
+      zones: { "before-profile": [hero("h1", "Wide", "wide")] },
+    });
+
+    expect(response.status).toBe(200);
+    expect(store.get("example:settings")?.zones["before-profile"]).toEqual([
+      hero("h1", "Wide", "wide"),
+    ]);
+  });
+});
+
+describe("a save built on a zone somebody else already moved", () => {
+  it("is a 409, and writes and emits nothing", async () => {
+    const { app, events, store, writes } = await harness({
+      rows: { "example:settings": { sidebar: [quote("s1", "Two")] } },
+    });
+
+    const response = await save(app, {
+      expectedZones: { sidebar: [quote("s1", "One")] },
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "Three")] },
+    });
+
+    expect(response.status).toBe(409);
+    expect(writes).toEqual([]);
+    expect(events).toEqual([]);
+    expect(store.get("example:settings")?.zones).toEqual({
+      sidebar: [quote("s1", "Two")],
+    });
+    expect(store.get("example:settings")?.updatedAt).toBe(STORED_AT);
+  });
+
+  it("does not refuse the very save that brings a zone back inside its bounds", async () => {
+    const overfull = [
+      hero("h1", "One"),
+      hero("h2", "Two"),
+      hero("h3", "Three"),
+      hero("h4", "Four"),
+    ];
+    const { app, store } = await harness({
+      rows: { "example:settings": { "before-profile": overfull } },
+    });
+
+    const response = await save(app, {
+      expectedZones: { "before-profile": overfull },
+      pageId: "example:settings",
+      zones: { "before-profile": [hero("h1", "One")] },
+    });
+
+    expect(response.status).toBe(200);
+    expect(store.get("example:settings")?.zones["before-profile"]).toEqual([
+      hero("h1", "One"),
+    ]);
+  });
+
+  it("is a 400 when the baselines do not name the very zones being written", async () => {
+    const { app, writes } = await harness();
+
+    const mismatched = [
+      { expectedZones: {}, zones: { sidebar: [quote("s1", "Mine")] } },
+      {
+        expectedZones: { "before-profile": [], sidebar: [] },
+        zones: { sidebar: [quote("s1", "Mine")] },
+      },
+      {
+        expectedZones: { "before-profile": [] },
+        zones: { sidebar: [quote("s1", "Mine")] },
+      },
+    ];
+
+    for (const body of mismatched) {
+      expect(
+        (await save(app, { ...body, pageId: "example:settings" })).status,
+      ).toBe(400);
+    }
+
+    expect(writes).toEqual([]);
+  });
+});
+
+describe("a refused save", () => {
+  const refusals: [
+    string,
+    { pageId: string; zones: Record<string, unknown[]> },
+  ][] = [
+    [
+      "an unknown page id",
+      { pageId: "example:nowhere", zones: { sidebar: [] } },
+    ],
+    ["no zone at all", { pageId: "example:settings", zones: {} }],
+    [
+      "a zone the page does not declare",
+      { pageId: "example:settings", zones: { footer: [quote("f1", "No")] } },
+    ],
+    [
+      "another page's zone",
+      { pageId: "example:settings", zones: { header: [quote("h1", "No")] } },
+    ],
+    [
+      "a column name used as a zone",
+      { pageId: "example:settings", zones: { zones: [quote("q1", "No")] } },
+    ],
+    [
+      "a zone id off Object.prototype",
+      {
+        pageId: "example:settings",
+        zones: { constructor: [quote("q1", "No")] },
+      },
+    ],
+    [
+      "a block nothing registered",
+      {
+        pageId: "example:settings",
+        zones: { sidebar: [{ data: {}, id: "x1", type: "core:missing" }] },
+      },
+    ],
+    [
+      "a block the zone does not allow",
+      { pageId: "example:settings", zones: { sidebar: [hero("h1", "No")] } },
+    ],
+    [
+      "a variant the block does not declare",
+      {
+        pageId: "example:settings",
+        zones: { "before-profile": [hero("h1", "No", "narrow")] },
+      },
+    ],
+    [
+      "an area inside an area",
+      {
+        pageId: "example:settings",
+        zones: {
+          "before-profile": [area("a1", [area("a2", [hero("h1", "No")])])],
+        },
+      },
+    ],
+    [
+      "more blocks than the zone allows, counting area children",
+      {
+        pageId: "example:settings",
+        zones: {
+          "before-profile": [
+            area("a1", [hero("h1", "One"), hero("h2", "Two")]),
+            hero("h3", "Three"),
+            hero("h4", "Four"),
+          ],
+        },
+      },
+    ],
+    [
+      "fewer blocks than the zone requires",
+      { pageId: "example:settings", zones: { "after-profile": [] } },
+    ],
+    [
+      "a block that is not a block at all",
+      { pageId: "example:settings", zones: { sidebar: [{ nope: true }] } },
+    ],
+    [
+      "a malformed block",
+      {
+        pageId: "example:settings",
+        zones: {
+          sidebar: [{ data: { text: 12 }, id: "q1", type: "core:quote" }],
+        },
+      },
+    ],
+  ];
+
+  it.each(refusals)("is a 400 for %s, and writes nothing", async (_, body) => {
+    const { app, events, writes } = await harness();
+
+    expect(
+      (
+        await save(app, {
+          ...body,
+          expectedZones: Object.fromEntries(
+            Object.keys(body.zones).map(zoneId => [zoneId, []]),
+          ),
+        })
+      ).status,
+    ).toBe(400);
+    expect(writes).toEqual([]);
+    expect(events).toEqual([]);
+  });
+
+  it("is a 400 for __proto__, and pollutes nothing", async () => {
+    const { app, writes } = await harness();
+
+    const response = await app.request("/layout", {
+      body: '{"pageId":"example:settings","zones":{"__proto__":[]},"expectedZones":{"__proto__":[]}}',
+      headers: { "Content-Type": "application/json" },
+      method: "PUT",
+    });
+
+    expect(response.status).toBe(400);
+    expect(writes).toEqual([]);
+    expect(({} as unknown as Record<string, unknown>).polluted).toBeUndefined();
+  });
+});
+
+describe("permissions", () => {
+  it("refuses a caller without the page's permission", async () => {
+    const { app, writes } = await harness({
+      permissions: [
+        { module: "widgets", permission: "can_view", plugin: PLUGIN_ID },
+      ],
+    });
+
+    const response = await save(app, {
+      expectedZones: { sidebar: [] },
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "New")] },
+    });
+
+    expect(response.status).toBe(403);
+    expect(writes).toEqual([]);
+  });
+
+  it("checks the permission before it looks at the zones", async () => {
+    const { app } = await harness({ permissions: [] });
+
+    const response = await save(app, {
+      expectedZones: { footer: [] },
+      pageId: "example:settings",
+      zones: { footer: [quote("f1", "Unknown zone")] },
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  it("cannot be satisfied by the same permission from another plugin", async () => {
+    const { app } = await harness({
+      permissions: [canEdit("widgets", "@vitnode/blog")],
+    });
+
+    const response = await save(app, {
+      expectedZones: { sidebar: [] },
+      pageId: "example:settings",
+      zones: { sidebar: [quote("s1", "New")] },
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  it("checks each page's own permission", async () => {
+    const { app, grant } = await harness();
+
+    expect(
+      (
+        await save(app, {
+          expectedZones: { header: [] },
+          pageId: "example:forum",
+          zones: { header: [quote("h1", "New")] },
+        })
+      ).status,
+    ).toBe(200);
+
+    await grant([
+      canEdit("widgets"),
+      { module: "forum", permission: "can_moderate", plugin: PLUGIN_ID },
+    ]);
+
+    expect(
+      (
+        await save(app, {
+          expectedZones: { header: [quote("h1", "New")] },
+          pageId: "example:forum",
+          zones: { header: [quote("h1", "Newer")] },
+        })
+      ).status,
+    ).toBe(403);
+  });
+});

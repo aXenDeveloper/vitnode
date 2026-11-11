@@ -217,6 +217,396 @@
       "types": "./dist/src/tanstack/*/server.d.ts",
       "default": "./dist/src/tanstack/*/server.js"
     },
+    "./api/lib/ai/run-schemas": {
+      "import": "./dist/src/api/lib/ai/run.schema.js",
+      "types": "./dist/src/api/lib/ai/run.schema.d.ts",
+      "default": "./dist/src/api/lib/ai/run.schema.js"
+    },
+    "./api/modules/admin/activity-logs/activity-logs.admin.module": {
+      "import": "./dist/src/api/modules/admin/activity-logs/activity-logs.module.js",
+      "types": "./dist/src/api/modules/admin/activity-logs/activity-logs.module.d.ts",
+      "default": "./dist/src/api/modules/admin/activity-logs/activity-logs.module.js"
+    },
+    "./api/modules/admin/activity-logs/routes/detail.route": {
+      "import": "./dist/src/api/modules/admin/activity-logs/routes/show.route.js",
+      "types": "./dist/src/api/modules/admin/activity-logs/routes/show.route.d.ts",
+      "default": "./dist/src/api/modules/admin/activity-logs/routes/show.route.js"
+    },
+    "./api/modules/admin/advanced/advanced.admin.module": {
+      "import": "./dist/src/api/modules/admin/advanced/advanced.module.js",
+      "types": "./dist/src/api/modules/admin/advanced/advanced.module.d.ts",
+      "default": "./dist/src/api/modules/admin/advanced/advanced.module.js"
+    },
+    "./api/modules/admin/advanced/cron/cron.admin.module": {
+      "import": "./dist/src/api/modules/admin/advanced/cron/cron.module.js",
+      "types": "./dist/src/api/modules/admin/advanced/cron/cron.module.d.ts",
+      "default": "./dist/src/api/modules/admin/advanced/cron/cron.module.js"
+    },
+    "./api/modules/admin/advanced/cron/routes/get.route": {
+      "import": "./dist/src/api/modules/admin/advanced/cron/routes/list.route.js",
+      "types": "./dist/src/api/modules/admin/advanced/cron/routes/list.route.d.ts",
+      "default": "./dist/src/api/modules/admin/advanced/cron/routes/list.route.js"
+    },
+    "./api/modules/admin/advanced/queue/queue.admin.module": {
+      "import": "./dist/src/api/modules/admin/advanced/queue/queue.module.js",
+      "types": "./dist/src/api/modules/admin/advanced/queue/queue.module.d.ts",
+      "default": "./dist/src/api/modules/admin/advanced/queue/queue.module.js"
+    },
+    "./api/modules/admin/advanced/queue/routes/get.route": {
+      "import": "./dist/src/api/modules/admin/advanced/queue/routes/list.route.js",
+      "types": "./dist/src/api/modules/admin/advanced/queue/routes/list.route.d.ts",
+      "default": "./dist/src/api/modules/admin/advanced/queue/routes/list.route.js"
+    },
+    "./api/modules/admin/ai/ai.admin.module": {
+      "import": "./dist/src/api/modules/admin/ai/ai.module.js",
+      "types": "./dist/src/api/modules/admin/ai/ai.module.d.ts",
+      "default": "./dist/src/api/modules/admin/ai/ai.module.js"
+    },
+    "./api/modules/admin/ai/routes/access.route": {
+      "import": "./dist/src/compat/api/modules/admin/ai/routes/access.route.js",
+      "types": "./dist/src/compat/api/modules/admin/ai/routes/access.route.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/ai/routes/access.route.js"
+    },
+    "./api/modules/admin/ai/routes/assist-stream.route": {
+      "import": "./dist/src/compat/api/modules/admin/ai/routes/assist-stream.route.js",
+      "types": "./dist/src/compat/api/modules/admin/ai/routes/assist-stream.route.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/ai/routes/assist-stream.route.js"
+    },
+    "./api/modules/admin/ai/routes/history.route": {
+      "import": "./dist/src/compat/api/modules/admin/ai/routes/history.route.js",
+      "types": "./dist/src/compat/api/modules/admin/ai/routes/history.route.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/ai/routes/history.route.js"
+    },
+    "./api/modules/admin/ai/routes/translation-sources.route": {
+      "import": "./dist/src/compat/api/modules/admin/ai/routes/translation-sources.route.js",
+      "types": "./dist/src/compat/api/modules/admin/ai/routes/translation-sources.route.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/ai/routes/translation-sources.route.js"
+    },
+    "./api/modules/admin/ai/schemas": {
+      "import": "./dist/src/api/modules/admin/ai/ai.schema.js",
+      "types": "./dist/src/api/modules/admin/ai/ai.schema.d.ts",
+      "default": "./dist/src/api/modules/admin/ai/ai.schema.js"
+    },
+    "./api/modules/admin/dashboard/dashboard.admin.module": {
+      "import": "./dist/src/api/modules/admin/dashboard/dashboard.module.js",
+      "types": "./dist/src/api/modules/admin/dashboard/dashboard.module.d.ts",
+      "default": "./dist/src/api/modules/admin/dashboard/dashboard.module.js"
+    },
+    "./api/modules/admin/debug/debug.admin.module": {
+      "import": "./dist/src/api/modules/admin/debug/debug.module.js",
+      "types": "./dist/src/api/modules/admin/debug/debug.module.d.ts",
+      "default": "./dist/src/api/modules/admin/debug/debug.module.js"
+    },
+    "./api/modules/admin/files/files.admin.module": {
+      "import": "./dist/src/api/modules/admin/files/files.module.js",
+      "types": "./dist/src/api/modules/admin/files/files.module.d.ts",
+      "default": "./dist/src/api/modules/admin/files/files.module.js"
+    },
+    "./api/modules/admin/files/routes/alt.route": {
+      "import": "./dist/src/compat/api/modules/admin/files/routes/alt.route.js",
+      "types": "./dist/src/compat/api/modules/admin/files/routes/alt.route.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/files/routes/alt.route.js"
+    },
+    "./api/modules/admin/notifications/notifications.admin.module": {
+      "import": "./dist/src/api/modules/admin/notifications/notifications.module.js",
+      "types": "./dist/src/api/modules/admin/notifications/notifications.module.d.ts",
+      "default": "./dist/src/api/modules/admin/notifications/notifications.module.js"
+    },
+    "./api/modules/admin/notifications/routes/danger.route": {
+      "import": "./dist/src/compat/api/modules/admin/notifications/routes/danger.route.js",
+      "types": "./dist/src/compat/api/modules/admin/notifications/routes/danger.route.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/notifications/routes/danger.route.js"
+    },
+    "./api/modules/admin/notifications/routes/deliveries.route": {
+      "import": "./dist/src/compat/api/modules/admin/notifications/routes/deliveries.route.js",
+      "types": "./dist/src/compat/api/modules/admin/notifications/routes/deliveries.route.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/notifications/routes/deliveries.route.js"
+    },
+    "./api/modules/admin/notifications/routes/maintenance.route": {
+      "import": "./dist/src/compat/api/modules/admin/notifications/routes/maintenance.route.js",
+      "types": "./dist/src/compat/api/modules/admin/notifications/routes/maintenance.route.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/notifications/routes/maintenance.route.js"
+    },
+    "./api/modules/admin/notifications/routes/settings.route": {
+      "import": "./dist/src/api/modules/admin/notifications/routes/update-type-policy.route.js",
+      "types": "./dist/src/api/modules/admin/notifications/routes/update-type-policy.route.d.ts",
+      "default": "./dist/src/api/modules/admin/notifications/routes/update-type-policy.route.js"
+    },
+    "./api/modules/admin/plugins/plugins.admin.module": {
+      "import": "./dist/src/api/modules/admin/plugins/plugins.module.js",
+      "types": "./dist/src/api/modules/admin/plugins/plugins.module.d.ts",
+      "default": "./dist/src/api/modules/admin/plugins/plugins.module.js"
+    },
+    "./api/modules/admin/plugins/routes/updates.schema": {
+      "import": "./dist/src/compat/api/modules/admin/plugins/routes/updates.schema.js",
+      "types": "./dist/src/compat/api/modules/admin/plugins/routes/updates.schema.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/plugins/routes/updates.schema.js"
+    },
+    "./api/modules/admin/report-reasons/report-reasons.admin.module": {
+      "import": "./dist/src/api/modules/admin/report-reasons/report-reasons.module.js",
+      "types": "./dist/src/api/modules/admin/report-reasons/report-reasons.module.d.ts",
+      "default": "./dist/src/api/modules/admin/report-reasons/report-reasons.module.js"
+    },
+    "./api/modules/admin/report-reasons/routes/report-reasons.routes": {
+      "import": "./dist/src/compat/api/modules/admin/report-reasons/routes/report-reasons.routes.js",
+      "types": "./dist/src/compat/api/modules/admin/report-reasons/routes/report-reasons.routes.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/report-reasons/routes/report-reasons.routes.js"
+    },
+    "./api/modules/admin/roles/roles.admin.module": {
+      "import": "./dist/src/api/modules/admin/roles/roles.module.js",
+      "types": "./dist/src/api/modules/admin/roles/roles.module.d.ts",
+      "default": "./dist/src/api/modules/admin/roles/roles.module.js"
+    },
+    "./api/modules/admin/roles/routes/create.route": {
+      "import": "./dist/src/compat/api/modules/admin/roles/routes/create.route.js",
+      "types": "./dist/src/compat/api/modules/admin/roles/routes/create.route.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/roles/routes/create.route.js"
+    },
+    "./api/modules/admin/roles/routes/list-mapping": {
+      "import": "./dist/src/api/modules/admin/roles/lib/list-mapping.js",
+      "types": "./dist/src/api/modules/admin/roles/lib/list-mapping.d.ts",
+      "default": "./dist/src/api/modules/admin/roles/lib/list-mapping.js"
+    },
+    "./api/modules/admin/routes/notifications.route": {
+      "import": "./dist/src/api/modules/admin/routes/send-notification.route.js",
+      "types": "./dist/src/api/modules/admin/routes/send-notification.route.d.ts",
+      "default": "./dist/src/api/modules/admin/routes/send-notification.route.js"
+    },
+    "./api/modules/admin/staff/lib/schema": {
+      "import": "./dist/src/api/modules/admin/staff/staff.schema.js",
+      "types": "./dist/src/api/modules/admin/staff/staff.schema.d.ts",
+      "default": "./dist/src/api/modules/admin/staff/staff.schema.js"
+    },
+    "./api/modules/admin/staff/staff.admin.module": {
+      "import": "./dist/src/api/modules/admin/staff/staff.module.js",
+      "types": "./dist/src/api/modules/admin/staff/staff.module.d.ts",
+      "default": "./dist/src/api/modules/admin/staff/staff.module.js"
+    },
+    "./api/modules/admin/users/users.admin.module": {
+      "import": "./dist/src/api/modules/admin/users/users.module.js",
+      "types": "./dist/src/api/modules/admin/users/users.module.d.ts",
+      "default": "./dist/src/api/modules/admin/users/users.module.js"
+    },
+    "./api/modules/admin/warnings/routes/warning-reasons.routes": {
+      "import": "./dist/src/compat/api/modules/admin/warnings/routes/warning-reasons.routes.js",
+      "types": "./dist/src/compat/api/modules/admin/warnings/routes/warning-reasons.routes.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/warnings/routes/warning-reasons.routes.js"
+    },
+    "./api/modules/admin/warnings/routes/warning-thresholds.routes": {
+      "import": "./dist/src/compat/api/modules/admin/warnings/routes/warning-thresholds.routes.js",
+      "types": "./dist/src/compat/api/modules/admin/warnings/routes/warning-thresholds.routes.d.ts",
+      "default": "./dist/src/compat/api/modules/admin/warnings/routes/warning-thresholds.routes.js"
+    },
+    "./api/modules/admin/warnings/warnings.admin.module": {
+      "import": "./dist/src/api/modules/admin/warnings/warnings.module.js",
+      "types": "./dist/src/api/modules/admin/warnings/warnings.module.d.ts",
+      "default": "./dist/src/api/modules/admin/warnings/warnings.module.js"
+    },
+    "./api/modules/ai/routes/stream.route": {
+      "import": "./dist/src/compat/api/modules/ai/routes/stream.route.js",
+      "types": "./dist/src/compat/api/modules/ai/routes/stream.route.d.ts",
+      "default": "./dist/src/compat/api/modules/ai/routes/stream.route.js"
+    },
+    "./api/modules/content/helpers/execute-content-schedule": {
+      "import": "./dist/src/api/modules/content/lib/execute-content-schedule.js",
+      "types": "./dist/src/api/modules/content/lib/execute-content-schedule.d.ts",
+      "default": "./dist/src/api/modules/content/lib/execute-content-schedule.js"
+    },
+    "./api/modules/cron/helpers/load-cron-health": {
+      "import": "./dist/src/api/modules/cron/lib/load-cron-health.js",
+      "types": "./dist/src/api/modules/cron/lib/load-cron-health.d.ts",
+      "default": "./dist/src/api/modules/cron/lib/load-cron-health.js"
+    },
+    "./api/modules/cron/helpers/process-cron-jobs": {
+      "import": "./dist/src/api/modules/cron/lib/process-cron-jobs.js",
+      "types": "./dist/src/api/modules/cron/lib/process-cron-jobs.d.ts",
+      "default": "./dist/src/api/modules/cron/lib/process-cron-jobs.js"
+    },
+    "./api/modules/cron/helpers/register-cron-jobs": {
+      "import": "./dist/src/api/modules/cron/lib/register-cron-jobs.js",
+      "types": "./dist/src/api/modules/cron/lib/register-cron-jobs.d.ts",
+      "default": "./dist/src/api/modules/cron/lib/register-cron-jobs.js"
+    },
+    "./api/modules/cron/routes/cron.route": {
+      "import": "./dist/src/api/modules/cron/routes/run.route.js",
+      "types": "./dist/src/api/modules/cron/routes/run.route.d.ts",
+      "default": "./dist/src/api/modules/cron/routes/run.route.js"
+    },
+    "./api/modules/middleware/route": {
+      "import": "./dist/src/compat/api/modules/middleware/route.js",
+      "types": "./dist/src/compat/api/modules/middleware/route.d.ts",
+      "default": "./dist/src/compat/api/modules/middleware/route.js"
+    },
+    "./api/modules/moderation/lib/schema": {
+      "import": "./dist/src/api/modules/moderation/moderation.schema.js",
+      "types": "./dist/src/api/modules/moderation/moderation.schema.d.ts",
+      "default": "./dist/src/api/modules/moderation/moderation.schema.js"
+    },
+    "./api/modules/moderation/lib/warnings-service": {
+      "import": "./dist/src/api/modules/moderation/lib/warnings.js",
+      "types": "./dist/src/api/modules/moderation/lib/warnings.d.ts",
+      "default": "./dist/src/api/modules/moderation/lib/warnings.js"
+    },
+    "./api/modules/moderation/routes/account-status.route": {
+      "import": "./dist/src/compat/api/modules/moderation/routes/account-status.route.js",
+      "types": "./dist/src/compat/api/modules/moderation/routes/account-status.route.d.ts",
+      "default": "./dist/src/compat/api/modules/moderation/routes/account-status.route.js"
+    },
+    "./api/modules/moderation/routes/approvals.routes": {
+      "import": "./dist/src/compat/api/modules/moderation/routes/approvals.routes.js",
+      "types": "./dist/src/compat/api/modules/moderation/routes/approvals.routes.d.ts",
+      "default": "./dist/src/compat/api/modules/moderation/routes/approvals.routes.js"
+    },
+    "./api/modules/moderation/routes/create.route": {
+      "import": "./dist/src/api/modules/moderation/routes/create-report.route.js",
+      "types": "./dist/src/api/modules/moderation/routes/create-report.route.d.ts",
+      "default": "./dist/src/api/modules/moderation/routes/create-report.route.js"
+    },
+    "./api/modules/moderation/routes/list.route": {
+      "import": "./dist/src/api/modules/moderation/routes/list-reports.route.js",
+      "types": "./dist/src/api/modules/moderation/routes/list-reports.route.d.ts",
+      "default": "./dist/src/api/modules/moderation/routes/list-reports.route.js"
+    },
+    "./api/modules/moderation/routes/notes.routes": {
+      "import": "./dist/src/compat/api/modules/moderation/routes/notes.routes.js",
+      "types": "./dist/src/compat/api/modules/moderation/routes/notes.routes.d.ts",
+      "default": "./dist/src/compat/api/modules/moderation/routes/notes.routes.js"
+    },
+    "./api/modules/moderation/routes/reasons.route": {
+      "import": "./dist/src/api/modules/moderation/routes/list-report-reasons.route.js",
+      "types": "./dist/src/api/modules/moderation/routes/list-report-reasons.route.d.ts",
+      "default": "./dist/src/api/modules/moderation/routes/list-report-reasons.route.js"
+    },
+    "./api/modules/moderation/routes/show.route": {
+      "import": "./dist/src/api/modules/moderation/routes/show-report.route.js",
+      "types": "./dist/src/api/modules/moderation/routes/show-report.route.d.ts",
+      "default": "./dist/src/api/modules/moderation/routes/show-report.route.js"
+    },
+    "./api/modules/moderation/routes/warnings.routes": {
+      "import": "./dist/src/compat/api/modules/moderation/routes/warnings.routes.js",
+      "types": "./dist/src/compat/api/modules/moderation/routes/warnings.routes.d.ts",
+      "default": "./dist/src/compat/api/modules/moderation/routes/warnings.routes.js"
+    },
+    "./api/modules/moderation/routes/workflow.routes": {
+      "import": "./dist/src/compat/api/modules/moderation/routes/workflow.routes.js",
+      "types": "./dist/src/compat/api/modules/moderation/routes/workflow.routes.d.ts",
+      "default": "./dist/src/compat/api/modules/moderation/routes/workflow.routes.js"
+    },
+    "./api/modules/notifications/routes/mark.route": {
+      "import": "./dist/src/compat/api/modules/notifications/routes/mark.route.js",
+      "types": "./dist/src/compat/api/modules/notifications/routes/mark.route.d.ts",
+      "default": "./dist/src/compat/api/modules/notifications/routes/mark.route.js"
+    },
+    "./api/modules/notifications/routes/preferences.route": {
+      "import": "./dist/src/compat/api/modules/notifications/routes/preferences.route.js",
+      "types": "./dist/src/compat/api/modules/notifications/routes/preferences.route.d.ts",
+      "default": "./dist/src/compat/api/modules/notifications/routes/preferences.route.js"
+    },
+    "./api/modules/notifications/schema": {
+      "import": "./dist/src/compat/api/modules/notifications/schema.js",
+      "types": "./dist/src/compat/api/modules/notifications/schema.d.ts",
+      "default": "./dist/src/compat/api/modules/notifications/schema.js"
+    },
+    "./api/modules/notifications/tasks/notification-tasks": {
+      "import": "./dist/src/compat/api/modules/notifications/tasks/notification-tasks.js",
+      "types": "./dist/src/compat/api/modules/notifications/tasks/notification-tasks.d.ts",
+      "default": "./dist/src/compat/api/modules/notifications/tasks/notification-tasks.js"
+    },
+    "./api/modules/pages/page-layout-routes": {
+      "import": "./dist/src/api/modules/pages/pages.module.js",
+      "types": "./dist/src/api/modules/pages/pages.module.d.ts",
+      "default": "./dist/src/api/modules/pages/pages.module.js"
+    },
+    "./api/modules/pages/page-layout-service": {
+      "import": "./dist/src/api/modules/pages/lib/page-layout.js",
+      "types": "./dist/src/api/modules/pages/lib/page-layout.d.ts",
+      "default": "./dist/src/api/modules/pages/lib/page-layout.js"
+    },
+    "./api/modules/queue/helpers/process-queue-tasks": {
+      "import": "./dist/src/api/modules/queue/lib/process-queue-tasks.js",
+      "types": "./dist/src/api/modules/queue/lib/process-queue-tasks.d.ts",
+      "default": "./dist/src/api/modules/queue/lib/process-queue-tasks.js"
+    },
+    "./api/modules/search/routes/search.route": {
+      "import": "./dist/src/compat/api/modules/search/routes/search.route.js",
+      "types": "./dist/src/compat/api/modules/search/routes/search.route.d.ts",
+      "default": "./dist/src/compat/api/modules/search/routes/search.route.js"
+    },
+    "./api/modules/search/routes/suggest.route": {
+      "import": "./dist/src/compat/api/modules/search/routes/suggest.route.js",
+      "types": "./dist/src/compat/api/modules/search/routes/suggest.route.d.ts",
+      "default": "./dist/src/compat/api/modules/search/routes/suggest.route.js"
+    },
+    "./api/modules/search/routes/timeline.route": {
+      "import": "./dist/src/compat/api/modules/search/routes/timeline.route.js",
+      "types": "./dist/src/compat/api/modules/search/routes/timeline.route.d.ts",
+      "default": "./dist/src/compat/api/modules/search/routes/timeline.route.js"
+    },
+    "./api/modules/users/avatar-color": {
+      "import": "./dist/src/api/modules/users/lib/avatar-color.js",
+      "types": "./dist/src/api/modules/users/lib/avatar-color.d.ts",
+      "default": "./dist/src/api/modules/users/lib/avatar-color.js"
+    },
+    "./api/modules/users/credential-limits": {
+      "import": "./dist/src/api/modules/users/lib/credential-limits.js",
+      "types": "./dist/src/api/modules/users/lib/credential-limits.d.ts",
+      "default": "./dist/src/api/modules/users/lib/credential-limits.js"
+    },
+    "./api/modules/users/passkeys/failure": {
+      "import": "./dist/src/api/modules/users/passkeys/lib/failure.js",
+      "types": "./dist/src/api/modules/users/passkeys/lib/failure.d.ts",
+      "default": "./dist/src/api/modules/users/passkeys/lib/failure.js"
+    },
+    "./api/modules/users/passkeys/schema": {
+      "import": "./dist/src/api/modules/users/passkeys/passkeys.schema.js",
+      "types": "./dist/src/api/modules/users/passkeys/passkeys.schema.d.ts",
+      "default": "./dist/src/api/modules/users/passkeys/passkeys.schema.js"
+    },
+    "./api/modules/users/presence-schema": {
+      "import": "./dist/src/api/modules/users/presence.schema.js",
+      "types": "./dist/src/api/modules/users/presence.schema.d.ts",
+      "default": "./dist/src/api/modules/users/presence.schema.js"
+    },
+    "./api/modules/users/routes/privacy.route": {
+      "import": "./dist/src/api/modules/users/routes/update-privacy.route.js",
+      "types": "./dist/src/api/modules/users/routes/update-privacy.route.d.ts",
+      "default": "./dist/src/api/modules/users/routes/update-privacy.route.js"
+    },
+    "./api/modules/users/routes/reset-passowrd.route": {
+      "import": "./dist/src/api/modules/users/routes/reset-password.route.js",
+      "types": "./dist/src/api/modules/users/routes/reset-password.route.d.ts",
+      "default": "./dist/src/api/modules/users/routes/reset-password.route.js"
+    },
+    "./api/modules/users/routes/time-zone.route": {
+      "import": "./dist/src/api/modules/users/routes/update-time-zone.route.js",
+      "types": "./dist/src/api/modules/users/routes/update-time-zone.route.d.ts",
+      "default": "./dist/src/api/modules/users/routes/update-time-zone.route.js"
+    },
+    "./api/modules/users/sso/connections/failure": {
+      "import": "./dist/src/api/modules/users/sso/connections/lib/failure.js",
+      "types": "./dist/src/api/modules/users/sso/connections/lib/failure.d.ts",
+      "default": "./dist/src/api/modules/users/sso/connections/lib/failure.js"
+    },
+    "./api/modules/users/sso/connections/routes/import.route": {
+      "import": "./dist/src/compat/api/modules/users/sso/connections/routes/import.route.js",
+      "types": "./dist/src/compat/api/modules/users/sso/connections/routes/import.route.d.ts",
+      "default": "./dist/src/compat/api/modules/users/sso/connections/routes/import.route.js"
+    },
+    "./api/modules/users/sso/connections/routes/preferences.route": {
+      "import": "./dist/src/compat/api/modules/users/sso/connections/routes/preferences.route.js",
+      "types": "./dist/src/compat/api/modules/users/sso/connections/routes/preferences.route.d.ts",
+      "default": "./dist/src/compat/api/modules/users/sso/connections/routes/preferences.route.js"
+    },
+    "./api/modules/users/sso/connections/schema": {
+      "import": "./dist/src/api/modules/users/sso/connections/connections.schema.js",
+      "types": "./dist/src/api/modules/users/sso/connections/connections.schema.d.ts",
+      "default": "./dist/src/api/modules/users/sso/connections/connections.schema.js"
+    },
+    "./api/modules/users/sso/routes/pending.route": {
+      "import": "./dist/src/compat/api/modules/users/sso/routes/pending.route.js",
+      "types": "./dist/src/compat/api/modules/users/sso/routes/pending.route.d.ts",
+      "default": "./dist/src/compat/api/modules/users/sso/routes/pending.route.js"
+    },
     "./*": {
       "import": "./dist/src/*.js",
       "types": "./dist/src/*.d.ts",
@@ -288,6 +678,7 @@
     "jose": "^6.2.15",
     "motion": "^14.10.1",
     "ocache": "^0.3.1",
+    "oxc-parser": "^0.148.0",
     "picocolors": "^1.1.1",
     "postgres": "^4.1.0",
     "rate-limiter-flexible": "^11.3.0",

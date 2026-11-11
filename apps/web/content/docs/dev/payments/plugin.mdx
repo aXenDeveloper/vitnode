@@ -84,7 +84,7 @@ The route checks the member, looks the price up, and calls
 `c.get("payments").createCheckout()`. Return paths are same-site paths; core
 turns them into absolute URLs on `VITNODE_WEB_URL` and refuses anything else.
 
-```ts title="plugins/payments-demo/src/api/modules/purchases/purchases.routes.ts"
+```ts title="plugins/payments-demo/src/api/modules/purchases/routes/checkout.route.ts"
 handler: async c => {
   const user = c.get('user')
   if (!user) throw new HTTPException(401)
@@ -173,7 +173,7 @@ The provider sends the customer back to `successPath`, but arriving there
 proves nothing. The status route reads core's payment and, while it is open,
 asks the provider for news, at most every 15 seconds:
 
-```ts title="plugins/payments-demo/src/api/modules/purchases/purchase-status.ts"
+```ts title="plugins/payments-demo/src/api/modules/purchases/lib/describe-purchase.ts"
 const attempts = await payments.listByReference(purchaseReference(purchase.id))
 let latest = attempts[0]
 

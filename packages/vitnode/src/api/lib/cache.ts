@@ -1,7 +1,17 @@
 import type { Context } from "hono";
 import type { RedisClientOptions, RedisClientType } from "redis";
+import type { z } from "zod";
 
+import type { CacheEntryDefinition } from "./cache-entry";
 import type { MemoryCacheStore } from "./cache-memory";
+
+import {
+  CACHE_ENTRY_PREFIX,
+  cacheEntryKey,
+  cacheEntryPrefix,
+  CacheEntryValidationError,
+} from "./cache-entry";
+import { parseJsonWire } from "./json-wire";
 
 /**
  * Connection options accepted by `redis` - `url` plus any client option of
@@ -14,6 +24,43 @@ export type CacheClient = RedisClientType;
 
 const CACHE_PREFIX = "vitnode:cache:";
 const SYSTEM_NAMESPACE = "__system__";
+
+/**
+ * One typed cache entry, as `c.get("cache").entry(definition, ...keyArgs)`
+ * returns it. Values are validated by the definition's schema on every write
+ * and read; a stored value the schema rejects, or that is not JSON, is a miss.
+ */
+export interface CacheEntryHandle<Schema extends z.ZodType> {
+  /** Removes the entry. No-op without a store or on error. */
+  readonly delete: () => Promise<void>;
+  /**
+   * The schema's output, or `undefined` on a miss: nothing stored, no store,
+   * a store error, or a stored value the schema rejects (which is deleted).
+   * A stored `null`, `false`, `0` or `""` is a hit.
+   */
+  readonly get: () => Promise<undefined | z.output<Schema>>;
+  /** The storage key, for logs and debugging. */
+  readonly key: string;
+  /**
+   * The cached value on a hit; on a miss, runs `loader`, validates and stores
+   * its result for the definition's TTL, and returns it. Both paths return
+   * the schema's output.
+   *
+   * @throws {CacheEntryValidationError} When `loader`'s result is not JSON or
+   * the schema rejects it. Nothing is stored.
+   */
+  readonly remember: (
+    loader: () => Promise<z.input<Schema>> | z.input<Schema>,
+  ) => Promise<z.output<Schema>>;
+  /**
+   * Validates `value` and stores it for the definition's TTL. A store error
+   * is swallowed, like every other cache write.
+   *
+   * @throws {CacheEntryValidationError} When `value` is not JSON or the schema
+   * rejects it. Nothing is stored.
+   */
+  readonly set: (value: z.input<Schema>) => Promise<void>;
+}
 
 /**
  * Server-side domain cache, read in a route as `c.get("cache")`. Values are
@@ -112,6 +159,16 @@ export class CacheModel {
       );
     } catch {
       return fullKeys.map(() => null);
+    }
+  }
+
+  private async readRaw(fullKey: string): Promise<null | string> {
+    try {
+      return this.client
+        ? await this.client.get(fullKey)
+        : (this.memory?.get(fullKey) ?? null);
+    } catch {
+      return null;
     }
   }
 
@@ -218,26 +275,116 @@ export class CacheModel {
   }
 
   /**
+   * A typed cache entry ({@link CacheEntryDefinition}), with its key built
+   * from `keyArgs`. Stored under the plugin that defined it, whichever plugin
+   * the current request belongs to.
+   *
+   * @throws {CacheEntryDefinitionError} When a key part is not a short
+   * string, a finite number or a boolean.
+   *
+   * @example
+   * ```ts
+   * const stats = await c
+   *   .get("cache")
+   *   .entry(forumStatsCache, forumId)
+   *   .remember(async () => await countForumStats(c, forumId));
+   * // after a write:
+   * await c.get("cache").entry(forumStatsCache, forumId).delete();
+   * ```
+   */
+  entry<Args extends readonly unknown[], Schema extends z.ZodType>(
+    definition: CacheEntryDefinition<string, string, Args, Schema>,
+    ...keyArgs: Args
+  ): CacheEntryHandle<Schema> {
+    const fullKey = cacheEntryKey(definition, definition.key(...keyArgs));
+    const label = `${definition.pluginId}:${definition.name}`;
+
+    const read = async (): Promise<
+      { hit: false } | { hit: true; value: z.output<Schema> }
+    > => {
+      const raw = await this.readRaw(fullKey);
+      if (raw === null) return { hit: false };
+
+      let stored: unknown;
+      try {
+        stored = JSON.parse(raw);
+      } catch {
+        await this.removeKeys([fullKey]);
+
+        return { hit: false };
+      }
+      const parsed = await definition.schema.safeParseAsync(stored);
+      if (!parsed.success) {
+        await this.removeKeys([fullKey]);
+
+        return { hit: false };
+      }
+
+      return { hit: true, value: parsed.data };
+    };
+
+    const write = async (value: unknown): Promise<z.output<Schema>> => {
+      const parsed = await parseJsonWire(definition.schema, value, "value");
+      if (!parsed.success) {
+        throw new CacheEntryValidationError(label, parsed.reason);
+      }
+      await this.writeKey(fullKey, parsed.wire, definition.ttlSeconds);
+
+      return parsed.data;
+    };
+
+    return {
+      delete: async () => {
+        await this.removeKeys([fullKey]);
+      },
+      get: async () => {
+        const result = await read();
+
+        return result.hit ? result.value : undefined;
+      },
+      key: fullKey,
+      remember: async loader => {
+        const result = await read();
+        if (result.hit) return result.value;
+
+        return await write(await loader());
+      },
+      set: async value => {
+        await write(value);
+      },
+    };
+  }
+
+  /**
    * Delete every cache key for the current plugin
-   * (`vitnode:cache:{plugin_code}:*`). Other plugins' keys and unrelated Redis
-   * data are left untouched.
+   * (`vitnode:cache:{plugin_code}:*`), and its typed entries
+   * (`vitnode:cache-entry:{plugin_code}:*`). Other plugins' keys and
+   * unrelated Redis data are left untouched.
    */
   async flush(): Promise<void> {
+    const pluginId = this.c.get("plugin")?.id;
+    const prefixes = [
+      this.prefix(),
+      pluginId ? cacheEntryPrefix(pluginId) : CACHE_ENTRY_PREFIX,
+    ];
+
     if (!this.client) {
-      this.memory?.deleteByPrefix(this.prefix());
+      for (const prefix of prefixes) this.memory?.deleteByPrefix(prefix);
 
       return;
     }
 
     try {
-      // `scanIterator` yields a batch of keys per SCAN round-trip.
-      const scan = this.client.scanIterator({
-        MATCH: `${this.prefix()}*`,
-        COUNT: 100,
-      });
+      for (const prefix of prefixes) {
+        // `scanIterator` yields a batch of keys per SCAN round-trip.
+        const scan = this.client.scanIterator({
+          MATCH: `${prefix}*`,
+          COUNT: 100,
+        });
 
-      for await (const keys of scan) {
-        if (keys.length > 0) await this.client.del(keys);
+        for await (const keys of scan) {
+          if (keys.length > 0) await this.client.del(keys);
+        }
       }
     } catch {
       /* swallow */

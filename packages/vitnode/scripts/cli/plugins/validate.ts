@@ -25,6 +25,9 @@ export interface PluginCheck {
 }
 
 export interface PluginValidation {
+  api?:
+    | { definition: Record<string, unknown>; status: "loaded" }
+    | { status: "failed" };
   checks: PluginCheck[];
   id: string;
   root: string;
@@ -33,37 +36,83 @@ export interface PluginValidation {
 
 export type ModuleImporter = (file: string) => Promise<unknown>;
 
-const nativeImport: ModuleImporter = async file =>
+export const nativeImport: ModuleImporter = async file =>
   import(pathToFileURL(file).href) as Promise<unknown>;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+export type DefinitionResolution =
+  | {
+      definition: Record<string, unknown>;
+      exportName: string;
+      status: "definition";
+    }
+  /**
+   * No export returned a definition, and these threw when called - most
+   * likely the factory itself, e.g. `buildApiPlugin` refusing a nested cron
+   * job in development. The original errors, unchanged.
+   */
+  | {
+      failures: { error: unknown; exportName: string }[];
+      status: "threw";
+    }
+  /** No export returned a definition, and none threw. */
+  | { status: "none" };
 
 /**
  * The plugin definition a module exports: the first exported factory that,
  * called with no arguments, returns an object with a `pluginId`.
  *
  * A plugin exports `blogPlugin = () => buildPlugin(...)` under a name of its
- * own choosing, so the name cannot be relied on - the shape can.
+ * own choosing, so the name cannot be relied on - the shape can. Each export
+ * is called at most once, so a factory that throws is reported with its own
+ * error rather than called again to find out why.
  */
-export const findDefinition = (
-  loaded: unknown,
-): null | Record<string, unknown> => {
-  if (!isRecord(loaded)) return null;
+export const resolveDefinition = (loaded: unknown): DefinitionResolution => {
+  if (!isRecord(loaded)) return { status: "none" };
 
-  for (const value of Object.values(loaded)) {
+  const failures: { error: unknown; exportName: string }[] = [];
+  for (const [exportName, value] of Object.entries(loaded)) {
     if (typeof value !== "function") continue;
     let result: unknown;
     try {
       result = (value as () => unknown)();
-    } catch {
+    } catch (error) {
+      failures.push({ error, exportName });
       continue;
     }
-    if (isRecord(result) && typeof result.pluginId === "string") return result;
+    if (isRecord(result) && typeof result.pluginId === "string") {
+      return { definition: result, exportName, status: "definition" };
+    }
   }
 
-  return null;
+  return failures.length > 0
+    ? { failures, status: "threw" }
+    : { status: "none" };
 };
+
+export const describeMissingDefinition = (
+  resolution: Exclude<DefinitionResolution, { status: "definition" }>,
+  file: string,
+  factory: string,
+): string[] =>
+  resolution.status === "none"
+    ? [`${file} exports no ${factory} factory.`]
+    : [
+        `${file}: calling the exported ${resolution.failures.length === 1 ? "function" : "functions"} ${resolution.failures
+          .map(({ exportName }) => `${exportName}()`)
+          .join(", ")} threw, so no ${factory} definition could be read:`,
+        ...resolution.failures.flatMap(({ error, exportName }) =>
+          errorMessage(error)
+            .split("\n")
+            .map((line, index) =>
+              index === 0 && resolution.failures.length > 1
+                ? `${exportName}(): ${line}`
+                : line,
+            ),
+        ),
+      ];
 
 /** `"@vitnode/blog.home.title"` → is that path an object or string in `messages`? */
 export const hasMessagePath = (
@@ -158,7 +207,9 @@ export const validatePlugin = async (
   const pass = (name: string, summary?: string) => {
     checks.push({ details: [], name, status: "ok", summary });
   };
+  let api: PluginValidation["api"];
   const done = (): PluginValidation => ({
+    api,
     checks,
     id,
     root,
@@ -210,12 +261,19 @@ export const validatePlugin = async (
   // Plugin definition
   let definition: null | Record<string, unknown> = null;
   try {
-    definition = findDefinition(await importModule(configFile));
-    if (definition === null) {
-      fail("Plugin definition", [
-        `${show(configFile)} exports no factory returning buildPlugin({ manifest, ... }).`,
-      ]);
-    } else {
+    const resolution = resolveDefinition(await importModule(configFile));
+    definition =
+      resolution.status === "definition" ? resolution.definition : null;
+    if (resolution.status !== "definition") {
+      fail(
+        "Plugin definition",
+        describeMissingDefinition(
+          resolution,
+          show(configFile),
+          "buildPlugin({ manifest, ... })",
+        ),
+      );
+    } else if (definition !== null) {
       pluginsFromLoadedConfig(
         { vitNodeConfig: { plugins: [definition] } },
         show(configFile),
@@ -237,19 +295,31 @@ export const validatePlugin = async (
   let apiDefinition: null | Record<string, unknown> = null;
   if (existsSync(apiFile)) {
     try {
-      apiDefinition = findDefinition(await importModule(apiFile));
-      if (apiDefinition === null) {
+      const resolution = resolveDefinition(await importModule(apiFile));
+      apiDefinition =
+        resolution.status === "definition" ? resolution.definition : null;
+      api =
+        resolution.status === "definition"
+          ? { definition: resolution.definition, status: "loaded" }
+          : { status: "failed" };
+      if (resolution.status !== "definition") {
+        fail(
+          "API definition",
+          describeMissingDefinition(
+            resolution,
+            show(apiFile),
+            "buildApiPlugin({ manifest, ... })",
+          ),
+        );
+      } else if (apiDefinition?.pluginId !== id) {
         fail("API definition", [
-          `${show(apiFile)} exports no factory returning buildApiPlugin({ pluginId, ... }).`,
-        ]);
-      } else if (apiDefinition.pluginId !== id) {
-        fail("API definition", [
-          `pluginId is "${String(apiDefinition.pluginId)}" but the package is "${id}".`,
+          `pluginId is "${String(apiDefinition?.pluginId)}" but the package is "${id}".`,
         ]);
       } else {
         pass("API definition");
       }
     } catch (error) {
+      api = { status: "failed" };
       fail("API definition", [errorMessage(error)]);
     }
   }

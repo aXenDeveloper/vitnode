@@ -5,11 +5,11 @@ import { isStaff } from "@/api/lib/check-staff-permission";
 import { PasskeyError, PasskeyModel } from "@/api/models/passkey";
 import { SessionAdminModel } from "@/api/models/session-admin";
 
-import { passkeyFailure } from "../failure";
+import { passkeyFailure } from "../lib/failure";
 import {
   PASSKEY_ERROR_RESPONSES,
   zodPasskeyAuthenticationResponseSchema,
-} from "../schema";
+} from "../passkeys.schema";
 
 export const passkeyAdminSignInVerifyRoute = buildRoute({
   route: {

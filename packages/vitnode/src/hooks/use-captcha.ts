@@ -9,7 +9,7 @@ import { useLocale, useTranslations } from "use-intl";
 
 import { useTheme } from "@/components/theme-provider";
 
-import type { routeMiddlewareSchema } from "../api/modules/middleware/route";
+import type { routeMiddlewareSchema } from "../api/modules/middleware/middleware.schema";
 
 declare global {
   interface Window {

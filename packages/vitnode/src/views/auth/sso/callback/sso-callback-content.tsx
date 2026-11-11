@@ -3,7 +3,7 @@ import type { z } from "zod";
 import { Link } from "@tanstack/react-router";
 import { useTranslations } from "use-intl";
 
-import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
+import type { routeMiddlewareSchema } from "@/api/modules/middleware/middleware.schema";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription } from "@/components/ui/card";

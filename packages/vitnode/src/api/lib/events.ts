@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import type { z } from "zod";
 
 import type { EnvVitNode } from "../middlewares/global.middleware";
 import type {
@@ -6,6 +7,7 @@ import type {
   VitNodeEventName,
   VitNodeEvents,
 } from "../models/events";
+import type { EventDefinition } from "./event-definition";
 
 /**
  * A listener for one VitNode event, as returned by {@link buildEventListener}.
@@ -16,6 +18,11 @@ import type {
 export interface BuildEventListenerReturn<
   K extends VitNodeEventName = VitNodeEventName,
 > {
+  /**
+   * The schema of a typed listener's event ({@link TypedEventListenerOptions}).
+   * Its emits are validated before this listener runs.
+   */
+  definition?: EventDefinition;
   /** Human-readable note for developers; not shown to end users. */
   description?: string;
   /** The event to react to - a key of `VitNodeEvents`. */
@@ -43,9 +50,39 @@ export interface EventListenerConfig extends BuildEventListenerReturn {
   pluginId: string;
 }
 
+/** An envelope whose payload is a defined event's output. */
+export type TypedEventEnvelope<Payload> = Omit<
+  EventEnvelope,
+  "name" | "payload"
+> & {
+  name: string;
+  payload: Payload;
+};
+
+/** What {@link buildEventListener} takes for a schema-defined event. */
+export interface TypedEventListenerOptions<Schema extends z.ZodType> {
+  /** Human-readable note for developers; not shown to end users. */
+  description?: string;
+  /** The event definition from `defineEvent`, possibly another plugin's. */
+  event: EventDefinition<string, string, Schema>;
+  /**
+   * Runs for every emit of `event` with the schema's output - validated once,
+   * before the first listener. Failure handling is the same as for any
+   * listener: a thrown error is logged and reported, never rethrown.
+   */
+  handler: (
+    c: Context<EnvVitNode>,
+    payload: z.output<Schema>,
+    envelope: TypedEventEnvelope<z.output<Schema>>,
+  ) => Promise<void> | void;
+  /** Identifies the listener in logs and failure reports. */
+  name: string;
+}
+
 /**
  * Declares a server-side listener for a VitNode event, with the payload typed
- * from `event`.
+ * from `event`: a `VitNodeEvents` name, or an event definition from
+ * `defineEvent`, whose listeners receive the schema's output.
  *
  * Add your own events by augmenting `VitNodeEvents` in
  * `@vitnode/core/api/models/events`, and emit them with
@@ -66,10 +103,26 @@ export interface EventListenerConfig extends BuildEventListenerReturn {
  * // buildModule({ name: "users", routes: [], events: [welcomeListener] })
  * ```
  */
+export function buildEventListener<Schema extends z.ZodType>(
+  args: TypedEventListenerOptions<Schema>,
+): BuildEventListenerReturn;
 export function buildEventListener<K extends VitNodeEventName>(
   args: BuildEventListenerReturn<K>,
+): BuildEventListenerReturn;
+export function buildEventListener(
+  args: BuildEventListenerReturn | TypedEventListenerOptions<z.ZodType>,
 ): BuildEventListenerReturn {
   // Listeners are matched by `event` at dispatch time; the cast erases the
   // per-event generic so listeners for different events can share one array.
-  return args as unknown as BuildEventListenerReturn;
+  if (typeof args.event === "object") {
+    return {
+      definition: args.event,
+      description: args.description,
+      event: args.event.name,
+      handler: args.handler,
+      name: args.name,
+    } as unknown as BuildEventListenerReturn;
+  }
+
+  return args;
 }

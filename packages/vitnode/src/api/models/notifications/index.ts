@@ -3,7 +3,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { NotificationSubject } from "@/lib/notifications/types";
 
 import { runAfterResponse } from "@/api/lib/after-response";
-import { processQueueTasksByIds } from "@/api/modules/queue/helpers/process-queue-tasks";
+import { processQueueTasksByIds } from "@/api/modules/queue/lib/process-queue-tasks";
 import { core_notifications } from "@/database/notifications";
 
 import type {

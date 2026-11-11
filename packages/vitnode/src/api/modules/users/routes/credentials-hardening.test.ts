@@ -18,10 +18,10 @@ import {
   USER_EMAIL_MAX_LENGTH,
   USER_NAME_MAX_LENGTH,
   USER_PASSWORD_MAX_LENGTH,
-} from "../credential-limits";
+} from "../lib/credential-limits";
 import { linkRoute } from "../sso/routes/link.route";
 import { changePasswordRoute } from "./change-password.route";
-import { resetPasswordRoute } from "./reset-passowrd.route";
+import { resetPasswordRoute } from "./reset-password.route";
 import { signInRoute } from "./sign-in.route";
 import { signUpRoute } from "./sign-up.route";
 

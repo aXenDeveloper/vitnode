@@ -1,6 +1,6 @@
 import { buildCron } from "@/api/lib/cron";
 
-import { processQueueTasks } from "../helpers/process-queue-tasks";
+import { processQueueTasks } from "../lib/process-queue-tasks";
 
 export const processQueueCron = buildCron({
   name: "process-queue",

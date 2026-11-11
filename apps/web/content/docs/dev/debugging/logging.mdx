@@ -16,7 +16,7 @@ server's stdout. No setup, no adapter, no configuration.
 `c.get('log')` is available in any handler that has a Hono context - a route, a
 middleware, a cron job, a queue task, an event listener:
 
-```ts title="plugins/site-notes/src/api/modules/hello/hello.route.ts"
+```ts title="plugins/site-notes/src/api/modules/hello/routes/hello.route.ts"
 import { z } from '@hono/zod-openapi'
 
 import { buildRoute } from '@/api/builders'

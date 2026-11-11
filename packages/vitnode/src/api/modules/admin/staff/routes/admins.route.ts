@@ -3,7 +3,7 @@ import { withPagination } from "@/api/lib/with-pagination";
 import { core_admin_permissions } from "@/database/admins";
 
 import { resolveStaffEdges } from "../lib/resolve-staff-edges";
-import { staffListAdminQuery, staffListAdminSchema } from "../lib/schema";
+import { staffListAdminQuery, staffListAdminSchema } from "../staff.schema";
 
 export const listAdminsStaffAdminRoute = buildRoute({
   adminStaffPermission: { module: "staff_admins", permission: "can_view" },

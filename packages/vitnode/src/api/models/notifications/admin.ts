@@ -9,7 +9,7 @@ import {
   isNotificationInAppAvailable,
   isNotificationLockedForMembers,
 } from "@/api/lib/notifications/preferences";
-import { loadCronHealth } from "@/api/modules/cron/helpers/load-cron-health";
+import { loadCronHealth } from "@/api/modules/cron/lib/load-cron-health";
 import {
   core_notification_deliveries,
   core_notification_events,
@@ -32,8 +32,7 @@ import {
   getNotificationWorkers,
   isEmailConfigured,
   loadNotificationSettings,
-  NOTIFICATIONS_OVERVIEW_TOTALS_CACHE_KEY,
-  NOTIFICATIONS_OVERVIEW_TOTALS_TTL_SECONDS,
+  notificationOverviewTotalsCache,
   NOTIFICATIONS_PLUGIN_ID,
   typeSettingsKey,
 } from "./shared";
@@ -45,48 +44,37 @@ const countBy = <K extends string>(rows: { count: number; key: K }[]) => {
   return counts;
 };
 
-interface NotificationOverviewTotals {
-  customizedMembers: number;
-  inboxItems: number;
-  unreadItems: number;
-}
-
-const loadOverviewTotals = async (
-  c: NotificationsContext,
-): Promise<NotificationOverviewTotals> =>
+const loadOverviewTotals = async (c: NotificationsContext) =>
   await c
     .get("cache")
-    .remember(
-      NOTIFICATIONS_OVERVIEW_TOTALS_CACHE_KEY,
-      NOTIFICATIONS_OVERVIEW_TOTALS_TTL_SECONDS,
-      async () => {
-        const db = c.get("db");
-        // Unread comes from the per-member counters every inbox write keeps
-        // under the member's lock (and `reconcileNotifications` repairs), so it
-        // is one pass over members rather than a filtered pass over every item.
-        const [[inbox], [members]] = await Promise.all([
-          db.select({ items: count() }).from(core_notifications),
-          db
-            .select({
-              customized:
-                sql<number>`count(*) filter (where ${core_notification_user_state.preferences} <> '{}'::jsonb)`.mapWith(
-                  Number,
-                ),
-              unread:
-                sql<number>`coalesce(sum(${core_notification_user_state.unreadCount}), 0)`.mapWith(
-                  Number,
-                ),
-            })
-            .from(core_notification_user_state),
-        ]);
+    .entry(notificationOverviewTotalsCache)
+    .remember(async () => {
+      const db = c.get("db");
+      // Unread comes from the per-member counters every inbox write keeps
+      // under the member's lock (and `reconcileNotifications` repairs), so it
+      // is one pass over members rather than a filtered pass over every item.
+      const [[inbox], [members]] = await Promise.all([
+        db.select({ items: count() }).from(core_notifications),
+        db
+          .select({
+            customized:
+              sql<number>`count(*) filter (where ${core_notification_user_state.preferences} <> '{}'::jsonb)`.mapWith(
+                Number,
+              ),
+            unread:
+              sql<number>`coalesce(sum(${core_notification_user_state.unreadCount}), 0)`.mapWith(
+                Number,
+              ),
+          })
+          .from(core_notification_user_state),
+      ]);
 
-        return {
-          customizedMembers: members.customized,
-          inboxItems: inbox.items,
-          unreadItems: members.unread,
-        };
-      },
-    );
+      return {
+        customizedMembers: members.customized,
+        inboxItems: inbox.items,
+        unreadItems: members.unread,
+      };
+    });
 
 export const getNotificationsOverview = async (c: NotificationsContext) => {
   const db = c.get("db");

@@ -26,28 +26,36 @@ import {
 } from "@/content/registry";
 import { contentDefinitionOf } from "@/content/server/model";
 import { contentReportTarget } from "@/content/server/report-target";
+import { CONFIG } from "@/lib/config";
 import { assertPluginManifest } from "@/lib/plugin-manifest";
 
 import type { SearchIndexer } from "../models/search";
 import type { AnyAiActionDefinition } from "./ai/action";
 import type { CronJobConfig } from "./cron";
 import type { RegisteredEditablePage } from "./editable-pages";
+import type { EventDefinition } from "./event-definition";
 import type { EventListenerConfig } from "./events";
 import type { ModerationPluginConfig } from "./moderation/registry";
 import type { ModerationReportTargetDefinition } from "./moderation/targets";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
 import type { AnyNotificationTypeDefinition } from "./notifications/registry";
 import type { PermissionStaffConfig } from "./permission-staff";
-import type { QueueTaskConfig } from "./queue";
+import type { BuildQueueTaskReturn } from "./queue";
 import type { WebSocketConfig } from "./websocket";
 
 import { validateSearchIndexers } from "../models/search";
 import { collectAiActions } from "./ai/registry";
 import { checkPluginId } from "./check-plugin-id";
 import { registerEditablePage, validateEditablePages } from "./editable-pages";
+import { collectEventDefinitions } from "./event-definition";
 import { withModerationPermissions } from "./moderation/registry";
+import {
+  describeNestedRegistration,
+  findNestedRegistrations,
+} from "./nested-registrations";
 import { validateNotificationTypes } from "./notifications/registry";
 import { applyModuleTags } from "./openapi-tags";
+import { collectPluginQueueTasks } from "./queue";
 
 export type { ApiPluginContract };
 
@@ -77,6 +85,8 @@ export interface BuildPluginApiReturn<
   contentTypes?: AnyContentTypeDefinition[];
   cronJobs?: Omit<CronJobConfig, "pluginId">[];
   editablePages?: AnyEditablePageDefinition[];
+  /** Event definitions the plugin owns, from `defineEvent`. */
+  eventDefinitions?: readonly EventDefinition[];
   events?: Omit<EventListenerConfig, "pluginId">[];
   /** Every module's routes, each module mounted at `/{module.name}`. */
   hono: OpenAPIHono;
@@ -97,7 +107,8 @@ export interface BuildPluginApiReturn<
   pluginId: P;
   /** Content types the plugin serves public URLs for. */
   publicContentTypes?: AnyContentTypeDefinition[];
-  queueTasks?: Omit<QueueTaskConfig, "pluginId">[];
+  /** Typed tasks keep their own `pluginId`, which always equals the plugin's. */
+  queueTasks?: (BuildQueueTaskReturn & { module: string })[];
   searchIndexers?: SearchIndexer[];
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
 }
@@ -126,7 +137,9 @@ export type AnyBuildPluginApiReturn = BuildPluginApiReturn<
  * @throws When `manifest` is malformed; when `blocks` belongs to another
  * plugin; when content types, containers, editable pages, AI actions, search
  * indexers or notification types are invalid or collide. In development, also
- * when no installed package's `package.json` has the plugin id as its name.
+ * when no installed package's `package.json` has the plugin id as its name, and
+ * when a nested module declares cron jobs, events, queue tasks or WebSockets,
+ * which production ignores.
  *
  * @example
  * ```ts
@@ -154,6 +167,7 @@ export function buildApiPlugin<
   blocks,
   contentNotifications,
   editablePages,
+  eventDefinitions,
   manifest,
   messages,
   moderation,
@@ -183,6 +197,12 @@ export function buildApiPlugin<
   contentNotifications?: ContentNotificationsConfig[];
   /** Pages built from widgets that admins edit in place. Page ids must be unique within the plugin. */
   editablePages?: AnyEditablePageDefinition[];
+  /**
+   * The plugin's own event definitions (`defineEvent`), so emits by name are
+   * validated too and two definitions of one name are refused at boot. A
+   * definition used by a typed listener is known without this.
+   */
+  eventDefinitions?: readonly EventDefinition[];
   /** The plugin's generated manifest (`src/manifest.gen.ts`). */
   manifest: PluginManifest<P>;
   /**
@@ -220,6 +240,7 @@ export function buildApiPlugin<
   );
 
   collectAiActions([{ aiActions, pluginId }]);
+  collectEventDefinitions([{ eventDefinitions, pluginId }]);
 
   const hono = new OpenAPIHono();
   const contentContainers: AnyContentContainerDefinition[] = [];
@@ -267,6 +288,18 @@ export function buildApiPlugin<
       webSockets.push({ ...webSocket, module: handler.name });
     });
   });
+
+  if (CONFIG.node_development) {
+    const nested = findNestedRegistrations(modules);
+    if (nested.length > 0) {
+      throw new Error(
+        [
+          `Plugin "${pluginId}" declares background work on nested modules. buildApiPlugin only collects it from top-level modules:`,
+          ...nested.map(entry => `  - ${describeNestedRegistration(entry)}`),
+        ].join("\n"),
+      );
+    }
+  }
 
   const registered: RegisteredContentType[] = validateContentTypes(
     contentTypes.map(definition => ({ definition, pluginId })),
@@ -324,6 +357,7 @@ export function buildApiPlugin<
     auditActions,
     blocks,
     editablePages: registeredPages.map(entry => entry.page),
+    eventDefinitions,
     manifest,
     messages,
     modules,
@@ -336,7 +370,7 @@ export function buildApiPlugin<
     publicContentTypes: [...publishing.values()],
     cronJobs,
     events,
-    queueTasks,
+    queueTasks: collectPluginQueueTasks(pluginId, queueTasks),
     notificationTypes: pluginNotificationTypes,
     searchIndexers: indexers,
     webSockets,

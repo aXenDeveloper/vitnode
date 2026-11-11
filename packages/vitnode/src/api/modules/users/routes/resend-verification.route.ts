@@ -9,7 +9,7 @@ import {
 } from "@/api/models/email-verification";
 import { core_users } from "@/database/users";
 
-import { USER_EMAIL_MAX_LENGTH } from "../credential-limits";
+import { USER_EMAIL_MAX_LENGTH } from "../lib/credential-limits";
 
 export const resendVerificationRoute = buildRoute({
   route: {

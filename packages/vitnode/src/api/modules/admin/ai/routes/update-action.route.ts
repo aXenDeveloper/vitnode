@@ -8,7 +8,7 @@ import {
 } from "@/api/lib/ai/capabilities";
 import { core_ai_action_settings } from "@/database/ai";
 
-import { zodAiActionSettingsInput } from "../schemas";
+import { zodAiActionSettingsInput } from "../ai.schema";
 
 export const updateAiActionAdminRoute = buildRoute({
   adminStaffPermission: { module: "ai", permission: "can_manage" },

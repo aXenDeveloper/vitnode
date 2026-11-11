@@ -3,12 +3,10 @@ import { buildEventListener } from "@vitnode/core/api/lib/events";
 import { buildModule } from "@/api/builders";
 import { manifest } from "@/manifest.gen";
 
-import {
-  catalogRoute,
-  checkoutRoute,
-  myPurchasesRoute,
-  purchaseRoute,
-} from "./purchases.routes";
+import { checkoutRoute } from "./routes/checkout.route";
+import { myPurchasesRoute } from "./routes/list-purchases.route";
+import { catalogRoute } from "./routes/show-catalog.route";
+import { purchaseRoute } from "./routes/show-purchase.route";
 
 const logPaidPurchase = buildEventListener({
   event: "payment.succeeded",

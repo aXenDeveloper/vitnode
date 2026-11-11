@@ -25,7 +25,7 @@ story?.title; // string, and a typo is a compile error
 
 `publicService` returns exactly what the [public API](/docs/content-engine/public-api) would, so a custom public route can never leak a draft:
 
-```ts title="plugins/newsroom/src/api/modules/stories/by-category.route.ts"
+```ts title="plugins/newsroom/src/api/modules/stories/routes/by-category.route.ts"
 handler: async c => {
   const { publicService } = storyContent;
   if (!publicService) throw new Error("Stories have no public API.");

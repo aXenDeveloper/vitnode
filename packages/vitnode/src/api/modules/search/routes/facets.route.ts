@@ -7,7 +7,7 @@ import {
   dateOrUndefined,
   positiveIntListOrUndefined,
   positiveIntOrUndefined,
-} from "./search.route";
+} from "../lib/query-params";
 
 export const facetsRoute = buildRoute({
   route: {

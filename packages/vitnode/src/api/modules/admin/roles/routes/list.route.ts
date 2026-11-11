@@ -15,7 +15,7 @@ import { core_users, core_users_secondary_roles } from "@/database/users";
 import { containsLikePattern } from "@/lib/api/like-pattern";
 
 import { assertCanListRoles } from "../lib/assert-can-list-roles";
-import { withRolesAdminListFields } from "./list-mapping";
+import { withRolesAdminListFields } from "../lib/list-mapping";
 
 const rolesAdminListSchema = z.object({
   edges: z.array(

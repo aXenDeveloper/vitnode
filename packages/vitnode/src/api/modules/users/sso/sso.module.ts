@@ -4,10 +4,8 @@ import { ssoConnectionsModule } from "./connections/connections.module";
 import { callbackRoute } from "./routes/callback.route";
 import { createUrlRoute } from "./routes/create-url.route";
 import { linkRoute } from "./routes/link.route";
-import {
-  ssoPendingConfirmRoute,
-  ssoPendingEmailRoute,
-} from "./routes/pending.route";
+import { ssoPendingConfirmRoute } from "./routes/pending-confirm.route";
+import { ssoPendingEmailRoute } from "./routes/pending-email.route";
 
 export const ssoUserModule = buildModule({
   name: "sso",

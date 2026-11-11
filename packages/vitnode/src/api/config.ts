@@ -43,7 +43,7 @@ import {
   exposeRateLimitHeaders,
   rateLimiterMiddleware,
 } from "./middlewares/rate-limiter.middleware";
-import { registerCronJobs } from "./modules/cron/helpers/register-cron-jobs";
+import { registerCronJobs } from "./modules/cron/lib/register-cron-jobs";
 
 /** 25 MB: room for an image upload, and nothing like enough to be a weapon. */
 const DEFAULT_MAX_BODY_SIZE = 25 * 1024 * 1024;

@@ -13,10 +13,10 @@ import { testCategoryContentType } from "@/tests/content-fixtures";
 import { createMemoryDb } from "@/tests/memory-db";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
 
-import { activityLogDetailAdminRoute } from "./detail.route";
 import { activityLogEntityAdminRoute } from "./entity.route";
 import { exportActivityLogsAdminRoute } from "./export.route";
 import { listActivityLogsAdminRoute } from "./list.route";
+import { activityLogDetailAdminRoute } from "./show.route";
 
 const BLOG = "@vitnode/blog";
 const MEMBER_ROLE = 3;

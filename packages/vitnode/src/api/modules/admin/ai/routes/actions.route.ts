@@ -8,7 +8,7 @@ import {
 import { projectAiAction } from "@/api/lib/ai/registry";
 import { core_ai_action_settings } from "@/database/ai";
 
-import { zodAiAction } from "../schemas";
+import { zodAiAction } from "../ai.schema";
 
 export const listAiActionsAdminRoute = buildRoute({
   adminStaffPermission: { module: "ai", permission: "can_view" },

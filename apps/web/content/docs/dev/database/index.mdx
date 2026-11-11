@@ -83,17 +83,17 @@ The notes get the ids `1`, `2` and `3` in that order, which later lessons use. W
 
 ### Read the table in the list route
 
-Replace the handler of `src/api/modules/notes/list.route.ts`, and its imports. Select only the columns the response schema declares:
+Replace the handler of `src/api/modules/notes/routes/list.route.ts`, and its imports. Select only the columns the response schema declares:
 
-```ts title="plugins/site-notes/src/api/modules/notes/list.route.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/list.route.ts"
 import { z } from "@hono/zod-openapi";
 import { desc } from "drizzle-orm"; // [!code ++]
 
 import { buildRoute } from "@/api/builders";
 import { site_notes } from "@/database/notes"; // [!code ++]
 
-import { zodNote } from "./notes.schema";
-import { sampleNotes } from "./sample-notes"; // [!code --]
+import { sampleNotes } from "../lib/sample-notes"; // [!code --]
+import { zodNote } from "../notes.schema";
 
 export const listNotesRoute = buildRoute({
   route: {
@@ -126,13 +126,14 @@ export const listNotesRoute = buildRoute({
 
 ### Read the table in the detail route
 
-Replace the handler of `src/api/modules/notes/show.route.ts` the same way. The params and responses stay as they are:
+Replace the handler of `src/api/modules/notes/routes/show.route.ts` the same way. The params and responses stay as they are:
 
-```ts title="plugins/site-notes/src/api/modules/notes/show.route.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
 import { eq } from "drizzle-orm"; // [!code ++]
 
 import { site_notes } from "@/database/notes"; // [!code ++]
-import { sampleNotes } from "./sample-notes"; // [!code --]
+
+import { sampleNotes } from "../lib/sample-notes"; // [!code --]
 
   // [!code ++:11]
   handler: async c => {
@@ -148,7 +149,7 @@ import { sampleNotes } from "./sample-notes"; // [!code --]
   },
 ```
 
-Then delete `src/api/modules/notes/sample-notes.ts`; nothing imports it any more.
+Then delete `src/api/modules/notes/lib/sample-notes.ts`; nothing imports it any more.
 
 </Step>
 
@@ -165,6 +166,7 @@ The list now starts with **New coffee machine**, the newest note, and `GET /api/
 ## Go further
 
 - [Pagination](/docs/dev/database/pagination) and [table search](/docs/dev/database/search) for long lists.
+- [Return only allowed fields](/docs/dev/plugins/api/response-fields): select whole rows and still answer with only the columns a route's schema declares.
 - [Database commands](/docs/dev/cli/database): `vitnode db generate`, `migrate`, `status` and `push`, when you need the steps separately.
 - [Connection pool](/docs/dev/database/connection-pool): sizing the pool for production, serverless and poolers.
 - [Content Engine](/docs/content-engine/create-a-content-type): if your table is editorial content, one definition generates the table, the API and the AdminCP screens.

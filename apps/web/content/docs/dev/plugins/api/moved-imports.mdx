@@ -1,0 +1,120 @@
+---
+title: Moved API imports
+description: Where the VitNode API files moved when routes got one file each under routes/, and how the former deep import paths keep working until you update them.
+icon: ArrowRightLeft
+---
+
+VitNode keeps one endpoint per file in each module's `routes/` folder, names modules `<feature>.module.ts`, and puts schemas next to their module. To get there, some API files moved or were split. Their endpoints did not change: the methods, paths, permissions and `fetcher` calls are the same. If your code imports one of the paths below, it keeps working, but the import is deprecated. Switch to the new path before the compatibility entries are removed in a future major release.
+
+## How the old paths still resolve
+
+- **Moved as a whole:** the package's `exports` map the old path straight to the new file, so every export is still there.
+- **Split or trimmed:** the old path points at a small compatibility module under `dist/src/compat/`. It re-exports each former export from its new module, marked `@deprecated`, and contains no code of its own. It pulls in no route code the old file did not already contain, so a browser-safe schema import stays browser-safe.
+- **Still at the same path:** a file that only lost some exports, such as `@vitnode/core/api/modules/ai/routes/stream.route`, still serves its remaining exports. Only the moved ones are deprecated.
+
+Nothing was removed without a replacement, so no import from the paths below breaks. In the tables, "everything else: unchanged" marks those remaining exports.
+
+## @vitnode/core
+
+| Former import | Import from |
+| --- | --- |
+| `@vitnode/core/api/lib/ai/run-schemas` | `@vitnode/core/api/lib/ai/run.schema` |
+| `@vitnode/core/api/modules/admin/activity-logs/activity-logs.admin.module` | `@vitnode/core/api/modules/admin/activity-logs/activity-logs.module` |
+| `@vitnode/core/api/modules/admin/activity-logs/routes/detail.route` | `@vitnode/core/api/modules/admin/activity-logs/routes/show.route` |
+| `@vitnode/core/api/modules/admin/advanced/advanced.admin.module` | `@vitnode/core/api/modules/admin/advanced/advanced.module` |
+| `@vitnode/core/api/modules/admin/advanced/cron/cron.admin.module` | `@vitnode/core/api/modules/admin/advanced/cron/cron.module` |
+| `@vitnode/core/api/modules/admin/advanced/cron/routes/get.route` | `@vitnode/core/api/modules/admin/advanced/cron/routes/list.route` |
+| `@vitnode/core/api/modules/admin/advanced/queue/queue.admin.module` | `@vitnode/core/api/modules/admin/advanced/queue/queue.module` |
+| `@vitnode/core/api/modules/admin/advanced/queue/routes/get.route` | `@vitnode/core/api/modules/admin/advanced/queue/routes/list.route` |
+| `@vitnode/core/api/modules/admin/ai/ai.admin.module` | `@vitnode/core/api/modules/admin/ai/ai.module` |
+| `@vitnode/core/api/modules/admin/ai/routes/access.route` | `deleteAiUserOverrideAdminRoute`: `@vitnode/core/api/modules/admin/ai/routes/delete-user-override.route`<br />`getAiRoleAccessAdminRoute`: `@vitnode/core/api/modules/admin/ai/routes/show-role-access.route`<br />`getAiUserOverrideAdminRoute`: `@vitnode/core/api/modules/admin/ai/routes/show-user-override.route`<br />`updateAiRoleAccessAdminRoute`: `@vitnode/core/api/modules/admin/ai/routes/update-role-access.route`<br />`updateAiUserOverrideAdminRoute`: `@vitnode/core/api/modules/admin/ai/routes/update-user-override.route` |
+| `@vitnode/core/api/modules/admin/ai/routes/assist-stream.route` | `estimateAiAdminRoute`: `@vitnode/core/api/modules/admin/ai/routes/assist-estimate.route`<br />everything else: unchanged |
+| `@vitnode/core/api/modules/admin/ai/routes/history.route` | `listAiHistoryAdminRoute`: `@vitnode/core/api/modules/admin/ai/routes/list-history.route`<br />`showAiRunAdminRoute`: `@vitnode/core/api/modules/admin/ai/routes/show-run.route` |
+| `@vitnode/core/api/modules/admin/ai/routes/translation-sources.route` | `getTranslationSourcesAdminRoute`: `@vitnode/core/api/modules/admin/ai/routes/list-translation-sources.route`<br />`saveTranslationSourcesAdminRoute`: `@vitnode/core/api/modules/admin/ai/routes/update-translation-sources.route` |
+| `@vitnode/core/api/modules/admin/ai/schemas` | `@vitnode/core/api/modules/admin/ai/ai.schema` |
+| `@vitnode/core/api/modules/admin/dashboard/dashboard.admin.module` | `@vitnode/core/api/modules/admin/dashboard/dashboard.module` |
+| `@vitnode/core/api/modules/admin/debug/debug.admin.module` | `@vitnode/core/api/modules/admin/debug/debug.module` |
+| `@vitnode/core/api/modules/admin/files/files.admin.module` | `@vitnode/core/api/modules/admin/files/files.module` |
+| `@vitnode/core/api/modules/admin/files/routes/alt.route` | `deleteFileAltAdminRoute`: `@vitnode/core/api/modules/admin/files/routes/delete-alt.route`<br />`getFileAltAdminRoute`: `@vitnode/core/api/modules/admin/files/routes/show-alt.route`<br />`updateFileAltPolicyAdminRoute`: `@vitnode/core/api/modules/admin/files/routes/update-alt-policy.route`<br />`updateFileAltAdminRoute`: `@vitnode/core/api/modules/admin/files/routes/update-alt.route` |
+| `@vitnode/core/api/modules/admin/notifications/notifications.admin.module` | `@vitnode/core/api/modules/admin/notifications/notifications.module` |
+| `@vitnode/core/api/modules/admin/notifications/routes/danger.route` | `cancelQueuedNotificationEmailsRoute`: `@vitnode/core/api/modules/admin/notifications/routes/cancel-queued-emails.route`<br />`deleteAllNotificationsRoute`: `@vitnode/core/api/modules/admin/notifications/routes/delete-all.route`<br />`markEverythingReadRoute`: `@vitnode/core/api/modules/admin/notifications/routes/mark-all-read.route`<br />`pauseNotificationsRoute`: `@vitnode/core/api/modules/admin/notifications/routes/pause.route`<br />`resetMemberNotificationPreferencesRoute`: `@vitnode/core/api/modules/admin/notifications/routes/reset-member-preferences.route`<br />`resumeNotificationsRoute`: `@vitnode/core/api/modules/admin/notifications/routes/resume.route` |
+| `@vitnode/core/api/modules/admin/notifications/routes/deliveries.route` | `listNotificationDeliveriesRoute`: `@vitnode/core/api/modules/admin/notifications/routes/list-deliveries.route`<br />`retryNotificationDeliveryRoute`: `@vitnode/core/api/modules/admin/notifications/routes/retry-delivery.route` |
+| `@vitnode/core/api/modules/admin/notifications/routes/maintenance.route` | `reconcileNotificationCountsRoute`: `@vitnode/core/api/modules/admin/notifications/routes/reconcile-counts.route`<br />`sendNotificationTestEmailRoute`: `@vitnode/core/api/modules/admin/notifications/routes/send-test-email.route` |
+| `@vitnode/core/api/modules/admin/notifications/routes/settings.route` | `@vitnode/core/api/modules/admin/notifications/routes/update-type-policy.route` |
+| `@vitnode/core/api/modules/admin/plugins/plugins.admin.module` | `@vitnode/core/api/modules/admin/plugins/plugins.module` |
+| `@vitnode/core/api/modules/admin/plugins/routes/updates.schema` | `iso`, `serializeComponentUpdate`: `@vitnode/core/api/modules/admin/plugins/lib/serialize-update`<br />`componentUpdateSchema`, `updatesOverviewSchema`, `updatesSummarySchema`: `@vitnode/core/api/modules/admin/plugins/updates.schema` |
+| `@vitnode/core/api/modules/admin/report-reasons/report-reasons.admin.module` | `@vitnode/core/api/modules/admin/report-reasons/report-reasons.module` |
+| `@vitnode/core/api/modules/admin/report-reasons/routes/report-reasons.routes` | `createReportReasonAdminRoute`: `@vitnode/core/api/modules/admin/report-reasons/routes/create.route`<br />`deleteReportReasonAdminRoute`: `@vitnode/core/api/modules/admin/report-reasons/routes/delete.route`<br />`listReportReasonsAdminRoute`: `@vitnode/core/api/modules/admin/report-reasons/routes/list.route`<br />`reorderReportReasonsAdminRoute`: `@vitnode/core/api/modules/admin/report-reasons/routes/reorder.route`<br />`updateReportReasonAdminRoute`: `@vitnode/core/api/modules/admin/report-reasons/routes/update.route` |
+| `@vitnode/core/api/modules/admin/roles/roles.admin.module` | `@vitnode/core/api/modules/admin/roles/roles.module` |
+| `@vitnode/core/api/modules/admin/roles/routes/create.route` | `ROLE_IMAGE_SIZE_MAX_KB`, `zodRoleEditOwnContentMinutesSchema`, `zodRoleImageSizeSchema`, `zodRoleNameSchema`, `zodRolePrefixSchema`, `zodRoleStorageSchema`: `@vitnode/core/api/modules/admin/roles/roles.schema`<br />everything else: unchanged |
+| `@vitnode/core/api/modules/admin/roles/routes/list-mapping` | `@vitnode/core/api/modules/admin/roles/lib/list-mapping` |
+| `@vitnode/core/api/modules/admin/routes/notifications.route` | `@vitnode/core/api/modules/admin/routes/send-notification.route` |
+| `@vitnode/core/api/modules/admin/staff/lib/schema` | `@vitnode/core/api/modules/admin/staff/staff.schema` |
+| `@vitnode/core/api/modules/admin/staff/staff.admin.module` | `@vitnode/core/api/modules/admin/staff/staff.module` |
+| `@vitnode/core/api/modules/admin/users/users.admin.module` | `@vitnode/core/api/modules/admin/users/users.module` |
+| `@vitnode/core/api/modules/admin/warnings/routes/warning-reasons.routes` | `createWarningReasonAdminRoute`: `@vitnode/core/api/modules/admin/warnings/routes/create-reason.route`<br />`listWarningReasonsAdminRoute`: `@vitnode/core/api/modules/admin/warnings/routes/list-reasons.route`<br />`reorderWarningReasonsAdminRoute`: `@vitnode/core/api/modules/admin/warnings/routes/reorder-reasons.route`<br />`updateWarningReasonAdminRoute`: `@vitnode/core/api/modules/admin/warnings/routes/update-reason.route` |
+| `@vitnode/core/api/modules/admin/warnings/routes/warning-thresholds.routes` | `createWarningThresholdAdminRoute`: `@vitnode/core/api/modules/admin/warnings/routes/create-threshold.route`<br />`deleteWarningThresholdAdminRoute`: `@vitnode/core/api/modules/admin/warnings/routes/delete-threshold.route`<br />`listWarningThresholdsAdminRoute`: `@vitnode/core/api/modules/admin/warnings/routes/list-thresholds.route`<br />`updateWarningThresholdAdminRoute`: `@vitnode/core/api/modules/admin/warnings/routes/update-threshold.route` |
+| `@vitnode/core/api/modules/admin/warnings/warnings.admin.module` | `@vitnode/core/api/modules/admin/warnings/warnings.module` |
+| `@vitnode/core/api/modules/ai/routes/stream.route` | `estimateAiRoute`: `@vitnode/core/api/modules/ai/routes/estimate.route`<br />everything else: unchanged |
+| `@vitnode/core/api/modules/content/helpers/execute-content-schedule` | `@vitnode/core/api/modules/content/lib/execute-content-schedule` |
+| `@vitnode/core/api/modules/cron/helpers/load-cron-health` | `@vitnode/core/api/modules/cron/lib/load-cron-health` |
+| `@vitnode/core/api/modules/cron/helpers/process-cron-jobs` | `@vitnode/core/api/modules/cron/lib/process-cron-jobs` |
+| `@vitnode/core/api/modules/cron/helpers/register-cron-jobs` | `@vitnode/core/api/modules/cron/lib/register-cron-jobs` |
+| `@vitnode/core/api/modules/cron/routes/cron.route` | `@vitnode/core/api/modules/cron/routes/run.route` |
+| `@vitnode/core/api/modules/middleware/route` | `routeMiddlewareSchema`: `@vitnode/core/api/modules/middleware/middleware.schema`<br />`routeMiddleware`: `@vitnode/core/api/modules/middleware/routes/show-config.route` |
+| `@vitnode/core/api/modules/moderation/lib/schema` | `@vitnode/core/api/modules/moderation/moderation.schema` |
+| `@vitnode/core/api/modules/moderation/lib/warnings-service` | `@vitnode/core/api/modules/moderation/lib/warnings` |
+| `@vitnode/core/api/modules/moderation/routes/account-status.route` | `accountStatusHistoryRoute`: `@vitnode/core/api/modules/moderation/routes/list-account-status-history.route`<br />`accountStatusRoute`: `@vitnode/core/api/modules/moderation/routes/show-account-status.route` |
+| `@vitnode/core/api/modules/moderation/routes/approvals.routes` | `approveApprovalRoute`: `@vitnode/core/api/modules/moderation/routes/approve-approval.route`<br />`listApprovalsRoute`: `@vitnode/core/api/modules/moderation/routes/list-approvals.route`<br />`myApprovalsRoute`: `@vitnode/core/api/modules/moderation/routes/list-my-approvals.route`<br />`rejectApprovalRoute`: `@vitnode/core/api/modules/moderation/routes/reject-approval.route`<br />`approvalFiltersRoute`: `@vitnode/core/api/modules/moderation/routes/show-approval-filters.route`<br />`showApprovalRoute`: `@vitnode/core/api/modules/moderation/routes/show-approval.route` |
+| `@vitnode/core/api/modules/moderation/routes/create.route` | `@vitnode/core/api/modules/moderation/routes/create-report.route` |
+| `@vitnode/core/api/modules/moderation/routes/list.route` | `@vitnode/core/api/modules/moderation/routes/list-reports.route` |
+| `@vitnode/core/api/modules/moderation/routes/notes.routes` | `deleteReportNoteRoute`: `@vitnode/core/api/modules/moderation/routes/delete-report-note.route`<br />`editReportNoteRoute`: `@vitnode/core/api/modules/moderation/routes/update-report-note.route` |
+| `@vitnode/core/api/modules/moderation/routes/reasons.route` | `@vitnode/core/api/modules/moderation/routes/list-report-reasons.route` |
+| `@vitnode/core/api/modules/moderation/routes/show.route` | `@vitnode/core/api/modules/moderation/routes/show-report.route` |
+| `@vitnode/core/api/modules/moderation/routes/warnings.routes` | `issueWarningRoute`: `@vitnode/core/api/modules/moderation/routes/issue-warning.route`<br />`memberLogRoute`: `@vitnode/core/api/modules/moderation/routes/list-member-log.route`<br />`listWarningReasonsRoute`: `@vitnode/core/api/modules/moderation/routes/list-warning-reasons.route`<br />`listWarningsRoute`: `@vitnode/core/api/modules/moderation/routes/list-warnings.route`<br />`previewWarningRoute`: `@vitnode/core/api/modules/moderation/routes/preview-warning.route`<br />`revokeSanctionRoute`: `@vitnode/core/api/modules/moderation/routes/revoke-sanction.route`<br />`revokeWarningRoute`: `@vitnode/core/api/modules/moderation/routes/revoke-warning.route`<br />`searchMembersRoute`: `@vitnode/core/api/modules/moderation/routes/search-members.route`<br />`memberStandingRoute`: `@vitnode/core/api/modules/moderation/routes/show-member-standing.route` |
+| `@vitnode/core/api/modules/moderation/routes/workflow.routes` | `assignReportRoute`: `@vitnode/core/api/modules/moderation/routes/assign-report.route`<br />`claimReportRoute`: `@vitnode/core/api/modules/moderation/routes/claim-report.route`<br />`noteReportRoute`: `@vitnode/core/api/modules/moderation/routes/create-report-note.route`<br />`reportAssigneesRoute`: `@vitnode/core/api/modules/moderation/routes/list-report-assignees.route`<br />`reopenReportRoute`: `@vitnode/core/api/modules/moderation/routes/reopen-report.route`<br />`resolveReportRoute`: `@vitnode/core/api/modules/moderation/routes/resolve-report.route`<br />`reportActionRoute`: `@vitnode/core/api/modules/moderation/routes/run-report-action.route` |
+| `@vitnode/core/api/modules/notifications/routes/mark.route` | `archiveNotificationRoute`: `@vitnode/core/api/modules/notifications/routes/archive.route`<br />`markAllNotificationsReadRoute`: `@vitnode/core/api/modules/notifications/routes/mark-all-read.route`<br />`markNotificationReadRoute`: `@vitnode/core/api/modules/notifications/routes/mark-read.route`<br />`markNotificationUnreadRoute`: `@vitnode/core/api/modules/notifications/routes/mark-unread.route` |
+| `@vitnode/core/api/modules/notifications/routes/preferences.route` | `zodNotificationPreferences`, `zodUpdateNotificationPreferences`: `@vitnode/core/api/modules/notifications/notifications.schema`<br />`getNotificationPreferencesRoute`: `@vitnode/core/api/modules/notifications/routes/show-preferences.route`<br />`updateNotificationPreferencesRoute`: `@vitnode/core/api/modules/notifications/routes/update-preferences.route` |
+| `@vitnode/core/api/modules/notifications/schema` | `requireNotificationUser`: `@vitnode/core/api/modules/notifications/lib/require-notification-user`<br />`unauthorizedResponse`, `zodNotificationEmailMode`, `zodNotificationIdParams`, `zodNotificationItem`, `zodNotificationState`: `@vitnode/core/api/modules/notifications/notifications.schema` |
+| `@vitnode/core/api/modules/notifications/tasks/notification-tasks` | `notificationsCleanupCron`, `notificationsScheduleCron`: `@vitnode/core/api/modules/notifications/cron/notifications.cron`<br />`notificationsCleanupTask`, `notificationsEmailTask`, `notificationsFanoutTask`: `@vitnode/core/api/modules/notifications/tasks/notifications.task` |
+| `@vitnode/core/api/modules/pages/page-layout-routes` | `@vitnode/core/api/modules/pages/pages.module` |
+| `@vitnode/core/api/modules/pages/page-layout-service` | `@vitnode/core/api/modules/pages/lib/page-layout` |
+| `@vitnode/core/api/modules/queue/helpers/process-queue-tasks` | `@vitnode/core/api/modules/queue/lib/process-queue-tasks` |
+| `@vitnode/core/api/modules/search/routes/search.route` | `dateOrUndefined`, `MAX_SEARCH_AUTHOR_IDS`, `positiveIntListOrUndefined`, `positiveIntOrUndefined`: `@vitnode/core/api/modules/search/lib/query-params`<br />`zodSearchHitAuthor`, `zodSearchHitSchema`, `zodSearchResultSchema`: `@vitnode/core/api/modules/search/search.schema`<br />everything else: unchanged |
+| `@vitnode/core/api/modules/search/routes/suggest.route` | `searchSuggestionsLimit`: `@vitnode/core/api/modules/search/lib/query-params`<br />`zodSearchSuggestion`: `@vitnode/core/api/modules/search/search.schema`<br />everything else: unchanged |
+| `@vitnode/core/api/modules/search/routes/timeline.route` | `searchTimeline`: `@vitnode/core/api/modules/search/lib/timeline`<br />`zodSearchTimelineQuery`, `zodSearchTimelineUserId`: `@vitnode/core/api/modules/search/search.schema`<br />everything else: unchanged |
+| `@vitnode/core/api/modules/users/avatar-color` | `@vitnode/core/api/modules/users/lib/avatar-color` |
+| `@vitnode/core/api/modules/users/credential-limits` | `@vitnode/core/api/modules/users/lib/credential-limits` |
+| `@vitnode/core/api/modules/users/passkeys/failure` | `@vitnode/core/api/modules/users/passkeys/lib/failure` |
+| `@vitnode/core/api/modules/users/passkeys/schema` | `@vitnode/core/api/modules/users/passkeys/passkeys.schema` |
+| `@vitnode/core/api/modules/users/presence-schema` | `@vitnode/core/api/modules/users/presence.schema` |
+| `@vitnode/core/api/modules/users/routes/privacy.route` | `@vitnode/core/api/modules/users/routes/update-privacy.route` |
+| `@vitnode/core/api/modules/users/routes/reset-passowrd.route` | `@vitnode/core/api/modules/users/routes/reset-password.route` |
+| `@vitnode/core/api/modules/users/routes/time-zone.route` | `@vitnode/core/api/modules/users/routes/update-time-zone.route` |
+| `@vitnode/core/api/modules/users/sso/connections/failure` | `@vitnode/core/api/modules/users/sso/connections/lib/failure` |
+| `@vitnode/core/api/modules/users/sso/connections/routes/import.route` | `ssoApplyImportRoute`, `zodSsoApplyImportSchema`: `@vitnode/core/api/modules/users/sso/connections/routes/apply-import.route`<br />`ssoDiscardImportRoute`: `@vitnode/core/api/modules/users/sso/connections/routes/discard-import.route`<br />`ssoImportPreviewRoute`: `@vitnode/core/api/modules/users/sso/connections/routes/preview-import.route` |
+| `@vitnode/core/api/modules/users/sso/connections/routes/preferences.route` | `zodSsoPreferencesSchema`: `@vitnode/core/api/modules/users/sso/connections/connections.schema`<br />`ssoPreferencesRoute`: `@vitnode/core/api/modules/users/sso/connections/routes/update-preferences.route` |
+| `@vitnode/core/api/modules/users/sso/connections/schema` | `@vitnode/core/api/modules/users/sso/connections/connections.schema` |
+| `@vitnode/core/api/modules/users/sso/routes/pending.route` | `ssoPendingConfirmRoute`, `zodSsoPendingConfirmSchema`: `@vitnode/core/api/modules/users/sso/routes/pending-confirm.route`<br />`ssoPendingEmailRoute`, `zodSsoPendingEmailSchema`: `@vitnode/core/api/modules/users/sso/routes/pending-email.route` |
+
+## @vitnode/blog
+
+| Former import | Import from |
+| --- | --- |
+| `@vitnode/blog/api/modules/admin/ai/ai.admin.module` | `@vitnode/blog/api/modules/admin/ai/ai.module` |
+| `@vitnode/blog/api/modules/categories/categories.module` | `zodBlogCategorySummary`: `@vitnode/blog/api/modules/categories/routes/list.route`<br />everything else: unchanged |
+
+## Related
+
+<Cards>
+  <Card
+    title="API modules"
+    description="How a module and its routes/ folder fit together"
+    href="/docs/dev/plugins/api/modules"
+  />
+  <Card
+    title="Generate commands"
+    description="Create modules and routes in this layout"
+    href="/docs/dev/cli/generate"
+  />
+</Cards>

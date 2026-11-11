@@ -1,20 +1,20 @@
 import { buildModule } from "@/api/builders";
 
-import { activityLogsAdminModule } from "./activity-logs/activity-logs.admin.module";
-import { advancedAdminModule } from "./advanced/advanced.admin.module";
-import { aiAdminModule } from "./ai/ai.admin.module";
-import { dashboardAdminModule } from "./dashboard/dashboard.admin.module";
-import { debugAdminModule } from "./debug/debug.admin.module";
-import { filesAdminModule } from "./files/files.admin.module";
-import { notificationsAdminModule } from "./notifications/notifications.admin.module";
-import { pluginsAdminModule } from "./plugins/plugins.admin.module";
-import { reportReasonsAdminModule } from "./report-reasons/report-reasons.admin.module";
-import { rolesAdminModule } from "./roles/roles.admin.module";
-import { sendNotificationRoute } from "./routes/notifications.route";
+import { activityLogsAdminModule } from "./activity-logs/activity-logs.module";
+import { advancedAdminModule } from "./advanced/advanced.module";
+import { aiAdminModule } from "./ai/ai.module";
+import { dashboardAdminModule } from "./dashboard/dashboard.module";
+import { debugAdminModule } from "./debug/debug.module";
+import { filesAdminModule } from "./files/files.module";
+import { notificationsAdminModule } from "./notifications/notifications.module";
+import { pluginsAdminModule } from "./plugins/plugins.module";
+import { reportReasonsAdminModule } from "./report-reasons/report-reasons.module";
+import { rolesAdminModule } from "./roles/roles.module";
+import { sendNotificationRoute } from "./routes/send-notification.route";
 import { sessionAdminRoute } from "./routes/session.route";
-import { staffAdminModule } from "./staff/staff.admin.module";
-import { usersAdminModule } from "./users/users.admin.module";
-import { warningsAdminModule } from "./warnings/warnings.admin.module";
+import { staffAdminModule } from "./staff/staff.module";
+import { usersAdminModule } from "./users/users.module";
+import { warningsAdminModule } from "./warnings/warnings.module";
 
 export const adminModule = buildModule({
   name: "admin",

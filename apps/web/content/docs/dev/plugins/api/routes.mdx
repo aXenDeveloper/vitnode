@@ -6,9 +6,13 @@ icon: Route
 
 Each route declares its inputs and outputs with Zod, and VitNode validates the request before your handler runs. In this lesson you add `GET /api/site-notes/notes/{id}`, which returns one note, refuses an id that is not a positive number, and answers `404` when no note has that id.
 
+<Callout type="idea" title="Prefer to generate it?">
+  `pnpm vitnode g route notes/show --id-type number` scaffolds a starter for this route (sample data, no `404` handling yet) and registers it. See [Generate an endpoint](/docs/dev/plugins/api/generate-route).
+</Callout>
+
 ## Before you begin
 
-- The `notes` module from [API modules](/docs/dev/plugins/api/modules), still returning the sample notes in `sample-notes.ts`.
+- The `notes` module from [API modules](/docs/dev/plugins/api/modules), still returning the sample notes in `lib/sample-notes.ts`.
 
 <Steps>
 
@@ -16,15 +20,15 @@ Each route declares its inputs and outputs with Zod, and VitNode validates the r
 
 ### Create the route
 
-Create `src/api/modules/notes/show.route.ts`:
+Create `src/api/modules/notes/routes/show.route.ts`, next to the list route:
 
-```ts title="plugins/site-notes/src/api/modules/notes/show.route.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
 
-import { zodNote } from "./notes.schema";
-import { sampleNotes } from "./sample-notes";
+import { sampleNotes } from "../lib/sample-notes";
+import { zodNote } from "../notes.schema";
 
 export const showNoteRoute = buildRoute({
   route: {
@@ -69,8 +73,8 @@ Open `src/api/modules/notes/notes.module.ts` and add the route after the list ro
 ```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts"
 import { buildModule } from "@/api/builders";
 
-import { listNotesRoute } from "./list.route";
-import { showNoteRoute } from "./show.route"; // [!code ++]
+import { listNotesRoute } from "./routes/list.route";
+import { showNoteRoute } from "./routes/show.route"; // [!code ++]
 
 export const notesModule = buildModule({
   name: "notes",

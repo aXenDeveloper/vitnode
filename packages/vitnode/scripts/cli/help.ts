@@ -12,8 +12,17 @@ export const PUBLIC_COMMANDS = [
   { description: "Start the development environment", name: "dev" },
   { description: "Build for production", name: "build" },
   { description: "Start the production server", name: "start" },
+  {
+    description: "Generate plugin API modules, routes, services and resources",
+    name: "generate <kind>",
+  },
   { description: "List plugins", name: "plugin list" },
   { description: "Validate plugins", name: "plugin validate" },
+  { description: "Check plugins for configuration problems", name: "doctor" },
+  {
+    description: "Show what plugins register: routes, jobs or events",
+    name: "inspect <what>",
+  },
   { description: "Generate a migration", name: "db generate" },
   { description: "Run pending migrations", name: "db migrate" },
   { description: "Push schema changes (development)", name: "db push" },
@@ -29,6 +38,8 @@ export const describeCommand = (name: PublicCommandName): string =>
 const EXAMPLES = [
   "vitnode dev",
   "vitnode build --analyze",
+  "vitnode g route notes/list --dry-run",
+  "vitnode doctor",
   "vitnode db migrate --yes",
 ];
 

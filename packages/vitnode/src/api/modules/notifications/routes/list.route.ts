@@ -3,11 +3,11 @@ import { z } from "zod";
 import { buildRoute } from "@/api/builders";
 import { listNotifications } from "@/api/models/notifications/inbox";
 
+import { requireNotificationUser } from "../lib/require-notification-user";
 import {
-  requireNotificationUser,
   unauthorizedResponse,
   zodNotificationItem,
-} from "../schema";
+} from "../notifications.schema";
 
 export const listNotificationsRoute = buildRoute({
   route: {

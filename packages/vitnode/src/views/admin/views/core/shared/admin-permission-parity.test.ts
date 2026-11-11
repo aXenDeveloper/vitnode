@@ -153,7 +153,7 @@ describe("the staff screens name the API's own permissions", () => {
 
   it("maps the two types the way the API's own table does", () => {
     const schema = readFileSync(
-      join(apiModules, "staff/lib/schema.ts"),
+      join(apiModules, "staff/staff.schema.ts"),
       "utf8",
     );
 

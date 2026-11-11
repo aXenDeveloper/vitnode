@@ -1,0 +1,132 @@
+---
+title: Protect an admin endpoint
+description: Generate a VitNode admin API route guarded by a staff permission, declare the permission and its AdminCP labels, and see what the guard does and does not check.
+icon: ShieldCheck
+---
+
+Admin endpoints live in the plugin's `admin` module tree, so their URLs contain `/admin/` and need an AdminCP session. Each one also needs a staff permission, which `adminStaffPermission` checks before the handler runs. `vitnode g route` sets up both. In this guide you add `POST /api/site-notes/admin/notes`, guarded by the **Create notes** permission.
+
+## Before you begin
+
+- The `site-notes` plugin from the earlier generator guides, or a fresh one from [Create plugin](/docs/dev/plugins/create), with a terminal in `plugins/site-notes`. It must not have the `admin/notes` create route from the [Permissions](/docs/dev/working-with-users/staff-permissions) lesson, or step 2 stops with `POST /admin/notes already exists`.
+- Optional, to see a `403`: a second staff account without the permission, as in [Restrict the second account](/docs/dev/working-with-users/staff-permissions#restrict-the-second-account).
+
+<Steps>
+
+<Step>
+
+### Preview the route
+
+`--admin` puts the route in the admin module tree: `notes/create` becomes `admin/notes/create`, the same as writing that path yourself. The generator never adds a staff guard to a public module.
+
+```bash
+pnpm vitnode g route notes/create --admin --permission notes.can_create --parents --dry-run
+```
+
+```txt
+✖ The staff permission notes.can_create is not declared.
+  Nobody can be granted a permission the plugin does not declare in src/config.api.ts:
+    permissionStaff: { admin: { notes: ["can_create"] } }
+
+  Pass --declare-permission to add it (and its labels), or pick a declared one.
+```
+
+The generator checks the permission against `buildApiPlugin({ permissionStaff })` before writing anything. Every admin route needs a permission: without `--permission`, an interactive terminal offers the declared ones and CI gets an error.
+
+One exception: when the plugin's `admin` module mounts Content Engine modules and the permission module is not declared at all, the generator only warns and writes the route. A content type adds its own permission module (`articles` for `newsroom.articles`), which the generator cannot see in source. Build the plugin and run [`pnpm vitnode doctor`](/docs/dev/cli/doctor) to confirm the permission exists.
+
+</Step>
+
+<Step>
+
+### Declare the permission and generate
+
+Add `--declare-permission` and drop `--dry-run`:
+
+```bash
+pnpm vitnode g route notes/create --admin --permission notes.can_create --parents --declare-permission
+```
+
+```txt
+  ✓ created      src/api/modules/admin/admin.module.ts  module "admin"; register adminNotesModule in module "admin"
+  ✓ created      src/api/modules/admin/notes/notes.module.ts  module "admin/notes"; register createNotesRoute in module "admin/notes"
+  ✓ created      src/api/modules/admin/notes/routes/create.route.ts  POST /admin/notes
+  ✓ updated      src/config.api.ts  declare the admin permission notes.can_create; register adminModule in buildApiPlugin
+  ✓ updated      src/locales/en.json  AdminCP labels for notes.can_create
+```
+
+`--parents` created the `admin` and `admin/notes` modules, and `admin/notes/notes.module.ts` imports the route from `./routes/create.route`. `config.api.ts` now ends its `modules` list with `adminModule` and declares the permission:
+
+```ts title="plugins/site-notes/src/config.api.ts"
+permissionStaff: { admin: { notes: ["can_create"] } },
+```
+
+`en.json` gained the labels the AdminCP permission editor shows: `"site-notes:notes": "Notes"` and `"site-notes:notes:can_create": "Create notes"`. The generator only edits `en.json` when it is plain two-space JSON. Otherwise it prints the keys to add by hand.
+
+</Step>
+
+<Step>
+
+### Read the guard
+
+The generated route carries the permission and documents the `403`:
+
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/create.route.ts"
+/**
+ * POST /admin/notes - a generated scaffold that answers 501 until implemented.
+ *
+ * Describe the input, add the success response to `responses`, then replace
+ * the `throw` with the real operation.
+ *
+ * The staff permission decides who may call it at all. It does not check
+ * access to a particular record - do that in the handler when it matters.
+ */
+export const createNotesRoute = buildRoute({
+  adminStaffPermission: { module: "notes", permission: "can_create" },
+  route: {
+    method: "post",
+    path: "/",
+    // ...
+    responses: {
+      403: { description: "Requires the notes.can_create staff permission." },
+      501: { description: "Not implemented yet." },
+    },
+  },
+  // ...
+});
+```
+
+The last paragraph of that comment applies to every write. `can_edit` lets an administrator call `PATCH /admin/notes/{id}`, but whether they may edit that particular note, such as one owned by another team, is for your handler to decide. See [Check a permission in code](/docs/dev/working-with-users/staff-permissions#check-a-permission-in-code).
+
+</Step>
+
+</Steps>
+
+If the plugin declares its permissions with [`defineStaffPermissions`](/docs/dev/working-with-users/staff-permission-refs), the generator edits that definition instead, and the route gets `adminStaffPermission: staffPermissions.admin.notes.canCreate`.
+
+## Check the result
+
+Generate a second admin route. The permission module and the `admin/notes` module now exist, so only the new pieces are added:
+
+```bash
+pnpm vitnode g route admin/notes/delete --permission notes.can_delete --declare-permission
+```
+
+It appends `"can_delete"` to `notes: [...]` in `permissionStaff`, adds the label, and registers `deleteNotesRoute` in `admin/notes`. Build the plugin and run `pnpm vitnode plugin validate` to check it the way an app loads it.
+
+To try the guard, reuse the `CheckNotes` button from [Generate an endpoint](/docs/dev/plugins/api/generate-route#call-it-from-a-page) with the call the generator printed for the create route: `method: "post"`, `module: "admin/notes"`, `path: "/"` and `args: { body: {} }`. Sign in to the AdminCP, open the page and press the button. An account holding **Create notes** gets `501`, because the route is not implemented yet. The restricted account gets `403`.
+
+## Related
+
+<Cards>
+  <Card
+    title="Permissions"
+    description="Grant permissions, dependencies and moderator checks"
+    href="/docs/dev/working-with-users/staff-permissions"
+  />
+  <Card
+    title="Generate commands"
+    description="Every option and safety rule"
+    href="/docs/dev/cli/generate"
+  />
+</Cards>

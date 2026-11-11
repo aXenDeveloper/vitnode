@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { getNotificationsOverview } from "@/api/models/notifications/admin";
-import { zodNotificationEmailMode } from "@/api/modules/notifications/schema";
+import { zodNotificationEmailMode } from "@/api/modules/notifications/notifications.schema";
 
 const zodCounts = z.record(z.string(), z.number());
 

@@ -1,11 +1,11 @@
 import { buildRoute } from "@/api/builders";
 import { PasskeyModel } from "@/api/models/passkey";
 
-import { passkeyFailure, requireSignedInUser } from "../failure";
+import { passkeyFailure, requireSignedInUser } from "../lib/failure";
 import {
   PASSKEY_ERROR_RESPONSES,
   zodPasskeyRegistrationOptionsSchema,
-} from "../schema";
+} from "../passkeys.schema";
 
 export const passkeyRegistrationOptionsRoute = buildRoute({
   route: {

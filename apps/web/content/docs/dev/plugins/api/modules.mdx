@@ -6,6 +6,10 @@ icon: Box
 
 An API module groups a plugin's Hono routes under one URL segment. In this lesson you add a `notes` module to `site-notes` whose endpoint returns two sample notes. A later lesson swaps the sample data for a database table.
 
+<Callout type="idea" title="Prefer to generate it?">
+  `pnpm vitnode g module notes` creates and registers an empty module in one step. See [Generate a module](/docs/dev/plugins/api/generate-module). This lesson writes it by hand so you see every part.
+</Callout>
+
 ## Before you begin
 
 - The `site-notes` plugin from [Create plugin](/docs/dev/plugins/create), with `pnpm dev` running at the workspace root. `dev` rebuilds the plugin every time you save.
@@ -28,9 +32,9 @@ export const zodNote = z.object({
 });
 ```
 
-Then create the sample data the endpoint returns for now:
+Then create the sample data the endpoint returns for now. Helpers that are not routes go in the module's `lib/` folder:
 
-```ts title="plugins/site-notes/src/api/modules/notes/sample-notes.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/lib/sample-notes.ts"
 /** Placeholder notes until the Database lesson stores real ones. */
 export const sampleNotes = [
   { id: 1, title: "Welcome to site notes", body: "Short updates for everyone on the site." },
@@ -44,15 +48,15 @@ export const sampleNotes = [
 
 ### Create the list route
 
-Create `src/api/modules/notes/list.route.ts`. `buildRoute` comes from the plugin's own `src/api/builders.ts`, which the generator wrote, so the route is tied to `site-notes` without naming it:
+Create `src/api/modules/notes/routes/list.route.ts`. Each endpoint gets its own file in the module's `routes/` folder. `buildRoute` comes from the plugin's own `src/api/builders.ts`, which the generator wrote, so the route is tied to `site-notes` without naming it:
 
-```ts title="plugins/site-notes/src/api/modules/notes/list.route.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/list.route.ts"
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
 
-import { zodNote } from "./notes.schema";
-import { sampleNotes } from "./sample-notes";
+import { sampleNotes } from "../lib/sample-notes";
+import { zodNote } from "../notes.schema";
 
 export const listNotesRoute = buildRoute({
   route: {
@@ -82,7 +86,7 @@ Create `src/api/modules/notes/notes.module.ts`. The module's `name` is the URL s
 ```ts title="plugins/site-notes/src/api/modules/notes/notes.module.ts"
 import { buildModule } from "@/api/builders";
 
-import { listNotesRoute } from "./list.route";
+import { listNotesRoute } from "./routes/list.route";
 
 export const notesModule = buildModule({
   name: "notes",

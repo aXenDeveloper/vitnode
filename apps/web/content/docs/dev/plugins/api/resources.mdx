@@ -1,0 +1,149 @@
+---
+title: Generate an API resource
+description: Scaffold a VitNode API resource with vitnode generate resource, including a module, Zod schemas, service stubs and list, show, create, update and delete routes.
+icon: Layers
+---
+
+`vitnode g resource <name> --kind api` writes a wired set of CRUD endpoints: a module, shared Zod schemas, a service with one typed function per operation, and five routes that call it. Nothing is stored yet. Every route answers `501 Not Implemented` until you implement the service, so the scaffold never returns made-up data.
+
+## Before you begin
+
+- A plugin made with [Create plugin](/docs/dev/plugins/create), with `pnpm dev` running at the workspace root and a terminal in `plugins/site-notes`.
+- No `notes` module with routes. A resource needs a new or empty module, so if you followed the earlier generator guides, start from a fresh plugin or pick another name.
+
+<Steps>
+
+<Step>
+
+### Generate the resource
+
+Describe the fields with `--fields name:type`, using `string`, `number`, `int` or `boolean`. A `?` after the name makes a field optional. `--id-type number` makes the id a positive integer instead of a string:
+
+```bash
+pnpm vitnode g resource notes --kind api --fields "title:string,body:string,pinned?:boolean" --id-type number
+```
+
+```txt
+  ✓ created      src/api/modules/notes/notes.module.ts  module "notes"; register the notes resource routes
+  ✓ created      src/api/modules/notes/notes.schema.ts  schemas for the notes resource
+  ✓ created      src/api/modules/notes/notes.service.ts  service stubs for the notes resource
+  ✓ created      src/api/modules/notes/routes/list.route.ts  GET /notes
+  ✓ created      src/api/modules/notes/routes/show.route.ts  GET /notes/{id}
+  ✓ created      src/api/modules/notes/routes/create.route.ts  POST /notes
+  ✓ created      src/api/modules/notes/routes/update.route.ts  PATCH /notes/{id}
+  ✓ created      src/api/modules/notes/routes/delete.route.ts  DELETE /notes/{id}
+  ✓ updated      src/config.api.ts  register notesModule in buildApiPlugin
+```
+
+The module, schemas and service sit together in `src/api/modules/notes/`. Each route has its own file in `routes/` and imports `../notes.schema` and `../notes.service`. Without `--fields`, an interactive terminal asks for them. In CI the schemas model only the `id`, with a comment in `notes.schema.ts` that says to add the rest. The generator never guesses fields such as `title` from a name.
+
+</Step>
+
+<Step>
+
+### Read the contract
+
+`notes.schema.ts` is the single source of the resource's shape. The routes validate with these schemas, and the service's types are inferred from them, so there are no parallel interfaces to keep in sync:
+
+```ts title="plugins/site-notes/src/api/modules/notes/notes.schema.ts"
+import { z } from "@hono/zod-openapi";
+
+/** One notes entry, as the API returns it. */
+export const zodNotesItem = z.object({
+  id: z.number().int().positive(),
+  title: z.string(),
+  body: z.string(),
+  pinned: z.boolean().optional(),
+});
+
+/** What creating a notes entry accepts. */
+export const zodNotesCreateBody = z.object({
+  title: z.string(),
+  body: z.string(),
+  pinned: z.boolean().optional(),
+});
+
+/** What updating a notes entry accepts: any subset of the create fields. */
+export const zodNotesUpdateBody = zodNotesCreateBody.partial();
+
+export type NotesItem = z.infer<typeof zodNotesItem>;
+export type NotesCreateInput = z.infer<typeof zodNotesCreateBody>;
+export type NotesUpdateInput = z.infer<typeof zodNotesUpdateBody>;
+```
+
+| Route    | Method and path      | Success | Also answers                         |
+| -------- | -------------------- | ------- | ------------------------------------ |
+| `list`   | `GET /notes`         | `200`   | `501`                                |
+| `show`   | `GET /notes/{id}`    | `200`   | `400` invalid id, `404`, `501`       |
+| `create` | `POST /notes`        | `201`   | `400` invalid body, `501`            |
+| `update` | `PATCH /notes/{id}`  | `200`   | `400`, `404`, `501`                  |
+| `delete` | `DELETE /notes/{id}` | `204`   | `400`, `404`, `501`                  |
+
+</Step>
+
+<Step>
+
+### Implement the service
+
+Each operation in `notes.service.ts` is a typed stub that rejects with `501`:
+
+```ts title="plugins/site-notes/src/api/modules/notes/notes.service.ts"
+export const createNotesService = (deps: NotesServiceDeps) => ({
+  deps,
+  list: async (): Promise<NotesItem[]> => notImplemented("list"),
+  /** Resolves `null` when there is no entry with this id. */
+  get: async (_id: number): Promise<NotesItem | null> => notImplemented("get"),
+  // create, update, remove...
+});
+```
+
+Keep the signatures and replace the bodies, one operation at a time. The routes already answer `404` when `get` or `update` resolves `null`, or `remove` resolves `false`. With the `site_notes` table from the [Database](/docs/dev/database) lesson, `list` becomes:
+
+```ts title="plugins/site-notes/src/api/modules/notes/notes.service.ts"
+list: async (): Promise<NotesItem[]> =>
+  deps.db
+    .select({ id: site_notes.id, title: site_notes.title, body: site_notes.body })
+    .from(site_notes),
+```
+
+Import `site_notes` from `@/database/notes`. The generator does not create the table or a migration. [Add a service](/docs/dev/plugins/api/services) explains where the service's dependencies come from.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Call `GET /notes` with the temporary `fetcher` button from [Generate an endpoint](/docs/dev/plugins/api/generate-route#call-it-from-a-page), using `module: "notes"` and `path: "/"` with no `args`. Before you implement `list`, it answers `501` with `notes: list is not implemented yet. Implement it in notes.service.ts.` Afterwards it returns the rows. Invalid input answers `400` either way, because validation runs before the service. Through `fetcher`, TypeScript already rejects a body such as `{ "title": 1 }` at compile time.
+
+## Admin resources
+
+`--admin` generates the resource under `admin/` and guards each operation with its own staff permission, so `can_create` never guards a delete:
+
+```bash
+pnpm vitnode g resource notes --admin --kind api --permission-module notes --declare-permission --parents
+```
+
+| Operations     | Permission         |
+| -------------- | ------------------ |
+| `list`, `show` | `notes.can_view`   |
+| `create`       | `notes.can_create` |
+| `update`       | `notes.can_edit`   |
+| `delete`       | `notes.can_delete` |
+
+Without `--declare-permission`, the command lists the permissions missing from `permissionStaff.admin` and writes nothing. With it, they are added to `config.api.ts` with their AdminCP labels. A staff permission decides who may call an operation, not which entries they may change. Check ownership in the service or handler when it matters.
+
+## Related
+
+<Cards>
+  <Card
+    title="Add a service"
+    description="Dependencies, lifecycle and errors for services"
+    href="/docs/dev/plugins/api/services"
+  />
+  <Card
+    title="Generate commands"
+    description="Every option and safety rule"
+    href="/docs/dev/cli/generate"
+  />
+</Cards>
