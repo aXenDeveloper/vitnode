@@ -24,8 +24,8 @@ import { buildRoute } from "./route";
 /**
  * Binds the builders to one plugin, so what they build carries the plugin id
  * without repeating it: routes (for OpenAPI tags, `c.get("plugin")`,
- * staff-permission checks and the fetcher's type inference), typed queue
- * tasks (whose rows are stored under it), typed cache entries (whose keys
+ * staff-permission checks and the fetcher's type inference), queue tasks
+ * (whose rows are stored under it), typed cache entries (whose keys
  * are) and event definitions (which it owns).
  *
  * Call it once per plugin, in a builders module the plugin's API code imports.
@@ -62,10 +62,7 @@ export const bindApiPlugin = <const Plugin extends string>(
       ...options,
       pluginId: manifest.id,
     }),
-  /**
-   * {@link buildQueueTask} for a typed task, with this plugin's id filled in.
-   * Untyped tasks keep using `buildQueueTask` from `@vitnode/core/api/lib/queue`.
-   */
+  /** {@link buildQueueTask}, with this plugin's id filled in. */
   buildQueueTask: <const Name extends string, Schema extends z.ZodType>(
     options: Omit<QueueTaskOptions<Plugin, Name, Schema>, "pluginId">,
   ): QueueTaskDefinition<Plugin, Name, Schema> =>

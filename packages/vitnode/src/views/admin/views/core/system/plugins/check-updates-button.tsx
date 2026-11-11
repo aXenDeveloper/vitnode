@@ -6,7 +6,7 @@ import { useTranslations } from "use-intl";
 
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
-import { manifest } from "@/manifest";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import type { CheckPluginUpdates } from "./plugin-updates-query";
 
@@ -21,11 +21,9 @@ export const CheckUpdatesButton = ({
 }) => {
   const t = useTranslations("admin.system.plugins.updates.check");
   const queryClient = useQueryClient();
-  const canCheck = useAdminStaffPermission({
-    plugin: manifest.id,
-    module: "plugins",
-    permission: "can_check_updates",
-  });
+  const canCheck = useAdminStaffPermission(
+    coreStaffPermissions.admin.plugins.canCheckUpdates,
+  );
   const [, formAction, isPending] = useActionState(async () => {
     const result = await onCheck();
 

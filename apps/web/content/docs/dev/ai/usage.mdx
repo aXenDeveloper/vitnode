@@ -1,6 +1,6 @@
 ---
 title: Direct SDK calls
-description: Call the Vercel AI SDK directly in VitNode API routes. Resolve a model with c.get("ai").model(), then generate text, stream a response, get structured output with Output.object or create embeddings.
+description: 'Call the Vercel AI SDK directly in VitNode API routes: resolve a model with c.get("ai").model(), then generate text, stream, structured output or embeddings.'
 icon: Bot
 ---
 
@@ -48,9 +48,10 @@ import { generateText } from 'ai'
 import { z } from 'zod'
 
 import { buildRoute } from '@/api/builders'
+import { staffPermissions } from '@/staff-permissions'
 
 export const summarizeRoute = buildRoute({
-  adminStaffPermission: { module: 'notes', permission: 'can_view' },
+  adminStaffPermission: staffPermissions.admin.notes.canCreate,
   route: {
     method: 'post',
     description: 'Summarize a text with the default AI model.',
@@ -87,7 +88,7 @@ export const summarizeRoute = buildRoute({
 })
 ```
 
-`adminStaffPermission` keeps the route to staff who hold `notes` → `can_view`. Swap in a permission your own plugin declares.
+`adminStaffPermission` keeps the route to staff who hold `notes` → `can_create`, declared in [Permissions](/docs/dev/working-with-users/staff-permissions). Swap in a reference to a permission your own plugin declares.
 
 ---
 

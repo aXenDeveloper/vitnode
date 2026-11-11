@@ -5,11 +5,12 @@ import { buildRoute } from "@/api/builders";
 import { removeUserImage, zodUserImageKind } from "@/api/lib/user-images";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { core_users } from "@/database/users";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 
 export const deleteUserImageAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   route: {
     method: "delete",
     description: "Remove a user's avatar or cover (Admin only).",

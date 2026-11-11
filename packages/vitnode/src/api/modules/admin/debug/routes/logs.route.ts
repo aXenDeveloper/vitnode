@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { core_logs } from "@/database/logs";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { core_users } from "../../../../../database/users";
 import {
@@ -12,7 +13,7 @@ import {
 } from "../../../../lib/with-pagination";
 
 export const logsDebugAdminRoute = buildRoute({
-  adminStaffPermission: { module: "debug", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.debug.canView,
   route: {
     method: "get",
     description: "Get Admin Debug Logs",

@@ -1,29 +1,31 @@
 import { assertType, describe, expectTypeOf, it } from "vitest";
 
-import { testArticleContentType } from "@/tests/content-fixtures";
+import {
+  testArticleContentType,
+  testPostContentType,
+} from "@/tests/content-fixtures";
 
-import type { VitNodeEvents } from "../api/models/events";
+import type { EventInput, EventPayload } from "../api/lib/event-definition";
+import type { ContentEventActionOf } from "./event-definitions";
 import type { ContentEventsFor } from "./events";
 
-import { contentEventName } from "./events";
+import { contentEvent } from "./event-definitions";
 
 type ArticleEvents = ContentEventsFor<typeof testArticleContentType>;
-
-declare module "../api/models/events" {
-  // oxlint-disable-next-line typescript/no-empty-object-type -- the members come from the mapped type
-  interface VitNodeEvents extends ArticleEvents {}
-}
 
 describe("content events", () => {
   it("builds literal event names and keys the map by them", () => {
     expectTypeOf(
-      contentEventName(testArticleContentType.id, "created"),
+      contentEvent(testArticleContentType, "created").name,
     ).toEqualTypeOf<"content.test.article.created">();
     expectTypeOf<keyof ArticleEvents>().toEqualTypeOf<
       | "content.test.article.created"
       | "content.test.article.deleted"
       | "content.test.article.updated"
     >();
+    expectTypeOf<
+      ContentEventActionOf<typeof testArticleContentType>
+    >().toEqualTypeOf<"created" | "deleted" | "updated">();
   });
 
   it("narrows changedFields to the content type's own field names", () => {
@@ -34,9 +36,30 @@ describe("content events", () => {
     assertType<Updated>({ changedFields: ["slug"], contentId: 1 });
   });
 
-  it("registers on the global map through module augmentation", () => {
+  it("types the definition's payload from the content type", () => {
     expectTypeOf<
-      VitNodeEvents["content.test.article.created"]
+      EventPayload<ReturnType<typeof createdEvent>>
     >().toEqualTypeOf<{ contentId: number }>();
   });
+
+  it("only accepts the actions the content type enables", () => {
+    contentEvent(testPostContentType, "published");
+    // @ts-expect-error - test.article does not enable publication
+    contentEvent(testArticleContentType, "published");
+    // @ts-expect-error - not a content action at all
+    contentEvent(testArticleContentType, "archived");
+  });
+
+  it("takes ISO strings on the wire and hands listeners Dates", () => {
+    const published = contentEvent(testPostContentType, "published");
+
+    expectTypeOf<
+      EventInput<typeof published>["publishedAt"]
+    >().toEqualTypeOf<string>();
+    expectTypeOf<
+      EventPayload<typeof published>["publishedAt"]
+    >().toEqualTypeOf<Date>();
+  });
 });
+
+const createdEvent = () => contentEvent(testArticleContentType, "created");

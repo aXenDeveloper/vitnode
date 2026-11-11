@@ -3,11 +3,13 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
+import { filesAltUpdatedEvent } from "@/api/events/files";
 import { core_files, core_files_alt } from "@/database/files";
 import { core_languages } from "@/database/languages";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const updateFileAltAdminRoute = buildRoute({
-  adminStaffPermission: { module: "files", permission: "can_edit_alt" },
+  adminStaffPermission: coreStaffPermissions.admin.files.canEditAlt,
   route: {
     method: "put",
     description: "Set an image's ALT text in one language.",
@@ -69,7 +71,7 @@ export const updateFileAltAdminRoute = buildRoute({
         set: { ...values, updatedAt: new Date() },
         target: [core_files_alt.fileId, core_files_alt.languageCode],
       });
-    await c.get("events").emit("files.alt.updated", {
+    await c.get("events").emit(filesAltUpdatedEvent, {
       fileId: id,
       languageCodes: [languageCode],
       origin: "human",

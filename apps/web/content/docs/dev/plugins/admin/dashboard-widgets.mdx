@@ -229,7 +229,7 @@ AdminCP dashboard at `/admin/core`.
 {
   id: 'notes',
   component: NotesWidget,
-  permission: { module: 'notes', permission: 'can_create' }, // [!code ++]
+  permission: staffPermissions.admin.notes.canCreate, // [!code ++]
   // ...
 }
 ```
@@ -239,10 +239,12 @@ AdminCP dashboard at `/admin/core`.
   `adminStaffPermission`, as the create endpoint in
   [Permissions](/docs/dev/working-with-users/staff-permissions) is. The notes
   list is public, so the Notes widget needs no guard.
-- **Declare the permission** in `buildApiPlugin({ permissionStaff })`, as
-  `site-notes` already does for `notes.can_create`. An undeclared permission
-  cannot be granted in the staff editor, so only root administrators would see
-  the widget. `vitnode plugin validate` checks this for sidebar links, not for
+- **Use a declared permission.** `staffPermissions` comes from
+  `src/staff-permissions.ts` (import it with
+  `import { staffPermissions } from '@/staff-permissions'`), where `site-notes`
+  already declares `notes.can_create`. A permission the plugin does not
+  register with `buildApiPlugin({ permissionStaff })` cannot be granted in the
+  staff editor, so only root administrators would see the widget. `vitnode plugin validate` checks this for sidebar links, not for
   widgets.
 
 ## Widget options

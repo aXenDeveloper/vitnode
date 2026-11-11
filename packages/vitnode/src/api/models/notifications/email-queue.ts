@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 
+import { notificationsEmailTask } from "@/api/modules/notifications/tasks/notifications.task";
 import { core_queue } from "@/database/queue";
 
 import type { NotificationsContext, NotificationsDb } from "./shared";
@@ -36,10 +37,7 @@ export const dispatchEmailDrain = async (
     return;
   }
 
-  await c.get("queue").dispatch({
-    availableAt,
-    name: QUEUE_NOTIFICATIONS_EMAIL,
-    pluginId: NOTIFICATIONS_PLUGIN_ID,
-    tx: db,
-  });
+  await c
+    .get("queue")
+    .dispatch(notificationsEmailTask, {}, { availableAt, tx: db });
 };

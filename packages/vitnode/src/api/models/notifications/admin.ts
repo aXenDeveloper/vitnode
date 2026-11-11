@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 
 import type { NotificationTypePolicy } from "@/api/lib/notifications/preferences";
 
+import { notificationTypeUpdatedEvent } from "@/api/events/notifications";
 import { writeAuditLogBestEffort } from "@/api/lib/audit/write";
 import {
   isNotificationEmailAvailable,
@@ -231,7 +232,7 @@ export const updateNotificationTypePolicy = async (
     changes: auditDiff({ after: merged, before: policies.get(typeId) ?? {} }),
     target: { id: typeId, label: typeId, type: "notification_type" },
   });
-  await c.get("events").emit("notifications.type.updated", { typeId });
+  await c.get("events").emit(notificationTypeUpdatedEvent, { typeId });
 
   return merged;
 };

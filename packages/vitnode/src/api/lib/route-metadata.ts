@@ -3,15 +3,16 @@ const ROUTE_STAFF_PERMISSIONS = Symbol.for("vitnode.route.staffPermissions");
 export const isAdminApiPath = (path: string): boolean =>
   /(^|\/)admin(\/|$)/.test(path);
 
-export interface RouteStaffPermissionRef {
+/** A route guard's permission as plain data: the plugin is always resolved. */
+export interface RouteStaffPermission {
   module: string;
   permission: string;
-  plugin?: string;
+  plugin: string;
 }
 
 export interface RouteStaffPermissions {
-  admin?: RouteStaffPermissionRef;
-  moderator?: RouteStaffPermissionRef;
+  admin?: RouteStaffPermission;
+  moderator?: RouteStaffPermission;
 }
 
 export const setRouteStaffPermissions = (

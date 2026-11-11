@@ -1,0 +1,568 @@
+---
+title: Write a complete operation
+description: "Build a VitNode write operation end to end: a staff-guarded route, a service, a transaction that queues a task, a cache generation bump and an event."
+icon: Workflow
+---
+
+A real write rarely touches only one table. Filing a correction on a newsroom article stores a row, queues an announcement, invalidates a cached list and tells other plugins about it, and each of those has to happen at the right moment. This guide walks through the newsroom plugin's corrections feature, which ships in the VitNode repository, so every file below compiles there. Use it as the template for your own operations.
+
+| Piece                 | File in `plugins/newsroom/src`                         | API                                 |
+| --------------------- | ------------------------------------------------------ | ----------------------------------- |
+| Staff permission      | `staff-permissions.ts`                                 | `defineStaffPermissions`            |
+| Queue task            | `api/tasks/announce-correction.task.ts`                | `buildQueueTask`                    |
+| Event                 | `api/events.ts`                                        | `defineEvent`                       |
+| Cache entries         | `api/cache/article-corrections.cache.ts`               | `defineCacheEntry`                  |
+| Service               | `api/modules/corrections/corrections.service.ts`       | `createCorrectionsService(deps)`    |
+| Admin route           | `api/modules/admin/corrections/routes/create.route.ts` | `buildRoute`, `respondJson`         |
+| Public route          | `api/modules/corrections/routes/list.route.ts`         | `buildRoute`                        |
+
+## Before you begin
+
+- The VitNode repository running with `pnpm dev`, as in [Contributing](/docs/dev/contribution). The `newsroom_corrections` table comes with its migration. In your own plugin, create the table first, as in [Database](/docs/dev/database).
+- At least one newsroom article, created in **AdminCP → Newsroom → Articles**.
+
+<Steps>
+
+<Step>
+
+### Declare the permission
+
+Only editors may file corrections, so the plugin declares an admin permission:
+
+```ts title="plugins/newsroom/src/staff-permissions.ts"
+import { defineStaffPermissions } from "@vitnode/core/lib/staff-permissions";
+
+import { manifest } from "@/manifest.gen";
+
+/** The newsroom's own staff permissions; the Content Engine adds those of its content types. */
+export const staffPermissions = defineStaffPermissions(manifest, {
+  admin: {
+    corrections: ["can_create"],
+  },
+  moderator: {
+    widgets: ["can_edit"],
+  },
+});
+```
+
+`config.api.ts` passes it as `permissionStaff: staffPermissions`, and `en.json` labels it `"newsroom:corrections:can_create": "File corrections on articles"`.
+
+</Step>
+
+<Step>
+
+### Define the schemas
+
+One file holds what readers see and what an editor sends. The stored row also has `createdById`, which no schema here declares:
+
+```ts title="plugins/newsroom/src/api/modules/corrections/corrections.schema.ts"
+import { z } from "@hono/zod-openapi";
+
+/** A correction as readers see it: never who filed it. */
+export const zodCorrection = z.object({
+  body: z.string(),
+  createdAt: z.iso.datetime(),
+  id: z.number().int().positive(),
+});
+
+/** One article's corrections, newest first. Also the cached value. */
+export const zodArticleCorrections = z.object({
+  corrections: z.array(zodCorrection),
+});
+
+/** What filing a correction accepts. */
+export const zodFileCorrectionBody = z.object({
+  articleId: z.number().int().positive(),
+  body: z.string().trim().min(3).max(1000),
+});
+
+export type FileCorrectionInput = z.infer<typeof zodFileCorrectionBody>;
+```
+
+</Step>
+
+<Step>
+
+### Define the task, the event and the cache entry
+
+All three come from the plugin's `src/api/builders.ts`, so each is owned by `newsroom`. The task announces a filed correction in the background:
+
+```ts title="plugins/newsroom/src/api/tasks/announce-correction.task.ts"
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+
+import { buildQueueTask } from "@/api/builders";
+import { newsroom_articles } from "@/database/articles";
+import { newsroom_corrections } from "@/database/corrections";
+
+export const announceCorrectionTask = buildQueueTask({
+  name: "announce-correction",
+  payload: z.object({ correctionId: z.number().int().positive() }),
+  maxAttempts: 5,
+  handler: async (c, { correctionId }) => {
+    const [correction] = await c
+      .get("db")
+      .select({ title: newsroom_articles.title })
+      .from(newsroom_corrections)
+      .innerJoin(
+        newsroom_articles,
+        eq(newsroom_articles.id, newsroom_corrections.articleId),
+      )
+      .where(eq(newsroom_corrections.id, correctionId))
+      .limit(1);
+    // Deleted with its article since it was queued: nothing left to announce.
+    if (!correction) return;
+
+    await c
+      .get("log")
+      .debug(
+        `[newsroom] Correction #${correctionId} on "${correction.title}" announced.`,
+      );
+  },
+});
+```
+
+The event tells other plugins a correction exists:
+
+```ts title="plugins/newsroom/src/api/events.ts"
+import { z } from "zod";
+
+import { defineEvent } from "@/api/builders";
+
+/** An editor filed a correction on an article. Emitted after it is committed. */
+export const correctionFiledEvent = defineEvent({
+  name: "newsroom.correction.filed",
+  payload: z.object({
+    articleId: z.number().int().positive(),
+    correctionId: z.number().int().positive(),
+  }),
+});
+```
+
+Two cache entries hold one article's public list: a generation token per article, and the list itself, keyed by article id and that token:
+
+```ts title="plugins/newsroom/src/api/cache/article-corrections.cache.ts"
+import { z } from "zod";
+
+import { defineCacheEntry } from "@/api/builders";
+import { zodArticleCorrections } from "@/api/modules/corrections/corrections.schema";
+
+/**
+ * One article's corrections generation: a random token that filing a
+ * correction replaces. Lists are cached under the token a reader captured
+ * before loading, so a reader that loaded rows before the write can only fill
+ * an old generation that nobody reads again.
+ *
+ * Kept longer than the lists it fences. When it expires or is lost, the next
+ * reader starts a new random token - never a previous one - so an old list
+ * cannot become current again; the cost is one cold read.
+ */
+export const articleCorrectionsGenerationCache = defineCacheEntry({
+  name: "article-corrections.generation",
+  version: 1,
+  key: (articleId: number) => [articleId],
+  schema: z.string().min(1),
+  ttlSeconds: 24 * 60 * 60,
+});
+
+/** One article's public corrections, under the article's current generation. */
+export const articleCorrectionsCache = defineCacheEntry({
+  name: "article-corrections",
+  version: 2,
+  key: (articleId: number, generation: string) => [articleId, generation],
+  schema: zodArticleCorrections,
+  ttlSeconds: 600,
+});
+```
+
+</Step>
+
+<Step>
+
+### Write the service
+
+The service receives each capability it uses, typed as narrowly as it uses it, and never sees the Hono context or an HTTP status. "No such article" is a result, not an exception:
+
+```ts title="plugins/newsroom/src/api/modules/corrections/corrections.service.ts"
+import type { EnvVariablesVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+
+import { desc, eq } from "drizzle-orm";
+import { randomUUID } from "node:crypto";
+
+import {
+  articleCorrectionsCache,
+  articleCorrectionsGenerationCache,
+} from "@/api/cache/article-corrections.cache";
+import { correctionFiledEvent } from "@/api/events";
+import { announceCorrectionTask } from "@/api/tasks/announce-correction.task";
+import { newsroom_articles } from "@/database/articles";
+import { newsroom_corrections } from "@/database/corrections";
+
+import type { FileCorrectionInput } from "./corrections.schema";
+
+/** What the corrections service needs, passed in by whoever builds it. */
+export interface CorrectionsServiceDeps {
+  /** In a route: `c.get("cache")`. */
+  cache: Pick<EnvVariablesVitNode["cache"], "entry">;
+  /** In a route: `c.get("db")`. `file` opens its own transaction on it. */
+  db: Omit<EnvVariablesVitNode["db"], "$client">;
+  /** In a route: `c.get("events")`. */
+  events: Pick<EnvVariablesVitNode["events"], "emit">;
+  /** In a route: `c.get("queue")`. */
+  queue: Pick<EnvVariablesVitNode["queue"], "dispatch">;
+}
+
+/** What `file` resolves to. The stored row includes who filed it - never return it as is. */
+export type FileCorrectionResult =
+  | { correction: typeof newsroom_corrections.$inferSelect; ok: true }
+  | { error: "article_not_found"; ok: false };
+
+/**
+ * Article corrections: filing one and reading an article's list. Build it per
+ * request from the context's capabilities:
+ * `createCorrectionsService({ cache: c.get("cache"), db: c.get("db"), events: c.get("events"), queue: c.get("queue") })`.
+ */
+export const createCorrectionsService = ({
+  cache,
+  db,
+  events,
+  queue,
+}: CorrectionsServiceDeps) => ({
+  /**
+   * Files a correction on an article. The row and its announcement task commit
+   * together, so the task is queued only when the correction is stored. Only
+   * after that commit does it move the article's corrections generation - so
+   * a list a reader loaded before the write can never become the cached one -
+   * and then emit the event. A rolled-back write does neither.
+   */
+  file: async ({
+    actor,
+    articleId,
+    body,
+  }: FileCorrectionInput & {
+    actor: { id: number };
+  }): Promise<FileCorrectionResult> => {
+    const correction = await db.transaction(async tx => {
+      const [article] = await tx
+        .select({ id: newsroom_articles.id })
+        .from(newsroom_articles)
+        .where(eq(newsroom_articles.id, articleId))
+        .limit(1);
+      if (!article) return null;
+
+      const [row] = await tx
+        .insert(newsroom_corrections)
+        .values({ articleId, body, createdById: actor.id })
+        .returning();
+      if (!row) throw new Error("Inserting the correction returned no row.");
+
+      await queue.dispatch(
+        announceCorrectionTask,
+        { correctionId: row.id },
+        { tx },
+      );
+
+      return row;
+    });
+    if (!correction) return { error: "article_not_found", ok: false };
+
+    await cache
+      .entry(articleCorrectionsGenerationCache, articleId)
+      .set(randomUUID());
+    await events.emit(correctionFiledEvent, {
+      articleId,
+      correctionId: correction.id,
+    });
+
+    return { correction, ok: true };
+  },
+
+  /**
+   * An article's corrections, newest first, read through the cache under the
+   * generation captured before loading.
+   */
+  listForArticle: async (articleId: number) => {
+    const generations = cache.entry(
+      articleCorrectionsGenerationCache,
+      articleId,
+    );
+    const generation =
+      (await generations.get()) ??
+      (await generations.setIfMissing(randomUUID()));
+
+    return await cache
+      .entry(articleCorrectionsCache, articleId, generation)
+      .remember(async () => {
+        const rows = await db
+          .select({
+            body: newsroom_corrections.body,
+            createdAt: newsroom_corrections.createdAt,
+            id: newsroom_corrections.id,
+          })
+          .from(newsroom_corrections)
+          .where(eq(newsroom_corrections.articleId, articleId))
+          .orderBy(desc(newsroom_corrections.id));
+
+        return {
+          corrections: rows.map(row => ({
+            ...row,
+            createdAt: row.createdAt.toISOString(),
+          })),
+        };
+      });
+  },
+});
+```
+
+The order inside `file` is the point of this guide:
+
+1. **Inside the transaction:** the row, and the task with `{ tx }`. Both commit or neither does, so the worker never announces a correction that was rolled back, and a stored correction always has its announcement queued.
+2. **After the commit:** move the article's generation to a new random token, then emit the event. Emitting earlier would let a listener read a row that may still roll back, and a rolled-back write moves nothing.
+
+Deleting the list's key would not be enough. A reader that loaded the old rows just before the commit could finish after the delete and store them again, and every later reader would get the stale list until it expired. That is why `listForArticle` reads the generation *before* loading and stores the list under that token. A late reader can only fill the old generation, which nobody reads again; the next reader resolves the new token and loads the new row.
+
+`setIfMissing` creates the first token atomically (`SET NX`), so a reader that started before the first correction cannot overwrite the token the writer just set. Tokens are random and the generation outlives the lists it fences (24 hours against 600 seconds), so an expired or lost generation starts a new token instead of bringing an old list back.
+
+The generation move and the event are not part of the transaction. If the process dies between the commit and those two steps, the correction is stored and announced, but listeners never hear of it and the cached list stays until its 600-second TTL; the same happens if Redis rejects the generation write. Without any cache store every read goes to the database. Events are not durable; anything that must happen goes in the queued task.
+
+</Step>
+
+<Step>
+
+### Map the result in the admin route
+
+The route checks who may call it, builds the service from the context, and turns each result into a status. `respondJson` answers with only the fields of `zodFiledCorrection`, so `createdById` never leaves the server:
+
+```ts title="plugins/newsroom/src/api/modules/admin/corrections/routes/create.route.ts"
+import { z } from "@hono/zod-openapi";
+import { respondJson } from "@vitnode/core/api/lib/respond-json";
+import { HTTPException } from "hono/http-exception";
+
+import { buildRoute } from "@/api/builders";
+import {
+  zodCorrection,
+  zodFileCorrectionBody,
+} from "@/api/modules/corrections/corrections.schema";
+import { createCorrectionsService } from "@/api/modules/corrections/corrections.service";
+import { staffPermissions } from "@/staff-permissions";
+
+const zodFiledCorrection = zodCorrection.extend({
+  articleId: z.number().int().positive(),
+});
+
+export const createCorrectionRoute = buildRoute({
+  adminStaffPermission: staffPermissions.admin.corrections.canCreate,
+  route: {
+    method: "post",
+    path: "/",
+    description:
+      "Files a correction on an article. Readers see it under the article.",
+    request: {
+      body: {
+        required: true,
+        content: { "application/json": { schema: zodFileCorrectionBody } },
+      },
+    },
+    responses: {
+      201: {
+        content: { "application/json": { schema: zodFiledCorrection } },
+        description: "The filed correction",
+      },
+      403: {
+        description: "Requires the corrections.can_create staff permission.",
+      },
+      404: {
+        content: {
+          "application/json": {
+            schema: z.object({ error: z.literal("article_not_found") }),
+          },
+        },
+        description: "No article with this id",
+      },
+    },
+  },
+  handler: async c => {
+    const admin = c.get("admin");
+    if (!admin) throw new HTTPException(403);
+
+    const result = await createCorrectionsService({
+      cache: c.get("cache"),
+      db: c.get("db"),
+      events: c.get("events"),
+      queue: c.get("queue"),
+    }).file({ ...c.req.valid("json"), actor: { id: admin.user.id } });
+    if (!result.ok) return c.json({ error: result.error }, 404);
+
+    // The row also holds who filed it; the schema leaves that out.
+    return respondJson(c, 201, zodFiledCorrection, {
+      ...result.correction,
+      createdAt: result.correction.createdAt.toISOString(),
+    });
+  },
+});
+```
+
+The staff permission decides who may file a correction. It says nothing about which article: any editor with **File corrections on articles** may correct any article. When that matters for your operation, check it in the service with an explicit argument, as the service does with `actor`.
+
+</Step>
+
+<Step>
+
+### Read through the cache in the public route
+
+The public route checks that the article is public first, then reads through the service, so the list is cached per article:
+
+```ts title="plugins/newsroom/src/api/modules/corrections/routes/list.route.ts"
+import { z } from "@hono/zod-openapi";
+import { HTTPException } from "hono/http-exception";
+
+import { buildRoute } from "@/api/builders";
+import { articleContent } from "@/database/articles";
+
+import { zodArticleCorrections } from "../corrections.schema";
+import { createCorrectionsService } from "../corrections.service";
+
+export const listCorrectionsRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/",
+    description: "The corrections filed on one public article, newest first",
+    request: {
+      query: z.object({
+        articleId: z.coerce.number().int().positive().openapi({ example: 1 }),
+      }),
+    },
+    responses: {
+      200: {
+        content: { "application/json": { schema: zodArticleCorrections } },
+        description: "The article's corrections",
+      },
+      404: { description: "No public article with this id" },
+    },
+  },
+  handler: async c => {
+    const { articleId } = c.req.valid("query");
+    const article = await articleContent.publicService?.(c).findById(articleId);
+    if (!article) {
+      throw new HTTPException(404, { message: "Article not found." });
+    }
+
+    const corrections = await createCorrectionsService({
+      cache: c.get("cache"),
+      db: c.get("db"),
+      events: c.get("events"),
+      queue: c.get("queue"),
+    }).listForArticle(articleId);
+
+    return c.json(corrections, 200);
+  },
+});
+```
+
+A route may throw `HTTPException`; the service never does.
+
+</Step>
+
+<Step>
+
+### Register everything
+
+The task goes on a top-level module, where the queue collects it:
+
+```ts title="plugins/newsroom/src/api/modules/corrections/corrections.module.ts"
+import { buildModule } from "@/api/builders";
+import { announceCorrectionTask } from "@/api/tasks/announce-correction.task";
+
+import { listCorrectionsRoute } from "./routes/list.route";
+
+export const correctionsModule = buildModule({
+  name: "corrections",
+  routes: [listCorrectionsRoute],
+  queueTasks: [announceCorrectionTask],
+});
+```
+
+The admin route sits in `adminCorrectionsModule`, which the plugin's `admin` module lists in its `modules`. `config.api.ts` adds the public module, the event definition and the permissions to `buildApiPlugin`. This excerpt shows only those keys:
+
+```ts title="plugins/newsroom/src/config.api.ts"
+buildApiPlugin({
+  manifest,
+  eventDefinitions: [correctionFiledEvent],
+  permissionStaff: staffPermissions,
+  modules: [helloModule, adminModule, articlesModule, correctionsModule /* , ... */],
+});
+```
+
+The cache entry needs no registration.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+1. Build the plugin and run `pnpm vitnode inspect jobs` in `plugins/newsroom`:
+
+   ```txt
+     newsroom  .
+     Kind    Name                  Owner      Contract         Schedule   Module
+     ────────────────────────────────────────────────────────────────────────────────
+     queue   announce-correction   newsroom   payload schema   -          corrections
+   ```
+
+   `pnpm vitnode inspect events` lists `newsroom.correction.filed` among the plugin's event definitions.
+
+2. Add a temporary button that files a correction with `fetcher`, for example in a newsroom page you can open while signed in to the AdminCP:
+
+   ```tsx title="plugins/newsroom/src/pages/check-correction.tsx"
+   import { Button } from "@vitnode/core/components/ui/button";
+   import { fetcher } from "@vitnode/core/tanstack/fetcher";
+   import { SendIcon } from "lucide-react";
+   import { useState } from "react";
+
+   export const CheckCorrection = () => {
+     const [result, setResult] = useState("");
+     const [isPending, setIsPending] = useState(false);
+
+     const onClick = async () => {
+       setIsPending(true);
+       try {
+         const response = await fetcher({
+           plugin: "newsroom",
+           method: "post",
+           module: "admin/corrections",
+           path: "/",
+           args: { body: { articleId: 1, body: "The photo caption named the wrong town." } },
+         });
+         setResult(`${response.status} ${JSON.stringify(await response.json())}`);
+       } finally {
+         setIsPending(false);
+       }
+     };
+
+     return (
+       <div className="flex items-center gap-3">
+         <Button isLoading={isPending} onClick={onClick}>
+           <SendIcon aria-hidden="true" />
+           File a correction
+         </Button>
+         {result ? <output>{result}</output> : null}
+       </div>
+     );
+   };
+   ```
+
+   Use the id of one of your articles. Pressing it shows `201` with `id`, `articleId`, `body` and `createdAt`, and no `createdById`. An unknown article id shows `404 {"error":"article_not_found"}`, and an administrator without the permission gets `403`.
+
+3. Open `http://localhost:3000/api/newsroom/corrections?articleId=1` for a published article. The new correction is first in the list, because filing it moved the article's corrections generation, so the read missed the old cached list.
+4. Run the queue processor, as in [Queue](/docs/dev/advanced/queue#check-the-result). **Debug Panel → Log explorer** shows `[newsroom] Correction #… on "…" announced.` Remove `CheckCorrection` when you are done.
+
+## When a step calls another system
+
+A payment provider or another HTTP API cannot join your database transaction. The payments demo's checkout service shows the other pattern: `createPurchasesService({ db, payments })` in `plugins/payments-demo/src/api/modules/purchases/purchases.service.ts` commits its own row first, then calls `payments.createCheckout()`, and makes the whole operation safe to repeat instead of atomic. A refusal comes back as `{ error: "already_owned" | PaymentErrorCode, ok: false }`, and the route maps it to a status, the same way the corrections route does.
+
+## Related
+
+- [Add a service](/docs/dev/plugins/api/services): dependencies and results.
+- [Return only allowed fields](/docs/dev/plugins/api/response-fields): how `respondJson` projects a row.
+- [Migrate to typed APIs](/docs/dev/plugins/api/migrate-typed-apis): move an older plugin to these APIs.

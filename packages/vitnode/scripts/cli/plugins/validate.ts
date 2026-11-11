@@ -16,6 +16,11 @@ import { toDisplayPath } from "../ui/format";
 export type CheckStatus = "error" | "ok" | "skipped" | "warning";
 
 export interface PluginCheck {
+  /**
+   * Skipped checks only: the failed check that kept this one from running. A
+   * skipped check without it does not apply to the plugin (no API, no app).
+   */
+  blockedBy?: string;
   /** Extra lines: what is wrong, where. */
   details: string[];
   name: string;
@@ -24,10 +29,17 @@ export interface PluginCheck {
   summary?: string;
 }
 
+/**
+ * The plugin's API definition as validation left it, so a caller can reuse it
+ * instead of calling the plugin's factory again.
+ */
+export type ValidatedApi =
+  | { blockedBy: string; status: "blocked" }
+  | { definition: Record<string, unknown>; status: "loaded" }
+  | { status: "absent" };
+
 export interface PluginValidation {
-  api?:
-    | { definition: Record<string, unknown>; status: "loaded" }
-    | { status: "failed" };
+  api: ValidatedApi;
   checks: PluginCheck[];
   id: string;
   root: string;
@@ -149,6 +161,7 @@ interface NavPermission {
   module?: unknown;
   permission?: unknown;
   plugin?: unknown;
+  staffType?: unknown;
 }
 
 const navPermissions = (
@@ -207,7 +220,12 @@ export const validatePlugin = async (
   const pass = (name: string, summary?: string) => {
     checks.push({ details: [], name, status: "ok", summary });
   };
-  let api: PluginValidation["api"];
+  const apiFile = dist("config.api.js");
+  const hasApi =
+    existsSync(join(root, "src", "config.api.ts")) || existsSync(apiFile);
+  let api: ValidatedApi = hasApi
+    ? { blockedBy: "Package", status: "blocked" }
+    : { status: "absent" };
   const done = (): PluginValidation => ({
     api,
     checks,
@@ -249,13 +267,27 @@ export const validatePlugin = async (
 
   // Build output
   const configFile = dist("config.js");
-  if (!existsSync(configFile)) {
+  const missing = [
+    ...(existsSync(configFile)
+      ? []
+      : [
+          `${show(configFile)} does not exist - apps load plugins from their build output.`,
+        ]),
+    ...(hasApi && !existsSync(apiFile)
+      ? [
+          `${show(apiFile)} does not exist, but src/config.api.ts does - the app's API cannot import ${id}/config.api.`,
+        ]
+      : []),
+  ];
+  if (missing.length > 0) {
     fail("Build output", [
-      `${show(configFile)} does not exist - apps load plugins from their build output.`,
-      "Run vitnode build in the plugin's folder (or pnpm build:plugins), then validate again.",
+      ...missing,
+      "Run vitnode build in the plugin's folder (or pnpm build:plugins), then check again.",
     ]);
-
-    return done();
+    if (hasApi) api = { blockedBy: "Build output", status: "blocked" };
+    if (!existsSync(configFile)) return done();
+  } else {
+    pass("Build output", hasApi ? "config.js, config.api.js" : "config.js");
   }
 
   // Plugin definition
@@ -291,17 +323,11 @@ export const validatePlugin = async (
   }
 
   // API definition
-  const apiFile = dist("config.api.js");
   let apiDefinition: null | Record<string, unknown> = null;
   if (existsSync(apiFile)) {
+    api = { blockedBy: "API definition", status: "blocked" };
     try {
       const resolution = resolveDefinition(await importModule(apiFile));
-      apiDefinition =
-        resolution.status === "definition" ? resolution.definition : null;
-      api =
-        resolution.status === "definition"
-          ? { definition: resolution.definition, status: "loaded" }
-          : { status: "failed" };
       if (resolution.status !== "definition") {
         fail(
           "API definition",
@@ -311,15 +337,17 @@ export const validatePlugin = async (
             "buildApiPlugin({ manifest, ... })",
           ),
         );
-      } else if (apiDefinition?.pluginId !== id) {
-        fail("API definition", [
-          `pluginId is "${String(apiDefinition?.pluginId)}" but the package is "${id}".`,
-        ]);
       } else {
-        pass("API definition");
+        apiDefinition = resolution.definition;
+        api = { definition: apiDefinition, status: "loaded" };
+        if (apiDefinition.pluginId === id) pass("API definition");
+        else {
+          fail("API definition", [
+            `pluginId is "${String(apiDefinition.pluginId)}" but the package is "${id}".`,
+          ]);
+        }
       }
     } catch (error) {
-      api = { status: "failed" };
       fail("API definition", [errorMessage(error)]);
     }
   }
@@ -381,7 +409,10 @@ export const validatePlugin = async (
 
     const [defaultLocale, defaultMessages] = [...loaded.entries()][0] ?? [];
     if (defaultLocale !== undefined) {
-      for (const { namespace, path } of routeNamespaces) {
+      const own = routeNamespaces.filter(
+        ({ namespace }) => namespace === id || namespace.startsWith(`${id}.`),
+      );
+      for (const { namespace, path } of own) {
         if (!hasMessagePath(defaultMessages, namespace, id)) {
           problems.push(
             `Route ${path} loads the namespace "${namespace}", which ${defaultLocale} does not define.`,
@@ -424,10 +455,18 @@ export const validatePlugin = async (
         ? apiDefinition.permissionStaff.admin
         : undefined;
       const problems = navPermissions(nav).flatMap(({ href, permission }) => {
-        if (permission.plugin !== undefined && permission.plugin !== id)
-          return [];
         const module = String(permission.module);
         const wanted = String(permission.permission);
+        if (
+          typeof permission.staffType === "string" &&
+          permission.staffType !== "admin"
+        ) {
+          return [
+            `AdminCP navigation item ${href} requires the ${permission.staffType} permission ${module}.${wanted}; AdminCP navigation takes admin permissions only.`,
+          ];
+        }
+        if (permission.plugin !== undefined && permission.plugin !== id)
+          return [];
         const entries =
           isRecord(declared) && Array.isArray(declared[module])
             ? (declared[module] as unknown[])
@@ -442,7 +481,7 @@ export const validatePlugin = async (
           ? []
           : [
               `AdminCP navigation item ${href} requires the permission ${module}.${wanted},`,
-              `but ${id} does not register it in buildApiPlugin({ permissionStaff: { admin } }).`,
+              `but ${id} does not declare it in the admin permissions of its defineStaffPermissions(manifest, {...}).`,
             ];
       });
 

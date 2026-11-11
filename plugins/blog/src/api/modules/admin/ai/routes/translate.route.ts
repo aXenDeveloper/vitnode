@@ -1,3 +1,7 @@
+import {
+  CONTENT_PERMISSIONS,
+  contentAdminStaffPermission,
+} from "@vitnode/core/content";
 import { z } from "zod";
 
 import {
@@ -5,9 +9,15 @@ import {
   zodTranslateAiSchema,
 } from "@/api/ai/actions";
 import { buildRoute } from "@/api/builders";
+import { blogPostContentType } from "@/content/post";
+import { manifest } from "@/manifest.gen";
 
 export const translateAiAdminRoute = buildRoute({
-  adminStaffPermission: { module: "posts", permission: "can_edit" },
+  adminStaffPermission: contentAdminStaffPermission(
+    manifest.id,
+    blogPostContentType,
+    CONTENT_PERMISSIONS.edit,
+  ),
   route: {
     method: "post",
     description:

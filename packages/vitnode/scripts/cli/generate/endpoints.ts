@@ -43,7 +43,12 @@ export const joinEndpointPath = (
 const pathKey = (path: string): string =>
   path.replace(/\{[^}]*\}/g, "{}").replace(/\/:[^/]+/g, "/{}");
 
-const endpointKey = (method: string, path: string): string =>
+/**
+ * What makes two endpoints the same route: the method in any case, and the
+ * path with every parameter (`{id}`, `{noteId}`, `:id`) reduced to one
+ * placeholder, since Hono matches them alike.
+ */
+export const endpointKey = (method: string, path: string): string =>
   `${method.toLowerCase()} ${pathKey(path)}`;
 
 export interface DeclaredEndpoint {

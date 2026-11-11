@@ -10,6 +10,7 @@ import {
   isAiMonth,
   resolveAiOverviewRange,
 } from "@/lib/ai/overview-range";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const zodUsageTotals = z.object({
   chargedUsd: z.string(),
@@ -69,7 +70,7 @@ export const zodAiOverview = z.object({
 });
 
 export const aiOverviewAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canView,
   route: {
     method: "get",
     description:

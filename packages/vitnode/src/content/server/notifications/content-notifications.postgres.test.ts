@@ -13,6 +13,7 @@ import {
 } from "vitest";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
+import type { ContentNotificationIntent } from "@/api/modules/content/tasks/content-notifications.task";
 import type { PostgresTestSchema } from "@/tests/postgres";
 
 import { createNotificationRegistry } from "@/api/lib/notifications/registry";
@@ -48,8 +49,6 @@ import {
 import { testManifest } from "@/tests/manifest";
 import { createPostgresTestSchema, POSTGRES_TEST_URL } from "@/tests/postgres";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
-
-import type { ContentNotificationIntent } from "./intents";
 
 import { contentNotificationRefs } from "./access";
 import { buildContentNotifications } from "./define";

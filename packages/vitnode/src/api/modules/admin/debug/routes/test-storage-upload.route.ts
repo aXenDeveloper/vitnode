@@ -2,6 +2,7 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const ADMIN_TEST_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
 
@@ -14,7 +15,7 @@ const ADMIN_TEST_MIME_TYPES = [
 ];
 
 export const testStorageUploadDebugAdminRoute = buildRoute({
-  adminStaffPermission: { module: "system", permission: "can_test_storage" },
+  adminStaffPermission: coreStaffPermissions.admin.system.canTestStorage,
   route: {
     method: "post",
     description:

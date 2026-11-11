@@ -1,11 +1,11 @@
 import { z } from "@hono/zod-openapi";
-import { PaymentError } from "@vitnode/core/api/lib/payments/errors";
-import { and, eq } from "drizzle-orm";
+import { PAYMENT_ERROR_STATUS } from "@vitnode/core/api/lib/payments/errors";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
-import { DEMO_ITEM_IDS, DEMO_ITEMS, purchaseReference } from "@/catalog";
-import { payments_demo_purchases } from "@/database/purchases";
+import { DEMO_ITEM_IDS } from "@/catalog";
+
+import { createPurchasesService } from "../purchases.service";
 
 const zodError = (description: string) => ({
   content: {
@@ -59,64 +59,26 @@ export const checkoutRoute = buildRoute({
     const user = c.get("user");
     if (!user) throw new HTTPException(401);
     const { itemId, providerId } = c.req.valid("json");
-    const item = DEMO_ITEMS[itemId];
-    const db = c.get("db");
 
-    await db
-      .insert(payments_demo_purchases)
-      .values({ itemId, userId: user.id })
-      .onConflictDoNothing();
-    const [purchase] = await db
-      .select()
-      .from(payments_demo_purchases)
-      .where(
-        and(
-          eq(payments_demo_purchases.userId, user.id),
-          eq(payments_demo_purchases.itemId, itemId),
-        ),
-      )
-      .limit(1);
-    if (!purchase) throw new HTTPException(500);
+    const result = await createPurchasesService({
+      db: c.get("db"),
+      payments: c.get("payments"),
+    }).checkout({ actor: { id: user.id }, itemId, providerId });
 
-    const payments = c.get("payments");
-    const reference = purchaseReference(purchase.id);
-    const attempts = await payments.listByReference(reference);
-    if (attempts.some(attempt => attempt.status === "succeeded")) {
-      return c.json({ error: "already_owned" }, 409);
+    if (result.ok) return c.json(result.checkout, 200);
+    if (result.error === "already_owned") {
+      return c.json({ error: result.error }, 409);
     }
 
-    try {
-      const checkout = await payments.createCheckout({
-        amount: item.amount,
-        cancelPath: `/payments-demo/purchases/${purchase.id}`,
-        currency: item.currency,
-        description: "VitNode demo sticker pack",
-        providerId,
-        reference,
-        successPath: `/payments-demo/purchases/${purchase.id}`,
-        userId: user.id,
-      });
-
-      return c.json(
-        {
-          paymentId: checkout.paymentId,
-          purchaseId: purchase.id,
-          redirectUrl: checkout.redirectUrl,
-        },
-        200,
-      );
-    } catch (error) {
-      if (!(error instanceof PaymentError)) throw error;
-
-      switch (error.status) {
-        case 400:
-        case 409:
-        case 502:
-        case 503:
-          return c.json({ error: error.code }, error.status);
-        default:
-          throw new HTTPException(500);
-      }
+    const status = PAYMENT_ERROR_STATUS[result.error];
+    switch (status) {
+      case 400:
+      case 409:
+      case 502:
+      case 503:
+        return c.json({ error: result.error }, status);
+      default:
+        throw new HTTPException(500);
     }
   },
 });

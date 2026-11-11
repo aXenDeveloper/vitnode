@@ -291,6 +291,7 @@ export type {
   ResolvedContentContainerPolicies,
 } from "./containers/policies";
 export {
+  contentContainerAdminStaffPermission,
   contentContainerPermissionEntries,
   validateContentContainers,
 } from "./containers/registry";
@@ -372,7 +373,13 @@ export {
   ContentTranslationVersionConflict,
   ContentVersionConflict,
 } from "./errors";
-export { contentEventName } from "./events";
+export { contentEvent } from "./event-definitions";
+export type {
+  ContentEventActionOf,
+  ContentEventDefinition,
+  ContentEventInput,
+  ContentEventPayloadOf,
+} from "./event-definitions";
 export type {
   ContentCreatedPayload,
   ContentDeletedPayload,
@@ -505,6 +512,7 @@ export type {
 export {
   CONTENT_EDIT_HREF_PLACEHOLDER,
   contentAdminHref,
+  contentAdminStaffPermission,
   contentCreateHref,
   contentEditHref,
   contentEditHrefTemplate,
@@ -519,6 +527,7 @@ export {
 } from "./registry";
 export type {
   ContentAdminAddressable,
+  ContentPermission,
   RegisteredContentType,
 } from "./registry";
 export { contentRevisionDiff } from "./revisions";

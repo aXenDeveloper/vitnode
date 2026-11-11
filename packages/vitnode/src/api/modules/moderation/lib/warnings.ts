@@ -13,6 +13,13 @@ import type {
   WarningThresholdAction,
 } from "@/lib/moderation/warnings";
 
+import {
+  moderationReportResolvedEvent,
+  moderationSanctionAppliedEvent,
+  moderationSanctionRevokedEvent,
+  moderationWarningIssuedEvent,
+  moderationWarningRevokedEvent,
+} from "@/api/events/moderation";
 import { userAuditLabel } from "@/api/lib/audit/labels";
 import { isUniqueViolation } from "@/api/lib/db-errors";
 import { canOnReport } from "@/api/lib/moderation/access";
@@ -723,7 +730,7 @@ export const issueWarning = async (
     await forgetSuspension(c, draft.user.id, { disconnect: true });
   }
   const events = c.get("events");
-  await events.emit("moderation.warning.issued", {
+  await events.emit(moderationWarningIssuedEvent, {
     issuedById: moderator.user.id,
     pluginId: draft.content?.pluginId ?? null,
     points: draft.points,
@@ -735,8 +742,8 @@ export const issueWarning = async (
     warningId: result.warningId,
   });
   if (result.sanction) {
-    await events.emit("moderation.sanction.applied", {
-      endsAt: result.sanction.endsAt,
+    await events.emit(moderationSanctionAppliedEvent, {
+      endsAt: result.sanction.endsAt?.toISOString() ?? null,
       sanctionId: result.sanction.id,
       source: "threshold",
       thresholdId: result.sanction.thresholdId,
@@ -746,7 +753,7 @@ export const issueWarning = async (
     });
   }
   if (report && result.reportResolved) {
-    await events.emit("moderation.report.resolved", {
+    await events.emit(moderationReportResolvedEvent, {
       reportId: report.id,
       resolution: "action_taken",
     });
@@ -825,7 +832,7 @@ export const revokeWarning = async (
   });
   if (!revoked) throw reportError(409, { error: "already_revoked" });
 
-  await c.get("events").emit("moderation.warning.revoked", {
+  await c.get("events").emit(moderationWarningRevokedEvent, {
     revokedById: moderator.user.id,
     userId: warning.userId,
     warningId: id,
@@ -899,7 +906,7 @@ export const revokeSanction = async (
   if (!revoked) throw reportError(409, { error: "already_revoked" });
 
   await forgetSuspension(c, sanction.userId, { disconnect: false });
-  await c.get("events").emit("moderation.sanction.revoked", {
+  await c.get("events").emit(moderationSanctionRevokedEvent, {
     revokedById: moderator.user.id,
     sanctionId: id,
     userId: sanction.userId,

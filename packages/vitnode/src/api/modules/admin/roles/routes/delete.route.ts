@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { and, count, eq, inArray } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { roleDeletedEvent } from "@/api/events/roles";
 import { roleAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
@@ -10,6 +11,7 @@ import { assertCanAssignPrimaryRole } from "@/api/modules/admin/users/lib/assert
 import { core_languages_words } from "@/database/languages";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import {
   assertCanManageAdminRole,
@@ -17,7 +19,7 @@ import {
 } from "../lib/assert-manage-admin-role";
 
 export const deleteRoleAdminRoute = buildRoute({
-  adminStaffPermission: { module: "roles", permission: "can_delete" },
+  adminStaffPermission: coreStaffPermissions.admin.roles.canDelete,
   route: {
     method: "delete",
     description: "Delete a role by id (Admin only)",
@@ -212,7 +214,7 @@ export const deleteRoleAdminRoute = buildRoute({
       ),
     );
 
-    await c.get("events").emit("role.deleted", { roleId });
+    await c.get("events").emit(roleDeletedEvent, { roleId });
 
     return c.body(null, 200);
   },

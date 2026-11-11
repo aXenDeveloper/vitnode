@@ -5,6 +5,7 @@ import { getCookie } from "hono/cookie";
 import { HTTPException } from "hono/http-exception";
 
 import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
+import { cacheStore } from "@/api/lib/cache";
 import { isStaff } from "@/api/lib/check-staff-permission";
 import { hashSessionToken } from "@/api/lib/session-token";
 import { core_admin_sessions } from "@/database/admins";
@@ -140,9 +141,9 @@ export class SessionAdminModel {
     // the TTL would naturally expire it. Nothing to drop when the device is
     // unknown - the key is built from its id, so no entry was ever written.
     if (device) {
-      await this.c
-        .get("cache")
-        .deleteSystem(adminSessionCacheKey(hashedToken, device.id));
+      await cacheStore(this.c).deleteSystem(
+        adminSessionCacheKey(hashedToken, device.id),
+      );
     }
 
     deleteAuthCookie(this.c, this.c.get("core").authorization.adminCookieName);
@@ -163,7 +164,7 @@ export class SessionAdminModel {
     ]);
     if (!device) return null;
 
-    const cache = this.c.get("cache");
+    const cache = cacheStore(this.c);
     const cacheKey = adminSessionCacheKey(hashedToken, device.id);
 
     // Fast path: skip the session + user lookups for a session resolved on a

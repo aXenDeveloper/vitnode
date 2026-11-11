@@ -1,4 +1,4 @@
-import { buildQueueTask } from "@/api/lib/queue";
+import { buildQueueTask } from "@/api/builders";
 import { CONTENT_QUEUE_TASK_SCHEDULE_EFFECTS } from "@/content/const";
 import {
   contentScheduleEffectsPayloadSchema,
@@ -7,11 +7,11 @@ import {
 
 export const contentScheduleEffectsQueueTask = buildQueueTask({
   name: CONTENT_QUEUE_TASK_SCHEDULE_EFFECTS,
+  payload: contentScheduleEffectsPayloadSchema,
   description:
     "Emit the event, sync search and expire the cache for a scheduled publish or unpublish that has already committed. Never republishes.",
   maxAttempts: 5,
-  handler: async (c, payload) => {
-    const input = contentScheduleEffectsPayloadSchema.parse(payload);
+  handler: async (c, input) => {
     const outcome = await runContentScheduleEffects(c, input);
 
     if (outcome.status === "unregistered") {

@@ -3,9 +3,10 @@ import { z } from "zod";
 import { buildRoute } from "@/api/builders";
 import { updateNotificationTypePolicy } from "@/api/models/notifications/admin";
 import { zodNotificationEmailMode } from "@/api/modules/notifications/notifications.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const updateNotificationTypePolicyRoute = buildRoute({
-  adminStaffPermission: { module: "notifications", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.notifications.canEdit,
   route: {
     method: "put",
     description:

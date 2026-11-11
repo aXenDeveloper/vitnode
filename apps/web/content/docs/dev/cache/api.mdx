@@ -1,79 +1,162 @@
 ---
 title: Cache API data
-description: Cache slow database reads in a VitNode Hono route with c.get("cache").remember, and delete the key when the data changes.
+description: Cache a slow database read in a VitNode Hono route with a typed defineCacheEntry (name, version, key and Zod schema) and delete it when the data changes.
 icon: Server
 ---
 
-`c.get("cache")` stores values in Redis from inside a Hono route handler. Use it for reads that are slow and give the same answer to many visitors, such as counts over a large table or a computed summary. Without Redis, values live in a small in-memory store for at most 15 seconds, so the same code works with and without it.
+The API cache keeps the result of a slow read, such as a count over a large table, so it runs once for many visitors instead of once per request. Every cached value is a **cache entry**: `defineCacheEntry` declares its key, its Zod schema and how long it lives, and `c.get("cache").entry(definition, ...key)` reads and writes it. Reads come back typed and validated, and writes are checked before they are stored. In this guide the `site-notes` plugin caches how many notes were written in a given year.
 
 ## Before you begin
 
-Connect Redis in `vitnode.api.config.ts` as described in [Redis](/docs/dev/advanced/redis). You can write the code below without Redis, but each instance then keeps its own short-lived copy, and a `delete` on one instance never reaches the others.
+- The `site-notes` plugin with its `site_notes` table from [Database](/docs/dev/database), and the create route from [Permissions](/docs/dev/working-with-users/staff-permissions).
+- Optional: [Redis](/docs/dev/advanced/redis). Without it, entries live in a per-process memory store for at most 15 seconds, so the same code works with and without Redis, but a `delete` on one instance never reaches the others.
 
 <Steps>
 <Step>
 
-### Wrap the slow read in `remember`
+### Define the entry
 
-In the route handler, pass `remember` a key, a time to live (TTL) in seconds, and a function that loads the value:
+Create `src/api/cache/year-stats.cache.ts`. `defineCacheEntry` comes from the plugin's `src/api/builders.ts`, which binds it to your plugin id:
 
-```ts title="plugins/site-notes/src/api/modules/notes/routes/stats.route.ts"
-handler: async c => {
-  // [!code ++:5]
-  const stats = await c.get('cache').remember(
-    'notes:stats',
-    60 * 5,
-    async () => await countNotesByAuthor(c),
-  )
+```ts title="plugins/site-notes/src/api/cache/year-stats.cache.ts"
+import { z } from "zod";
 
-  return c.json(stats)
-},
+import { defineCacheEntry } from "@/api/builders";
+
+export const yearStatsCache = defineCacheEntry({
+  name: "year-stats",
+  version: 1,
+  key: (year: number) => [year],
+  schema: z.object({
+    notes: z.number().int().nonnegative(),
+    lastNoteAt: z.iso.datetime().nullable(),
+  }),
+  ttlSeconds: 300,
+});
 ```
 
-`countNotesByAuthor` stands for your existing database query. On a hit, `remember` returns the stored value and skips the query. On a miss, it runs the query, stores the result for five minutes and returns it.
-
-Keys are prefixed with the plugin that owns the route. `notes:stats` is stored as `vitnode:cache:site-notes:notes:stats`, so it cannot collide with another plugin's key. Values are stored as JSON, so a `Date` comes back as a string.
+- **`key`** turns the entry's arguments into key parts. Its parameters become the arguments of `entry()`, so `year` must be a number wherever the entry is used. Omit `key` for an entry with a single value.
+- **`schema`** checks every write and every read. Values are stored as JSON, so its input must be JSON: `z.iso.datetime()` instead of `z.date()`.
+- **`version`** is yours to bump when the stored shape or its meaning changes. See [Change a cache entry](/docs/dev/cache/typed-entries).
+- **The entry belongs to `site-notes`**, whichever plugin's request reads it, so a listener running in a core request reaches the same key.
 
 </Step>
 <Step>
 
-### Delete the key when the data changes
+### Read through the entry
 
-In every route that changes notes, delete the key after the write succeeds:
+Create `src/api/modules/notes/routes/year-stats.route.ts`. The handler wraps the query in `remember`:
 
-```ts title="plugins/site-notes/src/api/modules/notes/routes/create.route.ts"
-handler: async c => {
-  const note = await createNote(c, c.req.valid('json'))
-  await c.get('cache').delete('notes:stats') // [!code ++]
+```ts title="plugins/site-notes/src/api/modules/notes/routes/year-stats.route.ts"
+import { z } from "@hono/zod-openapi";
+import { and, count, gte, lt, max } from "drizzle-orm";
 
-  return c.json(note, 201)
-},
+import { buildRoute } from "@/api/builders";
+import { yearStatsCache } from "@/api/cache/year-stats.cache";
+import { site_notes } from "@/database/notes";
+
+export const yearStatsRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/stats/{year}",
+    request: {
+      params: z.object({ year: z.coerce.number().int().min(2000).max(9999) }),
+    },
+    responses: {
+      200: {
+        content: { "application/json": { schema: yearStatsCache.schema } },
+        description: "How many notes were written in the year, and when the last one was.",
+      },
+    },
+  },
+  handler: async c => {
+    const { year } = c.req.valid("param");
+    const stats = await c
+      .get("cache")
+      .entry(yearStatsCache, year)
+      .remember(async () => {
+        const [row] = await c
+          .get("db")
+          .select({ notes: count(), lastNoteAt: max(site_notes.createdAt) })
+          .from(site_notes)
+          .where(
+            and(
+              gte(site_notes.createdAt, new Date(Date.UTC(year, 0, 1))),
+              lt(site_notes.createdAt, new Date(Date.UTC(year + 1, 0, 1))),
+            ),
+          );
+
+        return {
+          notes: row?.notes ?? 0,
+          lastNoteAt: row?.lastNoteAt?.toISOString() ?? null,
+        };
+      });
+
+    return c.json(stats, 200);
+  },
+});
 ```
 
-The TTL is a safety net, not the invalidation. Without `delete`, visitors see outdated stats for up to five minutes after every write. `delete` also accepts an array of keys.
+Then add `yearStatsRoute` to the `routes` of `notesModule` in `src/api/modules/notes/notes.module.ts`.
+
+On a hit, `remember` returns the stored value parsed by the schema and skips the query. On a miss, it runs the loader, validates the result, stores it for 300 seconds and returns the parsed value. A loader result the schema rejects throws `CacheEntryValidationError` and nothing is stored, so a bug in the query surfaces instead of being cached.
+
+</Step>
+<Step>
+
+### Expire the entry after a write
+
+A new note changes the current year's count. In `src/api/modules/admin/notes/routes/create.route.ts`, import the entry with `import { yearStatsCache } from "@/api/cache/year-stats.cache";` and delete it after the insert:
+
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/create.route.ts"
+  handler: async c => {
+    const values = c.req.valid("json");
+    const [note] = await c
+      .get("db")
+      .insert(site_notes)
+      .values(values)
+      .returning({ id: site_notes.id, title: site_notes.title, body: site_notes.body });
+
+    // [!code ++:4]
+    await c
+      .get("cache")
+      .entry(yearStatsCache, new Date().getUTCFullYear())
+      .delete();
+
+    return c.json(note, 201);
+  },
+```
+
+Do the same in any other route that adds or removes notes. The TTL is a safety net, not the invalidation: without `delete`, the old count stays for up to five minutes. When the write runs in a transaction, delete after it commits.
+
+`delete()` cannot stop a request that loaded the old value just before the commit from storing it again right after the delete. For a count that may be off for a few minutes that is acceptable; when a list must show a write as soon as it commits, cache it under a [generation](/docs/dev/cache/typed-entries#keep-a-list-fresh-with-a-generation) instead.
 
 </Step>
 </Steps>
 
 <Callout type="warn" title="The API cache is shared by every visitor">
-  A key such as `notes:stats` returns the same value to everyone. For data that
-  depends on who is asking, put the user ID in the key, for example
-  `notes:stats:${userId}`, or do not cache it.
+  An entry returns the same value to everyone who asks with the same key. For
+  data that depends on who is asking, put the user id in the key, for example
+  `key: (userId: number) => [userId]`, or do not cache it.
 </Callout>
-
-`remember` treats a stored `null` as a miss, so a loader that returns `null` runs on every call. If an empty answer is expensive to compute, return an object such as `{ stats: null }` instead.
 
 ## Check the result
 
-1. Open **AdminCP → System → Integrations** (`/admin/core/system/integrations`). The Redis card shows **Active** when Redis is connected. **Needs attention** means it is configured but unreachable.
-2. Call the stats route, then list your plugin's keys:
+1. Open `http://localhost:3000/api/site-notes/notes/stats/2026`, using the year your demo notes were added. It answers `{"notes":3,"lastNoteAt":"…"}`.
+2. With Redis connected, list the plugin's entries:
 
    ```bash
-   redis-cli --scan --pattern 'vitnode:cache:site-notes:*'
+   redis-cli --scan --pattern 'vitnode:cache-entry:site-notes:*'
    ```
 
-   The output includes `vitnode:cache:site-notes:notes:stats`. Calling the route again within five minutes does not run `countNotesByAuthor`.
+   The output includes `vitnode:cache-entry:site-notes:year-stats:v1:[2026]`. Calling the URL again within five minutes does not run the query.
 
-3. Create a note and run the same command. The key is gone until the next call to the stats route.
+3. Create a note, from the [AdminCP page](/docs/dev/plugins/admin) or the test button in [Permissions](/docs/dev/working-with-users/staff-permissions#check-the-result), and run the command again. The key is gone until the next request, which then counts the new note.
 
-To type-check keys and values and validate what Redis returns, define the value with `defineCacheEntry` instead: see [Typed cache entries](/docs/dev/cache/typed-entries). For every method, including `get`, `set`, `flush` and locks, see the [API cache reference](/docs/dev/cache/reference).
+**AdminCP → System → Integrations** (`/admin/core/system/integrations`) shows whether Redis is connected: the Redis card says **Active**, or **Needs attention** when it is configured but unreachable.
+
+## Related
+
+- [Change a cache entry](/docs/dev/cache/typed-entries): misses, versions, deploys and `flush()`.
+- [API cache reference](/docs/dev/cache/reference): every option, key format and error.
+- [Write a complete operation](/docs/dev/plugins/api/operation-workflow): expire an entry from a service after a transaction.

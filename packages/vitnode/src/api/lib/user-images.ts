@@ -6,6 +6,10 @@ import { HTTPException } from "hono/http-exception";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
+import {
+  userAvatarUpdatedEvent,
+  userCoverUpdatedEvent,
+} from "@/api/events/users";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { core_files } from "@/database/files";
 import { core_roles } from "@/database/roles";
@@ -144,7 +148,7 @@ const afterImageChange = async (
   await invalidateSessionCacheForUser(c, userId);
   await c
     .get("events")
-    .emit(kind === "avatar" ? "user.avatar.updated" : "user.cover.updated", {
+    .emit(kind === "avatar" ? userAvatarUpdatedEvent : userCoverUpdatedEvent, {
       fileId,
       userId,
     });

@@ -3,9 +3,10 @@ import { z } from "zod";
 import { buildRoute } from "@/api/builders";
 import { loadCronHealth } from "@/api/modules/cron/lib/load-cron-health";
 import { isCronSecretRejected } from "@/lib/config";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const getCronHealthRoute = buildRoute({
-  adminStaffPermission: { module: "cron", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.cron.canView,
   route: {
     method: "get",
     description:

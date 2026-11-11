@@ -2,9 +2,9 @@ import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
 import { and, eq } from "drizzle-orm";
-import { z } from "zod";
 
 import type { QueueModel } from "../../api/models/queue";
+import type { ContentSearchDependentsPayload } from "../../api/modules/content/tasks/content-search-dependents.task";
 import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentModel } from "./model";
@@ -12,6 +12,7 @@ import type { RegisteredContentModel } from "./model";
 import type { ContentSearchContext } from "./search-document";
 
 import { searchItemIdFromKey } from "../../api/models/search";
+import { contentSearchDependentsQueueTask } from "../../api/modules/content/tasks/content-search-dependents.task";
 import { core_search_index } from "../../database/search";
 import { contentContainerFieldOf } from "../containers/association";
 import { parseContentId } from "../ids";
@@ -232,23 +233,6 @@ const CONTENT_SEARCH_DEPENDENT_PAGE_SIZE = 200;
 /** Deletes in flight at once, so a page of them cannot drain the pool. */
 const CONTENT_SEARCH_DELETE_CONCURRENCY = 10;
 
-/** Finishes a dependent reindex too big for the request that started it. */
-export const CONTENT_QUEUE_TASK_SEARCH_DEPENDENTS = "content-search-dependents";
-
-export const contentSearchDependentsPayloadSchema = z.object({
-  /** The dependent's cursor: the last id the request already reindexed. */
-  after: z.union([z.number().int(), z.string().min(1)]),
-  /** The record whose title or URL the dependents carry. */
-  contentTypeId: z.string().min(1),
-  dependentTypeId: z.string().min(1),
-  field: z.string().min(1),
-  itemId: z.union([z.number().int(), z.string().min(1)]),
-});
-
-type ContentSearchDependentsPayload = z.infer<
-  typeof contentSearchDependentsPayloadSchema
->;
-
 const dependentSyncOf = (
   definition: AnyContentTypeDefinition,
   { changed, changedFields, operation }: ContentSearchSyncInput,
@@ -436,17 +420,12 @@ const syncContentSearchDependents = async (
           ...(queue
             ? {
                 defer: async after => {
-                  await queue.dispatch({
-                    name: CONTENT_QUEUE_TASK_SEARCH_DEPENDENTS,
-                    payload: {
-                      after,
-                      contentTypeId: definition.id,
-                      dependentTypeId: dependent.id,
-                      field,
-                      itemId,
-                    } satisfies ContentSearchDependentsPayload,
-                    // Core owns the handler, whichever plugin's request this is.
-                    pluginId: "@vitnode/core",
+                  await queue.dispatch(contentSearchDependentsQueueTask, {
+                    after,
+                    contentTypeId: definition.id,
+                    dependentTypeId: dependent.id,
+                    field,
+                    itemId,
                   });
                 },
               }

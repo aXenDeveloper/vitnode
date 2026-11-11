@@ -250,7 +250,10 @@ export const createPolicyWorld = async ({
     c.set("cache", cache);
     c.set("db", memory.db as unknown as Context["var"]["db"]);
     c.set("events", {
-      emit: async (name: string, payload: Record<string, unknown>) => {
+      emit: async (
+        { name }: { name: string },
+        payload: Record<string, unknown>,
+      ) => {
         emitted.push({ name, payload });
 
         return await Promise.resolve({

@@ -5,6 +5,7 @@ import {
   listUserDevices,
   zodUserDeviceSchema,
 } from "@/api/models/user-devices";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import {
   findTargetUserId,
@@ -14,7 +15,7 @@ import {
 } from "../lib/target-user";
 
 export const listUserDevicesAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canView,
   route: {
     method: "get",
     description:

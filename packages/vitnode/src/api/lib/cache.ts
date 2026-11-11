@@ -6,11 +6,11 @@ import type { CacheEntryDefinition } from "./cache-entry";
 import type { MemoryCacheStore } from "./cache-memory";
 
 import {
-  CACHE_ENTRY_PREFIX,
   cacheEntryKey,
   cacheEntryPrefix,
   CacheEntryValidationError,
 } from "./cache-entry";
+import { MEMORY_CACHE_MAX_TTL_SECONDS } from "./cache-memory";
 import { parseJsonWire } from "./json-wire";
 
 /**
@@ -24,6 +24,10 @@ export type CacheClient = RedisClientType;
 
 const CACHE_PREFIX = "vitnode:cache:";
 const SYSTEM_NAMESPACE = "__system__";
+
+/** Escapes Redis `MATCH` glob characters, so a prefix matches only itself. */
+const escapeGlob = (value: string): string =>
+  value.replaceAll(/[*?[\]\\]/g, "\\$&");
 
 /**
  * One typed cache entry, as `c.get("cache").entry(definition, ...keyArgs)`
@@ -60,28 +64,89 @@ export interface CacheEntryHandle<Schema extends z.ZodType> {
    * rejects it. Nothing is stored.
    */
   readonly set: (value: z.input<Schema>) => Promise<void>;
+  /**
+   * Stores `value` only when no valid value is stored, atomically (`SET NX`
+   * in Redis, the same check in the in-memory store), and resolves to the
+   * value that is current afterwards: the stored one, or `value` when it was
+   * written. Use it to initialise a generation stamp, so a delayed
+   * initialiser cannot overwrite a stamp a writer has already moved. Without
+   * a store, or when the store fails, it resolves to `value` without storing
+   * it.
+   *
+   * @throws {CacheEntryValidationError} When `value` is not JSON or the schema
+   * rejects it. Nothing is stored.
+   */
+  readonly setIfMissing: (value: z.input<Schema>) => Promise<z.output<Schema>>;
 }
 
 /**
- * Server-side domain cache, read in a route as `c.get("cache")`. Values are
- * stored as JSON, so dates come back as strings.
+ * The cache a plugin gets from `c.get("cache")`: typed entries and a
+ * plugin-scoped flush, nothing else. Declare an entry with `defineCacheEntry`
+ * from the plugin's `@/api/builders`, then read and write it through
+ * {@link DomainCache.entry}. Values are stored as JSON and validated by the
+ * entry's schema on every write and read.
  *
  * Backed by Redis when the API config has `redis` (the starter apps pass
- * `REDIS_URL`); without it, by the process-wide {@link MemoryCacheStore} the
- * global middleware passes in (short TTLs, single-instance only - see
- * `MEMORY_CACHE_MAX_TTL_SECONDS`). With neither, every method is a no-op.
- * Redis errors are swallowed: caching never fails a request.
- *
- * Keys are prefixed with the current plugin (`vitnode:cache:{pluginId}:`), so
- * plugins cannot read or clobber each other's keys. The `*System` methods use a
- * shared framework namespace instead.
+ * `REDIS_URL`); without it, by a process-wide in-memory store (TTLs capped at
+ * 15 seconds, single instance only). With neither, every read misses and every
+ * write is a no-op. Redis errors are swallowed: caching never fails a request.
  *
  * @example
  * ```ts
- * const stats = await c.get("cache").remember("stats", 300, async () => countPosts(c));
+ * import { z } from "zod";
+ *
+ * import { defineCacheEntry } from "@/api/builders";
+ *
+ * export const latestPostsCache = defineCacheEntry({
+ *   name: "latest-posts",
+ *   version: 1,
+ *   key: (locale: string) => [locale],
+ *   schema: z.array(z.object({ id: z.number().int(), title: z.string() })),
+ *   ttlSeconds: 60,
+ * });
+ *
+ * const posts = await c
+ *   .get("cache")
+ *   .entry(latestPostsCache, locale)
+ *   .remember(async () => await loadLatestPosts(c, locale));
  * // after a write:
- * await c.get("cache").delete("stats");
+ * await c.get("cache").entry(latestPostsCache, locale).delete();
  * ```
+ */
+export interface DomainCache {
+  /**
+   * A typed cache entry with its key built from `keyArgs`. Stored under the
+   * plugin that defined it (`vitnode:cache-entry:{pluginId}:`), whichever
+   * plugin the current request belongs to, so plugins cannot read or clobber
+   * each other's values.
+   *
+   * @throws {CacheEntryDefinitionError} When a key part is not a short
+   * string, a finite number or a boolean.
+   */
+  readonly entry: <Args extends readonly unknown[], Schema extends z.ZodType>(
+    definition: CacheEntryDefinition<string, string, Args, Schema>,
+    ...keyArgs: Args
+  ) => CacheEntryHandle<Schema>;
+  /**
+   * Maintenance: deletes every typed entry of the current request's plugin.
+   * Other plugins' entries and VitNode's own infrastructure keys are left
+   * untouched, and so is everything when the request has no plugin.
+   */
+  readonly flush: () => Promise<void>;
+}
+
+/**
+ * VitNode core's cache store behind `c.get("cache")`: the typed entries plus
+ * infrastructure with its own semantics - distributed locks, lease sets, the
+ * system JSON store used by sessions, staff permission sets, invalidation
+ * stamps and the Content Engine's public reads, and connection status.
+ *
+ * Internal to core. Plugins get the narrow {@link DomainCache}; core code
+ * reaches this store with {@link cacheStore}. The module is importable through
+ * the package's `./*` export like any other file, but it is not a supported
+ * plugin API and may change in any release.
+ *
+ * @internal
  */
 export class CacheModel {
   constructor(
@@ -97,22 +162,6 @@ export class CacheModel {
   protected readonly c: Context;
   protected readonly client: CacheClient | null;
   protected readonly memory: MemoryCacheStore | null;
-
-  private key(key: string): string {
-    return `${this.prefix()}${key}`;
-  }
-
-  /**
-   * Key prefix for the current request's plugin, e.g.
-   * `vitnode:cache:@vitnode/blog:`. Keys are scoped per plugin so one plugin
-   * can't read or clobber another's cache. Falls back to the shared
-   * `vitnode:cache:` namespace when there is no plugin on the context.
-   */
-  private prefix(): string {
-    const pluginId = this.c.get("plugin")?.id;
-
-    return pluginId ? `${CACHE_PREFIX}${pluginId}:` : CACHE_PREFIX;
-  }
 
   private async putKey<T>(
     fullKey: string,
@@ -131,6 +180,38 @@ export class CacheModel {
       });
     } else {
       await this.client.set(fullKey, raw);
+    }
+  }
+
+  /**
+   * `SET NX` with a TTL: `true` when written, `false` when the key exists,
+   * `null` without a store or on a store error.
+   */
+  private async putKeyIfAbsent(
+    fullKey: string,
+    value: unknown,
+    ttlSeconds: number,
+  ): Promise<boolean | null> {
+    const raw = JSON.stringify(value);
+    if (!this.client) {
+      return (
+        this.memory?.setIfAbsent(
+          fullKey,
+          raw,
+          Math.min(ttlSeconds, MEMORY_CACHE_MAX_TTL_SECONDS),
+        ) ?? null
+      );
+    }
+
+    try {
+      const result = await this.client.set(fullKey, raw, {
+        condition: "NX",
+        expiration: { type: "EX", value: ttlSeconds },
+      });
+
+      return result === "OK";
+    } catch {
+      return null;
     }
   }
 
@@ -210,6 +291,8 @@ export class CacheModel {
    * progress - callers must guard correctness some other way (e.g. Postgres
    * `FOR UPDATE SKIP LOCKED`). Returns `false` on a Redis error so a flaky
    * connection skips rather than double-runs work.
+   *
+   * @internal VitNode core infrastructure; plugins use `entry()`.
    */
   async acquireLock(key: string, ttlSeconds: number): Promise<boolean> {
     if (!this.client) {
@@ -239,6 +322,8 @@ export class CacheModel {
    * the order asked - one round trip however many keys. Redis only: lease sets
    * must be shared by every instance, so the in-memory store never holds them.
    * `null` without Redis or on an error, which callers must not read as "none".
+   *
+   * @internal VitNode core infrastructure; plugins use `entry()`.
    */
   async countLeases(keys: string[]): Promise<null | number[]> {
     if (!this.client) return null;
@@ -259,15 +344,11 @@ export class CacheModel {
     }
   }
 
-  /** Remove one or more keys. */
-  async delete(key: string | string[]): Promise<void> {
-    const keys = (Array.isArray(key) ? key : [key]).map(k => this.key(k));
-    await this.removeKeys(keys);
-  }
-
   /**
-   * Remove one or more keys from the framework system namespace. See
-   * {@link SYSTEM_NAMESPACE}.
+   * Removes one or more keys from the system store, the framework namespace
+   * shared by every plugin. No-op without a store or on error.
+   *
+   * @internal VitNode core infrastructure; plugins use `entry()`.
    */
   async deleteSystem(key: string | string[]): Promise<void> {
     const keys = (Array.isArray(key) ? key : [key]).map(k => this.systemKey(k));
@@ -352,20 +433,42 @@ export class CacheModel {
       set: async value => {
         await write(value);
       },
+      setIfMissing: async value => {
+        const parsed = await parseJsonWire(definition.schema, value, "value");
+        if (!parsed.success) {
+          throw new CacheEntryValidationError(label, parsed.reason);
+        }
+
+        for (let attempt = 0; attempt < 2; attempt++) {
+          const claimed = await this.putKeyIfAbsent(
+            fullKey,
+            parsed.wire,
+            definition.ttlSeconds,
+          );
+          if (claimed !== false) return parsed.data;
+
+          const current = await read();
+          if (current.hit) return current.value;
+        }
+
+        return parsed.data;
+      },
     };
   }
 
   /**
-   * Delete every cache key for the current plugin
-   * (`vitnode:cache:{plugin_code}:*`), and its typed entries
-   * (`vitnode:cache-entry:{plugin_code}:*`). Other plugins' keys and
-   * unrelated Redis data are left untouched.
+   * Deletes every typed entry of the current request's plugin
+   * (`vitnode:cache-entry:{pluginId}:*`), plus the keys the removed string API
+   * left under `vitnode:cache:{pluginId}:*`. Other plugins' entries, the
+   * system store and unrelated Redis data are left untouched, and so is
+   * everything when the context has no plugin. Errors are swallowed.
    */
   async flush(): Promise<void> {
     const pluginId = this.c.get("plugin")?.id;
+    if (!pluginId) return;
     const prefixes = [
-      this.prefix(),
-      pluginId ? cacheEntryPrefix(pluginId) : CACHE_ENTRY_PREFIX,
+      cacheEntryPrefix(pluginId),
+      `${CACHE_PREFIX}${pluginId}:`,
     ];
 
     if (!this.client) {
@@ -378,7 +481,7 @@ export class CacheModel {
       for (const prefix of prefixes) {
         // `scanIterator` yields a batch of keys per SCAN round-trip.
         const scan = this.client.scanIterator({
-          MATCH: `${prefix}*`,
+          MATCH: `${escapeGlob(prefix)}*`,
           COUNT: 100,
         });
 
@@ -391,33 +494,25 @@ export class CacheModel {
     }
   }
 
-  /** Read a JSON value. Returns `null` on a miss, without a store, or on error. */
-  async get<T>(key: string): Promise<null | T> {
-    return this.readKey<T>(this.key(key));
-  }
-
-  /** {@link CacheModel.get} in the framework system namespace, shared by every plugin. */
+  /**
+   * Reads a JSON value from the system store, the framework namespace shared
+   * by every plugin. `null` on a miss, without a store, or on error. The value
+   * is not validated: the caller owns its shape.
+   *
+   * @internal VitNode core infrastructure; plugins use `entry()`.
+   */
   async getSystem<T>(key: string): Promise<null | T> {
     return this.readKey<T>(this.systemKey(key));
   }
 
   /**
-   * Reads several system-namespace keys in one round trip (`MGET`), in order.
+   * Reads several system-store keys in one round trip (`MGET`), in order.
    * Each slot is `null` on a miss; every slot is `null` on error.
+   *
+   * @internal VitNode core infrastructure; plugins use `entry()`.
    */
   async getSystemMany<T>(keys: string[]): Promise<(null | T)[]> {
     return this.readKeys<T>(keys.map(key => this.systemKey(key)));
-  }
-
-  /** Whether a key currently exists. `false` without a store or on error. */
-  async has(key: string): Promise<boolean> {
-    if (!this.client) return this.memory?.has(this.key(key)) ?? false;
-
-    try {
-      return (await this.client.exists(this.key(key))) === 1;
-    } catch {
-      return false;
-    }
   }
 
   /**
@@ -428,7 +523,11 @@ export class CacheModel {
     return this.client !== null;
   }
 
-  /** Drop members from a lease set in the system namespace. No-op without Redis. */
+  /**
+   * Drop members from a lease set in the system namespace. No-op without Redis.
+   *
+   * @internal VitNode core infrastructure; plugins use `entry()`.
+   */
   async releaseLeases(key: string, members: string[]): Promise<void> {
     if (!this.client || members.length === 0) return;
 
@@ -439,29 +538,13 @@ export class CacheModel {
     }
   }
 
-  /** Release a lock taken with {@link acquireLock}. */
+  /**
+   * Release a lock taken with {@link acquireLock}.
+   *
+   * @internal VitNode core infrastructure; plugins use `entry()`.
+   */
   async releaseLock(key: string): Promise<void> {
     await this.removeKeys([this.systemKey(`lock:${key}`)]);
-  }
-
-  /**
-   * Returns the cached value, or runs `loader`, caches its result for
-   * `ttlSeconds` and returns it. A `null` result is never served from the
-   * cache, so a loader answering `null` runs every time. Without Redis it
-   * always runs `loader`.
-   */
-  async remember<T>(
-    key: string,
-    ttlSeconds: number,
-    loader: () => Promise<T>,
-  ): Promise<T> {
-    const cached = await this.get<T>(key);
-    if (cached !== null) return cached;
-
-    const value = await loader();
-    await this.set(key, value, ttlSeconds);
-
-    return value;
   }
 
   /**
@@ -471,6 +554,8 @@ export class CacheModel {
    * are swept on the way, and the key itself outlives its newest lease by
    * nothing. Redis only, like {@link countLeases}: `false` without Redis or
    * on an error.
+   *
+   * @internal VitNode core infrastructure; plugins use `entry()`.
    */
   async renewLease(
     key: string,
@@ -499,18 +584,13 @@ export class CacheModel {
   }
 
   /**
-   * Store a JSON value. Omit `ttlSeconds` (or pass `0`) to keep it until
-   * deleted. No-op without Redis or on error.
-   */
-  async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
-    await this.writeKey(this.key(key), value, ttlSeconds);
-  }
-
-  /**
-   * {@link CacheModel.set} in the framework system namespace, shared by every
-   * plugin. `strict` rethrows a failed write instead of swallowing it - for an
+   * Stores a JSON value in the system store, the framework namespace shared
+   * by every plugin. Omit `ttlSeconds` (or pass `0`) to keep it until deleted.
+   * A failed write is swallowed unless `strict`, which rethrows it - for an
    * invalidation stamp, whose caller has to know it did not land so it can
    * retry rather than leave readers on the old generation.
+   *
+   * @internal VitNode core infrastructure; plugins use `entry()`.
    */
   async setSystem<T>(
     key: string,
@@ -540,3 +620,63 @@ export class CacheModel {
     }
   }
 }
+
+const domainCaches = new WeakMap<object, CacheModel>();
+
+/**
+ * Wraps a store in the {@link DomainCache} facade the global middleware puts
+ * on `c.get("cache")`. The facade has only `entry` and `flush` at runtime too,
+ * and shares the store's client and memory store.
+ *
+ * @internal
+ */
+export const domainCacheOf = (store: CacheModel): DomainCache => {
+  const facade: DomainCache = Object.freeze({
+    entry: <Args extends readonly unknown[], Schema extends z.ZodType>(
+      definition: CacheEntryDefinition<string, string, Args, Schema>,
+      ...keyArgs: Args
+    ) => store.entry(definition, ...keyArgs),
+    flush: async () => {
+      await store.flush();
+    },
+  });
+  domainCaches.set(facade, store);
+
+  return facade;
+};
+
+/**
+ * The core cache store behind the request's `c.get("cache")`, or `undefined`
+ * when the context has none (some test contexts). A context whose `cache` is
+ * a store itself, as test helpers set it, resolves to that store.
+ *
+ * @internal
+ */
+export const findCacheStore = (c: Context): CacheModel | undefined => {
+  const cache: unknown = c.get("cache");
+  if (cache instanceof CacheModel) return cache;
+
+  return typeof cache === "object" && cache !== null
+    ? domainCaches.get(cache)
+    : undefined;
+};
+
+/**
+ * The core cache store behind the request's `c.get("cache")`, for VitNode
+ * core infrastructure: sessions, staff permission sets, invalidation stamps,
+ * locks and lease sets. Not a plugin API - plugins use `c.get("cache").entry()`.
+ *
+ * @throws {Error} When the context has no cache, i.e. outside VitNode's
+ * global middleware.
+ * @internal
+ */
+export const cacheStore = (c: Context): CacheModel => {
+  const store = findCacheStore(c);
+  if (!store) {
+    throw new Error(
+      "No VitNode cache store on this context - is the global middleware mounted?",
+    );
+  }
+
+  return store;
+};

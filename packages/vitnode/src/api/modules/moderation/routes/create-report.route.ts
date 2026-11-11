@@ -3,6 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
+import { moderationReportCreatedEvent } from "@/api/events/moderation";
 import { isUniqueViolation } from "@/api/lib/db-errors";
 import { findReportTarget } from "@/api/lib/moderation/registry";
 import { sealReportSnapshot } from "@/api/lib/moderation/snapshot";
@@ -200,7 +201,7 @@ export const createReportRoute = buildRoute({
       throw error;
     }
 
-    await c.get("events").emit("moderation.report.created", {
+    await c.get("events").emit(moderationReportCreatedEvent, {
       pluginId,
       reason: body.reason,
       reportId,

@@ -3,6 +3,7 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@/api/builders";
 import { writeAuditLogBestEffort } from "@/api/lib/audit/write";
 import { revokeSessions } from "@/api/models/session-revoke";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {
@@ -13,7 +14,7 @@ import {
 } from "../lib/target-user";
 
 export const revokeUserDevicesAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   route: {
     method: "delete",
     description:

@@ -7,6 +7,7 @@ import {
   getNotificationStats,
   NOTIFICATION_STATS_RANGES,
 } from "@/api/models/notifications/stats";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const zodTotals = z.object({
   events: z.number(),
@@ -16,7 +17,7 @@ const zodTotals = z.object({
 });
 
 export const getNotificationStatsRoute = buildRoute({
-  adminStaffPermission: { module: "notifications", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.notifications.canView,
   route: {
     method: "get",
     description:

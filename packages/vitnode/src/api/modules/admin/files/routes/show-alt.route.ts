@@ -5,11 +5,12 @@ import { z } from "zod";
 import { buildRoute } from "@/api/builders";
 import { core_files, core_files_alt } from "@/database/files";
 import { core_languages } from "@/database/languages";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { zodAltPolicy } from "../alt.schema";
 
 export const getFileAltAdminRoute = buildRoute({
-  adminStaffPermission: { module: "files", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.files.canView,
   route: {
     method: "get",
     description: "An image's default ALT text in every site language.",

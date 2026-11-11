@@ -1,180 +1,89 @@
 ---
-title: Typed cache entries
-description: Define a VitNode API cache entry with defineCacheEntry - a name, version, key and Zod schema - so reads and writes are type-checked and validated, then expire it after a write.
+title: Change a cache entry
+description: What a VitNode API cache miss is, how to change a cache entry's schema or version safely across deploys, and what c.get("cache").flush() deletes.
 icon: ShieldCheck
 ---
 
-`defineCacheEntry` declares one kind of cached value in the API: how its key is built, what it holds and how long it lives. Reads come back typed and validated, writes are checked before they are stored, and a stored value that no longer fits the schema is treated as a miss. In this guide the `site-notes` plugin caches how many notes were written in a given year.
-
-## Before you begin
-
-- The `site-notes` plugin with its `site_notes` table from [Database](/docs/dev/database), and the create route from [Permissions](/docs/dev/working-with-users/staff-permissions).
-- Optional: [Redis](/docs/dev/advanced/redis). Without it the entry lives in a per-process memory store for at most 15 seconds, and the Redis check below does not apply.
-
-<Steps>
-<Step>
-
-### Bind `defineCacheEntry` to your plugin
-
-Add it to the builders in `src/api/builders.ts`:
-
-```ts title="plugins/site-notes/src/api/builders.ts"
-export const buildModule = apiBuilders.buildModule;
-export const buildRoute = apiBuilders.buildRoute;
-export const defineCacheEntry = apiBuilders.defineCacheEntry; // [!code ++]
-```
-
-The bound version stores every entry under `site-notes`, whichever plugin's route reads it. An event listener running in a core request reaches the same key.
-
-</Step>
-<Step>
-
-### Define the entry
-
-Create `src/api/cache/year-stats.cache.ts`:
-
-```ts title="plugins/site-notes/src/api/cache/year-stats.cache.ts"
-import { z } from "zod";
-
-import { defineCacheEntry } from "@/api/builders";
-
-export const yearStatsCache = defineCacheEntry({
-  name: "year-stats",
-  version: 1,
-  key: (year: number) => [year],
-  schema: z.object({
-    notes: z.number().int().nonnegative(),
-    lastNoteAt: z.iso.datetime().nullable(),
-  }),
-  ttlSeconds: 300,
-});
-```
-
-- **`key`** turns the entry's arguments into key parts. Its parameters become the arguments of `entry()`, so `year` must be a number wherever the entry is used. Omit `key` for an entry with a single value.
-- **`schema`** checks every write and every read. Values are stored as JSON, so its input must be JSON: `z.iso.datetime()` instead of `z.date()`.
-- **`version`** is yours to bump. Change it when the stored shape or its meaning changes, and every old entry becomes a miss at once.
-
-</Step>
-<Step>
-
-### Read through the entry
-
-Create `src/api/modules/notes/routes/year-stats.route.ts`. The handler wraps the query in `remember`:
-
-```ts title="plugins/site-notes/src/api/modules/notes/routes/year-stats.route.ts"
-import { z } from "@hono/zod-openapi";
-import { and, count, gte, lt, max } from "drizzle-orm";
-
-import { buildRoute } from "@/api/builders";
-import { yearStatsCache } from "@/api/cache/year-stats.cache";
-import { site_notes } from "@/database/notes";
-
-export const yearStatsRoute = buildRoute({
-  route: {
-    method: "get",
-    path: "/stats/{year}",
-    request: {
-      params: z.object({ year: z.coerce.number().int().min(2000).max(9999) }),
-    },
-    responses: {
-      200: {
-        content: { "application/json": { schema: yearStatsCache.schema } },
-        description: "How many notes were written in the year, and when the last one was.",
-      },
-    },
-  },
-  handler: async c => {
-    const { year } = c.req.valid("param");
-    const stats = await c
-      .get("cache")
-      .entry(yearStatsCache, year)
-      .remember(async () => {
-        const [row] = await c
-          .get("db")
-          .select({ notes: count(), lastNoteAt: max(site_notes.createdAt) })
-          .from(site_notes)
-          .where(
-            and(
-              gte(site_notes.createdAt, new Date(Date.UTC(year, 0, 1))),
-              lt(site_notes.createdAt, new Date(Date.UTC(year + 1, 0, 1))),
-            ),
-          );
-
-        return {
-          notes: row?.notes ?? 0,
-          lastNoteAt: row?.lastNoteAt?.toISOString() ?? null,
-        };
-      });
-
-    return c.json(stats, 200);
-  },
-});
-```
-
-Then add `yearStatsRoute` to the `routes` of `notesModule` in `src/api/modules/notes/notes.module.ts`.
-
-On a hit, `remember` returns the stored value parsed by the schema and skips the query. On a miss, it runs the loader, validates the result, stores it for 300 seconds and returns the parsed value. A loader result the schema rejects throws `CacheEntryValidationError` and nothing is stored, so a bug in the query surfaces instead of being cached.
-
-</Step>
-<Step>
-
-### Expire the entry after a write
-
-A new note changes the current year's count. In `src/api/modules/admin/notes/routes/create.route.ts`, delete that entry after the insert:
-
-```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/create.route.ts"
-import { yearStatsCache } from "@/api/cache/year-stats.cache"; // [!code ++]
-
-  handler: async c => {
-    const values = c.req.valid("json");
-    const [note] = await c
-      .get("db")
-      .insert(site_notes)
-      .values(values)
-      .returning({ id: site_notes.id, title: site_notes.title, body: site_notes.body });
-
-    // [!code ++:4]
-    await c
-      .get("cache")
-      .entry(yearStatsCache, new Date().getUTCFullYear())
-      .delete();
-
-    return c.json(note, 201);
-  },
-```
-
-Do the same in any other route that adds or removes notes. The TTL is a safety net: without `delete`, the old count stays for up to five minutes.
-
-</Step>
-</Steps>
-
-## Check the result
-
-1. Open `http://localhost:3000/api/site-notes/notes/stats/2026`, using the year your demo notes were added. It answers `{"notes":3,"lastNoteAt":"…"}`.
-2. With Redis connected, list the plugin's typed entries:
-
-   ```bash
-   redis-cli --scan --pattern 'vitnode:cache-entry:site-notes:*'
-   ```
-
-   The output includes `vitnode:cache-entry:site-notes:year-stats:v1:[2026]`.
-
-3. Create a note, from the [AdminCP page](/docs/dev/plugins/admin) or the test button in [Permissions](/docs/dev/working-with-users/staff-permissions#check-the-result), and run the command again. The key is gone until the next request, which then counts the new note.
-4. Change `version` to `2` and open the stats URL again. A new `…:v2:[2026]` key appears. The `v1` key is never read again and expires on its TTL.
+Cache entries are disposable. Unlike a [queued task](/docs/dev/advanced/queue-typed-payloads), losing one costs only the time to load it again, so changing an entry never needs a migration. This page explains when an entry misses, how to change its schema or version, and how to clear a plugin's entries. The examples use the `year-stats` entry from [Cache API data](/docs/dev/cache/api).
 
 ## What counts as a miss
 
 `get()` returns `undefined` and `remember()` runs the loader when:
 
-- nothing is stored under the key,
+- nothing is stored under the key, for example after a restart without Redis (a cold start), or after the TTL ran out,
 - there is no cache store, or Redis fails,
-- the stored value is malformed JSON or the schema rejects it. That value is deleted on the way.
+- the stored value is malformed JSON or the schema rejects it. That value is deleted on the way,
+- the entry's `version` differs from the one that stored it.
 
-A stored `null`, `false`, `0` or `""` is a hit. The string API's `remember` reloads `null` instead.
+A stored `null`, `false`, `0` or `""` is a hit.
 
 What is stored is the JSON of the value you passed in, before the schema runs. Keys the schema strips are stored too and removed again on every read, so return only the fields you want in Redis.
 
+## Change the schema
+
+| Change                                                     | What to do                                                   |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| Add an optional field, or remove one                       | Nothing. Old values still parse                              |
+| Anything old values fail, such as a new required field     | Nothing is required: a rejected value is a miss and reloads. Bump `version` to skip the failed parse |
+| Same shape, different meaning, such as counting only published notes | Bump `version`. The schema cannot tell old values apart |
+
+Bump the version in the definition:
+
+```ts title="plugins/site-notes/src/api/cache/year-stats.cache.ts"
+export const yearStatsCache = defineCacheEntry({
+  name: "year-stats",
+  version: 1, // [!code --]
+  version: 2, // [!code ++]
+  // key, schema and ttlSeconds unchanged
+});
+```
+
+The version is part of the key, so every entry written with `v1` becomes a miss at once. Old keys are never read again; with Redis they stay until their TTL runs out, and without Redis they are gone with the process. During a rolling deploy, instances on the old and the new version write different keys and never read each other's values.
+
+Renaming an entry works the same way: the old keys are orphaned and expire on their TTL.
+
+## Check the result
+
+After the version bump, open `http://localhost:3000/api/site-notes/notes/stats/2026` and list the plugin's entries in Redis:
+
+```bash
+redis-cli --scan --pattern 'vitnode:cache-entry:site-notes:year-stats:*'
+```
+
+A new `…:v2:[2026]` key appears next to the old `…:v1:[2026]`, which is never read again and expires on its TTL.
+
+## Keep a list fresh with a generation
+
+Deleting an entry after a write leaves a gap: a reader that loaded the old rows just before the commit can store them right after the delete, and the stale value stays until its TTL. A generation closes that gap. Keep a random token per resource and cache the value under it:
+
+```ts
+const generations = c.get("cache").entry(articleCorrectionsGenerationCache, articleId);
+const generation =
+  (await generations.get()) ?? (await generations.setIfMissing(randomUUID()));
+
+const list = await c
+  .get("cache")
+  .entry(articleCorrectionsCache, articleId, generation)
+  .remember(async () => await loadCorrections(articleId));
+
+// after the write commits:
+await generations.set(randomUUID());
+```
+
+- Read the generation **before** loading. A late reader then fills only the old generation, which nobody reads again.
+- `setIfMissing` creates the first token atomically, so a reader that started before the first write cannot overwrite the token the writer set.
+- Use random tokens and let the generation entry outlive the cached values (for example 24 hours against 10 minutes). A lost generation then starts a new token instead of bringing an old value back.
+- Move the generation after the transaction commits, never inside it. If the move fails because Redis is unreachable, the old value stays until its TTL; with no cache store at all, every read goes to the database.
+
+[Write a complete operation](/docs/dev/plugins/api/operation-workflow) shows this in the newsroom corrections feature.
+
+## Clear every entry of a plugin
+
+`c.get("cache").flush()` deletes every entry of the plugin that owns the current request, plus keys left under `vitnode:cache:{plugin id}:` by the removed string-keyed API. Other plugins' entries, core's internal data and unrelated Redis keys are left alone, and VitNode never runs `FLUSHALL`.
+
+The plugin comes from the request (`c.get("plugin")`), not from an entry's definition. In your own routes that is your plugin. In a cron job, a queue task, or a listener of another plugin's event it is the plugin that runs it, often `@vitnode/core`, and with no plugin on the context `flush()` does nothing. To expire your own data from there, delete the entries you know: `c.get("cache").entry(yearStatsCache, year).delete()`.
+
 ## Related
 
-- [API cache reference](/docs/dev/cache/reference#typed-entries): every option, key and error.
-- [Cache API data](/docs/dev/cache/api): the string-keyed API.
+- [Cache API data](/docs/dev/cache/api): define, read and expire an entry.
+- [API cache reference](/docs/dev/cache/reference): options, key format and errors.

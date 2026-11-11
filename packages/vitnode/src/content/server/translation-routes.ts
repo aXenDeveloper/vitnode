@@ -25,6 +25,10 @@ import {
   CONTENT_PERMISSIONS,
   CONTENT_TRANSLATION_REVISION_OPERATIONS,
 } from "../const";
+import {
+  contentAdminStaffPermission,
+  type ContentPermission,
+} from "../registry";
 import { resolveContentActor } from "./actor";
 import { commitContentDrafts } from "./live-store";
 import { resetContentLiveRecord } from "./live/hooks";
@@ -61,7 +65,8 @@ export const buildContentTranslationRoutes = <
 ) => {
   const { definition } = model;
   const schemas = model.translationSchemas;
-  const module = definition.permissionModule;
+  const staffPermission = (permission: ContentPermission) =>
+    contentAdminStaffPermission(pluginId, definition, permission);
   const name = contentTypeName(definition.id);
 
   if (!schemas || !model.translationService) {
@@ -150,7 +155,7 @@ export const buildContentTranslationRoutes = <
 
   const list = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}/translations",
@@ -181,7 +186,7 @@ export const buildContentTranslationRoutes = <
 
   const detail = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}/translations/{locale}",
@@ -208,7 +213,7 @@ export const buildContentTranslationRoutes = <
 
   const create = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.edit),
     route: {
       method: "post",
       path: "/{id}/translations/{locale}",
@@ -254,7 +259,7 @@ export const buildContentTranslationRoutes = <
 
   const update = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.edit),
     route: {
       // PUT, not PATCH: an update replaces the translation it addresses.
       method: "put",
@@ -342,7 +347,7 @@ export const buildContentTranslationRoutes = <
    */
   const remove = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.delete },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.delete),
     route: {
       method: "delete",
       path: "/{id}/translations/{locale}",
@@ -411,7 +416,7 @@ export const buildContentTranslationRoutes = <
   const transitionRoute = (action: "publish" | "unpublish") =>
     buildRoute({
       pluginId,
-      adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.publish },
+      adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.publish),
       route: {
         method: "post",
         path: `/{id}/translations/{locale}/${action}`,
@@ -525,7 +530,7 @@ export const buildContentTranslationRoutes = <
 
   const revisionList = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}/translations/{locale}/revisions",
@@ -572,7 +577,7 @@ export const buildContentTranslationRoutes = <
 
   const revisionDetail = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}/translations/{locale}/revisions/{revisionId}",
@@ -603,66 +608,67 @@ export const buildContentTranslationRoutes = <
     },
   });
 
-  const restore = buildRoute({
-    pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.restore },
-    route: {
-      method: "post",
-      path: "/{id}/translations/{locale}/revisions/{revisionId}/restore",
-      description: `Restore one ${name} translation to an earlier revision`,
-      request: {
-        params: revisionParams,
-        body: jsonBody(translationSchemas.versionEnvelope),
+  const restore = () =>
+    buildRoute({
+      pluginId,
+      adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.restore),
+      route: {
+        method: "post",
+        path: "/{id}/translations/{locale}/revisions/{revisionId}/restore",
+        description: `Restore one ${name} translation to an earlier revision`,
+        request: {
+          params: revisionParams,
+          body: jsonBody(translationSchemas.versionEnvelope),
+        },
+        responses: {
+          200: jsonResponse(
+            z.object({
+              changed: z.boolean(),
+              row: translationSchemas.select,
+            }),
+            "Translation restored, or already at those values",
+          ),
+          400: invalidIdentifier,
+          404: { description: "Revision not found" },
+          409: conflict,
+          422: jsonResponse(
+            zodContentUnprocessable,
+            "The revision no longer fits this content type",
+          ),
+        },
       },
-      responses: {
-        200: jsonResponse(
-          z.object({
-            changed: z.boolean(),
-            row: translationSchemas.select,
-          }),
-          "Translation restored, or already at those values",
-        ),
-        400: invalidIdentifier,
-        404: { description: "Revision not found" },
-        409: conflict,
-        422: jsonResponse(
-          zodContentUnprocessable,
-          "The revision no longer fits this content type",
-        ),
+      handler: async c => {
+        const id = contentIdentifier(c, definition);
+        const target = locale(c);
+        const revisionId = revisionIdentifier(c);
+        const { expectedVersion } = await readJson(
+          c,
+          translationSchemas.versionEnvelope,
+        );
+
+        const outcome = await withTranslationHttpErrors(
+          "update",
+          async () =>
+            await editorial(c).restore(id, target, revisionId, {
+              actor: resolveContentActor(c),
+              expectedVersion,
+            }),
+          { contentTypeId: definition.id, itemId: id, locale: target },
+        );
+        if (!outcome) {
+          throw new HTTPException(404, { message: "Revision not found." });
+        }
+
+        await announce(c, outcome);
+        await resetContentLiveRecord(
+          c,
+          { contentTypeId: definition.id, itemId: id },
+          "restored",
+        );
+
+        return c.json({ changed: outcome.changed, row: outcome.row }, 200);
       },
-    },
-    handler: async c => {
-      const id = contentIdentifier(c, definition);
-      const target = locale(c);
-      const revisionId = revisionIdentifier(c);
-      const { expectedVersion } = await readJson(
-        c,
-        translationSchemas.versionEnvelope,
-      );
-
-      const outcome = await withTranslationHttpErrors(
-        "update",
-        async () =>
-          await editorial(c).restore(id, target, revisionId, {
-            actor: resolveContentActor(c),
-            expectedVersion,
-          }),
-        { contentTypeId: definition.id, itemId: id, locale: target },
-      );
-      if (!outcome) {
-        throw new HTTPException(404, { message: "Revision not found." });
-      }
-
-      await announce(c, outcome);
-      await resetContentLiveRecord(
-        c,
-        { contentTypeId: definition.id, itemId: id },
-        "restored",
-      );
-
-      return c.json({ changed: outcome.changed, row: outcome.row }, 200);
-    },
-  });
+    });
 
   /**
    * Mints a preview link for one language.
@@ -684,7 +690,7 @@ export const buildContentTranslationRoutes = <
    */
   const previewToken = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "post",
       path: "/{id}/translations/{locale}/preview",
@@ -794,7 +800,7 @@ export const buildContentTranslationRoutes = <
    */
   const publicLocales = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}/public-locales",
@@ -843,7 +849,7 @@ export const buildContentTranslationRoutes = <
     ...(publication
       ? [transitionRoute("publish"), transitionRoute("unpublish")]
       : []),
-    ...(editorialEnabled ? [revisionList, revisionDetail, restore] : []),
+    ...(editorialEnabled ? [revisionList, revisionDetail, restore()] : []),
     // `editorial.preview` already requires `publicApi`, so this exists only for a
     // localized content type that has a public API to preview against.
     ...(definition.editorial.preview.enabled ? [previewToken] : []),

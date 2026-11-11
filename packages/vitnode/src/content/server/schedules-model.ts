@@ -11,9 +11,10 @@ import type {
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
 
+import { contentScheduleQueueTask } from "../../api/modules/content/tasks/content-schedule.task";
 import { core_content_schedules } from "../../database/content";
 import { core_users } from "../../database/users";
-import { CONTENT_QUEUE_TASK_SCHEDULE, CONTENT_SCHEDULE_CODES } from "../const";
+import { CONTENT_SCHEDULE_CODES } from "../const";
 import { ContentScheduleError } from "../errors";
 import { contentIdKey } from "../ids";
 import { contentScheduleTimingError } from "../schedules";
@@ -310,15 +311,13 @@ export const createContentSchedulesModel = ({
         // Dispatched inside the transaction, so a schedule row can never exist
         // without the task that executes it - and the task carries a pointer
         // rather than data, because every value is re-read under a lock anyway.
-        await c.get("queue").dispatch({
-          availableAt: scheduledFor,
-          name: CONTENT_QUEUE_TASK_SCHEDULE,
-          payload: { generation, scheduleId: row.id },
-          // Core owns the handler. Without this the row would be stamped with
-          // the requesting plugin's id and nothing would ever claim it.
-          pluginId: "@vitnode/core",
-          tx,
-        });
+        await c
+          .get("queue")
+          .dispatch(
+            contentScheduleQueueTask,
+            { generation, scheduleId: row.id },
+            { availableAt: scheduledFor, tx },
+          );
 
         await recordContentAudit(c, tx, {
           action: "scheduled",

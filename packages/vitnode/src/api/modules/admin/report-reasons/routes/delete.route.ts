@@ -1,17 +1,19 @@
 import { and, count, eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationReportReasonDeletedEvent } from "@/api/events/moderation";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { REPORT_REASON_WORDS } from "@/api/lib/moderation/report-reasons";
 import { errorSchema, json } from "@/api/modules/moderation/moderation.schema";
 import { core_languages_words } from "@/database/languages";
 import { core_moderation_report_reasons } from "@/database/moderation";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { findReasonRow, LOCK_REASONS } from "../lib/reason-rows";
 import { idParams } from "../report-reasons.schema";
 
 export const deleteReportReasonAdminRoute = buildRoute({
-  adminStaffPermission: { module: "report_reasons", permission: "can_delete" },
+  adminStaffPermission: coreStaffPermissions.admin.report_reasons.canDelete,
   route: {
     method: "delete",
     path: "/{id}",
@@ -62,7 +64,7 @@ export const deleteReportReasonAdminRoute = buildRoute({
     });
     if (!deleted) return c.json({ error: "last_reason" }, 409);
 
-    await c.get("events").emit("moderation.report_reason.deleted", {
+    await c.get("events").emit(moderationReportReasonDeletedEvent, {
       code: row.code,
       reasonId: id,
     });

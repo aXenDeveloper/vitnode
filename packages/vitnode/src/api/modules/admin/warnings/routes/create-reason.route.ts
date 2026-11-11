@@ -2,11 +2,13 @@ import { z } from "@hono/zod-openapi";
 import { count, max, sql } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationWarningReasonCreatedEvent } from "@/api/events/moderation";
 import { multiLangAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { errorSchema, json } from "@/api/modules/moderation/moderation.schema";
 import { core_moderation_warning_reasons } from "@/database/warnings";
 import { auditDiff } from "@/lib/audit/diff";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 
 import { auditedSettings } from "../lib/reason-audit";
@@ -16,10 +18,7 @@ import { reasonBody } from "../warning-reasons.schema";
 const LOCK_REASONS = sql`lock table ${core_moderation_warning_reasons} in share row exclusive mode`;
 
 export const createWarningReasonAdminRoute = buildRoute({
-  adminStaffPermission: {
-    module: "warning_settings",
-    permission: "can_manage",
-  },
+  adminStaffPermission: coreStaffPermissions.admin.warning_settings.canManage,
   route: {
     method: "post",
     path: "/reasons",
@@ -78,7 +77,7 @@ export const createWarningReasonAdminRoute = buildRoute({
     await saveReasonWords(c, created.id, body);
     await c
       .get("events")
-      .emit("moderation.warning_reason.created", { reasonId: created.id });
+      .emit(moderationWarningReasonCreatedEvent, { reasonId: created.id });
 
     return c.json({ id: created.id }, 201);
   },

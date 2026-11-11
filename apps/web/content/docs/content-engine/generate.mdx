@@ -1,6 +1,6 @@
 ---
 title: Generate a content type
-description: Scaffold an administrative VitNode Content Engine content type - definition, model, admin module, AdminCP screen and labels - with vitnode generate resource --kind content.
+description: Scaffold a VitNode Content Engine content type with its model, admin module, AdminCP screen and labels using vitnode generate resource --kind content.
 icon: Wand
 ---
 
@@ -26,14 +26,14 @@ pnpm vitnode g resource articles --kind content --fields "title:text,body:richTe
 ```
 
 ```txt
-  would create src/content/articles.ts  content type sitenotes.articles
-  would create src/database/articles.ts  model and table site_notes_articles
-  would create src/api/modules/admin/admin.module.ts  module "admin"; mount articlesContent in the admin module
-  would create src/admin/nav.tsx  AdminCP sidebar entry
-  would create src/admin/content.tsx  AdminCP screens, re-using the sidebar list
-  would update src/api/builders.ts  bind the Content Engine admin builder
-  would update src/config.api.ts  register adminModule in buildApiPlugin
-  would update src/locales/en.json  AdminCP labels for the content type
+  ● would create src/content/articles.ts  content type sitenotes.articles
+  ● would create src/database/articles.ts  model and table site_notes_articles
+  ● would create src/api/modules/admin/admin.module.ts  module "admin"; mount articlesContent in the admin module
+  ● would create src/admin/nav.tsx  AdminCP sidebar entry
+  ● would create src/admin/content.tsx  AdminCP screens, re-using the sidebar list
+  ● would update src/api/builders.ts  bind the Content Engine admin builder
+  ● would update src/config.api.ts  register adminModule in buildApiPlugin
+  ● would update src/locales/en.json  AdminCP labels for the content type
 
   Dry run: 5 files to create, 3 to update. Nothing was written.
 ```
@@ -51,20 +51,22 @@ The names are derived, never guessed from meaning:
 | Id strategy       | `serial`, the Content Engine default                  | `--id-type uuid` or `bigint` |
 | Singular label    | The plural, `Articles`                                | `--singular`     |
 
-The generator declares no permissions. The Content Engine gives the permission module `can_view`, `can_create`, `can_edit` and `can_delete`, but only when the plugin does not declare that module in `permissionStaff`, inline or through [`defineStaffPermissions`](/docs/dev/working-with-users/staff-permission-refs). A plugin that already declares `articles` with all four is fine. If it declares only some of them, the generated staff routes would need permissions nobody can be granted, so the command stops before writing:
+The generator declares no permissions. The Content Engine gives the permission module `can_view`, `can_create`, `can_edit` and `can_delete`, but only when the plugin does not declare that module in its [`defineStaffPermissions`](/docs/dev/working-with-users/staff-permission-refs) call. A plugin that already declares `articles` with all four is fine. If it declares only some of them, the generated staff routes would need permissions nobody can be granted, so the command stops before writing:
 
 ```txt
 ✖ The plugin declares the permission module "articles" without can_create, can_edit, can_delete.
-  The Content Engine adds can_view, can_create, can_edit, can_delete to "articles" only when the plugin does not declare it, and src/config.api.ts declares it with can_view.
+  The Content Engine adds can_view, can_create, can_edit, can_delete to "articles" only when the plugin does not declare it, and src/staff-permissions.ts declares it with can_view.
   The generated staff routes would require permissions nobody can be granted. Nothing was written.
-  Add the missing ones to permissionStaff.admin["articles"] in src/config.api.ts:
+  Add the missing ones to admin["articles"] in src/staff-permissions.ts:
       { permission: "can_create", dependsOn: ["can_view"] },
       { permission: "can_edit", dependsOn: ["can_view"] },
       { permission: "can_delete", dependsOn: ["can_view"] },
   Or remove the "articles" entry, so the Content Engine declares all four itself.
+
+  Then run the command again.
 ```
 
-It also stops, with the steps to finish by hand, when it cannot read the plugin's permission declarations: `permissionStaff` has to be an object literal or `staffPermissions.config`, not a variable such as `permissionStaff: permissions`.
+It also stops, with the steps to finish by hand, when it cannot read the plugin's permission declarations: `permissionStaff` has to be the exported `defineStaffPermissions(manifest, {...})` result from `src/staff-permissions.ts`, not an inline object.
 
 </Step>
 

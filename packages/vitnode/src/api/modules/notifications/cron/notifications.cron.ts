@@ -1,9 +1,7 @@
 import { buildCron } from "@/api/lib/cron";
 import { runNotificationSchedule } from "@/api/models/notifications/maintenance";
-import {
-  NOTIFICATIONS_PLUGIN_ID,
-  QUEUE_NOTIFICATIONS_CLEANUP,
-} from "@/api/models/notifications/shared";
+
+import { notificationsCleanupTask } from "../tasks/notifications.task";
 
 export const notificationsScheduleCron = buildCron({
   name: "notifications-schedule",
@@ -20,9 +18,6 @@ export const notificationsCleanupCron = buildCron({
   description: "Queue the daily notification retention cleanup.",
   schedule: "0 2 * * *",
   handler: async c => {
-    await c.get("queue").dispatch({
-      name: QUEUE_NOTIFICATIONS_CLEANUP,
-      pluginId: NOTIFICATIONS_PLUGIN_ID,
-    });
+    await c.get("queue").dispatch(notificationsCleanupTask, {});
   },
 });

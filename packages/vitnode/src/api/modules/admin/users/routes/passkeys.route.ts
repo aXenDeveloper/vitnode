@@ -7,6 +7,7 @@ import {
   PASSKEY_ERROR_RESPONSES,
   zodPasskeySchema,
 } from "@/api/modules/users/passkeys/passkeys.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import {
   findTargetUserId,
@@ -16,7 +17,7 @@ import {
 } from "../lib/target-user";
 
 export const listUserPasskeysAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canView,
   route: {
     method: "get",
     description: "List a user's passkeys (Admin only)",

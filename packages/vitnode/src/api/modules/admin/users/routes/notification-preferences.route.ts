@@ -1,6 +1,7 @@
 import { buildRoute } from "@/api/builders";
 import { getNotificationPreferences } from "@/api/models/notifications/preferences";
 import { zodNotificationPreferences } from "@/api/modules/notifications/notifications.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import {
   findTargetUserId,
@@ -9,7 +10,7 @@ import {
 } from "../lib/target-user";
 
 export const listUserNotificationPreferencesAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canView,
   route: {
     method: "get",
     description:

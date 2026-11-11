@@ -62,7 +62,7 @@ export const contentScheduleEffectsPayloadSchema = z.object({
   /** `null` only if the transition somehow wrote no revision. */
   revisionId: z.number().int().positive().nullable(),
   /** The row as the transition returned it, JSON-flattened. */
-  row: z.record(z.string(), z.unknown()),
+  row: z.record(z.string(), z.json()),
   scheduleId: z.number().int().positive(),
   scheduledBy: z.number().int().nullable(),
   version: z.number().int().positive(),

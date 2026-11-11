@@ -3,12 +3,13 @@ import {
   loadUpdatesOverview,
   summarizeUpdates,
 } from "@/api/lib/updates/status";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { iso } from "../lib/serialize-update";
 import { updatesSummarySchema } from "../updates.schema";
 
 export const pluginUpdatesSummaryAdminRoute = buildRoute({
-  adminStaffPermission: { module: "plugins", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.plugins.canView,
   route: {
     method: "get",
     description:

@@ -3,13 +3,14 @@ import { z } from "zod";
 import { buildRoute } from "@/api/builders";
 import { listNotificationDeliveries } from "@/api/models/notifications/admin";
 import { core_notification_deliveries } from "@/database/notifications";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const zodDeliveryStatus = z.enum(
   core_notification_deliveries.status.enumValues,
 );
 
 export const listNotificationDeliveriesRoute = buildRoute({
-  adminStaffPermission: { module: "notifications", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.notifications.canView,
   route: {
     method: "get",
     description:

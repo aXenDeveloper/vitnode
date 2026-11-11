@@ -493,5 +493,7 @@
   "newsroom:page:can_delete": "Delete pages",
   "newsroom:page:can_publish": "Publish and unpublish pages",
   "newsroom:widgets": "Widgets",
-  "newsroom:widgets:can_edit": "Edit page widgets"
+  "newsroom:widgets:can_edit": "Edit page widgets",
+  "newsroom:corrections": "Corrections",
+  "newsroom:corrections:can_create": "File corrections on articles"
 }

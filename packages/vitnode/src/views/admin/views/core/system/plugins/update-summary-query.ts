@@ -5,6 +5,7 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import type { updatesSummarySchema } from "@/api/modules/admin/plugins/updates.schema";
 
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
@@ -47,11 +48,9 @@ export const updateSummaryQueryOptions = () =>
   });
 
 export const useAdminUpdateSummary = () => {
-  const canView = useAdminStaffPermission({
-    plugin: manifest.id,
-    module: "plugins",
-    permission: "can_view",
-  });
+  const canView = useAdminStaffPermission(
+    coreStaffPermissions.admin.plugins.canView,
+  );
   const { data, isError } = useQuery({
     ...updateSummaryQueryOptions(),
     enabled: canView,

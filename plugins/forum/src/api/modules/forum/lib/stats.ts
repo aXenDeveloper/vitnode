@@ -8,9 +8,11 @@ import {
 } from "@vitnode/core/content";
 import { createContentAccess } from "@vitnode/core/content/server";
 import { and, count, eq, inArray, max } from "drizzle-orm";
-import { createHash } from "node:crypto";
 
-import { rememberForumStats } from "@/api/lib/stats-cache";
+import {
+  readForumStatsGeneration,
+  topicStatsCache,
+} from "@/api/lib/stats-cache";
 import { forumContainers } from "@/content/forums";
 import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";
@@ -65,27 +67,30 @@ export const loadTopicStats = async (
 
   const comments = commentContent.table;
   const topics = topicContent.table;
-  const key = createHash("sha256").update(unique.join(",")).digest("base64url");
+  const generation = await readForumStatsGeneration(c);
 
-  return await rememberForumStats(c, `topics:${key}`, async () => {
-    const rows = await c
-      .get("db")
-      .select({
-        lastCommentAt: max(comments.publishedAt),
-        topicId: comments.topic,
-        value: count(),
-      })
-      .from(comments)
-      .innerJoin(topics, eq(comments.topic, topics.id))
-      .where(
-        and(inArray(comments.topic, unique), publicComment(), publicTopic()),
-      )
-      .groupBy(comments.topic);
+  return await c
+    .get("cache")
+    .entry(topicStatsCache, generation, unique)
+    .remember(async () => {
+      const rows = await c
+        .get("db")
+        .select({
+          lastCommentAt: max(comments.publishedAt),
+          topicId: comments.topic,
+          value: count(),
+        })
+        .from(comments)
+        .innerJoin(topics, eq(comments.topic, topics.id))
+        .where(
+          and(inArray(comments.topic, unique), publicComment(), publicTopic()),
+        )
+        .groupBy(comments.topic);
 
-    return rows.map(row => ({
-      lastCommentAt: iso(row.lastCommentAt),
-      commentCount: row.value,
-      topicId: row.topicId,
-    }));
-  });
+      return rows.map(row => ({
+        lastCommentAt: iso(row.lastCommentAt),
+        commentCount: row.value,
+        topicId: row.topicId,
+      }));
+    });
 };

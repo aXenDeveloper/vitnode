@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
+import { userUpdatedEvent } from "@/api/events/users";
 import { resolvePersonalInfoPolicy } from "@/api/lib/personal-info-policy";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
@@ -153,7 +154,7 @@ export const updateMeRoute = buildRoute({
       userId: user.id,
     });
     await invalidateSessionCacheForUser(c, user.id);
-    await c.get("events").emit("user.updated", {
+    await c.get("events").emit(userUpdatedEvent, {
       userId: user.id,
       email: user.email,
       name: user.name,

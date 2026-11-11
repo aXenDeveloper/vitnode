@@ -7,7 +7,7 @@ import type { Edit, ParsedSource } from "./ast";
 import type { PermissionRef } from "./names";
 import type { GenerationPlan } from "./plan";
 import type { GeneratorProject } from "./project";
-import type { HttpMethod, ParamType } from "./templates";
+import type { HttpMethod, ParamType, PermissionSource } from "./templates";
 
 import { staffPermissionKey } from "../../../src/lib/staff-permissions";
 import { ConfigError, UserError } from "../errors";
@@ -33,7 +33,6 @@ import {
   findConstInit,
   isExported,
   listImports,
-  objectArgument,
   objectValue,
   stringValue,
   topLevelNames,
@@ -53,6 +52,7 @@ import {
   builtModuleTemplate,
   routeTemplate,
   serviceTemplate,
+  staffPermissionsTemplate,
 } from "./templates";
 
 export interface GenerateContext {
@@ -113,7 +113,7 @@ export const ensureBuilders = (ctx: GenerateContext): void => {
   plan.create(
     API_BUILDERS,
     buildersTemplate(specifierFor(project, API_BUILDERS, MANIFEST, true)),
-    "the plugin-bound buildModule and buildRoute",
+    "the plugin-bound API builders",
   );
 };
 
@@ -375,22 +375,28 @@ export type PermissionDeclarations =
   | { modules: Map<string, string[]>; status: "resolved" }
   | { reason: string; status: "unresolved" };
 
+/** Where a plugin's generated staff permission module lives by default. */
+export const STAFF_PERMISSIONS = "src/staff-permissions.ts";
+const STAFF_PERMISSIONS_EXPORT = "staffPermissions";
+
 export type PermissionStaffLocation =
+  | {
+      /** `buildApiPlugin`'s options, which have no `permissionStaff` yet. */
+      holder: ObjectExpression;
+      kind: "absent";
+      parsed: ParsedSource;
+    }
   | {
       exportName: string;
       file: string;
       kind: "defined";
       parsed: ParsedSource;
+      /** The declarations object passed to `defineStaffPermissions(manifest, {...})`. */
       staff: ObjectExpression;
     }
-  | {
-      file: string;
-      holder: ObjectExpression;
-      kind: "inline";
-      parsed: ParsedSource;
-      staff: null | ObjectExpression;
-    }
   | { kind: "unresolved"; reason: string };
+
+const MOVE_TO_MODULE = `declare the permissions with defineStaffPermissions(manifest, { admin, moderator }) in ${STAFF_PERMISSIONS}, export it, and pass that object as permissionStaff`;
 
 export const locatePermissionStaff = (
   ctx: GenerateContext,
@@ -405,101 +411,129 @@ export const locatePermissionStaff = (
     };
   }
   if (effective.kind === "absent") {
-    return {
-      file: API_CONFIG,
-      holder: root.options,
-      kind: "inline",
-      parsed: root.parsed,
-      staff: null,
-    };
+    return { holder: root.options, kind: "absent", parsed: root.parsed };
   }
-  const property = effective.property;
 
-  const value = unwrap(property.value);
-  if (value.type === "ObjectExpression") {
+  const value = unwrap(effective.property.value);
+  if (value.type !== "Identifier") {
     return {
-      file: API_CONFIG,
-      holder: root.options,
-      kind: "inline",
-      parsed: root.parsed,
-      staff: value,
+      kind: "unresolved",
+      reason: `permissionStaff in ${API_CONFIG} is not a defineStaffPermissions(...) reference - ${MOVE_TO_MODULE}`,
     };
   }
 
-  if (
-    value.type === "MemberExpression" &&
-    !value.computed &&
-    value.object.type === "Identifier" &&
-    value.property.type === "Identifier" &&
-    value.property.name === "config"
-  ) {
-    const binding = resolveBinding(
-      ctx.plan,
-      ctx.project,
-      root.parsed,
-      value.object.name,
-    );
-    if (typeof binding === "string") {
-      return { kind: "unresolved", reason: `${value.object.name}: ${binding}` };
-    }
+  const binding = resolveBinding(
+    ctx.plan,
+    ctx.project,
+    root.parsed,
+    value.name,
+  );
+  if (typeof binding === "string") {
+    return { kind: "unresolved", reason: `${value.name}: ${binding}` };
+  }
+  if (binding.file === API_CONFIG) {
+    return {
+      kind: "unresolved",
+      reason: `${value.name} is declared in ${API_CONFIG}, which routes and the AdminCP navigation must not import - move it to its own module (${STAFF_PERMISSIONS})`,
+    };
+  }
 
-    const parsed = readParsed(ctx.plan, binding.file);
-    const init = findConstInit(parsed.program, binding.exportName);
-    const call = init === null ? null : unwrap(init);
-    const staff =
-      call?.type === "CallExpression" &&
-      call.callee.type === "Identifier" &&
-      call.callee.name === "defineStaffPermissions"
-        ? objectArgument(call)
-        : null;
+  const parsed = readParsed(ctx.plan, binding.file);
+  const init = findConstInit(parsed.program, binding.exportName);
+  const call = init === null ? null : unwrap(init);
+  const [, declarations] =
+    call?.type === "CallExpression" &&
+    call.callee.type === "Identifier" &&
+    call.callee.name === "defineStaffPermissions"
+      ? call.arguments
+      : [];
+  const staff =
+    declarations === undefined || declarations.type === "SpreadElement"
+      ? null
+      : unwrap(declarations);
 
-    return staff === null
-      ? {
-          kind: "unresolved",
-          reason: `${binding.exportName} in ${binding.file} is not a defineStaffPermissions({...}) call`,
-        }
-      : {
-          exportName: binding.exportName,
-          file: binding.file,
-          kind: "defined",
-          parsed,
-          staff,
-        };
+  if (staff?.type !== "ObjectExpression") {
+    return {
+      kind: "unresolved",
+      reason: `${binding.exportName} in ${binding.file} is not a defineStaffPermissions(manifest, {...}) call`,
+    };
+  }
+  if (!isExported(parsed.program, binding.exportName)) {
+    return {
+      kind: "unresolved",
+      reason: `${binding.exportName} in ${binding.file} is not exported, so generated routes cannot import it`,
+    };
   }
 
   return {
-    kind: "unresolved",
-    reason: "permissionStaff is not an object literal",
+    exportName: binding.exportName,
+    file: binding.file,
+    kind: "defined",
+    parsed,
+    staff,
   };
 };
 
+const member = (key: string) =>
+  IDENTIFIER.test(key) ? `.${key}` : `[${JSON.stringify(key)}]`;
+
+/** `staffPermissions.admin.notes.canCreate`, for code and messages. */
+export const permissionExpression = (
+  exportName: string,
+  ref: PermissionRef,
+): string =>
+  `${exportName}.admin${member(ref.module)}${member(staffPermissionKey(ref.permission))}`;
+
+/**
+ * The typed reference a generated route guards with, and its import. The
+ * permission must be declared in the plugin's `defineStaffPermissions` module
+ * (`planPermission` checks that, or declares it, first).
+ *
+ * @throws {UnsupportedStructureError} When the plugin's permissions cannot be
+ * located, or `ref` is not declared there.
+ */
 export const permissionSource = (
   ctx: GenerateContext,
   fromFile: string,
   ref: PermissionRef,
-): undefined | { expression: string; importLine: string } => {
+): PermissionSource => {
   const location = locatePermissionStaff(ctx);
-  if (
-    location.kind !== "defined" ||
-    location.file === API_CONFIG ||
-    !isExported(location.parsed.program, location.exportName)
-  ) {
-    return undefined;
+  const wanted = `${ref.module}.${ref.permission}`;
+  const manual = [
+    `Declare ${JSON.stringify(ref.permission)} in the admin.${ref.module} of the plugin's defineStaffPermissions(manifest, {...}) (${STAFF_PERMISSIONS}),`,
+    `and guard the route with adminStaffPermission: ${permissionExpression(STAFF_PERMISSIONS_EXPORT, ref)}.`,
+  ];
+
+  if (location.kind !== "defined") {
+    throw new UnsupportedStructureError(
+      `Cannot reference the staff permission ${wanted}.`,
+      [
+        location.kind === "absent"
+          ? `${API_CONFIG} passes no permissionStaff to buildApiPlugin.`
+          : `${location.reason}.`,
+      ],
+      manual,
+    );
   }
+
   const declarations = readAdminPermissions(ctx);
   if (
     declarations.status !== "resolved" ||
     declarations.modules.get(ref.module)?.includes(ref.permission) !== true
   ) {
-    return undefined;
+    throw new UnsupportedStructureError(
+      `Cannot reference the staff permission ${wanted}: ${location.file} does not declare it.`,
+      [
+        declarations.status === "resolved"
+          ? `Its admin permissions are ${[...declarations.modules].map(([module, names]) => names.map(name => `${module}.${name}`).join(", ")).join(", ") || "empty"}.`
+          : `${declarations.reason}.`,
+      ],
+      manual,
+    );
   }
 
-  const member = (key: string) =>
-    IDENTIFIER.test(key) ? `.${key}` : `[${JSON.stringify(key)}]`;
-  const key = staffPermissionKey(ref.permission);
-
   return {
-    expression: `${location.exportName}.admin${member(ref.module)}${member(key)}`,
+    expression: permissionExpression(location.exportName, ref),
     importLine: `import { ${location.exportName} } from ${JSON.stringify(specifierFor(ctx.project, fromFile, location.file, true))};`,
   };
 };
@@ -511,14 +545,15 @@ export const readAdminPermissions = (
   if (location.kind === "unresolved") {
     return { reason: location.reason, status: "unresolved" };
   }
+  if (location.kind === "absent") {
+    return { modules: new Map(), status: "resolved" };
+  }
 
   const { staff } = location;
-  if (staff === null) return { modules: new Map(), status: "resolved" };
-
   const admin = effectiveProperty(staff, "admin");
   if (admin.kind === "unsafe") {
     return {
-      reason: `in permissionStaff (${locate(location.parsed, admin.at)}), ${admin.reason}`,
+      reason: `in defineStaffPermissions (${locate(location.parsed, admin.at)}), ${admin.reason}`,
       status: "unresolved",
     };
   }
@@ -531,7 +566,7 @@ export const readAdminPermissions = (
     adminObject.properties.some(property => property.type === "SpreadElement")
   ) {
     return {
-      reason: "permissionStaff.admin is not a plain object literal",
+      reason: "the admin permissions are not a plain object literal",
       status: "unresolved",
     };
   }
@@ -545,7 +580,7 @@ export const readAdminPermissions = (
       property.method
     ) {
       return {
-        reason: "permissionStaff.admin has a computed key, getter or method",
+        reason: "the admin permissions have a computed key, getter or method",
         status: "unresolved",
       };
     }
@@ -558,7 +593,7 @@ export const readAdminPermissions = (
     const entries = arrayValue(property);
     if (key === null || entries === null) {
       return {
-        reason: `permissionStaff.admin.${key ?? "?"} is not an array literal`,
+        reason: `admin.${key ?? "?"} is not an array literal`,
         status: "unresolved",
       };
     }
@@ -577,14 +612,14 @@ export const readAdminPermissions = (
           entry.kind === "property" ? stringValue(entry.property) : null;
         if (permission === null) {
           return {
-            reason: `an entry of permissionStaff.admin.${key} has no literal permission`,
+            reason: `an entry of admin.${key} has no literal permission`,
             status: "unresolved",
           };
         }
         names.push(permission);
       } else {
         return {
-          reason: `permissionStaff.admin.${key} has an entry that is not a literal`,
+          reason: `admin.${key} has an entry that is not a literal`,
           status: "unresolved",
         };
       }
@@ -642,6 +677,67 @@ const planPermissionLabels = (ctx: GenerateContext, ref: PermissionRef) => {
   );
 };
 
+/**
+ * Creates `src/staff-permissions.ts` with `ref` as its only permission and
+ * passes it to `buildApiPlugin`, for a plugin that declares none yet.
+ */
+const planStaffPermissionsModule = (
+  ctx: GenerateContext,
+  holder: ObjectExpression,
+  parsed: ParsedSource,
+  entry: string,
+): void => {
+  const { plan, project } = ctx;
+  const manual = [
+    `Create ${STAFF_PERMISSIONS}:`,
+    `  export const ${STAFF_PERMISSIONS_EXPORT} = defineStaffPermissions(manifest, { admin: { ${entry} } });`,
+    `and pass it in ${API_CONFIG}: buildApiPlugin({ ..., permissionStaff: ${STAFF_PERMISSIONS_EXPORT} }).`,
+  ];
+
+  if (plan.exists(STAFF_PERMISSIONS)) {
+    throw new UnsupportedStructureError(
+      `${STAFF_PERMISSIONS} exists, but ${API_CONFIG} passes no permissionStaff to buildApiPlugin.`,
+      [],
+      [
+        `Pass its defineStaffPermissions(...) export as permissionStaff in ${API_CONFIG}, then run the command again.`,
+      ],
+    );
+  }
+  if (topLevelNames(parsed.program).has(STAFF_PERMISSIONS_EXPORT)) {
+    throw new UnsupportedStructureError(
+      `${API_CONFIG} already declares ${STAFF_PERMISSIONS_EXPORT}.`,
+      [],
+      manual,
+    );
+  }
+
+  plan.create(
+    STAFF_PERMISSIONS,
+    staffPermissionsTemplate({
+      entry,
+      exportName: STAFF_PERMISSIONS_EXPORT,
+      manifest: specifierFor(project, STAFF_PERMISSIONS, MANIFEST, true),
+    }),
+    "the plugin's staff permissions",
+  );
+  plan.update(
+    API_CONFIG,
+    applyEdits(parsed.source, [
+      ...addNamedImport(
+        parsed,
+        specifierFor(project, API_CONFIG, STAFF_PERMISSIONS, true),
+        STAFF_PERMISSIONS_EXPORT,
+      ),
+      ...addProperty(
+        parsed.source,
+        holder,
+        `permissionStaff: ${STAFF_PERMISSIONS_EXPORT}`,
+      ),
+    ]),
+    "register the plugin's staff permissions",
+  );
+};
+
 export const planPermission = (
   ctx: GenerateContext,
   ref: PermissionRef,
@@ -650,42 +746,58 @@ export const planPermission = (
   const declarations = readAdminPermissions(ctx);
   const wanted = `${ref.module}.${ref.permission}`;
   const entry = `${propertyKey(ref.module)}: [${JSON.stringify(ref.permission)}]`;
-  const snippet = `permissionStaff: { admin: { ${entry} } }`;
 
   if (declarations.status === "unresolved") {
-    if (declare) {
-      throw new UnsupportedStructureError(
-        `Cannot declare ${wanted}: ${declarations.reason}.`,
-        [
-          `Add ${JSON.stringify(ref.permission)} to permissionStaff.admin[${JSON.stringify(ref.module)}] in ${API_CONFIG} by hand.`,
-        ],
-      );
-    }
-    ctx.warnings.push(
-      `Could not verify that ${wanted} is declared (${declarations.reason}). Check ${API_CONFIG}.`,
+    throw new UnsupportedStructureError(
+      `Cannot ${declare ? "declare" : "verify"} ${wanted}: ${declarations.reason}.`,
+      [
+        "Generated routes guard with a typed reference from the plugin's defineStaffPermissions module, so it has to be readable.",
+      ],
+      [
+        `Add ${JSON.stringify(ref.permission)} to admin[${JSON.stringify(ref.module)}] of the plugin's defineStaffPermissions(manifest, {...}) by hand.`,
+      ],
     );
-
-    return;
   }
 
   if (declarations.modules.get(ref.module)?.includes(ref.permission) === true)
     return;
 
+  const key = staffPermissionKey(ref.permission);
+  const clash = declarations.modules
+    .get(ref.module)
+    ?.find(name => staffPermissionKey(name) === key);
+  if (clash !== undefined) {
+    throw new UserError(
+      `${wanted} collides with the declared ${ref.module}.${clash}.`,
+      {
+        details: [
+          `Both become the reference ${permissionExpression(STAFF_PERMISSIONS_EXPORT, ref)}, which defineStaffPermissions refuses.`,
+        ],
+        hint: `Use ${JSON.stringify(clash)}, or pick a name that differs in more than - and _.`,
+      },
+    );
+  }
+
   if (!declare) {
     if (contentModules && !declarations.modules.has(ref.module)) {
-      ctx.warnings.push(
-        `${wanted} is not declared in ${API_CONFIG}. If a content type generates the "${ref.module}" permission module, this is fine; otherwise nobody can be granted it. Run vitnode plugin validate after building to check.`,
+      throw new UserError(
+        `The staff permission ${wanted} is not declared by the plugin.`,
+        {
+          details: [
+            `If a content type generates the "${ref.module}" permission module, guard the route by hand with its generated permission:`,
+            `  adminStaffPermission: contentAdminStaffPermission(manifest.id, yourContent, ${JSON.stringify(ref.permission)})`,
+            `(contentAdminStaffPermission is exported by @vitnode/core/content).`,
+          ],
+          hint: "Or pass --declare-permission to declare it in the plugin's own permissions.",
+        },
       );
-
-      return;
     }
 
     const location = locatePermissionStaff(ctx);
-    const defined = location.kind === "defined";
     throw new UserError(`The staff permission ${wanted} is not declared.`, {
       details: [
-        `Nobody can be granted a permission the plugin does not declare in ${defined ? `${location.file} (defineStaffPermissions)` : API_CONFIG}:`,
-        `  ${defined ? `admin: { ${entry} }` : snippet}`,
+        `Nobody can be granted a permission the plugin does not declare in ${location.kind === "defined" ? location.file : STAFF_PERMISSIONS} (defineStaffPermissions):`,
+        `  admin: { ${entry} }`,
       ],
       hint: "Pass --declare-permission to add it (and its labels), or pick a declared one.",
     });
@@ -697,48 +809,47 @@ export const planPermission = (
       `Cannot declare ${wanted}: ${location.reason}.`,
       [],
       [
-        `Add ${JSON.stringify(ref.permission)} to permissionStaff.admin[${JSON.stringify(ref.module)}] by hand:`,
-        `  ${snippet}`,
+        `Add ${JSON.stringify(ref.permission)} to admin[${JSON.stringify(ref.module)}] of the plugin's defineStaffPermissions(manifest, {...}) by hand.`,
       ],
     );
+  }
+
+  if (location.kind === "absent") {
+    planStaffPermissionsModule(ctx, location.holder, location.parsed, entry);
+    planPermissionLabels(ctx, ref);
+
+    return;
   }
 
   const { parsed, staff } = location;
   const edits: Edit[] = [];
   const manual = [
-    `Add ${JSON.stringify(ref.permission)} to permissionStaff.admin[${JSON.stringify(ref.module)}] in ${location.file}${location.kind === "defined" ? ` (the object passed to defineStaffPermissions for ${location.exportName})` : ""}:`,
+    `Add ${JSON.stringify(ref.permission)} to admin[${JSON.stringify(ref.module)}] in ${location.file} (the object passed to defineStaffPermissions for ${location.exportName}):`,
     `  admin: { ${entry} }`,
   ];
   const editable = (object: ObjectExpression, name: string, where: string) =>
     withManual(manual, () => editableProperty(parsed, object, name, where));
-  const adminProperty =
-    staff === null ? null : editable(staff, "admin", "permissionStaff");
+  const adminProperty = editable(staff, "admin", "defineStaffPermissions");
   const admin = objectValue(adminProperty);
   if (adminProperty !== null && admin === null) {
     throw new UnsupportedStructureError(
-      `Cannot declare ${wanted}: permissionStaff.admin is not an object literal.`,
+      `Cannot declare ${wanted}: the admin permissions are not an object literal.`,
       [`At ${locate(parsed, adminProperty.start)}.`],
       manual,
     );
   }
   const moduleProperty =
-    admin === null
-      ? null
-      : editable(admin, ref.module, "permissionStaff.admin");
+    admin === null ? null : editable(admin, ref.module, "admin");
   const moduleEntries = arrayValue(moduleProperty);
   if (moduleProperty !== null && moduleEntries === null) {
     throw new UnsupportedStructureError(
-      `Cannot declare ${wanted}: permissionStaff.admin[${JSON.stringify(ref.module)}] is not an array literal.`,
+      `Cannot declare ${wanted}: admin[${JSON.stringify(ref.module)}] is not an array literal.`,
       [`At ${locate(parsed, moduleProperty.start)}.`],
       manual,
     );
   }
 
-  if (staff === null) {
-    if (location.kind === "inline") {
-      edits.push(...addProperty(parsed.source, location.holder, snippet));
-    }
-  } else if (admin === null) {
+  if (admin === null) {
     edits.push(...addProperty(parsed.source, staff, `admin: { ${entry} }`));
   } else if (moduleEntries === null) {
     edits.push(...addProperty(parsed.source, admin, entry));

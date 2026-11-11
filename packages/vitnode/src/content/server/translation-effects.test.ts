@@ -10,7 +10,7 @@ import { contentTranslationEffects } from "./translation-effects";
 
 const emit = vi.fn<
   (
-    name: string,
+    event: { name: string },
     payload: Record<string, unknown>,
     options?: unknown,
   ) => {
@@ -81,7 +81,9 @@ describe("one event per real mutation", () => {
 
     expect(emit).toHaveBeenCalledTimes(1);
     expect(emit).toHaveBeenCalledWith(
-      `content.test.localized-guide.${action}`,
+      expect.objectContaining({
+        name: `content.test.localized-guide.${action}`,
+      }),
       expect.anything(),
       { pluginId: "@vitnode/example" },
     );
@@ -92,7 +94,7 @@ describe("one event per real mutation", () => {
 
     // A shared update and a Polish translation update are different domain facts
     // with different consequences - one invalidates every locale, the other one.
-    const [name] = emit.mock.calls[0];
+    const [{ name }] = emit.mock.calls[0];
     expect(name).not.toBe("content.test.localized-guide.updated");
   });
 
@@ -149,7 +151,9 @@ describe("payloads", () => {
       } as never,
     });
 
-    expect(emit.mock.calls[0][1]).toMatchObject({ publishedAt });
+    expect(emit.mock.calls[0][1]).toMatchObject({
+      publishedAt: publishedAt.toISOString(),
+    });
   });
 
   it("omits revisionId when there is no history", async () => {

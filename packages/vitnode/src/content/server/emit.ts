@@ -1,10 +1,8 @@
 import type { Context } from "hono";
 
-import type {
-  EventEmitOptions,
-  EventEmitResult,
-  VitNodeEventName,
-} from "../../api/models/events";
+import { randomUUID } from "node:crypto";
+
+import type { EventEmitResult } from "../../api/models/events";
 import type {
   ContentCreatedPayload,
   ContentDeletedPayload,
@@ -27,9 +25,10 @@ import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentPublicState } from "./page-cache";
 
+import { EventPayloadValidationError } from "../../api/lib/event-definition";
 import { followContentSubmissionContainer } from "../approvals/server/follow-container";
 import { contentContainerFieldOf } from "../containers/association";
-import { contentEventName } from "../events";
+import { contentEventDefinitionOf } from "../event-definitions";
 import { invalidateContentPages } from "./page-cache";
 import { publishContentRefresh } from "./refresh/publish";
 
@@ -50,16 +49,9 @@ type ContentPayload =
   | ContentUnpublishedPayload<ContentId>
   | ContentUpdatedPayload<AnyContentTypeDefinition>;
 
-interface ContentEventEmitter {
-  emit: (
-    name: VitNodeEventName,
-    payload: ContentPayload,
-    options?: EventEmitOptions,
-  ) => Promise<EventEmitResult>;
-}
-
 /**
- * Emits `content.{definition.id}.{action}` on the request's event bus,
+ * Emits `content.{definition.id}.{action}` (its `contentEvent` definition) on
+ * the request's event bus, with any `Date` in `payload` sent as an ISO string,
  * invalidates the cached pages and public reads that show the content type,
  * and only then sends the live refresh signals (`publishContentRefresh`) to
  * open AdminCP lists and threads - so a client that reacts reads the new
@@ -69,8 +61,10 @@ interface ContentEventEmitter {
  * `model.service(c)` or `model.editorialService(c)` write emits nothing on
  * its own. Server-only.
  *
- * @returns The event bus result, with a page-cache invalidation failure, if
- * any, appended to `failures` rather than thrown.
+ * @returns The event bus result, with a page-cache invalidation failure or a
+ * payload the content type's event schema rejects (`module: "validation"`; no
+ * listener ran) appended to `failures` rather than thrown - the write has
+ * already committed.
  */
 export const emitContentEvent = async (
   c: Context,
@@ -93,17 +87,44 @@ export const emitContentEvent = async (
     row?: null | Record<string, unknown>;
   },
 ): Promise<EventEmitResult> => {
-  const name = contentEventName(definition.id, action) as VitNodeEventName;
-  const events = c.get("events") as unknown as ContentEventEmitter;
+  const wire = Object.fromEntries(
+    Object.entries(payload).map(([key, value]) => [
+      key,
+      value instanceof Date ? value.toISOString() : value,
+    ]),
+  );
   // Every content write announces itself here once its transaction has
   // committed, so this is where cached pages learn the content moved. Neither
   // waits for the other: a listener does not read the page cache, and the cache
   // does not care who listened. A failure travels with the event's own, so the
   // scheduled path retries it.
+  const event = contentEventDefinitionOf(definition, action);
+  const announce = async (): Promise<EventEmitResult> => {
+    try {
+      return await c
+        .get("events")
+        .emit(event, wire, { pluginId: options?.pluginId });
+    } catch (error) {
+      if (!(error instanceof EventPayloadValidationError)) throw error;
+      await c.get("log")?.error(error.message);
+
+      return {
+        delivered: 0,
+        eventId: randomUUID(),
+        failures: [
+          {
+            error: error.message,
+            listener: event.name,
+            module: "validation",
+            pluginId: options?.pluginId ?? event.pluginId,
+          },
+        ],
+        status: "delivered",
+      };
+    }
+  };
   const [result, pageCacheFailure] = await Promise.all([
-    events.emit(name, payload, {
-      pluginId: options?.pluginId,
-    }),
+    announce(),
     invalidateContentPages(
       c,
       definition,

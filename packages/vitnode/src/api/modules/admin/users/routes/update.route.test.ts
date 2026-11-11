@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
+import { userUpdatedEvent } from "@/api/events/users";
 import { sessionCacheKey } from "@/api/models/session-cache";
 import { core_admin_permissions } from "@/database/admins";
 import { core_languages } from "@/database/languages";
@@ -277,7 +278,7 @@ describe("PATCH /admin/users/{id} - personal information and preferences", () =>
     });
     expect(h.ssoSourcesOf(TARGET_ID)).toEqual(["lastName"]);
     expect(h.emit).toHaveBeenCalledWith(
-      "user.updated",
+      userUpdatedEvent,
       expect.objectContaining({ userId: TARGET_ID }),
     );
   });

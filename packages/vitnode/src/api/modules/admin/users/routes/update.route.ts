@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { userUpdatedEvent } from "@/api/events/users";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { isValidTimeZone } from "@/api/lib/notifications/digest-period";
 import { revokeAccountRecoveryTokens } from "@/api/lib/recovery-tokens";
@@ -12,6 +13,7 @@ import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { core_languages } from "@/database/languages";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { canonicalizeEmail } from "@/lib/email-canonical";
 import {
   personalInformationChanges,
@@ -102,7 +104,7 @@ export const zodUpdateUserAdminSchema = z
   });
 
 export const updateUserAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   route: {
     method: "patch",
     description:
@@ -429,7 +431,7 @@ export const updateUserAdminRoute = buildRoute({
         await invalidateSessionCacheForUser(c, user.id);
       }
 
-      await c.get("events").emit("user.updated", {
+      await c.get("events").emit(userUpdatedEvent, {
         userId: updated.id,
         email: updated.email,
         name: updated.name,
@@ -459,7 +461,7 @@ export const updateUserAdminRoute = buildRoute({
       ]);
     }
 
-    await c.get("events").emit("user.updated", {
+    await c.get("events").emit(userUpdatedEvent, {
       userId: current.id,
       email: current.email,
       name: current.name,

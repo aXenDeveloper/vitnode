@@ -2,12 +2,14 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { roleUpdatedEvent } from "@/api/events/roles";
 import { multiLangAuditLabel, roleAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { saveLanguageWords } from "@/api/lib/save-language-words";
 import { invalidateAllStaffPermissions } from "@/api/lib/staff-permission-cache";
 import { core_roles } from "@/database/roles";
 import { auditDiff } from "@/lib/audit/diff";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { parseEmojiIcon, serializeEmojiIcon } from "@/lib/emoji-icon";
 
 import { assertCanManageAdminRole } from "../lib/assert-manage-admin-role";
@@ -45,7 +47,7 @@ export const zodUpdateRoleAdminSchema = z
   });
 
 export const updateRoleAdminRoute = buildRoute({
-  adminStaffPermission: { module: "roles", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.roles.canEdit,
   route: {
     method: "patch",
     description: "Update a role by id (Admin only)",
@@ -201,7 +203,7 @@ export const updateRoleAdminRoute = buildRoute({
     // the answer for every member of this role at once.
     await invalidateAllStaffPermissions(c);
 
-    await c.get("events").emit("role.updated", { roleId });
+    await c.get("events").emit(roleUpdatedEvent, { roleId });
 
     return c.json({ id: roleId }, 200);
   },

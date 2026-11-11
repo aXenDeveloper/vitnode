@@ -6,9 +6,10 @@ import { exportAuditLogs, zodAuditFilters } from "@/api/lib/audit/query";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { AUDIT_EXPORT_MAX_ROWS } from "@/lib/audit/const";
 import { toCsv } from "@/lib/audit/csv";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const exportActivityLogsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "activity_logs", permission: "can_export" },
+  adminStaffPermission: coreStaffPermissions.admin.activity_logs.canExport,
   route: {
     method: "get",
     path: "/export",

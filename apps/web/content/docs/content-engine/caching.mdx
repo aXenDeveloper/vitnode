@@ -30,7 +30,7 @@ Add caching where it pays off:
 | A page of your VitNode app              | TanStack Query, warmed in the loader    | Its `staleTime`, or `invalidateQueries` after a write |
 | The HTML of a public page in your app   | [Page cache](/docs/dev/cache/pages)     | Automatic: every content write invalidates it         |
 | A separate front end with its own cache | That front end's tag cache              | `content.revalidateOrigins` and the cache tags below  |
-| Your own Hono route                     | [`c.get("cache")`](/docs/dev/cache/api) | `c.get("cache").delete(key)` after a write            |
+| Your own Hono route                     | [A cache entry](/docs/dev/cache/api)    | `c.get("cache").entry(definition, ...key).delete()` after a write |
 
 ## Cache a public list in the app
 

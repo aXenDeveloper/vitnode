@@ -5,6 +5,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import type { RouteValidationHook } from "../../../api/lib/route";
+import type { AdminStaffPermissionRef } from "../../../lib/staff-permissions";
 import type { AnyContentModel } from "../../server/model";
 import type { ContentAccessOverrides } from "../policy";
 import type {
@@ -14,10 +15,10 @@ import type {
 } from "../schemas";
 import type { ContentAccessFamily } from "./families";
 
+import { contentAccessUpdatedEvent } from "../../../api/events/content-access";
 import { resolveRoleNames } from "../../../api/lib/resolve-role-names";
 import { buildRoute } from "../../../api/lib/route";
 import { core_roles } from "../../../database/roles";
-import { CONTENT_PERMISSIONS } from "../../const";
 import {
   CONTENT_ACCESS_ACTIONS,
   type CONTENT_ACCESS_ERROR_CODES,
@@ -168,24 +169,26 @@ const reportOf = async (
 
 /**
  * The AdminCP access routes of one scope family, mounted under the family's
- * admin module (`/{id}/access`). Read needs `can_view`, writes `can_edit` of
- * the module. Plugins do not call this directly.
+ * admin module (`/{id}/access`). Read needs the family's `view` permission,
+ * writes its `edit` one. Plugins do not call this directly.
  */
 export const buildContentAccessAdminRoutes = <P extends string>({
   familyId,
-  permissionModule,
+  permissions,
   pluginId,
 }: {
   familyId: string;
-  permissionModule: string;
+  /** The family's generated `can_view` and `can_edit`. */
+  permissions: {
+    edit: AdminStaffPermissionRef;
+    view: AdminStaffPermissionRef;
+  };
   pluginId: P;
 }) => {
-  const module = permissionModule;
-
   const read = buildRoute({
     pluginId,
     hook: validationHook,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: permissions.view,
     route: {
       method: "get",
       path: "/{id}/access",
@@ -212,7 +215,7 @@ export const buildContentAccessAdminRoutes = <P extends string>({
   const preview = buildRoute({
     pluginId,
     hook: validationHook,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: permissions.view,
     route: {
       method: "post",
       path: "/{id}/access/preview",
@@ -253,7 +256,7 @@ export const buildContentAccessAdminRoutes = <P extends string>({
   const update = buildRoute({
     pluginId,
     hook: validationHook,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: permissions.edit,
     route: {
       method: "put",
       path: "/{id}/access",
@@ -342,7 +345,7 @@ export const buildContentAccessAdminRoutes = <P extends string>({
       forgetContentAccessState(c);
       if (changedActions.length > 0) {
         await expireContentAccessFamily(c, family);
-        await c.get("events").emit("content.access.updated", {
+        await c.get("events").emit(contentAccessUpdatedEvent, {
           changedActions,
           family: family.id,
           pluginId: family.pluginId,
@@ -359,7 +362,7 @@ export const buildContentAccessAdminRoutes = <P extends string>({
 
   const filesStatus = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: permissions.view,
     route: {
       method: "get",
       path: "/access/files",
@@ -387,7 +390,7 @@ export const buildContentAccessAdminRoutes = <P extends string>({
 
   const protectFiles = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: permissions.edit,
     route: {
       method: "post",
       path: "/access/files/protect",
@@ -432,20 +435,18 @@ export const buildContentAccessAdminRoutes = <P extends string>({
  */
 export const buildContentAccessEffectiveRoute = <P extends string>({
   contentTypeId,
-  permissionModule,
+  permission,
   pluginId,
 }: {
   contentTypeId: string;
-  permissionModule: string;
+  /** The content type's generated `can_view`. */
+  permission: AdminStaffPermissionRef;
   pluginId: P;
 }) =>
   buildRoute({
     pluginId,
     hook: validationHook,
-    adminStaffPermission: {
-      module: permissionModule,
-      permission: CONTENT_PERMISSIONS.view,
-    },
+    adminStaffPermission: permission,
     route: {
       method: "post",
       path: "/access/effective",

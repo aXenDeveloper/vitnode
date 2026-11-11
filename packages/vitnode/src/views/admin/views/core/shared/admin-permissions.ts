@@ -1,61 +1,53 @@
-import type {
-  PermissionsStaffArgs,
-  PermissionStaffType,
-} from "@/api/lib/permission-staff";
+import type { PermissionStaffType } from "@/api/lib/permission-staff";
 
-import { manifest } from "@/manifest";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
-/** A core permission tuple. The plugin is always `@vitnode/core` here. */
-const core = (module: string, permission: string): PermissionsStaffArgs => ({
-  module,
-  permission,
-  plugin: manifest.id,
-});
+const { admin } = coreStaffPermissions;
 
 export const ADMIN_USER_PERMISSIONS = {
-  create: core("users", "can_create"),
-  edit: core("users", "can_edit"),
-  editAdmin: core("users", "can_edit_admin"),
-  view: core("users", "can_view"),
-  viewHiddenPresence: core("users", "can_view_hidden_presence"),
+  create: admin.users.canCreate,
+  edit: admin.users.canEdit,
+  editAdmin: admin.users.canEditAdmin,
+  view: admin.users.canView,
+  viewHiddenPresence: admin.users.canViewHiddenPresence,
 } as const;
 
 export const ADMIN_DEBUG_PERMISSIONS = {
-  ai: core("ai", "can_view"),
-  clearCache: core("debug", "can_clear_cache"),
-  cron: core("cron", "can_view"),
-  plugins: core("plugins", "can_view"),
-  queue: core("queue", "can_view"),
-  system: core("system", "can_view"),
-  testAi: core("system", "can_test_ai"),
-  testEmail: core("system", "can_send_test_email"),
-  testStorage: core("system", "can_test_storage"),
-  view: core("debug", "can_view"),
+  ai: admin.ai.canView,
+  clearCache: admin.debug.canClearCache,
+  cron: admin.cron.canView,
+  plugins: admin.plugins.canView,
+  queue: admin.queue.canView,
+  system: admin.system.canView,
+  testAi: admin.system.canTestAi,
+  testEmail: admin.system.canSendTestEmail,
+  testStorage: admin.system.canTestStorage,
+  view: admin.debug.canView,
 } as const;
 
 export const ADMIN_SEARCH_PERMISSIONS = {
-  manage: core("system", "can_manage_search"),
+  manage: admin.system.canManageSearch,
 } as const;
 
 export const ADMIN_ROLE_PERMISSIONS = {
-  create: core("roles", "can_create"),
-  delete: core("roles", "can_delete"),
-  deleteAdmin: core("roles", "can_delete_admin"),
-  edit: core("roles", "can_edit"),
-  editAdmin: core("roles", "can_edit_admin"),
-  view: core("roles", "can_view"),
+  create: admin.roles.canCreate,
+  delete: admin.roles.canDelete,
+  deleteAdmin: admin.roles.canDeleteAdmin,
+  edit: admin.roles.canEdit,
+  editAdmin: admin.roles.canEditAdmin,
+  view: admin.roles.canView,
 } as const;
 
 export const ADMIN_REPORT_REASON_PERMISSIONS = {
-  create: core("report_reasons", "can_create"),
-  delete: core("report_reasons", "can_delete"),
-  edit: core("report_reasons", "can_edit"),
-  view: core("report_reasons", "can_view"),
+  create: admin.report_reasons.canCreate,
+  delete: admin.report_reasons.canDelete,
+  edit: admin.report_reasons.canEdit,
+  view: admin.report_reasons.canView,
 } as const;
 
 export const ADMIN_WARNING_PERMISSIONS = {
-  manage: core("warning_settings", "can_manage"),
-  view: core("warning_settings", "can_view"),
+  manage: admin.warning_settings.canManage,
+  view: admin.warning_settings.canView,
 } as const;
 
 export const staffPermissionModuleFor = (
@@ -63,13 +55,14 @@ export const staffPermissionModuleFor = (
 ): "staff_admins" | "staff_moderators" =>
   type === "admin" ? "staff_admins" : "staff_moderators";
 
+/** The permissions that manage the admin or the moderator staff list. */
 export const adminStaffPermissions = (type: PermissionStaffType) => {
-  const module = staffPermissionModuleFor(type);
+  const permissions = admin[staffPermissionModuleFor(type)];
 
   return {
-    create: core(module, "can_create"),
-    delete: core(module, "can_delete"),
-    edit: core(module, "can_edit"),
-    view: core(module, "can_view"),
+    create: permissions.canCreate,
+    delete: permissions.canDelete,
+    edit: permissions.canEdit,
+    view: permissions.canView,
   } as const;
 };

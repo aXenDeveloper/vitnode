@@ -91,7 +91,7 @@ The API collects cron jobs when it starts and writes any new one to `core_cron`,
 A job runs inside core's cron request, not inside one of your routes:
 
 - `c.get('db')`, `c.get('log')`, `c.get('queue')` and `c.get('cache')` work as in a route. There is no signed-in user.
-- `c.get('plugin')` is `@vitnode/core`, so logs are tagged with core, and `dispatch()` needs your plugin id: `c.get('queue').dispatch({ name: 'announce-note', pluginId: 'site-notes', payload })`.
+- `c.get('plugin')` is `@vitnode/core`, so logs are tagged with core. A queue task still belongs to the plugin that defines it, so `c.get('queue').dispatch(announceNoteTask, { noteId })` stores the row under `site-notes`, and a cache entry is stored under the plugin that defines it. An event emitted here records `@vitnode/core` as its emitter unless you pass `{ pluginId: manifest.id }` to `emit()`.
 - All jobs that are due on a tick run at the same time.
 - The schedule is only as precise as the tick. With a tick every minute, `*/10 * * * * *` (every 10 seconds) still runs once a minute.
 

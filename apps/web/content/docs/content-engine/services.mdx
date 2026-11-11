@@ -1,6 +1,6 @@
 ---
 title: Services
-description: Read and write Content Engine records from your own Hono routes, cron jobs and queue tasks with the typed public, plain and editorial services, and reuse the generated Zod schemas.
+description: Read and write Content Engine records from Hono routes, cron jobs and queue tasks with the typed public, plain and editorial services and Zod schemas.
 icon: Server
 ---
 
@@ -104,7 +104,7 @@ if (outcome) {
 
 - `expectedVersion` is the version the page loaded. A newer save turns the call into a `409 CONTENT_VERSION_CONFLICT`, which `withHttpErrors` answers for you.
 - `resolveContentActor(c)` names the signed-in user on the revision. A job passes `CONTENT_SYSTEM_ACTOR`.
-- Protect a staff route with `adminStaffPermission: { module: "story", permission: "can_edit" }`.
+- Protect a staff route with the content type's generated permission: `adminStaffPermission: contentAdminStaffPermission(manifest.id, storyContentType, "can_edit")`, with `contentAdminStaffPermission` from `@vitnode/core/content`. See [Content Engine permissions](/docs/dev/working-with-users/staff-permission-refs#content-engine-permissions).
 
 Hiding and duplicating work the same way, with `hide`, `unhide` and `duplicate` and the `contentVisibilityEffects` and `contentDuplicateEffects` helpers. They exist only when `visibility` or `duplication` is on.
 

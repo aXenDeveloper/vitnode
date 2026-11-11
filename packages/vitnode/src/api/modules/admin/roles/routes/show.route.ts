@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import { buildRoute } from "@/api/builders";
 import { core_languages_words } from "@/database/languages";
 import { core_roles } from "@/database/roles";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const roleAdminSchema = z.object({
   id: z.number(),
@@ -40,7 +41,7 @@ const roleAdminSchema = z.object({
 });
 
 export const showRoleAdminRoute = buildRoute({
-  adminStaffPermission: { module: "roles", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.roles.canView,
   route: {
     method: "get",
     description: "Get a single role by id (Admin only)",

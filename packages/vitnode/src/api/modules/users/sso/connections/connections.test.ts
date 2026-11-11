@@ -10,6 +10,11 @@ import type {
 import type { SSOApiPlugin, SSOProviderUser } from "@/api/models/sso";
 import type { SsoProfilePolicy } from "@/api/models/sso-connection";
 
+import {
+  userSsoLinkedEvent,
+  userSsoProfileSyncedEvent,
+  userSsoUnlinkedEvent,
+} from "@/api/events/users";
 import { pkceChallengeS256 } from "@/api/lib/sso-protocol";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
@@ -278,7 +283,7 @@ describe("connecting an account from settings", () => {
       }),
     ]);
     expect(h.users.get(ALICE.id)?.email).toBe(ALICE.email);
-    expect(h.emit).toHaveBeenCalledWith("user.sso.linked", {
+    expect(h.emit).toHaveBeenCalledWith(userSsoLinkedEvent, {
       email: ALICE.email,
       providerId: "google",
       userId: ALICE.id,
@@ -571,7 +576,7 @@ describe("disconnecting an account", () => {
     expect(h.sources).toEqual([]);
     expect(h.users.get(ALICE.id)?.firstName).toBe("Alicja");
     expect(h.google.fetchToken).not.toHaveBeenCalled();
-    expect(h.emit).toHaveBeenCalledWith("user.sso.unlinked", {
+    expect(h.emit).toHaveBeenCalledWith(userSsoUnlinkedEvent, {
       providerId: "google",
       userId: ALICE.id,
     });
@@ -846,7 +851,7 @@ describe("importing a profile now", () => {
       lastName: "Kowalska",
       showRealName: false,
     });
-    expect(h.emit).toHaveBeenCalledWith("user.sso.profile_synced", {
+    expect(h.emit).toHaveBeenCalledWith(userSsoProfileSyncedEvent, {
       fields: ["firstName"],
       providerId: "google",
       trigger: "import",
@@ -1040,7 +1045,7 @@ describe("updating the profile on sign-in", () => {
       lastName: "Kowalska",
       showRealName: false,
     });
-    expect(h.emit).toHaveBeenCalledWith("user.sso.profile_synced", {
+    expect(h.emit).toHaveBeenCalledWith(userSsoProfileSyncedEvent, {
       fields: ["avatar", "firstName"],
       providerId: "google",
       trigger: "sign_in",
@@ -1146,7 +1151,7 @@ describe("syncing now, without signing out", () => {
       lastName: "Kowalska",
       showRealName: false,
     });
-    expect(h.emit).toHaveBeenCalledWith("user.sso.profile_synced", {
+    expect(h.emit).toHaveBeenCalledWith(userSsoProfileSyncedEvent, {
       fields: ["avatar", "firstName"],
       providerId: "google",
       trigger: "sync",

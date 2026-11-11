@@ -4,9 +4,10 @@ import {
   zodAuditListQuery,
   zodAuditPage,
 } from "@/api/lib/audit/query";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const listActivityLogsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "activity_logs", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.activity_logs.canView,
   route: {
     method: "get",
     path: "/",

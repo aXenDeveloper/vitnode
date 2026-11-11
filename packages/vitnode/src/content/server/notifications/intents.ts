@@ -1,70 +1,17 @@
 import type { Context } from "hono";
 
 import { and, eq, or } from "drizzle-orm";
-import { z } from "zod";
 
+import type { ContentNotificationIntent } from "../../../api/modules/content/tasks/content-notifications.task";
 import type { ContentSubmissionRow } from "../../approvals/server/submissions";
 import type { ContentId } from "../../ids";
 import type { AnyContentTypeDefinition } from "../../types";
 import type { ContentDatabase } from "../service";
 import type { ContentNotificationRegistry } from "./registry";
 
+import { contentNotificationsQueueTask } from "../../../api/modules/content/tasks/content-notifications.task";
 import { core_notification_events } from "../../../database/notifications";
-import { CONTENT_QUEUE_TASK_NOTIFICATIONS } from "../../const";
 import { contentIdKey } from "../../ids";
-
-/**
- * The intent a content operation stores in its own transaction, as the payload
- * of a `content-notifications` queue task. Only identities and the facts of
- * the operation (who acted, which decision) - the records themselves are
- * reloaded when it is processed, so a change in between is respected.
- */
-export const contentNotificationIntentSchema = z.discriminatedUnion("trigger", [
-  z.object({
-    actorId: z.number().int().positive().nullable(),
-    contentTypeId: z.string().min(1),
-    itemId: z.string().min(1),
-    ruleIds: z.array(z.string().min(1)).min(1),
-    trigger: z.literal("firstPublication"),
-    v: z.literal(1),
-  }),
-  z.object({
-    actorId: z.number().int().positive().nullable(),
-    contentTypeId: z.string().min(1),
-    decision: z.enum(["approved", "rejected"]),
-    itemId: z.string().min(1),
-    ruleIds: z.array(z.string().min(1)).min(1),
-    submissionId: z.number().int().positive(),
-    trigger: z.literal("moderationDecision"),
-    v: z.literal(1),
-  }),
-  z.object({
-    contentTypeId: z.string().min(1),
-    itemId: z.string().min(1),
-    trigger: z.literal("deleted"),
-    v: z.literal(1),
-  }),
-  z.object({
-    contentTypeId: z.string().min(1),
-    itemId: z.string().min(1),
-    ruleIds: z.array(z.string().min(1)).min(1),
-    submissionId: z.number().int().positive(),
-    trigger: z.literal("approvalSubmitted"),
-    v: z.literal(1),
-  }),
-  z.object({
-    contentTypeId: z.string().min(1),
-    itemId: z.string().min(1),
-    ruleIds: z.array(z.string().min(1)).min(1),
-    submissionId: z.number().int().positive(),
-    trigger: z.literal("approvalResolved"),
-    v: z.literal(1),
-  }),
-]);
-
-export type ContentNotificationIntent = z.infer<
-  typeof contentNotificationIntentSchema
->;
 
 const MAX_ATTEMPTS = 5;
 
@@ -118,14 +65,12 @@ const dispatchIntent = async (
   tx: ContentDatabase,
   intent: ContentNotificationIntent,
 ): Promise<void> => {
-  const queued = await c.get("queue").dispatch({
-    maxAttempts: MAX_ATTEMPTS,
-    name: CONTENT_QUEUE_TASK_NOTIFICATIONS,
-    payload: intent,
-    // Core owns the handler, whichever plugin's route made the write.
-    pluginId: "@vitnode/core",
-    tx,
-  });
+  const queued = await c
+    .get("queue")
+    .dispatch(contentNotificationsQueueTask, intent, {
+      maxAttempts: MAX_ATTEMPTS,
+      tx,
+    });
 
   // Processed right after the response when the write came from a request;
   // a rolled-back write leaves nothing to claim. The queue cron covers the

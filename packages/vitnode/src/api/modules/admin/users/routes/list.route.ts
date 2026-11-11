@@ -13,11 +13,12 @@ import {
 import { core_files } from "@/database/files";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const avatarFile = alias(core_files, "user_avatar_file");
 
 export const listUsersAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canView,
   route: {
     method: "get",
     description: "Get list of all users",

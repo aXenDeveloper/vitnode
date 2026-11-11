@@ -5,7 +5,10 @@ import { createContentAccess } from "@vitnode/core/content/server";
 import { and, count, desc, eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
-import { rememberForumStats } from "@/api/lib/stats-cache";
+import {
+  forumStatsCache,
+  readForumStatsGeneration,
+} from "@/api/lib/stats-cache";
 import { forumContainers } from "@/content/forums";
 import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";
@@ -66,10 +69,10 @@ export const forumStatsRoute = buildRoute({
 
     // Three whole-table aggregates, read by every forum index visit - cached
     // until a forum write moves the generation.
-    const { commentCounts, latest, topicCounts } = await rememberForumStats(
-      c,
-      "forums",
-      async () => {
+    const { commentCounts, latest, topicCounts } = await c
+      .get("cache")
+      .entry(forumStatsCache, await readForumStatsGeneration(c))
+      .remember(async () => {
         const [topicCounts, commentCounts, latest] = await Promise.all([
           db
             .select({ forumId: topics.forum, value: count() })
@@ -105,8 +108,7 @@ export const forumStatsRoute = buildRoute({
           })),
           topicCounts,
         };
-      },
-    );
+      });
 
     const commentCountOf = new Map(
       commentCounts.map(row => [row.forumId, row.value]),

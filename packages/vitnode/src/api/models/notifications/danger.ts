@@ -1,6 +1,15 @@
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import {
+  notificationsDeletedAllEvent,
+  notificationsEmailsCancelledEvent,
+  notificationsPausedEvent,
+  notificationsPreferencesResetEvent,
+  notificationsReadAllEvent,
+  notificationsResumedEvent,
+} from "@/api/events/notifications";
+import { notificationsFanoutTask } from "@/api/modules/notifications/tasks/notifications.task";
+import {
   core_notification_deliveries,
   core_notification_events,
   core_notification_receipts,
@@ -19,8 +28,6 @@ import {
   expireNotificationOverviewTotals,
   GLOBAL_SETTINGS_KEY,
   loadNotificationSettings,
-  NOTIFICATIONS_PLUGIN_ID,
-  QUEUE_NOTIFICATIONS_FANOUT,
   sendNotificationStates,
 } from "./shared";
 
@@ -36,7 +43,7 @@ const setPaused = async (c: NotificationsContext, paused: boolean) => {
 
 export const pauseNotifications = async (c: NotificationsContext) => {
   await setPaused(c, true);
-  await c.get("events").emit("notifications.paused", {});
+  await c.get("events").emit(notificationsPausedEvent, {});
 };
 
 export const resumeNotifications = async (
@@ -52,18 +59,15 @@ export const resumeNotifications = async (
 
   await Promise.all(
     waiting.map(async ({ id }) =>
-      c.get("queue").dispatch({
-        name: QUEUE_NOTIFICATIONS_FANOUT,
-        payload: { eventId: id },
-        pluginId: NOTIFICATIONS_PLUGIN_ID,
-        priority: 10,
-      }),
+      c
+        .get("queue")
+        .dispatch(notificationsFanoutTask, { eventId: id }, { priority: 10 }),
     ),
   );
   await dispatchEmailDrain(c);
   await c
     .get("events")
-    .emit("notifications.resumed", { requeuedEvents: waiting.length });
+    .emit(notificationsResumedEvent, { requeuedEvents: waiting.length });
 
   return { requeuedEvents: waiting.length };
 };
@@ -103,7 +107,7 @@ export const cancelQueuedNotificationEmails = async (
 
   await c
     .get("events")
-    .emit("notifications.emails_cancelled", { count: cancelled });
+    .emit(notificationsEmailsCancelledEvent, { count: cancelled });
 
   return { cancelled };
 };
@@ -152,7 +156,7 @@ export const markEverythingRead = async (
   }
 
   await expireNotificationOverviewTotals(c);
-  await c.get("events").emit("notifications.read_all", { items, members });
+  await c.get("events").emit(notificationsReadAllEvent, { items, members });
 
   return { items, members };
 };
@@ -164,7 +168,7 @@ export const deleteAllNotifications = async (
   const events = await deleteUnreferencedEvents(c.get("db"));
   await expireNotificationOverviewTotals(c);
 
-  await c.get("events").emit("notifications.deleted_all", { items });
+  await c.get("events").emit(notificationsDeletedAllEvent, { items });
 
   return { events, items };
 };
@@ -185,7 +189,7 @@ export const resetMemberNotificationPreferences = async (
   await expireNotificationOverviewTotals(c);
   await c
     .get("events")
-    .emit("notifications.preferences_reset", { members: rows.length });
+    .emit(notificationsPreferencesResetEvent, { members: rows.length });
 
   return { members: rows.length };
 };

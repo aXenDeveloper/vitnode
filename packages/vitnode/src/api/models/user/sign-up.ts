@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { and, count, eq, or, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
+import { userCreatedEvent } from "@/api/events/users";
 import { emailAliases, matchesEmail } from "@/api/lib/user-email-lookup";
 import { generateAvatarColor } from "@/api/modules/users/lib/avatar-color";
 import { core_roles } from "@/database/roles";
@@ -140,7 +141,7 @@ export const signUp = async (
 
   const { password: _, ...user } = data;
 
-  await c.get("events").emit("user.created", {
+  await c.get("events").emit(userCreatedEvent, {
     userId: data.id,
     email: data.email,
     name: data.name,

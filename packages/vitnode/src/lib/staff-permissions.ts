@@ -1,3 +1,6 @@
+import type { PermissionStaffType } from "../api/lib/permission-staff";
+import type { PluginManifest } from "./plugin-manifest";
+
 /** One declared permission: its key, or an object with dependencies (and, for moderators, a scope). */
 export type StaffPermissionEntry =
   | string
@@ -12,14 +15,46 @@ export type StaffPermissionModules = Readonly<
   Record<string, readonly StaffPermissionEntry[]>
 >;
 
-/** A reference to one permission: what `adminStaffPermission` and AdminCP `permission` accept. */
+declare const staffPermissionBrand: unique symbol;
+
+/**
+ * A reference to one declared staff permission. Only {@link defineStaffPermissions}
+ * (or, for permissions generated at runtime, {@link declaredStaffPermission})
+ * creates one: a hand-written `{ module, permission }` is not a reference, and an
+ * admin reference is never a moderator one, even with the same strings.
+ *
+ * At runtime it is a frozen `{ staffType, plugin, module, permission }`.
+ */
 export interface StaffPermissionRef<
+  Type extends PermissionStaffType = PermissionStaffType,
+  Plugin extends string = string,
   Module extends string = string,
   Permission extends string = string,
 > {
+  /** The permission module, e.g. `posts`. */
   readonly module: Module;
+  /** The permission within it, e.g. `can_edit`. */
   readonly permission: Permission;
+  /** The plugin that declares the permission. */
+  readonly plugin: Plugin;
+  readonly [staffPermissionBrand]: Type;
+  /** Whether administrators or moderators are granted it. */
+  readonly staffType: Type;
 }
+
+/** What `adminStaffPermission`, AdminCP navigation and dashboard widgets accept. */
+export type AdminStaffPermissionRef<
+  Plugin extends string = string,
+  Module extends string = string,
+  Permission extends string = string,
+> = StaffPermissionRef<"admin", Plugin, Module, Permission>;
+
+/** What `moderatorStaffPermission` accepts. */
+export type ModeratorStaffPermissionRef<
+  Plugin extends string = string,
+  Module extends string = string,
+  Permission extends string = string,
+> = StaffPermissionRef<"moderator", Plugin, Module, Permission>;
 
 type EntryName<E> = E extends string
   ? E
@@ -45,12 +80,16 @@ export type StaffPermissionKey<S extends string> = UnderscoresToCamel<
   DashesToUnderscores<S>
 >;
 
-/** `{ notes: ["can_create"] }` → `{ notes: { canCreate: { module: "notes", permission: "can_create" } } }`. */
-export type StaffPermissionRefs<M extends StaffPermissionModules> = {
+/** `{ notes: ["can_create"] }` → `{ notes: { canCreate: StaffPermissionRef<Type, Plugin, "notes", "can_create"> } }`. */
+export type StaffPermissionRefs<
+  Type extends PermissionStaffType,
+  Plugin extends string,
+  M extends StaffPermissionModules,
+> = {
   readonly [Module in keyof M & string]: {
     readonly [
       Entry in M[Module][number] as StaffPermissionKey<EntryName<Entry>>
-    ]: StaffPermissionRef<Module, EntryName<Entry>>;
+    ]: StaffPermissionRef<Type, Plugin, Module, EntryName<Entry>>;
   };
 };
 
@@ -71,8 +110,26 @@ export const staffPermissionKey = (permission: string): string => {
 const nameOf = (entry: StaffPermissionEntry): string =>
   typeof entry === "string" ? entry : entry.permission;
 
+const createRef = <
+  Type extends PermissionStaffType,
+  Plugin extends string,
+  Module extends string,
+  Permission extends string,
+>(
+  staffType: Type,
+  plugin: Plugin,
+  module: Module,
+  permission: Permission,
+) =>
+  Object.freeze({
+    module,
+    permission,
+    plugin,
+    staffType,
+  }) as StaffPermissionRef<Type, Plugin, Module, Permission>;
+
 const assertUniqueKeys = (
-  staffType: "admin" | "moderator",
+  staffType: PermissionStaffType,
   modules: StaffPermissionModules,
 ) => {
   for (const [module, entries] of Object.entries(modules)) {
@@ -94,27 +151,36 @@ const assertUniqueKeys = (
   }
 };
 
-const refsOf = (
-  staffType: "admin" | "moderator",
-  modules: StaffPermissionModules,
-) => {
-  assertUniqueKeys(staffType, modules);
+const refsOf = <
+  Type extends PermissionStaffType,
+  Plugin extends string,
+  M extends StaffPermissionModules,
+>(
+  staffType: Type,
+  plugin: Plugin,
+  modules: M | undefined,
+): StaffPermissionRefs<Type, Plugin, M> => {
+  assertUniqueKeys(staffType, modules ?? {});
 
-  return Object.fromEntries(
-    Object.entries(modules).map(([module, entries]) => [
-      module,
-      Object.fromEntries(
-        entries.map(entry => {
-          const permission = nameOf(entry);
+  return Object.freeze(
+    Object.fromEntries(
+      Object.entries(modules ?? {}).map(([module, entries]) => [
+        module,
+        Object.freeze(
+          Object.fromEntries(
+            entries.map(entry => {
+              const permission = nameOf(entry);
 
-          return [
-            staffPermissionKey(permission),
-            Object.freeze({ module, permission }),
-          ];
-        }),
-      ),
-    ]),
-  );
+              return [
+                staffPermissionKey(permission),
+                createRef(staffType, plugin, module, permission),
+              ];
+            }),
+          ),
+        ),
+      ]),
+    ),
+  ) as StaffPermissionRefs<Type, Plugin, M>;
 };
 
 const toConfig = (modules: StaffPermissionModules) =>
@@ -133,35 +199,46 @@ const toConfig = (modules: StaffPermissionModules) =>
     ]),
   );
 
-/** What {@link defineStaffPermissions} returns. */
+/** The declarations of {@link defineStaffPermissions}, as the permission catalog stores them. */
+export interface StaffPermissionsConfig {
+  admin: Record<
+    string,
+    (string | { dependsOn?: string[]; permission: string; scope?: string })[]
+  >;
+  moderator: Record<
+    string,
+    (string | { dependsOn?: string[]; permission: string; scope?: string })[]
+  >;
+}
+
 export interface DefinedStaffPermissions<
-  Admin extends StaffPermissionModules,
-  Moderator extends StaffPermissionModules,
+  Plugin extends string = string,
+  Admin extends StaffPermissionModules = StaffPermissionModules,
+  Moderator extends StaffPermissionModules = StaffPermissionModules,
 > {
   /** References to the admin permissions: `admin.notes.canCreate`. */
-  readonly admin: StaffPermissionRefs<Admin>;
-  /** The same declarations, for `buildApiPlugin({ permissionStaff: permissions.config })`. */
-  readonly config: {
-    admin: Record<
-      string,
-      (string | { dependsOn?: string[]; permission: string; scope?: string })[]
-    >;
-    moderator: Record<
-      string,
-      (string | { dependsOn?: string[]; permission: string; scope?: string })[]
-    >;
-  };
+  readonly admin: StaffPermissionRefs<"admin", Plugin, Admin>;
+  /** The same declarations as plain data, which `buildApiPlugin` registers. */
+  readonly config: StaffPermissionsConfig;
   /** References to the moderator permissions: `moderator.notes.canDelete`. */
-  readonly moderator: StaffPermissionRefs<Moderator>;
+  readonly moderator: StaffPermissionRefs<"moderator", Plugin, Moderator>;
+  /** The plugin that declares them, from its manifest. */
+  readonly pluginId: Plugin;
 }
 
 /**
  * Declares a plugin's staff permissions once and returns typed references to
- * them, so routes and AdminCP navigation name a permission that exists instead
- * of repeating `{ module: "notes", permission: "can_create" }` strings.
+ * them. Routes (`adminStaffPermission`, `moderatorStaffPermission`), AdminCP
+ * navigation and dashboard widgets accept only these references, so a typo, a
+ * permission nobody declares or an admin permission used as a moderator one is
+ * a compile error.
  *
- * Pass `config` to `buildApiPlugin({ permissionStaff })`; it is the source of
- * truth, exactly as if the object were written there.
+ * Every reference carries the declaring plugin, so a route or nav item may
+ * guard with another plugin's permission and it is checked against that
+ * plugin, never the route's own.
+ *
+ * Pass the result to `buildApiPlugin({ permissionStaff })`; it is the source of
+ * truth for what the AdminCP offers to grant.
  *
  * Universal and browser-safe. Keep the definition in its own module (e.g.
  * `src/staff-permissions.ts`) rather than in `config.api.ts`, so the AdminCP
@@ -177,38 +254,95 @@ export interface DefinedStaffPermissions<
  * // src/staff-permissions.ts
  * import { defineStaffPermissions } from "@vitnode/core/lib/staff-permissions";
  *
- * export const staffPermissions = defineStaffPermissions({
+ * import { manifest } from "@/manifest.gen";
+ *
+ * export const staffPermissions = defineStaffPermissions(manifest, {
  *   admin: {
  *     notes: ["can_view", { permission: "can_edit", dependsOn: ["can_view"] }],
  *   },
  * });
  *
  * // src/config.api.ts
- * buildApiPlugin({ manifest, modules, permissionStaff: staffPermissions.config });
+ * buildApiPlugin({ manifest, modules, permissionStaff: staffPermissions });
  *
  * // a route
  * buildRoute({ adminStaffPermission: staffPermissions.admin.notes.canEdit, ... });
  * ```
  */
 export const defineStaffPermissions = <
+  const Plugin extends string,
   const Admin extends StaffPermissionModules = Record<never, never>,
   const Moderator extends StaffPermissionModules = Record<never, never>,
->({
-  admin,
-  moderator,
-}: {
-  /** Permissions grantable to AdminCP administrators, by permission module. */
-  admin?: Admin;
-  /** Permissions grantable to moderators, by permission module. */
-  moderator?: Moderator;
-}): DefinedStaffPermissions<Admin, Moderator> => ({
-  admin: refsOf("admin", admin ?? {}) as StaffPermissionRefs<Admin>,
+>(
+  manifest: Pick<PluginManifest<Plugin>, "id">,
+  {
+    admin,
+    moderator,
+  }: {
+    /** Permissions grantable to AdminCP administrators, by permission module. */
+    admin?: Admin;
+    /** Permissions grantable to moderators, by permission module. Entries may name a moderation `scope`. */
+    moderator?: Moderator;
+  },
+): DefinedStaffPermissions<Plugin, Admin, Moderator> => ({
+  admin: refsOf("admin", manifest.id, admin),
   config: {
     admin: toConfig(admin ?? {}),
     moderator: toConfig(moderator ?? {}),
   },
-  moderator: refsOf(
-    "moderator",
-    moderator ?? {},
-  ) as StaffPermissionRefs<Moderator>,
+  moderator: refsOf("moderator", manifest.id, moderator),
+  pluginId: manifest.id,
 });
+
+/**
+ * A reference as plain `{ plugin, module, permission }` data - what permission
+ * sets, stored grants and `hasStaffPermission` work with.
+ */
+export const staffPermissionArgs = ({
+  module,
+  permission,
+  plugin,
+}: StaffPermissionRef): {
+  module: string;
+  permission: string;
+  plugin: string;
+} => ({
+  module,
+  permission,
+  plugin,
+});
+
+/**
+ * A reference to a permission generated at runtime rather than written in
+ * {@link defineStaffPermissions} - the Content Engine's `can_view`/`can_edit`/...
+ * of a content type or container. Checks `permission` against the generated
+ * catalog the plugin registers for that module.
+ *
+ * @throws {Error} When `entries` does not declare `permission`, so a route can
+ * never guard with a permission nobody can be granted.
+ */
+export const declaredStaffPermission = <
+  const Type extends PermissionStaffType,
+  const Plugin extends string,
+>({
+  entries,
+  module,
+  permission,
+  plugin,
+  staffType,
+}: {
+  /** The generated declarations of `module`, as the plugin registers them. */
+  entries: readonly StaffPermissionEntry[];
+  module: string;
+  permission: string;
+  plugin: Plugin;
+  staffType: Type;
+}): StaffPermissionRef<Type, Plugin> => {
+  if (!entries.some(entry => nameOf(entry) === permission)) {
+    throw new Error(
+      `The ${staffType} permission "${permission}" is not generated for the "${module}" module of "${plugin}" (it has ${entries.map(entry => `"${nameOf(entry)}"`).join(", ") || "none"}). Nobody could be granted it.`,
+    );
+  }
+
+  return createRef(staffType, plugin, module, permission);
+};

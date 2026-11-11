@@ -5,12 +5,10 @@ import { buildRoute } from "@/api/builders";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { errorSchema, json } from "@/api/modules/moderation/moderation.schema";
 import { core_moderation_warning_reasons } from "@/database/warnings";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const reorderWarningReasonsAdminRoute = buildRoute({
-  adminStaffPermission: {
-    module: "warning_settings",
-    permission: "can_manage",
-  },
+  adminStaffPermission: coreStaffPermissions.admin.warning_settings.canManage,
   route: {
     method: "put",
     path: "/reasons/reorder",

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { contentEngineDiagnostics } from "@/content/server/diagnostics";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const localeDriftSchema = z.object({
   /** Documents `core_search_index` holds for this locale. */
@@ -63,7 +64,7 @@ const contentTypeSchema = z.object({
 });
 
 export const contentStatusDebugAdminRoute = buildRoute({
-  adminStaffPermission: { module: "system", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.system.canView,
   route: {
     method: "get",
     description:

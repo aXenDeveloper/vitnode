@@ -195,7 +195,6 @@ export const formatSchemaIssues = (
     : shown.join("; ");
 };
 
-/** What {@link parseJsonWire} returns. */
 export type JsonWireParseResult<Output> =
   | { data: Output; success: true; wire: JsonWireInput }
   | { reason: string; success: false };

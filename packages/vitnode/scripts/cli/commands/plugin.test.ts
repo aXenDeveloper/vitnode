@@ -159,6 +159,7 @@ describe("a generated plugin", () => {
     expect(result.checks.filter(check => check.status !== "ok")).toEqual([]);
     expect(result.checks.map(check => check.name)).toEqual([
       "Package",
+      "Build output",
       "Plugin definition",
       "API definition",
       "Routes",

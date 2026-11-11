@@ -6,6 +6,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 
+import {
+  userPasswordUpdatedEvent,
+  userSessionsRevokedEvent,
+} from "@/api/events/users";
 import { PasswordModel } from "@/api/models/password";
 import {
   adminSessionCacheKey,
@@ -174,10 +178,10 @@ describe("PUT /admin/users/{id}/password", () => {
 
     await h.put(TARGET_ID, NEW_PASSWORD);
 
-    expect(h.emit).toHaveBeenCalledWith("user.password.updated", {
+    expect(h.emit).toHaveBeenCalledWith(userPasswordUpdatedEvent, {
       userId: TARGET_ID,
     });
-    expect(h.emit).toHaveBeenCalledWith("user.sessions.revoked", {
+    expect(h.emit).toHaveBeenCalledWith(userSessionsRevokedEvent, {
       deviceId: null,
       sessions: 3,
       userId: TARGET_ID,

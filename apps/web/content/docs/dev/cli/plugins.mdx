@@ -74,7 +74,7 @@ Validation reads the plugin's build output, the `dist` files your app imports, s
 | API definition     | `dist/src/config.api.js` exports no working `buildApiPlugin()` factory, or its `pluginId` does not match                   |
 | Routes             | The route tree does not compile, or a `lazy(() => import(...))` page file is missing                                       |
 | Translations       | A locale file is unreadable, lacks the plugin's top-level key, or a route's `messages` namespace is missing                |
-| AdminCP navigation | A nav item requires a permission the plugin does not register in `permissionStaff.admin`                                   |
+| AdminCP navigation | A nav item requires an admin permission the plugin does not register with `buildApiPlugin({ permissionStaff })`, or a moderator permission |
 | Database schema    | A schema module fails to load, or two modules declare the same table                                                       |
 
 A translation file that is only missing some keys gets a `!` warning, not a failure, so a half-translated language does not block a release.
@@ -84,7 +84,7 @@ A failure says what is wrong and where:
 ```txt
   ✖ AdminCP navigation
       AdminCP navigation item /admin/site-notes requires the permission notes.can_create,
-      but site-notes does not register it in buildApiPlugin({ permissionStaff: { admin } }).
+      but site-notes does not declare it in the admin permissions of its defineStaffPermissions(manifest, {...}).
       dist/src/admin/nav.js
 
 ✖ 1 plugin failed validation: site-notes

@@ -1,10 +1,10 @@
 ---
 title: Doctor and inspect
-description: Check VitNode plugins for registration, permission and configuration problems with vitnode doctor, and list their routes, jobs and event listeners with vitnode inspect.
+description: Find VitNode plugin registration, permission and configuration problems with vitnode doctor, read its results and exit codes, and list routes with inspect.
 icon: Stethoscope
 ---
 
-`vitnode doctor` finds plugin mistakes that compile but break at runtime: a module nobody registered, a route guarded by a permission nobody can be granted, two routes on the same URL, a cron job that never runs. `vitnode inspect` lists what each plugin registers. Both read source and build output: no server starts, no job runs and no database is needed.
+`vitnode doctor` finds plugin mistakes that compile but break at runtime: a module nobody registered, a route guarded by a permission nobody can be granted, two routes on the same URL, a queue task that never runs. `vitnode inspect` lists what each plugin registers. Both read source and build output: no server starts, no job runs and no database is needed.
 
 Run them inside a plugin to check just that plugin. Inside an app, they cover every plugin the app configures plus the workspace's other plugins. To pick one plugin, pass its package name, its name without the npm scope, or its folder name: `pnpm vitnode doctor site-notes`.
 
@@ -14,69 +14,127 @@ Run them inside a plugin to check just that plugin. Inside an app, they cover ev
 pnpm vitnode doctor
 ```
 
+This `site-notes` declares its permissions in `src/staff-permissions.ts`, but `config.api.ts` does not pass them to `buildApiPlugin({ permissionStaff })`, and one admin route has no guard:
+
 ```txt
 ◆ VitNode
   Doctor
 
-  site-notes  ../../plugins/site-notes
+  site-notes  .
   ✓ Package  0.1.0
+  ✓ Build output  config.js, config.api.js
   ✓ Plugin definition
   ✓ API definition
   ✓ Routes  1 route
   ✓ Translations  en
-  ! API registration
-      Module orphanModule (src/api/modules/orphan/orphan.module.ts) is not registered in any modules array.
+  ✖ AdminCP navigation
+      AdminCP navigation item /admin/site-notes requires the permission notes.can_create,
+      but site-notes does not declare it in the admin permissions of its defineStaffPermissions(manifest, {...}).
+      dist/src/admin/nav.js
+  ✓ API registration  3 modules, 7 routes reached
   ✓ Fetcher registry
-  ✓ App registration  src/vitnode.api.config.ts
-  ✖ Staff permissions
-      POST /site-notes/admin/notes requires the admin permission notes.can_publish, which the plugin does not declare in permissionStaff.admin.
-  ✓ Endpoints  4 routes
-  ✖ Background registrations
-      cronJobs on nested module "admin/notes" (cleanup) never run: move them to the top-level module "admin".
+  ○ App registration  not used by an app in this workspace
+  ✖ Staff permission guards
+      GET /site-notes/admin/notes: adminStaffPermission requires notes.can_view, which site-notes does not declare in its defineStaffPermissions(manifest, { admin }).
+      POST /site-notes/admin/notes: adminStaffPermission requires notes.can_create, which site-notes does not declare in its defineStaffPermissions(manifest, { admin }).
+      GET /site-notes/admin/notes/stats is under /admin but declares no adminStaffPermission, so any admin can call it.
+  ✓ Endpoints  7 routes, no duplicates
+  ✓ Background registrations  0 jobs, 0 listeners, all on top-level modules
 
-  8 checks passed, 1 warning, 2 failed, 0 skipped.
+  10 checks passed, 0 warnings, 2 failed, 0 not run, 1 not applicable.
+  Read from each plugin's build output (dist/), declarations only: staff permission guards declared on buildRoute were checked, access checks inside handlers or middleware were not. Rebuild first - doctor cannot tell whether dist/ is older than src/.
+
 
 ✖ 1 plugin with problems: site-notes
 ```
 
-The first checks are the ones [`vitnode plugin validate`](/docs/dev/cli/plugins#validate-plugins) runs, with the same rules. Its **Routes** check counts the plugin's pages; **Endpoints** below counts API routes. Doctor adds:
+The output above is shortened to two of the five guarded routes. The first checks are the ones [`vitnode plugin validate`](/docs/dev/cli/plugins#validate-plugins) runs, with the same rules. Its **Routes** check counts the plugin's pages; **Endpoints** below counts API routes. Doctor adds:
 
-| Check                    | Reads        | Fails or warns when                                                                                                                                |
-| ------------------------ | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| API registration         | Source       | Warns: a `buildModule` or `buildRoute` export under `src/api/modules` is not reached from `config.api.ts`                                          |
-| Fetcher registry         | Source       | Fails: `config.api.ts` does not export `type VitNodeApiPlugin`. Warns: `types/api-registry.gen.d.ts` is missing or not in `tsconfig.json`          |
-| App registration         | Source       | Fails: the app lists the plugin in `vitnode.config.ts` but no `vitnode.api.config.ts` imports `<plugin>/config.api`. Warns the other way round     |
-| Staff permissions        | Build output | Fails: a route's `adminStaffPermission` or `moderatorStaffPermission` is not declared. Warns: a route under `admin/` has no `adminStaffPermission` |
-| Endpoints                | Build output | Fails: two routes answer the same method and path; only the first one is reachable                                                                 |
-| Background registrations | Build output | Fails: cron jobs, events, queue tasks or WebSockets sit on a nested module, where they never run                                                   |
+| Check                    | Reads        | Fails or warns when                                                                                                                                                                              |
+| ------------------------ | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| API registration         | Source       | Warns: a `buildModule` or `buildRoute` export under `src/api/modules` is not reached from `config.api.ts`                                                                                        |
+| Fetcher registry         | Source       | Fails: `config.api.ts` does not export `type VitNodeApiPlugin`. Warns: `types/api-registry.gen.d.ts` is missing or not in `tsconfig.json`                                                        |
+| App registration         | Source       | Fails: the app lists the plugin in `vitnode.config.ts` but no `vitnode.api.config.ts` imports `<plugin>/config.api`. Warns the other way round                                                   |
+| Staff permission guards  | Build output | Fails: a route's `adminStaffPermission` or `moderatorStaffPermission` is not declared by the plugin, or is declared for the other staff type. Warns: a route under `admin/` has no `adminStaffPermission` |
+| Endpoints                | Build output | Fails: two routes answer the same method and path, whatever their path parameters are called; only the first one is reachable                                                                   |
+| Background registrations | Build output | Fails: cron jobs, event listeners, queue tasks or WebSockets sit on a nested module, where they never run                                                                                       |
 
-A check that cannot run says so, and nothing unchecked is reported as passing. Without build output, **Build output** fails with "Run vitnode build in the plugin's folder (or pnpm build:plugins), then validate again.", the definition checks do not run, and the three build-output checks are `skipped`. When the source has entries doctor cannot follow, such as a spread in `modules`, **API registration** warns that its list may be incomplete.
+A guard that references another plugin's permission is counted but not checked, and the summary says so. The checks read declarations only: a `checkStaffPermission` call or an ownership rule inside a handler is never verified.
 
-`vitnode doctor` exits with code `1` when any check fails, so it can gate CI after `pnpm build:plugins`. Warnings do not change the exit code. A plugin name that matches nothing exits with code `2`.
+## Results and exit codes
+
+With `--plain`, each check starts with a tag instead of a symbol:
+
+| Tag       | Symbol | Meaning                                                                       |
+| --------- | ------ | ----------------------------------------------------------------------------- |
+| `OK`      | `✓`    | The check ran and passed                                                      |
+| `WARN`    | `!`    | The check ran and found something to look at                                  |
+| `FAIL`    | `✖`    | The check ran and found an error                                              |
+| `BLOCKED` | `○`    | The check could not run because an earlier one failed. It counts as not run   |
+| `SKIP`    | `○`    | The check does not apply, such as App registration for a plugin no app uses   |
+
+A plugin without a build shows both kinds of not run:
+
+```txt
+VitNode - Doctor
+site-notes (.)
+[OK] Package (0.1.0)
+[FAIL] Build output
+  dist/src/config.js does not exist - apps load plugins from their build output.
+  dist/src/config.api.js does not exist, but src/config.api.ts does - the app's API cannot import site-notes/config.api.
+  Run vitnode build in the plugin's folder (or pnpm build:plugins), then check again.
+[OK] API registration (3 modules, 7 routes reached)
+[OK] Fetcher registry
+[SKIP] App registration (not used by an app in this workspace)
+[BLOCKED] Staff permission guards (not run - Build output failed)
+[BLOCKED] Endpoints (not run - Build output failed)
+[BLOCKED] Background registrations (not run - Build output failed)
+
+3 checks passed, 0 warnings, 1 failed, 3 not run, 1 not applicable.
+```
+
+| Exit code | When                                                                                     |
+| --------- | ---------------------------------------------------------------------------------------- |
+| `0`       | No check failed and none was blocked. Warnings are allowed, unless you pass `--strict`   |
+| `1`       | A check failed, a check was blocked, or, with `--strict`, a check warned                 |
+| `2`       | A usage error, such as a plugin name that matches nothing: `No plugin named "nope" was found.` |
+
+### Fail CI on warnings
+
+`--strict` treats warnings as failures, so an unguarded admin route stops a pipeline:
+
+```bash
+pnpm vitnode doctor --strict
+```
+
+```txt
+  ! Staff permission guards (5 routes with declared guards; checks inside handlers or middleware not verified)
+      GET /site-notes/admin/notes/stats is under /admin but declares no adminStaffPermission, so any admin can call it.
+
+  11 checks passed, 1 warning, 0 failed, 0 not run, 1 not applicable.
+
+
+✖ 1 plugin with problems: site-notes
+
+  --strict fails on warnings too. Fix them, or run vitnode doctor without --strict to fail on errors only.
+```
+
+Without `--strict` the same plugin passes with `No errors - see the warnings above (--strict fails on them)`. Run doctor after `pnpm build:plugins`: it reads `dist/`, and it cannot tell whether `dist/` is older than `src/`.
 
 ### Background work on nested modules
 
-`buildApiPlugin` collects content types and notification types from the whole module tree, but cron jobs, event listeners, queue tasks and WebSockets only from the modules passed to it directly. In production, nested ones are silently ignored. In development (`NODE_ENV=development`), `buildApiPlugin` throws with the same message doctor prints, so the mistake shows up the first time `pnpm dev` loads the API.
+`buildApiPlugin` collects content types and notification types from the whole module tree, but cron jobs, event listeners, queue tasks and WebSockets only from the modules passed to it directly. In production, nested ones are silently ignored, and doctor fails **Background registrations**:
+
+```txt
+  ✖ Background registrations
+      site-notes: queueTasks "announce-note" on nested module "notes/jobs" never run - buildApiPlugin collects queueTasks from top-level modules only. Move it to buildModule({ queueTasks }) of the top-level module "notes".
+```
+
+In development (`NODE_ENV=development`), `buildApiPlugin` throws instead, starting with `Plugin "site-notes" declares background work on nested modules.`, so the mistake shows up the first time `pnpm dev` loads the API.
 
 ### When the plugin's factory throws
 
-To read a plugin's API, doctor, `vitnode inspect` and `vitnode plugin validate` call the function that the built `config.api.js` exports. When that call throws, as it does for nested background work in development, they print the original error and the call that threw it:
-
-```txt
-  ✖ API definition
-      dist/src/config.api.js: calling the exported function siteNotesApiPlugin() threw, so no buildApiPlugin({ manifest, ... }) definition could be read:
-      Plugin "site-notes" declares background work on nested modules. buildApiPlugin only collects it from top-level modules:
-        - cronJobs on nested module "hello/jobs" (cleanup) never run: move them to the top-level module "hello".
-  ...
-  Staff permissions (skipped)
-      API definition failed - see above.
-  Endpoints (skipped)
-      API definition failed - see above.
-  Background registrations (skipped)
-      API definition failed - see above.
-```
-
-Doctor reports the error once, under **API definition**. **Staff permissions**, **Endpoints** and **Background registrations** need the definition, so they are skipped and point back to it. Fix the quoted error and build again. A file that exports no factory at all fails the same way, with `dist/src/config.api.js exports no buildApiPlugin({ manifest, ... }) factory.` instead.
+To read a plugin's API, doctor, `vitnode inspect` and `vitnode plugin validate` call the function that the built `config.api.js` exports. When that call throws, they print the original error under **API definition**, after `dist/src/config.api.js: calling the exported function siteNotesApiPlugin() threw, so no buildApiPlugin({ manifest, ... }) definition could be read:`. **Staff permission guards**, **Endpoints** and **Background registrations** need the definition, so they are blocked with `not run - API definition failed`. Fix the quoted error and build again. A file that exports no factory at all fails with `dist/src/config.api.js exports no buildApiPlugin({ manifest, ... }) factory.` instead.
 
 ## List what plugins register
 
@@ -85,25 +143,47 @@ pnpm vitnode inspect routes site-notes
 ```
 
 ```txt
-  site-notes  ../../plugins/site-notes
-  Method   Path                          Staff permission
-  ──────────────────────────────────────────────────────────
-  GET      /site-notes/hello             -
-  GET      /site-notes/notes             -
-  POST     /site-notes/admin/notes       admin notes.can_create
+  site-notes  .
+  Method   Path                            Staff permission
+  ───────────────────────────────────────────────────────────────
+  GET      /site-notes/hello               -
+  GET      /site-notes/admin/notes         admin notes.can_view
+  GET      /site-notes/admin/notes/{id}    admin notes.can_view
+  POST     /site-notes/admin/notes         admin notes.can_create
+  PATCH    /site-notes/admin/notes/{id}    admin notes.can_edit
+  DELETE   /site-notes/admin/notes/{id}    admin notes.can_delete
+  GET      /site-notes/admin/notes/stats   -
 ```
 
-| Command                  | Lists                                                                                                   |
-| ------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `vitnode inspect routes` | Every route's method, path and declared staff permission                                                |
-| `vitnode inspect jobs`   | Cron jobs with their schedule, and queue tasks with whether a schema validates their payload, by module |
-| `vitnode inspect events` | Event listeners by event, with whether they are built from an event definition, and WebSockets by id, by module |
+| Command                  | Lists                                                                                                                                                  |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `vitnode inspect routes` | Every route's method, path and declared staff permission                                                                                               |
+| `vitnode inspect jobs`   | Cron jobs with their schedule, and queue tasks with their owner and payload contract, by module                                                        |
+| `vitnode inspect events` | Event listeners with the event's owner, contract and listener name, WebSockets by id, and the event definitions the plugin registers, including Content Engine ones |
+
+For example, `inspect jobs` in the newsroom plugin and `inspect events` in the payments demo:
+
+```txt
+  newsroom  .
+  Kind    Name                  Owner      Contract         Schedule   Module
+  ────────────────────────────────────────────────────────────────────────────────
+  queue   announce-correction   newsroom   payload schema   -          corrections
+```
+
+```txt
+  payments-demo  .
+  Kind    Event or id         Event owner     Contract         Listener            Module
+  ──────────────────────────────────────────────────────────────────────────────────────────
+  event   payment.succeeded   @vitnode/core   payload schema   log-paid-purchase   purchases
+
+  No event definitions in buildApiPlugin({ eventDefinitions }).
+```
 
 Each command takes the same optional plugin name as doctor. Paths include the plugin id and sit under the app's API base path, `/api` in the starter apps. Generated Content Engine routes are listed too, with the permissions the engine assigned.
 
 The **Staff permission** column shows what `buildRoute` was given in `adminStaffPermission` and `moderatorStaffPermission`. It does not show everything a route checks: a `checkStaffPermission` call or an ownership rule inside the handler, or a custom middleware, is invisible here.
 
-`vitnode inspect` reads each plugin's `dist` folder, so build plugins first (`pnpm build:plugins`, or keep `vitnode dev` running). A plugin that is not built is skipped with a note. A plugin whose API definition fails to load is reported, and the command exits with code `1`. The output holds names, schedules, paths and permission keys only, never environment values, secrets or request data.
+`vitnode inspect` reads each plugin's `dist` folder, so build plugins first (`pnpm build:plugins`, or keep `vitnode dev` running). A plugin that is not built is skipped with a note. A plugin whose API definition fails to load is reported, and the command exits with code `1`. The output holds names, schedules, paths and permission keys only, never environment values, secrets, payloads or request data. There is no JSON output; script against the exit codes of `vitnode doctor`.
 
 ## Related
 

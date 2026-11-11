@@ -2,6 +2,8 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
+import { rebuildSearchIndexTask } from "@/api/modules/search/tasks/rebuild-index.task";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const zodRebuildSearchSchema = z.object({
   // Rebuild a single collection; omit to rebuild the whole index.
@@ -9,7 +11,7 @@ export const zodRebuildSearchSchema = z.object({
 });
 
 export const rebuildSearchDebugAdminRoute = buildRoute({
-  adminStaffPermission: { module: "system", permission: "can_manage_search" },
+  adminStaffPermission: coreStaffPermissions.admin.system.canManageSearch,
   route: {
     method: "post",
     description:
@@ -52,10 +54,9 @@ export const rebuildSearchDebugAdminRoute = buildRoute({
       });
     }
 
-    await c.get("queue").dispatch({
-      name: "rebuild-search-index",
-      payload: itemType ? { itemType } : {},
-    });
+    await c
+      .get("queue")
+      .dispatch(rebuildSearchIndexTask, itemType ? { itemType } : {});
 
     return c.json({ queued: true });
   },

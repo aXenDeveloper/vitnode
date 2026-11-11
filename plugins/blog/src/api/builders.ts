@@ -6,9 +6,12 @@ import { manifest } from "@/manifest.gen";
 const apiBuilders = bindApiPlugin(manifest);
 const contentBuilders = bindContentPlugin(manifest);
 
-/** Module and route builders bound to the `@vitnode/blog` plugin id. */
+/** The API builders, bound to the `@vitnode/blog` plugin id. */
 export const buildModule = apiBuilders.buildModule,
-  buildRoute = apiBuilders.buildRoute;
+  buildQueueTask = apiBuilders.buildQueueTask,
+  buildRoute = apiBuilders.buildRoute,
+  defineCacheEntry = apiBuilders.defineCacheEntry,
+  defineEvent = apiBuilders.defineEvent;
 
 /**
  * The blog's generated Content Engine modules: `buildContentAdminModule` for

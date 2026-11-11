@@ -69,7 +69,11 @@ import {
   requireContentId,
 } from "../ids";
 import { partitionContentFields } from "../localization";
-import { orderableColumns } from "../registry";
+import {
+  contentAdminStaffPermission,
+  type ContentPermission,
+  orderableColumns,
+} from "../registry";
 import { resolveContentActor } from "./actor";
 import { duplicationMethods } from "./duplicate";
 import { contentDuplicateEffects } from "./duplicate-effects";
@@ -193,6 +197,9 @@ export const buildContentRoutes = <
 ) => {
   const { definition, schemas } = model;
   const module = definition.permissionModule;
+
+  const staffPermission = (permission: ContentPermission) =>
+    contentAdminStaffPermission(pluginId, definition, permission);
   const name = contentTypeName(definition.id);
 
   const localized = definition.localization.enabled;
@@ -392,7 +399,7 @@ export const buildContentRoutes = <
 
   const list = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/",
@@ -581,7 +588,7 @@ export const buildContentRoutes = <
 
   const options = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/options/{field}",
@@ -680,7 +687,7 @@ export const buildContentRoutes = <
 
   const upload = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "post",
       path: "/uploads/{field}",
@@ -839,7 +846,7 @@ export const buildContentRoutes = <
 
   const detail = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}",
@@ -874,7 +881,7 @@ export const buildContentRoutes = <
 
   const create = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.create },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.create),
     route: {
       method: "post",
       path: "/",
@@ -971,7 +978,7 @@ export const buildContentRoutes = <
 
   const duplicate = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.create },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.create),
     route: {
       method: "post",
       path: "/{id}/duplicate",
@@ -1100,7 +1107,7 @@ export const buildContentRoutes = <
    */
   const editorialUpdate = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.edit),
     route: {
       method: "put",
       path: "/{id}",
@@ -1154,7 +1161,7 @@ export const buildContentRoutes = <
 
   const update = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.edit),
     route: {
       // PUT, not PATCH: an update replaces the record it addresses.
       method: "put",
@@ -1218,7 +1225,7 @@ export const buildContentRoutes = <
   const publicationRoute = (action: "publish" | "unpublish") =>
     buildRoute({
       pluginId,
-      adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.publish },
+      adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.publish),
       route: {
         method: "post",
         path: `/{id}/${action}` as const,
@@ -1310,7 +1317,7 @@ export const buildContentRoutes = <
   const visibilityRoute = (action: ContentVisibilityAction) =>
     buildRoute({
       pluginId,
-      adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.hide },
+      adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.hide),
       route: {
         method: "post",
         path: `/{id}/${action}` as const,
@@ -1444,7 +1451,7 @@ export const buildContentRoutes = <
 
   const revisionList = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}/revisions",
@@ -1488,7 +1495,7 @@ export const buildContentRoutes = <
 
   const revisionDetail = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}/revisions/{revisionId}",
@@ -1516,64 +1523,68 @@ export const buildContentRoutes = <
     },
   });
 
-  const restore = buildRoute({
-    pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.restore },
-    route: {
-      method: "post",
-      path: "/{id}/revisions/{revisionId}/restore",
-      description: `Restore a ${name} to an earlier revision`,
-      request: {
-        params: revisionParams,
-        body: jsonBody(
+  const restore = () =>
+    buildRoute({
+      pluginId,
+      adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.restore),
+      route: {
+        method: "post",
+        path: "/{id}/revisions/{revisionId}/restore",
+        description: `Restore a ${name} to an earlier revision`,
+        request: {
+          params: revisionParams,
+          body: jsonBody(
+            z.strictObject({ expectedVersion: z.number().int().positive() }),
+          ),
+        },
+        responses: {
+          200: jsonResponse(
+            z.object({ changed: z.boolean(), row: schemas.selectObject }),
+            `${name} restored, or already at those values`,
+          ),
+          400: invalidIdentifier,
+          404: { description: "Revision not found" },
+          409: uniqueConflict,
+          422: jsonResponse(
+            zodContentUnprocessable,
+            "The revision no longer fits this content type",
+          ),
+        },
+      },
+      handler: async c => {
+        const id = contentIdentifier(c, definition);
+        const revisionId = revisionIdentifier(c);
+        const { expectedVersion } = await readJson(
+          c,
           z.strictObject({ expectedVersion: z.number().int().positive() }),
-        ),
+        );
+
+        const result = await withHttpErrors(
+          "update",
+          async () =>
+            await editorialService(c).restore(id, revisionId, {
+              actor: resolveContentActor(c),
+              expectedVersion,
+            }),
+          { contentTypeId: definition.id, itemId: id, structured: true },
+        );
+        if (!result) {
+          throw new HTTPException(404, { message: "Revision not found." });
+        }
+
+        await contentEditorialEffects(c, definition, result, {
+          model,
+          pluginId,
+        });
+        await resetContentLiveRecord(
+          c,
+          { contentTypeId: definition.id, itemId: id },
+          "restored",
+        );
+
+        return c.json({ changed: result.changed, row: result.row }, 200);
       },
-      responses: {
-        200: jsonResponse(
-          z.object({ changed: z.boolean(), row: schemas.selectObject }),
-          `${name} restored, or already at those values`,
-        ),
-        400: invalidIdentifier,
-        404: { description: "Revision not found" },
-        409: uniqueConflict,
-        422: jsonResponse(
-          zodContentUnprocessable,
-          "The revision no longer fits this content type",
-        ),
-      },
-    },
-    handler: async c => {
-      const id = contentIdentifier(c, definition);
-      const revisionId = revisionIdentifier(c);
-      const { expectedVersion } = await readJson(
-        c,
-        z.strictObject({ expectedVersion: z.number().int().positive() }),
-      );
-
-      const result = await withHttpErrors(
-        "update",
-        async () =>
-          await editorialService(c).restore(id, revisionId, {
-            actor: resolveContentActor(c),
-            expectedVersion,
-          }),
-        { contentTypeId: definition.id, itemId: id, structured: true },
-      );
-      if (!result) {
-        throw new HTTPException(404, { message: "Revision not found." });
-      }
-
-      await contentEditorialEffects(c, definition, result, { model, pluginId });
-      await resetContentLiveRecord(
-        c,
-        { contentTypeId: definition.id, itemId: id },
-        "restored",
-      );
-
-      return c.json({ changed: result.changed, row: result.row }, 200);
-    },
-  });
+    });
 
   /**
    * The delivery state of one record: where it lives, and where it used to.
@@ -1589,7 +1600,7 @@ export const buildContentRoutes = <
    */
   const deliveryDetail = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}/delivery",
@@ -1674,7 +1685,7 @@ export const buildContentRoutes = <
    */
   const livePreviewPeople = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/live-preview/people",
@@ -1714,7 +1725,7 @@ export const buildContentRoutes = <
 
   const previewToken = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "post",
       path: "/{id}/preview",
@@ -1831,7 +1842,7 @@ export const buildContentRoutes = <
 
   const scheduleList = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}/schedules",
@@ -1868,145 +1879,147 @@ export const buildContentRoutes = <
     },
   });
 
-  const scheduleCreate = buildRoute({
-    pluginId,
-    // `can_publish`, not `can_edit`: booking a publication *is* publishing, just
-    // later. A role trusted to write drafts is not automatically trusted to put
-    // one on the internet at 9am on Monday.
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.publish },
-    route: {
-      method: "post",
-      path: "/{id}/schedule",
-      description: `Schedule a ${name} to publish or unpublish later`,
-      request: {
-        params: schemas.params,
-        body: jsonBody(
+  const scheduleCreate = () =>
+    buildRoute({
+      pluginId,
+      // `can_publish`, not `can_edit`: booking a publication *is* publishing, just
+      // later. A role trusted to write drafts is not automatically trusted to put
+      // one on the internet at 9am on Monday.
+      adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.publish),
+      route: {
+        method: "post",
+        path: "/{id}/schedule",
+        description: `Schedule a ${name} to publish or unpublish later`,
+        request: {
+          params: schemas.params,
+          body: jsonBody(
+            z.strictObject({
+              action: z.enum(CONTENT_SCHEDULE_ACTIONS),
+              scheduledFor: z.iso.datetime(),
+            }),
+          ),
+        },
+        responses: {
+          200: jsonResponse(
+            z.object({
+              generation: z.number(),
+              id: z.number(),
+              scheduledFor: z.union([z.date(), z.string()]),
+            }),
+            "Scheduled",
+          ),
+          400: jsonResponse(
+            zodContentScheduleRejection,
+            "That time will not work",
+          ),
+          404: { description: `${name} not found` },
+        },
+      },
+      handler: async c => {
+        const id = contentIdentifier(c, definition);
+        const { action, scheduledFor } = await readJson(
+          c,
           z.strictObject({
             action: z.enum(CONTENT_SCHEDULE_ACTIONS),
             scheduledFor: z.iso.datetime(),
           }),
-        ),
-      },
-      responses: {
-        200: jsonResponse(
-          z.object({
-            generation: z.number(),
-            id: z.number(),
-            scheduledFor: z.union([z.date(), z.string()]),
-          }),
-          "Scheduled",
-        ),
-        400: jsonResponse(
-          zodContentScheduleRejection,
-          "That time will not work",
-        ),
-        404: { description: `${name} not found` },
-      },
-    },
-    handler: async c => {
-      const id = contentIdentifier(c, definition);
-      const { action, scheduledFor } = await readJson(
-        c,
-        z.strictObject({
-          action: z.enum(CONTENT_SCHEDULE_ACTIONS),
-          scheduledFor: z.iso.datetime(),
-        }),
-      );
+        );
 
-      // Checked before anything is written: scheduling a publication for a
-      // record that is not there would be a row nothing can ever act on.
-      const row = await model.service(c).findById(id);
-      if (!row) throw notFound(definition);
+        // Checked before anything is written: scheduling a publication for a
+        // record that is not there would be a row nothing can ever act on.
+        const row = await model.service(c).findById(id);
+        if (!row) throw notFound(definition);
 
-      const actor = resolveContentActor(c);
-      const result = await withHttpErrors(
-        "update",
-        async () =>
-          await schedulesModel(c).schedule({
+        const actor = resolveContentActor(c);
+        const result = await withHttpErrors(
+          "update",
+          async () =>
+            await schedulesModel(c).schedule({
+              action,
+              actorUserId: actor.userId,
+              itemId: id,
+              scheduledFor: new Date(scheduledFor),
+            }),
+          { contentTypeId: definition.id, itemId: id, structured: true },
+        );
+
+        // Scheduling changes no field value, so it writes no revision and burns
+        // no version - but it is still something other plugins may want to react
+        // to, so it gets an event of its own.
+        await emitContentEvent(
+          c,
+          definition,
+          "scheduled",
+          {
             action,
             actorUserId: actor.userId,
-            itemId: id,
-            scheduledFor: new Date(scheduledFor),
+            contentId: id,
+            scheduledFor: result.scheduledFor,
+            scheduleId: result.id,
+          } as never,
+          { pluginId },
+        );
+
+        return c.json(result, 200);
+      },
+    });
+
+  const scheduleCancel = () =>
+    buildRoute({
+      pluginId,
+      adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.publish),
+      route: {
+        method: "post",
+        path: "/{id}/schedule/{scheduleId}/cancel",
+        description: `Cancel a pending schedule for one ${name}`,
+        request: {
+          params: z.object({
+            id: schemas.params.shape.id,
+            scheduleId: z.coerce.number(),
           }),
-        { contentTypeId: definition.id, itemId: id, structured: true },
-      );
-
-      // Scheduling changes no field value, so it writes no revision and burns
-      // no version - but it is still something other plugins may want to react
-      // to, so it gets an event of its own.
-      await emitContentEvent(
-        c,
-        definition,
-        "scheduled",
-        {
-          action,
-          actorUserId: actor.userId,
-          contentId: id,
-          scheduledFor: result.scheduledFor,
-          scheduleId: result.id,
-        } as never,
-        { pluginId },
-      );
-
-      return c.json(result, 200);
-    },
-  });
-
-  const scheduleCancel = buildRoute({
-    pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.publish },
-    route: {
-      method: "post",
-      path: "/{id}/schedule/{scheduleId}/cancel",
-      description: `Cancel a pending schedule for one ${name}`,
-      request: {
-        params: z.object({
-          id: schemas.params.shape.id,
-          scheduleId: z.coerce.number(),
-        }),
+        },
+        responses: {
+          200: jsonResponse(z.object({ cancelled: z.boolean() }), "Cancelled"),
+          400: invalidIdentifier,
+          404: { description: "Schedule not found" },
+        },
       },
-      responses: {
-        200: jsonResponse(z.object({ cancelled: z.boolean() }), "Cancelled"),
-        400: invalidIdentifier,
-        404: { description: "Schedule not found" },
+      handler: async c => {
+        const id = contentIdentifier(c, definition);
+        const scheduleId = Number(c.req.param("scheduleId"));
+        if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
+          throw new HTTPException(400, {
+            message: "Invalid schedule identifier.",
+          });
+        }
+
+        // Scoped by the record in the URL as well as the schedule id: the table
+        // is shared, so an id alone proves nothing about ownership.
+        const cancelled = await schedulesModel(c).cancel(id, scheduleId);
+        if (!cancelled) {
+          throw new HTTPException(404, { message: "Schedule not found." });
+        }
+
+        const actor = resolveContentActor(c);
+        await emitContentEvent(
+          c,
+          definition,
+          "schedule_cancelled",
+          {
+            action: cancelled.action,
+            actorUserId: actor.userId,
+            contentId: id,
+            scheduleId,
+          } as never,
+          { pluginId },
+        );
+
+        // The queued task is deliberately left alone. It will wake up, find the
+        // row cancelled, and do nothing - which is far more reliable than trying
+        // to hunt down and delete a queue row.
+        return c.json({ cancelled: true }, 200);
       },
-    },
-    handler: async c => {
-      const id = contentIdentifier(c, definition);
-      const scheduleId = Number(c.req.param("scheduleId"));
-      if (!Number.isInteger(scheduleId) || scheduleId <= 0) {
-        throw new HTTPException(400, {
-          message: "Invalid schedule identifier.",
-        });
-      }
-
-      // Scoped by the record in the URL as well as the schedule id: the table
-      // is shared, so an id alone proves nothing about ownership.
-      const cancelled = await schedulesModel(c).cancel(id, scheduleId);
-      if (!cancelled) {
-        throw new HTTPException(404, { message: "Schedule not found." });
-      }
-
-      const actor = resolveContentActor(c);
-      await emitContentEvent(
-        c,
-        definition,
-        "schedule_cancelled",
-        {
-          action: cancelled.action,
-          actorUserId: actor.userId,
-          contentId: id,
-          scheduleId,
-        } as never,
-        { pluginId },
-      );
-
-      // The queued task is deliberately left alone. It will wake up, find the
-      // row cancelled, and do nothing - which is far more reliable than trying
-      // to hunt down and delete a queue row.
-      return c.json({ cancelled: true }, 200);
-    },
-  });
+    });
 
   /** The precondition an editorial delete carries. */
   const deleteEnvelope = z.strictObject({
@@ -2027,7 +2040,7 @@ export const buildContentRoutes = <
    */
   const editorialRemove = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.delete },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.delete),
     route: {
       method: "delete",
       path: "/{id}",
@@ -2073,7 +2086,7 @@ export const buildContentRoutes = <
 
   const remove = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.delete },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.delete),
     route: {
       method: "delete",
       path: "/{id}",
@@ -2135,7 +2148,7 @@ export const buildContentRoutes = <
     ...(definition.visibility.enabled
       ? [visibilityRoute("hide"), visibilityRoute("unhide")]
       : []),
-    ...(editorial ? [revisionList, revisionDetail, restore] : []),
+    ...(editorial ? [revisionList, revisionDetail, restore()] : []),
     ...(definition.liveEditing.enabled
       ? buildContentLiveRoutes(model, { pluginId })
       : []),
@@ -2145,7 +2158,7 @@ export const buildContentRoutes = <
     ...(previewEnabled ? [previewToken, livePreviewPeople] : []),
     ...(definition.delivery.enabled ? [deliveryDetail] : []),
     ...(definition.editorial.scheduling.enabled
-      ? [scheduleList, scheduleCreate, scheduleCancel]
+      ? [scheduleList, scheduleCreate(), scheduleCancel()]
       : []),
     // Mounted under the same module and the same permissions, so a localized
     // content type gets its translation routes without a second registration.
@@ -2155,7 +2168,10 @@ export const buildContentRoutes = <
     ...(definition.access.scope.enabled
       ? buildContentAccessAdminRoutes({
           familyId: definition.id,
-          permissionModule: definition.permissionModule,
+          permissions: {
+            edit: staffPermission(CONTENT_PERMISSIONS.edit),
+            view: staffPermission(CONTENT_PERMISSIONS.view),
+          },
           pluginId,
         })
       : []),
@@ -2163,7 +2179,7 @@ export const buildContentRoutes = <
       ? [
           buildContentAccessEffectiveRoute({
             contentTypeId: definition.id,
-            permissionModule: definition.permissionModule,
+            permission: staffPermission(CONTENT_PERMISSIONS.view),
             pluginId,
           }),
         ]

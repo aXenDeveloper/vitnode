@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import { and, eq, inArray, or, sql } from "drizzle-orm";
 
 import type { EnvVitNode } from "../../../api/middlewares/global.middleware";
+import type { ContentNotificationIntent } from "../../../api/modules/content/tasks/content-notifications.task";
 import type { AnyContentTypeDefinition } from "../../types";
 import type {
   ContentApprovalPendingNotificationData,
@@ -11,10 +12,10 @@ import type {
   ContentNotificationRuntimeContext,
   ContentThreadNotificationData,
 } from "./define";
-import type { ContentNotificationIntent } from "./intents";
 import type { RegisteredContentNotificationRule } from "./registry";
 
 import { detachNotificationEvents } from "../../../api/models/notifications/inbox";
+import { contentNotificationIntentSchema } from "../../../api/modules/content/tasks/content-notifications.task";
 import { core_content_containers } from "../../../database/content-containers";
 import { core_content_submissions } from "../../../database/content-submissions";
 import { core_notification_events } from "../../../database/notifications";
@@ -30,7 +31,6 @@ import { readContentNotificationRow } from "./access";
 import { contentNotificationText } from "./define";
 import {
   contentApprovalPendingKey,
-  contentNotificationIntentSchema,
   contentNotificationRegistryOf,
 } from "./intents";
 

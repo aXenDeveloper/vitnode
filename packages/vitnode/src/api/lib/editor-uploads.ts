@@ -6,6 +6,7 @@ import { HTTPException } from "hono/http-exception";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type { AnyContentModel } from "@/content/server/model";
 
+import { fileEditorUploadedEvent } from "@/api/events/files";
 import {
   contentPrivateAdminFileUrl,
   contentUploadVisibility,
@@ -172,7 +173,7 @@ export const storeEditorUpload = async (
 
     await c
       .get("events")
-      .emit("file.editor.uploaded", { fileId: stored.id, kind, userId });
+      .emit(fileEditorUploadedEvent, { fileId: stored.id, kind, userId });
 
     return {
       result: {

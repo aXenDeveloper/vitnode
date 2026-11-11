@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import TestEmailTemplate from "@/emails/test-email";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const zodSendTestEmailSchema = z.object({
   content: z.string().min(1).max(5000),
@@ -11,7 +12,7 @@ export const zodSendTestEmailSchema = z.object({
 });
 
 export const sendTestEmailDebugAdminRoute = buildRoute({
-  adminStaffPermission: { module: "system", permission: "can_send_test_email" },
+  adminStaffPermission: coreStaffPermissions.admin.system.canSendTestEmail,
   route: {
     method: "post",
     description:

@@ -1,7 +1,9 @@
 import type { Context } from "hono";
 
 import { and, eq, gt, isNull, or } from "drizzle-orm";
+import { z } from "zod";
 
+import { defineCacheEntry } from "@/api/builders";
 import { core_moderation_sanctions } from "@/database/warnings";
 import { isSanctionActiveAt } from "@/lib/moderation/warnings";
 
@@ -12,23 +14,25 @@ export interface ActiveSuspension {
   sanctionIds: number[];
 }
 
-interface CachedSanction {
-  endsAt: null | string;
-  id: number;
-  startsAt: string;
-}
+/**
+ * A user's unrevoked suspensions that had not ended when they were loaded.
+ * Positive and negative answers both live a minute, unless revoked sooner.
+ */
+const suspensionsCache = defineCacheEntry({
+  name: "moderation.suspensions",
+  version: 1,
+  key: (userId: number) => [userId],
+  schema: z.array(
+    z.object({
+      endsAt: z.iso.datetime().nullable(),
+      id: z.number().int(),
+      startsAt: z.iso.datetime(),
+    }),
+  ),
+  ttlSeconds: 60,
+});
 
-/** Positive and negative answers both live this long, unless revoked sooner. */
-const SUSPENSION_CACHE_TTL_SECONDS = 60;
-
-const suspensionCacheKey = (userId: number): string =>
-  `moderation:suspension:${userId}`;
-
-const loadSuspensions = async (
-  c: Context,
-  userId: number,
-  now: Date,
-): Promise<CachedSanction[]> => {
+const loadSuspensions = async (c: Context, userId: number, now: Date) => {
   const table = core_moderation_sanctions;
   const rows = await c
     .get("db")
@@ -66,13 +70,10 @@ export const findActiveSuspension = async (
   userId: number,
   now: Date = new Date(),
 ): Promise<ActiveSuspension | null> => {
-  const cache = c.get("cache");
-  const key = suspensionCacheKey(userId);
-  let sanctions = await cache.getSystem<CachedSanction[]>(key);
-  if (!sanctions) {
-    sanctions = await loadSuspensions(c, userId, now);
-    await cache.setSystem(key, sanctions, SUSPENSION_CACHE_TTL_SECONDS);
-  }
+  const sanctions = await c
+    .get("cache")
+    .entry(suspensionsCache, userId)
+    .remember(async () => await loadSuspensions(c, userId, now));
 
   const active = sanctions.filter(sanction =>
     isSanctionActiveAt(
@@ -109,6 +110,6 @@ export const forgetSuspension = async (
   userId: number,
   { disconnect }: { disconnect: boolean },
 ): Promise<void> => {
-  await c.get("cache").deleteSystem(suspensionCacheKey(userId));
+  await c.get("cache").entry(suspensionsCache, userId).delete();
   if (disconnect) c.get("realtime").closeUserConnections(userId);
 };

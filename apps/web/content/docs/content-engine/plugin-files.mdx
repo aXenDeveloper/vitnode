@@ -1,6 +1,6 @@
 ---
 title: Plugin files
-description: Reference for the files and exports a VitNode plugin needs for Content Engine content types, which part of the app or API reads each one, and why AdminCP code stays out of config.tsx.
+description: Reference for the files a VitNode plugin needs for Content Engine types, which part of the app reads each, and why AdminCP code stays out of config.tsx.
 icon: Package
 ---
 
@@ -20,7 +20,8 @@ VitNode reads a plugin's content types from several small files instead of one b
 | `src/routes.ts`                         | `routes`                           | The web build                              | The pages that serve `delivery` and `search` URLs                  |
 | `src/config.tsx`                        | The plugin                         | The app's `vitnode.config.ts`              | `manifest`, `messages`, `localeFiles` and `routes` only            |
 | `src/manifest.gen.ts`                   | `manifest`                         | Every file that needs the plugin id        | The plugin id as `manifest.id`. Written by `vitnode build` / `dev` |
-| `src/api/builders.ts`                   | `buildModule`, `buildRoute`, `buildContent*Module` | Every API module and route file | The builders bound to `manifest` by `bindApiPlugin` and `bindContentPlugin` |
+| `src/api/builders.ts`                   | `buildModule`, `buildRoute`, `buildQueueTask`, `defineCacheEntry`, `defineEvent`, `buildContent*Module` | Every API module, route, task, cache entry and event file | The builders bound to `manifest` by `bindApiPlugin` and `bindContentPlugin` |
+| `src/staff-permissions.ts`              | `staffPermissions`                 | `src/config.api.ts`, routes, `src/admin/nav.tsx` | Optional. Your own staff permissions, from `defineStaffPermissions(manifest, {...})`. Content types add theirs without it |
 | `src/locales/en.json`                   | JSON                               | The app, through `localeFiles`             | Labels for content types, fields and permissions                   |
 
 A content type with an AdminCP screen needs an entry in both `admin/nav` and `admin/content`. The first adds the sidebar link, the second the screen behind it. They are separate files so the sidebar stays small on every AdminCP page, while form and editor code loads only with the screen.

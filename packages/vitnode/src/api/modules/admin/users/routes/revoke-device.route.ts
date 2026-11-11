@@ -4,6 +4,7 @@ import { buildRoute } from "@/api/builders";
 import { writeAuditLogBestEffort } from "@/api/lib/audit/write";
 import { revokeSessions } from "@/api/models/session-revoke";
 import { findUserDeviceId } from "@/api/models/user-devices";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {
@@ -13,7 +14,7 @@ import {
 } from "../lib/target-user";
 
 export const revokeUserDeviceAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   route: {
     method: "delete",
     description:

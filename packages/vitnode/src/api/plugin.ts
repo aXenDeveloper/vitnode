@@ -1,9 +1,21 @@
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 
 import { blocks } from "@/blocks/built-in";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { manifest } from "@/manifest";
 import { settingsPage } from "@/views/auth/settings/widgets/settings-page";
 
+import { aiEventDefinitions } from "./events/ai";
+import { contentAccessEventDefinitions } from "./events/content-access";
+import { contentApprovalEventDefinitions } from "./events/content-approvals";
+import { contentContainerEventDefinitions } from "./events/content-containers";
+import { fileEventDefinitions } from "./events/files";
+import { moderationEventDefinitions } from "./events/moderation";
+import { notificationEventDefinitions } from "./events/notifications";
+import { pageEventDefinitions } from "./events/pages";
+import { paymentEventDefinitions } from "./events/payments";
+import { roleEventDefinitions } from "./events/roles";
+import { userEventDefinitions } from "./events/users";
 import {
   altGenerateAiAction,
   altTranslateAiAction,
@@ -36,6 +48,19 @@ export const newBuildPluginApiCore = buildApiPlugin({
   ],
   blocks,
   editablePages: [settingsPage],
+  eventDefinitions: [
+    ...aiEventDefinitions,
+    ...contentAccessEventDefinitions,
+    ...contentApprovalEventDefinitions,
+    ...contentContainerEventDefinitions,
+    ...fileEventDefinitions,
+    ...moderationEventDefinitions,
+    ...notificationEventDefinitions,
+    ...pageEventDefinitions,
+    ...paymentEventDefinitions,
+    ...roleEventDefinitions,
+    ...userEventDefinitions,
+  ],
   modules: [
     middlewareModule,
     usersModule,
@@ -50,103 +75,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     queueModule,
     searchModule,
   ],
-  permissionStaff: {
-    moderator: {
-      users: ["can_edit", "can_view_hidden_presence"],
-      widgets: ["can_edit"],
-      warnings: [
-        "can_view",
-        "can_warn",
-        "can_override_points",
-        "can_override_expiration",
-        { permission: "can_view_notes", dependsOn: ["can_view"] },
-        { permission: "can_revoke", dependsOn: ["can_view"] },
-        "can_view_sanctions",
-        {
-          permission: "can_manage_sanctions",
-          dependsOn: ["can_view_sanctions"],
-        },
-      ],
-    },
-    admin: {
-      dashboard: [
-        "can_view",
-        { permission: "can_edit", dependsOn: ["can_view"] },
-      ],
-      users: [
-        "can_view",
-        { permission: "can_create", dependsOn: ["can_view"] },
-        { permission: "can_edit", dependsOn: ["can_view"] },
-        { permission: "can_edit_admin", dependsOn: ["can_view"] },
-        { permission: "can_view_hidden_presence", dependsOn: ["can_view"] },
-      ],
-      roles: [
-        "can_view",
-        { permission: "can_create", dependsOn: ["can_view"] },
-        { permission: "can_edit", dependsOn: ["can_view"] },
-        { permission: "can_edit_admin", dependsOn: ["can_edit"] },
-        { permission: "can_delete", dependsOn: ["can_view"] },
-        { permission: "can_delete_admin", dependsOn: ["can_delete"] },
-      ],
-      debug: [
-        "can_view",
-        { permission: "can_clear_cache", dependsOn: ["can_view"] },
-      ],
-      system: [
-        "can_view",
-        { permission: "can_send_test_email", dependsOn: ["can_view"] },
-        { permission: "can_test_storage", dependsOn: ["can_view"] },
-        { permission: "can_test_ai", dependsOn: ["can_view"] },
-        { permission: "can_manage_search", dependsOn: ["can_view"] },
-      ],
-      files: [
-        "can_view",
-        { permission: "can_edit_alt", dependsOn: ["can_view"] },
-        { permission: "can_download", dependsOn: ["can_view"] },
-        { permission: "can_delete", dependsOn: ["can_view"] },
-        "can_upload",
-      ],
-      queue: ["can_view"],
-      plugins: [
-        "can_view",
-        { permission: "can_check_updates", dependsOn: ["can_view"] },
-      ],
-      notifications: [
-        "can_view",
-        { permission: "can_edit", dependsOn: ["can_view"] },
-        { permission: "can_manage", dependsOn: ["can_view"] },
-      ],
-      ai: ["can_view", { permission: "can_manage", dependsOn: ["can_view"] }],
-      cron: ["can_view", { permission: "can_run", dependsOn: ["can_view"] }],
-      activity_logs: [
-        "can_view",
-        { permission: "can_view_sensitive", dependsOn: ["can_view"] },
-        { permission: "can_export", dependsOn: ["can_view"] },
-      ],
-      report_reasons: [
-        "can_view",
-        { permission: "can_create", dependsOn: ["can_view"] },
-        { permission: "can_edit", dependsOn: ["can_view"] },
-        { permission: "can_delete", dependsOn: ["can_view"] },
-      ],
-      warning_settings: [
-        "can_view",
-        { permission: "can_manage", dependsOn: ["can_view"] },
-      ],
-      staff_moderators: [
-        "can_view",
-        { permission: "can_create", dependsOn: ["can_view"] },
-        { permission: "can_edit", dependsOn: ["can_view"] },
-        { permission: "can_delete", dependsOn: ["can_view"] },
-      ],
-      staff_admins: [
-        "can_view",
-        { permission: "can_create", dependsOn: ["can_view"] },
-        { permission: "can_edit", dependsOn: ["can_view"] },
-        { permission: "can_delete", dependsOn: ["can_view"] },
-      ],
-    },
-  },
+  permissionStaff: coreStaffPermissions,
 });
 
 export type VitNodeApiPlugin = ApiPluginContract<typeof newBuildPluginApiCore>;

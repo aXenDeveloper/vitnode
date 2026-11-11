@@ -3,9 +3,10 @@ import {
   auditFilterOptions,
   zodAuditFilterOptions,
 } from "@/api/lib/audit/registry";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const activityLogFiltersAdminRoute = buildRoute({
-  adminStaffPermission: { module: "activity_logs", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.activity_logs.canView,
   route: {
     method: "get",
     path: "/filters",

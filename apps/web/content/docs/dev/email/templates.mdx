@@ -1,6 +1,6 @@
 ---
 title: Templates
-description: Build a translated VitNode email template with React Email and DefaultTemplateEmail, send it from a plugin route to the signed-in admin, and preview it in the browser.
+description: Build a translated VitNode email template with React Email and DefaultTemplateEmail, send it from a plugin route and preview it in the browser.
 icon: LayoutTemplate
 ---
 
@@ -125,9 +125,10 @@ import { createTranslator } from "use-intl";
 import { buildRoute } from "@/api/builders";
 import { site_notes } from "@/database/notes";
 import NewNoteEmail from "@/emails/new-note";
+import { staffPermissions } from "@/staff-permissions";
 
 export const emailNoteRoute = buildRoute({
-  adminStaffPermission: { module: "notes", permission: "can_create" },
+  adminStaffPermission: staffPermissions.admin.notes.canCreate,
   route: {
     method: "post",
     path: "/{id}/email",

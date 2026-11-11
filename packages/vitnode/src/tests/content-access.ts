@@ -374,7 +374,10 @@ export const createAccessWorld = async ({
     core,
     db: memory.db,
     events: {
-      emit: async (name: string, payload: Record<string, unknown>) => {
+      emit: async (
+        { name }: { name: string },
+        payload: Record<string, unknown>,
+      ) => {
         emitted.push({ name, payload });
 
         return await Promise.resolve({ failures: [] });

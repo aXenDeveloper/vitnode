@@ -4,6 +4,7 @@ import { z } from "@hono/zod-openapi";
 import { createHash } from "node:crypto";
 
 import { buildRoute } from "@/api/builders";
+import { cacheStore } from "@/api/lib/cache";
 import { resolveClientIp } from "@/api/lib/client-ip";
 import { rateLimitKey } from "@/api/middlewares/rate-limiter.middleware";
 import { verifyContentSearchHits } from "@/content/access/server/search";
@@ -62,12 +63,10 @@ export const popularityRoute = buildRoute({
     const { kept } = await verifyContentSearchHits(c, [{ itemId, itemType }]);
     if (kept.length === 0) return c.json({ recorded: false });
 
-    const isFirstInWindow = await c
-      .get("cache")
-      .acquireLock(
-        `search-popularity:${signal}:${itemType}:${itemId}:${viewerKey(c)}`,
-        SEARCH_POPULARITY_REPEAT_WINDOW_SECONDS,
-      );
+    const isFirstInWindow = await cacheStore(c).acquireLock(
+      `search-popularity:${signal}:${itemType}:${itemId}:${viewerKey(c)}`,
+      SEARCH_POPULARITY_REPEAT_WINDOW_SECONDS,
+    );
     if (!isFirstInWindow) return c.json({ recorded: false });
 
     await search.recordPopularity({ itemId, itemType, signal });

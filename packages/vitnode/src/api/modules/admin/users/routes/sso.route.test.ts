@@ -7,6 +7,10 @@ import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 import type { SSOApiPlugin } from "@/api/models/sso";
 
+import {
+  userSsoPreferencesUpdatedEvent,
+  userSsoUnlinkedEvent,
+} from "@/api/events/users";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
@@ -228,7 +232,7 @@ describe("DELETE /admin/users/{id}/sso/{providerId}", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
     expect(h.sso.connections).toEqual([]);
-    expect(h.emit).toHaveBeenCalledWith("user.sso.unlinked", {
+    expect(h.emit).toHaveBeenCalledWith(userSsoUnlinkedEvent, {
       providerId: "google",
       userId: TARGET_ID,
     });
@@ -315,7 +319,7 @@ describe("PUT /admin/users/{id}/sso/preferences", () => {
       { field: "firstName", providerId: "google", userId: TARGET_ID },
     ]);
     expect(h.sso.connections[0]?.syncOnSignIn).toBe(true);
-    expect(h.emit).toHaveBeenCalledWith("user.sso.preferences_updated", {
+    expect(h.emit).toHaveBeenCalledWith(userSsoPreferencesUpdatedEvent, {
       sources: { firstName: "google" },
       sync: { google: true },
       userId: TARGET_ID,

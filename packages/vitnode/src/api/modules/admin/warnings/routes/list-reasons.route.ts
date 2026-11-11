@@ -6,9 +6,10 @@ import {
   warningReasonSchema,
 } from "@/api/lib/moderation/warnings/reasons";
 import { json } from "@/api/modules/moderation/moderation.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const listWarningReasonsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "warning_settings", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.warning_settings.canView,
   route: {
     method: "get",
     path: "/reasons",

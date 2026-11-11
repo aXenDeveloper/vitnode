@@ -4,11 +4,12 @@ import {
   AI_POINTS_CONVERSION,
   AI_POINTS_CONVERSION_VERSION,
 } from "@/api/lib/ai/ledger";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { zodAiSettingsResponse } from "../ai.schema";
 
 export const getAiSettingsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canView,
   route: {
     method: "get",
     description: "Site-wide AI settings: switch, budgets, limits, ALT.",

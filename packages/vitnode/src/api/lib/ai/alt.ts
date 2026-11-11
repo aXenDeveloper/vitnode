@@ -3,6 +3,8 @@ import type { Context } from "hono";
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 
+import { filesAltUpdatedEvent } from "@/api/events/files";
+
 import type { EnvVitNode } from "../../middlewares/global.middleware";
 import type { AiSettingsSnapshot } from "./ledger";
 
@@ -14,6 +16,7 @@ import {
   core_files_alt_state,
 } from "../../../database/files";
 import { core_languages } from "../../../database/languages";
+import { altGenerateQueueTask } from "../../modules/ai/tasks/alt-generate.task";
 import { QueueDeferError } from "../queue";
 import {
   ALT_BASE_LANGUAGE,
@@ -25,7 +28,6 @@ import { isAiError } from "./errors";
 import { periodContaining } from "./periods";
 
 export const ALT_QUEUE = "ai";
-export const ALT_TASK_NAME = "alt-generate";
 export const ALT_MAX_SOURCE_BYTES = 20 * 1024 * 1024;
 const ALT_MAX_EDGE_PX = 1024;
 const ALT_SCAN_WINDOW = 200;
@@ -84,14 +86,13 @@ export const enqueueAltGeneration = async (
   c: Context,
   fileId: number,
 ): Promise<boolean> => {
-  const { deduplicated } = await c.get("queue").dispatch({
-    dedupeKey: altDedupeKey(fileId),
-    maxAttempts: 3,
-    name: ALT_TASK_NAME,
-    payload: { fileId },
-    pluginId: "@vitnode/core",
-    queue: ALT_QUEUE,
-  });
+  const { deduplicated } = await c
+    .get("queue")
+    .dispatch(
+      altGenerateQueueTask,
+      { fileId },
+      { dedupeKey: altDedupeKey(fileId), maxAttempts: 3, queue: ALT_QUEUE },
+    );
   if (!deduplicated) await setAltState(c.get("db"), fileId, "pending");
 
   return !deduplicated;
@@ -464,7 +465,7 @@ export const processAltForFile = async (
       }
       await c
         .get("events")
-        ?.emit("files.alt.updated", {
+        ?.emit(filesAltUpdatedEvent, {
           fileId,
           languageCodes: [languageCode],
           origin: "ai",

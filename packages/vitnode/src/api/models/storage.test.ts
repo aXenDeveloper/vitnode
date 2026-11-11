@@ -3,6 +3,10 @@ import type { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import { describe, expect, it, vi } from "vitest";
 
+import {
+  userAvatarUpdatedEvent,
+  userCoverUpdatedEvent,
+} from "@/api/events/users";
 import { core_content_file_refs } from "@/database/content";
 
 import { STORAGE_FILE_IN_USE, StorageModel } from "./storage";
@@ -317,8 +321,8 @@ describe("StorageModel.deleteFile", () => {
     await new StorageModel(ctx).deleteFile(1);
 
     expect(emit.mock.calls).toEqual([
-      ["user.avatar.updated", { fileId: null, userId: 7 }],
-      ["user.cover.updated", { fileId: null, userId: 9 }],
+      [userAvatarUpdatedEvent, { fileId: null, userId: 7 }],
+      [userCoverUpdatedEvent, { fileId: null, userId: 9 }],
     ]);
     expect(del.mock.invocationCallOrder[0]).toBeLessThan(
       emit.mock.invocationCallOrder[0],

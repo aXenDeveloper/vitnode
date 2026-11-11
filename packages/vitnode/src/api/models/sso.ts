@@ -7,6 +7,7 @@ import { HTTPException } from "hono/http-exception";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type { SsoProfileField } from "@/lib/sso-profile";
 
+import { userSsoLinkedEvent } from "@/api/events/users";
 import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
 import { isUniqueViolation } from "@/api/lib/db-errors";
 import { isPasswordSignInEnabled } from "@/api/lib/password-sign-in";
@@ -623,7 +624,7 @@ export class SSOModel {
         throw error;
       });
 
-    await this.c.get("events").emit("user.sso.linked", {
+    await this.c.get("events").emit(userSsoLinkedEvent, {
       email: user.email,
       providerId,
       userId: user.id,

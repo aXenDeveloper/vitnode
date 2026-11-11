@@ -71,7 +71,7 @@ const originalNameOf = (table: Table): string => {
 };
 
 const WORD_PATTERN =
-  /\s*(>=|<=|<>|!=|::|\|\||[(),*=<>+]|'(?:[^']|'')*'|"[^"]*"|\d+(?:\.\d+)?|[A-Za-z_][\w]*)/y;
+  /\s*(>=|<=|<>|!=|::|\|\||[(),*=<>+-]|'(?:[^']|'')*'|"[^"]*"|\d+(?:\.\d+)?|[A-Za-z_][\w]*)/y;
 
 const tokenizeText = (text: string): Token[] => {
   const tokens: Token[] = [];
@@ -209,8 +209,8 @@ const parseTokens = (tokens: Token[], source: string) => {
 
   const parseConcat = (): Node => {
     let node = parseCast();
-    while (isWord("||") || isWord("+")) {
-      const operator = isWord("+") ? "+" : "||";
+    while (isWord("||") || isWord("+") || isWord("-")) {
+      const operator = isWord("+") ? "+" : isWord("-") ? "-" : "||";
       position++;
       node = {
         kind: "compare",
@@ -398,12 +398,14 @@ const compare = (left: unknown, operator: string, right: unknown) => {
 
     return unsupported(`"||" between ${typeof left} and ${typeof right}`);
   }
-  if (operator === "+") {
+  if (operator === "+" || operator === "-") {
     if (typeof left === "number" && typeof right === "number") {
-      return left + right;
+      return operator === "+" ? left + right : left - right;
     }
 
-    return unsupported(`"+" between ${typeof left} and ${typeof right}`);
+    return unsupported(
+      `"${operator}" between ${typeof left} and ${typeof right}`,
+    );
   }
   if (operator === "=") return equal(left, right);
   if (operator === "<>") return !equal(left, right);
@@ -544,6 +546,20 @@ const call = (
   }
   if (node.name === "coalesce") {
     return args.find(value => !isMissing(value)) ?? null;
+  }
+  if (node.name === "greatest" || node.name === "least") {
+    const present = args.filter(value => !isMissing(value));
+    if (present.length === 0) return null;
+
+    return present.reduce((best, value) =>
+      (
+        node.name === "greatest"
+          ? compare(value, ">", best)
+          : compare(value, "<", best)
+      )
+        ? value
+        : best,
+    );
   }
 
   return unsupported(`the function ${node.name}()`);

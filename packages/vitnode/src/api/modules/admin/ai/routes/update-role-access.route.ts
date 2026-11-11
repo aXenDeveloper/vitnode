@@ -5,11 +5,12 @@ import { buildRoute } from "@/api/builders";
 import { roleAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { core_ai_role_permissions, core_ai_role_policies } from "@/database/ai";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { zodDecimalString } from "../ai.schema";
 
 export const updateAiRoleAccessAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_manage" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canManage,
   route: {
     method: "put",
     description:

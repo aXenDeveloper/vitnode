@@ -15,6 +15,28 @@ const scoreBound = (bound: number | string): number => {
   return Number(bound);
 };
 
+const escapeRegExp = (char: string): string =>
+  char.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
+
+/** Redis `MATCH` glob (`*`, `?`, `\` escapes) as a regular expression. */
+const globPattern = (glob: string): RegExp => {
+  let source = "";
+  for (let index = 0; index < glob.length; index++) {
+    const char = glob[index];
+    if (char === "\\" && index + 1 < glob.length) {
+      source += escapeRegExp(glob[++index]);
+    } else if (char === "*") {
+      source += ".*";
+    } else if (char === "?") {
+      source += ".";
+    } else {
+      source += escapeRegExp(char);
+    }
+  }
+
+  return new RegExp(`^${source}$`);
+};
+
 export const createTestCacheClient = (): CacheClient => {
   const store = new Map<string, string>();
   const sortedSets = new Map<string, Map<string, number>>();
@@ -74,6 +96,12 @@ export const createTestCacheClient = (): CacheClient => {
     mGet: async (keys: string[]) =>
       Promise.resolve(keys.map(key => store.get(key) ?? null)),
     ping: async () => Promise.resolve("PONG"),
+    scanIterator: async function* ({ MATCH = "*" }: { MATCH?: string }) {
+      const pattern = globPattern(MATCH);
+      yield await Promise.resolve(
+        [...store.keys()].filter(key => pattern.test(key)),
+      );
+    },
     set: async (key: string, value: string, options?: SetOptions) => {
       if (options?.condition === "NX" && store.has(key)) {
         return Promise.resolve(null);

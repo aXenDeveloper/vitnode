@@ -1,16 +1,16 @@
 import { z } from "zod";
 
-import { ALT_TASK_NAME, processAltForFile } from "@/api/lib/ai/alt";
-import { buildQueueTask } from "@/api/lib/queue";
+import { buildQueueTask } from "@/api/builders";
 
 export const altGenerateQueueTask = buildQueueTask({
-  name: ALT_TASK_NAME,
+  name: "alt-generate",
+  payload: z.object({ fileId: z.number().int() }),
   description:
     "Describe one image and translate its ALT text into missing languages",
   maxAttempts: 3,
   leaseSeconds: 15 * 60,
-  handler: async (c, payload) => {
-    const { fileId } = z.object({ fileId: z.number().int() }).parse(payload);
+  handler: async (c, { fileId }) => {
+    const { processAltForFile } = await import("../../../lib/ai/alt");
     await processAltForFile(c, fileId);
   },
 });

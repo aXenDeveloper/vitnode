@@ -6,9 +6,10 @@ import {
   editorUploadResponses,
   storeEditorUpload,
 } from "@/api/lib/editor-uploads";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const uploadEditorFileAdminRoute = buildRoute({
-  adminStaffPermission: { module: "files", permission: "can_upload" },
+  adminStaffPermission: coreStaffPermissions.admin.files.canUpload,
   route: {
     method: "post",
     description:

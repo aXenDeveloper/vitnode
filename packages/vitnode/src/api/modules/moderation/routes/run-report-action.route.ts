@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
+import { moderationReportActionEvent } from "@/api/events/moderation";
 import { canOnReport, requireModerator } from "@/api/lib/moderation/access";
 
 import { recordReportAudit, withReportAudit } from "../lib/audit";
@@ -97,7 +98,7 @@ export const reportActionRoute = buildRoute({
 
     if (result.outcome.changed) {
       await result.outcome.effects();
-      await c.get("events").emit("moderation.report.action", {
+      await c.get("events").emit(moderationReportActionEvent, {
         action,
         pluginId: report.pluginId,
         reportId: report.id,

@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 
+import { userEmailVerifiedEvent } from "@/api/events/users";
 import {
   EMAIL_VERIFICATION_TTL_MS,
   EmailVerificationModel,
@@ -298,7 +299,7 @@ describe("following the confirmation link", () => {
     expect(await response.json()).toEqual({ email: UNVERIFIED.email });
     expect(h.userRow(UNVERIFIED.id)?.emailVerified).toBe(true);
     expect(h.confirmationRows()).toEqual([]);
-    expect(h.emit).toHaveBeenCalledWith("user.email.verified", {
+    expect(h.emit).toHaveBeenCalledWith(userEmailVerifiedEvent, {
       email: UNVERIFIED.email,
       userId: UNVERIFIED.id,
     });
@@ -455,7 +456,7 @@ describe("completing a password reset", () => {
 
     expect(response.status).toBe(201);
     expect(h.userRow(UNVERIFIED.id)?.emailVerified).toBe(true);
-    expect(h.emit).toHaveBeenCalledWith("user.email.verified", {
+    expect(h.emit).toHaveBeenCalledWith(userEmailVerifiedEvent, {
       email: UNVERIFIED.email,
       userId: UNVERIFIED.id,
     });
@@ -467,7 +468,7 @@ describe("completing a password reset", () => {
     await h.post("/change-password", changePassword(VERIFIED.id));
 
     expect(h.emit).not.toHaveBeenCalledWith(
-      "user.email.verified",
+      userEmailVerifiedEvent,
       expect.anything(),
     );
   });

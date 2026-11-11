@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { runUpdateCheckFor } from "@/api/lib/updates/context";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const busySchema = z.object({
   status: z.enum(["cooldown", "disabled", "interrupted", "running"]),
@@ -9,10 +10,7 @@ const busySchema = z.object({
 });
 
 export const checkPluginUpdatesAdminRoute = buildRoute({
-  adminStaffPermission: {
-    module: "plugins",
-    permission: "can_check_updates",
-  },
+  adminStaffPermission: coreStaffPermissions.admin.plugins.canCheckUpdates,
   route: {
     method: "post",
     description:

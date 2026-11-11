@@ -116,7 +116,7 @@ export const assertEditablePagePermissionsGrantable = ({
 
     if (!modules?.some(candidate => candidate.permission === permission)) {
       throw new EditablePageRegistryError(
-        `The editable page "${entry.page.id}" is edited with the moderator permission "${permission}" of "${plugin}"'s "${module}" module, which "${plugin}" never declares. Add \`permissionStaff: { moderator: { ${JSON.stringify(module)}: [${JSON.stringify(permission)}] } }\` to its API config: a permission the AdminCP cannot offer is a permission nobody holds, so the page would be editable by root roles alone and every other save would be a 403.`,
+        `The editable page "${entry.page.id}" is edited with the moderator permission "${permission}" of "${plugin}"'s "${module}" module, which "${plugin}" never declares. Add \`moderator: { ${JSON.stringify(module)}: [${JSON.stringify(permission)}] }\` to its defineStaffPermissions(manifest, {...}): a permission the AdminCP cannot offer is a permission nobody holds, so the page would be editable by root roles alone and every other save would be a 403.`,
       );
     }
   }

@@ -87,7 +87,7 @@ const harness = ({
     core,
     db: memory.db,
     events: {
-      emit: async (name: string, payload: unknown) => {
+      emit: async ({ name }: { name: string }, payload: unknown) => {
         emitted.push({ name, payload });
 
         return await Promise.resolve({ failures: [] });

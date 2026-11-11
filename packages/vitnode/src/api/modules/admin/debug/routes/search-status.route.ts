@@ -14,6 +14,7 @@ import { buildRoute } from "@/api/builders";
 import { searchDocumentOwner } from "@/api/models/search";
 import { core_logs } from "@/database/logs";
 import { core_search_index } from "@/database/search";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const CONTENT_SEARCH_LOG_PREFIX = "[content-search]";
 
@@ -47,7 +48,7 @@ const syncErrorSchema = z.object({
 });
 
 export const searchStatusDebugAdminRoute = buildRoute({
-  adminStaffPermission: { module: "system", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.system.canView,
   route: {
     method: "get",
     description:

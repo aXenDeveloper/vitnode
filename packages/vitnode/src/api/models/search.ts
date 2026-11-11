@@ -12,12 +12,14 @@ import {
   sql,
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
+import { z } from "zod";
 
 import type { SearchPopularitySignal } from "@/api/lib/search-popularity";
 import type { SearchSuggestion } from "@/api/lib/search-suggestions";
 import type { ContentId } from "@/content/ids";
 import type { RegisteredContentType } from "@/content/registry";
 
+import { defineCacheEntry } from "@/api/builders";
 import {
   deleteSearchPopularity,
   recordSearchPopularity,
@@ -44,7 +46,18 @@ import { stripHtml } from "@/lib/strip-html";
 
 const authorAvatarFile = alias(core_files, "search_author_avatar_file");
 
-const SEARCH_TOP_AUTHORS_TTL_SECONDS = 5 * 60;
+/**
+ * The ids of the most credited authors on what everybody may read, `limit` at
+ * a time. Shared by every unrestricted viewer; a restricted viewer's list is
+ * never cached.
+ */
+const searchTopAuthorsCache = defineCacheEntry({
+  name: "search.top-authors",
+  version: 1,
+  key: (limit: number) => [limit],
+  schema: z.array(z.number().int()),
+  ttlSeconds: 5 * 60,
+});
 
 // Rows per multi-row upsert: 17 columns × 500 stays far below Postgres' 65,535
 // bind-parameter cap while still turning a rebuild page into one round trip.
@@ -809,11 +822,8 @@ export class SearchModel {
       ? await loadTopAuthors()
       : await this.c
           .get("cache")
-          .remember(
-            `search:top-authors:${limit}`,
-            SEARCH_TOP_AUTHORS_TTL_SECONDS,
-            loadTopAuthors,
-          );
+          .entry(searchTopAuthorsCache, limit)
+          .remember(loadTopAuthors);
     if (topAuthorIds.length === 0) return [];
 
     const rows = await db

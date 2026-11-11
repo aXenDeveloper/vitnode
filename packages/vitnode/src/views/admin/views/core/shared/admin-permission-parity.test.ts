@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import { staffPermissionKey } from "@/lib/staff-permissions";
 import { manifest } from "@/manifest";
 
 import {
@@ -27,9 +28,9 @@ const sourcesIn = (module: string): { file: string; source: string }[] => {
     }));
 };
 
-/** `adminStaffPermission: { module: "users", permission: "can_view" }`. */
+/** `adminStaffPermission: coreStaffPermissions.admin.users.canView`. */
 const DECLARED =
-  /adminStaffPermission:\s*\{\s*module:\s*"([^"]+)",\s*permission:\s*"([^"]+)"\s*\}/;
+  /adminStaffPermission:\s*coreStaffPermissions\.admin\.(\w+)\.(\w+)/;
 
 /** The declaration on each route file that has one, by file name. */
 const declarationsIn = (module: string): Map<string, string> =>
@@ -57,14 +58,14 @@ const assertionsIn = (module: string): Map<string, string> =>
     }),
   );
 
-/** A tuple in the `module:permission` spelling the scans produce. */
+/** A tuple in the `module:referenceKey` spelling the scans produce. */
 const key = ({
   module,
   permission,
 }: {
   module: string;
   permission: string;
-}): string => `${module}:${permission}`;
+}): string => `${module}:${staffPermissionKey(permission)}`;
 
 describe("the users screens name the API's own permissions", () => {
   const declared = declarationsIn("users");
@@ -113,7 +114,7 @@ describe("the roles screen names the API's own permissions", () => {
     // the picker reads `/list`, and one role's full record is the edit screen's
     // read and nobody else's.
     expect(declared.has("list.route.ts")).toBe(false);
-    expect(ADMIN_ROLE_PERMISSIONS.view).toEqual({
+    expect(ADMIN_ROLE_PERMISSIONS.view).toMatchObject({
       module: "roles",
       permission: "can_view",
       plugin: manifest.id,

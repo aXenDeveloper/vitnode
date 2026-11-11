@@ -6,7 +6,7 @@ import type { ContentScheduleEffectsPayload } from "@/content/server/schedule-ef
 import type { AnyContentTypeDefinition } from "@/content/types";
 
 import { AUDIT_SYSTEM_ACTOR, withAuditContext } from "@/api/lib/audit/context";
-import { CONTENT_QUEUE_TASK_SCHEDULE_EFFECTS } from "@/content/const";
+import { contentScheduleEffectsQueueTask } from "@/api/modules/content/tasks/content-schedule-effects.task";
 import { contentIdFromKey } from "@/content/ids";
 import { CONTENT_SYSTEM_ACTOR } from "@/content/server/actor";
 import { contentDefinitionOf, findContentModel } from "@/content/server/model";
@@ -89,7 +89,9 @@ const effectsPayload = ({
     // *does* move it should not need this file to change.
     previousSlug: outcome.previousSlug ?? slugOf(definition, row),
     revisionId: outcome.revisionId,
-    row: JSON.parse(JSON.stringify(row)) as Record<string, unknown>,
+    row: JSON.parse(
+      JSON.stringify(row),
+    ) as ContentScheduleEffectsPayload["row"],
     scheduleId: claimed.id,
     scheduledBy: claimed.createdBy,
     version: outcome.version,
@@ -233,14 +235,9 @@ export const executeContentSchedule = async (
       // In the transaction, so the announcement task exists if and only if
       // the transition it announces committed. A crash a millisecond later
       // loses nothing: the row is durable and the queue will drain it.
-      await c.get("queue").dispatch({
-        name: CONTENT_QUEUE_TASK_SCHEDULE_EFFECTS,
-        payload: effects,
-        // Core owns the handler. Without this the row would be stamped with
-        // the requesting plugin's id and nothing would ever claim it.
-        pluginId: "@vitnode/core",
-        tx,
-      });
+      await c
+        .get("queue")
+        .dispatch(contentScheduleEffectsQueueTask, effects, { tx });
 
       return { effects, kind: "executed" };
     });

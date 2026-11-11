@@ -73,7 +73,10 @@ const buildContext = ({ failing = false }: { failing?: boolean } = {}) => {
     get: (key: string) => {
       if (key === "events") {
         return {
-          emit: async (name: string, payload: Record<string, unknown>) => {
+          emit: async (
+            { name }: { name: string },
+            payload: Record<string, unknown>,
+          ) => {
             emitted.push({ name, payload });
 
             return await Promise.resolve({

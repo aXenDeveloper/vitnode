@@ -1,12 +1,13 @@
 import { buildRoute } from "@/api/builders";
 import { withPagination } from "@/api/lib/with-pagination";
 import { core_moderators_permissions } from "@/database/moderators";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { resolveStaffEdges } from "../lib/resolve-staff-edges";
 import { staffListAdminQuery, staffListAdminSchema } from "../staff.schema";
 
 export const listModeratorsStaffAdminRoute = buildRoute({
-  adminStaffPermission: { module: "staff_moderators", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.staff_moderators.canView,
   route: {
     method: "get",
     description: "Get list of moderators staff (Admin only)",

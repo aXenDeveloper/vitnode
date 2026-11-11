@@ -7,6 +7,7 @@ import {
   zodNotificationPreferences,
   zodUpdateNotificationPreferences,
 } from "@/api/modules/notifications/notifications.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {
@@ -16,7 +17,7 @@ import {
 } from "../lib/target-user";
 
 export const updateUserNotificationPreferencesAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   route: {
     method: "put",
     description:

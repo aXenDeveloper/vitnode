@@ -19,6 +19,7 @@ import { field } from "./fields";
 import {
   CONTENT_EDIT_HREF_PLACEHOLDER,
   contentAdminHref,
+  contentAdminStaffPermission,
   contentCreateHref,
   contentEditHref,
   contentEditHrefTemplate,
@@ -993,5 +994,32 @@ describe("contentModeratorPermissionEntries", () => {
     ],
   ])("registers %s", (_label, definition, expected) => {
     expect(contentModeratorPermissionEntries(definition)).toEqual(expected);
+  });
+});
+
+describe("contentAdminStaffPermission", () => {
+  it("references a generated permission, owned by the registering plugin", () => {
+    expect(
+      contentAdminStaffPermission(
+        "@vitnode/example",
+        entry(widget({ publication: true })).definition,
+        "can_publish",
+      ),
+    ).toEqual({
+      module: "widget",
+      permission: "can_publish",
+      plugin: "@vitnode/example",
+      staffType: "admin",
+    });
+  });
+
+  it("throws for a permission the content type does not generate", () => {
+    expect(() =>
+      contentAdminStaffPermission(
+        "@vitnode/example",
+        entry(widget()).definition,
+        "can_publish",
+      ),
+    ).toThrow(/"can_publish" is not generated for the "widget" module/);
   });
 });

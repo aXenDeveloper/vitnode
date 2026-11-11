@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { core_content_schedules } from "@/database/content";
 import { testSearchablePostContentType } from "@/tests/content-fixtures";
 
+import type { AnyContentEventDefinition } from "../event-definitions";
 import type { ContentScheduleEffectsPayload } from "./schedule-effects";
 
 import { CONTENT_REVALIDATE_PATH } from "./revalidate-bridge";
@@ -225,7 +226,9 @@ describe("runContentScheduleEffects", () => {
 
     await runContentScheduleEffects(c, payload());
 
-    expect(emit.mock.calls[0][0]).toBe(`content.${definition.id}.published`);
+    expect(emit.mock.calls[0][0].name).toBe(
+      `content.${definition.id}.published`,
+    );
     expect(effectsErrors).toEqual([
       {
         condition: expect.anything(),
@@ -242,7 +245,11 @@ describe("runContentScheduleEffects", () => {
 
     await runContentScheduleEffects(c, payload());
 
-    const event = emit.mock.calls[0][1] as Record<string, unknown>;
+    const [definition, wire] = emit.mock.calls[0] as [
+      AnyContentEventDefinition,
+      Record<string, unknown>,
+    ];
+    const event = await definition.payload.parseAsync(wire);
     expect(event.publishedAt).toBeInstanceOf(Date);
     expect(event.publishedAt).toEqual(new Date("2026-08-05T12:00:00.000Z"));
   });

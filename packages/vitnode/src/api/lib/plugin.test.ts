@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createContentModel } from "@/content/server/model";
 import { buildContentPublicModule } from "@/content/server/public-module";
+import { defineStaffPermissions } from "@/lib/staff-permissions";
 import {
   testArticleContentType,
   testCategoryContentType,
@@ -62,15 +63,33 @@ describe("buildApiPlugin content types", () => {
     const plugin = buildApiPlugin({
       manifest: testManifest("@vitnode/example"),
       modules: [adminModule],
-      permissionStaff: {
-        admin: { article: ["can_view"], posts: ["can_view"] },
-        moderator: { posts: ["can_edit"] },
-      },
+      permissionStaff: defineStaffPermissions(
+        testManifest("@vitnode/example"),
+        {
+          admin: { article: ["can_view"], posts: ["can_view"] },
+          moderator: { posts: ["can_edit"] },
+        },
+      ),
     });
 
     expect(plugin.permissionStaff?.admin?.article).toEqual(["can_view"]);
     expect(plugin.permissionStaff?.admin?.posts).toEqual(["can_view"]);
     expect(plugin.permissionStaff?.moderator?.posts).toEqual(["can_edit"]);
+  });
+
+  it("refuses staff permissions declared for another plugin", () => {
+    expect(() =>
+      buildApiPlugin({
+        manifest: testManifest("@vitnode/example"),
+        modules: [],
+        permissionStaff: defineStaffPermissions(
+          testManifest("@vitnode/other"),
+          {
+            admin: { posts: ["can_view"] },
+          },
+        ),
+      }),
+    ).toThrow(/registers the staff permissions of "@vitnode\/other"/);
   });
 
   it("leaves permissionStaff untouched for a plugin with no content types", () => {

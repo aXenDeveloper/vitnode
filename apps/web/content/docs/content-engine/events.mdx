@@ -41,7 +41,8 @@ A few payload details that change what a listener does:
 - `hidden` and `unhidden` never replace `published` or `unpublished`, because [hiding](/docs/content-engine/content-visibility) does not change the status.
 - `changedFields` lists only the fields whose value actually moved, typed as the content type's own field names. On translation events it names localized fields only.
 - `restored` replaces `updated` for a rollback, so a listener that cares about field changes should handle both.
-- `publishedAt` is when the record first went live. It is never rewritten, and it can be missing, so guard for `undefined`.
+- `publishedAt` is when the record first went live, and it is never rewritten. Like every date in these payloads (`scheduledFor`, `hiddenAt`), listeners get a `Date`; code that emits one with `emitContentEvent` passes a `Date` and the engine sends it as an ISO string.
+- `emitContentEvent` runs after the write has committed, so a payload that does not match the content type's event schema is not thrown: no listener runs, the problem is logged, and the result's `failures` holds one entry with `module: "validation"`.
 - `scheduledBy` and `scheduleId` are set only when a schedule fired the change. `actorUserId` on `scheduled` is the same person as `scheduledBy` later.
 - The delivery events arrive alongside `updated`, `restored` or a publication event, never instead of them. `locale` is `null` for a shared slug.
 
@@ -56,41 +57,18 @@ The listener also receives an envelope with the actor, the time and `pluginId`. 
 <Steps>
 <Step>
 
-### Register the event types
-
-Add the content type to the global event map once per plugin. The listener's event name and payload are then type-checked, and an event the definition does not enable, such as `content.newsroom.category.published`, does not compile.
-
-```ts title="plugins/newsroom/src/api/lib/events.ts"
-import type { ContentEventsFor } from "@vitnode/core/content";
-
-import type { categoryContentType } from "@/content/category";
-import type { storyContentType } from "@/content/story";
-
-declare module "@vitnode/core/api/models/events" {
-  interface VitNodeEvents
-    extends
-      ContentEventsFor<typeof storyContentType>,
-      ContentEventsFor<typeof categoryContentType> {}
-}
-```
-
-The newsroom plugin imports this file from `config.api.ts` with `import "@/api/lib/events";`, so the declaration travels with the API build.
-
-</Step>
-<Step>
-
 ### Write the listener
 
-`contentEventName(id, action)` builds the name from the definition, so a renamed content type cannot leave a stale string behind:
+`contentEvent(contentType, action)` from `@vitnode/core/content` returns the event's definition. The payload is typed from the content type, and an action the definition does not enable, such as `contentEvent(categoryContentType, "published")`, does not compile. Nothing needs registering: `buildApiPlugin` registers the definitions of every content type it registers.
 
 ```ts title="plugins/newsroom/src/api/lib/listeners.ts"
 import { buildEventListener } from "@vitnode/core/api/lib/events";
-import { contentEventName } from "@vitnode/core/content";
+import { contentEvent } from "@vitnode/core/content";
 
 import { storyContentType } from "@/content/story";
 
 export const announceStoryListener = buildEventListener({
-  event: contentEventName(storyContentType.id, "published"),
+  event: contentEvent(storyContentType, "published"),
   name: "announce-published-story",
   description: "Logs every story that goes live",
   handler: async (c, payload) => {
@@ -131,7 +109,7 @@ export const adminModule = buildModule({
 });
 ```
 
-The blog plugin does the same with its `blogLegacyEventListeners`, which turn `content.blog.post.created` into the older `blog.post.created` event.
+The blog plugin does the same with its `blogLegacyEventListeners`, which turn `content.blog.post.created` into the older `blog.post.created` event, and the forum listens to `contentEvent(topicContentType, ...)` to expire its cached stats.
 
 </Step>
 </Steps>

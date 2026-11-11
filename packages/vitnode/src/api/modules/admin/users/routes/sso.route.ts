@@ -1,6 +1,7 @@
 import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { zodSsoConnectionsOverview } from "@/api/modules/users/sso/connections/connections.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import {
   findTargetUserId,
@@ -9,7 +10,7 @@ import {
 } from "../lib/target-user";
 
 export const listUserSsoAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canView,
   route: {
     method: "get",
     description:

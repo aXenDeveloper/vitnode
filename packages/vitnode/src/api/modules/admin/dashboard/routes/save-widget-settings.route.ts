@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import {
   isSettingsTooLarge,
@@ -18,7 +19,7 @@ export const zodSaveWidgetSettingsSchema = z.object({
 });
 
 export const saveDashboardWidgetSettingsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "dashboard", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.dashboard.canEdit,
   route: {
     method: "put",
     description:

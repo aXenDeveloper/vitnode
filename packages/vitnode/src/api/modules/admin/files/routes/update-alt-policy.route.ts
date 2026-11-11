@@ -3,11 +3,12 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { core_files } from "@/database/files";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { zodAltPolicy } from "../alt.schema";
 
 export const updateFileAltPolicyAdminRoute = buildRoute({
-  adminStaffPermission: { module: "files", permission: "can_edit_alt" },
+  adminStaffPermission: coreStaffPermissions.admin.files.canEditAlt,
   route: {
     method: "put",
     description:

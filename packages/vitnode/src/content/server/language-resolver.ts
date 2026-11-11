@@ -1,10 +1,13 @@
 import type { Context } from "hono";
 
-import type { CacheModel } from "../../api/lib/cache";
+import { z } from "zod";
+
+import type { DomainCache } from "../../api/lib/cache";
 import type { RegisteredContentType } from "../registry";
 import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
 
+import { defineCacheEntry } from "../../api/builders";
 import { core_languages } from "../../database/languages";
 import { ContentEngineError, ContentLanguageError } from "../errors";
 
@@ -31,18 +34,24 @@ const disabledLocales = (c: Context): ReadonlySet<string> => {
 };
 
 /**
- * How long the languages table is shared across requests. Short, because the
- * only thing that writes it is `db:prepare`, which runs outside any request and
- * so has no way to expire a cache entry.
+ * The languages table, shared across requests. Short-lived, because the only
+ * thing that writes it is `db:prepare`, which runs outside any request and so
+ * has no way to expire a cache entry.
  */
-const LANGUAGES_CACHE_TTL_SECONDS = 30;
-const LANGUAGES_CACHE_KEY = "content:languages";
+const languagesCache = defineCacheEntry({
+  name: "content.languages",
+  version: 1,
+  schema: z.array(
+    z.object({
+      code: z.string(),
+      id: z.number().int(),
+      isDefault: z.boolean(),
+    }),
+  ),
+  ttlSeconds: 30,
+});
 
-interface LanguageRow {
-  code: string;
-  id: number;
-  isDefault: boolean;
-}
+type LanguageRow = z.output<typeof languagesCache.schema>[number];
 
 const readRows = async (
   c: Context,
@@ -64,16 +73,12 @@ const readCachedRows = async (
   c: Context,
   tx?: ContentDatabase,
 ): Promise<LanguageRow[]> => {
-  const cache: CacheModel | undefined = tx ? undefined : c.get("cache");
+  const cache: DomainCache | undefined = tx ? undefined : c.get("cache");
   if (!cache) return await readRows(c, tx);
 
-  const cached = await cache.getSystem<LanguageRow[]>(LANGUAGES_CACHE_KEY);
-  if (cached) return cached;
-
-  const rows = await readRows(c);
-  await cache.setSystem(LANGUAGES_CACHE_KEY, rows, LANGUAGES_CACHE_TTL_SECONDS);
-
-  return rows;
+  return await cache
+    .entry(languagesCache)
+    .remember(async () => await readRows(c));
 };
 
 const load = async (

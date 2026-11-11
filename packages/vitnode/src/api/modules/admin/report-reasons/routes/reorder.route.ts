@@ -2,12 +2,14 @@ import { z } from "@hono/zod-openapi";
 import { inArray, sql } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationReportReasonReorderedEvent } from "@/api/events/moderation";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { errorSchema, json } from "@/api/modules/moderation/moderation.schema";
 import { core_moderation_report_reasons } from "@/database/moderation";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const reorderReportReasonsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "report_reasons", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.report_reasons.canEdit,
   route: {
     method: "put",
     path: "/reorder",
@@ -68,7 +70,7 @@ export const reorderReportReasonsAdminRoute = buildRoute({
     });
     await c
       .get("events")
-      .emit("moderation.report_reason.reordered", { reasonIds: ids });
+      .emit(moderationReportReasonReorderedEvent, { reasonIds: ids });
 
     return c.body(null, 200);
   },

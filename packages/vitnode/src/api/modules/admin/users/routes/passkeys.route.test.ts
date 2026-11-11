@@ -7,6 +7,10 @@ import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 
 import { buildModule } from "@/api/builders";
+import {
+  userPasskeyDeletedEvent,
+  userPasskeyUpdatedEvent,
+} from "@/api/events/users";
 import { PasskeyModel } from "@/api/models/passkey";
 import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
@@ -230,7 +234,7 @@ describe("PATCH /admin/users/{id}/passkeys/{passkeyId}", () => {
       name: "Desk",
     });
     expect(h.passkeys.get(h.keys.target.id)?.name).toBe("Desk");
-    expect(h.emit).toHaveBeenCalledWith("user.passkey.updated", {
+    expect(h.emit).toHaveBeenCalledWith(userPasskeyUpdatedEvent, {
       name: "Desk",
       passkeyId: h.keys.target.id,
       userId: TARGET_ID,
@@ -291,7 +295,7 @@ describe("DELETE /admin/users/{id}/passkeys/{passkeyId}", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ ok: true });
     expect(h.passkeys.has(h.keys.target.id)).toBe(false);
-    expect(h.emit).toHaveBeenCalledWith("user.passkey.deleted", {
+    expect(h.emit).toHaveBeenCalledWith(userPasskeyDeletedEvent, {
       passkeyId: h.keys.target.id,
       userId: TARGET_ID,
     });

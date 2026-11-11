@@ -7,9 +7,10 @@ import {
   zodSearchTimelineQuery,
   zodSearchTimelineUserId,
 } from "@/api/modules/search/search.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const timelineUserAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canView,
   route: {
     method: "get",
     description:

@@ -1,6 +1,6 @@
 ---
 title: Moderation reference
-description: Reference for VitNode moderation, covering the reports option, scope families, report targets, permissions, ModCP report and approval routes, statuses, events, snapshot format and limits.
+description: "Reference for VitNode moderation: the reports option, scope families, report targets, permissions, ModCP routes, statuses, events, snapshots and limits."
 icon: BookOpen
 ---
 
@@ -45,7 +45,7 @@ A stored grant is `{ plugin, module, permission, scope? }`. `scope` is one of:
 { family: "newsroom.category", mode: "selected", ids: ["1", "2"] }
 ```
 
-Declare a scoped permission with `{ permission, dependsOn?, scope: "family.id" }` in `permissionStaff.moderator`. Admin permissions cannot be scoped. Resource ids match `/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/`.
+Declare a scoped permission with `{ permission, dependsOn?, scope: "family.id" }` under `moderator` in the plugin's `defineStaffPermissions(manifest, {...})`. Admin permissions cannot be scoped. Resource ids match `/^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/`.
 
 `PATCH /api/@vitnode/core/admin/staff/entry/moderator/{id}` answers `400` with `{ error: "invalid_permissions", issues }`. Each issue has a `key` and a `type`: `missing_scope`, `empty_selection`, `invalid_resource`, `unknown_resource`, `unexpected_scope`, `wrong_family` or `dependency_scope`. A grant wider than the caller's own permissions is `403`.
 

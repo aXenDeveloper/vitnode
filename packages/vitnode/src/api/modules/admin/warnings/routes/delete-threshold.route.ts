@@ -1,19 +1,18 @@
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationWarningThresholdDeletedEvent } from "@/api/events/moderation";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { errorSchema, json } from "@/api/modules/moderation/moderation.schema";
 import { core_moderation_warning_thresholds } from "@/database/warnings";
 import { auditDiff } from "@/lib/audit/diff";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { TARGET } from "../lib/threshold-rows";
 import { idParams } from "../warning-thresholds.schema";
 
 export const deleteWarningThresholdAdminRoute = buildRoute({
-  adminStaffPermission: {
-    module: "warning_settings",
-    permission: "can_manage",
-  },
+  adminStaffPermission: coreStaffPermissions.admin.warning_settings.canManage,
   route: {
     method: "delete",
     path: "/thresholds/{id}",
@@ -53,7 +52,7 @@ export const deleteWarningThresholdAdminRoute = buildRoute({
 
     await c
       .get("events")
-      .emit("moderation.warning_threshold.deleted", { thresholdId: id });
+      .emit(moderationWarningThresholdDeletedEvent, { thresholdId: id });
 
     return c.body(null, 200);
   },

@@ -1,6 +1,6 @@
 ---
 title: AdminCP page
-description: Add an AdminCP page to the site-notes VitNode plugin that lists notes, creates them through a permission-guarded endpoint, refreshes the list and shows a toast, with a sidebar link only permitted staff see.
+description: Add an AdminCP page to the site-notes VitNode plugin that lists and creates notes through a permission-guarded endpoint, with a sidebar link for allowed staff.
 icon: LayoutDashboard
 ---
 
@@ -254,6 +254,7 @@ import type { AdminNavPluginSource } from "@vitnode/core/lib/plugin";
 import { StickyNoteIcon } from "lucide-react";
 
 import { manifest } from "@/manifest.gen";
+import { staffPermissions } from "@/staff-permissions";
 
 export const adminNav = {
   pluginId: manifest.id,
@@ -263,14 +264,14 @@ export const adminNav = {
         id: "notes",
         href: "/admin/site-notes",
         icon: <StickyNoteIcon />,
-        permission: { module: "notes", permission: "can_create" },
+        permission: staffPermissions.admin.notes.canCreate,
       },
     ],
   },
 } satisfies AdminNavPluginSource;
 ```
 
-`permission` hides the link from administrators without it. It must be a permission the plugin declares in `permissionStaff`, or `vitnode plugin validate` fails.
+`permission` hides the link from administrators without it. It takes an admin reference from `src/staff-permissions.ts`, and `vitnode plugin validate` fails when the plugin does not register that permission with `buildApiPlugin({ permissionStaff })`.
 
 </Step>
 

@@ -5,6 +5,12 @@ import { randomUUID } from "node:crypto";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
+import {
+  paymentExpiredEvent,
+  paymentFailedEvent,
+  paymentProcessingEvent,
+  paymentSucceededEvent,
+} from "@/api/events/payments";
 import { AUDIT_SYSTEM_ACTOR } from "@/api/lib/audit/context";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { isUniqueViolation } from "@/api/lib/db-errors";
@@ -111,12 +117,12 @@ export const PAYMENT_CHECKOUT_MINUTES_RANGE = {
   max: 23 * 60,
 } as const;
 
-const PAYMENT_EVENT_NAMES = {
-  expired: "payment.expired",
-  failed: "payment.failed",
-  processing: "payment.processing",
-  succeeded: "payment.succeeded",
-} as const satisfies Record<Exclude<PaymentStatus, "pending">, string>;
+const PAYMENT_EVENTS = {
+  expired: paymentExpiredEvent,
+  failed: paymentFailedEvent,
+  processing: paymentProcessingEvent,
+  succeeded: paymentSucceededEvent,
+} as const satisfies Record<Exclude<PaymentStatus, "pending">, unknown>;
 
 const toPayment = (row: PaymentRow): Payment => ({
   amount: row.amount,
@@ -338,7 +344,7 @@ export class PaymentsModel {
     if (payment.status === "pending") return;
 
     await this.c.get("events").emit(
-      PAYMENT_EVENT_NAMES[payment.status],
+      PAYMENT_EVENTS[payment.status],
       {
         amount: payment.amount,
         currency: payment.currency,

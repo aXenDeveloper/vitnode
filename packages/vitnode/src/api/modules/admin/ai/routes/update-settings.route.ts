@@ -7,11 +7,12 @@ import { saveAiSettings } from "@/api/lib/ai/settings-store";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { core_ai_settings } from "@/database/ai";
 import { auditDiff } from "@/lib/audit/diff";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { zodAiSettings } from "../ai.schema";
 
 export const updateAiSettingsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_manage" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canManage,
   route: {
     method: "put",
     description: "Update site-wide AI settings.",

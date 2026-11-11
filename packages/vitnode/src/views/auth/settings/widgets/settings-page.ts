@@ -1,5 +1,5 @@
 import { defineEditablePage } from "@/content/editor";
-import { manifest } from "@/manifest";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const SETTINGS_PAGE_ID = "core:settings";
 
@@ -13,11 +13,7 @@ const SETTINGS_ZONE_MAX_BLOCKS = 10;
 export const settingsPage = defineEditablePage({
   id: SETTINGS_PAGE_ID,
 
-  permission: {
-    module: "widgets",
-    permission: "can_edit",
-    plugin: manifest.id,
-  },
+  permission: coreStaffPermissions.moderator.widgets.canEdit,
 
   zones: {
     [SETTINGS_ZONE_IDS.header]: { max: SETTINGS_ZONE_MAX_BLOCKS },

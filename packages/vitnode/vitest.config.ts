@@ -39,11 +39,13 @@ const ISOLATED = [
 const INTEGRATION = [
   "scripts/cli/builder/package-build.test.ts",
   "scripts/cli/builder/scripts-build.test.ts",
+  "scripts/cli/commands/generate-compile.test.ts",
   "scripts/cli/commands/plugin.test.ts",
   "scripts/cli/commands/start.test.ts",
   "scripts/cli/dev/package-watch.test.ts",
   "scripts/watch-plugin-manifest.test.ts",
   "src/api/lib/updates/lock.postgres.test.ts",
+  "src/api/modules/queue/lib/process-queue-tasks.postgres.test.ts",
   "src/api/modules/moderation/warnings.postgres.test.ts",
   "src/content/approvals/server/approval-notifications.postgres.test.ts",
   "src/content/server/notifications/content-notifications.postgres.test.ts",

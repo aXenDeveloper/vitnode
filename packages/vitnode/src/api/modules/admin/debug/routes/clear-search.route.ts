@@ -2,13 +2,14 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const zodClearSearchSchema = z.object({
   itemType: z.string().min(1),
 });
 
 export const clearSearchDebugAdminRoute = buildRoute({
-  adminStaffPermission: { module: "system", permission: "can_manage_search" },
+  adminStaffPermission: coreStaffPermissions.admin.system.canManageSearch,
   route: {
     method: "post",
     description:

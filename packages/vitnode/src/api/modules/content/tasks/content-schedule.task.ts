@@ -1,23 +1,19 @@
 import { z } from "zod";
 
-import { buildQueueTask } from "@/api/lib/queue";
+import { buildQueueTask } from "@/api/builders";
 import { CONTENT_QUEUE_TASK_SCHEDULE } from "@/content/const";
-
-import { executeContentSchedule } from "../lib/execute-content-schedule";
-
-export const contentSchedulePayloadSchema = z.object({
-  generation: z.number().int().positive(),
-  scheduleId: z.number().int().positive(),
-});
 
 export const contentScheduleQueueTask = buildQueueTask({
   name: CONTENT_QUEUE_TASK_SCHEDULE,
+  payload: z.object({
+    generation: z.number().int().positive(),
+    scheduleId: z.number().int().positive(),
+  }),
   description:
     "Publish or unpublish a content record at its scheduled time. A cancelled, rescheduled or already-executed schedule is a no-op.",
-  handler: async (c, payload) => {
-    const { generation, scheduleId } =
-      contentSchedulePayloadSchema.parse(payload);
-
+  handler: async (c, { generation, scheduleId }) => {
+    const { executeContentSchedule } =
+      await import("../lib/execute-content-schedule");
     const outcome = await executeContentSchedule(c, { generation, scheduleId });
     if (outcome.status === "executed") return;
 

@@ -16,6 +16,28 @@ export const ${identifier} = buildModule({
 });
 `;
 
+export const staffPermissionsTemplate = ({
+  entry,
+  exportName,
+  manifest,
+}: {
+  entry: string;
+  exportName: string;
+  manifest: string;
+}): string => `import { defineStaffPermissions } from "@vitnode/core/lib/staff-permissions";
+
+import { manifest } from ${JSON.stringify(manifest)};
+
+/**
+ * The plugin's staff permissions. buildApiPlugin registers them, and routes
+ * and the AdminCP navigation guard with the references, e.g.
+ * \`${exportName}.admin.notes.canView\`.
+ */
+export const ${exportName} = defineStaffPermissions(manifest, {
+  admin: { ${entry} },
+});
+`;
+
 export const buildersTemplate = (manifest: string): string =>
   `import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
 
@@ -23,8 +45,12 @@ import { manifest } from ${JSON.stringify(manifest)};
 
 const apiBuilders = bindApiPlugin(manifest);
 
+/** The API builders, bound to this plugin's id. */
 export const buildModule = apiBuilders.buildModule;
 export const buildRoute = apiBuilders.buildRoute;
+export const buildQueueTask = apiBuilders.buildQueueTask;
+export const defineCacheEntry = apiBuilders.defineCacheEntry;
+export const defineEvent = apiBuilders.defineEvent;
 `;
 
 export type ParamType = "number" | "string";
@@ -40,15 +66,8 @@ export interface PermissionSource {
   importLine: string;
 }
 
-const permissionLine = (
-  permission?: { module: string; permission: string },
-  source?: PermissionSource,
-) =>
-  permission === undefined
-    ? ""
-    : source === undefined
-      ? `  adminStaffPermission: { module: ${JSON.stringify(permission.module)}, permission: ${JSON.stringify(permission.permission)} },\n`
-      : `  adminStaffPermission: ${source.expression},\n`;
+const permissionLine = (source?: PermissionSource) =>
+  source === undefined ? "" : `  adminStaffPermission: ${source.expression},\n`;
 
 export const localImports = (
   builders: string,
@@ -80,6 +99,7 @@ export interface RouteTemplateOptions {
   paramType: ParamType;
   path: string;
   permission?: { module: string; permission: string };
+  /** Required with `permission`: the typed reference the route guards with. */
   permissionSource?: PermissionSource;
 }
 
@@ -127,7 +147,7 @@ ${localImports(builders, options.permissionSource)}
  * Replace the 200 schema and the handler with the real response.
  */
 export const ${identifier} = buildRoute({
-${permissionLine(permission, options.permissionSource)}  route: {
+${permissionLine(options.permissionSource)}  route: {
     method: "get",
     path: ${JSON.stringify(path)},
 ${params.length === 0 ? "" : `    request: {\n      params: ${paramsObject(params, paramType)},\n    },\n`}    responses: {
@@ -192,7 +212,7 @@ ${localImports(builders, options.permissionSource)}
  * the \`throw\` with the real operation.${ownership}
  */
 export const ${identifier} = buildRoute({
-${permissionLine(permission, options.permissionSource)}  route: {
+${permissionLine(options.permissionSource)}  route: {
     method: ${JSON.stringify(method)},
     path: ${JSON.stringify(path)},
 ${request.length === 0 ? "" : `    request: {\n${request.join("\n")}\n    },\n`}    responses: {
@@ -226,17 +246,18 @@ export const serviceTemplate = ({
 
 /** What the ${module} service needs, passed in by whoever builds it. */
 export interface ${deps} {
-  /** In a route: \`c.get("db")\`. */
+  /** In a route: \`c.get("db")\`. A transaction works too. */
   db: Omit<EnvVariablesVitNode["db"], "$client">;
 }
 
 /**
- * Business operations for the \`${module}\` module.
- *
- * Generated empty - it has no operations yet. Add functions that take plain
- * input (and the acting user when one matters), not the Hono context, and
- * build the service where it is used: \`${factory}({ db: c.get("db") })\`.
+ * Business operations for the \`${module}\` module. Build it where it is used:
+ * \`${factory}({ db: c.get("db") })\`.
  */
-export const ${factory} = (deps: ${deps}) => ({ deps });
+export const ${factory} = (_deps: ${deps}) => ({
+  // Add operations here. Each takes plain input (and the acting user when it
+  // matters), never the Hono context, and returns data or a typed result the
+  // route turns into a status. Rename \`_deps\` to \`{ db }\` once one queries.
+});
 `;
 };

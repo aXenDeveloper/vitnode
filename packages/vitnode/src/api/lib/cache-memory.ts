@@ -84,10 +84,6 @@ export class MemoryCacheStore {
     return entry.raw;
   }
 
-  has(key: string): boolean {
-    return this.live(key) !== null;
-  }
-
   /** Stores a cached value, its TTL capped at {@link MEMORY_CACHE_MAX_TTL_SECONDS}. */
   set(key: string, raw: string, ttlSeconds?: number): void {
     const ttl =
