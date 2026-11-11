@@ -1,6 +1,6 @@
 ---
 title: Image alt text
-description: VitNode can describe uploaded images in the background and translate the ALT text into every site language, under a budget and without overwriting text a person wrote. This page covers how it works, how to render it and how to run its cron.
+description: Let VitNode describe uploaded images in the background and translate ALT text into every language, within a budget and without overwriting human text.
 icon: Image
 ---
 
@@ -235,15 +235,16 @@ await fetcher({
 `files.alt.updated` fires when the job (`origin: "ai"`) or a person (`origin: "human"`) writes a file's default ALT:
 
 ```ts title="plugins/gallery/src/api/lib/events.ts"
+import { filesAltUpdatedEvent } from '@vitnode/core/api/events/files'
 import { buildEventListener } from '@vitnode/core/api/lib/events'
 
 export const altUpdatedListener = buildEventListener({
-  event: 'files.alt.updated',
+  event: filesAltUpdatedEvent,
   name: 'refresh-gallery-alt',
   handler: async (c, { fileId, languageCodes, origin }) => {
     await c
       .get('log')
-      .info(`ALT for file ${fileId} (${languageCodes.join(', ')}) by ${origin}`)
+      .debug(`ALT for file ${fileId} (${languageCodes.join(', ')}) by ${origin}`)
   },
 })
 ```

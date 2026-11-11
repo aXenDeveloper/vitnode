@@ -4,6 +4,8 @@ import { createHash, randomUUID } from "node:crypto";
 
 import type { CacheModel } from "../../api/lib/cache";
 
+import { findCacheStore } from "../../api/lib/cache";
+
 /**
  * How long one cached public read lives. Only a safety net: a write moves the
  * content type's generation, which orphans every entry at once.
@@ -45,7 +47,7 @@ const bumpGeneration = async (
   key: string,
   { strict }: { strict: boolean },
 ): Promise<void> => {
-  const cache: CacheModel | undefined = c.get("cache");
+  const cache = findCacheStore(c);
   await cache?.setSystem(key, randomUUID(), undefined, { strict });
 };
 
@@ -95,7 +97,7 @@ const rememberInGeneration = async <T>(
   },
 ): Promise<T> => {
   // Tests often build a context without one.
-  const cache: CacheModel | undefined = c.get("cache");
+  const cache = findCacheStore(c);
   if (!cache) return await load();
 
   const generation = await pinnedGeneration(c, cache, generationKey);
@@ -155,7 +157,7 @@ export const pinContentPublicGeneration = async (
   c: Context,
   contentTypeId: string,
 ): Promise<void> => {
-  const cache: CacheModel | undefined = c.get("cache");
+  const cache = findCacheStore(c);
   if (cache)
     await pinnedGeneration(c, cache, publicGenerationKey(contentTypeId));
 };

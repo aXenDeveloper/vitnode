@@ -1,6 +1,6 @@
 ---
 title: Editable pages
-description: Make a VitNode page editable in the browser. Declare its widget zones once with defineEditablePage, register it with a moderator permission, and render it with PageWidgets so moderators get Edit widgets in the user menu.
+description: "Make a VitNode page editable in the browser: declare its widget zones with defineEditablePage, register a moderator permission and render it with PageWidgets."
 icon: PanelsTopLeft
 implementation:
   objective: Let moderators place and arrange widgets on an existing public page.
@@ -12,7 +12,8 @@ implementation:
     - Should an area show default widgets before anyone edits it?
   constraints:
     - Declare the page with `defineEditablePage` using a stable, hand-written id, and set `permission.plugin` to the plugin's manifest id.
-    - Add `editablePages` and `permissionStaff.moderator` to the existing `buildApiPlugin()` call, keeping its modules and any existing `permissionStaff` keys, with labels in the plugin's `src/locales/en.json`.
+    - Add the page to `editablePages` in the existing `buildApiPlugin()` call, keeping its other options.
+    - Declare the moderator permission in `defineStaffPermissions(manifest, {...})` in `src/staff-permissions.ts` (passed as `permissionStaff`), keeping existing modules, with labels in `src/locales/en.json`.
     - Warm the layout with `loadPageWidgets(context.queryClient, page)` in a `defineRoute` loader, and wrap the zones in `PageWidgets`. Write no save route, adapter or permission check of your own.
     - If a zone allows the plugin's own widgets, render it as `ContentZone` with a registry from `createBlockRegistry` instead of `PageWidgetsZone`.
   related:
@@ -32,7 +33,7 @@ An editable page is an ordinary page whose [content zones](/docs/dev/widgets/con
 | Core provides                                                         | You write                                       |
 | :-------------------------------------------------------------------- | :---------------------------------------------- |
 | The editor, loaded on the first click, and the **Edit widgets** entry | The page declaration: id, zones, permission     |
-| `GET` and `PUT /pages/layout`, and the `core_page_layouts` table      | Two lines of registration in `buildApiPlugin`   |
+| `GET` and `PUT /pages/layout`, and the `core_page_layouts` table      | A moderator permission and one `editablePages` entry |
 | The permission check on every save, and conflict detection            | One line in the route loader, and `PageWidgets` |
 
 ## Before you begin
@@ -85,9 +86,23 @@ The file imports nothing heavy, so the API and the page can both import it.
 
 ### Register it
 
-In `src/config.api.ts`, add two keys to the existing `buildApiPlugin` call: the page in `editablePages`, and its permission under `permissionStaff.moderator`. After [Plugin page](/docs/dev/plugins/page) the call looks like this; keep your `modules` as they are:
+Declare the page's permission as a moderator permission in `src/staff-permissions.ts`. If you followed the [Permissions](/docs/dev/working-with-users/staff-permissions) lesson, add the `moderator` line to the file you have and keep its `admin` declarations. Otherwise create it:
+
+```ts title="plugins/site-notes/src/staff-permissions.ts"
+import { defineStaffPermissions } from "@vitnode/core/lib/staff-permissions";
+
+import { manifest } from "@/manifest.gen";
+
+export const staffPermissions = defineStaffPermissions(manifest, {
+  moderator: { widgets: ["can_edit"] }, // [!code ++]
+});
+```
+
+Then, in `src/config.api.ts`, add the page to `editablePages` and pass the declarations as `permissionStaff`, unless the call already does. Keep your `modules` as they are:
 
 ```ts title="plugins/site-notes/src/config.api.ts (excerpt)"
+import { staffPermissions } from "@/staff-permissions"; // [!code ++]
+
 import { notesPage } from "./editable-pages/notes-page"; // [!code ++]
 
 export const siteNotesApiPlugin = () =>
@@ -95,14 +110,9 @@ export const siteNotesApiPlugin = () =>
     manifest,
     modules: [helloModule, notesModule],
     editablePages: [notesPage], // [!code ++]
-    // [!code ++:3]
-    permissionStaff: {
-      moderator: { widgets: ["can_edit"] },
-    },
+    permissionStaff: staffPermissions, // [!code ++]
   });
 ```
-
-If your call already has `permissionStaff`, for example `admin: { notes: ["can_create"] }` from the [Permissions](/docs/dev/working-with-users/staff-permissions) lesson, add the `moderator` key inside it instead of writing a second `permissionStaff`.
 
 Then label the permission in `src/locales/en.json`. Add the two permission keys at the root, next to the `site-notes` object, and a `title` inside that object if it has none yet; the AdminCP shows it as the plugin's name. Keep the keys you already have:
 
@@ -116,7 +126,7 @@ Then label the permission in `src/locales/en.json`. Add the two permission keys 
 }
 ```
 
-Without `editablePages`, reading the layout answers `404`. A page whose permission is missing from `permissionStaff.moderator`, or a page id registered twice, stops the API at startup with a message naming the fix.
+Without `editablePages`, reading the layout answers `404`. A page whose permission its plugin does not declare under `moderator`, or a page id registered twice, stops the API at startup with a message naming the fix.
 
 </Step>
 

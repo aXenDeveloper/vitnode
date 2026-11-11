@@ -41,11 +41,24 @@ export const renderCheck = (ui: Ui, check: PluginCheck) => {
     case "ok":
       ui.success(check.name, summary === "" ? undefined : summary);
       break;
-    case "skipped":
-      ui.note(`${check.name} (skipped)`);
+    case "skipped": {
+      const reason =
+        check.blockedBy === undefined
+          ? summary
+          : `not run - ${check.blockedBy} failed`;
+      if (ui.mode === "plain") {
+        ui.line(
+          `[${check.blockedBy === undefined ? "SKIP" : "BLOCKED"}] ${check.name}${reason === "" ? "" : ` (${reason})`}`,
+        );
+      } else {
+        ui.line(
+          `  ${ui.colors.muted(ui.symbols.pending)} ${check.name}  ${ui.colors.muted(reason === "" ? "skipped" : reason)}`,
+        );
+      }
       break;
+    }
     case "warning":
-      ui.warning(check.name);
+      ui.warning(summary === "" ? check.name : `${check.name} (${summary})`);
       break;
   }
 

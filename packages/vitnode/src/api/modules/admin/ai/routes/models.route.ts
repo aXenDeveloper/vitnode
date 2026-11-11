@@ -3,11 +3,12 @@ import { z } from "zod";
 import { buildRoute } from "@/api/builders";
 import { DEFAULT_AI_MODEL_CAPABILITIES } from "@/api/lib/ai/capabilities";
 import { providerIdOf, providerModelIdOf } from "@/api/lib/ai/runner";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { zodAiModel } from "../ai.schema";
 
 export const listAiModelsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canView,
   route: {
     method: "get",
     description: "Configured AI models, their capabilities and pricing.",

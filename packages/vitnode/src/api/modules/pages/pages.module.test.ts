@@ -222,7 +222,10 @@ const harness = async ({
       editablePages: pages.map(page => registerEditablePage(page, PLUGIN_ID)),
     } as never);
     c.set("events", {
-      emit: async (name: string, payload: Record<string, unknown>) => {
+      emit: async (
+        { name }: { name: string },
+        payload: Record<string, unknown>,
+      ) => {
         events.push({ name, payload });
 
         return await Promise.resolve({ failures: [], listeners: 0 });

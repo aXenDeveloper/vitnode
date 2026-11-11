@@ -3,6 +3,7 @@ import type { AdminDashboardWidget } from "@/lib/plugin";
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { hasStaffPermission } from "@/api/lib/staff-permission";
+import { staffPermissionArgs } from "@/lib/staff-permissions";
 import { manifest } from "@/manifest";
 
 import type { ResolvedDashboardWidget } from "./types";
@@ -35,14 +36,11 @@ export const resolveDashboardWidgets = ({
 
   for (const { keyPrefix, pluginId, pluginTitle, widgets } of sources) {
     for (const widget of widgets) {
-      // A widget's permission is checked against the plugin that *declared* it:
-      // a permission granted under core must not reveal a plugin's widget.
+      // The reference names the plugin that declares the permission, so one
+      // granted under core never reveals a plugin's widget by module name.
       if (
         widget.permission &&
-        !hasStaffPermission(permissions, {
-          plugin: pluginId,
-          ...widget.permission,
-        })
+        !hasStaffPermission(permissions, staffPermissionArgs(widget.permission))
       ) {
         continue;
       }

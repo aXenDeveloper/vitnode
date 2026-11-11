@@ -2,12 +2,14 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationWarningReasonUpdatedEvent } from "@/api/events/moderation";
 import { multiLangAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { listWarningReasons } from "@/api/lib/moderation/warnings/reasons";
 import { errorSchema, json } from "@/api/modules/moderation/moderation.schema";
 import { core_moderation_warning_reasons } from "@/database/warnings";
 import { auditDiff } from "@/lib/audit/diff";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { auditedSettings } from "../lib/reason-audit";
 import { saveReasonWords } from "../lib/reason-words";
@@ -18,10 +20,7 @@ const idParams = z.object({
 });
 
 export const updateWarningReasonAdminRoute = buildRoute({
-  adminStaffPermission: {
-    module: "warning_settings",
-    permission: "can_manage",
-  },
+  adminStaffPermission: coreStaffPermissions.admin.warning_settings.canManage,
   route: {
     method: "patch",
     path: "/reasons/{id}",
@@ -99,7 +98,7 @@ export const updateWarningReasonAdminRoute = buildRoute({
     await saveReasonWords(c, id, body);
     await c
       .get("events")
-      .emit("moderation.warning_reason.updated", { reasonId: id });
+      .emit(moderationWarningReasonUpdatedEvent, { reasonId: id });
 
     return c.json({ id }, 200);
   },

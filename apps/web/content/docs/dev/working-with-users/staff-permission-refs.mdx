@@ -1,119 +1,118 @@
 ---
-title: Typed permission references
-description: Declare a VitNode plugin's staff permissions once with defineStaffPermissions and reference them from routes and AdminCP navigation, so a typo is a compile error.
+title: Permission references
+description: "How VitNode's typed staff permission references work: defineStaffPermissions naming, admin and moderator refs, other plugins and Content Engine permissions."
 icon: KeyRound
 ---
 
-`defineStaffPermissions` turns your plugin's permission declarations into typed references. Routes write `adminStaffPermission: staffPermissions.admin.notes.canCreate` instead of repeating `{ module: "notes", permission: "can_create" }`, and a permission that is not declared does not compile. It is optional: string declarations keep working, and you can switch one plugin at a time.
+`defineStaffPermissions(manifest, { admin, moderator })` from `@vitnode/core/lib/staff-permissions` declares a plugin's staff permissions and returns a typed reference for each one. Route guards, AdminCP navigation items and dashboard widgets accept only these references, so a typo, an undeclared permission or a moderator permission on an admin route is a compile error. [Permissions](/docs/dev/working-with-users/staff-permissions) walks through declaring and granting one; this page is the lookup for how references behave.
 
-## Before you begin
-
-- A plugin with declared staff permissions, such as `site-notes` from [Permissions](/docs/dev/working-with-users/staff-permissions).
-- For the navigation step and the check, the AdminCP sidebar link in `src/admin/nav.tsx` from [AdminCP page](/docs/dev/plugins/admin). Without that file there is no navigation to reference, and `plugin validate` skips its navigation check.
-
-<Steps>
-
-<Step>
-
-### Define the permissions
-
-Create `src/staff-permissions.ts` and move the declarations from `permissionStaff` into it, unchanged. With the Permissions lesson's admin and moderator examples, that is:
+## What `defineStaffPermissions` returns
 
 ```ts title="plugins/site-notes/src/staff-permissions.ts"
 import { defineStaffPermissions } from "@vitnode/core/lib/staff-permissions";
 
-export const staffPermissions = defineStaffPermissions({
+import { manifest } from "@/manifest.gen";
+
+export const staffPermissions = defineStaffPermissions(manifest, {
   admin: {
-    notes: ["can_create"],
+    notes: ["can_view", { permission: "can_create", dependsOn: ["can_view"] }],
   },
-  moderator: {
-    notes: ["can_delete"],
-  },
+  moderator: { notes: ["can_delete"] },
 });
 ```
 
-Entries are the same strings and `{ permission, dependsOn, scope }` objects that `permissionStaff` takes, so a permission with dependencies moves over unchanged. The file imports no server code, so the AdminCP navigation can import it too. Keep it out of `config.api.ts`: that file pulls in your routes and database code, and a route importing from it would be a circular import.
+| Property    | Value                                                                                                   |
+| ----------- | ------------------------------------------------------------------------------------------------------- |
+| `admin`     | References to the admin permissions: `staffPermissions.admin.notes.canCreate`                           |
+| `moderator` | References to the moderator permissions: `staffPermissions.moderator.notes.canDelete`                   |
+| `config`    | The same declarations as plain data. `buildApiPlugin` reads it; you do not pass it yourself             |
+| `pluginId`  | The plugin id from the manifest                                                                         |
 
-</Step>
+Pass the whole result to `buildApiPlugin({ permissionStaff: staffPermissions })`. Entries are a permission name, or `{ permission, dependsOn?, scope? }` for dependencies and [moderator scopes](/docs/dev/moderation/scoped-permissions).
 
-<Step>
+Keep the call in `src/staff-permissions.ts`. It is browser-safe, so `src/admin/nav.tsx` can import it, and keeping it out of `config.api.ts` avoids a circular import between routes and the plugin config. [`vitnode generate`](/docs/dev/cli/generate) reads and edits it there.
 
-### Register them
+## Naming rule
 
-Pass `config` to `buildApiPlugin`. This excerpt replaces the inline object:
+A reference's key is the permission name in camelCase: `-` and `_` separate words. `can_create` becomes `canCreate`, `view-logs` becomes `viewLogs`.
 
-```ts title="plugins/site-notes/src/config.api.ts"
-import { staffPermissions } from "@/staff-permissions"; // [!code ++]
+Two different names in one module of one staff type that would share a key, such as `can_edit` and `can-edit`, make `defineStaffPermissions` throw when the file loads:
 
-export const siteNotesApiPlugin = () =>
-  buildApiPlugin({
-    manifest,
-    modules: [helloModule, notesModule, adminModule],
-    permissionStaff: { admin: { ... }, moderator: { ... } }, // [!code --]
-    permissionStaff: staffPermissions.config, // [!code ++]
-  });
+```txt
+defineStaffPermissions: admin permissions in module "notes" collide on reference key "canEdit": "can_edit" and "can-edit" both become admin.notes.canEdit. Rename or remove one of them.
 ```
 
-`config` holds the same declarations you wrote, so the AdminCP permission editor and its labels do not change.
+Listing the same name twice, or the same name under `admin` and `moderator`, is fine.
 
-</Step>
+## Admin and moderator references
 
-<Step>
+A reference carries its staff type. At runtime it is a frozen `{ staffType, plugin, module, permission }` object, and its type is `AdminStaffPermissionRef` or `ModeratorStaffPermissionRef`.
 
-### Reference them
+| Accepts                                                     | Type                          |
+| ----------------------------------------------------------- | ----------------------------- |
+| `buildRoute({ adminStaffPermission })`                      | `AdminStaffPermissionRef`     |
+| `buildRoute({ moderatorStaffPermission })`                  | `ModeratorStaffPermissionRef` |
+| AdminCP `nav` items and sub-items, dashboard widgets         | `AdminStaffPermissionRef`     |
 
-Each permission becomes a camelCase key under its module: `can_create` is `canCreate`. A reference is a plain `{ module, permission }` object, which is what routes and navigation already accept:
+The distinction is enforced at compile time: `staffPermissions.moderator.notes.canDelete` in `adminStaffPermission` does not compile, even when `admin` declares a permission with the same name. A hand-written `{ module: "notes", permission: "can_create" }` is not a reference and does not compile either. `buildRoute` also refuses the wrong staff type at startup, for JavaScript callers, and [`vitnode doctor`](/docs/dev/cli/doctor) reports it.
 
-```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/create.route.ts"
-import { staffPermissions } from "@/staff-permissions";
+## Another plugin's permissions
 
-export const createNoteRoute = buildRoute({
-  adminStaffPermission: staffPermissions.admin.notes.canCreate,
+A reference names the plugin that declares it, and a guard checks that plugin's permission, not the route's own. To guard a route with core's **Edit users** permission, import core's declarations:
+
+```ts
+import { coreStaffPermissions } from "@vitnode/core/lib/core-staff-permissions";
+
+buildRoute({
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   // ...
 });
 ```
 
-```tsx title="plugins/site-notes/src/admin/nav.tsx"
-import type { AdminNavPluginSource } from "@vitnode/core/lib/plugin";
+## Content Engine permissions
 
-import { StickyNoteIcon } from "lucide-react";
+A content type or container collection generates its permissions at runtime (`can_view`, `can_create`, `can_edit`, `can_delete`, plus `can_publish`, `can_hide` or `can_restore` when it enables those features), so they are not in your `defineStaffPermissions` call. Reference them with the helpers from `@vitnode/core/content`:
 
+```ts title="plugins/newsroom/src/api/modules/admin/stories/routes/feature.route.ts"
+import { contentAdminStaffPermission } from "@vitnode/core/content";
+
+import { buildRoute } from "@/api/builders";
+import { storyContentType } from "@/content/story";
 import { manifest } from "@/manifest.gen";
-import { staffPermissions } from "@/staff-permissions"; // [!code ++]
 
-export const adminNav = {
-  pluginId: manifest.id,
-  admin: {
-    nav: [
-      {
-        id: "notes",
-        href: "/admin/site-notes",
-        icon: <StickyNoteIcon />,
-        permission: { module: "notes", permission: "can_create" }, // [!code --]
-        permission: staffPermissions.admin.notes.canCreate, // [!code ++]
-      },
-    ],
-  },
-} satisfies AdminNavPluginSource;
+export const featureStoryRoute = buildRoute({
+  adminStaffPermission: contentAdminStaffPermission(manifest.id, storyContentType, "can_edit"),
+  // ...
+});
 ```
 
-For moderator routes, use `moderatorStaffPermission: staffPermissions.moderator.notes.canDelete`.
+| Helper                                                                | For                                        |
+| --------------------------------------------------------------------- | ------------------------------------------ |
+| `contentAdminStaffPermission(pluginId, contentType, permission)`      | A content type's generated admin permission |
+| `contentContainerAdminStaffPermission(pluginId, containers, permission)` | A container collection's admin permission |
+| `declaredStaffPermission({ entries, module, permission, plugin, staffType })` from `@vitnode/core/lib/staff-permissions` | Any other permission catalog built at runtime |
 
-Two different names in one module that would share a key, such as `can_edit` and `can-edit` (both `canEdit`), make `defineStaffPermissions` throw when the file loads: `defineStaffPermissions: admin permissions in module "notes" collide on reference key "canEdit"`, followed by both names. Rename one of them. Listing the same name twice is fine.
+These are the dynamic catalog boundary. They are checked when the module loads, not by the compiler: each one throws at startup when the content type does not generate the permission, for example `can_publish` on a content type without publication. `pluginId` must be the plugin that registers the content type.
 
-</Step>
+## Use a reference in a check
 
-</Steps>
+`checkStaffPermission`, `assertStaffPermission` and stored grants work with plain `{ plugin, module, permission }` data. `staffPermissionArgs(ref)` converts a reference:
 
-## Check the result
+```ts
+import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+import { staffPermissionArgs } from "@vitnode/core/lib/staff-permissions";
 
-Misspell a reference, for example `staffPermissions.admin.notes.canCreat`. TypeScript reports `Property 'canCreat' does not exist`, before anything runs. Fix it, build the plugin and run `pnpm vitnode plugin validate`: the **AdminCP navigation** check passes, because the navigation names a declared permission.
+const canCreate = await checkStaffPermission(c, {
+  type: "admin",
+  ...staffPermissionArgs(staffPermissions.admin.notes.canCreate),
+});
+```
 
-A reference names a permission, not a staff type. TypeScript accepts a moderator reference in `adminStaffPermission`, as it accepts any `{ module, permission }` object, so take admin routes' references from `staffPermissions.admin`. [`vitnode doctor`](/docs/dev/cli/doctor) reports a route whose permission is not declared for its staff type.
+Front-end checks such as `useAdminPermission({ plugin, module, permission })` and editable pages' `permission` still take plain objects, so they are not checked against the declarations at compile time.
 
-## With the generator
+## What a reference does not check
 
-When `permissionStaff` is `staffPermissions.config`, `vitnode g route ... --permission notes.can_create` checks the permission against `src/staff-permissions.ts`, adds it there with `--declare-permission`, and writes the route with `adminStaffPermission: staffPermissions.admin.notes.canCreate`. See [Protect an admin endpoint](/docs/dev/plugins/api/admin-routes).
+A guard decides who may call a route. It does not decide which record they may change: an administrator with **Edit notes** passes the guard on every note. Check ownership, a content type's [access rules](/docs/content-engine/access) or a moderator's [scope](/docs/dev/moderation/scoped-permissions) in the handler or service when that matters.
 
 ## Related
 

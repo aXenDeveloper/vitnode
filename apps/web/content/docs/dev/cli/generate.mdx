@@ -1,6 +1,6 @@
 ---
 title: Generate commands
-description: Reference for vitnode generate - scaffold plugin API modules, typed routes, admin routes, services and API resources, with dry runs, collision checks and explicit registration.
+description: "Reference for vitnode generate: scaffold plugin API modules, typed routes, admin routes, services and resources with dry runs and collision checks."
 icon: Wand
 ---
 
@@ -11,7 +11,7 @@ icon: Wand
 | `vitnode g module <path>`                  | `<name>/<name>.module.ts`, registered in `config.api.ts` or a parent | [Generate a module](/docs/dev/plugins/api/generate-module)      |
 | `vitnode g route <module>/<name>`          | `routes/<name>.route.ts`, added to the module's `routes`           | [Generate an endpoint](/docs/dev/plugins/api/generate-route)    |
 | `vitnode g route admin/...`                | The same, guarded by a staff permission                            | [Protect an admin endpoint](/docs/dev/plugins/api/admin-routes) |
-| `vitnode g service <module>`               | `<module>.service.ts`, an empty service factory                    | [Add a service](/docs/dev/plugins/api/services)                 |
+| `vitnode g service <module>`               | `<module>.service.ts`, a service factory with explicit dependencies | [Add a service](/docs/dev/plugins/api/services)                 |
 | `vitnode g resource <name> --kind api`     | A module, schemas, a service and five CRUD routes in `routes/`     | [Generate an API resource](/docs/dev/plugins/api/resources)     |
 | `vitnode g resource <name> --kind content` | An administrative Content Engine content type, wired in            | [Generate a content type](/docs/content-engine/generate)        |
 
@@ -40,7 +40,24 @@ pnpm --filter site-notes exec vitnode g module notes
 
 When several plugins qualify and there is no terminal to ask (CI, a script), the command lists them and exits with code `2`. Pass `--project` to choose.
 
-Only plugins can be targets. The plugin needs `src/config.api.ts` and the plugin-bound builders in `src/api/builders.ts`; `create-vitnode-app --plugin` writes both. When `builders.ts` is missing, the generator creates it from `src/manifest.gen.ts`. When that file is missing too, run `vitnode build` in the plugin once to write it.
+Only plugins can be targets. The plugin needs `src/config.api.ts` and the plugin-bound builders in `src/api/builders.ts`; `create-vitnode-app --plugin` writes both. When `builders.ts` is missing, the generator creates it from `src/manifest.gen.ts`, with all five bound builders:
+
+```ts title="src/api/builders.ts"
+import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
+
+import { manifest } from "@/manifest.gen";
+
+const apiBuilders = bindApiPlugin(manifest);
+
+/** The API builders, bound to this plugin's id. */
+export const buildModule = apiBuilders.buildModule;
+export const buildRoute = apiBuilders.buildRoute;
+export const buildQueueTask = apiBuilders.buildQueueTask;
+export const defineCacheEntry = apiBuilders.defineCacheEntry;
+export const defineEvent = apiBuilders.defineEvent;
+```
+
+When `src/manifest.gen.ts` is missing too, run `vitnode build` in the plugin once to write it. An existing `builders.ts` must export at least `buildModule` and `buildRoute`.
 
 ## Options
 
@@ -74,14 +91,14 @@ In an interactive terminal, the command asks for anything it cannot work out, su
 | `--id-type <type>`                 | `string`      | Schema of every path parameter: `string`, or `number` for positive integers                                   |
 | `--admin`                          | -             | Put the route in the admin module tree                                                                        |
 | `--permission <module.permission>` | -             | Required for admin routes, such as `notes.can_create`. An interactive terminal offers the declared ones       |
-| `--declare-permission`             | -             | Declare that permission, and add its AdminCP labels, when the plugin does not declare it yet                  |
+| `--declare-permission`             | -             | Declare that permission in `src/staff-permissions.ts`, creating the file when needed, and add its AdminCP labels |
 | `--parents`                        | -             | Also create missing modules instead of asking                                                                 |
 
 `--permission` and `--declare-permission` only apply to routes in the admin module tree. On any other route they stop the command.
 
 ### `g service`
 
-`vitnode g service <module path>` takes `--admin`, with the same meaning as for modules. The module must already exist.
+`vitnode g service <module path>` takes `--admin`, with the same meaning as for modules. The module must already exist. It writes `createXService = (_deps: XServiceDeps) => ({})` with `db` as the only dependency and no operations, and changes no route.
 
 ### `g resource --kind api`
 
@@ -97,7 +114,7 @@ In an interactive terminal, the command asks for anything it cannot work out, su
 | `--declare-permission`         | -                                        | Declare the missing permissions and their labels                                                     |
 | `--parents`                    | -                                        | Also create missing parent modules instead of asking                                                 |
 
-The resource's module must be new or have no routes yet. The generator creates no table, migration or storage, so every operation answers `501` until you implement the service.
+The resource's module must be new or have no routes yet. The generator creates no table, migration or storage. Every service operation rejects with a `<Name>NotImplementedError` until you implement it, and each route maps that error to `501` with `{ "error": "not_implemented", "message": "..." }`, declared in its `responses`.
 
 ### `g resource --kind content`
 
@@ -133,7 +150,7 @@ Any other name needs `--method` and `--path`, or answers to the prompts in an in
 
 - **`GET`** answers `200` with sample data, `{ "sample": true, "message": "..." }` plus any path parameters, and a response schema that matches it exactly. Replace both.
 - **`POST`, `PUT` and `PATCH`** validate their path parameters and a JSON body, an empty `z.object({})` for you to fill in. **`DELETE`** validates only its path parameters. All four answer `501 Not Implemented`, so a client never sees a fake success.
-- **Admin routes** add `adminStaffPermission` and a `403` response. The permission must be declared, or added with `--declare-permission`. When the plugin's `admin` module mounts Content Engine modules and the permission module is not declared, `g route` only warns, because a content type may declare it. `g resource --admin` always requires declared permissions.
+- **Admin routes** add `adminStaffPermission` with a typed reference, such as `staffPermissions.admin.notes.canCreate`, and a `403` response. The permission must be declared in `src/staff-permissions.ts`, or added with `--declare-permission`. When the plugin's `admin` module mounts Content Engine modules and the permission module is not declared, `g route` only warns, because a content type may declare it. `g resource --admin` always requires declared permissions.
 
 A staff permission decides who may call a route. It does not check access to a particular record, so do that in the handler when it matters.
 
@@ -167,7 +184,13 @@ The generator reads your source and never runs it. It follows these patterns:
 buildApiPlugin({
   manifest,
   modules: [notesModule, adminModule],
-  permissionStaff: { admin: { notes: ["can_create"] } },
+  permissionStaff: staffPermissions,
+});
+```
+
+```ts title="src/staff-permissions.ts"
+export const staffPermissions = defineStaffPermissions(manifest, {
+  admin: { notes: ["can_create"] },
 });
 ```
 
@@ -184,7 +207,7 @@ export const adminModule = buildModule({
 - `modules` and `routes` are array literals, and `name` is a string literal.
 - Each array entry is an identifier that resolves to a `const x = buildModule({...})` or `buildRoute({...})` in the plugin, declared in the same file or imported with `@/` or a relative path.
 - `buildContentAdminModule(...)` and `buildContentPublicModule(...)` are recognized as the generated `content` module. They take no hand-written routes or child modules.
-- `permissionStaff` is an object literal with array literals inside, or `staffPermissions.config`, where `staffPermissions` is a `defineStaffPermissions({...})` call in the plugin. With the second form, the generator reads and declares permissions in that call, and generated routes use typed references such as `staffPermissions.admin.notes.canCreate`. See [Typed permission references](/docs/dev/working-with-users/staff-permission-refs).
+- `permissionStaff` is an identifier for an exported `defineStaffPermissions(manifest, {...})` call in another file of the plugin, normally `staffPermissions` in `src/staff-permissions.ts`, whose `admin` entry is an object literal with array literals inside. The generator reads and declares permissions in that call, and generated routes import the export and use typed references such as `staffPermissions.admin.notes.canCreate`. An inline object, or a definition inside `config.api.ts`, stops the command with the steps to move it. See [Permission references](/docs/dev/working-with-users/staff-permission-refs).
 
 Other shapes, such as a spread inside `modules`, a variable holding the array, or a module from another package, stop the command when it has to search or edit that array. It writes nothing and prints the lines to add by hand. Elsewhere in the tree such entries only limit the duplicate-endpoint check, with a warning. A route whose method or path cannot be read also gets a warning, since the check could not cover it.
 

@@ -11,10 +11,13 @@ import { pageContent } from "@/database/pages";
 import { storyContent } from "@/database/stories";
 import { tagContent } from "@/database/tags";
 
+import { adminCorrectionsModule } from "./corrections/corrections.module";
+
 export const adminModule = buildModule({
   name: "admin",
   routes: [],
   modules: [
+    adminCorrectionsModule,
     buildContentAdminModule({
       containers: [deskContainers],
       // Explainers and bulletins get staff routes and permissions here, but no

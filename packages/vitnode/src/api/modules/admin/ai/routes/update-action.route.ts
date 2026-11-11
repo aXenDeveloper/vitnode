@@ -7,11 +7,12 @@ import {
   missingCapabilities,
 } from "@/api/lib/ai/capabilities";
 import { core_ai_action_settings } from "@/database/ai";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { zodAiActionSettingsInput } from "../ai.schema";
 
 export const updateAiActionAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_manage" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canManage,
   route: {
     method: "put",
     description:

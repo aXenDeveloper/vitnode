@@ -4,9 +4,10 @@ import { buildRoute } from "@/api/builders";
 import { AUDIT_PERMISSIONS, canAdminAudit } from "@/api/lib/audit/access";
 import { auditDetailOf } from "@/api/lib/audit/detail";
 import { findAuditLog, zodAuditDetail } from "@/api/lib/audit/query";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const activityLogDetailAdminRoute = buildRoute({
-  adminStaffPermission: { module: "activity_logs", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.activity_logs.canView,
   route: {
     method: "get",
     path: "/{id}",

@@ -68,6 +68,7 @@ const namesFor = (modulePath: readonly string[]): ResourceNames => {
     itemType: `${pascal}Item`,
     label: modulePath.join("/"),
     leaf,
+    notImplementedError: `${pascal}NotImplementedError`,
     updateSchema: `zod${pascal}UpdateBody`,
     updateType: `${pascal}UpdateInput`,
   };
@@ -109,7 +110,7 @@ export const planApiResource = (
         `${missing.map(name => `${module}.${name}`).join(", ")} ${missing.length === 1 ? "is" : "are"} not declared.`,
         {
           details: [
-            `Nobody can be granted a permission the plugin does not declare in permissionStaff.admin[${JSON.stringify(module)}].`,
+            `Nobody can be granted a permission the plugin does not declare in admin[${JSON.stringify(module)}] of its defineStaffPermissions(manifest, {...}).`,
           ],
           hint: "Pass --declare-permission to add them (and their labels).",
         },

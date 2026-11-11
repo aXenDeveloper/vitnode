@@ -7,9 +7,10 @@ import {
   zodPresenceUserId,
   zodUserPresence,
 } from "@/api/modules/users/presence.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const presenceUserAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canView,
   route: {
     method: "get",
     description:

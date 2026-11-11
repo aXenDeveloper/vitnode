@@ -1,9 +1,10 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const deleteFileAdminRoute = buildRoute({
-  adminStaffPermission: { module: "files", permission: "can_delete" },
+  adminStaffPermission: coreStaffPermissions.admin.files.canDelete,
   route: {
     method: "delete",
     description: "Delete an uploaded file and its record (Admin only).",

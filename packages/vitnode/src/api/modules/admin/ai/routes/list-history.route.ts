@@ -9,12 +9,13 @@ import {
 } from "@/api/lib/with-pagination";
 import { core_ai_runs } from "@/database/ai";
 import { core_users } from "@/database/users";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { zodAiRunRow, zodAiRunStatus } from "../ai.schema";
 import { runColumns, toRow } from "../lib/run-row";
 
 export const listAiHistoryAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canView,
   route: {
     method: "get",
     description:

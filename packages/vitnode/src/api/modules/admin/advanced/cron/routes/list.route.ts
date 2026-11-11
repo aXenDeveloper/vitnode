@@ -9,9 +9,10 @@ import {
 } from "@/api/lib/with-pagination";
 import { core_cron } from "@/database/cron";
 import { isCronJobOverdue } from "@/lib/api/cron-health";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const getCronsRoute = buildRoute({
-  adminStaffPermission: { module: "cron", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.cron.canView,
   route: {
     method: "get",
     description: "Get Admin Cron Logs",

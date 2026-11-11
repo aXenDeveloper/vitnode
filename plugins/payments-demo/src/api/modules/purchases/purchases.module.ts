@@ -1,3 +1,4 @@
+import { paymentSucceededEvent } from "@vitnode/core/api/events/payments";
 import { buildEventListener } from "@vitnode/core/api/lib/events";
 
 import { buildModule } from "@/api/builders";
@@ -9,7 +10,7 @@ import { catalogRoute } from "./routes/show-catalog.route";
 import { purchaseRoute } from "./routes/show-purchase.route";
 
 const logPaidPurchase = buildEventListener({
-  event: "payment.succeeded",
+  event: paymentSucceededEvent,
   name: "log-paid-purchase",
   handler: async (c, payload) => {
     if (payload.pluginId !== manifest.id) return;

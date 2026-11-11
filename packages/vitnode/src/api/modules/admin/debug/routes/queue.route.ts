@@ -3,6 +3,7 @@ import z from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { core_queue } from "@/database/queue";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const QUEUE_STATUSES = [
   "pending",
@@ -12,7 +13,7 @@ const QUEUE_STATUSES = [
 ] as const;
 
 export const queueDebugAdminRoute = buildRoute({
-  adminStaffPermission: { module: "debug", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.debug.canView,
   route: {
     method: "get",
     description:

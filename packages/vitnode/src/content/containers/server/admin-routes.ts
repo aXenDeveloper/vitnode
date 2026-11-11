@@ -4,6 +4,7 @@ import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
 import type { RouteValidationHook } from "../../../api/lib/route";
+import type { ContentPermission } from "../../registry";
 import type {
   AnyContentContainerDefinition,
   ContentContainerCreateInput,
@@ -22,6 +23,7 @@ import {
   zodContentContainerPolicyOverrides,
   zodEffectiveContentContainerPolicy,
 } from "../policies";
+import { contentContainerAdminStaffPermission } from "../registry";
 import {
   contentContainerInputRefusal,
   createContentContainerService,
@@ -91,7 +93,8 @@ export const buildContentContainerAdminRoutes = <
   definition: TDefinition,
   { pluginId, usage }: { pluginId: P; usage?: ContentContainerUsageCheck },
 ) => {
-  const module = definition.admin.permissionModule;
+  const staffPermission = (permission: ContentPermission) =>
+    contentContainerAdminStaffPermission(pluginId, definition, permission);
   const schemas = definition.schemas as unknown as {
     create: z.ZodType<ContentContainerCreateInput<TDefinition>>;
     move: z.ZodType<ContentContainerMoveInput>;
@@ -103,7 +106,7 @@ export const buildContentContainerAdminRoutes = <
 
   const list = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/",
@@ -126,7 +129,7 @@ export const buildContentContainerAdminRoutes = <
   const create = buildRoute({
     pluginId,
     hook: validationHook,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.create },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.create),
     route: {
       method: "post",
       path: "/",
@@ -159,7 +162,7 @@ export const buildContentContainerAdminRoutes = <
   const update = buildRoute({
     pluginId,
     hook: validationHook,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.edit),
     route: {
       method: "patch",
       path: "/{id}",
@@ -196,7 +199,7 @@ export const buildContentContainerAdminRoutes = <
   const move = buildRoute({
     pluginId,
     hook: validationHook,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.edit),
     route: {
       method: "post",
       path: "/{id}/move",
@@ -234,7 +237,7 @@ export const buildContentContainerAdminRoutes = <
   const remove = buildRoute({
     pluginId,
     hook: validationHook,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.delete },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.delete),
     route: {
       method: "delete",
       path: "/{id}",
@@ -261,7 +264,10 @@ export const buildContentContainerAdminRoutes = <
   const access = definition.access.enabled
     ? buildContentAccessAdminRoutes({
         familyId: definition.id,
-        permissionModule: module,
+        permissions: {
+          edit: staffPermission(CONTENT_PERMISSIONS.edit),
+          view: staffPermission(CONTENT_PERMISSIONS.view),
+        },
         pluginId,
       })
     : [];
@@ -273,7 +279,7 @@ export const buildContentContainerAdminRoutes = <
   const policies = buildRoute({
     pluginId,
     hook: validationHook,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.view },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
     route: {
       method: "get",
       path: "/{id}/policies",
@@ -304,7 +310,7 @@ export const buildContentContainerAdminRoutes = <
   const updatePolicies = buildRoute({
     pluginId,
     hook: validationHook,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.edit),
     route: {
       method: "put",
       path: "/{id}/policies",

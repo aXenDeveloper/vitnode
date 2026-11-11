@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationReportNoteUpdatedEvent } from "@/api/events/moderation";
 import { requireModerator } from "@/api/lib/moderation/access";
 import { core_moderation_report_events } from "@/database/moderation";
 
@@ -65,7 +66,7 @@ export const editReportNoteRoute = buildRoute({
       });
     });
 
-    await c.get("events").emit("moderation.report.note_updated", {
+    await c.get("events").emit(moderationReportNoteUpdatedEvent, {
       noteId: note.id,
       reportId: report.id,
     });

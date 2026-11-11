@@ -3,11 +3,12 @@ import { z } from "zod";
 import { buildRoute } from "@/api/builders";
 import { getNotificationsOverview } from "@/api/models/notifications/admin";
 import { zodNotificationEmailMode } from "@/api/modules/notifications/notifications.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const zodCounts = z.record(z.string(), z.number());
 
 export const getNotificationsOverviewRoute = buildRoute({
-  adminStaffPermission: { module: "notifications", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.notifications.canView,
   route: {
     method: "get",
     description:

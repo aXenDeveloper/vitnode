@@ -1,6 +1,6 @@
 ---
 title: AI actions
-description: Create your first managed AI action in a VitNode plugin. Define it with defineAiAction, register it, run it with c.get("ai").run() from an AdminCP route and find the run in the AI logs.
+description: Create your first managed AI action in a VitNode plugin with defineAiAction, run it with c.get("ai").run() from an AdminCP route and find it in the AI logs.
 icon: Wand
 implementation:
   objective: Add an AI feature to a plugin through a registered AI action.
@@ -167,6 +167,7 @@ export const forumApiPlugin = () =>
 Create an AdminCP route that validates the body and passes it to `c.get("ai").run()`:
 
 ```ts title="plugins/forum/src/api/modules/admin/ai/routes/summarize.route.ts"
+import { contentAdminStaffPermission } from '@vitnode/core/content'
 import { z } from 'zod'
 
 import {
@@ -175,12 +176,14 @@ import {
 } from '@/api/ai/actions'
 import { buildRoute } from '@/api/builders'
 import { topicContentType } from '@/content/topic'
+import { manifest } from '@/manifest.gen'
 
 export const summarizeTopicRoute = buildRoute({
-  adminStaffPermission: {
-    module: topicContentType.permissionModule,
-    permission: 'can_view',
-  },
+  adminStaffPermission: contentAdminStaffPermission(
+    manifest.id,
+    topicContentType,
+    'can_view',
+  ),
   route: {
     method: 'post',
     description: 'Summarize a forum topic with the configured AI model.',

@@ -36,7 +36,7 @@ export const MARKETING_PAGES = {
   solutions: {
     breadcrumbs: [{ name: 'Solutions', path: '/solutions' }],
     description:
-      'Five solutions built with VitNode: a help center, a membership site, an open-source project hub, a gaming guild hub and a multilingual magazine, each with the flow, the roles and real screens.',
+      'Five sites built with VitNode: a help center, a membership site, an open-source hub, a gaming guild hub and a multilingual magazine, with roles and screens.',
     path: '/solutions',
     title: 'Solutions - Five Sites Built with VitNode',
   },

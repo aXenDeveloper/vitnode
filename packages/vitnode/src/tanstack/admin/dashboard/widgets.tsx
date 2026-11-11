@@ -5,6 +5,7 @@ import type {
   AdminDashboardWidgetProps,
 } from "@/lib/plugin";
 
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { NotesWidget } from "@/views/admin/views/core/dashboard/widgets/notes/notes-widget";
 import { SendNotificationAction } from "@/views/admin/views/core/dashboard/widgets/send-notification/send-notification";
 import { SendNotificationSettings } from "@/views/admin/views/core/dashboard/widgets/send-notification/send-notification-settings";
@@ -36,7 +37,7 @@ export const coreDashboardBrowserWidgets: AdminDashboardWidget[] = [
     defaultSpan: 2,
     defaultRows: 1,
     defaultEnabled: true,
-    permission: { module: "plugins", permission: "can_view" },
+    permission: coreStaffPermissions.admin.plugins.canView,
   },
   {
     id: "notes",
@@ -56,6 +57,6 @@ export const coreDashboardBrowserWidgets: AdminDashboardWidget[] = [
     minSpan: 2,
     defaultEnabled: true,
     allowMultiple: true,
-    permission: { module: "notifications", permission: "can_manage" },
+    permission: coreStaffPermissions.admin.notifications.canManage,
   },
 ];

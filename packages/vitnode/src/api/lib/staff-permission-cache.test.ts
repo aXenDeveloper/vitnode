@@ -2,8 +2,11 @@ import type { Context } from "hono";
 
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { createTestCache } from "@/tests/cache";
+
 import type { ResolvedStaffPermissionSet } from "./permission-staff";
 
+import { CacheModel } from "./cache";
 import { resolveStaffPermissions } from "./check-staff-permission";
 import {
   invalidateAllStaffPermissions,
@@ -11,29 +14,10 @@ import {
   writeStaffPermissions,
 } from "./staff-permission-cache";
 
-const fakeCache = ({ configured = true }: { configured?: boolean } = {}) => {
-  const store = new Map<string, string>();
-
-  return {
-    store,
-    deleteSystem: async (key: string | string[]) => {
-      for (const one of Array.isArray(key) ? key : [key]) store.delete(one);
-
-      return Promise.resolve();
-    },
-    getSystem: async <T>(key: string): Promise<null | T> => {
-      if (!configured) return Promise.resolve(null);
-      const raw = store.get(key);
-
-      return Promise.resolve(raw === undefined ? null : (JSON.parse(raw) as T));
-    },
-    setSystem: async <T>(key: string, value: T): Promise<void> => {
-      if (configured) store.set(key, JSON.stringify(value));
-
-      return Promise.resolve();
-    },
-  };
-};
+const fakeCache = ({ configured = true }: { configured?: boolean } = {}) =>
+  configured
+    ? createTestCache()
+    : new CacheModel(null, { get: () => undefined } as unknown as Context);
 
 const fakeDb = (results: unknown[][]) => {
   let index = 0;

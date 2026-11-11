@@ -3,11 +3,13 @@ import { count, max } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
 
 import { buildRoute } from "@/api/builders";
+import { moderationReportReasonCreatedEvent } from "@/api/events/moderation";
 import { multiLangAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { errorSchema, json } from "@/api/modules/moderation/moderation.schema";
 import { core_moderation_report_reasons } from "@/database/moderation";
 import { auditDiff } from "@/lib/audit/diff";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { MODERATION_LIMITS } from "@/lib/moderation/const";
 
 import { LOCK_REASONS } from "../lib/reason-rows";
@@ -15,7 +17,7 @@ import { saveReasonWords } from "../lib/reason-words";
 import { reasonBody } from "../report-reasons.schema";
 
 export const createReportReasonAdminRoute = buildRoute({
-  adminStaffPermission: { module: "report_reasons", permission: "can_create" },
+  adminStaffPermission: coreStaffPermissions.admin.report_reasons.canCreate,
   route: {
     method: "post",
     path: "/create",
@@ -85,7 +87,7 @@ export const createReportReasonAdminRoute = buildRoute({
     await saveReasonWords(c, created.id, body);
     await c
       .get("events")
-      .emit("moderation.report_reason.created", { code, reasonId: created.id });
+      .emit(moderationReportReasonCreatedEvent, { code, reasonId: created.id });
 
     return c.json({ id: created.id }, 201);
   },

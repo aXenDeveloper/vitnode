@@ -21,6 +21,12 @@ import type {
   ContentContainerUpdateInput,
 } from "../types";
 
+import {
+  contentContainerCreatedEvent,
+  contentContainerDeletedEvent,
+  contentContainerMovedEvent,
+  contentContainerUpdatedEvent,
+} from "../../../api/events/content-containers";
 import { core_content_containers } from "../../../database/content-containers";
 import { invalidatePageCacheTags } from "../../../page-cache/store.server";
 import { expireContentAccessFamily } from "../../access/server/invalidate";
@@ -380,21 +386,6 @@ export const createContentContainerService = <
     }
   };
 
-  const emit = async <
-    TName extends
-      | "content.container.created"
-      | "content.container.deleted"
-      | "content.container.moved"
-      | "content.container.updated",
-  >(
-    name: TName,
-    payload: Record<string, unknown>,
-  ): Promise<void> => {
-    await c
-      .get("events")
-      .emit(name, { definitionId, pluginId, ...payload } as never);
-  };
-
   const parseInput = <TSchema extends z.ZodType>(
     schema: TSchema,
     input: unknown,
@@ -520,7 +511,9 @@ export const createContentContainerService = <
       });
 
       await expire("soft");
-      await emit("content.container.created", {
+      await c.get("events").emit(contentContainerCreatedEvent, {
+        definitionId,
+        pluginId,
         containerId: created.id,
         parentId: created.parentId,
       });
@@ -553,7 +546,9 @@ export const createContentContainerService = <
       });
 
       await expire("hard");
-      await emit("content.container.deleted", {
+      await c.get("events").emit(contentContainerDeletedEvent, {
+        definitionId,
+        pluginId,
         containerId: removed.id,
         parentId: removed.parentId,
       });
@@ -619,7 +614,9 @@ export const createContentContainerService = <
       if (!changed) return moved;
 
       await expire("soft");
-      await emit("content.container.moved", {
+      await c.get("events").emit(contentContainerMovedEvent, {
+        definitionId,
+        pluginId,
         containerId: moved.id,
         fromParentId: from,
         parentId: moved.parentId,
@@ -718,7 +715,9 @@ export const createContentContainerService = <
           .from(core_content_containers)
           .where(eq(core_content_containers.id, id))
           .limit(1);
-        await emit("content.container.updated", {
+        await c.get("events").emit(contentContainerUpdatedEvent, {
+          definitionId,
+          pluginId,
           changedFields: ["policies"],
           containerId: id,
           parentId: record[0]?.parentId ?? null,
@@ -806,7 +805,9 @@ export const createContentContainerService = <
 
       if (changedFields.length > 0) {
         await expire(slugChanged ? "hard" : "soft");
-        await emit("content.container.updated", {
+        await c.get("events").emit(contentContainerUpdatedEvent, {
+          definitionId,
+          pluginId,
           changedFields,
           containerId: record.id,
           parentId: record.parentId,

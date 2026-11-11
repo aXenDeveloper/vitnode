@@ -3,6 +3,13 @@ import type { Context } from "hono";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type { SsoConnectionIntent, SsoProfileField } from "@/lib/sso-profile";
 
+import {
+  userSsoLinkedEvent,
+  userSsoPreferencesUpdatedEvent,
+  userSsoProfileSyncedEvent,
+  userSsoUnlinkedEvent,
+  userUpdatedEvent,
+} from "@/api/events/users";
 import { describeError } from "@/api/lib/error-details";
 import { isPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { resolvePersonalInfoPolicy } from "@/api/lib/personal-info-policy";
@@ -247,7 +254,7 @@ export class SsoConnectionModel {
     if (Object.keys(names).length > 0) {
       await this.store.writeNames({ userId: account.id, values: names });
       await this.refreshSessions(account.id);
-      await this.c.get("events").emit("user.updated", {
+      await this.c.get("events").emit(userUpdatedEvent, {
         email: account.email,
         name: account.name,
         userId: account.id,
@@ -267,7 +274,7 @@ export class SsoConnectionModel {
       field => results[field] === "updated",
     );
     if (updated.length > 0) {
-      await this.c.get("events").emit("user.sso.profile_synced", {
+      await this.c.get("events").emit(userSsoProfileSyncedEvent, {
         fields: updated,
         providerId: connection.providerId,
         trigger,
@@ -558,7 +565,7 @@ export class SsoConnectionModel {
         throw new SsoConnectionError("provider_already_connected", 409);
       }
       if (outcome === "linked") {
-        await this.c.get("events").emit("user.sso.linked", {
+        await this.c.get("events").emit(userSsoLinkedEvent, {
           email: user.email,
           providerId,
           userId: user.id,
@@ -675,7 +682,7 @@ export class SsoConnectionModel {
 
     await this.c
       .get("events")
-      .emit("user.sso.unlinked", { providerId, userId });
+      .emit(userSsoUnlinkedEvent, { providerId, userId });
   }
 
   async importAvatar(
@@ -845,7 +852,7 @@ export class SsoConnectionModel {
 
     await this.c
       .get("events")
-      .emit("user.sso.preferences_updated", { sources, sync, userId });
+      .emit(userSsoPreferencesUpdatedEvent, { sources, sync, userId });
   }
 
   private get adapters(): SSOApiPlugin[] {

@@ -137,7 +137,7 @@ const harness = (
     c.set("cache", cache);
     c.set("db", memory.db as unknown as Context["var"]["db"]);
     c.set("events", {
-      emit: async (name: string, payload: unknown) => {
+      emit: async ({ name }: { name: string }, payload: unknown) => {
         emitted.push({ name, payload });
 
         return await Promise.resolve({
@@ -318,7 +318,7 @@ describe("POST / (create)", () => {
       { name: "content.test.topic.created", payload: { contentId: record.id } },
       {
         name: "content.test.topic.published",
-        payload: { contentId: record.id, publishedAt: expect.any(Date) },
+        payload: { contentId: record.id, publishedAt: expect.any(String) },
       },
     ]);
   });

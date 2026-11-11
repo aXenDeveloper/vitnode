@@ -19,7 +19,10 @@ const page = createContentModel(testStrictLocalizedPageContentType);
 const PLUGIN_ID = "@vitnode/example";
 
 const emitted = vi.fn<
-  (name: string, payload: unknown) => { failures: never[]; listeners: number }
+  (
+    event: { name: string },
+    payload: unknown,
+  ) => { failures: never[]; listeners: number }
 >(() => ({ failures: [], listeners: 0 }));
 const adminUser = {
   avatarColor: "000000",
@@ -189,7 +192,7 @@ describe("publishing a translation without editorial", () => {
       expectedVersion: 1,
     });
     expect(emitted).toHaveBeenCalledTimes(1);
-    expect(emitted.mock.calls[0][0]).toBe(
+    expect(emitted.mock.calls[0][0].name).toBe(
       "content.test.strict-localized-page.translation_published",
     );
   });
@@ -247,7 +250,7 @@ describe("publishing a translation without editorial", () => {
       row: { status: "draft" },
     });
     expect(emitted).toHaveBeenCalledTimes(1);
-    expect(emitted.mock.calls[0][0]).toBe(
+    expect(emitted.mock.calls[0][0].name).toBe(
       "content.test.strict-localized-page.translation_unpublished",
     );
   });

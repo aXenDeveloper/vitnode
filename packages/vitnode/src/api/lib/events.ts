@@ -2,33 +2,25 @@ import type { Context } from "hono";
 import type { z } from "zod";
 
 import type { EnvVitNode } from "../middlewares/global.middleware";
-import type {
-  EventEnvelope,
-  VitNodeEventName,
-  VitNodeEvents,
-} from "../models/events";
+import type { EventEnvelope } from "../models/events";
 import type { EventDefinition } from "./event-definition";
 
 /**
- * A listener for one VitNode event, as returned by {@link buildEventListener}.
+ * A listener for one event, as returned by {@link buildEventListener}.
  *
  * Register it in a top-level module's `events` array (`buildModule({ events })`);
  * listeners in nested modules are not collected.
  */
-export interface BuildEventListenerReturn<
-  K extends VitNodeEventName = VitNodeEventName,
-> {
-  /**
-   * The schema of a typed listener's event ({@link TypedEventListenerOptions}).
-   * Its emits are validated before this listener runs.
-   */
-  definition?: EventDefinition;
+export interface BuildEventListenerReturn {
+  /** The listened-to event. Its emits are validated before this listener runs. */
+  definition: EventDefinition;
   /** Human-readable note for developers; not shown to end users. */
   description?: string;
-  /** The event to react to - a key of `VitNodeEvents`. */
-  event: K;
+  /** The event's name, `definition.name` - what adapters match listeners on. */
+  event: string;
   /**
-   * Runs for every emit of `event`, with the emitter's request context.
+   * Runs for every emit of `event`, with the emitter's request context and the
+   * schema's output.
    *
    * With the default local adapter, listeners run one after another and the
    * emitter awaits them all. A thrown error is logged and reported in the
@@ -37,8 +29,8 @@ export interface BuildEventListenerReturn<
    */
   handler: (
     c: Context<EnvVitNode>,
-    payload: VitNodeEvents[K],
-    envelope: EventEnvelope<K>,
+    payload: unknown,
+    envelope: EventEnvelope,
   ) => Promise<void> | void;
   /** Identifies the listener in logs and failure reports. */
   name: string;
@@ -50,50 +42,38 @@ export interface EventListenerConfig extends BuildEventListenerReturn {
   pluginId: string;
 }
 
-/** An envelope whose payload is a defined event's output. */
-export type TypedEventEnvelope<Payload> = Omit<
-  EventEnvelope,
-  "name" | "payload"
-> & {
-  name: string;
-  payload: Payload;
-};
-
-/** What {@link buildEventListener} takes for a schema-defined event. */
-export interface TypedEventListenerOptions<Schema extends z.ZodType> {
+export interface EventListenerOptions<Schema extends z.ZodType> {
   /** Human-readable note for developers; not shown to end users. */
   description?: string;
   /** The event definition from `defineEvent`, possibly another plugin's. */
   event: EventDefinition<string, string, Schema>;
   /**
    * Runs for every emit of `event` with the schema's output - validated once,
-   * before the first listener. Failure handling is the same as for any
-   * listener: a thrown error is logged and reported, never rethrown.
+   * before the first listener. A thrown error is logged and reported in the
+   * emitter's `EventEmitResult.failures`, never rethrown.
    */
   handler: (
     c: Context<EnvVitNode>,
     payload: z.output<Schema>,
-    envelope: TypedEventEnvelope<z.output<Schema>>,
+    envelope: EventEnvelope<z.output<Schema>>,
   ) => Promise<void> | void;
   /** Identifies the listener in logs and failure reports. */
   name: string;
 }
 
 /**
- * Declares a server-side listener for a VitNode event, with the payload typed
- * from `event`: a `VitNodeEvents` name, or an event definition from
- * `defineEvent`, whose listeners receive the schema's output.
- *
- * Add your own events by augmenting `VitNodeEvents` in
- * `@vitnode/core/api/models/events`, and emit them with
- * `c.get("events").emit(name, payload)`.
+ * Declares a server-side listener for a schema-defined event. The payload is
+ * typed from the definition's schema output. Listen to another plugin's event
+ * by importing its definition; a Content Engine event comes from
+ * `contentEvent(contentType, action)`.
  *
  * @example
  * ```ts
+ * import { userCreatedEvent } from "@vitnode/core/api/events/users";
  * import { buildEventListener } from "@vitnode/core/api/lib/events";
  *
  * export const welcomeListener = buildEventListener({
- *   event: "user.created",
+ *   event: userCreatedEvent,
  *   name: "send-welcome",
  *   handler: async (c, payload) => {
  *     await c.get("log").debug(`Welcome, ${payload.name}`);
@@ -103,26 +83,19 @@ export interface TypedEventListenerOptions<Schema extends z.ZodType> {
  * // buildModule({ name: "users", routes: [], events: [welcomeListener] })
  * ```
  */
-export function buildEventListener<Schema extends z.ZodType>(
-  args: TypedEventListenerOptions<Schema>,
-): BuildEventListenerReturn;
-export function buildEventListener<K extends VitNodeEventName>(
-  args: BuildEventListenerReturn<K>,
-): BuildEventListenerReturn;
-export function buildEventListener(
-  args: BuildEventListenerReturn | TypedEventListenerOptions<z.ZodType>,
-): BuildEventListenerReturn {
-  // Listeners are matched by `event` at dispatch time; the cast erases the
-  // per-event generic so listeners for different events can share one array.
-  if (typeof args.event === "object") {
-    return {
-      definition: args.event,
-      description: args.description,
-      event: args.event.name,
-      handler: args.handler,
-      name: args.name,
-    } as unknown as BuildEventListenerReturn;
-  }
-
-  return args;
-}
+export const buildEventListener = <Schema extends z.ZodType>({
+  description,
+  event,
+  handler,
+  name,
+}: EventListenerOptions<Schema>): BuildEventListenerReturn =>
+  // Listeners are matched by name at dispatch time and receive the payload
+  // the definition's schema produced; the cast erases the per-event payload
+  // type so listeners for different events can share one array.
+  ({
+    definition: event,
+    description,
+    event: event.name,
+    handler: handler as BuildEventListenerReturn["handler"],
+    name,
+  });

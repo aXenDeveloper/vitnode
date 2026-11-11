@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { userPasswordUpdatedEvent } from "@/api/events/users";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { revokeAccountRecoveryTokens } from "@/api/lib/recovery-tokens";
@@ -9,6 +10,7 @@ import { PasswordModel } from "@/api/models/password";
 import { revokeSessions } from "@/api/models/session-revoke";
 import { USER_PASSWORD_MAX_LENGTH } from "@/api/modules/users/lib/credential-limits";
 import { core_users } from "@/database/users";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 
@@ -21,7 +23,7 @@ export const zodSetPasswordUserAdminSchema = z.object({
 });
 
 export const setPasswordUserAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   route: {
     method: "put",
     description:
@@ -106,7 +108,7 @@ export const setPasswordUserAdminRoute = buildRoute({
         tx,
       );
     });
-    await c.get("events").emit("user.password.updated", { userId: user.id });
+    await c.get("events").emit(userPasswordUpdatedEvent, { userId: user.id });
 
     await revokeAccountRecoveryTokens(c, user.id);
     await revokeSessions(c, { userId: user.id });

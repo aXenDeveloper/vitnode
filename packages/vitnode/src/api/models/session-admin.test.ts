@@ -100,25 +100,7 @@ const fakeDb = ({ sessionExpiresAt }: { sessionExpiresAt: Date | null }) => {
   };
 };
 
-const fakeCache = () => {
-  const entries = new Map<string, unknown>();
-
-  return {
-    entries,
-    cache: {
-      deleteSystem: async (key: string) => {
-        entries.delete(key);
-        await Promise.resolve();
-      },
-      getSystem: async <T>(key: string) =>
-        await Promise.resolve((entries.get(key) ?? null) as null | T),
-      setSystem: async (key: string, value: unknown) => {
-        entries.set(key, JSON.parse(JSON.stringify(value)));
-        await Promise.resolve();
-      },
-    },
-  };
-};
+const fakeCache = () => ({ cache: createTestCache() });
 
 const readSession = async ({
   cache = fakeCache(),
@@ -138,7 +120,7 @@ const readSession = async ({
       authorization: AUTHORIZATION,
     } as unknown as EnvVariablesVitNode["core"]);
     c.set("db", db as unknown as EnvVariablesVitNode["db"]);
-    c.set("cache", cache.cache as unknown as EnvVariablesVitNode["cache"]);
+    c.set("cache", cache.cache);
     c.set("ipAddress", "203.0.113.7");
 
     session = await new SessionAdminModel(c).getSession({ extend });

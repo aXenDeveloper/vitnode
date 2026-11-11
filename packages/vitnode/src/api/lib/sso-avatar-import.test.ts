@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
+import { userAvatarUpdatedEvent } from "@/api/events/users";
+
 import type { RemoteImage } from "./remote-image";
 
 import { importProviderAvatar, sha256Hex } from "./sso-avatar-import";
@@ -135,7 +137,7 @@ describe("importing a provider avatar", () => {
     });
     expect(stored?.file.type).toBe("image/png");
     expect(deleteFile).toHaveBeenCalledWith(7, { force: true });
-    expect(emit).toHaveBeenCalledWith("user.avatar.updated", {
+    expect(emit).toHaveBeenCalledWith(userAvatarUpdatedEvent, {
       fileId: 42,
       userId: 1,
     });

@@ -1,6 +1,6 @@
 ---
 title: Queue reference
-description: Options, types, errors and JSON rules of VitNode's queue API - buildQueueTask, typed and by-name dispatch, QueueTaskInput and QueueTaskPayload.
+description: Options, types, errors and JSON rules of VitNode's queue API - buildQueueTask, dispatch(task, payload, options), QueueTaskInput and QueueTaskPayload.
 icon: BookText
 ---
 
@@ -10,12 +10,7 @@ Signatures, options, types and errors of the background task queue. For a walkth
 
 ## `buildQueueTask`
 
-Server-only. Two forms:
-
-| Import                                                                                          | Form                                                                       | Returns                                     |
-| ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ------------------------------------------- |
-| `buildQueueTask` from your plugin's `@/api/builders` (`bindApiPlugin(manifest).buildQueueTask`) | Typed: takes `payload`, fills in `pluginId`                                | `QueueTaskDefinition<Plugin, Name, Schema>` |
-| `buildQueueTask` from `@vitnode/core/api/lib/queue`                                             | Untyped: no `payload`. Also takes a typed task with an explicit `pluginId` | `BuildQueueTaskReturn`                      |
+Server-only. Import it from your plugin's `@/api/builders` (`bindApiPlugin(manifest).buildQueueTask`), which fills in `pluginId`. It returns a `QueueTaskDefinition<Plugin, Name, Schema>`. The unbound `buildQueueTask` from `@vitnode/core/api/lib/queue` takes the same options plus a required `pluginId`.
 
 <TypeTable
   type={{
@@ -27,12 +22,13 @@ Server-only. Two forms:
     },
     payload: {
       description:
-        "Typed form only. Validates the payload on dispatch and again before the handler runs. Its input must be a JSON object and its output an object.",
+        "Validates the payload on dispatch and again before the handler runs. Its input must be a JSON object and its output an object. Use `z.object({})` for a task without data.",
+      required: true,
       type: "z.ZodType",
     },
     handler: {
       description:
-        "Runs once per claimed task. Typed: receives the schema's output. Untyped: receives the stored JSON. Return to complete, throw to fail the attempt.",
+        "Runs once per claimed task with the schema's output. Return to complete, throw to fail the attempt.",
       required: true,
       type: "(c: Context, payload) => Promise<void> | void",
     },
@@ -55,21 +51,17 @@ Server-only. Two forms:
   }}
 />
 
-Register either form in a top-level module's `queueTasks` array.
+Register the task in a top-level module's `queueTasks` array.
 
 ## `dispatch()`
 
-`c.get("queue").dispatch()` has two overloads. Both resolve to `{ deduplicated: boolean; id: number | null }` and only insert a row.
+`c.get("queue").dispatch()` resolves to `{ deduplicated: boolean; id: number | null }` and only inserts a row.
 
 ```ts
 dispatch(task: QueueTaskDefinition, payload: QueueTaskInput<typeof task>, options?: QueueDispatchOptions)
-dispatch(args: QueueDispatchArgs)
 ```
 
-| Overload                                     | Identity                                                                 | Payload check                                                                                                                          |
-| -------------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `dispatch(task, payload, options)`           | The definition's `pluginId` and `name`; the options cannot override them | Compile time against the schema input, then runtime validation. Throws when the task is not registered or another task holds its name. |
-| `dispatch({ name, payload, pluginId, ... })` | `pluginId`, else the current route's plugin, else `@vitnode/core`        | Runtime validation only, and only when the registered task has a schema. A name with no registered task is still queued.    |
+The row is stored under the definition's `pluginId` and `name`, whichever plugin's request dispatches it; the options cannot override them. The payload is checked at compile time against the schema's input, then validated at runtime. `dispatch` throws when the task is not registered or another task holds its name.
 
 <TypeTable
   type={{
@@ -103,20 +95,6 @@ dispatch(args: QueueDispatchArgs)
         "A transaction to insert with, so the task is queued only if it commits.",
       type: "Transaction",
     },
-    name: {
-      description: "By-name form only: the task's `name`.",
-      type: "string",
-    },
-    payload: {
-      description: "By-name form only: JSON data for the handler.",
-      default: "{}",
-      type: "Record<string, unknown>",
-    },
-    pluginId: {
-      description: "By-name form only: plugin that owns the task.",
-      default: "the current route's plugin",
-      type: "string",
-    },
   }}
 />
 
@@ -129,7 +107,7 @@ All from `@vitnode/core/api/lib/queue`, except `QueueDispatchOptions` and `Queue
 | `QueueTaskDefinition<Plugin, Name, Schema>` | A typed task, as the bound builder returns it.              |
 | `QueueTaskInput<typeof task>`               | What `dispatch(task, payload)` accepts: the schema's input. |
 | `QueueTaskPayload<typeof task>`             | What the handler receives: the schema's output.             |
-| `QueueDispatchOptions`                      | The third argument of the typed `dispatch`.                 |
+| `QueueDispatchOptions`                      | The third argument of `dispatch`.                           |
 | `QueueDispatchResult`                       | `{ deduplicated, id }`.                                     |
 
 Input and output differ when the schema transforms. With `at: z.iso.datetime().transform(value => new Date(value))`, `dispatch` takes a string and the handler gets a `Date`.
@@ -150,11 +128,11 @@ The schema's input type must be JSON, so `z.date()` or `z.map()` in a payload sc
 | ----------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------- | -------- |
 | `QueuePayloadValidationError` | `dispatch`            | The payload is not JSON, or the schema rejects it. `reason` lists paths and issue codes, never values.     | No       |
 | `QueueTaskRegistrationError`  | `dispatch(task, ...)` | The task is not registered, or a different task is registered under its name.                              | No       |
-| `QueueTaskRegistrationError`  | `buildApiPlugin`      | A typed task is registered by another plugin, or shares its name with a different task of the same plugin. | -        |
+| `QueueTaskRegistrationError`  | `buildApiPlugin`      | An entry in `queueTasks` is not a task definition, a task is registered by another plugin, or two different tasks of one plugin share a name. | -        |
 
 When the worker finds a stored payload its task's schema rejects, the row becomes **failed** at once with `Invalid payload: …` in `lastError`; it is not retried and is kept. A row whose task is not registered is retried with `No handler registered for queue task "…"` until it runs out of attempts.
 
 ## Related
 
-- [Migrate a task to a schema](/docs/dev/advanced/queue-typed-payloads)
+- [Change a task payload](/docs/dev/advanced/queue-typed-payloads)
 - [Queue](/docs/dev/advanced/queue)

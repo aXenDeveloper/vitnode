@@ -3,11 +3,12 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { core_ai_user_overrides } from "@/database/ai";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { decimalOrNull } from "../lib/decimal-or-null";
 
 export const getAiUserOverrideAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canView,
   route: {
     method: "get",
     description: "One user's AI exception, or null when their roles apply.",

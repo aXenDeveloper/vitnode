@@ -9,8 +9,10 @@
     "generate-route",
     "admin-routes",
     "services",
+    "operation-workflow",
     "resources",
     "response-fields",
+    "migrate-typed-apis",
     "moved-imports"
   ]
 }

@@ -8,9 +8,10 @@ import { AUDIT_SYSTEM_ACTOR, withAuditContext } from "@/api/lib/audit/context";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { core_cron } from "@/database/cron";
 import { getNextCronRunDate } from "@/lib/api/get-next-cron-run-date";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const runCronRoute = buildRoute({
-  adminStaffPermission: { module: "cron", permission: "can_run" },
+  adminStaffPermission: coreStaffPermissions.admin.cron.canRun,
   route: {
     method: "post",
     description: "Run a specific cron job",

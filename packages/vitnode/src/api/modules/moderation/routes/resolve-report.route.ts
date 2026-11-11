@@ -1,4 +1,5 @@
 import { buildRoute } from "@/api/builders";
+import { moderationReportResolvedEvent } from "@/api/events/moderation";
 import { requireModerator } from "@/api/lib/moderation/access";
 import { auditDiff } from "@/lib/audit/diff";
 
@@ -75,7 +76,7 @@ export const resolveReportRoute = buildRoute({
       return next;
     });
 
-    await c.get("events").emit("moderation.report.resolved", {
+    await c.get("events").emit(moderationReportResolvedEvent, {
       reportId: report.id,
       resolution,
     });

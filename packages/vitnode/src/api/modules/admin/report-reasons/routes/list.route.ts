@@ -6,9 +6,10 @@ import {
   reportReasonSchema,
 } from "@/api/lib/moderation/report-reasons";
 import { json } from "@/api/modules/moderation/moderation.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const listReportReasonsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "report_reasons", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.report_reasons.canView,
   route: {
     method: "get",
     path: "/",

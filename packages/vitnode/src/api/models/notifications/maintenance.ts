@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNull, lt, lte, notExists, sql } from "drizzle-orm";
 
+import { notificationsFanoutTask } from "@/api/modules/notifications/tasks/notifications.task";
 import {
   core_notification_deliveries,
   core_notification_events,
@@ -164,12 +165,9 @@ const recoverStalledEvents = async (
     .limit(100);
 
   for (const { id } of stalled) {
-    await c.get("queue").dispatch({
-      name: QUEUE_NOTIFICATIONS_FANOUT,
-      payload: { eventId: id },
-      pluginId: NOTIFICATIONS_PLUGIN_ID,
-      priority: 10,
-    });
+    await c
+      .get("queue")
+      .dispatch(notificationsFanoutTask, { eventId: id }, { priority: 10 });
   }
 
   return stalled.length;

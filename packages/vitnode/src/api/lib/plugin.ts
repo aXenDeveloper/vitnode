@@ -11,6 +11,7 @@ import type { AuditActionDefinition } from "@/lib/audit/actions";
 import type { ApiPluginContract } from "@/lib/fetcher/contract";
 import type { LocaleMessagesMap } from "@/lib/i18n/types";
 import type { PluginManifest } from "@/lib/plugin-manifest";
+import type { DefinedStaffPermissions } from "@/lib/staff-permissions";
 
 import { BlockError } from "@/blocks/errors";
 import {
@@ -19,6 +20,11 @@ import {
   validateContentContainers,
 } from "@/content/containers/registry";
 import { contentContainerModerationScope } from "@/content/containers/server/scope";
+import {
+  contentEventActionsOf,
+  contentEventDefinitionOf,
+  registerContentEventOwner,
+} from "@/content/event-definitions";
 import { contentPublicUrls } from "@/content/public-urls";
 import {
   validateContentTypes,
@@ -40,7 +46,7 @@ import type { ModerationReportTargetDefinition } from "./moderation/targets";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
 import type { AnyNotificationTypeDefinition } from "./notifications/registry";
 import type { PermissionStaffConfig } from "./permission-staff";
-import type { BuildQueueTaskReturn } from "./queue";
+import type { QueueTaskConfig } from "./queue";
 import type { WebSocketConfig } from "./websocket";
 
 import { validateSearchIndexers } from "../models/search";
@@ -107,8 +113,8 @@ export interface BuildPluginApiReturn<
   pluginId: P;
   /** Content types the plugin serves public URLs for. */
   publicContentTypes?: AnyContentTypeDefinition[];
-  /** Typed tasks keep their own `pluginId`, which always equals the plugin's. */
-  queueTasks?: (BuildQueueTaskReturn & { module: string })[];
+  /** Each task keeps its own `pluginId`, which always equals the plugin's. */
+  queueTasks?: QueueTaskConfig[];
   searchIndexers?: SearchIndexer[];
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
 }
@@ -134,9 +140,10 @@ export type AnyBuildPluginApiReturn = BuildPluginApiReturn<
  * permission module, and every content container and report target adds its
  * own entries, unless `permissionStaff` already declares that module.
  *
- * @throws When `manifest` is malformed; when `blocks` belongs to another
- * plugin; when content types, containers, editable pages, AI actions, search
- * indexers or notification types are invalid or collide. In development, also
+ * @throws When `manifest` is malformed; when `blocks` or `permissionStaff`
+ * belongs to another plugin; when content types, containers, editable pages,
+ * AI actions, search indexers or notification types are invalid or collide.
+ * In development, also
  * when no installed package's `package.json` has the plugin id as its name, and
  * when a nested module declares cron jobs, events, queue tasks or WebSockets,
  * which production ignores.
@@ -198,9 +205,9 @@ export function buildApiPlugin<
   /** Pages built from widgets that admins edit in place. Page ids must be unique within the plugin. */
   editablePages?: AnyEditablePageDefinition[];
   /**
-   * The plugin's own event definitions (`defineEvent`), so emits by name are
-   * validated too and two definitions of one name are refused at boot. A
-   * definition used by a typed listener is known without this.
+   * The event definitions the plugin owns (`defineEvent`). Two definitions of
+   * one name are refused at boot. The Content Engine events of the plugin's
+   * content types are registered automatically.
    */
   eventDefinitions?: readonly EventDefinition[];
   /** The plugin's generated manifest (`src/manifest.gen.ts`). */
@@ -216,8 +223,12 @@ export function buildApiPlugin<
   modules?: Modules;
   /** Notification types in addition to those modules declare. */
   notificationTypes?: AnyNotificationTypeDefinition[];
-  /** Staff permissions the plugin's routes check, grouped by permission module. */
-  permissionStaff?: PermissionStaffConfig;
+  /**
+   * The plugin's staff permissions, from `defineStaffPermissions(manifest, ...)`
+   * - the references routes and the AdminCP navigation use come from the same
+   * object. Must be declared for this plugin's manifest.
+   */
+  permissionStaff?: Pick<DefinedStaffPermissions<P>, "config" | "pluginId">;
   /** Search indexers in addition to those modules declare. */
   searchIndexers?: SearchIndexer[];
 }): BuildPluginApiReturn<P, Modules> {
@@ -225,6 +236,12 @@ export function buildApiPlugin<
   // Run for checking if the plugin is valid
   checkPluginId(pluginId);
   assertPluginManifest(pluginId, manifest, "buildApiPlugin()");
+
+  if (permissionStaff && permissionStaff.pluginId !== pluginId) {
+    throw new Error(
+      `Plugin "${pluginId}" registers the staff permissions of "${permissionStaff.pluginId}". Pass the object its own defineStaffPermissions(manifest, ...) returns.`,
+    );
+  }
 
   if (blocks && blocks.pluginId !== pluginId) {
     throw new BlockError(
@@ -240,7 +257,6 @@ export function buildApiPlugin<
   );
 
   collectAiActions([{ aiActions, pluginId }]);
-  collectEventDefinitions([{ eventDefinitions, pluginId }]);
 
   const hono = new OpenAPIHono();
   const contentContainers: AnyContentContainerDefinition[] = [];
@@ -305,6 +321,21 @@ export function buildApiPlugin<
     contentTypes.map(definition => ({ definition, pluginId })),
   );
 
+  for (const { definition } of registered) {
+    registerContentEventOwner(definition, pluginId);
+  }
+  const ownEventDefinitions: EventDefinition[] = [
+    ...(eventDefinitions ?? []),
+    ...registered.flatMap(({ definition }) =>
+      contentEventActionsOf(definition).map(action =>
+        contentEventDefinitionOf(definition, action),
+      ),
+    ),
+  ];
+  collectEventDefinitions([
+    { eventDefinitions: ownEventDefinitions, pluginId },
+  ]);
+
   const registeredContainers = validateContentContainers(
     contentContainers.map(definition => ({ definition, pluginId })),
   ).map(entry => entry.definition);
@@ -357,7 +388,7 @@ export function buildApiPlugin<
     auditActions,
     blocks,
     editablePages: registeredPages.map(entry => entry.page),
-    eventDefinitions,
+    eventDefinitions: ownEventDefinitions,
     manifest,
     messages,
     modules,
@@ -378,11 +409,15 @@ export function buildApiPlugin<
     // unless the plugin declared that module itself.
     permissionStaff: withModerationPermissions(
       withContainerPermissions(
-        withContentPermissions(permissionStaff, registered, publicContentTypes),
+        withContentPermissions(
+          permissionStaff?.config,
+          registered,
+          publicContentTypes,
+        ),
         registeredContainers,
       ),
       reportTargets,
-      new Set(Object.keys(permissionStaff?.moderator ?? {})),
+      new Set(Object.keys(permissionStaff?.config.moderator ?? {})),
     ),
     moderation: {
       reportTargets,

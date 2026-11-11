@@ -9,6 +9,7 @@ import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 import type { NotificationTypePreference } from "@/database/notifications";
 
+import { notificationsPreferencesUpdatedEvent } from "@/api/events/notifications";
 import {
   buildNotificationType,
   createNotificationRegistry,
@@ -275,7 +276,7 @@ describe("PUT /admin/users/{id}/notification-preferences", () => {
     expect(h.preferencesOf(EDITOR.id)).toEqual({
       [COMMENT]: { email: "none" },
     });
-    expect(h.emit).toHaveBeenCalledWith("notifications.preferences_updated", {
+    expect(h.emit).toHaveBeenCalledWith(notificationsPreferencesUpdatedEvent, {
       typeIds: [COMMENT],
       userId: TARGET_ID,
     });

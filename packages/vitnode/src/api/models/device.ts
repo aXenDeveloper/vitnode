@@ -5,6 +5,7 @@ import { getCookie } from "hono/cookie";
 import { randomBytes } from "node:crypto";
 
 import { setAuthCookie } from "@/api/lib/auth-cookie";
+import { cacheStore } from "@/api/lib/cache";
 import { core_sessions_known_devices } from "@/database/sessions";
 
 export const DEVICE_TOUCH_INTERVAL_MS = 60 * 1000;
@@ -94,9 +95,9 @@ export class DeviceModel {
     if (!publicId) return null;
 
     const now = new Date();
-    const cached = await this.c
-      .get("cache")
-      .getSystem<CachedDevice>(deviceCacheKey(publicId));
+    const cached = await cacheStore(this.c).getSystem<CachedDevice>(
+      deviceCacheKey(publicId),
+    );
 
     if (
       cached &&
@@ -141,7 +142,7 @@ export class DeviceModel {
         .where(eq(core_sessions_known_devices.id, stored.id));
     }
 
-    await this.c.get("cache").setSystem<CachedDevice>(
+    await cacheStore(this.c).setSystem<CachedDevice>(
       deviceCacheKey(publicId),
       {
         id: stored.id,

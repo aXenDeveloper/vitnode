@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 
 import { buildModule } from "@/api/builders";
+import { userSessionsRevokedEvent } from "@/api/events/users";
 import {
   adminSessionCacheKey,
   sessionCacheKey,
@@ -227,7 +228,7 @@ describe("DELETE /admin/users/{id}/devices/{publicId}", () => {
     });
     expect(h.sessionsOf(MODERATOR_ID).user).toEqual([PHONE.id]);
     expect((await h.isCached()).user).toBe(false);
-    expect(h.emit).toHaveBeenCalledWith("user.sessions.revoked", {
+    expect(h.emit).toHaveBeenCalledWith(userSessionsRevokedEvent, {
       deviceId: PHONE.id,
       sessions: 2,
       userId: TARGET_ID,
@@ -308,7 +309,7 @@ describe("DELETE /admin/users/{id}/devices", () => {
     expect(h.sessionsOf(TARGET_ID)).toEqual({ admin: [], user: [] });
     expect(h.sessionsOf(OTHER_ID).user).toEqual([TABLET.id]);
     expect(await h.isCached()).toEqual({ admin: false, user: false });
-    expect(h.emit).toHaveBeenCalledWith("user.sessions.revoked", {
+    expect(h.emit).toHaveBeenCalledWith(userSessionsRevokedEvent, {
       deviceId: null,
       sessions: 5,
       userId: TARGET_ID,

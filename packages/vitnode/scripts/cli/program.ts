@@ -129,6 +129,10 @@ export const createProgram = (hooks: ProgramHooks): Command => {
       "[name]",
       "plugin package name or folder (default: all, or the one you are in)",
     )
+    .option(
+      "--strict",
+      "exit with 1 on warnings too, not only on errors and checks that could not run (for CI)",
+    )
     .action(
       run(
         async () => (await import("./commands/doctor")).runDoctorCommand,
@@ -360,7 +364,7 @@ const registerGenerateCommands = (program: Command, run: Run) => {
     )
     .option(
       "--declare-permission",
-      "declare the permission in config.api.ts when it is missing",
+      "declare the permission in the plugin's defineStaffPermissions module when it is missing",
     )
     .option("--parents", "also create missing modules")
     .action(
@@ -398,7 +402,7 @@ const registerGenerateCommands = (program: Command, run: Run) => {
     )
     .option(
       "--declare-permission",
-      "declare missing permissions in config.api.ts",
+      "declare missing permissions in the plugin's defineStaffPermissions module",
     )
     .option("--parents", "also create missing parent modules")
     .action(

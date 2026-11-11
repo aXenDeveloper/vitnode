@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { adminMessageNotification } from "@/api/lib/notifications/core-types";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { notificationsChannel } from "@/ws/notifications";
 
 export const zodSendNotificationSchema = z.object({
@@ -13,7 +14,7 @@ export const zodSendNotificationSchema = z.object({
 });
 
 export const sendNotificationRoute = buildRoute({
-  adminStaffPermission: { module: "notifications", permission: "can_manage" },
+  adminStaffPermission: coreStaffPermissions.admin.notifications.canManage,
   route: {
     method: "post",
     description:

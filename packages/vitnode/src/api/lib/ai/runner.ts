@@ -5,6 +5,7 @@ import type {
   ProviderMetadata,
 } from "ai";
 import type { Context } from "hono";
+import type { z } from "zod";
 
 import {
   APICallError,
@@ -16,8 +17,10 @@ import {
   streamText,
 } from "ai";
 
+import { aiRunCompletedEvent, aiRunFailedEvent } from "@/api/events/ai";
+
 import type { AIModelDefinition } from "../../models/ai";
-import type { VitNodeEvents } from "../../models/events";
+import type { EventDefinition } from "../event-definition";
 import type { AiActorType, AiPrompt, AiResourceRef } from "./action";
 import type { AiModelCapability } from "./capabilities";
 import type { Decimal } from "./decimal";
@@ -380,12 +383,12 @@ export class AiRunner {
     };
   }
 
-  private async emit<K extends "ai.run.completed" | "ai.run.failed">(
-    name: K,
-    payload: VitNodeEvents[K],
+  private async emit<Schema extends z.ZodType>(
+    event: EventDefinition<string, string, Schema>,
+    payload: z.input<Schema>,
   ): Promise<void> {
     try {
-      await this.c.get("events").emit(name, payload);
+      await this.c.get("events").emit(event, payload);
     } catch {
       return;
     }
@@ -428,7 +431,7 @@ export class AiRunner {
               errorCode: null,
               status: "succeeded",
             });
-            await this.emit("ai.run.completed", {
+            await this.emit(aiRunCompletedEvent, {
               actionKey: plan.action.key,
               actorType: actor.type,
               runId,
@@ -461,7 +464,7 @@ export class AiRunner {
       errorCode: lastError,
       status: lastError === "AI_CANCELED" ? "canceled" : "failed",
     });
-    await this.emit("ai.run.failed", {
+    await this.emit(aiRunFailedEvent, {
       actionKey: plan.action.key,
       actorType: actor.type,
       errorCode: lastError,
@@ -798,13 +801,15 @@ export class AiRunner {
             ? "canceled"
             : "failed",
       });
-      await this.emit(delivered ? "ai.run.completed" : "ai.run.failed", {
+      const run = {
         actionKey: plan.action.key,
         actorType: plan.actor.type,
-        errorCode,
         runId,
         userId: plan.actor.userId,
-      });
+      };
+      await (delivered
+        ? this.emit(aiRunCompletedEvent, run)
+        : this.emit(aiRunFailedEvent, { ...run, errorCode }));
 
       return settled;
     };

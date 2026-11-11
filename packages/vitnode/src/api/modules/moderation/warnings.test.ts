@@ -242,7 +242,7 @@ const harness = async () => {
       ],
     ],
   ]);
-  const emit = vi.fn(async (_name: string, _payload: unknown) =>
+  const emit = vi.fn(async (_event: { name: string }, _payload: unknown) =>
     Promise.resolve(),
   );
   const publish = vi.fn(async (_args: Record<string, unknown>) =>
@@ -1026,7 +1026,7 @@ describe("staff notes", () => {
     const status = await suspended.text();
     expect((await h.call(0, "GET", "/account-status")).status).toBe(401);
 
-    expect(h.emit.mock.calls.map(([name]) => name)).toEqual([
+    expect(h.emit.mock.calls.map(([{ name }]) => name)).toEqual([
       "moderation.warning.issued",
       "moderation.sanction.applied",
       "moderation.warning.revoked",
@@ -1042,7 +1042,7 @@ describe("staff notes", () => {
 
     const leaked = JSON.stringify([
       status,
-      h.emit.mock.calls,
+      h.emit.mock.calls.map(([{ name }, payload]) => [name, payload]),
       h.publish.mock.calls.map(([args]) => args.data),
       trail,
     ]);

@@ -2,10 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
+import { filesAltUpdatedEvent } from "@/api/events/files";
 import { core_files_alt } from "@/database/files";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const deleteFileAltAdminRoute = buildRoute({
-  adminStaffPermission: { module: "files", permission: "can_edit_alt" },
+  adminStaffPermission: coreStaffPermissions.admin.files.canEditAlt,
   route: {
     method: "delete",
     description: "Remove an image's ALT text in one language.",
@@ -37,7 +39,7 @@ export const deleteFileAltAdminRoute = buildRoute({
       )
       .returning({ origin: core_files_alt.origin });
     if (removed.length > 0) {
-      await c.get("events").emit("files.alt.updated", {
+      await c.get("events").emit(filesAltUpdatedEvent, {
         fileId: id,
         languageCodes: [languageCode],
         origin: removed[0].origin,

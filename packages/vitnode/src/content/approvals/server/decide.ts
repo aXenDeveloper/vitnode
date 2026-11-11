@@ -12,6 +12,10 @@ import type { AnyContentTypeDefinition } from "../../types";
 import type { ContentSubmissionDecisionCode } from "../const";
 import type { ContentSubmissionRow } from "./submissions";
 
+import {
+  contentApprovalApprovedEvent,
+  contentApprovalRejectedEvent,
+} from "../../../api/events/content-approvals";
 import { withAuditContext } from "../../../api/lib/audit/context";
 import { writeAuditLog } from "../../../api/lib/audit/write";
 import { core_content_submissions } from "../../../database/content-submissions";
@@ -357,9 +361,9 @@ export const decideContentSubmission = async (
     submissionId: decided.id,
   };
   if (decided.status === "approved") {
-    await c.get("events").emit("content.approval.approved", payload);
+    await c.get("events").emit(contentApprovalApprovedEvent, payload);
   } else {
-    await c.get("events").emit("content.approval.rejected", {
+    await c.get("events").emit(contentApprovalRejectedEvent, {
       ...payload,
       reason: decided.reason,
     });

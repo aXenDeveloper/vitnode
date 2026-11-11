@@ -20,6 +20,7 @@ import {
 import { grantStaffPermissions } from "@/tests/staff-permissions";
 
 import { CONTENT_PERMISSIONS } from "../../const";
+import { contentContainerAdminStaffPermission } from "../../containers/registry";
 import { buildContentAccessAdminRoutes } from "./admin-routes";
 
 const ADMIN = USER.ROOT;
@@ -79,7 +80,18 @@ const harness = async (
   );
   for (const { handler, hook, route } of buildContentAccessAdminRoutes({
     familyId: family.id,
-    permissionModule: family.permissionModule,
+    permissions: {
+      edit: contentContainerAdminStaffPermission(
+        ACCESS_PLUGIN_ID,
+        { admin: { permissionModule: family.permissionModule } },
+        CONTENT_PERMISSIONS.edit,
+      ),
+      view: contentContainerAdminStaffPermission(
+        ACCESS_PLUGIN_ID,
+        { admin: { permissionModule: family.permissionModule } },
+        CONTENT_PERMISSIONS.view,
+      ),
+    },
     pluginId: ACCESS_PLUGIN_ID,
   })) {
     app.openapi(route, handler, hook as never);

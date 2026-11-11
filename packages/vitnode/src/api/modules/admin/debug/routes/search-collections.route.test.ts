@@ -43,8 +43,11 @@ const harness = ({
       if (key === "core") return { searchIndexers: indexers };
       if (key === "queue") {
         return {
-          dispatch: async (task: Dispatched) => {
-            dispatched.push(task);
+          dispatch: async (
+            task: { name: string },
+            payload: Record<string, unknown>,
+          ) => {
+            dispatched.push({ name: task.name, payload });
             await Promise.resolve();
           },
         };

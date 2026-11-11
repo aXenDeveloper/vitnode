@@ -2,6 +2,8 @@ import type { Context } from "hono";
 
 import { and, eq } from "drizzle-orm";
 
+import { userSessionsRevokedEvent } from "@/api/events/users";
+import { cacheStore } from "@/api/lib/cache";
 import { core_admin_sessions } from "@/database/admins";
 import { core_sessions } from "@/database/sessions";
 import { realtime } from "@/ws/registry";
@@ -58,7 +60,7 @@ const deleteSessionCacheKeys = async (
   ];
 
   if (keys.length > 0) {
-    await c.get("cache").deleteSystem(keys);
+    await cacheStore(c).deleteSystem(keys);
   }
 };
 
@@ -123,7 +125,7 @@ export const revokeSessions = async (
     tokenHashes: sessions.map(({ token }) => token),
     userId: scope.userId,
   });
-  await c.get("events").emit("user.sessions.revoked", {
+  await c.get("events").emit(userSessionsRevokedEvent, {
     deviceId: scope.deviceId ?? null,
     sessions: sessions.length + adminSessions.length,
     userId: scope.userId,

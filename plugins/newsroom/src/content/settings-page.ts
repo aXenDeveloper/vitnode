@@ -1,6 +1,7 @@
 import { defineEditablePage } from "@vitnode/core/content/editor";
 
 import { manifest } from "@/manifest.gen";
+import { staffPermissions } from "@/staff-permissions";
 
 import {
   PAGE_BLOCKS_ALLOWED,
@@ -11,10 +12,8 @@ const ZONE_BLOCKS_MAX = 20;
 
 export const NEWSROOM_SETTINGS_PAGE_ID = "newsroom:settings";
 
-export const NEWSROOM_WIDGETS_PERMISSION = {
-  module: "widgets",
-  permission: "can_edit",
-} as const;
+export const NEWSROOM_WIDGETS_PERMISSION =
+  staffPermissions.moderator.widgets.canEdit;
 
 export const NEWSROOM_ZONE_IDS = {
   afterProfile: "after-profile",

@@ -7,6 +7,7 @@ import {
   zodSsoPreferencesSchema,
 } from "@/api/modules/users/sso/connections/connections.schema";
 import { ssoConnectionFailure } from "@/api/modules/users/sso/connections/lib/failure";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {
@@ -23,7 +24,7 @@ const ssoErrorResponse = (description: string) => ({
 });
 
 export const updateUserSsoPreferencesAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   route: {
     method: "put",
     description:

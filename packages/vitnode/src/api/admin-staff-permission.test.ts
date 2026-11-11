@@ -1,6 +1,8 @@
 import { OpenAPIHono, z } from "@hono/zod-openapi";
 import { describe, expect, it } from "vitest";
 
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+
 import { buildModule } from "./lib/module";
 import { buildRoute, findAdminRoutesWithoutStaffPermission } from "./lib/route";
 import { newBuildPluginApiCore } from "./plugin";
@@ -35,7 +37,7 @@ describe("findAdminRoutesWithoutStaffPermission", () => {
   it("reports an admin route only when it has no staff permission", () => {
     const guarded = buildRoute({
       pluginId: "@vitnode/core",
-      adminStaffPermission: { module: "users", permission: "can_view" },
+      adminStaffPermission: coreStaffPermissions.admin.users.canView,
       route: { method: "get", path: "/guarded", responses: ok },
       handler: c => c.json({}, 200),
     });

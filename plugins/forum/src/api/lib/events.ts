@@ -1,23 +1,12 @@
-import type { ContentEventsFor } from "@vitnode/core/content";
-
+import { contentContainerDeletedEvent } from "@vitnode/core/api/events/content-containers";
 import { buildEventListener } from "@vitnode/core/api/lib/events";
-import { contentEventName } from "@vitnode/core/content";
+import { contentEvent } from "@vitnode/core/content";
 
 import { commentContentType } from "@/content/comment";
 import { forumContainers } from "@/content/forums";
 import { topicContentType } from "@/content/topic";
 
 import { invalidateForumStats } from "./stats-cache";
-
-declare module "@vitnode/core/api/models/events" {
-  interface VitNodeEvents
-    extends
-      ContentEventsFor<typeof commentContentType>,
-      ContentEventsFor<typeof topicContentType> {}
-}
-
-const TOPIC = topicContentType.id;
-const COMMENT = commentContentType.id;
 
 const description = "Expires the cached forum and topic stats";
 
@@ -50,7 +39,7 @@ const commentActions = [
 export const forumStatsEventListeners = [
   ...topicActions.map(action =>
     buildEventListener({
-      event: contentEventName(TOPIC, action),
+      event: contentEvent(topicContentType, action),
       name: `forum-stats-topic-${action}`,
       description,
       handler: async c => {
@@ -60,7 +49,7 @@ export const forumStatsEventListeners = [
   ),
   ...commentActions.map(action =>
     buildEventListener({
-      event: contentEventName(COMMENT, action),
+      event: contentEvent(commentContentType, action),
       name: `forum-stats-comment-${action}`,
       description,
       handler: async c => {
@@ -70,7 +59,7 @@ export const forumStatsEventListeners = [
   ),
   ...(["updated", "restored"] as const).map(action =>
     buildEventListener({
-      event: contentEventName(COMMENT, action),
+      event: contentEvent(commentContentType, action),
       name: `forum-stats-comment-${action}`,
       description,
       handler: async (c, payload) => {
@@ -81,7 +70,7 @@ export const forumStatsEventListeners = [
     }),
   ),
   buildEventListener({
-    event: "content.container.deleted",
+    event: contentContainerDeletedEvent,
     name: "forum-stats-forum-deleted",
     description,
     handler: async (c, payload) => {

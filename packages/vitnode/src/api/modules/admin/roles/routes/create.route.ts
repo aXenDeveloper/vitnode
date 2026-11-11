@@ -1,11 +1,13 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
+import { roleCreatedEvent } from "@/api/events/roles";
 import { multiLangAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { saveLanguageWords } from "@/api/lib/save-language-words";
 import { core_roles } from "@/database/roles";
 import { auditDiff } from "@/lib/audit/diff";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { parseEmojiIcon, serializeEmojiIcon } from "@/lib/emoji-icon";
 
 import {
@@ -37,7 +39,7 @@ export const zodCreateRoleAdminSchema = z.object({
 });
 
 export const createRoleAdminRoute = buildRoute({
-  adminStaffPermission: { module: "roles", permission: "can_create" },
+  adminStaffPermission: coreStaffPermissions.admin.roles.canCreate,
   route: {
     method: "post",
     description: "Create a new role (Admin only)",
@@ -144,7 +146,7 @@ export const createRoleAdminRoute = buildRoute({
       values: name,
     });
 
-    await c.get("events").emit("role.created", { roleId: role.id });
+    await c.get("events").emit(roleCreatedEvent, { roleId: role.id });
 
     return c.json({ id: role.id }, 201);
   },

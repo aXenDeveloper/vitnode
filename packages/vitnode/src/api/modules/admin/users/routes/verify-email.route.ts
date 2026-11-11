@@ -2,14 +2,16 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { userEmailVerifiedEvent } from "@/api/events/users";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { core_users, core_users_confirm_emails } from "@/database/users";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 
 export const verifyEmailUserAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   route: {
     method: "post",
     description: "Verify a user's email by id (Admin only)",
@@ -97,9 +99,10 @@ export const verifyEmailUserAdminRoute = buildRoute({
     });
     if (!user.emailVerified) {
       await invalidateSessionCacheForUser(c, user.id);
-      await c
-        .get("events")
-        .emit("user.email.verified", { email: updated.email, userId: user.id });
+      await c.get("events").emit(userEmailVerifiedEvent, {
+        email: updated.email,
+        userId: user.id,
+      });
     }
 
     return c.json(

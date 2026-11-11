@@ -7,15 +7,12 @@ import type {
 import type { NotificationSubject } from "@/lib/notifications/types";
 
 import { SUBJECT_TYPE_PATTERN } from "@/api/lib/notifications/registry";
+import { notificationsFanoutTask } from "@/api/modules/notifications/tasks/notifications.task";
 import { core_notification_events } from "@/database/notifications";
 
 import type { NotificationsContext, NotificationsDb } from "./shared";
 
-import {
-  getNotificationRegistry,
-  NOTIFICATIONS_PLUGIN_ID,
-  QUEUE_NOTIFICATIONS_FANOUT,
-} from "./shared";
+import { getNotificationRegistry } from "./shared";
 
 const MAX_EXPLICIT_RECIPIENTS = 100_000;
 
@@ -214,13 +211,13 @@ export const publishNotification = async <TData>(
   }
 
   if (hasAudience) {
-    const queued = await c.get("queue").dispatch({
-      name: QUEUE_NOTIFICATIONS_FANOUT,
-      payload: { eventId: created.id },
-      pluginId: NOTIFICATIONS_PLUGIN_ID,
-      priority: 10,
-      tx: db,
-    });
+    const queued = await c
+      .get("queue")
+      .dispatch(
+        notificationsFanoutTask,
+        { eventId: created.id },
+        { priority: 10, tx: db },
+      );
     if (queued.id !== null) onQueued(queued.id);
   }
 

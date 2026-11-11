@@ -3,6 +3,10 @@ import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
+import {
+  userEmailVerifiedEvent,
+  userPasswordUpdatedEvent,
+} from "@/api/events/users";
 import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { ForgotPasswordTokenModel, PasswordModel } from "@/api/models/password";
 import { revokeSessions } from "@/api/models/session-revoke";
@@ -86,7 +90,7 @@ export const changePasswordRoute = buildRoute({
         .delete(core_users_forgot_password)
         .where(eq(core_users_forgot_password.id, user.id)),
     ]);
-    await c.get("events").emit("user.password.updated", { userId });
+    await c.get("events").emit(userPasswordUpdatedEvent, { userId });
 
     const [confirmed] = await c
       .get("db")
@@ -99,7 +103,7 @@ export const changePasswordRoute = buildRoute({
     if (confirmed) {
       await c
         .get("events")
-        .emit("user.email.verified", { email: confirmed.email, userId });
+        .emit(userEmailVerifiedEvent, { email: confirmed.email, userId });
     }
 
     // After the new password is in place, so a failure above cannot sign

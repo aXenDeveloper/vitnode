@@ -1,6 +1,6 @@
 ---
 title: Errors and limits
-description: Handle VitNode AI action errors. The AiError JSON body, every error code with its status and fix, showing errors in the browser, stopping background jobs when the budget runs out, and listening to ai.run events.
+description: "Handle VitNode AI action errors: the AiError body, every error code with its status and fix, browser error messages, budget stops in jobs and ai.run events."
 icon: ShieldAlert
 ---
 
@@ -172,10 +172,11 @@ Each run that got past the budget reservation emits one event after it settles:
 `userId` is `null` for system runs. Refusals before the reservation, such as a missing permission or a reached limit, emit nothing. A listener that throws never breaks the run.
 
 ```ts title="plugins/forum/src/api/lib/ai-events.ts"
+import { aiRunFailedEvent } from '@vitnode/core/api/events/ai'
 import { buildEventListener } from '@vitnode/core/api/lib/events'
 
 export const aiFailureListener = buildEventListener({
-  event: 'ai.run.failed',
+  event: aiRunFailedEvent,
   name: 'log-ai-failures',
   handler: async (c, payload) => {
     if (!payload.actionKey.startsWith('@vitnode/forum:')) return

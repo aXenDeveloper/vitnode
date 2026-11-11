@@ -6,6 +6,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { EnvVariablesVitNode } from "@/api/middlewares/global.middleware";
 
+import {
+  userPasskeyCreatedEvent,
+  userPasskeyDeletedEvent,
+  userPasskeyUpdatedEvent,
+} from "@/api/events/users";
 import { PasskeyModel } from "@/api/models/passkey";
 import { SessionModel } from "@/api/models/session";
 import { SessionAdminModel } from "@/api/models/session-admin";
@@ -288,7 +293,7 @@ describe("passkey registration", () => {
       transports: ["internal", "hybrid"],
       userId: ALICE.id,
     });
-    expect(h.emit).toHaveBeenCalledWith("user.passkey.created", {
+    expect(h.emit).toHaveBeenCalledWith(userPasskeyCreatedEvent, {
       passkeyId: saved?.id,
       userId: ALICE.id,
     });
@@ -748,7 +753,7 @@ describe("passkey management", () => {
 
     expect(response.status).toBe(200);
     expect(h.passkeys.get(alicePasskeyId)?.name).toBe("Travel phone");
-    expect(h.emit).toHaveBeenCalledWith("user.passkey.updated", {
+    expect(h.emit).toHaveBeenCalledWith(userPasskeyUpdatedEvent, {
       name: "Travel phone",
       passkeyId: alicePasskeyId,
       userId: ALICE.id,
@@ -799,7 +804,7 @@ describe("passkey management", () => {
 
     expect(response.status).toBe(200);
     expect(h.passkeys.has(alicePasskeyId)).toBe(false);
-    expect(h.emit).toHaveBeenCalledWith("user.passkey.deleted", {
+    expect(h.emit).toHaveBeenCalledWith(userPasskeyDeletedEvent, {
       passkeyId: alicePasskeyId,
       userId: ALICE.id,
     });

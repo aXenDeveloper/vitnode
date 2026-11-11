@@ -1,6 +1,6 @@
 ---
 title: Access rules API
-description: Reference for VitNode Content Engine access rules - the access option of defineContentContainer and defineContentType, actions and audiences, createContentAccess, access flags, the 403 access-required body, AdminCP routes, errors, the content.access.updated event and the private storage store.
+description: "Reference for Content Engine access rules: the access option, actions and audiences, createContentAccess, access flags, the 403 body, AdminCP routes and errors."
 icon: FileBraces
 ---
 
@@ -185,10 +185,11 @@ See [Activity logs](/docs/content-engine/activity-logs#access-rules).
 `PUT /{id}/access` also emits `content.access.updated` after saving:
 
 ```ts title="plugins/site-notes/src/api/lib/access.listener.ts"
+import { contentAccessUpdatedEvent } from "@vitnode/core/api/events/content-access";
 import { buildEventListener } from "@vitnode/core/api/lib/events";
 
 export const accessListener = buildEventListener({
-  event: "content.access.updated",
+  event: contentAccessUpdatedEvent,
   name: "log-access-change",
   handler: async (c, { changedActions, family, scopeId, userId }) => {
     await c

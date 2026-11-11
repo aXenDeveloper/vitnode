@@ -2,6 +2,8 @@ import type { Context } from "hono";
 
 import { randomUUID } from "node:crypto";
 
+import { cacheStore } from "@/api/lib/cache";
+
 import type {
   PermissionStaffType,
   ResolvedStaffPermissionSet,
@@ -61,7 +63,7 @@ export const rememberRequestStaffPermissions = (
 };
 
 const fetchEpoch = async (c: Context): Promise<string> =>
-  (await c.get("cache").getSystem<string>(EPOCH_KEY)) ?? "0";
+  (await cacheStore(c).getSystem<string>(EPOCH_KEY)) ?? "0";
 
 // The memo holds the promise, set before awaiting, so an invalidation that
 // lands while the read is in flight clears it and the next read starts over.
@@ -84,11 +86,9 @@ export const readStaffPermissions = async (
   c: Context,
   args: { type: PermissionStaffType; userId: number },
 ): Promise<null | ResolvedStaffPermissionSet> =>
-  await c
-    .get("cache")
-    .getSystem<ResolvedStaffPermissionSet>(
-      permissionsKey(await readStaffPermissionsGeneration(c), args),
-    );
+  await cacheStore(c).getSystem<ResolvedStaffPermissionSet>(
+    permissionsKey(await readStaffPermissionsGeneration(c), args),
+  );
 
 export const writeStaffPermissionsInGeneration = async (
   c: Context,
@@ -96,13 +96,11 @@ export const writeStaffPermissionsInGeneration = async (
   args: { type: PermissionStaffType; userId: number },
   value: ResolvedStaffPermissionSet,
 ): Promise<void> => {
-  await c
-    .get("cache")
-    .setSystem(
-      permissionsKey(epoch, args),
-      value,
-      STAFF_PERMISSIONS_CACHE_TTL_SECONDS,
-    );
+  await cacheStore(c).setSystem(
+    permissionsKey(epoch, args),
+    value,
+    STAFF_PERMISSIONS_CACHE_TTL_SECONDS,
+  );
 };
 
 /** Stores one resolution for {@link STAFF_PERMISSIONS_CACHE_TTL_SECONDS}. */
@@ -132,12 +130,12 @@ export const readStaffPermissionsOfUser = async (
   userId: number,
 ): Promise<CachedStaffPermissionsOfUser> => {
   const epoch = await readStaffPermissionsGeneration(c);
-  const [admin = null, moderator = null] = await c
-    .get("cache")
-    .getSystemMany<ResolvedStaffPermissionSet>([
-      permissionsKey(epoch, { type: "admin", userId }),
-      permissionsKey(epoch, { type: "moderator", userId }),
-    ]);
+  const [admin = null, moderator = null] = await cacheStore(
+    c,
+  ).getSystemMany<ResolvedStaffPermissionSet>([
+    permissionsKey(epoch, { type: "admin", userId }),
+    permissionsKey(epoch, { type: "moderator", userId }),
+  ]);
 
   return {
     sets: { admin, moderator },
@@ -172,5 +170,5 @@ export const invalidateAllStaffPermissions = async (
   const memo = memoOf(c);
   memo.epoch = undefined;
   memo.sets.clear();
-  await c.get("cache").setSystem(EPOCH_KEY, randomUUID());
+  await cacheStore(c).setSystem(EPOCH_KEY, randomUUID());
 };

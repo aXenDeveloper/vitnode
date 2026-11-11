@@ -4,11 +4,12 @@ import { buildRoute } from "@/api/builders";
 import { userAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { core_ai_user_overrides } from "@/database/ai";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { zodDecimalString } from "../ai.schema";
 
 export const updateAiUserOverrideAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_manage" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canManage,
   route: {
     method: "put",
     description:

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
+import { userUpdatedEvent } from "@/api/events/users";
 import { invalidateSessionCacheForUser } from "@/api/models/session-revoke";
 import { resolveBrowseAnonymouslyPolicies } from "@/api/models/user-presence";
 import { core_users } from "@/database/users";
@@ -65,7 +66,7 @@ export const updateMyPrivacyRoute = buildRoute({
       .set({ hideOnlineStatus })
       .where(eq(core_users.id, user.id));
     await invalidateSessionCacheForUser(c, user.id);
-    await c.get("events").emit("user.updated", {
+    await c.get("events").emit(userUpdatedEvent, {
       email: user.email,
       name: user.name,
       userId: user.id,

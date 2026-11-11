@@ -15,6 +15,11 @@ import { getCookie } from "hono/cookie";
 
 import type { PasskeyErrorCode } from "@/api/modules/users/passkeys/passkeys.schema";
 
+import {
+  userPasskeyCreatedEvent,
+  userPasskeyDeletedEvent,
+  userPasskeyUpdatedEvent,
+} from "@/api/events/users";
 import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
 import { isStaff } from "@/api/lib/check-staff-permission";
 import { describeError } from "@/api/lib/error-details";
@@ -254,7 +259,7 @@ export class PasskeyModel {
 
     await this.c
       .get("events")
-      .emit("user.passkey.deleted", { passkeyId: id, userId });
+      .emit(userPasskeyDeletedEvent, { passkeyId: id, userId });
   }
 
   async listPasskeys(userId: number): Promise<PublicPasskey[]> {
@@ -323,7 +328,7 @@ export class PasskeyModel {
 
     if (!passkey) throw new PasskeyError("not_found", 404);
 
-    await this.c.get("events").emit("user.passkey.updated", {
+    await this.c.get("events").emit(userPasskeyUpdatedEvent, {
       name: passkey.name,
       passkeyId: passkey.id,
       userId,
@@ -449,7 +454,7 @@ export class PasskeyModel {
 
     await this.c
       .get("events")
-      .emit("user.passkey.created", { passkeyId: passkey.id, userId });
+      .emit(userPasskeyCreatedEvent, { passkeyId: passkey.id, userId });
 
     return toPublicPasskey(passkey);
   }

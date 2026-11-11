@@ -37,23 +37,16 @@ export interface PermissionStaffEntry {
 export type PermissionStaffModules = Record<string, PermissionStaffEntry[]>;
 
 /**
- * The staff permissions a plugin declares in `buildApiPlugin({ permissionStaff })`,
- * grouped by staff type and then by module.
+ * A plugin's staff permission catalog as plain data, grouped by staff type and
+ * then by module: what `defineStaffPermissions(manifest, ...)` declares (its
+ * `config`), plus what core adds before registering it.
  *
  * Core adds the generated content permissions (at least
  * `can_view`/`can_create`/`can_edit`/`can_delete`) for each content type and
  * container collection, plus report-target permissions, unless the plugin
- * declares that module itself. Enforce an admin permission with `adminStaffPermission` in
- * `buildRoute`, or any permission with `assertStaffPermission`.
- *
- * @example
- * ```ts
- * permissionStaff: {
- *   admin: {
- *     posts: ["can_view", { permission: "can_delete", dependsOn: ["can_view"] }],
- *   },
- * }
- * ```
+ * declares that module itself. Enforce an admin permission with
+ * `adminStaffPermission` in `buildRoute`, or any permission with
+ * `assertStaffPermission`.
  */
 export interface PermissionStaffConfig {
   /** Permissions grantable to AdminCP administrators. */

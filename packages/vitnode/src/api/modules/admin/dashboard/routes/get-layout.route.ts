@@ -2,11 +2,12 @@ import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { getDashboardWidgets, zodStoredDashboardWidget } from "../lib/layout";
 
 export const getDashboardLayoutAdminRoute = buildRoute({
-  adminStaffPermission: { module: "dashboard", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.dashboard.canView,
   route: {
     method: "get",
     description: "Get the signed-in admin's own dashboard widget layout",

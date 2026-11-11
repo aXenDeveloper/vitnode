@@ -10,11 +10,12 @@ import {
 } from "@/api/lib/user-images";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { core_users } from "@/database/users";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 
 export const uploadUserImageAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   route: {
     method: "post",
     description:

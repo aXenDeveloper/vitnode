@@ -4,6 +4,7 @@ import { asc } from "drizzle-orm";
 import { buildRoute } from "@/api/builders";
 import { json } from "@/api/modules/moderation/moderation.schema";
 import { core_moderation_warning_thresholds } from "@/database/warnings";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { WARNING_THRESHOLD_ACTIONS } from "@/lib/moderation/warnings";
 
 const thresholdSchema = z.object({
@@ -16,7 +17,7 @@ const thresholdSchema = z.object({
 });
 
 export const listWarningThresholdsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "warning_settings", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.warning_settings.canView,
   route: {
     method: "get",
     path: "/thresholds",

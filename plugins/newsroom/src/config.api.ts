@@ -4,6 +4,7 @@ import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 
 import { storyExcerptAiAction } from "@/api/ai/actions";
 import { buildContentPublicModule } from "@/api/builders";
+import { correctionFiledEvent } from "@/api/events";
 import { categoryModerationScope } from "@/api/lib/moderation";
 import { commentNotifications } from "@/api/lib/notifications";
 import { deskContainers } from "@/content/desks";
@@ -20,12 +21,13 @@ import { storyContent } from "@/database/stories";
 import { tagContent } from "@/database/tags";
 import messages from "@/locales/api";
 import { manifest } from "@/manifest.gen";
+import { staffPermissions } from "@/staff-permissions";
 
 import { adminModule } from "./api/modules/admin/admin.module";
 import { articlesModule } from "./api/modules/articles/articles.module";
+import { correctionsModule } from "./api/modules/corrections/corrections.module";
 import { helloModule } from "./api/modules/hello/hello.module";
 import { widgets } from "./widgets";
-import "@/api/lib/events";
 
 export const newsroomApiPlugin = () =>
   buildApiPlugin({
@@ -34,17 +36,15 @@ export const newsroomApiPlugin = () =>
     blocks: widgets,
     contentNotifications: [commentNotifications],
     editablePages: [settingsPage],
+    eventDefinitions: [correctionFiledEvent],
     messages,
     moderation: { scopes: [categoryModerationScope] },
-    permissionStaff: {
-      moderator: {
-        widgets: ["can_edit"],
-      },
-    },
+    permissionStaff: staffPermissions,
     modules: [
       helloModule,
       adminModule,
       articlesModule,
+      correctionsModule,
       buildContentPublicModule({
         containers: [deskContainers],
         contentTypes: [

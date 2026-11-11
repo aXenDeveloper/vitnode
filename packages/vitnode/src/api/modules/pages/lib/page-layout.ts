@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { eq, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
 
 import type { RegisteredEditablePage } from "@/api/lib/editable-pages";
 import type { ContentNode } from "@/blocks/types";
@@ -13,6 +14,7 @@ import type {
 } from "@/content/editor/types";
 import type { PageLayoutZones } from "@/database/page-layouts";
 
+import { defineCacheEntry } from "@/api/builders";
 import { isBlockAreaInstance } from "@/blocks/area";
 import { zodBlockInstances, zodContentNode } from "@/blocks/validate";
 import { core_page_layouts } from "@/database/page-layouts";
@@ -276,54 +278,85 @@ const selectPageLayout = async (
 
 export const PAGE_LAYOUT_CACHE_TTL_SECONDS = 60 * 60;
 
-const pageLayoutGenerationKey = (pageId: string): string =>
-  `page_layout:generation:${pageId}`;
+/**
+ * The current generation of a page's cached layout. A save moves it, so a read
+ * that loaded the old row before the save files it under a generation nobody
+ * reads again. A missing stamp starts a fresh generation rather than an old
+ * one, so losing it costs a cold read, never a stale one.
+ */
+const pageLayoutGenerationCache = defineCacheEntry({
+  name: "page-layout.generation",
+  version: 1,
+  key: (pageId: string) => [pageId],
+  schema: z.string().min(1),
+  ttlSeconds: 24 * 60 * 60,
+});
 
-const pageLayoutCacheKey = (pageId: string, generation: string): string =>
-  `page_layout:${generation}:${pageId}`;
+/** The zones as JSON: `selectPageLayout` checked that each one is a list. */
+const zodStoredZones = z.record(z.string(), z.array(z.json()));
+
+/** A page's stored layout row (`null` for none), per layout generation. */
+const pageLayoutCache = defineCacheEntry({
+  name: "page-layout",
+  version: 1,
+  key: (pageId: string, generation: string) => [pageId, generation],
+  schema: z.object({
+    row: z
+      .object({
+        pageId: z.string(),
+        updatedAt: z.iso.datetime(),
+        zones: zodStoredZones.transform(
+          zones => zones as unknown as PageLayoutZones,
+        ),
+      })
+      .nullable(),
+  }),
+  ttlSeconds: PAGE_LAYOUT_CACHE_TTL_SECONDS,
+});
 
 const readPageLayoutGeneration = async (
   c: Context,
   pageId: string,
 ): Promise<string> =>
-  (await c.get("cache").get<string>(pageLayoutGenerationKey(pageId))) ?? "0";
-
-interface CachedPageLayout {
-  row: null | (Omit<PageLayoutRow, "updatedAt"> & { updatedAt: string });
-}
-
-const toCachedPageLayout = (row: null | PageLayoutRow): CachedPageLayout => ({
-  row: row === null ? null : { ...row, updatedAt: row.updatedAt.toISOString() },
-});
-
-const fromCachedPageLayout = ({
-  row,
-}: CachedPageLayout): null | PageLayoutRow =>
-  row === null ? null : { ...row, updatedAt: new Date(row.updatedAt) };
+  await c
+    .get("cache")
+    .entry(pageLayoutGenerationCache, pageId)
+    .remember(() => randomUUID());
 
 export const readPageLayout = async (
   c: Context,
   pageId: string,
 ): Promise<null | PageLayoutRow> => {
   const generation = await readPageLayoutGeneration(c, pageId);
+  const { row } = await c
+    .get("cache")
+    .entry(pageLayoutCache, pageId, generation)
+    .remember(async () => {
+      const stored = await selectPageLayout(c.get("db"), pageId);
 
-  return fromCachedPageLayout(
-    await c
-      .get("cache")
-      .remember(
-        pageLayoutCacheKey(pageId, generation),
-        PAGE_LAYOUT_CACHE_TTL_SECONDS,
-        async () =>
-          toCachedPageLayout(await selectPageLayout(c.get("db"), pageId)),
-      ),
-  );
+      return {
+        row:
+          stored === null
+            ? null
+            : {
+                pageId: stored.pageId,
+                updatedAt: stored.updatedAt.toISOString(),
+                zones: zodStoredZones.parse(stored.zones),
+              },
+      };
+    });
+
+  return row === null ? null : { ...row, updatedAt: new Date(row.updatedAt) };
 };
 
 export const expirePageLayoutCache = async (
   c: Context,
   pageId: string,
 ): Promise<void> => {
-  await c.get("cache").set(pageLayoutGenerationKey(pageId), randomUUID());
+  await c
+    .get("cache")
+    .entry(pageLayoutGenerationCache, pageId)
+    .set(randomUUID());
 };
 
 const writePageLayout = async (

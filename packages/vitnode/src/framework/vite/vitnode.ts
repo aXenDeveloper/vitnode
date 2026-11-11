@@ -24,6 +24,11 @@ export interface VitNodeViteOptions
    * build, the development error page in `vite dev` and, with `webSocket`, the
    * `/api/ws` route. Arrays are merged, so your `handlers` are kept alongside
    * VitNode's.
+   *
+   * `features.fastResponse` defaults to `false`: srvx's `FastResponse` loses
+   * the status of a response rebuilt from another response, which Hono does
+   * whenever a middleware sets a header after the handler (`cors`), so every
+   * API error would reach the client as `200`.
    */
   nitro?: NitroPluginConfig;
 }
@@ -67,5 +72,8 @@ export const vitnode = ({
   vitNodePluginRoutes({ appRoot, hostRoutesDir }),
   vitNodeDevError(),
   vitNodeWebSocket({ webSocket }),
-  ...nitroPlugin(nitro),
+  ...nitroPlugin({
+    ...nitro,
+    features: { fastResponse: false, ...nitro?.features },
+  }),
 ];

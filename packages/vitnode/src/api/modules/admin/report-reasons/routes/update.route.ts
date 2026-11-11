@@ -2,18 +2,20 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationReportReasonUpdatedEvent } from "@/api/events/moderation";
 import { multiLangAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { errorSchema, json } from "@/api/modules/moderation/moderation.schema";
 import { core_moderation_report_reasons } from "@/database/moderation";
 import { auditDiff } from "@/lib/audit/diff";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { findReasonRow } from "../lib/reason-rows";
 import { saveReasonWords } from "../lib/reason-words";
 import { idParams, reasonBody } from "../report-reasons.schema";
 
 export const updateReportReasonAdminRoute = buildRoute({
-  adminStaffPermission: { module: "report_reasons", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.report_reasons.canEdit,
   route: {
     method: "patch",
     path: "/{id}",
@@ -70,7 +72,7 @@ export const updateReportReasonAdminRoute = buildRoute({
       );
     });
     await saveReasonWords(c, id, body);
-    await c.get("events").emit("moderation.report_reason.updated", {
+    await c.get("events").emit(moderationReportReasonUpdatedEvent, {
       code: row.code,
       reasonId: id,
     });

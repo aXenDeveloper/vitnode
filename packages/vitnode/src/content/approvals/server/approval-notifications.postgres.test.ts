@@ -15,7 +15,7 @@ import {
 
 import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
-import type { ContentNotificationIntent } from "@/content/server/notifications/intents";
+import type { ContentNotificationIntent } from "@/api/modules/content/tasks/content-notifications.task";
 import type { ContentDatabase } from "@/content/server/service";
 import type { PostgresTestSchema } from "@/tests/postgres";
 

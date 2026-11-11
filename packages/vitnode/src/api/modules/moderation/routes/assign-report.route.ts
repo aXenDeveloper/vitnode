@@ -2,6 +2,7 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationReportAssignedEvent } from "@/api/events/moderation";
 import { resolveStaffPermissions } from "@/api/lib/check-staff-permission";
 import { canOnReport, requireModerator } from "@/api/lib/moderation/access";
 import { core_users } from "@/database/users";
@@ -107,7 +108,7 @@ export const assignReportRoute = buildRoute({
       return next;
     });
 
-    await c.get("events").emit("moderation.report.assigned", {
+    await c.get("events").emit(moderationReportAssignedEvent, {
       assigneeId,
       previousAssigneeId: report.assigneeId,
       reportId: report.id,

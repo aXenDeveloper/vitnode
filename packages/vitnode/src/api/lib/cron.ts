@@ -55,20 +55,21 @@ export interface CronJobConfig extends BuildCronReturn {
  * since its last successful run; due jobs run concurrently. For heavy or
  * retryable work, have the job dispatch queue tasks instead of doing the work
  * itself. A job runs inside core's cron request, so `c.get("plugin")` is
- * `@vitnode/core`: pass your plugin's id to `dispatch` explicitly.
+ * `@vitnode/core`; a dispatched task is still stored under the plugin that
+ * defines it.
  *
  * @example
  * ```ts
  * import { buildCron } from "@vitnode/core/api/lib/cron";
+ *
+ * import { cleanDraftsTask } from "../tasks/clean-drafts.task";
  *
  * export const cleanDraftsCron = buildCron({
  *   name: "clean-drafts",
  *   description: "Delete abandoned drafts",
  *   schedule: "0 3 * * *",
  *   handler: async c => {
- *     await c
- *       .get("queue")
- *       .dispatch({ name: "clean-drafts", pluginId: "@acme/blog" });
+ *     await c.get("queue").dispatch(cleanDraftsTask, {});
  *   },
  * });
  * ```

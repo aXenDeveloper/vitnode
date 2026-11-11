@@ -3,340 +3,14 @@ import type { z } from "zod";
 
 import { randomUUID } from "node:crypto";
 
-import type { SsoProfileField } from "@/lib/sso-profile";
-
 import type { EventDefinition } from "../lib/event-definition";
 import type { EventListenerConfig } from "../lib/events";
 
 import {
   EventDefinitionError,
   EventPayloadValidationError,
-  isEventDefinition,
 } from "../lib/event-definition";
 import { parseJsonWire } from "../lib/json-wire";
-
-export interface ContentContainerEventPayload {
-  containerId: number;
-  definitionId: string;
-  parentId: null | number;
-  pluginId: string;
-}
-
-export interface PaymentEventPayload {
-  /** In minor units. */
-  amount: number;
-  currency: string;
-  paymentId: string;
-  /** The plugin that created the payment. */
-  pluginId: string;
-  /** The provider instance id. */
-  providerId: string;
-  /** The plugin's own reference, e.g. `order:42`. */
-  reference: string;
-  userId: null | number;
-}
-
-export interface ContentApprovalEventPayload {
-  authorId: null | number;
-  containerId: null | number;
-  contentId: string;
-  contentTypeId: string;
-  kind: "create" | "edit";
-  pluginId: string;
-  submissionId: number;
-}
-
-/**
- * Every server-side event, mapped to its payload. Emitting and listening are
- * type-checked against this map.
- *
- * A plugin adds its own events by augmenting the interface:
- *
- * @example
- * ```ts
- * declare module "@vitnode/core/api/models/events" {
- *   interface VitNodeEvents {
- *     "blog.post.created": { categoryId: number; postId: number };
- *   }
- * }
- * ```
- */
-export interface VitNodeEvents {
-  "ai.run.completed": {
-    actionKey: string;
-    actorType: "system" | "user";
-    runId: number;
-    userId: null | number;
-  };
-  "ai.run.failed": {
-    actionKey: string;
-    actorType: "system" | "user";
-    errorCode: null | string;
-    runId: number;
-    userId: null | number;
-  };
-  "content.access.updated": {
-    /** The actions whose rule this scope now sets, inherits or changed. */
-    changedActions: string[];
-    /** The container collection or scope content type id. */
-    family: string;
-    pluginId: string;
-    scopeId: string;
-    userId: null | number;
-  };
-  "content.approval.approved": ContentApprovalEventPayload & {
-    reviewerId: number;
-  };
-  "content.approval.rejected": ContentApprovalEventPayload & {
-    reason: null | string;
-    reviewerId: number;
-  };
-  "content.approval.submitted": ContentApprovalEventPayload & {
-    /** Id of the pending proposal this one replaced, if any. */
-    replacedSubmissionId: null | number;
-  };
-  "content.container.created": ContentContainerEventPayload;
-  "content.container.deleted": ContentContainerEventPayload;
-  "content.container.moved": ContentContainerEventPayload & {
-    fromParentId: null | number;
-    position: number;
-  };
-  "content.container.updated": ContentContainerEventPayload & {
-    changedFields: string[];
-  };
-  "core.page-layout.updated": {
-    changedZones: string[];
-    pageId: string;
-  };
-  "file.editor.uploaded": {
-    fileId: number;
-    kind: "attachment" | "image";
-    userId: number;
-  };
-  "files.alt.updated": {
-    fileId: number;
-    languageCodes: string[];
-    origin: "ai" | "human";
-  };
-  "moderation.report.action": {
-    action: "hide" | "unhide";
-    pluginId: string;
-    reportId: number;
-    targetId: string;
-    targetType: string;
-  };
-  "moderation.report.assigned": {
-    assigneeId: null | number;
-    previousAssigneeId: null | number;
-    reportId: number;
-  };
-  "moderation.report.created": {
-    pluginId: string;
-    reason: string;
-    reportId: number;
-    targetId: string;
-    targetType: string;
-  };
-  "moderation.report.note_deleted": {
-    noteId: number;
-    reportId: number;
-  };
-  "moderation.report.note_updated": {
-    noteId: number;
-    reportId: number;
-  };
-  "moderation.report.reopened": {
-    reportId: number;
-  };
-  "moderation.report.resolved": {
-    reportId: number;
-    resolution: string;
-  };
-  "moderation.report_reason.created": {
-    code: string;
-    reasonId: number;
-  };
-  "moderation.report_reason.deleted": {
-    code: string;
-    reasonId: number;
-  };
-  "moderation.report_reason.reordered": {
-    reasonIds: number[];
-  };
-  "moderation.report_reason.updated": {
-    code: string;
-    reasonId: number;
-  };
-  "moderation.sanction.applied": {
-    /** `null` for an indefinite sanction. */
-    endsAt: Date | null;
-    sanctionId: number;
-    source: "manual" | "threshold";
-    thresholdId: null | number;
-    type: "suspension";
-    userId: number;
-    warningId: null | number;
-  };
-  "moderation.sanction.revoked": {
-    revokedById: number;
-    sanctionId: number;
-    userId: number;
-  };
-  "moderation.warning.issued": {
-    issuedById: number;
-    pluginId: null | string;
-    points: number;
-    reasonId: null | number;
-    reportId: null | number;
-    targetId: null | string;
-    targetType: null | string;
-    userId: number;
-    warningId: number;
-  };
-  "moderation.warning.revoked": {
-    revokedById: number;
-    userId: number;
-    warningId: number;
-  };
-  "moderation.warning_reason.created": {
-    reasonId: number;
-  };
-  "moderation.warning_reason.updated": {
-    reasonId: number;
-  };
-  "moderation.warning_threshold.created": {
-    thresholdId: number;
-  };
-  "moderation.warning_threshold.deleted": {
-    thresholdId: number;
-  };
-  "moderation.warning_threshold.updated": {
-    thresholdId: number;
-  };
-  "notifications.deleted_all": {
-    items: number;
-  };
-  "notifications.emails_cancelled": {
-    count: number;
-  };
-  "notifications.paused": Record<string, never>;
-  "notifications.preferences_reset": {
-    members: number;
-  };
-  "notifications.preferences_updated": {
-    typeIds: string[];
-    userId: number;
-  };
-  "notifications.read_all": {
-    items: number;
-    members: number;
-  };
-  "notifications.resumed": {
-    requeuedEvents: number;
-  };
-  "notifications.type.updated": {
-    typeId: string;
-  };
-  /**
-   * The provider let the checkout lapse without a payment, or core closed an
-   * attempt whose checkout was never created.
-   */
-  "payment.expired": PaymentEventPayload;
-  /** The provider reported a final failure for the checkout, or refused to create it. */
-  "payment.failed": PaymentEventPayload;
-  /** The customer finished the checkout; a delayed payment method is still settling. */
-  "payment.processing": PaymentEventPayload;
-  /**
-   * The provider confirmed the payment, and the status is committed. Emitted
-   * once per payment, after the commit, through the events adapter - with the
-   * default local adapter that is in-process and not retried, so derive what a
-   * customer owns from the stored payment, not from this event.
-   */
-  "payment.succeeded": PaymentEventPayload;
-  "role.created": {
-    roleId: number;
-  };
-  "role.deleted": {
-    roleId: number;
-  };
-  "role.updated": {
-    roleId: number;
-  };
-  "user.avatar.updated": {
-    fileId: null | number;
-    userId: number;
-  };
-  "user.cover.updated": {
-    fileId: null | number;
-    userId: number;
-  };
-  "user.created": {
-    email: string;
-    emailVerified: boolean;
-    name: string;
-    userId: number;
-  };
-  /**
-   * Declared for plugins implementing account deletion - core has no user
-   * deletion flow yet and never emits this itself.
-   */
-  "user.deleted": {
-    email: string;
-    userId: number;
-  };
-  "user.email.verified": {
-    email: string;
-    userId: number;
-  };
-  "user.passkey.created": {
-    passkeyId: number;
-    userId: number;
-  };
-  "user.passkey.deleted": {
-    passkeyId: number;
-    userId: number;
-  };
-  "user.passkey.updated": {
-    name: string;
-    passkeyId: number;
-    userId: number;
-  };
-  "user.password.updated": {
-    userId: number;
-  };
-  "user.sessions.revoked": {
-    deviceId: null | number;
-    sessions: number;
-    userId: number;
-  };
-  "user.sso.linked": {
-    email: string;
-    providerId: string;
-    userId: number;
-  };
-  "user.sso.preferences_updated": {
-    sources: Partial<Record<SsoProfileField, null | string>>;
-    sync: Record<string, boolean>;
-    userId: number;
-  };
-  "user.sso.profile_synced": {
-    fields: SsoProfileField[];
-    providerId: string;
-    trigger: "import" | "sign_in" | "sync";
-    userId: number;
-  };
-  "user.sso.unlinked": {
-    providerId: string;
-    userId: number;
-  };
-  "user.updated": {
-    email: string;
-    name: string;
-    userId: number;
-  };
-}
-
-export type VitNodeEventName = keyof VitNodeEvents;
 
 /**
  * Who caused an event, resolved from the emitting request: the admin on an
@@ -348,8 +22,11 @@ export interface EventActor {
   type: "admin" | "system" | "user";
 }
 
-/** An emitted event with its metadata, passed to listeners and adapters. */
-export interface EventEnvelope<K extends VitNodeEventName = VitNodeEventName> {
+/**
+ * An emitted event with its metadata, passed to listeners and adapters.
+ * `Payload` is the event schema's output; adapters see `unknown`.
+ */
+export interface EventEnvelope<Payload = unknown> {
   /** Who caused the event. */
   actor: EventActor;
   /** When `emit()` was called. */
@@ -357,9 +34,9 @@ export interface EventEnvelope<K extends VitNodeEventName = VitNodeEventName> {
   /** A random UUID, unique per emit; also returned in the result. */
   eventId: string;
   /** The event name, e.g. `"role.created"`. */
-  name: K;
-  /** The event's data, typed by its {@link VitNodeEvents} entry. */
-  payload: VitNodeEvents[K];
+  name: string;
+  /** The event's data: its schema's output, validated before any listener ran. */
+  payload: Payload;
   /** Plugin that emitted the event. */
   pluginId: string;
 }
@@ -444,7 +121,7 @@ export class EventsModel {
         : user
           ? { type: "user", id: user.id }
           : { type: "system" },
-    } as EventEnvelope;
+    };
   }
 
   private async publish(envelope: EventEnvelope): Promise<EventEmitResult> {
@@ -476,111 +153,51 @@ export class EventsModel {
     }
   }
 
-  private registeredDefinition(name: string): EventDefinition | undefined {
-    return this.c.get("core").events.definitions?.get(name);
-  }
-
-  private async rejectInvalidPayload(
-    envelope: EventEnvelope,
-    reason: string,
-  ): Promise<EventEmitResult> {
-    const error = `Invalid payload: ${reason}`;
-    await this.c
-      .get("log")
-      .error(`Event "${envelope.name}" was not delivered. ${error}`);
-
-    return {
-      eventId: envelope.eventId,
-      status: "delivered",
-      delivered: 0,
-      failures: [
-        {
-          pluginId: envelope.pluginId,
-          module: "validation",
-          listener: envelope.name,
-          error,
-        },
-      ],
-    };
-  }
-
   /**
    * Emits a schema-defined event. The payload is type-checked against the
    * schema's input, copied to JSON and validated before the adapter or any
-   * listener sees it; listeners receive the schema's output. Delivery then
-   * works exactly like an emit by name: listener and adapter errors are
-   * logged and returned in `failures`.
+   * listener sees it; listeners receive the schema's output. Listener and
+   * adapter errors are logged and returned in `failures`, never thrown.
+   *
+   * With the local adapter the promise resolves after every listener has
+   * finished, so await it when listeners must run before the response, and
+   * keep listeners fast.
    *
    * @throws {EventPayloadValidationError} When the payload is not JSON or the
    * schema rejects it. Nothing was delivered.
    * @throws {EventDefinitionError} When a different definition is registered
    * under the same name.
+   *
+   * @example
+   * ```ts
+   * import { roleCreatedEvent } from "@vitnode/core/api/events/roles";
+   *
+   * await c.get("events").emit(roleCreatedEvent, { roleId: role.id });
+   * ```
    */
   async emit<Schema extends z.ZodType>(
     event: EventDefinition<string, string, Schema>,
     payload: z.input<Schema>,
     options?: EventEmitOptions,
-  ): Promise<EventEmitResult>;
-  /**
-   * Publishes an event to its listeners through the configured adapter.
-   *
-   * Never throws: listener and adapter errors are logged and returned in
-   * `failures`. With the local adapter the promise resolves after every
-   * listener has finished, so await it when listeners must run before the
-   * response, and keep listeners fast. When `name` belongs to a registered
-   * event definition, the payload is validated first; an invalid one is not
-   * delivered and comes back as a failure with `module: "validation"`.
-   *
-   * @example
-   * ```ts
-   * await c.get("events").emit("role.created", { roleId: role.id });
-   * ```
-   */
-  async emit<K extends VitNodeEventName>(
-    name: K,
-    payload: VitNodeEvents[K],
-    options?: EventEmitOptions,
-  ): Promise<EventEmitResult>;
-  async emit(
-    event: EventDefinition | VitNodeEventName,
-    payload: unknown,
-    options?: EventEmitOptions,
   ): Promise<EventEmitResult> {
-    if (isEventDefinition(event)) {
-      const registered = this.registeredDefinition(event.name);
-      if (
-        registered !== undefined &&
-        (registered.payload !== event.payload ||
-          registered.pluginId !== event.pluginId)
-      ) {
-        throw new EventDefinitionError(
-          `A different definition of the event "${event.name}" is registered (by "${registered.pluginId}"). Emit the registered definition, or rename one of them.`,
-        );
-      }
-
-      const parsed = await parseJsonWire(event.payload, payload, "payload");
-      if (!parsed.success) {
-        throw new EventPayloadValidationError(event.name, parsed.reason);
-      }
-
-      return await this.publish(
-        this.envelope(event.name, parsed.data, options),
+    const registered = this.c.get("core").events.definitions?.get(event.name);
+    if (
+      registered !== undefined &&
+      registered !== event &&
+      (registered.payload !== event.payload ||
+        registered.pluginId !== event.pluginId)
+    ) {
+      throw new EventDefinitionError(
+        `A different definition of the event "${event.name}" is registered (by "${registered.pluginId}"). Emit the registered definition, or rename one of them.`,
       );
     }
 
-    const definition = this.registeredDefinition(event);
-    if (definition === undefined) {
-      return await this.publish(this.envelope(event, payload, options));
+    const parsed = await parseJsonWire(event.payload, payload, "payload");
+    if (!parsed.success) {
+      throw new EventPayloadValidationError(event.name, parsed.reason);
     }
 
-    const parsed = await parseJsonWire(definition.payload, payload, "payload");
-
-    return parsed.success
-      ? await this.publish(this.envelope(event, parsed.data, options))
-      : await this.rejectInvalidPayload(
-          this.envelope(event, payload, options),
-          parsed.reason,
-        );
+    return await this.publish(this.envelope(event.name, parsed.data, options));
   }
 
   /** Name of the configured adapter, e.g. `"local"`. */

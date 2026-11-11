@@ -11,6 +11,7 @@ import { defineContentContainer } from "./define";
 import {
   assertContentContainerNamespaces,
   assertContentContainerReferences,
+  contentContainerAdminStaffPermission,
   validateContentContainers,
 } from "./registry";
 
@@ -189,5 +190,32 @@ describe("assertContentContainerReferences", () => {
     expect(run).toThrow(
       /Field "board" uses the container collection "test.sections", which no plugin registers/,
     );
+  });
+});
+
+describe("contentContainerAdminStaffPermission", () => {
+  it("references a generated permission of the collection's module", () => {
+    expect(
+      contentContainerAdminStaffPermission(
+        "@vitnode/example",
+        boards,
+        "can_edit",
+      ),
+    ).toEqual({
+      module: boards.admin.permissionModule,
+      permission: "can_edit",
+      plugin: "@vitnode/example",
+      staffType: "admin",
+    });
+  });
+
+  it("throws for a permission collections do not generate", () => {
+    expect(() =>
+      contentContainerAdminStaffPermission(
+        "@vitnode/example",
+        boards,
+        "can_publish",
+      ),
+    ).toThrow(/"can_publish" is not generated/);
   });
 });

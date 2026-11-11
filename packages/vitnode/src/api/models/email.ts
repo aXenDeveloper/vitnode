@@ -8,6 +8,7 @@ import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
 import { runAfterResponse } from "@/api/lib/after-response";
 import { processQueueTasksByIds } from "@/api/modules/queue/lib/process-queue-tasks";
+import { sendEmailQueueTask } from "@/api/modules/queue/tasks/send-email.task";
 
 import type { DefaultTemplateEmailProps } from "../../emails/default-template";
 
@@ -241,17 +242,13 @@ export class EmailModel {
     this.requireProvider();
     const email = await this.build(args);
 
-    const { id } = await this.c.get("queue").dispatch({
-      name: "send-email",
-      // The task is core's even when a plugin route sends the email.
-      pluginId: "@vitnode/core",
-      payload: {
-        to: email.to,
-        subject: email.subject,
-        html: email.html,
-        text: email.text,
-        ...(email.replyTo ? { replyTo: email.replyTo } : {}),
-      },
+    // The task is core's even when a plugin route sends the email.
+    const { id } = await this.c.get("queue").dispatch(sendEmailQueueTask, {
+      to: email.to,
+      subject: email.subject,
+      html: email.html,
+      text: email.text,
+      ...(email.replyTo ? { replyTo: email.replyTo } : {}),
     });
     if (id !== null) this.queued.push(id);
   }

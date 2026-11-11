@@ -85,11 +85,23 @@ export type NotesUpdateInput = z.infer<typeof zodNotesUpdateBody>;
 
 ### Implement the service
 
-Each operation in `notes.service.ts` is a typed stub that rejects with `501`:
+Each operation in `notes.service.ts` is a typed stub that rejects with `NotesNotImplementedError`. The service knows nothing about HTTP:
 
 ```ts title="plugins/site-notes/src/api/modules/notes/notes.service.ts"
-export const createNotesService = (deps: NotesServiceDeps) => ({
-  deps,
+/** Rejected by an operation that is not implemented yet. The routes answer it with 501. */
+export class NotesNotImplementedError extends Error {
+  constructor(operation: string) {
+    super(
+      `notes: ${operation} is not implemented yet. Implement it in notes.service.ts.`,
+    );
+    this.name = "NotesNotImplementedError";
+  }
+}
+
+const notImplemented = async (operation: string): Promise<never> =>
+  Promise.reject(new NotesNotImplementedError(operation));
+
+export const createNotesService = (_deps: NotesServiceDeps) => ({
   list: async (): Promise<NotesItem[]> => notImplemented("list"),
   /** Resolves `null` when there is no entry with this id. */
   get: async (_id: number): Promise<NotesItem | null> => notImplemented("get"),
@@ -97,14 +109,37 @@ export const createNotesService = (deps: NotesServiceDeps) => ({
 });
 ```
 
-Keep the signatures and replace the bodies, one operation at a time. The routes already answer `404` when `get` or `update` resolves `null`, or `remove` resolves `false`. With the `site_notes` table from the [Database](/docs/dev/database) lesson, `list` becomes:
+Each route catches that error and maps it to a typed `501` response, which it declares in `responses`:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/list.route.ts"
+handler: async c => {
+  try {
+    return c.json(await createNotesService({ db: c.get("db") }).list(), 200);
+  } catch (error) {
+    if (error instanceof NotesNotImplementedError) {
+      return c.json(
+        { error: "not_implemented" as const, message: error.message },
+        501,
+      );
+    }
+    throw error;
+  }
+},
+```
+
+Keep the signatures and replace the bodies, one operation at a time. Rename `_deps` to `{ db }` once an operation queries. The routes already answer `404` when `get` or `update` resolves `null`, or `remove` resolves `false`. With the `site_notes` table from the [Database](/docs/dev/database) lesson, `list` becomes:
 
 ```ts title="plugins/site-notes/src/api/modules/notes/notes.service.ts"
-list: async (): Promise<NotesItem[]> =>
-  deps.db
-    .select({ id: site_notes.id, title: site_notes.title, body: site_notes.body })
-    .from(site_notes),
+export const createNotesService = ({ db }: NotesServiceDeps) => ({
+  list: async (): Promise<NotesItem[]> =>
+    db
+      .select({ id: site_notes.id, title: site_notes.title, body: site_notes.body })
+      .from(site_notes),
+  // the other operations
+});
 ```
+
+When every operation is implemented, drop the `catch` blocks, the `501` responses and `NotesNotImplementedError`, as each route's comment says.
 
 Import `site_notes` from `@/database/notes`. The generator does not create the table or a migration. [Add a service](/docs/dev/plugins/api/services) explains where the service's dependencies come from.
 
@@ -114,7 +149,7 @@ Import `site_notes` from `@/database/notes`. The generator does not create the t
 
 ## Check the result
 
-Call `GET /notes` with the temporary `fetcher` button from [Generate an endpoint](/docs/dev/plugins/api/generate-route#call-it-from-a-page), using `module: "notes"` and `path: "/"` with no `args`. Before you implement `list`, it answers `501` with `notes: list is not implemented yet. Implement it in notes.service.ts.` Afterwards it returns the rows. Invalid input answers `400` either way, because validation runs before the service. Through `fetcher`, TypeScript already rejects a body such as `{ "title": 1 }` at compile time.
+Call `GET /notes` with the temporary `fetcher` button from [Generate an endpoint](/docs/dev/plugins/api/generate-route#call-it-from-a-page), using `module: "notes"` and `path: "/"` with no `args`. Before you implement `list`, it answers `501` with `{"error":"not_implemented","message":"notes: list is not implemented yet. Implement it in notes.service.ts."}`. Afterwards it returns the rows. Invalid input answers `400` either way, because validation runs before the service. Through `fetcher`, TypeScript already rejects a body such as `{ "title": 1 }` at compile time.
 
 ## Admin resources
 
@@ -131,7 +166,16 @@ pnpm vitnode g resource notes --admin --kind api --permission-module notes --dec
 | `update`       | `notes.can_edit`   |
 | `delete`       | `notes.can_delete` |
 
-Without `--declare-permission`, the command lists the permissions missing from `permissionStaff.admin` and writes nothing. With it, they are added to `config.api.ts` with their AdminCP labels. A staff permission decides who may call an operation, not which entries they may change. Check ownership in the service or handler when it matters.
+Without `--declare-permission`, the command lists the permissions missing from the plugin's `defineStaffPermissions(manifest, {...})` and writes nothing:
+
+```txt
+✖ notes.can_view, notes.can_create, notes.can_edit, notes.can_delete are not declared.
+  Nobody can be granted a permission the plugin does not declare in admin["notes"] of its defineStaffPermissions(manifest, {...}).
+
+  Pass --declare-permission to add them (and their labels).
+```
+
+With it, they are added to `src/staff-permissions.ts`, which the generator creates and passes to `buildApiPlugin({ permissionStaff })` when the plugin has none, with their AdminCP labels. Each route guards with its reference, such as `staffPermissions.admin.notes.canView`. A staff permission decides who may call an operation, not which entries they may change. Check ownership in the service or handler when it matters.
 
 ## Related
 

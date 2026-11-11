@@ -2,6 +2,7 @@ import { and, asc, gt, inArray } from "drizzle-orm";
 
 import type { AnyContentModel } from "@/content/server/model";
 
+import { cacheStore } from "@/api/lib/cache";
 import { buildCron } from "@/api/lib/cron";
 import { searchItemIdFromKey } from "@/api/models/search";
 import { contentAccessSourceOf } from "@/content/access/server/source";
@@ -34,7 +35,7 @@ export const contentSearchAccessCron = buildCron({
     if (models.length === 0) return;
 
     const itemTypes = models.map(model => model.definition.id);
-    const cache = c.get("cache");
+    const cache = cacheStore(c);
     let cursor = Number((await cache.getSystem<string>(CURSOR_KEY)) ?? 0) || 0;
     let corrected = 0;
 

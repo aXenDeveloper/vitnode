@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { StaffPermissionSet } from "@/api/lib/permission-staff";
 
 import { EMPTY_STAFF_PERMISSION_SET } from "@/api/lib/staff-permission";
+import { defineStaffPermissions } from "@/lib/staff-permissions";
 
 import type {
   AdminNavConfig,
@@ -95,7 +96,10 @@ describe("the palette indexes only what the sidebar shows", () => {
             {
               href: "/admin/example/reports",
               id: "reports",
-              permission: { module: "reports", permission: "can_view" },
+              permission: defineStaffPermissions(
+                { id: "@vitnode/example" },
+                { admin: { reports: ["can_view"] } },
+              ).admin.reports.canView,
             },
           ],
         },

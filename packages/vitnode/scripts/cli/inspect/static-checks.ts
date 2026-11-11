@@ -130,8 +130,8 @@ export const registrationCheck = (root: string): PluginCheck => {
     return {
       details: [errorMessage(error)],
       name,
-      status: "skipped",
-      summary: "the module tree could not be read from source",
+      status: "warning",
+      summary: "not verified - the module tree could not be read from source",
     };
   }
 

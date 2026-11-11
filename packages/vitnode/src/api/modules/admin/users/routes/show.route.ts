@@ -8,9 +8,10 @@ import {
   zodUserImagePolicy,
 } from "@/api/lib/user-images";
 import { UserModel } from "@/api/models/user";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const showUserAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canView,
   route: {
     method: "get",
     description: "Get a single user by id (Admin only)",

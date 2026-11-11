@@ -1,12 +1,13 @@
 import { buildRoute } from "@/api/builders";
 import { MANUAL_UPDATE_CHECK_COOLDOWN_MS } from "@/api/lib/updates/lock";
 import { loadUpdatesOverview } from "@/api/lib/updates/status";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { serializeComponentUpdate } from "../lib/serialize-update";
 import { updatesOverviewSchema } from "../updates.schema";
 
 export const pluginUpdatesAdminRoute = buildRoute({
-  adminStaffPermission: { module: "plugins", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.plugins.canView,
   route: {
     method: "get",
     description:

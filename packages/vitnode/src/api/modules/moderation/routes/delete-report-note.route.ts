@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationReportNoteDeletedEvent } from "@/api/events/moderation";
 import { requireModerator } from "@/api/lib/moderation/access";
 import { core_moderation_report_events } from "@/database/moderation";
 
@@ -47,7 +48,7 @@ export const deleteReportNoteRoute = buildRoute({
       });
     });
 
-    await c.get("events").emit("moderation.report.note_deleted", {
+    await c.get("events").emit(moderationReportNoteDeletedEvent, {
       noteId: note.id,
       reportId: report.id,
     });

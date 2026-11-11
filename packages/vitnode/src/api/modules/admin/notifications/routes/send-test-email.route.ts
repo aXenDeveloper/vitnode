@@ -3,9 +3,10 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { queueNotificationTestEmail } from "@/api/models/notifications/admin";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const sendNotificationTestEmailRoute = buildRoute({
-  adminStaffPermission: { module: "notifications", permission: "can_manage" },
+  adminStaffPermission: coreStaffPermissions.admin.notifications.canManage,
   route: {
     method: "post",
     description:

@@ -1,7 +1,11 @@
-import type { MiddlewareHandler } from "hono";
+import type { Context, MiddlewareHandler } from "hono";
 
 import { OpenAPIHono, z } from "@hono/zod-openapi";
 import { describe, expect, it } from "vitest";
+
+import { defineStaffPermissions } from "@/lib/staff-permissions";
+import { createTestCache } from "@/tests/cache";
+import { grantStaffPermissions } from "@/tests/staff-permissions";
 
 import { buildRoute } from "./route";
 
@@ -54,7 +58,10 @@ describe("buildRoute", () => {
 
     const { route } = buildRoute({
       pluginId: "@vitnode/test",
-      adminStaffPermission: { module: "articles", permission: "can_view" },
+      adminStaffPermission: defineStaffPermissions(
+        { id: "@vitnode/test" },
+        { admin: { articles: ["can_view"] } },
+      ).admin.articles.canView,
       route: {
         method: "get",
         path: "/",
@@ -69,4 +76,63 @@ describe("buildRoute", () => {
     expect(middleware).toHaveLength(3);
     expect(middleware.at(-1)).toBe(custom);
   });
+});
+
+describe("buildRoute staff permission guards", () => {
+  const ADMIN = { id: 1, roleId: 1 };
+  const owner = defineStaffPermissions(
+    { id: "@vitnode/route-owner" },
+    { admin: { notes: ["can_view"] }, moderator: { notes: ["can_view"] } },
+  );
+  const foreign = defineStaffPermissions(
+    { id: "@vitnode/foreign" },
+    { admin: { notes: ["can_view"] } },
+  );
+
+  const requestAs = async (granted: { plugin: string }) => {
+    const cache = createTestCache();
+    await grantStaffPermissions(cache, {
+      permissions: [
+        { module: "notes", permission: "can_view", plugin: granted.plugin },
+      ],
+      userId: ADMIN.id,
+    });
+    const app = new OpenAPIHono();
+    app.use("*", async (c, next) => {
+      c.set("admin", { user: ADMIN } as unknown as Context["var"]["admin"]);
+      c.set("cache", cache);
+      await next();
+    });
+    const route = buildRoute({
+      pluginId: "@vitnode/route-owner",
+      adminStaffPermission: foreign.admin.notes.canView,
+      route: { method: "get", path: "/", responses: okResponse },
+      handler: c => c.json({ plugin: c.get("plugin").id }, 200),
+    });
+    app.route("/", mount(route));
+
+    return (await app.request("/")).status;
+  };
+
+  it("checks another plugin's reference against that plugin, not the route's", async () => {
+    expect(await requestAs({ plugin: "@vitnode/route-owner" })).toBe(403);
+    expect(await requestAs({ plugin: "@vitnode/foreign" })).toBe(200);
+  });
+
+  it.each([
+    ["adminStaffPermission", owner.moderator.notes.canView],
+    ["moderatorStaffPermission", owner.admin.notes.canView],
+  ] as const)(
+    "refuses a reference of the other staff type in %s from an untyped caller",
+    (option, ref) => {
+      expect(() =>
+        buildRoute({
+          pluginId: "@vitnode/route-owner",
+          [option]: ref as never,
+          route: { method: "get", path: "/", responses: okResponse },
+          handler: c => c.json({ plugin: c.get("plugin").id }, 200),
+        }),
+      ).toThrow(/received the (admin|moderator) permission/);
+    },
+  );
 });

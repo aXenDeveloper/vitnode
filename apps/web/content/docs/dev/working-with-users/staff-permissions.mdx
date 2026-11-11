@@ -1,6 +1,6 @@
 ---
 title: Permissions
-description: Declare a VitNode staff permission in the site-notes plugin, guard a create endpoint with it, and check that VitNode refuses a restricted administrator until you grant the permission.
+description: Declare a VitNode staff permission with defineStaffPermissions, guard a create endpoint with it and check that a restricted admin is refused until granted.
 icon: ShieldCheck
 ---
 
@@ -20,29 +20,42 @@ Staff permissions decide what each AdminCP administrator or moderator may do. A 
 
 ### Declare the permission
 
-Add `permissionStaff` to `buildApiPlugin` in `src/config.api.ts`. This is an excerpt; keep the rest of the file:
+Create `src/staff-permissions.ts`. `defineStaffPermissions` takes the plugin's manifest and the permissions it declares, and returns typed references to them:
+
+```ts title="plugins/site-notes/src/staff-permissions.ts"
+import { defineStaffPermissions } from "@vitnode/core/lib/staff-permissions";
+
+import { manifest } from "@/manifest.gen";
+
+export const staffPermissions = defineStaffPermissions(manifest, {
+  admin: { notes: ["can_create"] },
+});
+```
+
+`admin` holds permissions for AdminCP administrators, `notes` is the permission module, and `can_create` the permission. Together with the plugin id they form `site-notes:notes:can_create`. Nobody can grant a permission that is not declared, so only unrestricted administrators would ever pass its check.
+
+Then register the declarations in `src/config.api.ts`. This is an excerpt; keep the rest of the file:
 
 ```ts title="plugins/site-notes/src/config.api.ts"
+import { staffPermissions } from "@/staff-permissions"; // [!code ++]
+
 export const siteNotesApiPlugin = () =>
   buildApiPlugin({
     manifest,
     modules: [helloModule, notesModule],
-    // [!code ++:3]
-    permissionStaff: {
-      admin: { notes: ["can_create"] }
-    }
+    permissionStaff: staffPermissions, // [!code ++]
   });
 ```
 
-`admin` holds permissions for AdminCP administrators, `notes` is the permission module, and `can_create` the permission. Together with the plugin id they form `site-notes:notes:can_create`. Nobody can grant a permission that is not declared here, so only unrestricted administrators would ever pass its check.
+Keep the declarations in their own file rather than in `config.api.ts`. The file imports no server code, so routes and the AdminCP navigation can import it without a circular import.
 
 Moderators work on the site, not in the AdminCP, so their permissions go under `moderator`. A plugin can declare both, for example letting moderators delete notes they find on the site:
 
-```ts title="plugins/site-notes/src/config.api.ts"
-permissionStaff: {
+```ts title="plugins/site-notes/src/staff-permissions.ts"
+export const staffPermissions = defineStaffPermissions(manifest, {
   admin: { notes: ["can_create"] },
   moderator: { notes: ["can_delete"] }, // [!code highlight]
-},
+});
 ```
 
 You grant `site-notes:notes:can_delete` in **Staff → Moderators**, and VitNode checks it against the signed-in member. [Moderator permissions](#moderator-permissions) shows the routes that use it; this lesson continues with `can_create` only.
@@ -80,12 +93,13 @@ import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
 import { site_notes } from "@/database/notes";
+import { staffPermissions } from "@/staff-permissions";
 
 import { zodNote } from "../../../notes/notes.schema";
 
 export const createNoteRoute = buildRoute({
   // [!code ++]
-  adminStaffPermission: { module: "notes", permission: "can_create" },
+  adminStaffPermission: staffPermissions.admin.notes.canCreate,
   route: {
     method: "post",
     path: "/",
@@ -121,7 +135,7 @@ export const createNoteRoute = buildRoute({
 });
 ```
 
-`adminStaffPermission` checks the permission of the plugin that owns the route, so it never names `site-notes`. Anyone without it gets `403` before the handler runs, and an invalid body gets `400`.
+Each declared permission becomes a camelCase reference under its module: `can_create` is `staffPermissions.admin.notes.canCreate`. A typo, or a permission the plugin does not declare, is a compile error. Anyone without the permission gets `403` before the handler runs, and an invalid body gets `400`.
 
 </Step>
 
@@ -245,8 +259,8 @@ The check happens on the server. Hiding a button or a sidebar link only tidies t
 
 When one permission only makes sense with another, declare the dependency. The editor locks the dependent permission until you tick its prerequisite:
 
-```ts title="plugins/site-notes/src/config.api.ts"
-permissionStaff: {
+```ts title="plugins/site-notes/src/staff-permissions.ts"
+export const staffPermissions = defineStaffPermissions(manifest, {
   admin: {
     notes: [
       "can_view",
@@ -254,28 +268,26 @@ permissionStaff: {
       { permission: "can_delete", dependsOn: ["can_view"] },
     ],
   },
-},
+});
 ```
 
-Each permission you add needs its own label and its own `adminStaffPermission` on the routes it protects.
-
-## Reference permissions with types
-
-To stop repeating `{ module: "notes", permission: "can_create" }` in routes and navigation, declare the permissions once with `defineStaffPermissions` and use `staffPermissions.admin.notes.canCreate` instead. See [Typed permission references](/docs/dev/working-with-users/staff-permission-refs).
+Each permission you add needs its own label and its own `adminStaffPermission` on the routes it protects. [Permission references](/docs/dev/working-with-users/staff-permission-refs) covers the naming rule, other plugins' permissions and Content Engine permissions.
 
 ## Check a permission in code
 
-`adminStaffPermission` and `moderatorStaffPermission` cover a whole route. For a decision inside a handler, such as letting staff edit any note but members only their own, call `checkStaffPermission(c, { type, plugin, module, permission })` from `@vitnode/core/api/lib/check-staff-permission`; it resolves to `true` or `false`. In AdminCP components, `useAdminPermission({ plugin, module, permission })` from `@vitnode/core/tanstack/admin` answers the same question for the signed-in administrator, for showing or hiding controls.
+`adminStaffPermission` and `moderatorStaffPermission` cover a whole route. They decide who may call it, not which notes that person may touch: a guard is not resource authorization. For a decision inside a handler, such as letting staff edit any note but members only their own, call `checkStaffPermission(c, { type, plugin, module, permission })` from `@vitnode/core/api/lib/check-staff-permission`; it resolves to `true` or `false`. `staffPermissionArgs(ref)` from `@vitnode/core/lib/staff-permissions` turns a reference into those `plugin`, `module` and `permission` fields.
+
+In AdminCP components, `useAdminPermission({ plugin, module, permission })` from `@vitnode/core/tanstack/admin` answers the same question for the signed-in administrator, for showing or hiding controls.
 
 ## Moderator permissions
 
 A moderator acts on the site with their normal member session, so moderator routes live in a public module, not under `admin`. These examples declare two moderator permissions:
 
-```ts title="plugins/site-notes/src/config.api.ts"
-permissionStaff: {
+```ts title="plugins/site-notes/src/staff-permissions.ts"
+export const staffPermissions = defineStaffPermissions(manifest, {
   admin: { notes: ["can_create"] },
   moderator: { notes: ["can_delete", "can_view_details"] },
-},
+});
 ```
 
 ```json title="plugins/site-notes/src/locales/en.json"
@@ -299,7 +311,7 @@ All three check the signed-in member, and a signed-out visitor never passes.
 
 ### Guard a whole route
 
-`moderatorStaffPermission` works like `adminStaffPermission`, but checks the member's site session. Anyone who is not a moderator with **Delete notes** gets `403` before the handler runs:
+`moderatorStaffPermission` works like `adminStaffPermission`, but checks the member's site session and takes a reference from `staffPermissions.moderator`. An admin reference, even one with the same module and name, is a compile error there. Anyone who is not a moderator with **Delete notes** gets `403` before the handler runs:
 
 ```ts title="plugins/site-notes/src/api/modules/notes/routes/delete.route.ts"
 import { z } from "@hono/zod-openapi";
@@ -307,10 +319,11 @@ import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
 import { site_notes } from "@/database/notes";
+import { staffPermissions } from "@/staff-permissions";
 
 export const deleteNoteRoute = buildRoute({
   // [!code ++]
-  moderatorStaffPermission: { module: "notes", permission: "can_delete" },
+  moderatorStaffPermission: staffPermissions.moderator.notes.canDelete,
   route: {
     method: "delete",
     path: "/{id}",
@@ -358,11 +371,12 @@ The public note route answers everyone, and adds when the note was written for m
 ```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
 import { z } from "@hono/zod-openapi";
 import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+import { staffPermissionArgs } from "@vitnode/core/lib/staff-permissions";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
 import { site_notes } from "@/database/notes";
-import { manifest } from "@/manifest.gen";
+import { staffPermissions } from "@/staff-permissions";
 
 import { zodNote } from "../notes.schema";
 
@@ -392,9 +406,7 @@ export const showNoteRoute = buildRoute({
 
     const canViewDetails = await checkStaffPermission(c, {
       type: "moderator",
-      plugin: manifest.id,
-      module: "notes",
-      permission: "can_view_details"
+      ...staffPermissionArgs(staffPermissions.moderator.notes.canViewDetails)
     });
 
     return c.json(
@@ -411,8 +423,8 @@ export const showNoteRoute = buildRoute({
 ```
 
 - **The extra field is optional in the schema**, so the fetcher types it as `string | undefined` and the page shows it only when it is there.
-- **`plugin: manifest.id`** is required here. Only the route options fill in the plugin for you.
-- **Don't cache the moderator's answer for everyone.** A response that depends on who asks must not go into a shared cache key; cache the public part, then add the extras.
+- **`staffPermissionArgs`** spreads the reference's `plugin`, `module` and `permission`, so the check names the same declared permission a route guard would. Pass `type` yourself.
+- **Don't cache the moderator's answer for everyone.** A response that depends on who asks must not go into a shared cache entry; cache the public part, then add the extras.
 
 ### Refuse one option
 
@@ -432,9 +444,7 @@ const { details } = c.req.valid("query");
 if (details) {
   await assertStaffPermission(c, {
     type: "moderator",
-    plugin: manifest.id,
-    module: "notes",
-    permission: "can_view_details",
+    ...staffPermissionArgs(staffPermissions.moderator.notes.canViewDetails),
   });
 }
 ```
@@ -443,4 +453,4 @@ Call it before the handler reads or changes anything, so a refused request has n
 
 Moderator permissions can also be limited to some resources, such as some forum sections, with `scope` on the entry. [Scoped moderator permissions](/docs/dev/moderation/scoped-permissions) covers the scope families and the AdminCP picker. `moderatorStaffPermission` and a check without a `resource` pass only for grants on all resources; to allow a moderator of one section, pass `resource` to `checkStaffPermission` or `assertStaffPermission` in the handler.
 
-Content Engine content types declare their own permissions (`can_view`, `can_create`, `can_edit`, ...). Declaring the same module in `permissionStaff` replaces them, so use your own module names for custom permissions.
+Content Engine content types declare their own permissions (`can_view`, `can_create`, `can_edit`, ...). Declaring the same module in `defineStaffPermissions` replaces them, so use your own module names for custom permissions. To guard a route with a content type's generated permission, see [Content Engine permissions](/docs/dev/working-with-users/staff-permission-refs#content-engine-permissions).

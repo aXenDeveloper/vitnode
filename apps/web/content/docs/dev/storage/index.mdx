@@ -1,6 +1,6 @@
 ---
 title: Storage
-description: Upload images in a VitNode plugin route with c.get("storage"). Validate the file, read its public URL and dimensions, and delete it again, on local disk, S3, R2 or Supabase.
+description: Upload images in a VitNode plugin route with c.get("storage"), validate them, read the URL and dimensions and delete them on local disk, S3, R2 or Supabase.
 icon: HardDrive
 ---
 
@@ -23,9 +23,10 @@ Create `src/api/modules/admin/notes/routes/upload-image.route.ts`:
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
+import { staffPermissions } from "@/staff-permissions";
 
 export const uploadNoteImageRoute = buildRoute({
-  adminStaffPermission: { module: "notes", permission: "can_create" },
+  adminStaffPermission: staffPermissions.admin.notes.canCreate,
   route: {
     method: "post",
     path: "/images",
@@ -96,9 +97,10 @@ Create `src/api/modules/admin/notes/routes/delete-image.route.ts`. It deletes by
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
+import { staffPermissions } from "@/staff-permissions";
 
 export const deleteNoteImageRoute = buildRoute({
-  adminStaffPermission: { module: "notes", permission: "can_create" },
+  adminStaffPermission: staffPermissions.admin.notes.canCreate,
   route: {
     method: "delete",
     path: "/images/{id}",

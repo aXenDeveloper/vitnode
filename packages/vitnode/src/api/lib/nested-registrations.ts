@@ -71,9 +71,17 @@ export const findNestedRegistrations = (
   return found;
 };
 
-export const describeNestedRegistration = ({
-  kind,
-  modulePath,
-  names,
-}: NestedRegistration): string =>
-  `${kind} on nested module "${modulePath}" (${names.join(", ")}) never run: move them to the top-level module "${modulePath.split("/")[0] ?? modulePath}".`;
+/**
+ * One line saying what a nested registration is, that it never runs and how to
+ * fix it. With `pluginId`, the line also names the plugin, for logs that
+ * mix plugins.
+ */
+export const describeNestedRegistration = (
+  { kind, modulePath, names }: NestedRegistration,
+  pluginId?: string,
+): string => {
+  const topLevel = modulePath.split("/")[0] ?? modulePath;
+  const declared = names.map(name => `"${name}"`).join(", ");
+
+  return `${pluginId === undefined ? "" : `${pluginId}: `}${kind} ${declared} on nested module "${modulePath}" never run - buildApiPlugin collects ${kind} from top-level modules only. Move ${names.length === 1 ? "it" : "them"} to buildModule({ ${kind} }) of the top-level module "${topLevel}".`;
+};

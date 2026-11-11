@@ -1,7 +1,10 @@
 import type { PermissionStaffEntryInput } from "../../api/lib/permission-staff";
+import type { AdminStaffPermissionRef } from "../../lib/staff-permissions";
+import type { ContentPermission } from "../registry";
 import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentContainerDefinition } from "./types";
 
+import { declaredStaffPermission } from "../../lib/staff-permissions";
 import { CONTENT_PERMISSIONS } from "../const";
 import { ContentEngineError } from "../errors";
 import {
@@ -137,6 +140,26 @@ export const assertContentContainerReferences = (
     }
   }
 };
+
+/**
+ * A typed reference to one of the admin permissions every container collection
+ * generates (see {@link contentContainerPermissionEntries}), owned by the
+ * plugin that registers it.
+ *
+ * @throws {Error} When collections do not generate `permission`.
+ */
+export const contentContainerAdminStaffPermission = <const P extends string>(
+  pluginId: P,
+  definition: { admin: { permissionModule: string } },
+  permission: ContentPermission,
+): AdminStaffPermissionRef<P> =>
+  declaredStaffPermission({
+    entries: contentContainerPermissionEntries(),
+    module: definition.admin.permissionModule,
+    permission,
+    plugin: pluginId,
+    staffType: "admin",
+  });
 
 export const contentContainerPermissionEntries =
   (): PermissionStaffEntryInput[] => [

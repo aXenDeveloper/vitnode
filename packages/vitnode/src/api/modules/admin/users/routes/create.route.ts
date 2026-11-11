@@ -8,6 +8,7 @@ import {
   USER_NAME_MAX_LENGTH,
   USER_PASSWORD_MAX_LENGTH,
 } from "@/api/modules/users/lib/credential-limits";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 
@@ -29,7 +30,7 @@ export const zodCreateUserAdminSchema = z.object({
 });
 
 export const createUserAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_create" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canCreate,
   route: {
     method: "post",
     description: "Create a new user (Admin only)",

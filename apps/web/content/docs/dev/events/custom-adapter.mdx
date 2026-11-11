@@ -1,6 +1,6 @@
 ---
 title: Custom adapter
-description: Replace or extend VitNode's in-process event transport with a custom EventsApiPlugin, for example one that runs local listeners and also forwards every event to a Redis stream for other services.
+description: Replace or extend VitNode's in-process event transport with a custom EventsApiPlugin, such as one that also forwards every event to a Redis stream.
 icon: Puzzle
 ---
 
@@ -68,8 +68,8 @@ export const RedisStreamEventsAdapter = (): EventsApiPlugin => ({
 ```
 
 - **The client is yours.** The adapter creates its own Redis connection, once per process. VitNode's cache connection is not available on `c`.
-- **`publish` returns what the local adapter returned.** That is `status: "delivered"`, the listeners that ran and their failures, plus one failure if forwarding failed. `emit()` never throws, so a broker outage costs a log line, not a failed save.
-- **The envelope** holds `eventId`, `name`, `payload`, `pluginId`, `actor` and `emittedAt`, which `JSON.stringify` writes as an ISO string.
+- **`publish` returns what the local adapter returned.** That is `status: "delivered"`, the listeners that ran and their failures, plus one failure if forwarding failed. `emit()` never throws for an adapter or listener failure, so a broker outage costs a log line, not a failed save.
+- **The envelope** holds `eventId`, `name` (the event name as a string), `payload`, `pluginId`, `actor` and `emittedAt`. `payload` is already validated and is the schema's output, so a date field holds a `Date`. `JSON.stringify` writes `Date` values, including `emittedAt`, as ISO strings.
 
 </Step>
 
@@ -110,7 +110,9 @@ Each entry has one field, `event`, holding the JSON envelope.
 
 ## Reading the stream elsewhere
 
-Whatever reads `vitnode:events`, with `XREAD` or a consumer group, runs its own code: a search indexer, an analytics pipeline, another app. It does not run VitNode listeners and has no Hono context. Work that must happen reliably inside VitNode, with retries, belongs in a [queue task](/docs/dev/advanced/queue) a listener dispatches.
+Whatever reads `vitnode:events`, with `XREAD` or a consumer group, runs its own code: a search indexer, an analytics pipeline, another app. It does not run VitNode listeners and has no Hono context. To get typed data back, parse `payload` with the event's definition, for example `userCreatedEvent.payload.parse(envelope.payload)` with `userCreatedEvent` from `@vitnode/core/api/events/users`. Date fields use `eventDate()`, which reads the ISO strings back as `Date` values.
+
+This adapter forwards each event once, after the local listeners. It stores nothing in VitNode, so an event emitted while Redis is down is not sent later, and an emitter that retries, such as a queue task, can forward the same fact twice. Give consumers the `eventId` to deduplicate on. Work that must happen reliably inside VitNode, with retries, belongs in a [queue task](/docs/dev/advanced/queue) a listener dispatches.
 
 ## The interface
 
@@ -132,9 +134,9 @@ interface EventsApiPlugin {
 | `delivered`       | How many listeners succeeded.                                                                       |
 | `failures`        | `{ pluginId, module, listener, error }` for each listener, or the adapter, that failed.            |
 
-For a [schema-defined event](/docs/dev/events/schema-events), `emit()` validates the payload before calling `publish`, and `envelope.payload` holds the schema's output. Serialize it yourself, as for any event; keep such schemas free of transforms when events leave the process, so the receiver can parse the payload with the same definition.
+`emit()` validates the payload against the event's schema before it calls `publish`, so an adapter never sees an invalid payload, and `envelope.payload` holds the schema's output. See [Event payloads](/docs/dev/events/schema-events#local-and-external-adapters) for dates and round trips.
 
-`emit()` catches an adapter that throws, logs it, and reports it as one failure with `module: "adapter"`. To run listeners yourself, read them from `c.get("core").events.listeners`, as `LocalEventsAdapter` does.
+`emit()` catches an adapter that throws, logs it, and reports it as one failure with `module: "adapter"`. To run listeners yourself, read them from `c.get("core").events.listeners`, as `LocalEventsAdapter` does: each one has an `event` name to match on `envelope.name`, and a `handler(c, payload, envelope)`.
 
 ## Related
 

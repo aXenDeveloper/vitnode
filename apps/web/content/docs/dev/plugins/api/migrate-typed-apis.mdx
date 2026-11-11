@@ -1,0 +1,303 @@
+---
+title: Migrate to typed APIs
+description: Move a VitNode plugin from the removed string-based APIs to typed builders, permission references, schema-defined tasks and events and typed cache entries.
+icon: ArrowRightLeft
+---
+
+VitNode's plugin APIs now take definitions instead of strings. A queue task, an event, a cache entry and a staff permission are each declared once with a schema or a manifest, and every call site imports that declaration. The string forms are removed, so a plugin written against them stops compiling. This guide maps each removed API to its replacement, in the order that keeps the plugin building, and says what happens to data that already exists.
+
+Every code block marked **Removed API** shows code that no longer compiles. Everything else is the current API.
+
+## Before you begin
+
+- Update `@vitnode/core` in the app and in every plugin to the same version.
+- Commit or stash your work. The steps below touch most API files of a plugin.
+
+<Steps>
+
+<Step>
+
+### Export all five builders
+
+`src/api/builders.ts` binds the builders to your plugin. Plugins generated before this change export only `buildModule` and `buildRoute`. Add the other three:
+
+```ts title="plugins/site-notes/src/api/builders.ts"
+import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
+
+import { manifest } from "@/manifest.gen";
+
+const apiBuilders = bindApiPlugin(manifest);
+
+export const buildModule = apiBuilders.buildModule;
+export const buildRoute = apiBuilders.buildRoute;
+export const buildQueueTask = apiBuilders.buildQueueTask; // [!code ++]
+export const defineCacheEntry = apiBuilders.defineCacheEntry; // [!code ++]
+export const defineEvent = apiBuilders.defineEvent; // [!code ++]
+```
+
+`create-vitnode-app --plugin` and `vitnode generate` write this file with all five.
+
+</Step>
+
+<Step>
+
+### Move staff permissions to references
+
+| Removed                                                                 | Use                                                                                                   |
+| ----------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `permissionStaff: { admin: {...}, moderator: {...} }` in `buildApiPlugin` | `defineStaffPermissions(manifest, { admin, moderator })` in `src/staff-permissions.ts`, then `permissionStaff: staffPermissions` |
+| `defineStaffPermissions({ admin, moderator })`                          | `defineStaffPermissions(manifest, { admin, moderator })`                                              |
+| `permissionStaff: staffPermissions.config`                              | `permissionStaff: staffPermissions`                                                                   |
+| `adminStaffPermission: { module: "notes", permission: "can_create" }`   | `adminStaffPermission: staffPermissions.admin.notes.canCreate`                                        |
+| `moderatorStaffPermission: { module: "notes", permission: "can_delete" }` | `moderatorStaffPermission: staffPermissions.moderator.notes.canDelete`                              |
+| AdminCP nav item or dashboard widget `permission: { module, permission }`, type `AdminNavPermission` | `permission: staffPermissions.admin.notes.canCreate`, type `AdminStaffPermissionRef` |
+| A content type's permission as `{ module: contentType.permissionModule, permission: "can_edit" }` | `contentAdminStaffPermission(manifest.id, contentType, "can_edit")` from `@vitnode/core/content` |
+| A container collection's permission as `{ module: "newsroom_desks", permission: "can_edit" }` | `contentContainerAdminStaffPermission(manifest.id, deskContainers, "can_edit")` from `@vitnode/core/content` |
+
+`defineStaffPermissions` comes from `@vitnode/core/lib/staff-permissions`. Create the file, moving the declarations unchanged:
+
+```ts title="plugins/site-notes/src/staff-permissions.ts"
+import { defineStaffPermissions } from "@vitnode/core/lib/staff-permissions";
+
+import { manifest } from "@/manifest.gen";
+
+export const staffPermissions = defineStaffPermissions(manifest, {
+  admin: { notes: ["can_create"] },
+  moderator: { notes: ["can_delete"] },
+});
+```
+
+Then replace each guard:
+
+```ts title="Removed API"
+buildRoute({
+  adminStaffPermission: { module: "notes", permission: "can_create" },
+  // ...
+});
+```
+
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/create.route.ts"
+import { staffPermissions } from "@/staff-permissions";
+
+buildRoute({
+  adminStaffPermission: staffPermissions.admin.notes.canCreate,
+  // ...
+});
+```
+
+What changes for you:
+
+- **Admin and moderator are different types.** An admin reference in `moderatorStaffPermission`, or a moderator one in `adminStaffPermission` or an AdminCP nav item, is a compile error, even when both declare the same name. Before, both took any `{ module, permission }`, and the wrong kind silently checked the other staff type's grants.
+- **A reference names its plugin.** A guard checks the plugin that declares the permission, not the route's plugin. To guard with core's or another plugin's permission, import that plugin's references, for example `coreStaffPermissions` from `@vitnode/core/lib/core-staff-permissions`.
+- **Generated permissions are a runtime boundary.** Content Engine permissions do not exist until the content type is registered, so the compiler cannot check them. `contentAdminStaffPermission` and `contentContainerAdminStaffPermission` check them when the module loads instead, and throw for a permission the content type does not generate.
+
+Nothing changes in the database. Stored grants, the AdminCP staff editor and the permission keys (`site-notes:notes:can_create`) are the same. `checkStaffPermission`, `assertStaffPermission`, `useAdminPermission` and editable pages' `permission` still take plain `{ plugin, module, permission }` objects; `staffPermissionArgs(ref)` converts a reference. A guard still decides only who may call a route, not which record they may change. See [Permission references](/docs/dev/working-with-users/staff-permission-refs).
+
+</Step>
+
+<Step>
+
+### Give every queue task a schema
+
+| Removed                                                                          | Use                                                                    |
+| -------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `buildQueueTask({ name, handler })` from `@vitnode/core/api/lib/queue`, without `payload` | `buildQueueTask({ name, payload, handler })` from `@/api/builders` |
+| `c.get("queue").dispatch({ name, payload, pluginId?, ...options })`              | `c.get("queue").dispatch(task, payload, options?)`                     |
+| `BuildQueueTaskReturn`                                                           | `QueueTaskDefinition`                                                  |
+| `QueueDispatchArgs`                                                              | `QueueDispatchOptions`, the third argument                             |
+| `UntypedQueueTaskOptions`                                                        | `QueueTaskOptions`                                                     |
+
+```ts title="Removed API"
+import { buildQueueTask } from "@vitnode/core/api/lib/queue";
+
+const zodPayload = z.object({ noteId: z.number().int().positive() });
+
+export const announceNoteTask = buildQueueTask({
+  name: "announce-note",
+  handler: async (c, payload) => {
+    const { noteId } = zodPayload.parse(payload);
+    // ...
+  },
+});
+
+await c.get("queue").dispatch({
+  name: "announce-note",
+  payload: { noteId: id },
+  pluginId: "site-notes",
+});
+```
+
+```ts title="plugins/site-notes/src/api/tasks/announce-note.task.ts"
+import { z } from "zod";
+
+import { buildQueueTask } from "@/api/builders";
+
+export const announceNoteTask = buildQueueTask({
+  name: "announce-note",
+  payload: z.object({ noteId: z.number().int().positive() }),
+  handler: async (c, { noteId }) => {
+    // ...
+  },
+});
+
+// where you dispatch it:
+await c.get("queue").dispatch(announceNoteTask, { noteId: id });
+```
+
+A task without data takes `payload: z.object({})`. The task now carries its plugin id, so a dispatch from a listener, a cron job or another plugin's request no longer needs `pluginId`. `buildApiPlugin` throws `QueueTaskRegistrationError` for an entry in `queueTasks` that is not a task definition, and `dispatch` throws it for a task that is not registered.
+
+</Step>
+
+<Step>
+
+### Define events instead of declaring names
+
+| Removed                                                                                         | Use                                                                         |
+| ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `declare module "@vitnode/core/api/models/events" { interface VitNodeEvents { ... } }`          | `defineEvent({ name, payload })` from `@/api/builders`, in `src/api/events.ts`, plus `buildApiPlugin({ eventDefinitions })` |
+| `c.get("events").emit("site-notes.note.created", payload)`                                      | `c.get("events").emit(noteCreatedEvent, payload)`                           |
+| `buildEventListener({ event: "user.created", ... })`                                            | `buildEventListener({ event: userCreatedEvent, ... })`, with `userCreatedEvent` from `@vitnode/core/api/events/users` |
+| `ContentEventsFor<typeof contentType>` grafted onto `VitNodeEvents`, and `contentEventName(id, action)` | `contentEvent(contentType, action)` from `@vitnode/core/content`, registered for you |
+| `VitNodeEventName`, `PaymentEventPayload`, `ContentContainerEventPayload`, `ContentApprovalEventPayload` | `EventPayload<typeof event>` from `@vitnode/core/api/lib/event-definition` |
+| `TypedEventEnvelope<Payload>`, `EventEnvelope<"name">`                                          | `EventEnvelope<Payload>` from `@vitnode/core/api/models/events`             |
+| `TypedEventListenerOptions`                                                                     | `EventListenerOptions` from `@vitnode/core/api/lib/events`                  |
+| `isEventDefinition`                                                                             | Not needed: every event is a definition                                    |
+
+```ts title="Removed API"
+declare module "@vitnode/core/api/models/events" {
+  interface VitNodeEvents {
+    "site-notes.note.created": { noteId: number; title: string };
+  }
+}
+
+await c.get("events").emit("site-notes.note.created", { noteId, title });
+
+buildEventListener({ event: "site-notes.note.created", name: "log-new-note", handler });
+```
+
+```ts title="plugins/site-notes/src/api/events.ts"
+import { z } from "zod";
+
+import { defineEvent } from "@/api/builders";
+
+export const noteCreatedEvent = defineEvent({
+  name: "site-notes.note.created",
+  payload: z.object({
+    noteId: z.number().int().positive(),
+    title: z.string().min(1),
+  }),
+});
+
+// config.api.ts: buildApiPlugin({ ..., eventDefinitions: [noteCreatedEvent] })
+// emit:   await c.get("events").emit(noteCreatedEvent, { noteId, title });
+// listen: buildEventListener({ event: noteCreatedEvent, name: "log-new-note", handler });
+```
+
+Keep the event **names**: listeners in other plugins and external consumers match on them. Delete the `declare module` file and its side-effect import from `config.api.ts`. [Built-in events](/docs/dev/events/built-in-events) lists the definition to import for every core, Content Engine, blog and newsroom event.
+
+What changes at runtime:
+
+- **Every emit is validated.** A payload the schema rejects now throws `EventPayloadValidationError` in the emitting request, and nothing is delivered. Before, an emit by name was not validated. Listener and adapter failures are still reported in `failures`, never thrown.
+- **Dates travel as ISO strings.** An event payload must be JSON, so a date field uses `eventDate()` from `@vitnode/core/api/events/wire`: emit an ISO string, and listeners get a `Date`. Core's only dated payload, `moderation.sanction.applied`, now takes `endsAt` as an ISO string; its listeners still receive a `Date`. Content Engine events emitted with `emitContentEvent` take `Date` values and convert them for you.
+- **Delivery is unchanged.** The local adapter runs listeners in the emitting request, once per emit. Events are still not durable and not exactly-once.
+
+</Step>
+
+<Step>
+
+### Replace string cache keys with entries
+
+| Removed                                                         | Use                                                                                         |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `c.get("cache").remember(key, ttlSeconds, loader)`              | `c.get("cache").entry(definition, ...keyArgs).remember(loader)`                             |
+| `c.get("cache").get(key)`, `.set(key, value, ttl)`, `.has(key)` | `entry(...).get()`, `entry(...).set(value)`; a miss is `undefined`                           |
+| `c.get("cache").delete(key)` or `.delete([keys])`               | `entry(...).delete()` for each entry                                                        |
+| `getSystem`, `setSystem`, `deleteSystem`, `getSystemMany`, `acquireLock`, `releaseLock`, `isConfigured`, `status` | Not on `c.get("cache")` any more, and not a replacement for the removed methods: they are VitNode core's own infrastructure. Use an entry (`setIfMissing` for a first-writer-wins token), or a database lock such as `FOR UPDATE SKIP LOCKED` |
+| `MemoryCacheStore.has`                                          | Removed                                                                                     |
+
+```ts title="Removed API"
+const stats = await c
+  .get("cache")
+  .remember(`notes:stats:${year}`, 300, async () => await countNotes(c, year));
+
+await c.get("cache").delete(`notes:stats:${year}`);
+```
+
+```ts title="plugins/site-notes/src/api/cache/year-stats.cache.ts"
+import { z } from "zod";
+
+import { defineCacheEntry } from "@/api/builders";
+
+export const yearStatsCache = defineCacheEntry({
+  name: "year-stats",
+  version: 1,
+  key: (year: number) => [year],
+  schema: z.object({ notes: z.number().int().nonnegative() }),
+  ttlSeconds: 300,
+});
+
+// read:   await c.get("cache").entry(yearStatsCache, year).remember(loader);
+// expire: await c.get("cache").entry(yearStatsCache, year).delete();
+```
+
+Only `entry()` and `flush()` stay on `c.get("cache")`. A stored `null` is now a hit, where `remember` used to reload it. [Cache API data](/docs/dev/cache/api) walks through the full example.
+
+</Step>
+
+<Step>
+
+### Update generated services
+
+Services that `vitnode g service` and `vitnode g resource` wrote before this change follow the old stubs. They still compile, but the new shape keeps HTTP out of the service:
+
+| Removed stub                                                                   | Current stub                                                                                    |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| `createNotesService = (deps: NotesServiceDeps) => ({ deps })`                  | `createNotesService = (_deps: NotesServiceDeps) => ({ /* operations */ })`                      |
+| Resource operations rejecting with `new HTTPException(501, ...)`               | Operations rejecting with `NotesNotImplementedError`; each route maps it to `501` with `{ error: "not_implemented", message }` |
+
+In services you have written, replace a thrown `HTTPException` with a result union or a domain error, and map it to a status in the route. See [Add a service](/docs/dev/plugins/api/services#return-results-not-http-errors).
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+1. Build the plugin with `pnpm vitnode build`. Type errors point at every remaining string API.
+2. Run `pnpm vitnode doctor --strict` in the plugin. It fails on an undeclared or wrong-type permission, a task, listener or cron job on a nested module, and warns on an admin route without a guard. See [Doctor and inspect](/docs/dev/cli/doctor).
+3. Run `pnpm vitnode inspect jobs` and `pnpm vitnode inspect events`. Every task and listener shows `payload schema` as its contract, with your plugin as the owner of its own tasks and events.
+
+## Queued tasks are durable
+
+Rows in `core_queue` survive the upgrade, and the worker parses them with the task's **new** schema before the handler runs:
+
+- **Keep the task's `name` and the plugin id.** Rows are matched to the handler by both. A renamed task leaves its old rows retrying with `No handler registered for queue task "…"` until they run out of attempts.
+- **Write a schema that accepts what you dispatched before.** If your handler parsed the payload by hand, that schema is the answer. New fields need `.optional()` or `.default()`.
+- **A row the schema rejects fails for good.** It becomes **failed** at once with `Invalid payload: <path>: <code>` in `lastError`, without retries, and stays in the table so you can dispatch a corrected task.
+
+Core's own tasks kept their names and accept the rows earlier versions queued. [Change a task payload](/docs/dev/advanced/queue-typed-payloads) covers later schema changes.
+
+## Cache entries are disposable
+
+Nothing in the cache needs migrating. After the upgrade:
+
+- Old string keys under `vitnode:cache:{plugin id}:` are never read again. Keys written with a TTL expire on their own; `c.get("cache").flush()` in one of your routes removes the rest.
+- Without Redis, every restart starts cold, so the first requests after a deploy miss and reload.
+- A stored value the entry's schema rejects is a miss, deleted on the way, and bumping `version` makes every old value a miss at once.
+
+See [Change a cache entry](/docs/dev/cache/typed-entries).
+
+## Custom event adapters and third-party plugins
+
+A custom `EventsApiPlugin` keeps its shape: `publish(c, envelope)` returning an `EventEmitResult`. Two things differ:
+
+- **`envelope.name` is a `string`**, not a union of known names, and `EventEnvelope<Payload>` is generic over the payload instead of the name.
+- **`envelope.payload` is the schema's output**, validated before `publish` runs. Dated fields hold `Date` values; `JSON.stringify` writes them as ISO strings, which the receiver can parse back with the same definition's `payload` schema.
+
+Listeners in `c.get("core").events.listeners` still have an `event` name and a `handler(c, payload, envelope)`. A third-party plugin that listened to another plugin's event by name now imports that plugin's definition; when the other plugin does not export one, ask its author to, rather than defining the same name again, which the API refuses at startup.
+
+## Related
+
+- [Write a complete operation](/docs/dev/plugins/api/operation-workflow): every typed API in one feature.
+- [Permission references](/docs/dev/working-with-users/staff-permission-refs): references, staff types and Content Engine permissions.
+- [Event payloads](/docs/dev/events/schema-events): validation, dates and adapters.

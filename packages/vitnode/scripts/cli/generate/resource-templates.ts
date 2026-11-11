@@ -72,6 +72,7 @@ export interface ResourceNames {
   itemType: string;
   label: string;
   leaf: string;
+  notImplementedError: string;
   updateSchema: string;
   updateType: string;
 }
@@ -137,8 +138,6 @@ export const resourceServiceTemplate = ({
 
   return `import type { EnvVariablesVitNode } from "@vitnode/core/api/middlewares/global.middleware";
 
-import { HTTPException } from "hono/http-exception";
-
 import type {
   ${names.createType},
   ${names.itemType},
@@ -147,27 +146,33 @@ import type {
 
 /** What the ${names.label} service needs, passed in by whoever builds it. */
 export interface ${deps} {
-  /** In a route: \`c.get("db")\`. */
+  /** In a route: \`c.get("db")\`. A transaction works too. */
   db: Omit<EnvVariablesVitNode["db"], "$client">;
 }
 
-/** Every operation answers 501 until it has a real implementation. */
+/** Rejected by an operation that is not implemented yet. The routes answer it with 501. */
+export class ${names.notImplementedError} extends Error {
+  constructor(operation: string) {
+    super(
+      \`${names.label}: \${operation} is not implemented yet. Implement it in ${names.leaf}.service.ts.\`,
+    );
+    this.name = "${names.notImplementedError}";
+  }
+}
+
 const notImplemented = async (operation: string): Promise<never> =>
-  Promise.reject(
-    new HTTPException(501, {
-      message: \`${names.label}: \${operation} is not implemented yet. Implement it in ${names.leaf}.service.ts.\`,
-    }),
-  );
+  Promise.reject(new ${names.notImplementedError}(operation));
 
 /**
- * Operations of the \`${names.label}\` resource.
+ * Operations of the \`${names.label}\` resource. Build it where it is used:
+ * \`${names.factory}({ db: c.get("db") })\`.
  *
  * Generated as typed stubs with no storage behind them: each one rejects with
- * 501 until you implement it - none returns made-up data. Keep the signatures
- * and replace the bodies, e.g. with queries through \`deps.db\`.
+ * {@link ${names.notImplementedError}} until you implement it - none returns
+ * made-up data. Keep the signatures, replace the bodies with queries through
+ * \`db\` (rename \`_deps\` to \`{ db }\`) and add further operations next to them.
  */
-export const ${names.factory} = (deps: ${deps}) => ({
-  deps,
+export const ${names.factory} = (_deps: ${deps}) => ({
   list: async (): Promise<${names.itemType}[]> => notImplemented("list"),
   /** Resolves \`null\` when there is no entry with this id. */
   get: async (_id: ${id}): Promise<${maybeItem}> => notImplemented("get"),
@@ -242,7 +247,7 @@ export const resourceRouteTemplate = ({
     idType === "number"
       ? "z.object({ id: z.coerce.number().int().positive() })"
       : "z.object({ id: z.string() })";
-  const notFound = `    throw new HTTPException(404, { message: "No ${names.leaf} entry with this id." });`;
+  const notFound = `      throw new HTTPException(404, { message: "No ${names.leaf} entry with this id." });`;
 
   const request = [
     hasId ? `      params: ${params},` : null,
@@ -278,50 +283,64 @@ export const resourceRouteTemplate = ({
       },`,
   }[operation];
 
+  const mapsNotImplemented = (
+    prelude: string,
+    body: string,
+  ) => `  handler: async c => {
+${prelude}    try {
+${body}
+    } catch (error) {
+      if (error instanceof ${names.notImplementedError}) {
+        return c.json(
+          { error: "not_implemented" as const, message: error.message },
+          501,
+        );
+      }
+      throw error;
+    }
+  },`;
+  const readId = `    const { id } = c.req.valid("param");\n`;
+  const notFoundCheck = (value: string) => `      if (!${value}) {
+  ${notFound}
+      }
+`;
+
   const handler = {
-    create: `  handler: async c => {
-    const entry = await ${service}.create(c.req.valid("json"));
+    create: mapsNotImplemented(
+      "",
+      `      const entry = await ${service}.create(c.req.valid("json"));
 
-    return c.json(entry, 201);
-  },`,
-    delete: `  handler: async c => {
-    const { id } = c.req.valid("param");
-    const deleted = await ${service}.remove(id);
-    if (!deleted) {
-  ${notFound}
-    }
-
-    return c.body(null, 204);
-  },`,
-    list: `  handler: async c => c.json(await ${service}.list(), 200),`,
-    show: `  handler: async c => {
-    const { id } = c.req.valid("param");
-    const entry = await ${service}.get(id);
-    if (!entry) {
-  ${notFound}
-    }
-
-    return c.json(entry, 200);
-  },`,
-    update: `  handler: async c => {
-    const { id } = c.req.valid("param");
-    const entry = await ${service}.update(id, c.req.valid("json"));
-    if (!entry) {
-  ${notFound}
-    }
-
-    return c.json(entry, 200);
-  },`,
+      return c.json(entry, 201);`,
+    ),
+    delete: mapsNotImplemented(
+      readId,
+      `      const deleted = await ${service}.remove(id);
+${notFoundCheck("deleted")}
+      return c.body(null, 204);`,
+    ),
+    list: mapsNotImplemented(
+      "",
+      `      return c.json(await ${service}.list(), 200);`,
+    ),
+    show: mapsNotImplemented(
+      readId,
+      `      const entry = await ${service}.get(id);
+${notFoundCheck("entry")}
+      return c.json(entry, 200);`,
+    ),
+    update: mapsNotImplemented(
+      readId,
+      `      const entry = await ${service}.update(id, c.req.valid("json"));
+${notFoundCheck("entry")}
+      return c.json(entry, 200);`,
+    ),
   }[operation];
 
-  const usesZ = operation === "list" || hasId;
   const usesHttpException = hasId;
   const guard =
-    permission === undefined
+    permissionSource === undefined
       ? ""
-      : permissionSource === undefined
-        ? `  adminStaffPermission: { module: ${JSON.stringify(permission.module)}, permission: ${JSON.stringify(permission.permission)} },\n`
-        : `  adminStaffPermission: ${permissionSource.expression},\n`;
+      : `  adminStaffPermission: ${permissionSource.expression},\n`;
   const ownership =
     permission === undefined ||
     operation === "list" ||
@@ -333,15 +352,19 @@ export const resourceRouteTemplate = ({
  * The staff permission decides who may call it. Whether this caller may change
  * this particular entry is for the service or handler to check.`;
 
-  return `${usesZ ? 'import { z } from "@hono/zod-openapi";\n' : ""}${usesHttpException ? 'import { HTTPException } from "hono/http-exception";\n' : ""}
+  return `import { z } from "@hono/zod-openapi";
+${usesHttpException ? 'import { HTTPException } from "hono/http-exception";\n' : ""}
 ${localImports(builders, permissionSource)}
 
-${schemaImports.length > 0 ? `import { ${schemaImports.join(", ")} } from ${JSON.stringify(schemaSpecifier)};\n` : ""}import { ${names.factory} } from ${JSON.stringify(factorySpecifier)};
+${schemaImports.length > 0 ? `import { ${schemaImports.join(", ")} } from ${JSON.stringify(schemaSpecifier)};\n` : ""}import {
+  ${[names.factory, names.notImplementedError].sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" })).join(",\n  ")},
+} from ${JSON.stringify(factorySpecifier)};
 
 /**
  * ${endpoint} - part of the generated \`${names.label}\` resource.
  *
- * Answers 501 until \`${names.factory}().${operation === "delete" ? "remove" : operation === "show" ? "get" : operation}\` is implemented.${ownership}
+ * Answers 501 until \`${names.factory}().${operation === "delete" ? "remove" : operation === "show" ? "get" : operation}\` is implemented;
+ * then drop the \`catch\` and the 501 response.${ownership}
  */
 export const ${identifier} = buildRoute({
 ${guard}  route: {
@@ -349,7 +372,14 @@ ${guard}  route: {
     path: ${JSON.stringify(path)},
 ${request.length === 0 ? "" : `    request: {\n${request.join("\n")}\n    },\n`}    responses: {
 ${success}
-${permission === undefined ? "" : `      403: { description: ${JSON.stringify(`Requires the ${permission.module}.${permission.permission} staff permission.`)} },\n`}${hasId ? '      404: { description: "No entry with this id." },\n' : ""}      501: { description: "Not implemented yet." },
+${permission === undefined ? "" : `      403: { description: ${JSON.stringify(`Requires the ${permission.module}.${permission.permission} staff permission.`)} },\n`}${hasId ? '      404: { description: "No entry with this id." },\n' : ""}      501: {
+        content: {
+          "application/json": {
+            schema: z.object({ error: z.literal("not_implemented"), message: z.string() }),
+          },
+        },
+        description: "Not implemented yet.",
+      },
     },
   },
 ${handler}

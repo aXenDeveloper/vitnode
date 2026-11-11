@@ -4,9 +4,15 @@ import type { ZodError } from "zod";
 
 import { createRoute as createRouteHono } from "@hono/zod-openapi";
 
+import type {
+  AdminStaffPermissionRef,
+  ModeratorStaffPermissionRef,
+  StaffPermissionRef,
+} from "../../lib/staff-permissions";
 import type { EnvVitNode } from "../middlewares/global.middleware";
 import type { PermissionStaffType } from "./permission-staff";
 
+import { staffPermissionArgs } from "../../lib/staff-permissions";
 import { captchaMiddleware } from "../middlewares/captcha.middleware";
 import { pluginMiddleware } from "../middlewares/plugin.middleware";
 import { assertStaffPermission } from "./check-staff-permission";
@@ -23,36 +29,24 @@ export type RouteValidationHook = (
   c: Context,
 ) => Promise<Response | undefined> | Response | undefined;
 
-/** The staff permission a route requires. */
-export interface AdminStaffPermission {
-  /** The permission module, e.g. `posts`. */
-  module: string;
-  /** The permission within it, e.g. `can_edit`. */
-  permission: string;
-  /** The plugin that declares the permission. Defaults to the route's own plugin. */
-  plugin?: string;
-}
-
-/** The moderator staff permission a route requires. */
-export type ModeratorStaffPermission = AdminStaffPermission;
-
 const staffPermissionGuards = new WeakSet<MiddlewareHandler>();
 
-const staffPermissionGuard =
-  (
-    type: PermissionStaffType,
-    { plugin, module, permission }: AdminStaffPermission,
-    pluginId: string,
-  ): MiddlewareHandler =>
-  async (c, next) => {
-    await assertStaffPermission(c, {
-      type,
-      plugin: plugin ?? pluginId,
-      module,
-      permission,
-    });
+const staffPermissionGuard = (
+  type: PermissionStaffType,
+  ref: StaffPermissionRef,
+): MiddlewareHandler => {
+  if (ref.staffType !== type) {
+    throw new Error(
+      `${type}StaffPermission received the ${ref.staffType} permission ${ref.plugin}:${ref.module}:${ref.permission}.`,
+    );
+  }
+  const { module, permission, plugin } = ref;
+
+  return async (c, next) => {
+    await assertStaffPermission(c, { type, plugin, module, permission });
     await next();
   };
+};
 
 interface MountedRoute {
   handler: unknown;
@@ -113,8 +107,12 @@ export interface BuildRouteOptions<
    * Requires an admin with this staff permission; anyone else gets `403`.
    * Paths containing `/admin/` already require an admin session, but this is
    * the only per-permission check, so every admin route should set it.
+   *
+   * A reference from `defineStaffPermissions` (`staffPermissions.admin.posts.canEdit`),
+   * checked against the plugin that declares it - another plugin's reference
+   * guards with that plugin's permission.
    */
-  adminStaffPermission?: AdminStaffPermission;
+  adminStaffPermission?: AdminStaffPermissionRef;
   /** The Hono handler, typed from `route`: `c.req.valid(...)` and `c.json(...)` follow its schemas. */
   handler: RouteHandler<R & { path: P }, EnvVitNode>;
   hook?: RouteValidationHook;
@@ -124,8 +122,11 @@ export interface BuildRouteOptions<
    * it on public routes, not under `/admin/`. A grant scoped to selected
    * resources does not pass: check those in the handler with
    * `assertStaffPermission` and a `resource`.
+   *
+   * A moderator reference from `defineStaffPermissions`, checked against the
+   * plugin that declares it.
    */
-  moderatorStaffPermission?: ModeratorStaffPermission;
+  moderatorStaffPermission?: ModeratorStaffPermissionRef;
   route: R;
 }
 
@@ -143,9 +144,10 @@ export interface BuildRouteOptions<
  * import { z } from "@hono/zod-openapi";
  *
  * import { buildRoute } from "@/api/builders";
+ * import { staffPermissions } from "@/staff-permissions";
  *
  * export const showPostRoute = buildRoute({
- *   adminStaffPermission: { module: "posts", permission: "can_view" },
+ *   adminStaffPermission: staffPermissions.admin.posts.canView,
  *   route: {
  *     method: "get",
  *     path: "/{id}",
@@ -180,14 +182,14 @@ export const buildRoute = <
   const middleware: MiddlewareHandler[] = [pluginMiddleware(pluginId)];
 
   if (adminStaffPermission) {
-    const guard = staffPermissionGuard("admin", adminStaffPermission, pluginId);
+    const guard = staffPermissionGuard("admin", adminStaffPermission);
     staffPermissionGuards.add(guard);
     middleware.push(guard);
   }
 
   if (moderatorStaffPermission) {
     middleware.push(
-      staffPermissionGuard("moderator", moderatorStaffPermission, pluginId),
+      staffPermissionGuard("moderator", moderatorStaffPermission),
     );
   }
 
@@ -217,8 +219,10 @@ export const buildRoute = <
 
   if (adminStaffPermission || moderatorStaffPermission) {
     setRouteStaffPermissions(built, {
-      admin: adminStaffPermission,
-      moderator: moderatorStaffPermission,
+      admin: adminStaffPermission && staffPermissionArgs(adminStaffPermission),
+      moderator:
+        moderatorStaffPermission &&
+        staffPermissionArgs(moderatorStaffPermission),
     });
   }
 

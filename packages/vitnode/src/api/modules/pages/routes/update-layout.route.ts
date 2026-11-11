@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 
+import { pageLayoutUpdatedEvent } from "@/api/events/pages";
 import { assertStaffPermission } from "@/api/lib/check-staff-permission";
 import { buildRoute } from "@/api/lib/route";
 import { EDITABLE_PAGE_ID_MAX_LENGTH } from "@/content/editor/const";
@@ -98,7 +99,7 @@ export const buildUpdatePageLayoutRoute = <P extends string>({
         await c
           .get("events")
           .emit(
-            "core.page-layout.updated",
+            pageLayoutUpdatedEvent,
             { changedZones: changed, pageId: page.id },
             { pluginId },
           );

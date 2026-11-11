@@ -21,11 +21,13 @@ import {
   ensureBuilders,
   hasContentModules,
   pathParams,
+  permissionExpression,
   planModule,
   planPermission,
   planRoute,
   planService,
   readAdminPermissions,
+  STAFF_PERMISSIONS,
 } from "../generate/generators";
 import {
   moduleIdentifier,
@@ -616,8 +618,8 @@ export const runGenerateRouteCommand = async (
         declare: options.declarePermission ?? false,
       });
     }, [
-      `Declare ${JSON.stringify(permission.permission)} in permissionStaff.admin[${JSON.stringify(permission.module)}] (src/config.api.ts, or the defineStaffPermissions object it uses),`,
-      `then create routes/${name}.route.ts in the folder of the "${modulePath.join("/")}" module file with adminStaffPermission: { module: ${JSON.stringify(permission.module)}, permission: ${JSON.stringify(permission.permission)} },`,
+      `Declare ${JSON.stringify(permission.permission)} in admin[${JSON.stringify(permission.module)}] of the plugin's defineStaffPermissions(manifest, {...}) (${STAFF_PERMISSIONS}),`,
+      `then create routes/${name}.route.ts in the folder of the "${modulePath.join("/")}" module file with adminStaffPermission: ${permissionExpression("staffPermissions", permission)},`,
       `import it in the module file from "./routes/${name}.route" and add it to the end of buildModule({ routes }).`,
     ]);
   }

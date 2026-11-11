@@ -4,6 +4,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { getCookie } from "hono/cookie";
 
 import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
+import { cacheStore } from "@/api/lib/cache";
 import { hashSessionToken } from "@/api/lib/session-token";
 import { core_sessions } from "@/database/sessions";
 import { realtime } from "@/ws/registry";
@@ -89,9 +90,9 @@ export class SessionModel {
       )
       .returning({ userId: core_sessions.userId });
 
-    await this.c
-      .get("cache")
-      .deleteSystem(sessionCacheKey(hashedToken, device.id));
+    await cacheStore(this.c).deleteSystem(
+      sessionCacheKey(hashedToken, device.id),
+    );
 
     for (const { userId } of deleted) {
       realtime.closeUserConnections(userId, device.id);
@@ -142,7 +143,7 @@ export class SessionModel {
     ]);
     if (!device) return null;
 
-    const cache = this.c.get("cache");
+    const cache = cacheStore(this.c);
     const cacheKey = sessionCacheKey(hashedToken, device.id);
 
     // Fast path: a still-valid session resolved on a recent request. Only

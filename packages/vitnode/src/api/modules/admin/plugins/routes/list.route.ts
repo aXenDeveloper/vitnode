@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
 import { authorOf } from "@/api/lib/installed-plugins";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { manifest } from "@/manifest";
 
 const registrationSchema = z
@@ -18,7 +19,7 @@ const authorSchema = z
   .nullable();
 
 export const listPluginsAdminRoute = buildRoute({
-  adminStaffPermission: { module: "plugins", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.plugins.canView,
   route: {
     method: "get",
     description:

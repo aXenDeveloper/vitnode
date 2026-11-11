@@ -2,14 +2,16 @@ import { inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
+import { cacheStore } from "@/api/lib/cache";
 import { loadCronHealth } from "@/api/modules/cron/lib/load-cron-health";
 import { core_queue } from "@/database/queue";
 import { getQueueStatus } from "@/lib/api/get-queue-status";
 import { INSECURE_DEFAULT_CRON_SECRET } from "@/lib/config";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { isRealtimePubSubEnabled, isWebSocketEnabled } from "@/ws/registry";
 
 export const integrationsDebugAdminRoute = buildRoute({
-  adminStaffPermission: { module: "system", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.system.canView,
   route: {
     method: "get",
     description:
@@ -100,7 +102,7 @@ export const integrationsDebugAdminRoute = buildRoute({
   handler: async c => {
     const core = c.get("core");
     const captcha = core.captcha;
-    const redis = await c.get("cache").status();
+    const redis = await cacheStore(c).status();
 
     const queueGrouped = await c
       .get("db")

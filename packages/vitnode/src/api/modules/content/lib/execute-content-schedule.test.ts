@@ -191,14 +191,21 @@ const harness = ({
   };
 };
 
-/** The single argument every effects dispatch carries. */
-const dispatchedPayload = (dispatch: ReturnType<typeof vi.fn>) =>
-  dispatch.mock.calls[0][0] as {
-    name: string;
-    payload: Record<string, unknown>;
-    pluginId: string;
-    tx?: unknown;
+/** The task, payload and options of the effects dispatch, read as one. */
+const dispatchedPayload = (dispatch: ReturnType<typeof vi.fn>) => {
+  const [task, payload, options] = dispatch.mock.calls[0] as [
+    { name: string; pluginId: string },
+    Record<string, unknown>,
+    undefined | { tx?: unknown },
+  ];
+
+  return {
+    name: task.name,
+    payload,
+    pluginId: task.pluginId,
+    tx: options?.tx,
   };
+};
 
 const completed = {
   completedAt: expect.any(Date),

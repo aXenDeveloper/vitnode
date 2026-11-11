@@ -16,7 +16,7 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
-import { manifest } from "@/manifest";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import type { AdminSearchNavItem } from "./flatten-nav";
 import type { AdminUserSearch } from "./search-users";
@@ -99,11 +99,9 @@ export const SearchAdminDialogContent = ({
     USERS_DEBOUNCE_MS,
   );
 
-  const canViewUsers = useAdminStaffPermission({
-    plugin: manifest.id,
-    module: "users",
-    permission: "can_view",
-  });
+  const canViewUsers = useAdminStaffPermission(
+    coreStaffPermissions.admin.users.canView,
+  );
 
   const hasUserSearch = canViewUsers && searchUsers !== undefined;
   const trimmedUsersQuery = usersQuery.trim();

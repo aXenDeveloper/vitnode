@@ -1,4 +1,5 @@
 import { buildRoute } from "@/api/builders";
+import { moderationReportAssignedEvent } from "@/api/events/moderation";
 import { requireModerator } from "@/api/lib/moderation/access";
 import { auditDiff } from "@/lib/audit/diff";
 
@@ -70,7 +71,7 @@ export const claimReportRoute = buildRoute({
       return next;
     });
 
-    await c.get("events").emit("moderation.report.assigned", {
+    await c.get("events").emit(moderationReportAssignedEvent, {
       assigneeId: moderator.user.id,
       previousAssigneeId: report.assigneeId,
       reportId: report.id,

@@ -24,6 +24,7 @@ import {
   zodContentFieldLockResponse,
 } from "../live/http";
 import { partitionContentFields } from "../localization";
+import { contentAdminStaffPermission } from "../registry";
 import { contentFieldUpdateSchema } from "../schemas";
 import { findContentLanguage } from "./language-resolver";
 import {
@@ -54,9 +55,12 @@ export const buildContentLiveRoutes = <
   { pluginId }: { pluginId: P },
 ) => {
   const { definition } = model;
-  const module = definition.permissionModule;
   const name = contentTypeName(definition.id);
-  const permission = { module, permission: CONTENT_PERMISSIONS.edit };
+  const permission = contentAdminStaffPermission(
+    pluginId,
+    definition,
+    CONTENT_PERMISSIONS.edit,
+  );
 
   const { collectionFields, localizedFields, sharedFields } =
     partitionContentFields(definition.fields);

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { fetcherClient } from "@/lib/fetcher-client";
 import { manifest } from "@/manifest";
 
@@ -34,11 +35,7 @@ const FileAltContent = React.lazy(async () =>
   })),
 );
 
-const FILES_EDIT_ALT = {
-  module: "files",
-  permission: "can_edit_alt",
-  plugin: manifest.id,
-} as const;
+const FILES_EDIT_ALT = coreStaffPermissions.admin.files.canEditAlt;
 
 const EditAltAction = ({ id, name }: { id: number; name: string }) => {
   const t = useTranslations("admin.system.files.alt");

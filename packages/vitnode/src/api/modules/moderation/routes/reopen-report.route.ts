@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationReportReopenedEvent } from "@/api/events/moderation";
 import { requireModerator } from "@/api/lib/moderation/access";
 import { core_moderation_reports } from "@/database/moderation";
 import { auditDiff } from "@/lib/audit/diff";
@@ -92,7 +93,7 @@ export const reopenReportRoute = buildRoute({
       return next;
     });
 
-    await c.get("events").emit("moderation.report.reopened", {
+    await c.get("events").emit(moderationReportReopenedEvent, {
       reportId: report.id,
     });
 

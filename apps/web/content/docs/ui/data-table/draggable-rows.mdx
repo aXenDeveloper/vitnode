@@ -113,7 +113,7 @@ always need a staff permission.
 ```ts title="plugins/tasks/src/api/modules/admin/tasks/routes/reorder.route.ts"
 export const reorderTasksRoute = buildRoute({
   // [!code ++]
-  adminStaffPermission: { module: 'tasks', permission: 'can_reorder' },
+  adminStaffPermission: staffPermissions.admin.tasks.canReorder,
   route: {
     method: 'post',
     path: '/reorder',
@@ -174,14 +174,21 @@ export const reorderTasksRoute = buildRoute({
 })
 ```
 
-Declare the permission in the plugin's API config:
+Declare the permission in the plugin's `src/staff-permissions.ts`, which the
+route imports `staffPermissions` from and `config.api.ts` passes to
+`buildApiPlugin({ permissionStaff: staffPermissions })`. See
+[Permissions](/docs/dev/working-with-users/staff-permissions):
 
-```ts title="plugins/tasks/src/config.api.ts"
-permissionStaff: {
+```ts title="plugins/tasks/src/staff-permissions.ts"
+import { defineStaffPermissions } from '@vitnode/core/lib/staff-permissions'
+
+import { manifest } from '@/manifest.gen'
+
+export const staffPermissions = defineStaffPermissions(manifest, {
   admin: {
     tasks: ['can_view', { permission: 'can_reorder', dependsOn: ['can_view'] }],
   },
-},
+})
 ```
 
 </Step>

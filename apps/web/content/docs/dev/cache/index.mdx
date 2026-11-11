@@ -4,7 +4,7 @@ description: Choose where to cache in VitNode - TanStack Query in the app, Redis
 icon: Zap
 ---
 
-VitNode caches in three places. The app keeps API responses in TanStack Query, so a page never asks for something it already has. The API keeps expensive results in Redis through `c.get("cache")`, so a slow query runs once for everyone. The page cache stores the rendered HTML of public pages, so an article renders once for all its visitors. All three are opt-in: nothing is cached until your code asks for it.
+VitNode caches in three places. The app keeps API responses in TanStack Query, so a page never asks for something it already has. The API keeps expensive results in typed cache entries, stored in Redis through `c.get("cache")`, so a slow query runs once for everyone. The page cache stores the rendered HTML of public pages, so an article renders once for all its visitors. All three are opt-in: nothing is cached until your code asks for it.
 
 ## Pick a layer
 
@@ -12,8 +12,8 @@ VitNode caches in three places. The app keeps API responses in TanStack Query, s
 | --------------------------------------------------------------- | -------------------------- | ---------------------------------------------------- |
 | Render SSR data without refetching it, and skip repeat requests | App cache (TanStack Query) | [Cache app data](/docs/dev/cache/app)                |
 | Stop running the same slow database query for every visitor     | API cache (Redis)          | [Cache API data](/docs/dev/cache/api)                |
-| Cache a value with a typed key and a validated shape            | API cache (Redis)          | [Typed cache entries](/docs/dev/cache/typed-entries) |
-| Look up `remember`, `delete`, `flush` and the other methods     | API cache (Redis)          | [API cache reference](/docs/dev/cache/reference)     |
+| Change an entry's schema or version, or clear a plugin's entries | API cache (Redis)          | [Change a cache entry](/docs/dev/cache/typed-entries) |
+| Look up `defineCacheEntry`, `entry()`, `flush()` and key formats | API cache (Redis)          | [API cache reference](/docs/dev/cache/reference)     |
 | Render a public page once and send that HTML to every visitor   | Page cache                 | [Cache server-rendered pages](/docs/dev/cache/pages) |
 
 Most features use both. The API caches the expensive part once, and each visitor's app keeps its own copy of the response. [How it differs from other caches](/docs/dev/cache/pages-invalidation#how-it-differs-from-other-caches) compares all three layers side by side.

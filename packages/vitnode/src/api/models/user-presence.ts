@@ -5,6 +5,7 @@ import { getCookie } from "hono/cookie";
 
 import type { PermissionStaffType } from "@/api/lib/permission-staff";
 
+import { cacheStore } from "@/api/lib/cache";
 import { checkStaffPermissionOfUser } from "@/api/lib/check-staff-permission";
 import { hashSessionToken } from "@/api/lib/session-token";
 import { core_roles } from "@/database/roles";
@@ -128,9 +129,10 @@ export class UserPresenceModel {
     // The lock is never released: it simply expires, which makes it a
     // cross-instance throttle. Without Redis it always succeeds and the
     // conditional update below is the throttle instead.
-    const due = await this.c
-      .get("cache")
-      .acquireLock(persistLockKey(userId), PRESENCE_PERSIST_INTERVAL_SECONDS);
+    const due = await cacheStore(this.c).acquireLock(
+      persistLockKey(userId),
+      PRESENCE_PERSIST_INTERVAL_SECONDS,
+    );
     if (!due) return;
 
     // Only ever forward, and only once per interval: an older request racing a
@@ -175,7 +177,7 @@ export class UserPresenceModel {
     // very next presence read.
     const policies = await resolveBrowseAnonymouslyPolicies(this.c, rows);
 
-    const cache = this.c.get("cache");
+    const cache = cacheStore(this.c);
     const leases = await cache.countLeases(rows.map(row => leaseKey(row.id)));
     // No Redis at all: the persisted activity is the only signal, and it is
     // never older than one persist interval for an active member.
@@ -277,9 +279,11 @@ export class UserPresenceModel {
     sessionId: string;
     userId: number;
   }): Promise<void> {
-    await this.c
-      .get("cache")
-      .renewLease(leaseKey(userId), sessionId, PRESENCE_LEASE_TTL_SECONDS);
+    await cacheStore(this.c).renewLease(
+      leaseKey(userId),
+      sessionId,
+      PRESENCE_LEASE_TTL_SECONDS,
+    );
     await this.persistLastSeen(userId, new Date());
   }
 
@@ -297,7 +301,7 @@ export class UserPresenceModel {
     if (tokenHashes.length === 0) return;
 
     const sessionIds = await Promise.all(tokenHashes.map(presenceSessionId));
-    await this.c.get("cache").releaseLeases(leaseKey(userId), sessionIds);
+    await cacheStore(this.c).releaseLeases(leaseKey(userId), sessionIds);
   }
 
   /** The signed-in member of the public site, checked as a moderator. */

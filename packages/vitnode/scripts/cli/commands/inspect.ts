@@ -1,7 +1,12 @@
 import { relative } from "node:path";
 
 import type { CommandContext, OutputOptions } from "../context";
-import type { PluginApiLoad, PluginApiMetadata } from "../inspect/api-metadata";
+import type {
+  InspectedPermissionRef,
+  PayloadContract,
+  PluginApiLoad,
+  PluginApiMetadata,
+} from "../inspect/api-metadata";
 import type { LoadConfiguredPluginIds } from "../plugins/discover";
 import type { ModuleImporter } from "../plugins/validate";
 import type { Ui } from "../ui/ui";
@@ -31,11 +36,15 @@ const TITLES: Record<Section, string> = {
 const permissionLabel = (
   pluginId: string,
   type: string,
-  ref?: { module: string; permission: string; plugin?: string },
+  ref?: InspectedPermissionRef,
 ) =>
   ref === undefined
     ? null
-    : `${type} ${ref.plugin !== undefined && ref.plugin !== pluginId ? `${ref.plugin}:` : ""}${ref.module}.${ref.permission}`;
+    : `${type} ${ref.plugin !== undefined && ref.plugin !== pluginId ? `${ref.plugin}:` : ""}${ref.module}.${ref.permission}${
+        ref.staffType !== undefined && ref.staffType !== type
+          ? ` (${ref.staffType} ref - wrong staff type)`
+          : ""
+      }`;
 
 const renderRoutes = (ui: Ui, id: string, metadata: PluginApiMetadata) => {
   if (metadata.routes.length === 0) {
@@ -63,6 +72,11 @@ const renderRoutes = (ui: Ui, id: string, metadata: PluginApiMetadata) => {
   });
 };
 
+const PAYLOAD_LABEL: Record<PayloadContract, string> = {
+  none: "none (untyped)",
+  schema: "payload schema",
+};
+
 const renderJobs = (ui: Ui, metadata: PluginApiMetadata) => {
   if (metadata.jobs.length === 0) ui.note("No cron jobs or queue tasks.");
   else {
@@ -70,15 +84,19 @@ const renderJobs = (ui: Ui, metadata: PluginApiMetadata) => {
       columns: [
         { header: "Kind" },
         { header: "Name" },
+        { header: "Owner" },
+        { header: "Contract" },
         { header: "Schedule" },
-        { header: "Payload" },
         { header: "Module" },
       ],
       rows: metadata.jobs.map(job => [
         job.kind,
         job.name,
+        job.owner,
+        job.payload === undefined
+          ? ui.colors.muted("-")
+          : PAYLOAD_LABEL[job.payload],
         job.schedule ?? ui.colors.muted("-"),
-        job.payload ?? ui.colors.muted("-"),
         job.module,
       ]),
     });
@@ -93,33 +111,64 @@ const renderListeners = (ui: Ui, metadata: PluginApiMetadata) => {
       columns: [
         { header: "Kind" },
         { header: "Event or id" },
-        { header: "Payload" },
+        { header: "Event owner" },
+        { header: "Contract" },
+        { header: "Listener" },
         { header: "Module" },
       ],
       rows: metadata.listeners.map(listener => [
         listener.kind,
         listener.event,
-        listener.payload ?? ui.colors.muted("-"),
+        listener.eventOwner ?? ui.colors.muted("-"),
+        listener.payload === undefined
+          ? ui.colors.muted("-")
+          : PAYLOAD_LABEL[listener.payload],
+        listener.name ?? ui.colors.muted("-"),
         listener.module,
+      ]),
+    });
+  }
+
+  ui.line();
+  if (metadata.eventDefinitions.length === 0) {
+    ui.note("No event definitions in buildApiPlugin({ eventDefinitions }).");
+  } else {
+    ui.table({
+      columns: [
+        { header: "Event definition" },
+        { header: "Owner" },
+        { header: "Contract" },
+      ],
+      rows: metadata.eventDefinitions.map(event => [
+        event.name,
+        event.owner,
+        PAYLOAD_LABEL[event.payload],
       ]),
     });
   }
 };
 
+const IGNORED_KINDS: Record<Section, ReadonlySet<string>> = {
+  events: new Set(["events", "webSockets"]),
+  jobs: new Set(["cronJobs", "queueTasks"]),
+  routes: new Set(),
+};
+
 const renderIgnored = (
   ui: Ui,
+  id: string,
   metadata: PluginApiMetadata,
   section: Section,
 ) => {
-  const kinds = new Set(
-    section === "jobs"
-      ? ["cronJobs", "queueTasks"]
-      : section === "events"
-        ? ["events", "webSockets"]
-        : [],
+  const ignored = metadata.ignored.filter(item =>
+    IGNORED_KINDS[section].has(item.kind),
   );
-  for (const entry of metadata.ignored.filter(item => kinds.has(item.kind))) {
-    ui.warning(describeNestedRegistration(entry));
+  if (ignored.length === 0) return;
+
+  ui.line();
+  ui.warning(`Ignored - ${plural(ignored.length, "registration")} never run`);
+  for (const entry of ignored) {
+    ui.line(`    ${describeNestedRegistration(entry, id)}`);
   }
 };
 
@@ -173,19 +222,15 @@ const run = async (
     if (section === "routes") renderRoutes(ui, target.id, load.metadata);
     if (section === "jobs") renderJobs(ui, load.metadata);
     if (section === "events") renderListeners(ui, load.metadata);
-    renderIgnored(ui, load.metadata, section);
+    renderIgnored(ui, target.id, load.metadata, section);
   }
 
   ui.line();
-  if (section === "routes") {
-    ui.note(
-      "Paths are under the app's API base path (/api in the starter apps). Staff permissions are the ones declared on buildRoute; checks inside handlers or custom middleware are not listed.",
-    );
-  } else {
-    ui.note(
-      "Read from each plugin's build output. Nothing was scheduled, run or sent.",
-    );
-  }
+  ui.note(
+    section === "routes"
+      ? "Read from each plugin's build output; declarations only. Paths are under the app's API base path (/api in the starter apps). Staff permissions are the guards declared on buildRoute - access checks inside handlers or middleware are not listed."
+      : "Read from each plugin's build output; declarations only. Each plugin's buildApiPlugin factory was called, but no handler ran and nothing was scheduled or sent.",
+  );
   ui.line();
 
   if (failed > 0) {

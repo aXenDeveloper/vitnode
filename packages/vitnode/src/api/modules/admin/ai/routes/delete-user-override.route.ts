@@ -5,9 +5,10 @@ import { buildRoute } from "@/api/builders";
 import { userAuditLabel } from "@/api/lib/audit/labels";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { core_ai_user_overrides } from "@/database/ai";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const deleteAiUserOverrideAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_manage" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canManage,
   route: {
     method: "delete",
     description: "Remove a user's AI exception; their roles apply again.",

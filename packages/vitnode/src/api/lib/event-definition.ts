@@ -22,15 +22,11 @@ export type EventInput<Event extends EventDefinition> = z.input<
   Event["payload"]
 >;
 
-/**
- * What listeners receive: the schema's output. Use it to bridge a defined
- * event into `VitNodeEvents`, so string-named listeners see the same type.
- */
+/** What listeners receive: the schema's output. */
 export type EventPayload<Event extends EventDefinition> = z.output<
   Event["payload"]
 >;
 
-/** What {@link defineEvent} takes. */
 export interface EventDefinitionOptions<
   Plugin extends string,
   Name extends string,
@@ -83,8 +79,11 @@ export class EventDefinitionError extends Error {
  * listener runs, and listeners receive the schema's output.
  *
  * Use the plugin-bound `defineEvent` from your `src/api/builders.ts`, which
- * fills in `pluginId`. Keep definitions in their own file, free of handlers
- * and database code, so other plugins can import them to listen. Server-side.
+ * fills in `pluginId`, and register every definition the plugin owns with
+ * `buildApiPlugin({ eventDefinitions })`. Keep definitions in their own file,
+ * free of handlers and database code, so other plugins can import them to
+ * listen. Content Engine events are defined for you: `contentEvent()`.
+ * Server-side.
  *
  * @throws {EventDefinitionError} For an invalid name.
  *
@@ -99,6 +98,8 @@ export class EventDefinitionError extends Error {
  *   name: "site-notes.note.archived",
  *   payload: z.object({ noteId: z.number().int().positive() }),
  * });
+ *
+ * // src/api/plugin.ts: buildApiPlugin({ manifest, eventDefinitions: [noteArchivedEvent] })
  *
  * // in a route:
  * await c.get("events").emit(noteArchivedEvent, { noteId: 3 });
@@ -126,18 +127,9 @@ export const defineEvent = <
   return Object.freeze({ name, payload, pluginId });
 };
 
-/** Whether a value is an event definition rather than an event name. */
-export const isEventDefinition = (value: unknown): value is EventDefinition =>
-  typeof value === "object" &&
-  value !== null &&
-  typeof (value as { name?: unknown }).name === "string" &&
-  typeof (value as { pluginId?: unknown }).pluginId === "string" &&
-  typeof (value as { payload?: { safeParseAsync?: unknown } }).payload
-    ?.safeParseAsync === "function";
-
 /**
  * Collects the event definitions an installation knows - registered with
- * `buildApiPlugin({ eventDefinitions })` or referenced by a typed listener -
+ * `buildApiPlugin({ eventDefinitions })` or referenced by a listener -
  * keyed by name, without running anything. Two different definitions for one
  * name, or a plugin registering another plugin's definition, throw.
  *
@@ -146,7 +138,7 @@ export const isEventDefinition = (value: unknown): value is EventDefinition =>
 export const collectEventDefinitions = (
   plugins: readonly {
     eventDefinitions?: readonly EventDefinition[];
-    events?: readonly { definition?: EventDefinition }[];
+    events?: readonly { definition: EventDefinition }[];
     pluginId: string;
   }[],
 ): Map<string, EventDefinition> => {
@@ -159,8 +151,9 @@ export const collectEventDefinitions = (
       return;
     }
     if (
-      previous.payload !== definition.payload ||
-      previous.pluginId !== definition.pluginId
+      previous !== definition &&
+      (previous.payload !== definition.payload ||
+        previous.pluginId !== definition.pluginId)
     ) {
       throw new EventDefinitionError(
         `Two different definitions claim the event "${definition.name}" (from "${previous.pluginId}" and "${definition.pluginId}", the second ${where}). Import the owning plugin's definition instead of defining it again, or rename one.`,
@@ -180,9 +173,7 @@ export const collectEventDefinitions = (
   }
   for (const plugin of plugins) {
     for (const listener of plugin.events ?? []) {
-      if (listener.definition) {
-        add(listener.definition, `used by a listener of "${plugin.pluginId}"`);
-      }
+      add(listener.definition, `used by a listener of "${plugin.pluginId}"`);
     }
   }
 

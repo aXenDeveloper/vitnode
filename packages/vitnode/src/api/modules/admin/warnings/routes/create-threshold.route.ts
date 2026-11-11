@@ -2,20 +2,19 @@ import { z } from "@hono/zod-openapi";
 import { count } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";
+import { moderationWarningThresholdCreatedEvent } from "@/api/events/moderation";
 import { writeAuditLog } from "@/api/lib/audit/write";
 import { json } from "@/api/modules/moderation/moderation.schema";
 import { core_moderation_warning_thresholds } from "@/database/warnings";
 import { auditDiff } from "@/lib/audit/diff";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 
 import { LOCK_THRESHOLDS, pointsTaken, TARGET } from "../lib/threshold-rows";
 import { responses, thresholdBody } from "../warning-thresholds.schema";
 
 export const createWarningThresholdAdminRoute = buildRoute({
-  adminStaffPermission: {
-    module: "warning_settings",
-    permission: "can_manage",
-  },
+  adminStaffPermission: coreStaffPermissions.admin.warning_settings.canManage,
   route: {
     method: "post",
     path: "/thresholds",
@@ -65,7 +64,7 @@ export const createWarningThresholdAdminRoute = buildRoute({
 
     await c
       .get("events")
-      .emit("moderation.warning_threshold.created", { thresholdId: result.id });
+      .emit(moderationWarningThresholdCreatedEvent, { thresholdId: result.id });
 
     return c.json({ id: result.id }, 201);
   },

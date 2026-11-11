@@ -27,6 +27,10 @@ import {
 import { CONTENT_LOCALE_MAX_LENGTH, CONTENT_PERMISSIONS } from "../const";
 import { zodContentFileReferenceRejection } from "../files";
 import { requireContentId } from "../ids";
+import {
+  contentAdminStaffPermission,
+  type ContentPermission,
+} from "../registry";
 import { resolveContentActor } from "./actor";
 import { withContentSaveAudit } from "./audit";
 import { contentEditorialEffects } from "./editorial-effects";
@@ -70,7 +74,8 @@ export const buildContentLocalizedAdminRoutes = <
     );
   }
 
-  const module = definition.permissionModule;
+  const staffPermission = (permission: ContentPermission) =>
+    contentAdminStaffPermission(pluginId, definition, permission);
   const name = contentTypeName(definition.id);
   const editorial = definition.editorial.enabled;
   const { defaultLocale } = definition.localization;
@@ -289,7 +294,7 @@ export const buildContentLocalizedAdminRoutes = <
 
   const create = buildRoute({
     pluginId,
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.create },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.create),
     route: {
       method: "post",
       path: "/localized",
@@ -390,7 +395,7 @@ export const buildContentLocalizedAdminRoutes = <
     // `can_edit`, for the shared half and every language alike: one Save button
     // writes one record, and there is no second permission for the part of it
     // that happens to live on the translation table.
-    adminStaffPermission: { module, permission: CONTENT_PERMISSIONS.edit },
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.edit),
     route: {
       method: "put",
       path: "/{id}/localized",

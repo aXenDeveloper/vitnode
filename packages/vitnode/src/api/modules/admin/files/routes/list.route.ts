@@ -13,9 +13,10 @@ import { core_files } from "@/database/files";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
 import { parseImageDimensions } from "@/lib/api/upload";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const listFilesAdminRoute = buildRoute({
-  adminStaffPermission: { module: "files", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.files.canView,
   route: {
     method: "get",
     description: "List uploaded files stored in core_files (Admin only).",

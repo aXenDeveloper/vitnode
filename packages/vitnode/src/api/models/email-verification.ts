@@ -4,6 +4,7 @@ import { and, eq, gt, sql } from "drizzle-orm";
 import crypto from "node:crypto";
 import { createTranslator } from "use-intl";
 
+import { userEmailVerifiedEvent } from "@/api/events/users";
 import { core_users, core_users_confirm_emails } from "@/database/users";
 import VerifyEmailTemplate from "@/emails/verify-email";
 import { CONFIG } from "@/lib/config";
@@ -140,7 +141,7 @@ export class EmailVerificationModel {
     if (!user) return null;
 
     await invalidateSessionCacheForUser(this.c, user.id);
-    await this.c.get("events").emit("user.email.verified", {
+    await this.c.get("events").emit(userEmailVerifiedEvent, {
       email: user.email,
       userId: user.id,
     });

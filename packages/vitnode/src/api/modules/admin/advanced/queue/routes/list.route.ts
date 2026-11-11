@@ -8,6 +8,7 @@ import {
   zodPaginationQuery,
 } from "@/api/lib/with-pagination";
 import { core_queue } from "@/database/queue";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 const QUEUE_STATUSES = [
   "pending",
@@ -17,7 +18,7 @@ const QUEUE_STATUSES = [
 ] as const;
 
 export const getQueueTasksRoute = buildRoute({
-  adminStaffPermission: { module: "queue", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.queue.canView,
   route: {
     method: "get",
     description: "Get Admin Queue Tasks",

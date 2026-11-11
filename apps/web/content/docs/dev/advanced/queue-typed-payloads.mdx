@@ -1,89 +1,63 @@
 ---
-title: Migrate a task to a schema
-description: Add a Zod payload schema to an existing VitNode queue task without breaking rows that are already queued, and see what happens to a stored payload the schema rejects.
+title: Change a task payload
+description: Change the Zod payload schema of a VitNode queue task without failing queued rows, and see what happens to a stored payload the new schema rejects.
 icon: FileCheck
 ---
 
-An untyped queue task receives `Record<string, unknown>` and checks every field by hand. A `payload` schema moves that check into the task's definition: dispatches are type-checked and validated before they are stored, and the handler receives parsed data. This guide migrates an untyped `announce-note` task and keeps every row already in the queue working.
+Queued tasks are durable. A row in `core_queue` keeps the JSON it was dispatched with, and the worker parses it with the task's **current** schema right before the handler runs. So a schema change also applies to rows queued by the previous version of your plugin. This guide adds a field to the `announce-note` task without failing the rows already waiting.
 
 ## Before you begin
 
-- An untyped task registered in a top-level module's `queueTasks`. This guide starts from this one, built with `buildQueueTask` from `@vitnode/core/api/lib/queue` and dispatched by name:
+- The `announce-note` task from [Queue](/docs/dev/advanced/queue), registered in a top-level module's `queueTasks`.
 
-  ```ts title="plugins/site-notes/src/api/tasks/announce-note.task.ts"
-  import { buildQueueTask } from "@vitnode/core/api/lib/queue";
-  import { z } from "zod";
+## Rules for a compatible change
 
-  const zodPayload = z.object({ noteId: z.number().int().positive() });
-
-  export const announceNoteTask = buildQueueTask({
-    name: "announce-note",
-    maxAttempts: 5,
-    handler: async (c, payload) => {
-      const { noteId } = zodPayload.parse(payload);
-      // ...
-    },
-  });
-  ```
-
-- `buildQueueTask` exported from your plugin's `src/api/builders.ts`, as in [Bind the task builder](/docs/dev/advanced/queue#bind-the-task-builder-to-your-plugin).
+| Change                                   | Safe for queued rows? | Do instead                                                                           |
+| ---------------------------------------- | --------------------- | ------------------------------------------------------------------------------------ |
+| Add a field with `.optional()` or `.default()` | Yes             | -                                                                                    |
+| Remove a field                           | Yes                   | `z.object` drops unknown keys, so old rows still parse                               |
+| Add a required field                     | No                    | Give it a `.default()`, or make it optional and handle `undefined`                   |
+| Narrow a field, such as `.min(3)` on a string | No              | Accept the old values, or drain the queue first                                      |
+| Rename the task, or move it to another plugin | No              | Keep `name` and the plugin id. Rows are matched to the handler by both               |
+| Change what the payload means            | No                    | Register a new task with a new `name`, and keep the old one until its rows are gone |
 
 <Steps>
 
 <Step>
 
-### Write a schema that accepts the rows already queued
+### Add an optional field
 
-Every pending row was stored with a payload your code dispatched before. After the switch, the worker parses those rows with the new schema, and a row it rejects fails for good. So the schema must accept every shape you dispatched. Here the handler already parsed with `zodPayload`, so that schema is the answer.
-
-Unknown keys are fine, because `z.object` drops them. A field that old rows lack must be `.optional()` or have a `.default()`.
-
-</Step>
-
-<Step>
-
-### Add the schema and keep the name
-
-Switch the import to the bound builder, pass the schema as `payload`, and read the fields from the handler's second argument. Keep `name` exactly as it was: pending rows find their handler by plugin and name.
+Give the task a `channel` that old rows do not have. `.default()` fills it in when the worker parses a row queued before the change:
 
 ```ts title="plugins/site-notes/src/api/tasks/announce-note.task.ts"
-import { buildQueueTask } from "@vitnode/core/api/lib/queue"; // [!code --]
-import { z } from "zod";
-
-import { buildQueueTask } from "@/api/builders"; // [!code ++]
-
-const zodPayload = z.object({ noteId: z.number().int().positive() });
-
 export const announceNoteTask = buildQueueTask({
   name: "announce-note",
-  payload: zodPayload, // [!code ++]
+  payload: z.object({
+    noteId: z.number().int().positive(),
+    channel: z.enum(["log", "email"]).default("log"), // [!code ++]
+  }),
   maxAttempts: 5,
-  handler: async (c, payload) => { // [!code --]
-    const { noteId } = zodPayload.parse(payload); // [!code --]
-  handler: async (c, { noteId }) => { // [!code ++]
-    // ...
+  handler: async (c, { noteId, channel }) => {
+    // channel is "log" for rows queued before this change
   },
 });
 ```
 
-The task stays registered in the same `queueTasks` array. Nothing is migrated in the database: rows keep their JSON, and the change takes effect when the API restarts.
+Keep `name` exactly as it was. The change takes effect when the API restarts; nothing is migrated in the database, and rows keep their JSON.
 
 </Step>
 
 <Step>
 
-### Switch the dispatches when you are ready
+### Dispatch the new field
 
-Existing `dispatch({ name: "announce-note", payload })` calls keep working, and are now validated against the schema: an invalid payload throws `QueuePayloadValidationError` instead of being queued. Change them to the typed form one at a time to get compile-time checks:
+`dispatch` accepts the schema's input, so `channel` is optional where you queue the task:
 
 ```ts
 await c
   .get("queue")
-  .dispatch({ name: "announce-note", payload: { noteId: id } }); // [!code --]
-await c.get("queue").dispatch(announceNoteTask, { noteId: id }); // [!code ++]
+  .dispatch(announceNoteTask, { noteId: id, channel: "email" });
 ```
-
-`dedupeKey`, `availableAt`, `priority`, `queue`, `maxAttempts` and `tx` move to the third argument.
 
 </Step>
 
@@ -91,7 +65,7 @@ await c.get("queue").dispatch(announceNoteTask, { noteId: id }); // [!code ++]
 
 ## Check the result
 
-1. Build the plugin (a running `pnpm dev` is enough), then run `pnpm vitnode inspect jobs` inside it. The `announce-note` row shows `schema` in the **Payload** column; tasks you have not migrated show `untyped`. The command never prints payloads.
+1. Build the plugin (a running `pnpm dev` is enough), then run `pnpm vitnode inspect jobs` inside it. The `announce-note` row shows `payload schema` in the **Contract** column and `site-notes` as its **Owner**. The command never prints payloads.
 2. Dispatch the task and run the processor, as in [Check the result](/docs/dev/advanced/queue#check-the-result). It completes as before.
 3. Optional: insert a row the schema rejects, with `noteId` as a string. With the Docker database from Setup, run this from the workspace root:
 
@@ -107,9 +81,11 @@ The worker parses each row with the task's schema right before the handler runs.
 
 A schema that throws, for example an async refinement whose database query fails, is not a validation failure: the attempt fails and is retried like any handler error.
 
+A row whose task is no longer registered at all, for example after a rename, is retried with `No handler registered for queue task "site-notes:announce-note"` until it runs out of attempts.
+
 ## Ownership and registration
 
-A typed task belongs to the plugin whose bound builder created it. `buildApiPlugin` throws `QueueTaskRegistrationError` when another plugin registers it, or when two different tasks of one plugin share a name. `dispatch(task, payload)` throws the same error when the task is not registered in the running API, so a typed dispatch can never queue work nothing would run.
+A task belongs to the plugin whose bound builder created it. `buildApiPlugin` throws `QueueTaskRegistrationError` when another plugin registers it, when an entry in `queueTasks` is not a task definition, or when two different tasks of one plugin share a name. `dispatch(task, payload)` throws the same error when the task is not registered in the running API, so a dispatch can never queue work nothing would run.
 
 ## Related
 

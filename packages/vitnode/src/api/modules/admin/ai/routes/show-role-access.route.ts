@@ -4,11 +4,12 @@ import { z } from "zod";
 import { buildRoute } from "@/api/builders";
 import { core_ai_role_permissions, core_ai_role_policies } from "@/database/ai";
 import { core_roles } from "@/database/roles";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { decimalOrNull } from "../lib/decimal-or-null";
 
 export const getAiRoleAccessAdminRoute = buildRoute({
-  adminStaffPermission: { module: "ai", permission: "can_view" },
+  adminStaffPermission: coreStaffPermissions.admin.ai.canView,
   route: {
     method: "get",
     description:

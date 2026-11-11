@@ -4,7 +4,7 @@ import type { ContentFieldName, ContentLocalizedFieldName } from "./types";
 /**
  * The last segment of a content event name, `content.{contentTypeId}.{action}`.
  * Which actions a content type emits depends on the options it enables - see
- * {@link ContentEventsFor}.
+ * {@link ContentEventsFor}. Listen with `contentEvent(definition, action)`.
  */
 export type ContentEventAction =
   | "created"
@@ -375,22 +375,11 @@ type ContentVisibilityEventsFor<TDefinition extends { id: string }> =
     : Record<never, never>;
 
 /**
- * The events a content type emits, as a literal-keyed map.
- *
- * Plugins graft these onto the global event map with one declaration - the
- * same module-augmentation mechanism every other VitNode event uses:
- *
- * ```ts
- * declare module "@vitnode/core/api/models/events" {
- *   interface VitNodeEvents
- *     extends ContentEventsFor<typeof articleContentType> {}
- * }
- * ```
- *
- * `TDefinition` is concrete at the augmentation site, so the keys are
- * statically known and `changedFields` narrows to the content type's own field
- * names. The envelope already carries the actor, plugin and timestamp, so the
- * payloads stay minimal.
+ * The events a content type emits, as a literal-keyed map from event name to
+ * the payload listeners receive. `contentEvent(definition, action)` types its
+ * definitions from it, so `changedFields` narrows to the content type's own
+ * field names. The envelope already carries the actor, plugin and timestamp,
+ * so the payloads stay minimal.
  */
 export type ContentEventsFor<TDefinition extends { id: string }> =
   ContentDeliveryEventsFor<TDefinition> &
@@ -413,12 +402,3 @@ export type ContentEventsFor<TDefinition extends { id: string }> =
       `content.${TDefinition["id"]}.updated`,
       ContentUpdatedPayload<TDefinition>
     >;
-
-/** Builds a content event name, `content.{contentTypeId}.{action}`, as a literal type. */
-export const contentEventName = <
-  TId extends string,
-  TAction extends ContentEventAction,
->(
-  contentTypeId: TId,
-  action: TAction,
-): `content.${TId}.${TAction}` => `content.${contentTypeId}.${action}`;

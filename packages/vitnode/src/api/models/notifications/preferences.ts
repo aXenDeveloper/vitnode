@@ -4,6 +4,7 @@ import { HTTPException } from "hono/http-exception";
 import type { NotificationTypePreference } from "@/database/notifications";
 import type { NotificationEmailMode } from "@/lib/notifications/types";
 
+import { notificationsPreferencesUpdatedEvent } from "@/api/events/notifications";
 import {
   isNotificationEmailAvailable,
   isNotificationInAppAvailable,
@@ -206,7 +207,7 @@ export const updateNotificationPreferences = async (
       .where(eq(core_notification_user_state.userId, userId));
   });
 
-  await c.get("events").emit("notifications.preferences_updated", {
+  await c.get("events").emit(notificationsPreferencesUpdatedEvent, {
     typeIds: Object.keys(patch),
     userId,
   });

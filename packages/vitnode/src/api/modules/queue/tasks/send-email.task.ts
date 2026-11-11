@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-import { buildQueueTask } from "@/api/lib/queue";
-import { EmailModel } from "@/api/models/email";
+import { buildQueueTask } from "@/api/builders";
 
 export const sendEmailPayloadSchema = z.object({
   to: z.string(),
@@ -13,10 +12,9 @@ export const sendEmailPayloadSchema = z.object({
 
 export const sendEmailQueueTask = buildQueueTask({
   name: "send-email",
+  payload: sendEmailPayloadSchema,
   description: "Deliver a rendered email through the configured provider.",
-  handler: async (c, payload) => {
-    const email = sendEmailPayloadSchema.parse(payload);
-
-    await new EmailModel(c).deliver(email);
+  handler: async (c, email) => {
+    await c.get("email").deliver(email);
   },
 });

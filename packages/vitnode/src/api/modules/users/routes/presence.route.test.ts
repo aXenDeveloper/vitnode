@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { MemoryRow } from "@/tests/memory-db";
 
+import { userUpdatedEvent } from "@/api/events/users";
 import { VIEW_HIDDEN_PRESENCE_PERMISSION } from "@/api/models/user-presence";
 import { core_roles } from "@/database/roles";
 import { core_users, core_users_secondary_roles } from "@/database/users";
@@ -298,7 +299,7 @@ describe("PUT /users/me/privacy", () => {
         ?.hideOnlineStatus,
     ).toBe(true);
     expect(world.emit).toHaveBeenCalledWith(
-      "user.updated",
+      userUpdatedEvent,
       expect.objectContaining({ userId: TARGET_ID }),
     );
     expect((await world.readPresence(TARGET_ID, member)).body).toEqual({

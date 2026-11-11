@@ -2,7 +2,7 @@ import type { Context, Env, Next } from "hono";
 
 import { HTTPException } from "hono/http-exception";
 
-import type { CacheClient } from "@/api/lib/cache";
+import type { CacheClient, DomainCache } from "@/api/lib/cache";
 import type { RegisteredContentType } from "@/content/registry";
 import type { RegisteredContentModel } from "@/content/server/model";
 import type { ContentNotificationRegistry } from "@/content/server/notifications/registry";
@@ -17,7 +17,7 @@ import { LocalEventsAdapter } from "@/api/adapters/events/local";
 import { PostgresSearchAdapter } from "@/api/adapters/search/postgres";
 import { runAfterResponse } from "@/api/lib/after-response";
 import { DEFAULT_SESSION_COOKIE_NAME } from "@/api/lib/auth-cookie";
-import { CacheModel } from "@/api/lib/cache";
+import { CacheModel, domainCacheOf } from "@/api/lib/cache";
 import { MemoryCacheStore } from "@/api/lib/cache-memory";
 import { collectEventDefinitions } from "@/api/lib/event-definition";
 import { findActiveSuspension } from "@/api/lib/moderation/warnings/suspension";
@@ -72,7 +72,7 @@ import type { NotificationRegistry } from "../lib/notifications/registry";
 import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
 import type { PaymentProviderApiPlugin } from "../lib/payments/provider";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
-import type { BuildQueueTaskReturn } from "../lib/queue";
+import type { QueueTaskConfig } from "../lib/queue";
 import type { UpdateComponent } from "../lib/updates/components";
 import type { WebSocketConfig } from "../lib/websocket";
 import type { EventsApiPlugin } from "../models/events";
@@ -131,9 +131,13 @@ export interface EnvVitNode extends Env {
  * handler: async c => {
  *   const user = c.get("user");
  *   if (!user) throw new HTTPException(401);
- *   const posts = await c.get("cache").remember("latest", 60, async () =>
- *     c.get("db").select().from(blog_posts).limit(10),
- *   );
+ *   // `latestPostsCache` comes from `defineCacheEntry` in `@/api/builders`.
+ *   const posts = await c
+ *     .get("cache")
+ *     .entry(latestPostsCache)
+ *     .remember(async () =>
+ *       await c.get("db").select().from(blog_posts).limit(10),
+ *     );
  *
  *   return c.json({ posts }, 200);
  * },
@@ -178,8 +182,12 @@ export interface EnvVariablesVitNode {
    * AdminCP staff logs): see {@link AuditModel}.
    */
   audit: AuditModel;
-  /** Plugin-scoped JSON cache, Redis-backed when the API config has `redis`, a no-op otherwise. */
-  cache: CacheModel;
+  /**
+   * Typed domain cache: `entry(definition, ...keyArgs)` and a plugin-scoped
+   * `flush()`. Redis-backed when the API config has `redis`, a short-lived
+   * in-process store otherwise. See {@link DomainCache}.
+   */
+  cache: DomainCache;
   /**
    * The resolved installation: the API config with its defaults applied, plus
    * everything every plugin registered. Read-only, and mostly for core's own
@@ -224,7 +232,7 @@ export interface EnvVariablesVitNode {
     email?: VitNodeApiConfig["email"];
     events: {
       adapter: EventsApiPlugin;
-      /** Every known event definition by name: registered, or used by a typed listener. */
+      /** Every known event definition by name: registered, or used by a listener. */
       definitions: ReadonlyMap<string, EventDefinition>;
       listeners: EventListenerConfig[];
     };
@@ -255,7 +263,7 @@ export interface EnvVariablesVitNode {
     /** Which personal-information fields this install offers. */
     personalInformationFields: PersonalInformationFields;
     plugins: { id: string }[];
-    queue: (BuildQueueTaskReturn & { module: string; pluginId: string })[];
+    queue: QueueTaskConfig[];
     search: { adapter: SearchProviderApiPlugin };
     searchIndexers: SearchIndexerConfig[];
     storage?: VitNodeApiConfig["storage"];
@@ -739,7 +747,7 @@ export const globalMiddleware = ({
     c.set("db", dbProvider);
     c.set("ai", new AIModel(c));
     c.set("audit", new AuditModel(c));
-    c.set("cache", new CacheModel(cacheClient, c, memoryCache));
+    c.set("cache", domainCacheOf(new CacheModel(cacheClient, c, memoryCache)));
     c.set("email", new EmailModel(c));
     c.set("events", new EventsModel(c));
     c.set("i18n", new I18nModel(c));

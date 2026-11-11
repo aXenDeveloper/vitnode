@@ -29,7 +29,8 @@ import {
 } from "@/content/admin/labels";
 import { CONTENT_PERMISSIONS } from "@/content/const";
 import { contentAdminHref } from "@/content/registry";
-import { manifest } from "@/manifest";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+import { staffPermissionArgs } from "@/lib/staff-permissions";
 import { fitNamespaceList, MAX_NAMESPACES } from "@/routing";
 
 /** A resolved sub-item, as the sidebar and the search index read it. */
@@ -150,15 +151,7 @@ const key = (value: string, namespace = "admin.global"): AdminNavTitle => ({
   namespace,
 });
 
-/** A core permission tuple, which is every tuple in the group below. */
-const core = (
-  module: string,
-  permission = "can_view",
-): PermissionsStaffArgs => ({
-  module,
-  permission,
-  plugin: manifest.id,
-});
+const { admin } = coreStaffPermissions;
 
 export const ADMIN_PLUGINS_HREF = "/admin/core/system/plugins";
 
@@ -180,22 +173,22 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
         {
           title: key("admin.global.nav.system.plugins"),
           href: ADMIN_PLUGINS_HREF,
-          permission: core("plugins"),
+          permission: staffPermissionArgs(admin.plugins.canView),
         },
         {
           title: key("admin.global.nav.system.integrations"),
           href: "/admin/core/system/integrations",
-          permission: core("system"),
+          permission: staffPermissionArgs(admin.system.canView),
         },
         {
           title: key("admin.global.nav.system.files"),
           href: "/admin/core/system/files",
-          permission: core("files"),
+          permission: staffPermissionArgs(admin.files.canView),
         },
         {
           title: key("admin.global.nav.system.notifications"),
           href: "/admin/core/system/notifications",
-          permission: core("notifications"),
+          permission: staffPermissionArgs(admin.notifications.canView),
         },
       ],
     },
@@ -207,12 +200,12 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
         {
           title: key("admin.global.nav.users.list"),
           href: "/admin/core/users",
-          permission: core("users"),
+          permission: staffPermissionArgs(admin.users.canView),
         },
         {
           title: key("admin.global.nav.users.roles"),
           href: "/admin/core/users/roles",
-          permission: core("roles"),
+          permission: staffPermissionArgs(admin.roles.canView),
         },
       ],
     },
@@ -224,12 +217,12 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
         {
           title: key("admin.global.nav.staff.moderators"),
           href: "/admin/core/staff/moderators",
-          permission: core("staff_moderators"),
+          permission: staffPermissionArgs(admin.staff_moderators.canView),
         },
         {
           title: key("admin.global.nav.staff.admins"),
           href: "/admin/core/staff/admins",
-          permission: core("staff_admins"),
+          permission: staffPermissionArgs(admin.staff_admins.canView),
         },
       ],
     },
@@ -241,12 +234,12 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
         {
           title: key("admin.global.nav.moderation.report_reasons"),
           href: "/admin/core/moderation/report-reasons",
-          permission: core("report_reasons"),
+          permission: staffPermissionArgs(admin.report_reasons.canView),
         },
         {
           title: key("admin.global.nav.moderation.warnings"),
           href: "/admin/core/moderation/warnings",
-          permission: core("warning_settings"),
+          permission: staffPermissionArgs(admin.warning_settings.canView),
         },
       ],
     },
@@ -258,12 +251,12 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
         {
           title: key("admin.global.nav.ai.overview"),
           href: "/admin/core/ai",
-          permission: core("ai"),
+          permission: staffPermissionArgs(admin.ai.canView),
         },
         {
           title: key("admin.global.nav.ai.actions"),
           href: "/admin/core/ai/actions",
-          permission: core("ai"),
+          permission: staffPermissionArgs(admin.ai.canView),
         },
       ],
     },
@@ -321,9 +314,7 @@ const declaredNavItems = (
       `${plugin.pluginId}.admin.nav.${item.id}`,
       `${plugin.pluginId}.admin.nav`,
     ),
-    permission: item.permission
-      ? { plugin: plugin.pluginId, ...item.permission }
-      : undefined,
+    permission: item.permission && staffPermissionArgs(item.permission),
     items:
       item.items?.map(subItem => ({
         href: subItem.href,
@@ -332,9 +323,8 @@ const declaredNavItems = (
           `${plugin.pluginId}.admin.nav.${item.id}.${subItem.id}`,
           `${plugin.pluginId}.admin.nav`,
         ),
-        permission: subItem.permission
-          ? { plugin: plugin.pluginId, ...subItem.permission }
-          : undefined,
+        permission:
+          subItem.permission && staffPermissionArgs(subItem.permission),
       })) ?? [],
   }));
 

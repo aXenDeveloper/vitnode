@@ -1,6 +1,6 @@
 ---
 title: Container tree
-description: How Content Engine containers nest, order, move and delete, how concurrent edits stay consistent, and how to read and change a container tree from your own API routes with createContentContainerService.
+description: How Content Engine containers nest, order, move and delete, how concurrent edits stay consistent, and how to change a tree with createContentContainerService.
 icon: ListTree
 ---
 
@@ -69,6 +69,7 @@ A collection holds at most 5,000 containers (`limitReached`, 409). The whole tre
 `createContentContainerService` is the one way to read and change a collection. The AdminCP routes and the public routes both use it, so your code gets the same rules, cache expiry and events. Call it inside any Hono handler with the request context. Here is a route you could add to the newsroom plugin. It files a desk under an **Archive** desk and locks it:
 
 ```ts title="src/api/modules/desks/routes/archive.route.ts"
+import { contentContainerAdminStaffPermission } from "@vitnode/core/content";
 import { createContentContainerService } from "@vitnode/core/content/server";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
@@ -78,7 +79,7 @@ import { deskContainers } from "@/content/desks";
 import { manifest } from "@/manifest.gen";
 
 export const archiveDeskRoute = buildRoute({
-  adminStaffPermission: { module: "newsroom_desks", permission: "can_edit" },
+  adminStaffPermission: contentContainerAdminStaffPermission(manifest.id, deskContainers, "can_edit"),
   route: {
     method: "post",
     path: "/{id}/archive",
@@ -146,10 +147,11 @@ Each successful write emits one event after its transaction commits. A write tha
 Every collection shares the same names, so filter on `definitionId`. This listener logs desk moves:
 
 ```ts title="src/api/lib/desk-listeners.ts"
+import { contentContainerMovedEvent } from "@vitnode/core/api/events/content-containers";
 import { buildEventListener } from "@vitnode/core/api/lib/events";
 
 export const deskMovedListener = buildEventListener({
-  event: "content.container.moved",
+  event: contentContainerMovedEvent,
   name: "log-desk-moves",
   handler: async (c, payload) => {
     if (payload.definitionId !== "newsroom.desks") return;

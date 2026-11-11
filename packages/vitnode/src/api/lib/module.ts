@@ -8,7 +8,7 @@ import type { SearchIndexer } from "../models/search";
 import type { BuildCronReturn } from "./cron";
 import type { BuildEventListenerReturn } from "./events";
 import type { AnyNotificationTypeDefinition } from "./notifications/registry";
-import type { BuildQueueTaskReturn } from "./queue";
+import type { QueueTaskDefinition } from "./queue";
 import type { Route } from "./route";
 import type { BuildWebSocketReturn } from "./websocket";
 
@@ -35,7 +35,7 @@ export interface BaseBuildModuleReturn<
   notificationTypes?: AnyNotificationTypeDefinition[];
   pluginId: P;
   publicContentTypes?: AnyContentTypeDefinition[];
-  queueTasks: BuildQueueTaskReturn[];
+  queueTasks: QueueTaskDefinition[];
   routes: Routes;
   searchIndexers?: SearchIndexer[];
   webSockets: BuildWebSocketReturn[];
@@ -82,7 +82,7 @@ export interface BuildModuleOptions<
    */
   publicContentTypes?: AnyContentTypeDefinition[];
   /** Background queue tasks. Only read from a plugin's top-level modules. */
-  queueTasks?: BuildQueueTaskReturn[];
+  queueTasks?: QueueTaskDefinition[];
   /** Routes built with the plugin's bound `buildRoute`. Pass `[]` for a module with only children. */
   routes: Routes;
   /** Search indexers this module registers. Collected from any depth. */

@@ -33,6 +33,7 @@ import {
   planModule,
   propertyKey,
   readAdminPermissions,
+  STAFF_PERMISSIONS,
 } from "./generators";
 import { camelCase, humanize } from "./names";
 import { API_BUILDERS } from "./project";
@@ -178,11 +179,11 @@ const assertContentPermissions = (
         `The Content Engine adds ${CONTENT_ADMIN_PERMISSIONS.join(", ")} to "${permissionModule}" only when the plugin does not declare that module.`,
       ],
       [
-        `Check permissionStaff.admin by hand: it must either have no ${JSON.stringify(permissionModule)} key, or list all four:`,
+        `Check the admin permissions of the plugin's defineStaffPermissions(manifest, {...}) by hand: they must either have no ${JSON.stringify(permissionModule)} key, or list all four:`,
         `  ${propertyKey(permissionModule)}: [`,
         ...lines,
         "  ],",
-        "Then make permissionStaff an object literal in buildApiPlugin (or staffPermissions.config from defineStaffPermissions({ ... })) and run the command again.",
+        `Then declare them with defineStaffPermissions(manifest, { admin }) in ${STAFF_PERMISSIONS}, pass that export as permissionStaff, and run the command again.`,
       ],
     );
   }
@@ -197,15 +198,14 @@ const assertContentPermissions = (
   if (missing.length === 0) return;
 
   const location = locatePermissionStaff(ctx);
-  const file =
-    location.kind === "unresolved" ? "src/config.api.ts" : location.file;
+  const file = location.kind === "defined" ? location.file : STAFF_PERMISSIONS;
   throw new ConfigError(
     `The plugin declares the permission module "${permissionModule}" without ${missing.join(", ")}.`,
     {
       details: [
         `The Content Engine adds ${CONTENT_ADMIN_PERMISSIONS.join(", ")} to "${permissionModule}" only when the plugin does not declare it, and ${file} declares it with ${declared.length === 0 ? "no permissions" : declared.join(", ")}.`,
         "The generated staff routes would require permissions nobody can be granted. Nothing was written.",
-        `Add the missing ones to permissionStaff.admin[${JSON.stringify(permissionModule)}] in ${file}:`,
+        `Add the missing ones to admin[${JSON.stringify(permissionModule)}] in ${file}:`,
         ...lines.filter((_, index) =>
           missing.includes(CONTENT_ADMIN_PERMISSIONS[index] ?? "can_view"),
         ),
@@ -621,7 +621,6 @@ import { ${definition} } from ${JSON.stringify(specifierFor(project, modelFile, 
 /** The server-side model of {@link ${definition}}. Server-only. */
 export const ${model} = createContentModel(${definition});
 
-// Migrations find tables through the exports of the built src/database files.
 export const ${tableName} = ${model}.table;
 `,
     `model and table ${tableName}`,

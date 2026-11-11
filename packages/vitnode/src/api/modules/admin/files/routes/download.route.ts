@@ -4,9 +4,10 @@ import { eq } from "drizzle-orm";
 import { buildRoute } from "@/api/builders";
 import { attachStoredFile } from "@/api/lib/file-download";
 import { core_files } from "@/database/files";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 export const downloadFileAdminRoute = buildRoute({
-  adminStaffPermission: { module: "files", permission: "can_download" },
+  adminStaffPermission: coreStaffPermissions.admin.files.canDownload,
   route: {
     method: "get",
     description:

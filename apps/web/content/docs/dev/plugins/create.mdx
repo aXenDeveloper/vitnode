@@ -93,7 +93,7 @@ The new package, with the files the next lessons change:
 </Files>
 
 - `src/config.api.ts` declares the API half; `src/config.tsx` and `src/routes.ts` the front-end half.
-- `src/api/builders.ts` binds `buildModule` and `buildRoute` to the plugin, so API files never spell its id.
+- `src/api/builders.ts` binds the five API builders to the plugin, so API files never spell its id: `buildModule` and `buildRoute` for modules and routes, `buildQueueTask` for [queue tasks](/docs/dev/advanced/queue), `defineCacheEntry` for [cache entries](/docs/dev/cache/api) and `defineEvent` for [events](/docs/dev/events).
 - Every build writes `src/manifest.gen.ts` and `types/api-registry.gen.d.ts`. Commit them; the second one is what types the plugin's own API calls (see [API modules](/docs/dev/plugins/api/modules#how-the-fetcher-knows-your-routes)).
 
 </Step>

@@ -7,6 +7,7 @@ import {
   PASSKEY_ERROR_RESPONSES,
   zodPasskeyIdParam,
 } from "@/api/modules/users/passkeys/passkeys.schema";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {
@@ -17,7 +18,7 @@ import {
 } from "../lib/target-user";
 
 export const deleteUserPasskeyAdminRoute = buildRoute({
-  adminStaffPermission: { module: "users", permission: "can_edit" },
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
   route: {
     method: "delete",
     description:

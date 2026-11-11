@@ -24,7 +24,6 @@ export interface CacheEntryDefinition<
   readonly version: number;
 }
 
-/** What {@link defineCacheEntry} takes. */
 export interface CacheEntryOptions<
   Plugin extends string,
   Name extends string,
@@ -167,8 +166,8 @@ export const defineCacheEntry = <
 
 /**
  * The storage key of one entry: plugin, name and version, then the key parts
- * as a JSON array, which keeps `"1"` and `1` apart and cannot be confused with
- * a key the string API writes (`vitnode:cache:{plugin}:…`).
+ * as a JSON array, which keeps `"1"` and `1` apart. Lives outside the system
+ * store (`vitnode:cache:__system__:…`), so no entry can collide with it.
  *
  * @throws {CacheEntryDefinitionError} For an unsupported key part.
  */

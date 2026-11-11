@@ -17,6 +17,7 @@ import type { QueueTaskConfig } from "@/api/lib/queue";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 
 import { AUDIT_SYSTEM_ACTOR, withAuditContext } from "@/api/lib/audit/context";
+import { cacheStore } from "@/api/lib/cache";
 import { parseJsonWire } from "@/api/lib/json-wire";
 import { QueueDeferError } from "@/api/lib/queue";
 import { core_queue } from "@/database/queue";
@@ -170,33 +171,29 @@ const runQueueTask = async (
     await c.get("log").warn(error);
   } else {
     try {
-      let payload = task.payload;
-      if (registered.payload !== undefined) {
-        const parsed = await parseJsonWire(
-          registered.payload,
-          task.payload,
-          "payload",
-        );
-        const output = parsed.success ? parsed.data : null;
-        if (!isPayloadObject(output)) {
-          const lastError = `Invalid payload: ${
-            parsed.success
-              ? "the schema's output is not an object"
-              : parsed.reason
-          }`;
-          await c
-            .get("log")
-            .warn(`Queue task "${key}" (#${String(task.id)}): ${lastError}`);
+      const parsed = await parseJsonWire(
+        registered.payload,
+        task.payload,
+        "payload",
+      );
+      const payload = parsed.success ? parsed.data : null;
+      if (!isPayloadObject(payload)) {
+        const lastError = `Invalid payload: ${
+          parsed.success
+            ? "the schema's output is not an object"
+            : parsed.reason
+        }`;
+        await c
+          .get("log")
+          .warn(`Queue task "${key}" (#${String(task.id)}): ${lastError}`);
 
-          return {
-            availableAt: task.availableAt,
-            completedAt: new Date(),
-            deferred: false,
-            lastError,
-            status: "failed",
-          };
-        }
-        payload = output;
+        return {
+          availableAt: task.availableAt,
+          completedAt: new Date(),
+          deferred: false,
+          lastError,
+          status: "failed",
+        };
       }
 
       // A task runs as the system, whichever request happened to drain it.
@@ -329,9 +326,10 @@ export const processQueueTasks = async (
     queues,
   }: ProcessQueueOptions = {},
 ): Promise<void> => {
-  const gotLock = await c
-    .get("cache")
-    .acquireLock(lockKey, QUEUE_LOCK_TTL_SECONDS);
+  const gotLock = await cacheStore(c).acquireLock(
+    lockKey,
+    QUEUE_LOCK_TTL_SECONDS,
+  );
   if (!gotLock) return;
   const lockedAt = Date.now();
 
@@ -364,7 +362,7 @@ export const processQueueTasks = async (
   } finally {
     // Past the TTL the key may already belong to another instance's run.
     if (Date.now() - lockedAt < QUEUE_LOCK_TTL_SECONDS * 1000) {
-      await c.get("cache").releaseLock(lockKey);
+      await cacheStore(c).releaseLock(lockKey);
     }
   }
 };

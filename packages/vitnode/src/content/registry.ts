@@ -3,9 +3,11 @@ import type {
   PermissionStaffEntryInput,
   PermissionStaffModulesInput,
 } from "../api/lib/permission-staff";
+import type { AdminStaffPermissionRef } from "../lib/staff-permissions";
 import type { ContentId } from "./ids";
 import type { AnyContentTypeDefinition } from "./types";
 
+import { declaredStaffPermission } from "../lib/staff-permissions";
 import {
   CONTENT_ADMIN_CREATE_SEGMENT,
   CONTENT_ADMIN_EDIT_SEGMENT,
@@ -437,6 +439,41 @@ export const contentPermissionEntries = (
   // editing the record in one language, so it is `can_edit` - and a role that
   // may edit an article may edit every language of it.
 ];
+
+/** One of the Content Engine's permission names, e.g. `can_edit`. */
+export type ContentPermission =
+  (typeof CONTENT_PERMISSIONS)[keyof typeof CONTENT_PERMISSIONS];
+
+/**
+ * A typed reference to one of the admin permissions a content type generates
+ * (see {@link contentPermissionEntries}), owned by the plugin that registers
+ * it. For the Content Engine's own routes, and for a plugin route that guards
+ * with a content type's generated permission.
+ *
+ * @throws {Error} When the content type does not generate `permission` -
+ * `can_publish` without publication, `can_hide` without visibility,
+ * `can_restore` without editorial.
+ *
+ * @example
+ * ```ts
+ * buildRoute({
+ *   adminStaffPermission: contentAdminStaffPermission(manifest.id, postContent, "can_edit"),
+ *   ...
+ * });
+ * ```
+ */
+export const contentAdminStaffPermission = <const P extends string>(
+  pluginId: P,
+  definition: AnyContentTypeDefinition,
+  permission: ContentPermission,
+): AdminStaffPermissionRef<P> =>
+  declaredStaffPermission({
+    entries: contentPermissionEntries(definition),
+    module: definition.permissionModule,
+    permission,
+    plugin: pluginId,
+    staffType: "admin",
+  });
 
 /**
  * Moderators act from the public site. `can_edit` edits any record a member

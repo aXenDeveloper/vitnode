@@ -10,6 +10,7 @@ import type { AnyContentTypeDefinition } from "../../types";
 import type { ContentSubmissionKind } from "../const";
 import type { ContentApprovalState } from "../schema";
 
+import { contentApprovalSubmittedEvent } from "../../../api/events/content-approvals";
 import { core_content_submissions } from "../../../database/content-submissions";
 import { contentIdKey } from "../../ids";
 import {
@@ -187,7 +188,7 @@ export const emitContentApprovalSubmitted = async (
   c: Context,
   { replaced, row }: { replaced: null | number; row: ContentSubmissionRow },
 ): Promise<void> => {
-  await c.get("events").emit("content.approval.submitted", {
+  await c.get("events").emit(contentApprovalSubmittedEvent, {
     authorId: row.authorId,
     containerId: row.containerId,
     contentId: row.itemId,

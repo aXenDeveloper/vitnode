@@ -2,6 +2,7 @@ import type { Context } from "hono";
 
 import { describe, expect, it, vi } from "vitest";
 
+import { userUpdatedEvent } from "@/api/events/users";
 import { core_users } from "@/database/users";
 import {
   createSessionWorld,
@@ -49,7 +50,7 @@ describe("PUT /users/me/time-zone", () => {
     expect(await response.json()).toEqual({ timeZone: "Europe/Warsaw" });
     expect(storedTimeZone()).toBe("Europe/Warsaw");
     expect(emit).toHaveBeenCalledWith(
-      "user.updated",
+      userUpdatedEvent,
       expect.objectContaining({ userId: member.userId }),
     );
   });

@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import type { ContentNode } from "@/blocks/types";
 import type { PageLayoutZones } from "@/database/page-layouts";
@@ -123,6 +123,7 @@ const harness = (zones?: PageLayoutZones, pageId: string = page.id) => {
     zones === undefined ? null : { pageId, updatedAt: STORED_AT, zones };
   const written: Written = { deletes: 0, log: [], upserts: [] };
   let queue: Promise<unknown> = Promise.resolve();
+  let beforeAnswer: (() => Promise<void>) | undefined;
 
   const db = {
     delete: () => ({
@@ -165,6 +166,9 @@ const harness = (zones?: PageLayoutZones, pageId: string = page.id) => {
             await new Promise(resolve => {
               setTimeout(resolve, 0);
             });
+            const race = beforeAnswer;
+            beforeAnswer = undefined;
+            await race?.();
 
             return answered === null ? [] : [answered];
           },
@@ -195,6 +199,10 @@ const harness = (zones?: PageLayoutZones, pageId: string = page.id) => {
       get: (key: string) => (key === "cache" ? cache : db),
     } as unknown as Context,
     cache,
+    /** Runs `run` after the next select has read the row, before it answers. */
+    raceNextSelect: (run: () => Promise<void>) => {
+      beforeAnswer = run;
+    },
     stored: () => row,
     written,
   };
@@ -336,16 +344,16 @@ describe("the cached read", () => {
   });
 
   it("does not let a read that started before a save remember the old layout", async () => {
-    const { c, cache } = harness({ sidebar: [quote("s1", "Stored")] });
-    const remember = cache.set.bind(cache);
+    const { c, raceNextSelect } = harness({
+      sidebar: [quote("s1", "Stored")],
+    });
 
-    vi.spyOn(cache, "set").mockImplementationOnce(async (...args) => {
+    raceNextSelect(async () => {
       await savePageLayout(c, {
         expectedZones: { sidebar: [quote("s1", "Stored")] },
         page,
         zones: { sidebar: [quote("s1", "Saved")] },
       });
-      await remember(...args);
     });
 
     expect((await readPageLayout(c, page.id))?.zones).toEqual({

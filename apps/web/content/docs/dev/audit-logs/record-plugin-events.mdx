@@ -1,6 +1,6 @@
 ---
 title: Record plugin events
-description: Record your plugin's own operations in the VitNode Activity Logs with c.get('audit').record(), inside the same transaction as the change, with before/after values and translated labels.
+description: Record your plugin's operations in the VitNode Activity Logs with c.get('audit').record(), in the same transaction as the change, with before and after values.
 icon: PenLine
 ---
 
@@ -29,7 +29,7 @@ a failed audit write fails the insert instead of quietly losing the trail.
 
 ```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/create.route.ts"
 export const createNoteRoute = buildRoute({
-  adminStaffPermission: { module: 'notes', permission: 'can_create' },
+  adminStaffPermission: staffPermissions.admin.notes.canCreate,
   route: {
     // unchanged
   },

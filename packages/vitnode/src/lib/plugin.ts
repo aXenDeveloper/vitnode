@@ -1,4 +1,3 @@
-import type { PermissionsStaffArgs } from "../api/lib/permission-staff";
 import type { ItemAutoFormComponentProps } from "../components/form/auto-form";
 import type { AnyContentContainerDefinition } from "../content/containers/types";
 import type { ContentId } from "../content/ids";
@@ -12,16 +11,9 @@ import type { AdminNavItem as ResolvedAdminNavItem } from "../views/admin/layout
 import type { ContentFormSkeletonControl } from "../views/admin/views/content/form/skeleton";
 import type { LocaleFilesMap, LocaleMessagesMap } from "./i18n/types";
 import type { PluginManifest } from "./plugin-manifest";
+import type { AdminStaffPermissionRef } from "./staff-permissions";
 
 import { assertPluginManifest } from "./plugin-manifest";
-
-/**
- * An admin staff permission a plugin's navigation item or dashboard widget
- * requires. The plugin is implied: it is always checked against the plugin that
- * declared the item, so a permission granted under another plugin never
- * reveals it.
- */
-export type AdminNavPermission = Omit<PermissionsStaffArgs, "plugin">;
 
 interface AdminNavItem extends Pick<
   ResolvedAdminNavItem,
@@ -32,8 +24,12 @@ interface AdminNavItem extends Pick<
    * frontend messages (`{pluginId}.admin.nav.{parentId}.{id}` for a sub-item).
    */
   id: string;
-  /** Hides the item from admins without this permission. Omit to show it to every admin. */
-  permission?: AdminNavPermission;
+  /**
+   * Hides the item from admins without this admin permission - a reference
+   * from `defineStaffPermissions`, checked against the plugin that declares
+   * it. Omit to show it to every admin.
+   */
+  permission?: AdminStaffPermissionRef;
 }
 
 /**
@@ -50,7 +46,7 @@ interface AdminNavItem extends Pick<
  *       id: "reports",
  *       href: "/admin/blog/reports",
  *       icon: <FlagIcon />,
- *       permission: { module: "reports", permission: "can_view" },
+ *       permission: staffPermissions.admin.reports.canView,
  *     },
  *   ],
  * },
@@ -155,8 +151,11 @@ export interface AdminDashboardWidget {
   id: string;
   /** The narrowest the admin can resize it to. Defaults to `1`. */
   minSpan?: AdminDashboardWidgetSpan;
-  /** Hides the widget from admins without this permission. */
-  permission?: AdminNavPermission;
+  /**
+   * Hides the widget from admins without this admin permission - a reference
+   * from `defineStaffPermissions`, checked against the plugin that declares it.
+   */
+  permission?: AdminStaffPermissionRef;
   /** A form for this instance's `settings`, shown when the admin edits the widget. */
   settingsComponent?: React.ComponentType<AdminDashboardWidgetProps>;
 }
