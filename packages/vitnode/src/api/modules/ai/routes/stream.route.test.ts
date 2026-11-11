@@ -12,7 +12,8 @@ import { MemoryAiLedger } from "@/api/lib/ai/memory-ledger";
 import { collectAiActions } from "@/api/lib/ai/registry";
 import { AIModel } from "@/api/models/ai";
 
-import { estimateAiRoute, streamAiRoute } from "./stream.route";
+import { estimateAiRoute } from "./estimate.route";
+import { streamAiRoute } from "./stream.route";
 
 const USER_ID = 5;
 

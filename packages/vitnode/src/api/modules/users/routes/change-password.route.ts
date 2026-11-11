@@ -8,7 +8,7 @@ import { ForgotPasswordTokenModel, PasswordModel } from "@/api/models/password";
 import { revokeSessions } from "@/api/models/session-revoke";
 import { core_users, core_users_forgot_password } from "@/database/users";
 
-import { USER_PASSWORD_MAX_LENGTH } from "../credential-limits";
+import { USER_PASSWORD_MAX_LENGTH } from "../lib/credential-limits";
 
 export const zodChangePasswordSchema = z.object({
   password: z.string().min(8).max(USER_PASSWORD_MAX_LENGTH).openapi({

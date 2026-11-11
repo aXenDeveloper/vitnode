@@ -4,7 +4,7 @@ import { categoryContent } from "@/database/categories";
 import { commentContent } from "@/database/comments";
 import { postContent } from "@/database/posts";
 
-import { aiAdminModule } from "./ai/ai.admin.module";
+import { aiAdminModule } from "./ai/ai.module";
 
 export const adminModule = buildModule({
   name: "admin",

@@ -8,26 +8,28 @@ icon: List
 
 ## Methods
 
-| Method                                 | Returns                                                | Behavior                                                                                                                       |
-| -------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `get<T>(key)`                          | `Promise<T \| null>`                                   | Reads and parses a value. Returns `null` on a miss or on a Redis error.                                                        |
-| `set<T>(key, value, ttlSeconds?)`      | `Promise<void>`                                        | Stores `value` as JSON. Without `ttlSeconds`, or with `0`, the key never expires.                                              |
-| `has(key)`                             | `Promise<boolean>`                                     | Whether the key exists. `false` on a Redis error.                                                                              |
-| `remember<T>(key, ttlSeconds, loader)` | `Promise<T>`                                           | Returns the cached value when `get` finds one. Otherwise runs `loader`, stores its result with `set` and returns it.           |
-| `delete(key)`                          | `Promise<void>`                                        | Deletes one key, or every key in an array.                                                                                     |
-| `flush()`                              | `Promise<void>`                                        | Deletes every key of the current plugin. Other plugins' keys and unrelated data in the same Redis instance are left untouched. |
-| `acquireLock(key, ttlSeconds)`         | `Promise<boolean>`                                     | Takes a lock that expires after `ttlSeconds`. `true` when this call holds the lock, `false` when another caller does.          |
-| `releaseLock(key)`                     | `Promise<void>`                                        | Releases a lock taken with `acquireLock`.                                                                                      |
-| `status()`                             | `Promise<{ configured: boolean; connected: boolean }>` | Pings Redis. Both fields are `false` without Redis.                                                                            |
+| Method                                 | Returns                                                | Behavior                                                                                                                                       |
+| -------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get<T>(key)`                          | `Promise<T \| null>`                                   | Reads and parses a value. Returns `null` on a miss or on a Redis error.                                                                        |
+| `set<T>(key, value, ttlSeconds?)`      | `Promise<void>`                                        | Stores `value` as JSON. Without `ttlSeconds`, or with `0`, the key never expires.                                                              |
+| `has(key)`                             | `Promise<boolean>`                                     | Whether the key exists. `false` on a Redis error.                                                                                              |
+| `remember<T>(key, ttlSeconds, loader)` | `Promise<T>`                                           | Returns the cached value when `get` finds one. Otherwise runs `loader`, stores its result with `set` and returns it.                           |
+| `delete(key)`                          | `Promise<void>`                                        | Deletes one key, or every key in an array.                                                                                                     |
+| `flush()`                              | `Promise<void>`                                        | Deletes every key and typed entry of the current plugin. Other plugins' keys and unrelated data in the same Redis instance are left untouched. |
+| `entry(definition, ...keyArgs)`        | `CacheEntryHandle`                                     | A typed entry. See [Typed entries](#typed-entries).                                                                                            |
+| `acquireLock(key, ttlSeconds)`         | `Promise<boolean>`                                     | Takes a lock that expires after `ttlSeconds`. `true` when this call holds the lock, `false` when another caller does.                          |
+| `releaseLock(key)`                     | `Promise<void>`                                        | Releases a lock taken with `acquireLock`.                                                                                                      |
+| `status()`                             | `Promise<{ configured: boolean; connected: boolean }>` | Pings Redis. Both fields are `false` without Redis.                                                                                            |
 
 `getSystem`, `getSystemMany`, `setSystem` and `deleteSystem` also exist. They write to a namespace shared with VitNode core, so plugins should use the plugin-scoped methods above.
 
 ## Keys
 
-| Method                                             | Stored as                             |
-| -------------------------------------------------- | ------------------------------------- |
-| `get`, `set`, `has`, `remember`, `delete`, `flush` | `vitnode:cache:{pluginId}:{key}`      |
-| `acquireLock`, `releaseLock`                       | `vitnode:cache:__system__:lock:{key}` |
+| Method                                             | Stored as                                                                      |
+| -------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `get`, `set`, `has`, `remember`, `delete`, `flush` | `vitnode:cache:{pluginId}:{key}`                                               |
+| `acquireLock`, `releaseLock`                       | `vitnode:cache:__system__:lock:{key}`                                          |
+| `entry(...)`                                       | `vitnode:cache-entry:{definition pluginId}:{name}:v{version}:{JSON key parts}` |
 
 The plugin ID comes from the route that handles the request. Lock keys are not prefixed with it, so include your plugin ID in a lock key, for example `site-notes:rebuild-stats`.
 
@@ -38,6 +40,31 @@ Values go through `JSON.stringify` and `JSON.parse`:
 - A `Date` comes back as an ISO string, and a `Map` or `Set` comes back as `{}`.
 - `null` is stored, but `get` returns `null` for it, so `remember` treats it as a miss and runs the loader again.
 - `undefined` is not stored.
+
+## Typed entries
+
+`defineCacheEntry` from your plugin's `@/api/builders` (`bindApiPlugin(manifest).defineCacheEntry`) declares an entry; `c.get("cache").entry(definition, ...keyArgs)` reads and writes it. A walkthrough is in [Typed cache entries](/docs/dev/cache/typed-entries).
+
+| Name         | Type                                           | Required | Default    | Description                                                                                     |
+| ------------ | ---------------------------------------------- | -------- | ---------- | ----------------------------------------------------------------------------------------------- |
+| `name`       | `string`                                       | Yes      | -          | Letters, digits, `.`, `_` and `-`, starting with a letter or digit, up to 100 characters. Unique within the plugin. |
+| `version`    | `number`                                       | Yes      | -          | Whole number, at least 1. Bump it to drop every stored entry. Never derived from the schema.    |
+| `schema`     | `z.ZodType`                                    | Yes      | -          | Validates writes and reads. Its input must be JSON; `z.date()` is a compile error.              |
+| `ttlSeconds` | `number`                                       | Yes      | -          | Whole number, at least 1. Capped at 15 by the in-memory fallback.                               |
+| `key`        | `(...args) => (string \| number \| boolean)[]` | No       | `() => []` | Builds the key parts from `entry()`'s arguments. At most 8 parts: strings up to 256 characters, finite numbers or booleans. |
+
+| Handle method      | Returns                        | Behavior                                                                                                                            |
+| ------------------ | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `get()`            | `Promise<Output \| undefined>` | The schema's output, or `undefined` on a miss. A stored `null`, `false`, `0` or `""` is a hit.                                      |
+| `set(value)`       | `Promise<void>`                | Validates the schema's input and stores its JSON for `ttlSeconds`. Throws `CacheEntryValidationError` when invalid.                 |
+| `remember(loader)` | `Promise<Output>`              | Returns the parsed hit, or runs `loader`, validates, stores and returns the parsed result. Throws like `set` for an invalid result. |
+| `delete()`         | `Promise<void>`                | Removes the entry.                                                                                                                  |
+| `key`              | `string`                       | The storage key, for logs.                                                                                                          |
+
+- **Keys** belong to the plugin in the definition, not to the route handling the request. Key parts are encoded as a JSON array, so `"1"` and `1` are different keys and no part can collide with a string-API key.
+- **Reads** treat malformed JSON, a value the schema rejects, a different `version`, no store and a Redis error as a miss; a rejected value is deleted.
+- **Writes** copy the value to JSON first and reject a `Date`, `Map`, class instance, `NaN`, `Infinity`, `bigint`, circular reference, or `undefined` or missing (sparse) array item; `undefined` object properties are omitted. What is stored is that JSON (the schema's input), not the schema's output.
+- **Errors:** `CacheEntryValidationError` for an invalid write; `CacheEntryDefinitionError` for an invalid `name`, `version`, `ttlSeconds` or key part. Redis errors are never thrown.
 
 ## Without Redis and when Redis fails
 

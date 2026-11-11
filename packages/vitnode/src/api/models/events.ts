@@ -1,10 +1,19 @@
 import type { Context } from "hono";
+import type { z } from "zod";
 
 import { randomUUID } from "node:crypto";
 
 import type { SsoProfileField } from "@/lib/sso-profile";
 
+import type { EventDefinition } from "../lib/event-definition";
 import type { EventListenerConfig } from "../lib/events";
+
+import {
+  EventDefinitionError,
+  EventPayloadValidationError,
+  isEventDefinition,
+} from "../lib/event-definition";
+import { parseJsonWire } from "../lib/json-wire";
 
 export interface ContentContainerEventPayload {
   containerId: number;
@@ -415,27 +424,15 @@ export class EventsModel {
     return this.c.get("core").events.adapter;
   }
 
-  /**
-   * Publishes an event to its listeners through the configured adapter.
-   *
-   * Never throws: listener and adapter errors are logged and returned in
-   * `failures`. With the local adapter the promise resolves after every
-   * listener has finished, so await it when listeners must run before the
-   * response, and keep listeners fast.
-   *
-   * @example
-   * ```ts
-   * await c.get("events").emit("role.created", { roleId: role.id });
-   * ```
-   */
-  async emit<K extends VitNodeEventName>(
-    name: K,
-    payload: VitNodeEvents[K],
-    options?: EventEmitOptions,
-  ): Promise<EventEmitResult> {
+  private envelope(
+    name: string,
+    payload: unknown,
+    options: EventEmitOptions | undefined,
+  ): EventEnvelope {
     const admin = this.c.get("admin");
     const user = this.c.get("user");
-    const envelope: EventEnvelope<K> = {
+
+    return {
       eventId: randomUUID(),
       name,
       payload,
@@ -447,7 +444,10 @@ export class EventsModel {
         : user
           ? { type: "user", id: user.id }
           : { type: "system" },
-    };
+    } as EventEnvelope;
+  }
+
+  private async publish(envelope: EventEnvelope): Promise<EventEmitResult> {
     const adapter = this.adapter();
 
     try {
@@ -457,7 +457,7 @@ export class EventsModel {
       await this.c
         .get("log")
         .error(
-          `Events adapter "${adapter.name}" failed to publish "${name}": ${error}`,
+          `Events adapter "${adapter.name}" failed to publish "${envelope.name}": ${error}`,
         );
 
       return {
@@ -474,6 +474,113 @@ export class EventsModel {
         ],
       };
     }
+  }
+
+  private registeredDefinition(name: string): EventDefinition | undefined {
+    return this.c.get("core").events.definitions?.get(name);
+  }
+
+  private async rejectInvalidPayload(
+    envelope: EventEnvelope,
+    reason: string,
+  ): Promise<EventEmitResult> {
+    const error = `Invalid payload: ${reason}`;
+    await this.c
+      .get("log")
+      .error(`Event "${envelope.name}" was not delivered. ${error}`);
+
+    return {
+      eventId: envelope.eventId,
+      status: "delivered",
+      delivered: 0,
+      failures: [
+        {
+          pluginId: envelope.pluginId,
+          module: "validation",
+          listener: envelope.name,
+          error,
+        },
+      ],
+    };
+  }
+
+  /**
+   * Emits a schema-defined event. The payload is type-checked against the
+   * schema's input, copied to JSON and validated before the adapter or any
+   * listener sees it; listeners receive the schema's output. Delivery then
+   * works exactly like an emit by name: listener and adapter errors are
+   * logged and returned in `failures`.
+   *
+   * @throws {EventPayloadValidationError} When the payload is not JSON or the
+   * schema rejects it. Nothing was delivered.
+   * @throws {EventDefinitionError} When a different definition is registered
+   * under the same name.
+   */
+  async emit<Schema extends z.ZodType>(
+    event: EventDefinition<string, string, Schema>,
+    payload: z.input<Schema>,
+    options?: EventEmitOptions,
+  ): Promise<EventEmitResult>;
+  /**
+   * Publishes an event to its listeners through the configured adapter.
+   *
+   * Never throws: listener and adapter errors are logged and returned in
+   * `failures`. With the local adapter the promise resolves after every
+   * listener has finished, so await it when listeners must run before the
+   * response, and keep listeners fast. When `name` belongs to a registered
+   * event definition, the payload is validated first; an invalid one is not
+   * delivered and comes back as a failure with `module: "validation"`.
+   *
+   * @example
+   * ```ts
+   * await c.get("events").emit("role.created", { roleId: role.id });
+   * ```
+   */
+  async emit<K extends VitNodeEventName>(
+    name: K,
+    payload: VitNodeEvents[K],
+    options?: EventEmitOptions,
+  ): Promise<EventEmitResult>;
+  async emit(
+    event: EventDefinition | VitNodeEventName,
+    payload: unknown,
+    options?: EventEmitOptions,
+  ): Promise<EventEmitResult> {
+    if (isEventDefinition(event)) {
+      const registered = this.registeredDefinition(event.name);
+      if (
+        registered !== undefined &&
+        (registered.payload !== event.payload ||
+          registered.pluginId !== event.pluginId)
+      ) {
+        throw new EventDefinitionError(
+          `A different definition of the event "${event.name}" is registered (by "${registered.pluginId}"). Emit the registered definition, or rename one of them.`,
+        );
+      }
+
+      const parsed = await parseJsonWire(event.payload, payload, "payload");
+      if (!parsed.success) {
+        throw new EventPayloadValidationError(event.name, parsed.reason);
+      }
+
+      return await this.publish(
+        this.envelope(event.name, parsed.data, options),
+      );
+    }
+
+    const definition = this.registeredDefinition(event);
+    if (definition === undefined) {
+      return await this.publish(this.envelope(event, payload, options));
+    }
+
+    const parsed = await parseJsonWire(definition.payload, payload, "payload");
+
+    return parsed.success
+      ? await this.publish(this.envelope(event, parsed.data, options))
+      : await this.rejectInvalidPayload(
+          this.envelope(event, payload, options),
+          parsed.reason,
+        );
   }
 
   /** Name of the configured adapter, e.g. `"local"`. */

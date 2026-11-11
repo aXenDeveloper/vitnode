@@ -1,25 +1,23 @@
 import { buildModule } from "@/api/builders";
 import { coreNotificationTypes } from "@/api/lib/notifications/core-types";
 
-import { listNotificationsRoute } from "./routes/list.route";
-import {
-  archiveNotificationRoute,
-  markAllNotificationsReadRoute,
-  markNotificationReadRoute,
-  markNotificationUnreadRoute,
-} from "./routes/mark.route";
-import {
-  getNotificationPreferencesRoute,
-  updateNotificationPreferencesRoute,
-} from "./routes/preferences.route";
-import { notificationStateRoute } from "./routes/state.route";
 import {
   notificationsCleanupCron,
+  notificationsScheduleCron,
+} from "./cron/notifications.cron";
+import { archiveNotificationRoute } from "./routes/archive.route";
+import { listNotificationsRoute } from "./routes/list.route";
+import { markAllNotificationsReadRoute } from "./routes/mark-all-read.route";
+import { markNotificationReadRoute } from "./routes/mark-read.route";
+import { markNotificationUnreadRoute } from "./routes/mark-unread.route";
+import { getNotificationPreferencesRoute } from "./routes/show-preferences.route";
+import { notificationStateRoute } from "./routes/state.route";
+import { updateNotificationPreferencesRoute } from "./routes/update-preferences.route";
+import {
   notificationsCleanupTask,
   notificationsEmailTask,
   notificationsFanoutTask,
-  notificationsScheduleCron,
-} from "./tasks/notification-tasks";
+} from "./tasks/notifications.task";
 
 export const notificationsModule = buildModule({
   name: "notifications",

@@ -1,4 +1,6 @@
-import { buildQueueTask } from "@/api/lib/queue";
+import { z } from "zod";
+
+import { buildQueueTask } from "@/api/builders";
 import {
   normalizeSearchIndexerPage,
   searchDocumentOwner,
@@ -8,12 +10,11 @@ const PAGE_SIZE = 200;
 
 export const rebuildSearchIndexTask = buildQueueTask({
   name: "rebuild-search-index",
+  payload: z.object({ itemType: z.string().min(1).optional() }),
   description:
     "Clear and rebuild the content search index. With no `itemType` payload it rebuilds every registered indexer; with one it rebuilds just that collection.",
-  handler: async (c, payload) => {
+  handler: async (c, { itemType }) => {
     const search = c.get("search");
-    const itemType =
-      typeof payload.itemType === "string" ? payload.itemType : undefined;
     const indexers = c
       .get("core")
       .searchIndexers.filter(

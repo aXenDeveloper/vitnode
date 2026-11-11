@@ -1,7 +1,7 @@
 import { ALT_QUEUE, detectMissingAlt } from "@/api/lib/ai/alt";
 import { buildCron } from "@/api/lib/cron";
 
-import { processQueueTasks } from "../../queue/helpers/process-queue-tasks";
+import { processQueueTasks } from "../../queue/lib/process-queue-tasks";
 
 export const altDetectCron = buildCron({
   name: "ai-alt-detect",

@@ -10,7 +10,7 @@ VitNode resolves the session cookie before your code runs, so the signed-in user
 
 `c.get("user")` returns the signed-in user, or `null` for a guest. This route answers `401` for guests and returns a few fields for everybody else:
 
-```ts title="plugins/site-notes/src/api/modules/hello/me.route.ts"
+```ts title="plugins/site-notes/src/api/modules/hello/routes/me.route.ts"
 import { z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 

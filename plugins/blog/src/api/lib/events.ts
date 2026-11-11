@@ -1,3 +1,4 @@
+import type { EventPayload } from "@vitnode/core/api/lib/event-definition";
 import type { EnvVitNode } from "@vitnode/core/api/middlewares/global.middleware";
 import type { ContentEventsFor } from "@vitnode/core/content";
 import type { Context } from "hono";
@@ -7,6 +8,7 @@ import { contentEventName } from "@vitnode/core/content";
 
 import type { blogCategoryContentType } from "@/content/category";
 
+import { blogPostDeletedEvent } from "@/api/event-definitions";
 import { blogPostContentType } from "@/content/post";
 import { postContent } from "@/database/posts";
 
@@ -43,10 +45,8 @@ declare module "@vitnode/core/api/models/events" {
       categoryId: number;
       postId: number;
     };
-    /** Compatibility name for `content.blog.post.deleted`. */
-    "blog.post.deleted": {
-      postId: number;
-    };
+    /** Compatibility name for `content.blog.post.deleted`, defined by {@link blogPostDeletedEvent}. */
+    "blog.post.deleted": EventPayload<typeof blogPostDeletedEvent>;
     /**
      * Compatibility name for `content.blog.post.updated`. Skipped when no
      * category can be read back for the article.
@@ -106,7 +106,7 @@ export const legacyPostDeletedListener = buildEventListener({
   name: "legacy-blog-post-deleted",
   description: "Re-emits the blog's own blog.post.deleted event",
   handler: async (c, payload) => {
-    await c.get("events").emit("blog.post.deleted", {
+    await c.get("events").emit(blogPostDeletedEvent, {
       postId: payload.contentId,
     });
   },

@@ -1,0 +1,147 @@
+---
+title: Add a service
+description: Generate a plain service factory for a VitNode API module, give it explicit dependencies, and call it from a route or a background job without the Hono context.
+icon: Workflow
+implementation:
+  objective: Move an API module's business logic into a plain service factory that routes, cron jobs and queue tasks can share.
+  decisions:
+    - Which plugin and module get the service? Offer modules under `src/api/modules` in plugins with a `src/config.api.ts`.
+    - Which operations move into it? Offer database queries and business rules found in the chosen module's route handlers.
+    - Which callers use it? Offer the module's routes and any cron jobs or queue tasks in the plugin that do the same work.
+  constraints:
+    - Create the file with `vitnode g service <module>` and keep the generated `{ db }` dependency shape.
+    - Pass plain values such as `db`, a transaction or the acting user into the service, never the Hono context.
+    - Keep request validation, staff permission checks and status codes in the routes.
+    - Build the service per call inside the handler, never once at module scope.
+  related:
+    - title: Database
+      href: /docs/dev/database
+    - title: Generate an endpoint
+      href: /docs/dev/plugins/api/generate-route
+---
+
+A service holds a module's business operations, such as listing notes or publishing one, as plain functions with explicit inputs. Routes keep the HTTP work: validating the request, checking permissions and choosing a status code. `vitnode g service` creates the file. There is no base class, decorator or container to register it with.
+
+## Before you begin
+
+- The `notes` module with its `list` route from [Generate an endpoint](/docs/dev/plugins/api/generate-route), with a terminal in `plugins/site-notes`.
+- The `site_notes` table and a few rows in it: create `src/database/notes.ts`, migrate and add rows as in the first steps of [Database](/docs/dev/database).
+
+<Steps>
+
+<Step>
+
+### Generate the service
+
+```bash
+pnpm vitnode g service notes
+```
+
+This creates `src/api/modules/notes/notes.service.ts` next to `notes.module.ts` and changes nothing else, so existing routes keep working:
+
+```ts title="plugins/site-notes/src/api/modules/notes/notes.service.ts"
+import type { EnvVariablesVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+
+/** What the notes service needs, passed in by whoever builds it. */
+export interface NotesServiceDeps {
+  /** In a route: `c.get("db")`. */
+  db: Omit<EnvVariablesVitNode["db"], "$client">;
+}
+
+/**
+ * Business operations for the `notes` module.
+ *
+ * Generated empty - it has no operations yet. ...
+ */
+export const createNotesService = (deps: NotesServiceDeps) => ({ deps });
+```
+
+The scaffold has no operations yet. `db` leaves out the driver client (`$client`), so a caller can pass a transaction as well as `c.get("db")`.
+
+</Step>
+
+<Step>
+
+### Add an operation
+
+Replace the factory's body with operations that take plain, typed arguments. When a route already validates an input with a Zod schema, type the argument with `z.infer<typeof schema>` instead of writing a second interface. This `list` operation reads the `site_notes` table:
+
+```ts title="plugins/site-notes/src/api/modules/notes/notes.service.ts"
+import type { EnvVariablesVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+
+import { desc } from "drizzle-orm";
+
+import { site_notes } from "@/database/notes";
+
+export interface NotesServiceDeps {
+  db: Omit<EnvVariablesVitNode["db"], "$client">;
+}
+
+export const createNotesService = ({ db }: NotesServiceDeps) => ({
+  list: async ({ limit }: { limit: number }) =>
+    db
+      .select({ id: site_notes.id, title: site_notes.title, body: site_notes.body })
+      .from(site_notes)
+      .orderBy(desc(site_notes.id))
+      .limit(limit),
+});
+```
+
+</Step>
+
+<Step>
+
+### Call it from a route
+
+In `routes/list.route.ts`, import the factory with `import { createNotesService } from "../notes.service";` and build the service inside the handler:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/list.route.ts"
+handler: async c => {
+  const notes = await createNotesService({ db: c.get("db") }).list({ limit: 20 });
+
+  return c.json(notes, 200);
+},
+```
+
+Replace the route's sample `200` schema with `z.array(z.object({ id: z.number(), title: z.string(), body: z.string() }))`, which is what `list` returns.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Reuse the `CheckNotes` button from [Generate an endpoint](/docs/dev/plugins/api/generate-route#call-it-from-a-page), changed to `path: "/"` with no `args`. Pressing it now shows the rows from `site_notes` instead of sample data. If the service returned a shape the `200` schema does not allow, TypeScript would report it in the handler.
+
+## Where dependencies come from
+
+Build a service where its dependencies are, and pass them in:
+
+| Dependency                                   | Lifetime                         | Where it comes from                                                   |
+| -------------------------------------------- | -------------------------------- | --------------------------------------------------------------------- |
+| The database client                          | Shared by the whole app          | `c.get("db")` in a route, or in a cron or queue handler, which gets a context too |
+| The acting user                              | One request                      | Read in the route, passed as an argument such as `actor: { id }`     |
+| Permission decisions                         | One request                      | Checked in the route (`adminStaffPermission`, `checkStaffPermission`) |
+| A transaction                                | One operation                    | Opened by the caller and passed in place of `db`                      |
+
+- **Pass values, not the context.** `createNotesService({ db })` works in a route, a [cron job](/docs/dev/cron), a queue task or a script alike, and a caller can hand it a transaction instead of `db`. A service that takes the whole context ties every caller to it.
+- **Keep request state out of module scope.** A service built once at import time would share one user, or one transaction, between requests. Building it per call is cheap: it is an object of functions.
+- **Pass the actor explicitly** when an operation depends on who does it, rather than reading a session inside the service.
+- **Throw `HTTPException`** from `hono/http-exception` for an outcome the route should answer with a status, as VitNode's own services do. There is no separate error hierarchy.
+
+The generator never rewrites existing handlers to use a service. Which route calls which operation, with which arguments, is your decision.
+
+## Related
+
+<Cards>
+  <Card
+    title="Generate an endpoint"
+    description="Add the routes that call the service"
+    href="/docs/dev/plugins/api/generate-route"
+  />
+  <Card
+    title="Database"
+    description="Create the table the service reads"
+    href="/docs/dev/database"
+  />
+</Cards>

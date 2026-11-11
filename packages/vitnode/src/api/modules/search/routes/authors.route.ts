@@ -2,7 +2,7 @@ import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
 
-import { zodSearchHitAuthor } from "./search.route";
+import { zodSearchHitAuthor } from "../search.schema";
 
 export const SEARCH_AUTHORS_LIMIT = 10;
 

@@ -6,7 +6,7 @@ import {
 import {
   zodNotificationPreferences,
   zodUpdateNotificationPreferences,
-} from "@/api/modules/notifications/routes/preferences.route";
+} from "@/api/modules/notifications/notifications.schema";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {

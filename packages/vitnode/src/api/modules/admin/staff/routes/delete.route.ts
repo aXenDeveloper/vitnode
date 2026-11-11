@@ -14,11 +14,11 @@ import { core_admin_permissions } from "@/database/admins";
 import { core_moderators_permissions } from "@/database/moderators";
 import { manifest } from "@/manifest";
 
-import { staffPermissionModuleByType, staffTypeSchema } from "../lib/schema";
 import {
   assertCanManageStaffEntry,
   assertNotOwnStaffEntry,
 } from "../lib/staff-entry-guards";
+import { staffPermissionModuleByType, staffTypeSchema } from "../staff.schema";
 
 const tableByType = {
   admin: core_admin_permissions,

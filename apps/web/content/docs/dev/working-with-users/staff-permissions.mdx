@@ -73,15 +73,15 @@ The AdminCP permission editor shows these names: **Site Notes** in its plugin li
 
 ### Guard the create route
 
-Admin endpoints live under an `admin` module, so their URLs contain `/admin/`. VitNode requires an AdminCP session for every such URL; `adminStaffPermission` adds the per-permission check. Create `src/api/modules/admin/notes/create.route.ts`:
+Admin endpoints live under an `admin` module, so their URLs contain `/admin/`. VitNode requires an AdminCP session for every such URL; `adminStaffPermission` adds the per-permission check. Create `src/api/modules/admin/notes/routes/create.route.ts`:
 
-```ts title="plugins/site-notes/src/api/modules/admin/notes/create.route.ts"
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/create.route.ts"
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
 import { site_notes } from "@/database/notes";
 
-import { zodNote } from "../../notes/notes.schema";
+import { zodNote } from "../../../notes/notes.schema";
 
 export const createNoteRoute = buildRoute({
   // [!code ++]
@@ -134,7 +134,7 @@ Create the two modules that put the route at `admin/notes`:
 ```ts title="plugins/site-notes/src/api/modules/admin/notes/notes.module.ts"
 import { buildModule } from "@/api/builders";
 
-import { createNoteRoute } from "./create.route";
+import { createNoteRoute } from "./routes/create.route";
 
 export const adminNotesModule = buildModule({
   name: "notes",
@@ -259,6 +259,10 @@ permissionStaff: {
 
 Each permission you add needs its own label and its own `adminStaffPermission` on the routes it protects.
 
+## Reference permissions with types
+
+To stop repeating `{ module: "notes", permission: "can_create" }` in routes and navigation, declare the permissions once with `defineStaffPermissions` and use `staffPermissions.admin.notes.canCreate` instead. See [Typed permission references](/docs/dev/working-with-users/staff-permission-refs).
+
 ## Check a permission in code
 
 `adminStaffPermission` and `moderatorStaffPermission` cover a whole route. For a decision inside a handler, such as letting staff edit any note but members only their own, call `checkStaffPermission(c, { type, plugin, module, permission })` from `@vitnode/core/api/lib/check-staff-permission`; it resolves to `true` or `false`. In AdminCP components, `useAdminPermission({ plugin, module, permission })` from `@vitnode/core/tanstack/admin` answers the same question for the signed-in administrator, for showing or hiding controls.
@@ -297,7 +301,7 @@ All three check the signed-in member, and a signed-out visitor never passes.
 
 `moderatorStaffPermission` works like `adminStaffPermission`, but checks the member's site session. Anyone who is not a moderator with **Delete notes** gets `403` before the handler runs:
 
-```ts title="plugins/site-notes/src/api/modules/notes/delete.route.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/delete.route.ts"
 import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
@@ -351,7 +355,7 @@ Signed in as the moderator, `response.status` is `204`; for any other member it 
 
 The public note route answers everyone, and adds when the note was written for moderators with **See note details**. `checkStaffPermission` resolves to `true` or `false` instead of refusing:
 
-```ts title="plugins/site-notes/src/api/modules/notes/show.route.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
 import { z } from "@hono/zod-openapi";
 import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
 import { eq } from "drizzle-orm";
@@ -360,7 +364,7 @@ import { buildRoute } from "@/api/builders";
 import { site_notes } from "@/database/notes";
 import { manifest } from "@/manifest.gen";
 
-import { zodNote } from "./notes.schema";
+import { zodNote } from "../notes.schema";
 
 export const showNoteRoute = buildRoute({
   route: {
@@ -414,7 +418,7 @@ export const showNoteRoute = buildRoute({
 
 `assertStaffPermission` takes the same arguments and throws `403` instead of returning `false`. Use it when a member asks for something only moderators may have, here the details behind `?details=1`, while the plain request stays public:
 
-```ts title="plugins/site-notes/src/api/modules/notes/show.route.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
 import { assertStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
 
 // request:

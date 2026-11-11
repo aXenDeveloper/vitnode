@@ -6,7 +6,7 @@ import {
   presenceResponseHeaders,
   zodPresenceUserId,
   zodUserPresence,
-} from "@/api/modules/users/presence-schema";
+} from "@/api/modules/users/presence.schema";
 
 export const presenceUserAdminRoute = buildRoute({
   adminStaffPermission: { module: "users", permission: "can_view" },

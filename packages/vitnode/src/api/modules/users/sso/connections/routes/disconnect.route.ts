@@ -3,12 +3,12 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
 
-import { requireSignedInUser } from "../../../passkeys/failure";
-import { ssoConnectionFailure } from "../failure";
+import { requireSignedInUser } from "../../../passkeys/lib/failure";
 import {
   SSO_CONNECTION_ERROR_RESPONSES,
   zodSsoProviderIdParam,
-} from "../schema";
+} from "../connections.schema";
+import { ssoConnectionFailure } from "../lib/failure";
 
 export const disconnectSsoConnectionRoute = buildRoute({
   route: {

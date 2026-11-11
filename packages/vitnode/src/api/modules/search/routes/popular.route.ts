@@ -2,7 +2,8 @@ import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
 
-import { searchSuggestionsLimit, zodSearchSuggestion } from "./suggest.route";
+import { searchSuggestionsLimit } from "../lib/query-params";
+import { zodSearchSuggestion } from "../search.schema";
 
 export const popularRoute = buildRoute({
   route: {

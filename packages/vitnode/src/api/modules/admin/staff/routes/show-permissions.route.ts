@@ -13,7 +13,7 @@ import {
   staffEntrySchema,
   staffPermissionModuleByType,
   staffTypeSchema,
-} from "../lib/schema";
+} from "../staff.schema";
 
 const tableByType = {
   admin: core_admin_permissions,

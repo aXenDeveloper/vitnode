@@ -1,10 +1,8 @@
 ---
 title: Queue
-description: Run slow work in the background with VitNode's PostgreSQL queue. Define a task, validate its payload, dispatch it from a route, and follow it to completion with retries, delays, leases and deduplication.
+description: Run slow work in the background with VitNode's PostgreSQL queue. Define a typed task with a payload schema, dispatch it from a route, and follow it to completion with retries, delays, leases and deduplication.
 icon: ListOrdered
 ---
-
-import { TypeTable } from "fumadocs-ui/components/type-table";
 
 import { ImgDocs } from "@/components/fumadocs/img";
 import queuePanel from "./queue-debug-panel.webp";
@@ -20,31 +18,50 @@ The queue moves work out of the request. A route stores a task in the `core_queu
 
 <Step>
 
+### Bind the task builder to your plugin
+
+Add `buildQueueTask` to the builders in `src/api/builders.ts`, next to `buildModule` and `buildRoute`:
+
+```ts title="plugins/site-notes/src/api/builders.ts"
+import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
+
+import { manifest } from "@/manifest.gen";
+
+const apiBuilders = bindApiPlugin(manifest);
+
+export const buildModule = apiBuilders.buildModule;
+export const buildRoute = apiBuilders.buildRoute;
+export const buildQueueTask = apiBuilders.buildQueueTask; // [!code ++]
+```
+
+The bound builder stamps every task with your plugin id, so its rows are stored under `site-notes` whichever route dispatches it.
+
+</Step>
+
+<Step>
+
 ### Create the task
 
 Create `src/api/tasks/announce-note.task.ts`:
 
 ```ts title="plugins/site-notes/src/api/tasks/announce-note.task.ts"
-import { buildQueueTask } from "@vitnode/core/api/lib/queue";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 
+import { buildQueueTask } from "@/api/builders";
 import { site_notes } from "@/database/notes";
-
-const zodPayload = z.object({ noteId: z.number().int().positive() });
 
 export const announceNoteTask = buildQueueTask({
   name: "announce-note",
+  payload: z.object({ noteId: z.number().int().positive() }),
   maxAttempts: 5,
-  handler: async (c, payload) => {
-    const { noteId } = zodPayload.parse(payload);
+  handler: async (c, { noteId }) => {
     const [note] = await c
       .get("db")
       .select({ title: site_notes.title })
       .from(site_notes)
       .where(eq(site_notes.id, noteId));
 
-    // Deleted since it was queued: nothing to announce, and nothing to retry.
     if (!note) return;
 
     await c.get("log").debug(`Announced note "${note.title}"`);
@@ -52,8 +69,9 @@ export const announceNoteTask = buildQueueTask({
 });
 ```
 
-- **The payload is stored as JSON**, so the handler receives it as `Record<string, unknown>`. `buildQueueTask` is not generic, so validate the payload yourself, here with Zod. An invalid payload throws, which counts as a failed attempt.
-- **Returning completes the task. Throwing fails the attempt** and schedules a retry.
+- **`payload` is the task's contract.** `dispatch()` type-checks against the schema's input and validates before inserting; the handler receives the schema's output, parsed again just before it runs. `noteId` is a `number` here, with no cast.
+- **The payload is stored as JSON.** The schema's input must be JSON, so use `z.iso.datetime()` rather than `z.date()`. See [JSON payloads](/docs/dev/advanced/queue-reference#json-payloads).
+- **Returning completes the task. Throwing fails the attempt** and schedules a retry. A note deleted since it was queued returns early: there is nothing to announce, and a retry would not change that.
 - **`name` is unique within the plugin.** Tasks are matched to handlers by plugin id and name.
 - **`c.get("log").debug()`** writes to the console and to the Debug Panel's log explorer.
 
@@ -69,8 +87,8 @@ Add the task to the `queueTasks` of `notesModule`, which `config.api.ts` passes 
 import { buildModule } from "@/api/builders";
 import { announceNoteTask } from "@/api/tasks/announce-note.task"; // [!code ++]
 
-import { listNotesRoute } from "./list.route";
-import { showNoteRoute } from "./show.route";
+import { listNotesRoute } from "./routes/list.route";
+import { showNoteRoute } from "./routes/show.route";
 
 export const notesModule = buildModule({
   name: "notes",
@@ -79,7 +97,7 @@ export const notesModule = buildModule({
 });
 ```
 
-Queue tasks are read only from modules passed to `buildApiPlugin`. Declared on a nested module, such as `admin/notes`, a task is never registered, and its dispatches fail with "No handler registered".
+Queue tasks are read only from modules passed to `buildApiPlugin`. Declared on a nested module, such as `admin/notes`, a task is never registered, and dispatching it throws `QueueTaskRegistrationError`. `buildApiPlugin` throws in development to say so, and [`vitnode doctor`](/docs/dev/cli/doctor) reports it.
 
 </Step>
 
@@ -87,12 +105,13 @@ Queue tasks are read only from modules passed to `buildApiPlugin`. Declared on a
 
 ### Dispatch it from a route
 
-Create `src/api/modules/admin/notes/announce.route.ts`. It queues the task and returns what `dispatch()` reported:
+Create `src/api/modules/admin/notes/routes/announce.route.ts`. It queues the task and returns what `dispatch()` reported:
 
-```ts title="plugins/site-notes/src/api/modules/admin/notes/announce.route.ts"
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/announce.route.ts"
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
+import { announceNoteTask } from "@/api/tasks/announce-note.task";
 
 export const announceNoteRoute = buildRoute({
   adminStaffPermission: { module: "notes", permission: "can_create" },
@@ -118,11 +137,13 @@ export const announceNoteRoute = buildRoute({
   },
   handler: async c => {
     const { id } = c.req.valid("param");
-    const { deduplicated, id: taskId } = await c.get("queue").dispatch({
-      name: "announce-note",
-      payload: { noteId: id },
-      dedupeKey: `announce-note:${id}`,
-    });
+    const { deduplicated, id: taskId } = await c
+      .get("queue")
+      .dispatch(
+        announceNoteTask,
+        { noteId: id },
+        { dedupeKey: `announce-note:${id}` },
+      );
 
     return c.json({ deduplicated, taskId }, 202);
   },
@@ -131,7 +152,7 @@ export const announceNoteRoute = buildRoute({
 
 Then add `announceNoteRoute` to the `routes` of `adminNotesModule` in `src/api/modules/admin/notes/notes.module.ts`, after `createNoteRoute`.
 
-`dispatch()` only inserts a row and returns `{ deduplicated, id }`. It never runs the handler. The task belongs to the plugin of the route that dispatched it; pass `pluginId` to queue another plugin's task.
+`dispatch(task, payload, options)` only inserts a row and returns `{ deduplicated, id }`. It never runs the handler. A missing or mistyped field is a compile error, and a value the schema rejects at runtime throws `QueuePayloadValidationError` before anything is stored. The task's name and plugin come from the definition, so the options cannot change them.
 
 </Step>
 
@@ -162,7 +183,11 @@ Then add `announceNoteRoute` to the `routes` of `adminNotesModule` in `src/api/m
            path: "/{id}/announce",
            args: { params: { id: 3 } },
          });
-         setResult(response.ok ? JSON.stringify(await response.json()) : String(response.status));
+         setResult(
+           response.ok
+             ? JSON.stringify(await response.json())
+             : String(response.status),
+         );
        } finally {
          setIsPending(false);
        }
@@ -179,7 +204,7 @@ Then add `announceNoteRoute` to the `routes` of `adminNotesModule` in `src/api/m
    };
    ```
 
-   Render `<CheckAnnounceNote />` in `src/pages/notes-page.tsx`, sign in to the AdminCP in the same browser, open `/site-notes/notes` and press the button twice. The first press shows `{"deduplicated":false,"taskId":3}`, the second `{"deduplicated":true,"taskId":null}`. The second dispatch is dropped because a task with the same `dedupeKey` is still waiting.
+   Render `<CheckAnnounceNote />` in `src/pages/notes-page.tsx`, sign in to the AdminCP in the same browser, open `/site-notes/notes` and press the button twice. The first press shows `{"deduplicated":false,"taskId":…}` with the new row's id. The second shows `{"deduplicated":true,"taskId":null}`: it is dropped because a task with the same `dedupeKey` is still waiting.
 
 2. Open **Debug Panel → Queue** (`/admin/core/debug/queue`). The `announce-note` task from `site-notes` is **pending**, because nothing has run it yet.
 3. Run the processor. With a cron adapter, wait for the next minute. During development you can trigger cron yourself; `CRON_SECRET` is in your `.env`:
@@ -203,14 +228,14 @@ Then add `announceNoteRoute` to the `routes` of `adminNotesModule` in `src/api/m
 
 ## Run a task later
 
-`availableAt` is the earliest time the task may run. The default is now:
+`availableAt` is the earliest time the task may run. The default is now. This dispatch runs the announcement in an hour at the earliest:
 
 ```ts
-await c.get("queue").dispatch({
-  name: "announce-note",
-  payload: { noteId: id },
-  availableAt: new Date(Date.now() + 60 * 60 * 1000), // in an hour
-});
+await c.get("queue").dispatch(
+  announceNoteTask,
+  { noteId: id },
+  { availableAt: new Date(Date.now() + 60 * 60 * 1000) },
+);
 ```
 
 The task still waits for the next processor run after that time. `priority` (higher first, default `0`) orders tasks that are due at the same time.
@@ -226,6 +251,8 @@ throw new QueueDeferError(new Date(Date.now() + 60_000), "Provider rate limit");
 ```
 
 A failed task stays failed. Fix the cause and dispatch again.
+
+A stored payload the schema rejects, for example a row queued before the schema changed, fails at once without a retry, because no attempt can fix stored data. See [What happens to an invalid stored payload](/docs/dev/advanced/queue-typed-payloads#what-happens-to-an-invalid-stored-payload).
 
 ## Leases and abandoned tasks
 
@@ -244,7 +271,7 @@ Pass `tx` to insert the task with the transaction that writes your data, so it i
 ```ts
 await c.get("db").transaction(async tx => {
   const [note] = await tx.insert(site_notes).values(values).returning();
-  await c.get("queue").dispatch({ name: "announce-note", payload: { noteId: note.id }, tx });
+  await c.get("queue").dispatch(announceNoteTask, { noteId: note.id }, { tx });
 });
 ```
 
@@ -254,56 +281,20 @@ Each `process-queue` run claims tasks in batches of 25, runs up to 5 at once, hi
 
 **Debug Panel → Queue** lists every task with its queue, status, attempts, next run, creation time and last error, filterable by status. It is read-only and needs the `queue → can_view` staff permission.
 
-## `buildQueueTask` options
+## Dispatch by name
 
-<TypeTable
-  type={{
-    name: {
-      description: "Unique within the plugin. Dispatches refer to it.",
-      required: true,
-      type: "string",
-    },
-    handler: {
-      description: "Runs once per claimed task. Return to complete it, throw to fail the attempt.",
-      required: true,
-      type: "(c: Context, payload: Record<string, unknown>) => Promise<void> | void",
-    },
-    maxAttempts: {
-      default: "3",
-      description: "Attempts before the task is failed, unless the dispatch sets its own.",
-      type: "number",
-    },
-    leaseSeconds: {
-      default: "600",
-      description: "How long a worker may hold a claimed task before it counts as abandoned.",
-      type: "number",
-    },
-    description: {
-      description: "A note for developers. Core does not display it.",
-      type: "string",
-    },
-  }}
-/>
+`dispatch({ name, payload })` queues a task by its name. It is the only way to queue a task without a schema, and it also works for typed tasks: when the registered task has a `payload` schema, the payload is validated first. The plugin defaults to the one that owns the current route; pass `pluginId` to queue another plugin's task.
 
-## `dispatch()` options
+```ts
+await c
+  .get("queue")
+  .dispatch({ name: "announce-note", payload: { noteId: id } });
+```
 
-<TypeTable
-  type={{
-    name: { description: "The task's `name`.", required: true, type: "string" },
-    payload: { description: "JSON data passed to the handler.", default: "{}", type: "Record<string, unknown>" },
-    availableAt: { description: "Earliest time the task may run.", default: "now", type: "Date" },
-    dedupeKey: { description: "Drops the dispatch while an active task has the same key.", type: "string" },
-    maxAttempts: { description: "Overrides the task's attempt limit.", type: "number" },
-    priority: { description: "Higher runs first.", default: "0", type: "number" },
-    queue: { description: "Queue name. The default worker drains every queue except `ai`.", default: '"default"', type: "string" },
-    pluginId: { description: "Plugin that owns the task.", default: "the current route's plugin", type: "string" },
-    tx: { description: "A transaction to insert with.", type: "Transaction" },
-  }}
-/>
-
-`dispatch()` returns `Promise<{ deduplicated: boolean; id: number | null }>`.
+Every option, type and error is listed in the [queue reference](/docs/dev/advanced/queue-reference).
 
 ## Related
 
+- [Migrate a task to a schema](/docs/dev/advanced/queue-typed-payloads): add a schema to an existing task without breaking queued rows.
 - [Cron](/docs/dev/cron): recurring jobs, and the adapters that run the queue.
 - [Events](/docs/dev/events): react to something that happened, inside the request.

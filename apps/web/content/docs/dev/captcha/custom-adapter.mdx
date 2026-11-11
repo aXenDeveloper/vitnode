@@ -121,7 +121,7 @@ Nothing on the client makes a route require a token. `withCaptcha: true` on the
 route does, in a [plugin](/docs/dev/plugins/create) exactly as in core. This is
 the route from the overview, trimmed to the relevant part:
 
-```ts title="plugins/site-notes/src/api/modules/contact/send.route.ts"
+```ts title="plugins/site-notes/src/api/modules/contact/routes/send.route.ts"
 import { buildRoute } from '@/api/builders'
 
 export const sendContactRoute = buildRoute({
@@ -236,7 +236,7 @@ hook exists.
 
 <Files>
   <Folder defaultOpen name="plugins/site-notes/src">
-    <Folder defaultOpen name="api/modules/contact">
+    <Folder defaultOpen name="api/modules/contact/routes">
       <File name="send.route.ts" />
     </Folder>
     <Folder defaultOpen name="pages">

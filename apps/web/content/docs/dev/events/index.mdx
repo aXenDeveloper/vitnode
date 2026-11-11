@@ -41,9 +41,9 @@ import "@/api/lib/events"; // [!code ++]
 
 ### Emit it after the write
 
-In `src/api/modules/admin/notes/create.route.ts`, emit the event once the insert has returned, before answering:
+In `src/api/modules/admin/notes/routes/create.route.ts`, emit the event once the insert has returned, before answering:
 
-```ts title="plugins/site-notes/src/api/modules/admin/notes/create.route.ts"
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/create.route.ts"
   handler: async c => {
     const values = c.req.valid("json");
     const [note] = await c
@@ -107,7 +107,7 @@ export const notesModule = buildModule({
 });
 ```
 
-Listeners are collected only from top-level modules. On a nested module, such as `admin/notes`, a listener never runs, and nothing warns you.
+Listeners are collected only from top-level modules. On a nested module, such as `admin/notes`, a listener never runs: `buildApiPlugin` throws in development to say so, and [`vitnode doctor`](/docs/dev/cli/doctor) reports it. Production ignores it silently.
 
 </Step>
 
@@ -124,7 +124,7 @@ With the default local adapter:
 | Question | Answer |
 | --- | --- |
 | When do listeners run? | Inside the emitting request, one after another in registration order. `emit()` resolves after the last one. |
-| Does a failing listener break the request? | No. Its error is logged and returned in `emit()`'s `failures`; `emit()` never throws, and the remaining listeners still run. |
+| Does a failing listener break the request? | No. Its error is logged and returned in `emit()`'s `failures`, and the remaining listeners still run. A listener or adapter error never makes `emit()` throw. |
 | Is delivery retried or stored? | No. Events live only in that request. Work that must survive a crash or a failure belongs in the [queue](/docs/dev/advanced/queue). |
 | Do other instances hear the event? | No, only the instance that emitted it. A [custom adapter](/docs/dev/events/custom-adapter) can deliver elsewhere and report `status: "queued"`. |
 
@@ -156,5 +156,6 @@ export const welcomeListener = buildEventListener({
 
 ## Related
 
+- [Schema-defined events](/docs/dev/events/schema-events): validate every emit with a Zod schema.
 - [Built-in events](/docs/dev/events/built-in-events): every event core and the Content Engine emit, with payloads.
 - [Custom event adapter](/docs/dev/events/custom-adapter): deliver events through your own transport.

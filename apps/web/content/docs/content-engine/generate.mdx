@@ -1,0 +1,142 @@
+---
+title: Generate a content type
+description: Scaffold an administrative VitNode Content Engine content type - definition, model, admin module, AdminCP screen and labels - with vitnode generate resource --kind content.
+icon: Wand
+---
+
+`vitnode g resource <name> --kind content` writes the files that [First content type](/docs/content-engine/create-a-content-type) builds by hand: the definition, the model and its table export, the staff API mount, the AdminCP sidebar entry and screen, and the labels. The Content Engine then generates the CRUD routes and permissions, as it does for a hand-written content type. The generator never writes or applies a migration.
+
+The result is **administrative only**: staff create and edit records in the AdminCP. It has no public API, member writes, drafts or ownership rules, because each of those changes who can read or write the records. Turn them on in the definition once you decide, following the linked guides.
+
+## Before you begin
+
+- A plugin made with [Create plugin](/docs/dev/plugins/create), with a terminal in its folder (here `plugins/site-notes`).
+- A database, to apply the migration at the end.
+
+<Steps>
+
+<Step>
+
+### Preview the content type
+
+In the plugin folder, name the resource and list its fields as `name:type`, with `text`, `richText`, `boolean`, `int` or `number`. A `?` after a name makes the field optional. The first required `text` field becomes the title, so the list needs one:
+
+```bash
+pnpm vitnode g resource articles --kind content --fields "title:text,body:richText,featured?:boolean" --singular Article --dry-run
+```
+
+```txt
+  would create src/content/articles.ts  content type sitenotes.articles
+  would create src/database/articles.ts  model and table site_notes_articles
+  would create src/api/modules/admin/admin.module.ts  module "admin"; mount articlesContent in the admin module
+  would create src/admin/nav.tsx  AdminCP sidebar entry
+  would create src/admin/content.tsx  AdminCP screens, re-using the sidebar list
+  would update src/api/builders.ts  bind the Content Engine admin builder
+  would update src/config.api.ts  register adminModule in buildApiPlugin
+  would update src/locales/en.json  AdminCP labels for the content type
+
+  Dry run: 5 files to create, 3 to update. Nothing was written.
+```
+
+The full diff of each file comes first; the summary above closes the output.
+
+The names are derived, never guessed from meaning:
+
+| Value             | Derived as                                            | Override         |
+| ----------------- | ----------------------------------------------------- | ---------------- |
+| Content type id   | Plugin name without its npm scope and dashes, a dot, the resource name | `--content-id`   |
+| Table             | Plugin name in snake_case, `_`, the resource name     | `--table`        |
+| Permission module | The part of the id after the dot: `articles`          | -                |
+| AdminCP path      | `/admin/content/<plugin>/<resource>`                  | -                |
+| Id strategy       | `serial`, the Content Engine default                  | `--id-type uuid` or `bigint` |
+| Singular label    | The plural, `Articles`                                | `--singular`     |
+
+The generator declares no permissions. The Content Engine gives the permission module `can_view`, `can_create`, `can_edit` and `can_delete`, but only when the plugin does not declare that module in `permissionStaff`, inline or through [`defineStaffPermissions`](/docs/dev/working-with-users/staff-permission-refs). A plugin that already declares `articles` with all four is fine. If it declares only some of them, the generated staff routes would need permissions nobody can be granted, so the command stops before writing:
+
+```txt
+✖ The plugin declares the permission module "articles" without can_create, can_edit, can_delete.
+  The Content Engine adds can_view, can_create, can_edit, can_delete to "articles" only when the plugin does not declare it, and src/config.api.ts declares it with can_view.
+  The generated staff routes would require permissions nobody can be granted. Nothing was written.
+  Add the missing ones to permissionStaff.admin["articles"] in src/config.api.ts:
+      { permission: "can_create", dependsOn: ["can_view"] },
+      { permission: "can_edit", dependsOn: ["can_view"] },
+      { permission: "can_delete", dependsOn: ["can_view"] },
+  Or remove the "articles" entry, so the Content Engine declares all four itself.
+```
+
+It also stops, with the steps to finish by hand, when it cannot read the plugin's permission declarations: `permissionStaff` has to be an object literal or `staffPermissions.config`, not a variable such as `permissionStaff: permissions`.
+
+</Step>
+
+<Step>
+
+### Generate it
+
+Run the command without `--dry-run`. The definition it writes:
+
+```ts title="plugins/site-notes/src/content/articles.ts"
+import { defineContentType, field } from "@vitnode/core/content";
+
+export const articlesContentType = defineContentType({
+  id: "sitenotes.articles",
+  tableName: "site_notes_articles",
+  fields: {
+    title: field.text({ maxLength: 200, required: true }),
+    body: field.richText({ required: true }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+  admin: {
+    path: "site-notes/articles",
+    titleField: "title",
+    list: {
+      columns: ["title", "updatedAt"],
+    },
+  },
+});
+```
+
+In an existing plugin, the generator adds to what is there. The model joins the `contentTypes` of an existing `buildContentAdminModule(...)` in the `admin` module, and the sidebar entry joins `adminNav.contentTypes`. Labels are only added, never overwritten; when `src/locales/en.json` is not plain two-space JSON, the command prints them for you to add by hand. It stops before writing, with the lines to add by hand, when `src/admin/content.tsx` builds its own `adminContent` instead of re-exporting `adminNav`.
+
+</Step>
+
+<Step>
+
+### Build and migrate
+
+Migrations are generated from the plugin's build output, so the order matters:
+
+```bash
+pnpm vitnode build          # in plugins/site-notes, or keep pnpm dev running
+cd ../../apps/api           # the app with drizzle.config.ts; apps/web in a single-app setup
+pnpm vitnode db generate    # writes the migration for site_notes_articles
+pnpm vitnode db migrate     # applies it, after asking
+```
+
+Review the migration before you apply it. The root `pnpm db:migrate` script of a Turborepo workspace generates and applies in one go without asking, so it skips that review. See [Database commands](/docs/dev/cli/database).
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Run `pnpm vitnode plugin validate` in the plugin: **AdminCP navigation** and **Database schema** pass. Then open **AdminCP → Site notes → Articles**, choose **Create Article**, and save one.
+
+`pnpm vitnode inspect routes` lists the generated staff routes, such as `POST /site-notes/admin/content/articles` guarded by `admin articles.can_create`. When you edit an administrator's permissions, the four permissions appear under **Site notes → Articles**.
+
+The guides below continue the hand-written `newsroom.article` tutorial; apply their configuration to `articlesContentType` the same way.
+
+## Related
+
+<Cards>
+  <Card
+    title="Drafts & publishing"
+    description="Add a publication workflow to the content type"
+    href="/docs/content-engine/publication"
+  />
+  <Card
+    title="Public API"
+    description="Decide which fields the public may read"
+    href="/docs/content-engine/public-api"
+  />
+</Cards>

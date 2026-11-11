@@ -5,7 +5,7 @@ import {
   AI_POINTS_CONVERSION_VERSION,
 } from "@/api/lib/ai/ledger";
 
-import { zodAiSettingsResponse } from "../schemas";
+import { zodAiSettingsResponse } from "../ai.schema";
 
 export const getAiSettingsAdminRoute = buildRoute({
   adminStaffPermission: { module: "ai", permission: "can_view" },

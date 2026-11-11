@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/api/builders";
-import { loadCronHealth } from "@/api/modules/cron/helpers/load-cron-health";
+import { loadCronHealth } from "@/api/modules/cron/lib/load-cron-health";
 import { isCronSecretRejected } from "@/lib/config";
 
 export const getCronHealthRoute = buildRoute({

@@ -1,11 +1,11 @@
 import { buildRoute } from "@/api/builders";
 import { getNotificationState } from "@/api/models/notifications/inbox";
 
+import { requireNotificationUser } from "../lib/require-notification-user";
 import {
-  requireNotificationUser,
   unauthorizedResponse,
   zodNotificationState,
-} from "../schema";
+} from "../notifications.schema";
 
 export const notificationStateRoute = buildRoute({
   route: {

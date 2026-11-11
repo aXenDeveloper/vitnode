@@ -10,11 +10,11 @@ import { PasskeyError, PasskeyModel } from "@/api/models/passkey";
 import { SessionModel } from "@/api/models/session";
 import { core_users } from "@/database/users";
 
-import { passkeyFailure } from "../failure";
+import { passkeyFailure } from "../lib/failure";
 import {
   PASSKEY_ERROR_RESPONSES,
   zodPasskeyAuthenticationResponseSchema,
-} from "../schema";
+} from "../passkeys.schema";
 
 export const passkeyAuthenticationVerifyRoute = buildRoute({
   route: {

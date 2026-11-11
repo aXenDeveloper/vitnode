@@ -18,9 +18,9 @@ import { mePolicyRoute } from "./me-policy.route";
 import { presenceBatchRoute } from "./presence-batch.route";
 import { presenceHeartbeatRoute } from "./presence-heartbeat.route";
 import { presenceRoute } from "./presence.route";
-import { updateMyPrivacyRoute } from "./privacy.route";
 import { revokeDeviceRoute } from "./revoke-device.route";
 import { signOutRoute } from "./sign-out.route";
+import { updateMyPrivacyRoute } from "./update-privacy.route";
 
 const T0 = new Date("2026-10-17T12:00:00.000Z").getTime();
 const SECOND = 1000;

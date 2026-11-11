@@ -6,4 +6,7 @@ const apiBuilders = bindApiPlugin(manifest);
 
 /** Core's own builders, bound to `@vitnode/core`. Plugins bind their own with `bindApiPlugin`. */
 export const buildModule = apiBuilders.buildModule,
-  buildRoute = apiBuilders.buildRoute;
+  buildQueueTask = apiBuilders.buildQueueTask,
+  buildRoute = apiBuilders.buildRoute,
+  defineCacheEntry = apiBuilders.defineCacheEntry,
+  defineEvent = apiBuilders.defineEvent;

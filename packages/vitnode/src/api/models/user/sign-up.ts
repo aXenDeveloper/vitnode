@@ -4,7 +4,7 @@ import { and, count, eq, or, sql } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 
 import { emailAliases, matchesEmail } from "@/api/lib/user-email-lookup";
-import { generateAvatarColor } from "@/api/modules/users/avatar-color";
+import { generateAvatarColor } from "@/api/modules/users/lib/avatar-color";
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
 import { canonicalizeEmail } from "@/lib/email-canonical";

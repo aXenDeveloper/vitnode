@@ -3,10 +3,11 @@ import { buildModule } from "@/api/builders";
 import { aiQueueCron, altDetectCron } from "./cron/alt.cron";
 import { aiMaintenanceCron } from "./cron/maintenance.cron";
 import { availableAiActionsRoute } from "./routes/available.route";
+import { estimateAiRoute } from "./routes/estimate.route";
 import { aiFeedbackRoute } from "./routes/feedback.route";
 import { aiHistoryRoute } from "./routes/history.route";
 import { runAiRoute } from "./routes/run.route";
-import { estimateAiRoute, streamAiRoute } from "./routes/stream.route";
+import { streamAiRoute } from "./routes/stream.route";
 import { aiUsageRoute } from "./routes/usage.route";
 import { altGenerateQueueTask } from "./tasks/alt-generate.task";
 

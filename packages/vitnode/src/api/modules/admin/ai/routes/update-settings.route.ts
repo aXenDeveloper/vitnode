@@ -8,7 +8,7 @@ import { writeAuditLog } from "@/api/lib/audit/write";
 import { core_ai_settings } from "@/database/ai";
 import { auditDiff } from "@/lib/audit/diff";
 
-import { zodAiSettings } from "../schemas";
+import { zodAiSettings } from "../ai.schema";
 
 export const updateAiSettingsAdminRoute = buildRoute({
   adminStaffPermission: { module: "ai", permission: "can_manage" },

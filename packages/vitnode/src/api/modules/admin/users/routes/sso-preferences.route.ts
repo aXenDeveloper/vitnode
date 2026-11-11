@@ -2,9 +2,11 @@ import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { ssoConnectionFailure } from "@/api/modules/users/sso/connections/failure";
-import { zodSsoPreferencesSchema } from "@/api/modules/users/sso/connections/routes/preferences.route";
-import { zodSsoConnectionErrorSchema } from "@/api/modules/users/sso/connections/schema";
+import {
+  zodSsoConnectionErrorSchema,
+  zodSsoPreferencesSchema,
+} from "@/api/modules/users/sso/connections/connections.schema";
+import { ssoConnectionFailure } from "@/api/modules/users/sso/connections/lib/failure";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
 import {

@@ -27,8 +27,8 @@ import { listNotifications } from "@/api/models/notifications/inbox";
 import { QueueModel } from "@/api/models/queue";
 import { contentNotificationsQueueTask } from "@/api/modules/content/tasks/content-notifications.task";
 import { moderationModule } from "@/api/modules/moderation/moderation.module";
-import { notificationsFanoutTask } from "@/api/modules/notifications/tasks/notification-tasks";
-import { processQueueTasks } from "@/api/modules/queue/helpers/process-queue-tasks";
+import { notificationsFanoutTask } from "@/api/modules/notifications/tasks/notifications.task";
+import { processQueueTasks } from "@/api/modules/queue/lib/process-queue-tasks";
 import {
   CONTENT_PERMISSIONS,
   CONTENT_QUEUE_TASK_NOTIFICATIONS,

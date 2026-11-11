@@ -4,7 +4,7 @@ import { buildRoute } from "@/api/builders";
 import { findModerationScope } from "@/api/lib/moderation/registry";
 import { isModerationResourceId } from "@/api/lib/moderation/scopes";
 
-import { staffPermissionModuleByType } from "../lib/schema";
+import { staffPermissionModuleByType } from "../staff.schema";
 
 const resourceSchema = z.object({
   id: z.string(),

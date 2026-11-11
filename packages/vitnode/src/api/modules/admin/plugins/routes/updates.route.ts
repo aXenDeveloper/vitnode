@@ -2,10 +2,8 @@ import { buildRoute } from "@/api/builders";
 import { MANUAL_UPDATE_CHECK_COOLDOWN_MS } from "@/api/lib/updates/lock";
 import { loadUpdatesOverview } from "@/api/lib/updates/status";
 
-import {
-  serializeComponentUpdate,
-  updatesOverviewSchema,
-} from "./updates.schema";
+import { serializeComponentUpdate } from "../lib/serialize-update";
+import { updatesOverviewSchema } from "../updates.schema";
 
 export const pluginUpdatesAdminRoute = buildRoute({
   adminStaffPermission: { module: "plugins", permission: "can_view" },

@@ -42,7 +42,7 @@ Registration, password reset and the resend-confirmation form are protected stra
 
 Add `withCaptcha: true` to the route definition. This `site-notes` route takes a message for the site owner:
 
-```ts title="plugins/site-notes/src/api/modules/contact/send.route.ts"
+```ts title="plugins/site-notes/src/api/modules/contact/routes/send.route.ts"
 import { z } from "@hono/zod-openapi"
 
 import { buildRoute } from "@/api/builders"

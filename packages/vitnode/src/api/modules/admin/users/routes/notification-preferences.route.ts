@@ -1,6 +1,6 @@
 import { buildRoute } from "@/api/builders";
 import { getNotificationPreferences } from "@/api/models/notifications/preferences";
-import { zodNotificationPreferences } from "@/api/modules/notifications/routes/preferences.route";
+import { zodNotificationPreferences } from "@/api/modules/notifications/notifications.schema";
 
 import {
   findTargetUserId,

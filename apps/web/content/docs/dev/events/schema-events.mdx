@@ -1,0 +1,168 @@
+---
+title: Schema-defined events
+description: Define a VitNode event with defineEvent and a Zod payload schema, so every emit is validated before listeners run and listeners receive parsed, typed data.
+icon: FileCheck
+---
+
+`defineEvent` gives an event a payload schema. `c.get("events").emit(event, payload)` then type-checks and validates the payload before the adapter or any listener sees it, and listeners built from the definition receive the schema's output. In this guide `site-notes` turns `site-notes.note.created` from [Events](/docs/dev/events) into a schema-defined event without renaming it or changing its payload.
+
+## Before you begin
+
+- The `site-notes.note.created` event, its emit in the create route and the `log-new-note` listener, from [Events](/docs/dev/events).
+
+<Steps>
+
+<Step>
+
+### Bind `defineEvent` to your plugin
+
+Add it to the builders in `src/api/builders.ts`:
+
+```ts title="plugins/site-notes/src/api/builders.ts"
+export const buildModule = apiBuilders.buildModule;
+export const buildRoute = apiBuilders.buildRoute;
+export const defineEvent = apiBuilders.defineEvent; // [!code ++]
+```
+
+</Step>
+
+<Step>
+
+### Define the event
+
+Create `src/api/events.ts`. Keep it free of handlers and database code, so another plugin can import the definition to listen:
+
+```ts title="plugins/site-notes/src/api/events.ts"
+import { z } from "zod";
+
+import { defineEvent } from "@/api/builders";
+
+export const noteCreatedEvent = defineEvent({
+  name: "site-notes.note.created",
+  payload: z.object({
+    noteId: z.number().int().positive(),
+    title: z.string().min(1),
+  }),
+});
+```
+
+The payload must be a JSON object, so an adapter can carry it to another process: `z.date()` is a compile error, use `z.iso.datetime()`.
+
+</Step>
+
+<Step>
+
+### Register it and bridge the name
+
+Pass the definition to `buildApiPlugin` in `src/config.api.ts`. This is an excerpt; keep the rest of the file:
+
+```ts title="plugins/site-notes/src/config.api.ts"
+import { noteCreatedEvent } from "@/api/events"; // [!code ++]
+
+export const siteNotesApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    modules: [helloModule, notesModule, adminModule],
+    eventDefinitions: [noteCreatedEvent], // [!code ++]
+  });
+```
+
+Then, in `src/api/lib/events.ts`, derive the `VitNodeEvents` entry from the schema instead of writing it by hand:
+
+```ts title="plugins/site-notes/src/api/lib/events.ts"
+import type { EventPayload } from "@vitnode/core/api/lib/event-definition"; // [!code ++]
+
+import type { noteCreatedEvent } from "@/api/events"; // [!code ++]
+
+declare module "@vitnode/core/api/models/events" {
+  interface VitNodeEvents {
+    "site-notes.note.created": { noteId: number; title: string }; // [!code --]
+    "site-notes.note.created": EventPayload<typeof noteCreatedEvent>; // [!code ++]
+  }
+}
+```
+
+Registration validates every emit of the name, including `emit("site-notes.note.created", ...)` calls you have not converted yet. The API refuses to start when a different definition claims the same name. The bridge gives listeners that still use the string name the same payload type.
+
+</Step>
+
+<Step>
+
+### Emit with the definition
+
+In the create route, pass the definition instead of the name:
+
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/create.route.ts"
+await c.get("events").emit("site-notes.note.created", { // [!code --]
+await c.get("events").emit(noteCreatedEvent, { // [!code ++]
+  noteId: note.id,
+  title: note.title,
+});
+```
+
+A missing or mistyped field is a compile error. At runtime, a payload the schema rejects throws `EventPayloadValidationError` before any listener runs.
+
+</Step>
+
+<Step>
+
+### Listen with the definition
+
+Change `event` in `src/api/lib/note-created.listener.ts` to the definition:
+
+```ts title="plugins/site-notes/src/api/lib/note-created.listener.ts"
+import { noteCreatedEvent } from "@/api/events"; // [!code ++]
+
+export const noteCreatedListener = buildEventListener({
+  event: "site-notes.note.created", // [!code --]
+  event: noteCreatedEvent, // [!code ++]
+  name: "log-new-note",
+  handler: async (c, payload, envelope) => {
+    // ...
+  },
+});
+```
+
+`payload` is now the schema's output. The listener stays in the same `events` array, matches the same name and runs in the same order.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+1. Create a note, as in [Events](/docs/dev/events#check-the-result). The `New note #…` line appears in **Debug Panel → Log explorer** as before.
+2. Build the plugin (a running `pnpm dev` is enough), then run `pnpm vitnode inspect events` inside it. The `site-notes.note.created` listener shows `schema` in the **Payload** column.
+
+## Validation failures and delivery failures
+
+| What went wrong                                  | `emit(definition, payload)`                                      | `emit("name", payload)`                                                                        |
+| ------------------------------------------------ | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| The payload is not JSON or the schema rejects it | Throws `EventPayloadValidationError`; nothing is delivered       | Never throws: nothing is delivered, and `failures` holds one entry with `module: "validation"` |
+| A listener throws                                | Logged and returned in `failures`; the other listeners still run | Same                                                                                           |
+| The adapter throws                               | One failure with `module: "adapter"`                             | Same                                                                                           |
+
+The schema runs once per emit, before the adapter, and every listener gets the same parsed value. Error messages name paths and issue codes, never payload values. An emit by a name that has no registered definition is not validated.
+
+## Local and external adapters
+
+The local adapter hands listeners the parsed output directly, so a transform such as `z.iso.datetime().transform(value => new Date(value))` gives listeners a `Date`. A [custom adapter](/docs/dev/events/custom-adapter) receives the same output in `envelope.payload` and serializes it itself, so that `Date` becomes a string on the way. When events cross a process boundary, keep the schema free of transforms and parse the payload again with `noteCreatedEvent.payload` on the receiving side. Core's own events, some of which carry `Date` values, are not schema-defined.
+
+## Reference
+
+All from `@vitnode/core/api/lib/event-definition`, except the bound builder.
+
+| Export                                     | Behavior                                                                                                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `defineEvent({ name, payload, pluginId })` | Declares an event. The bound `defineEvent` from `@/api/builders` fills in `pluginId`. Names use letters, digits and `. _ - : / @`.                                       |
+| `EventInput<typeof event>`                 | What `emit` accepts: the schema's input.                                                                                                                                 |
+| `EventPayload<typeof event>`               | What listeners receive: the schema's output. Use it for the `VitNodeEvents` bridge.                                                                                      |
+| `EventPayloadValidationError`              | Thrown by `emit(definition, payload)` for an invalid payload. `reason` names paths and codes.                                                                            |
+| `EventDefinitionError`                     | Two different definitions for one name, a plugin registering another plugin's definition, or an invalid name. Thrown at boot, or by `emit` for a conflicting definition. |
+
+`buildApiPlugin({ eventDefinitions })` takes the plugin's own definitions. A definition used by a typed listener is known without it, so another plugin's event never has to be registered to be listened to.
+
+## Related
+
+- [Events](/docs/dev/events): emit, listen, and how listeners run.
+- [Built-in events](/docs/dev/events/built-in-events): `blog.post.deleted` is a schema-defined event.

@@ -26,8 +26,8 @@ import {
   warningStatusAt,
 } from "@/lib/moderation/warnings";
 
+import { reportPersonSchema, warningMessageSchema } from "../moderation.schema";
 import { loadReportPeople } from "./people";
-import { reportPersonSchema, warningMessageSchema } from "./schema";
 
 const textSchema = z.array(
   z.object({ languageCode: z.string(), value: z.string() }),

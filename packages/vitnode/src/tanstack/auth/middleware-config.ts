@@ -3,7 +3,7 @@ import type { z } from "zod";
 
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 
-import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
+import type { routeMiddlewareSchema } from "@/api/modules/middleware/middleware.schema";
 import type { SSOProvider } from "@/views/auth/sso/providers";
 
 import { manifest } from "@/manifest";

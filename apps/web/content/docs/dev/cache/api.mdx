@@ -76,4 +76,4 @@ The TTL is a safety net, not the invalidation. Without `delete`, visitors see ou
 
 3. Create a note and run the same command. The key is gone until the next call to the stats route.
 
-For every method, including `get`, `set`, `flush` and locks, see the [API cache reference](/docs/dev/cache/reference).
+To type-check keys and values and validate what Redis returns, define the value with `defineCacheEntry` instead: see [Typed cache entries](/docs/dev/cache/typed-entries). For every method, including `get`, `set`, `flush` and locks, see the [API cache reference](/docs/dev/cache/reference).

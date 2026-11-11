@@ -17,18 +17,18 @@ import { core_moderators_permissions } from "@/database/moderators";
 import { auditDiff } from "@/lib/audit/diff";
 import { manifest } from "@/manifest";
 
-import {
-  permissionsStaffArgsSchema,
-  staffGrantIssueSchema,
-  staffPermissionModuleByType,
-  staffTypeSchema,
-} from "../lib/schema";
 import { sanitizeStaffGrants } from "../lib/scoped-grants";
 import {
   assertNotOwnStaffEntry,
   assertStaffAssignableRole,
   assertWithinStaffPrivilegeCeiling,
 } from "../lib/staff-entry-guards";
+import {
+  permissionsStaffArgsSchema,
+  staffGrantIssueSchema,
+  staffPermissionModuleByType,
+  staffTypeSchema,
+} from "../staff.schema";
 
 const tableByType = {
   admin: core_admin_permissions,

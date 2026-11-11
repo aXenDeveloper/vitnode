@@ -4,13 +4,13 @@ import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
 import { SSO_CONNECTION_INTENTS } from "@/lib/sso-profile";
 
-import { requireSignedInUser } from "../../../passkeys/failure";
-import { ssoConnectionFailure } from "../failure";
+import { requireSignedInUser } from "../../../passkeys/lib/failure";
 import {
   SSO_CONNECTION_ERROR_RESPONSES,
   zodSsoFieldOutcomes,
   zodSsoProviderIdParam,
-} from "../schema";
+} from "../connections.schema";
+import { ssoConnectionFailure } from "../lib/failure";
 
 export const zodSsoConnectionCallbackSchema = z.object({
   code: z.string().min(1).max(4096),

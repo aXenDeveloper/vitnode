@@ -7,7 +7,7 @@ import {
   USER_EMAIL_MAX_LENGTH,
   USER_NAME_MAX_LENGTH,
   USER_PASSWORD_MAX_LENGTH,
-} from "@/api/modules/users/credential-limits";
+} from "@/api/modules/users/lib/credential-limits";
 
 const nameRegex = /^(?!.* {2})[\p{L}\p{N}._@ -]*$/u;
 

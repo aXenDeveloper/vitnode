@@ -6,6 +6,7 @@
     "index",
     "app",
     "api",
+    "typed-entries",
     "pages",
     "pages-invalidation",
     "reference",

@@ -1,0 +1,179 @@
+---
+title: Generate an endpoint
+description: Add typed VitNode API routes with vitnode generate route, including a GET starter with sample data, a path parameter and a 501 write scaffold, then call one with the fetcher.
+icon: Route
+---
+
+`vitnode g route` creates a typed route file and adds it to its module's `routes`. The file name (`show.route.ts`) and the URL (`/{id}`) are separate: five common names imply a method and path, and any other name needs both. In this guide you add three endpoints to the `notes` module of `site-notes` and call one from a page.
+
+## Before you begin
+
+- The `notes` module from [Generate a module](/docs/dev/plugins/api/generate-module), and `pnpm dev` running at the workspace root.
+- A terminal in `plugins/site-notes`.
+
+<Steps>
+
+<Step>
+
+### Add a list endpoint
+
+```bash
+pnpm vitnode g route notes/list
+```
+
+`list` implies `GET /`, so no `--method` or `--path` is needed. Each route gets its own file in the module's `routes/` folder. The new `src/api/modules/notes/routes/list.route.ts` answers with sample data, marked `sample: true`, that its schema describes exactly:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/list.route.ts"
+import { z } from "@hono/zod-openapi";
+
+import { buildRoute } from "@/api/builders";
+
+/**
+ * GET /notes - a generated starter that answers with sample data.
+ *
+ * Replace the 200 schema and the handler with the real response.
+ */
+export const listNotesRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/",
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({ sample: z.literal(true), message: z.string() }),
+          },
+        },
+        description: "Sample data from a generated route.",
+      },
+    },
+  },
+  handler: c =>
+    c.json(
+      {
+        sample: true as const,
+        message:
+          "Sample data from list.route.ts. Replace it with the real response.",
+      },
+      200,
+    ),
+});
+```
+
+`notes.module.ts` now imports it from `./routes/list.route` and lists it: `routes: [listNotesRoute]`.
+
+</Step>
+
+<Step>
+
+### Add a route with a path parameter
+
+```bash
+pnpm vitnode g route notes/show --id-type number
+```
+
+`show` implies `GET /{id}`. For another path, pass `--path` in OpenAPI syntax, quoted so your shell leaves the braces alone: `--path '/{id}/archive'`. Path parameters are strings by default. `--id-type number` validates them as positive integers (`z.coerce.number().int().positive()`), so `/notes/abc` is refused with `400` before the handler runs.
+
+</Step>
+
+<Step>
+
+### Add a write scaffold
+
+```bash
+pnpm vitnode g route notes/create
+```
+
+`create` implies `POST /`. A write route validates its input but has no operation yet, so it answers `501 Not Implemented` rather than pretending to succeed:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/create.route.ts"
+handler: () => {
+  throw new HTTPException(501, {
+    message: "POST /notes is not implemented yet. Implement it in create.route.ts.",
+  });
+},
+```
+
+To implement it, fill in the body schema (an empty `z.object({})` for now), add the success response to `responses`, and replace the `throw` with the real insert. The [Permissions](/docs/dev/working-with-users/staff-permissions#guard-the-create-route) lesson shows a finished create route.
+
+</Step>
+
+<Step>
+
+### Call it from a page
+
+After each route, the generator printed a matching `fetcher` call. Put the one for `show` in a temporary component, `src/pages/check-notes.tsx`:
+
+```tsx title="plugins/site-notes/src/pages/check-notes.tsx"
+import { Button } from "@vitnode/core/components/ui/button";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { SearchIcon } from "lucide-react";
+import { useState } from "react";
+
+export const CheckNotes = () => {
+  const [result, setResult] = useState<string>();
+  const [isPending, setIsPending] = useState(false);
+
+  const onClick = async () => {
+    setIsPending(true);
+    try {
+      const response = await fetcher({
+        plugin: "site-notes",
+        method: "get",
+        module: "notes",
+        path: "/{id}",
+        args: { params: { id: 7 } },
+      });
+      setResult(JSON.stringify(await response.json()));
+    } finally {
+      setIsPending(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <Button isLoading={isPending} onClick={onClick}>
+        <SearchIcon aria-hidden="true" />
+        Show note 7
+      </Button>
+      {result ? <output className="text-sm">{result}</output> : null}
+    </div>
+  );
+};
+```
+
+Render `<CheckNotes />` in `src/pages/home-page.tsx`. TypeScript checks the call against the route: `id` must be a number, and a path the module does not have, such as `/missing`, is a compile error.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Open `/site-notes` and press **Show note 7**:
+
+```json
+{ "sample": true, "id": 7, "message": "Sample data from show.route.ts. Replace it with the real response." }
+```
+
+Then remove `CheckNotes`. Two safety checks are worth knowing:
+
+- A route the plugin already answers is refused. `pnpm vitnode g route notes/all --method get --path /` stops with `✖ GET /notes already exists.`, names `listNotesRoute` in `routes/list.route.ts` as the route that answers it, and writes nothing. The check covers the whole plugin, so routes in a parent and a child module that end up on the same URL collide too.
+- A name without a default, such as `notes/archive`, needs `--method` and `--path` in CI. An interactive terminal asks for them.
+
+The plugin's own pages see new routes at once. An app sees them after the plugin's declarations rebuild, which `pnpm dev` does on save.
+
+## Related
+
+<Cards>
+  <Card
+    title="API routes"
+    description="Write validated routes by hand, with 404 handling"
+    href="/docs/dev/plugins/api/routes"
+  />
+  <Card
+    title="Protect an admin endpoint"
+    description="Generate a route guarded by a staff permission"
+    href="/docs/dev/plugins/api/admin-routes"
+  />
+</Cards>

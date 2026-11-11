@@ -1,6 +1,6 @@
 import { buildRoute } from "@/api/builders";
 import { SsoConnectionModel } from "@/api/models/sso-connection";
-import { zodSsoConnectionsOverview } from "@/api/modules/users/sso/connections/schema";
+import { zodSsoConnectionsOverview } from "@/api/modules/users/sso/connections/connections.schema";
 
 import {
   findTargetUserId,

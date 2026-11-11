@@ -3,7 +3,7 @@ import { z } from "zod";
 import { buildQueueTask } from "@/api/lib/queue";
 import { CONTENT_QUEUE_TASK_SCHEDULE } from "@/content/const";
 
-import { executeContentSchedule } from "../helpers/execute-content-schedule";
+import { executeContentSchedule } from "../lib/execute-content-schedule";
 
 export const contentSchedulePayloadSchema = z.object({
   generation: z.number().int().positive(),

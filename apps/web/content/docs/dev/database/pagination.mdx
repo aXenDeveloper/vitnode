@@ -21,9 +21,9 @@ When a list needs numbered pages, the 1, 2, 3 … 38 kind that admin tables show
 
 ### Add a paginated API route
 
-Create `src/api/modules/notes/paged.route.ts`. Validate the query with `zodPaginationQuery`, describe the response with `zodPaginationPageInfo`, and let `withPagination` build the page:
+Create `src/api/modules/notes/routes/paged.route.ts`. Validate the query with `zodPaginationQuery`, describe the response with `zodPaginationPageInfo`, and let `withPagination` build the page:
 
-```ts title="plugins/site-notes/src/api/modules/notes/paged.route.ts"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/paged.route.ts"
 import { z } from '@hono/zod-openapi'
 import {
   withPagination,
@@ -34,7 +34,7 @@ import {
 import { buildRoute } from '@/api/builders'
 import { site_notes } from '@/database/notes'
 
-import { zodNote } from './notes.schema'
+import { zodNote } from '../notes.schema'
 
 export const pagedNotesRoute = buildRoute({
   route: {
@@ -367,7 +367,7 @@ Open `/site-notes/browse`. The page lists up to 10 notes, newest first. With mor
 
 `withPagination` filters with `search` (text columns matched case-insensitively against `?search=`) and `where` (any extra condition). Neither is in `zodPaginationQuery`, so extend the query schema with the parameters your route accepts:
 
-```ts title="plugins/site-notes/src/api/modules/notes/paged.route.ts (excerpt)"
+```ts title="plugins/site-notes/src/api/modules/notes/routes/paged.route.ts (excerpt)"
 import { gte } from 'drizzle-orm'
 
 // in route.request

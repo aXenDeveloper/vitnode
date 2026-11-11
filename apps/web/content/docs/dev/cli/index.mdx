@@ -1,6 +1,6 @@
 ---
 title: CLI
-description: The vitnode command runs, builds and starts VitNode apps, validates plugins, manages database migrations and translations.
+description: The vitnode command runs, builds and starts VitNode apps, generates plugin API code, validates plugins, manages database migrations and translations.
 icon: SquareTerminal
 ---
 
@@ -24,7 +24,7 @@ npx vitnode dev
 
 </Tabs>
 
-Run it inside an app, an API app or a plugin folder, through your package manager. The workspace root of a monorepo does not depend on `@vitnode/core`, so `vitnode` is not found there. Generated projects already call it from their `package.json` scripts, so `pnpm dev` and `pnpm start` run `vitnode dev` and `vitnode start` for you.
+Run it inside an app, an API app or a plugin folder, through your package manager. The workspace root of a monorepo does not depend on `@vitnode/core`, so `vitnode` is not found there. To run it in a package from the root, use `pnpm --filter <package> exec vitnode ...`. Generated projects already call it from their `package.json` scripts, so `pnpm dev` and `pnpm start` run `vitnode dev` and `vitnode start` for you.
 
 ## Commands
 
@@ -35,6 +35,9 @@ Run it inside an app, an API app or a plugin folder, through your package manage
 | `vitnode start`           | Start the production server                    | [Build and start](/docs/dev/cli/build)  |
 | `vitnode plugin list`     | List the plugins your app uses                 | [Plugins](/docs/dev/cli/plugins)        |
 | `vitnode plugin validate` | Check plugins the way your app will load them  | [Plugins](/docs/dev/cli/plugins)        |
+| `vitnode generate <kind>` | Scaffold API modules, routes and resources     | [Generate](/docs/dev/cli/generate)      |
+| `vitnode doctor`          | Find registration and permission problems      | [Doctor](/docs/dev/cli/doctor)          |
+| `vitnode inspect <what>`  | List routes, jobs or event listeners           | [Doctor](/docs/dev/cli/doctor)          |
 | `vitnode db generate`     | Write a migration for schema changes           | [Database](/docs/dev/cli/database)      |
 | `vitnode db migrate`      | Apply pending migrations and seed initial data | [Database](/docs/dev/cli/database)      |
 | `vitnode db status`       | Show the connection and what is pending        | [Database](/docs/dev/cli/database)      |
@@ -60,7 +63,7 @@ In a Turborepo workspace the root has its own scripts that run these through Tur
 
 To create a plugin, use the project generator: `create-vitnode-app --plugin`. See [Create a plugin](/docs/dev/plugins/create).
 
-Run `vitnode` alone (or `vitnode --help`) for a short overview, `vitnode <command> --help` for a command's options, and `vitnode --version` for the installed `@vitnode/core` version.
+Run `vitnode` alone (or `vitnode --help`) for a short overview of these commands with a few examples. Run `vitnode <command> --help` for a command's options, and `vitnode --version` for the installed `@vitnode/core` version.
 
 ## How the CLI picks your project
 

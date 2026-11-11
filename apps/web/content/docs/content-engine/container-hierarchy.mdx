@@ -68,7 +68,7 @@ A collection holds at most 5,000 containers (`limitReached`, 409). The whole tre
 
 `createContentContainerService` is the one way to read and change a collection. The AdminCP routes and the public routes both use it, so your code gets the same rules, cache expiry and events. Call it inside any Hono handler with the request context. Here is a route you could add to the newsroom plugin. It files a desk under an **Archive** desk and locks it:
 
-```ts title="src/api/modules/desks/archive.route.ts"
+```ts title="src/api/modules/desks/routes/archive.route.ts"
 import { createContentContainerService } from "@vitnode/core/content/server";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";

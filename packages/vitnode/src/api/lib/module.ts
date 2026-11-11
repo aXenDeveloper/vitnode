@@ -99,7 +99,8 @@ export interface BuildModuleOptions<
  * Mind the depth: content types, models, containers, notification types and
  * search indexers are collected from the whole module tree, but cron jobs,
  * events, queue tasks and WebSockets only from the modules passed to
- * `buildApiPlugin` directly - declared on a nested module, they never run.
+ * `buildApiPlugin` directly - declared on a nested module, they never run, and
+ * `buildApiPlugin` throws in development to say so (`vitnode doctor` too).
  *
  * @example
  * ```ts

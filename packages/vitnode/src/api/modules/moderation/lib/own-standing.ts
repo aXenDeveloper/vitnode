@@ -17,7 +17,7 @@ import {
 
 import type { SanctionRow, WarningRow } from "./warnings-view";
 
-import { warningMessageSchema } from "./schema";
+import { warningMessageSchema } from "../moderation.schema";
 
 const textSchema = z.array(
   z.object({ languageCode: z.string(), value: z.string() }),

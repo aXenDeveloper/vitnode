@@ -10,7 +10,7 @@ import { useMemo, useRef, useState } from "react";
 import { useTranslations } from "use-intl";
 import z from "zod";
 
-import type { routeMiddlewareSchema } from "../../api/modules/middleware/route";
+import type { routeMiddlewareSchema } from "../../api/modules/middleware/middleware.schema";
 import type { AnyFormFieldApi, FormMode, FormSubmitMeta } from "../ui/form";
 
 import { useCaptcha } from "../../hooks/use-captcha";

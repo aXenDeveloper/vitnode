@@ -4,7 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { MailIcon, UserIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import type { routeMiddlewareSchema } from "@/api/modules/middleware/route";
+import type { routeMiddlewareSchema } from "@/api/modules/middleware/middleware.schema";
 
 import {
   AutoForm,

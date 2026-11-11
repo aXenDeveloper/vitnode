@@ -13,7 +13,7 @@ import {
 import { isoBase64URL } from "@simplewebauthn/server/helpers";
 import { getCookie } from "hono/cookie";
 
-import type { PasskeyErrorCode } from "@/api/modules/users/passkeys/schema";
+import type { PasskeyErrorCode } from "@/api/modules/users/passkeys/passkeys.schema";
 
 import { deleteAuthCookie, setAuthCookie } from "@/api/lib/auth-cookie";
 import { isStaff } from "@/api/lib/check-staff-permission";

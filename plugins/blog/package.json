@@ -24,6 +24,16 @@
   "type": "module",
   "exports": {
     "./locales/*.json": "./src/locales/*.json",
+    "./api/modules/admin/ai/ai.admin.module": {
+      "import": "./dist/src/api/modules/admin/ai/ai.module.js",
+      "types": "./dist/src/api/modules/admin/ai/ai.module.d.ts",
+      "default": "./dist/src/api/modules/admin/ai/ai.module.js"
+    },
+    "./api/modules/categories/categories.module": {
+      "import": "./dist/src/compat/api/modules/categories/categories.module.js",
+      "types": "./dist/src/compat/api/modules/categories/categories.module.d.ts",
+      "default": "./dist/src/compat/api/modules/categories/categories.module.js"
+    },
     "./*": {
       "import": "./dist/src/*.js",
       "types": "./dist/src/*.d.ts",

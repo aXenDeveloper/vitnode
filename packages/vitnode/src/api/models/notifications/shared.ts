@@ -1,5 +1,7 @@
 import type { Context } from "hono";
 
+import { z } from "zod";
+
 import type {
   NotificationGlobalSettings,
   NotificationTypePolicy,
@@ -8,6 +10,7 @@ import type { NotificationRegistry } from "@/api/lib/notifications/registry";
 import type { EnvVitNode } from "@/api/middlewares/global.middleware";
 import type { NotificationStateMessage } from "@/lib/notifications/types";
 
+import { defineCacheEntry } from "@/api/builders";
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
   type NotificationWorkerSettings,
@@ -73,14 +76,23 @@ export const loadNotificationSettings = async (
 // The overview's totals scan whole tables, and an AdminCP tab left open polls
 // them. A minute of staleness is fine for a dashboard; the bulk actions that
 // change them by a lot expire the entry so their result shows at once.
-export const NOTIFICATIONS_OVERVIEW_TOTALS_CACHE_KEY =
-  "notifications:overview:totals";
 export const NOTIFICATIONS_OVERVIEW_TOTALS_TTL_SECONDS = 60;
+
+export const notificationOverviewTotalsCache = defineCacheEntry({
+  name: "notifications.overview-totals",
+  version: 1,
+  schema: z.object({
+    customizedMembers: z.number().int().nonnegative(),
+    inboxItems: z.number().int().nonnegative(),
+    unreadItems: z.number().int().nonnegative(),
+  }),
+  ttlSeconds: NOTIFICATIONS_OVERVIEW_TOTALS_TTL_SECONDS,
+});
 
 export const expireNotificationOverviewTotals = async (
   c: NotificationsContext,
 ): Promise<void> => {
-  await c.get("cache").delete(NOTIFICATIONS_OVERVIEW_TOTALS_CACHE_KEY);
+  await c.get("cache").entry(notificationOverviewTotalsCache).delete();
 };
 
 export const getNotificationWorkers = (

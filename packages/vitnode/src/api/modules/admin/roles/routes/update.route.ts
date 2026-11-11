@@ -17,7 +17,7 @@ import {
   zodRoleNameSchema,
   zodRolePrefixSchema,
   zodRoleStorageSchema,
-} from "./create.route";
+} from "../roles.schema";
 
 export const zodUpdateRoleAdminSchema = z
   .object({

@@ -4,6 +4,7 @@ import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
 
 import { blogAiActions } from "@/api/ai/actions";
 import { buildContentPublicModule } from "@/api/builders";
+import { blogEventDefinitions } from "@/api/event-definitions";
 import { commentNotifications } from "@/api/lib/notifications";
 import { adminModule } from "@/api/modules/admin/admin.module";
 import { categoriesModule } from "@/api/modules/categories/categories.module";
@@ -53,6 +54,7 @@ export const blogApiPlugin = () =>
     manifest,
     aiActions: blogAiActions,
     contentNotifications: [commentNotifications],
+    eventDefinitions: blogEventDefinitions,
     messages,
     modules: [
       adminModule,

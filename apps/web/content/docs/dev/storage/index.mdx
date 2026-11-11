@@ -17,9 +17,9 @@ icon: HardDrive
 
 ### Create the upload route
 
-Create `src/api/modules/admin/notes/upload-image.route.ts`:
+Create `src/api/modules/admin/notes/routes/upload-image.route.ts`:
 
-```ts title="plugins/site-notes/src/api/modules/admin/notes/upload-image.route.ts"
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/upload-image.route.ts"
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
@@ -90,9 +90,9 @@ export const uploadNoteImageRoute = buildRoute({
 
 ### Create the delete route
 
-Create `src/api/modules/admin/notes/delete-image.route.ts`. It deletes by the file's **id**, the number `upload()` returned:
+Create `src/api/modules/admin/notes/routes/delete-image.route.ts`. It deletes by the file's **id**, the number `upload()` returned:
 
-```ts title="plugins/site-notes/src/api/modules/admin/notes/delete-image.route.ts"
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/delete-image.route.ts"
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";

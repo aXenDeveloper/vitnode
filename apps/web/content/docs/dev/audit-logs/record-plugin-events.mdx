@@ -27,7 +27,7 @@ Replace the handler of `createNoteRoute`. Write the entry in the same
 transaction as the change. A rolled-back insert then leaves no entry behind, and
 a failed audit write fails the insert instead of quietly losing the trail.
 
-```ts title="plugins/site-notes/src/api/modules/admin/notes/create.route.ts"
+```ts title="plugins/site-notes/src/api/modules/admin/notes/routes/create.route.ts"
 export const createNoteRoute = buildRoute({
   adminStaffPermission: { module: 'notes', permission: 'can_create' },
   route: {

@@ -3,7 +3,7 @@ import {
   zodAiErrorBody,
   zodAiRunBody,
   zodAiRunResponse,
-} from "@/api/lib/ai/run-schemas";
+} from "@/api/lib/ai/run.schema";
 
 export const assistAiAdminRoute = buildRoute({
   route: {

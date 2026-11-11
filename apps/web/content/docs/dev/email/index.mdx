@@ -10,7 +10,7 @@ VitNode provides a unified transactional email service accessible via `c.get("em
 
 Once an [adapter](#configuring-email-adapters) is configured, any route can email the signed-in member:
 
-```ts title="plugins/site-notes/src/api/modules/welcome/send.route.ts"
+```ts title="plugins/site-notes/src/api/modules/welcome/routes/send.route.ts"
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";

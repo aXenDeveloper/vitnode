@@ -4,7 +4,7 @@ import { buildRoute } from "@/api/builders";
 import { UserPresenceModel } from "@/api/models/user-presence";
 import { PRESENCE_BATCH_MAX_USERS } from "@/lib/user-presence";
 
-import { presenceResponseHeaders, zodUserPresence } from "../presence-schema";
+import { presenceResponseHeaders, zodUserPresence } from "../presence.schema";
 
 export const presenceBatchRoute = buildRoute({
   route: {

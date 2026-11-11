@@ -2,12 +2,12 @@ import type { z } from "zod";
 
 import { queryOptions } from "@tanstack/react-query";
 
-import type { zodAiOverview } from "@/api/modules/admin/ai/routes/overview.route";
 import type {
   zodAiAction,
   zodAiModel,
   zodAiSettingsResponse,
-} from "@/api/modules/admin/ai/schemas";
+} from "@/api/modules/admin/ai/ai.schema";
+import type { zodAiOverview } from "@/api/modules/admin/ai/routes/overview.route";
 import type { AiOverviewPreset } from "@/lib/ai/overview-range";
 import type { AiRunStatusValue } from "@/lib/ai/run-status";
 import type {

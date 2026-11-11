@@ -2,11 +2,11 @@ import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/api/builders";
 import { PasskeyModel } from "@/api/models/passkey";
-import { passkeyFailure } from "@/api/modules/users/passkeys/failure";
+import { passkeyFailure } from "@/api/modules/users/passkeys/lib/failure";
 import {
   PASSKEY_ERROR_RESPONSES,
   zodPasskeySchema,
-} from "@/api/modules/users/passkeys/schema";
+} from "@/api/modules/users/passkeys/passkeys.schema";
 
 import {
   findTargetUserId,

@@ -2,5 +2,5 @@
   "title": "Events",
   "description": "Emit typed domain events and react to them from any plugin",
   "icon": "Radio",
-  "pages": ["index", "built-in-events", "custom-adapter"]
+  "pages": ["index", "schema-events", "built-in-events", "custom-adapter"]
 }

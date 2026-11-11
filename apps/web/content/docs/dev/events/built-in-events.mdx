@@ -1513,6 +1513,8 @@ a wrong id into an audit trail. A listener that needs the category should watch
 
 **A listener would** remove the post from an external index or feed.
 
+It is a [schema-defined event](/docs/dev/events/schema-events): `blogPostDeletedEvent` from `@vitnode/blog/api/event-definitions` validates every emit, so a listener built from that definition receives a checked `postId`. Listening by name works as before.
+
 ### blog.category.created and blog.category.updated
 
 <TypeTable

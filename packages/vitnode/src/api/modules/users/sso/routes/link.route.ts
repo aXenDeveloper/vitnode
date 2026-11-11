@@ -5,7 +5,7 @@ import { assertPasswordSignInEnabled } from "@/api/lib/password-sign-in";
 import { SessionModel } from "@/api/models/session";
 import { SSOModel } from "@/api/models/sso";
 
-import { USER_PASSWORD_MAX_LENGTH } from "../../credential-limits";
+import { USER_PASSWORD_MAX_LENGTH } from "../../lib/credential-limits";
 
 export const zodSsoLinkSchema = z.object({
   password: z

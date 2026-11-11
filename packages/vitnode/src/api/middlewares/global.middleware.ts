@@ -19,6 +19,7 @@ import { runAfterResponse } from "@/api/lib/after-response";
 import { DEFAULT_SESSION_COOKIE_NAME } from "@/api/lib/auth-cookie";
 import { CacheModel } from "@/api/lib/cache";
 import { MemoryCacheStore } from "@/api/lib/cache-memory";
+import { collectEventDefinitions } from "@/api/lib/event-definition";
 import { findActiveSuspension } from "@/api/lib/moderation/warnings/suspension";
 import { AIModel } from "@/api/models/ai";
 import { AuditModel } from "@/api/models/audit";
@@ -62,6 +63,7 @@ import type { AiActionRegistry } from "../lib/ai/registry";
 import type { RegisteredAuditAction } from "../lib/audit/registry";
 import type { BuildCronReturn } from "../lib/cron";
 import type { RegisteredEditablePage } from "../lib/editable-pages";
+import type { EventDefinition } from "../lib/event-definition";
 import type { EventListenerConfig } from "../lib/events";
 import type { InstalledPluginRegistry } from "../lib/installed-plugins";
 import type { ModerationRegistry } from "../lib/moderation/registry";
@@ -220,7 +222,12 @@ export interface EnvVariablesVitNode {
     /** Pages an editor may lay out, with the plugin that registered each. */
     editablePages: RegisteredEditablePage[];
     email?: VitNodeApiConfig["email"];
-    events: { adapter: EventsApiPlugin; listeners: EventListenerConfig[] };
+    events: {
+      adapter: EventsApiPlugin;
+      /** Every known event definition by name: registered, or used by a typed listener. */
+      definitions: ReadonlyMap<string, EventDefinition>;
+      listeners: EventListenerConfig[];
+    };
     // Whether a cron adapter is configured (`buildApiConfig({ cron })`), i.e. an
     // in-process scheduler is running the registered jobs automatically. Without
     // it, jobs only run when the cron endpoint is triggered externally.
@@ -449,6 +456,8 @@ export const globalMiddleware = ({
     })),
   );
 
+  const eventDefinitionsMetadata = collectEventDefinitions(plugins);
+
   const queueMetadata = plugins.flatMap(plugin =>
     (plugin.queueTasks ?? []).map(task => ({
       pluginId: plugin.pluginId,
@@ -458,6 +467,7 @@ export const globalMiddleware = ({
       description: task.description,
       maxAttempts: task.maxAttempts,
       leaseSeconds: task.leaseSeconds,
+      payload: task.payload,
     })),
   );
 
@@ -652,6 +662,7 @@ export const globalMiddleware = ({
       email,
       events: {
         adapter: events?.adapter ?? LocalEventsAdapter(),
+        definitions: eventDefinitionsMetadata,
         listeners: eventsMetadata,
       },
       search: { adapter: searchAdapter },
