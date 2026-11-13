@@ -17,5 +17,6 @@ export default defineConfig({
     "pnpm-lock.yaml",
     "packages/create-vitnode-app/copy-of-vitnode-app",
     "packages/vitnode/test-fixtures",
+    "**/wrangler.jsonc",
   ],
 });

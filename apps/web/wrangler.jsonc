@@ -21,13 +21,13 @@
   "durable_objects": {
     "bindings": [
       // The realtime hub that owns every WebSocket. The binding name is fixed.
-      { "name": "VITNODE_REALTIME", "class_name": "VitNodeRealtimeHub" },
-    ],
+      { "name": "VITNODE_REALTIME", "class_name": "VitNodeRealtimeHub" }
+    ]
   },
   // SQLite-backed, so the hub keeps its rooms while it hibernates.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VitNodeRealtimeHub"] }],
   "vars": {
-    "VITNODE_INSTALLATION_ID": "default",
+    "VITNODE_INSTALLATION_ID": "default"
   },
-  "observability": { "enabled": true },
+  "observability": { "enabled": true }
 }
