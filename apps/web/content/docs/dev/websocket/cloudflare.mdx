@@ -1,0 +1,144 @@
+---
+title: Cloudflare
+description: How VitNode serves the /api/ws WebSocket on Cloudflare Workers from a Durable Object hub - server push from requests and background jobs, hibernation, sharding and troubleshooting.
+icon: Cloud
+---
+
+On Cloudflare Workers, VitNode serves `/api/ws` from one Durable Object per installation, the **realtime hub**. Server push, rooms, notifications and Content Engine live editing work there as on Node. To deploy an app to Workers, including the hub's binding, follow [Cloudflare Workers](/docs/dev/deployments/cloud/cloudflare); this page explains what the hub does and how to push from code that runs outside a request.
+
+## Why a hub
+
+A Worker request runs in an isolate that may not be the one holding a visitor's socket, and it cannot reach sockets that belong to another request. So the sockets have to live somewhere every request can address. VitNode puts all of them in one named Durable Object:
+
+1. The browser upgrades `/api/ws`. The Worker hands the upgrade to the hub.
+2. The hub runs the handshake through your embedded API (Origin check, rate limiter, session cookie), then accepts the socket.
+3. An HTTP request that calls `c.get("realtime")` sends the push to the hub over Durable Object RPC, and the hub delivers it to its sockets.
+
+Plugins do not change: `c.get("realtime")`, `wsRegistry` inside socket handlers, `buildWebSocket` and `useVitNodeWebSocket` work as on Node. Redis is not used for realtime here. The hub owns every socket, so there is nothing to relay. An idle hub [hibernates](#hibernation-and-costs), and a busy installation can [split its sockets across shards](#sharding).
+
+## The hub configuration
+
+The deploy guide's `wrangler.jsonc` declares the hub. Three of its settings matter here:
+
+- **The `VITNODE_REALTIME` binding.** The name is fixed: the Worker finds the hub through it.
+- **`VITNODE_INSTALLATION_ID`** names the hub: `vitnode:default` for `"default"`. The upgrade and every push read it from the Worker's own configuration, never from the request, so a visitor cannot pick another installation's hub. Give each installation that shares one script its own value.
+- **`new_sqlite_classes`.** The hub keeps room memberships in its SQLite storage so they survive [hibernation](#hibernation-and-costs). A hub without it still works, but never hibernates.
+
+The handshake route stays as in [WebSocket setup](/docs/dev/websocket/setup): `src/server/vitnode-api.server.ts` mounts `/ws` with `upgradeWebSocket` from `@vitnode/core/ws/crossws.server`. The hub runs that route for each handshake, so a refused Origin answers `403` and a rate-limited visitor `429` before any socket exists, and the `Set-Cookie` of a handshake that changed the session reaches the browser on the `101` response.
+
+## Push from HTTP and background work
+
+Route handlers push exactly as on Node. This sends a toast to every open tab of one user, from an ordinary request:
+
+```ts title="plugins/blog/src/api/modules/posts/routes/publish.route.ts (excerpt)"
+import { notificationsChannel } from "@vitnode/core/ws/notifications"
+
+handler: async c => {
+  // ...publish the post in the database first
+  c.get("realtime").sendToUser(authorId, notificationsChannel, {
+    title: "Your post is live",
+    type: "success",
+  })
+
+  return c.json({ ok: true })
+},
+```
+
+All five methods work through the hub: `broadcast`, `sendToUser`, `sendToUsers`, `toRoom` and `closeUserConnections`. A push stays fire-and-forget: it is kept alive with the request's `waitUntil`, and a failure is logged, not thrown and not retried. Core modules that import `realtime` from `@vitnode/core/ws/registry` take the same path, and so do Content Engine resets: a discarded draft unloads the hub's copy of the document before the stored one is deleted.
+
+Code that runs outside a request or socket event, such as a `scheduled` handler or a queue consumer, has no scope yet. Open one with `runWithVitNodeCloudflare`:
+
+```ts title="src/worker-jobs.ts"
+import { runWithVitNodeCloudflare } from '@vitnode/core/cloudflare/edge'
+import type {
+  CloudflareEnv,
+  CloudflareExecutionContext,
+} from '@vitnode/core/cloudflare/types'
+
+export const runDigest = async (
+  env: CloudflareEnv,
+  ctx: CloudflareExecutionContext,
+) =>
+  await runWithVitNodeCloudflare(env, ctx, async () => {
+    await sendDailyDigest() // may call realtime and the database
+  })
+```
+
+Without it, a push logs `Realtime was used outside a VitNode execution scope` and is not delivered, and `scopedDatabase` throws the same error. VitNode never falls back to delivering to the sockets of the current isolate, because there are none.
+
+## Check the result
+
+1. Build the app and run it with `npx wrangler dev`, as in [Cloudflare Workers](/docs/dev/deployments/cloud/cloudflare#preview-it-locally), then open the site in two browsers, one signed in as an admin and one as a member.
+2. In both, the network panel shows `/api/ws` with `101 Switching Protocols`, then `vitnode_ping` and `vitnode_pong` frames.
+3. In the admin's AdminCP dashboard, use the **Send a notification** widget with the member's user ID. The member's tab shows the toast; the admin's does not.
+4. Sign the member out in another tab of the same browser. Its socket closes with code `1008` (`Session revoked`) and reconnects as a guest.
+5. Sign the member in again, leave every tab idle for two minutes so the hub hibernates, then send another notification. It still arrives.
+
+The VitNode repository runs these checks and more against a generated app: `scripts/cloudflare-smoke/` covers all five realtime methods, rooms, the handshake policy, revocation, reconnects, two-editor live editing and a hibernation round, with one hub or several shards.
+
+## Hibernation and costs
+
+Cloudflare bills a Durable Object for the time it is active, so a hub that stayed awake for every open socket would cost the same at 4 a.m. as at noon. By default the hub uses Cloudflare's WebSocket Hibernation API instead: once nothing has happened for a few seconds, the runtime evicts the hub from memory while its sockets stay open, and the hub stops accruing duration until the next event wakes it.
+
+What keeps working while it sleeps:
+
+- **Heartbeats.** The runtime answers the client's `vitnode_ping` itself, without waking the hub.
+- **Pushes.** A push wakes the hub. Each socket's user and device travel with the socket, and its rooms are kept in the hub's SQLite storage, so `sendToUser`, `toRoom` and revocation reach the right sockets right away.
+- **Handlers.** A socket's first message after a wake runs its handshake again through your API, with only its session, device and admin cookies, so its handlers get a fresh `c` that sees the current session. When the session behind the socket is gone or belongs to someone else now, the hub closes it with `1008` and the client reconnects as whoever it is.
+
+What decides when the hub can sleep:
+
+- **Live features keep it awake while used.** Content Engine live editing and live refresh keep members, timers and loaded documents in memory, so the hub stays active while anyone uses them and can hibernate about 15 to 20 seconds after the last member leaves.
+- **Recent handshakes keep it awake for about a minute.** The rate limiter's in-memory counters expire after 60 seconds, and a pending timer keeps a Durable Object awake.
+- **Per-socket state in your own handlers does not survive a wake.** Anything a plugin keeps in memory per socket (a `Map` keyed by `ws`, say) is gone after the hub wakes. Rooms joined with `wsRegistry.join` are restored; rebuild anything else from the database.
+
+Set `"VITNODE_REALTIME_HIBERNATION": "false"` in `vars` to keep the hub awake with the standard WebSocket API instead. Use it if a plugin cannot rebuild its per-socket state, and expect to pay for duration while any socket is open.
+
+Hibernation does not make memory durable. A deploy restarts the hub and closes every socket; clients reconnect with backoff, rejoin their rooms and reload state from the database, as described in [Reconnects](/docs/dev/websocket/reconnects). Edited rich text documents are saved to the database a couple of seconds after each change. As on Node, delivery is best effort: a push reaches the sockets that are open when it arrives, nothing is replayed and nothing is delivered twice.
+
+## Sharding
+
+One hub is one Durable Object, on one thread. When it cannot keep up, spread the sockets across several hubs:
+
+```jsonc title="wrangler.jsonc (excerpt)"
+"vars": {
+  "VITNODE_INSTALLATION_ID": "default",
+  "VITNODE_REALTIME_SHARDS": "4"
+}
+```
+
+Each upgrade lands on a random shard (`vitnode:default:0` to `vitnode:default:3`). Every push from an HTTP request goes to every shard, which delivers to its own sockets; a shard relays the pushes, presence updates and live-editing changes of its own handlers to its peers, the way Node instances share them over Redis. Two editors of one document may sit on different shards and still see each other.
+
+Sharding is a trade: each push now costs one RPC per shard, and each shard is a Durable Object of its own. Start with one hub, which suits most community sites, and add shards only when the hub's CPU is the limit. VitNode has not measured a socket count per hub, so load-test your expected peak. Changing the shard count moves sockets to new hubs: deploy it like any other configuration change, and clients reconnect.
+
+## Troubleshooting
+
+| Symptom                                                                            | Cause and fix                                                                                                                                                                                                                    |
+| ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/ws` answers `503` and the log says the `VITNODE_REALTIME` binding is missing | Add the `durable_objects` binding and the `new_sqlite_classes` migration to `wrangler.jsonc`, rebuild, deploy. HTTP keeps working meanwhile; each push logs the same error.                                                      |
+| Wrangler warns that no `VitNodeRealtimeHub` class is exported                      | The build did not use `webSocket: { transport: "cloudflare" }`, or you set your own Nitro `serverEntry`, which replaces VitNode's.                                                                                               |
+| Every handshake answers `403`                                                      | The page's origin is neither `VITNODE_WEB_URL` nor the Worker's own origin. Set `VITNODE_WEB_URL` to the site's URL.                                                                                                             |
+| Handshakes answer `429`                                                            | The visitor's IP spent the read budget of the [rate limiter](/docs/dev/advanced/rate-limiter). The Worker passes `CF-Connecting-IP` to the hub; a client cannot set it.                                                          |
+| `Realtime was used outside a VitNode execution scope`                              | Background code pushed or queried without `runWithVitNodeCloudflare`.                                                                                                                                                            |
+| The hub never hibernates                                                           | Something keeps it busy: an open database connection created outside `scopedDatabase`, a timer in a plugin, an active live-editing or live-refresh member. The log says "cannot hibernate" when the class has no SQLite storage. |
+| Sockets close with `1008` after a quiet period                                     | Their session ended while the hub slept; the client reconnects with its current session. Expected.                                                                                                                               |
+
+## Related
+
+<Cards>
+  <Card
+    title="Cloudflare Workers"
+    description="Build, configure and deploy the app as one Worker"
+    href="/docs/dev/deployments/cloud/cloudflare"
+  />
+  <Card
+    title="Reconnects and missed messages"
+    description="What clients restore after the hub restarts"
+    href="/docs/dev/websocket/reconnects"
+  />
+  <Card
+    title="Rooms"
+    description="Join and target rooms; the same API inside the hub"
+    href="/docs/dev/websocket/rooms"
+  />
+</Cards>

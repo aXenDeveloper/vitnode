@@ -17,12 +17,8 @@ import {
   contentRefreshChannel,
   contentRefreshRoom,
 } from "@/content/live/refresh";
-import {
-  isRealtimePubSubEnabled,
-  isWebSocketEnabled,
-  realtime,
-  wsRegistry,
-} from "@/ws/registry";
+import { isWebSocketEnabled, realtime } from "@/ws/registry";
+import { currentRealtimeRuntime } from "@/ws/runtime";
 
 import type { ContentPublicState } from "../page-cache";
 
@@ -93,10 +89,19 @@ const send = (scope: ContentRefreshScope, signal: ContentRefreshSignal) => {
   return room;
 };
 
-/** Without Redis, nobody outside this instance can be listening. */
-const hasListeners = (scope: ContentRefreshScope): boolean =>
-  isRealtimePubSubEnabled() ||
-  wsRegistry.membersOf(contentRefreshRoom(scope)).length > 0;
+/**
+ * Without Redis, nobody outside this instance can be listening. A runtime that
+ * owns no sockets (an HTTP request on Cloudflare) cannot tell, so it sends.
+ */
+const hasListeners = (scope: ContentRefreshScope): boolean => {
+  const runtime = currentRealtimeRuntime();
+
+  return (
+    runtime.crossInstance() ||
+    !runtime.registry ||
+    runtime.registry.membersOf(contentRefreshRoom(scope)).length > 0
+  );
+};
 
 const publicStateOf = ({
   action,

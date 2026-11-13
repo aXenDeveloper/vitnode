@@ -10,6 +10,10 @@ import { docsPrerenderPaths } from './src/docs/prerender.ts'
 import { PRERENDERED_PATHS } from './src/site/prerender.ts'
 import { vitNodeConfig } from './src/vitnode.config.ts'
 
+// `pnpm build:cloudflare` sets this: one Cloudflare Worker serves the site,
+// the API and the realtime hub. Every other build, and `vite dev`, is Node.
+const CLOUDFLARE = process.env.NITRO_PRESET === 'cloudflare-module'
+
 const config = defineConfig({
   resolve: {
     alias: [{ find: /^@\//, replacement: `${import.meta.dirname}/src/` }],
@@ -20,6 +24,7 @@ const config = defineConfig({
     vitnode({
       appRoot: import.meta.dirname,
       nitro: {
+        ...(CLOUDFLARE ? { preset: 'cloudflare-module' } : {}),
         prerender: {
           routes: prerenderRoutes({
             i18n: vitNodeConfig.i18n,
@@ -27,7 +32,8 @@ const config = defineConfig({
           }),
         },
       },
-      webSocket: true,
+      // On Workers, `/api/ws` is the `VitNodeRealtimeHub` Durable Object.
+      webSocket: CLOUDFLARE ? { transport: 'cloudflare' } : true,
     }),
     fumadocsMdx({ index: false }),
     devtools(),

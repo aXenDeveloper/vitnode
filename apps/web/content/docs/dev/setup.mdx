@@ -45,8 +45,9 @@ It asks for a project name (default `my-vitnode`), then these questions. The rec
 | Package manager       | the one you use                             | The generator offers only the managers you have installed.                                                                                    |
 | App type              | **Single App**                              | One TanStack Start app with the Hono API mounted at `/api`. **Monorepo App** splits web and API into two apps; **Only API** has no front end. |
 | Use Turborepo?        | **Yes**                                     | Required to create plugins. A Monorepo App always gets it, so the generator skips the question.                                               |
+| Where to deploy?      | **Node.js**, or **Bun** if you use it       | **Bun** runs dev, build and production on Bun; see [Bun](/docs/dev/deployments/bun). **Cloudflare Workers** (Single App only) builds one Worker with a Durable Object for WebSockets; see [Cloudflare Workers](/docs/dev/deployments/cloud/cloudflare). |
 | Oxlint & Oxfmt?       | your choice                                 | Adds lint and format scripts.                                                                                                                 |
-| Docker container?     | **Yes**, unless you run PostgreSQL yourself | Adds `docker-compose.yml` with PostgreSQL 17 and Redis on `127.0.0.1`.                                                                        |
+| Docker?               | **Yes**, unless you run PostgreSQL yourself | Adds `docker-compose.yml` with PostgreSQL 17 and Redis on `127.0.0.1`, plus a production image; see [Docker](/docs/dev/deployments/docker). |
 | Git repository?       | your choice                                 |                                                                                                                                               |
 | Install dependencies? | **Yes**                                     | Installs packages and generates the first migrations.                                                                                         |
 

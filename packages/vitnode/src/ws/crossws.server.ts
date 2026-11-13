@@ -1,23 +1,18 @@
-import type { WSEvents, WSReadyState } from "hono/ws";
-
-import { defineWebSocketHelper, WSContext } from "hono/ws";
+import { defineWebSocketHelper } from "hono/ws";
 
 import type { InProcessApiHandler } from "@/lib/fetcher/in-process-api.server";
 
 import { getInProcessApi } from "@/lib/fetcher/in-process-api.server";
 
-// `Symbol.for`, not a module-level symbol: the Hono route below runs in the
-// app's server bundle and the hooks in Nitro's, and each bundle has its own
-// copy of this module. Both read the same key off the same `Request`.
-const HANDSHAKE_KEY = Symbol.for("vitnode.ws.crossws.handshake");
+import type { VitNodeConnection, VitNodeHandshakeRequest } from "./handshake";
+
+import {
+  createVitNodeConnection,
+  HANDSHAKE_KEY,
+  runVitNodeHandshake,
+} from "./handshake";
 
 const CONTEXT_KEY = "vitnodeWebSocket";
-
-interface Handshake {
-  events?: WSEvents;
-}
-
-type HandshakeRequest = Request & { [HANDSHAKE_KEY]?: Handshake };
 
 /**
  * The Hono helper for a `/ws` route served through Nitro (crossws). It does not
@@ -43,10 +38,26 @@ type HandshakeRequest = Request & { [HANDSHAKE_KEY]?: Handshake };
  * ```
  */
 export const upgradeWebSocket = defineWebSocketHelper((c, events) => {
-  const handshake = (c.req.raw as HandshakeRequest)[HANDSHAKE_KEY];
+  const handshake = (c.req.raw as VitNodeHandshakeRequest)[HANDSHAKE_KEY];
   if (!handshake) return c.text("WebSocket upgrade is required.", 426);
 
   handshake.events = events;
+  const authorization = (
+    c.get("core") as
+      | undefined
+      | {
+          authorization?: {
+            adminCookieName?: string;
+            cookieName?: string;
+            deviceCookieName?: string;
+          };
+        }
+  )?.authorization;
+  handshake.cookieNames = [
+    authorization?.cookieName,
+    authorization?.deviceCookieName,
+    authorization?.adminCookieName,
+  ].filter((name): name is string => typeof name === "string");
 
   return c.body(null, 200);
 });
@@ -103,22 +114,18 @@ export interface VitNodeWebSocketHooksOptions {
   warmup?: (request: Request) => Promise<unknown>;
 }
 
-interface Connection {
-  closed: boolean;
-  events: WSEvents;
-  ws?: WSContext;
-}
-
 const logError = (message: string, error: unknown): void => {
   // oxlint-disable-next-line no-console
   console.error(message, error);
 };
 
-const connectionOf = (peer: VitNodeCrosswsPeer): Connection | undefined => {
+const connectionOf = (
+  peer: VitNodeCrosswsPeer,
+): undefined | VitNodeConnection => {
   const connection = peer.context[CONTEXT_KEY];
 
   return typeof connection === "object" && connection !== null
-    ? (connection as Connection)
+    ? (connection as VitNodeConnection)
     : undefined;
 };
 
@@ -126,37 +133,6 @@ const clientAddressOf = (request: Request): string | undefined => {
   const ip: unknown = Reflect.get(request, "ip");
 
   return typeof ip === "string" && ip.length > 0 ? ip : undefined;
-};
-
-const closeEvent = (code?: number, reason?: string): CloseEvent => {
-  const init = { code, reason, wasClean: code !== undefined && code !== 1006 };
-  if (typeof CloseEvent === "function") return new CloseEvent("close", init);
-
-  // Node 22 has no `CloseEvent` global.
-  return Object.assign(new Event("close"), init) as CloseEvent;
-};
-
-/**
- * Runs the connection's `onClose` exactly once, whether the socket closed, the
- * runtime reported an error, or both - so it leaves the registry and every room
- * once.
- */
-const finish = (
-  connection: Connection,
-  details: { code?: number; reason?: string },
-): void => {
-  if (connection.closed) return;
-  connection.closed = true;
-  if (!connection.ws) return;
-
-  try {
-    connection.events.onClose?.(
-      closeEvent(details.code, details.reason),
-      connection.ws,
-    );
-  } catch (error) {
-    logError("WebSocket close handler error:", error);
-  }
 };
 
 /**
@@ -224,22 +200,16 @@ export const createVitNodeWebSocketHooks = ({
 
   return {
     close: (peer, details) => {
-      const connection = connectionOf(peer);
-      if (connection) finish(connection, details);
+      connectionOf(peer)?.close(details);
     },
     error: (peer, error) => {
-      logError("WebSocket error:", error);
       const connection = connectionOf(peer);
-      if (!connection) return;
+      if (!connection) {
+        logError("WebSocket error:", error);
 
-      if (connection.ws) {
-        try {
-          connection.events.onError?.(new Event("error"), connection.ws);
-        } catch (handlerError) {
-          logError("WebSocket error handler error:", handlerError);
-        }
+        return;
       }
-      finish(connection, { code: 1011, reason: "Internal error" });
+      connection.error(error);
       try {
         peer.close(1011, "Internal error");
       } catch {
@@ -247,21 +217,11 @@ export const createVitNodeWebSocketHooks = ({
       }
     },
     message: (peer, message) => {
-      const connection = connectionOf(peer);
-      if (!connection?.ws || connection.closed) return;
-
-      const data =
+      connectionOf(peer)?.message(
         typeof message.rawData === "string"
           ? message.rawData
-          : message.arrayBuffer();
-      try {
-        connection.events.onMessage?.(
-          new MessageEvent("message", { data }),
-          connection.ws,
-        );
-      } catch (error) {
-        logError("WebSocket message handler error:", error);
-      }
+          : (message.arrayBuffer() as ArrayBuffer),
+      );
     },
     open: peer => {
       const connection = connectionOf(peer);
@@ -271,28 +231,22 @@ export const createVitNodeWebSocketHooks = ({
         return;
       }
 
-      // One wrapper for the connection's whole life: the registry, the rooms
-      // and every handler key their state by this object.
-      connection.ws = new WSContext({
-        close: (code, reason) => {
-          peer.close(code, reason);
+      connection.open(
+        {
+          close: (code, reason) => {
+            peer.close(code, reason);
+          },
+          protocol: peer.websocket.protocol,
+          get readyState() {
+            return peer.websocket.readyState ?? 1;
+          },
+          send: data => {
+            peer.send(data);
+          },
+          url: peer.request.url,
         },
-        protocol: peer.websocket.protocol,
-        raw: peer,
-        get readyState() {
-          return (peer.websocket.readyState ?? 1) as WSReadyState;
-        },
-        send: data => {
-          peer.send(data);
-        },
-        url: peer.request.url,
-      });
-
-      try {
-        connection.events.onOpen?.(new Event("open"), connection.ws);
-      } catch (error) {
-        logError("WebSocket open handler error:", error);
-      }
+        peer,
+      );
     },
     upgrade: async request => {
       const handler = await resolveApi(request);
@@ -302,36 +256,19 @@ export const createVitNodeWebSocketHooks = ({
         });
       }
 
-      const handshake: Handshake = {};
-      const handshakeRequest: HandshakeRequest = new Request(request.url, {
-        headers: request.headers,
-      });
-      handshakeRequest[HANDSHAKE_KEY] = handshake;
-
-      const response = await handler(handshakeRequest, {
+      const accepted = await runVitNodeHandshake(handler, request, {
         clientAddress: clientAddressOf(request),
       });
-
-      if (!handshake.events || !response.ok) {
-        // Origin refused, rate limited, not ready, ... - the API's own answer.
-        // crossws sends a returned `Response` back instead of upgrading.
-        return response.ok
-          ? new Response("WebSocket upgrade failed.", { status: 500 })
-          : response;
-      }
-      await response.body?.cancel();
+      // crossws sends a returned `Response` back instead of upgrading.
+      if (accepted instanceof Response) return accepted;
 
       return {
-        context: {
-          [CONTEXT_KEY]: {
-            closed: false,
-            events: handshake.events,
-          } satisfies Connection,
-        },
+        context: { [CONTEXT_KEY]: createVitNodeConnection(accepted.events) },
         // A handshake that refreshed the session passes the cookie on.
-        headers: response.headers
-          .getSetCookie()
-          .map((cookie): [string, string] => ["set-cookie", cookie]),
+        headers: accepted.setCookies.map((cookie): [string, string] => [
+          "set-cookie",
+          cookie,
+        ]),
       };
     },
   };

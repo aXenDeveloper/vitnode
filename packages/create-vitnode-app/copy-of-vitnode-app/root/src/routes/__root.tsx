@@ -31,6 +31,12 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
     locale: resolveLocale<Locale>(publicPathnameOf(location)),
   }),
   component: RootComponent,
+  loader: async ({ context }) => {
+    await context.queryClient.query({
+      ...intlQueryOptions({ locale: context.locale }),
+      staleTime: "static",
+    });
+  },
   head: () => ({
     links: [
       { href: appCss, rel: "stylesheet" },
@@ -48,12 +54,6 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
       { title: metadata.title },
     ],
   }),
-  loader: async ({ context }) => {
-    await context.queryClient.query({
-      ...intlQueryOptions({ locale: context.locale }),
-      staleTime: "static",
-    });
-  },
   shellComponent: RootDocument,
 });
 

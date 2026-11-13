@@ -1,12 +1,12 @@
 ---
 title: Setup
-description: Serve VitNode's /api/ws WebSocket from a single TanStack Start app with Nitro, Vercel included, or from a standalone Node API server.
+description: Serve VitNode's /api/ws WebSocket from a single TanStack Start app with Nitro, Vercel included, or from a standalone Node or Bun API server.
 icon: Plug
 ---
 
-VitNode's WebSocket lives at `/api/ws`. A single app serves it from the same deployment as the site and the HTTP API, through Nitro. A standalone API serves it from its own Node server. Both run the same handshake, protocol and handlers, so plugins and `useVitNodeWebSocket` work the same either way.
+VitNode's WebSocket lives at `/api/ws`. A single app serves it from the same deployment as the site and the HTTP API, through Nitro. A standalone API serves it from its own Node or Bun server. Both run the same handshake, protocol and handlers, so plugins and `useVitNodeWebSocket` work the same either way.
 
-New single apps from `create-vitnode-app` already include everything on this page. Follow it to add WebSockets to an older single app.
+New single apps from `create-vitnode-app` already include everything on this page. Follow it to add WebSockets to an older single app. On Cloudflare Workers, finish this page and then follow [Cloudflare Workers](/docs/dev/deployments/cloud/cloudflare), where a Durable Object hub owns the sockets.
 
 ## Single app
 
@@ -119,15 +119,37 @@ The `ws` server does not ping on its own. Without the heartbeat, a client that v
 
 A web app pointed at that API with `VITNODE_API_URL` connects to it on its own; it needs no `webSocket` option and no Nitro route.
 
+### On Bun
+
+An API that runs on Bun lets Bun upgrade the socket. Use the helpers from `hono/bun` and export Bun's server object instead of calling `serve`:
+
+```ts title="apps/api/src/index.ts (excerpt)"
+import { websocketOriginMiddleware } from "@vitnode/core/api/middlewares/websocket-origin.middleware"
+import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle"
+import { upgradeWebSocket, websocket } from "hono/bun"
+
+// `app` is your OpenAPIHono app, already passed to VitNodeAPI({ app, ... })
+app.get("/ws", websocketOriginMiddleware(), upgradeWebSocket(handleVitNodeWebSocket()))
+
+export default {
+  fetch: app.fetch,
+  hostname: process.env.HOST,
+  port: Number(process.env.PORT ?? 8000),
+  websocket,
+}
+```
+
+Bun pings idle sockets and drops dead ones on its own, so there is no heartbeat to write. API apps that `create-vitnode-app` generates for Bun ship this file already.
+
 ## Who may connect
 
 Both setups apply the same rules before a socket opens:
 
 - **Origin**: the configured web and API origins, any extra `origin` you pass, and the handshake's own origin (a page on the same host, such as a preview deployment). A handshake without an `Origin` header is not a browser and is allowed. Anything else gets `403`.
 - **Session**: the session cookie decides the user. Guests connect too, as `null`; a handler that needs a user checks `c.get("user")` itself, and live editing checks the AdminCP session on every message.
-- **Redis**: with `REDIS_URL` set, the instance answers `503` until it is subscribed to the realtime channel, so it never accepts a socket that other instances cannot reach. The client retries.
+- **Redis**: with `REDIS_URL` set, the instance answers `503` until it is subscribed to the realtime channel, so it never accepts a socket that other instances cannot reach. The client retries. Cloudflare Workers do not use Redis for this; the hub owns every socket.
 
-A rejected handshake registers nothing. Identity is fixed for the life of a socket. After sign-in or sign-out the client reconnects on its own. Revoking a session (signing out a device, changing a password, an admin revoke) closes that device's sockets on every instance.
+A rejected handshake registers nothing. Identity is fixed for the life of a socket. After sign-in or sign-out the client reconnects on its own. Revoking a session (signing out a device, changing a password, an admin revoke) closes that device's sockets on every instance, or in the Cloudflare hub.
 
 ## Check the result
 

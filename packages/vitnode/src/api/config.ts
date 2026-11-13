@@ -14,6 +14,7 @@ import { createCacheClient } from "@/api/lib/cache-client";
 import { clientIpMiddleware } from "@/api/lib/client-ip";
 import { collectCronJobs } from "@/api/lib/cron";
 import { describeError } from "@/api/lib/error-details";
+import { createReadinessCheck, mountHealthRoutes } from "@/api/lib/health";
 import { processSingleton } from "@/api/lib/process-singleton";
 import { newBuildPluginApiCore } from "@/api/plugin";
 import {
@@ -28,7 +29,9 @@ import {
   pageCacheStoreFor,
 } from "@/page-cache/store.server";
 import { initRealtimePubSub } from "@/ws/registry";
+import { isWorkerdRuntime, realtimeScopeRequirement } from "@/ws/runtime";
 
+import { runAfterResponse } from "./lib/after-response";
 import {
   assertPluginContentModules,
   generatedContentModules,
@@ -119,8 +122,10 @@ export function VitNodeAPI({
     : null;
 
   // Bridge realtime (WebSocket) messages across instances via Redis pub/sub, so
-  // `broadcast`/`sendToUser` reach clients on every instance. No-op without Redis.
-  initRealtimePubSub(redisClient);
+  // `broadcast`/`sendToUser` reach clients on every instance. No-op without
+  // Redis, and never on Cloudflare: its Durable Object hub owns every socket,
+  // and a long-lived subscriber cannot outlive the request that opened it.
+  if (!realtimeScopeRequirement()) initRealtimePubSub(redisClient);
 
   // A separate API process writes page invalidations to the web app's Redis.
   // Inside the web app the server entry has registered the store already.
@@ -205,6 +210,15 @@ export function VitNodeAPI({
       strictTransportSecurity: false,
     }),
   );
+  // Before the rate limiter and the request context: load balancers and
+  // orchestrators probe often, without cookies, from one address.
+  mountHealthRoutes(
+    app,
+    createReadinessCheck({
+      cacheClient: redisClient,
+      db: vitNodeApiConfig.dbProvider,
+    }),
+  );
   app.use("*", clientIpMiddleware);
   app.use("*", rateLimiter.preflight);
   app.use(
@@ -282,18 +296,36 @@ export function VitNodeAPI({
     });
   }
 
-  plugins.map(root => {
-    app.route(`/${root.pluginId}`, root.hono);
-  });
-
-  registerCronJobs(vitNodeApiConfig.dbProvider, collectCronJobs(plugins)).catch(
-    (error: unknown) => {
+  const registerCron = async (): Promise<void> => {
+    await registerCronJobs(
+      vitNodeApiConfig.dbProvider,
+      collectCronJobs(plugins),
+    ).catch((error: unknown) => {
       // oxlint-disable-next-line no-console
       console.warn(
         `\x1b[34m[VitNode]\x1b[0m \x1b[33mFailed to register cron jobs:\x1b[0m ${describeError(error)}`,
       );
-    },
-  );
+    });
+  };
+
+  if (isWorkerdRuntime()) {
+    // A Worker evaluates modules where no I/O is allowed - even one a request
+    // imports lazily: register on the first request instead, once per isolate.
+    let registering = false;
+    app.use(async (c, next) => {
+      if (!registering) {
+        registering = true;
+        runAfterResponse(c, registerCron());
+      }
+      await next();
+    });
+  } else {
+    void registerCron();
+  }
+
+  plugins.map(root => {
+    app.route(`/${root.pluginId}`, root.hono);
+  });
 
   app.onError(async (error, c) => {
     if (error instanceof HTTPException) {

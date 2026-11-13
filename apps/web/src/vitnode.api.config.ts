@@ -1,5 +1,6 @@
 import { blogApiPlugin } from '@vitnode/blog/config.api'
 import { FakePaymentAdapter } from '@vitnode/core/api/adapters/payments/fake'
+import { scopedDatabase } from '@vitnode/core/cloudflare/database'
 import { coreRelations } from '@vitnode/core/database/relations'
 import { buildApiConfig } from '@vitnode/core/vitnode.config'
 import { forumApiPlugin } from '@vitnode/forum/config.api'
@@ -16,6 +17,9 @@ import { frontendPlugins } from './plugin-inventory.gen'
 import { vitNodeConfig } from './vitnode.config'
 
 config({ quiet: true })
+
+/** `pnpm build:cloudflare`: the API runs inside a Cloudflare Worker. */
+const ON_WORKERS = globalThis.navigator?.userAgent === 'Cloudflare-Workers'
 
 export const POSTGRES_URL =
   process.env.POSTGRES_URL ?? 'postgresql://root:root@localhost:5432/vitnode'
@@ -40,9 +44,9 @@ export const vitNodeApiConfig = buildApiConfig({
   contentModules,
   frontendPlugins,
   storage: {
-    image: {
-      quality: 85,
-    },
+    // Re-encoding needs sharp, a native module Workers cannot load: there,
+    // images are stored as uploaded.
+    image: ON_WORKERS ? undefined : { quality: 85 },
     adapter: SupabaseStorageAdapter({
       url: process.env.SUPABASE_URL,
       secretKey: process.env.SUPABASE_SECRET_KEY,
@@ -81,10 +85,21 @@ export const vitNodeApiConfig = buildApiConfig({
         : []),
     ],
   },
-  dbProvider: drizzle({
-    connection: { url: POSTGRES_URL, onnotice: () => undefined },
-    relations: coreRelations,
-  }),
+  // One client per process on Node. On Workers a request cannot reuse a
+  // connection another request opened, so it gets its own, and the realtime
+  // hub closes its client when idle so it can hibernate.
+  dbProvider: scopedDatabase(() =>
+    drizzle({
+      connection: {
+        url: POSTGRES_URL,
+        ...(ON_WORKERS ? { max: 1 } : {}),
+        onnotice: () => undefined,
+      },
+      relations: coreRelations,
+    }),
+  ),
+  // Leave REDIS_URL unset on Workers: the realtime hub owns every socket, and
+  // the cache falls back to each isolate's memory.
   redis: process.env.REDIS_URL
     ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
     : undefined,

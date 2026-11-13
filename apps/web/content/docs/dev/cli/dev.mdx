@@ -85,6 +85,7 @@ The port is `--port`, then `PORT`, then `8000`. The CLI passes it to your API as
 
 The API runs on Bun, with `bun --hot`, when any of these is true:
 
+- `package.json` declares `"vitnode": { "runtime": "bun" }` (`"node"` there forces Node, whatever else says Bun)
 - you started the script with Bun (`bun run dev`)
 - the nearest `packageManager` field says `bun@...`
 - the nearest lockfile is `bun.lock` or `bun.lockb`

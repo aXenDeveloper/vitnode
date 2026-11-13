@@ -9,7 +9,7 @@ VitNode provides one shared WebSocket connection at `/api/ws`. Browsers share a 
 ## Before you begin
 
 - The `/api/ws` endpoint. A single app turns it on with `webSocket: true`, Vercel included; a standalone API mounts it next to its HTTP server. See [Set up the endpoint](/docs/dev/websocket/setup).
-- `REDIS_URL`, only if you run more than one API instance. Without it, pushes reach clients connected to the same instance.
+- `REDIS_URL`, only if you run more than one API instance. Without it, pushes reach clients connected to the same instance. On Cloudflare Workers a Durable Object hub owns every socket instead; see [Cloudflare](/docs/dev/websocket/cloudflare).
 
 ## Send a toast to a user
 
@@ -122,7 +122,7 @@ Every method returns nothing and does not wait. A client that is not connected m
 - **Heartbeat, both ways**: The server pings every socket every 30 seconds and closes the ones that stopped answering, so vanished clients do not linger (the standalone API's `ws` server and Nitro's crossws both do). The browser sends its own ping every 25 seconds and reconnects when no reply arrives within 10 seconds, so a half-dead connection after a Wi-Fi drop never pretends to be online.
 - **No replay**: Messages sent while a socket is down are not queued. A feature that must not miss updates reloads its state when the socket opens again - see [Reconnects and missed messages](/docs/dev/websocket/reconnects).
 - **Closed on revoke**: A socket is tied to the session and device that opened it. Revoking sessions (signing out a device, changing or resetting a password, an admin revoke) closes those sockets on every instance through `closeUserConnections`, so a revoked device stops receiving the user's pushes.
-- **Multiple instances**: With `REDIS_URL` set, `sendToUser`, `broadcast` and `toRoom` are relayed to every API instance over Redis pub/sub. Without Redis they only reach clients connected to the same instance.
+- **Multiple instances**: With `REDIS_URL` set, `sendToUser`, `broadcast` and `toRoom` are relayed to every API instance over Redis pub/sub. Without Redis they only reach clients connected to the same instance. On [Cloudflare](/docs/dev/websocket/cloudflare) they go to the installation's hub.
 
 ## Related
 

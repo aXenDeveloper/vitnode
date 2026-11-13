@@ -13,5 +13,7 @@ export interface PackageJSON {
   scripts?: Record<string, string>;
   type?: string;
   version?: string;
+  /** Read by the `vitnode` CLI: what runs the app or API. */
+  vitnode?: { runtime: "bun" | "node" };
   workspaces?: string[];
 }

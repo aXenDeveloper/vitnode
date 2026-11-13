@@ -2,6 +2,8 @@ import type { Plugin } from "vite";
 
 import { loadEnv } from "vite";
 
+import type { VitNodeWebSocketOption } from "./websocket";
+
 const CLIENT_ENV_KEYS = ["VITNODE_API_URL", "VITNODE_WEB_URL"] as const;
 
 export interface VitNodeEnvOptions {
@@ -18,8 +20,12 @@ export interface VitNodeEnvOptions {
    * The embedded API still needs its `/ws` handshake route. An app talking to a
    * separate API (`VITNODE_API_URL`) connects to it regardless. Defaults to
    * `false`.
+   *
+   * `true` serves the socket from the Node/Bun process (Nitro's crossws).
+   * `{ transport: "cloudflare" }` serves it from a Durable Object hub on
+   * Cloudflare Workers; see "Deploy WebSockets on Cloudflare" in the docs.
    */
-  webSocket?: boolean;
+  webSocket?: VitNodeWebSocketOption;
 }
 
 /**
@@ -46,7 +52,8 @@ export const vitNodeEnv = ({
       for (const [key, value] of Object.entries(env)) {
         process.env[key] ??= value;
       }
-      if (webSocket) process.env.VITNODE_EMBEDDED_WEBSOCKET ??= "true";
+      if (webSocket !== false)
+        process.env.VITNODE_EMBEDDED_WEBSOCKET ??= "true";
 
       return {
         environments: {

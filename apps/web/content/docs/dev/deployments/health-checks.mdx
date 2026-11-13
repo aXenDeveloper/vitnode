@@ -1,0 +1,66 @@
+---
+title: Health checks
+description: Use VitNode's /api/health liveness and /api/health/ready readiness endpoints with Docker, Kubernetes, load balancers and uptime monitors.
+icon: HeartPulse
+---
+
+Every VitNode API answers two health endpoints, so Docker, Kubernetes, a load balancer or an uptime monitor can tell whether an instance is alive and ready for traffic. They are on by default, need no configuration, and work for anonymous callers.
+
+| Endpoint                | Use it for | Answers                                                                        |
+| ----------------------- | ---------- | ------------------------------------------------------------------------------ |
+| `GET /api/health`       | Liveness   | `200 {"status":"ok"}` whenever the process answers HTTP. Touches nothing else. |
+| `GET /api/health/ready` | Readiness  | `200` with `ok` or `degraded`, `503` with `unavailable`. See below.            |
+
+A **Single App** serves both at its own origin. With a separate API, they live on the API; the web app has no `/api`, so check that its port accepts connections instead.
+
+## What readiness checks
+
+`/api/health/ready` asks the database for `select 1` and, when `REDIS_URL` is set, Redis for `PING`. Each gets 2 seconds.
+
+| Status        | HTTP  | Meaning                                                                                                                                                                                     |
+| ------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ok`          | `200` | Everything answered.                                                                                                                                                                        |
+| `degraded`    | `200` | Redis did not answer. Pages and the API keep working with in-memory caching, but instances no longer share cache or rate limits, and WebSocket handshakes answer `503` until Redis is back. |
+| `unavailable` | `503` | The database did not answer. Stop sending this instance traffic.                                                                                                                            |
+
+Redis alone never fails readiness: VitNode works without it, and taking every instance out of rotation because Redis blinked would turn a slower site into an offline one.
+
+## Which probe goes where
+
+- **Restart on failure** (Docker `HEALTHCHECK`, a Kubernetes `livenessProbe`): use `/api/health`. Restarting the process cannot fix a database outage, so liveness ignores the database.
+- **Route traffic** (a load balancer target check, a Kubernetes `readinessProbe`): use `/api/health/ready`.
+- **Alert a human** (an uptime monitor): use `/api/health/ready` and alert on anything but `ok`.
+
+The [Docker image](/docs/dev/deployments/docker) already ships a `HEALTHCHECK` on `/api/health`.
+
+## Safe to expose
+
+The endpoints skip the rate limiter and the session lookup, because probes arrive often, from one address, without cookies. To keep that cheap, concurrent and back-to-back readiness probes share one check per second, so a flood of requests cannot become a flood of database queries.
+
+Responses carry the status and nothing else: no versions, hostnames or error text. Every response sends `Cache-Control: no-store`, so a CDN never serves a stale answer. When the status changes, the server logs it once with the dependency that failed, for example `Health changed from "ok" to "degraded": Redis did not answer.`
+
+## Check the result
+
+With the app running locally, request both endpoints:
+
+```bash
+curl -i http://localhost:3000/api/health
+curl -i http://localhost:3000/api/health/ready
+```
+
+Both answer `200` with `{"status":"ok"}`. Use port `8000` for a separate API. Stop PostgreSQL and the readiness probe answers `503` with `{"status":"unavailable"}` until it is back.
+
+## Related
+
+<Cards>
+  <Card
+    title="Docker"
+    description="Production image and Compose stack"
+    href="/docs/dev/deployments/docker"
+  />
+  <Card
+    title="Redis Setup"
+    description="Shared caching and WebSockets across instances"
+    href="/docs/dev/advanced/redis"
+  />
+</Cards>

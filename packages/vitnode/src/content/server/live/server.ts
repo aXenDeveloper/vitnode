@@ -1,6 +1,5 @@
 import type { Context } from "hono";
 import type { WSContext } from "hono/ws";
-import type * as Y from "yjs";
 
 import { z } from "zod";
 
@@ -10,6 +9,8 @@ import type {
   ContentLiveRoomRef,
   ContentLiveServerMessage,
 } from "@/content/live/protocol";
+import type { WebSocketRegistry } from "@/ws/create-registry";
+import type { VitNodeRealtime } from "@/ws/realtime";
 
 import { contentAnyIdSchema } from "@/content/ids";
 import {
@@ -19,6 +20,7 @@ import {
   contentLiveRoom,
 } from "@/content/live/protocol";
 import { publishToInstances, realtime, wsRegistry } from "@/ws/registry";
+import { currentRealtimeScope } from "@/ws/runtime";
 
 import type { ContentLiveAuthorization } from "./auth";
 import type { ContentDocumentStore } from "./documents";
@@ -32,18 +34,11 @@ import {
   createContentLiveAuthCache,
   isContentLiveDocValid,
 } from "./auth";
-import {
-  createContentDocumentStore,
-  patchStoredContentDocuments,
-} from "./document-store";
+import { createContentDocumentStore } from "./document-store";
 import { createContentDocuments } from "./documents";
 import { markLiveDocumentFileDeleted } from "./file-references";
 import { contentLiveUserLeft } from "./hooks";
-import {
-  clientIdOf,
-  contentLiveClientMessageSchema,
-  encodeContentLiveBytes,
-} from "./messages";
+import { clientIdOf, contentLiveClientMessageSchema } from "./messages";
 import { createContentLivePresence } from "./presence";
 
 export const CONTENT_LIVE_PRESENCE_TOPIC = `${contentLiveChannel.id}:presence`;
@@ -110,9 +105,11 @@ export const createContentLiveServer = ({
   createStore = createContentDocumentStore,
   isDocValid = isContentLiveDocValid,
   now = Date.now,
+  bind = fn => fn,
   publish = snapshot => {
     publishToInstances(CONTENT_LIVE_PRESENCE_TOPIC, snapshot);
   },
+  realtime: delivery = realtime,
   registry = wsRegistry,
   userLeft = contentLiveUserLeft,
 }: {
@@ -121,11 +118,19 @@ export const createContentLiveServer = ({
     room: ContentLiveRoomRef,
   ) => Promise<ContentLiveAuthorization>;
   authTtlMs?: number;
+  /**
+   * Re-enters the owning runtime's scope for timer callbacks (the sweeper, the
+   * document persist timer), so they reach that runtime's database and
+   * sockets.
+   */
+  bind?: <A extends unknown[], R>(fn: (...args: A) => R) => (...args: A) => R;
   createStore?: (c: Context) => ContentDocumentStore;
   isDocValid?: typeof isContentLiveDocValid;
   now?: () => number;
   publish?: (snapshot: ContentLivePresenceSnapshot) => void;
-  registry?: Pick<typeof wsRegistry, "join" | "leave" | "toRoom">;
+  /** Delivery to rooms beyond this server's own sockets. */
+  realtime?: Pick<VitNodeRealtime, "toRoom">;
+  registry?: Pick<WebSocketRegistry, "join" | "leave" | "toRoom">;
   userLeft?: typeof contentLiveUserLeft;
 } = {}) => {
   const auth = createContentLiveAuthCache({ authorize, now, ttlMs: authTtlMs });
@@ -151,8 +156,9 @@ export const createContentLiveServer = ({
     leave: ({ ws }, room, clientId) => {
       registry.leave(ws, room, clientId);
     },
+    bind,
     relay: (room, message) => {
-      realtime.toRoom(room, contentLiveChannel, message);
+      delivery.toRoom(room, contentLiveChannel, message);
     },
     send: ({ ws }, message) => {
       sendTo(ws, message);
@@ -219,15 +225,25 @@ export const createContentLiveServer = ({
     presence.refresh();
     await afterLeft(removed);
     await documents.retrySeeding();
+    // Nothing left to time out or seed here: let the host go idle (a
+    // Cloudflare hub hibernates only without pending timers). The next join
+    // starts the sweeper again.
+    if (presence.localMembers().length === 0 && documents.size() === 0) {
+      clearInterval(sweeper);
+      sweeper = undefined;
+    }
   };
 
   const startSweeper = (): void => {
     if (sweeper) return;
-    sweeper = setInterval(() => {
-      sweep().catch((error: unknown) => {
-        logError("Content live sweep error:", error);
-      });
-    }, CONTENT_LIVE_HEARTBEAT_MS);
+    sweeper = setInterval(
+      bind(() => {
+        sweep().catch((error: unknown) => {
+          logError("Content live sweep error:", error);
+        });
+      }),
+      CONTENT_LIVE_HEARTBEAT_MS,
+    );
     sweeper.unref?.();
   };
 
@@ -423,9 +439,11 @@ export const createContentLiveServer = ({
         ),
       );
 
-      void Promise.all(work).catch((error: unknown) => {
+      const settled = Promise.all(work).catch((error: unknown) => {
         logError("Content live close error:", error);
       });
+      // The host keeps its database and stays awake until this is done.
+      currentRealtimeScope()?.keepAlive?.(settled);
     },
     onInstanceMessage: ({
       data,
@@ -454,30 +472,16 @@ export const createContentLiveServer = ({
       const reset = resetSchema.safeParse(data);
       if (reset.success) documents.resetRecord(reset.data.room);
     },
-    onFileDeleted: async ({
-      c,
-      fileId,
-    }: {
-      c: Context;
-      fileId: number;
-    }): Promise<void> => {
-      const mutate = (doc: Y.Doc) => markLiveDocumentFileDeleted(doc, fileId);
-      const loaded = new Set(
-        documents.patch(mutate).map(ref => contentLiveDocRoom(ref)),
-      );
-      const stored = await patchStoredContentDocuments(c, {
-        mutate,
-        skip: ref => loaded.has(contentLiveDocRoom(ref)),
-      });
-      for (const { ref, update } of stored) {
-        realtime.toRoom(contentLiveDocRoom(ref), contentLiveChannel, {
-          doc: ref,
-          from: null,
-          type: "doc:update",
-          update: encodeContentLiveBytes(update),
-        } satisfies ContentLiveServerMessage);
-      }
-    },
+    /**
+     * Marks `fileId` deleted in every document loaded here and relays the
+     * change to its editors. Returns the rooms it patched, so the stored copies
+     * of those documents are left alone.
+     */
+    patchLoadedFileDeleted: (fileId: number): string[] =>
+      documents
+        .patch(doc => markLiveDocumentFileDeleted(doc, fileId))
+        .map(ref => contentLiveDocRoom(ref)),
+    /** Unloads the record's documents here and deletes their stored copies. */
     onReset: async ({
       c,
       room,

@@ -95,11 +95,14 @@ const asRelayedUpdate = (
 };
 
 export const createContentDocuments = <TConnection>({
+  bind = fn => fn,
   join,
   leave,
   relay,
   send,
 }: {
+  /** Re-enters the owning runtime's scope for the persist timer. */
+  bind?: <A extends unknown[], R>(fn: (...args: A) => R) => (...args: A) => R;
   join: (connection: TConnection, room: string, clientId: string) => void;
   leave: (connection: TConnection, room: string, clientId: string) => void;
   relay: (room: string, message: ContentLiveServerMessage) => void;
@@ -202,9 +205,12 @@ export const createContentDocuments = <TConnection>({
   const schedulePersist = (entry: LoadedDoc<TConnection>): void => {
     entry.dirty = true;
     clearTimeout(entry.persistTimer);
-    entry.persistTimer = setTimeout(() => {
-      void persist(entry);
-    }, CONTENT_DOCUMENT_PERSIST_MS);
+    entry.persistTimer = setTimeout(
+      bind(() => {
+        void persist(entry);
+      }),
+      CONTENT_DOCUMENT_PERSIST_MS,
+    );
     unrefTimer(entry.persistTimer);
   };
 
@@ -390,6 +396,8 @@ export const createContentDocuments = <TConnection>({
         await closeEntry(entry, clientId);
       }
     },
+    /** How many documents are loaded or loading. */
+    size: (): number => docs.size + loading.size,
     loaded: (doc: ContentLiveDocRef): undefined | Y.Doc =>
       docs.get(contentLiveDocRoom(doc))?.doc,
     open: async ({

@@ -1,0 +1,246 @@
+---
+title: Cloudflare Workers
+description: Deploy a VitNode Single App to Cloudflare Workers as one Worker - the site, the API and a Durable Object for WebSockets - with Wrangler, secrets, migrations and the size limit.
+icon: Cloud
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+A VitNode **Single App** builds into one Cloudflare Worker: the site, the Hono API at `/api/*`, and a Durable Object, the realtime hub, that owns every WebSocket. Pages and the API run at the edge, and Postgres stays where it is, reached over TCP.
+
+## What works, and what does not
+
+| Feature                                              | On Workers     | Why                                                                                                        |
+| ---------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
+| The site, SSR, prerendered pages, `/api/*`           | ✅ Works       | One Worker answers every route; prerendered pages are served as static assets.                             |
+| [WebSockets](/docs/dev/websocket)                    | ✅ Works       | The realtime hub owns the sockets. See [Cloudflare WebSockets](/docs/dev/websocket/cloudflare).            |
+| Postgres                                             | ✅ Works       | Through `scopedDatabase`, one client per request.                                                          |
+| [S3 / R2](/docs/dev/storage/s3-r2), Supabase storage | ✅ Works       | Uploads go straight to the bucket.                                                                         |
+| [Local file storage](/docs/dev/storage/local)        | ❌ No disk     | A Worker has no persistent file system. Use a bucket.                                                      |
+| Image re-encoding (`storage.image`)                  | ❌ Unsupported | It needs `sharp`, a native module Workers cannot load. Leave `storage.image` out of the Worker build.      |
+| Redis                                                | ➖ Not used    | Its long-lived connection does not fit a Worker. Cache and rate limits fall back to each isolate's memory. |
+| [In-process cron](/docs/dev/cron/node-cron)          | ❌ Unsupported | No process stays up. Call the [cron endpoint](/docs/dev/cron/rest-api) from a scheduler instead.           |
+| Migrations                                           | ➖ From Node   | Run `db:migrate` from your machine or CI against the production database.                                  |
+
+## Before you begin
+
+- A Single App, the one layout `create-vitnode-app` offers for Workers.
+- Workers Paid. A VitNode Worker is above the 3 MiB limit of the Free plan; [Shrink the Worker](#shrink-the-worker) keeps it under the 10 MiB Paid limit.
+- A PostgreSQL database that Cloudflare can reach over TCP.
+- Wrangler 4 in the app:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install Wrangler'>
+
+```bash tab="bun"
+bun add -d wrangler
+```
+
+```bash tab="pnpm"
+pnpm add -D wrangler
+```
+
+```bash tab="npm"
+npm i -D wrangler
+```
+
+</Tabs>
+
+A new app gets the first three steps below from the generator: answer **Cloudflare Workers** to "Where do you want to deploy?", or pass `--deploy cloudflare`. Follow them to convert an existing Single App.
+
+## Deploy it
+
+<Steps>
+<Step>
+
+### Build for Workers
+
+Build with the Workers preset and serve `/api/ws` from the realtime hub:
+
+```ts title="vite.config.ts"
+const config = defineConfig(({ command }) => ({
+  plugins: [
+    vitnode({
+      appRoot: import.meta.dirname,
+      nitro: command === 'build' ? { preset: 'cloudflare-module' } : {}, // [!code highlight]
+      webSocket: { transport: 'cloudflare' }, // [!code highlight]
+    }),
+    tailwindcss(),
+    tanstackStart(),
+    viteReact(),
+  ],
+}))
+```
+
+`vite dev` stays on Node, so local development needs no Worker. A build with `transport: "cloudflare"` and another preset fails with an error that says so.
+
+</Step>
+<Step>
+
+### Configure Wrangler
+
+Create `wrangler.jsonc` next to `vite.config.ts`. The build merges it into `.output/server/wrangler.json` and adds `main` and `assets`:
+
+```jsonc title="wrangler.jsonc"
+{
+  "name": "my-vitnode-app",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      { "name": "VITNODE_REALTIME", "class_name": "VitNodeRealtimeHub" },
+    ],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VitNodeRealtimeHub"] }],
+  "vars": { "VITNODE_INSTALLATION_ID": "default" },
+}
+```
+
+The binding name `VITNODE_REALTIME` is fixed. `nodejs_compat` provides `AsyncLocalStorage`, `process.env` and the Node APIs the Postgres driver uses. [Cloudflare WebSockets](/docs/dev/websocket/cloudflare#the-hub-configuration) explains the hub's settings.
+
+</Step>
+<Step>
+
+### Give each request its own database client
+
+A Worker request cannot use a TCP connection another request opened, so a client created once at module load breaks on the second request. Wrap the client in `scopedDatabase`, and leave out `redis`:
+
+```ts title="src/vitnode.api.config.ts"
+import { scopedDatabase } from '@vitnode/core/cloudflare/database' // [!code ++]
+import { coreRelations } from '@vitnode/core/database/relations'
+import { drizzle } from 'drizzle-orm/postgres-js'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:9]
+  dbProvider: scopedDatabase(() =>
+    drizzle({
+      connection: {
+        url: process.env.POSTGRES_URL,
+        max: 1,
+      },
+      relations: coreRelations,
+    }),
+  ),
+  // ...the rest of your config
+})
+```
+
+On Node (`vite dev`, `db:migrate`) `scopedDatabase` keeps one client per process, so the same config serves both. It closes a Drizzle client on postgres.js or node-postgres; pass `scopedDatabase(create, { dispose })` for another driver.
+
+</Step>
+<Step>
+
+### Preview it locally
+
+Put the variables for local runs in `.dev.vars` in the app's folder, and never commit it:
+
+```bash title=".dev.vars"
+POSTGRES_URL=postgresql://user:password@127.0.0.1:5432/vitnode
+VITNODE_WEB_URL=http://localhost:8787
+CRON_SECRET=a-long-random-string
+```
+
+Run the app's `build` script, then start the Worker in workerd, the runtime Cloudflare uses:
+
+```bash
+npx wrangler dev
+```
+
+The build leaves `.wrangler/deploy/config.json`, which points Wrangler at the generated config, so run every Wrangler command from the app's folder without `--config`. With `--config .output/server/wrangler.json`, Wrangler looks for `.dev.vars` in `.output/server` and starts without your variables, and without a warning.
+
+</Step>
+<Step>
+
+### Set the secrets and migrate
+
+Store each production secret once:
+
+```bash
+npx wrangler secret put POSTGRES_URL
+npx wrangler secret put VITNODE_WEB_URL
+npx wrangler secret put CRON_SECRET
+```
+
+Then apply migrations from your machine or CI, with `POSTGRES_URL` set to the production database. They read the compiled plugins, so run them after the build:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Migrate'>
+
+```bash tab="bun"
+POSTGRES_URL="postgresql://…" bun run db:migrate
+```
+
+```bash tab="pnpm"
+POSTGRES_URL="postgresql://…" pnpm db:migrate
+```
+
+```bash tab="npm"
+POSTGRES_URL="postgresql://…" npm run db:migrate
+```
+
+</Tabs>
+
+Run `db:migrate` before every deploy that changes the schema.
+
+</Step>
+<Step>
+
+### Deploy
+
+Check the bundle and the bindings without uploading anything, then deploy:
+
+```bash
+npx wrangler deploy --dry-run --outdir .output/wrangler-dry-run
+npx wrangler deploy
+```
+
+An app made with `--deploy cloudflare` has these commands as its `preview`, `check:cloudflare` and `deploy:cloudflare` scripts.
+
+</Step>
+</Steps>
+
+## Shrink the Worker
+
+By default Wrangler uploads every module the build wrote, including chunks nothing imports, without minifying them. A large app, with many plugins or compiled docs, can pass the 10 MiB Paid limit that way. Let Wrangler bundle from the entry and minify:
+
+```jsonc title="wrangler.jsonc (excerpt)"
+"no_bundle": false,
+"minify": true,
+"keep_names": false,
+```
+
+The VitNode website went from 13.1 MiB to 6.6 MiB gzipped. Keep `keep_names` off: some server code sends functions to the browser as source text (the theme and scroll restoration scripts), and esbuild's name-keeping helper turns them into calls to a function the browser does not have, so every page the Worker renders fails with `n is not defined`.
+
+If the app prerenders pages, also set `"assets": { "html_handling": "drop-trailing-slash" }`. A prerendered page is written as `page/index.html`, and Cloudflare otherwise redirects `/page` to `/page/`.
+
+## Check the result
+
+With `npx wrangler dev` running, `http://localhost:8787/api/health/ready` answers `200` with `{"status":"ok"}`. If it answers `503`, the Worker cannot reach `POSTGRES_URL`. `wrangler deploy --dry-run` prints the Worker's size as `Total Upload: … / gzip: …`. To check WebSockets end to end, follow [Cloudflare WebSockets](/docs/dev/websocket/cloudflare#check-the-result).
+
+## Troubleshooting
+
+| Symptom                                                                                        | Cause and fix                                                                                                   |
+| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| The Worker ignores `.dev.vars`, and the bindings table lists none of its variables             | Wrangler ran with `--config .output/server/wrangler.json`. Run `wrangler dev` from the app's folder without it. |
+| A Worker-rendered page fails with `n is not defined` in the browser                            | The Worker is minified with `keep_names` on. Set `"keep_names": false`.                                         |
+| `CONNECTION_CLOSED` or `Cannot perform I/O on behalf of a different request` from the database | The client was created once at module load. Use `scopedDatabase`.                                               |
+| Image uploads fail with "The image optimization library (sharp) failed to load"                | Remove `storage.image` from the Worker's API config.                                                            |
+| Deploy fails because the script is too large                                                   | [Shrink the Worker](#shrink-the-worker), and check that you are on Workers Paid.                                |
+
+## Related
+
+<Cards>
+  <Card
+    title="Cloudflare WebSockets"
+    description="The realtime hub, background pushes, hibernation and sharding"
+    href="/docs/dev/websocket/cloudflare"
+  />
+  <Card
+    title="Health checks"
+    description="The /api/health probes for monitors and load balancers"
+    href="/docs/dev/deployments/health-checks"
+  />
+  <Card
+    title="Cron over REST"
+    description="Run scheduled jobs without a process that stays up"
+    href="/docs/dev/cron/rest-api"
+  />
+</Cards>

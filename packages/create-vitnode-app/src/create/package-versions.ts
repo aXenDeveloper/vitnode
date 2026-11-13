@@ -43,6 +43,7 @@ export const versionsPackageJson = {
   viteReact: "^6.2",
   tailwindVite: "^4.3",
   nitro: "3.0.261103-rc",
+  wrangler: "^4.153.0",
   tslib: "^2.9.1",
   tsdown: "^0.23.7",
   vitest: "^5.1",

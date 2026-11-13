@@ -54,8 +54,11 @@ VitNode's own features follow the same rule:
 | No `REDIS_URL`            | Sockets on the same instance only. Fine for one server.         |
 | `REDIS_URL`, one instance | Same as above, plus a ready check before sockets are accepted. |
 | `REDIS_URL`, many         | Matching sockets on every instance.                            |
+| Cloudflare Workers        | Matching sockets in the installation's hub. No Redis involved. |
 
 On serverless hosts such as Vercel the HTTP request that sends a message and the socket that should receive it often run on different instances, even within one deployment, so set `REDIS_URL` there. A publish started during a request is kept alive with the request's `waitUntil`, so the instance is not frozen before Redis has it.
+
+On Cloudflare every socket lives in one Durable Object hub, so a push from any request reaches it; see [Cloudflare](/docs/dev/websocket/cloudflare). When the hub restarts, for example on a deploy, its sockets drop and the clients run the restore above.
 
 When the Redis subscription drops and comes back, the instance closes its sockets with code `1012`. The clients reconnect and run the restore above, which picks up whatever was published while the instance could not hear it. While Redis is down, new handshakes on that instance answer `503` and the client keeps retrying.
 
