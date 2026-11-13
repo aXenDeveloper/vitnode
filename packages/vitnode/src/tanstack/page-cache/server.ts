@@ -26,6 +26,7 @@ import {
   PAGE_CACHE_STATUS_HEADER,
   pageCacheRenderToken,
 } from "@/page-cache/tags";
+import { isWorkerdRuntime } from "@/ws/runtime";
 
 import type { PageCacheRouteTable } from "../../page-cache/policy";
 
@@ -296,8 +297,21 @@ export const createPageCacheHandler = <AppLocales extends LocaleConfig[]>(
   };
 
   const pending = new WeakMap<HTTPEvent, never[]>();
-  const handlers = new Map<string, CachedEventHandler>();
-  const handlerFor = (maxAge: number, staleWhileRevalidate: number) => {
+  const sharedOwner = {};
+  const handlersByOwner = new WeakMap<
+    object,
+    Map<string, CachedEventHandler>
+  >();
+  const handlerFor = (
+    owner: object,
+    maxAge: number,
+    staleWhileRevalidate: number,
+  ) => {
+    let handlers = handlersByOwner.get(owner);
+    if (!handlers) {
+      handlers = new Map();
+      handlersByOwner.set(owner, handlers);
+    }
     const key = `${String(maxAge)}:${String(staleWhileRevalidate)}`;
     const existing = handlers.get(key);
     if (existing) return existing;
@@ -365,6 +379,7 @@ export const createPageCacheHandler = <AppLocales extends LocaleConfig[]>(
     }
 
     const handler = handlerFor(
+      isWorkerdRuntime() ? incoming : sharedOwner,
       route.policy.maxAge,
       route.policy.staleWhileRevalidate ?? 0,
     );
