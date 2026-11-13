@@ -13,6 +13,8 @@
   // Server code that ships functions to the browser as source (the theme and
   // scroll scripts) breaks under esbuild's name-keeping helper once minified.
   "keep_names": false,
+  // The bundle's source maps are about 85 MB, above Cloudflare's 60 MiB limit.
+  "upload_source_maps": false,
   // Prerendered pages are `page/index.html`: serve them at `/page`, as Node
   // does, instead of redirecting to `/page/`.
   "assets": { "html_handling": "drop-trailing-slash" },

@@ -13,6 +13,7 @@
     "**/.vercel",
     "**/.turbo",
     "**/*.gen.ts",
-    "**/*.gen.d.ts"
+    "**/*.gen.d.ts",
+    "wrangler.jsonc"
   ]
 }
