@@ -30,7 +30,8 @@ export const vitNodeApiConfig = buildApiConfig({
     drizzle({
       connection: {
         url: hyperdriveConnectionString(env) ?? POSTGRES_URL,
-        max: 1,
+        max: 5,
+        max_pipeline: 1,
         onnotice: () => undefined,
       },
       relations: coreRelations,

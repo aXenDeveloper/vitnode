@@ -86,7 +86,8 @@ export const hyperdriveConnectionString = (
  *   drizzle({
  *     connection: {
  *       url: hyperdriveConnectionString(env) ?? process.env.POSTGRES_URL,
- *       max: 1,
+ *       max: 5,
+ *       max_pipeline: 1,
  *     },
  *     relations: coreRelations,
  *   }),

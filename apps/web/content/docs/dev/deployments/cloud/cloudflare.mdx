@@ -110,12 +110,13 @@ import { coreRelations } from '@vitnode/core/database/relations'
 import { drizzle } from 'drizzle-orm/postgres-js'
 
 export const vitNodeApiConfig = buildApiConfig({
-  // [!code ++:9]
+  // [!code ++:10]
   dbProvider: scopedDatabase(() =>
     drizzle({
       connection: {
         url: process.env.POSTGRES_URL,
-        max: 1,
+        max: 5,
+        max_pipeline: 1,
       },
       relations: coreRelations,
     }),
@@ -123,6 +124,8 @@ export const vitNodeApiConfig = buildApiConfig({
   // ...the rest of your config
 })
 ```
+
+`max_pipeline: 1` sends each connection's next query only after the previous one answers. Drizzle runs every query as an unnamed statement, and [Hyperdrive](#connect-through-hyperdrive) never answers three or more of those queued on one connection, so a request that runs queries in parallel, such as the signed-in session, hangs without it. `max: 5` keeps parallel queries parallel, on separate connections.
 
 On Node (`vite dev`, `db:migrate`) `scopedDatabase` keeps one client per process, so the same config serves both. It closes a Drizzle client on postgres.js or node-postgres; pass `scopedDatabase(create, { dispose })` for another driver.
 
@@ -225,7 +228,8 @@ dbProvider: scopedDatabase(({ env }) =>
   drizzle({
     connection: {
       url: hyperdriveConnectionString(env) ?? process.env.POSTGRES_URL,
-      max: 1,
+      max: 5,
+      max_pipeline: 1,
     },
     relations: coreRelations,
   }),
@@ -262,16 +266,17 @@ With `npx wrangler dev` running, `http://localhost:8787/api/health/ready` answer
 
 ## Troubleshooting
 
-| Symptom                                                                                        | Cause and fix                                                                                                                         |
-| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| The Worker ignores `.dev.vars`, and the bindings table lists none of its variables             | Wrangler ran with `--config .output/server/wrangler.json`. Run `wrangler dev` from the app's folder without it.                       |
-| A Worker-rendered page fails with `n is not defined` in the browser                            | The Worker is minified with `keep_names` on. Set `"keep_names": false`.                                                               |
-| `CONNECTION_CLOSED` or `Cannot perform I/O on behalf of a different request` from the database | The client was created once at module load. Use `scopedDatabase`.                                                                     |
-| `TLS_HANDSHAKE_FAILED` from the database, and `/api/health/ready` answers `503`                | The database's certificate is not signed by a public CA, as with Supabase. [Connect through Hyperdrive](#connect-through-hyperdrive). |
-| Image uploads fail with "The image optimization library (sharp) failed to load"                | Remove `storage.image` from the Worker's API config.                                                                                  |
-| Deploy fails with `total sourcemap size is too large` (code `10021`)                           | Set `"upload_source_maps": false` in `wrangler.jsonc`.                                                                                |
-| Pages answer `503` and the logs show "Worker exceeded CPU time limit" after about 10 ms of CPU | The account is on Workers Free, which allows 10 ms of CPU per request. Upgrade to Workers Paid (30 s by default).                     |
-| Deploy fails because the script is too large                                                   | [Shrink the Worker](#shrink-the-worker), and check that you are on Workers Paid.                                                      |
+| Symptom                                                                                                 | Cause and fix                                                                                                                                                                        |
+| ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| The Worker ignores `.dev.vars`, and the bindings table lists none of its variables                      | Wrangler ran with `--config .output/server/wrangler.json`. Run `wrangler dev` from the app's folder without it.                                                                      |
+| A Worker-rendered page fails with `n is not defined` in the browser                                     | The Worker is minified with `keep_names` on. Set `"keep_names": false`.                                                                                                              |
+| `CONNECTION_CLOSED` or `Cannot perform I/O on behalf of a different request` from the database          | The client was created once at module load. Use `scopedDatabase`.                                                                                                                    |
+| `TLS_HANDSHAKE_FAILED` from the database, and `/api/health/ready` answers `503`                         | The database's certificate is not signed by a public CA, as with Supabase. [Connect through Hyperdrive](#connect-through-hyperdrive).                                                |
+| Image uploads fail with "The image optimization library (sharp) failed to load"                         | Remove `storage.image` from the Worker's API config.                                                                                                                                 |
+| Deploy fails with `total sourcemap size is too large` (code `10021`)                                    | Set `"upload_source_maps": false` in `wrangler.jsonc`.                                                                                                                               |
+| Signed-in requests, such as `/api/@vitnode/core/users/session`, never answer while signed-out ones work | Queries pipelined through Hyperdrive. Set `max_pipeline: 1` on the Postgres connection, see [Give each request its own database client](#give-each-request-its-own-database-client). |
+| Pages answer `503` and the logs show "Worker exceeded CPU time limit" after about 10 ms of CPU          | The account is on Workers Free, which allows 10 ms of CPU per request. Upgrade to Workers Paid (30 s by default).                                                                    |
+| Deploy fails because the script is too large                                                            | [Shrink the Worker](#shrink-the-worker), and check that you are on Workers Paid.                                                                                                     |
 
 ## Related
 
