@@ -9,6 +9,7 @@ import type {
   ContentRefreshScope,
   ContentRefreshServerMessage,
 } from "@/content/live/refresh";
+import type { WebSocketRegistry } from "@/ws/create-registry";
 
 import { contentAnyIdSchema } from "@/content/ids";
 import {
@@ -89,16 +90,22 @@ const clientIdOf = (data: unknown): string => {
  */
 export const createContentRefreshServer = ({
   authorize = authorizeContentRefresh,
+  bind = fn => fn,
   now = Date.now,
   reauthMs = CONTENT_REFRESH_REAUTH_MS,
+  registry = wsRegistry,
   shareKey = contentRefreshShareKey,
 }: {
   authorize?: (
     c: Context,
     scope: ContentRefreshScope,
   ) => Promise<ContentRefreshAuthorization>;
+  /** Re-enters the owning runtime's scope for the re-authorization sweeper. */
+  bind?: <A extends unknown[], R>(fn: (...args: A) => R) => (...args: A) => R;
   now?: () => number;
   reauthMs?: number;
+  /** The sockets' registry; defaults to the current runtime's. */
+  registry?: Pick<WebSocketRegistry, "join" | "leave">;
   shareKey?: (c: Context, scope: ContentRefreshScope) => null | string;
 } = {}) => {
   const bySocket = new Map<WSContext, Map<string, Membership>>();
@@ -120,7 +127,7 @@ export const createContentRefreshServer = ({
   };
 
   const drop = (membership: Membership, id: string): void => {
-    wsRegistry.leave(membership.ws, membership.room, id);
+    registry.leave(membership.ws, membership.room, id);
     membership.clientIds.delete(id);
     if (membership.clientIds.size > 0) return;
 
@@ -175,15 +182,24 @@ export const createContentRefreshServer = ({
       .flatMap(rooms => [...rooms.values()])
       .filter(membership => membership.checkedAt + reauthMs <= now());
     if (due.length > 0) await recheck(due);
+    // No memberships left to re-check: let the host go idle. The next join
+    // starts the sweeper again.
+    if (bySocket.size === 0) {
+      clearInterval(sweeper);
+      sweeper = undefined;
+    }
   };
 
   const startSweeper = (): void => {
     if (sweeper) return;
-    sweeper = setInterval(() => {
-      sweep().catch((error: unknown) => {
-        logError("Content refresh sweep error:", error);
-      });
-    }, CONTENT_REFRESH_SWEEP_MS);
+    sweeper = setInterval(
+      bind(() => {
+        sweep().catch((error: unknown) => {
+          logError("Content refresh sweep error:", error);
+        });
+      }),
+      CONTENT_REFRESH_SWEEP_MS,
+    );
     sweeper.unref?.();
   };
 
@@ -265,7 +281,7 @@ export const createContentRefreshServer = ({
     }
     membership.checkedAt = now();
     membership.clientIds.add(message.clientId);
-    wsRegistry.join(ws, room, message.clientId);
+    registry.join(ws, room, message.clientId);
 
     sendTo(ws, { clientId: message.clientId, room, type: "joined" });
     startSweeper();
@@ -328,3 +344,7 @@ export const createContentRefreshServer = ({
     sweep,
   };
 };
+
+export type ContentRefreshServer = ReturnType<
+  typeof createContentRefreshServer
+>;

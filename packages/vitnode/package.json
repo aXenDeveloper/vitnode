@@ -681,6 +681,7 @@
     "oxc-parser": "^0.148.0",
     "picocolors": "^1.1.1",
     "postgres": "^4.1.0",
+    "reflect-metadata": "^0.2.2",
     "rate-limiter-flexible": "^11.3.0",
     "react-colorful": "^5.8.1",
     "react-day-picker": "^10.0.2",

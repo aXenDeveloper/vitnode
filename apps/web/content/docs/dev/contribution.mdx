@@ -67,6 +67,18 @@ Open `http://localhost:3000` for the website, the AdminCP at `/admin` and the li
 | `apps/api`                                 | The standalone Hono API server                                              |
 | `plugins/*`                                | First-party plugins (`@vitnode/blog`, `@vitnode/forum`, `newsroom`)         |
 
+### Deploy the website to Cloudflare
+
+`apps/web` builds for Node by default. `pnpm build:cloudflare` builds the same app as one Cloudflare Worker - site, API and realtime hub - with the settings in `apps/web/wrangler.jsonc`. Build the CLI and plugins first, as in [Run the checks](#run-the-checks), then from `apps/web`:
+
+```bash
+pnpm build:cloudflare
+pnpm preview:cloudflare   # local workerd, reads .dev.vars (copy .dev.vars.example)
+pnpm deploy:cloudflare
+```
+
+Set `POSTGRES_URL`, `VITNODE_WEB_URL` and `CRON_SECRET` once with `npx wrangler secret put <NAME>`, plus the Supabase and Stripe keys the site uses. Leave `REDIS_URL` unset. Run migrations from your machine or CI with `pnpm --filter api db:migrate` against the production database before each deploy. Images are stored as uploaded on Workers, because re-encoding needs `sharp`. [Cloudflare Workers](/docs/dev/deployments/cloud/cloudflare) explains the Worker itself.
+
 ## Run the checks
 
 Before opening a pull request, run what GitHub Actions runs, from the repository root:

@@ -1,8 +1,7 @@
-import type { RegisteredRouter } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
 import type { Messages } from "use-intl";
 
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { LogoVitNode } from "@vitnode/core/components/logo-vitnode";
 import { buttonVariants } from "@vitnode/core/components/ui/button";
 import {
@@ -15,6 +14,7 @@ import {
   intlQueryOptions,
   RouteMessages,
 } from "@vitnode/core/tanstack/i18n";
+import { HrefLink } from "@vitnode/core/tanstack/link";
 import { pageHead } from "@vitnode/core/tanstack/metadata";
 import { cn } from "cn";
 import {
@@ -119,16 +119,16 @@ function HomeContent() {
 
         <div className="flex flex-col gap-3 sm:flex-row">
           {user ? null : (
-            <Link
+            <HrefLink
               className={cn(buttonVariants({ size: "lg" }), "px-5")}
-              to={REGISTER_HREF}
+              href={REGISTER_HREF}
             >
               <UserRoundPlus />
               {t("create_account")}
-            </Link>
+            </HrefLink>
           )}
 
-          <Link
+          <HrefLink
             className={cn(
               buttonVariants({
                 size: "lg",
@@ -136,11 +136,11 @@ function HomeContent() {
               }),
               "px-5",
             )}
-            to={ADMIN_HREF}
+            href={ADMIN_HREF}
           >
             <ShieldCheck />
             {t("open_admin")}
-          </Link>
+          </HrefLink>
         </div>
       </section>
 
@@ -208,8 +208,8 @@ function NextStepCard({ external = false, href, icon: Icon, id }: NextStep) {
   }
 
   return (
-    <Link<RegisteredRouter, string, string> className={className} href={href}>
+    <HrefLink className={className} href={href}>
       {content}
-    </Link>
+    </HrefLink>
   );
 }

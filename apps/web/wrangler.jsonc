@@ -1,0 +1,31 @@
+{
+  // `pnpm build:cloudflare` merges this file into `.output/server/wrangler.json`
+  // and adds `main` and `assets`; Wrangler finds that file on its own through
+  // `.wrangler/deploy/config.json`, and reads `.dev.vars` from this folder.
+  "name": "vitnode-web",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  // Nitro uploads every module it wrote, including chunks nothing imports.
+  // Bundling from the entry keeps only what the Worker reaches, and minifying
+  // brings it under the Workers Paid size limit (10 MiB gzipped).
+  "no_bundle": false,
+  "minify": true,
+  // Server code that ships functions to the browser as source (the theme and
+  // scroll scripts) breaks under esbuild's name-keeping helper once minified.
+  "keep_names": false,
+  // Prerendered pages are `page/index.html`: serve them at `/page`, as Node
+  // does, instead of redirecting to `/page/`.
+  "assets": { "html_handling": "drop-trailing-slash" },
+  "durable_objects": {
+    "bindings": [
+      // The realtime hub that owns every WebSocket. The binding name is fixed.
+      { "name": "VITNODE_REALTIME", "class_name": "VitNodeRealtimeHub" }
+    ]
+  },
+  // SQLite-backed, so the hub keeps its rooms while it hibernates.
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VitNodeRealtimeHub"] }],
+  "vars": {
+    "VITNODE_INSTALLATION_ID": "default"
+  },
+  "observability": { "enabled": true }
+}

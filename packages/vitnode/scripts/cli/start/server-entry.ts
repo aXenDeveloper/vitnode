@@ -20,8 +20,10 @@ const NODE_PRESETS = new Set(["node", "node-cluster", "node-server"]);
  * The file `vitnode start` runs, as the build itself recorded it.
  *
  * For an app that is Nitro's `.output/nitro.json`, which names the server
- * entry and the preset it was built for - so a build for Vercel is refused
- * here with a reason, instead of being started as if it were a Node server.
+ * entry and the preset it was built for: a `node-server` build runs on Node, a
+ * `bun` build on Bun, and a build for another platform (Vercel, Cloudflare) is
+ * refused here with a reason, instead of being started as if it were a Node
+ * server.
  * For a standalone API on Node it is the `dist/index.js` its `tsc` build
  * writes; on Bun it is `src/index.ts`, which Bun runs as it is.
  */
@@ -59,15 +61,24 @@ export const resolveServerEntry = (
       serverEntry?: string;
     };
 
-    if (manifest.preset !== undefined && !NODE_PRESETS.has(manifest.preset)) {
+    const preset = manifest.preset;
+    if (preset !== undefined && preset !== "bun" && !NODE_PRESETS.has(preset)) {
       throw new ConfigError(
-        `This build targets the "${manifest.preset}" preset, which that platform runs - not vitnode start.`,
-        { hint: "Build with the node-server preset to run it yourself." },
+        `This build targets the "${preset}" preset, which that platform runs - not vitnode start.`,
+        {
+          hint: "Build with the node-server or bun preset to run it yourself.",
+        },
       );
     }
 
     const entry = join(output, manifest.serverEntry ?? "server/index.mjs");
-    if (existsSync(entry)) return { defaultPort: 3000, entry, runtime: "node" };
+    if (existsSync(entry)) {
+      return {
+        defaultPort: 3000,
+        entry,
+        runtime: preset === "bun" ? "bun" : "node",
+      };
+    }
   }
 
   const fallback = join(output, "server", "index.mjs");

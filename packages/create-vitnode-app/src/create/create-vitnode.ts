@@ -15,10 +15,12 @@ import color from "picocolors";
 import type { InitGitResult } from "../helpers/init-git.js";
 import type { CreateCliReturn } from "../questions.js";
 
+import { getAvailablePackageManagers } from "../helpers/get-available-package-managers.js";
 import { initGitRepository } from "../helpers/init-git.js";
 import { generateMigrationsVitnode } from "../helpers/init-vitnode.js";
 import { installDependencies } from "../helpers/install-dependencies.js";
 import { isFolderEmpty } from "../helpers/is-folder-empty.js";
+import { createDockerFiles } from "./create-docker.js";
 import { createPackageJSON } from "./create-package-json.js";
 
 const GIT_WARNINGS: Record<Exclude<InitGitResult, "created">, string> = {
@@ -30,9 +32,39 @@ const GIT_WARNINGS: Record<Exclude<InitGitResult, "created">, string> = {
     'Git is not installed, so no repository was created. Run "git init" in the project after installing git.',
 };
 
+/**
+ * A Cloudflare Worker name from the project name: lowercase letters, digits
+ * and dashes, at most 63 characters.
+ */
+export const workerNameOf = (appName: string): string =>
+  appName
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 63) || "vitnode";
+
+/** The nitro options line of the templates' `vite.config.ts`. */
+const NITRO_OPTIONS_LINE =
+  "      nitro: { rollupConfig: { external: [/^@sentry\\//] } },";
+
+const BUN_NITRO_OPTIONS = `      nitro: {
+        // Built for Bun: the server runs on Bun.serve, and \`vitnode start\`
+        // starts it with Bun.
+        preset: "bun",
+        rollupConfig: { external: [/^@sentry\\//] },
+      },`;
+
+const CLOUDFLARE_GITIGNORE = `
+# Cloudflare (Wrangler)
+.wrangler
+.dev.vars*
+!.dev.vars.example
+`;
+
 export const createVitNode = async ({
   root,
   appName,
+  deploy,
   packageManager,
   oxlint,
   git,
@@ -112,6 +144,27 @@ export const createVitNode = async ({
     await cp(join(templatePath, "api-single-app"), destination, {
       recursive: true,
     });
+
+    // Cloudflare Workers: the Worker preset, the realtime hub's Wrangler
+    // config and a per-request database client, over the same app.
+    if (deploy === "cloudflare") {
+      await cp(join(templatePath, "cloudflare"), destination, {
+        recursive: true,
+      });
+      const wranglerPath = join(destination, "wrangler.jsonc");
+      await writeFile(
+        wranglerPath,
+        (await readFile(wranglerPath, "utf-8")).replace(
+          "{{WORKER_NAME}}",
+          workerNameOf(appName),
+        ),
+      );
+      const gitignorePath = join(destination, ".gitignore_template");
+      await writeFile(
+        gitignorePath,
+        (await readFile(gitignorePath, "utf-8")) + CLOUDFLARE_GITIGNORE,
+      );
+    }
   } else if (mode === "apiMonorepo") {
     // Two different destinations, so these genuinely are independent.
     await Promise.all([
@@ -123,7 +176,7 @@ export const createVitNode = async ({
       }),
     ]);
 
-    if (packageManager === "bun") {
+    if (deploy === "bun") {
       await cp(join(templatePath, "api-bun"), monorepoStructure.api, {
         recursive: true,
       });
@@ -137,7 +190,7 @@ export const createVitNode = async ({
       },
     );
 
-    if (packageManager === "bun") {
+    if (deploy === "bun") {
       await cp(
         join(templatePath, "api-bun"),
         monorepo ? monorepoStructure.api : root,
@@ -162,6 +215,24 @@ export const createVitNode = async ({
       join(templatePath, "monorepo", ".gitignore_template"),
       join(root, ".gitignore_template"),
     );
+  }
+
+  if (deploy === "bun" && mode !== "onlyApi") {
+    const viteConfigPath = join(
+      monorepo || mode === "apiMonorepo" ? monorepoStructure.web : root,
+      "vite.config.ts",
+    );
+    const viteConfig = await readFile(viteConfigPath, "utf-8");
+    const withBunPreset = viteConfig.replace(
+      NITRO_OPTIONS_LINE,
+      BUN_NITRO_OPTIONS,
+    );
+    if (withBunPreset === viteConfig) {
+      throw new Error(
+        `Could not set Nitro's bun preset in ${viteConfigPath}: the template's nitro options changed.`,
+      );
+    }
+    await writeFile(viteConfigPath, withBunPreset);
   }
 
   if (oxlint) {
@@ -211,6 +282,7 @@ export const createVitNode = async ({
   await createPackageJSON({
     root,
     appName,
+    deploy,
     packageManager,
     oxlint,
     docker,
@@ -238,6 +310,20 @@ export const createVitNode = async ({
       `${appName}_vitnode_postgres_dev`,
     );
     await writeFile(dockerComposePath, updatedContent);
+
+    // A Worker is deployed with Wrangler, not as a container.
+    if (deploy !== "cloudflare") {
+      const pmVersions = await getAvailablePackageManagers();
+      await createDockerFiles({
+        appName,
+        deploy,
+        mode,
+        monorepo: !!monorepo,
+        packageManager,
+        pmVersion: pmVersions[packageManager],
+        root,
+      });
+    }
   }
 
   // `src/styles.css` points Tailwind at `@vitnode/core`'s compiled components
@@ -291,6 +377,45 @@ export const createVitNode = async ({
     }
 
     readmeContent = readmeContent.replace("{{START_URLS}}", startUrlsText);
+    if (deploy === "cloudflare") {
+      const run = packageManager === "npm" ? "npm run" : packageManager;
+      readmeContent += `
+## Deploy to Cloudflare Workers
+
+\`${run} dev\` runs the app on Node for development. To run the real Worker,
+with WebSockets served by the \`VitNodeRealtimeHub\` Durable Object, copy
+\`.dev.vars.example\` to \`.dev.vars\`, then:
+
+\`\`\`bash
+${run} build
+${run} preview
+\`\`\`
+
+To deploy, set each secret once with
+\`npx wrangler secret put POSTGRES_URL\`,
+then run \`${run} check:cloudflare\` (a dry run) and
+\`${run} deploy:cloudflare\`. See
+[Cloudflare Workers](https://vitnode.com/docs/dev/deployments/cloud/cloudflare) in the docs.
+`;
+    }
+    if (docker && deploy !== "cloudflare") {
+      readmeContent += `
+## Deploy with Docker
+
+\`Dockerfile\` builds the production image and \`docker-compose.prod.yml\` runs
+it with PostgreSQL, Redis and a one-off migration job. Put
+\`POSTGRES_PASSWORD\`, \`REDIS_PASSWORD\`, \`VITNODE_WEB_URL\` and \`CRON_SECRET\`${
+        mode === "apiMonorepo" ? " (and `VITNODE_API_URL`)" : ""
+      }
+in \`.env.production\`, then:
+
+\`\`\`bash
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+\`\`\`
+
+See [Docker](https://vitnode.com/docs/dev/deployments/docker) in the docs.
+`;
+    }
     await writeFile(join(root, "README.md"), readmeContent);
 
     spinner.text = "Generating migrations...";

@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
+
 import type { AppBuildOptions } from "../builder/app-build";
 import type { LoadTsdown, StepRunner } from "../builder/compiler-build";
 import type { MeasuredFile } from "../builder/output-files";
@@ -141,6 +144,34 @@ const startCommand = (project: Project, env: Env): string => {
     : `${packageManager} start`;
 };
 
+/**
+ * The command that runs a Cloudflare Worker build locally, or `undefined` for
+ * a build Nitro made for Node: a Worker build writes a Wrangler config next to
+ * its entry, and `vitnode start` cannot serve it.
+ */
+const workerPreviewCommand = (
+  project: Project,
+  env: Env,
+): string | undefined => {
+  if (!existsSync(join(project.root, ".output", "server", "wrangler.json"))) {
+    return undefined;
+  }
+  const packageManager = detectPackageManager(project.root, env);
+  const scripts = readPackageJson(project.root)?.scripts ?? {};
+  // An app that builds for Node too keeps `preview` for that and names the
+  // Worker's own `preview:cloudflare`.
+  const script = ["preview:cloudflare", "preview"].find(
+    name => scripts[name] !== undefined,
+  );
+  if (packageManager !== undefined && script !== undefined) {
+    return packageManager === "npm"
+      ? `npm run ${script}`
+      : `${packageManager} ${script}`;
+  }
+
+  return "wrangler dev";
+};
+
 export const runBuildCommand = async (
   { cwd, env, ui }: CommandContext,
   options: BuildOptions,
@@ -196,7 +227,13 @@ export const runBuildCommand = async (
 
   ui.line();
   ui.success(`Built in ${formatDuration(now() - startedAt)}`);
-  if (project.kind !== "package") {
+  const worker =
+    project.kind === "package" ? undefined : workerPreviewCommand(project, env);
+  if (worker) {
+    ui.note(
+      `Run ${ui.colors.command(worker)} to run the Cloudflare Worker locally.`,
+    );
+  } else if (project.kind !== "package") {
     ui.note(
       `Run ${ui.colors.command(startCommand(project, env))} to serve it.`,
     );

@@ -183,7 +183,7 @@ wsRegistry.onConnectionClose((ws, left) => {
 | `wsRegistry.roomsOf(ws)` | `string[]` | The rooms of one socket |
 | `wsRegistry.onConnectionClose(listener)` | unsubscribe function | Calls `listener(ws, left)` when a socket closes |
 
-All `wsRegistry` methods act on the current instance only.
+All `wsRegistry` methods act on the runtime handling the current socket event only: this Node/Bun instance, or the installation's [Cloudflare hub](/docs/dev/websocket/cloudflare). On Cloudflare an ordinary HTTP request owns no sockets, so `wsRegistry` throws there; push with `c.get("realtime").toRoom()` instead. A listener registered with `wsRegistry.onConnectionClose` at module load runs in every runtime, the hub included. Room memberships survive the hub's [hibernation](/docs/dev/websocket/cloudflare#hibernation-and-costs); state you keep in memory per socket does not.
 
 ## Rooms on several instances
 

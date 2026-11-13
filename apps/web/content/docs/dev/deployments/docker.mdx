@@ -1,0 +1,112 @@
+---
+title: Docker
+description: Build a production Docker image of your VitNode app and run it with PostgreSQL, Redis and migrations using Docker Compose.
+icon: Container
+---
+
+`create-vitnode-app` writes a production `Dockerfile` and a `docker-compose.prod.yml` when you answer **Yes** to "Docker". One command then builds the image, runs your migrations and starts the app next to PostgreSQL and Redis. The same image runs on any host that takes containers: a VPS, Railway, Fly.io, Render, Coolify or Kubernetes.
+
+## Before you begin
+
+- [Docker](https://docs.docker.com/get-started/get-docker/) with Compose v2 on the machine that builds and runs the image.
+- A project created with Docker enabled, and its dependencies installed once, so the lockfile exists. [Cloudflare Workers](/docs/dev/deployments/cloud/cloudflare) projects get no image, because Wrangler deploys them.
+- Your migrations committed. The `migrate` job generates any missing ones inside the container, where they are lost on the next deploy.
+
+## What you get
+
+| File                      | What it does                                                                                         |
+| ------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `Dockerfile`              | Builds the whole workspace once, then a small image per server: `app`, `api`, and the `migrate` job. |
+| `docker-compose.prod.yml` | PostgreSQL, Redis, the `migrate` job and your server(s). Only the server ports are published.        |
+| `.dockerignore`           | Keeps `.env` files, local database data and build output out of the image.                           |
+
+The image follows the runtime you picked: Node.js images for **Node.js**, Bun images for **Bun**. The site image holds only Nitro's server bundle, about 400 MB with the base image; an API image carries its production `node_modules`.
+
+## Run it with Compose
+
+<Steps>
+<Step>
+
+### Write the production variables
+
+Create `.env.production` next to `docker-compose.prod.yml`. Your `.gitignore` already keeps it out of git.
+
+```bash title=".env.production"
+POSTGRES_PASSWORD=change_me_to_a_long_random_password
+REDIS_PASSWORD=change_me_to_another_long_random_password
+VITNODE_WEB_URL=https://example.com
+CRON_SECRET=change_me_to_a_long_random_secret_string
+
+# 0 when visitors reach the container directly, 1 behind one reverse proxy
+VITNODE_TRUSTED_PROXY_HOPS=1
+```
+
+A **Monorepo App** (web and API apart) also needs `VITNODE_API_URL`, the API's public address, for example `https://api.example.com`. The web image compiles it in, so set it before you build.
+
+Compose builds `POSTGRES_URL` and `REDIS_URL` from these values and refuses to start while a required one is missing. `APP_PORT` (default `3000`) and `API_PORT` (default `8000`) change the published ports.
+
+</Step>
+<Step>
+
+### Build and start
+
+Run this in the project's root folder:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+```
+
+Compose builds the image, starts PostgreSQL and Redis, and runs `migrate`, which applies pending migrations, seeds roles, languages and permissions, then exits. Your server starts only after `migrate` succeeded, so a failed migration never serves traffic. Run the same command for every deploy.
+
+</Step>
+</Steps>
+
+## Check the result
+
+List the services:
+
+```bash
+docker compose -f docker-compose.prod.yml --env-file .env.production ps -a
+```
+
+`migrate` shows **Exited (0)**, and `app` (and `api`) show **healthy** once their [health check](/docs/dev/deployments/health-checks) passes. Open `VITNODE_WEB_URL` and sign up: the first account on a fresh database becomes the administrator.
+
+If `migrate` exits with an error, read its log with `docker compose -f docker-compose.prod.yml --env-file .env.production logs migrate`.
+
+## Build images for another host
+
+Build each target yourself when your platform runs containers but not Compose:
+
+```bash
+docker build --target app -t my-app .
+docker build --target migrate -t my-app-migrate .
+```
+
+A **Monorepo App** or **Only API** project also has `--target api`; pass `--build-arg VITNODE_API_URL=…` when the project has a separate web app. Run `migrate` once per release, before the new version takes traffic. Most platforms call it a release or pre-deploy command. Give every container the variables from step 1, with `POSTGRES_URL` and `REDIS_URL` pointing at your managed database and Redis.
+
+<Callout type="warn" title="Uploads need a volume or a bucket">
+  Local file storage writes to `public/uploads` inside the container. Compose
+  mounts the `uploads` volume there; on another host, mount a persistent disk at
+  that path or switch to [S3 or R2](/docs/dev/storage/s3-r2). Without either,
+  uploads disappear on the next deploy.
+</Callout>
+
+## Related
+
+<Cards>
+  <Card
+    title="Health checks"
+    description="The /api/health probes the image uses"
+    href="/docs/dev/deployments/health-checks"
+  />
+  <Card
+    title="Self-hosted"
+    description="Environment variables and an Nginx reverse proxy"
+    href="/docs/dev/deployments/self-hosted"
+  />
+  <Card
+    title="Bun"
+    description="Develop, build and run on Bun"
+    href="/docs/dev/deployments/bun"
+  />
+</Cards>

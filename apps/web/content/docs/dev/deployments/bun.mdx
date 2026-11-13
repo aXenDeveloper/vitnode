@@ -1,0 +1,155 @@
+---
+title: Bun
+description: Develop, build and run a VitNode app or API on Bun instead of Node.js - TanStack Start through Nitro's bun preset, and Hono on Bun.serve.
+icon: Zap
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+VitNode runs on [Bun](https://bun.com) from the first `dev` to production. The TanStack Start app runs Vite on Bun and builds with Nitro's `bun` preset, and a standalone Hono API runs its TypeScript straight on `Bun.serve` - no compile step. Same app, same plugins, one runtime fewer to install on the server.
+
+## Before you begin
+
+- [Bun](https://bun.com/docs/installation) installed on your machine and on the server. Node.js is optional: when it is missing, `bun run` stands in for it, so the `vitnode` CLI still runs.
+- A PostgreSQL database, as for any VitNode deployment.
+
+## Create a Bun app
+
+Answer **Bun** to "Where to deploy?" when you create the app. The option shows up only when Bun is installed, and it is the default when you pick Bun as the package manager.
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Create a Bun app">
+
+```bash tab="bun"
+bun create vitnode-app@canary --deploy bun
+```
+
+```bash tab="pnpm"
+pnpm create vitnode-app@canary --deploy bun
+```
+
+```bash tab="npm"
+npx create-vitnode-app@canary --deploy bun
+```
+
+</Tabs>
+
+Any package manager can install the packages; the runtime is a separate choice. Here is what the generator changes compared with a Node app:
+
+| Where                | Node app                           | Bun app                                               |
+| -------------------- | ---------------------------------- | ----------------------------------------------------- |
+| App `dev` / `build`  | `vitnode dev`, `vitnode build`     | `bun --bun vitnode dev`, `bun --bun vitnode build`    |
+| App `vite.config.ts` | Nitro's default Node server        | `nitro: { preset: "bun" }`                            |
+| API entry            | `@hono/node-server` and `ws`       | `export default { fetch, websocket }` with `hono/bun` |
+| API `build`          | `tsc` into `dist`                  | none - Bun runs `src/index.ts`                        |
+| `package.json`       | `"vitnode": { "runtime": "node" }` | `"vitnode": { "runtime": "bun" }`                     |
+
+`start` stays `vitnode start` in both. It reads the build's preset (or the API's `vitnode.runtime`) and starts the server with Bun or Node to match.
+
+## Move an existing app to Bun
+
+<Steps>
+<Step>
+
+### Build the app for Bun
+
+Set Nitro's preset in the app's `vite.config.ts`:
+
+```ts title="vite.config.ts (excerpt)"
+vitnode({
+  nitro: {
+    preset: 'bun',
+    rollupConfig: { external: [/^@sentry\//] },
+  },
+  webSocket: true,
+})
+```
+
+</Step>
+<Step>
+
+### Run Vite on Bun
+
+Prefix the app's `dev` and `build` scripts with `bun --bun`, so Vite and the SSR code run on Bun rather than on Node:
+
+```json title="package.json (excerpt)"
+{
+  "scripts": {
+    "dev": "bun --bun vitnode dev",
+    "build": "bun --bun vitnode build",
+    "start": "vitnode start"
+  },
+  "vitnode": { "runtime": "bun" }
+}
+```
+
+</Step>
+<Step>
+
+### Serve a standalone API with Bun
+
+Skip this step for a single app - its API is part of the build above.
+
+A standalone API exports Bun's server object instead of calling `serve` from `@hono/node-server`. Copy the [WebSocket route for Bun](/docs/dev/websocket/setup#on-bun), drop the API's `build` script and set `"vitnode": { "runtime": "bun" }` in its `package.json`. `vitnode dev` then runs `bun --hot src/index.ts` and `vitnode start` runs `bun src/index.ts`. You can remove `@hono/node-server` and add `@types/bun` to `devDependencies`.
+
+</Step>
+</Steps>
+
+## Build and run
+
+Deploy exactly as in [Self-hosted](/docs/dev/deployments/self-hosted), with the same four commands:
+
+<Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Deploy on Bun">
+
+```bash tab="bun"
+bun install --frozen-lockfile
+bun run build
+bun run db:migrate
+bun start
+```
+
+```bash tab="pnpm"
+pnpm install --frozen-lockfile
+pnpm build
+pnpm db:migrate
+pnpm start
+```
+
+```bash tab="npm"
+npm ci
+npm run build
+npm run db:migrate
+npm start
+```
+
+</Tabs>
+
+<Callout type="warn" title="Bun reads .env on its own">
+  Bun loads `.env` before your code starts, so every variable in it applies -
+  even one you forgot about. A `REDIS_URL` pointing at a Redis that isn't
+  running makes WebSocket handshakes answer `503` until Redis is up. Comment out
+  what you don't use.
+</Callout>
+
+## Check the result
+
+`vitnode start` prints `Running` once the server accepts connections. To be sure it is Bun answering, list the processes: the server shows up as `bun .output/server/index.mjs` for an app, or `bun src/index.ts` for an API.
+
+## Related
+
+<Cards>
+  <Card
+    title="Self-hosted"
+    description="Environment variables, Nginx and PM2 for any runtime"
+    href="/docs/dev/deployments/self-hosted"
+  />
+  <Card
+    title="WebSocket setup"
+    description="The /api/ws route on Nitro, Node and Bun"
+    href="/docs/dev/websocket/setup"
+  />
+  <Card
+    title="Build and start"
+    description="What vitnode build and vitnode start do"
+    href="/docs/dev/cli/build"
+  />
+</Cards>

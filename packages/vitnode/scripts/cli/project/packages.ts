@@ -18,6 +18,11 @@ export interface PackageJson {
   scripts?: Record<string, string>;
   type?: string;
   version?: string;
+  /** VitNode's own settings for this project. */
+  vitnode?: {
+    /** What runs the app or API: `node` or `bun`. See `detectRuntime`. */
+    runtime?: unknown;
+  };
   workspaces?: string[] | { packages?: string[] };
 }
 

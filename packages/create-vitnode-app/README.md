@@ -77,8 +77,9 @@ plugins: [myPlugin()];
 | `--skip-install`    | Skip dependency installation after scaffolding.                       |
 | `--skip-git`        | Skip initializing a git repository (created on `main` after install). |
 | `--mode`            | Choose `singleApp`, `apiMonorepo`, or `onlyApi`.                      |
+| `--deploy`          | `node` (default), `bun`, or `cloudflare` (Single App only).           |
 | `--monorepo`        | Create a workspace layout for plugins and multiple applications.      |
-| `--docker`          | Include local Docker services.                                        |
+| `--docker`          | Include local Docker services and a production image.                 |
 | `--plugin`          | Create a VitNode plugin package.                                      |
 
 ## Linting

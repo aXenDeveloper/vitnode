@@ -67,6 +67,12 @@ const init = async () => {
       "What type of app do you want to create?",
     ).choices(["singleApp", "apiMonorepo", "onlyApi"]),
   );
+  program.addOption(
+    new Option(
+      "--deploy <target>",
+      "What the app runs on: node, bun, or cloudflare (Single App only).",
+    ).choices(["node", "bun", "cloudflare"]),
+  );
   program.option("--monorepo", "Create project with monorepo structure.");
   program.option("--docker", "Initialize with Docker support.");
   program.option("--plugin", "Create a plugin.");

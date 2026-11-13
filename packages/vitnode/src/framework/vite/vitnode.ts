@@ -71,7 +71,7 @@ export const vitnode = ({
   vitNodeTailwindSources({ appRoot }),
   vitNodePluginRoutes({ appRoot, hostRoutesDir }),
   vitNodeDevError(),
-  vitNodeWebSocket({ webSocket }),
+  vitNodeWebSocket({ nitroPreset: nitro?.preset, webSocket }),
   ...nitroPlugin({
     ...nitro,
     features: { fastResponse: false, ...nitro?.features },

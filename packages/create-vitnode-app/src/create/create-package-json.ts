@@ -2,7 +2,7 @@ import { writeFile } from "fs/promises";
 import { join } from "path";
 
 import type { PackageJSON } from "../helpers/packages-json.js";
-import type { CreateCliReturn } from "../questions.js";
+import type { CreateCliReturn, DeployTarget } from "../questions.js";
 
 import { getAvailablePackageManagers } from "../helpers/get-available-package-managers.js";
 import { getVitnodePackageVersion } from "../helpers/get-vitnode-package-version.js";
@@ -22,6 +22,20 @@ const paths = (root: string) => ({
   api: join(root, "apps", "api"),
   web: join(root, "apps", "web"),
 });
+
+/** What a generated app or API runs on: `node`, or `bun` for `--deploy bun`. */
+type Runtime = "bun" | "node";
+
+export const runtimeOf = (deploy: DeployTarget): Runtime =>
+  deploy === "bun" ? "bun" : "node";
+
+/**
+ * The app's Vite-driven commands. On Bun they run under `bun --bun`, so Vite,
+ * Nitro and TanStack Start themselves run on Bun, as Bun's TanStack Start
+ * guide does; `vitnode start` then starts the `bun` preset's output with Bun.
+ */
+const viteCommand = (command: "build" | "dev", runtime: Runtime): string =>
+  runtime === "bun" ? `bun --bun vitnode ${command}` : `vitnode ${command}`;
 
 /**
  * Shared blocks
@@ -125,14 +139,16 @@ export const apiScripts = (
   docker: boolean,
   onlyApi: boolean,
   appName: string,
+  runtime: Runtime = pm === "bun" ? "bun" : "node",
 ) => {
   return {
     "db:migrate": "vitnode migrate",
     "db:prepare": "vitnode db:prepare",
-    // `vitnode` follows the project's runtime: on Bun it runs `bun --hot`
-    // and starts `src/index.ts` directly, so there is nothing to build.
+    // `vitnode` follows the project's runtime (`vitnode.runtime`): on Bun it
+    // runs `bun --hot` and starts `src/index.ts` directly, so there is
+    // nothing to build.
     dev: "vitnode dev",
-    ...(pm === "bun" ? {} : { build: "vitnode build" }),
+    ...(runtime === "bun" ? {} : { build: "vitnode build" }),
     start: "vitnode start",
     "dev:email": "email dev --dir src/emails",
     ...i18nScripts,
@@ -172,21 +188,31 @@ export const singleAppScripts = (
   oxlint: boolean,
   docker: boolean,
   appName: string,
+  deploy: DeployTarget = "node",
 ) => ({
   "db:migrate": "vitnode migrate",
   "db:prepare": "vitnode db:prepare",
-  dev: "vitnode dev",
+  dev: viteCommand("dev", runtimeOf(deploy)),
   "dev:email": "email dev --dir src/emails",
-  build: "vitnode build",
-  start: "vitnode start",
+  build: viteCommand("build", runtimeOf(deploy)),
+  // A Cloudflare build is a Worker, not a Node entry: run it in workerd with
+  // Wrangler instead. `deploy` is a pnpm built-in, hence the longer names.
+  ...(deploy === "cloudflare"
+    ? {
+        preview: "wrangler dev",
+        "deploy:cloudflare": "wrangler deploy",
+        "check:cloudflare":
+          "wrangler deploy --dry-run --outdir .output/wrangler-dry-run",
+      }
+    : { start: "vitnode start" }),
   ...i18nScripts,
   ...withIf(oxlint, { ...oxlintScripts, ...formatScripts }),
   ...withIf(docker, { "docker:dev": dockerDevScript(appName) }),
 });
 
-export const webScripts = (oxlint: boolean) => ({
-  dev: "vitnode dev",
-  build: "vitnode build",
+export const webScripts = (oxlint: boolean, runtime: Runtime = "node") => ({
+  dev: viteCommand("dev", runtime),
+  build: viteCommand("build", runtime),
   start: "vitnode start",
   ...i18nScripts,
   ...withIf(oxlint, oxlintScripts),
@@ -204,30 +230,37 @@ const rootDevDeps = (oxlint: boolean) => ({
   zod: versionsPackageJson.zod,
 });
 
-const apiDeps = {
+/**
+ * What the API imports at runtime - a production install (a Docker image,
+ * `npm ci --omit=dev`) has nothing else. `@hono/node-server` serves the Node
+ * API; on Bun, Bun serves it.
+ */
+const apiDeps = (runtime: Runtime) => ({
+  ...(runtime === "bun" ? {} : { "@hono/node-server": "^2.0" }),
   "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
   "@hono/zod-validator": versionsPackageJson.honoZodValidator,
   "@vitnode/core": "", // filled dynamically
+  dotenv: versionsPackageJson.dotenv,
   "drizzle-kit": versionsPackageJson.drizzleKit,
   "drizzle-orm": versionsPackageJson.drizzleOrm,
   hono: versionsPackageJson.hono,
+  // Core's built-in blocks import their icons, and the API loads them.
+  "lucide-react": versionsPackageJson.lucide,
   react: versionsPackageJson.react,
   "react-dom": versionsPackageJson.reactDom,
   "react-email": versionsPackageJson.reactEmail,
   ws: versionsPackageJson.ws,
   zod: versionsPackageJson.zod,
-};
+});
 
-const apiDevDeps = (pm: string, oxlint: boolean) => ({
-  "@hono/node-server": "^2.0",
+const apiDevDeps = (oxlint: boolean, runtime: Runtime) => ({
   "@react-email/ui": versionsPackageJson.reactEmailUi,
-  ...(pm === "bun" ? { "@types/bun": versionsPackageJson.typesBun } : {}),
+  ...(runtime === "bun" ? { "@types/bun": versionsPackageJson.typesBun } : {}),
   "@types/node": versionsPackageJson.typesNode,
   "@types/react": versionsPackageJson.typesReact,
   "@types/react-dom": versionsPackageJson.typesReactDom,
   cn: versionsPackageJson.cn,
   "@vitnode/config": "",
-  dotenv: versionsPackageJson.dotenv,
   ...withIf(oxlint, oxcDevDeps),
   "tsc-alias": versionsPackageJson.tscAlias,
   tsx: versionsPackageJson.tsx,
@@ -278,11 +311,14 @@ const tanstackWebDevDeps = {
   vite: versionsPackageJson.vite,
 };
 
-const singleAppDevDeps = (oxlint: boolean) => ({
+const singleAppDevDeps = (oxlint: boolean, deploy: DeployTarget) => ({
   ...tanstackWebDevDeps,
   "@react-email/ui": versionsPackageJson.reactEmailUi,
   ...withIf(oxlint, oxcDevDeps),
   turbo: versionsPackageJson.turbo,
+  ...withIf(deploy === "cloudflare", {
+    wrangler: versionsPackageJson.wrangler,
+  }),
 });
 
 const webDeps = {
@@ -301,6 +337,7 @@ const webDevDeps = (oxlint: boolean) => ({
  */
 export const createPackageJSON = async ({
   appName,
+  deploy = "node",
   packageManager,
   root,
   oxlint,
@@ -309,6 +346,7 @@ export const createPackageJSON = async ({
   monorepo,
 }: {
   appName: string;
+  deploy?: DeployTarget;
   docker?: boolean;
   mode: Mode;
   monorepo?: boolean;
@@ -321,6 +359,7 @@ export const createPackageJSON = async ({
   const pmSpec = `${packageManager}@${pmVersions[packageManager]}`;
   const p = paths(root);
 
+  const runtime = runtimeOf(deploy);
   const isApiMonorepo = mode === "apiMonorepo" || !!monorepo;
   const isOnlyApi = mode === "onlyApi";
   const isSingleApp = mode === "singleApp";
@@ -362,17 +401,17 @@ export const createPackageJSON = async ({
       !!docker,
       mode === "onlyApi",
       appName,
+      runtime,
     ),
     dependencies: {
-      ...apiDeps,
+      ...apiDeps(runtime),
       "@vitnode/core": vitnodeVersionRange,
     },
     devDependencies: {
-      ...apiDevDeps(packageManager, oxlint),
+      ...apiDevDeps(oxlint, runtime),
       "@vitnode/config": vitnodeVersionRange,
-      // TS pipeline pieces when not using Bun for dev
-      ...(packageManager === "bun" ? {} : {}),
     },
+    vitnode: { runtime },
   };
 
   // 3) Single app (TanStack Start + the Hono API inside one app)
@@ -383,16 +422,17 @@ export const createPackageJSON = async ({
       private: true,
       type: "module",
       engines,
-      scripts: singleAppScripts(oxlint, !!docker, appName),
+      scripts: singleAppScripts(oxlint, !!docker, appName, deploy),
       dependencies: {
         ...singleAppDeps,
         "@vitnode/core": vitnodeVersionRange,
       },
       devDependencies: {
-        ...singleAppDevDeps(oxlint),
+        ...singleAppDevDeps(oxlint, deploy),
         "@vitnode/config": vitnodeVersionRange,
       },
       packageManager: pmSpec,
+      vitnode: { runtime },
     };
 
     await writeJson(join(monorepo ? p.web : p.root, "package.json"), singlePkg);
@@ -408,7 +448,7 @@ export const createPackageJSON = async ({
       private: true,
       type: "module",
       engines,
-      scripts: webScripts(oxlint),
+      scripts: webScripts(oxlint, runtime),
       dependencies: {
         ...webDeps,
         "@vitnode/core": vitnodeVersionRange,
@@ -417,6 +457,7 @@ export const createPackageJSON = async ({
         ...webDevDeps(oxlint),
         "@vitnode/config": vitnodeVersionRange,
       },
+      vitnode: { runtime },
     };
 
     await writeJson(join(p.web, "package.json"), webPkg);
