@@ -27,6 +27,7 @@
   // SQLite-backed, so the hub keeps its rooms while it hibernates.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VitNodeRealtimeHub"] }],
   "vars": {
+    "SUPABASE_URL": "https://wvmvsazvuzfvwydifigd.supabase.co",
     "VITNODE_INSTALLATION_ID": "default"
   },
   "observability": { "enabled": true }

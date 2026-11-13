@@ -333,14 +333,17 @@ export function VitNodeAPI({
     }
 
     const errorMessage = describeError(error);
+    const logger = c.get("log");
 
-    try {
-      const logger = c.get("log");
-      if (logger) {
-        await logger.error(`Unhandled error: ${errorMessage}`);
-      }
-    } catch {
-      /* empty */
+    if (logger) {
+      await logger
+        .error(`Unhandled error: ${errorMessage}`)
+        .catch(() => undefined);
+    } else {
+      // oxlint-disable-next-line no-console
+      console.error(
+        `\x1b[34m[VitNode]\x1b[0m \x1b[31mUnhandled error\x1b[0m: ${errorMessage}`,
+      );
     }
 
     return new Response(

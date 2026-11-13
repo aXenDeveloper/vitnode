@@ -21,21 +21,6 @@ export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
     const pluginId = c.get("plugin")?.id ?? "core";
     const ipAddress = c.get("ipAddress");
 
-    await c
-      .get("db")
-      .insert(core_logs)
-      .values({
-        pluginId,
-        type,
-        content,
-        ipAddress,
-        method: c.req.method.toUpperCase(),
-        path: c.req.path,
-        userAgent: c.req.header("User-Agent"),
-        statusCode: c.res.status,
-        userId: c.get("user")?.id,
-      });
-
     const loggers: Record<CoreLogsType, (msg: string) => void> = {
       debug: msg =>
         console.debug(
@@ -51,6 +36,21 @@ export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
         ),
     };
     (loggers[type] ?? loggers.debug)(content);
+
+    await c
+      .get("db")
+      .insert(core_logs)
+      .values({
+        pluginId,
+        type,
+        content,
+        ipAddress,
+        method: c.req.method.toUpperCase(),
+        path: c.req.path,
+        userAgent: c.req.header("User-Agent"),
+        statusCode: c.res.status,
+        userId: c.get("user")?.id,
+      });
   };
 
   return {
