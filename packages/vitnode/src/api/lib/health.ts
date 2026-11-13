@@ -4,6 +4,8 @@ import { sql } from "drizzle-orm";
 
 import type { VitNodeApiConfig } from "@/vitnode.config";
 
+import { inFlightOwner } from "@/api/lib/settled-memo";
+
 import type { CacheClient } from "./cache";
 
 /** Where the probes live, under the API's base path: `/api/health`. */
@@ -72,7 +74,8 @@ export const createReadinessCheck = ({
   db: Pick<VitNodeApiConfig["dbProvider"], "execute">;
 }): (() => Promise<HealthStatus>) => {
   let last: HealthStatus = "ok";
-  let cached: undefined | { at: number; status: Promise<HealthStatus> };
+  let settled: undefined | { at: number; status: HealthStatus };
+  const pending = new WeakMap<object, Promise<HealthStatus>>();
 
   const check = async (): Promise<HealthStatus> => {
     const [database, redis] = await Promise.all([
@@ -93,11 +96,27 @@ export const createReadinessCheck = ({
   };
 
   return async () => {
-    if (!cached || Date.now() - cached.at >= READY_CACHE_MS) {
-      cached = { at: Date.now(), status: check() };
+    if (settled && Date.now() - settled.at < READY_CACHE_MS) {
+      return settled.status;
     }
 
-    return await cached.status;
+    const owner = inFlightOwner();
+    const inFlight = pending.get(owner);
+    if (inFlight) return await inFlight;
+
+    const at = Date.now();
+    const checking = check().then(status => {
+      settled = { at, status };
+
+      return status;
+    });
+    pending.set(owner, checking);
+
+    try {
+      return await checking;
+    } finally {
+      pending.delete(owner);
+    }
   };
 };
 

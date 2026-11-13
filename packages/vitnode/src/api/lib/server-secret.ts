@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { eq } from "drizzle-orm";
 import crypto from "node:crypto";
 
+import { createSettledMemo, type SettledMemo } from "@/api/lib/settled-memo";
 import { core_secrets } from "@/database/secrets";
 
 type SecretsDatabase = Omit<Context["var"]["db"], "$client">;
@@ -44,21 +45,19 @@ const readOrCreate = async (
   throw new Error(`Could not read or create the "${name}" server secret.`);
 };
 
-const cached = new Map<string, Promise<string>>();
+const cached = new Map<string, SettledMemo<string>>();
 
 export const ensureServerSecret = async (
   db: SecretsDatabase,
   name: string,
 ): Promise<string> => {
-  const pending =
-    cached.get(name) ??
-    readOrCreate(db, name).catch((error: unknown) => {
-      cached.delete(name);
-      throw error;
-    });
-  cached.set(name, pending);
+  let memo = cached.get(name);
+  if (!memo) {
+    memo = createSettledMemo<string>();
+    cached.set(name, memo);
+  }
 
-  return await pending;
+  return await memo.get(async () => await readOrCreate(db, name));
 };
 
 export const resetServerSecrets = (): void => {

@@ -5,6 +5,7 @@ import { createHash, randomUUID } from "node:crypto";
 import type { CacheModel } from "../../api/lib/cache";
 
 import { findCacheStore } from "../../api/lib/cache";
+import { inFlightOwner } from "../../api/lib/settled-memo";
 
 /**
  * How long one cached public read lives. Only a safety net: a write moves the
@@ -51,7 +52,7 @@ const bumpGeneration = async (
   await cache?.setSystem(key, randomUUID(), undefined, { strict });
 };
 
-const inflight = new Map<string, Promise<unknown>>();
+const inflightByOwner = new WeakMap<object, Map<string, Promise<unknown>>>();
 
 const pinnedGenerations = new WeakMap<Context, Map<string, Promise<string>>>();
 
@@ -108,6 +109,12 @@ const rememberInGeneration = async <T>(
   const hit = await cache.getSystem<{ value: T }>(fullKey);
   if (hit) return hit.value;
 
+  const owner = inFlightOwner();
+  let inflight = inflightByOwner.get(owner);
+  if (!inflight) {
+    inflight = new Map();
+    inflightByOwner.set(owner, inflight);
+  }
   const pending = inflight.get(fullKey) as Promise<T> | undefined;
   if (pending) return await pending;
 

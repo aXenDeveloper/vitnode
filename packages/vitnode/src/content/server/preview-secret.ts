@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 
 import type { ContentDatabase } from "./service";
 
+import { createSettledMemo } from "../../api/lib/settled-memo";
 import { core_secrets } from "../../database/secrets";
 
 /** The `core_secrets` row the preview signing key lives in. */
@@ -41,20 +42,13 @@ const readOrCreate = async (db: ContentDatabase): Promise<string> => {
   );
 };
 
-let cached: Promise<string> | undefined;
+const cached = createSettledMemo<string>();
 
 export const ensureContentPreviewSecret = async (
   db: ContentDatabase,
-): Promise<string> => {
-  cached ??= readOrCreate(db).catch((error: unknown) => {
-    cached = undefined;
-    throw error;
-  });
-
-  return await cached;
-};
+): Promise<string> => await cached.get(async () => await readOrCreate(db));
 
 /** Test seam: forgets the memoised secret. */
 export const resetContentPreviewSecret = (): void => {
-  cached = undefined;
+  cached.reset();
 };

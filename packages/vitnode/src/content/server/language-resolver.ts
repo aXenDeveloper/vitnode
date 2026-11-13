@@ -8,6 +8,7 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDatabase } from "./service";
 
 import { defineCacheEntry } from "../../api/builders";
+import { createSettledMemo } from "../../api/lib/settled-memo";
 import { core_languages } from "../../database/languages";
 import { ContentEngineError, ContentLanguageError } from "../errors";
 
@@ -282,25 +283,22 @@ export const assertContentLocalizationLanguages = async (
  * A failure is not memoised, so a database that was not up yet gets checked
  * again on the next request instead of poisoning the process.
  */
-let bootCheck: Promise<void> | undefined;
+const bootCheck = createSettledMemo<true>();
 
 export const ensureContentLocalizationLanguages = async (
   c: Context,
   contentTypes: readonly RegisteredContentType[],
 ): Promise<void> => {
-  bootCheck ??= assertContentLocalizationLanguages(c, contentTypes).catch(
-    (error: unknown) => {
-      bootCheck = undefined;
-      throw error;
-    },
-  );
+  await bootCheck.get(async () => {
+    await assertContentLocalizationLanguages(c, contentTypes);
 
-  await bootCheck;
+    return true;
+  });
 };
 
 /** Test seam: forgets the memoised boot check. */
 export const resetContentLocalizationCheck = (): void => {
-  bootCheck = undefined;
+  bootCheck.reset();
 };
 
 /**

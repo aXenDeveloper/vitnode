@@ -270,6 +270,7 @@ With `npx wrangler dev` running, `http://localhost:8787/api/health/ready` answer
 | `TLS_HANDSHAKE_FAILED` from the database, and `/api/health/ready` answers `503`                | The database's certificate is not signed by a public CA, as with Supabase. [Connect through Hyperdrive](#connect-through-hyperdrive). |
 | Image uploads fail with "The image optimization library (sharp) failed to load"                | Remove `storage.image` from the Worker's API config.                                                                                  |
 | Deploy fails with `total sourcemap size is too large` (code `10021`)                           | Set `"upload_source_maps": false` in `wrangler.jsonc`.                                                                                |
+| Pages answer `503` and the logs show "Worker exceeded CPU time limit" after about 10 ms of CPU | The account is on Workers Free, which allows 10 ms of CPU per request. Upgrade to Workers Paid (30 s by default).                     |
 | Deploy fails because the script is too large                                                   | [Shrink the Worker](#shrink-the-worker), and check that you are on Workers Paid.                                                      |
 
 ## Related
