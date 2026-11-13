@@ -333,14 +333,18 @@ export function VitNodeAPI({
     }
 
     const errorMessage = describeError(error);
-
-    try {
-      const logger = c.get("log");
-      if (logger) {
-        await logger.error(`Unhandled error: ${errorMessage}`);
-      }
-    } catch {
-      /* empty */
+    const logger = c.get("log");
+    if (logger) {
+      // The logger prints before it writes to `core_logs`, so a failed
+      // insert (the database being the error) loses only the stored copy.
+      await logger.error(`Unhandled error: ${errorMessage}`).catch(() => {});
+    } else {
+      // The request failed before the request context existed - a session
+      // lookup against an unreachable database, say.
+      // oxlint-disable-next-line no-console
+      console.error(
+        `\x1b[34m[VitNode]\x1b[0m Unhandled error: ${errorMessage}`,
+      );
     }
 
     return new Response(

@@ -7,8 +7,8 @@ type CoreLogsType = "debug" | "error" | "warn";
 
 /**
  * `c.get("log")`: each method writes an entry to the `core_logs` table (shown
- * in AdminCP debug logs) with the request's plugin, path, IP and user, and
- * echoes it to the console.
+ * in AdminCP debug logs) with the request's plugin, path, IP and user, after
+ * printing it to the console.
  */
 export interface LoggerMiddlewareType {
   debug: (content: string) => Promise<void>;
@@ -20,21 +20,6 @@ export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
   const logToDbAndConsole = async (content: string, type: CoreLogsType) => {
     const pluginId = c.get("plugin")?.id ?? "core";
     const ipAddress = c.get("ipAddress");
-
-    await c
-      .get("db")
-      .insert(core_logs)
-      .values({
-        pluginId,
-        type,
-        content,
-        ipAddress,
-        method: c.req.method.toUpperCase(),
-        path: c.req.path,
-        userAgent: c.req.header("User-Agent"),
-        statusCode: c.res.status,
-        userId: c.get("user")?.id,
-      });
 
     const loggers: Record<CoreLogsType, (msg: string) => void> = {
       debug: msg =>
@@ -50,7 +35,24 @@ export const loggerMiddleware = (c: Context): LoggerMiddlewareType => {
           `\x1b[34m[VitNode]\x1b[0m \x1b[33mWarning (${pluginId})\x1b[0m: ${msg}`,
         ),
     };
+    // Printed first: when the database is what failed, the insert below
+    // throws, and the console is the only place the error shows up.
     (loggers[type] ?? loggers.debug)(content);
+
+    await c
+      .get("db")
+      .insert(core_logs)
+      .values({
+        pluginId,
+        type,
+        content,
+        ipAddress,
+        method: c.req.method.toUpperCase(),
+        path: c.req.path,
+        userAgent: c.req.header("User-Agent"),
+        statusCode: c.res.status,
+        userId: c.get("user")?.id,
+      });
   };
 
   return {
