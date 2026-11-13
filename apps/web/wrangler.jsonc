@@ -17,19 +17,37 @@
   "upload_source_maps": false,
   // Prerendered pages are `page/index.html`: serve them at `/page`, as Node
   // does, instead of redirecting to `/page/`.
-  "assets": { "html_handling": "drop-trailing-slash" },
+  "assets": {
+    "html_handling": "drop-trailing-slash"
+  },
   "durable_objects": {
     "bindings": [
       // The realtime hub that owns every WebSocket. The binding name is fixed.
-      { "name": "VITNODE_REALTIME", "class_name": "VitNodeRealtimeHub" }
+      {
+        "name": "VITNODE_REALTIME",
+        "class_name": "VitNodeRealtimeHub"
+      }
     ]
   },
   // SQLite-backed, so the hub keeps its rooms while it hibernates.
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VitNodeRealtimeHub"] }],
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["VitNodeRealtimeHub"]
+    }
+  ],
   "vars": {
     "CLOUDFLARE_TURNSTILE_SITE_KEY": "0x4AAAAAABi06L36gFn13BlF",
     "SUPABASE_URL": "https://wvmvsazvuzfvwydifigd.supabase.co",
     "VITNODE_INSTALLATION_ID": "default"
   },
-  "observability": { "enabled": true }
+  "observability": {
+    "enabled": true
+  },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "bc00c8f1ed754a87a48e12bfe6429011"
+    }
+  ]
 }
