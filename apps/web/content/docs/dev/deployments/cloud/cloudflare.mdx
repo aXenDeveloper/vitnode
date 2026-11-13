@@ -205,9 +205,10 @@ By default Wrangler uploads every module the build wrote, including chunks nothi
 "no_bundle": false,
 "minify": true,
 "keep_names": false,
+"upload_source_maps": false,
 ```
 
-The VitNode website went from 13.1 MiB to 6.6 MiB gzipped. Keep `keep_names` off: some server code sends functions to the browser as source text (the theme and scroll restoration scripts), and esbuild's name-keeping helper turns them into calls to a function the browser does not have, so every page the Worker renders fails with `n is not defined`.
+The VitNode website went from 13.1 MiB to 6.6 MiB gzipped. Keep `keep_names` off: some server code sends functions to the browser as source text (the theme and scroll restoration scripts), and esbuild's name-keeping helper turns them into calls to a function the browser does not have, so every page the Worker renders fails with `n is not defined`. Turn `upload_source_maps` off too: a real deploy uploads the bundle's source maps unless told not to, and a large app's maps pass Cloudflare's 60 MiB limit (error `10021`), which a dry run does not check.
 
 If the app prerenders pages, also set `"assets": { "html_handling": "drop-trailing-slash" }`. A prerendered page is written as `page/index.html`, and Cloudflare otherwise redirects `/page` to `/page/`.
 
@@ -223,6 +224,7 @@ With `npx wrangler dev` running, `http://localhost:8787/api/health/ready` answer
 | A Worker-rendered page fails with `n is not defined` in the browser                            | The Worker is minified with `keep_names` on. Set `"keep_names": false`.                                         |
 | `CONNECTION_CLOSED` or `Cannot perform I/O on behalf of a different request` from the database | The client was created once at module load. Use `scopedDatabase`.                                               |
 | Image uploads fail with "The image optimization library (sharp) failed to load"                | Remove `storage.image` from the Worker's API config.                                                            |
+| Deploy fails with `total sourcemap size is too large` (code `10021`)                           | Set `"upload_source_maps": false` in `wrangler.jsonc`.                                                          |
 | Deploy fails because the script is too large                                                   | [Shrink the Worker](#shrink-the-worker), and check that you are on Workers Paid.                                |
 
 ## Related
