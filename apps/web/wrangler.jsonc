@@ -13,19 +13,21 @@
   // Server code that ships functions to the browser as source (the theme and
   // scroll scripts) breaks under esbuild's name-keeping helper once minified.
   "keep_names": false,
+  // The bundle's source maps are about 85 MB, above Cloudflare's 60 MiB limit.
+  "upload_source_maps": false,
   // Prerendered pages are `page/index.html`: serve them at `/page`, as Node
   // does, instead of redirecting to `/page/`.
   "assets": { "html_handling": "drop-trailing-slash" },
   "durable_objects": {
     "bindings": [
       // The realtime hub that owns every WebSocket. The binding name is fixed.
-      { "name": "VITNODE_REALTIME", "class_name": "VitNodeRealtimeHub" }
-    ]
+      { "name": "VITNODE_REALTIME", "class_name": "VitNodeRealtimeHub" },
+    ],
   },
   // SQLite-backed, so the hub keeps its rooms while it hibernates.
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["VitNodeRealtimeHub"] }],
   "vars": {
-    "VITNODE_INSTALLATION_ID": "default"
+    "VITNODE_INSTALLATION_ID": "default",
   },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
 }
