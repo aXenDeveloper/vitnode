@@ -194,6 +194,7 @@ export const createCloudflareEdgeScope = ({
   };
 
   return {
+    env,
     keepAlive,
     resources: new Map<unknown, ScopedResource>(),
     runtime: createCloudflareEdgeRuntime({ env, keepAlive }),

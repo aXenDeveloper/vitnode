@@ -774,6 +774,7 @@ export const createVitNodeRealtimeHub = ({
     /** A fresh scope for one event, bound to this hub's state. */
     #scope(): RealtimeScope {
       return {
+        env: this.env,
         keepAlive: this.#keepAlive,
         resources: this.#resources,
         runtime: this.#runtime,

@@ -1,4 +1,7 @@
-import { scopedDatabase } from "@vitnode/core/cloudflare/database";
+import {
+  hyperdriveConnectionString,
+  scopedDatabase,
+} from "@vitnode/core/cloudflare/database";
 import { coreRelations } from "@vitnode/core/database/relations";
 import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { drizzle } from "drizzle-orm/postgres-js";
@@ -23,10 +26,10 @@ export const vitNodeApiConfig = buildApiConfig({
   // opened, so the client is created per request - and per busy period of the
   // realtime hub, which closes it when idle so it can hibernate. On Node
   // (`dev`, migrations) it is one client per process.
-  dbProvider: scopedDatabase(() =>
+  dbProvider: scopedDatabase(({ env }) =>
     drizzle({
       connection: {
-        url: POSTGRES_URL,
+        url: hyperdriveConnectionString(env) ?? POSTGRES_URL,
         max: 1,
         onnotice: () => undefined,
       },

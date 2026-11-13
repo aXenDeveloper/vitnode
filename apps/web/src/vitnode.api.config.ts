@@ -1,6 +1,9 @@
 import { blogApiPlugin } from '@vitnode/blog/config.api'
 import { FakePaymentAdapter } from '@vitnode/core/api/adapters/payments/fake'
-import { scopedDatabase } from '@vitnode/core/cloudflare/database'
+import {
+  hyperdriveConnectionString,
+  scopedDatabase,
+} from '@vitnode/core/cloudflare/database'
 import { coreRelations } from '@vitnode/core/database/relations'
 import { buildApiConfig } from '@vitnode/core/vitnode.config'
 import { forumApiPlugin } from '@vitnode/forum/config.api'
@@ -88,10 +91,10 @@ export const vitNodeApiConfig = buildApiConfig({
   // One client per process on Node. On Workers a request cannot reuse a
   // connection another request opened, so it gets its own, and the realtime
   // hub closes its client when idle so it can hibernate.
-  dbProvider: scopedDatabase(() =>
+  dbProvider: scopedDatabase(({ env }) =>
     drizzle({
       connection: {
-        url: POSTGRES_URL,
+        url: hyperdriveConnectionString(env) ?? POSTGRES_URL,
         ...(ON_WORKERS ? { max: 1 } : {}),
         onnotice: () => undefined,
       },

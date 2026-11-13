@@ -14,7 +14,7 @@ A VitNode **Single App** builds into one Cloudflare Worker: the site, the Hono A
 | ---------------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
 | The site, SSR, prerendered pages, `/api/*`           | ✅ Works       | One Worker answers every route; prerendered pages are served as static assets.                             |
 | [WebSockets](/docs/dev/websocket)                    | ✅ Works       | The realtime hub owns the sockets. See [Cloudflare WebSockets](/docs/dev/websocket/cloudflare).            |
-| Postgres                                             | ✅ Works       | Through `scopedDatabase`, one client per request.                                                          |
+| Postgres                                             | ✅ Works       | Through `scopedDatabase`, one client per request, or [Hyperdrive](#connect-through-hyperdrive).            |
 | [S3 / R2](/docs/dev/storage/s3-r2), Supabase storage | ✅ Works       | Uploads go straight to the bucket.                                                                         |
 | [Local file storage](/docs/dev/storage/local)        | ❌ No disk     | A Worker has no persistent file system. Use a bucket.                                                      |
 | Image re-encoding (`storage.image`)                  | ❌ Unsupported | It needs `sharp`, a native module Workers cannot load. Leave `storage.image` out of the Worker build.      |
@@ -26,7 +26,7 @@ A VitNode **Single App** builds into one Cloudflare Worker: the site, the Hono A
 
 - A Single App, the one layout `create-vitnode-app` offers for Workers.
 - Workers Paid. A VitNode Worker is above the 3 MiB limit of the Free plan; [Shrink the Worker](#shrink-the-worker) keeps it under the 10 MiB Paid limit.
-- A PostgreSQL database that Cloudflare can reach over TCP.
+- A PostgreSQL database that Cloudflare can reach over TCP. A Worker only trusts certificates from a public CA, so a provider such as Supabase needs [Hyperdrive](#connect-through-hyperdrive).
 - Wrangler 4 in the app:
 
 <Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install Wrangler'>
@@ -197,6 +197,50 @@ An app made with `--deploy cloudflare` has these commands as its `preview`, `che
 </Step>
 </Steps>
 
+## Connect through Hyperdrive
+
+A Worker opens its own TLS connection to `POSTGRES_URL` and only accepts a certificate signed by a public CA. Supabase signs its database certificates with its own CA, so every API request fails with `TLS_HANDSHAKE_FAILED`. [Hyperdrive](https://developers.cloudflare.com/hyperdrive/) is Cloudflare's database proxy: it opens that connection for the Worker and pools it across requests.
+
+Create a Hyperdrive config from your app's folder. For Supabase, use the **Direct connection** string, not a pooler one, because Hyperdrive does the pooling:
+
+```bash
+npx wrangler hyperdrive create vitnode --connection-string="postgresql://postgres:password@db.your-project.supabase.co:5432/postgres"
+```
+
+Add the `id` it prints to `wrangler.jsonc`:
+
+```jsonc title="wrangler.jsonc (excerpt)"
+"hyperdrive": [{ "binding": "HYPERDRIVE", "id": "your-hyperdrive-id" }],
+```
+
+`scopedDatabase` passes the Worker's bindings to its callback as `env`, and `hyperdriveConnectionString(env)` returns the binding's connection string, or `undefined` on Node and in a Worker without the binding. Fall back to `POSTGRES_URL`, so `vite dev` and `db:migrate` keep using it:
+
+```ts title="src/vitnode.api.config.ts (excerpt)"
+import {
+  hyperdriveConnectionString,
+  scopedDatabase,
+} from '@vitnode/core/cloudflare/database'
+
+dbProvider: scopedDatabase(({ env }) =>
+  drizzle({
+    connection: {
+      url: hyperdriveConnectionString(env) ?? process.env.POSTGRES_URL,
+      max: 1,
+    },
+    relations: coreRelations,
+  }),
+),
+```
+
+For `npx wrangler dev`, give the binding a local database in your shell, so the credentials stay out of `wrangler.jsonc`:
+
+```bash
+export CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE="postgresql://user:password@127.0.0.1:5432/vitnode"
+npx wrangler dev
+```
+
+Pass the binding's name as the second argument, `hyperdriveConnectionString(env, 'DATABASE')`, if you named it something else.
+
 ## Shrink the Worker
 
 By default Wrangler uploads every module the build wrote, including chunks nothing imports, without minifying them. A large app, with many plugins or compiled docs, can pass the 10 MiB Paid limit that way. Let Wrangler bundle from the entry and minify:
@@ -218,14 +262,15 @@ With `npx wrangler dev` running, `http://localhost:8787/api/health/ready` answer
 
 ## Troubleshooting
 
-| Symptom                                                                                        | Cause and fix                                                                                                   |
-| ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| The Worker ignores `.dev.vars`, and the bindings table lists none of its variables             | Wrangler ran with `--config .output/server/wrangler.json`. Run `wrangler dev` from the app's folder without it. |
-| A Worker-rendered page fails with `n is not defined` in the browser                            | The Worker is minified with `keep_names` on. Set `"keep_names": false`.                                         |
-| `CONNECTION_CLOSED` or `Cannot perform I/O on behalf of a different request` from the database | The client was created once at module load. Use `scopedDatabase`.                                               |
-| Image uploads fail with "The image optimization library (sharp) failed to load"                | Remove `storage.image` from the Worker's API config.                                                            |
-| Deploy fails with `total sourcemap size is too large` (code `10021`)                           | Set `"upload_source_maps": false` in `wrangler.jsonc`.                                                          |
-| Deploy fails because the script is too large                                                   | [Shrink the Worker](#shrink-the-worker), and check that you are on Workers Paid.                                |
+| Symptom                                                                                        | Cause and fix                                                                                                                         |
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| The Worker ignores `.dev.vars`, and the bindings table lists none of its variables             | Wrangler ran with `--config .output/server/wrangler.json`. Run `wrangler dev` from the app's folder without it.                       |
+| A Worker-rendered page fails with `n is not defined` in the browser                            | The Worker is minified with `keep_names` on. Set `"keep_names": false`.                                                               |
+| `CONNECTION_CLOSED` or `Cannot perform I/O on behalf of a different request` from the database | The client was created once at module load. Use `scopedDatabase`.                                                                     |
+| `TLS_HANDSHAKE_FAILED` from the database, and `/api/health/ready` answers `503`                | The database's certificate is not signed by a public CA, as with Supabase. [Connect through Hyperdrive](#connect-through-hyperdrive). |
+| Image uploads fail with "The image optimization library (sharp) failed to load"                | Remove `storage.image` from the Worker's API config.                                                                                  |
+| Deploy fails with `total sourcemap size is too large` (code `10021`)                           | Set `"upload_source_maps": false` in `wrangler.jsonc`.                                                                                |
+| Deploy fails because the script is too large                                                   | [Shrink the Worker](#shrink-the-worker), and check that you are on Workers Paid.                                                      |
 
 ## Related
 

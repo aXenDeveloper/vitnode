@@ -81,6 +81,11 @@ export interface RealtimeRuntime {
 /** What {@link runInRealtimeScope} makes current for the code it runs. */
 export interface RealtimeScope {
   /**
+   * The Cloudflare Worker bindings of this invocation or hub, such as a
+   * Hyperdrive binding. Set by the Cloudflare scopes only.
+   */
+  env?: Record<string, unknown>;
+  /**
    * Keeps work started in this scope alive past the response: a request's
    * `waitUntil`. Every realtime message that leaves the process is passed to
    * it.
