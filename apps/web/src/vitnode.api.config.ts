@@ -66,6 +66,11 @@ export const vitNodeApiConfig = buildApiConfig({
   authorization: {
     passkeys: true,
   },
+  captcha: {
+    type: 'cloudflare_turnstile',
+    siteKey: process.env.CLOUDFLARE_TURNSTILE_SITE_KEY,
+    secretKey: process.env.CLOUDFLARE_TURNSTILE_SECRET_KEY,
+  },
   payments: {
     providers: [
       ...(process.env.STRIPE_SECRET_KEY
