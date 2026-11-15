@@ -1,11 +1,11 @@
 import { google } from "@ai-sdk/google";
+import { DiscordSSOApiPlugin } from "@vitnode/api/adapters/sso/discord";
+import { FacebookSSOApiPlugin } from "@vitnode/api/adapters/sso/facebook";
+import { GoogleSSOApiPlugin } from "@vitnode/api/adapters/sso/google";
+import { coreRelations } from "@vitnode/api/database/relations";
+// import { LocalStorageAdapter } from "@vitnode/api/adapters/storage/local";
+import { buildApiConfig } from "@vitnode/api/vitnode.config";
 import { blogApiPlugin } from "@vitnode/blog/config.api";
-import { DiscordSSOApiPlugin } from "@vitnode/core/api/adapters/sso/discord";
-import { FacebookSSOApiPlugin } from "@vitnode/core/api/adapters/sso/facebook";
-import { GoogleSSOApiPlugin } from "@vitnode/core/api/adapters/sso/google";
-import { coreRelations } from "@vitnode/core/database/relations";
-// import { LocalStorageAdapter } from "@vitnode/core/api/adapters/storage/local";
-import { buildApiConfig } from "@vitnode/core/vitnode.config";
 import { forumApiPlugin } from "@vitnode/forum/config.api";
 import { NodeCronAdapter } from "@vitnode/node-cron";
 import { NodemailerEmailAdapter } from "@vitnode/nodemailer";
@@ -141,7 +141,7 @@ export const vitNodeApiConfig = buildApiConfig({
         clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
       }),
       // More built-in providers, opt-in: import the factory from
-      // `@vitnode/core/api/adapters/sso/{providerId}`, uncomment its line and
+      // `@vitnode/api/adapters/sso/{providerId}`, uncomment its line and
       // set its variables in `.env`. A button without credentials still shows
       // up and fails on click, so only add the ones you configure. Apple,
       // PayPal and TikTok need a public HTTPS `VITNODE_WEB_URL`.

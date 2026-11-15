@@ -1,22 +1,23 @@
+import type {
+  ContentRevisionSnapshot,
+  ContentSnapshotValue,
+} from "@vitnode/api/content/revisions";
+
+import { contentRevisionDiff } from "@vitnode/api/content/revisions";
+import {
+  isRichTextDocument,
+  isRichTextEmpty,
+} from "@vitnode/api/content/rich-text/document";
+import { richTextToPlainText } from "@vitnode/api/content/rich-text/plain-text";
 import { cn } from "cn";
 import { ArrowRightIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type {
-  ContentRevisionSnapshot,
-  ContentSnapshotValue,
-} from "@/content/revisions";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
-import { contentRevisionDiff } from "@/content/revisions";
-import {
-  isRichTextDocument,
-  isRichTextEmpty,
-} from "@/content/rich-text/document";
-import { richTextToPlainText } from "@/content/rich-text/plain-text";
 
 const TEXTAREA_PREVIEW_LINES = 8;
 

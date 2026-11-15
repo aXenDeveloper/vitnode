@@ -1,14 +1,13 @@
-import React from "react";
-
 import type {
   PermissionsStaffArgs,
   StaffPermissionSet,
-} from "@/api/lib/permission-staff";
+} from "@vitnode/api/lib/permission-staff";
 
 import {
   EMPTY_STAFF_PERMISSION_SET,
   hasStaffPermission,
-} from "@/api/lib/staff-permission";
+} from "@vitnode/api/lib/staff-permission";
+import React from "react";
 
 const AdminStaffPermissionContext = React.createContext<
   Promise<StaffPermissionSet> | StaffPermissionSet

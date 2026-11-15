@@ -1,9 +1,10 @@
+import type { ContentTarget } from "@vitnode/api/content/target";
+
 import { Link, useRouterState } from "@tanstack/react-router";
 import { FlagIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { ContentTarget } from "@/content/target";
 import type { ReportPreview } from "@/views/moderation/report/report-dialog-content";
 
 import { Button, buttonVariants } from "@/components/ui/button";

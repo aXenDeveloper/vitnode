@@ -1,4 +1,8 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { AI_ACTION_LIMITS } from "@vitnode/api/lib/ai/action";
+import { EMOJI_ICON_MAX_LENGTH } from "@vitnode/api/lib/emoji-icon";
+import { multiLangValueSchema } from "@vitnode/api/lib/helpers/multi-lang";
+import { ROLE_EDIT_OWN_CONTENT_MAX_MINUTES } from "@vitnode/api/lib/own-content";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
@@ -14,7 +18,6 @@ import type {
 } from "@/views/admin/views/core/ai/ai-query";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
-import { AI_ACTION_LIMITS } from "@/api/lib/ai/action";
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormColor } from "@/components/form/fields/color";
 import { AutoFormEmojiIcon } from "@/components/form/fields/emoji-icon";
@@ -27,9 +30,6 @@ import {
   type AiActionTranslate,
   withTranslatedAiActionText,
 } from "@/lib/ai/action-text";
-import { EMOJI_ICON_MAX_LENGTH } from "@/lib/emoji-icon";
-import { multiLangValueSchema } from "@/lib/helpers/multi-lang";
-import { ROLE_EDIT_OWN_CONTENT_MAX_MINUTES } from "@/lib/own-content";
 import {
   fromAiDecimal,
   toAiDecimal,

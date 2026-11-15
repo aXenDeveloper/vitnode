@@ -1,4 +1,10 @@
+import type { AiOverviewPreset } from "@vitnode/api/lib/ai/overview-range";
+
 import { Link } from "@tanstack/react-router";
+import {
+  AI_OVERVIEW_DEFAULT_PRESET,
+  AI_OVERVIEW_PRESETS,
+} from "@vitnode/api/lib/ai/overview-range";
 import { cn } from "cn";
 import {
   AnimatePresence,
@@ -11,17 +17,12 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { DateRangeValue } from "@/components/ui/date-range-picker";
-import type { AiOverviewPreset } from "@/lib/ai/overview-range";
 
 import { MotionFeatures } from "@/components/motion-features";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { SlidingNumber } from "@/components/ui/sliding-number";
-import {
-  AI_OVERVIEW_DEFAULT_PRESET,
-  AI_OVERVIEW_PRESETS,
-} from "@/lib/ai/overview-range";
 
 import type { AdminAiOverview, AiOverviewSearch } from "../ai-query";
 import type { AiOverviewMetric } from "./overview-metrics";

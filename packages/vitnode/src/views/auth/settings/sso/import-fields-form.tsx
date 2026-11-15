@@ -1,13 +1,14 @@
+import type { SsoProfileField } from "@vitnode/api/lib/shared/sso-profile";
+
+import { SSO_PROFILE_FIELDS } from "@vitnode/api/lib/shared/sso-profile";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
-import type { SsoProfileField } from "@/lib/sso-profile";
 
 import { AutoForm, AutoFormSubmitButton } from "@/components/form/auto-form";
 import { AutoFormCheckbox } from "@/components/form/fields/checkbox";
-import { SSO_PROFILE_FIELDS } from "@/lib/sso-profile";
 
 import type { StartSsoConnection } from "./sso-connections-mutations";
 

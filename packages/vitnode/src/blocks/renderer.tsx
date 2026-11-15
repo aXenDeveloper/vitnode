@@ -1,5 +1,13 @@
 import type { ReactElement } from "react";
 
+import {
+  areaLikeId,
+  contentNodeKey,
+  isAreaLike,
+  isBlockAreaInstance,
+} from "@vitnode/api/blocks/area";
+import { isBlockInstance } from "@vitnode/api/blocks/instance";
+import { resolveBlockVariant } from "@vitnode/api/blocks/variant";
 import { createElement, Fragment } from "react";
 
 import type {
@@ -11,17 +19,9 @@ import type {
   BlockValidationMode,
 } from "./types";
 
-import {
-  areaLikeId,
-  contentNodeKey,
-  isAreaLike,
-  isBlockAreaInstance,
-} from "./area";
 import { ContentArea } from "./area-renderer";
-import { isBlockInstance } from "./instance";
 import { isBlockAllowed, resolveBlockRegistry } from "./registry";
 import { blockDataShapeIssue } from "./shape";
-import { resolveBlockVariant } from "./variant";
 
 const isDevelopment = (): boolean => process.env.NODE_ENV !== "production";
 

@@ -1,9 +1,9 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
+import { ssoConnectionIntentOfState } from "@vitnode/api/lib/shared/sso-profile";
 import { useTranslations } from "use-intl";
 
 import { Spinner } from "@/components/ui/spinner";
-import { ssoConnectionIntentOfState } from "@/lib/sso-profile";
 import { ssoConnectionCallbackTarget } from "@/views/auth/settings/sso/connection-callback";
 import { useSsoConnectionNotice } from "@/views/auth/settings/sso/connection-notice";
 import { completeSsoConnectionInBrowser } from "@/views/auth/settings/sso/sso-connections-mutations";

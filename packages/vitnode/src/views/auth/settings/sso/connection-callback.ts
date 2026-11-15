@@ -1,4 +1,4 @@
-import type { SsoProfileField } from "@/lib/sso-profile";
+import type { SsoProfileField } from "@vitnode/api/lib/shared/sso-profile";
 
 import type {
   CompleteSsoConnectionFailure,

@@ -1,13 +1,12 @@
-import type { z } from "zod";
-
-import { queryOptions } from "@tanstack/react-query";
-
 import type {
   componentUpdateSchema,
   updatesOverviewSchema,
-} from "@/api/modules/admin/plugins/updates.schema";
+} from "@vitnode/api/modules/admin/plugins/updates.schema";
+import type { z } from "zod";
 
-import { manifest } from "@/manifest";
+import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
+
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 

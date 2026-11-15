@@ -1,6 +1,6 @@
-import type { ContentDuplicateRejection } from "@/content/conflicts";
+import type { ContentDuplicateRejection } from "@vitnode/api/content/conflicts";
 
-import { CONTENT_DUPLICATE_CODES } from "@/content/const";
+import { CONTENT_DUPLICATE_CODES } from "@vitnode/api/content/const";
 
 export type ContentDuplicateErrorMessage =
   | {

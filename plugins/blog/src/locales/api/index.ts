@@ -1,4 +1,4 @@
-import type { LocaleMessagesMap } from "@vitnode/core/lib/i18n/types";
+import type { LocaleMessagesMap } from "@vitnode/api/lib/i18n/types";
 
 /** Server-side messages (notification text), one loader per language. */
 const messages: LocaleMessagesMap = {

@@ -1,4 +1,4 @@
-import { defineEditablePage } from "@vitnode/core/content/editor";
+import { defineEditablePage } from "@vitnode/api/content/editor";
 
 import { manifest } from "@/manifest.gen";
 import { staffPermissions } from "@/staff-permissions";

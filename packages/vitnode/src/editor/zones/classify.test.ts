@@ -1,8 +1,8 @@
+import { createAreaInstance } from "@vitnode/api/blocks/area";
+import { AREA_CHILDREN_DEFAULT_MAX } from "@vitnode/api/blocks/const";
+import { createBlockInstance } from "@vitnode/api/blocks/instance";
 import { describe, expect, it } from "vitest";
 
-import { createAreaInstance } from "../../blocks/area";
-import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
-import { createBlockInstance } from "../../blocks/instance";
 import { classifyZoneEntries, describeInvalidEntry } from "./classify";
 
 const block = (text: string) =>

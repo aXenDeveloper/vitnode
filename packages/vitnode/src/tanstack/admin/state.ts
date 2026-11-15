@@ -1,15 +1,14 @@
 import type { QueryClient } from "@tanstack/react-query";
-
 import type {
   PermissionsStaffArgs,
   StaffPermissionSet,
-} from "@/api/lib/permission-staff";
+} from "@vitnode/api/lib/permission-staff";
 
 import {
   EMPTY_STAFF_PERMISSION_SET,
   hasStaffPermission,
-} from "@/api/lib/staff-permission";
-import { manifest } from "@/manifest";
+} from "@vitnode/api/lib/staff-permission";
+import { manifest } from "@vitnode/api/manifest";
 
 export const ADMIN_SESSION_QUERY_KEY = ["vitnode", "admin-session"] as const;
 

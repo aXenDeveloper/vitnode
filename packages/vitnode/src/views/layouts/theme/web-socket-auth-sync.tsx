@@ -1,12 +1,12 @@
+import type { VitNodeSocketUserId } from "@vitnode/api/ws/auth-sync";
+
+import { shouldReconnectForUser } from "@vitnode/api/ws/auth-sync";
 // The user id comes from whatever the app resolved the session to - the
 // canonical session query - so the reconnect must be driven by the prop changing
 // (sign-in/sign-out) rather than by a client event handler.
 /* oxlint-disable react-you-might-not-need-an-effect/no-event-handler */
 import React from "react";
 
-import type { VitNodeSocketUserId } from "@/ws/auth-sync";
-
-import { shouldReconnectForUser } from "@/ws/auth-sync";
 import { useVitNodeWebSocketContext } from "@/ws/provider";
 
 export const WebSocketAuthSync = ({

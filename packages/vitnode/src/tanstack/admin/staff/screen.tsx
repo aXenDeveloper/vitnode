@@ -1,5 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { manifest } from "@vitnode/api/manifest";
 import { HistoryIcon, PlusIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -10,7 +11,6 @@ import { AdminStaffPermissionGate } from "@/components/staff-permission/provider
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import { buttonVariants } from "@/components/ui/button";
 import { PageTitle } from "@/components/ui/page-title";
-import { manifest } from "@/manifest";
 import { adminStaffPermissions } from "@/views/admin/views/core/shared/admin-permissions";
 import {
   staffCreateHref,

@@ -1,7 +1,7 @@
 import type {
   PermissionsStaffArgs,
   StaffPermissionSet,
-} from "@/api/lib/permission-staff";
+} from "@vitnode/api/lib/permission-staff";
 
 import {
   AdminStaffPermissionGate,

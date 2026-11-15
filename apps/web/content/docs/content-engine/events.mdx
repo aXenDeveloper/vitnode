@@ -62,7 +62,7 @@ The listener also receives an envelope with the actor, the time and `pluginId`. 
 `contentEvent(contentType, action)` from `@vitnode/core/content` returns the event's definition. The payload is typed from the content type, and an action the definition does not enable, such as `contentEvent(categoryContentType, "published")`, does not compile. Nothing needs registering: `buildApiPlugin` registers the definitions of every content type it registers.
 
 ```ts title="plugins/newsroom/src/api/lib/listeners.ts"
-import { buildEventListener } from "@vitnode/core/api/lib/events";
+import { buildEventListener } from "@vitnode/api/lib/events";
 import { contentEvent } from "@vitnode/core/content";
 
 import { storyContentType } from "@/content/story";

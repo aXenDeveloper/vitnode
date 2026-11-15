@@ -99,7 +99,7 @@ These are the dynamic catalog boundary. They are checked when the module loads, 
 `checkStaffPermission`, `assertStaffPermission` and stored grants work with plain `{ plugin, module, permission }` data. `staffPermissionArgs(ref)` converts a reference:
 
 ```ts
-import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+import { checkStaffPermission } from "@vitnode/api/lib/check-staff-permission";
 import { staffPermissionArgs } from "@vitnode/core/lib/staff-permissions";
 
 const canCreate = await checkStaffPermission(c, {

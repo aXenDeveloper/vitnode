@@ -1,8 +1,7 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
+import { contentIdKey } from "@vitnode/api/content/ids";
 import React from "react";
-
-import type { ContentId } from "@/content/ids";
-
-import { contentIdKey } from "@/content/ids";
 
 import type { ContentOption, ContentOptionsLoader } from "./field-component";
 

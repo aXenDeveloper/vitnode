@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
+import { parseEmojiIcon } from "@vitnode/api/lib/emoji-icon";
 import { cn } from "cn";
-
-import { parseEmojiIcon } from "@/lib/emoji-icon";
 
 import { Avatar } from "./avatar";
 import { EmojiIcon } from "./ui/emoji-icon";

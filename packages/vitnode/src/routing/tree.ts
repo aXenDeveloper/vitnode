@@ -1,9 +1,9 @@
-import type { PageCacheSetting } from "../page-cache/policy";
+import type { PageCacheSetting } from "@vitnode/api/page-cache/policy";
 import type {
   PluginRouteArea,
   PluginRouteKind,
   PluginRouteRequirement,
-} from "./types";
+} from "@vitnode/api/routing/types";
 
 const LAZY_BRAND = Symbol.for("vitnode.plugin-routes.lazy");
 const DECLARATION_BRAND = Symbol.for("vitnode.plugin-routes.declaration");

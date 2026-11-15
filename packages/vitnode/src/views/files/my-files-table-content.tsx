@@ -1,3 +1,4 @@
+import { formatBytes } from "@vitnode/api/lib/format-bytes";
 import { FileIcon, FolderIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
@@ -5,7 +6,6 @@ import { DateFormat } from "@/components/date-format";
 import { FilePreview } from "@/components/files/file-preview";
 import { MetadataCell } from "@/components/files/metadata-cell";
 import { ContentDataTable } from "@/components/table/content";
-import { formatBytes } from "@/lib/format-bytes";
 
 import type { DeleteMyFile, DeleteMyFiles } from "./my-files-delete";
 import type { MyFile, MyFilesPage } from "./my-files-query";

@@ -1,9 +1,9 @@
-import React from "react";
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentPublicPerson } from "@vitnode/api/content/public-person";
+import type { ContentRevisionDetail } from "@vitnode/api/content/revisions";
+import type { ContentScheduleAction } from "@vitnode/api/content/schedules";
 
-import type { ContentId } from "@/content/ids";
-import type { ContentPublicPerson } from "@/content/public-person";
-import type { ContentRevisionDetail } from "@/content/revisions";
-import type { ContentScheduleAction } from "@/content/schedules";
+import React from "react";
 
 import type { ContentMutationResult } from "../content-mutation";
 import type {

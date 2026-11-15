@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
-import { createContentAccess } from "@vitnode/core/content/server";
+import { createContentAccess } from "@vitnode/api/content/server";
 import { and, count, desc, eq } from "drizzle-orm";
 
 import { buildRoute } from "@/api/builders";

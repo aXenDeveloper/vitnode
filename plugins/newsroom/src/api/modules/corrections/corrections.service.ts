@@ -1,4 +1,4 @@
-import type { EnvVariablesVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+import type { EnvVariablesVitNode } from "@vitnode/api/middlewares/global.middleware";
 
 import { desc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";

@@ -1,10 +1,10 @@
+import { isRichTextDocument } from "@vitnode/api/content/rich-text/document";
 import { cn } from "cn";
 import { ChevronDownIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import { RichTextContent } from "@/components/rich-text";
-import { isRichTextDocument } from "@/content/rich-text/document";
 
 import type { ModcpApprovalDetail } from "../modcp-query";
 

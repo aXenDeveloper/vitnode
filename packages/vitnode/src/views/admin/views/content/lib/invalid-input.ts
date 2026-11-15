@@ -1,11 +1,12 @@
+import type { ContentInvalidInput } from "@vitnode/api/content/conflicts";
+
+import { humanizeFieldName } from "@vitnode/api/content/admin/labels";
+import { CONTENT_INPUT_ISSUE_CODES } from "@vitnode/api/content/const";
+
 import type {
   ContentFormFieldSpec,
   ContentFormSpec,
 } from "@/content/admin/spec";
-import type { ContentInvalidInput } from "@/content/conflicts";
-
-import { humanizeFieldName } from "@/content/admin/labels";
-import { CONTENT_INPUT_ISSUE_CODES } from "@/content/const";
 
 export interface ContentInvalidField {
   label: string;

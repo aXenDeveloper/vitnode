@@ -1,3 +1,8 @@
+import type { ContentPublicationAction } from "@vitnode/api/content/publication";
+import type { ContentVisibilityAction } from "@vitnode/api/content/visibility";
+
+import { contentPublicationTransition } from "@vitnode/api/content/publication";
+import { contentVisibilityTransition } from "@vitnode/api/content/visibility";
 import {
   ChevronDownIcon,
   FileClockIcon,
@@ -6,9 +11,6 @@ import {
 } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
-
-import type { ContentPublicationAction } from "@/content/publication";
-import type { ContentVisibilityAction } from "@/content/visibility";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { AutoFormSubmitButton } from "@/components/form/auto-form";
@@ -20,8 +22,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { contentPublicationTransition } from "@/content/publication";
-import { contentVisibilityTransition } from "@/content/visibility";
 
 import {
   CONTENT_VISIBILITY_ICONS,

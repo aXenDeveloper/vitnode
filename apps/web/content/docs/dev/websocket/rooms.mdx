@@ -20,8 +20,8 @@ A room is a named group of browser tabs, such as everyone looking at one chat th
 All tabs of a browser share one socket, so a socket joins a room on behalf of a tab. Each tab sends its own random `clientId` with every message, and the server joins or leaves with it. Create a server socket with `buildWebSocket`:
 
 ```ts title="plugins/acme-chat/src/api/modules/rooms/rooms.socket.ts"
-import { buildWebSocket } from "@vitnode/core/api/lib/websocket"
-import { wsRegistry } from "@vitnode/core/ws/registry"
+import { buildWebSocket } from "@vitnode/api/lib/websocket"
+import { wsRegistry } from "@vitnode/api/ws/registry"
 
 export interface RoomMessage {
   clientId: string
@@ -71,7 +71,7 @@ Pass `roomsModule` to `buildApiPlugin({ modules })`. Only top-level modules are 
 Next to `chatChannel`, add a channel with the same plugin, module and id as the socket. Its first type parameter is what the browser sends:
 
 ```ts title="plugins/acme-chat/src/ws/chat.channel.ts"
-import { createWebSocketChannel } from "@vitnode/core/ws/types"
+import { createWebSocketChannel } from "@vitnode/api/ws/types"
 
 import type { RoomMessage } from "../api/modules/rooms/rooms.socket"
 
@@ -160,7 +160,7 @@ Open the chat room page for room `42` in two browsers, and room `7` in a third. 
 A socket that closes leaves all of its rooms. Use `wsRegistry.onConnectionClose` to update your own state, such as an "online now" list. Register the listener once, at module load:
 
 ```ts title="plugins/acme-chat/src/api/modules/rooms/presence.ts"
-import { wsRegistry } from "@vitnode/core/ws/registry"
+import { wsRegistry } from "@vitnode/api/ws/registry"
 
 const online = new Map<string, Set<string>>()
 
@@ -189,14 +189,14 @@ All `wsRegistry` methods act on the runtime handling the current socket event on
 
 With `REDIS_URL` set, `toRoom` also publishes the message over Redis, and every other instance delivers it to its own members. Room membership itself stays local to each instance.
 
-When an instance keeps per-room state in memory, it can follow the other instances with helpers from `@vitnode/core/ws/registry`:
+When an instance keeps per-room state in memory, it can follow the other instances with helpers from `@vitnode/api/ws/registry`:
 
 ```ts
 import {
   onInstanceMessage,
   onRemoteRoomMessage,
   publishToInstances,
-} from "@vitnode/core/ws/registry"
+} from "@vitnode/api/ws/registry"
 ```
 
 - `onRemoteRoomMessage((room, id, data) => ...)` sees room messages from other instances before they reach local sockets. A collaborative document uses it to apply the same edit to its own copy.

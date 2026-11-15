@@ -3,9 +3,10 @@ import type {
   PluginAuthor,
   PluginManifest,
   PluginUpdateSource,
-} from "../../lib/plugin-manifest.js";
+} from "@vitnode/api/lib/plugin-manifest";
 
-import { assertPluginManifest } from "../../lib/plugin-manifest.js";
+import { assertPluginManifest } from "@vitnode/api/lib/plugin-manifest";
+
 import { PLUGIN_ROUTES_ERROR_PREFIX as ERROR_PREFIX } from "../plugin-routes/diagnostics.js";
 
 export const PLUGIN_MANIFEST_SUBPATH = "manifest.gen";
@@ -158,7 +159,7 @@ export const generatePluginInventorySource = (
   );
 
   return `${HEADER}
-import type { FrontendPluginInventory } from '@vitnode/core/lib/plugin-manifest'
+import type { FrontendPluginInventory } from '@vitnode/api/lib/plugin-manifest'
 
 export const frontendPlugins: FrontendPluginInventory = [
 ${sorted.map(entrySource).join("")}]

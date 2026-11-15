@@ -1,9 +1,9 @@
+import type { routeMiddlewareSchema } from "@vitnode/api/modules/middleware/middleware.schema";
+
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
-
-import type { routeMiddlewareSchema } from "@/api/modules/middleware/middleware.schema";
 
 import type {
   PasswordResetMutationResult,

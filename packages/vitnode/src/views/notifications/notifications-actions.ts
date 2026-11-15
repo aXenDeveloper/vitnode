@@ -1,10 +1,11 @@
 import type {
   NotificationEmailMode,
   NotificationState,
-} from "@/lib/notifications/types";
+} from "@vitnode/api/lib/notifications/types";
+
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 
 import { NotificationsRequestError } from "./notifications-query";
 

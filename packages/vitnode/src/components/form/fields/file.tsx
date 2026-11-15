@@ -1,4 +1,10 @@
 import { useMutation } from "@tanstack/react-query";
+import {
+  fileAcceptAttribute,
+  fileFormatLabels,
+  validateFile,
+} from "@vitnode/api/lib/file-constraints";
+import { formatBytes } from "@vitnode/api/lib/format-bytes";
 import { cn } from "cn";
 import { RotateCcwIcon, XIcon } from "lucide-react";
 import React from "react";
@@ -7,12 +13,6 @@ import { useTranslations } from "use-intl";
 import { AttachmentAction } from "@/components/ui/attachment";
 import { Button } from "@/components/ui/button";
 import { FormControl, FormMessage } from "@/components/ui/form";
-import {
-  fileAcceptAttribute,
-  fileFormatLabels,
-  validateFile,
-} from "@/lib/file-constraints";
-import { formatBytes } from "@/lib/format-bytes";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 import type { AutoFormFileValue } from "./file-shared";

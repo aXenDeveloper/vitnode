@@ -56,7 +56,8 @@ Open `http://localhost:3000` for the website, the AdminCP at `/admin` and the li
 
 | Directory                                  | Role                                                                        |
 | :----------------------------------------- | :-------------------------------------------------------------------------- |
-| `packages/vitnode`                         | `@vitnode/core`: routing, auth, models, UI primitives and the `vitnode` CLI |
+| `packages/api`                             | `@vitnode/api`: the Hono API, database schema, Content Engine backend, emails and the `vitnode` CLI |
+| `packages/vitnode`                         | `@vitnode/core`: routing, UI primitives, the AdminCP and the Vite/TanStack Start integration |
 | `packages/create-vitnode-app`              | The project and plugin generator (`create-vitnode-app`)                     |
 | `packages/config`                          | `@vitnode/config`, shared TypeScript and lint configuration                 |
 | `packages/resend`, `packages/nodemailer`   | Email adapters                                                              |

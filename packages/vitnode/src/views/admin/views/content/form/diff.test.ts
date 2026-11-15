@@ -1,6 +1,6 @@
+import { humanizeFieldName } from "@vitnode/api/content/admin/labels";
 import { describe, expect, it } from "vitest";
 
-import { humanizeFieldName } from "@/content/admin/labels";
 import { buildContentFormSpec } from "@/content/admin/spec";
 import {
   testAdvancedLocalizedContentType,

@@ -1,6 +1,6 @@
-import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
+import type { ApiPluginContract } from "@vitnode/api/lib/plugin";
 
-import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+import { buildApiPlugin } from "@vitnode/api/lib/plugin";
 
 import { storyExcerptAiAction } from "@/api/ai/actions";
 import { buildContentPublicModule } from "@/api/builders";
@@ -27,13 +27,13 @@ import { adminModule } from "./api/modules/admin/admin.module";
 import { articlesModule } from "./api/modules/articles/articles.module";
 import { correctionsModule } from "./api/modules/corrections/corrections.module";
 import { helloModule } from "./api/modules/hello/hello.module";
-import { widgets } from "./widgets";
+import { widgetSchemas } from "./widget-schemas";
 
 export const newsroomApiPlugin = () =>
   buildApiPlugin({
     manifest,
     aiActions: [storyExcerptAiAction],
-    blocks: widgets,
+    blocks: widgetSchemas,
     contentNotifications: [commentNotifications],
     editablePages: [settingsPage],
     eventDefinitions: [correctionFiledEvent],

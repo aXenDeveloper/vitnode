@@ -48,8 +48,8 @@ describe("the rich text renderer never ships the editor", () => {
     expect(reachedFiles(entries["components/rich-text"])).toEqual(
       expect.arrayContaining([
         "components/rich-text/rich-text-content.tsx",
-        "content/rich-text/elements.ts",
-        "content/rich-text/html.ts",
+        "../../api/src/content/rich-text/elements.ts",
+        "../../api/src/content/rich-text/html.ts",
       ]),
     );
   });

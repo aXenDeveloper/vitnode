@@ -1,8 +1,9 @@
-import type { UserImageKind } from "@/lib/user-images";
+import type { UserImageKind } from "@vitnode/api/lib/shared/user-images";
+
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { readApiErrorMessage } from "@/lib/read-api-error";
-import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,

@@ -1,20 +1,19 @@
-import { cn } from "cn";
-import React from "react";
-
 import type {
   RichTextDocument,
   RichTextMark,
   RichTextNode,
-} from "@/content/rich-text/document";
-import type { RichTextElement } from "@/content/rich-text/elements";
+} from "@vitnode/api/content/rich-text/document";
+import type { RichTextElement } from "@vitnode/api/content/rich-text/elements";
 
 import {
   RICH_TEXT_SLOT,
   RICH_TEXT_VOID_TAGS,
   richTextMarkElement,
   richTextNodeElement,
-} from "@/content/rich-text/elements";
-import { richTextToHtml } from "@/content/rich-text/html";
+} from "@vitnode/api/content/rich-text/elements";
+import { richTextToHtml } from "@vitnode/api/content/rich-text/html";
+import { cn } from "cn";
+import React from "react";
 
 import {
   DeletedUpload,

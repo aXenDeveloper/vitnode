@@ -1,6 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
-
-import type { ContentId } from "@/content/ids";
+import type { ContentId } from "@vitnode/api/content/ids";
 
 import {
   contentDeliveryQueryKey,

@@ -2,9 +2,9 @@ import type {
   PersonalInformationFields,
   UserPersonalInformation,
   UserPersonalInformationField,
-} from "@/lib/user-personal-information";
+} from "@vitnode/api/lib/user-personal-information";
 
-import { personalInformationChanges } from "@/lib/user-personal-information";
+import { personalInformationChanges } from "@vitnode/api/lib/user-personal-information";
 
 export interface ProfileSheetValues extends Partial<
   Record<UserPersonalInformationField, boolean | string>

@@ -1,10 +1,11 @@
+import type { LocaleRoutePaths } from "@vitnode/api/lib/i18n/types";
+
+import { LocaleRoutingConfigError } from "@vitnode/api/lib/i18n/route-paths";
 import { describe, expect, it } from "vitest";
 
-import type { LocaleRoutePaths } from "../../lib/i18n/types.js";
 import type { PluginRouteDeclaration } from "../../routing/tree.js";
 import type { PluginRouteCompilerSource } from "./compile.js";
 
-import { LocaleRoutingConfigError } from "../../lib/i18n/route-paths.js";
 import {
   definePluginRoutes,
   index,

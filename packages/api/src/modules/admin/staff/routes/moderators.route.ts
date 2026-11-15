@@ -1,0 +1,73 @@
+import { buildRoute } from "@/builders";
+import { core_moderators_permissions } from "@/database/moderators";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+import { withPagination } from "@/lib/with-pagination";
+
+import { resolveStaffEdges } from "../lib/resolve-staff-edges";
+import { staffListAdminQuery, staffListAdminSchema } from "../staff.schema";
+
+export const listModeratorsStaffAdminRoute = buildRoute({
+  adminStaffPermission: coreStaffPermissions.admin.staff_moderators.canView,
+  route: {
+    method: "get",
+    description: "Get list of moderators staff (Admin only)",
+    path: "/moderators",
+    request: {
+      query: staffListAdminQuery,
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: staffListAdminSchema,
+          },
+        },
+        description: "List of moderators staff",
+      },
+      403: {
+        description: "Access Denied",
+      },
+    },
+  },
+  handler: async c => {
+    const query = c.req.valid("query");
+
+    const data = await withPagination({
+      params: {
+        query,
+      },
+      primaryCursor: core_moderators_permissions.id,
+      query: async ({ cursorSelection, limit, offset, where, orderBy }) =>
+        await c
+          .get("db")
+          .select({
+            ...cursorSelection,
+            id: core_moderators_permissions.id,
+            roleId: core_moderators_permissions.roleId,
+            userId: core_moderators_permissions.userId,
+            createdAt: core_moderators_permissions.createdAt,
+            updatedAt: core_moderators_permissions.updatedAt,
+            unrestricted: core_moderators_permissions.unrestricted,
+            protected: core_moderators_permissions.protected,
+          })
+          .from(core_moderators_permissions)
+          .where(where)
+          .orderBy(orderBy)
+          .limit(limit)
+          .offset(offset),
+      table: core_moderators_permissions,
+      orderBy: {
+        column: query.orderBy
+          ? core_moderators_permissions[query.orderBy]
+          : core_moderators_permissions.updatedAt,
+        order: query.order ?? "desc",
+      },
+      c,
+    });
+
+    return c.json({
+      pageInfo: data.pageInfo,
+      edges: await resolveStaffEdges(c, data.edges),
+    });
+  },
+});

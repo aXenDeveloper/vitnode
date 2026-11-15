@@ -1,12 +1,14 @@
-import type { ReactElement, ReactNode } from "react";
-
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
 import type {
   AnyEditablePageDefinition,
   EditablePageLayoutPayload,
   EditablePageZone,
-} from "../content/editor/types";
+} from "@vitnode/api/content/editor/types";
+import type { ReactElement, ReactNode } from "react";
+
+import { editablePageZone } from "@vitnode/api/content/editor/define";
+import { ContentEngineError } from "@vitnode/api/content/errors";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+
 import type {
   VisualEditorAdapter,
   VisualEditorSaveInput,
@@ -17,8 +19,6 @@ import type {
 } from "./page-context";
 import type { EditablePageZones } from "./page-layout";
 
-import { editablePageZone } from "../content/editor/define";
-import { ContentEngineError } from "../content/errors";
 import { ContentEditorRuntime } from "./edit";
 import { useEditWidgets } from "./edit-widgets-context";
 import { EditablePageContext } from "./page-context";

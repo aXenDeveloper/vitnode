@@ -1,3 +1,4 @@
+import { WARNING_LIMITS } from "@vitnode/api/lib/moderation/warnings";
 import { PencilIcon, PlusIcon, TriangleAlertIcon } from "lucide-react";
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
@@ -17,7 +18,6 @@ import {
 } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 import { resolveReasonText } from "@/views/moderation/report-reasons-query";
 import { WarningDuration } from "@/views/moderation/warnings/warning-format";
 

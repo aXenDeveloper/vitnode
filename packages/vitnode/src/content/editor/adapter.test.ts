@@ -1,15 +1,16 @@
+import type {
+  EditablePageLayoutPayload,
+  EditablePageSavePayload,
+} from "@vitnode/api/content/editor/types";
+
+import { defineEditablePage } from "@vitnode/api/content/editor/define";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AnyBlockInstance } from "../../blocks/types";
 import type { VisualEditorSaveInput } from "../../editor/adapter/types";
-import type {
-  EditablePageLayoutPayload,
-  EditablePageSavePayload,
-} from "./types";
 
 import { saveRefusalOf } from "../../editor/adapter/refusal";
 import { createContentEditorAdapter } from "./adapter";
-import { defineEditablePage } from "./define";
 
 type Transport = (
   payload: EditablePageSavePayload,

@@ -68,6 +68,54 @@ Features live in plugins, each a package in `plugins/*` or `node_modules`:
 - **Only configured plugins ship.** A plugin that is not listed in
   `vitnode.config.ts` and `vitnode.api.config.ts` adds no code to the build.
 
+## Packages
+
+VitNode ships the two layers as two npm packages. An API-only project installs
+`@vitnode/api` alone; a web app installs `@vitnode/core`, which depends on
+`@vitnode/api` itself.
+
+| Package         | Owns                                                                                                   | Installed by                                                              |
+| :-------------- | :----------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------ |
+| `@vitnode/api`  | The Hono API, database schema, Content Engine backend, emails, WebSocket and Cloudflare runtime, the `vitnode` CLI | API apps (runtime), single apps (runtime), web apps and plugins (dev, for the CLI) |
+| `@vitnode/core` | React components, the AdminCP, TanStack Start integration and the Vite plugin                          | Web apps, single apps and plugins                                         |
+
+Shared contracts that both layers read, such as content type definitions,
+staff permissions and the fetcher registry, live in `@vitnode/api` and are
+browser-safe. `@vitnode/core` re-exports the ones plugins already import, so
+`@vitnode/core/content` and `@vitnode/core/lib/staff-permissions` keep working.
+
+The built-in plugin keeps the id `@vitnode/core` even though its server code
+ships in `@vitnode/api`. Endpoints stay under `/api/@vitnode/core/...`, calls
+stay `fetcher({ plugin: "@vitnode/core", ... })`, and permissions, events and
+database rows are unchanged.
+
+### Moving imports to `@vitnode/api`
+
+Server code that imported from `@vitnode/core` now imports from
+`@vitnode/api`. There is no compatibility alias for the old paths, so update
+them when you upgrade:
+
+| Before                                                   | After                                         |
+| :------------------------------------------------------- | :-------------------------------------------- |
+| `@vitnode/core/api/config`                               | `@vitnode/api/config`                         |
+| `@vitnode/core/api/lib/plugin`                           | `@vitnode/api/lib/plugin`                     |
+| `@vitnode/core/api/lib/bind-api-plugin`                  | `@vitnode/api/lib/bind-api-plugin`            |
+| `@vitnode/core/api/models/*`, `@vitnode/core/api/modules/*` | `@vitnode/api/models/*`, `@vitnode/api/modules/*` |
+| `@vitnode/core/database/*`                               | `@vitnode/api/database/*`                     |
+| `@vitnode/core/drizzle.config`                           | `@vitnode/api/drizzle.config`                 |
+| `@vitnode/core/content/server`                           | `@vitnode/api/content/server`                 |
+| `buildApiConfig` from `@vitnode/core/vitnode.config`     | `buildApiConfig` from `@vitnode/api/vitnode.config` |
+| `@vitnode/core/locales/api/en.json`                      | `@vitnode/api/locales/en.json`                |
+
+Frontend imports, such as `buildConfig`, `@vitnode/core/tanstack/fetcher` and
+`@vitnode/core/routing`, do not change. Add `@vitnode/api` to every package
+that runs `vitnode`: the CLI now ships there.
+
+A widget registered on the API is a schema without a component. Declare it
+with `defineWidgetSchema` from `@vitnode/api/blocks`, pass it to
+`buildApiPlugin({ blocks })`, and spread the same schema into `defineWidget`
+in the browser. See [Widgets](/docs/dev/widgets).
+
 ## Related
 
 <Cards>

@@ -4,7 +4,7 @@ description: Reference for c.get('audit').record(), auditDiff, withAuditContext,
 icon: BookOpen
 ---
 
-This page lists every server-side Activity Logs API in `@vitnode/core`, plus
+This page lists every server-side Activity Logs API in `@vitnode/api`, plus
 the stored fields, the admin routes and their limits.
 
 ## `c.get('audit').record(input, options?)`
@@ -34,7 +34,7 @@ AdminCP request, `public` for a signed-in member and `system` otherwise.
 The actor, the actor's name, the IP address and the request id are always taken
 from the request (or a trusted `withAuditContext` frame), never from `input`. A
 member writing in the `moderator` area is recorded as staff. Malformed input
-throws `AuditLogError` from `@vitnode/core/api/lib/audit/write`, even with
+throws `AuditLogError` from `@vitnode/api/lib/audit/write`, even with
 `bestEffort`.
 
 Values are sanitized before they are stored: strings are cut at 500
@@ -43,7 +43,7 @@ only their name, and sensitive keys are redacted.
 
 ## `auditDiff({ before, after, include?, exclude? })`
 
-From `@vitnode/core/lib/audit/diff`, also `c.get('audit').diff()`. Universal.
+From `@vitnode/api/lib/audit/diff`, also `c.get('audit').diff()`. Universal.
 Returns only the fields whose value changed, or `null`.
 
 - `before: null` describes a creation, `after: null` a deletion. A missing
@@ -56,7 +56,7 @@ Returns only the fields whose value changed, or `null`.
 
 ## `withAuditContext(c, frame, body)`
 
-From `@vitnode/core/api/lib/audit/context`. Server-only. Applies trusted
+From `@vitnode/api/lib/audit/context`. Server-only. Applies trusted
 context to every entry `body` writes on `c` and returns what `body` returns.
 Frames nest; the innermost wins.
 
@@ -76,7 +76,7 @@ Cron jobs and queue tasks already run inside a system frame with
 import {
   AUDIT_SYSTEM_ACTOR,
   withAuditContext,
-} from '@vitnode/core/api/lib/audit/context'
+} from '@vitnode/api/lib/audit/context'
 
 await withAuditContext(
   c,
@@ -91,7 +91,7 @@ await withAuditContext(
 
 ## `defineAuditActions(actions)`
 
-From `@vitnode/core/lib/audit/actions`. Universal. Validates
+From `@vitnode/api/lib/audit/actions`. Universal. Validates
 `{ action, targetType }[]` for `buildApiPlugin({ auditActions })` and throws
 when an action or target type is not a valid identifier, or an action is
 declared twice. Declaring is optional. It only adds the actions to the action

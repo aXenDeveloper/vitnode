@@ -1,0 +1,225 @@
+import { and, eq } from "drizzle-orm";
+
+import type {
+  AnyNotificationTypeDefinition,
+  NotificationTypeDefinition,
+} from "@/lib/notifications/registry";
+import type { NotificationSubject } from "@/lib/notifications/types";
+
+import { core_notification_events } from "@/database/notifications";
+import { SUBJECT_TYPE_PATTERN } from "@/lib/notifications/registry";
+import { notificationsFanoutTask } from "@/modules/notifications/tasks/notifications.task";
+
+import type { NotificationsContext, NotificationsDb } from "./shared";
+
+import { getNotificationRegistry } from "./shared";
+
+const MAX_EXPLICIT_RECIPIENTS = 100_000;
+
+/** What `c.get("notifications").publish()` takes. */
+export interface PublishNotificationArgs<TData> {
+  /**
+   * Who caused it. Defaults to the request's admin or signed-in user; `null`
+   * for none. The actor is dropped from `recipients` unless `allowSelf`.
+   */
+  actorId?: null | number;
+  allowSelf?: boolean;
+  /** Validated against the type's `schema`. */
+  data: NoInfer<TData>;
+  /**
+   * One key per real-world event, 1-255 characters. Publishing the same type
+   * with the same key again returns `duplicate: true` instead of notifying
+   * twice.
+   */
+  idempotencyKey: string;
+  /**
+   * Candidate user ids, at most 100000. Core still drops deleted users,
+   * members who turned the type off and those `access` rejects.
+   */
+  recipients?: readonly number[];
+  /** What the notification is about; used by `remove()`, grouping and `subjectType`. */
+  subject?: NotificationSubject;
+  /** A transaction to publish in, so the event only exists if it commits. */
+  tx?: NotificationsDb;
+  /** The registered definition (preferred, for typed `data`) or its id. */
+  type: NotificationTypeDefinition<TData> | string;
+}
+
+export interface PublishNotificationResult {
+  duplicate: boolean;
+  eventId: number;
+}
+
+/** Thrown by `publish()` for invalid input; see {@link PublishNotificationArgs}. */
+export class NotificationPublishError extends Error {
+  constructor(message: string) {
+    super(`[Notifications] ${message}`);
+    this.name = "NotificationPublishError";
+  }
+}
+
+const normalizeSubject = (
+  subject: NotificationSubject,
+): { id: string; type: string } => {
+  const id = String(subject.id);
+  if (!SUBJECT_TYPE_PATTERN.test(subject.type) || subject.type.length > 100) {
+    throw new NotificationPublishError(
+      `Invalid subject type "${subject.type}".`,
+    );
+  }
+  if (id.length === 0 || id.length > 100) {
+    throw new NotificationPublishError(`Invalid subject id "${id}".`);
+  }
+
+  return { id, type: subject.type };
+};
+
+const resolveGroupKey = (
+  definition: AnyNotificationTypeDefinition,
+  data: unknown,
+  subject: null | { id: string; type: string },
+): null | string => {
+  if (!definition.grouping) return null;
+  const key = definition.grouping.key
+    ? definition.grouping.key({ data, subject })
+    : subject
+      ? `${subject.type}:${subject.id}`
+      : null;
+
+  return key ? key.slice(0, 200) : null;
+};
+
+export const publishNotification = async <TData>(
+  c: NotificationsContext,
+  args: PublishNotificationArgs<TData>,
+  onQueued: (queueId: number) => void,
+): Promise<PublishNotificationResult> => {
+  const typeId = typeof args.type === "string" ? args.type : args.type.id;
+  const registered = getNotificationRegistry(c).get(typeId);
+  if (!registered) {
+    throw new NotificationPublishError(
+      `Notification type "${typeId}" is not registered. Add it to a plugin's "notificationTypes".`,
+    );
+  }
+  if (typeof args.type !== "string" && args.type !== registered.definition) {
+    throw new NotificationPublishError(
+      `Notification type "${typeId}" was published with a definition other than the registered one.`,
+    );
+  }
+
+  const { definition, pluginId } = registered;
+  const parsed = definition.schema.safeParse(args.data);
+  if (!parsed.success) {
+    throw new NotificationPublishError(
+      `Invalid data for "${typeId}": ${parsed.error.issues
+        .map(issue => `${issue.path.join(".") || "(root)"} ${issue.message}`)
+        .join("; ")}`,
+    );
+  }
+
+  const idempotencyKey = args.idempotencyKey.trim();
+  if (idempotencyKey.length === 0 || idempotencyKey.length > 255) {
+    throw new NotificationPublishError(
+      "idempotencyKey must be 1-255 characters.",
+    );
+  }
+
+  const subject = args.subject ? normalizeSubject(args.subject) : null;
+  if (
+    subject &&
+    definition.subjectType &&
+    subject.type !== definition.subjectType
+  ) {
+    throw new NotificationPublishError(
+      `"${typeId}" is about "${definition.subjectType}" subjects, not "${subject.type}".`,
+    );
+  }
+
+  const actorId =
+    args.actorId === undefined
+      ? (c.get("admin")?.user.id ?? c.get("user")?.id ?? null)
+      : args.actorId;
+
+  const recipientIds = [
+    ...new Set(
+      (args.recipients ?? []).filter(
+        id =>
+          Number.isInteger(id) &&
+          id > 0 &&
+          (args.allowSelf === true || id !== actorId),
+      ),
+    ),
+  ].sort((a, b) => a - b);
+
+  if (recipientIds.length > MAX_EXPLICIT_RECIPIENTS) {
+    throw new NotificationPublishError(
+      `At most ${MAX_EXPLICIT_RECIPIENTS} recipients per event.`,
+    );
+  }
+
+  const db = args.tx ?? c.get("db");
+  const hasAudience = recipientIds.length > 0;
+  const now = new Date();
+
+  const [created] = await db
+    .insert(core_notification_events)
+    .values({
+      actorId,
+      allowSelf: args.allowSelf ?? false,
+      completedAt: hasAudience ? null : now,
+      createdAt: now,
+      data: parsed.data as Record<string, unknown>,
+      groupKey: resolveGroupKey(definition, parsed.data, subject),
+      idempotencyKey,
+      pluginId,
+      recipientIds,
+      schemaVersion: definition.version,
+      status: hasAudience ? "pending" : "completed",
+      subjectId: subject?.id ?? null,
+      subjectType: subject?.type ?? null,
+      type: typeId,
+    })
+    .onConflictDoNothing({
+      target: [
+        core_notification_events.pluginId,
+        core_notification_events.type,
+        core_notification_events.idempotencyKey,
+      ],
+    })
+    .returning({ id: core_notification_events.id });
+
+  if (!created) {
+    const [existing] = await db
+      .select({ id: core_notification_events.id })
+      .from(core_notification_events)
+      .where(
+        and(
+          eq(core_notification_events.pluginId, pluginId),
+          eq(core_notification_events.type, typeId),
+          eq(core_notification_events.idempotencyKey, idempotencyKey),
+        ),
+      )
+      .limit(1);
+
+    if (!existing) {
+      throw new NotificationPublishError(
+        `Event "${typeId}" with key "${idempotencyKey}" is being published concurrently.`,
+      );
+    }
+
+    return { duplicate: true, eventId: existing.id };
+  }
+
+  if (hasAudience) {
+    const queued = await c
+      .get("queue")
+      .dispatch(
+        notificationsFanoutTask,
+        { eventId: created.id },
+        { priority: 10, tx: db },
+      );
+    if (queued.id !== null) onQueued(queued.id);
+  }
+
+  return { duplicate: false, eventId: created.id };
+};

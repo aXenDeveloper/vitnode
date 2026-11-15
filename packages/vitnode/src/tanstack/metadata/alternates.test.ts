@@ -1,6 +1,5 @@
+import { createLocaleRouting } from "@vitnode/api/lib/i18n/locale-routing";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import { createLocaleRouting } from "@/lib/i18n/locale-routing";
 
 import { configureIntl, resetIntlRuntime } from "../i18n/runtime";
 import { declaredLocaleAlternates, localeAlternateLinks } from "./alternates";

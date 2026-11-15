@@ -17,7 +17,7 @@ This guide continues the `forum.topic_reply` type from [Publish notifications](/
 Add `access` to the type. It receives a batch of candidate user ids and returns the ones that may see the notification. `forum_topic_members` stands for your plugin's own membership table, with a `topicId` and a `userId` column:
 
 ```ts title="plugins/acme-forum/src/api/lib/notifications.ts"
-import { buildNotificationType } from '@vitnode/core/api/lib/notifications/registry'
+import { buildNotificationType } from '@vitnode/api/lib/notifications/registry'
 import { and, eq, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 

@@ -1,5 +1,5 @@
-import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
-import { bindContentPlugin } from "@vitnode/core/content/server";
+import { bindContentPlugin } from "@vitnode/api/content/server";
+import { bindApiPlugin } from "@vitnode/api/lib/bind-api-plugin";
 
 import { manifest } from "@/manifest.gen";
 

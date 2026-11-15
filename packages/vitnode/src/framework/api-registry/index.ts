@@ -5,5 +5,5 @@ export {
   generatePluginApiRegistrySource,
   PLUGIN_API_CONFIG_SPECIFIER,
   PLUGIN_API_REGISTRY_PATH,
-} from "./generate.js";
-export type { ResolvedApiPluginModule } from "./types.js";
+} from "@vitnode/api/framework/api-registry/generate";
+export type { ResolvedApiPluginModule } from "@vitnode/api/framework/api-registry/types";

@@ -11,11 +11,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { UpdateManifest } from "../../packages/vitnode/src/lib/updates/manifest.ts";
+import type { UpdateManifest } from "../../packages/api/src/lib/updates/manifest.ts";
 import type {
   GitHubReleaseMetadata,
   PublishedPackage,
-} from "../../packages/vitnode/scripts/update-manifest/merge.ts";
+} from "../../packages/api/scripts/update-manifest/merge.ts";
 
 import {
   applySecurityUpdates,
@@ -25,7 +25,7 @@ import {
   readPublishedManifest,
   requiresCoreFrom,
   serializeUpdateManifest,
-} from "../../packages/vitnode/scripts/update-manifest/merge.ts";
+} from "../../packages/api/scripts/update-manifest/merge.ts";
 
 /**
  * Publishes VitNode's official update manifest to the `update-manifest` branch,
@@ -43,7 +43,10 @@ const BRANCH = process.env.UPDATE_MANIFEST_BRANCH ?? "update-manifest";
 const FILE = "updates.json";
 const SECURITY_UPDATES_FILE = join("security", "security-updates.json");
 const MAX_PUSH_ATTEMPTS = 5;
+/** The built-in plugin's logical id, which installs check updates against. */
 const CORE_ID = "@vitnode/core";
+/** The npm package that ships the built-in plugin's manifest and server. */
+const API_PACKAGE = "@vitnode/api";
 
 const workspace = process.env.GITHUB_WORKSPACE ?? process.cwd();
 
@@ -85,15 +88,25 @@ interface WorkspacePackage {
 
 const MANIFEST_FILES = ["src/manifest.gen.ts", "src/manifest.ts"];
 
-const updatesUrlOf = async (dir: string): Promise<null | string> => {
+/**
+ * The plugin manifest a package ships: its logical id and update feed. The id
+ * is usually the package name, but not always - `@vitnode/api` ships the
+ * built-in plugin, whose id stays `@vitnode/core`.
+ */
+const manifestOf = async (
+  dir: string,
+): Promise<null | { id: null | string; updatesUrl: null | string }> => {
   const file = MANIFEST_FILES.map(name => join(dir, name)).find(existsSync);
   if (file === undefined) return null;
 
   const { manifest } = (await import(pathToFileURL(file).href)) as {
-    manifest?: { updates?: null | { url?: string } };
+    manifest?: { id?: string; updates?: null | { url?: string } };
   };
 
-  return manifest?.updates?.url ?? null;
+  return {
+    id: manifest?.id ?? null,
+    updatesUrl: manifest?.updates?.url ?? null,
+  };
 };
 
 const readWorkspacePackages = (): Map<string, WorkspacePackage> => {
@@ -173,16 +186,24 @@ const publishedPackages = async (
     const pkg = workspacePackages.get(name);
     if (!pkg) throw new Error(`${name} is not a package in this workspace.`);
 
-    const updatesUrl = await updatesUrlOf(pkg.dir);
-    if (updatesUrl?.toLowerCase() !== feedUrl.toLowerCase()) continue;
+    const manifest = await manifestOf(pkg.dir);
+    if (manifest?.updatesUrl?.toLowerCase() !== feedUrl.toLowerCase()) continue;
     if (!pkg.version) throw new Error(`${name} has no version.`);
 
-    const requiresCore =
-      name === CORE_ID || coreVersion === null
-        ? undefined
-        : requiresCoreFrom(pkg.dependencies[CORE_ID], coreVersion);
+    const id = manifest.id ?? name;
+    if (packages.some(published => published.id === id)) {
+      throw new Error(`Two published packages declare the plugin id ${id}.`);
+    }
 
-    packages.push({ id: name, requiresCore, version: pkg.version });
+    const requiresCore =
+      id === CORE_ID || coreVersion === null
+        ? undefined
+        : requiresCoreFrom(
+            pkg.dependencies[CORE_ID] ?? pkg.dependencies[API_PACKAGE],
+            coreVersion,
+          );
+
+    packages.push({ id, requiresCore, version: pkg.version });
   }
 
   return packages;

@@ -1,6 +1,9 @@
-import type { LocaleConfig, VitNodeI18nConfig } from "@/lib/i18n/types";
+import type {
+  LocaleConfig,
+  VitNodeI18nConfig,
+} from "@vitnode/api/lib/i18n/types";
 
-import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
+import { localeRoutingFromConfig } from "@vitnode/api/lib/i18n/locale-routing";
 
 export interface PrerenderRoutesOptions {
   /** The app's `i18n` config, usually `vitNodeConfig.i18n`. */

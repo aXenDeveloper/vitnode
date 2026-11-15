@@ -1,14 +1,19 @@
-import type { LocaleRouting } from "@/lib/i18n/locale-routing";
+import type { LocaleRouting } from "@vitnode/api/lib/i18n/locale-routing";
 import type {
   PageCachePolicy,
   PageCachePolicySource,
-} from "@/page-cache/policy";
-import type { ResolvedPageCacheRoute } from "@/page-cache/resolve";
-import type { PluginRoute, PluginRouteSegment } from "@/routing/types";
+} from "@vitnode/api/page-cache/policy";
+import type {
+  PluginRoute,
+  PluginRouteSegment,
+} from "@vitnode/api/routing/types";
 
-import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
+import { localeRoutingFromConfig } from "@vitnode/api/lib/i18n/locale-routing";
+import { formatRoutePath, routeMatchKey } from "@vitnode/api/routing/path";
+
+import type { ResolvedPageCacheRoute } from "@/page-cache/resolve";
+
 import { compareRouteSpecificity, routeSegmentsMatch } from "@/routing/match";
-import { formatRoutePath, routeMatchKey } from "@/routing/path";
 
 import type { HostRoutePath, LocaleRoutePathsConfig } from "../plugin-routes";
 

@@ -1,10 +1,10 @@
+import type { routeMiddlewareSchema } from "@vitnode/api/modules/middleware/middleware.schema";
 import type { z } from "zod";
 
 import { Link } from "@tanstack/react-router";
+import { removeSpecialCharacters } from "@vitnode/api/lib/special-characters";
 import { MailIcon, UserIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
-
-import type { routeMiddlewareSchema } from "@/api/modules/middleware/middleware.schema";
 
 import {
   AutoForm,
@@ -13,7 +13,6 @@ import {
 import { AutoFormCheckbox } from "@/components/form/fields/checkbox";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { InputGroupAddon } from "@/components/ui/input-group";
-import { removeSpecialCharacters } from "@/lib/special-characters";
 
 import { PasswordInput } from "../components/password-input";
 import { type SignUpSubmit, useSignUpForm } from "./use-sign-up-form";

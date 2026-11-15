@@ -1,6 +1,6 @@
-import { useTranslations } from "use-intl";
+import type { WarningStatus } from "@vitnode/api/lib/moderation/warnings";
 
-import type { WarningStatus } from "@/lib/moderation/warnings";
+import { useTranslations } from "use-intl";
 
 import { Badge } from "@/components/ui/badge";
 

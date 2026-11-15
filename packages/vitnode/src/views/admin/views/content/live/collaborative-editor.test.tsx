@@ -7,10 +7,10 @@ import type {
   ContentLiveDocRef,
   ContentLiveMember,
   ContentLiveServerMessage,
-} from "@/content/live/protocol";
-import type { RichTextDocument } from "@/content/rich-text/document";
+} from "@vitnode/api/content/live/protocol";
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
 
-import { contentLiveChannel } from "@/content/live/protocol";
+import { contentLiveChannel } from "@vitnode/api/content/live/protocol";
 import { VitNodeWebSocketProvider } from "@/ws/provider";
 
 import type { ContentLiveContextValue } from "./context";

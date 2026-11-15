@@ -1,5 +1,6 @@
 import type { ReactElement, ReactNode } from "react";
 
+import { BlockError } from "@vitnode/api/blocks/errors";
 import {
   lazy,
   Suspense,
@@ -19,7 +20,6 @@ import type {
 
 import { ContentEditContext, sameContentZoneMount } from "./edit-context";
 import { EDITOR_SHELL_TRANSITION_MS } from "./editor-shell";
-import { BlockError } from "./errors";
 
 const EditorRoot = lazy(async () => await import("../editor/root"));
 

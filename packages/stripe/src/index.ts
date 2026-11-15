@@ -1,12 +1,12 @@
 import type {
   PaymentCheckoutState,
   PaymentProviderApiPlugin,
-} from "@vitnode/core/api/lib/payments/provider";
+} from "@vitnode/api/lib/payments/provider";
 
 import {
   PaymentProviderError,
   PaymentWebhookVerificationError,
-} from "@vitnode/core/api/lib/payments/errors";
+} from "@vitnode/api/lib/payments/errors";
 import Stripe from "stripe";
 
 /**

@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 
-import type { LocaleRouting } from "@/lib/i18n/locale-routing";
+import type { LocaleRouting } from "@vitnode/api/lib/i18n/locale-routing";
 
 import { serializeLocaleCookie } from "@/lib/i18n/locale-cookie";
 import { urlLocaleToRemember } from "@/lib/i18n/remembered-locale";

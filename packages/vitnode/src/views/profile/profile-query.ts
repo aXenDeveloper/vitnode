@@ -1,9 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import type { RoleNameEntry } from "@/components/role-name";
 
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export const MAX_NAME_CODE_LENGTH = 255;

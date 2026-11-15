@@ -7,7 +7,8 @@ import {
   AUDIT_TARGET_ID_MAX_LENGTH,
   AUDIT_TARGET_TYPE_MAX_LENGTH,
   AUDIT_TARGET_TYPE_PATTERN,
-} from "@/lib/audit/const";
+} from "@vitnode/api/lib/audit/const";
+
 import { asSearchValue } from "@/lib/table-params";
 
 import type { ActivityFilters, ActivityPagination } from "./activity-query";

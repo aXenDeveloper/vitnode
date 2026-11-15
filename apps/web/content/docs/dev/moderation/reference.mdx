@@ -53,7 +53,7 @@ Declare a scoped permission with `{ permission, dependsOn?, scope: "family.id" }
 
 ## `defineModerationScope`
 
-From `@vitnode/core/api/moderation`. Register with `buildApiPlugin({ moderation: { scopes } })`.
+From `@vitnode/api/moderation`. Register with `buildApiPlugin({ moderation: { scopes } })`.
 
 | Name          | Type                                                                              | Required | Description                                       |
 | ------------- | --------------------------------------------------------------------------------- | -------- | ------------------------------------------------- |
@@ -206,7 +206,7 @@ A refused decision answers `{ error, message }`:
 | `gone`      | `409`  | The record was deleted. The submission becomes `cancelled`              |
 | `stale`     | `409`  | The record changed since the proposal, or the proposal no longer validates |
 
-Statuses are `pending`, `approved`, `rejected`, `superseded` (replaced by the author's newer proposal) and `cancelled` (the record was deleted first). The constants are `CONTENT_SUBMISSION_STATUSES`, `CONTENT_SUBMISSION_KINDS` and `CONTENT_SUBMISSION_DECISION_CODES` from `@vitnode/core/content`. Server code can decide one with `decideContentSubmission(c, { decision, id, reason?, reviewerId })` from `@vitnode/core/content/server`, which throws `ContentSubmissionDecisionError` with the same `code` and `status`.
+Statuses are `pending`, `approved`, `rejected`, `superseded` (replaced by the author's newer proposal) and `cancelled` (the record was deleted first). The constants are `CONTENT_SUBMISSION_STATUSES`, `CONTENT_SUBMISSION_KINDS` and `CONTENT_SUBMISSION_DECISION_CODES` from `@vitnode/core/content`. Server code can decide one with `decideContentSubmission(c, { decision, id, reason?, reviewerId })` from `@vitnode/api/content/server`, which throws `ContentSubmissionDecisionError` with the same `code` and `status`.
 
 ## Events
 

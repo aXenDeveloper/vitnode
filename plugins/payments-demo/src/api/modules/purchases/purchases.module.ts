@@ -1,5 +1,5 @@
-import { paymentSucceededEvent } from "@vitnode/core/api/events/payments";
-import { buildEventListener } from "@vitnode/core/api/lib/events";
+import { paymentSucceededEvent } from "@vitnode/api/events/payments";
+import { buildEventListener } from "@vitnode/api/lib/events";
 
 import { buildModule } from "@/api/builders";
 import { manifest } from "@/manifest.gen";

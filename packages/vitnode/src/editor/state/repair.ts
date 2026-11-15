@@ -1,7 +1,8 @@
+import { isBlockAreaInstance } from "@vitnode/api/blocks/area";
+
 import type { ContentNode } from "../../blocks/types";
 import type { EditorZoneState } from "./types";
 
-import { isBlockAreaInstance } from "../../blocks/area";
 import { editableBlockIssue } from "../block-shell/issue";
 import { zoneRegistry } from "./capabilities";
 

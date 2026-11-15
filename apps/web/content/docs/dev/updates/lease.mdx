@@ -4,7 +4,7 @@ description: How VitNode keeps update checks exclusive across API instances with
 icon: Lock
 ---
 
-Every update check - the daily cron job and the **Check for updates** button - runs through one function, `runLockedUpdateCheck` in `@vitnode/core`. It takes a database lease first, so only one check runs at a time across all API instances. This page explains how that lease is kept, what happens when it is lost, and why an old owner can never write after a new one took over.
+Every update check - the daily cron job and the **Check for updates** button - runs through one function, `runLockedUpdateCheck` in `@vitnode/api`. It takes a database lease first, so only one check runs at a time across all API instances. This page explains how that lease is kept, what happens when it is lost, and why an old owner can never write after a new one took over.
 
 ## The lease lifecycle
 

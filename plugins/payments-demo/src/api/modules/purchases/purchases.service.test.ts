@@ -1,7 +1,7 @@
-import type { PaymentErrorCode } from "@vitnode/core/api/lib/payments/errors";
-import type { Payment } from "@vitnode/core/api/models/payments";
+import type { PaymentErrorCode } from "@vitnode/api/lib/payments/errors";
+import type { Payment } from "@vitnode/api/models/payments";
 
-import { PaymentError } from "@vitnode/core/api/lib/payments/errors";
+import { PaymentError } from "@vitnode/api/lib/payments/errors";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PurchasesServiceDeps } from "./purchases.service";

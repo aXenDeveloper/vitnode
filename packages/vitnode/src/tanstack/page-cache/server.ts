@@ -1,34 +1,33 @@
 import "@tanstack/react-start/server-only";
+import type { LocaleConfig } from "@vitnode/api/lib/i18n/types";
+import type { PageCacheRouteTable } from "@vitnode/api/page-cache/policy";
+import type { PageCacheStore } from "@vitnode/api/page-cache/store.server";
 import type { CachedEventHandler, HTTPEvent, ResponseCacheEntry } from "ocache";
 
-import { defineCachedHandler } from "ocache";
-
-import type { LocaleConfig } from "@/lib/i18n/types";
-import type { PageCacheStore } from "@/page-cache/store.server";
-import type { VitNodeConfig } from "@/vitnode.config";
-
-import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
-import { resolvePageCacheConfig } from "@/page-cache/config";
-import { createPageCacheMatcher } from "@/page-cache/match";
-import { longestPageCacheLifetime } from "@/page-cache/policy";
-import { runPageCacheRender } from "@/page-cache/render-context.server";
+import { localeRoutingFromConfig } from "@vitnode/api/lib/i18n/locale-routing";
+import { resolvePageCacheConfig } from "@vitnode/api/page-cache/config";
+import { longestPageCacheLifetime } from "@vitnode/api/page-cache/policy";
 import {
   configurePageCacheStore,
   latestPageCacheInvalidation,
   PAGE_CACHE_CLOCK_SKEW_MS,
   pageCacheRuntime,
   pageCacheStoreFor,
-} from "@/page-cache/store.server";
+} from "@vitnode/api/page-cache/store.server";
 import {
   decodePageCacheTags,
   encodePageCacheTags,
   PAGE_CACHE_RENDER_HEADER,
   PAGE_CACHE_STATUS_HEADER,
   pageCacheRenderToken,
-} from "@/page-cache/tags";
-import { isWorkerdRuntime } from "@/ws/runtime";
+} from "@vitnode/api/page-cache/tags";
+import { isWorkerdRuntime } from "@vitnode/api/ws/runtime";
+import { defineCachedHandler } from "ocache";
 
-import type { PageCacheRouteTable } from "../../page-cache/policy";
+import type { VitNodeConfig } from "@/vitnode.config";
+
+import { createPageCacheMatcher } from "@/page-cache/match";
+import { runPageCacheRender } from "@/page-cache/render-context.server";
 
 import { handleLocaleRequest } from "../i18n/request";
 import { DOCUMENT_CACHE_CONTROL } from "../start/document-headers";
@@ -522,4 +521,4 @@ export {
   invalidatePageCacheTags,
   type PageCacheInvalidationMode,
   type PageCacheInvalidationResult,
-} from "@/page-cache/store.server";
+} from "@vitnode/api/page-cache/store.server";

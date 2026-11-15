@@ -1,3 +1,5 @@
+import { BLOCK_WILDCARD } from "@vitnode/api/blocks/const";
+
 import type { BlockRegistry } from "../../blocks/types";
 import type {
   EditorContainerRef,
@@ -6,7 +8,6 @@ import type {
   VisualEditorState,
 } from "./types";
 
-import { BLOCK_WILDCARD } from "../../blocks/const";
 import { getDefaultBlockRegistry, isBlockAllowed } from "../../blocks/registry";
 
 export const zoneRegistry = (

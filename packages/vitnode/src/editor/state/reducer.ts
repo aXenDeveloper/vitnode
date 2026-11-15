@@ -1,3 +1,10 @@
+import {
+  contentNodeBlocks,
+  isBlockAreaInstance,
+} from "@vitnode/api/blocks/area";
+import { AREA_CHILDREN_DEFAULT_MAX } from "@vitnode/api/blocks/const";
+import { createBlockInstanceId } from "@vitnode/api/blocks/instance";
+
 import type {
   AnyBlockInstance,
   BlockAllowedSpec,
@@ -16,9 +23,6 @@ import type {
   VisualEditorState,
 } from "./types";
 
-import { contentNodeBlocks, isBlockAreaInstance } from "../../blocks/area";
-import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
-import { createBlockInstanceId } from "../../blocks/instance";
 import {
   areaHasRoom,
   fitsRootNodeCap,

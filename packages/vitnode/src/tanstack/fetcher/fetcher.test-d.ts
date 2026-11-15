@@ -1,12 +1,15 @@
+import type { ApiPluginContract } from "@vitnode/api/lib/fetcher/contract";
+
 import { z } from "@hono/zod-openapi";
+import {
+  buildContentPublicModule,
+  createContentModel,
+} from "@vitnode/api/content/server";
+import { buildModule } from "@vitnode/api/lib/module";
+import { buildApiPlugin } from "@vitnode/api/lib/plugin";
+import { buildRoute } from "@vitnode/api/lib/route";
 import { describe, expectTypeOf, it } from "vitest";
 
-import type { ApiPluginContract } from "@/lib/fetcher/contract";
-
-import { buildModule } from "@/api/lib/module";
-import { buildApiPlugin } from "@/api/lib/plugin";
-import { buildRoute } from "@/api/lib/route";
-import { buildContentPublicModule, createContentModel } from "@/content/server";
 import {
   testPostContentType,
   testTopicContentType,

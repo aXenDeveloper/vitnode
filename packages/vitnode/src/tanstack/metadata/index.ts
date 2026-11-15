@@ -1,6 +1,7 @@
-import type { VitNodeMetadata } from "@/lib/metadata";
+import type { VitNodeMetadata } from "@vitnode/api/lib/metadata";
 
-import { formatPageTitle } from "@/lib/metadata";
+import { formatPageTitle } from "@vitnode/api/lib/metadata";
+
 import { getVitNodeConfig } from "@/vitnode.config";
 
 import type { LocaleAlternates, RouteHeadLink } from "./alternates";

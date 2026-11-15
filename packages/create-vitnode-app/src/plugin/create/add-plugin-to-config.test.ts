@@ -29,8 +29,8 @@ export const vitNodeConfig = buildConfig({
 });
 `;
 
-const API_CONFIG = `import { buildApiConfig } from "@vitnode/core/vitnode.config";
-import { coreRelations } from "@vitnode/core/database/relations";
+const API_CONFIG = `import { buildApiConfig } from "@vitnode/api/vitnode.config";
+import { coreRelations } from "@vitnode/api/database/relations";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 export const vitNodeApiConfig = buildApiConfig({

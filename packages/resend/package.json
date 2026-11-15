@@ -32,8 +32,8 @@
     "resend": "^6.37.0"
   },
   "devDependencies": {
+    "@vitnode/api": "workspace:*",
     "@vitnode/config": "workspace:*",
-    "@vitnode/core": "workspace:*",
     "oxlint": "^1.92.0",
     "oxlint-tsgolint": "^7.0.2006",
     "tsdown": "^0.23.7",

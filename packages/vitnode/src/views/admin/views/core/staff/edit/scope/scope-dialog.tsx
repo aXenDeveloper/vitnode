@@ -1,3 +1,5 @@
+import type { PermissionStaffScope } from "@vitnode/api/lib/permission-staff";
+
 import {
   keepPreviousData,
   useInfiniteQuery,
@@ -8,7 +10,6 @@ import { SearchIcon, TriangleAlertIcon, XIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { PermissionStaffScope } from "@/api/lib/permission-staff";
 import type { StaffScopeFamily } from "@/views/admin/views/core/staff/staff-model";
 
 import { Button } from "@/components/ui/button";

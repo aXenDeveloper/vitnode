@@ -1,13 +1,14 @@
+import type {
+  ContentFileDescriptor,
+  ContentFileFieldValue,
+} from "@vitnode/api/content/files";
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
-import type {
-  ContentFileDescriptor,
-  ContentFileFieldValue,
-} from "@/content/files";
-import type { ContentId } from "@/content/ids";
 
 import { AiFieldAssist } from "@/components/ai/ai-field-assist";
 import { AutoFormCombobox } from "@/components/form/fields/combobox";

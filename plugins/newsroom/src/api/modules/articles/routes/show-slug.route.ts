@@ -1,6 +1,6 @@
 import { z } from "@hono/zod-openapi";
-import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
-import { contentPublicListTag } from "@vitnode/core/content";
+import { contentPublicListTag } from "@vitnode/api/content";
+import { setPageCacheTags } from "@vitnode/api/lib/page-cache";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";

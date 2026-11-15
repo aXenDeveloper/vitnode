@@ -1,10 +1,15 @@
+import type {
+  PluginRoute,
+  PluginRouteSegment,
+} from "@vitnode/api/routing/types";
+
+import { localeRoutingFromConfig } from "@vitnode/api/lib/i18n/locale-routing";
+import { formatRoutePath } from "@vitnode/api/routing/path";
+
 import type { RoutePathTarget } from "../../lib/i18n/route-paths-validation.js";
-import type { PluginRoute, PluginRouteSegment } from "../../routing/types.js";
 import type { HostRoutePath } from "./host-routes.js";
 
-import { localeRoutingFromConfig } from "../../lib/i18n/locale-routing.js";
 import { assertRoutePathsMatchRoutes } from "../../lib/i18n/route-paths-validation.js";
-import { formatRoutePath } from "../../routing/path.js";
 
 export type LocaleRoutePathsConfig = Parameters<
   typeof localeRoutingFromConfig

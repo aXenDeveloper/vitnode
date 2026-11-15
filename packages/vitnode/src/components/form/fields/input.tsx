@@ -1,5 +1,6 @@
+import { getMultiLangConstraints } from "@vitnode/api/lib/helpers/multi-lang";
+
 import { InputGroup, InputGroupInput } from "@/components/ui/input-group";
-import { getMultiLangConstraints } from "@/lib/helpers/multi-lang";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 

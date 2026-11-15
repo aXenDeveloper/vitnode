@@ -72,7 +72,7 @@ A category is a small content type of its own, managed in the AdminCP. `titleFie
 Create `src/database/categories.ts`. This is the complete file:
 
 ```ts title="plugins/newsroom/src/database/categories.ts"
-import { createContentModel } from "@vitnode/core/content/server";
+import { createContentModel } from "@vitnode/api/content/server";
 
 import { categoryContentType } from "@/content/category";
 
@@ -169,7 +169,7 @@ Then show the category in the AdminCP list by adding `"category"` to `admin.list
 Edit `src/database/articles.ts`. This is the complete file:
 
 ```ts title="plugins/newsroom/src/database/articles.ts"
-import { createContentModel } from "@vitnode/core/content/server";
+import { createContentModel } from "@vitnode/api/content/server";
 
 import { articleContentType } from "@/content/article";
 

@@ -52,7 +52,7 @@ The nightly cleanup removes, in batches:
 How much work each run does and how long notifications are kept are deployment settings, so they live in your API config, not in the AdminCP. Add a `notifications` block to `buildApiConfig`:
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   // other options unchanged

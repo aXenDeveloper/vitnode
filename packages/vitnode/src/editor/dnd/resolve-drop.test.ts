@@ -1,3 +1,8 @@
+import {
+  AREA_CHILDREN_DEFAULT_MAX,
+  BLOCK_WILDCARD,
+  CONTENT_BLOCKS_ABSOLUTE_MAX,
+} from "@vitnode/api/blocks/const";
 import { describe, expect, it } from "vitest";
 
 import type { BlockAllowedSpec } from "../../blocks/types";
@@ -9,11 +14,6 @@ import type {
   TargetCapabilities,
 } from "./resolve-drop";
 
-import {
-  AREA_CHILDREN_DEFAULT_MAX,
-  BLOCK_WILDCARD,
-  CONTENT_BLOCKS_ABSOLUTE_MAX,
-} from "../../blocks/const";
 import { isBlockAllowed } from "../../blocks/registry";
 import {
   AREA_DROPPABLE_PREFIX,

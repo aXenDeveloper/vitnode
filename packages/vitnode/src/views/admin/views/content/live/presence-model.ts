@@ -1,6 +1,6 @@
-import type { ContentLiveMember } from "@/content/live/protocol";
+import type { ContentLiveMember } from "@vitnode/api/content/live/protocol";
 
-import { colorLuminance } from "@/lib/colors";
+import { colorLuminance } from "@vitnode/api/lib/colors";
 
 const CONTENT_LIVE_FALLBACK_COLOR = "71717a";
 

@@ -1,3 +1,4 @@
+import { isContentPublished } from "@vitnode/api/content/publication";
 import { cn } from "cn";
 import { EyeOffIcon, SendIcon } from "lucide-react";
 import React from "react";
@@ -5,7 +6,6 @@ import { useFormatter, useTranslations } from "use-intl";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { isContentPublished } from "@/content/publication";
 
 import { useContentForm } from "./context";
 import { ContentFormButtonSkeleton } from "./skeleton";

@@ -3,7 +3,7 @@ import type { PgColumn } from "drizzle-orm/pg-core";
 import {
   publicationColumns,
   publishedCondition,
-} from "@vitnode/core/content/server";
+} from "@vitnode/api/content/server";
 
 import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";

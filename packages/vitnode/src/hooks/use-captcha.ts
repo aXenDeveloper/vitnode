@@ -1,3 +1,4 @@
+import type { routeMiddlewareSchema } from "@vitnode/api/modules/middleware/middleware.schema";
 /* oxlint-disable react-you-might-not-need-an-effect/no-external-store-subscription */
 /* oxlint-disable react/set-state-in-effect */
 /* oxlint-disable react-you-might-not-need-an-effect/no-adjust-state-on-prop-change */
@@ -8,8 +9,6 @@ import { toast } from "sonner";
 import { useLocale, useTranslations } from "use-intl";
 
 import { useTheme } from "@/components/theme-provider";
-
-import type { routeMiddlewareSchema } from "../api/modules/middleware/middleware.schema";
 
 declare global {
   interface Window {

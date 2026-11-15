@@ -1,9 +1,8 @@
+import { colorToHslString } from "@vitnode/api/lib/colors";
 import { cn } from "cn";
 import { XIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
-
-import { colorToHslString } from "@/lib/colors";
 
 import { Button } from "./button";
 import { ColorPresetPicker } from "./color-preset-picker";

@@ -1,4 +1,4 @@
-import { manifest } from "@/manifest";
+import { manifest } from "@vitnode/api/manifest";
 import "@tanstack/react-start/server-only";
 
 import { fetcher } from "@/tanstack/fetcher/server";

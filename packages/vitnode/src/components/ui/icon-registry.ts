@@ -1,11 +1,10 @@
 import type { LucideIconData } from "lucide-react";
 
-import React from "react";
-
 import {
   componentNameToIconName,
   iconNameToComponentName,
-} from "@/lib/emoji-icon";
+} from "@vitnode/api/lib/emoji-icon";
+import React from "react";
 
 export type LucideIconSnapshot = Record<string, LucideIconData | null>;
 

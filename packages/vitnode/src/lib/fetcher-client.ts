@@ -1,3 +1,5 @@
+import { CAPTCHA_TOKEN_HEADER } from "@vitnode/api/lib/fetcher/request-context";
+
 import type { RawApiFetchArgs } from "./fetcher/raw";
 import type {
   FetcherCall,
@@ -9,10 +11,7 @@ import type {
 import { coreFetcher } from "./fetcher/core";
 import { isRateLimited, notifyRateLimited } from "./fetcher/rate-limit";
 import { rawApiFetch } from "./fetcher/raw";
-import { CAPTCHA_TOKEN_HEADER } from "./fetcher/request-context";
 
-export type { ApiEndpoint, ApiPluginContract } from "./fetcher/contract";
-export type { ApiPluginRegistry } from "./fetcher/registry";
 export type {
   AllEndpoints,
   ApiRequest,
@@ -23,6 +22,11 @@ export type {
   RegisteredPluginId,
   ResponseFor,
 } from "./fetcher/types";
+export type {
+  ApiEndpoint,
+  ApiPluginContract,
+} from "@vitnode/api/lib/fetcher/contract";
+export type { ApiPluginRegistry } from "@vitnode/api/lib/fetcher/registry";
 
 /** What a browser call accepts besides the route and `args`. */
 export type FetcherClientOptions = Omit<

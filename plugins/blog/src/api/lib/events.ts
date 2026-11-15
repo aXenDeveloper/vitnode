@@ -1,8 +1,8 @@
-import type { EnvVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+import type { EnvVitNode } from "@vitnode/api/middlewares/global.middleware";
 import type { Context } from "hono";
 
-import { buildEventListener } from "@vitnode/core/api/lib/events";
-import { contentEvent } from "@vitnode/core/content";
+import { contentEvent } from "@vitnode/api/content";
+import { buildEventListener } from "@vitnode/api/lib/events";
 
 import {
   blogCategoryCreatedEvent,

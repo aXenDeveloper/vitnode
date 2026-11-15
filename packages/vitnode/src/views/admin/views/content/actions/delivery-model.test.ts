@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
 
-import type { AnyContentTypeDefinition } from "@/content/types";
+import { describe, expect, it } from "vitest";
 
 import {
   testDeliveredLocalizedContentType,

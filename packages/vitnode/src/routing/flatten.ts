@@ -1,22 +1,27 @@
-import type { PageCacheSetting } from "../page-cache/policy";
-import type { PluginRouteDeclaration, PluginRouteLazyComponent } from "./tree";
+import type { PageCacheSetting } from "@vitnode/api/page-cache/policy";
 import type {
   PluginRouteArea,
   PluginRouteKind,
   PluginRouteRequirement,
   PluginRouteSearchValidator,
   PluginRouteSegment,
-} from "./types";
+} from "@vitnode/api/routing/types";
 
 import {
   PageCachePolicyError,
   readPageCacheSetting,
-} from "../page-cache/policy";
+} from "@vitnode/api/page-cache/policy";
+import { parseRoutePath } from "@vitnode/api/routing/path";
+import {
+  PLUGIN_ROUTE_AREAS,
+  PLUGIN_ROUTE_REQUIREMENTS,
+} from "@vitnode/api/routing/types";
+
+import type { PluginRouteDeclaration, PluginRouteLazyComponent } from "./tree";
+
 import { PluginRouteError } from "./errors";
 import { namespaceProblem, normalizeNamespaceList } from "./namespaces";
-import { parseRoutePath } from "./path";
 import { isPluginRouteDeclaration, isPluginRouteLazyComponent } from "./tree";
-import { PLUGIN_ROUTE_AREAS, PLUGIN_ROUTE_REQUIREMENTS } from "./types";
 
 export interface FlatPluginRoute {
   area: PluginRouteArea;

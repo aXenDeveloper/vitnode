@@ -1,13 +1,13 @@
-import { z } from "zod";
+import type { ContentContainerPolicyOverrides } from "@vitnode/api/content/containers/policies";
+import type { ContentContainerErrorCode } from "@vitnode/api/content/containers/types";
 
-import type { ContentContainerPolicyOverrides } from "@/content/containers/policies";
-import type { ContentContainerErrorCode } from "@/content/containers/types";
-
-import { CONTENT_CONTAINER_ERROR_CODES } from "@/content/containers/const";
+import { CONTENT_CONTAINER_ERROR_CODES } from "@vitnode/api/content/containers/const";
 import {
   zodContentContainerPolicyOverrides,
   zodEffectiveContentContainerPolicy,
-} from "@/content/containers/policies";
+} from "@vitnode/api/content/containers/policies";
+import { z } from "zod";
+
 import { rawFetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 

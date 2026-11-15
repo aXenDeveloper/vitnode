@@ -1,11 +1,11 @@
-import type { ContentNode } from "../../blocks/types";
-import type { EditorZoneState, VisualEditorState } from "./types";
-
-import { contentNodeBlocks } from "../../blocks/area";
+import { contentNodeBlocks } from "@vitnode/api/blocks/area";
 import {
   AREA_CHILDREN_DEFAULT_MAX,
   CONTENT_BLOCKS_ABSOLUTE_MAX,
-} from "../../blocks/const";
+} from "@vitnode/api/blocks/const";
+
+import type { ContentNode } from "../../blocks/types";
+import type { EditorZoneState, VisualEditorState } from "./types";
 
 export interface ZoneCapacity {
   blocks: number;

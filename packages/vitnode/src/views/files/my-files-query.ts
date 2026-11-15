@@ -1,9 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/components/table/url-state";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import { readFirstValue, readPageSize } from "@/lib/table-params";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 /** The columns the list route will sort by. Anything else is ignored. */

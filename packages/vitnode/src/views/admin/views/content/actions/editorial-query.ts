@@ -1,10 +1,10 @@
-import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-
-import type { ContentId } from "@/content/ids";
+import type { ContentId } from "@vitnode/api/content/ids";
 import type {
   ContentRevisionDetail,
   ContentRevisionMeta,
-} from "@/content/revisions";
+} from "@vitnode/api/content/revisions";
+
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 
 import type {
   ContentDeliveryPanelResult,

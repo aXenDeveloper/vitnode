@@ -1,11 +1,15 @@
-import type { PageCachePolicy, PageCacheRouteTable } from "./policy";
+import type {
+  PageCachePolicy,
+  PageCacheRouteTable,
+} from "@vitnode/api/page-cache/policy";
+
+import { parseRoutePath } from "@vitnode/api/routing/path";
 
 import {
   compareRouteSpecificity,
   pathnameParts,
   routeSegmentsMatch,
 } from "../routing/match";
-import { parseRoutePath } from "../routing/path";
 
 export interface PageCacheRouteMatch {
   path: string;

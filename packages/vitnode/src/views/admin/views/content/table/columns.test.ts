@@ -1,11 +1,12 @@
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
+
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
 import type { ContentColumnSpec } from "@/content/admin/spec";
-import type { AnyContentTypeDefinition } from "@/content/types";
 
 import { buildContentColumnSpec } from "@/content/admin/spec";
-import { defineContentType } from "@/content/define";
-import { field } from "@/content/fields";
 
 import type { ContentRowData } from "./cells";
 

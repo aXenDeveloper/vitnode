@@ -1,4 +1,4 @@
-import type { NotificationEmailMode } from "@/lib/notifications/types";
+import type { NotificationEmailMode } from "@vitnode/api/lib/notifications/types";
 
 import type { NotificationTypePolicyPatch } from "./notifications-mutations";
 import type { AdminNotificationType } from "./notifications-query";

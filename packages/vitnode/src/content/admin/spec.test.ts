@@ -1,3 +1,6 @@
+import { humanizeFieldName } from "@vitnode/api/content/admin/labels";
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -10,9 +13,6 @@ import {
 
 import type { ContentSectionLabeller } from "./spec";
 
-import { defineContentType } from "../define";
-import { field } from "../fields";
-import { humanizeFieldName } from "./labels";
 import {
   buildContentColumnSpec,
   buildContentFormSpec,

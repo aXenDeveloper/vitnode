@@ -17,7 +17,7 @@ you own at all. R2 is S3-compatible, so the same adapter covers both: you add an
 
 ```ts title="src/vitnode.api.config.ts"
 import { S3StorageAdapter } from '@vitnode/s3' // [!code ++]
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   storage: {
@@ -133,7 +133,7 @@ For AWS S3, the four values above are all it needs:
 
 ```ts title="src/vitnode.api.config.ts"
 import { S3StorageAdapter } from '@vitnode/s3' // [!code ++]
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   storage: {

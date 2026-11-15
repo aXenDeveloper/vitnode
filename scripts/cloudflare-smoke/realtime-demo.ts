@@ -5,9 +5,9 @@ import type { WSEvents } from "hono/ws";
 import {
   assertStaffPermission,
   isStaff,
-} from "@vitnode/core/api/lib/check-staff-permission";
-import { realtime, wsRegistry } from "@vitnode/core/ws/registry";
-import { createWebSocketChannel } from "@vitnode/core/ws/types";
+} from "@vitnode/api/lib/check-staff-permission";
+import { realtime, wsRegistry } from "@vitnode/api/ws/registry";
+import { createWebSocketChannel } from "@vitnode/api/ws/types";
 import { z } from "zod";
 
 /**

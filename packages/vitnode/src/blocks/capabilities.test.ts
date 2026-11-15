@@ -1,10 +1,13 @@
+import {
+  BLOCK_FIELD_KINDS,
+  blockFieldKindRefusal,
+} from "@vitnode/api/blocks/capabilities";
+import { BlockError } from "@vitnode/api/blocks/errors";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
-import { field } from "../content/fields";
 import { blocks as coreBlocks } from "./built-in";
-import { BLOCK_FIELD_KINDS, blockFieldKindRefusal } from "./capabilities";
 import { defineBlock } from "./define";
-import { BlockError } from "./errors";
 
 const Noop = () => null;
 

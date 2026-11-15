@@ -1,9 +1,9 @@
+import type { PluginRoute } from "@vitnode/api/routing/types";
+
+import { parseRoutePath } from "@vitnode/api/routing/path";
 import { describe, expect, it } from "vitest";
 
-import type { PluginRoute } from "@/routing/types";
-
 import { resolvePageCacheRoutes } from "@/page-cache/resolve";
-import { parseRoutePath } from "@/routing/path";
 
 import { buildRouteReport } from "./route-report";
 

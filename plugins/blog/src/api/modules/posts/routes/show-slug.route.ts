@@ -1,10 +1,10 @@
 import { z } from "@hono/zod-openapi";
-import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
 import {
   CONTENT_LOCALE_MAX_LENGTH,
   contentPublicListTag,
-} from "@vitnode/core/content";
-import { createContentAccess } from "@vitnode/core/content/server";
+} from "@vitnode/api/content";
+import { createContentAccess } from "@vitnode/api/content/server";
+import { setPageCacheTags } from "@vitnode/api/lib/page-cache";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";

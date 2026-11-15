@@ -1,11 +1,11 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
+import { contentIdKey } from "@vitnode/api/content/ids";
 import React from "react";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentId } from "@/content/ids";
 import type { ContentFormLayout } from "@/lib/plugin";
-
-import { contentIdKey } from "@/content/ids";
 
 import type { TranslationRow } from "../content-mutation";
 import type { ContentFormHeaderValue } from "../form/context";

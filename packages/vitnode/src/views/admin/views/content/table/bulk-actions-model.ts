@@ -1,7 +1,7 @@
-import type { ContentId } from "@/content/ids";
+import type { ContentId } from "@vitnode/api/content/ids";
 
-import { isContentPublished } from "@/content/publication";
-import { isContentHidden } from "@/content/visibility";
+import { isContentPublished } from "@vitnode/api/content/publication";
+import { isContentHidden } from "@vitnode/api/content/visibility";
 
 import type { ContentRowMutationResult } from "./list-mutations";
 

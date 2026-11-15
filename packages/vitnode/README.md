@@ -1,6 +1,6 @@
 # (VitNode) Core
 
-This package provides the core functionality for VitNode project.
+The VitNode frontend: React components, the AdminCP, TanStack Start integration and the Vite plugin. The server and the `vitnode` CLI ship in [`@vitnode/api`](https://www.npmjs.com/package/@vitnode/api), which this package depends on.
 
 <p align="center">
   <br>

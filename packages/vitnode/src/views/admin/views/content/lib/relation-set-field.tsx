@@ -1,12 +1,13 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
+import { contentIdKey } from "@vitnode/api/content/ids";
 import { useLocale, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
-import type { ContentId } from "@/content/ids";
 
 import { AutoFormCombobox } from "@/components/form/fields/combobox";
 import { contentOptionValueToId } from "@/content/admin/spec";
-import { contentIdKey } from "@/content/ids";
 
 import type { ContentOption, ContentOptionsLoader } from "./field-component";
 

@@ -1,19 +1,19 @@
+import type { ContentLabelTranslator } from "@vitnode/api/content/admin/labels";
+import type { AuditArea } from "@vitnode/api/lib/audit/const";
+
 import { Link } from "@tanstack/react-router";
-import { cn } from "cn";
-import React from "react";
-import { useTranslations } from "use-intl";
-
-import type { ContentLabelTranslator } from "@/content/admin/labels";
-import type { AuditArea } from "@/lib/audit/const";
-
-import { Badge } from "@/components/ui/badge";
-import { UserFormat } from "@/components/user-format";
 import {
   contentI18nKeys,
   contentNouns,
   humanizeFieldName,
-} from "@/content/admin/labels";
-import { AUDIT_CORE_PLUGIN_ID } from "@/lib/audit/const";
+} from "@vitnode/api/content/admin/labels";
+import { AUDIT_CORE_PLUGIN_ID } from "@vitnode/api/lib/audit/const";
+import { cn } from "cn";
+import React from "react";
+import { useTranslations } from "use-intl";
+
+import { Badge } from "@/components/ui/badge";
+import { UserFormat } from "@/components/user-format";
 
 import type {
   ActivityEntry,

@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface Passkey {

@@ -1,8 +1,23 @@
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
+
+import { defineContentType } from "@vitnode/api/content/define";
+import { contentDeliverySeo } from "@vitnode/api/content/delivery";
+import { field } from "@vitnode/api/content/fields";
+import { buildSearchCondition } from "@vitnode/api/content/server/query";
+import {
+  contentRevisionSnapshot,
+  contentTranslationRevisionSnapshot,
+  projectTranslationRevisionSnapshot,
+} from "@vitnode/api/content/server/revision-snapshot";
+import { contentSearchDocument } from "@vitnode/api/content/server/search-document";
+import {
+  contentTableColumns,
+  createContentTable,
+} from "@vitnode/api/content/server/table";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
 
 import type { ContentFormSpec } from "./admin/spec";
-import type { RichTextDocument } from "./rich-text/document";
 
 import { testContentLocaleRouting } from "../tests/content-fixtures";
 import {
@@ -10,17 +25,6 @@ import {
   contentFormInitialValues,
   contentFormValuesToTranslations,
 } from "./admin/spec";
-import { defineContentType } from "./define";
-import { contentDeliverySeo } from "./delivery";
-import { field } from "./fields";
-import { buildSearchCondition } from "./server/query";
-import {
-  contentRevisionSnapshot,
-  contentTranslationRevisionSnapshot,
-  projectTranslationRevisionSnapshot,
-} from "./server/revision-snapshot";
-import { contentSearchDocument } from "./server/search-document";
-import { contentTableColumns, createContentTable } from "./server/table";
 
 const paragraph = (text: string): RichTextDocument => ({
   content: [{ content: [{ text, type: "text" }], type: "paragraph" }],

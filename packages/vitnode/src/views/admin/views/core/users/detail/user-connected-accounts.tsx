@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { SSO_PROFILE_FIELDS } from "@vitnode/api/lib/shared/sso-profile";
 import {
   KeyRoundIcon,
   RefreshCwIcon,
@@ -40,7 +41,6 @@ import {
   TooltipTrigger,
   TooltipWithContent,
 } from "@/components/ui/tooltip";
-import { SSO_PROFILE_FIELDS } from "@/lib/sso-profile";
 import {
   SETTINGS_ROW,
   SettingsGroup,

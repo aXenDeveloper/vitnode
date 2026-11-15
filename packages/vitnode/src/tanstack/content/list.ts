@@ -1,8 +1,8 @@
 import type { QueryKey } from "@tanstack/react-query";
 
 import { queryOptions } from "@tanstack/react-query";
+import { CONTENT_PUBLIC_MAX_PAGE_SIZE } from "@vitnode/api/content/const";
 
-import { CONTENT_PUBLIC_MAX_PAGE_SIZE } from "@/content/const";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 /** The longest search term a public list keeps, like the site search. */

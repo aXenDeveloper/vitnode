@@ -1,9 +1,9 @@
 import {
   hyperdriveConnectionString,
   scopedDatabase,
-} from "@vitnode/core/cloudflare/database";
-import { coreRelations } from "@vitnode/core/database/relations";
-import { buildApiConfig } from "@vitnode/core/vitnode.config";
+} from "@vitnode/api/cloudflare/database";
+import { coreRelations } from "@vitnode/api/database/relations";
+import { buildApiConfig } from "@vitnode/api/vitnode.config";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 import { contentModules } from "./content-modules.gen";

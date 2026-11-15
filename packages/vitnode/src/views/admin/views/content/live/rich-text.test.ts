@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
 
-import type { RichTextDocument } from "@/content/rich-text/document";
+import { describe, expect, it, vi } from "vitest";
 
 import { createContentRichTextRegistry } from "./rich-text";
 

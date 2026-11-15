@@ -1,13 +1,13 @@
-import { describe, expect, it } from "vitest";
-
-import type { BlockAreaInstance } from "../../blocks/types";
-
 import {
   AREA_JUSTIFY_CLASSES,
   areaLayoutClassNames,
   areaLayoutWithDefaults,
-} from "../../blocks/area";
-import { DEFAULT_AREA_LAYOUT } from "../../blocks/area";
+} from "@vitnode/api/blocks/area";
+import { DEFAULT_AREA_LAYOUT } from "@vitnode/api/blocks/area";
+import { describe, expect, it } from "vitest";
+
+import type { BlockAreaInstance } from "../../blocks/types";
+
 import {
   AREA_LAYOUT_OPTIONS,
   AREA_SPACING_RANGE,

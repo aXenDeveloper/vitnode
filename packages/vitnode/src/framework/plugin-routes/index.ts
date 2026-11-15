@@ -20,7 +20,6 @@ export {
   contentTypesFromContentModule,
   ContentUrlError,
 } from "./content-urls.js";
-export { CORE_PLUGIN_ID, CORE_ROUTES_SPECIFIER } from "./core.js";
 export {
   annotatePluginRouteError,
   PLUGIN_ROUTES_ERROR_PREFIX,
@@ -43,7 +42,6 @@ export {
   i18nFromLoadedConfig,
   localeRoutePathTargets,
 } from "./locale-route-paths.js";
-
 export {
   assertPluginId,
   configuredPluginsFrom,
@@ -55,3 +53,8 @@ export {
 } from "./resolve.js";
 
 export type { ResolvedPluginRoutesModule } from "./types.js";
+
+export {
+  CORE_PLUGIN_ID,
+  CORE_ROUTES_SPECIFIER,
+} from "@vitnode/api/framework/plugin-routes/core";

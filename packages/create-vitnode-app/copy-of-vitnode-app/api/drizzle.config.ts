@@ -1,4 +1,4 @@
-import { defineVitNodeDrizzleConfig } from "@vitnode/core/drizzle.config";
+import { defineVitNodeDrizzleConfig } from "@vitnode/api/drizzle.config";
 
 import { POSTGRES_URL, vitNodeApiConfig } from "./src/vitnode.api.config";
 

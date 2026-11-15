@@ -15,10 +15,7 @@
   "exclude": ["node_modules"],
   "include": [
     "src",
-    "scripts",
-    "src/emails",
     "vitest.config.ts",
-    "tsdown.config.ts",
     "global.d.ts"
   ]
 }

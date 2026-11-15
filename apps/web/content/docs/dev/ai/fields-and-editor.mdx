@@ -26,9 +26,9 @@ On this page the `newsroom` plugin suggests a story teaser (`excerpt`) from the 
 The field sends **one string per source field, plus `locale`** for the language being edited. Match `inputSchema` to that shape:
 
 ```ts title="plugins/newsroom/src/api/ai/actions.ts"
-import { defineAiAction } from '@vitnode/core/api/lib/ai/action'
-import { languageName } from '@vitnode/core/api/lib/ai/language-name'
-import { checkStaffPermission } from '@vitnode/core/api/lib/check-staff-permission'
+import { defineAiAction } from '@vitnode/api/lib/ai/action'
+import { languageName } from '@vitnode/api/lib/ai/language-name'
+import { checkStaffPermission } from '@vitnode/api/lib/check-staff-permission'
 import { z } from 'zod'
 
 import { storyContentType } from '@/content/story'

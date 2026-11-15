@@ -1,0 +1,59 @@
+import {
+  CONTENT_REVISION_MAX_RETENTION,
+  CONTENT_SCHEDULE_RETENTION_DAYS,
+} from "@/content/const";
+import { cleanupStaleContentDrafts } from "@/content/server/live-store";
+import { cleanupStaleContentDocuments } from "@/content/server/live/document-store";
+import { pruneContentRevisions } from "@/content/server/revisions-model";
+import { pruneContentSchedules } from "@/content/server/schedules-model";
+import { buildCron } from "@/lib/cron";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export const contentEditorialCleanupCron = buildCron({
+  name: "content-editorial-cleanup",
+  description:
+    "Remove revisions and schedules for content types that are no longer registered, settled schedules past their retention window, expired field locks, and live-editing drafts and documents nobody touched for 30 days.",
+  // 03:20 daily, off the hour so it does not pile onto every other daily job.
+  schedule: "20 3 * * *",
+  handler: async c => {
+    const known = c
+      .get("core")
+      .contentTypes.filter(entry => entry.definition.editorial.enabled)
+      .map(entry => entry.definition.id);
+
+    const schedules = await pruneContentSchedules({
+      db: c.get("db"),
+      knownContentTypeIds: known,
+      olderThan: new Date(
+        Date.now() - CONTENT_SCHEDULE_RETENTION_DAYS * DAY_MS,
+      ),
+    });
+
+    const revisions = await pruneContentRevisions({
+      db: c.get("db"),
+      knownContentTypeIds: known,
+    });
+
+    const live = await cleanupStaleContentDrafts(c);
+    const documents = await cleanupStaleContentDocuments(c);
+
+    if (live.drafts + live.locks + documents > 0) {
+      await c
+        .get("log")
+        .debug(
+          `[content-editorial-cleanup] removed ${live.locks} expired field locks, ${live.drafts} stale drafts and ${documents} stale documents.`,
+        );
+    }
+
+    if (schedules.orphaned + revisions.orphaned === 0) return;
+
+    // Worth saying out loud: an unexpected number here usually means a plugin
+    // id or a content type id was renamed without the documented UPDATE.
+    await c
+      .get("log")
+      .debug(
+        `[content-editorial-cleanup] removed ${revisions.orphaned} orphaned revisions and ${schedules.orphaned} orphaned schedules (${schedules.settled} settled schedules aged out; revision retention stays capped at ${CONTENT_REVISION_MAX_RETENTION} per record).`,
+      );
+  },
+});

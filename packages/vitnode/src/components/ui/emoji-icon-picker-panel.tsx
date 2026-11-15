@@ -1,8 +1,8 @@
+import type { EmojiIconValue } from "@vitnode/api/lib/emoji-icon";
+
 import { ShapesIcon, SmileIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
-
-import type { EmojiIconValue } from "@/lib/emoji-icon";
 
 import type { EmojiIconPickerKind } from "./emoji-icon-picker-kinds";
 

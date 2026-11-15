@@ -1,11 +1,10 @@
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
+
+import { CONTENT_DEFAULT_PAGE_SIZE } from "@vitnode/api/content/const";
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
+import { contentFilterableFields } from "@vitnode/api/content/registry";
 import { describe, expect, it } from "vitest";
-
-import type { AnyContentTypeDefinition } from "@/content/types";
-
-import { CONTENT_DEFAULT_PAGE_SIZE } from "@/content/const";
-import { defineContentType } from "@/content/define";
-import { field } from "@/content/fields";
-import { contentFilterableFields } from "@/content/registry";
 
 import {
   contentListFilters,

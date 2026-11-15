@@ -1,13 +1,14 @@
-import { queryOptions } from "@tanstack/react-query";
+import type { StaffPermissionSet } from "@vitnode/api/lib/permission-staff";
+import type { UserImagePolicy } from "@vitnode/api/lib/shared/user-images";
 
-import type { StaffPermissionSet } from "@/api/lib/permission-staff";
-import type { UserImagePolicy } from "@/lib/user-images";
+import { queryOptions } from "@tanstack/react-query";
+import { hasStaffPermission } from "@vitnode/api/lib/staff-permission";
+import { manifest } from "@vitnode/api/manifest";
+
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { AdminUserRole } from "@/views/admin/views/core/users/list/users-query";
 
-import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { ADMIN_USER_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";

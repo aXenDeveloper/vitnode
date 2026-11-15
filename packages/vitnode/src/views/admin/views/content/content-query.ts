@@ -1,4 +1,4 @@
-import type { ContentId } from "@/content/ids";
+import type { ContentId } from "@vitnode/api/content/ids";
 
 import { adminQueryRoot } from "@/views/admin/table/query";
 

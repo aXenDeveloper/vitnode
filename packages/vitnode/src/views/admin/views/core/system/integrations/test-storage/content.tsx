@@ -1,4 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 import {
   HardDriveIcon,
   ImageIcon,
@@ -21,7 +22,6 @@ import {
   AttachmentTrigger,
 } from "@/components/ui/attachment";
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 
 export const ContentTestStorage = () => {
   const t = useTranslations("admin.system.integrations.storage.test");

@@ -23,7 +23,7 @@ A cron job is a named handler with a cron expression, declared by a plugin. VitN
 Create `src/api/cron/count-notes.cron.ts`. `buildCron` takes a name, a schedule and a handler that receives a Hono context:
 
 ```ts title="plugins/site-notes/src/api/cron/count-notes.cron.ts"
-import { buildCron } from '@vitnode/core/api/lib/cron'
+import { buildCron } from '@vitnode/api/lib/cron'
 import { count } from 'drizzle-orm'
 
 import { site_notes } from '@/database/notes'

@@ -1,4 +1,4 @@
-import { defineStaffPermissions } from "@vitnode/core/lib/staff-permissions";
+import { defineStaffPermissions } from "@vitnode/api/lib/staff-permissions";
 
 import { manifest } from "@/manifest.gen";
 

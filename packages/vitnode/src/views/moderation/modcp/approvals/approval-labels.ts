@@ -1,10 +1,9 @@
-import { useTranslations } from "use-intl";
-
 import {
   contentEntityKey,
   contentTypeName,
   humanizeFieldName,
-} from "@/content/admin/labels";
+} from "@vitnode/api/content/admin/labels";
+import { useTranslations } from "use-intl";
 
 const baseKey = (pluginId: string, contentTypeId: string) =>
   `${pluginId}.content.${contentEntityKey(contentTypeId)}`;

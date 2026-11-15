@@ -1,4 +1,4 @@
-import { defineContentType, field } from "@vitnode/core/content";
+import { defineContentType, field } from "@vitnode/api/content";
 
 import { PAGE_BLOCKS_ALLOWED } from "./page-blocks";
 

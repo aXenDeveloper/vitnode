@@ -1,16 +1,16 @@
 import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
+import { sanitizeRichTextAlign } from "@vitnode/api/content/rich-text/elements";
+import {
+  EDITOR_IMAGE_MIN_WIDTH,
+  isEditorImageWrap,
+  normalizeEditorImageWidth,
+} from "@vitnode/api/lib/shared/editor-uploads";
 import { cn } from "cn";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import { DeletedUpload } from "@/components/rich-text/deleted-upload";
 import { Spinner } from "@/components/ui/spinner";
-import { sanitizeRichTextAlign } from "@/content/rich-text/elements";
-import {
-  EDITOR_IMAGE_MIN_WIDTH,
-  isEditorImageWrap,
-  normalizeEditorImageWidth,
-} from "@/lib/editor-uploads";
 
 import { editorUploadPreview, finishedEditorUpload } from "../uploads/flow";
 import { EditorImageSettings } from "./image-settings";

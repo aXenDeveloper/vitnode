@@ -1,3 +1,10 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+import type {
+  ContentRevisionMeta,
+  ContentRevisionOperation,
+  ContentRevisionSnapshot,
+} from "@vitnode/api/content/revisions";
+
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "cn";
 import { ChevronDownIcon, RotateCcwIcon } from "lucide-react";
@@ -6,12 +13,6 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentId } from "@/content/ids";
-import type {
-  ContentRevisionMeta,
-  ContentRevisionOperation,
-  ContentRevisionSnapshot,
-} from "@/content/revisions";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { DateFormat } from "@/components/date-format";

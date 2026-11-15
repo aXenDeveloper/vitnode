@@ -1,8 +1,11 @@
-import React from "react";
+import type {
+  RichTextAttrs,
+  RichTextNode,
+} from "@vitnode/api/content/rich-text/document";
+import type { MultiLangValue } from "@vitnode/api/lib/helpers/multi-lang";
+import type { EditorUploadResult } from "@vitnode/api/lib/shared/editor-uploads";
 
-import type { RichTextAttrs, RichTextNode } from "@/content/rich-text/document";
-import type { EditorUploadResult } from "@/lib/editor-uploads";
-import type { MultiLangValue } from "@/lib/helpers/multi-lang";
+import React from "react";
 
 /** An image or file already in another language version of the same field. */
 export interface EditorReusableUpload {

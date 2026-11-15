@@ -1,5 +1,11 @@
 import type { ReactElement, ReactNode } from "react";
 
+import {
+  areaLayoutWithDefaults,
+  isAreaAlign,
+  isAreaColumns,
+  isAreaJustify,
+} from "@vitnode/api/blocks/area";
 import { Columns2Icon, CopyIcon, Trash2Icon, UngroupIcon } from "lucide-react";
 import { useState } from "react";
 import { useTranslations } from "use-intl";
@@ -7,12 +13,6 @@ import { useTranslations } from "use-intl";
 import type { BlockAreaInstance, BlockAreaLayout } from "../../blocks/types";
 import type { EditorNodeRef } from "../state/types";
 
-import {
-  areaLayoutWithDefaults,
-  isAreaAlign,
-  isAreaColumns,
-  isAreaJustify,
-} from "../../blocks/area";
 import { ConfirmActionAlertDialog } from "../../components/confirm-action/confirm-action-alert-dialog";
 import { Button } from "../../components/ui/button";
 import {

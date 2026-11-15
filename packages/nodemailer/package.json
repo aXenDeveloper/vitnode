@@ -34,8 +34,8 @@
   },
   "devDependencies": {
     "@types/nodemailer": "^8.0.2",
+    "@vitnode/api": "workspace:*",
     "@vitnode/config": "workspace:*",
-    "@vitnode/core": "workspace:*",
     "oxlint": "^1.92.0",
     "oxlint-tsgolint": "^7.0.2006",
     "tsdown": "^0.23.7",

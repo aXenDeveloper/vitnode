@@ -1,0 +1,79 @@
+import { HTTPException } from "hono/http-exception";
+import { z } from "zod";
+
+import { buildRoute } from "@/builders";
+import { resolveStaffPermissions } from "@/lib/check-staff-permission";
+import { manifest } from "@/manifest";
+
+export const sessionAdminRoute = buildRoute({
+  route: {
+    method: "get",
+    description: "Verify admin session",
+    path: "/session",
+    request: {
+      query: z.object({
+        passive: z.literal("true").optional(),
+      }),
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              user: z.object({
+                id: z.number(),
+                email: z.string(),
+                name: z.string(),
+                nameCode: z.string(),
+                createdAt: z.date(),
+                newsletter: z.boolean(),
+                avatarColor: z.string(),
+                avatarUrl: z.string().nullable(),
+                coverUrl: z.string().nullable(),
+                emailVerified: z.boolean(),
+                roleId: z.number(),
+                birthday: z.date().nullable(),
+              }),
+              permissions: z.object({
+                root: z.boolean(),
+                permissions: z.array(
+                  z.object({
+                    plugin: z.string(),
+                    module: z.string(),
+                    permission: z.string(),
+                  }),
+                ),
+              }),
+              vitnode_version: z.string(),
+              expiresAt: z.date(),
+              signOutWhenTabsClose: z.boolean(),
+            }),
+          },
+        },
+        description: "User",
+      },
+      403: {
+        description: "Access Denied",
+      },
+    },
+  },
+  handler: async c => {
+    const user = c.get("admin")?.user;
+    const expiresAt = c.get("adminSessionExpiresAt");
+    if (!(user && expiresAt)) throw new HTTPException(403);
+
+    const permissions = await resolveStaffPermissions(c, {
+      type: "admin",
+      user,
+    });
+
+    return c.json({
+      user,
+      permissions,
+      vitnode_version: manifest.version,
+      expiresAt,
+      signOutWhenTabsClose:
+        c.get("core").authorization.cookieDomain === undefined,
+    });
+  },
+});

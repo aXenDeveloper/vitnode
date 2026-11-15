@@ -1,15 +1,15 @@
-import { CameraIcon, FileIcon, ScissorsIcon } from "lucide-react";
-import { useFormatter, useTranslations } from "use-intl";
-
 import type {
   ModerationReportSnapshot,
   ModerationSnapshotField,
-} from "@/lib/moderation/snapshot";
+} from "@vitnode/api/lib/shared/moderation-snapshot";
+
+import { isRichTextDocument } from "@vitnode/api/content/rich-text/document";
+import { formatBytes } from "@vitnode/api/lib/format-bytes";
+import { CameraIcon, FileIcon, ScissorsIcon } from "lucide-react";
+import { useFormatter, useTranslations } from "use-intl";
 
 import { RichTextContent } from "@/components/rich-text";
 import { Badge } from "@/components/ui/badge";
-import { isRichTextDocument } from "@/content/rich-text/document";
-import { formatBytes } from "@/lib/format-bytes";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);

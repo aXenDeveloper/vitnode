@@ -1,15 +1,14 @@
 import type { ReactElement } from "react";
 
-import { createElement, Fragment } from "react";
-
-import type { BlockAreaInstance } from "./types";
-
 import {
   areaLayoutClassNames,
   areaLayoutStyle,
   areaMarginStyle,
   contentNodeKey,
-} from "./area";
+} from "@vitnode/api/blocks/area";
+import { createElement, Fragment } from "react";
+
+import type { BlockAreaInstance } from "./types";
 
 export type ContentAreaChildRenderer = (
   child: unknown,

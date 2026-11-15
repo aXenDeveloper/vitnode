@@ -1,6 +1,7 @@
+import type { LocaleConfig } from "@vitnode/api/lib/i18n/types";
+
 import React from "react";
 
-import type { LocaleConfig } from "@/lib/i18n/types";
 import type { VitNodeConfig } from "@/vitnode.config";
 
 import { EditWidgetsHost } from "@/blocks/edit-widgets-host";

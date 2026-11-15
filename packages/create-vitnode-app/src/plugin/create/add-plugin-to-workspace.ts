@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile } from "fs/promises";
+import { access, readdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 
 import type { PackageJSON } from "../../helpers/packages-json.js";
@@ -44,6 +44,31 @@ const findPackageJsonFiles = async (
   return results;
 };
 
+const dependsOn = (pkg: PackageJSON, name: string): boolean =>
+  Boolean(pkg.dependencies?.[name] ?? pkg.devDependencies?.[name]);
+
+/**
+ * Whether a workspace package is an app that installs plugins: one on
+ * `@vitnode/core` (a web or single app), or one on `@vitnode/api` that serves
+ * the API itself (`src/vitnode.api.config.ts`). A package that only builds on
+ * `@vitnode/api` - an adapter - is not a host.
+ */
+export const isVitNodeHost = async (
+  dir: string,
+  pkg: PackageJSON,
+): Promise<boolean> => {
+  if (dependsOn(pkg, "@vitnode/core")) return true;
+  if (!dependsOn(pkg, "@vitnode/api")) return false;
+
+  try {
+    await access(join(dir, "src", "vitnode.api.config.ts"));
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export const addPluginToWorkspace = async ({
   packageManager,
   pluginName,
@@ -70,11 +95,7 @@ export const addPluginToWorkspace = async ({
       const content = await readFile(packageJsonPath, "utf-8");
       const pkg: PackageJSON = JSON.parse(content);
 
-      const hasVitnodeCore =
-        pkg.dependencies?.["@vitnode/core"] ??
-        pkg.devDependencies?.["@vitnode/core"];
-
-      if (!hasVitnodeCore) {
+      if (!(await isVitNodeHost(dirname(packageJsonPath), pkg))) {
         continue;
       }
 

@@ -1,8 +1,9 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentId } from "@/content/ids";
 
 import type { ContentPanelProps } from "./content-panel";
 

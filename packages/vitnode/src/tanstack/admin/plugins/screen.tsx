@@ -1,8 +1,8 @@
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 import { useTranslations } from "use-intl";
 
 import { PageTitle } from "@/components/ui/page-title";
-import { manifest } from "@/manifest";
 import { PluginList } from "@/views/admin/views/core/system/plugins/plugin-list";
 import { pluginRowsOf } from "@/views/admin/views/core/system/plugins/plugin-rows";
 import {

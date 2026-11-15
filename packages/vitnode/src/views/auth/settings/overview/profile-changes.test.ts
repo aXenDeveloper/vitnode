@@ -1,8 +1,7 @@
+import type { UserPersonalInformation } from "@vitnode/api/lib/user-personal-information";
+
+import { resolvePersonalInformationFields } from "@vitnode/api/lib/user-personal-information";
 import { describe, expect, it } from "vitest";
-
-import type { UserPersonalInformation } from "@/lib/user-personal-information";
-
-import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
 
 import { profileChanges } from "./profile-changes";
 

@@ -1,36 +1,16 @@
+import { assertPluginId } from "@vitnode/api/lib/plugin-id";
+
 import type { PackageMessagesSource } from "../package-messages/resolve.js";
 import type { ResolvedPluginRoutesModule } from "./types.js";
 
 import { localeFilesFromDeclaration } from "../package-messages/resolve.js";
-import { CORE_PLUGIN_ID } from "./core.js";
 import { PLUGIN_ROUTES_ERROR_PREFIX as ERROR_PREFIX } from "./diagnostics.js";
 
-const PLUGIN_ID_PATTERN =
-  /^(?:@[A-Za-z0-9][A-Za-z0-9._-]*\/)?[A-Za-z0-9][A-Za-z0-9._-]*$/;
+export { assertPluginId } from "@vitnode/api/lib/plugin-id";
+export { toSingleQuotedLiteral } from "@vitnode/api/lib/source-literal";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-/** Validates a plugin id and returns it unchanged, so it can be used inline. */
-export const assertPluginId = (pluginId: string, source: string): string => {
-  if (!PLUGIN_ID_PATTERN.test(pluginId)) {
-    throw new Error(
-      `${ERROR_PREFIX} ${source} declares the plugin id ${JSON.stringify(pluginId)}, which is not a package name. A plugin's routes module is imported from the plugin's package, so the id has to be one.`,
-    );
-  }
-
-  // Core's own routes are prepended to every app's registry, so a plugin
-  // claiming this id would be a second source under one name - and the duplicate
-  // check downstream would blame the app's configuration for something VitNode
-  // added.
-  if (pluginId === CORE_PLUGIN_ID) {
-    throw new Error(
-      `${ERROR_PREFIX} ${source} configures a plugin with the id ${JSON.stringify(CORE_PLUGIN_ID)}, which is core's own. Core's routes are registered by VitNode itself - give the plugin its own package name.`,
-    );
-  }
-
-  return pluginId;
-};
 
 /**
  * Turns a JavaScript string into a single-quoted TypeScript literal.
@@ -41,13 +21,6 @@ export const assertPluginId = (pluginId: string, source: string): string => {
  * and a code generator that concatenates unescaped strings is one refactor away
  * from writing whatever a plugin's `package.json` says into an app's source.
  */
-export const toSingleQuotedLiteral = (value: string): string =>
-  `'${value
-    .replace(/\\/g, "\\\\")
-    .replace(/'/g, "\\'")
-    .replace(/\n/g, "\\n")
-    .replace(/\r/g, "\\r")}'`;
-
 export const configuredPluginsFrom = (
   loaded: unknown,
   source: string,

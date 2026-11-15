@@ -1,3 +1,10 @@
+import { formatBytes } from "@vitnode/api/lib/format-bytes";
+import {
+  EDITOR_IMAGE_MAX_ALT_LENGTH,
+  EDITOR_IMAGE_MAX_BYTES,
+  EDITOR_IMAGE_MIME_TYPES,
+  isRemoteEditorImageUrl,
+} from "@vitnode/api/lib/shared/editor-uploads";
 import { ImageUpIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -14,13 +21,6 @@ import {
   TabsPanels,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  EDITOR_IMAGE_MAX_ALT_LENGTH,
-  EDITOR_IMAGE_MAX_BYTES,
-  EDITOR_IMAGE_MIME_TYPES,
-  isRemoteEditorImageUrl,
-} from "@/lib/editor-uploads";
-import { formatBytes } from "@/lib/format-bytes";
 
 import type { EditorUploadRuntime } from "../../../uploads/runtime";
 

@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import type { ContentRevisionMeta } from "@vitnode/api/content/revisions";
 
-import type { ContentRevisionMeta } from "@/content/revisions";
+import { describe, expect, it } from "vitest";
 
 import {
   contentDeliveryQueryKey,

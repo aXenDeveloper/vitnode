@@ -1,0 +1,247 @@
+import type { SQL } from "drizzle-orm";
+import type { Context } from "hono";
+
+import { and, asc, count, desc, eq, gt, lt, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+
+import type {
+  SearchHit,
+  SearchProviderApiPlugin,
+  SearchQueryParams,
+  SearchResult,
+} from "@/models/search";
+
+import { core_files } from "@/database/files";
+import { core_search_index, resolveSearchTextConfig } from "@/database/search";
+import { core_users } from "@/database/users";
+import { searchIndexFilters } from "@/lib/search-filters";
+import { parseSearchOffset } from "@/lib/search-offset";
+import { storageUrlOf } from "@/lib/storage-url";
+import { searchItemIdFromKey } from "@/models/search";
+
+const authorAvatarFile = alias(core_files, "search_author_avatar_file");
+
+const leadAuthorId = sql<null | number>`${core_search_index.authorIds}[1]`;
+
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 100;
+// Without a term every consumer shows the head of `content` as a short snippet,
+// so a page of whole articles is not worth shipping. With one, the snippet is
+// cut around the first match, which can sit anywhere - so content stays whole.
+const CONTENT_EXCERPT_LENGTH = 1000;
+
+/**
+ * The rows after the cursor in `(createdAt, id)` order - the order the page is
+ * sorted by. The cursor is a row id, so the boundary's `createdAt` is read
+ * back from that row, as `::text` to keep its microseconds.
+ * A cursor whose row has since gone - or that this viewer may not see - falls
+ * back to the id alone, so a cursor can't probe when a hidden row was created.
+ */
+const keysetAfter = async (
+  c: Context,
+  cursor: number,
+  oldest: boolean,
+  filters: SQL | undefined,
+): Promise<SQL> => {
+  const [boundary] = await c
+    .get("db")
+    .select({ createdAt: sql<string>`${core_search_index.createdAt}::text` })
+    .from(core_search_index)
+    .where(and(eq(core_search_index.id, cursor), filters))
+    .limit(1);
+  if (!boundary) {
+    return oldest
+      ? gt(core_search_index.id, cursor)
+      : lt(core_search_index.id, cursor);
+  }
+
+  const at = sql`${boundary.createdAt}::timestamp`;
+  const row = sql`(${core_search_index.createdAt}, ${core_search_index.id})`;
+
+  // The plain range is redundant with the row comparison; it is there so the
+  // planner can start from the `createdAt` index.
+  return oldest
+    ? sql`(${core_search_index.createdAt} >= ${at} AND ${row} > (${at}, ${cursor}::integer))`
+    : sql`(${core_search_index.createdAt} <= ${at} AND ${row} < (${at}, ${cursor}::integer))`;
+};
+
+export const PostgresSearchAdapter = (): SearchProviderApiPlugin => ({
+  name: "postgres",
+  // Two capabilities that are both true for the same reason: this provider's
+  // store *is* `core_search_index`. `languageScopedDelete` because
+  // `SearchModel.delete` already narrows that table by `languageCode` before it
+  // gets here, and `canonicalStorage` because there is no second copy to drift
+  // from - so diagnostics can report the canonical count as the provider count
+  // rather than asking the same table twice.
+  capabilities: {
+    authorBoost: false,
+    canonicalStorage: true,
+    facets: true,
+    languageScopedDelete: true,
+    timeDecay: false,
+  },
+
+  // The SearchModel owns the canonical `core_search_index` table, which is this
+  // provider's store, so the write methods are intentionally no-ops.
+  index: async () => {},
+  bulkIndex: async () => {},
+  delete: async () => {},
+  deleteMany: async () => {},
+  clear: async () => {},
+
+  ping: async c => {
+    try {
+      await c.get("db").execute(sql`select 1`);
+
+      return true;
+    } catch {
+      return false;
+    }
+  },
+
+  countByType: async (c: Context, params: SearchQueryParams) => {
+    const rows = await c
+      .get("db")
+      .select({ itemType: core_search_index.itemType, total: count() })
+      .from(core_search_index)
+      .where(searchIndexFilters(c, params))
+      .groupBy(core_search_index.itemType);
+
+    return Object.fromEntries(rows.map(row => [row.itemType, row.total]));
+  },
+
+  search: async (
+    c: Context,
+    params: SearchQueryParams,
+  ): Promise<SearchResult> => {
+    const db = c.get("db");
+    const term = params.term?.trim();
+    const useRelevance = params.sort === "relevance" && !!term;
+    const size = Math.min(params.first ?? DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE);
+    const filters = searchIndexFilters(c, params);
+
+    const totalQuery = db
+      .select({ total: count() })
+      .from(core_search_index)
+      .where(filters);
+
+    const config = resolveSearchTextConfig(params.languageCode);
+    const rankExpr = term
+      ? sql<number>`ts_rank("core_search_index"."search_vector", websearch_to_tsquery(${config}::regconfig, ${term}))`
+      : sql<null | number>`NULL`;
+
+    // Bounded and checked, because on the relevance path this becomes the
+    // query's `OFFSET`. `Number("abc")` is `NaN`, which Postgres rejects as a
+    // 500 rather than a bad request, and an unbounded one is a full scan a
+    // client can ask for by typing a big number into a URL.
+    const cursorValue = parseSearchOffset(params.cursor);
+
+    const orderBy: SQL[] = [];
+    let where = filters;
+    let offset = 0;
+
+    if (useRelevance) {
+      orderBy.push(sql`${rankExpr} DESC`, desc(core_search_index.id));
+      offset = cursorValue ?? 0;
+    } else {
+      const oldest = params.sort === "oldest";
+      orderBy.push(
+        oldest
+          ? asc(core_search_index.createdAt)
+          : desc(core_search_index.createdAt),
+        oldest ? asc(core_search_index.id) : desc(core_search_index.id),
+      );
+      if (cursorValue) {
+        const cond = await keysetAfter(c, cursorValue, oldest, filters);
+        where = where ? and(where, cond) : cond;
+      }
+    }
+
+    const rowsQuery = db
+      .select({
+        id: core_search_index.id,
+        pluginId: core_search_index.pluginId,
+        itemType: core_search_index.itemType,
+        itemId: core_search_index.itemId,
+        languageCode: core_search_index.languageCode,
+        authorId: leadAuthorId,
+        authorIds: core_search_index.authorIds,
+        title: core_search_index.title,
+        content: term
+          ? core_search_index.content
+          : sql<string>`left(${core_search_index.content}, ${CONTENT_EXCERPT_LENGTH}::integer)`,
+        containerType: core_search_index.containerType,
+        containerId: core_search_index.containerId,
+        url: core_search_index.url,
+        isPublic: core_search_index.isPublic,
+        isHidden: core_search_index.isHidden,
+        imageId: core_search_index.imageId,
+        metadata: core_search_index.metadata,
+        createdAt: core_search_index.createdAt,
+        score: rankExpr,
+        author: {
+          id: core_users.id,
+          name: core_users.name,
+          nameCode: core_users.nameCode,
+          avatarColor: core_users.avatarColor,
+        },
+        authorAvatarKey: authorAvatarFile.key,
+      })
+      .from(core_search_index)
+      .leftJoin(core_users, eq(core_users.id, leadAuthorId))
+      .leftJoin(authorAvatarFile, eq(authorAvatarFile.id, core_users.avatarId))
+      .where(where)
+      .orderBy(...orderBy)
+      .limit(size + 1)
+      .offset(useRelevance ? offset : 0);
+
+    const [[{ total }], rows] = await Promise.all([totalQuery, rowsQuery]);
+
+    const hasNextPage = rows.length > size;
+    const sliced = rows.slice(0, size);
+
+    const { contentTypes } = c.get("core");
+    const edges: SearchHit[] = sliced.map(row => ({
+      id: row.id,
+      pluginId: row.pluginId,
+      itemType: row.itemType,
+      itemId: searchItemIdFromKey(contentTypes, row.itemType, row.itemId),
+      languageCode: row.languageCode,
+      authorId: row.authorId,
+      authorIds: row.authorIds,
+      authors: [],
+      title: row.title,
+      content: row.content,
+      containerType: row.containerType,
+      containerId: row.containerId,
+      url: row.url,
+      isPublic: row.isPublic,
+      isHidden: row.isHidden,
+      image: null,
+      imageId: row.imageId,
+      metadata: row.metadata,
+      createdAt: row.createdAt,
+      score: row.score,
+      author: row.author?.id
+        ? { ...row.author, avatarUrl: storageUrlOf(c, row.authorAvatarKey) }
+        : null,
+    }));
+
+    const startCursor = useRelevance ? offset : (edges[0]?.id ?? null);
+    const endCursor = useRelevance
+      ? offset + edges.length
+      : (edges.at(-1)?.id ?? null);
+
+    return {
+      edges,
+      pageInfo: {
+        totalCount: total,
+        count: edges.length,
+        hasNextPage,
+        hasPreviousPage: useRelevance ? offset > 0 : !!cursorValue,
+        startCursor,
+        endCursor,
+      },
+    };
+  },
+});

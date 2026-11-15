@@ -1,8 +1,8 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import { useQuery } from "@tanstack/react-query";
 import { CheckIcon, LinkIcon, XIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
-
-import type { ContentId } from "@/content/ids";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";

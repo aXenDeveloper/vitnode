@@ -1,7 +1,11 @@
-import { useMutation } from "@tanstack/react-query";
-import React from "react";
+import type { UserImageKind } from "@vitnode/api/lib/shared/user-images";
 
-import type { UserImageKind } from "@/lib/user-images";
+import { useMutation } from "@tanstack/react-query";
+import {
+  USER_IMAGE_MIME_TYPES,
+  USER_IMAGE_OUTPUT,
+} from "@vitnode/api/lib/shared/user-images";
+import React from "react";
 
 import { FileError } from "@/components/form/fields/file-shared";
 import { ImageCropFields } from "@/components/image-crop/image-crop-fields";
@@ -16,7 +20,6 @@ import {
   FieldTitle,
 } from "@/components/ui/field";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { USER_IMAGE_MIME_TYPES, USER_IMAGE_OUTPUT } from "@/lib/user-images";
 
 export type UserImageAction = "remove" | "upload";
 

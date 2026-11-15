@@ -1,0 +1,49 @@
+import { buildRoute } from "@/builders";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+import { getNotificationPreferences } from "@/models/notifications/preferences";
+import { zodNotificationPreferences } from "@/modules/notifications/notifications.schema";
+
+import {
+  findTargetUserId,
+  userNotFoundResponse,
+  zodTargetUserParams,
+} from "../lib/target-user";
+
+export const listUserNotificationPreferencesAdminRoute = buildRoute({
+  adminStaffPermission: coreStaffPermissions.admin.users.canView,
+  route: {
+    method: "get",
+    description:
+      "Every notification type the installation offers, with the channels it may use and what a user currently receives. Only mandatory types are locked for staff (Admin only)",
+    path: "/{id}/notification-preferences",
+    request: {
+      params: zodTargetUserParams,
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": { schema: zodNotificationPreferences },
+        },
+        description: "Notification preferences",
+      },
+      403: {
+        description: "Access Denied",
+      },
+      404: userNotFoundResponse,
+    },
+  },
+  handler: async c => {
+    const userId = await findTargetUserId(c, c.req.valid("param").id);
+    if (userId === null) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    return c.json(
+      await getNotificationPreferences(c, {
+        language: c.get("admin")?.user.language,
+        userId,
+      }),
+      200,
+    );
+  },
+});

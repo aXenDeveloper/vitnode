@@ -1,8 +1,8 @@
+import type { ContentRevisionMeta } from "@vitnode/api/content/revisions";
+
 import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import { useTranslations } from "use-intl";
-
-import type { ContentRevisionMeta } from "@/content/revisions";
 
 import { UserFormat } from "@/components/user-format";
 

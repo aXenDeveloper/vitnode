@@ -58,7 +58,7 @@ the schedule it keeps is not yours: each job carries its own expression, and thi
 only decides how often VitNode looks.
 
 ```ts title="src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 import { NodeCronAdapter } from '@vitnode/node-cron' // [!code ++]
 
 export const vitNodeApiConfig = buildApiConfig({
@@ -114,7 +114,7 @@ The whole package is the file below, and knowing it saves an afternoon of
 debugging:
 
 ```ts title="packages/node-cron/src/index.ts"
-import { type CronAdapter, handleCronJobs } from '@vitnode/core/api/lib/cron'
+import { type CronAdapter, handleCronJobs } from '@vitnode/api/lib/cron'
 import { schedule } from 'node-cron'
 
 export const NodeCronAdapter = (): CronAdapter => {

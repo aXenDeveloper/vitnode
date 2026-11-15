@@ -1,4 +1,4 @@
-import { createContentModel } from "@vitnode/core/content/server";
+import { createContentModel } from "@vitnode/api/content/server";
 
 import { storyContentType } from "@/content/story";
 

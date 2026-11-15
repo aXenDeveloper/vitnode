@@ -9,8 +9,8 @@ import type {
 import type { BlockComponentProps, BlockData, ContentNode } from "./types";
 
 import { EditablePageSaveRefused } from "../content/editor/adapter";
-import { defineEditablePage } from "../content/editor/define";
-import { field } from "../content/fields";
+import { defineEditablePage } from "@vitnode/api/content/editor/define";
+import { field } from "@vitnode/api/content/fields";
 import { isSaveConflict } from "../editor/adapter/refusal";
 import { defineBlock } from "./define";
 import { EditablePage } from "./page";

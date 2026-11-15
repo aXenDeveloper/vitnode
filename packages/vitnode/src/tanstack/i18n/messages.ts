@@ -1,18 +1,20 @@
-import type { AbstractIntlMessages } from "use-intl";
-
-import "@tanstack/react-start/server-only";
-
 import type {
   AppMessagesMap,
   LocaleMessagesMap,
   MessagesSource,
-} from "@/lib/i18n/types";
+} from "@vitnode/api/lib/i18n/types";
+
+import "@tanstack/react-start/server-only";
+
+import type { AbstractIntlMessages } from "use-intl";
+
+import { loadMessages } from "@vitnode/api/lib/i18n/load-messages";
+import { manifest } from "@vitnode/api/manifest";
+
 import type { VitNodeServerConfig } from "@/vitnode.config";
 
-import { loadMessages } from "@/lib/i18n/load-messages";
 import { pickMessages } from "@/lib/i18n/pick-messages";
 import { buildAppMessagesSources } from "@/lib/i18n/sources";
-import { manifest } from "@/manifest";
 
 import type { IntlMessages } from "./runtime";
 

@@ -107,7 +107,7 @@ curl -b "vitnode_auth_admin=<session>" \
 }
 ```
 
-This excerpt shows two indexed documents for one published story, so search is not healthy until you reindex the collection. `failedEffects` counts scheduled publishes that committed but whose event or search update failed. In your own code, `contentEngineDiagnostics(c)` from `@vitnode/core/content/server` returns the same object.
+This excerpt shows two indexed documents for one published story, so search is not healthy until you reindex the collection. `failedEffects` counts scheduled publishes that committed but whose event or search update failed. In your own code, `contentEngineDiagnostics(c)` from `@vitnode/api/content/server` returns the same object.
 
 ## Know the limits
 

@@ -12,7 +12,7 @@ icon: List
 | ------------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `entry(definition, ...keyArgs)` | `CacheEntryHandle`                                     | One entry, with its key built from `keyArgs`. See [Entry handle](#entry-handle).                                                                                |
 | `flush()`                       | `Promise<void>`                                        | Deletes every entry of the current request's plugin. A no-op when the context has no plugin. See [Clear every entry of a plugin](/docs/dev/cache/typed-entries#clear-every-entry-of-a-plugin). |
-`c.get("cache")` has nothing else: its type is `DomainCache` (from `@vitnode/core/api/lib/cache`), and the object at runtime has only these two methods. In a service, depend on just what you call, for example `cache: Pick<EnvVariablesVitNode["cache"], "entry">`, and pass `c.get("cache")`.
+`c.get("cache")` has nothing else: its type is `DomainCache` (from `@vitnode/api/lib/cache`), and the object at runtime has only these two methods. In a service, depend on just what you call, for example `cache: Pick<EnvVariablesVitNode["cache"], "entry">`, and pass `c.get("cache")`.
 
 VitNode core keeps its own cache store behind that object: the system store, locks, lease sets and the Redis connection status, which sessions, staff permission sets, presence, the queue worker and the Content Engine's public reads use. It is not reachable from `c.get("cache")` and is not a plugin API. Its module can be imported through the package's deep paths like any other file, but it may change in any release.
 
@@ -27,7 +27,7 @@ The plugin in an entry's key is the plugin that defined it, not the one handling
 
 ## Definition options
 
-`defineCacheEntry` from your plugin's `@/api/builders` (`bindApiPlugin(manifest).defineCacheEntry`) declares an entry. The unbound version in `@vitnode/core/api/lib/cache-entry` also takes `pluginId`.
+`defineCacheEntry` from your plugin's `@/api/builders` (`bindApiPlugin(manifest).defineCacheEntry`) declares an entry. The unbound version in `@vitnode/api/lib/cache-entry` also takes `pluginId`.
 
 | Name         | Type                                           | Required | Default    | Description                                                                                     |
 | ------------ | ---------------------------------------------- | -------- | ---------- | ----------------------------------------------------------------------------------------------- |
@@ -50,7 +50,7 @@ The plugin in an entry's key is the plugin that defined it, not the one handling
 
 - **Reads** treat malformed JSON, a value the schema rejects, a different `version`, no store and a Redis error as a miss; a rejected value is deleted.
 - **Writes** copy the value to JSON first and reject a `Date`, `Map`, class instance, `NaN`, `Infinity`, `bigint`, circular reference, or `undefined` or missing (sparse) array item; `undefined` object properties are omitted. What is stored is that JSON (the schema's input), not the schema's output.
-- **Errors:** `CacheEntryValidationError` for an invalid write; `CacheEntryDefinitionError` for an invalid `name`, `version`, `ttlSeconds` or key part. Both are exported from `@vitnode/core/api/lib/cache-entry`. Redis errors are never thrown.
+- **Errors:** `CacheEntryValidationError` for an invalid write; `CacheEntryDefinitionError` for an invalid `name`, `version`, `ttlSeconds` or key part. Both are exported from `@vitnode/api/lib/cache-entry`. Redis errors are never thrown.
 
 ## Without Redis and when Redis fails
 

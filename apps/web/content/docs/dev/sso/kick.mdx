@@ -58,8 +58,8 @@ KICK_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
 Add `KickSSOApiPlugin` to `authorization.ssoAdapters` in the API's `vitnode.api.config.ts` ([where it lives](/docs/dev/sso#where-the-files-live)), next to any adapters you already have. Keep the rest of the config as it is:
 
 ```ts title="src/vitnode.api.config.ts (excerpt)"
-import { KickSSOApiPlugin } from '@vitnode/core/api/adapters/sso/kick' // [!code ++]
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { KickSSOApiPlugin } from '@vitnode/api/adapters/sso/kick' // [!code ++]
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   // ...

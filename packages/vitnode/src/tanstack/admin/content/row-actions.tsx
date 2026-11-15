@@ -1,5 +1,12 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentVisibilityAction } from "@vitnode/api/content/visibility";
+
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import {
+  contentVisibilityTransition,
+  isContentHidden,
+} from "@vitnode/api/content/visibility";
 import {
   ActivityIcon,
   CalendarClockIcon,
@@ -18,9 +25,7 @@ import React from "react";
 import { toast } from "sonner";
 import { useFormatter, useTranslations } from "use-intl";
 
-import type { ContentId } from "@/content/ids";
 import type { RegisteredFrontendContentType } from "@/content/index";
-import type { ContentVisibilityAction } from "@/content/visibility";
 import type {
   ContentEditorialActionId,
   ContentRowActionId,
@@ -48,10 +53,6 @@ import {
   contentEditHref,
   contentPublicationTransition,
 } from "@/content/index";
-import {
-  contentVisibilityTransition,
-  isContentHidden,
-} from "@/content/visibility";
 import { ContentAccessDialog } from "@/views/admin/views/access/access-dialog";
 import { ContentDuplicateDialog } from "@/views/admin/views/content/actions/duplicate-dialog";
 import {

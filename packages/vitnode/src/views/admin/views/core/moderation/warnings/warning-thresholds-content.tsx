@@ -1,3 +1,4 @@
+import { WARNING_LIMITS } from "@vitnode/api/lib/moderation/warnings";
 import { GaugeIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -20,7 +21,6 @@ import {
 } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 import { SuspensionDuration } from "@/views/moderation/warnings/warning-format";
 
 import type { WarningThresholdFormProps } from "./warning-threshold-form";

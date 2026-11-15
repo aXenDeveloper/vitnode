@@ -1,5 +1,8 @@
+import type { FrontendPluginInventoryEntry } from "@vitnode/api/lib/plugin-manifest";
+import type { ResolvedPageCacheConfig } from "@vitnode/api/page-cache/config";
 import type { Plugin } from "vite";
 
+import { pageCacheConfigFromLoadedConfig } from "@vitnode/api/page-cache/config";
 import { createJiti } from "jiti";
 import { randomBytes } from "node:crypto";
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -14,8 +17,6 @@ import {
 } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { FrontendPluginInventoryEntry } from "../../lib/plugin-manifest";
-import type { ResolvedPageCacheConfig } from "../../page-cache/config";
 import type { ResolvedPageCacheRoute } from "../../page-cache/resolve";
 import type { ResolvedAdminNavModule } from "../admin-nav";
 import type { ResolvedApiPluginModule } from "../api-registry";
@@ -31,7 +32,6 @@ import type {
 } from "../plugin-routes";
 import type { RouteReportEntry, RouteReportInput } from "./route-report";
 
-import { pageCacheConfigFromLoadedConfig } from "../../page-cache/config";
 import { generatePageCacheSource } from "../../page-cache/generate";
 import {
   pageCacheRouteTable,

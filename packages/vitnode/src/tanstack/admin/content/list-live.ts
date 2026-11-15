@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  CONTENT_REFRESH_DEBOUNCE_MS,
+  CONTENT_REFRESH_MAX_WAIT_MS,
+} from "@vitnode/api/content/live/refresh";
 import React from "react";
 
 import type { ContentLiveRefreshStatus } from "@/tanstack/content/live-refresh";
 
-import {
-  CONTENT_REFRESH_DEBOUNCE_MS,
-  CONTENT_REFRESH_MAX_WAIT_MS,
-} from "@/content/live/refresh";
 import { createCoalescer } from "@/lib/coalesce";
 import { useContentLiveRefresh } from "@/tanstack/content/live-refresh";
 import { invalidateContentList } from "@/views/admin/views/content/lib/invalidate";

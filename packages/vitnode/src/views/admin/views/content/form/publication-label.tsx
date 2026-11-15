@@ -1,8 +1,8 @@
+import { isContentPublished } from "@vitnode/api/content/publication";
 import { cn } from "cn";
 import { useFormatter, useTranslations } from "use-intl";
 
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { isContentPublished } from "@/content/publication";
 
 import { useContentForm } from "./context";
 

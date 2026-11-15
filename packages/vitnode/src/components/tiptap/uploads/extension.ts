@@ -7,8 +7,7 @@ import {
 } from "@tiptap/pm/model";
 import { NodeSelection, Plugin, PluginKey } from "@tiptap/pm/state";
 import { Extension } from "@tiptap/react";
-
-import { isRemoteEditorImageUrl } from "@/lib/editor-uploads";
+import { isRemoteEditorImageUrl } from "@vitnode/api/lib/shared/editor-uploads";
 
 import type { EditorUploadRuntime } from "./runtime";
 

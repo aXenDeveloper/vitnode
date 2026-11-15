@@ -1,6 +1,6 @@
-import React from "react";
+import type { NotificationState } from "@vitnode/api/lib/notifications/types";
 
-import type { NotificationState } from "@/lib/notifications/types";
+import React from "react";
 
 export interface NotificationStateSnapshot extends NotificationState {
   userId: number;

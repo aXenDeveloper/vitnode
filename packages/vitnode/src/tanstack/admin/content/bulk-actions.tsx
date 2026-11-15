@@ -1,3 +1,5 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ChevronDownIcon,
@@ -11,7 +13,6 @@ import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { ContentId } from "@/content/ids";
 import type { RegisteredFrontendContentType } from "@/content/index";
 import type { ContentLabels } from "@/views/admin/views/content/content-labels";
 import type {

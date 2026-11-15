@@ -1,0 +1,73 @@
+import { z } from "@hono/zod-openapi";
+
+import { buildRoute } from "@/builders";
+import { SSO_CONNECTION_INTENTS } from "@/lib/shared/sso-profile";
+import { SsoConnectionModel } from "@/models/sso-connection";
+
+import { requireSignedInUser } from "../../../passkeys/lib/failure";
+import {
+  SSO_CONNECTION_ERROR_RESPONSES,
+  zodSsoFieldOutcomes,
+  zodSsoProviderIdParam,
+} from "../connections.schema";
+import { ssoConnectionFailure } from "../lib/failure";
+
+export const zodSsoConnectionCallbackSchema = z.object({
+  code: z.string().min(1).max(4096),
+  state: z.string().min(16).max(256),
+  user: z.string().max(2048).optional(),
+});
+
+export const ssoConnectionCallbackRoute = buildRoute({
+  route: {
+    method: "post",
+    description:
+      "Finish a provider round trip started from settings - connect, import or sync. The state must belong to the signed-in user, this provider and this intent, and works once.",
+    path: "/{providerId}/callback",
+    request: {
+      params: z.object({ providerId: zodSsoProviderIdParam }),
+      body: {
+        required: true,
+        content: {
+          "application/json": { schema: zodSsoConnectionCallbackSchema },
+        },
+      },
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({
+              intent: z.enum(SSO_CONNECTION_INTENTS),
+              providerId: z.string(),
+              results: zodSsoFieldOutcomes.optional(),
+            }),
+          },
+        },
+        description:
+          "The account was connected, or its profile is ready to review",
+      },
+      ...SSO_CONNECTION_ERROR_RESPONSES,
+    },
+  },
+  handler: async c => {
+    const user = requireSignedInUser(c.get("user"));
+    const { providerId } = c.req.valid("param");
+    const { code, state, user: providerUser } = c.req.valid("json");
+
+    try {
+      return c.json(
+        await new SsoConnectionModel(c).callback({
+          code,
+          params: providerUser === undefined ? {} : { user: providerUser },
+          providerId,
+          state,
+          user,
+        }),
+        200,
+      );
+    } catch (error) {
+      return ssoConnectionFailure(c, error);
+    }
+  },
+});

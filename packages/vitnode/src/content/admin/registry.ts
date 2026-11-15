@@ -1,14 +1,15 @@
+import type { AnyContentContainerDefinition } from "@vitnode/api/content/containers/types";
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
+
+import { validateContentContainers } from "@vitnode/api/content/containers/registry";
+import { validateContentTypes } from "@vitnode/api/content/registry";
+
 import type {
   ContentContainerFrontendRegistration,
   ContentFrontendPluginSource,
   ContentTypeFrontendRegistration,
 } from "../../lib/plugin";
-import type { AnyContentContainerDefinition } from "../containers/types";
-import type { AnyContentTypeDefinition } from "../types";
 import type { ContentTypeLookup } from "./route";
-
-import { validateContentContainers } from "../containers/registry";
-import { validateContentTypes } from "../registry";
 
 /** A content type's frontend registration, plus the plugin that registered it. */
 export interface RegisteredFrontendContentType {

@@ -1,8 +1,8 @@
-import type { PaymentErrorCode } from "@vitnode/core/api/lib/payments/errors";
-import type { EnvVariablesVitNode } from "@vitnode/core/api/middlewares/global.middleware";
-import type { PaymentsModel } from "@vitnode/core/api/models/payments";
+import type { PaymentErrorCode } from "@vitnode/api/lib/payments/errors";
+import type { EnvVariablesVitNode } from "@vitnode/api/middlewares/global.middleware";
+import type { PaymentsModel } from "@vitnode/api/models/payments";
 
-import { PaymentError } from "@vitnode/core/api/lib/payments/errors";
+import { PaymentError } from "@vitnode/api/lib/payments/errors";
 import { and, eq } from "drizzle-orm";
 
 import { DEMO_ITEMS, type DemoItemId, purchaseReference } from "@/catalog";

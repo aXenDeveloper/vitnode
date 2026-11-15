@@ -1,3 +1,4 @@
+import { PASSKEY_NAME_MAX_LENGTH } from "@vitnode/api/lib/passkey";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
@@ -5,7 +6,6 @@ import { z } from "zod";
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { useDialog } from "@/components/ui/dialog";
-import { PASSKEY_NAME_MAX_LENGTH } from "@/lib/passkey";
 
 import type { AdminUserPasskey } from "./user-account-query";
 import type { AdminUserDetail } from "./user-query";

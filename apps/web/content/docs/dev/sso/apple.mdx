@@ -81,8 +81,8 @@ Apple's token endpoint wants a **client secret**: a short ES256 JWT signed with 
 Add `AppleSSOApiPlugin` to `authorization.ssoAdapters` in the API's `vitnode.api.config.ts` ([where it lives](/docs/dev/sso#where-the-files-live)), next to any adapters you already have. Keep the rest of the config as it is:
 
 ```ts title="src/vitnode.api.config.ts (excerpt)"
-import { AppleSSOApiPlugin } from '@vitnode/core/api/adapters/sso/apple' // [!code ++]
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { AppleSSOApiPlugin } from '@vitnode/api/adapters/sso/apple' // [!code ++]
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   // ...

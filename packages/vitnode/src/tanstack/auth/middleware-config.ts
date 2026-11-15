@@ -1,12 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { routeMiddlewareSchema } from "@vitnode/api/modules/middleware/middleware.schema";
 import type { z } from "zod";
 
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
-import type { routeMiddlewareSchema } from "@/api/modules/middleware/middleware.schema";
 import type { SSOProvider } from "@/views/auth/sso/providers";
 
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { normalizeSSOProviders } from "@/views/auth/sso/providers";
 

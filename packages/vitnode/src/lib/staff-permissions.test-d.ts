@@ -1,14 +1,13 @@
 import { z } from "@hono/zod-openapi";
-import { describe, expectTypeOf, it } from "vitest";
-
-import type { AdminDashboardWidget, AdminNavDeclaration } from "./plugin";
-
-import { buildRoute } from "../api/lib/route";
+import { buildRoute } from "@vitnode/api/lib/route";
 import {
   type AdminStaffPermissionRef,
   defineStaffPermissions,
   type ModeratorStaffPermissionRef,
-} from "./staff-permissions";
+} from "@vitnode/api/lib/staff-permissions";
+import { describe, expectTypeOf, it } from "vitest";
+
+import type { AdminDashboardWidget, AdminNavDeclaration } from "./plugin";
 
 const permissions = defineStaffPermissions(
   { id: "@vitnode/notes" },

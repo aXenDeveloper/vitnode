@@ -1,11 +1,14 @@
-import { queryOptions } from "@tanstack/react-query";
+import type {
+  UserImageKind,
+  UserImagePolicy,
+} from "@vitnode/api/lib/shared/user-images";
 
-import type { UserImageKind, UserImagePolicy } from "@/lib/user-images";
+import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
 import { readApiErrorMessage } from "@/lib/read-api-error";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 import { PROFILE_QUERY_ROOT } from "../profile-query";

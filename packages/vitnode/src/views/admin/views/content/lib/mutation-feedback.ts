@@ -2,7 +2,7 @@ import type {
   ContentConflict,
   ContentDeliveryConflict,
   ContentUnprocessable,
-} from "@/content/conflicts";
+} from "@vitnode/api/content/conflicts";
 
 /** Keys under `core.content.errors` that a mutation status maps onto. */
 export type ContentErrorKey =

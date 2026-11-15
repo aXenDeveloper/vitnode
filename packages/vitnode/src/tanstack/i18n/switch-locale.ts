@@ -1,9 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { AnyRouter } from "@tanstack/react-router";
+import type { LocaleRouting } from "@vitnode/api/lib/i18n/locale-routing";
 
 import { useRouter } from "@tanstack/react-router";
-
-import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 
 import { serializeLocaleCookie } from "@/lib/i18n/locale-cookie";
 

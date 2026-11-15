@@ -1,6 +1,10 @@
+import type {
+  UserImageKind,
+  UserImageLimit,
+} from "@vitnode/api/lib/shared/user-images";
+
 import { useTranslations } from "use-intl";
 
-import type { UserImageKind, UserImageLimit } from "@/lib/user-images";
 import type { UserImageDialogLabels } from "@/views/profile/images/user-image-dialog";
 
 import { UserImageDialog } from "@/views/profile/images/user-image-dialog";

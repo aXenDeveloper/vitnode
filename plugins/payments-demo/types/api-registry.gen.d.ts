@@ -13,10 +13,10 @@
 
 import type { VitNodeApiPlugin } from '../src/config.api'
 
-declare module '@vitnode/core/lib/fetcher/registry' {
+declare module '@vitnode/api/lib/fetcher/registry' {
   interface ApiPluginRegistry {
     'payments-demo': VitNodeApiPlugin
   }
 }
 
-export type { ApiPluginRegistry } from '@vitnode/core/lib/fetcher/registry'
+export type { ApiPluginRegistry } from '@vitnode/api/lib/fetcher/registry'

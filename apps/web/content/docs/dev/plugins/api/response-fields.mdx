@@ -8,7 +8,7 @@ implementation:
     - Which plugin? Offer plugins in the project with a `src/config.api.ts`.
     - Which routes? Offer handlers in the chosen plugin that pass database rows or other wide objects to `c.json`.
   constraints:
-    - Answer with `respondJson(c, status, schema, value)` from `@vitnode/core/api/lib/respond-json`, using the same schema the route declares for that status.
+    - Answer with `respondJson(c, status, schema, value)` from `@vitnode/api/lib/respond-json`, using the same schema the route declares for that status.
     - Response schemas must be plain JSON schemas, without transforms, pipes, defaults, catch, lazy or intersections.
     - Check access before building the value. Projection removes undeclared fields; it does not authorize declared ones.
   related:
@@ -16,7 +16,7 @@ implementation:
       href: /docs/dev/plugins/api/routes
 ---
 
-`c.json(row, 200)` sends every property of `row`, including columns the response schema never mentions. `respondJson` from `@vitnode/core/api/lib/respond-json` copies only the fields the schema declares, at every depth, and then validates the result. In this guide the `site-notes` detail route selects whole rows and still answers with only `id`, `title` and `body`.
+`c.json(row, 200)` sends every property of `row`, including columns the response schema never mentions. `respondJson` from `@vitnode/api/lib/respond-json` copies only the fields the schema declares, at every depth, and then validates the result. In this guide the `site-notes` detail route selects whole rows and still answers with only `id`, `title` and `body`.
 
 ## Before you begin
 
@@ -31,7 +31,7 @@ implementation:
 In `src/api/modules/notes/routes/show.route.ts`, select the whole row and pass the response schema the route already declares for `200`:
 
 ```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
-import { respondJson } from "@vitnode/core/api/lib/respond-json"; // [!code ++]
+import { respondJson } from "@vitnode/api/lib/respond-json"; // [!code ++]
 
   handler: async c => {
     const { id } = c.req.valid("param");
@@ -77,7 +77,7 @@ After projecting, `respondJson` validates the result. A required field that is m
 
 ## Reference
 
-All exports of `@vitnode/core/api/lib/respond-json`:
+All exports of `@vitnode/api/lib/respond-json`:
 
 | Export                    | Signature                                     | Behavior                                                                               |
 | ------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------- |

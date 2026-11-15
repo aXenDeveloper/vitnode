@@ -1,12 +1,11 @@
+import type { updatesSummarySchema } from "@vitnode/api/modules/admin/plugins/updates.schema";
 import type { z } from "zod";
 
 import { queryOptions, useQuery } from "@tanstack/react-query";
-
-import type { updatesSummarySchema } from "@/api/modules/admin/plugins/updates.schema";
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
+import { manifest } from "@vitnode/api/manifest";
 
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 

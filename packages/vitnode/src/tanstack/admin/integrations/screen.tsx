@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import { PageTitle } from "@/components/ui/page-title";
-import { manifest } from "@/manifest";
 import { IntegrationsContent } from "@/views/admin/views/core/system/integrations/integrations-content";
 import { integrationsQueryOptions } from "@/views/admin/views/core/system/integrations/integrations-query";
 import { sendTestEmailInBrowser } from "@/views/admin/views/core/system/integrations/send-test-email/send-test-email-mutation";

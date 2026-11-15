@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import type {
   EditablePageLayoutPayload,
@@ -7,7 +8,6 @@ import type {
 
 import { EditablePageSaveRefused } from "@/content/editor";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface ModeratorPermissions {

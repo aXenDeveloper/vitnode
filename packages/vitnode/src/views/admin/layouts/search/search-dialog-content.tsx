@@ -1,4 +1,5 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
 import { MenuIcon } from "lucide-react";
 import React from "react";
 import { useDebouncedCallback } from "use-debounce";
@@ -16,7 +17,6 @@ import {
   CommandShortcut,
 } from "@/components/ui/command";
 import { Skeleton } from "@/components/ui/skeleton";
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import type { AdminSearchNavItem } from "./flatten-nav";
 import type { AdminUserSearch } from "./search-users";

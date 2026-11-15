@@ -26,7 +26,7 @@ Passkeys are **opt-in**: they stay off until you set `authorization.passkeys`. `
 - **RP name** - `metadata.shortTitle`, falling back to `metadata.title`
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
-import { buildApiConfig } from "@vitnode/core/vitnode.config"
+import { buildApiConfig } from "@vitnode/api/vitnode.config"
 
 export const vitNodeApiConfig = buildApiConfig({
   // [!code ++:3]

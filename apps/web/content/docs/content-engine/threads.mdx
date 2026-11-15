@@ -118,7 +118,7 @@ export const commentContentType = defineContentType({
 Create `src/database/comments.ts`. This is the complete file; `references` points the `article` relation at the articles table:
 
 ```ts title="plugins/newsroom/src/database/comments.ts"
-import { createContentModel } from "@vitnode/core/content/server";
+import { createContentModel } from "@vitnode/api/content/server";
 
 import { commentContentType } from "@/content/comment";
 

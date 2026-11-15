@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import type { BrowseAnonymouslyPolicy } from "@/lib/user-presence";
+import type { BrowseAnonymouslyPolicy } from "@vitnode/api/lib/user-presence";
 
 import { PrivacySettings } from "./privacy-settings";
 

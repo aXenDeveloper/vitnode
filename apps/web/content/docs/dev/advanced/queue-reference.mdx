@@ -10,7 +10,7 @@ Signatures, options, types and errors of the background task queue. For a walkth
 
 ## `buildQueueTask`
 
-Server-only. Import it from your plugin's `@/api/builders` (`bindApiPlugin(manifest).buildQueueTask`), which fills in `pluginId`. It returns a `QueueTaskDefinition<Plugin, Name, Schema>`. The unbound `buildQueueTask` from `@vitnode/core/api/lib/queue` takes the same options plus a required `pluginId`.
+Server-only. Import it from your plugin's `@/api/builders` (`bindApiPlugin(manifest).buildQueueTask`), which fills in `pluginId`. It returns a `QueueTaskDefinition<Plugin, Name, Schema>`. The unbound `buildQueueTask` from `@vitnode/api/lib/queue` takes the same options plus a required `pluginId`.
 
 <TypeTable
   type={{
@@ -100,7 +100,7 @@ The row is stored under the definition's `pluginId` and `name`, whichever plugin
 
 ## Types
 
-All from `@vitnode/core/api/lib/queue`, except `QueueDispatchOptions` and `QueueDispatchResult` from `@vitnode/core/api/models/queue`.
+All from `@vitnode/api/lib/queue`, except `QueueDispatchOptions` and `QueueDispatchResult` from `@vitnode/api/models/queue`.
 
 | Type                                        | Meaning                                                     |
 | ------------------------------------------- | ----------------------------------------------------------- |

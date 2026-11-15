@@ -1,4 +1,4 @@
-import { defineModerationScope } from "@vitnode/core/api/moderation";
+import { defineModerationScope } from "@vitnode/api/moderation";
 import { and, asc, gt, ilike, inArray } from "drizzle-orm";
 
 import { newsroom_categories } from "@/database/categories";

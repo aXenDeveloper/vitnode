@@ -214,9 +214,9 @@ importers:
       '@hono/zod-validator':
         specifier: ^0.9.1
         version: 0.9.1(hono@4.13.17)(zod@4.6.7)
-      '@vitnode/core':
+      '@vitnode/api':
         specifier: workspace:*
-        version: link:../../packages/vitnode
+        version: link:../../packages/api
       '@vitnode/node-cron':
         specifier: workspace:*
         version: link:../../packages/node-cron
@@ -335,6 +335,9 @@ importers:
       '@tanstack/react-start':
         specifier: ^1.169.4
         version: 1.169.4(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.3.0)(rollup@4.63.5)(supports-color@10.2.2)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@vitnode/blog':
         specifier: workspace:*
         version: link:../../plugins/blog
@@ -472,6 +475,139 @@ importers:
         specifier: ^4.153.0
         version: 4.160.1(@types/node@26.6.6)
 
+  packages/api:
+    dependencies:
+      '@hono/swagger-ui':
+        specifier: ^0.6.2
+        version: 0.6.2(hono@4.13.17)
+      '@inquirer/prompts':
+        specifier: ^8.7.5
+        version: 8.7.5(@types/node@26.6.6)
+      '@simplewebauthn/server':
+        specifier: ^14.1.0
+        version: 14.1.0
+      ai:
+        specifier: ^7.0.164
+        version: 7.0.164(zod@4.6.7)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      cn:
+        specifier: ^0.5.2
+        version: 0.5.2
+      commander:
+        specifier: ^15.1.0
+        version: 15.1.0
+      cron-parser:
+        specifier: ^5.10.4
+        version: 5.10.4
+      dotenv:
+        specifier: ^18.0.9
+        version: 18.0.9
+      jiti:
+        specifier: ^2.7.0
+        version: 2.7.0
+      jose:
+        specifier: ^6.2.15
+        version: 6.2.15
+      ocache:
+        specifier: ^0.3.1
+        version: 0.3.1
+      oxc-parser:
+        specifier: ^0.148.0
+        version: 0.148.0
+      picocolors:
+        specifier: ^1.1.1
+        version: 1.1.1
+      postgres:
+        specifier: ^4.1.0
+        version: 4.1.0
+      rate-limiter-flexible:
+        specifier: ^11.3.0
+        version: 11.3.0
+      redis:
+        specifier: ^6.3.1
+        version: 6.3.1(@opentelemetry/api@1.9.1)
+      semver:
+        specifier: ^7.8.6
+        version: 7.8.6
+      sharp:
+        specifier: ^0.35.5
+        version: 0.35.5(@types/node@26.6.6)
+      use-intl:
+        specifier: ^4.14.9
+        version: 4.14.9(@types/react@19.3.0)(react@19.3.1)
+      y-protocols:
+        specifier: ^1.0.7
+        version: 1.0.7(yjs@13.6.33)
+      yjs:
+        specifier: ^13.6.33
+        version: 13.6.33
+    devDependencies:
+      '@hono/zod-openapi':
+        specifier: ^1.6.3
+        version: 1.6.3(hono@4.13.17)(zod@4.6.7)
+      '@types/node':
+        specifier: ^26.6.6
+        version: 26.6.6
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      '@types/react-dom':
+        specifier: ^19.3.0
+        version: 19.3.0(@types/react@19.3.0)
+      '@types/semver':
+        specifier: ^7.8.0
+        version: 7.8.0
+      '@vitest/coverage-v8':
+        specifier: ^5.1.0
+        version: 5.1.0(vitest@5.1.0)
+      '@vitnode/config':
+        specifier: workspace:*
+        version: link:../config
+      drizzle-kit:
+        specifier: 1.0.0-rc.5
+        version: 1.0.0-rc.5(drizzle-orm@1.0.0-rc.5(@opentelemetry/api@1.9.1)(postgres@4.1.0)(zod@4.6.7))
+      drizzle-orm:
+        specifier: 1.0.0-rc.5
+        version: 1.0.0-rc.5(@opentelemetry/api@1.9.1)(postgres@4.1.0)(zod@4.6.7)
+      hono:
+        specifier: ^4.13.17
+        version: 4.13.17
+      oxlint:
+        specifier: ^1.92.0
+        version: 1.92.0(oxlint-tsgolint@7.0.2006)
+      oxlint-tsgolint:
+        specifier: ^7.0.2006
+        version: 7.0.2006
+      react:
+        specifier: ^19.3.1
+        version: 19.3.1
+      react-dom:
+        specifier: ^19.3.1
+        version: 19.3.1(react@19.3.1)
+      react-email:
+        specifier: ^6.11.8
+        version: 6.11.8(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(supports-color@10.2.2)
+      tsdown:
+        specifier: ^0.23.7
+        version: 0.23.7(oxc-resolver@11.24.2)(tsx@4.23.15)(typescript@7.1.0-beta)
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+      typescript:
+        specifier: 7.1.0-beta
+        version: 7.1.0-beta
+      vite:
+        specifier: ^8.3.6
+        version: 8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)
+      vitest:
+        specifier: ^5.1.0
+        version: 5.1.0(@opentelemetry/api@1.9.1)(@types/node@26.6.6)(@vitest/coverage-v8@5.1.0)(happy-dom@21.0.4)(jsdom@31.0.0)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      zod:
+        specifier: ^4.6.6
+        version: 4.6.7
+
   packages/config:
     dependencies:
       eslint-plugin-perfectionist:
@@ -543,12 +679,12 @@ importers:
         specifier: ^9.5.1
         version: 9.5.1(apache-arrow@21.2.0)(supports-color@10.2.2)
     devDependencies:
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../api
       '@vitnode/config':
         specifier: workspace:*
         version: link:../config
-      '@vitnode/core':
-        specifier: workspace:*
-        version: link:../vitnode
       oxlint:
         specifier: ^1.92.0
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
@@ -568,12 +704,12 @@ importers:
         specifier: ^4.6.0
         version: 4.6.0
     devDependencies:
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../api
       '@vitnode/config':
         specifier: workspace:*
         version: link:../config
-      '@vitnode/core':
-        specifier: workspace:*
-        version: link:../vitnode
       oxlint:
         specifier: ^1.92.0
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
@@ -596,12 +732,12 @@ importers:
       '@types/nodemailer':
         specifier: ^8.0.2
         version: 8.0.2
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../api
       '@vitnode/config':
         specifier: workspace:*
         version: link:../config
-      '@vitnode/core':
-        specifier: workspace:*
-        version: link:../vitnode
       oxlint:
         specifier: ^1.92.0
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
@@ -621,12 +757,12 @@ importers:
         specifier: ^6.37.0
         version: 6.37.0(@react-email/render@2.2.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1))
     devDependencies:
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../api
       '@vitnode/config':
         specifier: workspace:*
         version: link:../config
-      '@vitnode/core':
-        specifier: workspace:*
-        version: link:../vitnode
       oxlint:
         specifier: ^1.92.0
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
@@ -646,12 +782,12 @@ importers:
         specifier: ^3.1164.0
         version: 3.1164.0
     devDependencies:
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../api
       '@vitnode/config':
         specifier: workspace:*
         version: link:../config
-      '@vitnode/core':
-        specifier: workspace:*
-        version: link:../vitnode
       oxlint:
         specifier: ^1.92.0
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
@@ -671,12 +807,12 @@ importers:
         specifier: ^23.1.0
         version: 23.1.0(@types/node@26.6.6)
     devDependencies:
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../api
       '@vitnode/config':
         specifier: workspace:*
         version: link:../config
-      '@vitnode/core':
-        specifier: workspace:*
-        version: link:../vitnode
       oxlint:
         specifier: ^1.92.0
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
@@ -696,12 +832,12 @@ importers:
         specifier: ^2.119.0
         version: 2.119.0
     devDependencies:
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../api
       '@vitnode/config':
         specifier: workspace:*
         version: link:../config
-      '@vitnode/core':
-        specifier: workspace:*
-        version: link:../vitnode
       oxlint:
         specifier: ^1.92.0
         version: 1.92.0(oxlint-tsgolint@7.0.2006)
@@ -735,18 +871,9 @@ importers:
       '@ferrucc-io/emoji-picker':
         specifier: ^0.1.2
         version: 0.1.2(@babel/core@7.29.13(supports-color@10.2.2))(@babel/template@7.29.7)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(tailwindcss@4.3.5)
-      '@hono/swagger-ui':
-        specifier: ^0.6.2
-        version: 0.6.2(hono@4.13.17)
-      '@inquirer/prompts':
-        specifier: ^8.7.5
-        version: 8.7.5(@types/node@26.6.6)
       '@simplewebauthn/browser':
         specifier: ^14.0.0
         version: 14.0.0
-      '@simplewebauthn/server':
-        specifier: ^14.1.0
-        version: 14.1.0
       '@tanstack/charts':
         specifier: ^1.4.0
         version: 1.4.0(preact@10.29.8)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(solid-js@1.9.18)
@@ -804,9 +931,9 @@ importers:
       '@tiptap/y-tiptap':
         specifier: ^3.2.0
         version: 3.2.0(prosemirror-model@1.25.12)(prosemirror-state@1.4.4)(prosemirror-view@1.42.9)(y-protocols@1.0.7(yjs@13.6.33))(yjs@13.6.33)
-      ai:
-        specifier: ^7.0.164
-        version: 7.0.164(zod@4.6.7)
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../api
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -816,12 +943,6 @@ importers:
       cn:
         specifier: ^0.5.2
         version: 0.5.2
-      commander:
-        specifier: ^15.1.0
-        version: 15.1.0
-      cron-parser:
-        specifier: ^5.10.4
-        version: 5.10.4
       d3-shape:
         specifier: ^3.2.1
         version: 3.2.1
@@ -837,27 +958,12 @@ importers:
       jiti:
         specifier: ^2.7.0
         version: 2.7.0
-      jose:
-        specifier: ^6.2.15
-        version: 6.2.15
       motion:
         specifier: ^14.10.1
         version: 14.10.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       ocache:
         specifier: ^0.3.1
         version: 0.3.1
-      oxc-parser:
-        specifier: ^0.148.0
-        version: 0.148.0
-      picocolors:
-        specifier: ^1.1.1
-        version: 1.1.1
-      postgres:
-        specifier: ^4.1.0
-        version: 4.1.0
-      rate-limiter-flexible:
-        specifier: ^11.3.0
-        version: 11.3.0
       react-colorful:
         specifier: ^5.8.1
         version: 5.8.1(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -867,9 +973,6 @@ importers:
       react-resizable-panels:
         specifier: ^4.19.1
         version: 4.19.1(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      redis:
-        specifier: ^6.3.1
-        version: 6.3.1(@opentelemetry/api@1.9.1)
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -882,9 +985,6 @@ importers:
       shadcn:
         specifier: ^4.23.0
         version: 4.23.0(supports-color@10.2.2)
-      sharp:
-        specifier: ^0.35.5
-        version: 0.35.5(@types/node@26.6.6)
       use-debounce:
         specifier: ^10.1.1
         version: 10.1.1(react@19.3.1)
@@ -904,9 +1004,6 @@ importers:
       '@hono/zod-validator':
         specifier: ^0.9.1
         version: 0.9.1(hono@4.13.17)(zod@4.6.7)
-      '@react-email/ui':
-        specifier: ^6.11.8
-        version: 6.11.8(@babel/core@7.29.13(supports-color@10.2.2))(@opentelemetry/api@1.9.1)(@playwright/test@1.61.1)(@types/node@26.6.6)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tanstack/react-form':
         specifier: ^1.33.5
         version: 1.33.5(@tanstack/react-start@1.169.4(esbuild@0.28.2)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(rolldown@1.3.0)(rollup@4.63.5)(supports-color@10.2.2)(vite@8.3.6(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -985,9 +1082,6 @@ importers:
       react-dom:
         specifier: ^19.3.1
         version: 19.3.1(react@19.3.1)
-      react-email:
-        specifier: ^6.11.8
-        version: 6.11.8(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(supports-color@10.2.2)
       sonner:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -1030,6 +1124,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.170.46
         version: 1.170.46(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@vitnode/core':
         specifier: workspace:*
         version: link:../../packages/vitnode
@@ -1124,6 +1221,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.170.46
         version: 1.170.46(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@vitnode/core':
         specifier: workspace:*
         version: link:../../packages/vitnode
@@ -1200,6 +1300,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.170.46
         version: 1.170.46(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@vitnode/core':
         specifier: workspace:*
         version: link:../../packages/vitnode
@@ -1273,6 +1376,9 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.170.46
         version: 1.170.46(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@vitnode/api':
+        specifier: workspace:*
+        version: link:../../packages/api
       '@vitnode/core':
         specifier: workspace:*
         version: link:../../packages/vitnode

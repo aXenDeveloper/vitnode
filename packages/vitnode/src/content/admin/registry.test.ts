@@ -1,10 +1,11 @@
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
+
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
 import type { ContentFrontendPluginSource } from "../../lib/plugin";
-import type { AnyContentTypeDefinition } from "../types";
 
-import { defineContentType } from "../define";
-import { field } from "../fields";
 import {
   buildContentFrontendRegistry,
   CONTENT_FRONTEND_REGISTRY_MISSING,

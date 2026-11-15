@@ -1,3 +1,6 @@
+import { safeParseBlockData } from "@vitnode/api/blocks/schema";
+import { field } from "@vitnode/api/content/fields";
+import { getDefaults } from "@vitnode/api/lib/helpers/auto-form";
 import { describe, expect, it } from "vitest";
 import z from "zod";
 
@@ -6,10 +9,7 @@ import type { RegisteredBlock } from "../../blocks/types";
 import { blocks as builtInBlocks } from "../../blocks/built-in";
 import { defineBlock } from "../../blocks/define";
 import { createBlockRegistry } from "../../blocks/registry";
-import { safeParseBlockData } from "../../blocks/schema";
 import { buildFormSchemaFromSpec } from "../../content/admin/spec";
-import { field } from "../../content/fields";
-import { getDefaults } from "../../lib/helpers/auto-form";
 import { createBlockInstanceFor } from "../instance/defaults";
 import {
   blockDataFromFormValues,

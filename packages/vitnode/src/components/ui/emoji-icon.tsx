@@ -1,6 +1,6 @@
-import { cn } from "cn";
+import type { EmojiIconValue } from "@vitnode/api/lib/emoji-icon";
 
-import type { EmojiIconValue } from "@/lib/emoji-icon";
+import { cn } from "cn";
 
 import { DynamicIcon } from "./dynamic-icon";
 

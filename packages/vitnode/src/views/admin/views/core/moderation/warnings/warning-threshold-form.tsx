@@ -1,4 +1,5 @@
 import { useSelector } from "@tanstack/react-form";
+import { WARNING_LIMITS } from "@vitnode/api/lib/moderation/warnings";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
@@ -19,7 +20,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 import {
   MINUTES_PER_UNIT,
   splitSuspensionMinutes,

@@ -1,4 +1,7 @@
-import type { PluginRoute, PluginRouteSegment } from "./types";
+import type {
+  PluginRoute,
+  PluginRouteSegment,
+} from "@vitnode/api/routing/types";
 
 /**
  * How specific a segment is: the narrower set of URLs sorts first.

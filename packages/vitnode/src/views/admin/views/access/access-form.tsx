@@ -1,9 +1,21 @@
+import type {
+  ContentAccessAction,
+  ContentAccessAudience,
+  ContentAccessOverrides,
+} from "@vitnode/api/content/access/policy";
+import type {
+  ContentAccessAdminResponse,
+  ContentAccessAdminRole,
+} from "@vitnode/api/content/access/schemas";
+
 import { useSelector } from "@tanstack/react-form";
 import {
   keepPreviousData,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { CONTENT_ACCESS_ACTIONS } from "@vitnode/api/content/access/const";
+import { zodContentAccessOverrides } from "@vitnode/api/content/access/policy";
 import {
   AlertTriangleIcon,
   FolderTreeIcon,
@@ -19,15 +31,6 @@ import { useLocale, useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
-import type {
-  ContentAccessAction,
-  ContentAccessAudience,
-  ContentAccessOverrides,
-} from "@/content/access/policy";
-import type {
-  ContentAccessAdminResponse,
-  ContentAccessAdminRole,
-} from "@/content/access/schemas";
 
 import { AutoForm } from "@/components/form/auto-form";
 import { roleOptionName } from "@/components/form/fields/roles";
@@ -43,8 +46,6 @@ import {
 } from "@/components/ui/empty";
 import { useFormApi } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CONTENT_ACCESS_ACTIONS } from "@/content/access/const";
-import { zodContentAccessOverrides } from "@/content/access/policy";
 import { DOCS_URLS } from "@/lib/docs-links";
 
 import type { ContentAccessRuleValue } from "./access-matrix";

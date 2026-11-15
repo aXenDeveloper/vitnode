@@ -52,9 +52,9 @@ On this page you add a **Summarize topic** action to the `@vitnode/forum` plugin
 Create `src/api/ai/actions.ts` in the forum plugin:
 
 ```ts title="plugins/forum/src/api/ai/actions.ts"
-import { defineAiAction } from '@vitnode/core/api/lib/ai/action'
-import { aiActionRef } from '@vitnode/core/api/lib/ai/registry'
-import { checkStaffPermission } from '@vitnode/core/api/lib/check-staff-permission'
+import { defineAiAction } from '@vitnode/api/lib/ai/action'
+import { aiActionRef } from '@vitnode/api/lib/ai/registry'
+import { checkStaffPermission } from '@vitnode/api/lib/check-staff-permission'
 import { z } from 'zod'
 
 import { topicContentType } from '@/content/topic'

@@ -1,16 +1,16 @@
-import React from "react";
-
 import type {
   ContentRefreshClientMessage,
   ContentRefreshScope,
   ContentRefreshServerMessage,
   ContentRefreshSignal,
-} from "@/content/live/refresh";
+} from "@vitnode/api/content/live/refresh";
 
 import {
   contentRefreshChannel,
   contentRefreshRoom,
-} from "@/content/live/refresh";
+} from "@vitnode/api/content/live/refresh";
+import React from "react";
+
 import { useOptionalVitNodeWebSocketContext } from "@/ws/provider";
 
 /**
