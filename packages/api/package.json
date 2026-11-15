@@ -45,7 +45,6 @@
     "@hono/zod-openapi": "^1.6.3",
     "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
     "@types/semver": "^7.8.0",
     "@vitest/coverage-v8": "^5.1.0",
     "@vitnode/config": "workspace:*",
@@ -557,6 +556,9 @@
     "yjs": "^13.6.33"
   },
   "peerDependenciesMeta": {
+    "@types/react": {
+      "optional": true
+    },
     "tsdown": {
       "optional": true
     },
@@ -564,9 +566,6 @@
       "optional": true
     },
     "vite": {
-      "optional": true
-    },
-    "@types/react": {
       "optional": true
     }
   }

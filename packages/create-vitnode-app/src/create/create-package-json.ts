@@ -238,7 +238,6 @@ const rootDevDeps = (oxlint: boolean) => ({
 const apiDeps = (runtime: Runtime) => ({
   ...(runtime === "bun" ? {} : { "@hono/node-server": "^2.0" }),
   "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
-  "@hono/zod-validator": versionsPackageJson.honoZodValidator,
   "@vitnode/api": "", // filled dynamically
   dotenv: versionsPackageJson.dotenv,
   "drizzle-kit": versionsPackageJson.drizzleKit,
@@ -289,7 +288,6 @@ const singleAppDeps = {
   ...tanstackWebDeps,
   "@vitnode/api": "",
   "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
-  "@hono/zod-validator": versionsPackageJson.honoZodValidator,
   "drizzle-kit": versionsPackageJson.drizzleKit,
   "drizzle-orm": versionsPackageJson.drizzleOrm,
   hono: versionsPackageJson.hono,
