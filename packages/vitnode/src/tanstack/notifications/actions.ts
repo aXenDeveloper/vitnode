@@ -1,10 +1,11 @@
+import type { NotificationState } from "@vitnode/api/lib/notifications/types";
+
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { NotificationState } from "@/lib/notifications/types";
 import type { NotificationItemView } from "@/views/notifications/notifications-query";
 
 import { notificationStateStore } from "@/views/notifications/notification-state-store";

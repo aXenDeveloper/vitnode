@@ -1,6 +1,6 @@
-import type { AiPrompt } from "@vitnode/core/api/lib/ai/action";
+import type { AiPrompt } from "@vitnode/api/lib/ai/action";
 
-import { languageName } from "@vitnode/core/api/lib/ai/language-name";
+import { languageName } from "@vitnode/api/lib/ai/language-name";
 
 export type AiTextFormat = "html" | "text";
 

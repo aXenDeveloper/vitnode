@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { WARNING_LIMITS } from "@vitnode/api/lib/moderation/warnings";
 import { cn } from "cn";
 import {
   ExternalLinkIcon,
@@ -26,7 +27,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 
 import type { ReportPerson } from "../modcp/report-tone";
 import type {

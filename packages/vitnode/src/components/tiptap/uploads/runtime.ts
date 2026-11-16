@@ -1,6 +1,6 @@
-import React from "react";
+import type { EditorUploadResult } from "@vitnode/api/lib/shared/editor-uploads";
 
-import type { EditorUploadResult } from "@/lib/editor-uploads";
+import React from "react";
 
 export type EditorUploadRejection = "too_large" | "type" | "upload";
 

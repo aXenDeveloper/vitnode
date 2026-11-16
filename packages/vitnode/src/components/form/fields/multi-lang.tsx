@@ -1,8 +1,16 @@
+import type { MultiLangValue } from "@vitnode/api/lib/helpers/multi-lang";
+
+import {
+  findLangValue,
+  getLangValue,
+  hasText,
+  pickLangCodeWhere,
+  upsertLangValue,
+} from "@vitnode/api/lib/helpers/multi-lang";
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
 import type { FormFieldApi } from "@/components/ui/form";
-import type { MultiLangValue } from "@/lib/helpers/multi-lang";
 import type { LocaleConfig } from "@/vitnode.config";
 
 import { useLanguages } from "@/components/languages-provider";
@@ -13,13 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  findLangValue,
-  getLangValue,
-  hasText,
-  pickLangCodeWhere,
-  upsertLangValue,
-} from "@/lib/helpers/multi-lang";
 
 import { AutoFormLabel } from "../common/label";
 import { hasTipContent } from "../common/tip";
@@ -33,11 +34,11 @@ import {
   MultiLangShownLanguageContext,
 } from "./multi-lang-presence";
 
-export { multiLangValueSchema } from "@/lib/helpers/multi-lang";
+export { multiLangValueSchema } from "@vitnode/api/lib/helpers/multi-lang";
 export type {
   MultiLangValue,
   MultiLangValueItem,
-} from "@/lib/helpers/multi-lang";
+} from "@vitnode/api/lib/helpers/multi-lang";
 
 /** A form field holding one value per language. */
 export interface MultiLangFieldProps {

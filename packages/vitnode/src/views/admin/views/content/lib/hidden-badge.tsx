@@ -1,8 +1,8 @@
+import { isContentHidden } from "@vitnode/api/content/visibility";
 import { EyeOffIcon } from "lucide-react";
 
 import { HiddenIcon } from "@/components/hidden-icon";
 import { Badge } from "@/components/ui/badge";
-import { isContentHidden } from "@/content/visibility";
 
 export const ContentHiddenBadge = ({
   label,

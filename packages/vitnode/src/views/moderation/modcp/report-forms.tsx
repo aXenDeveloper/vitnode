@@ -1,17 +1,18 @@
+import type { ModerationReportResolution } from "@vitnode/api/lib/moderation/const";
+
+import {
+  MODERATION_LIMITS,
+  MODERATION_REPORT_RESOLUTIONS,
+} from "@vitnode/api/lib/moderation/const";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
-import type { ModerationReportResolution } from "@/lib/moderation/const";
 
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormRadioGroup } from "@/components/form/fields/radio-group";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
-import {
-  MODERATION_LIMITS,
-  MODERATION_REPORT_RESOLUTIONS,
-} from "@/lib/moderation/const";
 
 import type { ModerationResult, ReportState } from "../moderation-mutations";
 

@@ -266,7 +266,7 @@ The redirect needs the article's slug, and a comment only knows its article's id
 
 ```ts title="plugins/newsroom/src/api/modules/articles/routes/show-slug.route.ts"
 import { z } from "@hono/zod-openapi";
-import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
+import { setPageCacheTags } from "@vitnode/api/lib/page-cache";
 import { contentPublicListTag } from "@vitnode/core/content";
 import { HTTPException } from "hono/http-exception";
 

@@ -1,10 +1,10 @@
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
 import type { BlockCatalogEntry } from "./catalog";
 
 import { defineBlock } from "../../blocks/define";
 import { createBlockRegistry } from "../../blocks/registry";
-import { field } from "../../content/fields";
 import {
   blockCatalogFor,
   blockCatalogNotice,

@@ -1,11 +1,10 @@
 import type { RequestServerOptions } from "@tanstack/react-start";
-
-import type { LocaleRouting } from "@/lib/i18n/locale-routing";
+import type { LocaleRouting } from "@vitnode/api/lib/i18n/locale-routing";
 
 import {
   isPageCacheRenderMarker,
   PAGE_CACHE_RENDER_HEADER,
-} from "@/page-cache/tags";
+} from "@vitnode/api/page-cache/tags";
 
 import { handleLocaleRequest } from "../i18n/request";
 import {

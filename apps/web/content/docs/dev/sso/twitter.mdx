@@ -69,8 +69,8 @@ TWITTER_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code 
 Add `TwitterSSOApiPlugin` to `authorization.ssoAdapters` in the API's `vitnode.api.config.ts` ([where it lives](/docs/dev/sso#where-the-files-live)), next to any adapters you already have. Keep the rest of the config as it is:
 
 ```ts title="src/vitnode.api.config.ts (excerpt)"
-import { TwitterSSOApiPlugin } from '@vitnode/core/api/adapters/sso/twitter' // [!code ++]
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { TwitterSSOApiPlugin } from '@vitnode/api/adapters/sso/twitter' // [!code ++]
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   // ...

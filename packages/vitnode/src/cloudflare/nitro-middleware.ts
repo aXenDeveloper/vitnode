@@ -1,12 +1,14 @@
-import { runInRealtimeScope } from "@/ws/runtime";
-
-import type { CloudflareEnv, CloudflareExecutionContext } from "./types";
+import type {
+  CloudflareEnv,
+  CloudflareExecutionContext,
+} from "@vitnode/api/cloudflare/types";
 
 import {
   createCloudflareEdgeScope,
   forwardWebSocketToHub,
   isWebSocketUpgrade,
-} from "./edge";
+} from "@vitnode/api/cloudflare/edge";
+import { runInRealtimeScope } from "@vitnode/api/ws/runtime";
 
 const WEBSOCKET_PATH = "/api/ws";
 

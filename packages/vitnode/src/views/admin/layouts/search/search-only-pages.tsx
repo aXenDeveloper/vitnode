@@ -1,12 +1,12 @@
+import type { StaffPermissionSet } from "@vitnode/api/lib/permission-staff";
+import type { AdminStaffPermissionRef } from "@vitnode/api/lib/staff-permissions";
+
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
+import { hasStaffPermission } from "@vitnode/api/lib/staff-permission";
+import { staffPermissionArgs } from "@vitnode/api/lib/staff-permissions";
 import { BugIcon, ClockIcon, ListTodoIcon, SearchIcon } from "lucide-react";
 
-import type { StaffPermissionSet } from "@/api/lib/permission-staff";
-import type { AdminStaffPermissionRef } from "@/lib/staff-permissions";
 import type { AdminNavTranslator } from "@/views/admin/layouts/sidebar/nav/nav-model";
-
-import { hasStaffPermission } from "@/api/lib/staff-permission";
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
-import { staffPermissionArgs } from "@/lib/staff-permissions";
 
 import type { AdminSearchNavItem } from "./flatten-nav";
 

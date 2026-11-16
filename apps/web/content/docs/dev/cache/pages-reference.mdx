@@ -64,7 +64,7 @@ Entries are keyed by the request origin (scheme, host and port), the path, the m
 
 ## Label and invalidate your own data
 
-From `@vitnode/core/api/lib/page-cache`, for data a cached page reads from your own Hono routes.
+From `@vitnode/api/lib/page-cache`, for data a cached page reads from your own Hono routes.
 
 | Function                                  | Returns                                | Behavior                                                                                      |
 | ----------------------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -72,14 +72,14 @@ From `@vitnode/core/api/lib/page-cache`, for data a cached page reads from your 
 | `invalidatePageCacheTags(tags, { mode })` | `Promise<PageCacheInvalidationResult>` | Invalidates every page stored with any of `tags`. `mode` is `"soft"` or `"hard"`.             |
 
 ```ts title="plugins/events/src/api/modules/events/routes/list.route.ts"
-import { setPageCacheTags } from '@vitnode/core/api/lib/page-cache'
+import { setPageCacheTags } from '@vitnode/api/lib/page-cache'
 
 // in the handler, before returning the response
 setPageCacheTags(c, ['events:list'])
 ```
 
 ```ts title="plugins/events/src/api/modules/events/routes/update.route.ts"
-import { invalidatePageCacheTags } from '@vitnode/core/api/lib/page-cache'
+import { invalidatePageCacheTags } from '@vitnode/api/lib/page-cache'
 
 // in the handler, after the write commits
 const result = await invalidatePageCacheTags(['events:list'], { mode: 'soft' })

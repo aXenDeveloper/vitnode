@@ -1,19 +1,11 @@
 import type { WidgetComponentProps, WidgetData } from "@vitnode/core/widgets";
 
-import { field } from "@vitnode/core/content/fields";
 import { defineWidget } from "@vitnode/core/widgets";
 import { InfoIcon } from "lucide-react";
 
-const calloutFields = {
-  body: field.textarea({ maxLength: 600, minLength: 1, required: true }),
-  title: field.text({ maxLength: 120, minLength: 1, required: true }),
-  tone: field.enum({
-    defaultValue: "info",
-    values: ["info", "success", "warning"],
-  }),
-};
+import { calloutSchema } from "./callout.schema";
 
-type CalloutData = WidgetData<typeof calloutFields>;
+type CalloutData = WidgetData<typeof calloutSchema.fields>;
 
 const tones: Record<string, string> = {
   info: "border-primary/40 bg-primary/5",
@@ -35,12 +27,9 @@ const Callout = ({ data }: WidgetComponentProps<CalloutData>) => (
 );
 
 export const calloutWidget = defineWidget({
+  ...calloutSchema,
   component: Callout,
-  description: "A short highlighted note in one of three tones.",
-  fields: calloutFields,
   icon: InfoIcon,
-  id: "callout",
-  name: "Callout",
 });
 
 export const calloutBlock = calloutWidget;

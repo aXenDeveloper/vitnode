@@ -1,9 +1,10 @@
-import type { PluginRoute } from "../../routing/types.js";
+import type { PluginRoute } from "@vitnode/api/routing/types";
 
 import {
   routeMatchKey,
   routeMatchKeyFromTanStackPath,
-} from "../../routing/path.js";
+} from "@vitnode/api/routing/path";
+
 import { PLUGIN_ROUTES_ERROR_PREFIX } from "./diagnostics.js";
 
 export interface HostRoutePath {

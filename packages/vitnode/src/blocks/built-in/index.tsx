@@ -1,4 +1,4 @@
-import { manifest } from "@/manifest";
+import { manifest } from "@vitnode/api/manifest";
 
 import type { BlockPluginSource } from "../types";
 

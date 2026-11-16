@@ -1,19 +1,18 @@
-import { arrayMove } from "@dnd-kit/sortable";
-
 import type {
   ContentContainerPlacement,
   ContentContainerTreeRules,
-} from "@/content/containers/tree";
+} from "@vitnode/api/content/containers/tree";
 import type {
   AnyContentContainerDefinition,
   ContentContainerErrorCode,
-} from "@/content/containers/types";
+} from "@vitnode/api/content/containers/types";
 
+import { arrayMove } from "@dnd-kit/sortable";
 import {
   contentContainerAncestors,
   orderContentContainers,
   planContentContainerMove,
-} from "@/content/containers/tree";
+} from "@vitnode/api/content/containers/tree";
 
 import type { AdminContentContainer } from "./container-request";
 

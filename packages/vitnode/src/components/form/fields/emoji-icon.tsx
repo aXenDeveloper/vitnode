@@ -1,8 +1,12 @@
 import type React from "react";
 
+import {
+  parseEmojiIcon,
+  serializeEmojiIcon,
+} from "@vitnode/api/lib/emoji-icon";
+
 import { EmojiIconPicker } from "@/components/ui/emoji-icon-picker";
 import { FormControl, FormMessage } from "@/components/ui/form";
-import { parseEmojiIcon, serializeEmojiIcon } from "@/lib/emoji-icon";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 

@@ -1,17 +1,11 @@
+import { textBlockSchema } from "@vitnode/api/blocks/built-in/text";
 import { TypeIcon } from "lucide-react";
 
 import type { BlockComponentProps, BlockData } from "../types";
 
-import { field } from "../../content/fields";
 import { defineBlock } from "../define";
 
-const textFields = {
-  body: field.textarea({ maxLength: 20000, minLength: 1, required: true }),
-  heading: field.text({ maxLength: 200, nullable: true }),
-  width: field.enum({ defaultValue: "prose", values: ["prose", "full"] }),
-};
-
-type TextData = BlockData<typeof textFields>;
+type TextData = BlockData<typeof textBlockSchema.fields>;
 
 const paragraphs = (body: string): string[] =>
   body
@@ -38,11 +32,7 @@ const Text = ({ data }: BlockComponentProps<TextData>) => (
 );
 
 export const textBlock = defineBlock({
+  ...textBlockSchema,
   component: Text,
-  description:
-    "Plain paragraphs of prose. Blank lines separate paragraphs, and nothing is parsed as markup.",
-  fields: textFields,
   icon: TypeIcon,
-  id: "text",
-  name: "Text",
 });

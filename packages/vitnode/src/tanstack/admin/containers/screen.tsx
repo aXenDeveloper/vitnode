@@ -1,14 +1,15 @@
+import type { ContentLabelTranslator } from "@vitnode/api/content/admin/labels";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { contentContainerLabelsFrom } from "@vitnode/api/content/admin/containers";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { ContentLabelTranslator } from "@/content/admin/labels";
 import type { RegisteredFrontendContentContainer } from "@/content/admin/registry";
 import type { ContentContainerSave } from "@/views/admin/views/containers/container-form-content";
 import type { ContentContainerPoliciesSave } from "@/views/admin/views/containers/container-policies-form";
 import type { ContentContainerMutationResult } from "@/views/admin/views/containers/container-request";
 
-import { contentContainerLabelsFrom } from "@/content/admin/containers";
 import { ContentContainerManager } from "@/views/admin/views/containers/container-manager";
 import { invalidateContentContainers } from "@/views/admin/views/containers/container-query";
 import {

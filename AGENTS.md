@@ -85,7 +85,7 @@ Pick the error view by what failed:
 
 - `fetcher` from `@vitnode/core/tanstack/fetcher` is universal - one call, SSR and browser. Never hand-write `createIsomorphicFn().server(...).client(...)` for a fetch.
 - A call names the plugin, never an API module: `fetcher({ plugin: "@vitnode/core", method: "get", module: "users", path: "/devices" })`. `plugin`, `module` (any nesting depth, `admin/advanced/cron`), `path`, `method`, `args` and the response are all inferred from the plugin API registry; an invalid combination is a compile error at the offending property.
-- The registry is `ApiPluginRegistry` in `@vitnode/core/lib/fetcher/registry`. Core registers itself; an app's `src/api-registry.gen.ts` registers every configured plugin that exports `config.api`, with type-only imports; `vitnode build`/`vitnode dev` write a plugin's own entry to its `types/api-registry.gen.d.ts` (kept out of the published package) so its pages can call it. Never import a plugin API factory as a value outside `vitnode.api.config.ts`.
+- The registry is `ApiPluginRegistry` in `@vitnode/api/lib/fetcher/registry` (`@vitnode/core/lib/fetcher/registry` re-exports it). Core registers itself; an app's `src/api-registry.gen.ts` registers every configured plugin that exports `config.api`, with type-only imports; `vitnode build`/`vitnode dev` write a plugin's own entry to its `types/api-registry.gen.d.ts` (kept out of the published package) so its pages can call it. Never import a plugin API factory as a value outside `vitnode.api.config.ts`.
 - `@vitnode/core/tanstack/fetcher/server` is for work that is genuinely server-only: server functions, `allowSaveCookies` cookie relay, cron/jobs, upstream secrets or a different `origin`. Same call shape, more options.
 - Shared `views/*` query modules call `fetcher` directly - no injected transport, no browser-only twin. `@vitnode/core/lib/fetcher-client` is the framework-neutral browser primitive the universal fetcher is built on, for code that never renders on a server.
 - Write the route inline at the call site - never build a request object elsewhere and pass it in.
@@ -100,6 +100,12 @@ Pick the error view by what failed:
 - Server-side domain caching is the API's own: `c.get("cache")` in a Hono route, Redis-backed when `REDIS_URL` is set and a no-op otherwise.
 - Content Engine tag builders live in `content/cache.ts` (`contentPublicListTag` and friends) - pure strings, used to expire a content type's cached reads.
 - A background mutation cannot expire a front end's cache by calling a function. `dispatchContentRevalidation` posts to the origins an install opts into via `content.revalidateOrigins`.
+
+# Packages
+
+- `@vitnode/api` (`packages/api`) owns the backend: Hono API, database schema, Content Engine server, emails, WebSocket/Cloudflare runtime and the `vitnode` CLI. `@vitnode/core` (`packages/vitnode`) owns React, the AdminCP, TanStack Start and the Vite plugin, and depends on `@vitnode/api` - never the other way round, not even for types.
+- Server code imports from `@vitnode/api/...` (`@vitnode/api/lib/plugin`, `@vitnode/api/database/*`, `@vitnode/api/content/server`, `buildApiConfig` from `@vitnode/api/vitnode.config`). Contracts both sides read (content definitions, staff permissions, widget schemas) live in browser-safe `@vitnode/api` subpaths; core imports them directly, not through its own re-export stubs.
+- The built-in plugin keeps the logical id `@vitnode/core` in endpoints, `fetcher({ plugin: "@vitnode/core" })`, permissions, events and database rows. Never replace that id with the package name.
 
 # Coding Guidelines
 
@@ -188,7 +194,7 @@ npm i x
 ### Speed
 
 - The file name picks the environment: `*.test.tsx` runs in happy-dom (project `dom`), `*.test.ts` runs in node (project `unit`). Never add a `// @vitest-environment` pragma.
-- `unit` shares one module graph per worker (`isolate: false`). A test that asserts process-wide state ("nothing registered yet") goes in `ISOLATED` in `packages/vitnode/vitest.config.ts`.
+- `unit` shares one module graph per worker (`isolate: false`). A test that asserts process-wide state ("nothing registered yet") goes in `ISOLATED` in the package's `vitest.config.ts` (`packages/vitnode` or `packages/api`).
 - Real builds, watchers and child processes go in `INTEGRATION` there. `pnpm test` runs everything; `pnpm test:unit` skips them.
 - Never wait out a real delay - use `vi.useFakeTimers()` and advance the clock.
 - Build a Hono app or a fixture once per file when the tests only read from it.

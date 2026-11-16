@@ -1,14 +1,13 @@
-import React from "react";
-import { useTranslations } from "use-intl";
-
-import type { FileConstraints } from "@/lib/file-constraints";
+import type { FileConstraints } from "@vitnode/api/lib/file-constraints";
 
 import {
   fileAcceptAttribute,
   fileFormatLabels,
   validateFile,
-} from "@/lib/file-constraints";
-import { formatBytes } from "@/lib/format-bytes";
+} from "@vitnode/api/lib/file-constraints";
+import { formatBytes } from "@vitnode/api/lib/format-bytes";
+import React from "react";
+import { useTranslations } from "use-intl";
 
 import type { Offset, Size } from "./crop-math";
 import type { ImageCropOutput, LoadedSource } from "./crop-render";

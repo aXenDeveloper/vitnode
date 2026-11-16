@@ -1,38 +1,41 @@
-import { z } from "zod";
-
-import type { ContentId, ContentIdStrategy } from "../ids";
+import type { ContentId, ContentIdStrategy } from "@vitnode/api/content/ids";
 import type {
   AnyContentTypeDefinition,
   ContentFieldAiAssist,
   ContentFieldDescriptor,
   ContentFieldKind,
-} from "../types";
+} from "@vitnode/api/content/types";
 
-import { zodContentNode } from "../../blocks/validate";
-import {
-  getLangValue,
-  type MultiLangValue,
-  resolveLangValue,
-  upsertLangValue,
-} from "../../lib/helpers/multi-lang";
+import { zodContentNode } from "@vitnode/api/blocks/validate";
+import { humanizeFieldName } from "@vitnode/api/content/admin/labels";
 import {
   contentFileCollectionMax,
   contentFileCollectionMin,
   contentRepeatableMax,
   contentRepeatableMin,
-} from "../advanced";
-import { contentIdFromKey, contentIdKey, contentIdSchema } from "../ids";
+} from "@vitnode/api/content/advanced";
+import {
+  contentIdFromKey,
+  contentIdKey,
+  contentIdSchema,
+} from "@vitnode/api/content/ids";
 import {
   contentFieldPath,
   contentInnerFields,
   isContentReferenceCollection,
-} from "../paths";
+} from "@vitnode/api/content/paths";
 import {
   isRichTextDocument,
   isRichTextEmpty,
   type RichTextDocument,
-} from "../rich-text/document";
-import { humanizeFieldName } from "./labels";
+} from "@vitnode/api/content/rich-text/document";
+import {
+  getLangValue,
+  type MultiLangValue,
+  resolveLangValue,
+  upsertLangValue,
+} from "@vitnode/api/lib/helpers/multi-lang";
+import { z } from "zod";
 
 export interface ContentFormFieldSpec {
   ai?: ContentFieldAiAssist;

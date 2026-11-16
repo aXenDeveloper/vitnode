@@ -1,14 +1,14 @@
-import { queryOptions } from "@tanstack/react-query";
-
 import type {
   PersonalInformationFields,
   UserPersonalInformation,
-} from "@/lib/user-personal-information";
-import type { BrowseAnonymouslyPolicy } from "@/lib/user-presence";
+} from "@vitnode/api/lib/user-personal-information";
+import type { BrowseAnonymouslyPolicy } from "@vitnode/api/lib/user-presence";
+
+import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface PersonalInfoPolicy {

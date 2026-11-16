@@ -1,3 +1,4 @@
+import type { routeMiddlewareSchema } from "@vitnode/api/modules/middleware/middleware.schema";
 import type { z } from "zod";
 
 import { Link } from "@tanstack/react-router";
@@ -5,8 +6,6 @@ import { LockIcon, MailIcon } from "lucide-react";
 import { AnimatePresence, useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import { useTranslations } from "use-intl";
-
-import type { routeMiddlewareSchema } from "@/api/modules/middleware/middleware.schema";
 
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormInput } from "@/components/form/fields/input";

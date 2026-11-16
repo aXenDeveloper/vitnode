@@ -1,4 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { AI_USAGE_TONE_BAR, aiUsageTone } from "@vitnode/api/lib/ai/usage-tone";
 import { HistoryIcon, RotateCwIcon } from "lucide-react";
 import { useFormatter, useLocale, useTranslations } from "use-intl";
 
@@ -35,7 +36,6 @@ import {
 } from "@/lib/ai/action-text";
 import { formatAiPoints } from "@/lib/ai/format-points";
 import { aiRunStatusVariant, isAiRunStatus } from "@/lib/ai/run-status";
-import { AI_USAGE_TONE_BAR, aiUsageTone } from "@/lib/ai/usage-tone";
 
 import type { AiHistoryItem, AiUsage, AiUsageAction } from "./ai-usage-query";
 

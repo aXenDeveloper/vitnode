@@ -1,4 +1,4 @@
-import type { VitNodeSocketUserId } from "@/ws/auth-sync";
+import type { VitNodeSocketUserId } from "@vitnode/api/ws/auth-sync";
 
 export interface SocketSession {
   user?: null | { id: number };

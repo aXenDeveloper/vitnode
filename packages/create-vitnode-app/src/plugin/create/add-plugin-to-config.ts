@@ -5,6 +5,7 @@ import { basename, dirname, join } from "path";
 
 import type { PackageJSON } from "../../helpers/packages-json.js";
 
+import { dependsOn } from "./add-plugin-to-workspace.js";
 import {
   pluginApiVariableName,
   pluginVariableName,
@@ -399,10 +400,21 @@ const findConfigFiles = async (
   return results;
 };
 
+/**
+ * Whether the package that holds `file` installs VitNode for that config: a
+ * frontend config (`vitnode.config.ts`) belongs to a package on
+ * `@vitnode/core`; an API config (`vitnode.api.config.ts`) to one on
+ * `@vitnode/api`, or on `@vitnode/core` for a host created before the API had
+ * its own package.
+ */
 const ownedByVitNodePackage = async (
   file: string,
   rootPath: string,
 ): Promise<boolean> => {
+  const packages =
+    basename(file) === "vitnode.api.config.ts"
+      ? ["@vitnode/api", "@vitnode/core"]
+      : ["@vitnode/core"];
   let current = dirname(file);
 
   while (current.startsWith(rootPath)) {
@@ -411,10 +423,7 @@ const ownedByVitNodePackage = async (
         await readFile(join(current, "package.json"), "utf-8"),
       );
 
-      return Boolean(
-        pkg.dependencies?.["@vitnode/core"] ??
-        pkg.devDependencies?.["@vitnode/core"],
-      );
+      return packages.some(name => dependsOn(pkg, name));
     } catch {
       const parent = dirname(current);
 

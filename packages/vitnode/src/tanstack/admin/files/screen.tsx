@@ -1,11 +1,11 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 import React from "react";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
 
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import { PageTitle } from "@/components/ui/page-title";
-import { manifest } from "@/manifest";
 import { FilesTableContent } from "@/views/admin/views/core/system/files/files-table-content";
 
 import type { AdminTableNavigate } from "../table-search";

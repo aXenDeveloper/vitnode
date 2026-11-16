@@ -1,4 +1,10 @@
+import type { ContentAccessAudience } from "@vitnode/api/content/access/policy";
+import type { ContentAccessEffectiveResponse } from "@vitnode/api/content/access/schemas";
+
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { CONTENT_ACCESS_ACTIONS } from "@vitnode/api/content/access/const";
+import { sameContentAccessAudience } from "@vitnode/api/content/access/policy";
+import { zodContentAccessEffectiveResponse } from "@vitnode/api/content/access/schemas";
 import { cn } from "cn";
 import {
   ChevronDownIcon,
@@ -10,9 +16,6 @@ import {
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
-import type { ContentAccessAudience } from "@/content/access/policy";
-import type { ContentAccessEffectiveResponse } from "@/content/access/schemas";
-
 import { roleOptionName } from "@/components/form/fields/roles";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,9 +24,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CONTENT_ACCESS_ACTIONS } from "@/content/access/const";
-import { sameContentAccessAudience } from "@/content/access/policy";
-import { zodContentAccessEffectiveResponse } from "@/content/access/schemas";
 import { rawFetcher } from "@/tanstack/fetcher";
 import { RouteMessages } from "@/tanstack/i18n/route-messages";
 

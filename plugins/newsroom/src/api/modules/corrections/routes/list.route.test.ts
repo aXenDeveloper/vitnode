@@ -1,8 +1,8 @@
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { CacheModel } from "@vitnode/core/api/lib/cache";
-import { MemoryCacheStore } from "@vitnode/core/api/lib/cache-memory";
+import { CacheModel } from "@vitnode/api/lib/cache";
+import { MemoryCacheStore } from "@vitnode/api/lib/cache-memory";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { articleContent } from "@/database/articles";

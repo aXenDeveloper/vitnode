@@ -1,3 +1,6 @@
+import { createAreaInstance } from "@vitnode/api/blocks/area";
+import { createBlockInstance } from "@vitnode/api/blocks/instance";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -7,13 +10,10 @@ import type {
 } from "../../blocks/types";
 import type { EditorZoneState } from "./types";
 
-import { createAreaInstance } from "../../blocks/area";
-import { createBlockInstance } from "../../blocks/instance";
 import {
   createBlockRegistry,
   setDefaultBlockRegistry,
 } from "../../blocks/registry";
-import { field } from "../../content/fields";
 import { isRepairRemoval } from "./repair";
 
 const registry = createBlockRegistry([

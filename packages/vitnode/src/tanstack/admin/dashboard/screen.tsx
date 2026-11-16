@@ -1,4 +1,5 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { CONFIG } from "@vitnode/api/lib/config";
 import { AlertTriangleIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -8,7 +9,6 @@ import type { DashboardWidgetTranslator } from "@/views/admin/views/core/dashboa
 
 import { Badge } from "@/components/ui/badge";
 import { PageTitle } from "@/components/ui/page-title";
-import { CONFIG } from "@/lib/config";
 import { fitNamespaceList } from "@/routing";
 import { DashboardBoardProvider } from "@/views/admin/views/core/dashboard/grid/board-provider";
 import { DashboardGrid } from "@/views/admin/views/core/dashboard/grid/dashboard-grid";

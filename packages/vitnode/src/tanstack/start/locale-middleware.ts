@@ -1,6 +1,6 @@
-import { createMiddleware } from "@tanstack/react-start";
+import type { LocaleRouting } from "@vitnode/api/lib/i18n/locale-routing";
 
-import type { LocaleRouting } from "@/lib/i18n/locale-routing";
+import { createMiddleware } from "@tanstack/react-start";
 
 import { runLocaleRequest } from "./locale-request";
 

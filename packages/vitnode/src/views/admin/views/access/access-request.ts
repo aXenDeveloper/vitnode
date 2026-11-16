@@ -1,19 +1,19 @@
-import { queryOptions } from "@tanstack/react-query";
-import { z } from "zod";
-
-import type { ContentAccessOverrides } from "@/content/access/policy";
+import type { ContentAccessOverrides } from "@vitnode/api/content/access/policy";
 import type {
   ContentAccessAdminResponse,
   ContentAccessFileStatusResponse,
   ContentAccessProtectResult,
-} from "@/content/access/schemas";
+} from "@vitnode/api/content/access/schemas";
 
-import { CONTENT_ACCESS_ERROR_CODES } from "@/content/access/const";
+import { queryOptions } from "@tanstack/react-query";
+import { CONTENT_ACCESS_ERROR_CODES } from "@vitnode/api/content/access/const";
 import {
   zodContentAccessAdminResponse,
   zodContentAccessFileStatus,
   zodContentAccessProtectResult,
-} from "@/content/access/schemas";
+} from "@vitnode/api/content/access/schemas";
+import { z } from "zod";
+
 import { rawFetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";

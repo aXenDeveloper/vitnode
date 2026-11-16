@@ -12,8 +12,6 @@
 /tsconfig.json
 /components.json
 /global.d.ts
-/tsdown.config.ts
 /vitest.config.ts
 /tsconfig.json
-/scripts
 /dist/*.tsbuildinfo

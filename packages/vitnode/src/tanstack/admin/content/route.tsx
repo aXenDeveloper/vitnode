@@ -1,8 +1,9 @@
+import type { ContentLabelTranslator } from "@vitnode/api/content/admin/labels";
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import { notFound } from "@tanstack/react-router";
 import { createTranslator } from "use-intl";
 
-import type { ContentLabelTranslator } from "@/content/admin/labels";
-import type { ContentId } from "@/content/ids";
 import type {
   ContentAdminAction,
   ContentFrontendRegistry,

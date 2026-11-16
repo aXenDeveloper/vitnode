@@ -1,8 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { ContentContainerErrorCode } from "@vitnode/api/content/containers/types";
 
 import { queryOptions } from "@tanstack/react-query";
-
-import type { ContentContainerErrorCode } from "@/content/containers/types";
 
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import { isAdminRequestError } from "@/views/admin/admin-request";

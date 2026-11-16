@@ -1,15 +1,15 @@
 import { useMutation } from "@tanstack/react-query";
+import {
+  fileAcceptAttribute,
+  fileFormatLabels,
+  validateFile,
+} from "@vitnode/api/lib/file-constraints";
+import { formatBytes } from "@vitnode/api/lib/format-bytes";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import { FormControl, FormMessage } from "@/components/ui/form";
-import {
-  fileAcceptAttribute,
-  fileFormatLabels,
-  validateFile,
-} from "@/lib/file-constraints";
-import { formatBytes } from "@/lib/format-bytes";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 import type { FileGalleryRow } from "./file-gallery";

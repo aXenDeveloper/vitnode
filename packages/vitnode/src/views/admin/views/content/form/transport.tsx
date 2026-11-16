@@ -1,9 +1,9 @@
-import React from "react";
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentDrafts } from "@vitnode/api/content/live/http";
+import type { ContentFieldLock } from "@vitnode/api/content/live/protocol";
+import type { ContentVisibilityAction } from "@vitnode/api/content/visibility";
 
-import type { ContentId } from "@/content/ids";
-import type { ContentDrafts } from "@/content/live/http";
-import type { ContentFieldLock } from "@/content/live/protocol";
-import type { ContentVisibilityAction } from "@/content/visibility";
+import React from "react";
 
 import type {
   ContentMutationResult,

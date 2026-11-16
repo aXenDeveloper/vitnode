@@ -1,3 +1,9 @@
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
+
+import {
+  isRichTextDocument,
+  isRichTextEmpty,
+} from "@vitnode/api/content/rich-text/document";
 import { cn } from "cn";
 import {
   CheckCircle2Icon,
@@ -20,7 +26,6 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
-import type { RichTextDocument } from "@/content/rich-text/document";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { DateFormat } from "@/components/date-format";
@@ -42,10 +47,6 @@ import {
   TabsPanels,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import {
-  isRichTextDocument,
-  isRichTextEmpty,
-} from "@/content/rich-text/document";
 
 import type { ModcpReportDetail } from "./modcp-query";
 import type { ReportPerson, ToneName } from "./report-tone";

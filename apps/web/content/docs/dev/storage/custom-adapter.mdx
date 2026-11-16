@@ -69,7 +69,7 @@ import type {
   StorageApiPlugin,
   StorageUploadArgs,
   StorageUploadResult,
-} from '@vitnode/core/api/models/storage'
+} from '@vitnode/api/models/storage'
 
 export const HttpStorageAdapter = ({
   apiKey = '',
@@ -143,7 +143,7 @@ An adapter needs no registry, no manifest and no plugin entry. It is a value on
 the API config:
 
 ```ts title="src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 import { HttpStorageAdapter } from './utils/storage/http-storage' // [!code ++]
 
@@ -271,7 +271,7 @@ starting template:
 - [`@vitnode/supabase-storage`](https://github.com/aXenDeveloper/vitnode/tree/canary/packages/supabase-storage) -
   the shortest real adapter
 
-Keep `@vitnode/core` a dev dependency (you only import types from it) and ship
+Keep `@vitnode/api` a dev dependency (you only import types from it) and ship
 your provider's SDK as a real dependency, the way both of those do.
 
 ## Related

@@ -1,0 +1,11 @@
+/**
+ * @deprecated `@vitnode/api/modules/admin/ai/routes/translation-
+ * sources.route` was split by the API file migration. This compatibility
+ * entry only re-exports its former exports from their new modules, named on
+ * each export below; import from those instead.
+ */
+
+/** @deprecated Import from `@vitnode/api/modules/admin/ai/routes/list-translation-sources.route`. */
+export { getTranslationSourcesAdminRoute } from "@/modules/admin/ai/routes/list-translation-sources.route";
+/** @deprecated Import from `@vitnode/api/modules/admin/ai/routes/update-translation-sources.route`. */
+export { saveTranslationSourcesAdminRoute } from "@/modules/admin/ai/routes/update-translation-sources.route";

@@ -1,5 +1,6 @@
+import { manifest } from "@vitnode/api/manifest";
+
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 
 /** What a mutation reports back. `error` is the API's own text. */
 export interface SearchIndexMutationResult {

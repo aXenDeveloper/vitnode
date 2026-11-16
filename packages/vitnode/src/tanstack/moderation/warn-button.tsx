@@ -1,8 +1,9 @@
+import type { ContentTarget } from "@vitnode/api/content/target";
+
 import { TriangleAlertIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { ContentTarget } from "@/content/target";
 import type { IssuedWarning } from "@/views/moderation/warnings/warnings-api";
 
 import { Button } from "@/components/ui/button";

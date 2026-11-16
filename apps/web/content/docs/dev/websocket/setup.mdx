@@ -45,9 +45,9 @@ Older single apps mounted their own `src/server/websocket.ts` through `nitro({ h
 Add the `/ws` route after `VitNodeAPI`, so the API's middleware runs first:
 
 ```ts title="src/server/vitnode-api.server.ts"
-import { websocketOriginMiddleware } from "@vitnode/core/api/middlewares/websocket-origin.middleware" // [!code ++]
-import { upgradeWebSocket } from "@vitnode/core/ws/crossws.server" // [!code ++]
-import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle" // [!code ++]
+import { websocketOriginMiddleware } from "@vitnode/api/middlewares/websocket-origin.middleware" // [!code ++]
+import { upgradeWebSocket } from "@vitnode/api/ws/crossws.server" // [!code ++]
+import { handleVitNodeWebSocket } from "@vitnode/api/ws/handle" // [!code ++]
 
 const createVitNodeApi = () => {
   const app = new OpenAPIHono().basePath("/api")
@@ -65,7 +65,7 @@ const createVitNodeApi = () => {
 }
 ```
 
-`upgradeWebSocket` from `@vitnode/core/ws/crossws.server` does not upgrade anything itself. It hands the connection's handlers back to the Nitro route, which opens the socket. A plain `GET /api/ws` gets `426 Upgrade Required`.
+`upgradeWebSocket` from `@vitnode/api/ws/crossws.server` does not upgrade anything itself. It hands the connection's handlers back to the Nitro route, which opens the socket. A plain `GET /api/ws` gets `426 Upgrade Required`.
 
 </Step>
 </Steps>
@@ -76,8 +76,8 @@ A separate API server runs on `@hono/node-server` and upgrades with its own help
 
 ```ts title="apps/api/src/index.ts (excerpt)"
 import { serve, upgradeWebSocket } from "@hono/node-server"
-import { websocketOriginMiddleware } from "@vitnode/core/api/middlewares/websocket-origin.middleware"
-import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle"
+import { websocketOriginMiddleware } from "@vitnode/api/middlewares/websocket-origin.middleware"
+import { handleVitNodeWebSocket } from "@vitnode/api/ws/handle"
 import { type WebSocket, WebSocketServer } from "ws"
 
 // `app` is your OpenAPIHono app, already passed to VitNodeAPI({ app, ... })
@@ -124,8 +124,8 @@ A web app pointed at that API with `VITNODE_API_URL` connects to it on its own; 
 An API that runs on Bun lets Bun upgrade the socket. Use the helpers from `hono/bun` and export Bun's server object instead of calling `serve`:
 
 ```ts title="apps/api/src/index.ts (excerpt)"
-import { websocketOriginMiddleware } from "@vitnode/core/api/middlewares/websocket-origin.middleware"
-import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle"
+import { websocketOriginMiddleware } from "@vitnode/api/middlewares/websocket-origin.middleware"
+import { handleVitNodeWebSocket } from "@vitnode/api/ws/handle"
 import { upgradeWebSocket, websocket } from "hono/bun"
 
 // `app` is your OpenAPIHono app, already passed to VitNodeAPI({ app, ... })

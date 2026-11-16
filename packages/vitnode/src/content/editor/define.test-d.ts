@@ -1,13 +1,13 @@
-import { createElement } from "react";
-import { assertType, describe, expectTypeOf, it } from "vitest";
-
 import type {
   AnyEditablePageDefinition,
   EditablePageDefinition,
-} from "./types";
+} from "@vitnode/api/content/editor/types";
+
+import { defineEditablePage } from "@vitnode/api/content/editor/define";
+import { createElement } from "react";
+import { assertType, describe, expectTypeOf, it } from "vitest";
 
 import { ContentZone } from "../../blocks/zone";
-import { defineEditablePage } from "./define";
 
 const settings = defineEditablePage({
   id: "example:settings",

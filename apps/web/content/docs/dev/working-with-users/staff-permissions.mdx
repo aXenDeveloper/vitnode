@@ -275,7 +275,7 @@ Each permission you add needs its own label and its own `adminStaffPermission` o
 
 ## Check a permission in code
 
-`adminStaffPermission` and `moderatorStaffPermission` cover a whole route. They decide who may call it, not which notes that person may touch: a guard is not resource authorization. For a decision inside a handler, such as letting staff edit any note but members only their own, call `checkStaffPermission(c, { type, plugin, module, permission })` from `@vitnode/core/api/lib/check-staff-permission`; it resolves to `true` or `false`. `staffPermissionArgs(ref)` from `@vitnode/core/lib/staff-permissions` turns a reference into those `plugin`, `module` and `permission` fields.
+`adminStaffPermission` and `moderatorStaffPermission` cover a whole route. They decide who may call it, not which notes that person may touch: a guard is not resource authorization. For a decision inside a handler, such as letting staff edit any note but members only their own, call `checkStaffPermission(c, { type, plugin, module, permission })` from `@vitnode/api/lib/check-staff-permission`; it resolves to `true` or `false`. `staffPermissionArgs(ref)` from `@vitnode/core/lib/staff-permissions` turns a reference into those `plugin`, `module` and `permission` fields.
 
 In AdminCP components, `useAdminPermission({ plugin, module, permission })` from `@vitnode/core/tanstack/admin` answers the same question for the signed-in administrator, for showing or hiding controls.
 
@@ -370,7 +370,7 @@ The public note route answers everyone, and adds when the note was written for m
 
 ```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
 import { z } from "@hono/zod-openapi";
-import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+import { checkStaffPermission } from "@vitnode/api/lib/check-staff-permission";
 import { staffPermissionArgs } from "@vitnode/core/lib/staff-permissions";
 import { eq } from "drizzle-orm";
 
@@ -431,7 +431,7 @@ export const showNoteRoute = buildRoute({
 `assertStaffPermission` takes the same arguments and throws `403` instead of returning `false`. Use it when a member asks for something only moderators may have, here the details behind `?details=1`, while the plain request stays public:
 
 ```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
-import { assertStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+import { assertStaffPermission } from "@vitnode/api/lib/check-staff-permission";
 
 // request:
 request: {

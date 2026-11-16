@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { WARNING_LIMITS } from "@vitnode/api/lib/moderation/warnings";
 import { RotateCcwIcon, ShieldOffIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useFormatter, useLocale, useNow, useTranslations } from "use-intl";
@@ -13,7 +14,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 import { PersonName } from "@/views/moderation/modcp/report-tone";
 import { ReasonFormFooter } from "@/views/moderation/warnings/reason-form-footer";
 import {

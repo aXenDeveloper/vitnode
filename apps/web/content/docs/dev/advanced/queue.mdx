@@ -224,7 +224,7 @@ The task still waits for the next processor run after that time. `priority` (hig
 
 A thrown error fails the attempt. Until `maxAttempts` is reached, the task returns to `pending` with an exponential delay. The first retry waits about 10 seconds, and each later one waits twice as long, up to one hour. After the last attempt it is **failed**, with the error in `lastError`.
 
-`maxAttempts` comes from the dispatch, then the task definition, then `3`. To wait without using an attempt, for example on a rate limit, throw `QueueDeferError` from `@vitnode/core/api/lib/queue`:
+`maxAttempts` comes from the dispatch, then the task definition, then `3`. To wait without using an attempt, for example on a rate limit, throw `QueueDeferError` from `@vitnode/api/lib/queue`:
 
 ```ts
 throw new QueueDeferError(new Date(Date.now() + 60_000), "Provider rate limit");

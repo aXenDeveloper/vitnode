@@ -145,7 +145,7 @@ handler: async (c) => {
 - `textStream` is a `ReadableStream<string>` of text deltas.
 - `result` resolves to `{ output, runId, usage }` once the stream ends, the same shape `run()` returns, and rejects with an `AiError` if the full text fails `parseText()` or `outputSchema`.
 
-Core checks permissions, limits and budgets before `stream()` resolves, so a refusal is an ordinary JSON error response. To answer in the same NDJSON format as Core's routes, return `aiNdjsonStream(c, request)` with `AI_NDJSON_HEADERS`, both from `@vitnode/core/api/lib/ai/stream-response`.
+Core checks permissions, limits and budgets before `stream()` resolves, so a refusal is an ordinary JSON error response. To answer in the same NDJSON format as Core's routes, return `aiNdjsonStream(c, request)` with `AI_NDJSON_HEADERS`, both from `@vitnode/api/lib/ai/stream-response`.
 
 ## Built-in stream routes
 

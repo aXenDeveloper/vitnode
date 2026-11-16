@@ -1,24 +1,12 @@
+import { heroBlockSchema } from "@vitnode/api/blocks/built-in/hero";
 import { PanelTopIcon } from "lucide-react";
 
 import type { BlockComponentProps, BlockData } from "../types";
 
-import { field } from "../../content/fields";
 import { isValidNavigationHref } from "../../lib/navigation";
 import { defineBlock } from "../define";
 
-const heroFields = {
-  align: field.enum({
-    defaultValue: "start",
-    values: ["start", "center"],
-  }),
-  description: field.textarea({ maxLength: 500, nullable: true }),
-  eyebrow: field.text({ maxLength: 80, nullable: true }),
-  linkHref: field.text({ maxLength: 500, nullable: true }),
-  linkLabel: field.text({ maxLength: 80, nullable: true }),
-  title: field.text({ maxLength: 200, minLength: 1, required: true }),
-};
-
-type HeroData = BlockData<typeof heroFields>;
+type HeroData = BlockData<typeof heroBlockSchema.fields>;
 
 const Hero = ({ data }: BlockComponentProps<HeroData>) => {
   const centered = data.align === "center";
@@ -58,10 +46,7 @@ const Hero = ({ data }: BlockComponentProps<HeroData>) => {
 };
 
 export const heroBlock = defineBlock({
+  ...heroBlockSchema,
   component: Hero,
-  description: "A page heading with an optional lead paragraph and one link.",
-  fields: heroFields,
   icon: PanelTopIcon,
-  id: "hero",
-  name: "Hero",
 });

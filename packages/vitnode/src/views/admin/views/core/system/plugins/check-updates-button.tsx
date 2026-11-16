@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
 import { RefreshCwIcon } from "lucide-react";
 import { useActionState } from "react";
 import { toast } from "sonner";
@@ -6,7 +7,6 @@ import { useTranslations } from "use-intl";
 
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import type { CheckPluginUpdates } from "./plugin-updates-query";
 

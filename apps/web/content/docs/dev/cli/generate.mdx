@@ -24,7 +24,7 @@ cd plugins/site-notes
 pnpm vitnode g module notes
 ```
 
-The workspace root does not depend on `@vitnode/core`, so `pnpm vitnode` is not found there. From the root, point pnpm at the plugin:
+The workspace root does not depend on `@vitnode/api`, so `pnpm vitnode` is not found there. From the root, point pnpm at the plugin:
 
 ```bash
 pnpm --filter site-notes exec vitnode g module notes
@@ -43,7 +43,7 @@ When several plugins qualify and there is no terminal to ask (CI, a script), the
 Only plugins can be targets. The plugin needs `src/config.api.ts` and the plugin-bound builders in `src/api/builders.ts`; `create-vitnode-app --plugin` writes both. When `builders.ts` is missing, the generator creates it from `src/manifest.gen.ts`, with all five bound builders:
 
 ```ts title="src/api/builders.ts"
-import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
+import { bindApiPlugin } from "@vitnode/api/lib/bind-api-plugin";
 
 import { manifest } from "@/manifest.gen";
 

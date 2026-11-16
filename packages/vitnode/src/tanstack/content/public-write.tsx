@@ -1,3 +1,8 @@
+import { parseContentPublicWriteRejection } from "@vitnode/api/content/conflicts";
+import {
+  CONTENT_CONFLICT_CODES,
+  CONTENT_PUBLIC_WRITE_ISSUE_CODES,
+} from "@vitnode/api/content/const";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -5,11 +10,6 @@ import { useTranslations } from "use-intl";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { setFormFieldError } from "@/components/ui/form";
-import { parseContentPublicWriteRejection } from "@/content/conflicts";
-import {
-  CONTENT_CONFLICT_CODES,
-  CONTENT_PUBLIC_WRITE_ISSUE_CODES,
-} from "@/content/const";
 
 type FormApi = Parameters<typeof setFormFieldError>[0];
 

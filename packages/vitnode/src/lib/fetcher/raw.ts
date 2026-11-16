@@ -1,4 +1,5 @@
-import { CONFIG } from "../config";
+import { CONFIG } from "@vitnode/api/lib/config";
+
 import { buildSearchParams } from "./helpers";
 
 /** An untyped API call: the URL parts and the request, with nothing inferred. */

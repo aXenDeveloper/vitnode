@@ -1,3 +1,9 @@
+import type {
+  PermissionsStaffArgs,
+  PermissionStaffScope,
+  PermissionStaffType,
+} from "@vitnode/api/lib/permission-staff";
+
 import { cn } from "cn";
 import {
   ChevronRightIcon,
@@ -13,11 +19,6 @@ import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type {
-  PermissionsStaffArgs,
-  PermissionStaffScope,
-  PermissionStaffType,
-} from "@/api/lib/permission-staff";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 import type {
   StaffModuleGroup,

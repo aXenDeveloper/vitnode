@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
-import type { RichTextDocument } from "@/content/rich-text";
+import type { RichTextDocument } from "@vitnode/api/content/rich-text";
 
 import type { AuthUser } from "../auth/state";
 import type { ContentCommentNode, ContentCommentsThreadPage } from "./thread";

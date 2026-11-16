@@ -1,8 +1,8 @@
+import type { FileConstraints } from "@vitnode/api/lib/file-constraints";
+
 import { ImageIcon, ZoomInIcon, ZoomOutIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
-
-import type { FileConstraints } from "@/lib/file-constraints";
 
 import {
   FileConstraintsLine,

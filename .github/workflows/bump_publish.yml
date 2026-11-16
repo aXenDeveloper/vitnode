@@ -35,7 +35,10 @@ on:
 env:
   # Every package this workflow publishes. The publish steps and the update
   # manifest both read it, so the manifest never names a package npm did not get.
-  PUBLISHED_PACKAGES: "create-vitnode-app @vitnode/core @vitnode/config @vitnode/blog @vitnode/nodemailer @vitnode/resend @vitnode/node-cron"
+  PUBLISHED_PACKAGES: "create-vitnode-app @vitnode/api @vitnode/core @vitnode/config @vitnode/blog @vitnode/nodemailer @vitnode/resend @vitnode/node-cron"
+  # Published last, and only once everything else is on npm: a new app depends
+  # on `@vitnode/api` and `@vitnode/core` at exactly this version.
+  SCAFFOLD_PACKAGE: "create-vitnode-app"
 
 jobs:
   bump-version:
@@ -59,7 +62,7 @@ jobs:
       - uses: pnpm/action-setup@v6.1.0
         name: Install pnpm
         with:
-          version: 12.18.0
+          version: 12.21.0
 
       - name: Install Node.js
         uses: actions/setup-node@v7.0.0
@@ -90,21 +93,36 @@ jobs:
 
       - name: Publish canary
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'canary' }}
-        run: pnpm publish $(printf -- "--filter %s " $PUBLISHED_PACKAGES) --tag canary --no-git-checks --access public
+        # pnpm publishes the filtered packages in dependency order, so
+        # `@vitnode/api` goes out before `@vitnode/core`; the scaffold follows
+        # only if all of them succeeded.
+        run: |
+          pnpm publish $(printf -- "--filter %s " $(echo $PUBLISHED_PACKAGES | tr ' ' '\n' | grep -vx "$SCAFFOLD_PACKAGE")) --tag canary --no-git-checks --access public
+          pnpm publish --filter "$SCAFFOLD_PACKAGE" --tag canary --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish release candidate
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'release-candidate' }}
-        run: pnpm publish $(printf -- "--filter %s " $PUBLISHED_PACKAGES) --tag rc --no-git-checks --access public
+        # pnpm publishes the filtered packages in dependency order, so
+        # `@vitnode/api` goes out before `@vitnode/core`; the scaffold follows
+        # only if all of them succeeded.
+        run: |
+          pnpm publish $(printf -- "--filter %s " $(echo $PUBLISHED_PACKAGES | tr ' ' '\n' | grep -vx "$SCAFFOLD_PACKAGE")) --tag rc --no-git-checks --access public
+          pnpm publish --filter "$SCAFFOLD_PACKAGE" --tag rc --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
 
       - name: Publish stable
         if: ${{ (github.event.inputs.mode == 'bump_and_publish' || github.event.inputs.mode == 'publish') && github.event.inputs.release == 'stable' }}
-        run: pnpm publish $(printf -- "--filter %s " $PUBLISHED_PACKAGES) --tag latest --no-git-checks --access public
+        # pnpm publishes the filtered packages in dependency order, so
+        # `@vitnode/api` goes out before `@vitnode/core`; the scaffold follows
+        # only if all of them succeeded.
+        run: |
+          pnpm publish $(printf -- "--filter %s " $(echo $PUBLISHED_PACKAGES | tr ' ' '\n' | grep -vx "$SCAFFOLD_PACKAGE")) --tag latest --no-git-checks --access public
+          pnpm publish --filter "$SCAFFOLD_PACKAGE" --tag latest --no-git-checks --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_PROVENANCE: true
@@ -148,7 +166,7 @@ jobs:
       - uses: pnpm/action-setup@v6.1.0
         name: Install pnpm
         with:
-          version: 12.18.0
+          version: 12.21.0
 
       - name: Install Node.js
         uses: actions/setup-node@v7.0.0

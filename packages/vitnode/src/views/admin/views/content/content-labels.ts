@@ -1,11 +1,12 @@
-import type { ContentLabelTranslator } from "@/content/admin/labels";
-import type { RegisteredFrontendContentType } from "@/content/admin/registry";
+import type { ContentLabelTranslator } from "@vitnode/api/content/admin/labels";
 
 import {
   contentI18nKeys,
   contentNouns,
   humanizeFieldName,
-} from "@/content/admin/labels";
+} from "@vitnode/api/content/admin/labels";
+
+import type { RegisteredFrontendContentType } from "@/content/admin/registry";
 
 export interface ContentLabels {
   desc: string | undefined;

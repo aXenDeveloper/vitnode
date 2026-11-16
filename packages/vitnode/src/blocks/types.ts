@@ -1,29 +1,39 @@
+import type {
+  AnyBlockInstance,
+  BlockPluginSource as ApiBlockPluginSource,
+  BlockRegistry as ApiBlockRegistry,
+  RegisteredBlock as ApiRegisteredBlock,
+  BlockFieldMap,
+  BlockSchemaDefinition,
+  BlockUnknownData,
+} from "@vitnode/api/blocks/types";
+import type { ContentFieldMap } from "@vitnode/api/content/types";
 import type { ComponentType, ReactElement } from "react";
 
-import type { ContentFieldMap, ContentValuesOf } from "../content/types";
-import type {
-  AREA_ALIGNS,
-  AREA_COLUMNS,
-  AREA_JUSTIFIES,
-  AREA_LEGACY_SPACINGS,
-  CONTENT_AREA_KIND,
-} from "./const";
-
-export type BlockFieldMap = Record<string, { kind: string }>;
-
-/** A widget's data type, inferred from its field map. */
-export type BlockData<TFields> = ContentValuesOf<TFields>;
-
-export type BlockUnknownData = Record<string, unknown>;
-
-export interface BlockVariantDefinition<TId extends string = string> {
-  description?: string;
-  /** Lowercase letters, digits and single hyphens. Stored in every instance that picks it, so keep it stable. */
-  id: TId;
-  label?: string;
-}
-
-export type AnyBlockVariantDefinition = BlockVariantDefinition;
+export type {
+  AnyBlockInstance,
+  AnyBlockSchemaDefinition,
+  AnyBlockVariantDefinition,
+  AreaLegacySpacing,
+  AreaStoredSpacing,
+  BlockAllowedEntry,
+  BlockAllowedSpec,
+  BlockAreaAlign,
+  BlockAreaColumns,
+  BlockAreaInstance,
+  BlockAreaJustify,
+  BlockAreaLayout,
+  BlockAreaStoredLayout,
+  BlockData,
+  BlockFieldMap,
+  BlockInstance,
+  BlockSchemaDefinition,
+  BlockUnknownData,
+  BlockVariantDefinition,
+  ContentNode,
+  ContentZoneDefinition,
+  ParsedContentZoneId,
+} from "@vitnode/api/blocks/types";
 
 /** Props of a widget's component. */
 export interface BlockComponentProps<
@@ -49,126 +59,40 @@ export type BlockComponent<
 
 export type BlockIcon = ComponentType<{ className?: string }>;
 
+/**
+ * A widget as the browser registers it: the schema the API validates against
+ * (`BlockSchemaDefinition` from `@vitnode/api/blocks`) plus how it renders.
+ */
 export interface BlockDefinition<
   TId extends string = string,
   TFields extends BlockFieldMap = ContentFieldMap,
   TVariant extends string = string,
-> {
+> extends BlockSchemaDefinition<TId, TFields, TVariant> {
   /** Renders one instance. */
   component: BlockComponent;
-  /** Variant used when an instance stores none. */
-  defaultVariant?: TVariant;
-  /** Shown in the Visual Editor's catalogue. */
-  description?: string;
-  /** Content Engine fields the data is validated and edited with. */
-  fields: TFields;
   /** Icon component for the editor; a generic widget icon when missing. */
   icon?: BlockIcon;
-  /** Name without a namespace; the registry stores it as `{namespace}:{id}`. */
-  id: TId;
-  /** Display name in the editor. */
-  name?: string;
-  /** Alternative looks for the same data. */
-  variants?: readonly BlockVariantDefinition<TVariant>[];
 }
 
 export type AnyBlockDefinition = BlockDefinition;
 
-/** One stored widget: `{ id, type, data, variant? }`. Create one with `createWidgetInstance`. */
-export interface BlockInstance<
-  TType extends string = string,
-  TData = BlockUnknownData,
-  TVariant extends string = string,
-> {
-  data: TData;
-  id: string;
-  type: TType;
-  variant?: TVariant;
-}
-
-export type AnyBlockInstance = BlockInstance;
-
-export type BlockAreaColumns = (typeof AREA_COLUMNS)[number];
-
-export type BlockAreaAlign = (typeof AREA_ALIGNS)[number];
-
-export type BlockAreaJustify = (typeof AREA_JUSTIFIES)[number];
-
-export type AreaLegacySpacing = (typeof AREA_LEGACY_SPACINGS)[number];
-
-export interface BlockAreaLayout {
-  align?: BlockAreaAlign;
-  columns: BlockAreaColumns;
-  /** Pixels between the area's own children. */
-  gap?: number;
-  justify?: BlockAreaJustify;
-  /** Pixels to the inline start and end of the area, outside its own grid. */
-  marginX?: number;
-  /** Pixels above and below the area, outside its own grid. */
-  marginY?: number;
-}
-
-export type AreaStoredSpacing = AreaLegacySpacing | number;
-
-export interface BlockAreaStoredLayout extends Omit<
-  BlockAreaLayout,
-  "gap" | "marginX" | "marginY"
-> {
-  gap?: AreaStoredSpacing;
-  marginX?: AreaStoredSpacing;
-  marginY?: AreaStoredSpacing;
-}
-
-/** A layout area grouping widgets in a grid, stored next to widget instances. */
-export interface BlockAreaInstance {
-  children: readonly AnyBlockInstance[];
-  id: string;
-  kind: typeof CONTENT_AREA_KIND;
-  layout: BlockAreaStoredLayout;
-}
-
-export type ContentNode = AnyBlockInstance | BlockAreaInstance;
-
-export type BlockAllowedEntry = string;
-
 /**
- * Which widgets a zone accepts: `"*"` for all, or a list of qualified ids
- * (`"blog:latest-posts"`) and namespace wildcards (`"blog:*"`).
+ * A plugin's widgets as the browser registers them, collected into the app's
+ * generated `src/blocks.gen.ts`. The API registers the same ids from schemas
+ * (`buildApiPlugin({ blocks })`), so both sides namespace them identically.
  */
-export type BlockAllowedSpec = "*" | readonly BlockAllowedEntry[];
+export type BlockPluginSource<
+  TDefinition extends AnyBlockDefinition = AnyBlockDefinition,
+> = ApiBlockPluginSource<TDefinition>;
 
-/**
- * A plugin's widgets, passed to `buildApiPlugin({ blocks })` and collected
- * into the app's generated registry. Export it from a module of its own so
- * the API and the browser register the same object.
- */
-export interface BlockPluginSource {
-  /** The plugin's widget definitions, from `defineWidget`. */
-  blocks?: readonly AnyBlockDefinition[];
-  /**
-   * Overrides the id prefix, which defaults to the last segment of `pluginId`
-   * (`@vitnode/blog` -> `blog`). Only needed when two plugins' names end the same.
-   */
-  namespace?: string;
-  /** The plugin's id (`manifest.id`); must match the plugin passing it to `buildApiPlugin`. */
-  pluginId: string;
-}
+export type RegisteredBlock<
+  TDefinition extends AnyBlockDefinition = AnyBlockDefinition,
+> = ApiRegisteredBlock<TDefinition>;
 
-export interface RegisteredBlock {
-  definition: AnyBlockDefinition;
-  namespace: string;
-  pluginId: string;
-  type: string;
-}
-
-/** Every installed widget by qualified id. Built by `createWidgetRegistry`. */
-export interface BlockRegistry {
-  all: () => readonly RegisteredBlock[];
-  byNamespace: (namespace: string) => readonly RegisteredBlock[];
-  get: (type: string) => RegisteredBlock | undefined;
-  has: (type: string) => boolean;
-  namespaces: () => readonly string[];
-}
+/** Every installed widget by qualified id, with its component. Built by `createWidgetRegistry`. */
+export type BlockRegistry<
+  TDefinition extends AnyBlockDefinition = AnyBlockDefinition,
+> = ApiBlockRegistry<TDefinition>;
 
 export type BlockRenderFallbackReason =
   | "invalid-data"
@@ -191,13 +115,3 @@ export type BlockValidationMode = "always" | "development" | "never";
 export type BlockRenderFallback = (
   props: BlockRenderFallbackProps,
 ) => null | ReactElement;
-
-export interface ContentZoneDefinition {
-  allowedBlocks?: BlockAllowedSpec;
-  id: string;
-}
-
-export interface ParsedContentZoneId {
-  name: string;
-  scope: string | undefined;
-}

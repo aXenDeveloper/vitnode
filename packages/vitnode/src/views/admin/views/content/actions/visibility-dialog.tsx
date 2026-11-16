@@ -1,7 +1,7 @@
+import type { ContentVisibilityAction } from "@vitnode/api/content/visibility";
+
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
-
-import type { ContentVisibilityAction } from "@/content/visibility";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 

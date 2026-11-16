@@ -1,7 +1,6 @@
+import { SSO_PROFILE_FIELDS } from "@vitnode/api/lib/shared/sso-profile";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
-
-import { SSO_PROFILE_FIELDS } from "@/lib/sso-profile";
 
 import type { SsoConnectionCallbackTarget } from "./connection-callback";
 

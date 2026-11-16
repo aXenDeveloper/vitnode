@@ -1,10 +1,11 @@
-import type { FilterDataTable } from "@/components/table/filters";
-import type { AnyContentTypeDefinition } from "@/content/types";
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
 
 import {
   CONTENT_PUBLICATION_STATUSES,
   CONTENT_VISIBILITY_FILTERS,
-} from "@/content/const";
+} from "@vitnode/api/content/const";
+
+import type { FilterDataTable } from "@/components/table/filters";
 
 const CONTENT_LIST_SYSTEM_FILTERS: Readonly<Record<string, readonly string[]>> =
   {

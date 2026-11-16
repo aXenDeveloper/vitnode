@@ -1,23 +1,11 @@
 import type { WidgetComponentProps, WidgetData } from "@vitnode/core/widgets";
 
-import { field } from "@vitnode/core/content/fields";
 import { defineWidget } from "@vitnode/core/widgets";
 import { SparklesIcon } from "lucide-react";
 
-const featureItem = {
-  body: field.textarea({ maxLength: 240, nullable: true }),
-  title: field.text({ maxLength: 80, minLength: 1, required: true }),
-};
+import { featuresSchema } from "./features.schema";
 
-const featuresFields = {
-  heading: field.text({ maxLength: 120, minLength: 1, required: true }),
-  intro: field.textarea({ maxLength: 300, nullable: true }),
-  primary: field.group({ fields: featureItem }),
-  secondary: field.group({ fields: featureItem, nullable: true }),
-  tertiary: field.group({ fields: featureItem, nullable: true }),
-};
-
-type FeaturesData = WidgetData<typeof featuresFields>;
+type FeaturesData = WidgetData<typeof featuresSchema.fields>;
 
 type FeatureItem = NonNullable<FeaturesData["primary"]>;
 
@@ -120,23 +108,9 @@ const Features = ({
 };
 
 export const featuresWidget = defineWidget({
+  ...featuresSchema,
   component: Features,
-  defaultVariant: "grid",
-  description:
-    "Up to three features, told the same way in three different shapes.",
-  fields: featuresFields,
   icon: SparklesIcon,
-  id: "features",
-  name: "Features",
-  variants: [
-    { description: "Cards side by side.", id: "grid", label: "Grid" },
-    {
-      description: "One per row, with room to explain.",
-      id: "list",
-      label: "List",
-    },
-    { description: "A dense summary.", id: "compact", label: "Compact" },
-  ],
 });
 
 export const featuresBlock = featuresWidget;

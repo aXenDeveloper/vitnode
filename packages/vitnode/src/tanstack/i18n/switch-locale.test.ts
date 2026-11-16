@@ -1,4 +1,5 @@
 import type { AnyRouter } from "@tanstack/react-router";
+import type { VitNodeI18nConfig } from "@vitnode/api/lib/i18n/types";
 
 import {
   createMemoryHistory,
@@ -7,8 +8,6 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { VitNodeI18nConfig } from "@/lib/i18n/types";
 
 import type { LocaleHostReader } from "./locale";
 

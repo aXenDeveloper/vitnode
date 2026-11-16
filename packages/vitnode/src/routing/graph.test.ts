@@ -1,18 +1,19 @@
-import { describe, expect, it } from "vitest";
-
-import type { PluginRouteGraph, PluginRouteNode } from "./graph";
 import type {
   PluginRoute,
   PluginRouteArea,
   PluginRouteKind,
   PluginRouteRequirement,
-} from "./types";
+} from "@vitnode/api/routing/types";
+
+import { parseRoutePath } from "@vitnode/api/routing/path";
+import { describe, expect, it } from "vitest";
+
+import type { PluginRouteGraph, PluginRouteNode } from "./graph";
 
 import { PluginRouteError } from "./errors";
 import { buildPluginRouteGraph, pluginRouteNamespaces } from "./graph";
 import { pluginRouteId } from "./manifest";
 import { comparePluginRoutes } from "./order";
-import { parseRoutePath } from "./path";
 
 interface RouteFixture {
   area?: PluginRouteArea;

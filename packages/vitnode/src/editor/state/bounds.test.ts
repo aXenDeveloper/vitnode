@@ -1,12 +1,12 @@
+import { createAreaInstance } from "@vitnode/api/blocks/area";
+import { CONTENT_BLOCKS_ABSOLUTE_MAX } from "@vitnode/api/blocks/const";
+import { createBlockInstance } from "@vitnode/api/blocks/instance";
 import { describe, expect, it } from "vitest";
 
 import type { AnyBlockInstance, ContentNode } from "../../blocks/types";
 import type { ZoneCapacity } from "./bounds";
 import type { EditorZoneState } from "./types";
 
-import { createAreaInstance } from "../../blocks/area";
-import { CONTENT_BLOCKS_ABSOLUTE_MAX } from "../../blocks/const";
-import { createBlockInstance } from "../../blocks/instance";
 import {
   fitsRootNodeCap,
   refusesDuplicate,

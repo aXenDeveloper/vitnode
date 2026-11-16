@@ -1,0 +1,36 @@
+import { buildRoute } from "@/builders";
+import { SsoConnectionModel } from "@/models/sso-connection";
+
+import { requireSignedInUser } from "../../../passkeys/lib/failure";
+import {
+  SSO_CONNECTION_ERROR_RESPONSES,
+  zodSsoConnectionsOverview,
+} from "../connections.schema";
+import { ssoConnectionFailure } from "../lib/failure";
+
+export const listSsoConnectionsRoute = buildRoute({
+  route: {
+    method: "get",
+    description:
+      "List the configured SSO providers with the signed-in user's connection to each, and where their profile fields come from.",
+    path: "/",
+    responses: {
+      200: {
+        content: {
+          "application/json": { schema: zodSsoConnectionsOverview },
+        },
+        description: "Providers, connections and profile sources",
+      },
+      ...SSO_CONNECTION_ERROR_RESPONSES,
+    },
+  },
+  handler: async c => {
+    const user = requireSignedInUser(c.get("user"));
+
+    try {
+      return c.json(await new SsoConnectionModel(c).overview(user.id), 200);
+    } catch (error) {
+      return ssoConnectionFailure(c, error);
+    }
+  },
+});

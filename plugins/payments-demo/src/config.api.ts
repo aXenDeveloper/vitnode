@@ -1,6 +1,6 @@
-import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
+import type { ApiPluginContract } from "@vitnode/api/lib/plugin";
 
-import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+import { buildApiPlugin } from "@vitnode/api/lib/plugin";
 
 import { purchasesModule } from "@/api/modules/purchases/purchases.module";
 import { manifest } from "@/manifest.gen";

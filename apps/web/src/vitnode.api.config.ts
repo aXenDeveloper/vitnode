@@ -1,11 +1,11 @@
-import { blogApiPlugin } from '@vitnode/blog/config.api'
-import { FakePaymentAdapter } from '@vitnode/core/api/adapters/payments/fake'
+import { FakePaymentAdapter } from '@vitnode/api/adapters/payments/fake'
 import {
   hyperdriveConnectionString,
   scopedDatabase,
-} from '@vitnode/core/cloudflare/database'
-import { coreRelations } from '@vitnode/core/database/relations'
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+} from '@vitnode/api/cloudflare/database'
+import { coreRelations } from '@vitnode/api/database/relations'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
+import { blogApiPlugin } from '@vitnode/blog/config.api'
 import { forumApiPlugin } from '@vitnode/forum/config.api'
 import { StripePaymentAdapter } from '@vitnode/stripe'
 import { SupabaseStorageAdapter } from '@vitnode/supabase-storage'

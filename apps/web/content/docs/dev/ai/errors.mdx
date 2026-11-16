@@ -100,7 +100,7 @@ try {
 
 ## Handle errors on the server
 
-Import the helpers from `@vitnode/core/api/lib/ai/errors`:
+Import the helpers from `@vitnode/api/lib/ai/errors`:
 
 | Export            | What it is                                     |
 | :---------------- | :--------------------------------------------- |
@@ -128,8 +128,8 @@ const summarizeTopicAiAction = defineAiAction({
 Then call it from a cron job and stop when the budget runs out, instead of failing on every topic:
 
 ```ts title="plugins/forum/src/api/cron/summarize-topics.cron.ts"
-import { isAiError } from '@vitnode/core/api/lib/ai/errors'
-import { buildCron } from '@vitnode/core/api/lib/cron'
+import { isAiError } from '@vitnode/api/lib/ai/errors'
+import { buildCron } from '@vitnode/api/lib/cron'
 
 import { SUMMARIZE_TOPIC_AI_ACTION } from '@/api/ai/actions'
 
@@ -172,8 +172,8 @@ Each run that got past the budget reservation emits one event after it settles:
 `userId` is `null` for system runs. Refusals before the reservation, such as a missing permission or a reached limit, emit nothing. A listener that throws never breaks the run.
 
 ```ts title="plugins/forum/src/api/lib/ai-events.ts"
-import { aiRunFailedEvent } from '@vitnode/core/api/events/ai'
-import { buildEventListener } from '@vitnode/core/api/lib/events'
+import { aiRunFailedEvent } from '@vitnode/api/events/ai'
+import { buildEventListener } from '@vitnode/api/lib/events'
 
 export const aiFailureListener = buildEventListener({
   event: aiRunFailedEvent,

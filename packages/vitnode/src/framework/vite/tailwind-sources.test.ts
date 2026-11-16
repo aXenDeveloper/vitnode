@@ -48,13 +48,14 @@ const sourcesIn = (code: string): string[] =>
   [...code.matchAll(/@source "([^"]+)";/g)].map(match => match[1]);
 
 describe("the Tailwind sources a VitNode app scans", () => {
-  it("scans the package and every configured plugin", async () => {
+  it("scans both VitNode packages and every configured plugin", async () => {
     const { transform } = await prepared();
 
     expect(
       sourcesIn(transform(APP_CSS, "/app/src/styles.css")?.code ?? ""),
     ).toEqual([
       "/app/node_modules/@vitnode/core/dist/src/**/*.js",
+      "/app/node_modules/@vitnode/api/dist/src/**/*.js",
       "/app/node_modules/@acme/blog/dist/src/**/*.js",
     ]);
   });
@@ -97,6 +98,7 @@ describe("the Tailwind sources a VitNode app scans", () => {
       ),
     ).toEqual([
       "/app/node_modules/@vitnode/core/dist/src/**/*.js",
+      "/app/node_modules/@vitnode/api/dist/src/**/*.js",
       "/app/node_modules/@acme/blog/dist/src/**/*.js",
     ]);
   });
@@ -152,7 +154,10 @@ describe("the Tailwind sources a VitNode app scans", () => {
 
     expect(
       sourcesIn(transform(APP_CSS, "/app/src/styles.css")?.code ?? ""),
-    ).toEqual(["/app/node_modules/@vitnode/core/dist/src/**/*.js"]);
+    ).toEqual([
+      "/app/node_modules/@vitnode/core/dist/src/**/*.js",
+      "/app/node_modules/@vitnode/api/dist/src/**/*.js",
+    ]);
   });
 
   it("scans a linked package at its real path so Vite sees its rebuilds", async () => {
@@ -179,7 +184,7 @@ describe("the Tailwind sources a VitNode app scans", () => {
             join(appRoot, "src", "styles.css"),
           )?.code ?? "",
         ),
-      ).toEqual([`${packageRoot}/dist/src/**/*.js`]);
+      ).toContain(`${packageRoot}/dist/src/**/*.js`);
     } finally {
       rmSync(workspace, { force: true, recursive: true });
     }

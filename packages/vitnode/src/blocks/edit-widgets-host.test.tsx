@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { BlockComponentProps, BlockData, ContentNode } from "./types";
 
-import { defineEditablePage } from "../content/editor/define";
-import { field } from "../content/fields";
+import { defineEditablePage } from "@vitnode/api/content/editor/define";
+import { field } from "@vitnode/api/content/fields";
 import { defineBlock } from "./define";
 import { useEditWidgets } from "./edit-widgets-context";
 import { EditWidgetsHost } from "./edit-widgets-host";

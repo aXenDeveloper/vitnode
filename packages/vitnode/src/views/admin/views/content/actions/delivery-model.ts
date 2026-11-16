@@ -1,4 +1,4 @@
-import type { AnyContentTypeDefinition } from "@/content/types";
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
 
 export const hasContentDelivery = (
   definition: AnyContentTypeDefinition,

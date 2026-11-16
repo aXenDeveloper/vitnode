@@ -25,7 +25,7 @@ CLOUDFLARE_TURNSTILE_SECRET_KEY=0x4AAAAAAA...
 ```
 
 ```ts title="src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
@@ -143,7 +143,7 @@ CLOUDFLARE_TURNSTILE_SECRET_KEY=0x4AAAAAAA... # [!code ++]
 Add the `captcha` block to your API config with `type: 'cloudflare_turnstile'`.
 
 ```ts title="src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [],

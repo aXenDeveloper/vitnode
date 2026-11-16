@@ -1,13 +1,14 @@
+import type { ResolvedPageCacheConfig } from "@vitnode/api/page-cache/config";
+import type { PageCacheSetting } from "@vitnode/api/page-cache/policy";
+import type { PluginRoute } from "@vitnode/api/routing/types";
+
+import { PageCachePolicyError } from "@vitnode/api/page-cache/policy";
+import { parseRoutePath } from "@vitnode/api/routing/path";
 import { describe, expect, it } from "vitest";
 
-import type { PluginRoute } from "../routing/types";
-import type { ResolvedPageCacheConfig } from "./config";
-import type { PageCacheSetting } from "./policy";
 import type { PageCacheHostRoute } from "./resolve";
 
-import { parseRoutePath } from "../routing/path";
 import { createPageCacheMatcher } from "./match";
-import { PageCachePolicyError } from "./policy";
 import { pageCacheRouteTable, resolvePageCacheRoutes } from "./resolve";
 
 const segmentsOf = (path: string) => {

@@ -1,4 +1,4 @@
-import type { ContentId } from "@/content/ids";
+import type { ContentId } from "@vitnode/api/content/ids";
 
 /** The `id` prefix of every comment element, for `#comment-...` links. */
 export const CONTENT_COMMENT_ANCHOR_PREFIX = "comment-";

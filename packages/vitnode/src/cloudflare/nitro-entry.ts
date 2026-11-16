@@ -3,9 +3,8 @@
 // after that check; loaded here, it is in place before the app's server bundle
 // is imported on the first request.
 import "reflect-metadata";
+import { createVitNodeRealtimeHub } from "@vitnode/api/cloudflare/hub";
 import { fetchService } from "nitro/services";
-
-import { createVitNodeRealtimeHub } from "./hub";
 
 /**
  * The realtime hub of a Nitro app on Cloudflare Workers: the Durable Object

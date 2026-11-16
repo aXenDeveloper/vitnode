@@ -1,4 +1,5 @@
-import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+import type { PermissionsStaffArgs } from "@vitnode/api/lib/permission-staff";
+
 import type { PluginRouteTranslator } from "@/routing";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 

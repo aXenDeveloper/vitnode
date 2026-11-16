@@ -1,15 +1,14 @@
 import type { AnyRequestMiddleware } from "@tanstack/react-start";
+import type { LocaleConfig } from "@vitnode/api/lib/i18n/types";
 
 import {
   createCsrfMiddleware,
   createMiddleware,
   createStart,
 } from "@tanstack/react-start";
+import { localeRoutingFromConfig } from "@vitnode/api/lib/i18n/locale-routing";
 
-import type { LocaleConfig } from "@/lib/i18n/types";
 import type { VitNodeConfig } from "@/vitnode.config";
-
-import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
 
 import type { DocumentSecurityHeaders } from "./document-headers";
 

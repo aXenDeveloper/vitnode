@@ -6,7 +6,7 @@ icon: SquareTerminal
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
-`vitnode` is the command-line tool for VitNode projects. It ships with `@vitnode/core`, so every VitNode app and plugin already has it. You do not install anything extra.
+`vitnode` is the command-line tool for VitNode projects. It ships with `@vitnode/api`, which every VitNode app, API and plugin depends on - an API app at runtime, a web app or plugin at least as a dev dependency. You do not install anything extra.
 
 <Tabs groupId="package-manager" persist items={["bun", "pnpm", "npm"]} label="Run the VitNode CLI">
 
@@ -24,7 +24,7 @@ npx vitnode dev
 
 </Tabs>
 
-Run it inside an app, an API app or a plugin folder, through your package manager. The workspace root of a monorepo does not depend on `@vitnode/core`, so `vitnode` is not found there. To run it in a package from the root, use `pnpm --filter <package> exec vitnode ...`. Generated projects already call it from their `package.json` scripts, so `pnpm dev` and `pnpm start` run `vitnode dev` and `vitnode start` for you.
+Run it inside an app, an API app or a plugin folder, through your package manager. The workspace root of a monorepo does not depend on `@vitnode/api`, so `vitnode` is not found there. To run it in a package from the root, use `pnpm --filter <package> exec vitnode ...`. Generated projects already call it from their `package.json` scripts, so `pnpm dev` and `pnpm start` run `vitnode dev` and `vitnode start` for you.
 
 ## Commands
 
@@ -63,7 +63,7 @@ In a Turborepo workspace the root has its own scripts that run these through Tur
 
 To create a plugin, use the project generator: `create-vitnode-app --plugin`. See [Create a plugin](/docs/dev/plugins/create).
 
-Run `vitnode` alone (or `vitnode --help`) for a short overview of these commands with a few examples. Run `vitnode <command> --help` for a command's options, and `vitnode --version` for the installed `@vitnode/core` version.
+Run `vitnode` alone (or `vitnode --help`) for a short overview of these commands with a few examples. Run `vitnode <command> --help` for a command's options, and `vitnode --version` for the installed `@vitnode/api` version (`@vitnode/core` is released with the same version).
 
 ## How the CLI picks your project
 

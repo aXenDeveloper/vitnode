@@ -12,9 +12,9 @@ export {
   richTextToHtml,
   richTextToPlainText,
   sanitizeRichTextHref,
-} from "@/content/rich-text";
+} from "@vitnode/api/content/rich-text";
 export type {
   RichTextDocument,
   RichTextMark,
   RichTextNode,
-} from "@/content/rich-text";
+} from "@vitnode/api/content/rich-text";

@@ -1,7 +1,7 @@
+import type { NotificationState } from "@vitnode/api/lib/notifications/types";
+
 import { useQuery } from "@tanstack/react-query";
 import React from "react";
-
-import type { NotificationState } from "@/lib/notifications/types";
 
 import { useNotificationState } from "@/views/notifications/notification-state-store";
 import { NotificationsBellContent } from "@/views/notifications/notifications-bell-content";

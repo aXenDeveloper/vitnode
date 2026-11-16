@@ -1,9 +1,10 @@
+import type { PermissionStaffType } from "@vitnode/api/lib/permission-staff";
+
 import { ShieldIcon, UserIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "use-intl";
 
-import type { PermissionStaffType } from "@/api/lib/permission-staff";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 import type {
   AdminUserOption,

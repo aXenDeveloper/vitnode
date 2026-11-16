@@ -1,9 +1,9 @@
+import type { zodCreateRoleAdminSchema } from "@vitnode/api/modules/admin/roles/routes/create.route";
 import type { z } from "zod";
 
-import type { zodCreateRoleAdminSchema } from "@/api/modules/admin/roles/routes/create.route";
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,

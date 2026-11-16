@@ -1,7 +1,8 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useTranslations } from "use-intl";
 
-import type { ContentId } from "@/content/ids";
 import type {
   ContentAdminAction,
   RegisteredFrontendContentType,

@@ -2,7 +2,6 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { Editor } from "@tiptap/react";
 
 import { NodeSelection, Selection } from "@tiptap/pm/state";
-
 import {
   EDITOR_ATTACHMENT_MAX_BYTES,
   EDITOR_IMAGE_MAX_ALT_LENGTH,
@@ -12,7 +11,7 @@ import {
   isEditorAttachment,
   isEditorImageMimeType,
   isRemoteEditorImageUrl,
-} from "@/lib/editor-uploads";
+} from "@vitnode/api/lib/shared/editor-uploads";
 
 import type { EditorUploadRuntime } from "./runtime";
 

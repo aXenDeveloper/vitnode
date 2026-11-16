@@ -106,7 +106,7 @@ Create `src/api/lib/notifications.ts`. It is server-only, so only `config.api.ts
 <Tab value="A: replies only">
 
 ```ts title="plugins/newsroom/src/api/lib/notifications.ts"
-import { buildContentNotifications } from "@vitnode/core/content/server";
+import { buildContentNotifications } from "@vitnode/api/content/server";
 
 import { articleContentType } from "@/content/article";
 import { commentContentType } from "@/content/comment";
@@ -139,7 +139,7 @@ export const commentNotifications = buildContentNotifications({
 <Tab value="B: comments and replies">
 
 ```ts title="plugins/newsroom/src/api/lib/notifications.ts"
-import { buildContentNotifications } from "@vitnode/core/content/server";
+import { buildContentNotifications } from "@vitnode/api/content/server";
 
 import { articleContentType } from "@/content/article";
 import { commentContentType } from "@/content/comment";

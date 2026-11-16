@@ -1,10 +1,10 @@
-import type { CacheClient, DomainCache } from "@vitnode/core/api/lib/cache";
+import type { CacheClient, DomainCache } from "@vitnode/api/lib/cache";
 import type { SQL } from "drizzle-orm";
 import type { Context } from "hono";
 
-import { CacheModel, domainCacheOf } from "@vitnode/core/api/lib/cache";
-import { cacheEntryPrefix } from "@vitnode/core/api/lib/cache-entry";
-import { MemoryCacheStore } from "@vitnode/core/api/lib/cache-memory";
+import { CacheModel, domainCacheOf } from "@vitnode/api/lib/cache";
+import { cacheEntryPrefix } from "@vitnode/api/lib/cache-entry";
+import { MemoryCacheStore } from "@vitnode/api/lib/cache-memory";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 

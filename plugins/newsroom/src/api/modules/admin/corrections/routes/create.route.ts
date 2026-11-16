@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { respondJson } from "@vitnode/core/api/lib/respond-json";
+import { respondJson } from "@vitnode/api/lib/respond-json";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";

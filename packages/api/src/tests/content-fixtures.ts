@@ -1,0 +1,1054 @@
+import type { LocaleRoutingConfig } from "@/lib/i18n/locale-routing";
+
+import { defineContentContainer } from "@/content/containers/define";
+import { defineContentType } from "@/content/define";
+import { field } from "@/content/fields";
+import { createLocaleRouting } from "@/lib/i18n/locale-routing";
+
+export const testContentLocaleRouting = (
+  config: Partial<LocaleRoutingConfig> = {},
+) =>
+  createLocaleRouting({
+    defaultLocale: "en",
+    locales: ["en", "pl"],
+    ...config,
+  });
+
+export const testCategoryContentType = defineContentType({
+  id: "test.category",
+  tableName: "test_categories",
+  fields: {
+    title: field.text({ required: true, minLength: 1, maxLength: 100 }),
+  },
+});
+
+export const testLocalizedCategoryContentType = defineContentType({
+  id: "test.localized-category",
+  tableName: "test_localized_categories",
+  localization: { defaultLocale: "en", fallback: "default" },
+  fields: {
+    color: field.text({ maxLength: 50, nullable: true }),
+    name: field.text({
+      localized: true,
+      required: true,
+      minLength: 1,
+      maxLength: 100,
+    }),
+  },
+  admin: {
+    titleField: "name",
+    list: { columns: ["name", "color"] },
+  },
+});
+
+export const testLocalizedRelationArticleContentType = defineContentType({
+  id: "test.localized-relation",
+  tableName: "test_localized_relation_articles",
+  fields: {
+    title: field.text({ required: true, minLength: 1, maxLength: 200 }),
+    category: field.relation({
+      required: true,
+      onDelete: "restrict",
+      target: () => testLocalizedCategoryContentType,
+    }),
+  },
+  admin: {
+    titleField: "title",
+    list: { columns: ["title", "category"] },
+  },
+});
+
+/**
+ * Stage 1 shape, kept deliberately unchanged: it declares its own `status` and
+ * `publishedAt` fields, so it doubles as the backward-compatibility fixture.
+ */
+export const testArticleContentType = defineContentType({
+  id: "test.article",
+  tableName: "test_articles",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    views: field.number({ integer: true, min: 0, defaultValue: 0 }),
+    featured: field.boolean({ defaultValue: false }),
+    status: field.enum({
+      values: ["draft", "published", "archived"],
+      defaultValue: "draft",
+    }),
+    publishedAt: field.dateTime({ nullable: true }),
+    author: field.user({ nullable: true, onDelete: "set null" }),
+    category: field.relation({
+      required: true,
+      onDelete: "restrict",
+      target: () => testCategoryContentType,
+    }),
+  },
+  indexes: [{ on: ["status", "createdAt"] }],
+  admin: {
+    titleField: "title",
+    list: {
+      columns: ["title", "status", "author", "updatedAt"],
+      searchableFields: ["title", "excerpt"],
+      orderableFields: ["title", "status"],
+      defaultOrderBy: "updatedAt",
+      defaultOrder: "desc",
+    },
+  },
+});
+
+/**
+ * The Stage 2 shape: `status` and `publishedAt` come from `publication`, and
+ * the URL segment from a `slug` field derived from the title.
+ */
+export const testPostContentType = defineContentType({
+  id: "test.post",
+  tableName: "test_posts",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    views: field.number({ integer: true, min: 0, defaultValue: 0 }),
+    author: field.user(),
+    category: field.relation({
+      required: true,
+      onDelete: "restrict",
+      target: () => testCategoryContentType,
+    }),
+  },
+  publication: true,
+  // `views` and `author` are deliberately absent from `fields`: they are the
+  // "a private field never leaves Postgres" assertion in the public tests.
+  publicApi: {
+    path: "posts",
+    fields: ["title", "slug", "excerpt", "category", "publishedAt"],
+    searchableFields: ["title", "excerpt"],
+    orderableFields: ["publishedAt", "title"],
+    filterableFields: ["category"],
+    defaultOrderBy: "publishedAt",
+    defaultOrder: "desc",
+  },
+  admin: {
+    titleField: "title",
+    list: {
+      searchableFields: ["title", "excerpt"],
+      orderableFields: ["title"],
+      defaultOrderBy: "publishedAt",
+    },
+  },
+});
+
+export const testEditorialPostContentType = defineContentType({
+  id: "test.editorial",
+  tableName: "test_editorial_posts",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    views: field.number({ integer: true, min: 0, defaultValue: 0 }),
+  },
+  publication: true,
+  publicApi: {
+    path: "editorial",
+    fields: ["title", "slug", "excerpt", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  editorial: {
+    revisions: { retention: 10 },
+    preview: {
+      expiresInMinutes: 30,
+      pathTemplate: "/editorial/preview/{token}",
+    },
+    scheduling: true,
+  },
+  admin: {
+    titleField: "title",
+    list: {
+      columns: ["status", "title", "version"],
+      defaultOrderBy: "version",
+    },
+  },
+});
+
+export const testEditorialNoteContentType = defineContentType({
+  id: "test.note",
+  tableName: "test_notes",
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    body: field.textarea({ nullable: true }),
+  },
+  editorial: true,
+  liveEditing: true,
+});
+
+export const testSearchablePostContentType = defineContentType({
+  id: "test.searchable",
+  tableName: "test_searchable_posts",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    body: field.textarea({ nullable: true }),
+    code: field.text({ required: true, maxLength: 100 }),
+    views: field.number({ integer: true, min: 0, defaultValue: 0 }),
+    author: field.user(),
+  },
+  publication: true,
+  publicApi: {
+    path: "searchable",
+    fields: ["title", "slug", "excerpt", "body", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    descriptionField: "excerpt",
+    contentFields: ["excerpt", "body"],
+    pathTemplate: "/searchable/{slug}",
+  },
+  admin: {
+    titleField: "title",
+    list: { defaultOrderBy: "publishedAt" },
+  },
+});
+
+export const testLocalizedArticleContentType = defineContentType({
+  id: "test.localized",
+  tableName: "test_localized_articles",
+  localization: {
+    defaultLocale: "en",
+    fallback: "none",
+  },
+  fields: {
+    title: field.text({
+      localized: true,
+      required: true,
+      minLength: 3,
+      maxLength: 200,
+    }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, nullable: true }),
+    // Shared, and deliberately the only one: "a localized field is absent from
+    // the base table" needs something present there to be contrasted with.
+    featured: field.boolean({ defaultValue: false }),
+    views: field.number({ integer: true, min: 0, defaultValue: 0 }),
+  },
+  admin: {
+    list: { columns: ["featured", "views"], orderableFields: ["views"] },
+  },
+});
+
+export const testLocalizedNoteContentType = defineContentType({
+  id: "test.localized-note",
+  tableName: "test_localized_notes",
+  localization: { defaultLocale: "EN" },
+  fields: {
+    heading: field.text({ localized: true, required: true }),
+    slug: field.slug({ localized: true }),
+    pinned: field.boolean({ defaultValue: false }),
+  },
+});
+
+export const testLocalizedGuideContentType = defineContentType({
+  id: "test.localized-guide",
+  tableName: "test_localized_guides",
+  editorial: { revisions: { retention: 5 } },
+  liveEditing: true,
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, nullable: true }),
+    summary: field.text({ localized: true, nullable: true, maxLength: 300 }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+  admin: {
+    list: { columns: ["featured", "status"] },
+  },
+});
+
+export const testLocalizedPageContentType = defineContentType({
+  id: "test.localized-page",
+  tableName: "test_localized_pages",
+  editorial: {
+    preview: { expiresInMinutes: 30 },
+    revisions: { retention: 5 },
+  },
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, nullable: true }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+  publicApi: {
+    path: "localized-pages",
+    fields: ["title", "slug", "body", "featured", "publishedAt"],
+    searchableFields: ["title", "body"],
+    // Shared only, and that is the rule: a localized column is not on the base
+    // table, and a list ordered by one would reshuffle per language.
+    orderableFields: ["publishedAt"],
+    filterableFields: ["featured", "slug"],
+    defaultOrderBy: "publishedAt",
+    defaultOrder: "desc",
+  },
+  admin: {
+    list: { columns: ["featured", "status"] },
+  },
+});
+
+/** The same shape with `fallback: "none"`, for the refusal half of the rules. */
+export const testStrictLocalizedPageContentType = defineContentType({
+  id: "test.strict-localized-page",
+  tableName: "test_strict_localized_pages",
+  localization: { defaultLocale: "en", fallback: "none" },
+  publication: true,
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+  publicApi: {
+    path: "strict-localized-pages",
+    fields: ["title", "slug", "featured", "publishedAt"],
+    searchableFields: ["title"],
+    orderableFields: ["publishedAt"],
+    filterableFields: ["featured"],
+  },
+  admin: {
+    list: { columns: ["featured", "status"] },
+  },
+});
+
+export const testLocalizedSearchPageContentType = defineContentType({
+  id: "test.localized-search-page",
+  tableName: "test_localized_search_pages",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    body: field.textarea({ localized: true, nullable: true }),
+    featured: field.boolean({ defaultValue: false }),
+  },
+  publicApi: {
+    path: "pages",
+    fields: ["title", "slug", "body", "featured", "publishedAt"],
+    searchableFields: ["title", "body"],
+    orderableFields: ["publishedAt"],
+    filterableFields: ["featured"],
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title", "body"],
+    pathTemplate: "/{locale}/pages/{slug}",
+  },
+  admin: {
+    list: { columns: ["featured", "status"] },
+  },
+});
+
+export const testStrictLocalizedSearchPageContentType = defineContentType({
+  id: "test.strict-localized-search-page",
+  tableName: "test_strict_localized_search_pages",
+  localization: { defaultLocale: "en", fallback: "none" },
+  publication: true,
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+  },
+  publicApi: {
+    path: "strict-pages",
+    fields: ["title", "slug", "publishedAt"],
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title"],
+    pathTemplate: "/strict-pages/{slug}",
+  },
+});
+
+export const testAdvancedLocalizedContentType = defineContentType({
+  id: "test.advanced-localized",
+  tableName: "test_advanced_localized",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: true,
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    // Localized whole: both leaves live on the translation table, and a
+    // translation revision has to record them nested.
+    seo: field.group({
+      localized: true,
+      nullable: true,
+      fields: {
+        title: field.text({ nullable: true, maxLength: 200 }),
+        description: field.textarea({ nullable: true }),
+      },
+    }),
+    featured: field.boolean({ defaultValue: false }),
+    // Shared, like every Stage 6 repeatable - so every locale's document is
+    // built from the same children, and all of them have to contain them.
+    faq: field.repeatable({
+      fields: {
+        question: field.text({ required: true, maxLength: 200 }),
+        answer: field.textarea({ required: true }),
+      },
+    }),
+  },
+  publicApi: {
+    path: "advanced-localized",
+    fields: [
+      "title",
+      "slug",
+      "seo.title",
+      "seo.description",
+      "faq.question",
+      "faq.answer",
+      "featured",
+      "publishedAt",
+    ],
+    searchableFields: ["title"],
+    orderableFields: ["publishedAt"],
+  },
+  search: {
+    titleField: "title",
+    descriptionField: "seo.description",
+    contentFields: ["title", "seo.description", "faq.question", "faq.answer"],
+    pathTemplate: "/{locale}/advanced-localized/{slug}",
+  },
+  admin: {
+    list: { columns: ["featured", "status"] },
+  },
+});
+
+export const testDeliveredPostContentType = defineContentType({
+  id: "test.delivered-post",
+  tableName: "test_delivered_posts",
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+    hidden: field.boolean({ defaultValue: false }),
+  },
+  publication: true,
+  editorial: true,
+  publicApi: {
+    path: "delivered-posts",
+    fields: ["id", "title", "slug", "excerpt", "hidden", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  delivery: {
+    redirects: true,
+    seo: {
+      titleField: "title",
+      descriptionField: "excerpt",
+      noIndexField: "hidden",
+      openGraph: { titleField: "title", descriptionField: "excerpt" },
+    },
+    sitemap: { changeFrequency: "weekly", priority: 0.7 },
+  },
+});
+
+export const testDeliveredLocalizedContentType = defineContentType({
+  id: "test.delivered-localized",
+  tableName: "test_delivered_localized",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: true,
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+    seo: field.group({
+      localized: true,
+      nullable: true,
+      fields: {
+        title: field.text({ nullable: true, maxLength: 200 }),
+        description: field.textarea({ nullable: true, maxLength: 500 }),
+      },
+    }),
+  },
+  publicApi: {
+    path: "delivered-localized",
+    fields: [
+      "id",
+      "title",
+      "slug",
+      "seo.title",
+      "seo.description",
+      "publishedAt",
+    ],
+    defaultOrderBy: "publishedAt",
+  },
+  delivery: {
+    redirects: true,
+    hreflang: { xDefault: "defaultLocale" },
+    seo: {
+      titleField: "seo.title",
+      fallbackTitleField: "title",
+      descriptionField: "seo.description",
+    },
+    sitemap: { changeFrequency: "daily", priority: 0.5 },
+  },
+  admin: {
+    list: { columns: ["status", "updatedAt"] },
+  },
+});
+
+export const testDeliveredPreviewableContentType = defineContentType({
+  id: "test.delivered-previewable",
+  tableName: "test_delivered_previewable",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: {
+    preview: { expiresInMinutes: 30 },
+  },
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+  },
+  publicApi: {
+    path: "delivered-previewable",
+    fields: ["id", "title", "slug", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  delivery: {
+    redirects: true,
+    sitemap: true,
+  },
+  admin: {
+    list: { columns: ["status", "updatedAt"] },
+  },
+});
+
+export const testSectionedContentType = defineContentType({
+  id: "test.sectioned",
+  tableName: "test_sectioned",
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    excerpt: field.textarea({ nullable: true }),
+    featured: field.boolean({ defaultValue: false }),
+    views: field.number({ integer: true, defaultValue: 0 }),
+  },
+  admin: {
+    titleField: "title",
+    form: {
+      sections: [
+        { name: "general", fields: ["title", "excerpt"] },
+        // `views` is in no section, so the form does not have it at all.
+        { name: "visibility", fields: ["featured"] },
+      ],
+    },
+  },
+});
+
+export const testFilePostContentType = defineContentType({
+  id: "test.file-post",
+  tableName: "test_file_posts",
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    cover: field.file({
+      maxBytes: 5 * 1024 * 1024,
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
+    animation: field.file({
+      maxBytes: 10 * 1024 * 1024,
+      allowedExtensions: [".gif"],
+      allowedMimeTypes: ["image/gif"],
+    }),
+    document: field.file({
+      maxBytes: 20 * 1024 * 1024,
+      allowedExtensions: [".pdf"],
+      allowedMimeTypes: ["application/pdf"],
+    }),
+  },
+  publication: true,
+  publicApi: {
+    path: "file-posts",
+    fields: ["title", "slug", "cover", "publishedAt"],
+  },
+  admin: {
+    titleField: "title",
+    list: { columns: ["cover", "title", "status", "updatedAt"] },
+  },
+});
+
+export const testFileGalleryContentType = defineContentType({
+  id: "test.file-gallery",
+  tableName: "test_file_galleries",
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    // The single-file field, kept beside the gallery: every rule that has to hold
+    // "per field rather than per row" needs both arities in one content type.
+    cover: field.file({
+      maxBytes: 5 * 1024 * 1024,
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
+    gallery: field.file({
+      multiple: true,
+      min: 1,
+      max: 4,
+      maxBytes: 5 * 1024 * 1024,
+      allowedExtensions: [".jpg", ".jpeg", ".png", ".webp", ".avif"],
+      allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+    }),
+    // Unordered on purpose, so "the stored order is ascending file id" has
+    // something to be true of - the gallery above proves the other branch.
+    attachments: field.file({
+      multiple: true,
+      ordered: false,
+      maxBytes: 20 * 1024 * 1024,
+      allowedExtensions: [".pdf"],
+      allowedMimeTypes: ["application/pdf"],
+    }),
+  },
+  publication: true,
+  editorial: { revisions: { retention: 5 } },
+  publicApi: {
+    path: "file-galleries",
+    fields: ["title", "slug", "cover", "gallery", "publishedAt"],
+  },
+  admin: {
+    titleField: "title",
+    // The gallery is deliberately absent: it is not one column, so
+    // `admin.list.columns` refuses it and the list response loads no junction.
+    list: { columns: ["cover", "title", "status", "updatedAt"] },
+  },
+});
+
+export const testDuplicableArticleContentType = defineContentType({
+  id: "test.duplicable-article",
+  tableName: "test_duplicable_articles",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: true,
+  duplication: true,
+  fields: {
+    title: field.text({
+      localized: true,
+      required: true,
+      minLength: 1,
+      maxLength: 20,
+    }),
+    slug: field.slug({ localized: true, source: "title" }),
+    seo: field.group({
+      localized: true,
+      nullable: true,
+      fields: {
+        description: field.textarea({ nullable: true, maxLength: 200 }),
+      },
+    }),
+    code: field.text({ unique: true, nullable: true, maxLength: 40 }),
+    featured: field.boolean({ defaultValue: false }),
+    startsAt: field.dateTime({ nullable: true }),
+    author: field.user(),
+    reviewers: field.user({ multiple: true, ordered: true }),
+    categories: field.relation({
+      multiple: true,
+      ordered: true,
+      target: () => testCategoryContentType,
+    }),
+    cover: field.file({ maxBytes: 5 * 1024 * 1024 }),
+    gallery: field.file({ multiple: true, maxBytes: 5 * 1024 * 1024 }),
+    faq: field.repeatable({
+      fields: {
+        question: field.text({ required: true, maxLength: 200 }),
+        answer: field.textarea({ required: true }),
+      },
+    }),
+  },
+  publicApi: {
+    path: "duplicable-articles",
+    fields: ["id", "title", "slug", "faq.question", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title", "faq.question"],
+    pathTemplate: "/{locale}/duplicable-articles/{slug}",
+  },
+  delivery: { redirects: true },
+  admin: {
+    titleField: "title",
+    list: { columns: ["status", "updatedAt"] },
+  },
+});
+
+export const testDuplicableNoteContentType = defineContentType({
+  id: "test.duplicable-note",
+  tableName: "test_duplicable_notes",
+  publication: true,
+  duplication: true,
+  fields: {
+    title: field.text({ required: true, minLength: 1, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    code: field.text({ required: true, unique: true, maxLength: 40 }),
+  },
+  admin: {
+    titleField: "title",
+    list: { columns: ["title", "status", "updatedAt"] },
+  },
+});
+
+export const testHideablePostContentType = defineContentType({
+  id: "test.hideable-post",
+  tableName: "test_hideable_posts",
+  publication: true,
+  visibility: true,
+  editorial: {
+    preview: { expiresInMinutes: 30 },
+    scheduling: true,
+  },
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    excerpt: field.textarea({ maxLength: 500, nullable: true }),
+  },
+  publicApi: {
+    path: "hideable-posts",
+    fields: ["id", "title", "slug", "excerpt", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["excerpt"],
+    pathTemplate: "/hideable-posts/{slug}",
+  },
+  delivery: {
+    redirects: true,
+    seo: { titleField: "title" },
+    sitemap: true,
+  },
+  admin: { titleField: "title" },
+});
+
+export const testHideableNoteContentType = defineContentType({
+  id: "test.hideable-note",
+  tableName: "test_hideable_notes",
+  publication: true,
+  visibility: true,
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+  },
+  publicApi: {
+    path: "hideable-notes",
+    fields: ["id", "title", "slug", "publishedAt"],
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title"],
+    pathTemplate: "/hideable-notes/{slug}",
+  },
+});
+
+export const testUuidTagContentType = defineContentType({
+  id: "test.uuid-tag",
+  tableName: "test_uuid_tags",
+  idStrategy: "uuid",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  visibility: true,
+  duplication: true,
+  editorial: {
+    preview: { expiresInMinutes: 30 },
+  },
+  fields: {
+    name: field.text({ localized: true, required: true, maxLength: 100 }),
+    slug: field.slug({ localized: true, source: "name" }),
+    category: field.relation({
+      nullable: true,
+      onDelete: "set null",
+      target: () => testCategoryContentType,
+    }),
+    relatedTags: field.relation({ multiple: true, ordered: true, self: true }),
+  },
+  publicApi: {
+    path: "uuid-tags",
+    fields: ["id", "name", "slug", "category", "relatedTags", "publishedAt"],
+    filterableFields: ["relatedTags"],
+    defaultOrderBy: "publishedAt",
+  },
+  admin: { titleField: "name" },
+});
+
+export const testBigintEventContentType = defineContentType({
+  id: "test.bigint-event",
+  tableName: "test_bigint_events",
+  idStrategy: "bigint",
+  publication: true,
+  visibility: true,
+  duplication: true,
+  editorial: {
+    preview: { expiresInMinutes: 30 },
+    scheduling: true,
+  },
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    body: field.richText({ nullable: true }),
+    primaryTag: field.relation({
+      nullable: true,
+      onDelete: "set null",
+      target: () => testUuidTagContentType,
+    }),
+    category: field.relation({
+      nullable: true,
+      onDelete: "set null",
+      target: () => testCategoryContentType,
+    }),
+    tags: field.relation({
+      multiple: true,
+      ordered: true,
+      target: () => testUuidTagContentType,
+    }),
+    relatedEvents: field.relation({ multiple: true, self: true }),
+    sessions: field.repeatable({
+      fields: {
+        title: field.text({ required: true, maxLength: 100 }),
+        startsAt: field.dateTime({ nullable: true }),
+      },
+    }),
+  },
+  publicApi: {
+    path: "bigint-events",
+    fields: [
+      "id",
+      "title",
+      "slug",
+      "primaryTag",
+      "category",
+      "tags",
+      "relatedEvents",
+      "sessions.title",
+      "publishedAt",
+    ],
+    filterableFields: ["tags"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title", "sessions.title"],
+    pathTemplate: "/bigint-events/{slug}",
+  },
+  delivery: {
+    redirects: true,
+    seo: { titleField: "title" },
+    sitemap: true,
+  },
+  admin: { titleField: "title", list: { columns: ["title", "tags"] } },
+});
+
+export const testBigintPageContentType = defineContentType({
+  id: "test.bigint-page",
+  tableName: "test_bigint_pages",
+  idStrategy: "bigint",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  editorial: true,
+  fields: {
+    title: field.text({ localized: true, required: true, maxLength: 200 }),
+    slug: field.slug({ localized: true, source: "title" }),
+  },
+  publicApi: {
+    path: "bigint-pages",
+    fields: ["id", "title", "slug", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  search: {
+    titleField: "title",
+    contentFields: ["title"],
+    pathTemplate: "/{locale}/bigint-pages/{slug}",
+  },
+  delivery: {
+    redirects: true,
+    hreflang: { xDefault: "defaultLocale" },
+    seo: { titleField: "title" },
+    sitemap: true,
+  },
+});
+
+export const testForumContentType = defineContentType({
+  id: "test.forum",
+  tableName: "test_forums",
+  publication: true,
+  visibility: true,
+  fields: {
+    title: field.text({ required: true, maxLength: 100 }),
+    slug: field.slug({ source: "title" }),
+  },
+  publicApi: {
+    path: "forums",
+    fields: ["id", "title", "slug", "publishedAt"],
+  },
+});
+
+export const testTopicContentType = defineContentType({
+  id: "test.topic",
+  tableName: "test_topics",
+  publication: true,
+  visibility: true,
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    body: field.richText({ required: true, maxBytes: 2000 }),
+    pinned: field.boolean({ defaultValue: false }),
+    author: field.user(),
+    forum: field.relation({
+      required: true,
+      onDelete: "restrict",
+      target: () => testForumContentType,
+    }),
+  },
+  publicApi: {
+    path: "topics",
+    fields: ["id", "title", "slug", "forum", "publishedAt"],
+  },
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["title", "body", "forum"], status: "published" },
+    update: { fields: ["title", "body", "forum"] },
+  },
+});
+
+export const testEditorialTopicContentType = defineContentType({
+  id: "test.editorial-topic",
+  tableName: "test_editorial_topics",
+  publication: true,
+  editorial: true,
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    author: field.user(),
+  },
+  publicApi: {
+    path: "editorial-topics",
+    fields: ["title", "slug", "publishedAt"],
+  },
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["title"] },
+    update: { fields: ["title"] },
+  },
+});
+
+export const testBoardContainers = defineContentContainer({
+  id: "test.boards",
+  fields: {
+    description: field.textarea({ maxLength: 500, nullable: true }),
+    color: field.text({ maxLength: 7, nullable: true }),
+    locked: field.boolean({ defaultValue: false }),
+    notes: field.textarea({ maxLength: 500, nullable: true }),
+  },
+  hierarchy: { maxDepth: 3 },
+  publicApi: { path: "boards", fields: ["description", "color"] },
+});
+
+export const testSectionContainers = defineContentContainer({
+  id: "test.sections",
+  publicApi: { path: "sections" },
+});
+
+export const testThreadContentType = defineContentType({
+  id: "test.thread",
+  tableName: "test_threads",
+  publication: true,
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    author: field.user(),
+    board: field.container({ definition: testBoardContainers, required: true }),
+  },
+  publicApi: {
+    path: "threads",
+    fields: ["id", "title", "slug", "board", "publishedAt"],
+    filterableFields: ["board"],
+  },
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["title", "board"], status: "published" },
+    update: { fields: ["title"] },
+  },
+});
+
+/** A container collection that takes part in publishing policies. */
+export const testPolicyBoardContainers = defineContentContainer({
+  id: "test.policy-boards",
+  hierarchy: { maxDepth: 3 },
+  policies: {
+    defaults: {
+      publish: "immediate",
+      edits: "immediate",
+      authorEdit: "always",
+    },
+    contentTypes: {
+      "test.policy-reply": { authorEdit: "window", authorEditMinutes: 60 },
+    },
+  },
+  publicApi: { path: "policy-boards" },
+});
+
+export const testPolicyTopicContentType = defineContentType({
+  id: "test.policy-topic",
+  tableName: "test_policy_topics",
+  publication: true,
+  visibility: true,
+  editorial: true,
+  fields: {
+    title: field.text({ required: true, minLength: 3, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    author: field.user(),
+    board: field.container({
+      definition: testPolicyBoardContainers,
+      required: true,
+    }),
+  },
+  publicApi: {
+    path: "policy-topics",
+    fields: ["id", "title", "slug", "board", "publishedAt"],
+  },
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["title", "board"], status: "published" },
+    update: { fields: ["title"] },
+  },
+  admin: { titleField: "title" },
+});
+
+/** Answers under a topic: filed in the topic's board, threaded by `parent`. */
+export const testPolicyReplyContentType = defineContentType({
+  id: "test.policy-reply",
+  tableName: "test_policy_replies",
+  publication: true,
+  visibility: true,
+  fields: {
+    slug: field.slug({ generated: true }),
+    body: field.text({ required: true, maxLength: 2000 }),
+    author: field.user(),
+    topic: field.relation({
+      target: () => testPolicyTopicContentType,
+      required: true,
+      container: true,
+      onDelete: "cascade",
+    }),
+    parent: field.relation({
+      self: true,
+      nullable: true,
+      onDelete: "set null",
+    }),
+  },
+  publicApi: {
+    path: "policy-replies",
+    fields: ["id", "slug", "body", "topic", "parent", "publishedAt"],
+  },
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["body", "topic", "parent"], status: "published" },
+    update: { fields: ["body"] },
+  },
+  thread: { parent: "parent", root: "topic", maxDepth: 4 },
+});

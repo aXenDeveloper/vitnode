@@ -5,12 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ContentLiveClientMessage,
   ContentLiveServerMessage,
-} from "@/content/live/protocol";
+} from "@vitnode/api/content/live/protocol";
 
 import {
   CONTENT_LIVE_POLL_MS,
   contentLiveChannel,
-} from "@/content/live/protocol";
+} from "@vitnode/api/content/live/protocol";
 import { VitNodeWebSocketProvider } from "@/ws/provider";
 
 import type { ContentFormTransport } from "../form/transport";

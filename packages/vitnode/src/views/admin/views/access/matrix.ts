@@ -1,8 +1,8 @@
 import type {
   ContentAccessAction,
   ContentAccessAudience,
-} from "@/content/access/policy";
-import type { ContentAccessAdminResponse } from "@/content/access/schemas";
+} from "@vitnode/api/content/access/policy";
+import type { ContentAccessAdminResponse } from "@vitnode/api/content/access/schemas";
 
 /** One row of the access matrix: guests, signed-in members or a role id. */
 export type ContentAccessMatrixRow = "guests" | "members" | number;

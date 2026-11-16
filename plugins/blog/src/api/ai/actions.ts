@@ -1,12 +1,12 @@
-import { defineAiAction } from "@vitnode/core/api/lib/ai/action";
-import { assertSameHtmlStructure } from "@vitnode/core/api/lib/ai/html-structure";
-import { aiActionRef } from "@vitnode/core/api/lib/ai/registry";
-import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
 import {
   createRichTextDocumentSchema,
   richTextToHtml,
   richTextToPlainText,
-} from "@vitnode/core/content/rich-text";
+} from "@vitnode/api/content/rich-text";
+import { defineAiAction } from "@vitnode/api/lib/ai/action";
+import { assertSameHtmlStructure } from "@vitnode/api/lib/ai/html-structure";
+import { aiActionRef } from "@vitnode/api/lib/ai/registry";
+import { checkStaffPermission } from "@vitnode/api/lib/check-staff-permission";
 import { z } from "zod";
 
 import { buildTranslatePrompt, unquote } from "@/api/lib/ai-writing";

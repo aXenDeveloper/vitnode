@@ -1,7 +1,6 @@
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
-
-import { defineContentType } from "@/content/define";
-import { field } from "@/content/fields";
 
 import {
   contentListSystemFilterValue,

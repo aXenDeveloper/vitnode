@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import type { PluginRoute } from "@vitnode/api/routing/types";
 
-import type { PluginRoute } from "../../routing/types.js";
+import { describe, expect, it } from "vitest";
 
 import { buildPluginRouteManifest } from "../../routing/manifest.js";
 import { definePluginRoutes, lazy, page } from "../../routing/tree.js";

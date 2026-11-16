@@ -1,15 +1,14 @@
 import { mergeAttributes, Node, ReactNodeViewRenderer } from "@tiptap/react";
-
 import {
   sanitizeRichTextAlign,
   sanitizeRichTextSrc,
-} from "@/content/rich-text/elements";
+} from "@vitnode/api/content/rich-text/elements";
 import {
   EDITOR_IMAGE_MAX_ALT_LENGTH,
   editorPositiveIntegerOf,
   isEditorImageWrap,
   normalizeEditorImageWidth,
-} from "@/lib/editor-uploads";
+} from "@vitnode/api/lib/shared/editor-uploads";
 
 import { EDITOR_IMAGE_NODE } from "../uploads/flow";
 import { EditorImageNodeView } from "./image-node-view";

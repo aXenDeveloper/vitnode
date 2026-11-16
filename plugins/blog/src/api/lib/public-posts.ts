@@ -1,5 +1,5 @@
-import type { EnvVitNode } from "@vitnode/core/api/middlewares/global.middleware";
-import type { ContentPublicHiddenAccess } from "@vitnode/core/content/server";
+import type { ContentPublicHiddenAccess } from "@vitnode/api/content/server";
+import type { EnvVitNode } from "@vitnode/api/middlewares/global.middleware";
 import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
@@ -9,7 +9,7 @@ import {
   contentTranslationPublicationColumns,
   findContentLanguage,
   publishedCondition,
-} from "@vitnode/core/content/server";
+} from "@vitnode/api/content/server";
 import { and, eq, exists, or, sql } from "drizzle-orm";
 
 import { postContent } from "@/database/posts";

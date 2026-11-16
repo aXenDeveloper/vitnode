@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 
+import { createAreaInstance } from "@vitnode/api/blocks/area";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
@@ -18,7 +19,6 @@ import type {
 } from "./context";
 import type { EditorContainerRef, VisualEditorSnapshot } from "./state/types";
 
-import { createAreaInstance } from "../blocks/area";
 import { useEditWidgets } from "../blocks/edit-widgets-context";
 import { getDefaultBlockRegistry, isBlockAllowed } from "../blocks/registry";
 import { isSaveConflict, saveRefusalOf } from "./adapter/refusal";

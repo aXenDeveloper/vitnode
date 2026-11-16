@@ -2,7 +2,7 @@ import type {
   StorageApiPlugin,
   StorageUploadArgs,
   StorageUploadResult,
-} from "@vitnode/core/api/models/storage";
+} from "@vitnode/api/models/storage";
 
 import { StorageClient } from "@supabase/storage-js";
 

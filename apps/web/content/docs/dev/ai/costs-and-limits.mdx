@@ -168,9 +168,9 @@ Provider adapters read cost and request ids from a provider's response metadata.
 Add an adapter for another provider that reports its cost:
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
-import type { AiProviderAdapter } from '@vitnode/core/api/lib/ai/usage-cost'
+import type { AiProviderAdapter } from '@vitnode/api/lib/ai/usage-cost'
 
-import { decimalFromNumber } from '@vitnode/core/api/lib/ai/decimal'
+import { decimalFromNumber } from '@vitnode/api/lib/ai/decimal'
 
 const acmeAdapter: AiProviderAdapter = {
   id: 'acme',

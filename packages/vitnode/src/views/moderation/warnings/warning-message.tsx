@@ -1,12 +1,15 @@
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
+import type { WarningMessage } from "@vitnode/api/lib/moderation/warnings";
+
+import { isRichTextEmpty } from "@vitnode/api/content/rich-text/document";
+import {
+  findLangValue,
+  pickLangCodeWhere,
+} from "@vitnode/api/lib/helpers/multi-lang";
 import { cn } from "cn";
 import { useLocale } from "use-intl";
 
-import type { RichTextDocument } from "@/content/rich-text/document";
-import type { WarningMessage } from "@/lib/moderation/warnings";
-
 import { RichTextContent } from "@/components/rich-text/rich-text-content";
-import { isRichTextEmpty } from "@/content/rich-text/document";
-import { findLangValue, pickLangCodeWhere } from "@/lib/helpers/multi-lang";
 
 export const pickWarningMessage = (
   message: WarningMessage,

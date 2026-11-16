@@ -1,9 +1,9 @@
-import { queryOptions } from "@tanstack/react-query";
+import type { SsoProfileField } from "@vitnode/api/lib/shared/sso-profile";
 
-import type { SsoProfileField } from "@/lib/sso-profile";
+import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface SsoConnection {

@@ -1,3 +1,5 @@
+import type { NotificationEmailMode } from "@vitnode/api/lib/notifications/types";
+
 import { cn } from "cn";
 import {
   BellIcon,
@@ -10,7 +12,6 @@ import {
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { NotificationEmailMode } from "@/lib/notifications/types";
 import type { NotificationPreferenceTypeView } from "@/views/notifications/notifications-query";
 
 import { RevealPanel } from "@/components/reveal-panel";

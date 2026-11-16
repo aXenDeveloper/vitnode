@@ -1,9 +1,8 @@
-import { describe, expect, it } from "vitest";
-
 import {
   createLocaleRouting,
   DEFAULT_IGNORED_LOCALE_PATHS,
-} from "@/lib/i18n/locale-routing";
+} from "@vitnode/api/lib/i18n/locale-routing";
+import { describe, expect, it } from "vitest";
 
 import { ADMIN_ENTRY_PATH, ADMIN_HOME_PATH } from "./state";
 

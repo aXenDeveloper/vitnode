@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import type { ContentDrafts } from "@vitnode/api/content/live/http";
 
-import type { ContentDrafts } from "@/content/live/http";
+import { describe, expect, it } from "vitest";
 
 import {
   contentDraftDiffers,

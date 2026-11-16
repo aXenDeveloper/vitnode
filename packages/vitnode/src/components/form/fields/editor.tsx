@@ -1,3 +1,12 @@
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
+import type { MultiLangValue } from "@vitnode/api/lib/helpers/multi-lang";
+
+import {
+  isRichTextDocument,
+  isRichTextEmpty,
+} from "@vitnode/api/content/rich-text/document";
+import { richTextToPlainText } from "@vitnode/api/content/rich-text/plain-text";
+import { stripHtml } from "@vitnode/api/lib/strip-html";
 import { cn } from "cn";
 import { MessageCircleIcon } from "lucide-react";
 import React from "react";
@@ -5,8 +14,6 @@ import { useLocale, useTranslations } from "use-intl";
 
 import type { TipTapEditorBaseProps } from "@/components/tiptap/tiptap-editor";
 import type { FormFieldApi } from "@/components/ui/form";
-import type { RichTextDocument } from "@/content/rich-text/document";
-import type { MultiLangValue } from "@/lib/helpers/multi-lang";
 
 import {
   CollaborativeEditorSlot,
@@ -15,12 +22,6 @@ import {
 import { reusableEditorUploads } from "@/components/tiptap/uploads/reuse";
 import { Editor } from "@/components/ui/editor";
 import { FormControl, FormMessage, useFormField } from "@/components/ui/form";
-import {
-  isRichTextDocument,
-  isRichTextEmpty,
-} from "@/content/rich-text/document";
-import { richTextToPlainText } from "@/content/rich-text/plain-text";
-import { stripHtml } from "@/lib/strip-html";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 

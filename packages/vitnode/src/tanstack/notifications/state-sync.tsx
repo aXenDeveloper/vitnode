@@ -1,12 +1,12 @@
-import { useQueryClient } from "@tanstack/react-query";
-import React from "react";
+import type { NotificationStateMessage } from "@vitnode/api/lib/notifications/types";
 
-import type { NotificationStateMessage } from "@/lib/notifications/types";
+import { useQueryClient } from "@tanstack/react-query";
+import { notificationsStateChannel } from "@vitnode/api/ws/notifications";
+import React from "react";
 
 import { createCoalescer } from "@/views/notifications/coalesce";
 import { notificationStateStore } from "@/views/notifications/notification-state-store";
 import { fetchNotificationState } from "@/views/notifications/notifications-query";
-import { notificationsStateChannel } from "@/ws/notifications";
 import { useVitNodeWebSocket } from "@/ws/use-websocket";
 
 import { useSessionQuery } from "../auth/session-query";

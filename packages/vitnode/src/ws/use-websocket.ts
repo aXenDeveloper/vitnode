@@ -1,6 +1,6 @@
-import React from "react";
+import type { VitNodeWSChannel } from "@vitnode/api/ws/types";
 
-import type { VitNodeWSChannel } from "./types";
+import React from "react";
 
 import { useVitNodeWebSocketContext } from "./provider";
 

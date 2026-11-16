@@ -7,7 +7,8 @@ const warmup = async (request: Request) => fetchService("ssr", request);
 
 const loadHooks = async (url: string) => {
   await warmup(new Request(url));
-  const { createVitNodeWebSocketHooks } = await import("./crossws.server");
+  const { createVitNodeWebSocketHooks } =
+    await import("@vitnode/api/ws/crossws.server");
 
   return createVitNodeWebSocketHooks({ warmup });
 };

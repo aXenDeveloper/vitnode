@@ -1,10 +1,10 @@
+import { staffPermissionKey } from "@vitnode/api/lib/staff-permissions";
+import { manifest } from "@vitnode/api/manifest";
 import { readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { staffPermissionKey } from "@/lib/staff-permissions";
-import { manifest } from "@/manifest";
+import { API_SRC_ROOT } from "@/tests/import-graph";
 
 import {
   ADMIN_ROLE_PERMISSIONS,
@@ -13,8 +13,8 @@ import {
   staffPermissionModuleFor,
 } from "./admin-permissions";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const apiModules = resolve(here, "../../../../../api/modules/admin");
+// The routes these screens call live in `@vitnode/api`'s workspace sources.
+const apiModules = join(API_SRC_ROOT, "modules", "admin");
 
 const sourcesIn = (module: string): { file: string; source: string }[] => {
   const directory = join(apiModules, module, "routes");

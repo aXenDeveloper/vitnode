@@ -45,7 +45,7 @@ How long entries are kept is a deployment setting, so it lives in your API
 config, not in the AdminCP. Add an `activityLogs` block to `buildApiConfig`:
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   // other options unchanged

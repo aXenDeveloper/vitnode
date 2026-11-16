@@ -1,18 +1,20 @@
-import type { FlatPluginRoute } from "./flatten";
-import type { PluginRouteLazyComponent } from "./tree";
 import type {
   PluginRoute,
   PluginRouteManifest,
   PluginRouteSearchValidator,
   PluginRouteSource,
-} from "./types";
+} from "@vitnode/api/routing/types";
+
+import { routeMatchKey } from "@vitnode/api/routing/path";
+import { PLUGIN_ROUTE_ID_SEPARATOR } from "@vitnode/api/routing/types";
+
+import type { FlatPluginRoute } from "./flatten";
+import type { PluginRouteLazyComponent } from "./tree";
 
 import { PluginRouteError } from "./errors";
 import { flattenPluginRoutes } from "./flatten";
 import { buildPluginRouteGraph } from "./graph";
 import { comparePluginRoutes } from "./order";
-import { routeMatchKey } from "./path";
-import { PLUGIN_ROUTE_ID_SEPARATOR } from "./types";
 
 export { comparePluginRoutes };
 

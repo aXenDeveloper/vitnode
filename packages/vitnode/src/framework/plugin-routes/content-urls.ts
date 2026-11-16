@@ -2,16 +2,18 @@ import type {
   ContentPublicUrl,
   ContentUrlDefinition,
   ContentUrlSetting,
-} from "../../content/public-urls.js";
-import type { PluginRoute } from "../../routing/types.js";
-import type { HostRoutePath } from "./host-routes.js";
+} from "@vitnode/api/content/public-urls";
+import type { PluginRoute } from "@vitnode/api/routing/types";
 
 import {
   CONTENT_URLS_ERROR_PREFIX,
   contentPublicUrls,
   ContentUrlError,
-} from "../../content/public-urls.js";
-import { parseRoutePath, routeMatchKey } from "../../routing/path.js";
+} from "@vitnode/api/content/public-urls";
+import { parseRoutePath, routeMatchKey } from "@vitnode/api/routing/path";
+
+import type { HostRoutePath } from "./host-routes.js";
+
 import { localeRoutePathTargets } from "./locale-route-paths.js";
 
 export type {
@@ -19,13 +21,13 @@ export type {
   ContentUrlErrorCode,
   ContentUrlErrorDetails,
   ContentUrlSetting,
-} from "../../content/public-urls.js";
+} from "@vitnode/api/content/public-urls";
 export {
   CONTENT_TYPES_EXPORT,
   CONTENT_URLS_ERROR_PREFIX,
   contentTypesFromContentModule,
   ContentUrlError,
-} from "../../content/public-urls.js";
+} from "@vitnode/api/content/public-urls";
 
 export interface ContentUrlSource {
   contentTypes: readonly ContentUrlDefinition[];

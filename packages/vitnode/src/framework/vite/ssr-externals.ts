@@ -2,7 +2,7 @@ import type { Plugin } from "vite";
 
 import { configuredPluginIds } from "./plugin-routes";
 
-const PACKAGE_NAME = "@vitnode/core";
+const PACKAGE_NAMES = ["@vitnode/core", "@vitnode/api"] as const;
 
 const ALWAYS_EXTERNAL = ["tslib"] as const;
 
@@ -16,7 +16,7 @@ export interface VitNodeSsrExternalsOptions {
 }
 
 /**
- * In a production build, keeps `@vitnode/core` and every configured plugin out
+ * In a production build, keeps `@vitnode/core`, `@vitnode/api` and every configured plugin out
  * of the server bundle, loaded from `node_modules` at runtime instead.
  */
 export const vitNodeSsrExternals = ({
@@ -32,7 +32,7 @@ export const vitNodeSsrExternals = ({
       external:
         command === "build"
           ? [
-              PACKAGE_NAME,
+              ...PACKAGE_NAMES,
               ...(await readPluginIds(appRoot)),
               ...ALWAYS_EXTERNAL,
             ]

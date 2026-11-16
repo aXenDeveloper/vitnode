@@ -1,3 +1,4 @@
+import { EDITOR_ATTACHMENT_ACCEPT } from "@vitnode/api/lib/shared/editor-uploads";
 import {
   AudioLinesIcon,
   ChevronDownIcon,
@@ -20,7 +21,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Kbd } from "@/components/ui/kbd";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { EDITOR_ATTACHMENT_ACCEPT } from "@/lib/editor-uploads";
 
 import { BLOCK_COMMANDS } from "../../block-commands";
 import { insertEditorFiles } from "../../uploads/flow";

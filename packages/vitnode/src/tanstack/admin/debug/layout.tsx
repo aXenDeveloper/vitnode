@@ -1,8 +1,8 @@
+import type { PermissionsStaffArgs } from "@vitnode/api/lib/permission-staff";
+
 import { useRouterState } from "@tanstack/react-router";
+import { hasStaffPermission } from "@vitnode/api/lib/staff-permission";
 
-import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
-
-import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { PageTitle } from "@/components/ui/page-title";
 import { debugHealth } from "@/views/admin/views/core/debug/health/health";
 import { DebugNav } from "@/views/admin/views/core/debug/nav/debug-nav";

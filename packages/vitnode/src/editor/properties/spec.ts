@@ -1,4 +1,10 @@
+import type { ContentFieldDescriptor } from "@vitnode/api/content/types";
 import type z from "zod";
+
+import { humanizeFieldName } from "@vitnode/api/content/admin/labels";
+import { CONTENT_PATH_SEPARATOR } from "@vitnode/api/content/const";
+import { contentInnerFields } from "@vitnode/api/content/paths";
+import { contentFieldValuesObject } from "@vitnode/api/content/schemas";
 
 import type {
   AnyBlockDefinition,
@@ -9,13 +15,8 @@ import type {
   ContentFormFieldSpec,
   ContentFormSpec,
 } from "../../content/admin/spec";
-import type { ContentFieldDescriptor } from "../../content/types";
 
-import { humanizeFieldName } from "../../content/admin/labels";
 import { projectFormField } from "../../content/admin/spec";
-import { CONTENT_PATH_SEPARATOR } from "../../content/const";
-import { contentInnerFields } from "../../content/paths";
-import { contentFieldValuesObject } from "../../content/schemas";
 
 const labelForPath = (path: string): string => {
   const leaf = path.split(CONTENT_PATH_SEPARATOR).at(-1) ?? path;

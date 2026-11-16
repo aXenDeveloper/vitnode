@@ -1,12 +1,12 @@
-import type { CacheClient } from "@vitnode/core/api/lib/cache";
+import type { CacheClient } from "@vitnode/api/lib/cache";
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { MemoryAiLedger } from "@vitnode/core/api/lib/ai/memory-ledger";
-import { collectAiActions } from "@vitnode/core/api/lib/ai/registry";
-import { CacheModel } from "@vitnode/core/api/lib/cache";
-import { writeStaffPermissions } from "@vitnode/core/api/lib/staff-permission-cache";
-import { AIModel } from "@vitnode/core/api/models/ai";
+import { MemoryAiLedger } from "@vitnode/api/lib/ai/memory-ledger";
+import { collectAiActions } from "@vitnode/api/lib/ai/registry";
+import { CacheModel } from "@vitnode/api/lib/cache";
+import { writeStaffPermissions } from "@vitnode/api/lib/staff-permission-cache";
+import { AIModel } from "@vitnode/api/models/ai";
 import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it } from "vitest";
 

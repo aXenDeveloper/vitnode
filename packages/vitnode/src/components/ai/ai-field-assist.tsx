@@ -1,9 +1,9 @@
+import type { ContentFieldAiAssist } from "@vitnode/api/content/types";
+
 import { SparklesIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "use-intl";
-
-import type { ContentFieldAiAssist } from "@/content/types";
 
 import { useMultiLangSelected } from "@/components/form/fields/multi-lang-language";
 import { Button } from "@/components/ui/button";

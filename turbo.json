@@ -30,7 +30,7 @@
       "env": ["POSTGRES_URL"]
     },
     "build:plugins": {
-      "dependsOn": ["^build:plugins", "@vitnode/core#build:scripts"],
+      "dependsOn": ["^build:plugins", "@vitnode/api#build:scripts"],
       "outputs": ["dist/**"]
     },
     "build": {
@@ -43,7 +43,7 @@
       "dependsOn": ["^build:scripts"],
       "outputs": ["dist/**"]
     },
-    "@vitnode/core#build:scripts": {
+    "@vitnode/api#build:scripts": {
       "dependsOn": ["^build:scripts"],
       "outputs": ["dist/scripts/**"]
     },

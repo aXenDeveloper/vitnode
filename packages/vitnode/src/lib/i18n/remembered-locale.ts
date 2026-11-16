@@ -1,4 +1,4 @@
-import type { LocaleRouting } from "./locale-routing";
+import type { LocaleRouting } from "@vitnode/api/lib/i18n/locale-routing";
 
 import { readLocaleCookie } from "./locale-cookie";
 

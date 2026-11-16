@@ -1,4 +1,5 @@
-import type { NotificationEmailMode } from "@/lib/notifications/types";
+import type { NotificationEmailMode } from "@vitnode/api/lib/notifications/types";
+
 import type { NotificationPreferenceTypeView } from "@/views/notifications/notifications-query";
 
 export type EmailChannelState = "off" | "on" | "unavailable";

@@ -1,4 +1,12 @@
+import type { ContentFileDescriptor } from "@vitnode/api/content/files";
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentLivePreviewReferences } from "@vitnode/api/content/live-preview";
+
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  CONTENT_LIVE_PREVIEW_MESSAGE,
+  isContentLivePreviewReady,
+} from "@vitnode/api/content/live-preview";
 import { cn } from "cn";
 import {
   ExternalLinkIcon,
@@ -13,10 +21,6 @@ import {
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { ContentFileDescriptor } from "@/content/files";
-import type { ContentId } from "@/content/ids";
-import type { ContentLivePreviewReferences } from "@/content/live-preview";
-
 import { Button } from "@/components/ui/button";
 import {
   Empty,
@@ -29,10 +33,6 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import {
-  CONTENT_LIVE_PREVIEW_MESSAGE,
-  isContentLivePreviewReady,
-} from "@/content/live-preview";
 
 import { useContentEditorialTransport } from "../actions/editorial-transport";
 import { useContentFormOptional } from "./context";

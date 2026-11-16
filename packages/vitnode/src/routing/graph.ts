@@ -1,9 +1,17 @@
-import type { PluginRoute, PluginRouteSegment } from "./types";
+import type {
+  PluginRoute,
+  PluginRouteSegment,
+} from "@vitnode/api/routing/types";
+
+import {
+  formatRoutePath,
+  relativeRouteSegments,
+  routeMatchKey,
+} from "@vitnode/api/routing/path";
 
 import { PluginRouteError } from "./errors";
 import { normalizeNamespaceList } from "./namespaces";
 import { comparePluginRoutes } from "./order";
-import { formatRoutePath, relativeRouteSegments, routeMatchKey } from "./path";
 
 export interface PluginRouteNode {
   /** In manifest order: static before dynamic, shallow before deep. */

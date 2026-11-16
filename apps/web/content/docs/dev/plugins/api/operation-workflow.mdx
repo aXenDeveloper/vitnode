@@ -184,7 +184,7 @@ export const articleCorrectionsCache = defineCacheEntry({
 The service receives each capability it uses, typed as narrowly as it uses it, and never sees the Hono context or an HTTP status. "No such article" is a result, not an exception:
 
 ```ts title="plugins/newsroom/src/api/modules/corrections/corrections.service.ts"
-import type { EnvVariablesVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+import type { EnvVariablesVitNode } from "@vitnode/api/middlewares/global.middleware";
 
 import { desc, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
@@ -335,7 +335,7 @@ The route checks who may call it, builds the service from the context, and turns
 
 ```ts title="plugins/newsroom/src/api/modules/admin/corrections/routes/create.route.ts"
 import { z } from "@hono/zod-openapi";
-import { respondJson } from "@vitnode/core/api/lib/respond-json";
+import { respondJson } from "@vitnode/api/lib/respond-json";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";

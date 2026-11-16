@@ -1,9 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
+import { contentAnyIdSchema } from "@vitnode/api/content/ids";
 import { z } from "zod";
 
 import type { AdminTablePage } from "@/views/admin/table/params";
 
-import { contentAnyIdSchema } from "@/content/ids";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 import type { ContentApiRequest, ContentApiTarget } from "../content-request";

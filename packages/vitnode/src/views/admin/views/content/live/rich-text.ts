@@ -1,6 +1,6 @@
-import React from "react";
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
 
-import type { RichTextDocument } from "@/content/rich-text/document";
+import React from "react";
 
 import { useContentLive } from "./context";
 

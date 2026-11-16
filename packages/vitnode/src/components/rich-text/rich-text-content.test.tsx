@@ -5,7 +5,7 @@ import type {
   RichTextDocument,
   RichTextMark,
   RichTextNode,
-} from "@/content/rich-text/document";
+} from "@vitnode/api/content/rich-text/document";
 
 import { RichTextContent } from "./rich-text-content";
 

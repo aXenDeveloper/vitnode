@@ -1,3 +1,13 @@
+import type { ContentContainerLabels } from "@vitnode/api/content/admin/containers";
+import type { ContentContainerTreeRules } from "@vitnode/api/content/containers/tree";
+import type { AnyContentContainerDefinition } from "@vitnode/api/content/containers/types";
+import type { ContentFieldDescriptor } from "@vitnode/api/content/types";
+
+import {
+  CONTENT_CONTAINER_NAME_MAX_LENGTH,
+  CONTENT_CONTAINER_SLUG_MAX_LENGTH,
+} from "@vitnode/api/content/containers/const";
+import { planContentContainerCreate } from "@vitnode/api/content/containers/tree";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
@@ -6,14 +16,10 @@ import type {
   AutoFormOnSubmit,
   ItemAutoFormComponentProps,
 } from "@/components/form/auto-form";
-import type { ContentContainerLabels } from "@/content/admin/containers";
 import type {
   ContentFormFieldSpec,
   ContentFormSpec,
 } from "@/content/admin/spec";
-import type { ContentContainerTreeRules } from "@/content/containers/tree";
-import type { AnyContentContainerDefinition } from "@/content/containers/types";
-import type { ContentFieldDescriptor } from "@/content/types";
 
 import { AutoForm, setFormFieldError } from "@/components/form/auto-form";
 import { AutoFormSheetFooter } from "@/components/form/auto-form-sheet-footer";
@@ -23,11 +29,6 @@ import {
   buildFormSchemaFromSpec,
   projectFormField,
 } from "@/content/admin/spec";
-import {
-  CONTENT_CONTAINER_NAME_MAX_LENGTH,
-  CONTENT_CONTAINER_SLUG_MAX_LENGTH,
-} from "@/content/containers/const";
-import { planContentContainerCreate } from "@/content/containers/tree";
 import { ContentField } from "@/views/admin/views/content/lib/field-component";
 
 import type {

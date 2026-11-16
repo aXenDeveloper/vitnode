@@ -1,11 +1,24 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 
 /** `packages/vitnode/src`, which `@/` resolves against. */
 export const SRC_ROOT = resolve(
   dirname(new URL(import.meta.url).pathname),
   "..",
 );
+
+/**
+ * `packages/api/src`. Core's bundles include what it imports from
+ * `@vitnode/api`, so the graph follows those imports into the workspace
+ * sources instead of stopping at them as if they were a third-party package.
+ */
+export const API_SRC_ROOT = resolve(SRC_ROOT, "..", "..", "api", "src");
+
+const API_PACKAGE_PREFIX = "@vitnode/api/";
+
+/** The root `@/` means in `from`: the API's own sources use their own. */
+const aliasRootOf = (from: string, srcRoot: string): string =>
+  from.startsWith(`${API_SRC_ROOT}${sep}`) ? API_SRC_ROOT : srcRoot;
 
 const CANDIDATE_SUFFIXES = ["", ".ts", ".tsx", "/index.ts", "/index.tsx"];
 
@@ -16,8 +29,12 @@ export const resolveSpecifier = (
 ): null | string => {
   let base: string;
 
-  if (specifier.startsWith("@/")) base = join(srcRoot, specifier.slice(2));
-  else if (specifier.startsWith(".")) base = resolve(dirname(from), specifier);
+  if (specifier.startsWith("@/")) {
+    base = join(aliasRootOf(from, srcRoot), specifier.slice(2));
+  } else if (specifier.startsWith(API_PACKAGE_PREFIX)) {
+    base = join(API_SRC_ROOT, specifier.slice(API_PACKAGE_PREFIX.length));
+  } else if (specifier.startsWith("."))
+    base = resolve(dirname(from), specifier);
   else return null;
 
   for (const suffix of CANDIDATE_SUFFIXES) {

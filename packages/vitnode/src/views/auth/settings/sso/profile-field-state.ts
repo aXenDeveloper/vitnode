@@ -1,6 +1,6 @@
-import type { SsoProfileField } from "@/lib/sso-profile";
+import type { SsoProfileField } from "@vitnode/api/lib/shared/sso-profile";
 
-import { SSO_PROFILE_FIELDS } from "@/lib/sso-profile";
+import { SSO_PROFILE_FIELDS } from "@vitnode/api/lib/shared/sso-profile";
 
 import type {
   SsoConnectionProvider,

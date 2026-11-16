@@ -9,7 +9,7 @@ Contributions to VitNode are always welcome, whether it's a bug fix, a new featu
 ## Before you begin
 
 - **Node.js** `^22.22.0`, `^24.11.0` or `26` and later (the `engines` range in the root `package.json`).
-- **pnpm**. The repository is a pnpm workspace (`packageManager: pnpm@12.18.0`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`), and CI uses pnpm too, so use it rather than bun or npm here. With Corepack, `corepack enable` picks the right version.
+- **pnpm**. The repository is a pnpm workspace (`packageManager: pnpm@12.21.0`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`), and CI uses pnpm too, so use it rather than bun or npm here. With Corepack, `corepack enable` picks the right version.
 - **Docker**, for the local PostgreSQL and Redis containers. Without Docker, point `POSTGRES_URL` in `apps/api/.env` and `apps/web/.env` at your own database.
 
 ## Set up the repository
@@ -54,18 +54,19 @@ Open `http://localhost:3000` for the website, the AdminCP at `/admin` and the li
 
 ## Repository layout
 
-| Directory                                  | Role                                                                        |
-| :----------------------------------------- | :-------------------------------------------------------------------------- |
-| `packages/vitnode`                         | `@vitnode/core`: routing, auth, models, UI primitives and the `vitnode` CLI |
-| `packages/create-vitnode-app`              | The project and plugin generator (`create-vitnode-app`)                     |
-| `packages/config`                          | `@vitnode/config`, shared TypeScript and lint configuration                 |
-| `packages/resend`, `packages/nodemailer`   | Email adapters                                                              |
-| `packages/s3`, `packages/supabase-storage` | Storage adapters                                                            |
-| `packages/node-cron`                       | In-process cron adapter                                                     |
-| `packages/elasticsearch`                   | Search provider adapter                                                     |
-| `apps/web`                                 | The TanStack Start website, AdminCP and this documentation                  |
-| `apps/api`                                 | The standalone Hono API server                                              |
-| `plugins/*`                                | First-party plugins (`@vitnode/blog`, `@vitnode/forum`, `newsroom`)         |
+| Directory                                  | Role                                                                                                |
+| :----------------------------------------- | :-------------------------------------------------------------------------------------------------- |
+| `packages/api`                             | `@vitnode/api`: the Hono API, database schema, Content Engine backend, emails and the `vitnode` CLI |
+| `packages/vitnode`                         | `@vitnode/core`: routing, UI primitives, the AdminCP and the Vite/TanStack Start integration        |
+| `packages/create-vitnode-app`              | The project and plugin generator (`create-vitnode-app`)                                             |
+| `packages/config`                          | `@vitnode/config`, shared TypeScript and lint configuration                                         |
+| `packages/resend`, `packages/nodemailer`   | Email adapters                                                                                      |
+| `packages/s3`, `packages/supabase-storage` | Storage adapters                                                                                    |
+| `packages/node-cron`                       | In-process cron adapter                                                                             |
+| `packages/elasticsearch`                   | Search provider adapter                                                                             |
+| `apps/web`                                 | The TanStack Start website, AdminCP and this documentation                                          |
+| `apps/api`                                 | The standalone Hono API server                                                                      |
+| `plugins/*`                                | First-party plugins (`@vitnode/blog`, `@vitnode/forum`, `newsroom`)                                 |
 
 ### Deploy the website to Cloudflare
 

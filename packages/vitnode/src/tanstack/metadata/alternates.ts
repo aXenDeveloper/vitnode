@@ -1,6 +1,6 @@
-import type { LocaleRouting } from "@/lib/i18n/locale-routing";
+import type { LocaleRouting } from "@vitnode/api/lib/i18n/locale-routing";
 
-import { CONFIG } from "@/lib/config";
+import { CONFIG } from "@vitnode/api/lib/config";
 
 import { getIntlRuntime } from "../i18n/runtime";
 

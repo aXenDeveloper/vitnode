@@ -1,3 +1,4 @@
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -8,7 +9,6 @@ import type {
 import type { EditorNodeRef, VisualEditorState } from "../state/types";
 
 import { defineBlock } from "../../blocks/define";
-import { field } from "../../content/fields";
 import {
   selectedNode,
   VARIANT_CLEAR_VALUE,

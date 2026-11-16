@@ -1,0 +1,835 @@
+import type { Context, Env, Next } from "hono";
+
+import { HTTPException } from "hono/http-exception";
+
+import type { RegisteredContentType } from "@/content/registry";
+import type { RegisteredContentModel } from "@/content/server/model";
+import type { ContentNotificationRegistry } from "@/content/server/notifications/registry";
+import type { CacheClient, DomainCache } from "@/lib/cache";
+import type { LocaleRouting } from "@/lib/i18n/locale-routing";
+import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
+import type { UpdateChannel } from "@/lib/updates/manifest";
+import type { PersonalInformationFields } from "@/lib/user-personal-information";
+import type { VitNodeApiConfig } from "@/vitnode.config";
+import type { VitNodeRealtime } from "@/ws/registry";
+
+import { LocalEventsAdapter } from "@/adapters/events/local";
+import { PostgresSearchAdapter } from "@/adapters/search/postgres";
+import {
+  assertContentContainerReferences,
+  type RegisteredContentContainer,
+  validateContentContainers,
+} from "@/content/containers/registry";
+import { validateContentTypes } from "@/content/registry";
+import { ensureContentLocalizationLanguages } from "@/content/server/language-resolver";
+import { createContentNotificationRegistry } from "@/content/server/notifications/registry";
+import { warnAboutContentPreviewConfig } from "@/content/server/preview-config";
+import { ensureContentPreviewSecret } from "@/content/server/preview-secret";
+import { runAfterResponse } from "@/lib/after-response";
+import { DEFAULT_SESSION_COOKIE_NAME } from "@/lib/auth-cookie";
+import { CacheModel, domainCacheOf } from "@/lib/cache";
+import { MemoryCacheStore } from "@/lib/cache-memory";
+import { CONFIG } from "@/lib/config";
+import { collectEventDefinitions } from "@/lib/event-definition";
+import { collectLocaleCodes } from "@/lib/i18n/load-messages";
+import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
+import { buildApiMessagesSources } from "@/lib/i18n/sources";
+import { findActiveSuspension } from "@/lib/moderation/warnings/suspension";
+import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
+import { manifest as coreManifest } from "@/manifest";
+import { AIModel } from "@/models/ai";
+import { AuditModel } from "@/models/audit";
+import { EmailModel } from "@/models/email";
+import { EventsModel } from "@/models/events";
+import { I18nModel } from "@/models/i18n";
+import { NotificationsModel } from "@/models/notifications";
+import {
+  PAYMENT_CHECKOUT_MINUTES_RANGE,
+  PAYMENT_DEFAULT_CHECKOUT_MINUTES,
+  PaymentsModel,
+} from "@/models/payments";
+import { QueueModel } from "@/models/queue";
+import {
+  assertSearchProviderCapabilities,
+  SearchModel,
+  validateSearchIndexers,
+} from "@/models/search";
+import { SessionModel } from "@/models/session";
+import { SessionAdminModel } from "@/models/session-admin";
+import { StorageModel } from "@/models/storage";
+import { realtime, runWithRealtimeKeepAlive } from "@/ws/registry";
+
+import type { AiActionRegistry } from "../lib/ai/registry";
+import type { RegisteredAuditAction } from "../lib/audit/registry";
+import type { BuildCronReturn } from "../lib/cron";
+import type { RegisteredEditablePage } from "../lib/editable-pages";
+import type { EventDefinition } from "../lib/event-definition";
+import type { EventListenerConfig } from "../lib/events";
+import type { InstalledPluginRegistry } from "../lib/installed-plugins";
+import type { ModerationRegistry } from "../lib/moderation/registry";
+import type { NotificationWorkerSettings } from "../lib/notifications/preferences";
+import type { NotificationRegistry } from "../lib/notifications/registry";
+import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
+import type { PaymentProviderApiPlugin } from "../lib/payments/provider";
+import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
+import type { QueueTaskConfig } from "../lib/queue";
+import type { UpdateComponent } from "../lib/updates/components";
+import type { WebSocketConfig } from "../lib/websocket";
+import type { EventsApiPlugin } from "../models/events";
+import type {
+  SearchIndexerConfig,
+  SearchProviderApiPlugin,
+} from "../models/search";
+import type { SSOApiPlugin } from "../models/sso";
+
+import { assertAiModelPricing } from "../lib/ai/pricing";
+import { assertContentAiActions, collectAiActions } from "../lib/ai/registry";
+import { collectAuditActions } from "../lib/audit/registry";
+import { resolveAuditRetentionDays } from "../lib/audit/settings";
+import { resolveClientIp } from "../lib/client-ip";
+import { collectCronJobs } from "../lib/cron";
+import {
+  assertEditablePagePermissionsGrantable,
+  registerEditablePage,
+  validateEditablePages,
+} from "../lib/editable-pages";
+import { buildInstalledPluginRegistry } from "../lib/installed-plugins";
+import {
+  loggerMiddleware,
+  type LoggerMiddlewareType,
+} from "../lib/logger-middleware";
+import { validateModerationRegistry } from "../lib/moderation/registry";
+import { resolveNotificationWorkerSettings } from "../lib/notifications/preferences";
+import { createNotificationRegistry } from "../lib/notifications/registry";
+import { resolvePasskeysConfig } from "../lib/passkey-config";
+import { validatePaymentProviders } from "../lib/payments/provider";
+import { normalizePermissionStaffModules } from "../lib/permission-staff";
+import { collectUpdateComponents } from "../lib/updates/components";
+import { resolveUpdatesConfig } from "../lib/updates/config";
+
+declare module "hono" {
+  // oxlint-disable-next-line typescript/no-empty-object-type
+  interface ContextVariableMap extends EnvVariablesVitNode {}
+}
+
+/** The Hono environment of every VitNode API route: see {@link EnvVariablesVitNode}. */
+export interface EnvVitNode extends Env {
+  Variables: EnvVariablesVitNode;
+}
+
+/**
+ * What a route handler reads with `c.get(...)`. All are set before the route
+ * runs: the global middleware sets most of them, `buildRoute` sets `plugin`,
+ * and the admin middleware fills `admin` on `/admin/` paths. They are also
+ * typed on Hono's own `Context` through `ContextVariableMap`.
+ *
+ * The models (`ai`, `cache`, `email`, ...) are per-request objects bound to the
+ * context, so they act for the current user and plugin.
+ *
+ * @example
+ * ```ts
+ * handler: async c => {
+ *   const user = c.get("user");
+ *   if (!user) throw new HTTPException(401);
+ *   // `latestPostsCache` comes from `defineCacheEntry` in `@/api/builders`.
+ *   const posts = await c
+ *     .get("cache")
+ *     .entry(latestPostsCache)
+ *     .remember(async () =>
+ *       await c.get("db").select().from(blog_posts).limit(10),
+ *     );
+ *
+ *   return c.json({ posts }, 200);
+ * },
+ * ```
+ */
+export interface EnvVariablesVitNode {
+  /**
+   * The signed-in admin, on paths containing `/admin/` only - such a request
+   * without a valid admin session is answered `403` before the route runs.
+   * `null` everywhere else.
+   */
+  admin: null | {
+    user: {
+      avatarColor: string;
+      avatarUrl: null | string;
+      birthday: Date | null;
+      coverUrl: null | string;
+      createdAt: Date;
+      email: string;
+      emailVerified: boolean;
+      firstName: null | string;
+      headline: null | string;
+      hideOnlineStatus: boolean;
+      id: number;
+      language: string;
+      lastName: null | string;
+      name: string;
+      nameCode: string;
+      newsletter: boolean;
+      phone: null | string;
+      roleId: number;
+      showRealName: boolean;
+      timeZone: null | string;
+    };
+  };
+  /** When the admin session expires; `null` outside `/admin/` paths. */
+  adminSessionExpiresAt: Date | null;
+  /** The AI model registry and action runner: see {@link AIModel}. */
+  ai: AIModel;
+  /**
+   * Records who did what to which resource in the central audit log (the
+   * AdminCP staff logs): see {@link AuditModel}.
+   */
+  audit: AuditModel;
+  /**
+   * Typed domain cache: `entry(definition, ...keyArgs)` and a plugin-scoped
+   * `flush()`. Redis-backed when the API config has `redis`, a short-lived
+   * in-process store otherwise. See {@link DomainCache}.
+   */
+  cache: DomainCache;
+  /**
+   * The resolved installation: the API config with its defaults applied, plus
+   * everything every plugin registered. Read-only, and mostly for core's own
+   * routes - prefer the models above.
+   */
+  core: {
+    ai?: VitNodeApiConfig["ai"];
+    aiActions: AiActionRegistry;
+    /** Every declared audit action - core's, the Content Engine's and each plugin's. */
+    auditActions: RegisteredAuditAction[];
+    /** Days an Activity Logs entry is kept (`activityLogs.retentionDays`); `0` keeps everything. */
+    auditRetentionDays: number;
+    authorization: {
+      adminCookieExpires: number;
+      adminCookieName: string;
+      cookie_expires: number;
+      /** Unset means host-only cookies; see `VitNodeApiConfig`. */
+      cookieDomain: string | undefined;
+      cookieName: string;
+      cookieSecure: boolean;
+      deviceCookieExpires: number;
+      deviceCookieName: string;
+      passkeys: ResolvedPasskeysConfig;
+      password: { enabled: boolean };
+      ssoAdapters: SSOApiPlugin[];
+    };
+    captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
+
+    contentContainers: RegisteredContentContainer[];
+    contentModels: RegisteredContentModel[];
+    /** Content notification rules of every plugin. */
+    contentNotifications?: ContentNotificationRegistry;
+
+    contentPreviewSecret?: string;
+    /** Web origins the background cache bridge posts to. */
+    contentRevalidateOrigins?: string[];
+    contentTypes: RegisteredContentType[];
+    cron: (BuildCronReturn & { module: string; pluginId: string })[];
+    cronSecret?: string;
+    /** Pages an editor may lay out, with the plugin that registered each. */
+    editablePages: RegisteredEditablePage[];
+    email?: VitNodeApiConfig["email"];
+    events: {
+      adapter: EventsApiPlugin;
+      /** Every known event definition by name: registered, or used by a listener. */
+      definitions: ReadonlyMap<string, EventDefinition>;
+      listeners: EventListenerConfig[];
+    };
+    // Whether a cron adapter is configured (`buildApiConfig({ cron })`), i.e. an
+    // in-process scheduler is running the registered jobs automatically. Without
+    // it, jobs only run when the cron endpoint is triggered externally.
+    hasCronAdapter: boolean;
+    i18n: {
+      defaultLocale: string;
+      localeRouting: LocaleRouting;
+      locales: LocaleConfig[];
+      sources: MessagesSource[];
+    };
+    installedPlugins: InstalledPluginRegistry;
+    metadata: {
+      shortTitle?: string;
+      title: string;
+    };
+    moderation: ModerationRegistry;
+    notifications?: NotificationRegistry;
+    notificationWorkers?: NotificationWorkerSettings;
+    /** Payment provider instances and the checkout lifetime, in milliseconds. */
+    payments: {
+      checkoutTtlMs: number;
+      providers: PaymentProviderApiPlugin[];
+    };
+    permissionStaff: PermissionStaffCatalogEntry[];
+    /** Which personal-information fields this install offers. */
+    personalInformationFields: PersonalInformationFields;
+    plugins: { id: string }[];
+    queue: QueueTaskConfig[];
+    search: { adapter: SearchProviderApiPlugin };
+    searchIndexers: SearchIndexerConfig[];
+    storage?: VitNodeApiConfig["storage"];
+    /** Core and every catalog plugin, with the update source and versions to check. */
+    updates: {
+      channelOverride: null | UpdateChannel;
+      components: UpdateComponent[];
+      coreVersion: null | string;
+      enabled: boolean;
+    };
+    webSockets: WebSocketConfig[];
+  };
+  /** The Drizzle database from the API config's `dbProvider`. */
+  db: Pick<VitNodeApiConfig, "dbProvider">["dbProvider"];
+  /** Renders and sends emails through the configured email adapter: see {@link EmailModel}. */
+  email: EmailModel;
+  /** Emits events to registered listeners. */
+  events: EventsModel;
+  /** Server-side translations, for output with no UI such as emails: see {@link I18nModel}. */
+  i18n: I18nModel;
+  /**
+   * The client's IP: from a signed forwarded header (server-side fetcher
+   * calls), else the socket address (or the `x-forwarded-for` hop behind
+   * `VITNODE_TRUSTED_PROXY_HOPS` proxies), else `127.0.0.1`.
+   */
+  ipAddress: string;
+  /**
+   * Writes a `debug`, `warn` or `error` entry to the `core_logs` table, with
+   * the request's plugin, path, IP and user, and echoes it to the console.
+   */
+  log: LoggerMiddlewareType;
+  /** Creates and delivers user notifications. */
+  notifications: NotificationsModel;
+  /** Hosted-checkout payments through the configured providers: see {@link PaymentsModel}. */
+  payments: PaymentsModel;
+  /**
+   * The plugin whose route is handling the request, set by every route built
+   * with `buildRoute`. Scopes `cache` keys and stored files to that plugin.
+   */
+  plugin: {
+    id: string;
+  };
+  /** Dispatches background queue tasks. */
+  queue: QueueModel;
+  /** Pushes payloads to open WebSocket connections, across instances when Redis is configured. */
+  realtime: VitNodeRealtime;
+  /** Indexes and queries the search adapter: see {@link SearchModel}. */
+  search: SearchModel;
+  /** Uploads, reads and deletes files through the storage adapter: see {@link StorageModel}. */
+  storage: StorageModel;
+  /**
+   * Set when the session belongs to a suspended account. `user` is then
+   * `null`, so every route - core's and every plugin's - treats the request as
+   * a guest's. Only routes built for the suspended experience (the account
+   * status page, sign-out) read this.
+   */
+  suspension: null | {
+    /** The latest end among active suspensions; `null` while any is indefinite. */
+    endsAt: Date | null;
+    userId: number;
+  };
+  /** The signed-in user from the session cookie, or `null` for a guest. */
+  user: null | {
+    avatarColor: string;
+    avatarUrl: null | string;
+    birthday: Date | null;
+    coverUrl: null | string;
+    createdAt: Date;
+    email: string;
+    emailVerified: boolean;
+    firstName: null | string;
+    headline: null | string;
+    hideOnlineStatus: boolean;
+    id: number;
+    language: string;
+    lastName: null | string;
+    name: string;
+    nameCode: string;
+    newsletter: boolean;
+    phone: null | string;
+    roleId: number;
+    showRealName: boolean;
+    timeZone: null | string;
+  };
+}
+
+type CoreVariables = EnvVariablesVitNode["core"];
+
+/**
+ * Validates every registration once, then sets the {@link EnvVariablesVitNode}
+ * variables on each request. Mounted by `VitNodeAPI`; plugins never call it.
+ *
+ * @throws At startup, when the plugins' registrations are invalid or collide
+ * (content types, containers, editable pages, AI actions, search indexers,
+ * moderation targets and scopes).
+ */
+export const globalMiddleware = ({
+  activityLogs,
+  ai,
+  authorization,
+  content,
+  metadata,
+  email,
+  dbProvider,
+  captcha,
+  cron,
+  events,
+  frontendPlugins,
+  plugins,
+  i18n,
+  notifications,
+  payments,
+  search,
+  storage,
+  updates,
+  users,
+  cacheClient,
+}: Pick<VitNodeApiConfig, "metadata"> &
+  Pick<
+    VitNodeApiConfig,
+    | "activityLogs"
+    | "ai"
+    | "authorization"
+    | "captcha"
+    | "content"
+    | "cron"
+    | "dbProvider"
+    | "email"
+    | "events"
+    | "frontendPlugins"
+    | "i18n"
+    | "notifications"
+    | "payments"
+    | "plugins"
+    | "search"
+    | "storage"
+    | "updates"
+    | "users"
+  > & {
+    cacheClient: CacheClient | null;
+  }) => {
+  const notificationWorkers = resolveNotificationWorkerSettings(notifications);
+  const auditRetentionDays = resolveAuditRetentionDays(activityLogs);
+  const pluginsMetadata = plugins.map(plugin => ({
+    id: plugin.pluginId,
+  }));
+  const installedPlugins = buildInstalledPluginRegistry({
+    api: plugins,
+    frontend: frontendPlugins,
+  });
+  const updatesConfig = resolveUpdatesConfig(updates);
+  const updatesMetadata = {
+    ...updatesConfig,
+    components: collectUpdateComponents({
+      api: plugins,
+      core: coreManifest,
+      frontend: frontendPlugins,
+      registry: installedPlugins,
+    }),
+    coreVersion: coreManifest.version,
+  };
+
+  // Resolved once at boot: the packages installed here can't change per
+  // request. With no `i18n` block the locale list is whatever the installed
+  // packages happen to ship. The server only ever needs the API tree - emails,
+  // not admin UI copy.
+  const messagesSources = buildApiMessagesSources({
+    appMessages: i18n?.messages,
+    plugins,
+  });
+  const defaultLocale = i18n?.defaultLocale ?? "en";
+  const locales =
+    i18n?.locales ??
+    collectLocaleCodes(messagesSources).map(code => ({ code, name: code }));
+  const i18nMetadata = {
+    defaultLocale,
+    localeRouting: localeRoutingFromConfig({
+      defaultLocale,
+      domains: i18n?.domains,
+      localePrefix: i18n?.localePrefix,
+      locales,
+      routePaths: i18n?.routePaths,
+    }),
+    locales,
+    sources: messagesSources,
+  };
+
+  const cronMetadata = collectCronJobs(plugins);
+
+  const aiActionsMetadata = collectAiActions(plugins);
+
+  const auditActionsMetadata = collectAuditActions(plugins);
+
+  const eventsMetadata: EventListenerConfig[] = plugins.flatMap(plugin =>
+    (plugin.events ?? []).map(listener => ({
+      ...listener,
+      pluginId: plugin.pluginId,
+    })),
+  );
+
+  const eventDefinitionsMetadata = collectEventDefinitions(plugins);
+
+  const queueMetadata = plugins.flatMap(plugin =>
+    (plugin.queueTasks ?? []).map(task => ({
+      pluginId: plugin.pluginId,
+      module: task.module,
+      name: task.name,
+      handler: task.handler,
+      description: task.description,
+      maxAttempts: task.maxAttempts,
+      leaseSeconds: task.leaseSeconds,
+      payload: task.payload,
+    })),
+  );
+
+  const webSocketsMetadata: WebSocketConfig[] = plugins.flatMap(plugin =>
+    (plugin.webSockets ?? []).map(webSocket => ({
+      ...webSocket,
+      pluginId: plugin.pluginId,
+    })),
+  );
+
+  // Validated across *all* plugins, for the same reason content types are:
+  // `buildApiPlugin` can only catch collisions inside a single plugin.
+  const searchIndexersMetadata: SearchIndexerConfig[] = validateSearchIndexers(
+    plugins.flatMap(plugin =>
+      (plugin.searchIndexers ?? []).map(indexer => ({
+        ...indexer,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  );
+
+  // Validated once more across *all* plugins: `buildApiPlugin` can only catch
+  // collisions inside a single plugin.
+  const contentTypesMetadata: RegisteredContentType[] = validateContentTypes(
+    plugins.flatMap(plugin =>
+      (plugin.contentTypes ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  );
+
+  const contentContainersMetadata = validateContentContainers(
+    plugins.flatMap(plugin =>
+      (plugin.contentContainers ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  );
+  assertContentContainerReferences(
+    [
+      ...contentTypesMetadata.map(entry => entry.definition),
+      ...plugins.flatMap(plugin => plugin.publicContentTypes ?? []),
+    ],
+    contentContainersMetadata,
+  );
+
+  // Once, here, because "does anything have preview enabled" is only answerable
+  // after every plugin's content types are in. A warning, never a boot failure:
+  // preview is one content type's opt-in feature, not a prerequisite for the
+  // API.
+  warnAboutContentPreviewConfig({ contentTypes: contentTypesMetadata });
+
+  // Whether anything can mint a preview link at all - and so whether this
+  // install has any reason to hold a signing key. An install with no previewable
+  // content type never touches `core_secrets` because of this.
+  const hasPreviewableContentTypes = contentTypesMetadata.some(
+    entry => entry.definition.editorial.preview.enabled,
+  );
+
+  // Not validated: a model carries the definition that `contentTypesMetadata`
+  // already checked, so a second pass would only repeat the same errors.
+  const contentModelsMetadata: RegisteredContentModel[] = plugins.flatMap(
+    plugin =>
+      (plugin.contentModels ?? []).map(model => ({
+        model,
+        pluginId: plugin.pluginId,
+      })),
+  );
+
+  // Computed at boot, outside the request: "does anything need the languages
+  // table" is a property of the installed plugins, not of a request.
+  const hasLocalizedContentTypes = contentTypesMetadata.some(
+    entry => entry.definition.localization.enabled,
+  );
+
+  // Resolved once rather than per request - the adapter cannot change between
+  // them - which is also what makes the capability check below a boot-time fact.
+  const searchAdapter = search?.adapter ?? PostgresSearchAdapter();
+
+  // A localized searchable content type is indexed once per translation, so
+  // taking one translation down has to remove one document. A provider that
+  // ignores the language would remove them all and say nothing, so the pairing
+  // is refused here rather than discovered by whoever deletes a translation.
+  assertSearchProviderCapabilities(searchAdapter, {
+    localizedSearchContentTypes: contentTypesMetadata
+      .filter(
+        entry =>
+          entry.definition.localization.enabled &&
+          entry.definition.search.enabled,
+      )
+      .map(entry => entry.definition.id),
+  });
+
+  // Validated across *all* plugins, like content types: `buildApiPlugin` can
+  // only see the pages of the plugin it is building.
+  const editablePagesMetadata: RegisteredEditablePage[] = validateEditablePages(
+    plugins.flatMap(plugin =>
+      (plugin.editablePages ?? []).map(page =>
+        registerEditablePage(page, plugin.pluginId),
+      ),
+    ),
+  );
+
+  assertContentAiActions(contentTypesMetadata, aiActionsMetadata);
+  assertAiModelPricing(ai?.models ?? []);
+
+  const contentNotificationsMetadata = createContentNotificationRegistry(
+    plugins.flatMap(plugin =>
+      (plugin.contentNotifications ?? []).map(config => ({
+        config,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+    contentModelsMetadata,
+  );
+
+  const notificationsMetadata = createNotificationRegistry(
+    plugins.flatMap(plugin =>
+      (plugin.notificationTypes ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  );
+
+  const paymentsMetadata = {
+    providers: validatePaymentProviders(payments?.providers ?? []),
+    checkoutTtlMs:
+      Math.min(
+        Math.max(
+          Math.trunc(
+            payments?.checkoutExpiresInMinutes ??
+              PAYMENT_DEFAULT_CHECKOUT_MINUTES,
+          ),
+          PAYMENT_CHECKOUT_MINUTES_RANGE.min,
+        ),
+        PAYMENT_CHECKOUT_MINUTES_RANGE.max,
+      ) *
+      60 *
+      1000,
+  };
+
+  const passkeysMetadata = resolvePasskeysConfig({
+    config: authorization?.passkeys,
+    rpNameFallback: metadata.shortTitle ?? metadata.title,
+    webOrigin: CONFIG.web.origin,
+  });
+
+  const permissionStaffMetadata: PermissionStaffCatalogEntry[] = plugins.map(
+    plugin => ({
+      pluginId: plugin.pluginId,
+      admin: normalizePermissionStaffModules(plugin.permissionStaff?.admin),
+      moderator: normalizePermissionStaffModules(
+        plugin.permissionStaff?.moderator,
+      ),
+    }),
+  );
+
+  assertEditablePagePermissionsGrantable({
+    pages: editablePagesMetadata,
+    permissionStaff: permissionStaffMetadata,
+  });
+
+  const moderationMetadata: ModerationRegistry = validateModerationRegistry({
+    catalog: permissionStaffMetadata,
+    scopes: plugins.flatMap(plugin =>
+      (plugin.moderation?.scopes ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+    targets: plugins.flatMap(plugin =>
+      (plugin.moderation?.reportTargets ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  });
+
+  // Everything in `core` but the two values below is fixed once the plugins are
+  // in, so it is built once here - adapters, nested config objects and all.
+  const staticCore: Omit<CoreVariables, "contentPreviewSecret" | "cronSecret"> =
+    {
+      ai,
+      aiActions: aiActionsMetadata,
+      auditActions: auditActionsMetadata,
+      auditRetentionDays,
+      i18n: i18nMetadata,
+      metadata,
+      email,
+      events: {
+        adapter: events?.adapter ?? LocalEventsAdapter(),
+        definitions: eventDefinitionsMetadata,
+        listeners: eventsMetadata,
+      },
+      search: { adapter: searchAdapter },
+      searchIndexers: searchIndexersMetadata,
+      storage,
+      authorization: {
+        cookieName: authorization?.cookieName ?? DEFAULT_SESSION_COOKIE_NAME,
+        cookie_expires:
+          authorization?.cookieExpires ?? 1000 * 60 * 60 * 24 * 90, // 90 days
+        ssoAdapters: authorization?.ssoAdapters ?? [],
+        deviceCookieName: authorization?.deviceCookieName ?? "vitnode_device",
+        deviceCookieExpires:
+          authorization?.deviceCookieExpires ?? 1000 * 60 * 60 * 24 * 365, // 1 year,
+        adminCookieName: authorization?.adminCookieName ?? "vitnode_auth_admin",
+        adminCookieExpires: authorization?.adminCookieExpires ?? 1000 * 60 * 60,
+        cookieSecure: authorization?.cookieSecure ?? true,
+        // No default on purpose: absent means host-only, which is correct on
+        // localhost, on a generated preview hostname and in production alike.
+        cookieDomain: authorization?.cookieDomain,
+        passkeys: passkeysMetadata,
+        password: { enabled: authorization?.password ?? true },
+      },
+      captcha,
+      personalInformationFields: resolvePersonalInformationFields(
+        users?.personalInformation,
+      ),
+      hasCronAdapter: !!cron,
+      plugins: pluginsMetadata,
+      installedPlugins,
+      updates: updatesMetadata,
+      cron: cronMetadata,
+      editablePages: editablePagesMetadata,
+      queue: queueMetadata,
+      webSockets: webSocketsMetadata,
+      permissionStaff: permissionStaffMetadata,
+      moderation: moderationMetadata,
+      notifications: notificationsMetadata,
+      notificationWorkers,
+      payments: paymentsMetadata,
+      contentContainers: contentContainersMetadata,
+      contentModels: contentModelsMetadata,
+      contentNotifications: contentNotificationsMetadata,
+      contentRevalidateOrigins: content?.revalidateOrigins,
+      contentTypes: contentTypesMetadata,
+    };
+  let core: CoreVariables | undefined;
+
+  // Without Redis, sessions, devices and staff permissions would otherwise hit
+  // the database on every request. One store per app, shared by its requests.
+  const memoryCache = cacheClient ? null : new MemoryCacheStore();
+
+  // The preview secret is memoised after the first request and the cron secret
+  // is read from the environment, so in practice this hands every request the
+  // same object. It is shared, so nothing may mutate it.
+  const coreFor = (
+    contentPreviewSecret: string | undefined,
+    cronSecret: string,
+  ): CoreVariables => {
+    if (
+      !core ||
+      core.contentPreviewSecret !== contentPreviewSecret ||
+      core.cronSecret !== cronSecret
+    ) {
+      core = { ...staticCore, contentPreviewSecret, cronSecret };
+    }
+
+    return core;
+  };
+
+  return async (c: Context, next: Next) => {
+    if (!c.get("ipAddress")) {
+      c.set("ipAddress", resolveClientIp(c));
+    }
+    c.set("db", dbProvider);
+    c.set("ai", new AIModel(c));
+    c.set("audit", new AuditModel(c));
+    c.set("cache", domainCacheOf(new CacheModel(cacheClient, c, memoryCache)));
+    c.set("email", new EmailModel(c));
+    c.set("events", new EventsModel(c));
+    c.set("i18n", new I18nModel(c));
+    c.set("notifications", new NotificationsModel(c as Context<EnvVitNode>));
+    c.set("payments", new PaymentsModel(c));
+    c.set("queue", new QueueModel(c));
+    c.set("search", new SearchModel(c));
+    c.set("storage", new StorageModel(c));
+    c.set("realtime", realtime);
+
+    // Resolved before `core` is set rather than per mint, so the integrations
+    // panel and the routes read the same value. Memoised, so this is one query
+    // on the first request of the process and nothing afterwards.
+    const contentPreviewSecret = hasPreviewableContentTypes
+      ? await ensureContentPreviewSecret(dbProvider)
+      : undefined;
+
+    c.set("core", coreFor(contentPreviewSecret, CONFIG.cronJobSecret));
+
+    // Whether a localized content type's `defaultLocale` names a row in
+    // `core_languages` is a fact about the *installation*, so it cannot be
+    // checked when the definition is built - there is no connection yet. This is
+    // that check, run at most once per process and skipped entirely when nothing
+    // is localized, so an install with no localized content types never touches
+    // the languages table because of this.
+    if (hasLocalizedContentTypes) {
+      await ensureContentLocalizationLanguages(c, contentTypesMetadata);
+    }
+
+    const sessionUser = await new SessionModel(c).getUser();
+    const suspension = sessionUser
+      ? await findActiveSuspension(c, sessionUser.id)
+      : null;
+    c.set("user", suspension ? null : sessionUser);
+    c.set(
+      "suspension",
+      sessionUser && suspension
+        ? { endsAt: suspension.endsAt, userId: sessionUser.id }
+        : null,
+    );
+    c.set("admin", null);
+    c.set("adminSessionExpiresAt", null);
+    c.set("log", loggerMiddleware(c));
+
+    // Realtime publishes started anywhere in this request - `c.get("realtime")`
+    // or a module that has no context of its own - are kept alive past the
+    // response, so a serverless instance does not freeze them half-sent.
+    await runWithRealtimeKeepAlive(
+      task => {
+        runAfterResponse(c, task);
+      },
+      async () => {
+        await next();
+
+        c.get("notifications").flushAfterResponse();
+        c.get("email").flushAfterResponse();
+      },
+    );
+  };
+};
+
+/**
+ * Requires a valid admin session and sets `admin`. `VitNodeAPI` runs it for
+ * every path containing `/admin/`; a passive request (`?passive=true`) reads
+ * the session without extending it.
+ *
+ * @throws `HTTPException(403)` without a valid admin session.
+ */
+export const globalAdminMiddleware = () => {
+  return async (c: Context, next: Next) => {
+    const session = await new SessionAdminModel(c).getSession({
+      extend: c.req.query("passive") !== "true",
+    });
+    if (!session) throw new HTTPException(403);
+    if (await findActiveSuspension(c, session.user.id)) {
+      throw new HTTPException(403);
+    }
+    c.set("admin", {
+      user: session.user,
+    });
+    c.set("adminSessionExpiresAt", session.expiresAt);
+
+    await next();
+  };
+};

@@ -9,8 +9,8 @@ import { TypeTable } from 'fumadocs-ui/components/type-table'
 This page lists everything an AI action can declare and everything a run accepts and returns. Use it when you change an action you already built; to build your first one, follow [AI actions](/docs/dev/ai/actions). The examples continue that page's `@vitnode/forum` **Summarize topic** action.
 
 ```ts
-import { defineAiAction } from '@vitnode/core/api/lib/ai/action'
-import { aiActionRef } from '@vitnode/core/api/lib/ai/registry'
+import { defineAiAction } from '@vitnode/api/lib/ai/action'
+import { aiActionRef } from '@vitnode/api/lib/ai/registry'
 ```
 
 `defineAiAction(definition)` validates the definition when the module loads and fills in defaults. Anything invalid throws an `AiActionDefinitionError` at boot. Register the result in `buildApiPlugin({ aiActions: [...] })`.

@@ -1,8 +1,9 @@
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
+
 import { cn } from "cn";
 import React from "react";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ContentFormLayout } from "@/lib/plugin";
 
 import { Skeleton } from "@/components/ui/skeleton";

@@ -1,11 +1,11 @@
+import type { ContentDrafts } from "@vitnode/api/content/live/http";
+
+import { CONTENT_DRAFT_AUTOSAVE_MS } from "@vitnode/api/content/live/protocol";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentDrafts } from "@/content/live/http";
-
-import { CONTENT_DRAFT_AUTOSAVE_MS } from "@/content/live/protocol";
 
 import type { ContentRow, TranslationRow } from "../content-mutation";
 import type {

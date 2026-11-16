@@ -1,4 +1,4 @@
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
 
 export const ADMIN_AI_PERMISSIONS = {
   manage: coreStaffPermissions.admin.ai.canManage,

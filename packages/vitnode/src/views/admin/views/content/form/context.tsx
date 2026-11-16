@@ -1,12 +1,13 @@
-import React from "react";
-
-import type { PageTitleBack } from "@/components/ui/page-title";
 import type {
   ContentFileDescriptor,
   ContentFileFieldValue,
-} from "@/content/files";
-import type { ContentId } from "@/content/ids";
-import type { ContentVisibilityAction } from "@/content/visibility";
+} from "@vitnode/api/content/files";
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentVisibilityAction } from "@vitnode/api/content/visibility";
+
+import React from "react";
+
+import type { PageTitleBack } from "@/components/ui/page-title";
 
 export interface ContentFormHeaderValue {
   back: PageTitleBack;

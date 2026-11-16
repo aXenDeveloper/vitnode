@@ -1,10 +1,11 @@
+import type { AuditStaffLog } from "@vitnode/api/lib/audit/const";
+
 import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { HistoryIcon, RotateCwIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
-import type { AuditStaffLog } from "@/lib/audit/const";
 
 import {
   FiltersPanelDataTable,

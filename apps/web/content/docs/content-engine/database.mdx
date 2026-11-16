@@ -6,7 +6,7 @@ icon: Database
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-Every content type becomes ordinary Postgres tables managed by Drizzle. `createContentModel` from `@vitnode/core/content/server` builds them from the definition, and the usual VitNode migration workflow creates them. Values are stored in typed columns. Only `field.blocks()` and `field.richText()` keep a JSON document, in a `jsonb` column.
+Every content type becomes ordinary Postgres tables managed by Drizzle. `createContentModel` from `@vitnode/api/content/server` builds them from the definition, and the usual VitNode migration workflow creates them. Values are stored in typed columns. Only `field.blocks()` and `field.richText()` keep a JSON document, in a `jsonb` column.
 
 ## Generate and apply a migration
 
@@ -39,7 +39,7 @@ Commit the generated migration together with the content type. Production never 
 Drizzle Kit finds tables by reading the exports of `node_modules/<pluginId>/dist/src/database/*.js` for each plugin. A table without an export is left out of the migration, without a warning. A content type with relations, translations and repeatable rows has several tables:
 
 ```ts title="plugins/newsroom/src/database/explainers.ts"
-import { createContentModel } from "@vitnode/core/content/server";
+import { createContentModel } from "@vitnode/api/content/server";
 
 import { explainerContentType } from "@/content/explainer";
 

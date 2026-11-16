@@ -1,5 +1,11 @@
 import type { ReactElement, ReactNode } from "react";
 
+import {
+  areaLayoutClassNames,
+  areaLayoutStyle,
+  areaLayoutWithDefaults,
+  areaMarginStyle,
+} from "@vitnode/api/blocks/area";
 import { cn } from "cn";
 import {
   BanIcon,
@@ -22,12 +28,6 @@ import type { EditorDropRejection } from "../dnd/resolve-drop";
 import type { EditorNodeRef } from "../state/types";
 import type { ZoneDropTone } from "./drop-state";
 
-import {
-  areaLayoutClassNames,
-  areaLayoutStyle,
-  areaLayoutWithDefaults,
-  areaMarginStyle,
-} from "../../blocks/area";
 import { useVisualEditor } from "../context";
 import { useEditorDnd } from "../dnd/context";
 import { useAreaDroppable } from "../dnd/use-container-droppable";

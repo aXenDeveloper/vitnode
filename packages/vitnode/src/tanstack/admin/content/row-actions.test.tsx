@@ -12,13 +12,13 @@ import {
   vi,
 } from "vitest";
 
-import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+import type { PermissionsStaffArgs } from "@vitnode/api/lib/permission-staff";
 import type { RegisteredFrontendContentType } from "@/content/index";
 import type { ContentRowData } from "@/views/admin/views/content/table/cells";
 
 import { AdminStaffPermissionProvider } from "@/components/staff-permission/provider";
-import { defineContentType } from "@/content/define";
-import { field } from "@/content/fields";
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
 import { runInStartRequest } from "@/tests/start-request";
 
 import type { ContentDuplicatedRecord } from "./row-actions";

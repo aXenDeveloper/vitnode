@@ -1,9 +1,15 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
+import {
+  emptyRichTextDocument,
+  isRichTextEmpty,
+  type RichTextDocument,
+  zodRichTextDocument,
+} from "@vitnode/api/content/rich-text";
 import { CheckIcon, SendHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
-
-import type { ContentId } from "@/content/ids";
 
 import {
   AutoForm,
@@ -13,12 +19,6 @@ import {
 import { AutoFormEditor } from "@/components/form/fields/editor";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  emptyRichTextDocument,
-  isRichTextEmpty,
-  type RichTextDocument,
-  zodRichTextDocument,
-} from "@/content/rich-text";
 
 import type { ContentCommentWriteOutcome } from "./thread";
 import type { ContentCommentEditable } from "./use-content-comments";

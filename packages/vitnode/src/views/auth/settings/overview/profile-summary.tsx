@@ -1,3 +1,9 @@
+import type {
+  PersonalInformationFields,
+  UserPersonalInformation,
+} from "@vitnode/api/lib/user-personal-information";
+
+import { fullNameOf } from "@vitnode/api/lib/user-personal-information";
 import {
   EyeIcon,
   EyeOffIcon,
@@ -8,10 +14,6 @@ import {
 } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import type {
-  PersonalInformationFields,
-  UserPersonalInformation,
-} from "@/lib/user-personal-information";
 import type { ProfileRole } from "@/views/profile/profile-query";
 
 import { Badge } from "@/components/ui/badge";
@@ -22,7 +24,6 @@ import {
   FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
-import { fullNameOf } from "@/lib/user-personal-information";
 
 import { OverviewFact } from "./overview-fact";
 import { timeZoneLabel } from "./time-zone-update";

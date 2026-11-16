@@ -1,3 +1,10 @@
+import {
+  AI_OVERVIEW_DEFAULT_PRESET,
+  isAiDay,
+  isAiMonth,
+  isAiOverviewPreset,
+} from "@vitnode/api/lib/ai/overview-range";
+
 import type {
   AiHistoryFilters,
   AiHistoryOrderBy,
@@ -5,12 +12,6 @@ import type {
   AiOverviewSearch,
 } from "@/views/admin/views/core/ai/ai-query";
 
-import {
-  AI_OVERVIEW_DEFAULT_PRESET,
-  isAiDay,
-  isAiMonth,
-  isAiOverviewPreset,
-} from "@/lib/ai/overview-range";
 import { isAiRunStatus } from "@/lib/ai/run-status";
 import { asSearchValue } from "@/lib/table-params";
 import {

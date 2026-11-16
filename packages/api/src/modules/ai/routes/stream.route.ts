@@ -1,0 +1,38 @@
+import { z } from "zod";
+
+import { buildRoute } from "@/builders";
+import { zodAiRunBody } from "@/lib/ai/run.schema";
+import { AI_NDJSON_HEADERS, aiNdjsonStream } from "@/lib/ai/stream-response";
+
+export const streamAiRoute = buildRoute({
+  route: {
+    method: "post",
+    description: "Stream a registered AI text action for the signed-in user.",
+    path: "/stream",
+    request: {
+      body: {
+        required: true,
+        content: { "application/json": { schema: zodAiRunBody } },
+      },
+    },
+    responses: {
+      200: {
+        content: { "application/x-ndjson": { schema: z.string() } },
+        description: "Text deltas, then the run summary",
+      },
+    },
+  },
+  handler: async c => {
+    const body = c.req.valid("json");
+
+    const stream = await aiNdjsonStream(c, {
+      ...body,
+      resource: body.resource ?? undefined,
+    });
+
+    return new Response(stream, {
+      headers: AI_NDJSON_HEADERS,
+      status: 200,
+    }) as never;
+  },
+});

@@ -1,14 +1,14 @@
+import type { AuditArea, AuditStaffLog } from "@vitnode/api/lib/audit/const";
+
 import {
   infiniteQueryOptions,
   keepPreviousData,
   queryOptions,
 } from "@tanstack/react-query";
-
-import type { AuditArea, AuditStaffLog } from "@/lib/audit/const";
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 /** The filters an Activity Logs list is read with, as they sit in the URL. */

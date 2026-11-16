@@ -1,3 +1,23 @@
+import type {
+  PermissionsStaffArgs,
+  StaffPermissionSet,
+} from "@vitnode/api/lib/permission-staff";
+
+import {
+  contentContainerAdminHref,
+  contentContainerNamespace,
+  contentContainerNouns,
+} from "@vitnode/api/content/admin/containers";
+import {
+  contentEntityKey,
+  type ContentLabelTranslator,
+  contentNouns,
+} from "@vitnode/api/content/admin/labels";
+import { CONTENT_PERMISSIONS } from "@vitnode/api/content/const";
+import { contentAdminHref } from "@vitnode/api/content/registry";
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
+import { hasStaffPermission } from "@vitnode/api/lib/staff-permission";
+import { staffPermissionArgs } from "@vitnode/api/lib/staff-permissions";
 import {
   FileTextIcon,
   FlagIcon,
@@ -9,28 +29,9 @@ import {
   UsersRoundIcon,
 } from "lucide-react";
 
-import type {
-  PermissionsStaffArgs,
-  StaffPermissionSet,
-} from "@/api/lib/permission-staff";
 import type { AdminDashboardWidget } from "@/lib/plugin";
 import type { VitNodeConfig } from "@/vitnode.config";
 
-import { hasStaffPermission } from "@/api/lib/staff-permission";
-import {
-  contentContainerAdminHref,
-  contentContainerNamespace,
-  contentContainerNouns,
-} from "@/content/admin/containers";
-import {
-  contentEntityKey,
-  type ContentLabelTranslator,
-  contentNouns,
-} from "@/content/admin/labels";
-import { CONTENT_PERMISSIONS } from "@/content/const";
-import { contentAdminHref } from "@/content/registry";
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
-import { staffPermissionArgs } from "@/lib/staff-permissions";
 import { fitNamespaceList, MAX_NAMESPACES } from "@/routing";
 
 /** A resolved sub-item, as the sidebar and the search index read it. */

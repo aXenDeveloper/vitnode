@@ -5,6 +5,22 @@ import {
   getRequestIP,
   setCookie,
 } from "@tanstack/react-start/server";
+import { executionContextOf } from "@vitnode/api/lib/after-response";
+import { CONFIG } from "@vitnode/api/lib/config";
+import {
+  FORWARDED_SIGNATURE_HEADER,
+  resolveForwardedIpSecret,
+  signForwardedFor,
+} from "@vitnode/api/lib/fetcher/forwarded-signature.server";
+import { getInProcessApi } from "@vitnode/api/lib/fetcher/in-process-api.server";
+import {
+  buildForwardedHeaders,
+  resolveVisitorIp,
+} from "@vitnode/api/lib/fetcher/request-context";
+import {
+  parseSetCookies,
+  shouldSaveApiCookies,
+} from "@vitnode/api/lib/fetcher/set-cookie";
 import { config } from "dotenv";
 
 import type { ApiTransport, RawApiFetchArgs } from "@/lib/fetcher/raw";
@@ -15,24 +31,8 @@ import type {
   ResponseFor,
 } from "@/lib/fetcher/types";
 
-import { executionContextOf } from "@/api/lib/after-response";
-import { CONFIG } from "@/lib/config";
 import { coreFetcher } from "@/lib/fetcher/core";
-import {
-  FORWARDED_SIGNATURE_HEADER,
-  resolveForwardedIpSecret,
-  signForwardedFor,
-} from "@/lib/fetcher/forwarded-signature.server";
-import { getInProcessApi } from "@/lib/fetcher/in-process-api.server";
 import { rawApiFetch } from "@/lib/fetcher/raw";
-import {
-  buildForwardedHeaders,
-  resolveVisitorIp,
-} from "@/lib/fetcher/request-context";
-import {
-  parseSetCookies,
-  shouldSaveApiCookies,
-} from "@/lib/fetcher/set-cookie";
 import { recordPageCacheApiResponse } from "@/page-cache/render-context.server";
 
 config({ quiet: true });

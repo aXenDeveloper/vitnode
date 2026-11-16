@@ -1,0 +1,23 @@
+import { buildModule } from "@/builders";
+import { contentLiveWebSocket } from "@/content/server/live/socket";
+import { contentRefreshWebSocket } from "@/content/server/refresh/socket";
+
+import { contentEditorialCleanupCron } from "./cron/content-editorial-cleanup.cron";
+import { contentSearchAccessCron } from "./cron/content-search-access.cron";
+import { contentNotificationsQueueTask } from "./tasks/content-notifications.task";
+import { contentScheduleEffectsQueueTask } from "./tasks/content-schedule-effects.task";
+import { contentScheduleQueueTask } from "./tasks/content-schedule.task";
+import { contentSearchDependentsQueueTask } from "./tasks/content-search-dependents.task";
+
+export const contentModule = buildModule({
+  name: "content",
+  routes: [],
+  cronJobs: [contentEditorialCleanupCron, contentSearchAccessCron],
+  queueTasks: [
+    contentScheduleQueueTask,
+    contentScheduleEffectsQueueTask,
+    contentSearchDependentsQueueTask,
+    contentNotificationsQueueTask,
+  ],
+  webSockets: [contentLiveWebSocket, contentRefreshWebSocket],
+});

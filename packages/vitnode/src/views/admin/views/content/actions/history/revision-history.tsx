@@ -1,15 +1,16 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { CONTENT_PERMISSIONS } from "@vitnode/api/content/const";
 import { HistoryIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentId } from "@/content/ids";
 
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { CONTENT_PERMISSIONS } from "@/content/const";
 
 import { useContentFormNavigation } from "../../form/navigation";
 import {

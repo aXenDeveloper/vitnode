@@ -318,7 +318,7 @@ describe("the generated API config", () => {
     const config = pluginApiConfigTemplate("@acme/my-blog");
 
     expect(config).toContain(
-      'import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";',
+      'import type { ApiPluginContract } from "@vitnode/api/lib/plugin";',
     );
     expect(config).toContain(
       "export type VitNodeApiPlugin = ApiPluginContract<",

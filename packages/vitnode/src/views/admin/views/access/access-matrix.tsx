@@ -1,16 +1,17 @@
+import type {
+  ContentAccessAction,
+  ContentAccessAudience,
+} from "@vitnode/api/content/access/policy";
+import type {
+  ContentAccessAdminResponse,
+  ContentAccessAdminRole,
+} from "@vitnode/api/content/access/schemas";
+
+import { CONTENT_ACCESS_ACTIONS } from "@vitnode/api/content/access/const";
 import { cn } from "cn";
 import { ChevronRightIcon, LockIcon, SearchIcon } from "lucide-react";
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
-
-import type {
-  ContentAccessAction,
-  ContentAccessAudience,
-} from "@/content/access/policy";
-import type {
-  ContentAccessAdminResponse,
-  ContentAccessAdminRole,
-} from "@/content/access/schemas";
 
 import { roleOptionName } from "@/components/form/fields/roles";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,7 +28,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { CONTENT_ACCESS_ACTIONS } from "@/content/access/const";
 
 import type { ContentAccessMatrixRow } from "./matrix";
 

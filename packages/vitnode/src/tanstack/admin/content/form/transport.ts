@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { ContentId } from "@vitnode/api/content/ids";
 
-import type { ContentId } from "@/content/ids";
 import type { ContentApiTarget } from "@/views/admin/views/content/content-request";
 import type { ContentFormTransport } from "@/views/admin/views/content/form/transport";
 

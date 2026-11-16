@@ -1,4 +1,8 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentSchedule } from "@vitnode/api/content/schedules";
+
 import { useQuery } from "@tanstack/react-query";
+import { contentScheduleTimingError } from "@vitnode/api/content/schedules";
 import { CalendarClockIcon, CheckIcon, XIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -6,8 +10,6 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
-import type { ContentId } from "@/content/ids";
-import type { ContentSchedule } from "@/content/schedules";
 
 import { DateFormat } from "@/components/date-format";
 import { AutoForm } from "@/components/form/auto-form";
@@ -17,7 +19,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { contentScheduleTimingError } from "@/content/schedules";
 
 import { contentErrorKey } from "../../lib/mutation-feedback";
 import { contentSchedulesQueryOptions } from "../editorial-query";

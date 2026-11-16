@@ -6,7 +6,7 @@ import {
   notificationStateStore,
   useNotificationState,
 } from "@/views/notifications/notification-state-store";
-import { notificationsStateChannel } from "@/ws/notifications";
+import { notificationsStateChannel } from "@vitnode/api/ws/notifications";
 import { VitNodeWebSocketProvider } from "@/ws/provider";
 
 import { SESSION_QUERY_KEY } from "../auth/state";

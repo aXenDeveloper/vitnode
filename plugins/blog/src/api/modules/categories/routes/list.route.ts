@@ -1,16 +1,15 @@
-import type { EnvVitNode } from "@vitnode/core/api/middlewares/global.middleware";
-import type { ContentAccessFlags } from "@vitnode/core/content";
-import type { ContentPublicHiddenAccess } from "@vitnode/core/content/server";
+import type { ContentAccessFlags } from "@vitnode/api/content";
+import type { ContentPublicHiddenAccess } from "@vitnode/api/content/server";
+import type { EnvVitNode } from "@vitnode/api/middlewares/global.middleware";
 import type { Context } from "hono";
 
 import { z } from "@hono/zod-openapi";
-import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
 import {
   CONTENT_LOCALE_MAX_LENGTH,
   contentAccessTag,
   contentLocalesMatch,
   zodContentAccessFlags,
-} from "@vitnode/core/content";
+} from "@vitnode/api/content";
 import {
   contentAccessFlagsForScopes,
   contentListHiddenAccess,
@@ -23,7 +22,8 @@ import {
   pinContentPublicGeneration,
   rememberContentPublicRead,
   resolveContentRequestLocale,
-} from "@vitnode/core/content/server";
+} from "@vitnode/api/content/server";
+import { setPageCacheTags } from "@vitnode/api/lib/page-cache";
 import { and, asc, count, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 

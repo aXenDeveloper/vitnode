@@ -1,15 +1,17 @@
 import type { Editor } from "@tiptap/react";
+import type {
+  ContentLiveDocRef,
+  ContentLiveServerMessage,
+} from "@vitnode/api/content/live/protocol";
 
 import { Collaboration } from "@tiptap/extension-collaboration";
 import { CollaborationCaret } from "@tiptap/extension-collaboration-caret";
+import { contentLiveChannel } from "@vitnode/api/content/live/protocol";
+import { isRichTextEmpty } from "@vitnode/api/content/rich-text/document";
 import React from "react";
 import * as Y from "yjs";
 
 import type { CollaborativeEditorProps } from "@/components/tiptap/collaboration";
-import type {
-  ContentLiveDocRef,
-  ContentLiveServerMessage,
-} from "@/content/live/protocol";
 
 import { useEditorConfig } from "@/components/editor-provider";
 import { EditorSkeleton } from "@/components/tiptap/editor-skeleton";
@@ -18,8 +20,6 @@ import {
   toRichTextDocument,
 } from "@/components/tiptap/rich-text-json";
 import { TipTapEditor } from "@/components/tiptap/tiptap-editor";
-import { contentLiveChannel } from "@/content/live/protocol";
-import { isRichTextEmpty } from "@/content/rich-text/document";
 import { useVitNodeWebSocketContext } from "@/ws/provider";
 
 import type { ContentLiveContextValue } from "./context";

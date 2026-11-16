@@ -1,11 +1,16 @@
-import type { AnyContentTypeDefinition } from "@/content/types";
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
+
+import { CONTENT_DEFAULT_PAGE_SIZE } from "@vitnode/api/content/const";
+import {
+  contentFilterableFields,
+  orderableColumns,
+} from "@vitnode/api/content/registry";
+
 import type {
   AdminTableContract,
   AdminTableParams,
 } from "@/views/admin/table/params";
 
-import { CONTENT_DEFAULT_PAGE_SIZE } from "@/content/const";
-import { contentFilterableFields, orderableColumns } from "@/content/registry";
 import { contentListSystemFilterValue } from "@/views/admin/views/content/table/list-filters";
 
 import type {

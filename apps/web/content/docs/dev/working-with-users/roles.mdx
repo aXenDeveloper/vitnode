@@ -14,7 +14,7 @@ A role groups users. It decides how their name looks (colour and prefix), what t
 `getUserRoleIds` returns every role id a user holds, primary and secondary, without duplicates. It reads the database on each call:
 
 ```ts
-import { getUserRoleIds } from "@vitnode/core/api/lib/check-staff-permission";
+import { getUserRoleIds } from "@vitnode/api/lib/check-staff-permission";
 
 // inside a route handler, where `c` is the Hono context
 const user = c.get("user");

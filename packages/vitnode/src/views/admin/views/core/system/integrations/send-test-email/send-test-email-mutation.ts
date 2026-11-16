@@ -1,9 +1,9 @@
+import type { zodSendTestEmailSchema } from "@vitnode/api/modules/admin/debug/routes/send-test-email.route";
 import type { z } from "zod";
 
-import type { zodSendTestEmailSchema } from "@/api/modules/admin/debug/routes/send-test-email.route";
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 
 export type SendTestEmailBody = z.infer<typeof zodSendTestEmailSchema>;
 

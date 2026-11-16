@@ -1,4 +1,5 @@
-import { manifest } from "@/manifest";
+import { manifest } from "@vitnode/api/manifest";
+
 import { fetcher } from "@/tanstack/fetcher";
 
 import type { AdminSessionReadOptions } from "./session-read";

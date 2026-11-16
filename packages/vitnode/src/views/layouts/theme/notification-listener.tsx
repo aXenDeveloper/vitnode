@@ -1,6 +1,6 @@
+import { notificationsChannel } from "@vitnode/api/ws/notifications";
 import { toast } from "sonner";
 
-import { notificationsChannel } from "@/ws/notifications";
 import { useVitNodeWebSocket } from "@/ws/use-websocket";
 
 export const NotificationListener = () => {

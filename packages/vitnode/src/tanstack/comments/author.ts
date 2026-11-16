@@ -1,6 +1,6 @@
-import type { ContentPublicPerson } from "@/content/public-person";
+import type { ContentPublicPerson } from "@vitnode/api/content/public-person";
 
-import { zodContentPublicPerson } from "@/content/public-person";
+import { zodContentPublicPerson } from "@vitnode/api/content/public-person";
 
 const zodAuthor = zodContentPublicPerson.nullable().catch(null);
 

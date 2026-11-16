@@ -1,4 +1,4 @@
-import type { PluginRouteSegment } from "./types";
+import type { PluginRouteSegment } from "@vitnode/api/routing/types";
 
 const segmentRank = (segment: PluginRouteSegment | undefined): number => {
   if (segment === undefined) return 2;

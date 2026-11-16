@@ -24,7 +24,7 @@ import type { VitNodeApiPlugin as ApiPlugin1 } from '@vitnode/forum/config.api'
 import type { VitNodeApiPlugin as ApiPlugin2 } from 'newsroom/config.api'
 import type { VitNodeApiPlugin as ApiPlugin3 } from 'payments-demo/config.api'
 
-declare module '@vitnode/core/lib/fetcher/registry' {
+declare module '@vitnode/api/lib/fetcher/registry' {
   interface ApiPluginRegistry {
     '@vitnode/blog': ApiPlugin0
     '@vitnode/forum': ApiPlugin1
@@ -33,4 +33,4 @@ declare module '@vitnode/core/lib/fetcher/registry' {
   }
 }
 
-export type { ApiPluginRegistry } from '@vitnode/core/lib/fetcher/registry'
+export type { ApiPluginRegistry } from '@vitnode/api/lib/fetcher/registry'

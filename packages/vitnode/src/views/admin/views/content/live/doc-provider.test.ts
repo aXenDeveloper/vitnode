@@ -1,11 +1,11 @@
-import { afterEach, describe, expect, it } from "vitest";
-import * as Y from "yjs";
-
 import type {
   ContentLiveClientMessage,
   ContentLiveDocRef,
   ContentLiveServerMessage,
-} from "@/content/live/protocol";
+} from "@vitnode/api/content/live/protocol";
+
+import { afterEach, describe, expect, it } from "vitest";
+import * as Y from "yjs";
 
 import {
   createLiveHarness,

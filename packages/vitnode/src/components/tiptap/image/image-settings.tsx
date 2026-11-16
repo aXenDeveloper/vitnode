@@ -1,5 +1,12 @@
 import type { Editor, ReactNodeViewProps } from "@tiptap/react";
 
+import {
+  EDITOR_IMAGE_MAX_ALT_LENGTH,
+  EDITOR_IMAGE_MIME_TYPES,
+  EDITOR_IMAGE_MIN_WIDTH,
+  EDITOR_IMAGE_WRAPS,
+  type EditorImageWrap,
+} from "@vitnode/api/lib/shared/editor-uploads";
 import { cn } from "cn";
 import { ImageUpIcon, Settings2Icon, Trash2Icon } from "lucide-react";
 import React from "react";
@@ -26,13 +33,6 @@ import {
   slidingIndicatorTransitionClassName,
   useSlidingIndicator,
 } from "@/hooks/use-sliding-indicator";
-import {
-  EDITOR_IMAGE_MAX_ALT_LENGTH,
-  EDITOR_IMAGE_MIME_TYPES,
-  EDITOR_IMAGE_MIN_WIDTH,
-  EDITOR_IMAGE_WRAPS,
-  type EditorImageWrap,
-} from "@/lib/editor-uploads";
 
 import { replaceEditorImageFile } from "../uploads/flow";
 import { useEditorUploadRuntime } from "../uploads/runtime";

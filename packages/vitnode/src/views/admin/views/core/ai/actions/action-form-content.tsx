@@ -1,3 +1,4 @@
+import { AI_ACTION_LIMITS } from "@vitnode/api/lib/ai/action";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -9,7 +10,6 @@ import type {
 } from "@/components/form/auto-form";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
-import { AI_ACTION_LIMITS } from "@/api/lib/ai/action";
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormSheetFooter } from "@/components/form/auto-form-sheet-footer";
 import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number";

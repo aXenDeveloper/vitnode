@@ -9,7 +9,7 @@ This page lists everything `buildContentNotifications` accepts and how its notif
 ## `buildContentNotifications()`
 
 ```ts title="plugins/newsroom/src/api/lib/notifications.ts"
-import { buildContentNotifications } from "@vitnode/core/content/server";
+import { buildContentNotifications } from "@vitnode/api/content/server";
 
 export const commentNotifications = buildContentNotifications({
   content: commentContentType,
@@ -20,7 +20,7 @@ export const commentNotifications = buildContentNotifications({
 });
 ```
 
-Server-only, from `@vitnode/core/content/server`. Register the result in `buildApiPlugin({ contentNotifications: [commentNotifications] })`. Each rule becomes one [notification type](/docs/dev/notifications/notification-types), registered with the plugin.
+Server-only, from `@vitnode/api/content/server`. Register the result in `buildApiPlugin({ contentNotifications: [commentNotifications] })`. Each rule becomes one [notification type](/docs/dev/notifications/notification-types), registered with the plugin.
 
 | Name      | Type                          | Required          | Default | Description |
 | --------- | ----------------------------- | ----------------- | ------- | ----------- |
@@ -120,8 +120,8 @@ A rule with `type` instead of `preset` publishes an existing notification type o
 import {
   contentNotificationAccess,
   contentNotificationRefs,
-} from "@vitnode/core/content/server";
-import { buildNotificationType } from "@vitnode/core/api/lib/notifications/registry";
+} from "@vitnode/api/content/server";
+import { buildNotificationType } from "@vitnode/api/lib/notifications/registry";
 import { z } from "zod";
 
 const deskCommentNotification = buildNotificationType({

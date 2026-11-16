@@ -1,5 +1,5 @@
-import { CONTENT_ZONE_SEPARATOR } from "../../blocks/const";
-import { isContentZoneId } from "../../blocks/zone-meta";
+import { CONTENT_ZONE_SEPARATOR } from "@vitnode/api/blocks/const";
+import { isContentZoneId } from "@vitnode/api/blocks/zone-meta";
 
 const SEGMENT_JOINER = " · ";
 

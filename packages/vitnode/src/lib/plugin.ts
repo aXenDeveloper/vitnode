@@ -1,19 +1,28 @@
-import type { ItemAutoFormComponentProps } from "../components/form/auto-form";
-import type { AnyContentContainerDefinition } from "../content/containers/types";
-import type { ContentId } from "../content/ids";
+import type { AnyContentContainerDefinition } from "@vitnode/api/content/containers/types";
+import type { ContentId } from "@vitnode/api/content/ids";
 import type {
   AnyContentTypeDefinition,
   ContentSelect,
   ContentSystemField,
-} from "../content/types";
+} from "@vitnode/api/content/types";
+import type {
+  AdminDashboardWidgetRows,
+  AdminDashboardWidgetSettings,
+  AdminDashboardWidgetSpan,
+} from "@vitnode/api/lib/dashboard-widgets";
+import type {
+  LocaleFilesMap,
+  LocaleMessagesMap,
+} from "@vitnode/api/lib/i18n/types";
+import type { PluginManifest } from "@vitnode/api/lib/plugin-manifest";
+import type { AdminStaffPermissionRef } from "@vitnode/api/lib/staff-permissions";
+
+import { assertPluginManifest } from "@vitnode/api/lib/plugin-manifest";
+
+import type { ItemAutoFormComponentProps } from "../components/form/auto-form";
 import type { PluginRoutes } from "../routing/tree";
 import type { AdminNavItem as ResolvedAdminNavItem } from "../views/admin/layouts/sidebar/nav/nav-model";
 import type { ContentFormSkeletonControl } from "../views/admin/views/content/form/skeleton";
-import type { LocaleFilesMap, LocaleMessagesMap } from "./i18n/types";
-import type { PluginManifest } from "./plugin-manifest";
-import type { AdminStaffPermissionRef } from "./staff-permissions";
-
-import { assertPluginManifest } from "./plugin-manifest";
 
 interface AdminNavItem extends Pick<
   ResolvedAdminNavItem,
@@ -105,12 +114,11 @@ export interface AdminNavPluginSource {
   pluginId: string;
 }
 
-/** How many of the dashboard grid's three columns a widget covers. */
-export type AdminDashboardWidgetSpan = 1 | 2 | 3;
-/** How many grid rows a widget covers. */
-export type AdminDashboardWidgetRows = 1 | 2 | 3;
-/** A widget instance's own settings, saved with the admin's dashboard layout. */
-export type AdminDashboardWidgetSettings = Record<string, unknown>;
+export type {
+  AdminDashboardWidgetRows,
+  AdminDashboardWidgetSettings,
+  AdminDashboardWidgetSpan,
+} from "@vitnode/api/lib/dashboard-widgets";
 
 export interface AdminDashboardWidgetProps {
   /** This instance's saved settings; `{}` until the admin changes any. */
@@ -378,7 +386,7 @@ export type BuildPluginOptions<P extends string> = Omit<
 
 /**
  * Declares a plugin's frontend half: its pages and translations. Its API half is declared separately with `buildApiPlugin` from
- * `@vitnode/core/api/lib/plugin`; both take the same generated manifest, whose
+ * `@vitnode/api/lib/plugin`; both take the same generated manifest, whose
  * `id` (the package name) is the plugin id every registration is keyed by.
  *
  * Browser-safe: it is imported by the app's frontend config, so keep server-only

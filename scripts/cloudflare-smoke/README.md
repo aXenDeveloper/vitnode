@@ -21,7 +21,7 @@ room the script talks to. Neither file is part of any package.
      --mode singleApp --deploy cloudflare --package-manager pnpm --skip-git
    ```
 
-   In `apps/cf-smoke/package.json` set `@vitnode/core` and `@vitnode/config`
+   In `apps/cf-smoke/package.json` set `@vitnode/api`, `@vitnode/core` and `@vitnode/config`
    to `workspace:*`, and add `@vitnode/blog: workspace:*`, `postgres`, and the
    dev dependencies `ws` and `yjs`.
 

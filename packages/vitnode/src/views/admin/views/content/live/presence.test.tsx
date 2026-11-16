@@ -2,7 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentLiveMember } from "@/content/live/protocol";
+import type { ContentLiveMember } from "@vitnode/api/content/live/protocol";
 
 import type { ContentLiveContextValue } from "./context";
 

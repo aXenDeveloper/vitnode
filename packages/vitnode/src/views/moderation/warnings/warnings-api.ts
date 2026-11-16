@@ -1,10 +1,10 @@
-import { keepPreviousData, queryOptions } from "@tanstack/react-query";
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
+import type { WarningMessage } from "@vitnode/api/lib/moderation/warnings";
 
-import type { RichTextDocument } from "@/content/rich-text/document";
-import type { WarningMessage } from "@/lib/moderation/warnings";
+import { keepPreviousData, queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 import { ModcpRequestError } from "../modcp/modcp-query";

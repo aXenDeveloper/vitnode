@@ -1,4 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import type {
   AdminTableContract,
@@ -10,7 +11,6 @@ import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope"
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import {
   AdminRequestError,

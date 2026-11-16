@@ -1,9 +1,11 @@
+import type { ContentFieldLock } from "@vitnode/api/content/live/protocol";
+
+import { CONTENT_FIELD_LOCK_RENEW_MS } from "@vitnode/api/content/live/protocol";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { AnyFormFieldApi } from "@/components/form/auto-form";
 import type { ContentFormFieldSpec } from "@/content/admin/spec";
-import type { ContentFieldLock } from "@/content/live/protocol";
 
 import { useMultiLangLanguage } from "@/components/form/fields/multi-lang-language";
 import {
@@ -16,7 +18,6 @@ import {
   contentApiValueToFormField,
   contentFormFieldToApi,
 } from "@/content/admin/spec";
-import { CONTENT_FIELD_LOCK_RENEW_MS } from "@/content/live/protocol";
 
 import type { ContentLiveContextValue } from "./context";
 

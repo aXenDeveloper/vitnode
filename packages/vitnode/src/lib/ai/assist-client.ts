@@ -1,5 +1,6 @@
+import { manifest } from "@vitnode/api/manifest";
+
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 
 export const AI_CLIENT_ERROR_CODES = [
   "AI_ACTION_DISABLED",

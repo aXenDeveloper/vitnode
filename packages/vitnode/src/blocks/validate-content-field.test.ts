@@ -1,8 +1,8 @@
+import { isBlockAreaInstance } from "@vitnode/api/blocks/area";
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
 import { beforeAll, describe, expect, it } from "vitest";
 
-import { defineContentType } from "../content/define";
-import { field } from "../content/fields";
-import { isBlockAreaInstance } from "./area";
 import { defineBlock } from "./define";
 import { createBlockRegistry, setDefaultBlockRegistry } from "./registry";
 

@@ -45,6 +45,7 @@ export const createPluginPackageJSON = async ({
     dependencies: {
       "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
       "@tanstack/react-form": versionsPackageJson.tanstackReactForm,
+      "@vitnode/api": vitnodeVersionRange,
       "@vitnode/core": vitnodeVersionRange,
       "drizzle-kit": versionsPackageJson.drizzleKit,
       "drizzle-orm": versionsPackageJson.drizzleOrm,

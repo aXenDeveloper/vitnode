@@ -1,9 +1,9 @@
+import type { zodSendNotificationSchema } from "@vitnode/api/modules/admin/routes/send-notification.route";
 import type { z } from "zod";
 
-import type { zodSendNotificationSchema } from "@/api/modules/admin/routes/send-notification.route";
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 
 import type { DashboardMutationResult } from "./dashboard-actions";
 

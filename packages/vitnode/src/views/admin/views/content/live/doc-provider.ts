@@ -1,3 +1,13 @@
+import type {
+  ContentLiveClientMessage,
+  ContentLiveDocRef,
+  ContentLiveServerMessage,
+} from "@vitnode/api/content/live/protocol";
+
+import {
+  sameContentLiveDoc,
+  sameContentLiveRoom,
+} from "@vitnode/api/content/live/protocol";
 import {
   applyAwarenessUpdate,
   Awareness,
@@ -5,17 +15,6 @@ import {
   removeAwarenessStates,
 } from "y-protocols/awareness";
 import * as Y from "yjs";
-
-import type {
-  ContentLiveClientMessage,
-  ContentLiveDocRef,
-  ContentLiveServerMessage,
-} from "@/content/live/protocol";
-
-import {
-  sameContentLiveDoc,
-  sameContentLiveRoom,
-} from "@/content/live/protocol";
 
 export interface ContentDocTransport {
   isLive: () => boolean;

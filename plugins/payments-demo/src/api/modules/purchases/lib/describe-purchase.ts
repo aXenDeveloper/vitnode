@@ -1,5 +1,5 @@
-import type { EnvVitNode } from "@vitnode/core/api/middlewares/global.middleware";
-import type { Payment } from "@vitnode/core/api/models/payments";
+import type { EnvVitNode } from "@vitnode/api/middlewares/global.middleware";
+import type { Payment } from "@vitnode/api/models/payments";
 import type { Context } from "hono";
 
 import { DEMO_ITEMS, type DemoItemId, purchaseReference } from "@/catalog";

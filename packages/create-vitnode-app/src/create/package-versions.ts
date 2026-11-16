@@ -27,7 +27,6 @@ export const versionsPackageJson = {
 
   hono: "^4.13",
   honoZodOpenapi: "^1.6",
-  honoZodValidator: "^0.9.1",
   reactEmail: "^6.11",
   reactEmailUi: "^6.11",
   zod: "^4.6",

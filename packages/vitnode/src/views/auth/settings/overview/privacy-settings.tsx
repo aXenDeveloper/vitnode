@@ -1,9 +1,9 @@
+import type { BrowseAnonymouslyPolicy } from "@vitnode/api/lib/user-presence";
+
 import { EyeOffIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
-
-import type { BrowseAnonymouslyPolicy } from "@/lib/user-presence";
 
 import { Switch } from "@/components/ui/switch";
 import { TooltipWithContent } from "@/components/ui/tooltip";

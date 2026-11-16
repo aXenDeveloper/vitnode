@@ -6,9 +6,9 @@ import type { VisualEditorAdapter } from "../editor/adapter/types";
 import type { ContentEditRuntime, ContentZoneMount } from "./edit-context";
 import type { BlockComponentProps, BlockData, ContentNode } from "./types";
 
-import { defineEditablePage } from "../content/editor/define";
-import { field } from "../content/fields";
-import { CONTENT_BLOCKS_DEFAULT_MAX } from "./const";
+import { defineEditablePage } from "@vitnode/api/content/editor/define";
+import { field } from "@vitnode/api/content/fields";
+import { CONTENT_BLOCKS_DEFAULT_MAX } from "@vitnode/api/blocks/const";
 import { defineBlock } from "./define";
 import { ContentEditContext } from "./edit-context";
 import { EditablePage } from "./page";

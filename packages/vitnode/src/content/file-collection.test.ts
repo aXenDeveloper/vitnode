@@ -1,3 +1,5 @@
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -8,8 +10,6 @@ import {
   buildFormSchemaFromSpec,
   isCollectionFieldSpec,
 } from "./admin/spec";
-import { defineContentType } from "./define";
-import { field } from "./fields";
 
 const gallery = field.file({
   multiple: true,

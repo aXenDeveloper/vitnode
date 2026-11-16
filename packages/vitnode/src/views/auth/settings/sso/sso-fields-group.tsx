@@ -1,16 +1,15 @@
+import type { SsoProfileField } from "@vitnode/api/lib/shared/sso-profile";
 import type React from "react";
 
+import { SSO_PROFILE_FIELDS } from "@vitnode/api/lib/shared/sso-profile";
 import { cn } from "cn";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
-
-import type { SsoProfileField } from "@/lib/sso-profile";
 
 import {
   NativeSelect,
   NativeSelectOption,
 } from "@/components/ui/native-select";
-import { SSO_PROFILE_FIELDS } from "@/lib/sso-profile";
 
 import type { SaveSsoPreferences } from "./sso-connections-mutations";
 import type { SsoConnectionsApi } from "./sso-connections-query";

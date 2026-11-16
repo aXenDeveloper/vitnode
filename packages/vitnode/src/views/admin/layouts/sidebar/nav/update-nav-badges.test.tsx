@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { StaffPermissionSet } from "@/api/lib/permission-staff";
+import type { StaffPermissionSet } from "@vitnode/api/lib/permission-staff";
 import type { AdminUpdateSummary } from "@/views/admin/views/core/system/plugins/update-summary-query";
 
 import { AdminStaffPermissionProvider } from "@/components/staff-permission/provider";

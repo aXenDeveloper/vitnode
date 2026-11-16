@@ -1,13 +1,15 @@
+import type { DeleteFileResult } from "@vitnode/api/lib/files/in-use";
+
+import { readFileInUse } from "@vitnode/api/lib/files/in-use";
+import { manifest } from "@vitnode/api/manifest";
+
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
-import type { DeleteFileResult } from "@/lib/files/in-use";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import {
   runBulkFileDelete,
   shouldRefreshAfterBulkDelete,
 } from "@/lib/files/bulk-delete";
-import { readFileInUse } from "@/lib/files/in-use";
-import { manifest } from "@/manifest";
 
 export interface DeleteMyFileArgs {
   force?: boolean;

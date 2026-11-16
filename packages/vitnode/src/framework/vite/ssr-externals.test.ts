@@ -28,11 +28,12 @@ const externalsFor = async (
 };
 
 describe("what a VitNode app externalises from its SSR pass", () => {
-  it("externalises the package and every configured plugin for the build", async () => {
+  it("externalises both VitNode packages and every configured plugin for the build", async () => {
     const { external } = await externalsFor("build");
 
     expect(external).toEqual([
       "@vitnode/core",
+      "@vitnode/api",
       "@acme/blog",
       "@acme/docs",
       "tslib",

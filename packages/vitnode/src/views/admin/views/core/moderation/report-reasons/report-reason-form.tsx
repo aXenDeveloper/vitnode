@@ -1,3 +1,5 @@
+import { multiLangValueSchema } from "@vitnode/api/lib/helpers/multi-lang";
+import { MODERATION_LIMITS } from "@vitnode/api/lib/moderation/const";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "use-intl";
 import { z } from "zod";
@@ -10,8 +12,6 @@ import { AutoFormSheetFooter } from "@/components/form/auto-form-sheet-footer";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
-import { multiLangValueSchema } from "@/lib/helpers/multi-lang";
-import { MODERATION_LIMITS } from "@/lib/moderation/const";
 import { resolveReasonText } from "@/views/moderation/report-reasons-query";
 
 import type { AdminReportReasonInput } from "./report-reasons-mutations";

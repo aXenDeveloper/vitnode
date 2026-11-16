@@ -3,7 +3,7 @@ import type React from "react";
 import {
   componentNameToIconName,
   iconNameToComponentName,
-} from "@/lib/emoji-icon";
+} from "@vitnode/api/lib/emoji-icon";
 
 export type LucideIconComponent = React.ComponentType<{
   absoluteStrokeWidth?: boolean;

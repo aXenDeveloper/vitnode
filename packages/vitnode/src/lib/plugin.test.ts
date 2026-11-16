@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import type { PluginManifest } from "@vitnode/api/lib/plugin-manifest";
 
-import type { PluginManifest } from "./plugin-manifest";
+import { describe, expect, it } from "vitest";
 
 import { buildPlugin } from "./plugin";
 

@@ -1,0 +1,14 @@
+/src/*
+!/src/locales
+!/src/locales/**
+
+/node_modules
+/.turbo
+/tsconfig.json
+/global.d.ts
+/tsdown.config.ts
+/vitest.config.ts
+/scripts
+/types
+/dist/*.tsbuildinfo
+/oxlint.config.ts

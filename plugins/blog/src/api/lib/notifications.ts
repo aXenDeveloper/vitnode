@@ -1,4 +1,4 @@
-import { buildContentNotifications } from "@vitnode/core/content/server";
+import { buildContentNotifications } from "@vitnode/api/content/server";
 
 import { blogCommentContentType } from "@/content/comment";
 import { blogPostContentType } from "@/content/post";

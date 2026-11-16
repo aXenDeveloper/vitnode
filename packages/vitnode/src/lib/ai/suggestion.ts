@@ -1,5 +1,8 @@
-import { fingerprint } from "@/content/hash";
-import { getLangValue, upsertLangValue } from "@/lib/helpers/multi-lang";
+import { fingerprint } from "@vitnode/api/content/hash";
+import {
+  getLangValue,
+  upsertLangValue,
+} from "@vitnode/api/lib/helpers/multi-lang";
 
 type FieldValue =
   | string

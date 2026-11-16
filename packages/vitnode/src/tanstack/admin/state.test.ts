@@ -1,8 +1,7 @@
+import type { StaffPermissionSet } from "@vitnode/api/lib/permission-staff";
+
+import { EMPTY_STAFF_PERMISSION_SET } from "@vitnode/api/lib/staff-permission";
 import { describe, expect, it } from "vitest";
-
-import type { StaffPermissionSet } from "@/api/lib/permission-staff";
-
-import { EMPTY_STAFF_PERMISSION_SET } from "@/api/lib/staff-permission";
 
 import type { AdminAccess } from "./state";
 

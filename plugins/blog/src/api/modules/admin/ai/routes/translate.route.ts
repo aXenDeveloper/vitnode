@@ -1,7 +1,7 @@
 import {
   CONTENT_PERMISSIONS,
   contentAdminStaffPermission,
-} from "@vitnode/core/content";
+} from "@vitnode/api/content";
 import { z } from "zod";
 
 import {

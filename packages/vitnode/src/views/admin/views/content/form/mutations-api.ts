@@ -1,11 +1,10 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentPublicationAction } from "@vitnode/api/content/publication";
+import type { ContentVisibilityAction } from "@vitnode/api/content/visibility";
+
+import { CONTENT_OPTIONS_LIMIT } from "@vitnode/api/content/const";
+import { contentAnyIdSchema } from "@vitnode/api/content/ids";
 import { z } from "zod";
-
-import type { ContentId } from "@/content/ids";
-import type { ContentPublicationAction } from "@/content/publication";
-import type { ContentVisibilityAction } from "@/content/visibility";
-
-import { CONTENT_OPTIONS_LIMIT } from "@/content/const";
-import { contentAnyIdSchema } from "@/content/ids";
 
 import type {
   ContentMutationResult,

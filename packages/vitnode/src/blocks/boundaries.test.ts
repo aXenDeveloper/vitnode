@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  API_SRC_ROOT,
   offenders,
   reachedFiles,
   reachedSpecifiers,
@@ -10,6 +11,10 @@ import {
 } from "@/tests/import-graph";
 
 const here = dirname(fileURLToPath(import.meta.url));
+
+// The schema half of widgets - areas, zone metadata, validation - ships in
+// `@vitnode/api`; the renderer imports it, so its guarantees are checked here.
+const apiBlocks = join(API_SRC_ROOT, "blocks");
 
 const EDITOR_PACKAGES = [
   "@dnd-kit/core",
@@ -64,7 +69,7 @@ describe("the registry", () => {
 });
 
 describe("the area model", () => {
-  const entry = join(here, "area.ts");
+  const entry = join(apiBlocks, "area.ts");
 
   it("reaches no third-party module at all", () => {
     expect(reachedSpecifiers(entry)).toStrictEqual([]);
@@ -205,7 +210,7 @@ describe("the public content zone", () => {
 describe("why a zone takes an allowlist and not a content type", () => {
   it("costs a validation library, which a public page must not pay", () => {
     expect(
-      reachedSpecifiers(join(here, "..", "content", "define.ts")),
+      reachedSpecifiers(join(API_SRC_ROOT, "content", "define.ts")),
     ).toContain("zod");
   });
 
@@ -221,7 +226,7 @@ describe("why a zone takes an allowlist and not a content type", () => {
 });
 
 describe("zone metadata", () => {
-  const entry = join(here, "zone-meta.ts");
+  const entry = join(apiBlocks, "zone-meta.ts");
 
   it("reaches no third-party module at all", () => {
     expect(reachedSpecifiers(entry)).toStrictEqual([]);
@@ -229,7 +234,7 @@ describe("zone metadata", () => {
 });
 
 describe("the write-time validator", () => {
-  const entry = join(here, "validate.ts");
+  const entry = join(apiBlocks, "validate.ts");
 
   it("is where the schema machinery lives", () => {
     expect(reachedSpecifiers(entry)).toContain("zod");

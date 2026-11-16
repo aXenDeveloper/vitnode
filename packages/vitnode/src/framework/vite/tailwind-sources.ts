@@ -2,10 +2,15 @@ import type { Plugin } from "vite";
 
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { configuredPluginIds } from "./plugin-routes";
 
-const PACKAGE_NAME = "@vitnode/core";
+/**
+ * Core's own output, and `@vitnode/api`'s: the API package ships class names
+ * the renderers use too (a widget area's grid classes).
+ */
+const PACKAGE_NAMES = ["@vitnode/core", "@vitnode/api"] as const;
 
 const BUILD_OUTPUT = ["dist", "src"] as const;
 
@@ -27,8 +32,8 @@ export interface VitNodeTailwindSourcesOptions {
   readStylesheet?: (path: string) => null | string;
 }
 
-const buildOutputOf = (appRoot: string, packageName: string): null | string => {
-  for (let directory = appRoot; ; directory = dirname(directory)) {
+const buildOutputFrom = (start: string, packageName: string): null | string => {
+  for (let directory = start; ; directory = dirname(directory)) {
     const candidate = join(
       directory,
       "node_modules",
@@ -40,6 +45,14 @@ const buildOutputOf = (appRoot: string, packageName: string): null | string => {
     if (dirname(directory) === directory) return null;
   }
 };
+
+/**
+ * A package's build output as the app sees it, else as core sees it - an app
+ * that does not list `@vitnode/api` itself still reaches core's copy.
+ */
+const buildOutputOf = (appRoot: string, packageName: string): null | string =>
+  buildOutputFrom(appRoot, packageName) ??
+  buildOutputFrom(dirname(fileURLToPath(import.meta.url)), packageName);
 
 const stylesheetOf = (path: string): null | string => {
   for (const candidate of [path, `${path}.css`]) {
@@ -79,7 +92,7 @@ const sourceDirective = (directory: string): string =>
   `@source "${directory.replaceAll("\\", "/")}/${SCANNED_FILES}";`;
 
 /**
- * Adds an `@source` for the built output of `@vitnode/core` and every
+ * Adds an `@source` for the built output of `@vitnode/core`, `@vitnode/api` and every
  * configured plugin to each stylesheet that imports Tailwind, so the classes
  * those packages use are generated without listing them by hand.
  */
@@ -93,13 +106,16 @@ export const vitNodeTailwindSources = ({
 
   return {
     configResolved: async () => {
-      const packageNames = [PACKAGE_NAME, ...(await readPluginIds(appRoot))];
+      const packageNames = [
+        ...PACKAGE_NAMES,
+        ...(await readPluginIds(appRoot)),
+      ];
 
-      directives = packageNames
+      const directories = packageNames
         .map(packageName => readBuildOutput(appRoot, packageName))
-        .filter(directory => directory !== null)
-        .map(sourceDirective)
-        .join("\n");
+        .filter(directory => directory !== null);
+
+      directives = [...new Set(directories)].map(sourceDirective).join("\n");
     },
     enforce: "pre",
     name: "vitnode:tailwind-sources",

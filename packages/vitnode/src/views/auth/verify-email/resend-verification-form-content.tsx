@@ -1,3 +1,4 @@
+import type { routeMiddlewareSchema } from "@vitnode/api/modules/middleware/middleware.schema";
 import type z from "zod";
 
 import { MailCheckIcon, MailIcon } from "lucide-react";
@@ -5,7 +6,6 @@ import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { routeMiddlewareSchema } from "@/api/modules/middleware/middleware.schema";
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 
 import { AutoForm } from "@/components/form/auto-form";

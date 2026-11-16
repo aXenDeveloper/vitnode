@@ -1,8 +1,8 @@
-import type { PaymentErrorCode } from "@vitnode/core/api/lib/payments/errors";
+import type { PaymentErrorCode } from "@vitnode/api/lib/payments/errors";
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { PaymentError } from "@vitnode/core/api/lib/payments/errors";
+import { PaymentError } from "@vitnode/api/lib/payments/errors";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { checkoutRoute } from "./checkout.route";

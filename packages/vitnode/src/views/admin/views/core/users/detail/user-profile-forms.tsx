@@ -1,3 +1,10 @@
+import {
+  USER_FIRST_NAME_MAX_LENGTH,
+  USER_HEADLINE_MAX_LENGTH,
+  USER_LAST_NAME_MAX_LENGTH,
+  USER_PHONE_MAX_LENGTH,
+  USER_PHONE_PATTERN,
+} from "@vitnode/api/lib/user-personal-information";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -12,13 +19,6 @@ import { AutoFormSelect } from "@/components/form/fields/select";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { useLanguages } from "@/components/languages-provider";
 import { useDialog } from "@/components/ui/dialog";
-import {
-  USER_FIRST_NAME_MAX_LENGTH,
-  USER_HEADLINE_MAX_LENGTH,
-  USER_LAST_NAME_MAX_LENGTH,
-  USER_PHONE_MAX_LENGTH,
-  USER_PHONE_PATTERN,
-} from "@/lib/user-personal-information";
 import {
   supportedTimeZones,
   timeZoneLabel,

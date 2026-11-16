@@ -1,8 +1,8 @@
+import { manifest } from "@vitnode/api/manifest";
 import { z } from "zod";
 
 import type { AdminSearchUser } from "@/views/admin/layouts/search/search-users";
 
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { MAX_SEARCH_RESULTS } from "@/views/admin/layouts/search/constants";
 

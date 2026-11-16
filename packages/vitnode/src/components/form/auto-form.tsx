@@ -1,3 +1,5 @@
+import type { routeMiddlewareSchema } from "@vitnode/api/modules/middleware/middleware.schema";
+
 import {
   type FormApi,
   type FormAsyncValidateOrFn,
@@ -6,21 +8,20 @@ import {
   useForm,
   useSelector,
 } from "@tanstack/react-form";
-import { useMemo, useRef, useState } from "react";
-import { useTranslations } from "use-intl";
-import z from "zod";
-
-import type { routeMiddlewareSchema } from "../../api/modules/middleware/middleware.schema";
-import type { AnyFormFieldApi, FormMode, FormSubmitMeta } from "../ui/form";
-
-import { useCaptcha } from "../../hooks/use-captcha";
 import {
   getDefaults,
   getNestedParam,
   getZodInputParams,
   type InputParams,
   isRequiredPath,
-} from "../../lib/helpers/auto-form";
+} from "@vitnode/api/lib/helpers/auto-form";
+import { useMemo, useRef, useState } from "react";
+import { useTranslations } from "use-intl";
+import z from "zod";
+
+import type { AnyFormFieldApi, FormMode, FormSubmitMeta } from "../ui/form";
+
+import { useCaptcha } from "../../hooks/use-captcha";
 import { Button } from "../ui/button";
 import { DialogClose, DialogFooter, useDialog } from "../ui/dialog";
 import { Field } from "../ui/field";

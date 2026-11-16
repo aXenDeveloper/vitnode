@@ -1,16 +1,16 @@
+import { isBlockInstanceId } from "@vitnode/api/blocks/instance";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
 import type { AnyBlockDefinition, RegisteredBlock } from "../../blocks/types";
 
 import { blocks as builtInBlocks } from "../../blocks/built-in";
 import { defineBlock } from "../../blocks/define";
-import { isBlockInstanceId } from "../../blocks/instance";
 import {
   createBlockRegistry,
   setDefaultBlockRegistry,
 } from "../../blocks/registry";
 import { blockDataShapeIssue } from "../../blocks/shape";
-import { field } from "../../content/fields";
 import { blockInstanceIssue, createBlockInstanceFor } from "./defaults";
 
 const registry = createBlockRegistry([builtInBlocks]);
