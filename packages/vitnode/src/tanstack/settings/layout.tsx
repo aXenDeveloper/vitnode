@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useRouterState } from "@tanstack/react-router";
+import {
+  SETTINGS_ZONE_IDS,
+  settingsPage,
+} from "@vitnode/api/modules/pages/settings-page";
 
 import {
   aiUsageQueryOptions,
@@ -8,10 +12,6 @@ import {
 import { SettingsNavContent } from "@/views/auth/settings/nav-content";
 import { visibleSettingsNavItems } from "@/views/auth/settings/settings-nav";
 import { SettingsShellContent } from "@/views/auth/settings/shell-content";
-import {
-  SETTINGS_ZONE_IDS,
-  settingsPage,
-} from "@/views/auth/settings/widgets/settings-page";
 
 import { useMiddlewareConfigQuery } from "../auth/middleware-config";
 import { RouteMessages } from "../i18n/route-messages";

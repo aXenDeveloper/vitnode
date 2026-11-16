@@ -1,9 +1,9 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import { ExternalLinkIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
-
-import type { ContentId } from "@/content/ids";
 
 import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";

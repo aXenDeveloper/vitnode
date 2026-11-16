@@ -1,3 +1,4 @@
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
 import { NotebookPenIcon, RefreshCwIcon, SendIcon } from "lucide-react";
 
 import type {
@@ -5,7 +6,6 @@ import type {
   AdminDashboardWidgetProps,
 } from "@/lib/plugin";
 
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { NotesWidget } from "@/views/admin/views/core/dashboard/widgets/notes/notes-widget";
 import { SendNotificationAction } from "@/views/admin/views/core/dashboard/widgets/send-notification/send-notification";
 import { SendNotificationSettings } from "@/views/admin/views/core/dashboard/widgets/send-notification/send-notification-settings";

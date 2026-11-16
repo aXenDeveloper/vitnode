@@ -1,3 +1,4 @@
+import { manifest } from "@vitnode/api/manifest";
 import { LoaderCircleIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -14,7 +15,6 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 
 import type { TestAIModel } from "./test-ai";
 

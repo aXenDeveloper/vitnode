@@ -1,3 +1,5 @@
+import { isRichTextDocument } from "@vitnode/api/content/rich-text/document";
+import { richTextToPlainText } from "@vitnode/api/content/rich-text/plain-text";
 import { TriangleAlertIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
@@ -15,8 +17,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { isRichTextDocument } from "@/content/rich-text/document";
-import { richTextToPlainText } from "@/content/rich-text/plain-text";
 
 export interface ContentConflictState {
   currentVersion: number;

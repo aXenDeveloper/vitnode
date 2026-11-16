@@ -7,9 +7,9 @@ import type {
   BlockValidationMode,
 } from "./types";
 
-import { field } from "../content/fields";
+import { field } from "@vitnode/api/content/fields";
 import { defineBlock } from "./define";
-import { createBlockInstance } from "./instance";
+import { createBlockInstance } from "@vitnode/api/blocks/instance";
 import { createBlockRegistry, setDefaultBlockRegistry } from "./registry";
 import { ContentRenderer } from "./renderer";
 

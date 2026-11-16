@@ -1,7 +1,8 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
-import type { ContentId } from "@/content/ids";
 import type { TranslationSourceRecord } from "@/lib/ai/translation-freshness";
 
 import {

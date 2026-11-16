@@ -1,4 +1,5 @@
-import type { ContentId } from "@/content/ids";
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import type { RegisteredFrontendContentType } from "@/content/index";
 import type { ContentEditorialActionId } from "@/views/admin/views/content/actions/row-actions-model";
 import type { ContentRowData } from "@/views/admin/views/content/table/cells";

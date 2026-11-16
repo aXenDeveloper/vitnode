@@ -1,6 +1,6 @@
-import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
+import type { ApiPluginContract } from "@vitnode/api/lib/plugin";
 
-import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+import { buildApiPlugin } from "@vitnode/api/lib/plugin";
 
 import { blogAiActions } from "@/api/ai/actions";
 import { buildContentPublicModule } from "@/api/builders";
@@ -41,7 +41,7 @@ import { manifest } from "@/manifest.gen";
  * ```ts
  * // src/vitnode.api.config.ts
  * import { blogApiPlugin } from "@vitnode/blog/config.api";
- * import { buildApiConfig } from "@vitnode/core/vitnode.config";
+ * import { buildApiConfig } from "@vitnode/api/vitnode.config";
  *
  * export const vitNodeApiConfig = buildApiConfig({
  *   // ...

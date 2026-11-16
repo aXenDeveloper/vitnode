@@ -1,11 +1,11 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
+
 import { queryOptions } from "@tanstack/react-query";
+import { contentAnyIdSchema } from "@vitnode/api/content/ids";
+import { resolveLangValue } from "@vitnode/api/lib/helpers/multi-lang";
 import { z } from "zod";
 
-import type { ContentId } from "@/content/ids";
-import type { AnyContentTypeDefinition } from "@/content/types";
-
-import { contentAnyIdSchema } from "@/content/ids";
-import { resolveLangValue } from "@/lib/helpers/multi-lang";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 
 import type { TranslationRow } from "../content-mutation";

@@ -24,7 +24,7 @@ RECAPTCHA_SECRET_KEY=6Lc...
 ```
 
 ```ts title="src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [],
@@ -147,7 +147,7 @@ RECAPTCHA_SECRET_KEY=6Lc... # [!code ++]
 Add the `captcha` block to your API config with `type: 'recaptcha_v3'`.
 
 ```ts title="src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [],

@@ -1,7 +1,8 @@
-import type { RichTextDocument } from "@/content/rich-text/document";
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
+
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 
 const REPORTED_FAILURES = [
   "already_claimed",

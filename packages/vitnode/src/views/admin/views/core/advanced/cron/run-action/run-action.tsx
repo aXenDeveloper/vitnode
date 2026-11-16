@@ -1,3 +1,4 @@
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
 import { PlayIcon } from "lucide-react";
 import { useActionState } from "react";
 import { toast } from "sonner";
@@ -6,7 +7,6 @@ import { useTranslations } from "use-intl";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 
 import type { RunCron } from "./run-cron";
 

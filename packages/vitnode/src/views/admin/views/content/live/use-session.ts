@@ -1,20 +1,20 @@
-import React from "react";
-
-import type { ContentDrafts } from "@/content/live/http";
+import type { ContentDrafts } from "@vitnode/api/content/live/http";
 import type {
   ContentFieldLock,
   ContentLiveMember,
   ContentLiveResetReason,
   ContentLiveRoomRef,
   ContentLiveServerMessage,
-} from "@/content/live/protocol";
+} from "@vitnode/api/content/live/protocol";
 
 import {
   CONTENT_LIVE_HEARTBEAT_MS,
   CONTENT_LIVE_POLL_MS,
   contentLiveChannel,
   sameContentLiveRoom,
-} from "@/content/live/protocol";
+} from "@vitnode/api/content/live/protocol";
+import React from "react";
+
 import { useVitNodeWebSocket } from "@/ws/use-websocket";
 
 import { useContentFormTransport } from "../form/transport";
@@ -26,7 +26,7 @@ export interface ContentLiveDraftEvent {
   values: Record<string, unknown>;
 }
 
-export type { ContentLiveResetReason } from "@/content/live/protocol";
+export type { ContentLiveResetReason } from "@vitnode/api/content/live/protocol";
 
 export interface ContentLiveSession {
   clientId: string;

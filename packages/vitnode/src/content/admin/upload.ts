@@ -1,9 +1,14 @@
-import type { FileRejectionReason } from "../../lib/file-constraints";
-import type { ContentFileDescriptor } from "../files";
+import type { ContentFileDescriptor } from "@vitnode/api/content/files";
+import type { FileRejectionReason } from "@vitnode/api/lib/file-constraints";
+
+import {
+  contentFileRejectionReason,
+  zodContentFileDescriptor,
+} from "@vitnode/api/content/files";
+
 import type { ContentFormSpec } from "./spec";
 
 import { rawApiFetch } from "../../lib/fetcher/raw";
-import { contentFileRejectionReason, zodContentFileDescriptor } from "../files";
 
 export const contentUploadPath = (
   spec: Pick<ContentFormSpec, "permissionModule">,

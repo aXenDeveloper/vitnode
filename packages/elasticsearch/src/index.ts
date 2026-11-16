@@ -1,12 +1,12 @@
 import type { estypes } from "@elastic/elasticsearch";
+import type { ContentId } from "@vitnode/api/content";
 import type {
   SearchDocument,
   SearchHit,
   SearchProviderApiPlugin,
   SearchQueryParams,
   SearchResult,
-} from "@vitnode/core/api/models/search";
-import type { ContentId } from "@vitnode/core/content";
+} from "@vitnode/api/models/search";
 
 import { Client, errors } from "@elastic/elasticsearch";
 

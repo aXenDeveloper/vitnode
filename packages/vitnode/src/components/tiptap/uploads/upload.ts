@@ -1,8 +1,9 @@
-import type { EditorUploadResult } from "@/lib/editor-uploads";
+import type { EditorUploadResult } from "@vitnode/api/lib/shared/editor-uploads";
+
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { readApiErrorMessage } from "@/lib/read-api-error";
-import { manifest } from "@/manifest";
 
 const requestUpload = async (
   session: "admin" | "member",

@@ -1,0 +1,282 @@
+import type { SearchDocument } from "../../models/search";
+import type { ContentLocaleRouting } from "../public-url";
+import type { AnyContentTypeDefinition } from "../types";
+
+import {
+  isContentPubliclyVisible,
+  isContentTranslationPubliclyVisible,
+} from "../cache";
+import { isContentId } from "../ids";
+import { partitionContentFields } from "../localization";
+import { readContentPath, splitContentFieldPath } from "../paths";
+import { isRichTextDocument } from "../rich-text/document";
+import { richTextToPlainText } from "../rich-text/plain-text";
+import {
+  contentSearchContextSource,
+  contentSearchTitleRelation,
+  contentSearchUrl,
+} from "../search";
+import { isContentHidden } from "../visibility";
+
+/** Collapses whitespace so a multi-line value cannot break a result heading. */
+const normalize = (value: unknown): string => {
+  const text = isRichTextDocument(value) ? richTextToPlainText(value) : value;
+
+  return typeof text === "string" ? text.replace(/\s+/g, " ").trim() : "";
+};
+
+const readSearchValue = (
+  values: Record<string, unknown>,
+  name: string,
+): string => {
+  const path = splitContentFieldPath(name);
+  if (!path) return normalize(values[name]);
+
+  const [owner, leaf] = path;
+  const container = values[owner];
+
+  if (Array.isArray(container)) {
+    return (container as Record<string, unknown>[])
+      .map(child => normalize(child[leaf]))
+      .filter(value => value !== "")
+      .join("\n");
+  }
+
+  return normalize(readContentPath(values, name));
+};
+
+const toDate = (value: unknown): Date | undefined => {
+  if (value instanceof Date) return value;
+  if (typeof value !== "string") return undefined;
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
+
+const toTimestamp = (value: unknown): Date | null | string | undefined => {
+  if (value instanceof Date || typeof value === "string") return value;
+
+  return value === null ? null : undefined;
+};
+
+const isContentRowHidden = (row: object): boolean => {
+  const values = row as Record<string, unknown>;
+
+  return (
+    isContentHidden(values) && isContentRowPublic({ ...values, hiddenAt: null })
+  );
+};
+
+export const isContentRowPublic = (row: object): boolean => {
+  const values = row as Record<string, unknown>;
+  if (values.deletedAt != null) return false;
+
+  return isContentPubliclyVisible({
+    hiddenAt: toTimestamp(values.hiddenAt),
+    publishedAt: toTimestamp(values.publishedAt),
+    status: normalize(values.status) || undefined,
+  });
+};
+
+export const toAuthorIds = (value: unknown): number[] => [
+  ...new Set(
+    (Array.isArray(value) ? value : [value]).filter(
+      (id): id is number => Number.isSafeInteger(id) && (id as number) > 0,
+    ),
+  ),
+];
+
+const toFileId = (value: unknown): null | number =>
+  typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? value
+    : null;
+
+export interface ContentSearchContext {
+  containerId: null | number;
+  containerType: string;
+  isPublic: boolean;
+  title: string;
+  url: null | string;
+}
+
+export const contentSearchDocument = (
+  definition: AnyContentTypeDefinition,
+  row: object,
+  {
+    context,
+    isHidden: isOwnHidden = isContentRowHidden(row),
+    isPublic: isOwnPublic = isContentRowPublic(row),
+    locale,
+    pluginId,
+    routing,
+  }: {
+    context?: ContentSearchContext | null;
+    isHidden?: boolean;
+    isPublic?: boolean;
+    locale?: string;
+    pluginId?: string;
+    routing: ContentLocaleRouting;
+  },
+): null | SearchDocument => {
+  const { publicApi, search } = definition;
+  if (!search.enabled) return null;
+
+  const values = row as Record<string, unknown>;
+
+  const itemId = values.id;
+  if (!isContentId(definition.idStrategy, itemId)) return null;
+
+  const titleRelation = contentSearchTitleRelation(definition);
+  const title = normalize(
+    titleRelation ? context?.title : readSearchValue(values, search.titleField),
+  );
+  if (title === "") return null;
+
+  const isReachable =
+    contentSearchContextSource(definition)?.kind !== "relation" ||
+    context?.isPublic === true;
+  const isPublic = isOwnPublic && isReachable;
+  const isHidden = isOwnHidden && isReachable;
+
+  const url =
+    isPublic || isHidden
+      ? contentSearchUrl({
+          definition,
+          locale,
+          routing,
+          slug: normalize(values[publicApi.slugField]),
+        })
+      : null;
+  if (isPublic && url === null) return null;
+
+  // A published row always carries `publishedAt`, so this resolves to the
+  // publication date - which is the date the feed and the timeline sort by.
+  const createdAt = toDate(values.publishedAt) ?? toDate(values.createdAt);
+  if (!createdAt) return null;
+
+  // The description leads the body so it shows up first in a result excerpt.
+  // Skipped when it is already one of the content fields, so it is not indexed
+  // twice and does not distort ranking.
+  const sources = search.contentFields.includes(search.descriptionField ?? "")
+    ? search.contentFields
+    : [
+        ...(search.descriptionField ? [search.descriptionField] : []),
+        ...search.contentFields,
+      ];
+
+  return {
+    authorIds: search.authorField
+      ? toAuthorIds(values[search.authorField])
+      : [],
+    // `SearchModel.index` strips HTML from `content` (but never from `title`,
+    // which is why the title is normalized above).
+    // `readSearchValue` has already collapsed the whitespace *inside* each
+    // value; normalizing again here would flatten the newlines that separate
+    // one repeatable child's answer from the next's into single spaces.
+    content: sources
+      .map(name => readSearchValue(values, name))
+      .filter(value => value !== "")
+      .join("\n\n"),
+    createdAt,
+    ...(search.imageField === null
+      ? {}
+      : { imageId: toFileId(values[search.imageField]) }),
+    isHidden: !isPublic && isHidden && url !== null,
+    isPublic,
+    itemId,
+    // Content type ids are globally unique and already namespaced as
+    // `plugin.entity`, so the id alone is a collision-free item type.
+    itemType: definition.id,
+    // The owning plugin, so a rebuild - which runs in the core cron request -
+    // stores the same ownership a live write did.
+    ...(pluginId === undefined ? {} : { pluginId }),
+    // `""` for a content type that is not localized - the language-agnostic
+    // value that matches every locale, and what every document written before
+    // Stage 5D already carries. A localized one is indexed once per language.
+    ...(locale === undefined || locale === "" ? {} : { languageCode: locale }),
+    // Deliberately absent: `metadata` (nothing reads it).
+    ...(context
+      ? {
+          containerType: context.containerType,
+          ...(context.containerId === null
+            ? {}
+            : { containerId: context.containerId }),
+        }
+      : {}),
+    ...(context || definition.thread.enabled
+      ? {
+          metadata: {
+            ...(context
+              ? {
+                  context: {
+                    title: normalize(context.title),
+                    url: context.url,
+                  },
+                }
+              : {}),
+            ...(definition.thread.enabled ? { thread: true } : {}),
+          },
+        }
+      : {}),
+    title,
+    updatedAt: toDate(values.updatedAt),
+    ...(url === null ? {} : { url }),
+  };
+};
+
+export const contentTranslationSearchDocument = (
+  definition: AnyContentTypeDefinition,
+  {
+    base,
+    locale,
+    translation,
+  }: { base: object; locale: string; translation: object },
+  { pluginId, routing }: { pluginId?: string; routing: ContentLocaleRouting },
+): null | SearchDocument => {
+  if (!definition.search.enabled || !definition.localization.enabled) {
+    return null;
+  }
+
+  const baseValues = base as Record<string, unknown>;
+  const translationValues = translation as Record<string, unknown>;
+
+  const translationVisible = (hiddenAt: Date | null | string | undefined) =>
+    isContentTranslationPubliclyVisible({
+      base: {
+        hiddenAt,
+        publishedAt: toTimestamp(baseValues.publishedAt),
+        status: normalize(baseValues.status) || undefined,
+      },
+      translation: {
+        publishedAt: toTimestamp(translationValues.publishedAt),
+        status: normalize(translationValues.status) || undefined,
+      },
+    });
+  const isPublic = translationVisible(toTimestamp(baseValues.hiddenAt));
+  const isHidden =
+    !isPublic && isContentHidden(baseValues) && translationVisible(null);
+
+  const { localizedFields } = partitionContentFields(definition.fields);
+  // The localized half wins, and only for declared localized fields: a
+  // translation row also carries its own `createdAt`, `version` and publication
+  // state, and letting those through would describe the translation rather than
+  // the page.
+  const merged: Record<string, unknown> = { ...baseValues };
+  for (const name of Object.keys(localizedFields)) {
+    merged[name] = translationValues[name];
+  }
+
+  // `publishedAt` decides the document's date, and this language's is the honest
+  // one.
+  merged.publishedAt = translationValues.publishedAt ?? baseValues.publishedAt;
+  merged.updatedAt = translationValues.updatedAt ?? baseValues.updatedAt;
+
+  return contentSearchDocument(definition, merged, {
+    isHidden,
+    isPublic,
+    locale,
+    pluginId,
+    routing,
+  });
+};

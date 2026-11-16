@@ -105,8 +105,8 @@ The binding name `VITNODE_REALTIME` is fixed. `nodejs_compat` provides `AsyncLoc
 A Worker request cannot use a TCP connection another request opened, so a client created once at module load breaks on the second request. Wrap the client in `scopedDatabase`, and leave out `redis`:
 
 ```ts title="src/vitnode.api.config.ts"
-import { scopedDatabase } from '@vitnode/core/cloudflare/database' // [!code ++]
-import { coreRelations } from '@vitnode/core/database/relations'
+import { scopedDatabase } from '@vitnode/api/cloudflare/database' // [!code ++]
+import { coreRelations } from '@vitnode/api/database/relations'
 import { drizzle } from 'drizzle-orm/postgres-js'
 
 export const vitNodeApiConfig = buildApiConfig({
@@ -222,7 +222,7 @@ Add the `id` it prints to `wrangler.jsonc`:
 import {
   hyperdriveConnectionString,
   scopedDatabase,
-} from '@vitnode/core/cloudflare/database'
+} from '@vitnode/api/cloudflare/database'
 
 dbProvider: scopedDatabase(({ env }) =>
   drizzle({

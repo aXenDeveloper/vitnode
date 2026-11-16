@@ -109,10 +109,13 @@ export class VersionManager {
   }
 
   updateConfigVersion(version: string): void {
+    // The built-in plugin's manifest (logical id `@vitnode/core`) ships in
+    // `@vitnode/api`, the package that serves it; `npm version --workspaces`
+    // already moved both packages' `package.json` to the same version.
     const configPath = join(
       this.env.WORKSPACE,
       "packages",
-      "vitnode",
+      "api",
       "src",
       "manifest.ts",
     );

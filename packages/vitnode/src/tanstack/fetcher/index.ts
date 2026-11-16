@@ -14,8 +14,6 @@ import {
 } from "./server";
 
 export type { FetcherClientOptions, UniversalFetcher, UniversalRawFetcher };
-export type { ApiEndpoint, ApiPluginContract } from "@/lib/fetcher/contract";
-export type { ApiPluginRegistry } from "@/lib/fetcher/registry";
 export type {
   AllEndpoints,
   ApiRequest,
@@ -26,6 +24,11 @@ export type {
   RegisteredPluginId,
   ResponseFor,
 } from "@/lib/fetcher/types";
+export type {
+  ApiEndpoint,
+  ApiPluginContract,
+} from "@vitnode/api/lib/fetcher/contract";
+export type { ApiPluginRegistry } from "@vitnode/api/lib/fetcher/registry";
 
 type IsomorphicFetcher = (request: never) => Promise<Response>;
 

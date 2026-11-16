@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { IntlProvider } from "use-intl";
 import { describe, expect, it } from "vitest";
 
-import type { UserPresence } from "@/lib/user-presence";
+import type { UserPresence } from "@vitnode/api/lib/user-presence";
 
 import {
   type PresenceVariant,

@@ -1,6 +1,6 @@
+import { localeRoutingFromConfig } from "@vitnode/api/lib/i18n/locale-routing";
 import { describe, expect, it } from "vitest";
 
-import { localeRoutingFromConfig } from "./locale-routing";
 import { urlLocaleToRemember } from "./remembered-locale";
 
 const localeRouting = localeRoutingFromConfig({

@@ -1,21 +1,22 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { PageCacheRouteTable } from "@vitnode/api/page-cache/policy";
+import type { PageCacheStore } from "@vitnode/api/page-cache/store.server";
 
-import type { PageCacheRouteTable } from "@/page-cache/policy";
-import type { PageCacheStore } from "@/page-cache/store.server";
-import type { VitNodeConfig } from "@/vitnode.config";
-
-import { recordPageCacheApiResponse } from "@/page-cache/render-context.server";
 import {
   createMemoryPageCacheStore,
   invalidatePageCacheTags,
   resetPageCacheStore,
-} from "@/page-cache/store.server";
+} from "@vitnode/api/page-cache/store.server";
 import {
   isPageCacheRenderMarker,
   PAGE_CACHE_RENDER_HEADER,
   PAGE_CACHE_STATUS_HEADER,
   PAGE_CACHE_TAGS_HEADER,
-} from "@/page-cache/tags";
+} from "@vitnode/api/page-cache/tags";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { VitNodeConfig } from "@/vitnode.config";
+
+import { recordPageCacheApiResponse } from "@/page-cache/render-context.server";
 
 import { createPageCacheHandler } from "./server";
 

@@ -1,5 +1,11 @@
 import type { JSX, ReactElement } from "react";
 
+import {
+  assertContentZoneId,
+  contentZoneAllowed,
+  contentZoneAttributes,
+  contentZoneBounds,
+} from "@vitnode/api/blocks/zone-meta";
 import { createElement } from "react";
 
 import type {
@@ -12,12 +18,6 @@ import type {
 import { useContentEditRuntime } from "./edit-context";
 import { useEditablePage } from "./page-context";
 import { ContentRenderer } from "./renderer";
-import {
-  assertContentZoneId,
-  contentZoneAllowed,
-  contentZoneAttributes,
-  contentZoneBounds,
-} from "./zone-meta";
 import { ContentZoneOutlet } from "./zone-outlet";
 
 export interface ContentZoneProps {

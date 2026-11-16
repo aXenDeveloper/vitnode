@@ -1,4 +1,4 @@
-import { core_users } from "@vitnode/core/database/users";
+import { core_users } from "@vitnode/api/database/users";
 import { camelCase, index } from "drizzle-orm/pg-core";
 
 import { newsroom_articles } from "./articles";

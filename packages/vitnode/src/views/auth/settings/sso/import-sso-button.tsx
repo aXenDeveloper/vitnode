@@ -1,8 +1,8 @@
+import type { SsoProfileField } from "@vitnode/api/lib/shared/sso-profile";
+
 import { DownloadIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
-
-import type { SsoProfileField } from "@/lib/sso-profile";
 
 import { Button } from "@/components/ui/button";
 import {

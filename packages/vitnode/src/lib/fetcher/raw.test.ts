@@ -1,9 +1,9 @@
+import { CONFIG } from "@vitnode/api/lib/config";
+import { buildForwardedHeaders } from "@vitnode/api/lib/fetcher/request-context";
 import { Hono } from "hono";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CONFIG } from "../config";
 import { buildApiUrl, rawApiFetch } from "./raw";
-import { buildForwardedHeaders } from "./request-context";
 
 const PLUGIN_ID = "@vitnode/core";
 const ORIGIN = "http://localhost:3000";

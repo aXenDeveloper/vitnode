@@ -1,12 +1,13 @@
-import { queryOptions } from "@tanstack/react-query";
+import type { MultiLangValue } from "@vitnode/api/lib/helpers/multi-lang";
+import type { WarningThresholdAction } from "@vitnode/api/lib/moderation/warnings";
 
-import type { MultiLangValue } from "@/lib/helpers/multi-lang";
-import type { WarningThresholdAction } from "@/lib/moderation/warnings";
+import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
+
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import {

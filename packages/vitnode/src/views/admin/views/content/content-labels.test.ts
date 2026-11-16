@@ -1,10 +1,9 @@
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
 import { createTranslator } from "use-intl";
 import { describe, expect, it } from "vitest";
 
 import type { RegisteredFrontendContentType } from "@/content/admin/registry";
-
-import { defineContentType } from "@/content/define";
-import { field } from "@/content/fields";
 
 import { contentLabelsFrom } from "./content-labels";
 

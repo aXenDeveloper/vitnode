@@ -1,10 +1,11 @@
 import type {
   PermissionsStaffArgs,
   PermissionStaffType,
-} from "@/api/lib/permission-staff";
+} from "@vitnode/api/lib/permission-staff";
+
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,

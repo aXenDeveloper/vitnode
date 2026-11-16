@@ -1,6 +1,6 @@
-import type { ContentRelationTarget } from "@vitnode/core/content";
+import type { ContentRelationTarget } from "@vitnode/api/content";
 
-import { defineContentType, field } from "@vitnode/core/content";
+import { defineContentType, field } from "@vitnode/api/content";
 
 import { categoryContentType } from "./category";
 import { tagContentType } from "./tag";

@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
 import {
   BugIcon,
   ChevronsUpDownIcon,
@@ -28,7 +29,6 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { UserMenuIdentity } from "@/components/user-menu-identity";
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { VITNODE_ISSUES_URL, VITNODE_WEBSITE_URL } from "@/lib/docs-links";
 
 export interface AdminUserBarUser {

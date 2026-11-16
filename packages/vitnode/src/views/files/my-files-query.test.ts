@@ -1,9 +1,11 @@
 import { hashKey } from "@tanstack/react-query";
+import {
+  readFileInUse,
+  STORAGE_FILE_IN_USE,
+} from "@vitnode/api/lib/files/in-use";
 import { describe, expect, it } from "vitest";
 
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
-
-import { readFileInUse, STORAGE_FILE_IN_USE } from "@/lib/files/in-use";
 
 import { shouldRefreshAfterBulkDelete } from "./my-files-delete";
 import {

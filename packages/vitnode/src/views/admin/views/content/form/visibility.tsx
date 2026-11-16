@@ -1,11 +1,11 @@
+import {
+  contentVisibilityTransition,
+  isContentHidden,
+} from "@vitnode/api/content/visibility";
 import { useTranslations } from "use-intl";
 
 import { HiddenIcon } from "@/components/hidden-icon";
 import { Button } from "@/components/ui/button";
-import {
-  contentVisibilityTransition,
-  isContentHidden,
-} from "@/content/visibility";
 
 import {
   CONTENT_VISIBILITY_ICONS,

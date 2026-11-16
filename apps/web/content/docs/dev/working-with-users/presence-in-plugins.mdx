@@ -104,7 +104,7 @@ The `dot` variant carries its label as `aria-label`, so screen readers still hea
 When your own API route needs presence, for example to return each post with its author's status, use `UserPresenceModel`. Add it to a route that already loads posts:
 
 ```ts title="plugins/blog/src/api/modules/posts/routes/list.route.ts"
-import { UserPresenceModel } from '@vitnode/core/api/models/user-presence'
+import { UserPresenceModel } from '@vitnode/api/models/user-presence'
 
 export const listPostsRoute = buildRoute({
   route: {

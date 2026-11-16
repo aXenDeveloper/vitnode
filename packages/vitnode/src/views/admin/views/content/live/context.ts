@@ -1,7 +1,8 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import React from "react";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentId } from "@/content/ids";
 
 import type { ContentRichTextRegistry } from "./rich-text";
 import type { ContentLiveSession } from "./use-session";

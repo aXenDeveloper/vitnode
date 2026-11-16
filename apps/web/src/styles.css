@@ -1,9 +1,9 @@
-@import 'tailwindcss';
-@import 'shadcn/tailwind.css';
-@import 'tw-animate-css';
-@import './theme.css';
-@import '@vitnode/core/styles/tiptap.css';
-@import '@vitnode/core/styles/view-transitions.css';
+@import "tailwindcss";
+@import "shadcn/tailwind.css";
+@import "tw-animate-css";
+@import "./theme.css";
+@import "@vitnode/core/styles/tiptap.css";
+@import "@vitnode/core/styles/view-transitions.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 @custom-variant reduced-transparency (@media (prefers-reduced-transparency: reduce));
@@ -16,7 +16,7 @@
   --card-foreground: oklch(0.214 0.006 264);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.214 0.006 264);
-  --primary: oklch(0.52 0.2 264);
+  --primary: oklch(0.54 0.17 262);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.955 0.004 264);
   --secondary-foreground: oklch(0.214 0.006 264);
@@ -29,8 +29,8 @@
   --warn: oklch(0.55 0.145 50);
   --border: oklch(0.928 0.004 264);
   --input: oklch(0.908 0.003 264);
-  --ring: oklch(0.52 0.2 264);
-  --chart-1: oklch(0.52 0.2 264);
+  --ring: oklch(0.54 0.17 262);
+  --chart-1: oklch(0.54 0.17 262);
   --chart-2: oklch(0.72 0.15 55);
   --chart-3: oklch(0.6 0 0);
   --chart-4: oklch(0.45 0.11 155);
@@ -53,7 +53,7 @@
   --card-foreground: oklch(0.976 0 0);
   --popover: oklch(0.22 0.012 264);
   --popover-foreground: oklch(0.976 0 0);
-  --primary: oklch(0.6 0.18 262.65);
+  --primary: oklch(0.54 0.17 262);
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.269 0.018 264);
   --secondary-foreground: oklch(0.976 0 0);
@@ -66,8 +66,8 @@
   --warn: oklch(0.78 0.142 50);
   --border: oklch(0.269 0.018 264);
   --input: oklch(0.348 0.013 264);
-  --ring: oklch(0.7 0.14 264);
-  --chart-1: oklch(0.7 0.14 264);
+  --ring: oklch(0.54 0.17 262);
+  --chart-1: oklch(0.54 0.17 262);
   --chart-2: oklch(0.82 0.13 55);
   --chart-3: oklch(0.6 0.01 264);
   --chart-4: oklch(0.62 0.14 155);

@@ -74,7 +74,7 @@ action belongs to a moderation scope.
 
 ### Describe the changes
 
-`diff()` (also exported as `auditDiff` from `@vitnode/core/lib/audit/diff`)
+`diff()` (also exported as `auditDiff` from `@vitnode/api/lib/audit/diff`)
 compares two objects and keeps only the fields that changed. `before: null`
 describes a creation, `after: null` a deletion:
 
@@ -103,7 +103,7 @@ Declare your actions so the Activity Logs action filter offers them before they
 first happen. Create `src/api/audit-actions.ts`:
 
 ```ts title="plugins/site-notes/src/api/audit-actions.ts"
-import { defineAuditActions } from '@vitnode/core/lib/audit/actions'
+import { defineAuditActions } from '@vitnode/api/lib/audit/actions'
 
 export const siteNotesAuditActions = defineAuditActions([
   { action: 'note.created', targetType: 'note' },
@@ -158,7 +158,7 @@ values.
 
 - In a cron job or queue task, entries are attributed to the **system**
   automatically. To add context to your own block of work, wrap it in
-  `withAuditContext` from `@vitnode/core/api/lib/audit/context`, for example
+  `withAuditContext` from `@vitnode/api/lib/audit/context`, for example
   with `{ metadata: { trigger: 'import' } }`.
 - A malformed action or target type throws `AuditLogError`. That is a bug in
   your code, so VitNode never swallows it. For a non-critical operation outside

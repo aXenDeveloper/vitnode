@@ -1,6 +1,6 @@
-import { contentContainerDeletedEvent } from "@vitnode/core/api/events/content-containers";
-import { buildEventListener } from "@vitnode/core/api/lib/events";
-import { contentEvent } from "@vitnode/core/content";
+import { contentEvent } from "@vitnode/api/content";
+import { contentContainerDeletedEvent } from "@vitnode/api/events/content-containers";
+import { buildEventListener } from "@vitnode/api/lib/events";
 
 import { commentContentType } from "@/content/comment";
 import { forumContainers } from "@/content/forums";

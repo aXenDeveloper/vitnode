@@ -1,10 +1,5 @@
 import type { EmojiItem } from "@tiptap/extension-emoji";
 import type { JSONContent } from "@tiptap/react";
-
-import { gitHubEmojis, shortcodeToEmoji } from "@tiptap/extension-emoji";
-import { generateJSON } from "@tiptap/react";
-
-import type { EditorEmojiSection } from "@/components/editor-provider";
 import type {
   RichTextAttrPrimitive,
   RichTextAttrs,
@@ -12,7 +7,12 @@ import type {
   RichTextDocument,
   RichTextMark,
   RichTextNode,
-} from "@/content/rich-text/document";
+} from "@vitnode/api/content/rich-text/document";
+
+import { gitHubEmojis, shortcodeToEmoji } from "@tiptap/extension-emoji";
+import { generateJSON } from "@tiptap/react";
+
+import type { EditorEmojiSection } from "@/components/editor-provider";
 
 import { customEmojiToTipTap } from "./emoji/custom-emoji";
 import { createTipTapExtensions } from "./extension";

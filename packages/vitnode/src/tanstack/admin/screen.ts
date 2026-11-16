@@ -1,6 +1,6 @@
-import { notFound } from "@tanstack/react-router";
+import type { PermissionsStaffArgs } from "@vitnode/api/lib/permission-staff";
 
-import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
+import { notFound } from "@tanstack/react-router";
 
 import type { AdminLoaderContext } from "./intl";
 import type { AdminAccessState } from "./session-api";

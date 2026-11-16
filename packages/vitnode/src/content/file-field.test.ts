@@ -1,9 +1,9 @@
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
+import { createContentTable } from "@vitnode/api/content/server/table";
 import { describe, expect, it } from "vitest";
 
 import { buildContentFormSpec, buildFormSchemaFromSpec } from "./admin/spec";
-import { defineContentType } from "./define";
-import { field } from "./fields";
-import { createContentTable } from "./server/table";
 
 const articleWith = (
   fields: Parameters<typeof defineContentType>[0]["fields"],

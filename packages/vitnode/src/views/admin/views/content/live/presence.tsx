@@ -1,3 +1,5 @@
+import type { ContentLiveMember } from "@vitnode/api/content/live/protocol";
+
 import { cn } from "cn";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
@@ -5,7 +7,6 @@ import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentLiveMember } from "@/content/live/protocol";
 
 import { Avatar } from "@/components/avatar";
 import {

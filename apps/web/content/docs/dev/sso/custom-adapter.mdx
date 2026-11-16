@@ -39,15 +39,15 @@ GITHUB_CLIENT_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx # [!code ++]
 Create `src/utils/sso/github.ts` next to `vitnode.api.config.ts`, in the same app:
 
 ```ts title="src/utils/sso/github.ts"
-import type { SSOApiPlugin } from "@vitnode/core/api/models/sso";
+import type { SSOApiPlugin } from "@vitnode/api/models/sso";
 
 import {
   bearerAuth,
   formPost,
   requestSsoProviderJson,
   requireSsoOption,
-} from "@vitnode/core/api/lib/sso-protocol";
-import { getRedirectUri } from "@vitnode/core/api/models/sso";
+} from "@vitnode/api/lib/sso-protocol";
+import { getRedirectUri } from "@vitnode/api/models/sso";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
@@ -167,7 +167,7 @@ What keeps it safe:
 In `vitnode.api.config.ts`, import the adapter and add it to `authorization.ssoAdapters`. Keep everything else, including adapters you already have:
 
 ```ts title="src/vitnode.api.config.ts (excerpt)"
-import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { buildApiConfig } from "@vitnode/api/vitnode.config";
 
 import { GitHubSSOApiPlugin } from "./utils/sso/github"; // [!code ++]
 
@@ -250,7 +250,7 @@ Adapters written for older versions, with `getUrl({ state })`, `fetchToken(code)
 
 ## PKCE, ID tokens and provider calls
 
-`@vitnode/core/api/lib/sso-protocol` has the small helpers the built-in adapters use. All of them are server-only:
+`@vitnode/api/lib/sso-protocol` has the small helpers the built-in adapters use. All of them are server-only:
 
 | Helper                     | Use it to                                                                                         |
 | -------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -261,7 +261,7 @@ Adapters written for older versions, with `getUrl({ state })`, `fetchToken(code)
 | `remoteJwks`               | Fetch and cache the provider's signing keys                                                      |
 
 ```ts title="src/utils/sso/acme.ts"
-import { remoteJwks, verifySsoIdToken } from '@vitnode/core/api/lib/sso-protocol'
+import { remoteJwks, verifySsoIdToken } from '@vitnode/api/lib/sso-protocol'
 
 // inside the adapter
 fetchUser: async ({ id_token }, { nonce }) => {

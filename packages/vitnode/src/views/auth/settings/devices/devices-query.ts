@@ -1,7 +1,7 @@
 import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 /** Which icon a row gets, and the only three values the API will send. */

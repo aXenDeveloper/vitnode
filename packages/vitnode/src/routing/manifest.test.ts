@@ -1,7 +1,9 @@
+import type { PluginRouteArea } from "@vitnode/api/routing/types";
+
+import { PLUGIN_ROUTE_AREAS } from "@vitnode/api/routing/types";
 import { describe, expect, it } from "vitest";
 
 import type { PluginRouteDeclaration } from "./tree";
-import type { PluginRouteArea } from "./types";
 
 import { PluginRouteError } from "./errors";
 import {
@@ -11,7 +13,6 @@ import {
 } from "./manifest";
 import { comparePluginRoutes } from "./order";
 import { definePluginRoutes, index, layout, lazy, page } from "./tree";
-import { PLUGIN_ROUTE_AREAS } from "./types";
 
 const lazyPage = () =>
   lazy(async () => await Promise.resolve({ default: () => null }));

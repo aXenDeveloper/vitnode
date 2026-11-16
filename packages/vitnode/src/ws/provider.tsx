@@ -1,11 +1,9 @@
+import type { WebSocketManager } from "@vitnode/api/ws/manager";
+import type { VitNodeWSMessage } from "@vitnode/api/ws/types";
+
+import { CONFIG } from "@vitnode/api/lib/config";
+import { createWebSocketManager } from "@vitnode/api/ws/manager";
 import React from "react";
-
-import { CONFIG } from "@/lib/config";
-
-import type { WebSocketManager } from "./manager";
-import type { VitNodeWSMessage } from "./types";
-
-import { createWebSocketManager } from "./manager";
 
 type Listener = (data: unknown) => void;
 

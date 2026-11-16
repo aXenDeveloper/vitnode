@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { contentPublicationTransition } from "@vitnode/api/content/publication";
 import { cn } from "cn";
 import { EyeOffIcon, SaveIcon, SendIcon } from "lucide-react";
 import React from "react";
@@ -7,7 +8,6 @@ import { useTranslations } from "use-intl";
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { AutoFormSubmitButton } from "@/components/form/auto-form";
 import { Button } from "@/components/ui/button";
-import { contentPublicationTransition } from "@/content/publication";
 
 import { useContentForm } from "./context";
 import { ContentFormPublication } from "./publication-status";

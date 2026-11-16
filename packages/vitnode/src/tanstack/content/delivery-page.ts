@@ -1,8 +1,7 @@
 import { notFound, redirect } from "@tanstack/react-router";
+import { stripHtml } from "@vitnode/api/lib/strip-html";
 
 import type { PluginRouteHead } from "@/routing";
-
-import { stripHtml } from "@/lib/strip-html";
 
 const DESCRIPTION_MAX_LENGTH = 160;
 

@@ -1,6 +1,6 @@
-import type { ContentId } from "@/content/ids";
-import type { ContentPublicationAction } from "@/content/publication";
-import type { ContentVisibilityAction } from "@/content/visibility";
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentPublicationAction } from "@vitnode/api/content/publication";
+import type { ContentVisibilityAction } from "@vitnode/api/content/visibility";
 
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentApiTarget } from "../content-request";

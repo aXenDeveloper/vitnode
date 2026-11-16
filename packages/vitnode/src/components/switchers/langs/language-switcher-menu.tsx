@@ -1,7 +1,7 @@
+import type { LocaleConfig } from "@vitnode/api/lib/i18n/types";
+
 import { LanguagesIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
-
-import type { LocaleConfig } from "@/lib/i18n/types";
 
 import {
   DropdownMenuRadioGroup,

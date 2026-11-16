@@ -6,8 +6,8 @@ import type {
   ContentScheduleRejection,
   ContentTranslationConflict,
   ContentUnprocessable,
-} from "@/content/conflicts";
-import type { ContentId } from "@/content/ids";
+} from "@vitnode/api/content/conflicts";
+import type { ContentId } from "@vitnode/api/content/ids";
 
 /** One language's row, as the tab strip, the panel and the form read it. */
 export interface TranslationRow {

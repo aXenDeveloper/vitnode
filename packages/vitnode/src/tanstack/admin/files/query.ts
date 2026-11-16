@@ -1,10 +1,10 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { DeleteFileResult } from "@vitnode/api/lib/files/in-use";
 
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
 import type { BulkDeleteFilesResult } from "@/lib/files/bulk-delete";
-import type { DeleteFileResult } from "@/lib/files/in-use";
 import type {
   DeleteAdminFile,
   DeleteAdminFileArgs,

@@ -1,12 +1,12 @@
 import type { Context } from "hono";
 
-import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
 import {
   contentAccessTag,
   contentContainerTag,
   contentPublicListTag,
-} from "@vitnode/core/content";
-import { createContentAccess } from "@vitnode/core/content/server";
+} from "@vitnode/api/content";
+import { createContentAccess } from "@vitnode/api/content/server";
+import { setPageCacheTags } from "@vitnode/api/lib/page-cache";
 import { and, count, eq, inArray, max } from "drizzle-orm";
 
 import {

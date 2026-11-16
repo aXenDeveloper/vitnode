@@ -1,4 +1,4 @@
-import { defineContentType, field } from "@vitnode/core/content";
+import { defineContentType, field } from "@vitnode/api/content";
 
 /**
  * The blog category (`blog.category`, table `blog_categories`): a localized

@@ -1,3 +1,4 @@
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -6,7 +7,6 @@ import type {
   RegisteredBlock,
 } from "../../blocks/types";
 
-import { field } from "../../content/fields";
 import { editableBlockIssue } from "../block-shell/issue";
 import { editableBlockRender } from "./block-render";
 

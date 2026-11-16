@@ -1,3 +1,9 @@
+import {
+  blockDataIssues,
+  safeParseBlockData,
+} from "@vitnode/api/blocks/schema";
+import { resolveBlockVariant } from "@vitnode/api/blocks/variant";
+
 import type {
   AnyBlockInstance,
   BlockAllowedSpec,
@@ -5,9 +11,7 @@ import type {
 } from "../../blocks/types";
 
 import { isBlockAllowed } from "../../blocks/registry";
-import { blockDataIssues, safeParseBlockData } from "../../blocks/schema";
 import { blockDataShapeIssue } from "../../blocks/shape";
-import { resolveBlockVariant } from "../../blocks/variant";
 
 export type EditableBlockIssue =
   | { detail: string; kind: "invalid-data" }

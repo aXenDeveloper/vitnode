@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 
+import { isBlockAreaInstance } from "@vitnode/api/blocks/area";
 import { cn } from "cn";
 import { BanIcon, PlusIcon } from "lucide-react";
 import { createElement, Fragment, memo, useEffect, useMemo } from "react";
@@ -16,7 +17,6 @@ import type {
 import type { EditorZoneMount, EditorZoneState } from "../state/types";
 import type { ZoneDropTone } from "./drop-state";
 
-import { isBlockAreaInstance } from "../../blocks/area";
 import { resolveBlockRegistry } from "../../blocks/registry";
 import { ContentRenderer } from "../../blocks/renderer";
 import { EditableBlockShell } from "../block-shell/block-shell";

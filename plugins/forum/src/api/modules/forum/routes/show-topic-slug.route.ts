@@ -1,7 +1,7 @@
 import { z } from "@hono/zod-openapi";
-import { setPageCacheTags } from "@vitnode/core/api/lib/page-cache";
-import { contentPublicListTag } from "@vitnode/core/content";
-import { createContentAccess } from "@vitnode/core/content/server";
+import { contentPublicListTag } from "@vitnode/api/content";
+import { createContentAccess } from "@vitnode/api/content/server";
+import { setPageCacheTags } from "@vitnode/api/lib/page-cache";
 import { and, eq } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
 

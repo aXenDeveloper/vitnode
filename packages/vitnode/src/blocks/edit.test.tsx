@@ -16,7 +16,7 @@ import type {
 
 import { ContentEditorRuntime } from "./edit";
 import { useContentEditRuntime } from "./edit-context";
-import { BlockError } from "./errors";
+import { BlockError } from "@vitnode/api/blocks/errors";
 import { ContentZone } from "./zone";
 
 const seam = vi.hoisted(() => ({

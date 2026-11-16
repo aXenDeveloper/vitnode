@@ -1,4 +1,4 @@
-import type { EmailApiPlugin } from "@vitnode/core/api/models/email";
+import type { EmailApiPlugin } from "@vitnode/api/models/email";
 
 import { Resend } from "resend";
 

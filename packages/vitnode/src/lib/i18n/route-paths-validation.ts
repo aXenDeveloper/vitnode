@@ -1,11 +1,14 @@
-import type { PluginRouteSegment } from "../../routing/types";
-import type { CompiledRoutePath, RoutePathTranslator } from "./route-paths";
+import type {
+  CompiledRoutePath,
+  RoutePathTranslator,
+} from "@vitnode/api/lib/i18n/route-paths";
+import type { PluginRouteSegment } from "@vitnode/api/routing/types";
 
-import { formatRoutePath, routeMatchKey } from "../../routing/path";
 import {
   compareRouteSpecificity,
   LocaleRoutingConfigError,
-} from "./route-paths";
+} from "@vitnode/api/lib/i18n/route-paths";
+import { formatRoutePath, routeMatchKey } from "@vitnode/api/routing/path";
 
 export type RoutePathTargetKind = "host" | "layout" | "page";
 

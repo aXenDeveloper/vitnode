@@ -1,6 +1,5 @@
+import { createLocaleRouting } from "@vitnode/api/lib/i18n/locale-routing";
 import { describe, expect, it } from "vitest";
-
-import { createLocaleRouting } from "@/lib/i18n/locale-routing";
 
 import { resolveDocumentSecurityHeaders } from "./document-headers";
 import { runLocaleRequest } from "./locale-request";

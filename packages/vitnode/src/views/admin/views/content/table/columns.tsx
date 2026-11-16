@@ -1,9 +1,10 @@
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
+
+import { orderableColumns } from "@vitnode/api/content/registry";
+
 import type { ColumnDef } from "@/components/table/data-table-content";
 import type { ContentColumnSpec } from "@/content/admin/spec";
-import type { AnyContentTypeDefinition } from "@/content/types";
 import type { ContentTypeFrontendRegistration } from "@/lib/plugin";
-
-import { orderableColumns } from "@/content/registry";
 
 import type { ContentRowData, ContentStatusLabels } from "./cells";
 

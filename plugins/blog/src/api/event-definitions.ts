@@ -1,4 +1,4 @@
-import { defineEvent } from "@vitnode/core/api/lib/event-definition";
+import { defineEvent } from "@vitnode/api/lib/event-definition";
 import { z } from "zod";
 
 import { manifest } from "@/manifest.gen";

@@ -1,11 +1,11 @@
 import type { CSSProperties, ReactElement } from "react";
 
+import { contentZoneAttributes } from "@vitnode/api/blocks/zone-meta";
 import { createElement, useCallback, useState } from "react";
 
 import type { ContentEditRuntime, ContentZoneMount } from "./edit-context";
 
 import { sameContentZoneMount } from "./edit-context";
-import { contentZoneAttributes } from "./zone-meta";
 
 const CONTENTS: CSSProperties = { display: "contents" };
 

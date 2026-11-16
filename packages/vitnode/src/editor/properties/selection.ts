@@ -1,3 +1,9 @@
+import { isBlockAreaInstance } from "@vitnode/api/blocks/area";
+import {
+  blockVariants,
+  resolveBlockVariant,
+} from "@vitnode/api/blocks/variant";
+
 import type {
   AnyBlockDefinition,
   AnyBlockInstance,
@@ -6,8 +12,6 @@ import type {
 } from "../../blocks/types";
 import type { EditorNodeRef, VisualEditorState } from "../state/types";
 
-import { isBlockAreaInstance } from "../../blocks/area";
-import { blockVariants, resolveBlockVariant } from "../../blocks/variant";
 import { findNode } from "../state/reducer";
 
 export type EditorSelectionView =

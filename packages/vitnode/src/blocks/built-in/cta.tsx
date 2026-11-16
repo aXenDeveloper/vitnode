@@ -1,19 +1,12 @@
+import { ctaBlockSchema } from "@vitnode/api/blocks/built-in/cta";
 import { MegaphoneIcon } from "lucide-react";
 
 import type { BlockComponentProps, BlockData } from "../types";
 
-import { field } from "../../content/fields";
 import { isValidNavigationHref } from "../../lib/navigation";
 import { defineBlock } from "../define";
 
-const ctaFields = {
-  description: field.textarea({ maxLength: 300, nullable: true }),
-  href: field.text({ maxLength: 500, minLength: 1, required: true }),
-  label: field.text({ maxLength: 80, minLength: 1, required: true }),
-  title: field.text({ maxLength: 160, minLength: 1, required: true }),
-};
-
-type CtaData = BlockData<typeof ctaFields>;
+type CtaData = BlockData<typeof ctaBlockSchema.fields>;
 
 const Cta = ({ data }: BlockComponentProps<CtaData>) => (
   <section className="border-border bg-muted/40 flex flex-col gap-4 rounded-lg border p-6 md:flex-row md:items-center md:justify-between md:p-8">
@@ -40,10 +33,7 @@ const Cta = ({ data }: BlockComponentProps<CtaData>) => (
 );
 
 export const ctaBlock = defineBlock({
+  ...ctaBlockSchema,
   component: Cta,
-  description: "A short call to action with one link.",
-  fields: ctaFields,
   icon: MegaphoneIcon,
-  id: "cta",
-  name: "Call to action",
 });

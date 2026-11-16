@@ -11,7 +11,7 @@ the wrong choice on serverless.
 
 | Cloud          | Self-hosted  | Package                      |
 | :------------- | :----------- | :--------------------------- |
-| ⚠️ Not durable | ✅ Supported | Ships inside `@vitnode/core` |
+| ⚠️ Not durable | ✅ Supported | Ships inside `@vitnode/api` |
 
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { TypeTable } from 'fumadocs-ui/components/type-table'
@@ -20,8 +20,8 @@ import { File, Files, Folder } from 'fumadocs-ui/components/files'
 ## Quick start
 
 ```ts title="src/vitnode.api.config.ts"
-import { LocalStorageAdapter } from '@vitnode/core/api/adapters/storage/local' // [!code ++]
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { LocalStorageAdapter } from '@vitnode/api/adapters/storage/local' // [!code ++]
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 export const vitNodeApiConfig = buildApiConfig({
   storage: {
@@ -40,8 +40,8 @@ on which app runs the API - keep reading.
 
 ### Register the adapter
 
-There is nothing to install - the adapter lives in `@vitnode/core`, which you
-already depend on. Import it and set `storage.adapter`, exactly as in the
+There is nothing to install - the adapter lives in `@vitnode/api`, which your
+API already depends on. Import it and set `storage.adapter`, exactly as in the
 [Quick start](#quick-start) above.
 
 Uploads then land under the current working directory of the API process:
@@ -73,7 +73,7 @@ derived from your `publicPath` instead of hardcoded in two places.
 
 ```ts tab="Standalone API" title="apps/api/src/index.ts"
 import { serveStatic } from '@hono/node-server/serve-static'
-import { storageStaticHeadersMiddleware } from '@vitnode/core/api/middlewares/storage-static.middleware'
+import { storageStaticHeadersMiddleware } from '@vitnode/api/middlewares/storage-static.middleware'
 import { mkdirSync } from 'node:fs'
 
 // [!code ++:15]
@@ -98,7 +98,7 @@ VitNodeAPI({ app, vitNodeApiConfig })
 
 ```ts tab="TanStack Start app" title="src/server/vitnode-api.server.ts"
 import { serveStatic } from '@hono/node-server/serve-static'
-import { storageStaticHeadersMiddleware } from '@vitnode/core/api/middlewares/storage-static.middleware'
+import { storageStaticHeadersMiddleware } from '@vitnode/api/middlewares/storage-static.middleware'
 import { mkdirSync } from 'node:fs'
 
 const createVitNodeApi = () => {

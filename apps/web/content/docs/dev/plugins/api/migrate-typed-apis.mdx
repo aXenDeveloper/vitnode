@@ -10,7 +10,7 @@ Every code block marked **Removed API** shows code that no longer compiles. Ever
 
 ## Before you begin
 
-- Update `@vitnode/core` in the app and in every plugin to the same version.
+- Update `@vitnode/core` and `@vitnode/api` in the app and in every plugin to the same version.
 - Commit or stash your work. The steps below touch most API files of a plugin.
 
 <Steps>
@@ -22,7 +22,7 @@ Every code block marked **Removed API** shows code that no longer compiles. Ever
 `src/api/builders.ts` binds the builders to your plugin. Plugins generated before this change export only `buildModule` and `buildRoute`. Add the other three:
 
 ```ts title="plugins/site-notes/src/api/builders.ts"
-import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
+import { bindApiPlugin } from "@vitnode/api/lib/bind-api-plugin";
 
 import { manifest } from "@/manifest.gen";
 
@@ -101,14 +101,14 @@ Nothing changes in the database. Stored grants, the AdminCP staff editor and the
 
 | Removed                                                                          | Use                                                                    |
 | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `buildQueueTask({ name, handler })` from `@vitnode/core/api/lib/queue`, without `payload` | `buildQueueTask({ name, payload, handler })` from `@/api/builders` |
+| `buildQueueTask({ name, handler })` from `@vitnode/api/lib/queue`, without `payload` | `buildQueueTask({ name, payload, handler })` from `@/api/builders` |
 | `c.get("queue").dispatch({ name, payload, pluginId?, ...options })`              | `c.get("queue").dispatch(task, payload, options?)`                     |
 | `BuildQueueTaskReturn`                                                           | `QueueTaskDefinition`                                                  |
 | `QueueDispatchArgs`                                                              | `QueueDispatchOptions`, the third argument                             |
 | `UntypedQueueTaskOptions`                                                        | `QueueTaskOptions`                                                     |
 
 ```ts title="Removed API"
-import { buildQueueTask } from "@vitnode/core/api/lib/queue";
+import { buildQueueTask } from "@vitnode/api/lib/queue";
 
 const zodPayload = z.object({ noteId: z.number().int().positive() });
 
@@ -154,17 +154,17 @@ A task without data takes `payload: z.object({})`. The task now carries its plug
 
 | Removed                                                                                         | Use                                                                         |
 | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `declare module "@vitnode/core/api/models/events" { interface VitNodeEvents { ... } }`          | `defineEvent({ name, payload })` from `@/api/builders`, in `src/api/events.ts`, plus `buildApiPlugin({ eventDefinitions })` |
+| `declare module "@vitnode/api/models/events" { interface VitNodeEvents { ... } }`          | `defineEvent({ name, payload })` from `@/api/builders`, in `src/api/events.ts`, plus `buildApiPlugin({ eventDefinitions })` |
 | `c.get("events").emit("site-notes.note.created", payload)`                                      | `c.get("events").emit(noteCreatedEvent, payload)`                           |
-| `buildEventListener({ event: "user.created", ... })`                                            | `buildEventListener({ event: userCreatedEvent, ... })`, with `userCreatedEvent` from `@vitnode/core/api/events/users` |
+| `buildEventListener({ event: "user.created", ... })`                                            | `buildEventListener({ event: userCreatedEvent, ... })`, with `userCreatedEvent` from `@vitnode/api/events/users` |
 | `ContentEventsFor<typeof contentType>` grafted onto `VitNodeEvents`, and `contentEventName(id, action)` | `contentEvent(contentType, action)` from `@vitnode/core/content`, registered for you |
-| `VitNodeEventName`, `PaymentEventPayload`, `ContentContainerEventPayload`, `ContentApprovalEventPayload` | `EventPayload<typeof event>` from `@vitnode/core/api/lib/event-definition` |
-| `TypedEventEnvelope<Payload>`, `EventEnvelope<"name">`                                          | `EventEnvelope<Payload>` from `@vitnode/core/api/models/events`             |
-| `TypedEventListenerOptions`                                                                     | `EventListenerOptions` from `@vitnode/core/api/lib/events`                  |
+| `VitNodeEventName`, `PaymentEventPayload`, `ContentContainerEventPayload`, `ContentApprovalEventPayload` | `EventPayload<typeof event>` from `@vitnode/api/lib/event-definition` |
+| `TypedEventEnvelope<Payload>`, `EventEnvelope<"name">`                                          | `EventEnvelope<Payload>` from `@vitnode/api/models/events`             |
+| `TypedEventListenerOptions`                                                                     | `EventListenerOptions` from `@vitnode/api/lib/events`                  |
 | `isEventDefinition`                                                                             | Not needed: every event is a definition                                    |
 
 ```ts title="Removed API"
-declare module "@vitnode/core/api/models/events" {
+declare module "@vitnode/api/models/events" {
   interface VitNodeEvents {
     "site-notes.note.created": { noteId: number; title: string };
   }
@@ -198,7 +198,7 @@ Keep the event **names**: listeners in other plugins and external consumers matc
 What changes at runtime:
 
 - **Every emit is validated.** A payload the schema rejects now throws `EventPayloadValidationError` in the emitting request, and nothing is delivered. Before, an emit by name was not validated. Listener and adapter failures are still reported in `failures`, never thrown.
-- **Dates travel as ISO strings.** An event payload must be JSON, so a date field uses `eventDate()` from `@vitnode/core/api/events/wire`: emit an ISO string, and listeners get a `Date`. Core's only dated payload, `moderation.sanction.applied`, now takes `endsAt` as an ISO string; its listeners still receive a `Date`. Content Engine events emitted with `emitContentEvent` take `Date` values and convert them for you.
+- **Dates travel as ISO strings.** An event payload must be JSON, so a date field uses `eventDate()` from `@vitnode/api/events/wire`: emit an ISO string, and listeners get a `Date`. Core's only dated payload, `moderation.sanction.applied`, now takes `endsAt` as an ISO string; its listeners still receive a `Date`. Content Engine events emitted with `emitContentEvent` take `Date` values and convert them for you.
 - **Delivery is unchanged.** The local adapter runs listeners in the emitting request, once per emit. Events are still not durable and not exactly-once.
 
 </Step>

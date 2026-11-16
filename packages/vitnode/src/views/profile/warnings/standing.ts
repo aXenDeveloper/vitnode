@@ -1,5 +1,9 @@
-import type { RichTextDocument } from "@/content/rich-text/document";
-import type { WarningMessage, WarningStatus } from "@/lib/moderation/warnings";
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
+import type {
+  WarningMessage,
+  WarningStatus,
+} from "@vitnode/api/lib/moderation/warnings";
+
 import type { ReportPerson } from "@/views/moderation/modcp/report-tone";
 import type {
   AccountStatus,

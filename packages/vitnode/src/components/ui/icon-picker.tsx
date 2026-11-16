@@ -1,8 +1,7 @@
+import { humanizeIconName } from "@vitnode/api/lib/emoji-icon";
 import { cn } from "cn";
 import React from "react";
 import { useTranslations } from "use-intl";
-
-import { humanizeIconName } from "@/lib/emoji-icon";
 
 import { loadLucideIconCatalog } from "./icon-catalog";
 import { Input } from "./input";

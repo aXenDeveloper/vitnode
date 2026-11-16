@@ -1,16 +1,15 @@
-import type { Context } from "hono";
-import type { WSContext } from "hono/ws";
-
 import type {
   ContentLiveClientMessage,
   ContentLiveDocRef,
   ContentLiveServerMessage,
-} from "@/content/live/protocol";
-import type { ContentLiveUser } from "@/content/server/live/auth";
-import type { ContentDocumentStore } from "@/content/server/live/documents";
+} from "@vitnode/api/content/live/protocol";
+import type { ContentLiveUser } from "@vitnode/api/content/server/live/auth";
+import type { ContentDocumentStore } from "@vitnode/api/content/server/live/documents";
+import type { Context } from "hono";
+import type { WSContext } from "hono/ws";
 
-import { createContentLiveServer } from "@/content/server/live/server";
-import { wsRegistry } from "@/ws/registry";
+import { createContentLiveServer } from "@vitnode/api/content/server/live/server";
+import { wsRegistry } from "@vitnode/api/ws/registry";
 
 type ServerOptions = NonNullable<Parameters<typeof createContentLiveServer>[0]>;
 

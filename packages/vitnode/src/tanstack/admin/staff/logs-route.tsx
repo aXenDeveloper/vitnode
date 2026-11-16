@@ -1,4 +1,5 @@
-import type { PermissionStaffType } from "@/api/lib/permission-staff";
+import type { PermissionStaffType } from "@vitnode/api/lib/permission-staff";
+
 import type { PluginRouteTranslator } from "@/routing";
 import type { ActivityRouteSearch } from "@/views/activity-logs/activity-search";
 

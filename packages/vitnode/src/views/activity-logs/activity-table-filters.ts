@@ -1,10 +1,13 @@
+import type { AuditStaffLog } from "@vitnode/api/lib/audit/const";
+
+import {
+  AUDIT_AREAS,
+  AUDIT_CORE_PLUGIN_ID,
+} from "@vitnode/api/lib/audit/const";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { FilterDataTable } from "@/components/table/filters";
-import type { AuditStaffLog } from "@/lib/audit/const";
-
-import { AUDIT_AREAS, AUDIT_CORE_PLUGIN_ID } from "@/lib/audit/const";
 
 import type { ActivityFilterOptions } from "./activity-query";
 

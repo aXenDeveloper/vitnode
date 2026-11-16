@@ -1,11 +1,12 @@
 import type { QueryClient } from "@tanstack/react-query";
-
-import { notFound } from "@tanstack/react-router";
-
 import type {
   PermissionStaffScope,
   PermissionStaffType,
-} from "@/api/lib/permission-staff";
+} from "@vitnode/api/lib/permission-staff";
+
+import { notFound } from "@tanstack/react-router";
+import { deepMerge } from "@vitnode/api/lib/i18n/deep-merge";
+
 import type { PluginRouteTranslator } from "@/routing";
 import type {
   StaffPluginGroup,
@@ -16,7 +17,6 @@ import type {
   AdminStaffRow,
 } from "@/views/admin/views/core/staff/staff-query";
 
-import { deepMerge } from "@/lib/i18n/deep-merge";
 import { adminStaffPermissions } from "@/views/admin/views/core/shared/admin-permissions";
 import {
   buildStaffPermissionGroups,

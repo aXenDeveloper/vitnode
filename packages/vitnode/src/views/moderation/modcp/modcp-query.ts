@@ -1,8 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface ModcpReportsFilter {

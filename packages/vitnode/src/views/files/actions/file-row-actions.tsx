@@ -1,15 +1,15 @@
+import type { FileInUse } from "@vitnode/api/lib/files/in-use";
+
+import { manifest } from "@vitnode/api/manifest";
 import { DownloadIcon, LoaderCircleIcon, Trash2Icon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { FileInUse } from "@/lib/files/in-use";
-
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 
 import type { DeleteMyFile } from "../my-files-delete";
 

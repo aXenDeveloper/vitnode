@@ -1,9 +1,8 @@
 import type { QueryKey, UseQueryResult } from "@tanstack/react-query";
 
 import { useQueries } from "@tanstack/react-query";
+import { CONTENT_PUBLIC_MAX_PAGE_SIZE } from "@vitnode/api/content/const";
 import React from "react";
-
-import { CONTENT_PUBLIC_MAX_PAGE_SIZE } from "@/content/const";
 
 import { useSessionQuery } from "../auth/session-query";
 

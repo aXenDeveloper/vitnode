@@ -1,16 +1,16 @@
 import type { Editor } from "@tiptap/react";
 
+import { richTextToHtml } from "@vitnode/api/content/rich-text/html";
+import {
+  editorAttachmentKindOf,
+  editorAttachmentMeta,
+} from "@vitnode/api/lib/shared/editor-uploads";
 import { CopyPlusIcon } from "lucide-react";
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { richTextToHtml } from "@/content/rich-text/html";
-import {
-  editorAttachmentKindOf,
-  editorAttachmentMeta,
-} from "@/lib/editor-uploads";
 
 import type { EditorReusableUpload } from "./reuse";
 

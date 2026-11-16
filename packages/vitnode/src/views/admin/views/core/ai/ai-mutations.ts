@@ -1,12 +1,12 @@
-import type { z } from "zod";
-
 import type {
   zodAiActionSettingsInput,
   zodAiSettings,
-} from "@/api/modules/admin/ai/ai.schema";
+} from "@vitnode/api/modules/admin/ai/ai.schema";
+import type { z } from "zod";
+
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,

@@ -1,13 +1,13 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { deepMerge } from "@vitnode/api/lib/i18n/deep-merge";
 import { Trash2Icon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { IntlProvider, useMessages, useTranslations } from "use-intl";
 
-import type { ContentId } from "@/content/ids";
-
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
-import { deepMerge } from "@/lib/i18n/deep-merge";
 import { IntlProvider as CoreIntlProvider } from "@/lib/i18n/provider";
 
 import type { ContentCommentNode } from "./thread";

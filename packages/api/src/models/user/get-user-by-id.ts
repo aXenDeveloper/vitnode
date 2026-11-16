@@ -1,0 +1,52 @@
+import type { Context } from "hono";
+
+import { eq } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
+
+import { core_files } from "@/database/files";
+import { core_users } from "@/database/users";
+import { storageUrlOf } from "@/lib/storage-url";
+
+const avatarFile = alias(core_files, "user_avatar_file");
+const coverFile = alias(core_files, "user_cover_file");
+
+export const getUserById = async ({ id, c }: { c: Context; id: number }) => {
+  const [user] = await c
+    .get("db")
+    .select({
+      id: core_users.id,
+      email: core_users.email,
+      name: core_users.name,
+      nameCode: core_users.nameCode,
+      firstName: core_users.firstName,
+      lastName: core_users.lastName,
+      phone: core_users.phone,
+      headline: core_users.headline,
+      showRealName: core_users.showRealName,
+      createdAt: core_users.createdAt,
+      newsletter: core_users.newsletter,
+      avatarColor: core_users.avatarColor,
+      emailVerified: core_users.emailVerified,
+      roleId: core_users.roleId,
+      birthday: core_users.birthday,
+      language: core_users.language,
+      timeZone: core_users.timeZone,
+      hideOnlineStatus: core_users.hideOnlineStatus,
+      avatarKey: avatarFile.key,
+      coverKey: coverFile.key,
+    })
+    .from(core_users)
+    .leftJoin(avatarFile, eq(avatarFile.id, core_users.avatarId))
+    .leftJoin(coverFile, eq(coverFile.id, core_users.coverId))
+    .where(eq(core_users.id, id))
+    .limit(1);
+  if (!user) return null;
+
+  const { avatarKey, coverKey, ...rest } = user;
+
+  return {
+    ...rest,
+    avatarUrl: storageUrlOf(c, avatarKey),
+    coverUrl: storageUrlOf(c, coverKey),
+  };
+};

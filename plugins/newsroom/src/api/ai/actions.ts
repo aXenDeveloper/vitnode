@@ -1,6 +1,6 @@
-import { defineAiAction } from "@vitnode/core/api/lib/ai/action";
-import { languageName } from "@vitnode/core/api/lib/ai/language-name";
-import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+import { defineAiAction } from "@vitnode/api/lib/ai/action";
+import { languageName } from "@vitnode/api/lib/ai/language-name";
+import { checkStaffPermission } from "@vitnode/api/lib/check-staff-permission";
 import { z } from "zod";
 
 import { storyContentType } from "@/content/story";

@@ -1,4 +1,4 @@
-import type { DeleteFileResult } from "./in-use";
+import type { DeleteFileResult } from "@vitnode/api/lib/files/in-use";
 
 export interface BulkDeleteFilesResult {
   /** Live content points at these, which `force` does not get past. */

@@ -1,4 +1,4 @@
-import { colorLuminance, normalizeColorString } from "@/lib/colors";
+import { colorLuminance, normalizeColorString } from "@vitnode/api/lib/colors";
 
 export const COLOR_PRESET_ROWS = [
   [

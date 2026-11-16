@@ -1,6 +1,6 @@
-import { useTranslations } from "use-intl";
+import type { PermissionStaffType } from "@vitnode/api/lib/permission-staff";
 
-import type { PermissionStaffType } from "@/api/lib/permission-staff";
+import { useTranslations } from "use-intl";
 
 import {
   STAFF_TYPE_SEGMENT,

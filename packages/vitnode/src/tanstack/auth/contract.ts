@@ -1,10 +1,10 @@
-import { z } from "zod";
-
 import type {
   PasskeyErrorCode,
   zodPasskeyAuthenticationOptionsSchema,
   zodPasskeyAuthenticationResponseSchema,
-} from "@/api/modules/users/passkeys/passkeys.schema";
+} from "@vitnode/api/modules/users/passkeys/passkeys.schema";
+
+import { z } from "zod";
 
 import { RATE_LIMIT_STATUS } from "@/lib/fetcher/rate-limit";
 import { signUpConflictReason } from "@/views/auth/sign-up/form/schema";
@@ -500,4 +500,4 @@ export type ResendEmailVerificationResult = PasswordResetRequestResult;
 export const resendEmailVerificationResultFromStatus =
   passwordResetRequestResultFromStatus;
 
-export { shouldSaveApiCookies } from "@/lib/fetcher/set-cookie";
+export { shouldSaveApiCookies } from "@vitnode/api/lib/fetcher/set-cookie";

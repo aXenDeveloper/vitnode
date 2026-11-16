@@ -27,8 +27,8 @@ You need a plugin your app already loads. This tutorial uses one named `newsroom
 Edit `src/api/builders.ts`. The generated file binds the API builders. Add the Content Engine ones next to them, so no file in your plugin has to spell out its plugin id:
 
 ```ts title="plugins/newsroom/src/api/builders.ts"
-import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
-import { bindContentPlugin } from "@vitnode/core/content/server"; // [!code ++]
+import { bindApiPlugin } from "@vitnode/api/lib/bind-api-plugin";
+import { bindContentPlugin } from "@vitnode/api/content/server"; // [!code ++]
 
 import { manifest } from "@/manifest.gen";
 
@@ -99,7 +99,7 @@ export const articleContentType = defineContentType({
 Create `src/database/articles.ts`. `createContentModel` turns the definition into a Drizzle table, validation schemas and a service:
 
 ```ts title="plugins/newsroom/src/database/articles.ts"
-import { createContentModel } from "@vitnode/core/content/server";
+import { createContentModel } from "@vitnode/api/content/server";
 
 import { articleContentType } from "@/content/article";
 

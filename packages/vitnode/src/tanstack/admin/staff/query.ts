@@ -1,9 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query";
+import type { PermissionStaffType } from "@vitnode/api/lib/permission-staff";
 
 import { useQueryClient } from "@tanstack/react-query";
 import React from "react";
 
-import type { PermissionStaffType } from "@/api/lib/permission-staff";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { CreateStaffFormProps } from "@/views/admin/views/core/staff/create/create-staff-form-content";
 import type { EditStaffFormProps } from "@/views/admin/views/core/staff/edit/edit-staff-form-content";

@@ -1,10 +1,10 @@
-import { fingerprint } from "@/content/hash";
+import { fingerprint } from "@vitnode/api/content/hash";
 import {
   isRichTextDocument,
   isRichTextEmpty,
-} from "@/content/rich-text/document";
-import { richTextToHtml } from "@/content/rich-text/html";
-import { findLangValue } from "@/lib/helpers/multi-lang";
+} from "@vitnode/api/content/rich-text/document";
+import { richTextToHtml } from "@vitnode/api/content/rich-text/html";
+import { findLangValue } from "@vitnode/api/lib/helpers/multi-lang";
 
 export type TranslationFreshness =
   | "edited"

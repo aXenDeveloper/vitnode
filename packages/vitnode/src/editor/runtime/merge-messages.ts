@@ -1,6 +1,6 @@
 import type { AbstractIntlMessages } from "use-intl";
 
-import { deepMerge } from "@/lib/i18n/deep-merge";
+import { deepMerge } from "@vitnode/api/lib/i18n/deep-merge";
 
 export const mergeEditorMessages = (
   page: AbstractIntlMessages,

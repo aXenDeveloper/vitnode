@@ -16,7 +16,7 @@ VitNode provides one shared WebSocket connection at `/api/ws`. Browsers share a 
 Push a transient toast to any signed-in user from any Hono route or service:
 
 ```ts
-import { notificationsChannel } from "@vitnode/core/ws/notifications"
+import { notificationsChannel } from "@vitnode/api/ws/notifications"
 
 c.get("realtime").sendToUser(userId, notificationsChannel, {
   title: "New Comment",
@@ -41,7 +41,7 @@ The user receives an immediate `sonner` toast in all open tabs across devices.
 A channel is a typed id that the server and the browser both import. Create your plugin's channels in one file:
 
 ```ts title="plugins/acme-chat/src/ws/chat.channel.ts"
-import { createWebSocketChannel } from "@vitnode/core/ws/types"
+import { createWebSocketChannel } from "@vitnode/api/ws/types"
 
 export interface MessagePayload {
   roomId: string

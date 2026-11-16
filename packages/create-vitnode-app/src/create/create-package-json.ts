@@ -130,7 +130,7 @@ export const rootScripts = (
  * Running the bootstrap twice is safe *because* of `withMigrationLock`: the
  * second run waits for the first, then finds nothing pending. Without that lock
  * two gates in one monorepo race on `CREATE SCHEMA IF NOT EXISTS drizzle` and one
- * of them fails - measured, not theorised. See `@vitnode/core`'s
+ * of them fails - measured, not theorised. See `@vitnode/api`'s
  * `scripts/prepare-database.ts`.
  */
 export const apiScripts = (
@@ -238,14 +238,11 @@ const rootDevDeps = (oxlint: boolean) => ({
 const apiDeps = (runtime: Runtime) => ({
   ...(runtime === "bun" ? {} : { "@hono/node-server": "^2.0" }),
   "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
-  "@hono/zod-validator": versionsPackageJson.honoZodValidator,
-  "@vitnode/core": "", // filled dynamically
+  "@vitnode/api": "", // filled dynamically
   dotenv: versionsPackageJson.dotenv,
   "drizzle-kit": versionsPackageJson.drizzleKit,
   "drizzle-orm": versionsPackageJson.drizzleOrm,
   hono: versionsPackageJson.hono,
-  // Core's built-in blocks import their icons, and the API loads them.
-  "lucide-react": versionsPackageJson.lucide,
   react: versionsPackageJson.react,
   "react-dom": versionsPackageJson.reactDom,
   "react-email": versionsPackageJson.reactEmail,
@@ -289,8 +286,8 @@ const tanstackWebDeps = {
 
 const singleAppDeps = {
   ...tanstackWebDeps,
+  "@vitnode/api": "",
   "@hono/zod-openapi": versionsPackageJson.honoZodOpenapi,
-  "@hono/zod-validator": versionsPackageJson.honoZodValidator,
   "drizzle-kit": versionsPackageJson.drizzleKit,
   "drizzle-orm": versionsPackageJson.drizzleOrm,
   hono: versionsPackageJson.hono,
@@ -326,8 +323,14 @@ const webDeps = {
   shadcn: versionsPackageJson.shadcn,
 };
 
+/**
+ * The web workspace of a split deployment imports no API code of its own -
+ * core does, as its dependency - but it runs the `vitnode` CLI, which ships in
+ * `@vitnode/api`. A binary is only linked for a direct dependency.
+ */
 const webDevDeps = (oxlint: boolean) => ({
   ...tanstackWebDevDeps,
+  "@vitnode/api": "",
   "class-variance-authority": versionsPackageJson.cva,
   ...withIf(oxlint, oxcDevDeps),
 });
@@ -405,7 +408,7 @@ export const createPackageJSON = async ({
     ),
     dependencies: {
       ...apiDeps(runtime),
-      "@vitnode/core": vitnodeVersionRange,
+      "@vitnode/api": vitnodeVersionRange,
     },
     devDependencies: {
       ...apiDevDeps(oxlint, runtime),
@@ -425,6 +428,7 @@ export const createPackageJSON = async ({
       scripts: singleAppScripts(oxlint, !!docker, appName, deploy),
       dependencies: {
         ...singleAppDeps,
+        "@vitnode/api": vitnodeVersionRange,
         "@vitnode/core": vitnodeVersionRange,
       },
       devDependencies: {
@@ -451,6 +455,7 @@ export const createPackageJSON = async ({
       scripts: webScripts(oxlint, runtime),
       dependencies: {
         ...webDeps,
+        "@vitnode/api": vitnodeVersionRange,
         "@vitnode/core": vitnodeVersionRange,
       },
       devDependencies: {

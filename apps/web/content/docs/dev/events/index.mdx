@@ -34,7 +34,7 @@ export const noteCreatedEvent = defineEvent({
 
 - **Prefix the name with your plugin id**, so it never collides with core's or another plugin's.
 - **Keep the file free of handlers and database code.** Another plugin imports the definition to listen, and should not pull in your routes.
-- **The payload must be a JSON object**, so an adapter can carry it to another process: `z.date()` is a compile error. For a date, use `eventDate()` from `@vitnode/core/api/events/wire`, which takes an ISO string and gives listeners a `Date`. See [Event payloads](/docs/dev/events/schema-events).
+- **The payload must be a JSON object**, so an adapter can carry it to another process: `z.date()` is a compile error. For a date, use `eventDate()` from `@vitnode/api/events/wire`, which takes an ISO string and gives listeners a `Date`. See [Event payloads](/docs/dev/events/schema-events).
 
 </Step>
 
@@ -96,7 +96,7 @@ A missing or mistyped field is a compile error. At runtime the payload is valida
 Create `src/api/lib/note-created.listener.ts`:
 
 ```ts title="plugins/site-notes/src/api/lib/note-created.listener.ts"
-import { buildEventListener } from "@vitnode/core/api/lib/events";
+import { buildEventListener } from "@vitnode/api/lib/events";
 
 import { noteCreatedEvent } from "@/api/events";
 
@@ -145,11 +145,11 @@ Listeners are collected only from top-level modules. On a nested module, such as
 
 ## Listen to core and other plugins
 
-Every event has a definition you import. Core's live in `@vitnode/core/api/events/*`, one file per area, and a plugin exports its own:
+Every event has a definition you import. Core's live in `@vitnode/api/events/*`, one file per area, and a plugin exports its own:
 
 ```ts title="plugins/site-notes/src/api/lib/welcome.listener.ts"
-import { userCreatedEvent } from "@vitnode/core/api/events/users";
-import { buildEventListener } from "@vitnode/core/api/lib/events";
+import { userCreatedEvent } from "@vitnode/api/events/users";
+import { buildEventListener } from "@vitnode/api/lib/events";
 
 import { welcomeMemberTask } from "@/api/tasks/welcome-member.task";
 

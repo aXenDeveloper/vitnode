@@ -1,6 +1,7 @@
+import { PRESENCE_HEARTBEAT_INTERVAL_MS } from "@vitnode/api/lib/user-presence";
+import { manifest } from "@vitnode/api/manifest";
+
 import { fetcherClient } from "@/lib/fetcher-client";
-import { PRESENCE_HEARTBEAT_INTERVAL_MS } from "@/lib/user-presence";
-import { manifest } from "@/manifest";
 
 export type PresenceHeartbeatResult = "failed" | "ok" | "signed-out";
 

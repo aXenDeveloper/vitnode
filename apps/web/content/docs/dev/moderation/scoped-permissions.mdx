@@ -19,7 +19,7 @@ Scopes build on [staff permissions](/docs/dev/working-with-users/staff-permissio
 A scope family tells the AdminCP which resources exist. Create it on the server with `defineModerationScope`:
 
 ```ts title="plugins/newsroom/src/api/lib/moderation.ts"
-import { defineModerationScope } from "@vitnode/core/api/moderation";
+import { defineModerationScope } from "@vitnode/api/moderation";
 import { and, asc, gt, ilike, inArray } from "drizzle-orm";
 
 import { newsroom_categories } from "@/database/categories";
@@ -179,7 +179,7 @@ When a plugin later makes an existing permission scoped, grants saved before tha
 Pass the resource when you check a scoped permission:
 
 ```ts
-import { checkStaffPermission } from "@vitnode/core/api/lib/check-staff-permission";
+import { checkStaffPermission } from "@vitnode/api/lib/check-staff-permission";
 
 // inside a route handler, where `c` is the Hono context
 const allowed = await checkStaffPermission(c, {
@@ -191,4 +191,4 @@ const allowed = await checkStaffPermission(c, {
 });
 ```
 
-A check without `resource` only passes for an unscoped or an **All resources** grant, so older code can never be widened by a selection. When a record moves to another resource, call `syncModerationReportScope(c, { pluginId, targetType, targetId })` from `@vitnode/core/api/moderation` after the move, so its reports follow it. The ModCP also re-reads the scope every time it opens a report.
+A check without `resource` only passes for an unscoped or an **All resources** grant, so older code can never be widened by a selection. When a record moves to another resource, call `syncModerationReportScope(c, { pluginId, targetType, targetId })` from `@vitnode/api/moderation` after the move, so its reports follow it. The ModCP also re-reads the scope every time it opens a report.

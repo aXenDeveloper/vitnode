@@ -1,18 +1,17 @@
-import { z } from "zod";
-
-import type { ContentId } from "@/content/ids";
-import type { ContentPublicPerson } from "@/content/public-person";
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentPublicPerson } from "@vitnode/api/content/public-person";
 import type {
   ContentRevisionDetail,
   ContentRevisionMeta,
-} from "@/content/revisions";
+} from "@vitnode/api/content/revisions";
 import type {
   ContentSchedule,
   ContentScheduleAction,
-} from "@/content/schedules";
+} from "@vitnode/api/content/schedules";
 
-import { contentAnyIdSchema } from "@/content/ids";
-import { zodContentPublicPerson } from "@/content/public-person";
+import { contentAnyIdSchema } from "@vitnode/api/content/ids";
+import { zodContentPublicPerson } from "@vitnode/api/content/public-person";
+import { z } from "zod";
 
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentApiTarget } from "../content-request";

@@ -94,7 +94,7 @@ The fetcher sends it in the `x-vitnode-captcha-token` header, from the browser a
 TypeScript, not the router, knows which routes exist. Each plugin exports a contract type from its `config.api.ts`. The plugin generator already writes it:
 
 ```ts title="plugins/site-notes/src/config.api.ts"
-import type { ApiPluginContract } from '@vitnode/core/api/lib/plugin'
+import type { ApiPluginContract } from '@vitnode/api/lib/plugin'
 
 export type VitNodeApiPlugin = ApiPluginContract<
   ReturnType<typeof siteNotesApiPlugin>
@@ -192,7 +192,7 @@ For records, invalidate the query after a write instead of shortening the stale 
 
 When your app mounts the API in its own process (the default single app does,
 via `configureInProcessApi` from
-`@vitnode/core/lib/fetcher/in-process-api.server`), server-side calls hand the
+`@vitnode/api/lib/fetcher/in-process-api.server`), server-side calls hand the
 request straight to it - no HTTP round trip, no trip through your proxy or
 CDN, same cookies, headers and signed visitor IP. Set `VITNODE_API_URL` to a
 different origin, or pass `origin` on a call, and the request goes over the

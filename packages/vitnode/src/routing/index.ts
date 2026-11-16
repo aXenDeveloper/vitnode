@@ -41,16 +41,6 @@ export {
 } from "./namespaces";
 export { comparePluginRoutes } from "./order";
 
-export type { ParseRoutePathResult } from "./path";
-export {
-  formatRoutePath,
-  parseRoutePath,
-  relativeRouteSegments,
-  routeMatchKey,
-  routeMatchKeyFromTanStackPath,
-  toNextRoutePath,
-  toTanStackRoutePath,
-} from "./path";
 export type {
   PluginRouteComponent,
   PluginRouteDeclaration,
@@ -73,6 +63,16 @@ export {
   lazy,
   page,
 } from "./tree";
+export type { ParseRoutePathResult } from "@vitnode/api/routing/path";
+export {
+  formatRoutePath,
+  parseRoutePath,
+  relativeRouteSegments,
+  routeMatchKey,
+  routeMatchKeyFromTanStackPath,
+  toNextRoutePath,
+  toTanStackRoutePath,
+} from "@vitnode/api/routing/path";
 export type {
   PluginRoute,
   PluginRouteArea,
@@ -82,10 +82,10 @@ export type {
   PluginRouteSearchValidator,
   PluginRouteSegment,
   PluginRouteSource,
-} from "./types";
+} from "@vitnode/api/routing/types";
 export {
   PLUGIN_ROUTE_AREAS,
   PLUGIN_ROUTE_ID_SEPARATOR,
   PLUGIN_ROUTE_KINDS,
   PLUGIN_ROUTE_REQUIREMENTS,
-} from "./types";
+} from "@vitnode/api/routing/types";

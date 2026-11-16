@@ -1,10 +1,10 @@
+import { createAreaInstance } from "@vitnode/api/blocks/area";
+import { createBlockInstance } from "@vitnode/api/blocks/instance";
 import { describe, expect, it } from "vitest";
 
 import type { AnyBlockInstance, ContentNode } from "../../blocks/types";
 import type { EditorZoneMount, VisualEditorState } from "../state/types";
 
-import { createAreaInstance } from "../../blocks/area";
-import { createBlockInstance } from "../../blocks/instance";
 import {
   initialVisualEditorState,
   unsafeZoneIds,

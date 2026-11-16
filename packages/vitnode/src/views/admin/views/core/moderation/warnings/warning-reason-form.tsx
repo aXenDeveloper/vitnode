@@ -1,3 +1,5 @@
+import { multiLangValueSchema } from "@vitnode/api/lib/helpers/multi-lang";
+import { WARNING_LIMITS } from "@vitnode/api/lib/moderation/warnings";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "use-intl";
 import { z } from "zod";
@@ -12,8 +14,6 @@ import { AutoFormNullableNumber } from "@/components/form/fields/nullable-number
 import { AutoFormNumber } from "@/components/form/fields/number";
 import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
-import { multiLangValueSchema } from "@/lib/helpers/multi-lang";
-import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 import { resolveReasonText } from "@/views/moderation/report-reasons-query";
 import { splitSuspensionMinutes } from "@/views/moderation/warnings/warning-format";
 

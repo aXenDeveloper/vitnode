@@ -1,7 +1,6 @@
+import { parseEmojiIcon } from "@vitnode/api/lib/emoji-icon";
 import { cn } from "cn";
 import { useLocale } from "use-intl";
-
-import { parseEmojiIcon } from "@/lib/emoji-icon";
 
 import type { RoleNameEntry } from "./role-name";
 

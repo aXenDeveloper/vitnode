@@ -1,0 +1,46 @@
+import { z } from "zod";
+
+import { buildRoute } from "@/builders";
+import { DEFAULT_AI_MODEL_CAPABILITIES } from "@/lib/ai/capabilities";
+import { providerIdOf, providerModelIdOf } from "@/lib/ai/runner";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+
+import { zodAiModel } from "../ai.schema";
+
+export const listAiModelsAdminRoute = buildRoute({
+  adminStaffPermission: coreStaffPermissions.admin.ai.canView,
+  route: {
+    method: "get",
+    description: "Configured AI models, their capabilities and pricing.",
+    path: "/models",
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({ models: z.array(zodAiModel) }),
+          },
+        },
+        description: "AI models",
+      },
+    },
+  },
+  handler: c => {
+    const models = c.get("core").ai?.models ?? [];
+
+    return c.json(
+      {
+        models: models.map(entry => ({
+          capabilities: [
+            ...(entry.capabilities ?? DEFAULT_AI_MODEL_CAPABILITIES),
+          ],
+          id: entry.id,
+          model: providerModelIdOf(entry.model),
+          name: entry.name,
+          pricing: entry.pricing ?? null,
+          provider: providerIdOf(entry.model),
+        })),
+      },
+      200,
+    );
+  },
+});

@@ -459,7 +459,7 @@ const formSchema = z.object({
 old rows in one transaction.
 
 ```ts title="plugins/{plugin_name}/src/api/routes/create-category.route.ts"
-import { saveLanguageWords } from '@vitnode/core/api/lib/save-language-words'
+import { saveLanguageWords } from '@vitnode/api/lib/save-language-words'
 
 await saveLanguageWords(c, {
   pluginCode: 'blog',

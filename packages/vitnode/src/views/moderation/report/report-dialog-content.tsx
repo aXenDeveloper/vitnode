@@ -1,4 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { MODERATION_LIMITS } from "@vitnode/api/lib/moderation/const";
 import { FlagIcon, RotateCwIcon } from "lucide-react";
 import { AnimatePresence, MotionConfig } from "motion/react";
 import * as m from "motion/react-m";
@@ -24,7 +25,6 @@ import {
 } from "@/components/ui/empty";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MODERATION_LIMITS } from "@/lib/moderation/const";
 
 import type { ModerationFailure } from "../moderation-mutations";
 import type { ReportReasonOption } from "../report-reasons-query";

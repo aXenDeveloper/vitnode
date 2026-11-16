@@ -1,9 +1,8 @@
+import type { LocaleRouting } from "@vitnode/api/lib/i18n/locale-routing";
+import type { VitNodeI18nConfig } from "@vitnode/api/lib/i18n/types";
 import type { AbstractIntlMessages } from "use-intl";
 
-import type { LocaleRouting } from "@/lib/i18n/locale-routing";
-import type { VitNodeI18nConfig } from "@/lib/i18n/types";
-
-import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
+import { localeRoutingFromConfig } from "@vitnode/api/lib/i18n/locale-routing";
 
 /** One language's messages for one set of namespaces. */
 export interface IntlMessages {

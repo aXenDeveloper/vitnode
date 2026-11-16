@@ -1,12 +1,12 @@
 import { queryOptions } from "@tanstack/react-query";
-
-import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
 import {
   PRESENCE_BATCH_MAX_USERS,
   PRESENCE_HEARTBEAT_INTERVAL_MS,
   type UserPresence,
-} from "@/lib/user-presence";
-import { manifest } from "@/manifest";
+} from "@vitnode/api/lib/user-presence";
+import { manifest } from "@vitnode/api/manifest";
+
+import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
 import { fetcher } from "@/tanstack/fetcher";
 
 /** Every presence query - invalidate it after a privacy change. */

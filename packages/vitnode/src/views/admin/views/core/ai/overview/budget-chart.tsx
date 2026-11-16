@@ -6,13 +6,13 @@ import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { scalePoint } from "@tanstack/charts/scales/point";
 import { tooltip } from "@tanstack/charts/tooltip";
 import { portal } from "@tanstack/charts/tooltip/portal";
+import { listAiDays, shiftAiMonth } from "@vitnode/api/lib/ai/overview-range";
 import { curveMonotoneX } from "d3-shape";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import { ChartContainer } from "@/components/ui/chart";
 import { chartTooltipMotion } from "@/components/ui/chart-utils";
-import { listAiDays, shiftAiMonth } from "@/lib/ai/overview-range";
 
 import type { AdminAiOverview } from "../ai-query";
 

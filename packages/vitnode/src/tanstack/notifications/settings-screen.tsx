@@ -1,9 +1,10 @@
+import type { NotificationEmailMode } from "@vitnode/api/lib/notifications/types";
+
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { NotificationEmailMode } from "@/lib/notifications/types";
 import type {
   NotificationPreferencesView,
   NotificationPreferenceTypeView,

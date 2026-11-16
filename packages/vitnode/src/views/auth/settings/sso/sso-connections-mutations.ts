@@ -1,7 +1,11 @@
-import type { SsoConnectionIntent, SsoProfileField } from "@/lib/sso-profile";
+import type {
+  SsoConnectionIntent,
+  SsoProfileField,
+} from "@vitnode/api/lib/shared/sso-profile";
+
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 import { errorCodeOf } from "@/views/auth/sso/error-code-of";
 
 import type { SsoProfileSources } from "./sso-connections-query";

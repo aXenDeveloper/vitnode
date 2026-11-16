@@ -1,7 +1,8 @@
-import type { ContentFieldDescriptor } from "../content/types";
-import type { AnyBlockDefinition } from "./types";
+import type { ContentFieldDescriptor } from "@vitnode/api/content/types";
 
-import { contentInnerFields } from "../content/paths";
+import { contentInnerFields } from "@vitnode/api/content/paths";
+
+import type { AnyBlockDefinition } from "./types";
 
 const typeOfKind = (kind: string): string => {
   switch (kind) {

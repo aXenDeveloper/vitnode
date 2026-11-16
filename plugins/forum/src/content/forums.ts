@@ -1,4 +1,4 @@
-import { defineContentContainer, field } from "@vitnode/core/content";
+import { defineContentContainer, field } from "@vitnode/api/content";
 
 export const forumContainers = defineContentContainer({
   id: "forum.forums",

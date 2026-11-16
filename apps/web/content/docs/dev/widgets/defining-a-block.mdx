@@ -10,7 +10,7 @@ A widget is one `defineWidget` call: a bare id, the fields an editor fills in an
 
 ## One call
 
-```tsx title="plugins/newsroom/src/widgets/callout.tsx (excerpt)"
+```tsx title="src/widgets/callout.tsx (excerpt)"
 import type { WidgetComponentProps, WidgetData } from '@vitnode/core/widgets'
 
 import { field } from '@vitnode/core/content/fields'
@@ -79,6 +79,45 @@ export const blocks = widgets
 ```
 
 [First widget](/docs/dev/widgets/end-to-end#give-the-api-the-same-list) shows the `buildApiPlugin` side. A widget missing from either place does not render in the app, or is refused on every write.
+
+## Keep React out of the API
+
+The API reads only a widget's id, fields and variants, but importing
+`src/widgets.tsx` from `src/config.api.ts` loads every component with them. To
+keep React out of an API process, declare the schema once with
+`defineWidgetSchema` from `@vitnode/api/blocks` and give the API a list of
+schemas:
+
+```ts title="src/widgets/callout.schema.ts"
+import { defineWidgetSchema } from '@vitnode/api/blocks'
+import { field } from '@vitnode/api/content/fields'
+
+export const calloutSchema = defineWidgetSchema({
+  fields: {
+    body: field.textarea({ maxLength: 600, minLength: 1, required: true }),
+    title: field.text({ maxLength: 120, minLength: 1, required: true }),
+  },
+  id: 'callout',
+  name: 'Callout',
+})
+```
+
+Spread the schema into `defineWidget` in the browser, so both sides register
+the same id and fields:
+
+```tsx title="src/widgets/callout.tsx (excerpt)"
+export const calloutWidget = defineWidget({
+  ...calloutSchema,
+  component: Callout,
+  icon: InfoIcon,
+})
+```
+
+Then list the schemas in their own module, for example
+`src/widget-schemas.ts` with `{ pluginId: manifest.id, blocks: [calloutSchema] }`,
+and pass that object to `buildApiPlugin({ blocks })`. The newsroom plugin in
+this repository is a complete example. Passing the full widgets object still
+works; it only loads the components on the server.
 
 ## Give it an icon
 

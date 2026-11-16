@@ -1,9 +1,9 @@
+import type { MultiLangValue } from "@vitnode/api/lib/helpers/multi-lang";
+
 import { queryOptions } from "@tanstack/react-query";
+import { resolveLangValue } from "@vitnode/api/lib/helpers/multi-lang";
+import { manifest } from "@vitnode/api/manifest";
 
-import type { MultiLangValue } from "@/lib/helpers/multi-lang";
-
-import { resolveLangValue } from "@/lib/helpers/multi-lang";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { getIntlRuntime } from "@/tanstack/i18n/runtime";
 

@@ -1,10 +1,10 @@
-import type { PermissionsStaffArgs } from "@vitnode/core/api/lib/permission-staff";
+import type { PermissionsStaffArgs } from "@vitnode/api/lib/permission-staff";
 import type { Context } from "hono";
 
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { CacheModel } from "@vitnode/core/api/lib/cache";
-import { MemoryCacheStore } from "@vitnode/core/api/lib/cache-memory";
-import { writeStaffPermissions } from "@vitnode/core/api/lib/staff-permission-cache";
+import { CacheModel } from "@vitnode/api/lib/cache";
+import { MemoryCacheStore } from "@vitnode/api/lib/cache-memory";
+import { writeStaffPermissions } from "@vitnode/api/lib/staff-permission-cache";
 import { describe, expect, it } from "vitest";
 
 import { createCorrectionRoute } from "./create.route";

@@ -1,5 +1,6 @@
+import type { PluginRouteManifest } from "@vitnode/api/routing/types";
+
 import type { PluginRouteLazyComponent } from "../../routing/tree.js";
-import type { PluginRouteManifest } from "../../routing/types.js";
 import type { ContentUrlSource } from "./content-urls.js";
 import type { HostRoutePath } from "./host-routes.js";
 import type { LocaleRoutePathsConfig } from "./locale-route-paths.js";

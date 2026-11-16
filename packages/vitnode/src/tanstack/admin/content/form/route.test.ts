@@ -1,11 +1,11 @@
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
+
 import { isNotFound } from "@tanstack/react-router";
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
-import type { AnyContentTypeDefinition } from "@/content/types";
-
 import { buildContentFrontendRegistry } from "@/content/admin/registry";
-import { defineContentType } from "@/content/define";
-import { field } from "@/content/fields";
 import { AdminRequestError } from "@/views/admin/admin-request";
 
 import type { AdminScreenContext } from "../../screen";

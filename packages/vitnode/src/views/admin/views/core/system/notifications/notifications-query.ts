@@ -1,9 +1,9 @@
-import { queryOptions } from "@tanstack/react-query";
+import type { NotificationEmailMode } from "@vitnode/api/lib/notifications/types";
 
-import type { NotificationEmailMode } from "@/lib/notifications/types";
+import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";

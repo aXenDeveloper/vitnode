@@ -28,9 +28,9 @@ By default, `c.get("events").emit()` runs the matching listeners inside the emit
 Create `src/lib/events/redis-stream-adapter.ts` in the API app:
 
 ```ts title="apps/api/src/lib/events/redis-stream-adapter.ts"
-import type { EventsApiPlugin } from "@vitnode/core/api/models/events";
+import type { EventsApiPlugin } from "@vitnode/api/models/events";
 
-import { LocalEventsAdapter } from "@vitnode/core/api/adapters/events/local";
+import { LocalEventsAdapter } from "@vitnode/api/adapters/events/local";
 import { createClient } from "redis";
 
 const redis = createClient({ url: process.env.REDIS_URL });
@@ -80,7 +80,7 @@ export const RedisStreamEventsAdapter = (): EventsApiPlugin => ({
 Set `events.adapter` in `buildApiConfig`:
 
 ```ts title="apps/api/src/vitnode.api.config.ts (excerpt)"
-import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { buildApiConfig } from "@vitnode/api/vitnode.config";
 
 import { RedisStreamEventsAdapter } from "./lib/events/redis-stream-adapter";
 
@@ -110,14 +110,14 @@ Each entry has one field, `event`, holding the JSON envelope.
 
 ## Reading the stream elsewhere
 
-Whatever reads `vitnode:events`, with `XREAD` or a consumer group, runs its own code: a search indexer, an analytics pipeline, another app. It does not run VitNode listeners and has no Hono context. To get typed data back, parse `payload` with the event's definition, for example `userCreatedEvent.payload.parse(envelope.payload)` with `userCreatedEvent` from `@vitnode/core/api/events/users`. Date fields use `eventDate()`, which reads the ISO strings back as `Date` values.
+Whatever reads `vitnode:events`, with `XREAD` or a consumer group, runs its own code: a search indexer, an analytics pipeline, another app. It does not run VitNode listeners and has no Hono context. To get typed data back, parse `payload` with the event's definition, for example `userCreatedEvent.payload.parse(envelope.payload)` with `userCreatedEvent` from `@vitnode/api/events/users`. Date fields use `eventDate()`, which reads the ISO strings back as `Date` values.
 
 This adapter forwards each event once, after the local listeners. It stores nothing in VitNode, so an event emitted while Redis is down is not sent later, and an emitter that retries, such as a queue task, can forward the same fact twice. Give consumers the `eventId` to deduplicate on. Work that must happen reliably inside VitNode, with retries, belongs in a [queue task](/docs/dev/advanced/queue) a listener dispatches.
 
 ## The interface
 
 ```ts
-import type { EventEnvelope, EventEmitResult } from "@vitnode/core/api/models/events";
+import type { EventEnvelope, EventEmitResult } from "@vitnode/api/models/events";
 import type { Context } from "hono";
 
 interface EventsApiPlugin {

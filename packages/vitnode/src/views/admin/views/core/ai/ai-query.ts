@@ -1,14 +1,15 @@
-import type { z } from "zod";
-
-import { queryOptions } from "@tanstack/react-query";
-
+import type { AiOverviewPreset } from "@vitnode/api/lib/ai/overview-range";
 import type {
   zodAiAction,
   zodAiModel,
   zodAiSettingsResponse,
-} from "@/api/modules/admin/ai/ai.schema";
-import type { zodAiOverview } from "@/api/modules/admin/ai/routes/overview.route";
-import type { AiOverviewPreset } from "@/lib/ai/overview-range";
+} from "@vitnode/api/modules/admin/ai/ai.schema";
+import type { zodAiOverview } from "@vitnode/api/modules/admin/ai/routes/overview.route";
+import type { z } from "zod";
+
+import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
+
 import type { AiRunStatusValue } from "@/lib/ai/run-status";
 import type {
   AdminTableContract,
@@ -21,7 +22,6 @@ import {
   OPERATIONAL_STALE_TIME,
   RECORD_STALE_TIME,
 } from "@/lib/query-freshness";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import {
   AdminRequestError,

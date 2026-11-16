@@ -1,4 +1,4 @@
-import type { AdminDashboardWidgetLayoutItem } from "@/database/dashboard";
+import type { AdminDashboardWidgetLayoutItem } from "@vitnode/api/database/dashboard";
 
 import type {
   DashboardLayoutItem,

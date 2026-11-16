@@ -1,3 +1,7 @@
+import type { FileRejectionReason } from "@vitnode/api/lib/file-constraints";
+
+import { fileFormatLabels } from "@vitnode/api/lib/file-constraints";
+import { formatBytes } from "@vitnode/api/lib/format-bytes";
 import { cn } from "cn";
 import {
   FileIcon,
@@ -9,8 +13,6 @@ import {
 } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
-
-import type { FileRejectionReason } from "@/lib/file-constraints";
 
 import {
   Attachment,
@@ -25,8 +27,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
-import { fileFormatLabels } from "@/lib/file-constraints";
-import { formatBytes } from "@/lib/format-bytes";
 
 /**
  * A stored file as a file field shows it - what an upload resolves with and

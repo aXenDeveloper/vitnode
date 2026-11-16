@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import type { AiAssistScope } from "@/lib/ai/stream-client";
 
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 
 /**

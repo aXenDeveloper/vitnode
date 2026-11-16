@@ -1,9 +1,10 @@
+import type { PermissionStaffType } from "@vitnode/api/lib/permission-staff";
+
 import { Link } from "@tanstack/react-router";
 import { LockIcon, PencilIcon, ShieldUserIcon, Trash2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { PermissionStaffType } from "@/api/lib/permission-staff";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 import type {
   AdminStaffPage,

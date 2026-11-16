@@ -1,3 +1,4 @@
+import { CONTENT_HIDDEN_REASON_MAX_LENGTH } from "@vitnode/api/content/const";
 import { EyeOffIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
@@ -9,7 +10,6 @@ import {
 } from "@/components/form/auto-form";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
 import { Button } from "@/components/ui/button";
-import { CONTENT_HIDDEN_REASON_MAX_LENGTH } from "@/content/const";
 
 export interface ContentCommentHideFormProps {
   onCancel: () => void;

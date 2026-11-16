@@ -1,5 +1,6 @@
+import type { ContentDrafts } from "@vitnode/api/content/live/http";
+
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type { ContentDrafts } from "@/content/live/http";
 
 import { isReferenceKind } from "@/content/admin/spec";
 

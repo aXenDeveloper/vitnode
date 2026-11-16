@@ -1,4 +1,10 @@
 import { NodeViewWrapper, type ReactNodeViewProps } from "@tiptap/react";
+import { sanitizeRichTextHref } from "@vitnode/api/content/rich-text/elements";
+import {
+  type EditorAttachmentKind,
+  editorAttachmentKindOf,
+  editorAttachmentMeta,
+} from "@vitnode/api/lib/shared/editor-uploads";
 import {
   ExternalLinkIcon,
   FileArchiveIcon,
@@ -12,12 +18,6 @@ import { useTranslations } from "use-intl";
 import { DeletedUpload } from "@/components/rich-text/deleted-upload";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { sanitizeRichTextHref } from "@/content/rich-text/elements";
-import {
-  type EditorAttachmentKind,
-  editorAttachmentKindOf,
-  editorAttachmentMeta,
-} from "@/lib/editor-uploads";
 
 import { finishedEditorUpload } from "../uploads/flow";
 

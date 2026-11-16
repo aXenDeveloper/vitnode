@@ -48,7 +48,7 @@ This creates `src/api/modules/notes/notes.service.ts` next to `notes.module.ts` 
 ```
 
 ```ts title="plugins/site-notes/src/api/modules/notes/notes.service.ts"
-import type { EnvVariablesVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+import type { EnvVariablesVitNode } from "@vitnode/api/middlewares/global.middleware";
 
 /** What the notes service needs, passed in by whoever builds it. */
 export interface NotesServiceDeps {
@@ -78,7 +78,7 @@ The scaffold has no operations yet, so its dependencies are named `_deps` until 
 Rename `_deps` to `{ db }` and replace the comment with operations that take plain, typed arguments. When a route already validates an input with a Zod schema, type the argument with `z.infer<typeof schema>` instead of writing a second interface. This `list` operation reads the `site_notes` table:
 
 ```ts title="plugins/site-notes/src/api/modules/notes/notes.service.ts"
-import type { EnvVariablesVitNode } from "@vitnode/core/api/middlewares/global.middleware";
+import type { EnvVariablesVitNode } from "@vitnode/api/middlewares/global.middleware";
 
 import { desc } from "drizzle-orm";
 

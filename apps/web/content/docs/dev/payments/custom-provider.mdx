@@ -18,7 +18,7 @@ import type {
   PaymentCreateCheckoutArgs,
   PaymentProviderApiPlugin,
   PaymentWebhookEvent,
-} from '@vitnode/core/api/lib/payments/provider'
+} from '@vitnode/api/lib/payments/provider'
 ```
 
 | Member            | Required | Behavior                                                                                                          |
@@ -111,7 +111,7 @@ The route is `POST /api/@vitnode/core/payments/webhooks/{id}` and answers
 
 ## Errors
 
-Throw `PaymentProviderError` from `@vitnode/core/api/lib/payments/errors` for
+Throw `PaymentProviderError` from `@vitnode/api/lib/payments/errors` for
 provider failures. Never put secrets, card data or checkout URLs in the
 message.
 
@@ -141,7 +141,7 @@ Configure as many instances as you need; each gets its own id, secret and
 webhook URL. Core never moves a payment to another instance.
 
 For automated tests, `FakePaymentAdapter` from
-`@vitnode/core/api/adapters/payments/fake` implements the contract in memory.
+`@vitnode/api/adapters/payments/fake` implements the contract in memory.
 Its `settle(checkoutId, outcome)` returns a signed webhook to post, and
 `setUnavailable(true)` simulates an outage. It moves no money, has no hosted
 page and refuses to start when `NODE_ENV=production`.

@@ -1,14 +1,17 @@
-import { describe, expect, it } from "vitest";
+import type { LocaleRoutePaths } from "@vitnode/api/lib/i18n/types";
 
-import { parseRoutePath } from "@/routing/path";
+import {
+  compileRoutePaths,
+  LocaleRoutingConfigError,
+} from "@vitnode/api/lib/i18n/route-paths";
+import { parseRoutePath } from "@vitnode/api/routing/path";
+import { describe, expect, it } from "vitest";
 
 import type {
   RoutePathTarget,
   RoutePathTargetKind,
 } from "./route-paths-validation";
-import type { LocaleRoutePaths } from "./types";
 
-import { compileRoutePaths, LocaleRoutingConfigError } from "./route-paths";
 import { assertRoutePathsMatchRoutes } from "./route-paths-validation";
 
 const target = (

@@ -11,7 +11,7 @@ export const pluginTitleFor = (pluginName: string): string =>
     .join(" ") || pluginName;
 
 export const pluginInfoTemplate = (pluginName: string): string =>
-  `import type { PluginInfo } from "@vitnode/core/lib/plugin-manifest";
+  `import type { PluginInfo } from "@vitnode/api/lib/plugin-manifest";
 
 export const pluginInfo: PluginInfo = {
   title: ${JSON.stringify(pluginTitleFor(pluginName))},
@@ -20,7 +20,7 @@ export const pluginInfo: PluginInfo = {
 `;
 
 export const pluginApiBuildersTemplate = (): string =>
-  `import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
+  `import { bindApiPlugin } from "@vitnode/api/lib/bind-api-plugin";
 
 import { manifest } from "@/manifest.gen";
 
@@ -248,9 +248,9 @@ export const helloModule = buildModule({
 `;
 
 export const pluginApiConfigTemplate = (pluginName: string): string =>
-  `import type { ApiPluginContract } from "@vitnode/core/api/lib/plugin";
+  `import type { ApiPluginContract } from "@vitnode/api/lib/plugin";
 
-import { buildApiPlugin } from "@vitnode/core/api/lib/plugin";
+import { buildApiPlugin } from "@vitnode/api/lib/plugin";
 
 import { manifest } from "@/manifest.gen";
 
@@ -320,7 +320,7 @@ Docs: https://vitnode.com/docs/dev/plugins
 export const pluginGlobalTypesTemplate = (): string =>
   `/// <reference types="use-intl" />
 
-import coreApi from "@vitnode/core/locales/api/en.json" with { type: "json" };
+import coreApi from "@vitnode/api/locales/en.json" with { type: "json" };
 import core from "@vitnode/core/locales/en.json" with { type: "json" };
 import plugin from "./src/locales/en.json" with { type: "json" };
 

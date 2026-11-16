@@ -1,11 +1,11 @@
-import type { ContentId, ContentIdStrategy } from "../ids";
-import type { AnyContentTypeDefinition } from "../types";
+import type { ContentId, ContentIdStrategy } from "@vitnode/api/content/ids";
+import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
 
 import {
   CONTENT_ADMIN_CREATE_SEGMENT,
   CONTENT_ADMIN_EDIT_SEGMENT,
-} from "../const";
-import { parseContentId } from "../ids";
+} from "@vitnode/api/content/const";
+import { parseContentId } from "@vitnode/api/content/ids";
 
 /** What `/admin/content/[...slug]` was actually asked for. */
 export type ContentAdminAction = "create" | "edit" | "list";

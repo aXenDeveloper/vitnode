@@ -1,11 +1,10 @@
-import React from "react";
-
-import type { ContentLivePreviewPayload } from "@/content/live-preview";
+import type { ContentLivePreviewPayload } from "@vitnode/api/content/live-preview";
 
 import {
   CONTENT_LIVE_PREVIEW_MESSAGE,
   parseContentLivePreviewValues,
-} from "@/content/live-preview";
+} from "@vitnode/api/content/live-preview";
+import React from "react";
 
 const editorWindows = (): Window[] => {
   const windows: Window[] = [];

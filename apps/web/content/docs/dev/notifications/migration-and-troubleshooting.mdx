@@ -51,7 +51,7 @@ A reply, a mention, an approval or a finished export belongs in the inbox, becau
 Declare and register one type per kept toast, as in [Publish notifications](/docs/dev/notifications/publishing):
 
 ```ts title="plugins/shop/src/api/lib/notifications.ts"
-import { buildNotificationType } from '@vitnode/core/api/lib/notifications/registry'
+import { buildNotificationType } from '@vitnode/api/lib/notifications/registry'
 import { z } from 'zod'
 
 export const exportReadyNotification = buildNotificationType({

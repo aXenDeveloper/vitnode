@@ -1,16 +1,17 @@
+import type { PermissionStaffType } from "@vitnode/api/lib/permission-staff";
+
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 import { DownloadIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { PermissionStaffType } from "@/api/lib/permission-staff";
 import type { ActivityFilterOptions } from "@/views/activity-logs/activity-query";
 import type { ActivityRouteSearch } from "@/views/activity-logs/activity-search";
 
 import { Button } from "@/components/ui/button";
 import { PageTitle } from "@/components/ui/page-title";
-import { manifest } from "@/manifest";
 import {
   activityPluginNamespaces,
   useActivityStaffFilters,

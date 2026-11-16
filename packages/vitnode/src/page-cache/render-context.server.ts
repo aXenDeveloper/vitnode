@@ -1,6 +1,8 @@
+import {
+  decodePageCacheTags,
+  PAGE_CACHE_TAGS_HEADER,
+} from "@vitnode/api/page-cache/tags";
 import { AsyncLocalStorage } from "node:async_hooks";
-
-import { decodePageCacheTags, PAGE_CACHE_TAGS_HEADER } from "./tags";
 
 /** What one shared render read, collected while it runs. */
 export interface PageCacheRenderState {

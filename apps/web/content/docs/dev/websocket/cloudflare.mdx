@@ -24,14 +24,14 @@ The deploy guide's `wrangler.jsonc` declares the hub. Three of its settings matt
 - **`VITNODE_INSTALLATION_ID`** names the hub: `vitnode:default` for `"default"`. The upgrade and every push read it from the Worker's own configuration, never from the request, so a visitor cannot pick another installation's hub. Give each installation that shares one script its own value.
 - **`new_sqlite_classes`.** The hub keeps room memberships in its SQLite storage so they survive [hibernation](#hibernation-and-costs). A hub without it still works, but never hibernates.
 
-The handshake route stays as in [WebSocket setup](/docs/dev/websocket/setup): `src/server/vitnode-api.server.ts` mounts `/ws` with `upgradeWebSocket` from `@vitnode/core/ws/crossws.server`. The hub runs that route for each handshake, so a refused Origin answers `403` and a rate-limited visitor `429` before any socket exists, and the `Set-Cookie` of a handshake that changed the session reaches the browser on the `101` response.
+The handshake route stays as in [WebSocket setup](/docs/dev/websocket/setup): `src/server/vitnode-api.server.ts` mounts `/ws` with `upgradeWebSocket` from `@vitnode/api/ws/crossws.server`. The hub runs that route for each handshake, so a refused Origin answers `403` and a rate-limited visitor `429` before any socket exists, and the `Set-Cookie` of a handshake that changed the session reaches the browser on the `101` response.
 
 ## Push from HTTP and background work
 
 Route handlers push exactly as on Node. This sends a toast to every open tab of one user, from an ordinary request:
 
 ```ts title="plugins/blog/src/api/modules/posts/routes/publish.route.ts (excerpt)"
-import { notificationsChannel } from "@vitnode/core/ws/notifications"
+import { notificationsChannel } from "@vitnode/api/ws/notifications"
 
 handler: async c => {
   // ...publish the post in the database first
@@ -44,16 +44,16 @@ handler: async c => {
 },
 ```
 
-All five methods work through the hub: `broadcast`, `sendToUser`, `sendToUsers`, `toRoom` and `closeUserConnections`. A push stays fire-and-forget: it is kept alive with the request's `waitUntil`, and a failure is logged, not thrown and not retried. Core modules that import `realtime` from `@vitnode/core/ws/registry` take the same path, and so do Content Engine resets: a discarded draft unloads the hub's copy of the document before the stored one is deleted.
+All five methods work through the hub: `broadcast`, `sendToUser`, `sendToUsers`, `toRoom` and `closeUserConnections`. A push stays fire-and-forget: it is kept alive with the request's `waitUntil`, and a failure is logged, not thrown and not retried. Core modules that import `realtime` from `@vitnode/api/ws/registry` take the same path, and so do Content Engine resets: a discarded draft unloads the hub's copy of the document before the stored one is deleted.
 
 Code that runs outside a request or socket event, such as a `scheduled` handler or a queue consumer, has no scope yet. Open one with `runWithVitNodeCloudflare`:
 
 ```ts title="src/worker-jobs.ts"
-import { runWithVitNodeCloudflare } from '@vitnode/core/cloudflare/edge'
+import { runWithVitNodeCloudflare } from '@vitnode/api/cloudflare/edge'
 import type {
   CloudflareEnv,
   CloudflareExecutionContext,
-} from '@vitnode/core/cloudflare/types'
+} from '@vitnode/api/cloudflare/types'
 
 export const runDigest = async (
   env: CloudflareEnv,

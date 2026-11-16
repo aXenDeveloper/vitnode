@@ -1,7 +1,9 @@
+import type { PersonalInformationFields } from "@vitnode/api/lib/user-personal-information";
+
+import { displayNameOf } from "@vitnode/api/lib/user-personal-information";
 import { AtSignIcon, MailIcon, ShieldIcon, UsersIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import type { PersonalInformationFields } from "@/lib/user-personal-information";
 import type { UserImageEditor } from "@/views/profile/images/types";
 import type { ProfileRole } from "@/views/profile/profile-query";
 
@@ -15,7 +17,6 @@ import {
   FrameTitle,
 } from "@/components/ui/frame";
 import { PageTitle } from "@/components/ui/page-title";
-import { displayNameOf } from "@/lib/user-personal-information";
 import { SelfUserImageDialog } from "@/views/profile/images/self-image-dialog";
 
 import type { UpdatePersonalInformation } from "./personal-update";

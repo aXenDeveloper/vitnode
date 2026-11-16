@@ -1,8 +1,10 @@
-import type { SsoProfileField } from "@/lib/sso-profile";
+import type { SsoProfileField } from "@vitnode/api/lib/shared/sso-profile";
+
+import { manifest } from "@vitnode/api/manifest";
+
 import type { NotificationPreferenceTypeView } from "@/views/notifications/notifications-query";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,

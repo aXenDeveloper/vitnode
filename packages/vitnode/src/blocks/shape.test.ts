@@ -1,8 +1,8 @@
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
 import type { AnyBlockDefinition } from "./types";
 
-import { field } from "../content/fields";
 import { defineBlock } from "./define";
 import { blockDataShapeIssue } from "./shape";
 

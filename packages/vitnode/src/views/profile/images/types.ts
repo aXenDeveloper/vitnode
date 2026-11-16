@@ -2,7 +2,7 @@ import type {
   UserImageKind,
   UserImageLimit,
   UserImagePolicy,
-} from "@/lib/user-images";
+} from "@vitnode/api/lib/shared/user-images";
 
 export type { UserImageKind, UserImageLimit, UserImagePolicy };
 

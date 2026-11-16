@@ -1,0 +1,71 @@
+import { z } from "@hono/zod-openapi";
+import { eq } from "drizzle-orm";
+
+import { buildRoute } from "@/builders";
+import { core_users } from "@/database/users";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+import { removeUserImage, zodUserImageKind } from "@/lib/user-images";
+import { SsoConnectionModel } from "@/models/sso-connection";
+
+import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
+
+export const deleteUserImageAdminRoute = buildRoute({
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
+  route: {
+    method: "delete",
+    description: "Remove a user's avatar or cover (Admin only).",
+    path: "/{id}/images/{kind}",
+    request: {
+      params: z.object({
+        id: z.string().openapi({ example: "1" }),
+        kind: zodUserImageKind.openapi({ example: "avatar" }),
+      }),
+    },
+    responses: {
+      200: {
+        description: "Image removed",
+      },
+      403: {
+        description: "Access Denied",
+      },
+      404: {
+        content: {
+          "application/json": {
+            schema: z.object({ error: z.string() }),
+          },
+        },
+        description: "User not found",
+      },
+    },
+  },
+  handler: async c => {
+    const { id, kind } = c.req.valid("param");
+
+    const userId = Number(id);
+    if (!Number.isInteger(userId)) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    const [user] = await c
+      .get("db")
+      .select({ id: core_users.id })
+      .from(core_users)
+      .where(eq(core_users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    await assertCanEditAdminTarget(c, userId);
+    if (kind === "avatar") {
+      await new SsoConnectionModel(c).clearSourcesAfterManualEdit({
+        fields: ["avatar"],
+        userId: user.id,
+      });
+    }
+    await removeUserImage(c, { kind, userId: user.id });
+
+    return c.body(null, 200);
+  },
+});

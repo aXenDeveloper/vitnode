@@ -1,4 +1,20 @@
+import type { ContentLabelTranslator } from "@vitnode/api/content/admin/labels";
+import type {
+  ContentContainerPolicy,
+  ContentContainerPolicyKey,
+  ContentContainerPolicyOverrides,
+} from "@vitnode/api/content/containers/policies";
+import type { AnyContentContainerDefinition } from "@vitnode/api/content/containers/types";
+
 import { useQuery } from "@tanstack/react-query";
+import { contentNouns } from "@vitnode/api/content/admin/labels";
+import {
+  CONTENT_CONTAINER_POLICY_AUTHOR_EDIT,
+  CONTENT_CONTAINER_POLICY_CREATE,
+  CONTENT_CONTAINER_POLICY_MAX_MINUTES,
+  CONTENT_CONTAINER_POLICY_MODES,
+} from "@vitnode/api/content/containers/const";
+import { zodContentContainerPolicyOverrides } from "@vitnode/api/content/containers/policies";
 import { RotateCwIcon, ShieldAlertIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -9,13 +25,6 @@ import type {
   AutoFormOnSubmit,
   ItemAutoFormComponentProps,
 } from "@/components/form/auto-form";
-import type { ContentLabelTranslator } from "@/content/admin/labels";
-import type {
-  ContentContainerPolicy,
-  ContentContainerPolicyKey,
-  ContentContainerPolicyOverrides,
-} from "@/content/containers/policies";
-import type { AnyContentContainerDefinition } from "@/content/containers/types";
 
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormSheetFooter } from "@/components/form/auto-form-sheet-footer";
@@ -32,14 +41,6 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
-import { contentNouns } from "@/content/admin/labels";
-import {
-  CONTENT_CONTAINER_POLICY_AUTHOR_EDIT,
-  CONTENT_CONTAINER_POLICY_CREATE,
-  CONTENT_CONTAINER_POLICY_MAX_MINUTES,
-  CONTENT_CONTAINER_POLICY_MODES,
-} from "@/content/containers/const";
-import { zodContentContainerPolicyOverrides } from "@/content/containers/policies";
 
 import type {
   AdminContentContainer,

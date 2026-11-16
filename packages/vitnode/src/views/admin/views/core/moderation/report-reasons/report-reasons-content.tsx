@@ -1,3 +1,4 @@
+import { MODERATION_LIMITS } from "@vitnode/api/lib/moderation/const";
 import { FlagIcon, PencilIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -20,7 +21,6 @@ import {
 } from "@/components/ui/sheet";
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { MODERATION_LIMITS } from "@/lib/moderation/const";
 import { resolveReasonText } from "@/views/moderation/report-reasons-query";
 
 import type { ReportReasonFormProps } from "./report-reason-form";

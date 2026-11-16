@@ -1,8 +1,8 @@
+import type { UserPresence } from "@vitnode/api/lib/user-presence";
+
 import { cn } from "cn";
 import { EyeOffIcon } from "lucide-react";
 import { useFormatter, useNow, useTranslations } from "use-intl";
-
-import type { UserPresence } from "@/lib/user-presence";
 
 export type PresenceVariant = "compact" | "dot" | "full";
 

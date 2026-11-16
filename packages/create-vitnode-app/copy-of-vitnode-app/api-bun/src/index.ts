@@ -1,7 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { websocketOriginMiddleware } from "@vitnode/core/api/middlewares/websocket-origin.middleware";
-import { VitNodeAPI } from "@vitnode/core/api/config";
-import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle";
+import { websocketOriginMiddleware } from "@vitnode/api/middlewares/websocket-origin.middleware";
+import { VitNodeAPI } from "@vitnode/api/config";
+import { handleVitNodeWebSocket } from "@vitnode/api/ws/handle";
 import { upgradeWebSocket, websocket } from "hono/bun";
 
 import { vitNodeApiConfig } from "./vitnode.api.config.js";

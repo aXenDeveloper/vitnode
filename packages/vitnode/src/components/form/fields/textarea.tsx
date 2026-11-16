@@ -1,9 +1,10 @@
 import type React from "react";
 
+import { getMultiLangConstraints } from "@vitnode/api/lib/helpers/multi-lang";
+
 import { FormControl, FormMessage } from "@/components/ui/form";
 import { InputGroup, InputGroupTextarea } from "@/components/ui/input-group";
 import { Textarea } from "@/components/ui/textarea";
-import { getMultiLangConstraints } from "@/lib/helpers/multi-lang";
 
 import type { ItemAutoFormComponentProps } from "../auto-form";
 

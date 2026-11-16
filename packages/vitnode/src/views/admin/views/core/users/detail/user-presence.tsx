@@ -1,8 +1,9 @@
+import type { UserPresence } from "@vitnode/api/lib/user-presence";
+
 import { useQuery } from "@tanstack/react-query";
 import { ActivityIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import type { UserPresence } from "@/lib/user-presence";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { DateFormat } from "@/components/date-format";

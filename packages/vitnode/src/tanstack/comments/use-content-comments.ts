@@ -1,4 +1,7 @@
 import type { QueryClient, QueryKey } from "@tanstack/react-query";
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { RichTextDocument } from "@vitnode/api/content/rich-text";
+import type { ContentTarget } from "@vitnode/api/content/target";
 
 import {
   hashKey,
@@ -6,15 +9,11 @@ import {
   useInfiniteQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { zodRichTextDocument } from "@vitnode/api/content/rich-text";
 import React from "react";
 import { z } from "zod";
 
-import type { ContentId } from "@/content/ids";
-import type { RichTextDocument } from "@/content/rich-text";
-import type { ContentTarget } from "@/content/target";
 import type { ContentLiveRefreshStatus } from "@/tanstack/content/live-refresh";
-
-import { zodRichTextDocument } from "@/content/rich-text";
 
 import type {
   ContentPermissions,

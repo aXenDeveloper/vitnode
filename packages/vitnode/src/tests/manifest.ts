@@ -1,4 +1,4 @@
-import type { PluginManifest } from "@/lib/plugin-manifest";
+import type { PluginManifest } from "@vitnode/api/lib/plugin-manifest";
 
 export const testManifest = <const Id extends string>(
   id: Id,

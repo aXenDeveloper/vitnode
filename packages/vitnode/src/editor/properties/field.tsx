@@ -1,10 +1,12 @@
+import type { ContentFieldDescriptor } from "@vitnode/api/content/types";
+
+import { contentInnerFields } from "@vitnode/api/content/paths";
 import { useRef } from "react";
 import { useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "../../components/form/auto-form";
 import type { AnyFormFieldApi } from "../../components/ui/form";
 import type { ContentFormFieldSpec } from "../../content/admin/spec";
-import type { ContentFieldDescriptor } from "../../content/types";
 
 import { AutoFormDateTime } from "../../components/form/fields/date-time";
 import { AutoFormInput } from "../../components/form/fields/input";
@@ -16,7 +18,6 @@ import { AutoFormSwitch } from "../../components/form/fields/switch";
 import { AutoFormTextarea } from "../../components/form/fields/textarea";
 import { Switch } from "../../components/ui/switch";
 import { buildGroupFormSchema } from "../../content/admin/spec";
-import { contentInnerFields } from "../../content/paths";
 import { groupDefaults } from "../instance/defaults";
 
 export interface BlockPropertyFieldProps extends ItemAutoFormComponentProps {

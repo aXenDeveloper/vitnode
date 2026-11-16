@@ -1,23 +1,23 @@
+import type { RichTextDocument } from "@vitnode/api/content/rich-text/document";
+
 import {
   type Editor,
   EditorContent,
   type Extensions,
   useEditor,
 } from "@tiptap/react";
+import { formatBytes } from "@vitnode/api/lib/format-bytes";
+import {
+  EDITOR_ATTACHMENT_MAX_BYTES,
+  EDITOR_IMAGE_MAX_BYTES,
+  isEditorImageMimeType,
+} from "@vitnode/api/lib/shared/editor-uploads";
 import { cn } from "cn";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { RichTextDocument } from "@/content/rich-text/document";
-
 import { useEditorConfig } from "@/components/editor-provider";
-import {
-  EDITOR_ATTACHMENT_MAX_BYTES,
-  EDITOR_IMAGE_MAX_BYTES,
-  isEditorImageMimeType,
-} from "@/lib/editor-uploads";
-import { formatBytes } from "@/lib/format-bytes";
 
 import { TipTapDragHandle } from "./drag-handle";
 import { EditorSkeleton } from "./editor-skeleton";

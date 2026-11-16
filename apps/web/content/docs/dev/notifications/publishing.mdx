@@ -40,7 +40,7 @@ This guide notifies a topic's author when someone replies to their topic. You de
 Create a file for your plugin's notification types:
 
 ```ts title="plugins/acme-forum/src/api/lib/notifications.ts"
-import { buildNotificationType } from '@vitnode/core/api/lib/notifications/registry'
+import { buildNotificationType } from '@vitnode/api/lib/notifications/registry'
 import { z } from 'zod'
 
 export const topicReplyNotification = buildNotificationType({
@@ -93,7 +93,7 @@ The API renders notification text, so the strings belong in your plugin's API me
 Pass the type and the API messages to `buildApiPlugin()`:
 
 ```ts title="plugins/acme-forum/src/config.api.ts"
-import { buildApiPlugin } from '@vitnode/core/api/lib/plugin'
+import { buildApiPlugin } from '@vitnode/api/lib/plugin'
 
 import { topicReplyNotification } from '@/api/lib/notifications' // [!code ++]
 import { topicsModule } from '@/api/modules/topics/topics.module'

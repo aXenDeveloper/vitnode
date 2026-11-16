@@ -1,4 +1,4 @@
-import { bindApiPlugin } from "@vitnode/core/api/lib/bind-api-plugin";
+import { bindApiPlugin } from "@vitnode/api/lib/bind-api-plugin";
 
 import { manifest } from "@/manifest.gen";
 

@@ -1,12 +1,12 @@
-import type { StorageStaticConfig } from "@vitnode/core/api/models/storage";
+import type { StorageStaticConfig } from "@vitnode/api/models/storage";
 
 import { serve, upgradeWebSocket } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { OpenAPIHono } from "@hono/zod-openapi";
-import { VitNodeAPI } from "@vitnode/core/api/config";
-import { storageStaticHeadersMiddleware } from "@vitnode/core/api/middlewares/storage-static.middleware";
-import { websocketOriginMiddleware } from "@vitnode/core/api/middlewares/websocket-origin.middleware";
-import { handleVitNodeWebSocket } from "@vitnode/core/ws/handle";
+import { VitNodeAPI } from "@vitnode/api/config";
+import { storageStaticHeadersMiddleware } from "@vitnode/api/middlewares/storage-static.middleware";
+import { websocketOriginMiddleware } from "@vitnode/api/middlewares/websocket-origin.middleware";
+import { handleVitNodeWebSocket } from "@vitnode/api/ws/handle";
 import { compress } from "hono/compress";
 import { mkdirSync } from "node:fs";
 import { type WebSocket, WebSocketServer } from "ws";

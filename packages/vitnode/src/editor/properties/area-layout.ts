@@ -1,13 +1,13 @@
-import type { BlockAreaInstance, BlockAreaLayout } from "../../blocks/types";
-
-import { areaLayoutWithDefaults } from "../../blocks/area";
+import { areaLayoutWithDefaults } from "@vitnode/api/blocks/area";
 import {
   AREA_ALIGNS,
   AREA_COLUMNS,
   AREA_JUSTIFIES,
   AREA_SPACING_MAX,
   AREA_SPACING_MIN,
-} from "../../blocks/const";
+} from "@vitnode/api/blocks/const";
+
+import type { BlockAreaInstance, BlockAreaLayout } from "../../blocks/types";
 
 export type AreaDeleteMode = "empty" | "holds-blocks";
 

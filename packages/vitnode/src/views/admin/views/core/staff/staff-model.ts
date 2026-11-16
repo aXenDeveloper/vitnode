@@ -2,13 +2,13 @@ import type {
   PermissionsStaffArgs,
   PermissionStaffScope,
   PermissionStaffType,
-} from "@/api/lib/permission-staff";
+} from "@vitnode/api/lib/permission-staff";
 
+import { MODERATION_PERMISSIONS } from "@vitnode/api/lib/moderation/const";
 import {
   staffPermissionKey,
   staffScopeCovers,
-} from "@/api/lib/staff-permission";
-import { MODERATION_PERMISSIONS } from "@/lib/moderation/const";
+} from "@vitnode/api/lib/staff-permission";
 
 /* -------------------------------------------------------------------------- */
 /*                              Where things live                             */

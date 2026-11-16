@@ -1,8 +1,7 @@
+import { manifest } from "@vitnode/api/manifest";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, extname, join, relative } from "node:path";
-
-import { manifest } from "@/manifest";
 
 import type { DevErrorHint } from "./hints";
 import type {

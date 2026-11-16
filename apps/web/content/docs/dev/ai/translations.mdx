@@ -16,7 +16,7 @@ Two helpers make AI translation of Content Engine fields trustworthy. `assertSam
 Asking a model to "preserve the HTML" is not a guarantee. Check it in the action's `parseText()` instead. The blog's translate action accepts plain text or a rich-text document, and compares the HTML it sent with the HTML it got back:
 
 ```ts title="plugins/blog/src/api/ai/actions.ts (excerpt)"
-import { assertSameHtmlStructure } from '@vitnode/core/api/lib/ai/html-structure'
+import { assertSameHtmlStructure } from '@vitnode/api/lib/ai/html-structure'
 import { richTextToHtml } from '@vitnode/core/content/rich-text'
 
 const translateSource = (input: TranslateAiInput) =>

@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { PAYMENT_ERROR_STATUS } from "@vitnode/core/api/lib/payments/errors";
+import { PAYMENT_ERROR_STATUS } from "@vitnode/api/lib/payments/errors";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";

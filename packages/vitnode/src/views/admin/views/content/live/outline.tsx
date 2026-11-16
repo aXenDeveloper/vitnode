@@ -1,11 +1,11 @@
+import type { ContentLiveMember } from "@vitnode/api/content/live/protocol";
+
 import {
   AnimatePresence,
   type Transition,
   useReducedMotion,
 } from "motion/react";
 import * as m from "motion/react-m";
-
-import type { ContentLiveMember } from "@/content/live/protocol";
 
 import { MotionFeatures } from "@/components/motion-features";
 

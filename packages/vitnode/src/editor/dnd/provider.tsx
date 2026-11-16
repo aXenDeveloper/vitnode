@@ -22,6 +22,8 @@ import {
 } from "@dnd-kit/core";
 import { restrictToWindowEdges } from "@dnd-kit/modifiers";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { isBlockAreaInstance } from "@vitnode/api/blocks/area";
+import { parseBlockId } from "@vitnode/api/blocks/namespace";
 import { cn } from "cn";
 import { Columns2Icon } from "lucide-react";
 import { useReducedMotion } from "motion/react";
@@ -54,8 +56,6 @@ import type {
   ResolvedDrop,
 } from "./resolve-drop";
 
-import { isBlockAreaInstance } from "../../blocks/area";
-import { parseBlockId } from "../../blocks/namespace";
 import { getDefaultBlockRegistry } from "../../blocks/registry";
 import { DragLift } from "../../lib/dnd/drag-lift";
 import {

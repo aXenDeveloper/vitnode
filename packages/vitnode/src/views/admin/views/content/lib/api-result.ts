@@ -8,7 +8,7 @@ import {
   parseContentScheduleRejection,
   parseContentTranslationConflict,
   parseContentUnprocessable,
-} from "@/content/conflicts";
+} from "@vitnode/api/content/conflicts";
 
 import type { ContentMutationResult } from "../content-mutation";
 import type { ContentApiRequest } from "../content-request";

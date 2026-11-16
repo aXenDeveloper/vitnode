@@ -1,11 +1,12 @@
+import type { ContentPublicRoutes } from "@vitnode/api/content/server/public-module";
+
+import { defineContentType } from "@vitnode/api/content/define";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expectTypeOf, it } from "vitest";
 import { z } from "zod";
 
-import type { ContentPublicRoutes } from "@/content/server/public-module";
 import type { InferResponseType } from "@/lib/fetcher/types";
 
-import { defineContentType } from "@/content/define";
-import { field } from "@/content/fields";
 import { fetcherClient } from "@/lib/fetcher-client";
 
 describe("fetcherClient", () => {

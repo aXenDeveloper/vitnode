@@ -1,3 +1,6 @@
+import type { ContentAccessAction } from "@vitnode/api/content/access/policy";
+
+import { CONTENT_ACCESS_ACTIONS } from "@vitnode/api/content/access/const";
 import { cn } from "cn";
 import {
   BookOpenIcon,
@@ -7,10 +10,6 @@ import {
 } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
-
-import type { ContentAccessAction } from "@/content/access/policy";
-
-import { CONTENT_ACCESS_ACTIONS } from "@/content/access/const";
 
 export const MATRIX_ROW =
   "grid grid-cols-7 items-center border-b sm:grid-cols-6";

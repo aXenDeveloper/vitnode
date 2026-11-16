@@ -1,3 +1,4 @@
+import { CONTENT_ACCESS_ACTIONS } from "@vitnode/api/content/access/const";
 import { cn } from "cn";
 import { ChevronRightIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
@@ -5,7 +6,6 @@ import { useTranslations } from "use-intl";
 import { Button } from "@/components/ui/button";
 import { DialogClose } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CONTENT_ACCESS_ACTIONS } from "@/content/access/const";
 
 import {
   ContentAccessMatrixHeader,

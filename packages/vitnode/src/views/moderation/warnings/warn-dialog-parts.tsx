@@ -1,12 +1,18 @@
+import type { MultiLangValue } from "@vitnode/api/lib/helpers/multi-lang";
+import type { WarningMessage } from "@vitnode/api/lib/moderation/warnings";
+
 import { useQuery } from "@tanstack/react-query";
+import {
+  isRichTextDocument,
+  isRichTextEmpty,
+} from "@vitnode/api/content/rich-text/document";
+import { richTextToPlainText } from "@vitnode/api/content/rich-text/plain-text";
 import { cn } from "cn";
 import { ArrowRightIcon, PencilLineIcon } from "lucide-react";
 import React from "react";
 import { useFormatter, useLocale, useNow, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
-import type { MultiLangValue } from "@/lib/helpers/multi-lang";
-import type { WarningMessage } from "@/lib/moderation/warnings";
 
 import { Avatar } from "@/components/avatar";
 import { FEEDBACK_TONE_TEXT } from "@/components/ui/feedback-tone";
@@ -21,11 +27,6 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SlidingNumber } from "@/components/ui/sliding-number";
-import {
-  isRichTextDocument,
-  isRichTextEmpty,
-} from "@/content/rich-text/document";
-import { richTextToPlainText } from "@/content/rich-text/plain-text";
 import {
   activeSuspensionOf,
   standingFromModcp,

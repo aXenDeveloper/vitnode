@@ -1,11 +1,11 @@
 import type { ReactElement } from "react";
 
+import { blockVariantLabel } from "@vitnode/api/blocks/variant";
 import { useTranslations } from "use-intl";
 
 import type { AnyBlockDefinition } from "../../blocks/types";
 import type { EditorNodeRef } from "../state/types";
 
-import { blockVariantLabel } from "../../blocks/variant";
 import {
   Select,
   SelectContent,

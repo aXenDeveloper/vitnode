@@ -1,0 +1,72 @@
+import { z } from "@hono/zod-openapi";
+import { eq } from "drizzle-orm";
+import { HTTPException } from "hono/http-exception";
+
+import { buildRoute } from "@/builders";
+import { core_users } from "@/database/users";
+import { userUpdatedEvent } from "@/events/users";
+import { canonicalTimeZone } from "@/lib/notifications/digest-period";
+import { invalidateSessionCacheForUser } from "@/models/session-revoke";
+
+export const updateMyTimeZoneRoute = buildRoute({
+  route: {
+    method: "put",
+    description:
+      "Set the signed-in user's time zone. It decides when their daily and weekly digests arrive; `null` falls back to their language's time zone.",
+    path: "/me/time-zone",
+    request: {
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({
+              timeZone: z
+                .string()
+                .max(64)
+                .nullable()
+                .openapi({ example: "Europe/Warsaw" }),
+            }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: z.object({ timeZone: z.string().nullable() }),
+          },
+        },
+        description: "Saved time zone",
+      },
+      400: { description: "Unknown time zone" },
+      401: { description: "Unauthorized" },
+    },
+  },
+  handler: async c => {
+    const user = c.get("user");
+    if (!user) {
+      throw new HTTPException(401, { message: "Unauthorized" });
+    }
+
+    const requested = c.req.valid("json").timeZone;
+    const timeZone = requested === null ? null : canonicalTimeZone(requested);
+    if (requested !== null && timeZone === null) {
+      throw new HTTPException(400, { message: "Unknown time zone." });
+    }
+
+    await c
+      .get("db")
+      .update(core_users)
+      .set({ timeZone })
+      .where(eq(core_users.id, user.id));
+    await invalidateSessionCacheForUser(c, user.id);
+    await c.get("events").emit(userUpdatedEvent, {
+      email: user.email,
+      name: user.name,
+      userId: user.id,
+    });
+
+    return c.json({ timeZone }, 200);
+  },
+});

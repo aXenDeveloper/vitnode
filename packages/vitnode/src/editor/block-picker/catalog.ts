@@ -1,3 +1,6 @@
+import { BLOCK_WILDCARD } from "@vitnode/api/blocks/const";
+import { parseBlockId } from "@vitnode/api/blocks/namespace";
+
 import type {
   BlockAllowedSpec,
   BlockIcon,
@@ -5,8 +8,6 @@ import type {
   RegisteredBlock,
 } from "../../blocks/types";
 
-import { BLOCK_WILDCARD } from "../../blocks/const";
-import { parseBlockId } from "../../blocks/namespace";
 import { allowedBlocks } from "../../blocks/registry";
 
 export interface BlockCatalogEntry {

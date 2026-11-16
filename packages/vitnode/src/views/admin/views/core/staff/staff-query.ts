@@ -1,9 +1,11 @@
-import { queryOptions } from "@tanstack/react-query";
-
 import type {
   PermissionsStaffArgs,
   PermissionStaffType,
-} from "@/api/lib/permission-staff";
+} from "@vitnode/api/lib/permission-staff";
+
+import { queryOptions } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
+
 import type {
   AdminTableContract,
   AdminTablePage,
@@ -13,7 +15,6 @@ import type {
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 import type { StaffCatalog } from "@/views/admin/views/core/staff/staff-model";
 
-import { manifest } from "@/manifest";
 import {
   AdminRequestError,
   describeAdminParams,

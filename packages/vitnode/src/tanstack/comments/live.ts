@@ -4,17 +4,16 @@ import type {
   QueryClient,
   QueryKey,
 } from "@tanstack/react-query";
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentRefreshSignal } from "@vitnode/api/content/live/refresh";
 
 import { hashKey } from "@tanstack/react-query";
-
-import type { ContentId } from "@/content/ids";
-import type { ContentRefreshSignal } from "@/content/live/refresh";
-
 import {
   CONTENT_REFRESH_DEBOUNCE_MS,
   CONTENT_REFRESH_MAX_WAIT_MS,
   CONTENT_THREAD_BRANCHES_MAX,
-} from "@/content/live/refresh";
+} from "@vitnode/api/content/live/refresh";
+
 import { createCoalescer } from "@/lib/coalesce";
 
 import type {

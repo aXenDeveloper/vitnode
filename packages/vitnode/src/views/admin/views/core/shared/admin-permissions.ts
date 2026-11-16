@@ -1,6 +1,6 @@
-import type { PermissionStaffType } from "@/api/lib/permission-staff";
+import type { PermissionStaffType } from "@vitnode/api/lib/permission-staff";
 
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
 
 const { admin } = coreStaffPermissions;
 

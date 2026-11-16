@@ -1,3 +1,7 @@
+import type { FileInUse } from "@vitnode/api/lib/files/in-use";
+
+import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
+import { manifest } from "@vitnode/api/manifest";
 import {
   CaptionsIcon,
   DownloadIcon,
@@ -7,8 +11,6 @@ import {
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
-
-import type { FileInUse } from "@/lib/files/in-use";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
@@ -23,9 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 
 import type { DeleteAdminFile } from "../files-delete";
 

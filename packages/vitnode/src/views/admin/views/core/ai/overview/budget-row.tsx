@@ -1,4 +1,10 @@
 import { Link } from "@tanstack/react-router";
+import {
+  aiMonthOf,
+  countAiDays,
+  shiftAiMonth,
+} from "@vitnode/api/lib/ai/overview-range";
+import { AI_USAGE_TONE_BAR, aiUsageTone } from "@vitnode/api/lib/ai/usage-tone";
 import { cn } from "cn";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
@@ -6,8 +12,6 @@ import { useTranslations } from "use-intl";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { SlidingNumber } from "@/components/ui/sliding-number";
-import { aiMonthOf, countAiDays, shiftAiMonth } from "@/lib/ai/overview-range";
-import { AI_USAGE_TONE_BAR, aiUsageTone } from "@/lib/ai/usage-tone";
 
 import type { AdminAiOverview } from "../ai-query";
 

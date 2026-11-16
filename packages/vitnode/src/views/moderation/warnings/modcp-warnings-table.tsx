@@ -1,3 +1,4 @@
+import { richTextToPlainText } from "@vitnode/api/content/rich-text/plain-text";
 import { cn } from "cn";
 import { TriangleAlertIcon } from "lucide-react";
 import React from "react";
@@ -8,7 +9,6 @@ import type { ColumnDef } from "@/components/table/data-table-content";
 import { DateFormat } from "@/components/date-format";
 import { ContentDataTable } from "@/components/table/content";
 import { useDataTableUrl } from "@/components/table/navigation";
-import { richTextToPlainText } from "@/content/rich-text/plain-text";
 
 import type { ModcpWarningsPage } from "./warnings-api";
 

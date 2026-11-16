@@ -1,15 +1,15 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { AnyRouter } from "@tanstack/react-router";
+import type { PermissionsStaffArgs } from "@vitnode/api/lib/permission-staff";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
+import { hasStaffPermission } from "@vitnode/api/lib/staff-permission";
 import React from "react";
 
-import type { PermissionsStaffArgs } from "@/api/lib/permission-staff";
 import type { DebugLogsParams } from "@/views/admin/views/core/debug/debug-query";
 import type { DebugSources } from "@/views/admin/views/core/debug/health/health";
 
-import { hasStaffPermission } from "@/api/lib/staff-permission";
 import { cronHealthQueryOptions } from "@/views/admin/views/core/advanced/cron/cron-query";
 import {
   debugLogsQueryOptions,

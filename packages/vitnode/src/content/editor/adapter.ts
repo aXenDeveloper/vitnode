@@ -1,12 +1,13 @@
+import type { EditablePageAdapterArgs } from "@vitnode/api/content/editor/types";
+
+import { ContentEngineError } from "@vitnode/api/content/errors";
+
 import type { ContentNode } from "../../blocks/types";
 import type {
   VisualEditorAdapter,
   VisualEditorSaveResult,
 } from "../../editor/adapter/types";
 import type { VisualEditorSnapshot } from "../../editor/state/types";
-import type { EditablePageAdapterArgs } from "./types";
-
-import { ContentEngineError } from "../errors";
 
 const quoted = (values: readonly string[]): string =>
   values.map(value => JSON.stringify(value)).join(", ");

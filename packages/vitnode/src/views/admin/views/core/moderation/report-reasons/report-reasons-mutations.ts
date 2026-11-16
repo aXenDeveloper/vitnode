@@ -1,7 +1,8 @@
-import type { MultiLangValue } from "@/lib/helpers/multi-lang";
+import type { MultiLangValue } from "@vitnode/api/lib/helpers/multi-lang";
+
+import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
-import { manifest } from "@/manifest";
 import {
   type AdminMutationResult,
   runAdminApiMutation,

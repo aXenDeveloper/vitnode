@@ -1,4 +1,5 @@
-import type { EditablePageLayoutPayload } from "../content/editor/types";
+import type { EditablePageLayoutPayload } from "@vitnode/api/content/editor/types";
+
 import type { VisualEditorSaveInput } from "../editor/adapter/types";
 import type { ContentNode } from "./types";
 

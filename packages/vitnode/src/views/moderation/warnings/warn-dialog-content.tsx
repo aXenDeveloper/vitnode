@@ -1,9 +1,17 @@
+import type { ContentTarget } from "@vitnode/api/content/target";
+
 import { useSelector } from "@tanstack/react-form";
 import {
   keepPreviousData,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import {
+  isRichTextDocument,
+  isRichTextEmpty,
+} from "@vitnode/api/content/rich-text/document";
+import { richTextToPlainText } from "@vitnode/api/content/rich-text/plain-text";
+import { WARNING_LIMITS } from "@vitnode/api/lib/moderation/warnings";
 import { ShieldAlertIcon, TriangleAlertIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -11,7 +19,6 @@ import { useFormatter, useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
-import type { ContentTarget } from "@/content/target";
 
 import { AutoForm, AutoFormSubmitButton } from "@/components/form/auto-form";
 import { AutoFormDateTime } from "@/components/form/fields/date-time";
@@ -31,12 +38,6 @@ import {
 } from "@/components/ui/dialog";
 import { useFormApi } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  isRichTextDocument,
-  isRichTextEmpty,
-} from "@/content/rich-text/document";
-import { richTextToPlainText } from "@/content/rich-text/plain-text";
-import { WARNING_LIMITS } from "@/lib/moderation/warnings";
 
 import type { DocumentDraft, MessageDraft } from "./warn-dialog-parts";
 import type {

@@ -1,3 +1,13 @@
+import {
+  createAreaInstance,
+  isBlockAreaInstance,
+} from "@vitnode/api/blocks/area";
+import {
+  AREA_CHILDREN_DEFAULT_MAX,
+  CONTENT_BLOCKS_ABSOLUTE_MAX,
+} from "@vitnode/api/blocks/const";
+import { createBlockInstance } from "@vitnode/api/blocks/instance";
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -13,17 +23,10 @@ import type {
   VisualEditorState,
 } from "./types";
 
-import { createAreaInstance, isBlockAreaInstance } from "../../blocks/area";
-import {
-  AREA_CHILDREN_DEFAULT_MAX,
-  CONTENT_BLOCKS_ABSOLUTE_MAX,
-} from "../../blocks/const";
-import { createBlockInstance } from "../../blocks/instance";
 import {
   createBlockRegistry,
   setDefaultBlockRegistry,
 } from "../../blocks/registry";
-import { field } from "../../content/fields";
 import { buildInvalidSnapshot, buildSaveInput } from "../adapter/save-input";
 import { classifyZoneEntries } from "../zones/classify";
 import {

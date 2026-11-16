@@ -16,16 +16,16 @@ import. You never register another plugin's definition yourself.
 
 | Domain                                               | Names                                       | Import the definition from                    |
 | :--------------------------------------------------- | :------------------------------------------ | :-------------------------------------------- |
-| [Core](#core-events-vitnodecore)                     | `user.*`, `file.editor.uploaded`, `role.*`  | `@vitnode/core/api/events/users`, `files`, `roles` |
-| [Notifications](#notification-events)                | `notifications.*`                           | `@vitnode/core/api/events/notifications`      |
-| [Moderation](#moderation-events)                     | `moderation.*`                              | `@vitnode/core/api/events/moderation`         |
-| [AI](#ai-events)                                     | `ai.run.*`, `files.alt.updated`             | `@vitnode/core/api/events/ai`, `files`        |
-| [Payments](#payment-events)                          | `payment.*`                                 | `@vitnode/core/api/events/payments`           |
-| [Page layouts](#page-layout-events)                  | `core.page-layout.updated`                  | `@vitnode/core/api/events/pages`              |
+| [Core](#core-events-vitnodecore)                     | `user.*`, `file.editor.uploaded`, `role.*`  | `@vitnode/api/events/users`, `files`, `roles` |
+| [Notifications](#notification-events)                | `notifications.*`                           | `@vitnode/api/events/notifications`      |
+| [Moderation](#moderation-events)                     | `moderation.*`                              | `@vitnode/api/events/moderation`         |
+| [AI](#ai-events)                                     | `ai.run.*`, `files.alt.updated`             | `@vitnode/api/events/ai`, `files`        |
+| [Payments](#payment-events)                          | `payment.*`                                 | `@vitnode/api/events/payments`           |
+| [Page layouts](#page-layout-events)                  | `core.page-layout.updated`                  | `@vitnode/api/events/pages`              |
 | [Content Engine](#content-engine-events)             | `content.<content type id>.<action>`        | `contentEvent()` from `@vitnode/core/content` |
-| [Content containers](#content-container-events)      | `content.container.*`                       | `@vitnode/core/api/events/content-containers` |
-| [Content access](#content-access-events)             | `content.access.updated`                    | `@vitnode/core/api/events/content-access`     |
-| [Content approvals](#content-approval-events)        | `content.approval.*`                        | `@vitnode/core/api/events/content-approvals`  |
+| [Content containers](#content-container-events)      | `content.container.*`                       | `@vitnode/api/events/content-containers` |
+| [Content access](#content-access-events)             | `content.access.updated`                    | `@vitnode/api/events/content-access`     |
+| [Content approvals](#content-approval-events)        | `content.approval.*`                        | `@vitnode/api/events/content-approvals`  |
 | [Blog](#blog-events-vitnodeblog)                     | `blog.post.*`, `blog.category.*`            | `@vitnode/blog/api/event-definitions`         |
 | [Newsroom](#newsroom-events-newsroom)                | `newsroom.correction.filed`                 | `newsroom/api/events`                         |
 
@@ -59,8 +59,8 @@ export const welcomeMemberTask = buildQueueTask({
 ```
 
 ```ts title="plugins/site-notes/src/api/lib/welcome.listener.ts"
-import { userCreatedEvent } from '@vitnode/core/api/events/users' // [!code ++]
-import { buildEventListener } from '@vitnode/core/api/lib/events'
+import { userCreatedEvent } from '@vitnode/api/events/users' // [!code ++]
+import { buildEventListener } from '@vitnode/api/lib/events'
 
 import { welcomeMemberTask } from '@/api/tasks/welcome-member.task'
 
@@ -108,14 +108,14 @@ while the envelope's `pluginId` names the content type's owner (see
 ## Core events (`@vitnode/core`)
 
 Nineteen names. The `user.*` definitions are exported from
-`@vitnode/core/api/events/users` (`userCreatedEvent`, `userUpdatedEvent`,
+`@vitnode/api/events/users` (`userCreatedEvent`, `userUpdatedEvent`,
 `userDeletedEvent`, `userEmailVerifiedEvent`, `userPasswordUpdatedEvent`,
 `userSessionsRevokedEvent`, `userSsoLinkedEvent`, `userSsoUnlinkedEvent`,
 `userSsoPreferencesUpdatedEvent`, `userSsoProfileSyncedEvent`,
 `userPasskeyCreatedEvent`, `userPasskeyUpdatedEvent`, `userPasskeyDeletedEvent`,
 `userAvatarUpdatedEvent`, `userCoverUpdatedEvent`), `file.editor.uploaded` from
-`@vitnode/core/api/events/files` (`fileEditorUploadedEvent`) and `role.*` from
-`@vitnode/core/api/events/roles` (`roleCreatedEvent`, `roleUpdatedEvent`,
+`@vitnode/api/events/files` (`fileEditorUploadedEvent`) and `role.*` from
+`@vitnode/api/events/roles` (`roleCreatedEvent`, `roleUpdatedEvent`,
 `roleDeletedEvent`). Every one except `user.deleted`, which core never emits,
 fires **after** the write it describes has committed.
 
@@ -539,7 +539,7 @@ is already gone, so key the cleanup off `payload.roleId` rather than re-reading
 `core_roles`:
 
 ```ts title="Example: clean up plugin data on role deletion"
-import { roleDeletedEvent } from '@vitnode/core/api/events/roles'
+import { roleDeletedEvent } from '@vitnode/api/events/roles'
 
 export const roleCleanupListener = buildEventListener({
   event: roleDeletedEvent,
@@ -558,7 +558,7 @@ export const roleCleanupListener = buildEventListener({
 
 ## Notification events
 
-Eight names, exported from `@vitnode/core/api/events/notifications`:
+Eight names, exported from `@vitnode/api/events/notifications`:
 `notificationTypeUpdatedEvent`, `notificationsPreferencesUpdatedEvent`,
 `notificationsPreferencesResetEvent`, `notificationsPausedEvent`,
 `notificationsResumedEvent`, `notificationsEmailsCancelledEvent`,
@@ -585,7 +585,7 @@ member is notified.
 
 ## Moderation events
 
-Twenty names, exported from `@vitnode/core/api/events/moderation` as
+Twenty names, exported from `@vitnode/api/events/moderation` as
 `moderation` plus the rest of the name in camelCase with an `Event` suffix:
 `moderationReportCreatedEvent`, `moderationReportReasonReorderedEvent`,
 `moderationSanctionAppliedEvent`, `moderationWarningThresholdDeletedEvent` and
@@ -629,8 +629,8 @@ per-moderator count of resolved reports.
 ## AI events
 
 `aiRunCompletedEvent` and `aiRunFailedEvent` are exported from
-`@vitnode/core/api/events/ai`, and `filesAltUpdatedEvent` from
-`@vitnode/core/api/events/files`. The two `ai.run.*` events are emitted by the shared AI runner (see
+`@vitnode/api/events/ai`, and `filesAltUpdatedEvent` from
+`@vitnode/api/events/files`. The two `ai.run.*` events are emitted by the shared AI runner (see
 [AI errors and limits](/docs/dev/ai/errors#react-to-runs-with-events)). They fire **after** the run was settled,
 so its cost and points are already in the history when a listener reads it. A
 failing listener never breaks the run - or the ALT write.
@@ -655,7 +655,7 @@ image whose ALT text just changed.
 
 ## Payment events
 
-Exported from `@vitnode/core/api/events/payments` as `paymentProcessingEvent`,
+Exported from `@vitnode/api/events/payments` as `paymentProcessingEvent`,
 `paymentSucceededEvent`, `paymentFailedEvent` and `paymentExpiredEvent`, and
 emitted by [payments](/docs/dev/payments) **after** the new status is
 committed, once per status change, whichever path found it: the webhook route,
@@ -684,7 +684,7 @@ clear a cached page that shows the buyer's purchases.
 
 ## Page layout events
 
-One name, exported from `@vitnode/core/api/events/pages` as
+One name, exported from `@vitnode/api/events/pages` as
 `pageLayoutUpdatedEvent`. It fires **after** the layout row
 has been written, and not at all when a save changed nothing.
 
@@ -726,7 +726,7 @@ rearranged which page, or queue a task that rebuilds something derived from the
 page:
 
 ```ts title="Example: audit-log a layout change"
-import { pageLayoutUpdatedEvent } from '@vitnode/core/api/events/pages'
+import { pageLayoutUpdatedEvent } from '@vitnode/api/events/pages'
 
 export const pageLayoutAuditListener = buildEventListener({
   event: pageLayoutUpdatedEvent,
@@ -780,7 +780,7 @@ Listen with `contentEvent(contentType, action)` from `@vitnode/core/content`,
 which returns the definition of `content.<id>.<action>`:
 
 ```ts title="plugins/newsroom/src/api/lib/listeners.ts"
-import { buildEventListener } from '@vitnode/core/api/lib/events'
+import { buildEventListener } from '@vitnode/api/lib/events'
 import { contentEvent } from '@vitnode/core/content'
 
 import { storyContentType } from '@/content/story'
@@ -1268,7 +1268,7 @@ inspects `failures` and retries the whole delivery when it is non-empty.
 
 ## Content container events
 
-Four names, exported from `@vitnode/core/api/events/content-containers` as
+Four names, exported from `@vitnode/api/events/content-containers` as
 `contentContainerCreatedEvent`, `contentContainerUpdatedEvent`,
 `contentContainerMovedEvent` and `contentContainerDeletedEvent`, and shared by every
 [container collection](/docs/content-engine/containers). Each fires **after**
@@ -1331,7 +1331,7 @@ or a delete do not get events of their own.
 a staff channel when a desk is deleted:
 
 ```ts title="Example: announce deleted desks"
-import { contentContainerDeletedEvent } from '@vitnode/core/api/events/content-containers'
+import { contentContainerDeletedEvent } from '@vitnode/api/events/content-containers'
 
 export const deskDeletedListener = buildEventListener({
   event: contentContainerDeletedEvent,
@@ -1349,7 +1349,7 @@ export const deskDeletedListener = buildEventListener({
 
 ## Content access events
 
-One name, exported from `@vitnode/core/api/events/content-access` as
+One name, exported from `@vitnode/api/events/content-access` as
 `contentAccessUpdatedEvent`.
 
 | Event                    | Payload                                                         | Emitted when                                                      |
@@ -1390,8 +1390,8 @@ cache they decide has been expired. Saving the same rules again emits nothing.
 />
 
 ```ts title="plugins/forum/src/api/lib/events.ts"
-import { contentAccessUpdatedEvent } from '@vitnode/core/api/events/content-access'
-import { buildEventListener } from '@vitnode/core/api/lib/events'
+import { contentAccessUpdatedEvent } from '@vitnode/api/events/content-access'
+import { buildEventListener } from '@vitnode/api/lib/events'
 
 export const logForumAccess = buildEventListener({
   event: contentAccessUpdatedEvent,
@@ -1411,7 +1411,7 @@ export const logForumAccess = buildEventListener({
 
 ## Content approval events
 
-Three names, exported from `@vitnode/core/api/events/content-approvals` as
+Three names, exported from `@vitnode/api/events/content-approvals` as
 `contentApprovalSubmittedEvent`, `contentApprovalApprovedEvent` and
 `contentApprovalRejectedEvent`, and shared by every content type
 that waits for [approval](/docs/content-engine/approvals) under a container's
@@ -1488,7 +1488,7 @@ already pending refreshes that submission and emits no approval event.
 rejected, or ping a moderators' channel when the queue grows:
 
 ```ts title="Example: log a rejection"
-import { contentApprovalRejectedEvent } from '@vitnode/core/api/events/content-approvals'
+import { contentApprovalRejectedEvent } from '@vitnode/api/events/content-approvals'
 
 export const approvalRejectedListener = buildEventListener({
   event: contentApprovalRejectedEvent,

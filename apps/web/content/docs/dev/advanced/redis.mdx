@@ -56,7 +56,7 @@ REDIS_PASSWORD=root # [!code ++]
 The starter apps already contain this. Check that `redis` is set in `vitnode.api.config.ts`:
 
 ```ts title="apps/api/src/vitnode.api.config.ts"
-import { buildApiConfig } from "@vitnode/core/vitnode.config";
+import { buildApiConfig } from "@vitnode/api/vitnode.config";
 
 export const vitNodeApiConfig = buildApiConfig({
   // [!code ++:3]

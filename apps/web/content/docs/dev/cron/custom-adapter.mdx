@@ -22,7 +22,7 @@ trace header, or the platform hands you a trigger of its own.
 The shortest adapter that works is a timer:
 
 ```ts title="src/adapters/interval-cron.adapter.ts"
-import { type CronAdapter, handleCronJobs } from '@vitnode/core/api/lib/cron'
+import { type CronAdapter, handleCronJobs } from '@vitnode/api/lib/cron'
 
 export const IntervalCronAdapter = (): CronAdapter => ({
   schedule() {
@@ -34,7 +34,7 @@ export const IntervalCronAdapter = (): CronAdapter => ({
 ```
 
 ```ts title="src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 import { IntervalCronAdapter } from './adapters/interval-cron.adapter' // [!code ++]
 
@@ -108,7 +108,7 @@ The official package is the reference implementation, and it is short enough to
 read in one go:
 
 ```ts title="src/adapters/node-cron.adapter.ts"
-import { type CronAdapter, handleCronJobs } from '@vitnode/core/api/lib/cron'
+import { type CronAdapter, handleCronJobs } from '@vitnode/api/lib/cron'
 import { schedule } from 'node-cron'
 
 export const NodeCronAdapter = (): CronAdapter => {
@@ -137,7 +137,7 @@ its signature is yours.
 ### Register it in the API config
 
 ```ts title="src/vitnode.api.config.ts"
-import { buildApiConfig } from '@vitnode/core/vitnode.config'
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
 
 import { NodeCronAdapter } from './adapters/node-cron.adapter' // [!code ++]
 

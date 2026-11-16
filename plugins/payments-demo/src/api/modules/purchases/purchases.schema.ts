@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { PAYMENT_STATUSES } from "@vitnode/core/database/payments";
+import { PAYMENT_STATUSES } from "@vitnode/api/database/payments";
 
 export const zodPurchase = z.object({
   amount: z.number(),

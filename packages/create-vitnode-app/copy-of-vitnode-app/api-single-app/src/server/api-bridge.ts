@@ -1,7 +1,7 @@
 import {
   type ExecutionContext,
   executionContextOf,
-} from "@vitnode/core/api/lib/after-response";
+} from "@vitnode/api/lib/after-response";
 
 export interface ApiBridgeEnv {
   clientAddress?: string;

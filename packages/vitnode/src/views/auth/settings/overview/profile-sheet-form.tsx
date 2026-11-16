@@ -1,4 +1,14 @@
+import type { PersonalInformationFields } from "@vitnode/api/lib/user-personal-information";
+
 import { useSelector } from "@tanstack/react-form";
+import {
+  PERSONAL_INFORMATION_TEXT_FIELDS,
+  USER_FIRST_NAME_MAX_LENGTH,
+  USER_HEADLINE_MAX_LENGTH,
+  USER_LAST_NAME_MAX_LENGTH,
+  USER_PHONE_MAX_LENGTH,
+  USER_PHONE_PATTERN,
+} from "@vitnode/api/lib/user-personal-information";
 import { PhoneIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
@@ -6,7 +16,6 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import type { AutoFormOnSubmit } from "@/components/form/auto-form";
-import type { PersonalInformationFields } from "@/lib/user-personal-information";
 
 import { AutoForm } from "@/components/form/auto-form";
 import { AutoFormSheetFooter } from "@/components/form/auto-form-sheet-footer";
@@ -16,14 +25,6 @@ import { AutoFormSwitch } from "@/components/form/fields/switch";
 import { Button } from "@/components/ui/button";
 import { useFormApi } from "@/components/ui/form";
 import { InputGroupAddon } from "@/components/ui/input-group";
-import {
-  PERSONAL_INFORMATION_TEXT_FIELDS,
-  USER_FIRST_NAME_MAX_LENGTH,
-  USER_HEADLINE_MAX_LENGTH,
-  USER_LAST_NAME_MAX_LENGTH,
-  USER_PHONE_MAX_LENGTH,
-  USER_PHONE_PATTERN,
-} from "@/lib/user-personal-information";
 
 import type { UpdatePersonalInformation } from "./personal-update";
 import type { ProfileSummaryUser } from "./profile-summary";

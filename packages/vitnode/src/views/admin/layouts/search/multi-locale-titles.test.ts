@@ -1,9 +1,12 @@
+import {
+  loadMessages,
+  resetMessagesCache,
+} from "@vitnode/api/lib/i18n/load-messages";
+import { manifest } from "@vitnode/api/manifest";
 import { createTranslator } from "use-intl";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { loadMessages, resetMessagesCache } from "@/lib/i18n/load-messages";
 import { buildMessagesSources } from "@/lib/i18n/sources";
-import { manifest } from "@/manifest";
 
 import { buildSearchText, matchesAdminNavItem } from "./flatten-nav";
 

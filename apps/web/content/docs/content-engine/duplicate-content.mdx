@@ -121,10 +121,10 @@ The response is `201` with `{ id, sourceId, row, locales, skippedLocales }`: the
 
 `service(c).duplicate(sourceId, options)` and `editorialService(c, { pluginId }).duplicate(sourceId, { actor, ...options })` take the same `overrides` and `translations`, plus `tx`. Both exist only when duplication is on, and both return `null` when the source does not exist.
 
-The services do not emit events or index the copy. Run `contentDuplicateEffects` from `@vitnode/core/content/server` after the transaction commits, as the generated route does:
+The services do not emit events or index the copy. Run `contentDuplicateEffects` from `@vitnode/api/content/server` after the transaction commits, as the generated route does:
 
 ```ts
-import { contentDuplicateEffects, resolveContentActor } from "@vitnode/core/content/server";
+import { contentDuplicateEffects, resolveContentActor } from "@vitnode/api/content/server";
 
 const { editorialService } = postContent;
 if (!editorialService) throw new Error("Articles have no editorial features.");

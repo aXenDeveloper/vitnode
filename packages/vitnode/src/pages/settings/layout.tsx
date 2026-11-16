@@ -1,3 +1,5 @@
+import { settingsPage } from "@vitnode/api/modules/pages/settings-page";
+
 import type { PluginRoutePageProps } from "@/routing";
 
 import { middlewareConfigQueryOptions } from "@/tanstack/auth/middleware-config";
@@ -6,7 +8,6 @@ import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
 import { SettingsLayoutContent } from "@/tanstack/settings/layout";
 import { loadPageWidgets } from "@/tanstack/widgets";
 import { aiUsageQueryOptions } from "@/views/auth/settings/ai/ai-usage-query";
-import { settingsPage } from "@/views/auth/settings/widgets/settings-page";
 
 interface SettingsLayoutData {
   userId: number;

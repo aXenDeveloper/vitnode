@@ -311,7 +311,7 @@ From `@vitnode/core/tanstack/content`, for pages in the browser:
 
 ## Server API
 
-Use these from `@vitnode/core/content/server` when a plugin needs its own write route, such as "write a letter from a question", with the same ownership, authorization and effects as the generated routes.
+Use these from `@vitnode/api/content/server` when a plugin needs its own write route, such as "write a letter from a question", with the same ownership, authorization and effects as the generated routes.
 
 ### `createContentPublicWriteService`
 
@@ -344,7 +344,7 @@ import { ContentPublicWriteDenied } from "@vitnode/core/content";
 import {
   createContentPublicWriteService,
   withHttpErrors,
-} from "@vitnode/core/content/server";
+} from "@vitnode/api/content/server";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 

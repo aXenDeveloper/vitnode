@@ -11,7 +11,7 @@ Every VitNode event is defined with a payload schema. `c.get("events").emit(even
 Most schemas have the same input and output. They differ when the schema transforms a value, and the one transform core uses is for dates. The JSON wire has no date type, so a date field takes an ISO string and gives listeners a `Date`:
 
 ```ts title="plugins/site-notes/src/api/events.ts"
-import { eventDate } from "@vitnode/core/api/events/wire";
+import { eventDate } from "@vitnode/api/events/wire";
 import { z } from "zod";
 
 import { defineEvent } from "@/api/builders";
@@ -70,13 +70,13 @@ When an event crosses a process boundary, parse the payload on the receiving sid
 
 | Export                                                                                   | Behavior                                                                                                                                                            |
 | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `defineEvent({ name, payload })` from `@/api/builders`                                   | Declares an event owned by your plugin. Names use letters, digits and `. _ - : / @`, up to 200 characters. The unbound version in `@vitnode/core/api/lib/event-definition` also takes `pluginId` |
-| `EventDefinition`, `EventInput<typeof event>`, `EventPayload<typeof event>`              | The definition type, what `emit` accepts and what listeners receive. From `@vitnode/core/api/lib/event-definition`                                                  |
+| `defineEvent({ name, payload })` from `@/api/builders`                                   | Declares an event owned by your plugin. Names use letters, digits and `. _ - : / @`, up to 200 characters. The unbound version in `@vitnode/api/lib/event-definition` also takes `pluginId` |
+| `EventDefinition`, `EventInput<typeof event>`, `EventPayload<typeof event>`              | The definition type, what `emit` accepts and what listeners receive. From `@vitnode/api/lib/event-definition`                                                  |
 | `EventPayloadValidationError`                                                            | Thrown by `emit` for an invalid payload. `reason` names paths and codes                                                                                            |
 | `EventDefinitionError`                                                                   | Two different definitions for one name, a plugin registering another plugin's definition, or an invalid name. Thrown at startup, or by `emit` for a conflicting definition |
-| `eventDate()` from `@vitnode/core/api/events/wire`                                       | A date field: ISO string in, `Date` out                                                                                                                             |
-| `buildEventListener({ event, name, handler, description? })` from `@vitnode/core/api/lib/events` | A listener for one definition. Options type: `EventListenerOptions`                                                                                         |
-| `EventEnvelope<Payload>`, `EventsApiPlugin` from `@vitnode/core/api/models/events`       | What listeners and adapters receive, and the adapter interface                                                                                                      |
+| `eventDate()` from `@vitnode/api/events/wire`                                       | A date field: ISO string in, `Date` out                                                                                                                             |
+| `buildEventListener({ event, name, handler, description? })` from `@vitnode/api/lib/events` | A listener for one definition. Options type: `EventListenerOptions`                                                                                         |
+| `EventEnvelope<Payload>`, `EventsApiPlugin` from `@vitnode/api/models/events`       | What listeners and adapters receive, and the adapter interface                                                                                                      |
 | `contentEvent(contentType, action)` from `@vitnode/core/content`                         | A Content Engine event definition                                                                                                                                   |
 
 `buildApiPlugin({ eventDefinitions })` takes the plugin's own definitions. A definition used by a listener is known without it, so another plugin's event never has to be registered to be listened to.

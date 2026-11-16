@@ -1,8 +1,8 @@
+import { countAiDays } from "@vitnode/api/lib/ai/overview-range";
 import React from "react";
 import { useFormatter, useLocale, useTranslations } from "use-intl";
 
 import { formatAiUsd } from "@/lib/ai/format-points";
-import { countAiDays } from "@/lib/ai/overview-range";
 
 import type { AdminAiOverview } from "../ai-query";
 import type { AiMetricFormat } from "./overview-metrics";

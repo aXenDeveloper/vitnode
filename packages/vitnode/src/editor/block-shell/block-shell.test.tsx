@@ -12,7 +12,7 @@ import type { VisualEditorState } from "../state/types";
 
 import { defineBlock } from "../../blocks/define";
 import { createBlockRegistry } from "../../blocks/registry";
-import { field } from "../../content/fields";
+import { field } from "@vitnode/api/content/fields";
 import {
   initialVisualEditorState,
   unsafeZoneIds,

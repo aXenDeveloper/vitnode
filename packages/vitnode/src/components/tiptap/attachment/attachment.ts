@@ -1,11 +1,10 @@
 import { mergeAttributes, Node, ReactNodeViewRenderer } from "@tiptap/react";
-
-import { sanitizeRichTextHref } from "@/content/rich-text/elements";
+import { sanitizeRichTextHref } from "@vitnode/api/content/rich-text/elements";
 import {
   editorAttachmentKindOf,
   editorAttachmentMeta,
   editorPositiveIntegerOf,
-} from "@/lib/editor-uploads";
+} from "@vitnode/api/lib/shared/editor-uploads";
 
 import { EDITOR_ATTACHMENT_NODE } from "../uploads/flow";
 import { EditorAttachmentNodeView } from "./attachment-node-view";

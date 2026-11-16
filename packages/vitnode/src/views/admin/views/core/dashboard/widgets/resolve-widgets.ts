@@ -1,10 +1,11 @@
-import type { StaffPermissionSet } from "@/api/lib/permission-staff";
+import type { StaffPermissionSet } from "@vitnode/api/lib/permission-staff";
+
+import { hasStaffPermission } from "@vitnode/api/lib/staff-permission";
+import { staffPermissionArgs } from "@vitnode/api/lib/staff-permissions";
+import { manifest } from "@vitnode/api/manifest";
+
 import type { AdminDashboardWidget } from "@/lib/plugin";
 import type { VitNodeConfig } from "@/vitnode.config";
-
-import { hasStaffPermission } from "@/api/lib/staff-permission";
-import { staffPermissionArgs } from "@/lib/staff-permissions";
-import { manifest } from "@/manifest";
 
 import type { ResolvedDashboardWidget } from "./types";
 

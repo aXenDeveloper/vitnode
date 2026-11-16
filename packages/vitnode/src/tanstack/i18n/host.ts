@@ -1,4 +1,4 @@
-import { normalizeHost } from "@/lib/i18n/locale-domains";
+import { normalizeHost } from "@vitnode/api/lib/i18n/locale-domains";
 
 export const requestHostOf = ({
   url,

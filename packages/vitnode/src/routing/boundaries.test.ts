@@ -48,7 +48,15 @@ describe("the routing layer is framework-neutral", () => {
   it("imports nothing but its own modules", () => {
     const offenders = files.flatMap(path =>
       importsFrom(path)
-        .filter(specifier => !specifier.startsWith("."))
+        // Its path and type contracts and the page-cache policy live in
+        // `@vitnode/api` - the API reads them too - and are framework-neutral
+        // by the same rule.
+        .filter(
+          specifier =>
+            !specifier.startsWith(".") &&
+            !specifier.startsWith("@vitnode/api/routing/") &&
+            specifier !== "@vitnode/api/page-cache/policy",
+        )
         .map(specifier => `${relative(here, path)} -> ${specifier}`),
     );
 

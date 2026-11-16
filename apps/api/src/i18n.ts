@@ -1,4 +1,4 @@
-import type { VitNodeI18nConfig } from "@vitnode/core/lib/i18n/types";
+import type { VitNodeI18nConfig } from "@vitnode/api/lib/i18n/types";
 
 export const i18n = {
   defaultLocale: "en",

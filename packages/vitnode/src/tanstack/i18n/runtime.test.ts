@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import type { VitNodeI18nConfig } from "@vitnode/api/lib/i18n/types";
 
-import type { VitNodeI18nConfig } from "@/lib/i18n/types";
+import { describe, expect, it } from "vitest";
 
 import type { IntlMessages } from "./runtime";
 

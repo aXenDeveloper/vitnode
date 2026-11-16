@@ -1,9 +1,9 @@
+import { isContentPublished } from "@vitnode/api/content/publication";
 import { CircleCheckIcon, FileClockIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
-import { isContentPublished } from "@/content/publication";
 
 import { ContentHiddenBadge } from "../lib/hidden-badge";
 

@@ -1,4 +1,7 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import { Link, useRouterState } from "@tanstack/react-router";
+import { zodRichTextDocument } from "@vitnode/api/content/rich-text";
 import { cn } from "cn";
 import {
   ChevronDownIcon,
@@ -14,8 +17,6 @@ import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import type { ContentId } from "@/content/ids";
-
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
 import { RichTextContent } from "@/components/rich-text/rich-text-content";
@@ -30,7 +31,6 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserFormat } from "@/components/user-format";
-import { zodRichTextDocument } from "@/content/rich-text";
 import { useRevealHashTarget } from "@/hooks/use-reveal-hash-target";
 
 import type { ContentCommentNode, ContentCommentTreeNode } from "./thread";

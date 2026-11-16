@@ -1,3 +1,9 @@
+import type { RichTextNode } from "@vitnode/api/content/rich-text/document";
+import type {
+  ApiEndpoint,
+  ApiModuleContract,
+} from "@vitnode/api/lib/fetcher/contract";
+import type { ApiPluginRegistry } from "@vitnode/api/lib/fetcher/registry";
 import type { ResponseFormat } from "hono/types";
 import type { StatusCode, SuccessStatusCode } from "hono/utils/http-status";
 import type {
@@ -6,11 +12,6 @@ import type {
   JSONValue,
 } from "hono/utils/types";
 import type { z } from "zod";
-
-import type { RichTextNode } from "@/content/rich-text/document";
-
-import type { ApiEndpoint, ApiModuleContract } from "./contract";
-import type { ApiPluginRegistry } from "./registry";
 
 interface ClientResponse<
   T,

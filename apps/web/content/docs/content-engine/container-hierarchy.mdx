@@ -70,7 +70,7 @@ A collection holds at most 5,000 containers (`limitReached`, 409). The whole tre
 
 ```ts title="src/api/modules/desks/routes/archive.route.ts"
 import { contentContainerAdminStaffPermission } from "@vitnode/core/content";
-import { createContentContainerService } from "@vitnode/core/content/server";
+import { createContentContainerService } from "@vitnode/api/content/server";
 import { HTTPException } from "hono/http-exception";
 import { z } from "zod";
 
@@ -147,8 +147,8 @@ Each successful write emits one event after its transaction commits. A write tha
 Every collection shares the same names, so filter on `definitionId`. This listener logs desk moves:
 
 ```ts title="src/api/lib/desk-listeners.ts"
-import { contentContainerMovedEvent } from "@vitnode/core/api/events/content-containers";
-import { buildEventListener } from "@vitnode/core/api/lib/events";
+import { contentContainerMovedEvent } from "@vitnode/api/events/content-containers";
+import { buildEventListener } from "@vitnode/api/lib/events";
 
 export const deskMovedListener = buildEventListener({
   event: contentContainerMovedEvent,

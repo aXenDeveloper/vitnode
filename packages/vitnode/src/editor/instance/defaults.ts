@@ -1,23 +1,25 @@
 import type {
-  AnyBlockInstance,
-  BlockRegistry,
-  BlockUnknownData,
-  RegisteredBlock,
-} from "../../blocks/types";
-import type {
   ContentFieldDescriptor,
   ContentFieldMap,
   ContentNumberField,
   ContentTextareaField,
   ContentTextField,
-} from "../../content/types";
+} from "@vitnode/api/content/types";
+
+import { createBlockInstance } from "@vitnode/api/blocks/instance";
+import { blockVariants } from "@vitnode/api/blocks/variant";
+import { humanizeFieldName } from "@vitnode/api/content/admin/labels";
+import { contentInnerFields } from "@vitnode/api/content/paths";
+
+import type {
+  AnyBlockInstance,
+  BlockRegistry,
+  BlockUnknownData,
+  RegisteredBlock,
+} from "../../blocks/types";
 import type { StoredBlockIssue } from "../block-shell/issue";
 
-import { createBlockInstance } from "../../blocks/instance";
 import { getDefaultBlockRegistry } from "../../blocks/registry";
-import { blockVariants } from "../../blocks/variant";
-import { humanizeFieldName } from "../../content/admin/labels";
-import { contentInnerFields } from "../../content/paths";
 import { checkStoredBlock } from "../block-shell/issue";
 
 const ABSENT = Symbol("absent");

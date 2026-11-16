@@ -1,11 +1,12 @@
-import { ExternalLinkIcon } from "lucide-react";
-import React from "react";
-import { useTranslations } from "use-intl";
-
 import type {
   ModerationReportSnapshot,
   ModerationSnapshotField,
-} from "@/lib/moderation/snapshot";
+} from "@vitnode/api/lib/shared/moderation-snapshot";
+
+import { isRichTextDocument } from "@vitnode/api/content/rich-text/document";
+import { ExternalLinkIcon } from "lucide-react";
+import React from "react";
+import { useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import {
@@ -15,7 +16,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { isRichTextDocument } from "@/content/rich-text/document";
 
 import type { ReportPerson } from "./report-tone";
 

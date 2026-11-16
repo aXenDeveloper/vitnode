@@ -1,9 +1,10 @@
+import type { ContentLabelTranslator } from "@vitnode/api/content/admin/labels";
+
 import { useSuspenseQuery } from "@tanstack/react-query";
 import React from "react";
 import { createTranslator } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
-import type { ContentLabelTranslator } from "@/content/admin/labels";
 import type { ContentFormSpec } from "@/content/admin/spec";
 import type { RegisteredFrontendContentType } from "@/content/index";
 import type { ContentLabels } from "@/views/admin/views/content/content-labels";

@@ -1,0 +1,42 @@
+import { z } from "@hono/zod-openapi";
+
+import { buildRoute } from "@/builders";
+import { SsoConnectionModel } from "@/models/sso-connection";
+
+import { requireSignedInUser } from "../../../passkeys/lib/failure";
+import {
+  SSO_CONNECTION_ERROR_RESPONSES,
+  zodSsoProviderIdParam,
+} from "../connections.schema";
+import { ssoConnectionFailure } from "../lib/failure";
+
+export const disconnectSsoConnectionRoute = buildRoute({
+  route: {
+    method: "delete",
+    description:
+      "Remove the signed-in user's connection to a provider and its profile sync settings. Refused when it is the account's last way to sign in. Does not revoke anything at the provider.",
+    path: "/{providerId}",
+    request: {
+      params: z.object({ providerId: zodSsoProviderIdParam }),
+    },
+    responses: {
+      200: { description: "Connection removed" },
+      ...SSO_CONNECTION_ERROR_RESPONSES,
+    },
+  },
+  handler: async c => {
+    const user = requireSignedInUser(c.get("user"));
+    const { providerId } = c.req.valid("param");
+
+    try {
+      await new SsoConnectionModel(c).disconnect({
+        providerId,
+        userId: user.id,
+      });
+
+      return c.body(null, 200);
+    } catch (error) {
+      return ssoConnectionFailure(c, error);
+    }
+  },
+});

@@ -17,7 +17,7 @@ import type {
 import type {
   ContentFieldLock,
   ContentLiveMember,
-} from "@/content/live/protocol";
+} from "@vitnode/api/content/live/protocol";
 
 import { useMultiLangField } from "@/components/form/fields/multi-lang";
 import { MultiLangPresenceContext } from "@/components/form/fields/multi-lang-presence";

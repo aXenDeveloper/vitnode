@@ -18,37 +18,12 @@ const EXCLUDE = [
 // re-evaluating the same server modules for every file. These files assert on
 // process-wide state ("nothing registered yet"), so they keep a fresh graph.
 const ISOLATED = [
-  "src/blocks/registry.test.ts",
-  "src/blocks/validate.test.ts",
   "src/components/ui/icon-registry.test.ts",
-  "src/content/server/refresh/instances.test.ts",
-  "src/content/server/refresh/publish.test.ts",
-  "src/content/server/refresh/server.test.ts",
   "src/editor/instance/defaults.test.ts",
   "src/editor/state/repair.test.ts",
   "src/tanstack/admin/content/slots.test.ts",
   "src/tanstack/admin/transport.test.ts",
   "src/tanstack/auth/transport.test.ts",
-  "src/ws/crossws.server.test.ts",
-  "src/ws/pubsub-lifetime.test.ts",
-  "src/ws/realtime-readiness.test.ts",
-];
-
-// Real builds, watchers and child processes. `pnpm test` still runs them;
-// `pnpm test:unit` skips them for a fast local loop.
-const INTEGRATION = [
-  "scripts/cli/builder/package-build.test.ts",
-  "scripts/cli/builder/scripts-build.test.ts",
-  "scripts/cli/commands/generate-compile.test.ts",
-  "scripts/cli/commands/plugin.test.ts",
-  "scripts/cli/commands/start.test.ts",
-  "scripts/cli/dev/package-watch.test.ts",
-  "scripts/watch-plugin-manifest.test.ts",
-  "src/api/lib/updates/lock.postgres.test.ts",
-  "src/api/modules/queue/lib/process-queue-tasks.postgres.test.ts",
-  "src/api/modules/moderation/warnings.postgres.test.ts",
-  "src/content/approvals/server/approval-notifications.postgres.test.ts",
-  "src/content/server/notifications/content-notifications.postgres.test.ts",
 ];
 
 export default defineConfig({
@@ -61,7 +36,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
-      exclude: [...EXCLUDE, "**/scripts/**"],
+      exclude: EXCLUDE,
     },
     projects: [
       {
@@ -70,8 +45,8 @@ export default defineConfig({
           name: "unit",
           environment: "node",
           isolate: false,
-          include: ["{src,scripts}/**/*.test.ts"],
-          exclude: [...EXCLUDE, ...ISOLATED, ...INTEGRATION],
+          include: ["src/**/*.test.ts"],
+          exclude: [...EXCLUDE, ...ISOLATED],
         },
       },
       {
@@ -89,14 +64,6 @@ export default defineConfig({
           environment: "happy-dom",
           include: ["src/**/*.test.tsx"],
           setupFiles: ["./src/tests/setup-dom.ts"],
-        },
-      },
-      {
-        extends: true,
-        test: {
-          name: "integration",
-          environment: "node",
-          include: INTEGRATION,
         },
       },
       // `*.test-d.ts` files assert types only. `pnpm test:types` runs this

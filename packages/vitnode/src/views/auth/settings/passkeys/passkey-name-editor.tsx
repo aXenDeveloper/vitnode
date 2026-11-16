@@ -1,3 +1,4 @@
+import { PASSKEY_NAME_MAX_LENGTH } from "@vitnode/api/lib/passkey";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -8,7 +9,6 @@ import type { AutoFormOnSubmit } from "@/components/form/auto-form";
 import { AutoForm, AutoFormSubmitButton } from "@/components/form/auto-form";
 import { AutoFormInput } from "@/components/form/fields/input";
 import { Button } from "@/components/ui/button";
-import { PASSKEY_NAME_MAX_LENGTH } from "@/lib/passkey";
 
 import type { RenamePasskey } from "./passkeys-mutations";
 

@@ -1,7 +1,7 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
+import { manifest } from "@vitnode/api/manifest";
 
 import { PageTitle } from "@/components/ui/page-title";
-import { manifest } from "@/manifest";
 import { NotificationsContent } from "@/views/admin/views/core/system/notifications/notifications-content";
 import { notificationsOverviewQueryOptions } from "@/views/admin/views/core/system/notifications/notifications-query";
 import { NotificationsSettingsSheet } from "@/views/admin/views/core/system/notifications/settings-sheet";

@@ -1,11 +1,12 @@
-import { queryOptions } from "@tanstack/react-query";
+import type { UserPresence } from "@vitnode/api/lib/user-presence";
 
-import type { UserPresence } from "@/lib/user-presence";
+import { queryOptions } from "@tanstack/react-query";
+import { PRESENCE_HEARTBEAT_INTERVAL_MS } from "@vitnode/api/lib/user-presence";
+import { manifest } from "@vitnode/api/manifest";
+
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
-import { PRESENCE_HEARTBEAT_INTERVAL_MS } from "@/lib/user-presence";
-import { manifest } from "@/manifest";
 import { fetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 

@@ -14,7 +14,7 @@
 // Same plugin configuration in, same bytes out: the entries are sorted by
 // plugin id.
 
-import type { FrontendPluginInventory } from '@vitnode/core/lib/plugin-manifest'
+import type { FrontendPluginInventory } from '@vitnode/api/lib/plugin-manifest'
 
 export const frontendPlugins: FrontendPluginInventory = [
   {

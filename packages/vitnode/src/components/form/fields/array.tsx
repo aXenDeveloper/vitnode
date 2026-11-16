@@ -1,13 +1,14 @@
+import type { InputParams } from "@vitnode/api/lib/helpers/auto-form";
+
 import { getBy, useSelector } from "@tanstack/react-form";
+import { getNestedParam } from "@vitnode/api/lib/helpers/auto-form";
 import { cn } from "cn";
 import { PlusIcon, Trash2Icon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { InputParams } from "../../../lib/helpers/auto-form";
 import type { ItemAutoFormComponentProps } from "../auto-form";
 
-import { getNestedParam } from "../../../lib/helpers/auto-form";
 import { Button } from "../../ui/button";
 import {
   Field,

@@ -7,6 +7,8 @@ import type {
   KeyboardCoordinateGetter,
   UniqueIdentifier,
 } from "@dnd-kit/core";
+import type { ContentContainerLabels } from "@vitnode/api/content/admin/containers";
+import type { AnyContentContainerDefinition } from "@vitnode/api/content/containers/types";
 
 import {
   closestCenter,
@@ -24,15 +26,14 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { useQueryClient } from "@tanstack/react-query";
+import { CONTENT_PERMISSIONS } from "@vitnode/api/content/const";
+import { planContentContainerCreate } from "@vitnode/api/content/containers/tree";
 import { cn } from "cn";
 import { FolderTreeIcon, PlusIcon, RotateCwIcon } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
-
-import type { ContentContainerLabels } from "@/content/admin/containers";
-import type { AnyContentContainerDefinition } from "@/content/containers/types";
 
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
@@ -46,8 +47,6 @@ import {
 } from "@/components/ui/empty";
 import { PageTitle } from "@/components/ui/page-title";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CONTENT_PERMISSIONS } from "@/content/const";
-import { planContentContainerCreate } from "@/content/containers/tree";
 import { DragLift } from "@/lib/dnd/drag-lift";
 import {
   DRAG_OVERLAY_LIFT_CLASS,

@@ -5,12 +5,12 @@ import type {
   ContentRefreshClientMessage,
   ContentRefreshScope,
   ContentRefreshServerMessage,
-} from "@/content/live/refresh";
+} from "@vitnode/api/content/live/refresh";
 
 import {
   contentRefreshChannel,
   contentRefreshRoom,
-} from "@/content/live/refresh";
+} from "@vitnode/api/content/live/refresh";
 import { VitNodeWebSocketProvider } from "@/ws/provider";
 
 import type { ContentLiveRefreshHandlers } from "./live-refresh";

@@ -1,0 +1,78 @@
+import { z } from "@hono/zod-openapi";
+
+import { buildRoute } from "@/builders";
+import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+import { PasskeyModel } from "@/models/passkey";
+import { passkeyFailure } from "@/modules/users/passkeys/lib/failure";
+import {
+  PASSKEY_ERROR_RESPONSES,
+  zodPasskeyIdParam,
+  zodPasskeyNameSchema,
+  zodPasskeySchema,
+} from "@/modules/users/passkeys/passkeys.schema";
+
+import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
+import {
+  findTargetUserId,
+  USER_NOT_FOUND,
+  userNotFoundResponse,
+  zodTargetUserIdParam,
+} from "../lib/target-user";
+
+export const renameUserPasskeyAdminRoute = buildRoute({
+  adminStaffPermission: coreStaffPermissions.admin.users.canEdit,
+  route: {
+    method: "patch",
+    description: "Rename one of a user's passkeys (Admin only)",
+    path: "/{id}/passkeys/{passkeyId}",
+    request: {
+      params: z.object({
+        id: zodTargetUserIdParam,
+        passkeyId: zodPasskeyIdParam,
+      }),
+      body: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: z.object({ name: zodPasskeyNameSchema }),
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        content: {
+          "application/json": {
+            schema: zodPasskeySchema,
+          },
+        },
+        description: "Passkey renamed",
+      },
+      ...PASSKEY_ERROR_RESPONSES,
+      404: {
+        ...userNotFoundResponse,
+        description: "Unknown user, unknown passkey, or passkeys are disabled",
+      },
+    },
+  },
+  handler: async c => {
+    const { id, passkeyId } = c.req.valid("param");
+    const { name } = c.req.valid("json");
+    const userId = await findTargetUserId(c, id);
+    if (userId === null) return c.json(USER_NOT_FOUND, 404);
+
+    await assertCanEditAdminTarget(c, userId);
+
+    try {
+      const passkey = await new PasskeyModel(c).renamePasskey({
+        id: Number(passkeyId),
+        name,
+        userId,
+      });
+
+      return c.json(passkey, 200);
+    } catch (error) {
+      return passkeyFailure(c, error);
+    }
+  },
+});

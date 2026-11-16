@@ -1,13 +1,13 @@
 import { z } from "@hono/zod-openapi";
 import {
-  zodPaginationPageInfo,
-  zodPaginationQuery,
-} from "@vitnode/core/api/lib/with-pagination";
-import {
   CONTENT_ACCESS_REQUIRED_CODE,
   zodContentPublicPerson,
-} from "@vitnode/core/content";
-import { createContentAccess } from "@vitnode/core/content/server";
+} from "@vitnode/api/content";
+import { createContentAccess } from "@vitnode/api/content/server";
+import {
+  zodPaginationPageInfo,
+  zodPaginationQuery,
+} from "@vitnode/api/lib/with-pagination";
 import { HTTPException } from "hono/http-exception";
 
 import { buildRoute } from "@/api/builders";

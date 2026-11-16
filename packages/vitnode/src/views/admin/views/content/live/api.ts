@@ -1,10 +1,10 @@
-import type { ContentId } from "@/content/ids";
+import type { ContentId } from "@vitnode/api/content/ids";
 import type {
   ContentDraftRejection,
   ContentDrafts,
   ContentFieldLockAction,
-} from "@/content/live/http";
-import type { ContentFieldLock } from "@/content/live/protocol";
+} from "@vitnode/api/content/live/http";
+import type { ContentFieldLock } from "@vitnode/api/content/live/protocol";
 
 import {
   zodContentDraftRejection,
@@ -13,7 +13,7 @@ import {
   zodContentFieldLocked,
   zodContentFieldLockList,
   zodContentFieldLockResponse,
-} from "@/content/live/http";
+} from "@vitnode/api/content/live/http";
 
 import type { ContentApiTarget } from "../content-request";
 

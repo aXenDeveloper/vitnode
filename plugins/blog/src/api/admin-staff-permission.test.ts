@@ -1,4 +1,4 @@
-import { findAdminRoutesWithoutStaffPermission } from "@vitnode/core/api/lib/route";
+import { findAdminRoutesWithoutStaffPermission } from "@vitnode/api/lib/route";
 import { describe, expect, it } from "vitest";
 
 import { blogApiPlugin } from "@/config.api";

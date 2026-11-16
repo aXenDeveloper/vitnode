@@ -1,10 +1,9 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
-
 import {
   isPageCacheRenderMarker,
   PAGE_CACHE_RENDER_HEADER,
-} from "@/page-cache/tags";
+} from "@vitnode/api/page-cache/tags";
 
 const PRERENDER_REQUEST_HEADER = "x-nitro-prerender";
 

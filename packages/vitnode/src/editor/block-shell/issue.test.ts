@@ -1,8 +1,8 @@
+import { field } from "@vitnode/api/content/fields";
 import { describe, expect, it } from "vitest";
 
 import type { AnyBlockInstance, RegisteredBlock } from "../../blocks/types";
 
-import { field } from "../../content/fields";
 import { editableBlockIssue } from "./issue";
 
 const entry: RegisteredBlock = {

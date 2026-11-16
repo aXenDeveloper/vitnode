@@ -1,15 +1,17 @@
+import type {
+  ContentFileDescriptor,
+  ContentFileFieldValue,
+} from "@vitnode/api/content/files";
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { ContentVisibilityAction } from "@vitnode/api/content/visibility";
+
+import { CONTENT_PERMISSIONS } from "@vitnode/api/content/const";
 import React from "react";
 import { toast } from "sonner";
 import { useLocale, useTranslations } from "use-intl";
 
 import type { ItemAutoFormComponentProps } from "@/components/form/auto-form";
 import type { ContentFormSpec } from "@/content/admin/spec";
-import type {
-  ContentFileDescriptor,
-  ContentFileFieldValue,
-} from "@/content/files";
-import type { ContentId } from "@/content/ids";
-import type { ContentVisibilityAction } from "@/content/visibility";
 import type { ContentFormLayout } from "@/lib/plugin";
 
 import { AutoForm, type AutoFormOnSubmit } from "@/components/form/auto-form";
@@ -24,7 +26,6 @@ import {
   contentTitleFromValues,
 } from "@/content/admin/spec";
 import { uploadContentFile } from "@/content/admin/upload";
-import { CONTENT_PERMISSIONS } from "@/content/const";
 
 import type {
   ContentMutationResult,

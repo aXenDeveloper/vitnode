@@ -1,0 +1,619 @@
+import type {
+  PgColumn,
+  PgTableWithColumns,
+  TableConfig,
+} from "drizzle-orm/pg-core";
+import type { Context } from "hono";
+
+import { and, asc, count, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
+
+import type { ContentId } from "../ids";
+import type { AnyContentTypeDefinition } from "../types";
+import type { ContentPublicHiddenAccess } from "./hidden-list";
+import type { ContentModel } from "./model";
+import type { ContentDatabase } from "./service";
+
+import { cursorTextCast } from "../../lib/pagination-cursor";
+import { ContentInputError } from "../errors";
+import { isContentHidden } from "../visibility";
+import { publicationColumns, publishedCondition } from "./publication";
+import { isContentBaseRowPublic } from "./visibility";
+
+export class ContentThreadPlacementError extends ContentInputError {
+  constructor({
+    contentTypeId,
+    field,
+    message,
+  }: {
+    contentTypeId: string;
+    field: string;
+    message: string;
+  }) {
+    super(message, { contentTypeId });
+    this.name = "ContentThreadPlacementError";
+    this.detail = message;
+    this.field = field;
+  }
+
+  readonly detail: string;
+  readonly field: string;
+}
+
+interface ThreadTable {
+  columns: Record<string, PgColumn>;
+  definition: AnyContentTypeDefinition;
+  table: PgTableWithColumns<TableConfig>;
+}
+
+const keyOf = (value: unknown): null | string =>
+  typeof value === "number" ||
+  typeof value === "string" ||
+  typeof value === "bigint"
+    ? String(value)
+    : null;
+
+const same = (a: unknown, b: unknown): boolean =>
+  keyOf(a) !== null && keyOf(a) === keyOf(b);
+
+/**
+ * Keeps a thread a tree: the parent answers in the same root, the record never
+ * ends up below itself, and nothing sits deeper than `thread.maxDepth`. Runs on
+ * every create and on any update that touches the parent or the root.
+ */
+export const assertContentThreadPlacement = async (
+  tx: ContentDatabase,
+  { columns, definition, table }: ThreadTable,
+  { id, values }: { id: ContentId | null; values: Record<string, unknown> },
+): Promise<void> => {
+  const { thread } = definition;
+  if (!thread.enabled) return;
+
+  const { maxDepth, parentField, rootField } = thread;
+  const touchesParent = Object.hasOwn(values, parentField);
+  const touchesRoot = Object.hasOwn(values, rootField);
+  if (id !== null && !touchesParent && !touchesRoot) return;
+
+  const refuse = (field: string, message: string): never => {
+    throw new ContentThreadPlacementError({
+      contentTypeId: definition.id,
+      field,
+      message,
+    });
+  };
+
+  const parentColumn = columns[parentField];
+  const rootColumn = columns[rootField];
+  const select = { id: columns.id, parent: parentColumn, root: rootColumn };
+
+  const [current] =
+    id === null
+      ? [undefined]
+      : await tx.select(select).from(table).where(eq(columns.id, id)).limit(1);
+
+  const parentId = touchesParent ? values[parentField] : current?.parent;
+  const rootId = touchesRoot ? values[rootField] : current?.root;
+
+  if (id !== null && touchesRoot && !same(rootId, current?.root)) {
+    const [child] = await tx
+      .select({ id: columns.id })
+      .from(table)
+      .where(eq(parentColumn, id))
+      .limit(1);
+    if (child) {
+      refuse(
+        rootField,
+        "This reply has answers. Move the whole conversation instead of one reply.",
+      );
+    }
+  }
+
+  if (parentId === null || parentId === undefined) return;
+
+  let cursor: unknown = parentId;
+  let depth = 1;
+  const seen = new Set<string>();
+  while (cursor !== null && cursor !== undefined) {
+    const key = keyOf(cursor);
+    if (key === null || seen.has(key)) {
+      refuse(parentField, "The reply chain loops back on itself.");
+    }
+    seen.add(key ?? "");
+
+    const [row] = await tx
+      .select(select)
+      .from(table)
+      .where(eq(columns.id, cursor as ContentId))
+      .limit(1);
+    if (!row)
+      refuse(parentField, "The reply you are answering does not exist.");
+    if (depth === 1 && !same(row?.root, rootId)) {
+      refuse(
+        parentField,
+        "The reply you are answering belongs to another conversation.",
+      );
+    }
+    if (id !== null && same(row?.id, id)) {
+      refuse(
+        parentField,
+        "A reply cannot answer itself or one of its answers.",
+      );
+    }
+
+    depth += 1;
+    if (depth > maxDepth) {
+      refuse(
+        parentField,
+        `Replies nest at most ${maxDepth} levels deep. Answer a reply higher up.`,
+      );
+    }
+    cursor = row?.parent;
+  }
+};
+
+export interface ContentThreadNode<TRecord> {
+  /**
+   * Set for a reply that was deleted, or hidden from this reader, while it
+   * still had answers: it stays in the thread as an anonymous placeholder - no
+   * text, no author - dated when it was written. `byAuthor` tells whether its
+   * own author deleted or hid it, rather than a moderator.
+   */
+  deleted: null | { byAuthor: boolean; createdAt: Date };
+  /** How deep the reply sits: 1 for a direct answer to the root. */
+  depth: number;
+  /**
+   * `true` for a hidden reply shown only because the reader may see it - a
+   * moderator, an editor or its author. Never set without `hiddenAccess`.
+   */
+  hidden: boolean;
+  /** Why it was hidden, when the moderator gave a reason. Only with `hidden`. */
+  hiddenReason: null | string;
+  id: ContentId;
+  parentId: ContentId | null;
+  /** The public record, or `null` for a removed reply kept so its answers stay in place. */
+  record: null | TRecord;
+  removed: boolean;
+}
+
+export interface ContentThreadPage<TRecord> {
+  items: ContentThreadNode<TRecord>[];
+  pageInfo: {
+    endCursor: null | string;
+    hasNextPage: boolean;
+    /** Public top-level replies in the whole thread. */
+    totalCount: number;
+  };
+  /** Every public reply in the thread, at any depth. */
+  replyCount: number;
+  /** Set when a page held more nested replies than one response carries. */
+  truncated: boolean;
+}
+
+export const CONTENT_THREAD_MAX_NODES = 500;
+
+/**
+ * Where a page ends. `createdAt` is the column's own `::text`: Postgres keeps
+ * microseconds and a `Date` only milliseconds, so a cursor built from a `Date`
+ * sorts before its own row and the next page would repeat it.
+ */
+interface ThreadPosition {
+  createdAt: string;
+  id: ContentId;
+}
+
+/** A `timestamp::text` or an ISO string - anything else never reaches the cast. */
+const TIMESTAMP_TEXT =
+  /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/;
+
+const encodeCursor = ({ createdAt, id }: ThreadPosition): string =>
+  Buffer.from(JSON.stringify([createdAt, id])).toString("base64url");
+
+const decodeCursor = (cursor: string | undefined): null | ThreadPosition => {
+  if (!cursor) return null;
+  try {
+    const [createdAt, id] = JSON.parse(
+      Buffer.from(cursor, "base64url").toString("utf8"),
+    ) as [unknown, unknown];
+    if (typeof createdAt !== "string" || !TIMESTAMP_TEXT.test(createdAt)) {
+      return null;
+    }
+    if (typeof id !== "number" && typeof id !== "string") return null;
+
+    return { createdAt, id };
+  } catch {
+    return null;
+  }
+};
+
+interface NodeRow extends Record<string, unknown> {
+  createdAt: Date;
+  createdAtText: string;
+  hiddenAt?: Date | null;
+  id: ContentId;
+  parent: ContentId | null;
+  publishedAt: Date | null;
+  status: string;
+}
+
+interface ThreadReadOptions<TRecord> {
+  /**
+   * Hidden replies this reader may see, from `contentThreadHiddenAccess`.
+   * They are kept with `hidden: true`; omit it for the public thread.
+   */
+  hiddenAccess?: ContentPublicHiddenAccess;
+  /**
+   * Rows for these ids, in any order: public ones, plus the hidden ones in
+   * `hiddenIds` the reader may see.
+   */
+  project: (
+    ids: ContentId[],
+    options: { hiddenIds: ContentId[] },
+  ) => Promise<Map<string, TRecord>>;
+  root: ContentId;
+}
+
+/**
+ * Everything a thread read needs, built once per request: the top-level
+ * selection, the counts and the tree below a set of top-level rows. Shared by
+ * the page read and the branch read so both answer with the same visibility,
+ * placeholders, depth and truncation.
+ */
+const createThreadReader = <
+  TDefinition extends AnyContentTypeDefinition,
+  TRecord,
+>(
+  c: Context,
+  model: ContentModel<TDefinition>,
+  { hiddenAccess, project, root }: ThreadReadOptions<TRecord>,
+) => {
+  const { definition } = model;
+  const { maxDepth, parentField, rootField } = definition.thread;
+  const columns = model.columns as Record<string, PgColumn>;
+  const table: PgTableWithColumns<TableConfig> = model.table;
+  const parentColumn = columns[parentField];
+  const rootColumn = columns[rootField];
+  const db = c.get("db");
+  const published = publicationColumns(definition, columns);
+  const publicCondition = publishedCondition(published);
+
+  const ownerField =
+    definition.search.authorField ?? definition.publicWrite.ownerField;
+  const ownerColumn = ownerField ? columns[ownerField] : undefined;
+
+  const nodeSelection = {
+    createdAt: columns.createdAt,
+    createdAtText: sql<string>`${columns.createdAt}::text`,
+    id: columns.id,
+    parent: parentColumn,
+    publishedAt: columns.publishedAt,
+    status: columns.status,
+    ...(columns.hiddenAt
+      ? { hiddenAt: columns.hiddenAt, hiddenBy: columns.hiddenBy }
+      : {}),
+    ...(columns.hiddenReason ? { hiddenReason: columns.hiddenReason } : {}),
+    ...(columns.deletedAt
+      ? { deletedAt: columns.deletedAt, deletedBy: columns.deletedBy }
+      : {}),
+    ...(ownerColumn ? { owner: ownerColumn } : {}),
+  };
+
+  const isViewableHidden = (row: NodeRow): boolean =>
+    hiddenAccess !== undefined &&
+    isContentHidden(row) &&
+    isContentBaseRowPublic({ ...row, hiddenAt: null }) &&
+    (hiddenAccess.all ||
+      (hiddenAccess.authorId !== null && row.owner === hiddenAccess.authorId));
+
+  const isReadable = (row: NodeRow): boolean =>
+    isContentBaseRowPublic(row) || isViewableHidden(row);
+
+  const topLevel = and(eq(rootColumn, root), isNull(parentColumn));
+  const after_ = (position: null | ThreadPosition) => {
+    if (!position) return undefined;
+    // Cast back to a timestamp: the text is the column's own `::text`, so it
+    // already has the precision Postgres stored.
+    const createdAt = sql`${position.createdAt}::${cursorTextCast(columns.createdAt)}`;
+
+    return or(
+      gt(columns.createdAt, createdAt),
+      and(eq(columns.createdAt, createdAt), gt(columns.id, position.id)),
+    );
+  };
+
+  /**
+   * A top-level reply that is not public earns a place only when something
+   * answers it - otherwise it would be pruned and leave a page short.
+   */
+  const keepTops = async (batch: NodeRow[]): Promise<NodeRow[]> => {
+    const hidden = batch.filter(row => !isReadable(row)).map(row => row.id);
+    const answered = new Set(
+      hidden.length === 0
+        ? []
+        : (
+            await db
+              .select({ parent: parentColumn })
+              .from(table)
+              .where(inArray(parentColumn, hidden))
+          ).map(row => String(row.parent)),
+    );
+
+    return batch.filter(row => isReadable(row) || answered.has(String(row.id)));
+  };
+
+  /** Skipped top-level replies are read past in a few bounded rounds. */
+  const readTops = async (
+    after: string | undefined,
+    first: number,
+  ): Promise<NodeRow[]> => {
+    const collected: NodeRow[] = [];
+    let position = decodeCursor(after);
+
+    for (let round = 0; round < 5 && collected.length <= first; round++) {
+      const batch = (await db
+        .select(nodeSelection)
+        .from(table)
+        .where(and(topLevel, after_(position)))
+        .orderBy(asc(columns.createdAt), asc(columns.id))
+        .limit(first + 1)) as NodeRow[];
+      if (batch.length === 0) break;
+
+      collected.push(...(await keepTops(batch)));
+
+      const last = batch.at(-1);
+      if (!last || batch.length <= first) break;
+      position = { createdAt: last.createdAtText, id: last.id };
+    }
+
+    return collected;
+  };
+
+  /** The given top-level replies of this root, oldest first. */
+  const readBranchTops = async (ids: ContentId[]): Promise<NodeRow[]> =>
+    ids.length === 0
+      ? []
+      : await keepTops(
+          (await db
+            .select(nodeSelection)
+            .from(table)
+            .where(and(topLevel, inArray(columns.id, ids)))
+            .orderBy(asc(columns.createdAt), asc(columns.id))) as NodeRow[],
+        );
+
+  const counts = async (): Promise<{
+    replyCount: number;
+    totalCount: number;
+  }> => {
+    const [[topTotal], [replyTotal]] = await Promise.all([
+      db
+        .select({ value: count() })
+        .from(table)
+        .where(and(topLevel, publicCondition)),
+      db
+        .select({ value: count() })
+        .from(table)
+        .where(and(eq(rootColumn, root), publicCondition)),
+    ]);
+
+    return {
+      replyCount: replyTotal?.value ?? 0,
+      totalCount: topTotal?.value ?? 0,
+    };
+  };
+
+  /** Every reader-visible entry below `page`, flattened depth first. */
+  const build = async (
+    page: NodeRow[],
+  ): Promise<{ items: ContentThreadNode<TRecord>[]; truncated: boolean }> => {
+    const nodes = new Map<string, NodeRow>();
+    const children = new Map<string, NodeRow[]>();
+    for (const row of page) nodes.set(String(row.id), row);
+
+    let frontier = page.map(row => row.id);
+    let truncated = false;
+    for (let level = 2; level <= maxDepth && frontier.length > 0; level++) {
+      if (nodes.size >= CONTENT_THREAD_MAX_NODES) {
+        truncated = true;
+        break;
+      }
+      const rows = (await db
+        .select(nodeSelection)
+        .from(table)
+        .where(and(eq(rootColumn, root), inArray(parentColumn, frontier)))
+        .orderBy(asc(columns.createdAt), asc(columns.id))
+        .limit(CONTENT_THREAD_MAX_NODES - nodes.size + 1)) as NodeRow[];
+      if (rows.length > CONTENT_THREAD_MAX_NODES - nodes.size) {
+        truncated = true;
+        rows.length = CONTENT_THREAD_MAX_NODES - nodes.size;
+      }
+
+      for (const row of rows) {
+        nodes.set(String(row.id), row);
+        const key = String(row.parent);
+        children.set(key, [...(children.get(key) ?? []), row]);
+      }
+      frontier = rows.map(row => row.id);
+    }
+
+    const kept = new Set<string>();
+    const keep = (row: NodeRow): boolean => {
+      let any = false;
+      for (const child of children.get(String(row.id)) ?? []) {
+        if (keep(child)) any = true;
+      }
+      if (any || isReadable(row)) {
+        kept.add(String(row.id));
+
+        return true;
+      }
+
+      return false;
+    };
+    for (const row of page) keep(row);
+
+    const readable = [...kept]
+      .map(key => nodes.get(key))
+      .filter((row): row is NodeRow => row !== undefined)
+      .filter(row => isReadable(row));
+    const records = await project(
+      readable.map(row => row.id),
+      {
+        hiddenIds: readable
+          .filter(row => !isContentBaseRowPublic(row))
+          .map(row => row.id),
+      },
+    );
+
+    const placeholderOf = (
+      row: NodeRow,
+      owner: null | number,
+    ): ContentThreadNode<TRecord>["deleted"] => {
+      const removedBy =
+        row.deletedAt instanceof Date
+          ? row.deletedBy
+          : row.hiddenAt instanceof Date
+            ? row.hiddenBy
+            : undefined;
+      if (removedBy === undefined) return null;
+
+      return {
+        byAuthor: owner !== null && removedBy === owner,
+        createdAt: row.createdAt,
+      };
+    };
+
+    const items: ContentThreadNode<TRecord>[] = [];
+    const walk = (row: NodeRow, depth: number): void => {
+      const key = String(row.id);
+      if (!kept.has(key)) return;
+      const record = records.get(key) ?? null;
+      const owner = typeof row.owner === "number" ? row.owner : null;
+      const hidden = record !== null && isViewableHidden(row);
+      items.push({
+        deleted: record === null ? placeholderOf(row, owner) : null,
+        depth,
+        hidden,
+        hiddenReason:
+          hidden && typeof row.hiddenReason === "string"
+            ? row.hiddenReason
+            : null,
+        id: row.id,
+        parentId: row.parent,
+        record,
+        removed: record === null,
+      });
+      for (const child of children.get(key) ?? []) walk(child, depth + 1);
+    };
+    for (const row of page) walk(row, 1);
+
+    return { items, truncated };
+  };
+
+  return { build, counts, readBranchTops, readTops };
+};
+
+/**
+ * Pages a thread oldest first: a page is a run of top-level replies plus every
+ * answer below them, flattened depth first. A reply that is not public is left
+ * out - unless a public answer sits below it, in which case it is returned as
+ * `removed` with no values, so the tree keeps its shape.
+ */
+export const readContentThread = async <
+  TDefinition extends AnyContentTypeDefinition,
+  TRecord,
+>(
+  c: Context,
+  model: ContentModel<TDefinition>,
+  {
+    first,
+    after,
+    ...options
+  }: ThreadReadOptions<TRecord> & { after?: string; first: number },
+): Promise<ContentThreadPage<TRecord>> => {
+  const reader = createThreadReader(c, model, options);
+  const [tops, { replyCount, totalCount }] = await Promise.all([
+    reader.readTops(after, first),
+    reader.counts(),
+  ]);
+
+  const hasNextPage = tops.length > first;
+  const page = tops.slice(0, first);
+  const { items, truncated } = await reader.build(page);
+  const last = page.at(-1);
+
+  return {
+    items,
+    pageInfo: {
+      endCursor: last
+        ? encodeCursor({ createdAt: last.createdAtText, id: last.id })
+        : null,
+      hasNextPage,
+      totalCount,
+    },
+    replyCount,
+    truncated,
+  };
+};
+
+/**
+ * One top-level branch as {@link readContentThreadBranches} answers it:
+ * `items` holds the top-level reply first, then every answer below it, exactly
+ * as `readContentThread` would place them on a page. `gone` when this reader
+ * no longer sees the branch at all - deleted, hidden or unpublished with no
+ * public answer left, not top-level, or not under this root.
+ */
+export type ContentThreadBranch<TRecord> =
+  | { id: ContentId; items: ContentThreadNode<TRecord>[]; status: "ok" }
+  | { id: ContentId; status: "gone" };
+
+export interface ContentThreadBranches<TRecord> {
+  branches: ContentThreadBranch<TRecord>[];
+  pageInfo: { totalCount: number };
+  replyCount: number;
+  truncated: boolean;
+}
+
+/**
+ * Reads the current state of some top-level branches of one thread, with the
+ * same visibility, placeholder, depth and truncation rules as
+ * {@link readContentThread} - for refreshing branches already on screen
+ * without reading every page again. Answers every requested id, in the order
+ * given; one that is not a top-level reply of `root` is `gone`, whether it
+ * exists elsewhere or not. Server-only.
+ */
+export const readContentThreadBranches = async <
+  TDefinition extends AnyContentTypeDefinition,
+  TRecord,
+>(
+  c: Context,
+  model: ContentModel<TDefinition>,
+  { ids, ...options }: ThreadReadOptions<TRecord> & { ids: ContentId[] },
+): Promise<ContentThreadBranches<TRecord>> => {
+  const reader = createThreadReader(c, model, options);
+  const [tops, { replyCount, totalCount }] = await Promise.all([
+    reader.readBranchTops(ids),
+    reader.counts(),
+  ]);
+  const { items, truncated } = await reader.build(tops);
+
+  const byBranch = new Map<string, ContentThreadNode<TRecord>[]>();
+  let current: ContentThreadNode<TRecord>[] | undefined;
+  for (const item of items) {
+    if (item.depth === 1) {
+      current = [];
+      byBranch.set(String(item.id), current);
+    }
+    current?.push(item);
+  }
+
+  return {
+    branches: ids.map(id => {
+      const branch = byBranch.get(String(id));
+
+      return branch
+        ? { id: branch[0]?.id ?? id, items: branch, status: "ok" as const }
+        : { id, status: "gone" as const };
+    }),
+    pageInfo: { totalCount },
+    replyCount,
+    truncated,
+  };
+};

@@ -1,9 +1,9 @@
+import { isAreaLike, isBlockAreaInstance } from "@vitnode/api/blocks/area";
+import { AREA_CHILDREN_DEFAULT_MAX } from "@vitnode/api/blocks/const";
+import { isBlockInstance } from "@vitnode/api/blocks/instance";
+
 import type { BlockAreaInstance, ContentNode } from "../../blocks/types";
 import type { EditorZoneInvalidEntry } from "../state/types";
-
-import { isAreaLike, isBlockAreaInstance } from "../../blocks/area";
-import { AREA_CHILDREN_DEFAULT_MAX } from "../../blocks/const";
-import { isBlockInstance } from "../../blocks/instance";
 
 export interface ClassifiedZoneEntries {
   invalid: EditorZoneInvalidEntry[];

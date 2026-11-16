@@ -1,19 +1,23 @@
-import type { PluginRoute, PluginRouteSegment } from "../routing/types";
-import type { ResolvedPageCacheConfig } from "./config";
+import type { ResolvedPageCacheConfig } from "@vitnode/api/page-cache/config";
 import type {
   PageCachePolicy,
   PageCachePolicySource,
   PageCacheRoute,
   PageCacheSetting,
-} from "./policy";
+} from "@vitnode/api/page-cache/policy";
+import type {
+  PluginRoute,
+  PluginRouteSegment,
+} from "@vitnode/api/routing/types";
 
-import { compareRouteSpecificity } from "../routing/match";
+import { PageCachePolicyError } from "@vitnode/api/page-cache/policy";
 import {
   formatRoutePath,
   parseRoutePath,
   routeMatchKey,
-} from "../routing/path";
-import { PageCachePolicyError } from "./policy";
+} from "@vitnode/api/routing/path";
+
+import { compareRouteSpecificity } from "../routing/match";
 
 /** A page route the host application owns, already parsed. */
 export interface PageCacheHostRoute {
