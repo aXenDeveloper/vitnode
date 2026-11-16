@@ -304,6 +304,44 @@
             "library": "Media library tips"
           }
         }
+      },
+      "faq": {
+        "eyebrow": "FAQ",
+        "title": "What people ask before installing",
+        "items": {
+          "what": {
+            "question": "What is VitNode?",
+            "answer": "An open-source platform for community websites. Members and roles, publishing with the Content Engine, search, moderation and an admin panel (AdminCP) come out of the box, built on TanStack Start, Hono, Drizzle and PostgreSQL."
+          },
+          "free": {
+            "question": "Is VitNode free to use?",
+            "answer": "Yes. VitNode is <license>MIT-licensed</license>: no paid tiers, no per-member pricing, no lock-in. You run it on your own server and own your data. The only bills are your hosting and, if you switch them on, your AI providers."
+          },
+          "ready": {
+            "question": "Can I run my community on VitNode today?",
+            "answer": "Not in production yet. VitNode 2.0 is a canary build, so expect bugs and breaking changes between releases. For now it is for exploring, prototyping and building plugins ahead of the stable release."
+          },
+          "non_dev": {
+            "question": "I’m not a developer. Can I still build with VitNode?",
+            "answer": "Day-to-day running happens in the AdminCP, no code needed. Installing and extending still need a terminal, and that is where an AI coding agent like Claude Code earns its keep: the docs ship as <code>llms-full.txt</code>, so your agent can read them and do the setup with you."
+          },
+          "hosting": {
+            "question": "Where can I host it, and what does it need to run?",
+            "answer": "Anywhere Node.js 22+ or Bun runs: your own server, Docker or Cloudflare Workers. It needs PostgreSQL; Redis is optional and speeds up caching. The generator can add a Docker Compose file with both. Start with the <setup>setup guide</setup>."
+          },
+          "plugins": {
+            "question": "How do I add features VitNode does not ship with, like a forum, a blog or paid content for members?",
+            "answer": "With plugins. Official ones add a blog, a forum and one-time payments through Stripe. When you need something of your own, the <code>vitnode</code> CLI generates a plugin with pages, an API, database tables and AdminCP screens in a few minutes. See <create>Create a plugin</create>."
+          },
+          "languages": {
+            "question": "Can my community speak more than one language?",
+            "answer": "Yes. The interface is translated, and content is translated field by field with a fallback language, so a missing translation never leaves a blank page. Sitemaps include hreflang links, so search engines send each reader to their own language."
+          },
+          "ai": {
+            "question": "Which AI models does it work with, and who pays for them?",
+            "answer": "Any model the Vercel AI SDK supports: OpenAI, Anthropic, Google and more. You bring your own keys, set a monthly budget in the AdminCP and choose which roles get AI. Members spend AI points, so nobody burns through the budget in an afternoon."
+          }
+        }
       }
     },
     "search": {

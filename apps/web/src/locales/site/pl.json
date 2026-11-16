@@ -304,6 +304,44 @@
             "library": "Sprzedam rower"
           }
         }
+      },
+      "faq": {
+        "eyebrow": "FAQ",
+        "title": "O co ludzie pytają przed instalacją",
+        "items": {
+          "what": {
+            "question": "Czym jest VitNode?",
+            "answer": "To platforma open source do stron społeczności. Członkowie i role, publikowanie w Content Engine, wyszukiwarka, moderacja i panel administracyjny (AdminCP) działają od razu. Całość zbudowano na TanStack Start, Hono, Drizzle i PostgreSQL."
+          },
+          "free": {
+            "question": "Czy VitNode jest darmowy?",
+            "answer": "Tak. VitNode jest na <license>licencji MIT</license>: bez płatnych planów, bez opłat za członków i bez uzależnienia od dostawcy. Uruchamiasz go na własnym serwerze, a dane należą do Ciebie. Płacisz tylko za hosting i, jeśli je włączysz, za dostawców AI."
+          },
+          "ready": {
+            "question": "Czy mogę już dziś uruchomić na nim swoją społeczność?",
+            "answer": "Jeszcze nie produkcyjnie. VitNode 2.0 to wersja canary, więc spodziewaj się błędów i zmian łamiących zgodność między wydaniami. Na razie służy do poznawania platformy, prototypowania i budowania wtyczek przed stabilnym wydaniem."
+          },
+          "non_dev": {
+            "question": "Nie jestem programistą. Czy mimo to zbuduję coś z VitNode?",
+            "answer": "Codzienną pracę wykonujesz w AdminCP, bez kodu. Instalacja i rozbudowa wymagają jednak terminala i tu przydaje się agent AI do kodowania, na przykład Claude Code: dokumentacja jest dostępna jako <code>llms-full.txt</code>, więc agent może ją przeczytać i przeprowadzić konfigurację razem z Tobą."
+          },
+          "hosting": {
+            "question": "Gdzie mogę go hostować i czego potrzebuje do działania?",
+            "answer": "Wszędzie tam, gdzie działa Node.js 22+ lub Bun: na własnym serwerze, w Dockerze albo w Cloudflare Workers. Wymaga PostgreSQL; Redis jest opcjonalny i przyspiesza cache. Generator może dodać plik Docker Compose z oboma. Zacznij od <setup>przewodnika instalacji</setup>."
+          },
+          "plugins": {
+            "question": "Jak dodać funkcje, których VitNode nie ma, na przykład forum, bloga albo płatne treści dla członków?",
+            "answer": "Za pomocą wtyczek. Oficjalne dodają bloga, forum i jednorazowe płatności przez Stripe. Gdy potrzebujesz czegoś własnego, CLI <code>vitnode</code> w kilka minut wygeneruje wtyczkę ze stronami, API, tabelami w bazie i ekranami AdminCP. Zobacz <create>Tworzenie wtyczki</create>."
+          },
+          "languages": {
+            "question": "Czy moja społeczność może mówić w kilku językach?",
+            "answer": "Tak. Interfejs jest przetłumaczony, a treści tłumaczysz pole po polu z językiem zapasowym, więc brak tłumaczenia nigdy nie zostawi pustej strony. Mapy witryny zawierają linki hreflang, dzięki czemu wyszukiwarki kierują każdego czytelnika do jego języka."
+          },
+          "ai": {
+            "question": "Z jakimi modelami AI działa i kto za nie płaci?",
+            "answer": "Z każdym modelem obsługiwanym przez Vercel AI SDK: OpenAI, Anthropic, Google i innymi. Używasz własnych kluczy, ustawiasz miesięczny budżet w AdminCP i decydujesz, które role mają dostęp do AI. Członkowie wydają punkty AI, więc nikt nie wyczerpie budżetu w jedno popołudnie."
+          }
+        }
       }
     },
     "search": {
