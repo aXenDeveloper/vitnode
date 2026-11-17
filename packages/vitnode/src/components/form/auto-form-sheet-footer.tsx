@@ -10,8 +10,7 @@ import { SheetClose } from "../ui/sheet";
  * (closes the sheet) and Submit. Render it from the form's `layout`, below a
  * scrollable body.
  *
- * Submit stays disabled until a value differs from its default (unless
- * `allowPristine`), and shows a
+ * Submit stays disabled until a value differs from its default, and shows a
  * spinner while submitting. Closing the sheet after a successful save is the
  * caller's job.
  *
@@ -34,20 +33,11 @@ import { SheetClose } from "../ui/sheet";
  * ```
  */
 export const AutoFormSheetFooter = ({
-  allowPristine = false,
   disabled = false,
-  submitIcon,
   submitLabel,
 }: {
-  /**
-   * Lets Submit run with no changes, for a sheet whose submit is itself the
-   * action (e.g. "Turn off site"). Defaults to `false`.
-   */
-  allowPristine?: boolean;
   /** Disables Submit even with unsaved changes. Defaults to `false`. */
   disabled?: boolean;
-  /** A `lucide-react` icon before the label. */
-  submitIcon?: React.ReactNode;
   submitLabel: string;
 }) => {
   const t = useTranslations("core.global");
@@ -63,11 +53,10 @@ export const AutoFormSheetFooter = ({
       <div className="flex items-center gap-2">
         <SheetClose render={<Button variant="ghost">{t("cancel")}</Button>} />
         <Button
-          disabled={disabled || (!allowPristine && !isDirty)}
+          disabled={disabled || !isDirty}
           isLoading={isSubmitting}
           type="submit"
         >
-          {submitIcon}
           {submitLabel}
         </Button>
       </div>

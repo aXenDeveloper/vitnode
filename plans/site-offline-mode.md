@@ -46,6 +46,26 @@ Owner: core.
   - **Clock** (giant digital clock hero): great for launches, but it buried
     the reason and "Opening soon"/"no time" left a huge empty hero.
 
+## AdminCP screen - decided from the in-place site-status prototype
+
+- Direction: **Inline** - the whole status edited on the page, no sheet:
+  status card with the "Take the site offline" switch, the multi-language
+  message editor, then the opening time and "Show countdown"; a sticky live
+  preview of the offline card on the right (dimmed while the site is online).
+- A sticky save bar appears only with unsaved changes (fade + 8px rise,
+  200ms, motion-safe) with Discard and a button that names the outcome:
+  "Turn off site" (destructive), "Turn on site" or "Save changes". No separate
+  confirm dialog - the button label is the confirmation.
+- A "Not saved yet" badge marks a flipped switch before saving.
+- The form requires the default language's message while offline, matching
+  the API, so the error shows on the field instead of as a 400 toast.
+- Rejected:
+  - **Current** (status card + side sheet + static preview): the preview could
+    not show unsaved edits, and every change took two steps.
+  - **Control panel** (big Online/Offline segmented switch, summary rows,
+    preview in a dialog): fast to scan, but the message was hidden behind
+    Edit and the preview behind a click.
+
 ## Goals
 
 1. **On/off switch.** An admin turns the whole public site off and on from

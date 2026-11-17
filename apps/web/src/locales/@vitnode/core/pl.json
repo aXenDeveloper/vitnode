@@ -1536,76 +1536,63 @@
           "online": "Dostępna",
           "offline": "Wyłączona"
         },
-        "card": {
-          "online": {
-            "title": "Strona jest dostępna",
-            "desc": "Każdy może ją odwiedzić. Wyłącz ją, aby pokazać odwiedzającym komunikat na czas prac."
-          },
-          "offline": {
-            "title": "Strona jest wyłączona",
-            "desc": "Odwiedzający widzą stronę przerwy. Zespół nadal może przeglądać stronę i się logować."
-          }
-        },
-        "details": {
-          "offline_since": "Wyłączona od",
-          "last_change": "Ostatnia zmiana",
+        "status": {
+          "online": "Strona jest dostępna",
+          "offline": "Strona jest wyłączona",
+          "not_saved": "Niezapisane",
+          "last_switched": "Ostatnia zmiana",
           "by": "przez {name}",
-          "never": "Nigdy nie była wyłączona",
-          "opens_at": "Czas otwarcia",
-          "no_opening_time": "Nie ustawiono"
+          "never": "Nigdy nie była wyłączona"
         },
-        "actions": {
-          "edit": "Edytuj komunikat",
+        "preview": {
+          "title": "Podgląd na żywo",
+          "now": "To widzą teraz odwiedzający",
+          "offline_only": "Widoczne, gdy strona jest wyłączona"
+        },
+        "save_bar": {
+          "unsaved": "Masz niezapisane zmiany",
+          "discard": "Odrzuć",
+          "save": "Zapisz zmiany",
           "turn_off": "Wyłącz stronę",
           "turn_on": "Włącz stronę"
         },
-        "turn_on_confirm": {
-          "title": "Włączyć stronę?",
-          "desc": "Odwiedzający od razu zobaczą stronę. Otwarte strony przerwy przeładują się same w ciągu minuty."
-        },
-        "turned_on": {
-          "title": "Strona jest dostępna",
-          "desc": "Odwiedzający znów mogą korzystać ze strony."
-        },
-        "preview": {
-          "title": "Podgląd",
-          "desc": "To, co widzą odwiedzający, gdy strona jest wyłączona, w Twoim bieżącym języku."
-        },
-        "sheet": {
-          "edit": {
-            "title": "Edytuj komunikat o przerwie",
-            "desc": "Powód i czas otwarcia, które widzą odwiedzający, gdy strona jest wyłączona."
+        "toast": {
+          "saved": {
+            "title": "Zapisano zmiany",
+            "desc": "Odwiedzający zobaczą je przy następnym wczytaniu strony przerwy."
           },
-          "turn_off": {
-            "title": "Wyłącz stronę",
-            "desc": "Odwiedzający zobaczą ten komunikat zamiast strony. Zespół zachowuje pełny dostęp."
+          "turned_off": {
+            "title": "Strona jest wyłączona",
+            "desc": "Odwiedzający widzą teraz stronę przerwy. Zespół nadal może korzystać ze strony."
+          },
+          "turned_on": {
+            "title": "Strona jest dostępna",
+            "desc": "Odwiedzający znów mogą korzystać ze strony. Otwarte strony przerwy przeładują się same w ciągu minuty."
           }
         },
         "form": {
+          "offline": {
+            "label": "Wyłącz stronę",
+            "desc": "Odwiedzający zobaczą stronę przerwy zamiast strony. Zespół zachowuje pełny dostęp."
+          },
           "message": {
             "label": "Komunikat",
             "desc": "Dlaczego strona jest wyłączona. Napisz go co najmniej w języku domyślnym; pozostałe języki go przejmą.",
             "placeholder": "Aktualizujemy forum. Zaraz wracamy!",
-            "required": "Napisz komunikat, aby odwiedzający wiedzieli, co się dzieje."
+            "required": "Napisz komunikat w języku domyślnym, aby każdy odwiedzający wiedział, co się dzieje."
+          },
+          "opening": {
+            "title": "Otwarcie",
+            "desc": "Opcjonalne. Pokazuje odwiedzającym, kiedy wrócić."
           },
           "opens_at": {
             "label": "Czas otwarcia",
-            "desc": "Kiedy odwiedzający mogą spodziewać się powrotu strony. Strona nigdy nie otworzy się sama - po upływie czasu odwiedzający widzą \"Wkrótce otwarcie\", dopóki jej nie włączysz.",
+            "desc": "Strona nigdy nie otworzy się sama - po upływie czasu odwiedzający widzą \"Wkrótce otwarcie\", dopóki jej nie włączysz.",
             "past": "Wybierz czas w przyszłości."
           },
           "show_countdown": {
             "label": "Pokaż odliczanie",
             "desc": "Pokazuj odliczanie na żywo. Po wyłączeniu odwiedzający widzą tylko datę."
-          },
-          "submit": "Zapisz",
-          "submit_turn_off": "Wyłącz stronę",
-          "saved": {
-            "title": "Zapisano komunikat o przerwie",
-            "desc": "Odwiedzający zobaczą nowy komunikat przy następnym wczytaniu strony przerwy."
-          },
-          "turned_off": {
-            "title": "Strona jest wyłączona",
-            "desc": "Odwiedzający widzą teraz stronę przerwy. Zespół nadal może korzystać ze strony."
           }
         }
       }

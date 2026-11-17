@@ -5251,76 +5251,63 @@
           "online": "Online",
           "offline": "Offline"
         },
-        "card": {
-          "online": {
-            "title": "Your site is online",
-            "desc": "Everyone can visit it. Turn it off to show visitors a message while you work."
-          },
-          "offline": {
-            "title": "Your site is offline",
-            "desc": "Visitors see the offline page. Staff can still browse the site and sign in."
-          }
-        },
-        "details": {
-          "offline_since": "Offline since",
-          "last_change": "Last switched",
+        "status": {
+          "online": "Site is online",
+          "offline": "Site is offline",
+          "not_saved": "Not saved yet",
+          "last_switched": "Last switched",
           "by": "by {name}",
-          "never": "Never switched off",
-          "opens_at": "Opening time",
-          "no_opening_time": "Not set"
+          "never": "Never switched off"
         },
-        "actions": {
-          "edit": "Edit message",
+        "preview": {
+          "title": "Live preview",
+          "now": "What visitors see now",
+          "offline_only": "Shown while offline"
+        },
+        "save_bar": {
+          "unsaved": "You have unsaved changes",
+          "discard": "Discard",
+          "save": "Save changes",
           "turn_off": "Turn off site",
           "turn_on": "Turn on site"
         },
-        "turn_on_confirm": {
-          "title": "Turn the site on?",
-          "desc": "Visitors will see the site again right away. Open offline pages reload on their own within a minute."
-        },
-        "turned_on": {
-          "title": "Site is online",
-          "desc": "Visitors can use the site again."
-        },
-        "preview": {
-          "title": "Preview",
-          "desc": "What visitors see while the site is offline, in your current language."
-        },
-        "sheet": {
-          "edit": {
-            "title": "Edit offline message",
-            "desc": "The reason and the opening time visitors see while the site is offline."
+        "toast": {
+          "saved": {
+            "title": "Changes saved",
+            "desc": "Visitors see them the next time the offline page loads."
           },
-          "turn_off": {
-            "title": "Turn off site",
-            "desc": "Visitors will see this message instead of the site. Staff keep full access."
+          "turned_off": {
+            "title": "Site is offline",
+            "desc": "Visitors now see the offline page. Staff can still use the site."
+          },
+          "turned_on": {
+            "title": "Site is online",
+            "desc": "Visitors can use the site again. Open offline pages reload on their own within a minute."
           }
         },
         "form": {
+          "offline": {
+            "label": "Take the site offline",
+            "desc": "Visitors see the offline page instead of the site. Staff keep full access."
+          },
           "message": {
             "label": "Message",
             "desc": "Why the site is offline. Write it in the default language at least; other languages fall back to it.",
             "placeholder": "We're upgrading the forum. Back shortly!",
-            "required": "Write a message so visitors know what's going on."
+            "required": "Write the message in the default language so every visitor knows what's going on."
+          },
+          "opening": {
+            "title": "Opening",
+            "desc": "Optional. Shows visitors when to come back."
           },
           "opens_at": {
             "label": "Opening time",
-            "desc": "When visitors can expect the site back. The site never opens by itself - when the time is up, visitors see \"Opening soon\" until you turn it on.",
+            "desc": "The site never opens by itself - when the time is up, visitors see \"Opening soon\" until you turn it on.",
             "past": "Pick a time in the future."
           },
           "show_countdown": {
             "label": "Show countdown",
             "desc": "Show a live countdown. When off, visitors see only the date."
-          },
-          "submit": "Save",
-          "submit_turn_off": "Turn off site",
-          "saved": {
-            "title": "Offline message saved",
-            "desc": "Visitors see the new message the next time the offline page loads."
-          },
-          "turned_off": {
-            "title": "Site is offline",
-            "desc": "Visitors now see the offline page. Staff can still use the site."
           }
         }
       }

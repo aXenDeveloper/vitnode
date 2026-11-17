@@ -25,14 +25,6 @@ import {
 
 import type { AdminSiteStatusRouteData } from "./route";
 
-// PROTOTYPE site-status-admin
-const SiteStatusProto = React.lazy(async () =>
-  import("@/proto/site-status/harness").then(module => ({
-    default: module.SiteStatusProto,
-  })),
-);
-// END PROTOTYPE site-status-admin
-
 import { RouteMessages } from "../../i18n/route-messages";
 import { siteStatusQueryKey } from "../../site-status/query";
 import { useAdminPermission } from "../permissions";
@@ -90,22 +82,6 @@ const SiteStatusScreen = () => {
       </Empty>
     );
   }
-
-  // PROTOTYPE site-status-admin: dev-only variants picker. Remove this block
-  // and the src/proto/site-status folder after the decision.
-  if (import.meta.env.DEV) {
-    return (
-      <React.Suspense fallback={<CardsPendingSkeleton />}>
-        <SiteStatusProto
-          canManage={canManage}
-          data={query.data}
-          fetchedAt={query.dataUpdatedAt}
-          onSave={onSave}
-        />
-      </React.Suspense>
-    );
-  }
-  // END PROTOTYPE site-status-admin
 
   return (
     <SiteStatusContent

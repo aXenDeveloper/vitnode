@@ -7,7 +7,6 @@ icon: Power
 import { ImgDocs } from "@/components/fumadocs/img"
 import siteOfflineAdmin from "./site-offline-admin.webp"
 import siteOfflinePage from "./site-offline-page.webp"
-import siteOfflineSheet from "./site-offline-sheet.webp"
 
 Site offline mode swaps the public site for a "We'll be right back" page while you upgrade, migrate or prepare a launch. Visitors see your message in their language and, if you set an opening time, a countdown. Staff keep using the site as usual, so you can check everything before you open the doors.
 
@@ -25,14 +24,9 @@ Go to **AdminCP → System → Site status**. You need the **Site status → Vie
 
 <Step>
 
-### Write the message
+### Switch it off and write the message
 
-Select **Turn off site**. Write why the site is offline in **Message**. The editor has a language switcher: write the default language at least. A visitor whose language has no message gets the default one.
-
-<ImgDocs
-  src={siteOfflineSheet}
-  alt="Turn off site sheet with the message editor, its language switcher, the opening time and the Show countdown switch"
-/>
+Turn on **Take the site offline**, then write why in **Message**. The editor has a language switcher: write the default language at least. A visitor whose language has no message gets the default one. The **Live preview** beside the form updates as you type.
 
 </Step>
 
@@ -48,20 +42,20 @@ The site **never opens by itself**. Once the opening time has passed, visitors s
 
 <Step>
 
-### Confirm
+### Save
 
-Select **Turn off site** in the sheet footer. The status card turns to **Offline** and the preview shows what visitors see.
+A bar appears at the bottom once something changes. Select **Turn off site** in it. The status card turns to **Offline**, and the preview now shows what visitors see.
 
 <ImgDocs
   src={siteOfflineAdmin}
-  alt="Site status page in the AdminCP showing the site offline, who switched it off, the opening time and a preview with the countdown"
+  alt="Site status page in the AdminCP: the Take the site offline switch, the message editor and the opening time on the left, and a live preview of the offline page on the right"
 />
 
 </Step>
 
 </Steps>
 
-To open the site, select **Turn on site** and confirm. Offline pages that are still open check the status every minute and load the site on their own.
+To open the site, turn off **Take the site offline** and select **Turn on site** in the save bar. Offline pages that are still open check the status every minute and load the site on their own.
 
 ## What visitors and staff see
 
