@@ -44,6 +44,8 @@ const pinNoteRoute = buildRoute({
   route: {
     method: "post",
     path: "/{id}/pin",
+    // An MCP tool too: the fetcher's inference below must not change.
+    mcp: { name: "pin_note" },
     request: {
       body: {
         content: {

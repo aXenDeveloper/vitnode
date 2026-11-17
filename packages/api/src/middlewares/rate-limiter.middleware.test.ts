@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CacheClient } from "@/lib/cache";
 
 import { clientIpMiddleware } from "@/lib/client-ip";
+import { dispatchMcpTool, mcpDispatchMiddleware } from "@/lib/mcp/dispatch";
 
 import {
   RATE_LIMITER_DEFAULTS,
@@ -602,6 +603,94 @@ describe("rateLimiterMiddleware per member", () => {
     expect(line).toContain('"category":"read","subject":"user"');
     expect(line).not.toContain("4242");
     expect(line).not.toContain("203.0.113");
+  });
+});
+
+/**
+ * `/api/mcp` dispatches one GET tool call per request, as the member named in
+ * `x-owner`, and answers with the tool result.
+ */
+const buildMcpApp = (config: RateLimiterConfig) => {
+  const app = new Hono<Env>().basePath("/api");
+  const limiter = rateLimiterMiddleware(config, {
+    isMcpEndpoint: c => c.req.path === "/api/mcp",
+    sessionCookieName: SESSION_COOKIE,
+  });
+
+  app.use("*", mcpDispatchMiddleware);
+  app.use("*", async (c, next) => {
+    c.set("ipAddress", "203.0.113.7");
+
+    return next();
+  });
+  app.use("*", limiter.preflight);
+  app.use("*", limiter.requests);
+  app.use("*", limiter.identified);
+  app.get("/@acme/notes/notes", c => c.json({ ok: true }));
+  app.post("/mcp", async c =>
+    c.json(
+      await dispatchMcpTool(
+        {
+          basePath: "/api",
+          c,
+          fetch: app.fetch,
+          maxResponseBytes: 1024,
+        },
+        {
+          args: {},
+          frame: {
+            correlationId: "corr",
+            ipAddress: "203.0.113.7",
+            principal: { tokenId: 1, userId: Number(c.req.header("x-owner")) },
+            tool: "acme-notes__get_notes",
+          },
+          tool: {
+            description: "List notes",
+            groups: {},
+            inputSchema: { type: "object" },
+            method: "GET",
+            name: "acme-notes__get_notes",
+            operation: "get_notes",
+            path: "/notes",
+            pluginId: "@acme/notes",
+            requiresAdmin: false,
+          },
+        },
+      ),
+    ),
+  );
+
+  const call = async (owner: number) => {
+    const response = await app.request("/api/mcp", {
+      headers: { "x-owner": String(owner) },
+      method: "POST",
+    });
+    if (response.status !== 200) return response.status;
+    const { isError } = (await response.json()) as { isError?: boolean };
+
+    return isError ? "tool 429" : 200;
+  };
+
+  return { call };
+};
+
+describe("rateLimiterMiddleware for MCP", () => {
+  it("charges an MCP request safety once, and its tool call never again", async () => {
+    const { call } = buildMcpApp({
+      safety: { points: 2 },
+      write: { points: 1 },
+    });
+
+    await expect(Promise.all([call(7), call(7)])).resolves.toEqual([200, 200]);
+    expect(await call(7)).toBe(429);
+  });
+
+  it("charges each tool call its route's categories, per token owner", async () => {
+    const { call } = buildMcpApp({ safety: ROOMY, read: { points: 1 } });
+
+    expect(await call(7)).toBe(200);
+    expect(await call(8)).toBe(200);
+    expect(await call(7)).toBe("tool 429");
   });
 });
 

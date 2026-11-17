@@ -9,6 +9,7 @@ import {
 } from "@/lib/fetcher/forwarded-signature.server";
 
 import { clientIpMiddleware } from "./client-ip";
+import { dispatchMcpTool, mcpDispatchMiddleware } from "./mcp/dispatch";
 
 interface Env {
   Variables: { ipAddress: string };
@@ -73,6 +74,50 @@ describe("clientIpMiddleware", () => {
     await expect(
       resolve({ env: { clientAddress: "203.0.113.7" } }),
     ).resolves.toBe("203.0.113.7");
+  });
+
+  it("gives an MCP tool call the MCP client's address, not the runtime's socket", async () => {
+    const app = new Hono<Env>().basePath("/api");
+    app.use("*", mcpDispatchMiddleware);
+    app.use("*", clientIpMiddleware);
+    app.get("/@acme/notes/ip", c => c.json({ ip: c.get("ipAddress") }));
+    app.post("/mcp", async c =>
+      c.json(
+        await dispatchMcpTool(
+          { basePath: "/api", c, fetch: app.fetch, maxResponseBytes: 1024 },
+          {
+            args: {},
+            frame: {
+              correlationId: "corr",
+              ipAddress: "198.51.100.4",
+              principal: { tokenId: 1, userId: 7 },
+              tool: "acme-notes__get_ip",
+            },
+            tool: {
+              description: "Address",
+              groups: {},
+              inputSchema: { type: "object" },
+              method: "GET",
+              name: "acme-notes__get_ip",
+              operation: "get_ip",
+              path: "/ip",
+              pluginId: "@acme/notes",
+              requiresAdmin: false,
+            },
+          },
+        ),
+      ),
+    );
+
+    const res = await app.request(
+      "/api/mcp",
+      { method: "POST" },
+      { clientAddress: "203.0.113.7" },
+    );
+
+    expect(await res.json()).toMatchObject({
+      structuredContent: { ip: "198.51.100.4" },
+    });
   });
 
   describe("behind trusted proxies", () => {

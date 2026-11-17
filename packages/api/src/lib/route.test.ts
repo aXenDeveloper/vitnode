@@ -8,6 +8,7 @@ import { createTestCache } from "@/tests/cache";
 import { grantStaffPermissions } from "@/tests/staff-permissions";
 
 import { buildRoute } from "./route";
+import { routeMcp } from "./route-metadata";
 
 const okResponse = {
   200: {
@@ -133,6 +134,33 @@ describe("buildRoute staff permission guards", () => {
           handler: c => c.json({ plugin: c.get("plugin").id }, 200),
         }),
       ).toThrow(/received the (admin|moderator) permission/);
+    },
+  );
+});
+
+describe("buildRoute mcp", () => {
+  it.each([
+    ["omitted", undefined, undefined],
+    ["false", false, undefined],
+    ["true", true, {}],
+    ["options", { name: "list_things" }, { name: "list_things" }],
+  ] as const)(
+    "keeps mcp %s off the OpenAPI route and records it as metadata",
+    async (_label, mcp, metadata) => {
+      const built = buildRoute({
+        pluginId: "@vitnode/test",
+        route: {
+          method: "get",
+          path: "/",
+          responses: okResponse,
+          ...(mcp === undefined ? {} : { mcp }),
+        },
+        handler: c => c.json({ plugin: c.get("plugin").id }, 200),
+      });
+
+      expect(built.route).not.toHaveProperty("mcp");
+      expect(routeMcp(built)).toEqual(metadata);
+      expect((await mount(built).request("/")).status).toBe(200);
     },
   );
 });
