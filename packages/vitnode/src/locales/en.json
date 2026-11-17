@@ -5303,7 +5303,7 @@
           },
           "opens_at": {
             "label": "Opening time",
-            "desc": "The site never opens by itself - when the time is up, visitors see \"Opening soon\" until you turn it on.",
+            "desc": "The site never opens by itself. When the time is up, visitors see \"Opening soon\" until you turn it on.",
             "past": "Pick a time in the future."
           },
           "show_countdown": {
@@ -5449,8 +5449,8 @@
           "websocket": "WebSocket"
         },
         "site": {
-          "offline": "The public site is offline - visitors see the offline page",
-          "offline_until": "The public site is offline - visitors see the offline page until {opensAt, date, medium}, {opensAt, time, short}"
+          "offline": "The public site is offline",
+          "offline_until": "The public site is offline until {opensAt, date, medium}, {opensAt, time, short}"
         }
       },
       "actions": {

@@ -3,6 +3,7 @@ import {
   setResponseHeader,
   setResponseStatus,
 } from "@tanstack/react-start/server";
+import { retryAfterSeconds } from "@vitnode/api/lib/site-status";
 
 /**
  * Answers the current SSR request as an offline page: `503` (so search
@@ -12,16 +13,10 @@ import {
  */
 export const markSiteOfflineResponse = createIsomorphicFn()
   .server((opensAt: null | string) => {
-    try {
-      setResponseStatus(503);
-      setResponseHeader("cache-control", "no-store");
-      setResponseHeader("x-robots-tag", "noindex");
-      const seconds = opensAt
-        ? Math.ceil((Date.parse(opensAt) - Date.now()) / 1000)
-        : 0;
-      if (seconds > 0) setResponseHeader("retry-after", String(seconds));
-    } catch {
-      // Outside a request (a prerender at build time) there is no response.
-    }
+    setResponseStatus(503);
+    setResponseHeader("cache-control", "no-store");
+    setResponseHeader("x-robots-tag", "noindex");
+    const retryAfter = retryAfterSeconds(opensAt);
+    if (retryAfter) setResponseHeader("retry-after", String(retryAfter));
   })
   .client(() => undefined);

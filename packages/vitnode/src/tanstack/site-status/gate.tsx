@@ -68,14 +68,14 @@ const StaffBanner = () => {
   );
 };
 
-/** The full-page offline screen, for a visitor who is not staff. */
+/** The full-page offline screen, for a visitor who may not use the offline site. */
 export const SiteOfflineScreen = () => (
   <RouteMessages namespaces={SITE_OFFLINE_NAMESPACES}>
     <OfflineScreen />
   </RouteMessages>
 );
 
-/** Tells staff that visitors see the offline page, with a link to the AdminCP. */
+/** Tells a viewer who may use the offline site that visitors see the offline page, with a link to the AdminCP. */
 export const SiteOfflineStaffBanner = () => (
   <RouteMessages namespaces={SITE_OFFLINE_NAMESPACES}>
     <StaffBanner />
@@ -120,7 +120,8 @@ export const useSiteOfflineView = (): SiteOfflineView => {
 
 /**
  * Swaps `children` for the offline page while the site is offline, except for
- * staff (who get a reminder banner above it) and the sign-in pages. For a
+ * viewers who may use the offline site (they get a reminder banner above it)
+ * and the sign-in pages. For a
  * custom public layout; `ThemeLayoutContent` already does it.
  */
 export const SiteOfflineGate = ({

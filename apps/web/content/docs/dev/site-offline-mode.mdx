@@ -79,7 +79,7 @@ The `503` answer tells search engines the outage is temporary, so they keep your
 
 ## Let moderators in
 
-Admins always pass. A moderator passes only with the moderator staff permission **Site status → Access the site while it's offline**: give it to a moderator role in **AdminCP → Staff → Moderators**. A root role holds it automatically. The check runs on the server, so the offline page, the `503` and the API agree on who gets in.
+Admins always pass. A moderator passes only with the moderator staff permission **Site status → Access the site while it's offline**. Give it to a moderator or a moderator role in **AdminCP → Staff → Moderators**. Root roles and unrestricted moderators hold it already. The server makes the call, so the offline page, the `503` and the API never disagree about who gets in.
 
 ## Keep a route working while offline
 
@@ -101,7 +101,7 @@ export const orderWebhookRoute = buildRoute({
 });
 ```
 
-Core already allows signing in, password reset, e-mail verification, SSO, passkey sign-in, cron and payment webhooks.
+Core already allows signing in, password reset, e-mail verification, SSO, passkey sign-in, cron, payment webhooks and content preview links.
 
 ## Read the status in your code
 
@@ -110,12 +110,18 @@ Core already allows signing in, password reset, e-mail verification, SSO, passke
 ```tsx title="plugins/shop/src/components/launch-badge.tsx"
 import { useQuery } from "@tanstack/react-query";
 import { siteStatusQueryOptions } from "@vitnode/core/tanstack/site-status";
+import { useFormatter } from "use-intl";
 
 export const LaunchBadge = () => {
+  const format = useFormatter();
   const { data } = useQuery(siteStatusQueryOptions());
-  if (!data?.offline) return null;
+  if (!data?.offline || !data.opensAt) return null;
 
-  return <span>Opens {data.opensAt ?? "soon"}</span>;
+  return (
+    <span>
+      Opens {format.dateTime(new Date(data.opensAt), { dateStyle: "medium" })}
+    </span>
+  );
 };
 ```
 

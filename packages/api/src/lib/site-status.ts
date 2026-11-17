@@ -18,6 +18,15 @@ export const SITE_STATUS_LIMITS = {
   messageMaxBytes: 64 * 1024,
 } as const;
 
+/** Seconds until `opensAt` for a `Retry-After` header, or `null` once it has passed. */
+export const retryAfterSeconds = (opensAt: null | string): null | number => {
+  const seconds = opensAt
+    ? Math.ceil((Date.parse(opensAt) - Date.now()) / 1000)
+    : 0;
+
+  return seconds > 0 ? seconds : null;
+};
+
 /** The page-cache tag every render that read the site status carries. */
 export const SITE_STATUS_PAGE_CACHE_TAG = "core:site-status";
 
@@ -42,39 +51,24 @@ export const zodSiteStatus = z.object({
 export type SiteStatus = z.output<typeof zodSiteStatus>;
 
 /**
- * What the AdminCP sends to save the site status. Browser-safe, so the form
- * validates with the same rules. `message` needs a non-empty document in at
- * least one language while `offline` is on; the API also requires the
- * default language.
+ * What the AdminCP sends to save the site status. Browser-safe. The API also
+ * requires a non-empty message in the default language while `offline` is on.
  */
-export const zodSiteStatusUpdate = z
-  .object({
-    offline: z.boolean(),
-    message: z
-      .array(
-        z.object({
-          languageCode: z.string().min(1).max(20),
-          value: createRichTextDocumentSchema({
-            maxBytes: SITE_STATUS_LIMITS.messageMaxBytes,
-          }),
+export const zodSiteStatusUpdate = z.object({
+  offline: z.boolean(),
+  message: z
+    .array(
+      z.object({
+        languageCode: z.string().min(1).max(20),
+        value: createRichTextDocumentSchema({
+          maxBytes: SITE_STATUS_LIMITS.messageMaxBytes,
         }),
-      )
-      .default([]),
-    opensAt: z.iso.datetime({ offset: true }).nullable().default(null),
-    showCountdown: z.boolean().default(true),
-  })
-  .superRefine((value, ctx) => {
-    if (
-      value.offline &&
-      !value.message.some(item => !isRichTextEmpty(item.value))
-    ) {
-      ctx.addIssue({
-        code: "custom",
-        message: "message_required",
-        path: ["message"],
-      });
-    }
-  });
+      }),
+    )
+    .default([]),
+  opensAt: z.iso.datetime({ offset: true }).nullable().default(null),
+  showCountdown: z.boolean().default(true),
+});
 
 export type SiteStatusUpdate = z.output<typeof zodSiteStatusUpdate>;
 

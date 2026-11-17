@@ -18,7 +18,7 @@ import {
 export type AdminSiteStatus = z.infer<typeof zodSiteStatusAdmin>;
 export type AdminSiteStatusInput = SiteStatusUpdate;
 
-export const adminSiteStatusQueryKey = adminQueryRoot("site-status");
+const adminSiteStatusQueryKey = adminQueryRoot("site-status");
 
 export const adminSiteStatusQueryOptions = () =>
   queryOptions({

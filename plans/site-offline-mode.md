@@ -1,339 +1,125 @@
-# Site offline mode with an opening countdown
+# Site offline mode
 
-Status: implemented (phases 0-5). Tests are left for a separate session.
-Owner: core.
+Status: implemented. Tests still to write (see the last section). Owner: core.
 
-## Changes from the plan
+An admin switches the public site off in **AdminCP → System → Site status**
+and writes why, once per language. Visitors get a card with that message and,
+if an opening time is set, a countdown. The site never opens by itself: when
+the time runs out the card says "Opening soon" until an admin turns the site
+back on. Admins, and moderators given the permission, keep using the site.
 
-- **Lockdown lives in `buildRoute`**, not a path allowlist: every route gets
-  `siteOfflineGuard` unless it sets `allowWhenOffline: true` or
-  `adminStaffPermission`. Core opts in sign-in, password reset, e-mail
-  verification, SSO, passkey sign-in, session, `show-config`, the status
-  itself, cron, payment webhooks and signed content previews. An unreadable
-  status counts as online.
-- **No realtime push.** The socket only serves signed-in users, and the
-  offline page is for guests, so the page polls every minute (and on focus)
-  and calls `router.invalidate()` when it reopens.
-- **`show-config` is unchanged.** The shell loads `siteStatusQueryOptions`
-  next to the session in `loadMainShell`, so there is no extra round trip.
-- **`ThemeLayoutContent` from `@vitnode/core/tanstack/layout` is the gate**, so
-  existing apps get it without changing their `_main` route. `SiteOfflineGate`
-  covers custom layouts.
-- **`503` via `setResponseStatus`** in `markSiteOfflineResponse`; the page
-  cache never stores a non-`200` render, so staff (with cookies) always get
-  their own render. `X-Robots-Tag: noindex` replaces the `<meta>` tag.
-- **Sign-in stays open**, registration does not (`/login` and below only).
-- **Who passes the offline gate:** an AdminCP session, any admin, and
-  moderators holding `moderator.site_status.can_access_offline` (root roles
-  hold it). The server decides (`canBypassSiteOffline`) and the public status
-  answers `viewerCanBypass`; the client keys the status query by viewer id so
-  signing in refetches it.
-- `AutoFormSheetFooter` gained `allowPristine` and `submitIcon`.
+Out of scope: scheduled automatic opening, offline mode per section or per
+plugin, IP allowlists.
 
-## Offline page design - decided from /proto/offline
+## Who gets in
 
-- Direction: **Notice** - one card on a muted page, like a status page:
-  logo + "Maintenance" pill, heading, the message, then one compact row
-  for the opening time.
-- Opening row: "Back in 02d 05h 37m 09s" with rolling digits and the date
-  on the right; with **Show countdown** off, "Expected back" + the date only;
-  once the time has passed (either mode), "Opening soon". No opening time:
-  no row.
-- No sign-in link and no mention of staff on the offline page; staff go to
-  `/login` or `/admin` by address.
-- Card enters with fade + zoom from 0.98 + 8px rise, 300ms, motion-safe only.
-- Rejected:
-  - **Current** (centred stack, big countdown tiles): message and countdown
-    fought for attention, and it read as a launch page rather than a
-    maintenance notice.
-  - **Editorial** (left-aligned split, ruled countdown list): strong for long
-    reasons, but on phones the countdown fell below the fold.
-  - **Clock** (giant digital clock hero): great for launches, but it buried
-    the reason and "Opening soon"/"no time" left a huge empty hero.
-
-## AdminCP screen - decided from the in-place site-status prototype
-
-- Direction: **Inline** - the whole status edited on the page, no sheet:
-  status card with the "Take the site offline" switch, the multi-language
-  message editor, then the opening time and "Show countdown"; a sticky live
-  preview of the offline card on the right (dimmed while the site is online).
-- A sticky save bar appears only with unsaved changes (fade + 8px rise,
-  200ms, motion-safe) with Discard and a button that names the outcome:
-  "Turn off site" (destructive), "Turn on site" or "Save changes". No separate
-  confirm dialog - the button label is the confirmation.
-- A "Not saved yet" badge marks a flipped switch before saving.
-- The form requires the default language's message while offline, matching
-  the API, so the error shows on the field instead of as a 400 toast.
-- Rejected:
-  - **Current** (status card + side sheet + static preview): the preview could
-    not show unsaved edits, and every change took two steps.
-  - **Control panel** (big Online/Offline segmented switch, summary rows,
-    preview in a dialog): fast to scan, but the message was hidden behind
-    Edit and the preview behind a click.
-
-## Goals
-
-1. **On/off switch.** An admin turns the whole public site off and on from
-   the AdminCP. Turning it off needs a reason.
-2. **Reason per language.** The reason is rich text (the Tiptap WYSIWYG), one
-   document per language, edited with the existing multi-language editor.
-3. **Countdown.** Optionally, the offline page counts down to a planned
-   opening time with rolling digits (`SlidingNumber` from
-   `@vitnode/core/components/ui/sliding-number`).
-4. **Never opens by itself.** When the countdown reaches zero, the page shows
-   "Opening soon" and the site stays off until an admin switches it on.
-5. **Staff keep working.** Staff browse the site normally while it is off,
-   with a banner reminding them that visitors can't. The AdminCP and sign-in
-   always work.
-
-Non-goals: scheduled automatic opening, per-section or per-plugin offline
-mode, a custom offline page designer, IP allowlists.
-
-## Constraints found in the code
-
-- Site-wide singletons are a one-row table with `id = 1`
-  (`core_ai_settings` in `packages/api/src/database/ai.ts`), read through an
-  admin `GET /settings` and written through `PUT /settings` with an audit log
-  (`modules/admin/ai/routes/*`).
-- Multi-language rich text already exists: `MultiLangValue<RichTextDocument>`
-  stored as `jsonb` (`core_warnings.message`), edited with
-  `<AutoFormEditor format="json" multiLang />` and rendered on the server by
-  `RichTextContent` without shipping Tiptap.
-- `SlidingNumber` already rolls digits, respects reduced motion and keeps an
-  sr-only value.
-- The public shell loads in `loadMainShell`
-  (`packages/vitnode/src/tanstack/layout/header.tsx`), which already redirects
-  suspended sessions (`redirectSuspendedSession`) and renders a gate
-  (`SuspensionGate` in `main-header.tsx`). The offline gate follows the same
-  shape.
-- The page cache stores shared renders that never read a session. An offline
-  render must not be served to staff, and an online render must not be served
-  after the switch flips.
-- New admin APIs require staff permissions (`coreStaffPermissions`).
-- `@vitnode/api` must not import from `@vitnode/core`.
-
-## Decisions
-
-| Topic | Decision |
+| Viewer | Gets |
 | --- | --- |
-| Storage | New singleton table `core_site_status` (`id = 1`). |
-| Reason format | `MultiLangValue<RichTextDocument>` in `jsonb`; the default language is required when turning off, others fall back to it. |
-| Who passes the gate | All staff (admins and moderators). See open question 1. |
-| Countdown end | Client-side only: the countdown swaps to "Opening soon". No cron, no write. |
-| Enforcement | Front end gate for every visitor, plus a `503` from public API routes for non-staff (open question 2). |
-| HTTP status | Offline page answers `503` with `Retry-After` (when `opensAt` is in the future) and `noindex`. |
-| Admin surface | Page `/admin/core/system/site-status` with a status card; editing in a **Sheet** (short settings, per AGENTS.md). |
-| Live flip | Realtime event to open offline pages + `refetchInterval` fallback, so visitors see the site as soon as it opens. |
-| Permissions | New group `admin.site_status: ["can_view", { can_manage, dependsOn: can_view }]`. |
+| Admin, or any AdminCP session | The site, with a "site is offline" banner |
+| Moderator with `moderator.site_status.can_access_offline` | The same as an admin |
+| Any other moderator, member or guest | The offline card, `503` |
+| Anyone on `/login` and below | The sign-in pages, so staff can sign in |
 
-## Data model
+Root roles and unrestricted moderator entries hold the permission without
+listing it. Registration stays closed: `/register` is not an open path.
 
-`packages/api/src/database/site-status.ts`:
+The server makes this call once, in `canBypassSiteOffline`
+(`packages/api/src/lib/site-status.server.ts`). The API guard, the SSR `503`
+and the client gate all follow it, so they cannot disagree.
 
-```ts
-export const core_site_status = camelCase.table.withRLS("core_site_status", t => ({
-  id: t.integer().primaryKey().default(1),
-  offline: t.boolean().notNull().default(false),
-  message: t.jsonb().$type<MultiLangValue<RichTextDocument>>().notNull().default([]),
-  opensAt: t.timestamp({ withTimezone: true }),          // null = no countdown
-  showCountdown: t.boolean().notNull().default(true),
-  changedAt: t.timestamp().notNull().defaultNow(),       // when `offline` last flipped
-  changedById: t.integer().references(() => core_users.id, { onDelete: "set null" }),
-  updatedAt: t.timestamp().notNull().defaultNow().$onUpdate(() => new Date()),
-}));
-```
+## Storage and API
 
-Plus a migration (`pnpm db:prepare`). A missing row means online.
+- `core_site_status`: one row, `id = 1`. A missing row means online.
+  `message` is `MultiLangValue<RichTextDocument>` in `jsonb`. `changedAt` and
+  `changedById` move only when `offline` flips.
+- `loadSiteStatus(c)` reads the row once per request and caches it for 300s
+  (Redis when configured). A save deletes the entry and hard-invalidates the
+  page-cache tag `core:site-status`.
+- `GET /site/status` (public, `allowWhenOffline`): offline flag, message,
+  opening time, `serverNow` for clock skew, and `viewerCanBypass` for the
+  requesting viewer.
+- `GET` / `PUT /admin/site/status`: guarded by `admin.site_status.can_view` /
+  `can_manage`. The `PUT` requires a non-empty message in the default language
+  while offline, refuses a new opening time in the past (an expired one may
+  stay), writes an audit entry and emits `site.status.updated`.
 
-## API (`@vitnode/api`)
+## Enforcement
 
-### Model / helpers
+- **API:** `buildRoute` adds `siteOfflineGuard` to every route unless it sets
+  `allowWhenOffline` or `adminStaffPermission`. Blocked callers get
+  `503 { error: "site_offline" }` with `Retry-After`. Core opts in sign-in,
+  password reset, e-mail verification, SSO, passkey sign-in, the session,
+  `show-config`, the status itself, cron, payment webhooks and signed content
+  previews. Deny by default was the point: a path allowlist would have
+  silently exposed every new plugin route.
+- **Pages:** `loadMainShell` loads the status keyed by viewer id (signing in
+  fetches it again) and answers `503`, `no-store` and `X-Robots-Tag: noindex`
+  through `setResponseStatus`. `ThemeLayoutContent` swaps the frame for the
+  offline card, so existing apps needed no route changes; `SiteOfflineGate`
+  covers custom layouts.
+- **Page cache:** it never stores a non-`200` render, so an offline card is
+  never cached and a cookie-bearing staff request always gets its own render.
+- **Failure:** a status that cannot be read counts as online. A broken lookup
+  should not take every route down with it.
+- **Reopening:** an open offline card polls every minute and on focus, then
+  calls `router.invalidate()` so the page behind it loads its data. No
+  realtime push: the socket only serves signed-in users, and the card is for
+  guests.
 
-`packages/api/src/lib/site-status/`
+## Offline card (decided from `/proto/offline`)
 
-- `site-status.schema.ts` - Zod: `zodSiteStatus` (public shape) and
-  `zodSiteStatusUpdate` (admin body). `opensAt` must be in the future when
-  set; `message` must have a non-empty default-language document when
-  `offline` is `true`.
-- `load.ts` - `loadSiteStatus(c)`: reads the row through `c.get("cache")`
-  (key `core:site-status`, Redis when configured, memory otherwise), so the
-  per-request check costs a cache read, not a query.
-- `save.ts` - `saveSiteStatus(tx, body, userId)`: upsert, sets `changedAt`
-  only when `offline` flips; afterwards expires the cache key, the page-cache
-  tag `core:site-status`, emits the event and the realtime message.
+- **Notice**: one card on a muted page. Logo and a "Maintenance" pill, the
+  heading, the message, then one row for the opening time.
+- The row shows "Back in 02d 05h 37m 09s" with rolling digits
+  (`SlidingNumber`) and the date. With **Show countdown** off it shows the
+  date alone. Once the time has passed it shows "Opening soon". No opening
+  time, no row.
+- The row lays out by the card's width (`@container`), not the viewport, so it
+  fits the narrow AdminCP preview.
+- No sign-in link and no mention of staff. Staff open `/login` or `/admin`
+  directly.
+- Rejected:
+  - **Centred stack with countdown tiles**: the message and the countdown
+    competed, and it read as a product launch, not maintenance.
+  - **Editorial split** (left-aligned, ruled countdown list): good for long
+    reasons, but on phones the countdown dropped below the fold.
+  - **Giant digital clock**: fun for launches, but it buried the reason, and
+    "Opening soon" or no time at all left a huge empty hero.
 
-### Routes
+## AdminCP screen (decided from the in-place prototype)
 
-| Route | Who | What |
-| --- | --- | --- |
-| `GET /api/core/site-status` (public) | everyone | `{ offline, message, opensAt, showCountdown, serverNow }`. When online returns `{ offline: false }` only. Tagged `core:site-status` for the page cache. `serverNow` lets the countdown correct client clock skew. |
-| `GET /api/core/admin/site-status` | `site_status.can_view` | The full row plus `changedAt` and who changed it. |
-| `PUT /api/core/admin/site-status` | `site_status.can_manage` | Save settings and the switch. Audit log `settings.updated`, target `site-status`. |
+- **Inline**: everything is edited on the page. A status card with the "Take
+  the site offline" switch, the multi-language editor, the opening time and
+  "Show countdown", next to a sticky live preview of the card (dimmed while
+  the site is online).
+- A save bar appears only with unsaved changes. Its button names the outcome:
+  "Turn off site" (destructive), "Turn on site" or "Save changes". There is no
+  extra confirm dialog; the label is the confirmation.
+- The form checks the default-language message itself, so the error lands on
+  the field instead of coming back as a `400` toast.
+- Rejected:
+  - **Status card, side sheet and static preview**: the preview could not show
+    unsaved edits, and every change took two steps.
+  - **Control panel** (big Online/Offline switch, summary rows, preview in a
+    dialog): quick to scan, but the message hid behind "Edit" and the preview
+    behind a click.
 
-The `routeMiddlewareSchema` (`show-config`) gains `siteOffline: boolean`, so
-the shell knows the state from the request it already makes, without a second
-round trip.
+## Debug panel
 
-### Enforcement (open question 2)
+While the site is offline, the Debug Panel lists a warning ("The public site
+is offline until ...") that links to Site status. It counts towards the
+warning badge in the AdminCP user bar, so an offline site is hard to forget.
 
-`siteOfflineMiddleware` after `globalMiddleware`: when offline and the
-request has no staff user, public API routes answer
-`503 { code: "site_offline" }`. Always allowed: auth and session routes,
-`site-status`, `show-config`, i18n/languages, captcha, admin modules, files
-needed by the offline page, cron/queue/webhooks (payments). Plugins can opt
-a route in with `allowWhenOffline: true` on `buildRoute`.
+## Tests to write
 
-### Event
+Per AGENTS.md, in a separate session:
 
-`site.status.updated` - `{ offline, opensAt, changedById }`, after commit.
-Exported as `siteStatusUpdatedEvent` from `@vitnode/api/events/site`.
-Documented in `apps/web/content/docs/dev/events/built-in-events.mdx`.
-
-## Front end (`@vitnode/core`)
-
-### Public gate
-
-`packages/vitnode/src/tanstack/site-status/`
-
-- `query.ts` - `siteStatusQueryOptions()` with
-  `fetcher({ plugin: "@vitnode/core", method: "get", module: "site-status", path: "/" })`.
-  When offline: `refetchInterval: 60_000`, plus invalidation on the realtime
-  `site.status` message.
-- `gate.ts` - `redirectOfflineSite(queryClient, location)` called from
-  `loadMainShell`, next to `redirectSuspendedSession`. Non-staff on any path
-  except the sign-in pages see the offline screen. Instead of a redirect to a
-  new URL the shell renders the offline screen in place, so the visitor's URL
-  survives the reopening.
-- `offline-screen.tsx` - the page (below). Sets `503`, `Retry-After`, and
-  `<meta name="robots" content="noindex">` through `head`.
-- `staff-banner.tsx` - for staff while offline: an `Alert variant="warning"`
-  under the header, "The site is offline. Only staff can see it." with a
-  link to the AdminCP page.
-
-### Offline screen
-
-Mobile-first, centered, `main` landmark, semantic tokens only:
-
-```
-        [site logo]
-   We're offline for a bit          <- h1, text-balance
-   <reason rich text, current UI language, falls back to default language>
-
-   ┌────┐ ┌────┐ ┌────┐ ┌────┐
-   │ 02 │ │ 14 │ │ 37 │ │ 05 │     <- SlidingNumber, tabular-nums
-   └────┘ └────┘ └────┘ └────┘
-    days   hours  mins   secs
-
-   Staff sign in →                   <- text link, underline on hover
-```
-
-- `countdown.tsx` - `Countdown({ opensAt, serverNow })`: one
-  `useSyncExternalStore` ticking every second (one interval for the whole
-  component, cleared on unmount, paused when the tab is hidden). Each unit
-  is a card with a `SlidingNumber` and its label; units above zero only
-  (days hide at 0). Clock skew is corrected with `serverNow - Date.now()` at
-  load.
-- SSR renders the digits from `serverNow`, so hydration matches and the
-  first paint already shows the right time.
-- At zero: the digits fade out (`opacity` only, `motion-safe:`) and
-  "Opening soon" with a pulsing dot appears. Nothing else changes; the
-  query keeps polling so the page reloads into the site once an admin opens
-  it.
-- Accessibility: the visible digits are `aria-hidden` (`SlidingNumber`
-  already does it); one `role="timer"` region with an sr-only label that
-  updates once per minute, not every second, so screen readers aren't
-  flooded. "Opening soon" is announced through `role="status"`.
-- Reduced motion: `SlidingNumber` jumps instead of rolling.
-
-### AdminCP
-
-- Nav: "Site status" under **System**
-  (`views/admin/layouts/sidebar/nav/nav-model.tsx`), icon `PowerIcon`,
-  permission `site_status.can_view`. Route in `routes.tsx`:
-  `page("/admin/core/system/site-status", ...)` with a
-  `tanstack/admin/site-status/route.ts` loader that checks the permission
-  and warms the admin query.
-- Screen (`views/admin/views/core/system/site-status/`):
-  - Status card: a large badge (Online / Offline since <date> by <user>),
-    the opening time and a live countdown when set.
-  - **Turn off site** (`PowerOffIcon`) opens the Sheet with the switch
-    already off; **Turn on site** (`PowerIcon`) is a `ConfirmAction`
-    ("Visitors will see the site immediately").
-  - **Edit message** (`PencilIcon`) opens the same Sheet without flipping.
-  - A preview of the public offline screen (the same component, in a
-    framed `Card`), so admins see the reason and countdown before saving.
-- Sheet form (`AutoForm`, lazy-loaded, `AutoFormSheetFooter`):
-  - `offline` - `AutoFormSwitch`
-  - `message` - `AutoFormEditor format="json" multiLang`
-  - `opensAt` - `AutoFormDateTime`, optional, "Leave empty for no countdown"
-  - `showCountdown` - `AutoFormSwitch`, disabled without `opensAt`
-  - After save: close the Sheet, invalidate the admin and public queries,
-    `sonner` toast with a description.
-- A dashboard header pill "Site offline" for admins while offline, linking
-  to the page (also in the AdminCP top bar so nobody forgets).
-- Errors per AGENTS.md: first load failed → `Empty` with `PowerOffIcon` and
-  retry; `403` without retry.
-
-### i18n
-
-- `core.site_offline.*` - title, opening soon, units, staff sign in, staff
-  banner, sr-only timer label.
-- `admin.system.site_status.*` - page title/desc, card, form labels/descs,
-  confirm dialog, toasts, load error.
-- Added to `packages/api/src/locales/en.json`, then `pnpm i18n:update`.
-
-## Page cache
-
-- The public status response is tagged `core:site-status`; every shared
-  render reads it through the shell, so every cached page carries the tag.
-  Saving the status hard-invalidates the tag: no stale online page is served
-  after switching off, and no stale offline page after switching on.
-- While offline, a shared render (no session) produces the offline screen
-  and is cacheable for anonymous visitors. A request with cookies is not
-  served the shared entry (existing cookie rule), so staff get their own
-  render. To verify during implementation: that a shared offline entry is
-  never served to a cookie-bearing request; if it can be, mark offline
-  renders non-shareable instead.
-
-## Docs
-
-- `apps/web/content/docs/guides/take-your-site-offline.mdx` (or under the
-  AdminCP section): turning it off, writing the reason per language, the
-  countdown, what staff see, and the `503` behaviour for SEO. Screenshot
-  requests via `// Image prompt:` comments.
-- Developer section: `allowWhenOffline` on routes, the
-  `site.status.updated` event, reading the status with `fetcher`.
-- JSDoc on `siteStatusQueryOptions`, `Countdown`, `allowWhenOffline` and the
-  event export.
-
-## Phases
-
-0. **Schema + API.** Table, migration, schemas, `loadSiteStatus` with cache,
-   public and admin routes, permissions, audit log, event. `show-config`
-   gains `siteOffline`.
-1. **AdminCP.** Nav item, route, status card, Sheet form with the
-   multi-language editor, toasts, dashboard/top-bar pill.
-2. **Public gate.** Shell check, offline screen with the reason, staff
-   banner, `503` + `noindex`, sign-in exception.
-3. **Countdown.** `Countdown` with `SlidingNumber`, skew correction,
-   "Opening soon" state, a11y timer, reduced motion, realtime + polling
-   reopen.
-4. **API lockdown + page cache.** `siteOfflineMiddleware`, allowlist,
-   `allowWhenOffline`, cache tag invalidation.
-5. **Docs + polish.** MDX pages, events doc, i18n update, `pnpm lint:fix`,
-   manual check in the browser (test@test.com), screenshots.
-6. **Tests (separate session, after it works).** `saveSiteStatus` rules,
-   route `200`/`403`, middleware allowlist and staff pass, countdown unit
-   math as a pure function (`remainingParts(opensAt, now)`), offline screen
-   DOM (reason, countdown, "Opening soon" at zero).
-
-## Open questions
-
-1. **Who can browse while offline?** Proposed: all staff (admins and
-   moderators). Alternatives: admins only, or staff plus roles picked in the
-   form.
-2. **Block the API too?** Proposed: yes, public API routes answer `503` for
-   non-staff, so content can't be read around the offline page. The lighter
-   option is a front-end gate only.
-3. **Reason required?** Proposed: required in the default language when
-   turning off; other languages fall back to it.
+- `canBypassSiteOffline`: admin, moderator with and without the permission,
+  guest.
+- `siteOfflineGuard`: blocked route `503` with `Retry-After`;
+  `allowWhenOffline` and `/admin/` pass.
+- `PUT /admin/site/status`: missing default-language message `400`, past
+  opening time `400`, expired time kept, `403` without `can_manage`.
+- `countdownParts` as a pure function.
+- The offline card's DOM: message fallback, countdown, date only,
+  "Opening soon".

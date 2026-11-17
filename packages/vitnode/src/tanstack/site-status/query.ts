@@ -8,7 +8,7 @@ import { fetcher } from "../fetcher";
 export type { SiteStatus } from "@vitnode/api/lib/site-status";
 
 /** How often an open offline page asks whether the site is back. */
-export const SITE_OFFLINE_POLL_MS = 60_000;
+const SITE_OFFLINE_POLL_MS = 60_000;
 
 const SITE_STATUS_STALE_TIME = 60_000;
 

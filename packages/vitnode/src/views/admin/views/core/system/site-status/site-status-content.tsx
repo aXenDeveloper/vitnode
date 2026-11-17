@@ -67,6 +67,7 @@ const filledMessage = (message: FormValues["message"]) =>
 const useFormValues = (): FormValues => {
   const { form } = useFormApi();
 
+  // `useFormApi` is untyped; the values follow this screen's `formSchema`.
   return useSelector(form.store, state => state.values as FormValues);
 };
 
@@ -184,7 +185,7 @@ const SaveBar = ({ data }: { data: AdminSiteStatus }) => {
   }
 
   return (
-    <div className="bg-popover/95 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 sticky bottom-4 z-10 flex items-center justify-between gap-3 rounded-xl border p-3 shadow-lg shadow-black/5 backdrop-blur-sm motion-safe:duration-200">
+    <div className="bg-popover/95 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 sticky bottom-4 z-10 flex items-center justify-between gap-3 rounded-xl border p-3 shadow-lg backdrop-blur-sm motion-safe:duration-200">
       <p className="text-muted-foreground px-1 text-sm">{t("unsaved")}</p>
       <div className="flex items-center gap-2">
         <Button

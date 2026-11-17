@@ -8,8 +8,8 @@ import {
 
 /**
  * The public site's page frame: `listeners`, then `header`, then `breadcrumb`,
- * then the page inside `<main>`. While the site is offline, visitors who are
- * not staff get the offline page instead (see `SiteOfflineGate`); pair it
+ * then the page inside `<main>`. While the site is offline, visitors who may
+ * not use it get the offline page instead (see `SiteOfflineGate`); pair it
  * with `loadMainShell` in the route's loader.
  *
  * @example

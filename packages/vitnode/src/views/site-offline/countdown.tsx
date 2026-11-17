@@ -55,8 +55,7 @@ const OpensAtDate = ({ opensAt }: { opensAt: string }) => {
 /**
  * When the site opens, as a compact row: a live countdown with rolling
  * digits and the date, or (with `showCountdown` off) the date alone. Once the
- * time has passed it shows "Opening soon" - it never opens anything by
- * itself.
+ * time has passed it shows "Opening soon". It never opens anything itself.
  */
 export const SiteOpening = ({
   className,

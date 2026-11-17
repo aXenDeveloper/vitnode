@@ -61,15 +61,11 @@ const zodMessage = z.array(
   z.object({ languageCode: z.string(), value: zodRichTextDocument }),
 );
 
-const parseMessage = (json: string): SiteOfflineMessage => {
-  try {
-    const parsed = zodMessage.safeParse(JSON.parse(json));
+const parseMessage = (json: string): SiteOfflineMessage =>
+  zodMessage.parse(JSON.parse(json));
 
-    return parsed.success ? parsed.data : [];
-  } catch {
-    return [];
-  }
-};
+/** Test apps built without the global middleware have no cache. */
+const cacheOf = (c: Context) => c.get("cache") as DomainCache | undefined;
 
 const perRequest = new WeakMap<Context, Promise<StoredSiteStatus>>();
 
@@ -100,7 +96,7 @@ export const loadSiteStatus = async (c: Context): Promise<StoredSiteStatus> => {
   const remembered = perRequest.get(c);
   if (remembered) return await remembered;
 
-  const cache = c.get("cache") as DomainCache | undefined;
+  const cache = cacheOf(c);
   const loading = cache
     ? cache
         .entry(siteStatusCache)
@@ -183,8 +179,7 @@ export const saveSiteStatus = async (
  */
 export const afterSiteStatusSaved = async (c: Context): Promise<void> => {
   perRequest.delete(c);
-  const cache = c.get("cache") as DomainCache | undefined;
-  await cache?.entry(siteStatusCache).delete();
+  await cacheOf(c)?.entry(siteStatusCache).delete();
   await invalidatePageCacheTags([SITE_STATUS_PAGE_CACHE_TAG], {
     mode: "hard",
   });

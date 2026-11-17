@@ -432,8 +432,8 @@
           "websocket": "WebSocket"
         },
         "site": {
-          "offline": "Publiczna strona jest wyłączona - odwiedzający widzą stronę przerwy",
-          "offline_until": "Publiczna strona jest wyłączona - odwiedzający widzą stronę przerwy do {opensAt, date, medium}, {opensAt, time, short}"
+          "offline": "Publiczna strona jest wyłączona",
+          "offline_until": "Publiczna strona jest wyłączona do {opensAt, date, medium}, {opensAt, time, short}"
         }
       },
       "actions": {
@@ -1592,7 +1592,7 @@
           },
           "opens_at": {
             "label": "Czas otwarcia",
-            "desc": "Strona nigdy nie otworzy się sama - po upływie czasu odwiedzający widzą \"Wkrótce otwarcie\", dopóki jej nie włączysz.",
+            "desc": "Strona nigdy nie otworzy się sama. Po upływie czasu odwiedzający widzą \"Wkrótce otwarcie\", dopóki jej nie włączysz.",
             "past": "Wybierz czas w przyszłości."
           },
           "show_countdown": {

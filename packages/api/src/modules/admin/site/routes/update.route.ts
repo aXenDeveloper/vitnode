@@ -59,15 +59,10 @@ export const updateSiteStatusAdminRoute = buildRoute({
     // A countdown that already ran out may stay as it is; a new time must be
     // in the future.
     const current = await loadSiteStatus(c);
-    const opensAtChanged =
-      body.opensAt !== null &&
-      (current.opensAt === null ||
-        Date.parse(current.opensAt) !== Date.parse(body.opensAt));
-    if (
-      body.opensAt &&
-      opensAtChanged &&
-      Date.parse(body.opensAt) <= Date.now()
-    ) {
+    const opensAtMs = body.opensAt ? Date.parse(body.opensAt) : null;
+    const unchanged =
+      current.opensAt !== null && Date.parse(current.opensAt) === opensAtMs;
+    if (opensAtMs !== null && !unchanged && opensAtMs <= Date.now()) {
       throw new HTTPException(400, {
         message: "The opening time must be in the future.",
       });
@@ -75,7 +70,7 @@ export const updateSiteStatusAdminRoute = buildRoute({
 
     const { switched } = await c.get("db").transaction(async tx => {
       const saved = await saveSiteStatus(tx, body, admin.user.id);
-      const before = saved.before;
+      const { before } = saved;
       const changes = auditDiff({
         after: {
           offline: body.offline,
