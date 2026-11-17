@@ -13,6 +13,20 @@ export const adminModule = buildModule({
     aiAdminModule,
     buildContentAdminModule({
       contentTypes: [categoryContent, postContent, commentContent],
+      // MCP tools, when the install turns MCP on: read and write articles
+      // through the same routes the AdminCP uses, and read categories to pick
+      // `categoryId`. Publishing, deleting and comments stay off MCP.
+      mcp: {
+        "blog.category": ["list", "detail"],
+        "blog.post": [
+          "list",
+          "detail",
+          "listTranslations",
+          "showTranslation",
+          "createLocalized",
+          "updateLocalized",
+        ],
+      },
     }),
   ],
   // Event listeners are only collected from top-level modules, so the

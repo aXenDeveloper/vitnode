@@ -271,6 +271,18 @@ where you reword a string a package translates differently to how you want it.
   URLs](/docs/dev/i18n/localized-urls).
 </Callout>
 
+The API config is also where you turn on the MCP endpoint for AI assistants. It
+is off by default:
+
+```ts title="apps/web/src/vitnode.api.config.ts (excerpt)"
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  mcp: { enabled: true },
+})
+```
+
+Its limits and token lifetime are in the [MCP reference](/docs/dev/mcp/reference#api-config).
+
 ## Request pipeline
 
 TanStack Start expects a `src/start.ts`. In a VitNode app it is one call:

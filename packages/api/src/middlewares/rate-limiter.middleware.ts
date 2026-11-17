@@ -13,6 +13,7 @@ import {
 import type { CacheClient } from "@/lib/cache";
 
 import { CONFIG } from "../lib/config";
+import { mcpDispatchOf } from "../lib/mcp/dispatch";
 import {
   RATE_LIMITER_KEY_PREFIXES,
   type RateLimiterCategory,
@@ -213,13 +214,23 @@ interface CategoryLimiter {
 }
 
 interface RateLimiterMiddlewareOptions {
+  /**
+   * Requests to the MCP endpoint itself. They are charged `safety` only: each
+   * tool call they make is charged separately, in the categories of the route
+   * it runs.
+   */
+  isMcpEndpoint?: (c: Context) => boolean;
   sessionCookieName: string;
   storeClient?: CacheClient | null;
 }
 
 export const rateLimiterMiddleware = (
   config: RateLimiterConfig | undefined,
-  { sessionCookieName, storeClient }: RateLimiterMiddlewareOptions,
+  {
+    isMcpEndpoint,
+    sessionCookieName,
+    storeClient,
+  }: RateLimiterMiddlewareOptions,
 ): {
   identified: MiddlewareHandler;
   preflight: MiddlewareHandler;
@@ -355,7 +366,27 @@ export const rateLimiterMiddleware = (
       await next();
     },
     requests: async (c, next) => {
-      if (c.req.method !== "OPTIONS") {
+      const mcpDispatch = mcpDispatchOf(c);
+      if (mcpDispatch) {
+        // A tool call: the MCP request already paid `safety` for this client,
+        // so the route's own categories are charged once, to the token's owner.
+        const rejected = await consume(
+          c,
+          rateLimiterCategoriesFor(c.req.method, c.req.path).filter(
+            category => category !== "safety",
+          ),
+          perUser
+            ? {
+                key: userRateLimitKey(mcpDispatch.principal.userId),
+                subject: "user",
+              }
+            : ipIdentity(c),
+        );
+        if (rejected) return rejected;
+      } else if (c.req.method !== "OPTIONS" && isMcpEndpoint?.(c)) {
+        const rejected = await consume(c, ["safety"], ipIdentity(c));
+        if (rejected) return rejected;
+      } else if (c.req.method !== "OPTIONS") {
         const categories = rateLimiterCategoriesFor(c.req.method, c.req.path);
         const rejected = await consume(
           c,
@@ -370,7 +401,12 @@ export const rateLimiterMiddleware = (
       await next();
     },
     identified: async (c, next) => {
-      if (c.req.method !== "OPTIONS" && carriesSession(c)) {
+      if (
+        c.req.method !== "OPTIONS" &&
+        !mcpDispatchOf(c) &&
+        !isMcpEndpoint?.(c) &&
+        carriesSession(c)
+      ) {
         const userId = c.get("user")?.id;
         const rejected = await consume(
           c,

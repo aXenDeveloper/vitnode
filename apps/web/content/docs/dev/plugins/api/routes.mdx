@@ -104,3 +104,19 @@ curl -i http://localhost:3000/api/site-notes/notes/abc
 | `/notes/abc` | `400` | `{ "success": false, "error": { "name": "ZodError", ... } }` |
 
 The `400` comes from validation, so your handler never ran.
+
+## Expose it to AI assistants
+
+Add `mcp: true` (and a `summary`) to the route definition to serve the same route as a Model Context Protocol tool. The tool reuses this route's schemas, permissions and handler, and only runs for members whose MCP token grants it:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
+route: {
+  method: "get",
+  path: "/{id}",
+  summary: "Get one site note by its id", // [!code ++]
+  mcp: true, // [!code ++]
+  // ...
+},
+```
+
+See [Expose a route](/docs/dev/mcp/expose-route).

@@ -2200,7 +2200,8 @@
           "sso": "Połączone konta",
           "notifications": "Powiadomienia",
           "ai": "Użycie AI",
-          "standing": "Status konta"
+          "standing": "Status konta",
+          "mcp": "Integracje AI"
         },
         "overview": {
           "accountTitle": "Konto",
@@ -2616,6 +2617,70 @@
           "overview": {
             "title": "Punkty AI",
             "details": "Zobacz swoje funkcje AI"
+          }
+        },
+        "mcp": {
+          "title": "Integracje AI",
+          "desc": "Pozwól asystentowi AI korzystać z tej strony w Twoim imieniu przez Model Context Protocol (MCP). Każdy token działa tylko dla wybranych narzędzi i tylko do daty wygaśnięcia.",
+          "endpoint": "Adres MCP",
+          "endpoint_desc": "Dodaj ten adres do klienta MCP obsługującego tokeny bearer, a token z listy poniżej ustaw jako nagłówek Authorization.",
+          "tokens": "Tokeny",
+          "empty": {
+            "title": "Brak tokenów",
+            "desc": "Utwórz token, aby połączyć asystenta AI. Sam decydujesz, które narzędzia może wywoływać."
+          },
+          "no_tools": {
+            "title": "Brak narzędzi do przyznania",
+            "desc": "Żadna z zainstalowanych wtyczek nie udostępnia narzędzia MCP, do którego masz dostęp."
+          },
+          "load_error": {
+            "title": "Nie udało się wczytać tokenów",
+            "desc": "Coś poszło nie tak podczas wczytywania tokenów. Spróbuj ponownie za chwilę."
+          },
+          "retry": "Spróbuj ponownie",
+          "status": {
+            "active": "Aktywny",
+            "expired": "Wygasł",
+            "revoked": "Unieważniony"
+          },
+          "expires": "Wygasa",
+          "last_used": "Ostatnio użyty",
+          "never_used": "Nigdy nieużyty",
+          "tools_count": "{count, plural, one {# narzędzie} few {# narzędzia} many {# narzędzi} other {# narzędzia}}",
+          "create": {
+            "action": "Utwórz token",
+            "title": "Utwórz token MCP",
+            "desc": "Token działa w Twoim imieniu, ale tylko przez zaznaczone narzędzia, a Twoje uprawnienia obowiązują przy każdym wywołaniu.",
+            "label": "Nazwa",
+            "label_desc": "Gdzie go używasz, np. \"Claude na laptopie\".",
+            "expires_in_days": "Wygasa po (dniach)",
+            "expires_in_days_desc": "Maksymalnie {max} dni.",
+            "tools": "Narzędzia",
+            "tools_desc": "Narzędzia tylko do odczytu są oznaczone. Narzędzie zmieniające dane działa z Twoimi uprawnieniami, a jego zmiany są rejestrowane.",
+            "read_only": "Tylko odczyt",
+            "admin": "Administrator",
+            "submit": "Utwórz token",
+            "errors": {
+              "tools_not_available": "Nie możesz już przyznać części tych narzędzi. Odśwież stronę i wybierz ponownie.",
+              "token_lifetime_too_long": "Wybierz krótszy czas ważności.",
+              "mcp_disabled": "MCP jest wyłączone na tej stronie."
+            }
+          },
+          "created": {
+            "title": "Skopiuj token teraz",
+            "desc": "Widzisz go tylko ten jeden raz. Zapisz go w ustawieniach klienta MCP - jeśli go zgubisz, unieważnij go i utwórz nowy.",
+            "copy": "Kopiuj token",
+            "done": "Skopiowałem go",
+            "toast": "Utworzono token",
+            "toast_desc": "Klient MCP może już używać tokenu \"{label}\"."
+          },
+          "revoke": {
+            "action": "Unieważnij token",
+            "title": "Unieważnić ten token?",
+            "desc": "\"{label}\" przestanie działać od razu. Każdy klient, który go używa, straci dostęp.",
+            "confirm": "Unieważnij",
+            "success": "Unieważniono token",
+            "success_desc": "\"{label}\" już nie działa."
           }
         }
       },
@@ -5586,6 +5651,11 @@
           "created": "Utworzono akcję ostrzeżeń",
           "updated": "Zaktualizowano akcję ostrzeżeń",
           "deleted": "Usunięto akcję ostrzeżeń"
+        },
+        "mcp": {
+          "token_created": "Utworzono token MCP",
+          "token_revoked": "Unieważniono token MCP",
+          "tool_called": "Wywołano narzędzie MCP"
         }
       },
       "fields": {

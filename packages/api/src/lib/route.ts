@@ -5,6 +5,7 @@ import type { ZodError } from "zod";
 import { createRoute as createRouteHono } from "@hono/zod-openapi";
 
 import type { EnvVitNode } from "../middlewares/global.middleware";
+import type { RouteMcpConfig } from "./mcp/route-options";
 import type { PermissionStaffType } from "./permission-staff";
 import type {
   AdminStaffPermissionRef,
@@ -16,7 +17,11 @@ import { captchaMiddleware } from "../middlewares/captcha.middleware";
 import { pluginMiddleware } from "../middlewares/plugin.middleware";
 import { assertStaffPermission } from "./check-staff-permission";
 import { pluginTag } from "./openapi-tags";
-import { isAdminApiPath, setRouteStaffPermissions } from "./route-metadata";
+import {
+  isAdminApiPath,
+  setRouteMcp,
+  setRouteStaffPermissions,
+} from "./route-metadata";
 import { staffPermissionArgs } from "./staff-permissions";
 
 /**
@@ -88,6 +93,19 @@ export const findAdminRoutesWithoutStaffPermission = (hono: {
 
 /** A `@hono/zod-openapi` route definition, plus VitNode's own options. */
 export type BuildRouteConfig<P extends string> = Omit<RouteConfig, "path"> & {
+  /**
+   * Exposes the route as a tool on the install's MCP endpoint (`/api/mcp`),
+   * when the API config turns MCP on. Off when omitted or `false`; `true` uses
+   * the route's own `operationId` and `description` (or `summary`), an object
+   * overrides them - see `RouteMcpOptions` in `@vitnode/api/lib/mcp/route-options`.
+   *
+   * The tool runs this same route - its middleware, staff-permission guards,
+   * validation and handler - as the user who owns the MCP token, and only when
+   * the token grants it. A tool needs a description, JSON request bodies,
+   * no declared headers or cookies, and no `withCaptcha`: the API refuses to
+   * start otherwise. Not part of the OpenAPI document.
+   */
+  mcp?: RouteMcpConfig;
   /** Relative to the module, with OpenAPI-style params, e.g. `/{id}`. Also the fetcher's `path`. */
   path: P;
   /**
@@ -139,6 +157,10 @@ export interface BuildRouteOptions<
  * guards and the captcha check when requested, then the route's own
  * `middleware`.
  *
+ * With `route.mcp`, the same route is also an MCP tool when the API config
+ * turns MCP on. Tool calls run this route through the full pipeline above, so
+ * nothing about the route is declared twice.
+ *
  * @example
  * ```ts
  * import { z } from "@hono/zod-openapi";
@@ -177,6 +199,9 @@ export const buildRoute = <
 }: BuildRouteOptions<P, R> & {
   pluginId: Plugin;
 }): Route<Plugin, R & { path: P }> => {
+  // MCP options are VitNode's own: they are kept off the OpenAPI document and
+  // recorded on the built route instead.
+  const { mcp, ...openApiRoute } = route;
   const tags = [pluginTag(pluginId), ...(route.tags ?? [])];
 
   const middleware: MiddlewareHandler[] = [pluginMiddleware(pluginId)];
@@ -204,18 +229,24 @@ export const buildRoute = <
   }
 
   const built: Route<Plugin, R & { path: P }> = {
+    // Typed as declared: the one key the runtime value lacks is `mcp`, which
+    // lives on the built route's metadata instead.
     route: createRouteHono({
       // `route` is spread first on purpose: `tags` and `middleware` already
       // merge the route's own values, so letting the spread win would drop
       // `pluginMiddleware` and the staff-permission guard.
-      ...route,
+      ...openApiRoute,
       tags,
       middleware,
-    }),
+    }) as unknown as R & { path: P },
     handler: handler as Route<Plugin, R & { path: P }>["handler"],
     ...(hook ? { hook } : {}),
     pluginId,
   };
+
+  if (mcp) {
+    setRouteMcp(built, mcp === true ? {} : mcp);
+  }
 
   if (adminStaffPermission || moderatorStaffPermission) {
     setRouteStaffPermissions(built, {

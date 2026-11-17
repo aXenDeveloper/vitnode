@@ -203,6 +203,11 @@ export const routes = defineRoutes([
         search: normalizeSsoSettingsSearch,
       }),
 
+      page("mcp", {
+        component: lazy(() => import("./pages/settings/mcp")),
+        pendingComponent: () => <FeedPendingSkeleton rows={3} />,
+      }),
+
       page("ai", {
         component: lazy(() => import("./pages/settings/ai")),
         pendingComponent: () => <FeedPendingSkeleton rows={4} />,

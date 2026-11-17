@@ -26,9 +26,11 @@ import { createContentNotificationRegistry } from "@/content/server/notification
 import { warnAboutContentPreviewConfig } from "@/content/server/preview-config";
 import { ensureContentPreviewSecret } from "@/content/server/preview-secret";
 import { runAfterResponse } from "@/lib/after-response";
+import { withAuditContext } from "@/lib/audit/context";
 import { DEFAULT_SESSION_COOKIE_NAME } from "@/lib/auth-cookie";
 import { CacheModel, domainCacheOf } from "@/lib/cache";
 import { MemoryCacheStore } from "@/lib/cache-memory";
+import { isStaff } from "@/lib/check-staff-permission";
 import { CONFIG } from "@/lib/config";
 import { collectEventDefinitions } from "@/lib/event-definition";
 import { collectLocaleCodes } from "@/lib/i18n/load-messages";
@@ -57,6 +59,7 @@ import {
 import { SessionModel } from "@/models/session";
 import { SessionAdminModel } from "@/models/session-admin";
 import { StorageModel } from "@/models/storage";
+import { UserModel } from "@/models/user";
 import { realtime, runWithRealtimeKeepAlive } from "@/ws/registry";
 
 import type { AiActionRegistry } from "../lib/ai/registry";
@@ -66,6 +69,8 @@ import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventDefinition } from "../lib/event-definition";
 import type { EventListenerConfig } from "../lib/events";
 import type { InstalledPluginRegistry } from "../lib/installed-plugins";
+import type { ResolvedMcpConfig } from "../lib/mcp/config";
+import type { McpRegistry } from "../lib/mcp/registry";
 import type { ModerationRegistry } from "../lib/moderation/registry";
 import type { NotificationWorkerSettings } from "../lib/notifications/preferences";
 import type { NotificationRegistry } from "../lib/notifications/registry";
@@ -98,6 +103,7 @@ import {
   loggerMiddleware,
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
+import { mcpDispatchOf } from "../lib/mcp/dispatch";
 import { validateModerationRegistry } from "../lib/moderation/registry";
 import { resolveNotificationWorkerSettings } from "../lib/notifications/preferences";
 import { createNotificationRegistry } from "../lib/notifications/registry";
@@ -247,6 +253,8 @@ export interface EnvVariablesVitNode {
       sources: MessagesSource[];
     };
     installedPlugins: InstalledPluginRegistry;
+    /** The `mcp` config with its defaults, and every plugin's MCP tools (none while MCP is off). */
+    mcp: { config: ResolvedMcpConfig; registry: McpRegistry };
     metadata: {
       shortTitle?: string;
       title: string;
@@ -381,6 +389,7 @@ export const globalMiddleware = ({
   updates,
   users,
   cacheClient,
+  mcp,
 }: Pick<VitNodeApiConfig, "metadata"> &
   Pick<
     VitNodeApiConfig,
@@ -404,6 +413,7 @@ export const globalMiddleware = ({
     | "users"
   > & {
     cacheClient: CacheClient | null;
+    mcp: { config: ResolvedMcpConfig; registry: McpRegistry };
   }) => {
   const notificationWorkers = resolveNotificationWorkerSettings(notifications);
   const auditRetentionDays = resolveAuditRetentionDays(activityLogs);
@@ -700,6 +710,7 @@ export const globalMiddleware = ({
       hasCronAdapter: !!cron,
       plugins: pluginsMetadata,
       installedPlugins,
+      mcp,
       updates: updatesMetadata,
       cron: cronMetadata,
       editablePages: editablePagesMetadata,
@@ -777,7 +788,16 @@ export const globalMiddleware = ({
       await ensureContentLocalizationLanguages(c, contentTypesMetadata);
     }
 
-    const sessionUser = await new SessionModel(c).getUser();
+    // A request the MCP endpoint dispatched acts as its token's owner, read
+    // fresh here so a deleted or suspended owner stops working at once. It
+    // never reads a session cookie - it carries none.
+    const mcpDispatch = mcpDispatchOf(c);
+    const sessionUser = mcpDispatch
+      ? await new UserModel().getUserById({
+          c,
+          id: mcpDispatch.principal.userId,
+        })
+      : await new SessionModel(c).getUser();
     const suspension = sessionUser
       ? await findActiveSuspension(c, sessionUser.id)
       : null;
@@ -795,17 +815,38 @@ export const globalMiddleware = ({
     // Realtime publishes started anywhere in this request - `c.get("realtime")`
     // or a module that has no context of its own - are kept alive past the
     // response, so a serverless instance does not freeze them half-sent.
-    await runWithRealtimeKeepAlive(
-      task => {
-        runAfterResponse(c, task);
-      },
-      async () => {
-        await next();
+    const run = async () => {
+      await runWithRealtimeKeepAlive(
+        task => {
+          runAfterResponse(c, task);
+        },
+        async () => {
+          await next();
 
-        c.get("notifications").flushAfterResponse();
-        c.get("email").flushAfterResponse();
-      },
-    );
+          c.get("notifications").flushAfterResponse();
+          c.get("email").flushAfterResponse();
+        },
+      );
+    };
+
+    // The route's own audit entries (a content save, a role change) say which
+    // MCP token and tool made them, and share the MCP request's correlation
+    // id with the endpoint's invocation entry.
+    if (mcpDispatch) {
+      await withAuditContext(
+        c,
+        {
+          correlationId: mcpDispatch.correlationId,
+          metadata: {
+            mcpTokenId: mcpDispatch.principal.tokenId,
+            mcpTool: mcpDispatch.tool,
+          },
+        },
+        run,
+      );
+    } else {
+      await run();
+    }
   };
 };
 
@@ -818,6 +859,27 @@ export const globalMiddleware = ({
  */
 export const globalAdminMiddleware = () => {
   return async (c: Context, next: Next) => {
+    const mcpDispatch = mcpDispatchOf(c);
+    if (mcpDispatch) {
+      // An MCP call has no AdminCP session to show. Its owner must still be an
+      // admin right now - checked live, never cached - and every route keeps
+      // its own staff-permission guard on top.
+      const user = c.get("user");
+      if (
+        !user ||
+        user.id !== mcpDispatch.principal.userId ||
+        !(await isStaff(c, { live: true, type: "admin", userId: user.id }))
+      ) {
+        throw new HTTPException(403);
+      }
+      c.set("admin", { user });
+      c.set("adminSessionExpiresAt", null);
+
+      await next();
+
+      return;
+    }
+
     const session = await new SessionAdminModel(c).getSession({
       extend: c.req.query("passive") !== "true",
     });

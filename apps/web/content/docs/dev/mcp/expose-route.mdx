@@ -1,0 +1,114 @@
+---
+title: Expose a route
+description: Make an existing VitNode API route an MCP tool by adding mcp true to its definition, then call it from an MCP client with a scoped token.
+icon: Wrench
+---
+
+A route becomes an MCP tool when its definition says `mcp: true`. Nothing else is registered: the tool's input comes from the route's Zod schemas, and every call runs the route itself. In this guide the `GET /api/site-notes/notes/{id}` route from the API lessons becomes the tool `site-notes__get_notes_by_id`.
+
+## Before you begin
+
+- The `show` route from [API routes](/docs/dev/plugins/api/routes).
+- MCP turned on and a client script, from [Connect a client](/docs/dev/mcp/connect).
+
+<Steps>
+
+<Step>
+
+### Mark the route
+
+Open the route and add a `summary` - a tool needs a description for the model to choose it, and the API refuses to start without one - and `mcp: true`:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
+export const showNoteRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/{id}",
+    summary: "Get one site note by its id", // [!code ++]
+    mcp: true, // [!code ++]
+    request: {
+      params: z.object({ id: z.coerce.number().int().positive() }),
+    },
+    // responses unchanged
+  },
+  handler: c => {
+    // unchanged
+  },
+});
+```
+
+`mcp` is VitNode's own option: it never reaches the OpenAPI document, and the REST endpoint behaves exactly as before.
+
+</Step>
+
+<Step>
+
+### Grant the tool
+
+Restart `pnpm dev`, open **Settings → AI integrations** and create a token with **site-notes__get_notes_by_id** ticked. Any signed-in member can grant it: the route has no staff permission.
+
+</Step>
+
+<Step>
+
+### Call it
+
+Add a call to your client script, after `connect`:
+
+```js title="call-tool.mjs"
+const result = await client.callTool({
+  name: "site-notes__get_notes_by_id",
+  arguments: { params: { id: 2 } },
+});
+console.log(result.structuredContent);
+```
+
+Arguments are grouped by where the route reads them: `params` for the path, `query` for the query string, `body` for the JSON body. This route only declares `params`, so it is the only key the tool accepts.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+The call returns the route's JSON body, both as `structuredContent` and as text:
+
+```json
+{ "id": 2, "title": "Office closed on Friday", "body": "We are back on Monday at 9:00." }
+```
+
+Ask for `{ "params": { "id": 9 } }` and the route answers `404`, which the client receives as a tool error the model can read, not as a protocol failure:
+
+```json
+{ "isError": true, "content": [{ "type": "text", "text": "The call failed with HTTP 404." }] }
+```
+
+A route's `403` arrives the same way. An argument the route does not declare is refused before the route runs: `Unknown argument "headers". This tool takes "params".`
+
+## Name and describe the tool
+
+The plugin's package name is always the first half of the name, so tools of two plugins never collide. The second half is, in order:
+
+1. `mcp.name`,
+2. the route's `operationId`,
+3. derived from the method and full path: `GET /notes/{id}` is `get_notes_by_id`.
+
+`mcp` also takes `description` (else `description`, then `summary`) and `annotations`, hints the client may use to decide when to ask before calling:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
+mcp: {
+  name: "show_note",
+  annotations: { readOnlyHint: true, openWorldHint: false },
+},
+```
+
+Annotations never grant access or skip a check, and VitNode infers none from the HTTP method. A route that cannot work as a tool - a captcha, declared headers or cookies, a non-JSON body or response, a schema with no JSON form - stops the API at startup with the route named. See the [MCP reference](/docs/dev/mcp/reference#what-a-route-needs).
+
+## Admin routes
+
+Admin routes work the same way. The call still goes through the `/admin/` checks: the token's owner must be an admin at the time of the call, and the route's `adminStaffPermission` is checked as usual. A member cannot even select such a tool when creating a token. See [Protect an admin endpoint](/docs/dev/plugins/api/admin-routes).
+
+## Related
+
+- [Expose content](/docs/dev/mcp/content)
+- [MCP reference](/docs/dev/mcp/reference)

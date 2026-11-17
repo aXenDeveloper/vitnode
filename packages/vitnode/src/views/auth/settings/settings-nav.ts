@@ -6,6 +6,7 @@ export const SETTINGS_ROOT_HREF = "/settings";
 export type SettingsNavKey =
   | "ai"
   | "devices"
+  | "mcp"
   | "notifications"
   | "overview"
   | "security"
@@ -25,23 +26,28 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { href: "/settings/security", key: "security" },
   { href: "/settings/sso", key: "sso" },
   { href: "/settings/ai", key: "ai" },
+  { href: "/settings/mcp", key: "mcp" },
   { href: "/settings/standing", key: "standing" },
 ];
 
 export const visibleSettingsNavItems = ({
   ai,
   aiFeatures = true,
+  mcp = false,
   passkeys,
   sso = [],
 }: {
   ai?: { models: readonly unknown[] };
   aiFeatures?: boolean;
+  /** Whether the site serves MCP; the AI integrations panel is hidden otherwise. */
+  mcp?: boolean;
   passkeys: boolean;
   sso?: readonly unknown[];
 }): readonly SettingsNavItem[] =>
   SETTINGS_NAV_ITEMS.filter(
     item =>
       (item.key !== "security" || passkeys) &&
+      (item.key !== "mcp" || mcp) &&
       (item.key !== "sso" || sso.length > 0) &&
       (item.key !== "ai" || ((ai?.models.length ?? 0) > 0 && aiFeatures)),
   );

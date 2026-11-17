@@ -187,4 +187,6 @@ export const vitNodeApiConfig = buildApiConfig({
     title: "VitNode API",
     shortTitle: "VitNode",
   },
+  // Serves the plugins' MCP tools at `/api/mcp` to members' MCP tokens.
+  mcp: { enabled: true },
 });

@@ -196,6 +196,8 @@ export const publicCategoriesRoute = buildRoute({
     path: "/",
     description:
       "Every blog category with its name in the requested locale, its colour and its article count",
+    // A read any member's MCP token may be granted: `vitnode-blog__get_categories`.
+    mcp: true,
     request: {
       query: z.object({
         locale: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH).optional(),

@@ -1,0 +1,167 @@
+---
+title: Expose content
+description: Expose selected Content Engine admin operations, such as listing, creating and updating blog articles, as MCP tools without writing CRUD routes.
+icon: Newspaper
+---
+
+The Content Engine generates the AdminCP routes of every content type. `buildContentAdminModule` can expose chosen operations of chosen content types as MCP tools, so an assistant reads and writes records through the exact routes, permissions, revisions and events the AdminCP uses. This guide follows `@vitnode/blog`, whose articles are localized and editorial.
+
+## Before you begin
+
+- A content type registered with [`buildContentAdminModule`](/docs/content-engine/plugin-files).
+- MCP turned on, from [Connect a client](/docs/dev/mcp/connect), and an admin account with the content type's staff permissions.
+- For the blog example, one category. Create it in the AdminCP; the `vitnode-blog__blog_category_list` tool returns its `id`.
+
+<Steps>
+
+<Step>
+
+### Choose the operations
+
+Add `mcp` to the module, keyed by content type id. Every content type and operation not listed stays off MCP:
+
+```ts title="plugins/blog/src/api/modules/admin/admin.module.ts"
+buildContentAdminModule({
+  contentTypes: [categoryContent, postContent, commentContent],
+  mcp: { // [!code ++]
+    "blog.category": ["list", "detail"], // [!code ++]
+    "blog.post": [ // [!code ++]
+      "list", // [!code ++]
+      "detail", // [!code ++]
+      "listTranslations", // [!code ++]
+      "showTranslation", // [!code ++]
+      "createLocalized", // [!code ++]
+      "updateLocalized", // [!code ++]
+    ], // [!code ++]
+  }, // [!code ++]
+}),
+```
+
+Each tool is named `{content type id}_{operation}` in snake case behind the plugin prefix: `vitnode-blog__blog_post_create_localized`. Publishing, deleting and comments are not in the list, so no token can reach them through MCP.
+
+</Step>
+
+<Step>
+
+### Grant the tools
+
+Rebuild the plugin, restart `pnpm dev` and create a token with the article tools in **Settings → AI integrations**. They are marked **Admin**: only admins holding the type's permission see them.
+
+</Step>
+
+<Step>
+
+### Create an article
+
+A localized type is created with `createLocalized`: shared fields in `values`, each language in `translations`, and the default language (`en` for the blog) must be one of them. `content` is a rich-text field, so it takes the TipTap/ProseMirror JSON document the editor saves - not Markdown or HTML:
+
+```js title="create-article.mjs"
+const created = await client.callTool({
+  name: "vitnode-blog__blog_post_create_localized",
+  arguments: {
+    body: {
+      values: { categoryId: [1], authorId: [1] },
+      translations: [
+        {
+          locale: "en",
+          values: {
+            title: "Hello from MCP",
+            content: {
+              type: "doc",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "Written through an MCP tool." }],
+                },
+              ],
+            },
+          },
+        },
+      ],
+    },
+  },
+});
+console.log(created.structuredContent);
+```
+
+```json
+{
+  "id": 1,
+  "status": "draft",
+  "publishedAt": null,
+  "version": 1,
+  "hiddenAt": null,
+  "hiddenBy": null,
+  "coverImage": null,
+  "createdAt": "2026-11-17T17:04:17.378Z",
+  "updatedAt": "2026-11-17T17:04:17.378Z"
+}
+```
+
+The article is a **draft**. Creating never publishes it, and neither do the update tools below: `status` and `publishedAt` are not fields of the create or update bodies. Publishing needs the separate `publish` (or `publishTranslation`) operation, which also checks the `can_publish` permission.
+
+</Step>
+
+<Step>
+
+### Update it
+
+`updateLocalized` changes only what the call names. Leave out `values` to keep the shared fields, and send a translation's `expectedVersion` - read it with `showTranslation` - to change that language:
+
+```js title="update-article.mjs"
+await client.callTool({
+  name: "vitnode-blog__blog_post_update_localized",
+  arguments: {
+    params: { id: 1 },
+    body: {
+      translations: [
+        { locale: "en", expectedVersion: 1, values: { title: "Edited through MCP" } },
+      ],
+    },
+  },
+});
+```
+
+Changing a shared field needs the record's `version` from the `detail` tool as `expectedVersion`. A stale one is refused, and the record is left untouched:
+
+```txt
+The call failed with HTTP 409: {"code":"CONTENT_VERSION_CONFLICT","contentTypeId":"blog.post","currentVersion":1,"expectedVersion":999,"itemId":1}
+```
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Open the blog's articles in the AdminCP: the article is there as a draft. **AdminCP → Staff → Administrators → Logs** shows one `content.created` entry for it, with `mcpTokenId` and `mcpTool` in its details, and a **Called an MCP tool** entry sharing its correlation id. Each call writes once, so there is never a second domain entry.
+
+If the token's owner loses the permission, the tool disappears from `tools/list` and a call is refused by the route itself:
+
+```txt
+The call failed with HTTP 403.
+```
+
+## Operations
+
+| Operation | Route | Needs |
+| --- | --- | --- |
+| `list`, `detail` | `GET /`, `GET /{id}` | - |
+| `create`, `update`, `delete` | `POST /`, `PUT /{id}`, `DELETE /{id}` | - |
+| `createLocalized`, `updateLocalized` | `POST /localized`, `PUT /{id}/localized` | `localization` |
+| `listTranslations`, `showTranslation`, `createTranslation`, `updateTranslation`, `deleteTranslation` | `/{id}/translations[/{locale}]` | `localization` |
+| `publish`, `unpublish`, `publishTranslation`, `unpublishTranslation` | `POST /{id}/publish` and friends | `publication` |
+| `hide`, `unhide` | `POST /{id}/hide`, `POST /{id}/unhide` | `visibility` |
+| `duplicate` | `POST /{id}/duplicate` | `duplication` |
+| `listRevisions`, `showRevision`, `restoreRevision` | `/{id}/revisions...` | `editorial` |
+| `listSchedules`, `schedule`, `cancelSchedule` | `/{id}/schedule...` | `editorial.scheduling` |
+
+An operation the content type does not have, or an id that is not in `contentTypes`, stops the API at startup. Uploads, preview links, live editing and access rules cannot be exposed.
+
+A tool can do whatever its route can. The blog's update routes cannot change publication state, but an exposed `publish` publishes, and an exposed `delete` deletes - grant them deliberately. Creates are not idempotent: an assistant that retries a failed create may create two records.
+
+## Related
+
+- [MCP reference](/docs/dev/mcp/reference)
+- [Rich text](/docs/content-engine/rich-text)
+- [Editorial](/docs/content-engine/editorial)

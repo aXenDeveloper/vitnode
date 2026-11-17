@@ -1,0 +1,41 @@
+---
+title: MCP
+description: Expose VitNode plugin API routes to AI assistants as Model Context Protocol (MCP) tools, with per-member scoped tokens and every existing permission check.
+icon: Bot
+---
+
+VitNode can serve your plugins' API routes as [Model Context Protocol](https://modelcontextprotocol.io) tools, so an AI assistant such as an MCP-capable desktop or coding client can list blog articles or save a draft for you. You mark a route with `mcp: true`; the route's schemas, permissions, middleware and handler stay exactly as they are and run for every tool call.
+
+MCP only exposes operations. It does not run or pay for a language model: the assistant you connect brings its own.
+
+## How a tool call works
+
+1. A member creates a token in **Settings → AI integrations** and ticks the tools it may call.
+2. Their MCP client sends the token as `Authorization: Bearer ...` to `/api/mcp`.
+3. VitNode checks the token, then turns each tool call into a request to the tool's own route, in the same process. The request runs the full API pipeline as the token's owner: admin session rules, staff permissions, validation, the handler and its side effects, once.
+
+A token can never do more than its owner can do right now:
+
+**effective access = tools the install exposes ∩ the token's tools ∩ the owner's current permissions ∩ the route's own checks**
+
+Revoking a token, letting it expire, removing a permission or suspending the owner takes effect on the next request.
+
+## Choose a guide
+
+| You want to | Read |
+| --- | --- |
+| Turn MCP on, create a token and connect a client | [Connect a client](/docs/dev/mcp/connect) |
+| Make one of your own routes a tool | [Expose a route](/docs/dev/mcp/expose-route) |
+| Let an assistant read and write Content Engine records, such as blog articles | [Expose content](/docs/dev/mcp/content) |
+| Look up names, argument mapping, errors and limits | [MCP reference](/docs/dev/mcp/reference) |
+
+## What is supported
+
+- **Transport:** Streamable HTTP, stateless, JSON responses. Built on `@modelcontextprotocol/server` 2.4.0, which serves protocol revision `2026-07-28` and the 2025 revisions (`2025-11-25`, `2025-06-18`, `2025-03-26`) through its stateless fallback. Both eras were checked with the official TypeScript client.
+- **Authentication:** bearer tokens only. Use a client that lets you set a custom `Authorization` header. OAuth sign-in, which some clients require, is not available yet.
+- **Tools:** JSON in, JSON out. File uploads, downloads, streams, WebSockets and captcha-protected routes cannot be tools.
+
+## Related
+
+- [API routes](/docs/dev/plugins/api/routes)
+- [Staff permissions](/docs/dev/working-with-users/staff-permissions)

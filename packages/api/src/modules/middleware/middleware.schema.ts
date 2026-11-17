@@ -23,6 +23,8 @@ export const routeMiddlewareSchema = z.object({
     }),
   ),
   isEmail: z.boolean(),
+  /** Whether the MCP endpoint is on, so members can create MCP tokens. */
+  mcp: z.boolean().optional(),
   passkeys: z.boolean(),
   password: z.boolean(),
   captcha: z

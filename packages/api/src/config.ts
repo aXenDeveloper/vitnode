@@ -1,5 +1,5 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import type { Context, Env, Schema } from "hono";
+import type { Context, Env, Hono, Schema } from "hono";
 
 import { swaggerUI } from "@hono/swagger-ui";
 import { cors } from "hono/cors";
@@ -20,6 +20,10 @@ import { CONFIG } from "@/lib/config";
 import { collectCronJobs } from "@/lib/cron";
 import { describeError } from "@/lib/error-details";
 import { createReadinessCheck, mountHealthRoutes } from "@/lib/health";
+import { resolveMcpConfig } from "@/lib/mcp/config";
+import { mcpDispatchMiddleware } from "@/lib/mcp/dispatch";
+import { createMcpEndpoints, MCP_PATH_SEGMENT } from "@/lib/mcp/endpoint";
+import { buildMcpRegistry } from "@/lib/mcp/registry";
 import { processSingleton } from "@/lib/process-singleton";
 import { manifest } from "@/manifest";
 import {
@@ -71,9 +75,10 @@ interface CSRFOptions {
 /**
  * Mounts VitNode on a Hono app: security headers, CORS, CSRF, the body limit,
  * rate limiting, the per-request context (`c.get("db")`, `c.get("cache")` and
- * friends), core and every plugin at `/{pluginId}`, cron registration, and an
- * error handler that hides details outside development. It returns the same
- * `app`.
+ * friends), core and every plugin at `/{pluginId}`, the MCP endpoints at
+ * `/mcp` and `/mcp/{pluginId}` when `mcp.enabled` is on, cron registration,
+ * and an error handler that hides details outside development. It returns the
+ * same `app`.
  *
  * Call it at startup. Calling it again in the same process, as a dev server
  * does after a plugin's API code changes, builds a fresh set of routes while
@@ -82,7 +87,8 @@ interface CSRFOptions {
  * Server-only. Give `app` its base path (`/api`) before calling it.
  *
  * @throws At startup when the configuration is invalid - plugin content
- * modules, colliding registrations, misconfigured passkeys or locale domains.
+ * modules, colliding registrations (MCP tool names and prefixes included), a
+ * plugin named `mcp` while MCP is on, misconfigured passkeys or locale domains.
  *
  * @example
  * ```ts
@@ -148,6 +154,19 @@ export function VitNodeAPI({
 
   const plugins = [newBuildPluginApiCore, ...vitNodeApiConfig.plugins];
 
+  const mcpConfig = resolveMcpConfig(vitNodeApiConfig.mcp);
+  if (
+    mcpConfig.enabled &&
+    plugins.some(plugin => plugin.pluginId === MCP_PATH_SEGMENT)
+  ) {
+    throw new Error(
+      `A plugin named "${MCP_PATH_SEGMENT}" would be mounted where the MCP endpoint lives. Turn \`mcp\` off or remove the plugin.`,
+    );
+  }
+  // One registry per API instance: a dev server that rebuilds the API gets a
+  // fresh one, with nothing left over from the previous build.
+  const mcpRegistry = buildMcpRegistry(mcpConfig.enabled ? plugins : []);
+
   assertPluginContentModules({
     loader: vitNodeApiConfig.contentModules
       ? generatedContentModules(vitNodeApiConfig.contentModules)
@@ -196,13 +215,29 @@ export function VitNodeAPI({
   }
 
   const webOrigin = CONFIG.web.origin;
+  const mcpEndpoints = mcpConfig.enabled
+    ? createMcpEndpoints({
+        app: app as unknown as Hono,
+        cacheClient: redisClient,
+        config: mcpConfig,
+        registry: mcpRegistry,
+      })
+    : undefined;
   const rateLimiter = rateLimiterMiddleware(vitNodeApiConfig.rateLimiter, {
+    isMcpEndpoint: mcpEndpoints?.isMcpEndpoint,
     sessionCookieName:
       vitNodeApiConfig.authorization?.cookieName ?? DEFAULT_SESSION_COOKIE_NAME,
     storeClient: redisClient,
   });
   const corsConfig = corsOptions ?? { credentials: true, origin: webOrigin };
 
+  // First of all: a request the MCP endpoint dispatched for a tool call gets
+  // its frame moved onto its context before anything reads the request.
+  app.use("*", mcpDispatchMiddleware);
+  if (mcpEndpoints) {
+    app.use(`/${MCP_PATH_SEGMENT}`, mcpEndpoints.mark);
+    app.use(`/${MCP_PATH_SEGMENT}/*`, mcpEndpoints.mark);
+  }
   app.use(
     secureHeaders({
       crossOriginResourcePolicy: false,
@@ -275,6 +310,7 @@ export function VitNodeAPI({
       users: vitNodeApiConfig.users,
       plugins,
       cacheClient: redisClient,
+      mcp: { config: mcpConfig, registry: mcpRegistry },
     }),
   );
   app.use("*", rateLimiter.identified);
@@ -322,6 +358,9 @@ export function VitNodeAPI({
   } else {
     void registerCron();
   }
+
+  // Before the plugins, so no plugin mount can shadow it.
+  mcpEndpoints?.mount();
 
   plugins.map(root => {
     app.route(`/${root.pluginId}`, root.hono);

@@ -4,6 +4,7 @@ import type { DefaultTemplateEmailProps } from "./emails/default-template";
 import type { CacheConfig } from "./lib/cache";
 import type { CronAdapter } from "./lib/cron";
 import type { VitNodeApiI18nConfig } from "./lib/i18n/types";
+import type { McpConfig } from "./lib/mcp/config";
 import type { VitNodeMetadata } from "./lib/metadata";
 import type { NotificationWorkerSettings } from "./lib/notifications/preferences";
 import type { PasskeysConfig } from "./lib/passkey-config";
@@ -21,6 +22,7 @@ import type { SSOApiPlugin } from "./models/sso";
 import type { StorageApiPlugin } from "./models/storage";
 
 export type { LocaleConfig, VitNodeApiI18nConfig } from "./lib/i18n/types";
+export type { McpConfig } from "./lib/mcp/config";
 export type { VitNodeMetadata } from "./lib/metadata";
 
 /**
@@ -159,6 +161,18 @@ export interface VitNodeApiConfig {
    * unauthenticated caller was choosing.
    */
   maxBodySize?: number;
+  /**
+   * The Model Context Protocol endpoint: `{base}/mcp` for every plugin's tools,
+   * `{base}/mcp/{pluginId}` (`/api/mcp/@vitnode/blog`) for one plugin's. A tool
+   * is a route marked with `mcp` in its definition; it runs as the user who owns
+   * the bearer token, only when the token grants it, with every permission the
+   * route itself checks. Tokens are created per member, each limited to the
+   * tools it lists and to an expiry date.
+   *
+   * Off by default. While off, no MCP path is mounted and creating tokens is
+   * refused; routes marked with `mcp` are still validated at startup.
+   */
+  mcp?: McpConfig;
   /** The site title, used in emails and as the passkey RP name. */
   metadata: VitNodeMetadata;
   /**

@@ -1,5 +1,6 @@
 import {
   BellIcon,
+  BotIcon,
   KeyRoundIcon,
   LinkIcon,
   MenuIcon,
@@ -32,6 +33,7 @@ const ICONS: Record<
 > = {
   ai: SparklesIcon,
   devices: MonitorSmartphoneIcon,
+  mcp: BotIcon,
   notifications: BellIcon,
   overview: UserRoundIcon,
   security: KeyRoundIcon,

@@ -1,0 +1,6 @@
+{
+  "title": "MCP",
+  "description": "Expose plugin API routes to AI assistants as Model Context Protocol tools, with scoped per-member tokens",
+  "icon": "Bot",
+  "pages": ["index", "connect", "expose-route", "content", "reference"]
+}

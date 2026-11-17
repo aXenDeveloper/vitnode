@@ -4,7 +4,7 @@ description: "Learn VitNode development step by step: set up an app and build th
 icon: Power
 ---
 
-import { BookOpenIcon, LayersIcon, ServerIcon } from "lucide-react";
+import { BookOpenIcon, BotIcon, LayersIcon, ServerIcon } from "lucide-react";
 
 VitNode is a **TanStack Start** front end, a **Hono** API, PostgreSQL and an AdminCP. Product features live in **plugins**. A plugin owns its pages, API, tables, translations and AdminCP screens, so the app itself stays small.
 
@@ -50,6 +50,12 @@ The same plugin then continues in [Events](/docs/dev/events), [Queue](/docs/dev/
     title="Routing"
     description="Public and AdminCP pages owned by a plugin."
     href="/docs/dev/routing"
+  />
+  <Card
+    icon={<BotIcon />}
+    title="MCP"
+    description="Let AI assistants call your plugin routes as tools."
+    href="/docs/dev/mcp"
   />
   <Card
     icon={<ServerIcon />}

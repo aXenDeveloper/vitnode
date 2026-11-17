@@ -143,3 +143,7 @@ Pages call plugin APIs through the [fetcher](/docs/dev/fetcher), which infers `m
 - **In the app**, `vitnode dev` and `vitnode build` write `src/api-registry.gen.ts` from the plugins the app configured. That file, not the plugin's, decides what the app's pages can call.
 
 The `VitNodeApiPlugin` type at the bottom of `config.api.ts` is the link between the two. It keeps the plugin id, module paths and route definitions and drops the Hono app, database and listener code, so a type-only import never pulls server code into a browser build. The generator writes it; keep it when you edit the file.
+
+## MCP tools in nested modules
+
+Routes marked with `mcp` are collected from the whole module tree, at any depth, with their full path inside the plugin: a route `/{id}` in an `admin` → `notes` module is the tool path `/admin/notes/{id}`. You never register tools by hand - installing the plugin and marking the route is enough. See [MCP](/docs/dev/mcp).

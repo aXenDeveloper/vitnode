@@ -534,6 +534,7 @@
   "dependencies": {
     "@hono/swagger-ui": "^0.6.2",
     "@inquirer/prompts": "^8.7.5",
+    "@modelcontextprotocol/server": "2.4.0",
     "@simplewebauthn/server": "^14.1.0",
     "ai": "^7.0.164",
     "class-variance-authority": "^0.7.1",

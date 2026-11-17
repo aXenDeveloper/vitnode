@@ -25,6 +25,7 @@ export const routeMiddleware = buildRoute({
       {
         ai: { models: c.get("ai").models() },
         isEmail: !!c.get("core").email?.adapter,
+        mcp: c.get("core").mcp.config.enabled,
         passkeys: c.get("core").authorization.passkeys.enabled,
         password: c.get("core").authorization.password.enabled,
         sso: sso.map(s => ({

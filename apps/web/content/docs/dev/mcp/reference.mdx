@@ -1,0 +1,127 @@
+---
+title: MCP reference
+description: VitNode MCP configuration, route mcp options, tool naming, argument and result mapping, errors, limits, audit entries and supported protocol versions.
+icon: BookOpen
+---
+
+Exact behavior of VitNode's MCP endpoint and of the `mcp` option on routes. For a walkthrough, start with [Connect a client](/docs/dev/mcp/connect).
+
+## API config
+
+`buildApiConfig({ mcp })` in `src/vitnode.api.config.ts`:
+
+| Name | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `enabled` | `boolean` | No | `false` | Mounts `{base}/mcp` and `{base}/mcp/{pluginId}` and lets members create tokens |
+| `maxRequestBytes` | `number` | No | `1048576` | Largest MCP request body, in bytes; a larger one gets `413` |
+| `maxResponseBytes` | `number` | No | `1048576` | Largest route response turned into a tool result; a larger one is a tool error, never truncated |
+| `rateLimit` | `{ points?, duration? }` | No | `120` per `60` s | Requests per token, on top of the API's own [rate limits](/docs/dev/advanced/rate-limiter) |
+| `tokenMaxLifetimeDays` | `number` | No | `365` | Longest lifetime a member may give a token |
+
+With MCP on, a plugin whose id is `mcp` stops the API at startup, since it would be mounted on the same path.
+
+## Route option
+
+`buildRoute({ route: { mcp } })` takes `boolean | RouteMcpOptions` (`@vitnode/api/lib/mcp/route-options`). Omitted or `false` keeps the route off MCP.
+
+| Name | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | `operationId`, else derived | The operation half of the tool name, `[A-Za-z0-9_-]` |
+| `description` | `string` | `description`, else `summary` | What the tool does, for the model. Required in one of the three places |
+| `annotations` | `{ readOnlyHint?, destructiveHint?, idempotentHint?, openWorldHint?, title? }` | none | Client hints only; they never change access |
+
+For generated Content Engine routes use [`buildContentAdminModule({ mcp })`](/docs/dev/mcp/content) instead.
+
+## Tool names
+
+`{plugin prefix}__{operation}`, at most 128 characters.
+
+- **Plugin prefix:** the plugin id without `@`, every other character outside `[A-Za-z0-9_-]` turned into `-`: `@vitnode/blog` → `vitnode-blog`. Two installed plugins with one prefix stop the API at startup.
+- **Derived operation:** method, then path segments, `{param}` as `by_param`: `GET /admin/notes/{id}` → `get_admin_notes_by_id`.
+- Two routes with one tool name stop the API at startup, naming both routes.
+
+Names avoid dots and slashes because several MCP clients accept only `[A-Za-z0-9_-]`. Some clients also cap names at 64 characters; keep `mcp.name` short when the plugin id is long.
+
+## What a route needs
+
+The API refuses to start when a route marked `mcp` has:
+
+- no `mcp.description`, `description` or `summary`;
+- `withCaptcha` - an MCP client cannot solve a captcha;
+- `request.headers` or `request.cookies` - a tool sends no headers of its own;
+- a body other than one `application/json` schema, or a success response that is not JSON (a stream, a file, HTML);
+- a path parameter or query parameter that is not a single string, number or boolean - arrays and objects have no agreed URL form;
+- a request schema with no JSON Schema form, such as `z.custom()` or `z.date()`.
+
+## Arguments
+
+`inputSchema` is an object with one key per group the route declares, built from the route's Zod schemas in their input (JSON-wire) form:
+
+```json
+{
+  "params": { "id": "123" },
+  "query": { "locale": "en" },
+  "body": { "title": "Updated article title" }
+}
+```
+
+- `params` is required when the path has parameters. `query` is required when it has a required key; `body` when the route marks it required or its schema has required keys.
+- Path values are URL-encoded; `.` and `..` are refused. Query values are sent as text, one per key.
+- `body` is sent as given: omitted keys stay omitted and `null` stays `null`, so a partial update changes only what it names.
+- The route validates as it always does, transforms and refinements included. Its `400` comes back as a tool error.
+
+## Results
+
+| Route answers | Tool result |
+| --- | --- |
+| `2xx` with a JSON object | `structuredContent` is the object; `content` holds it as JSON text |
+| `2xx` with an array or a scalar | `structuredContent` is `{ "result": ... }` |
+| `2xx` with no body (`204`) | Text `Done (HTTP 204).`, no `structuredContent` |
+| `3xx` | Tool error: redirects are not followed |
+| `4xx` | Tool error with the status and the body, e.g. a domain error code |
+| `5xx` | Tool error with `Internal Server Error` only - no stack trace |
+| Over `maxResponseBytes` | Tool error asking for a smaller request |
+
+Response headers are never read, so no `Set-Cookie`, token or internal header reaches the model. `outputSchema` is advertised only when the route declares exactly one success response with a describable JSON schema; dates are `date-time` strings and objects allow extra keys.
+
+## Errors
+
+| Situation | Answer |
+| --- | --- |
+| Missing, unknown, expired or revoked token | HTTP `401` with `WWW-Authenticate: Bearer` |
+| Token owner suspended | HTTP `403` |
+| `Origin` header other than the web app's or the API's own | HTTP `403` |
+| Unknown `{pluginId}` endpoint, or a plugin with no tools | HTTP `404` |
+| Token rate limit reached | HTTP `429` with `Retry-After` |
+| `tools/call` for a tool outside the endpoint or the token | JSON-RPC error `-32602` `Unknown tool` |
+| Arguments that do not fit the groups | Tool error, before the route runs |
+
+## How calls run
+
+Each call is one request to the route, in the same process, with no network round trip. It carries no cookie and no credential: the caller is attached to that request object by the MCP endpoint, which nothing outside the API can reach. Plain REST requests never accept MCP tokens.
+
+- The global middleware loads the owner fresh on every call, so a deleted or suspended owner stops at once.
+- On `/admin/` paths the owner must be an admin at that moment (checked live) instead of having an AdminCP session; the route's `adminStaffPermission` still applies.
+- Rate limits: the MCP request is charged the `safety` category per client IP; each call is charged the route's own categories per owner; the token has its own limit.
+- `tools/list` shows only tools whose admin requirement and staff permissions the owner meets now. Resource-level checks run on every call.
+
+## Tokens
+
+- Created in **Settings → AI integrations**, or with `POST /api/@vitnode/core/mcp/tokens` (`{ label, expiresInDays, tools }`) from a signed-in session. Listed with `GET .../mcp/tokens`, revoked with `DELETE .../mcp/tokens/{id}`. `GET .../mcp/tools` returns the tools the member may grant.
+- A token may only list tools its owner can use when it is created. Only its SHA-256 hash and its first characters are stored.
+- Creating and revoking emit `mcp.token.created` and `mcp.token.revoked` ([built-in events](/docs/dev/events/built-in-events)) and write `mcp.token_created` / `mcp.token_revoked` to the activity log.
+
+## Audit
+
+Every call writes one `mcp.tool_called` entry: the owner, token id, plugin, tool, `targetId` when the call names `params.id`, and the outcome (`success`, `error` or `rejected_arguments`). Arguments are never stored. Audit entries the route writes itself - a content save, say - carry `mcpTokenId` and `mcpTool` and share the call's correlation id.
+
+## Protocol support
+
+Verified with `@modelcontextprotocol/client` 2.4.0 against `@modelcontextprotocol/server` 2.4.0, Streamable HTTP, stateless:
+
+| Revision | Served by |
+| --- | --- |
+| `2026-07-28` | The per-request handler |
+| `2025-11-25`, `2025-06-18`, `2025-03-26` | The SDK's stateless fallback: no session is kept, so `GET` answers `405` and there is nothing to `DELETE` |
+
+OAuth authorization (resource metadata discovery, consent, PKCE) is not implemented. Clients that only connect through OAuth cannot use the endpoint yet.

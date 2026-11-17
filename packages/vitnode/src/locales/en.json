@@ -1176,7 +1176,8 @@
           "sso": "Connected accounts",
           "notifications": "Notifications",
           "ai": "AI usage",
-          "standing": "Account status"
+          "standing": "Account status",
+          "mcp": "AI integrations"
         },
         "overview": {
           "desc": "Your avatar and the details on your account.",
@@ -1614,6 +1615,70 @@
           "overview": {
             "title": "AI points",
             "details": "See your AI features"
+          }
+        },
+        "mcp": {
+          "title": "AI integrations",
+          "desc": "Let an AI assistant use this site as you, through the Model Context Protocol (MCP). Each token works only for the tools you pick and only until it expires.",
+          "endpoint": "MCP endpoint",
+          "endpoint_desc": "Add this URL to an MCP client that supports bearer tokens, with a token below as the Authorization header.",
+          "tokens": "Tokens",
+          "empty": {
+            "title": "No tokens yet",
+            "desc": "Create a token to connect an AI assistant. You choose exactly which tools it may call."
+          },
+          "no_tools": {
+            "title": "No tools to grant",
+            "desc": "None of the installed plugins offers an MCP tool you have access to."
+          },
+          "load_error": {
+            "title": "Tokens didn't load",
+            "desc": "Something went wrong loading your tokens. Try again in a moment."
+          },
+          "retry": "Try again",
+          "status": {
+            "active": "Active",
+            "expired": "Expired",
+            "revoked": "Revoked"
+          },
+          "expires": "Expires",
+          "last_used": "Last used",
+          "never_used": "Never used",
+          "tools_count": "{count, plural, one {# tool} other {# tools}}",
+          "create": {
+            "action": "Create token",
+            "title": "Create an MCP token",
+            "desc": "The token acts as you, but only through the tools you tick, and your permissions still apply to every call.",
+            "label": "Name",
+            "label_desc": "Where you use it, e.g. \"Claude on my laptop\".",
+            "expires_in_days": "Expires after (days)",
+            "expires_in_days_desc": "At most {max} days.",
+            "tools": "Tools",
+            "tools_desc": "Read-only tools are marked. A tool that changes data runs with your permissions, and its changes are logged.",
+            "read_only": "Read-only",
+            "admin": "Admin",
+            "submit": "Create token",
+            "errors": {
+              "tools_not_available": "You can no longer grant some of these tools. Reload and pick again.",
+              "token_lifetime_too_long": "Pick a shorter lifetime.",
+              "mcp_disabled": "MCP is turned off on this site."
+            }
+          },
+          "created": {
+            "title": "Copy your token now",
+            "desc": "This is the only time it is shown. Store it in your MCP client's settings - if you lose it, revoke it and create another.",
+            "copy": "Copy token",
+            "done": "I've copied it",
+            "toast": "Token created",
+            "toast_desc": "\"{label}\" can now be used by your MCP client."
+          },
+          "revoke": {
+            "action": "Revoke token",
+            "title": "Revoke this token?",
+            "desc": "\"{label}\" stops working right away. Any client using it loses access.",
+            "confirm": "Revoke",
+            "success": "Token revoked",
+            "success_desc": "\"{label}\" no longer works."
           }
         }
       },
@@ -3022,7 +3087,7 @@
         "duration": {
           "days": "{count, plural, one {# day} other {# days}}",
           "hours": "{count, plural, one {# hour} other {# hours}}",
-            "minutes": "{count, plural, one {# minute} other {# minutes}}"
+          "minutes": "{count, plural, one {# minute} other {# minutes}}"
         },
         "statuses": {
           "active": "Active",
@@ -3440,6 +3505,11 @@
           "created": "Created warning action",
           "updated": "Updated warning action",
           "deleted": "Deleted warning action"
+        },
+        "mcp": {
+          "token_created": "Created an MCP token",
+          "token_revoked": "Revoked an MCP token",
+          "tool_called": "Called an MCP tool"
         }
       },
       "fields": {

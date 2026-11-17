@@ -1,0 +1,135 @@
+---
+title: Connect a client
+description: Turn on the VitNode MCP endpoint, create a scoped MCP token in account settings, and connect an MCP client with a bearer token.
+icon: Plug
+---
+
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import tokensImage from "./mcp-settings-tokens.webp";
+import createTokenImage from "./mcp-settings-create-token.webp";
+
+This guide turns on MCP for your app, creates a token limited to a few tools, and lists those tools from a real MCP client.
+
+## Before you begin
+
+- A running VitNode app with at least one plugin that exposes tools, such as `@vitnode/blog`. The blog's article tools need an admin account; its `vitnode-blog__get_categories` tool works for any member.
+- Node.js 20 or newer for the client script below.
+
+<Steps>
+
+<Step>
+
+### Turn on MCP
+
+Add `mcp` to your API config:
+
+```ts title="apps/web/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // ...your existing options
+  mcp: { enabled: true },
+});
+```
+
+Restart the dev server. MCP is off by default; while it is off, no `/api/mcp` path exists and members cannot create tokens.
+
+</Step>
+
+<Step>
+
+### Create a token
+
+Sign in, open **Settings → AI integrations** and copy the **MCP endpoint**.
+
+<ImgDocs withoutBackground className="*:max-w-full" alt="The AI integrations settings page with the MCP endpoint and two tokens, one active and one revoked" src={tokensImage} />
+
+Select **Create token**, give it a name, pick how many days it lasts and tick only the tools the assistant needs. The list shows the tools you can use today; admin tools appear only for admins.
+
+<ImgDocs withoutBackground className="*:max-w-full" alt="The Create an MCP token sheet with blog tools listed, two of them ticked" src={createTokenImage} />
+
+Select **Create token** and copy the token from the dialog. It is shown once - VitNode stores only its SHA-256 hash. Keep it in an environment variable, never in a committed file:
+
+```bash
+export VITNODE_MCP_TOKEN="vnmcp_..."
+```
+
+</Step>
+
+<Step>
+
+### Connect a client
+
+Any MCP client that supports Streamable HTTP and a custom `Authorization: Bearer` header can connect. To check the connection from code, install the official TypeScript client:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Install the MCP client'>
+
+```bash tab="bun"
+bun i @modelcontextprotocol/client@2.4.0
+```
+
+```bash tab="pnpm"
+pnpm i @modelcontextprotocol/client@2.4.0
+```
+
+```bash tab="npm"
+npm i @modelcontextprotocol/client@2.4.0
+```
+
+</Tabs>
+
+```js title="list-tools.mjs"
+import {
+  Client,
+  StreamableHTTPClientTransport,
+} from "@modelcontextprotocol/client";
+
+const client = new Client({ name: "vitnode-check", version: "1.0.0" });
+await client.connect(
+  new StreamableHTTPClientTransport(new URL("http://localhost:3000/api/mcp"), {
+    requestInit: {
+      headers: { Authorization: `Bearer ${process.env.VITNODE_MCP_TOKEN}` },
+    },
+  }),
+);
+
+const { tools } = await client.listTools();
+console.log(tools.map(tool => tool.name));
+await client.close();
+```
+
+The client uses the 2025 handshake by default. Pass `{ versionNegotiation: { mode: { pin: "2026-07-28" } } }` as the `Client`'s second argument to use the 2026-07-28 revision instead; both work.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+```bash
+node list-tools.mjs
+```
+
+```txt
+[ 'vitnode-blog__blog_category_list', 'vitnode-blog__blog_post_list' ]
+```
+
+You see the tools you ticked that your account may still use. Common failures:
+
+| Response | Cause |
+| --- | --- |
+| `401` `{"error":"A bearer token is required."}` | No `Authorization: Bearer` header |
+| `401` `{"error":"The token is invalid, expired or revoked."}` | Wrong token, expired, or revoked in settings |
+| `403` `{"error":"Origin not allowed."}` | A browser page on another origin called the endpoint |
+| `404` `{"error":"No MCP tools for this plugin."}` | A plugin endpoint such as `/api/mcp/@vitnode/core` with no tools |
+
+To stop a client, select the trash icon next to its token. The next request with that token gets `401`.
+
+## One plugin per connection
+
+`/api/mcp` serves every granted tool. `/api/mcp/{pluginId}` serves the same tools filtered to one plugin, using the plugin's package name as it appears in its API URLs: `/api/mcp/@vitnode/blog`. A tool from another plugin cannot be called through it, even with a token that grants it.
+
+## Related
+
+- [Expose a route](/docs/dev/mcp/expose-route)
+- [MCP reference](/docs/dev/mcp/reference)

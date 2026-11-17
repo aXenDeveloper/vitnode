@@ -80,6 +80,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/newsroom/zones' },
   { path: '/settings/ai' },
   { path: '/settings/devices' },
+  { path: '/settings/mcp' },
   { path: '/settings/notifications' },
   { path: '/settings/security' },
   { path: '/settings/sso' },

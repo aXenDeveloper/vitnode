@@ -156,4 +156,7 @@ export const CORE_AUDIT_ACTIONS = defineAuditActions([
   { action: "payment.expired", targetType: "payment" },
   { action: "audit_logs.pruned", targetType: "settings" },
   { action: "audit_logs.exported", targetType: "settings" },
+  { action: "mcp.token_created", targetType: "mcp_token" },
+  { action: "mcp.token_revoked", targetType: "mcp_token" },
+  { action: "mcp.tool_called", targetType: "mcp_tool" },
 ] as const);

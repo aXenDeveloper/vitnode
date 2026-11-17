@@ -583,6 +583,21 @@ own preferences are saved, by them or by staff on their AdminCP user page.
 pauses, deletes or resets everything, or note when staff changed how a single
 member is notified.
 
+## MCP token events
+
+Two names, exported from `@vitnode/api/events/mcp`: `mcpTokenCreatedEvent`
+and `mcpTokenRevokedEvent`. Both fire **after** a member's change in
+**Settings → AI integrations** (or the token API) has been saved; the actor is
+that member. Neither payload ever carries the token. See [MCP](/docs/dev/mcp).
+
+| Event               | Payload                                   | Fires when                                                       |
+| ------------------- | ----------------------------------------- | ---------------------------------------------------------------- |
+| `mcp.token.created` | `{ tokenId, userId, tools, expiresAt }`   | A member creates an MCP token - `tools` are the full tool names  |
+| `mcp.token.revoked` | `{ tokenId, userId }`                     | A member revokes one of their tokens; it stops working at once   |
+
+**A listener would** email the member when a token is created on their
+account, or alert security staff when a token granting admin tools appears.
+
 ## Moderation events
 
 Twenty names, exported from `@vitnode/api/events/moderation` as

@@ -12,6 +12,7 @@ import {
   FORWARDED_IP_FALLBACK,
   resolveVisitorIp,
 } from "@/lib/fetcher/request-context";
+import { mcpDispatchOf } from "@/lib/mcp/dispatch";
 
 const UNKNOWN_CLIENT_IP = "127.0.0.1";
 
@@ -103,7 +104,9 @@ export const clientIpMiddleware = async (
   c: Context,
   next: () => Promise<void>,
 ) => {
-  c.set("ipAddress", resolveClientIp(c));
+  // A request the MCP endpoint dispatched has no socket of its own: it is the
+  // MCP client's, resolved by the outer request.
+  c.set("ipAddress", mcpDispatchOf(c)?.ipAddress ?? resolveClientIp(c));
 
   await next();
 };

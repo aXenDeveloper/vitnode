@@ -115,4 +115,7 @@ export const vitNodeApiConfig = buildApiConfig({
     title: 'VitNode API',
     shortTitle: 'VitNode',
   },
+  // Serves the plugins' MCP tools at `/api/mcp` to members' MCP tokens,
+  // created under Settings -> AI integrations.
+  mcp: { enabled: true },
 })

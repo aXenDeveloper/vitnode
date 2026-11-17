@@ -128,6 +128,10 @@ It appends `"can_delete"` to `notes: [...]` in `src/staff-permissions.ts`, adds 
 
 To try the guard, reuse the `CheckNotes` button from [Generate an endpoint](/docs/dev/plugins/api/generate-route#call-it-from-a-page) with the call the generator printed for the create route: `method: "post"`, `module: "admin/notes"`, `path: "/"` and `args: { body: {} }`. Sign in to the AdminCP, open the page and press the button. An account holding **Create notes** gets `501`, because the route is not implemented yet. The restricted account gets `403`.
 
+## Admin routes as MCP tools
+
+Marking an admin route with `mcp: true` keeps every check on this page. A tool call to it still passes the `/admin/` middleware - the token's owner must be an admin at the moment of the call, instead of holding an AdminCP session - and then the route's `adminStaffPermission`. A member without that permission cannot select the tool when creating a token, and a token created before the permission was removed gets `403`. See [Expose a route](/docs/dev/mcp/expose-route#admin-routes).
+
 ## Related
 
 <Cards>

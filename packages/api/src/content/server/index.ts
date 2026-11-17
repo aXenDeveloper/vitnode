@@ -219,13 +219,22 @@ export type {
   ContentLocalizedCreateResult,
   ContentLocalizedService,
 } from "./localized-service";
+export {
+  CONTENT_MCP_OPERATIONS,
+  type ContentMcpExposure,
+  type ContentMcpOperation,
+} from "./mcp";
 export { createContentModel, findContentModel } from "./model";
 export type {
   AnyContentModel,
   ContentModel,
   RegisteredContentModel,
 } from "./model";
-export { buildContentAdminModule } from "./module";
+export {
+  buildContentAdminModule,
+  type ContentAdminModuleOptions,
+  type ContentModelId,
+} from "./module";
 export {
   contentNotificationAccess,
   contentNotificationRefs,

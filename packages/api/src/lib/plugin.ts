@@ -41,6 +41,7 @@ import type { CronJobConfig } from "./cron";
 import type { RegisteredEditablePage } from "./editable-pages";
 import type { EventDefinition } from "./event-definition";
 import type { EventListenerConfig } from "./events";
+import type { McpToolDescriptor } from "./mcp/registry";
 import type { ModerationPluginConfig } from "./moderation/registry";
 import type { ModerationReportTargetDefinition } from "./moderation/targets";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
@@ -54,6 +55,7 @@ import { collectAiActions } from "./ai/registry";
 import { checkPluginId } from "./check-plugin-id";
 import { registerEditablePage, validateEditablePages } from "./editable-pages";
 import { collectEventDefinitions } from "./event-definition";
+import { collectPluginMcpTools } from "./mcp/registry";
 import { withModerationPermissions } from "./moderation/registry";
 import {
   describeNestedRegistration,
@@ -97,6 +99,11 @@ export interface BuildPluginApiReturn<
   /** Every module's routes, each module mounted at `/{module.name}`. */
   hono: OpenAPIHono;
   manifest?: PluginManifest<P>;
+  /**
+   * Routes marked with `mcp`, from the whole module tree, as MCP tool
+   * descriptors sorted by name. Served only when the API config turns MCP on.
+   */
+  mcpTools?: McpToolDescriptor[];
   messages?: LocaleMessagesMap;
   /**
    * Declared targets and scopes, plus one report target per content model with
@@ -142,7 +149,10 @@ export type AnyBuildPluginApiReturn = BuildPluginApiReturn<
  *
  * @throws When `manifest` is malformed; when `blocks` or `permissionStaff`
  * belongs to another plugin; when content types, containers, editable pages,
- * AI actions, search indexers or notification types are invalid or collide.
+ * AI actions, search indexers or notification types are invalid or collide;
+ * when a route marked `mcp` cannot be an MCP tool (no description, a captcha,
+ * headers or cookies, a non-JSON body or response, a schema with no JSON form)
+ * or two of them share a tool name.
  * In development, also
  * when no installed package's `package.json` has the plugin id as its name, and
  * when a nested module declares cron jobs, events, queue tasks or WebSockets,
@@ -386,6 +396,8 @@ export function buildApiPlugin<
       .map(model => contentReportTarget(model, pluginId)),
   ];
 
+  const mcpTools = collectPluginMcpTools({ modules, pluginId });
+
   return {
     pluginId,
     aiActions,
@@ -394,6 +406,7 @@ export function buildApiPlugin<
     editablePages: registeredPages.map(entry => entry.page),
     eventDefinitions: ownEventDefinitions,
     manifest,
+    mcpTools,
     messages,
     modules,
     hono,
