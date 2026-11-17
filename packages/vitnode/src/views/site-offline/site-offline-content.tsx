@@ -46,7 +46,7 @@ export const SiteOfflineContent = ({
   return (
     <article
       className={cn(
-        "bg-card text-card-foreground flex w-full max-w-lg flex-col gap-6 rounded-2xl border p-6 shadow-lg shadow-black/5 sm:p-8",
+        "bg-card text-card-foreground @container flex w-full max-w-lg flex-col gap-6 rounded-2xl border p-6 shadow-lg shadow-black/5 sm:p-8",
         className,
       )}
     >

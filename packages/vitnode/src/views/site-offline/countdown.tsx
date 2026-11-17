@@ -85,7 +85,7 @@ export const SiteOpening = ({
     [locale],
   );
   const frame = cn(
-    "bg-muted/60 flex flex-col gap-1 rounded-xl px-4 py-3 text-start sm:flex-row sm:items-center sm:justify-between sm:gap-4",
+    "bg-muted/60 flex flex-col gap-1 rounded-xl px-4 py-3 text-start @sm:flex-row @sm:items-center @sm:justify-between @sm:gap-4",
     className,
   );
 
@@ -109,7 +109,7 @@ export const SiteOpening = ({
   if (!showCountdown) {
     return (
       <div
-        className={cn(frame, "flex-row items-center gap-3 sm:justify-start")}
+        className={cn(frame, "flex-row items-center gap-3 @sm:justify-start")}
       >
         <CalendarClockIcon
           aria-hidden="true"
