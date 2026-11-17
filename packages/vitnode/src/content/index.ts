@@ -350,6 +350,8 @@ export {
 export type {
   ContentDeliveryAlternate,
   ContentDeliveryHreflang,
+  ContentDeliveryOpenGraph,
+  ContentDeliveryOpenGraphImage,
   ContentDeliveryPathParts,
   ContentDeliveryRobots,
   ContentDeliverySeo,

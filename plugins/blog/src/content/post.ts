@@ -148,6 +148,9 @@ export const blogPostContentType = defineContentType({
     seo: {
       titleField: "title",
       descriptionField: "content",
+      // The cover is the shared image when an article has one; without it the
+      // API draws a card from the title.
+      openGraph: { imageField: "coverImage" },
     },
     sitemap: { changeFrequency: "weekly", priority: 0.7 },
     hreflang: { xDefault: "defaultLocale" },

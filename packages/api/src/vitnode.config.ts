@@ -6,6 +6,7 @@ import type { CronAdapter } from "./lib/cron";
 import type { VitNodeApiI18nConfig } from "./lib/i18n/types";
 import type { VitNodeMetadata } from "./lib/metadata";
 import type { NotificationWorkerSettings } from "./lib/notifications/preferences";
+import type { OgImageConfig } from "./lib/og-image/types";
 import type { PasskeysConfig } from "./lib/passkey-config";
 import type { PaymentProviderApiPlugin } from "./lib/payments/provider";
 import type { BuildPluginApiReturn } from "./lib/plugin";
@@ -167,6 +168,12 @@ export interface VitNodeApiConfig {
    * `retentionDays` 90.
    */
   notifications?: Partial<NotificationWorkerSettings>;
+  /**
+   * Generated social cards (`og:image`): the built-in template draws the site
+   * name, a page's title and description at 1200 × 630. On by default; see
+   * {@link OgImageConfig} for fonts, colours and templates.
+   */
+  ogImage?: OgImageConfig;
   /**
    * For an API that runs in its own process, next to a web app that caches
    * pages in Redis (`vitNodeConfig.pageCache.storage: "redis"`). Content

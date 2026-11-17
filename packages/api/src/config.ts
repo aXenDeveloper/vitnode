@@ -267,6 +267,7 @@ export function VitNodeAPI({
       events: vitNodeApiConfig.events,
       frontendPlugins: vitNodeApiConfig.frontendPlugins,
       notifications: vitNodeApiConfig.notifications,
+      ogImage: vitNodeApiConfig.ogImage,
       activityLogs: vitNodeApiConfig.activityLogs,
       payments: vitNodeApiConfig.payments,
       search: vitNodeApiConfig.search,

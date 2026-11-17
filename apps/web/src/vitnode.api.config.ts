@@ -4,6 +4,7 @@ import {
   scopedDatabase,
 } from '@vitnode/api/cloudflare/database'
 import { coreRelations } from '@vitnode/api/database/relations'
+import { VITNODE_LOGO_SVG } from '@vitnode/api/lib/og-image/vitnode-logo'
 import { buildApiConfig } from '@vitnode/api/vitnode.config'
 import { blogApiPlugin } from '@vitnode/blog/config.api'
 import { forumApiPlugin } from '@vitnode/forum/config.api'
@@ -112,7 +113,13 @@ export const vitNodeApiConfig = buildApiConfig({
     ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
     : undefined,
   metadata: {
-    title: 'VitNode API',
+    title: 'VitNode',
     shortTitle: 'VitNode',
+    // Shown on the site's social card, under the title.
+    description: 'Build modern community apps with plugins, React and Hono.',
+  },
+  // The VitNode wordmark on every social card, drawn from SVG.
+  ogImage: {
+    logo: { svg: VITNODE_LOGO_SVG, wordmark: true },
   },
 })

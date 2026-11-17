@@ -4,6 +4,7 @@ import { buildRoute } from "@/builders";
 import { resolveUserRoles, userRoleSchema } from "@/lib/resolve-user-roles";
 import { publicFullNameOf } from "@/lib/user-personal-information";
 import { UserModel } from "@/models/user";
+import { profileOgImage } from "@/modules/og/lib/profile-card";
 
 export const profileRoute = buildRoute({
   route: {
@@ -28,6 +29,16 @@ export const profileRoute = buildRoute({
               avatarUrl: z.string().nullable(),
               coverUrl: z.string().nullable(),
               createdAt: z.date(),
+              /** The profile's social card, or `null` when cards are off. */
+              ogImage: z
+                .object({
+                  alt: z.string(),
+                  height: z.number().int(),
+                  type: z.string(),
+                  url: z.string(),
+                  width: z.number().int(),
+                })
+                .nullable(),
               role: userRoleSchema,
               secondaryRoles: z.array(userRoleSchema),
             }),
@@ -71,6 +82,7 @@ export const profileRoute = buildRoute({
         avatarUrl: user.avatarUrl,
         coverUrl: user.coverUrl,
         createdAt: user.createdAt,
+        ogImage: profileOgImage(c, user),
         ...roles,
       },
       200,

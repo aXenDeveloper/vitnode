@@ -11,13 +11,33 @@ export interface ContentDeliveryPageAlternate {
   locale: string;
 }
 
+/** The `og:image` a delivery answer carries: the record's own image or its generated card. */
+export interface ContentDeliveryPageOpenGraphImage {
+  alt: null | string;
+  height: null | number;
+  type: null | string;
+  /** Absolute. */
+  url: string;
+  width: null | number;
+}
+
 /** The SEO data a Content Engine delivery answer carries for one page. */
 export interface ContentDeliveryPageMetadata {
   /** The page in every locale it is published in, the current one included. */
   alternates: readonly ContentDeliveryPageAlternate[];
   canonicalInternalPath: null | string;
+  /** The public path, locale prefix included. Used as the canonical URL of a one-language page. */
+  canonicalPath?: null | string;
+  /** The absolute canonical URL, when the API knows the origin. */
+  canonicalUrl?: null | string;
   /** The locale the content was resolved in, which may be a fallback locale. */
   locale: null | string;
+  /** `null` unless the content type sets `delivery.seo.openGraph`. */
+  openGraph?: null | {
+    description: null | string;
+    image: ContentDeliveryPageOpenGraphImage | null;
+    title: null | string;
+  };
   robots: null | { follow: boolean; index: boolean };
   /** SEO overrides; `description` may contain HTML. */
   seo: { description: null | string; title: null | string };
@@ -135,8 +155,10 @@ const internalAlternates = (
 /**
  * A plugin route's `head` for a delivered content page: the SEO title (or
  * `title` as fallback), a plain-text description cut to 160 characters, the
- * locale alternates, and `noindex, nofollow` when the page must not be
- * indexed. Returns just `title` while there is no metadata yet.
+ * locale alternates (or the canonical URL of a one-language page), the Open
+ * Graph title, description and image (`og:type` `article`), and
+ * `noindex, nofollow` when the page must not be indexed. Returns just `title`
+ * while there is no metadata yet.
  */
 export const contentDeliveryPageHead = (
   metadata: ContentDeliveryPageMetadata | undefined,
@@ -153,6 +175,22 @@ export const contentDeliveryPageHead = (
   if (description !== undefined) head.description = description;
   if (alternates !== undefined) head.alternates = alternates;
   if (metadata.robots?.index === false) head.robots = "noindex, nofollow";
+
+  const canonical = metadata.canonicalUrl ?? metadata.canonicalPath ?? null;
+  if (alternates === undefined && canonical !== null) {
+    head.canonical = canonical;
+  }
+
+  const { openGraph } = metadata;
+  if (openGraph) {
+    const ogDescription = metaDescription(openGraph.description);
+    head.openGraph = {
+      type: "article",
+      ...(openGraph.title === null ? {} : { title: openGraph.title }),
+      ...(ogDescription === undefined ? {} : { description: ogDescription }),
+      ...(openGraph.image === null ? {} : { image: openGraph.image }),
+    };
+  }
 
   return head;
 };

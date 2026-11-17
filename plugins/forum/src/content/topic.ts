@@ -57,7 +57,12 @@ export const topicContentType = defineContentType({
   delivery: {
     path: "/forum/topics/:slug",
     redirects: true,
-    seo: { titleField: "title", descriptionField: "body" },
+    seo: {
+      titleField: "title",
+      descriptionField: "body",
+      // A generated card: a topic has no image of its own.
+      openGraph: {},
+    },
     sitemap: { changeFrequency: "daily", priority: 0.6 },
   },
 

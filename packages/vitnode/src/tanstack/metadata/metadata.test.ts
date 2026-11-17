@@ -38,8 +38,10 @@ describe("routeHead", () => {
 
   it("falls back to the full site name when there is no short one", () => {
     expect(
-      routeHead({ title: "VitNode Community" }, { title: "Discover" }),
-    ).toEqual({ meta: [{ title: "Discover - VitNode Community" }] });
+      titleOf(
+        routeHead({ title: "VitNode Community" }, { title: "Discover" }).meta,
+      ),
+    ).toEqual({ title: "Discover - VitNode Community" });
   });
 
   it("emits a description on its own", () => {
@@ -106,15 +108,17 @@ describe("routeHead openGraph", () => {
     expect(byName(head(FULL), "og:title")).toBeUndefined();
   });
 
-  it.each([
-    ["title", { title: "Routes" }, "og:title"],
-    ["description", { description: "A page" }, "og:description"],
-    ["type", { type: "website" as const }, "og:type"],
-  ])("emits og:%s on its own", (_field, openGraph, property) => {
-    const meta = head({ openGraph });
+  it("emits og:title from openGraph alone", () => {
+    expect(
+      byProperty(head({ openGraph: { title: "Routes" } }), "og:title"),
+    ).toEqual({ content: "Routes", property: "og:title" });
+  });
 
-    expect(meta).toHaveLength(1);
-    expect(byProperty(meta, property)).toBeDefined();
+  it.each([
+    ["description", { description: "A page" }],
+    ["type", { type: "website" as const }],
+  ])("emits nothing for og:%s without a title", (_field, openGraph) => {
+    expect(head({ openGraph })).toEqual([]);
   });
 
   it("omits every undefined Open Graph field", () => {
@@ -135,8 +139,8 @@ describe("createRouteHead", () => {
   it("binds the site name once so a route never restates it", () => {
     const pageHead = createRouteHead(METADATA);
 
-    expect(pageHead({ title: "Discover" })).toEqual({
-      meta: [{ title: "Discover - VitNode" }],
+    expect(titleOf(pageHead({ title: "Discover" }).meta)).toEqual({
+      title: "Discover - VitNode",
     });
     expect(pageHead()).toEqual({ meta: [] });
   });
@@ -144,9 +148,12 @@ describe("createRouteHead", () => {
   it("passes Open Graph through unchanged", () => {
     const pageHead = createRouteHead(METADATA);
 
-    expect(pageHead({ openGraph: { type: "article" } })).toEqual({
-      meta: [{ content: "article", property: "og:type" }],
-    });
+    expect(
+      byProperty(
+        pageHead({ openGraph: { title: "Routes", type: "article" } }).meta,
+        "og:type",
+      ),
+    ).toEqual({ content: "article", property: "og:type" });
   });
 });
 

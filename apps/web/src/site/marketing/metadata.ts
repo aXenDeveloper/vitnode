@@ -110,22 +110,22 @@ export const marketingHead = (page: MarketingPageMeta) => {
   const { description, path, title } = page
   const url = new URL(path, SITE_ORIGIN).href
   const socialTitle = `${title} - VitNode`
+  // Canonical link, og:url, og:site_name, og:locale, og:image (the site card)
+  // and twitter:card all come from `pageHead`.
   const head = pageHead({
+    canonical: url,
     description,
+    locale: 'en-US',
     openGraph: { description, title: socialTitle, type: 'website' },
     robots: 'index, follow',
     title,
   })
 
   return {
-    links: [{ href: url, rel: 'canonical' }],
+    links: head.links ?? [],
     meta: [
       ...head.meta,
       { content: BRAND_BLUE, name: 'theme-color' },
-      { content: url, property: 'og:url' },
-      { content: 'VitNode', property: 'og:site_name' },
-      { content: 'en_US', property: 'og:locale' },
-      { content: 'summary_large_image', name: 'twitter:card' },
       { content: socialTitle, name: 'twitter:title' },
       { content: description, name: 'twitter:description' },
     ],
