@@ -26,6 +26,7 @@
   "@vitnode/core:site_status": "Status strony",
   "@vitnode/core:site_status:can_view": "Podgląd, czy strona jest dostępna, i jej komunikatu o przerwie",
   "@vitnode/core:site_status:can_manage": "Wyłączanie i włączanie strony oraz edycja komunikatu o przerwie",
+  "@vitnode/core:site_status:can_access_offline": "Dostęp do strony, gdy jest wyłączona",
   "@vitnode/core:plugins": "Wtyczki",
   "@vitnode/core:plugins:can_view": "Przeglądanie zainstalowanych wtyczek i ich wersji",
   "@vitnode/core:queue": "Zadania w kolejce",
@@ -1563,7 +1564,7 @@
           },
           "turned_off": {
             "title": "Strona jest wyłączona",
-            "desc": "Odwiedzający widzą teraz stronę przerwy. Zespół nadal może korzystać ze strony."
+            "desc": "Odwiedzający widzą teraz stronę przerwy. Administratorzy i moderatorzy z dostępem nadal mogą korzystać ze strony."
           },
           "turned_on": {
             "title": "Strona jest dostępna",
@@ -1573,7 +1574,7 @@
         "form": {
           "offline": {
             "label": "Wyłącz stronę",
-            "desc": "Odwiedzający zobaczą stronę przerwy zamiast strony. Zespół zachowuje pełny dostęp."
+            "desc": "Odwiedzający zobaczą stronę przerwy zamiast strony. Administratorzy i moderatorzy z dostępem nadal z niej korzystają."
           },
           "message": {
             "label": "Komunikat",
@@ -5868,7 +5869,7 @@
       },
       "staff_banner": {
         "title": "Strona jest wyłączona",
-        "desc": "Widzi ją tylko zespół. Odwiedzający dostają stronę przerwy. <link>Zarządzaj statusem strony</link>"
+        "desc": "Widzisz ją dzięki uprawnieniom zespołu. Odwiedzający dostają stronę przerwy. <link>Zarządzaj statusem strony</link>"
       }
     }
   },

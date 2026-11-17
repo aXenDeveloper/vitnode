@@ -1,7 +1,5 @@
 import type { SiteStatus } from "@vitnode/api/lib/site-status";
 
-import type { SessionApi } from "../auth/session-api";
-
 /**
  * Pages every visitor can open while the site is offline, so staff can sign
  * in: `/login` and everything below it (password reset, e-mail
@@ -15,26 +13,27 @@ export const isSiteOfflineOpenPath = (pathname: string): boolean =>
     path => pathname === path || pathname.startsWith(`${path}/`),
   );
 
-/** Whether the session belongs to staff (admin or moderator), who keep using an offline site. */
+/**
+ * Whether this viewer keeps using the site while it is offline: the API says
+ * so for admins and for moderators with the "Access the site while it's
+ * offline" staff permission.
+ */
 export const isSiteOfflineBypass = (
-  session: null | SessionApi | undefined,
-): boolean =>
-  !!session?.user && (session.user.isAdmin || session.user.isModerator);
+  status: Pick<SiteStatus, "offline" | "viewerCanBypass"> | undefined,
+): boolean => !!status?.offline && status.viewerCanBypass;
 
 /**
  * Whether this visitor gets the offline page instead of `pathname`: the site
- * is offline, they are not staff, and the page is not one of
+ * is offline, they may not bypass it, and the page is not one of
  * {@link SITE_OFFLINE_OPEN_PATHS}.
  */
 export const isSiteClosedTo = ({
   pathname,
-  session,
   status,
 }: {
   pathname: string;
-  session: null | SessionApi | undefined;
-  status: Pick<SiteStatus, "offline"> | undefined;
+  status: Pick<SiteStatus, "offline" | "viewerCanBypass"> | undefined;
 }): boolean =>
   !!status?.offline &&
-  !isSiteOfflineBypass(session) &&
+  !status.viewerCanBypass &&
   !isSiteOfflineOpenPath(pathname);

@@ -10,9 +10,14 @@ import { core_site_status } from "@/database/site";
 import type { DomainCache } from "./cache";
 import type { SiteOfflineMessage, SiteStatusUpdate } from "./site-status";
 
-import { getStaffFlags } from "./check-staff-permission";
+import {
+  checkStaffPermissionOfUser,
+  getStaffFlags,
+} from "./check-staff-permission";
+import { coreStaffPermissions } from "./core-staff-permissions";
 import { invalidatePageCacheTags } from "./page-cache";
 import { SITE_STATUS_PAGE_CACHE_TAG } from "./site-status";
+import { staffPermissionArgs } from "./staff-permissions";
 
 /** The stored row, as every request reads it. */
 export interface StoredSiteStatus {
@@ -112,8 +117,10 @@ export const loadSiteStatus = async (c: Context): Promise<StoredSiteStatus> => {
 };
 
 /**
- * Whether the request's user is staff (admin or moderator) and so may use the
- * site while it is offline. Server-only.
+ * Whether the request may use the site while it is offline: an AdminCP
+ * session, an admin, or a moderator holding
+ * `coreStaffPermissions.moderator.site_status.canAccessOffline` (a root role
+ * holds it too). Server-only.
  */
 export const canBypassSiteOffline = async (c: Context): Promise<boolean> => {
   if (c.get("admin")) return true;
@@ -121,8 +128,15 @@ export const canBypassSiteOffline = async (c: Context): Promise<boolean> => {
   if (!user) return false;
 
   const { isAdmin, isModerator } = await getStaffFlags(c, user);
+  if (isAdmin) return true;
+  if (!isModerator) return false;
 
-  return isAdmin || isModerator;
+  return await checkStaffPermissionOfUser(c, user, {
+    type: "moderator",
+    ...staffPermissionArgs(
+      coreStaffPermissions.moderator.site_status.canAccessOffline,
+    ),
+  });
 };
 
 /**

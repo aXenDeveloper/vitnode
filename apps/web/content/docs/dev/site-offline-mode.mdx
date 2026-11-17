@@ -8,7 +8,7 @@ import { ImgDocs } from "@/components/fumadocs/img"
 import siteOfflineAdmin from "./site-offline-admin.webp"
 import siteOfflinePage from "./site-offline-page.webp"
 
-Site offline mode swaps the public site for a "We'll be right back" page while you upgrade, migrate or prepare a launch. Visitors see your message in their language and, if you set an opening time, a countdown. Staff keep using the site as usual, so you can check everything before you open the doors.
+Site offline mode swaps the public site for a "We'll be right back" page while you upgrade, migrate or prepare a launch. Visitors see your message in their language and, if you set an opening time, a countdown. Admins, and moderators you allow, keep using the site as usual, so you can check everything before you open the doors.
 
 ## Turn the site off
 
@@ -67,15 +67,21 @@ To open the site, turn off **Take the site offline** and select **Turn on site**
 | Who | What they get |
 | --- | --- |
 | Guests and members | The offline page on every public URL, with an HTTP `503` status |
-| Staff (admins and moderators) | The full site, with a banner reminding them it is offline |
+| Admins | The full site, with a banner reminding them it is offline |
+| Moderators with **Access the site while it's offline** | The same as admins |
+| Other moderators | The offline page, like any member |
 | Anyone on `/login` | The sign-in pages. The offline page has no sign-in link, so staff open `/login` or `/admin` directly |
 | AdminCP | Works as usual; it needs an AdminCP session anyway |
 
 The `503` answer tells search engines the outage is temporary, so they keep your pages indexed. It carries `Retry-After` when the opening time is set, and the [page cache](/docs/dev/cache/pages) never stores it.
 
+## Let moderators in
+
+Admins always pass. A moderator passes only with the moderator staff permission **Site status → Access the site while it's offline**: give it to a moderator role in **AdminCP → Staff → Moderators**. A root role holds it automatically. The check runs on the server, so the offline page, the `503` and the API agree on who gets in.
+
 ## Keep a route working while offline
 
-While the site is offline, every API route answers non-staff callers with `503 { "error": "site_offline" }`, so content cannot be read around the offline page. Routes under `/admin/` and routes with `adminStaffPermission` are never blocked.
+While the site is offline, every API route answers callers who may not use the offline site with `503 { "error": "site_offline" }`, so content cannot be read around the offline page. Routes under `/admin/` and routes with `adminStaffPermission` are never blocked.
 
 Set `allowWhenOffline` on a route that an offline site still needs, such as a payment webhook or a sign-in step:
 

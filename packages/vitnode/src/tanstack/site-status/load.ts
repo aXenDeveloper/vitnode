@@ -19,8 +19,9 @@ export const loadSiteStatusGate = async (
   { locale, queryClient }: { locale: string; queryClient: QueryClient },
   pathname: string,
 ): Promise<void> => {
+  const session = queryClient.getQueryData(sessionQueryOptions().queryKey);
   const status = await queryClient
-    .query(siteStatusQueryOptions())
+    .query(siteStatusQueryOptions({ viewerId: session?.user?.id ?? null }))
     .catch(() => undefined);
   if (!status?.offline) return;
 
@@ -29,8 +30,7 @@ export const loadSiteStatusGate = async (
     staleTime: "static",
   });
 
-  const session = queryClient.getQueryData(sessionQueryOptions().queryKey);
-  if (isSiteClosedTo({ pathname, session, status })) {
+  if (isSiteClosedTo({ pathname, status })) {
     markSiteOfflineResponse(status.opensAt);
   }
 };

@@ -11,6 +11,7 @@ export const coreStaffPermissions = defineStaffPermissions(manifest, {
   moderator: {
     users: ["can_edit", "can_view_hidden_presence"],
     widgets: ["can_edit"],
+    site_status: ["can_access_offline"],
     warnings: [
       "can_view",
       "can_warn",

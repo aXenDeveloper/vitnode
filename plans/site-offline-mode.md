@@ -23,6 +23,11 @@ Owner: core.
   cache never stores a non-`200` render, so staff (with cookies) always get
   their own render. `X-Robots-Tag: noindex` replaces the `<meta>` tag.
 - **Sign-in stays open**, registration does not (`/login` and below only).
+- **Who passes the offline gate:** an AdminCP session, any admin, and
+  moderators holding `moderator.site_status.can_access_offline` (root roles
+  hold it). The server decides (`canBypassSiteOffline`) and the public status
+  answers `viewerCanBypass`; the client keys the status query by viewer id so
+  signing in refetches it.
 - `AutoFormSheetFooter` gained `allowPristine` and `submitIcon`.
 
 ## Offline page design - decided from /proto/offline

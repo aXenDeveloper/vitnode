@@ -31,6 +31,12 @@ export const zodSiteStatus = z.object({
   showCountdown: z.boolean(),
   /** The server's clock when it answered, so a countdown can correct skew. */
   serverNow: z.string(),
+  /**
+   * Whether the requesting viewer may use the site while it is offline
+   * (admins, and moderators with `site_status.can_access_offline`). Always
+   * `false` while the site is online.
+   */
+  viewerCanBypass: z.boolean(),
 });
 
 export type SiteStatus = z.output<typeof zodSiteStatus>;

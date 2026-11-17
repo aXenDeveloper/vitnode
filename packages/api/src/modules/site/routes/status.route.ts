@@ -1,14 +1,14 @@
 import { buildRoute } from "@/builders";
 import { setPageCacheTags } from "@/lib/page-cache";
 import { SITE_STATUS_PAGE_CACHE_TAG, zodSiteStatus } from "@/lib/site-status";
-import { loadSiteStatus } from "@/lib/site-status.server";
+import { canBypassSiteOffline, loadSiteStatus } from "@/lib/site-status.server";
 
 export const siteStatusRoute = buildRoute({
   allowWhenOffline: true,
   route: {
     method: "get",
     description:
-      "Whether the public site is online. While it is offline, also the reason per language and the planned opening time.",
+      "Whether the public site is online. While it is offline, also the reason per language, the planned opening time and whether the requesting viewer may still use the site.",
     path: "/status",
     responses: {
       200: {
@@ -29,6 +29,7 @@ export const siteStatusRoute = buildRoute({
           opensAt: null,
           serverNow: new Date().toISOString(),
           showCountdown: false,
+          viewerCanBypass: false,
         },
         200,
       );
@@ -41,6 +42,7 @@ export const siteStatusRoute = buildRoute({
         opensAt: status.opensAt,
         serverNow: new Date().toISOString(),
         showCountdown: status.showCountdown && status.opensAt !== null,
+        viewerCanBypass: await canBypassSiteOffline(c),
       },
       200,
     );

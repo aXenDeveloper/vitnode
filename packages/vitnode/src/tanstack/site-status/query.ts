@@ -30,7 +30,8 @@ const fetchSiteStatus = async (): Promise<SiteStatus> => {
 
 /**
  * Whether the public site is online, as a TanStack Query. While it is offline
- * it also holds the reason per language and the planned opening time, and it
+ * it also holds the reason per language, the planned opening time and whether
+ * this viewer may still use the site (`viewerCanBypass`), and it
  * refetches every minute so an open offline page notices the reopening.
  * Universal.
  *
@@ -42,10 +43,19 @@ const fetchSiteStatus = async (): Promise<SiteStatus> => {
  * if (status.offline) console.log("Closed until", status.opensAt);
  * ```
  */
-export const siteStatusQueryOptions = () =>
+export const siteStatusQueryOptions = ({
+  viewerId = null,
+}: {
+  /**
+   * The signed-in user's id, or `null` for a guest. The answer says whether
+   * this viewer may use the offline site, so each viewer gets their own
+   * cache entry and signing in fetches it again.
+   */
+  viewerId?: null | number;
+} = {}) =>
   queryOptions({
     queryFn: fetchSiteStatus,
-    queryKey: siteStatusQueryKey,
+    queryKey: [...siteStatusQueryKey, viewerId ?? "guest"] as const,
     refetchInterval: query =>
       query.state.data?.offline ? SITE_OFFLINE_POLL_MS : false,
     refetchOnWindowFocus: query => query.state.data?.offline === true,

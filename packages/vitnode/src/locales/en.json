@@ -38,6 +38,7 @@
   "@vitnode/core:site_status": "Site status",
   "@vitnode/core:site_status:can_view": "View whether the site is online and its offline message",
   "@vitnode/core:site_status:can_manage": "Switch the site off and on, and edit its offline message",
+  "@vitnode/core:site_status:can_access_offline": "Access the site while it's offline",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:plugins": "Plugins",
@@ -3649,7 +3650,7 @@
       },
       "staff_banner": {
         "title": "The site is offline",
-        "desc": "Only staff can see it. Visitors get the offline page. <link>Manage site status</link>"
+        "desc": "You can see it because of your staff permissions. Visitors get the offline page. <link>Manage site status</link>"
       }
     }
   },
@@ -5278,7 +5279,7 @@
           },
           "turned_off": {
             "title": "Site is offline",
-            "desc": "Visitors now see the offline page. Staff can still use the site."
+            "desc": "Visitors now see the offline page. Admins, and moderators with offline access, can still use the site."
           },
           "turned_on": {
             "title": "Site is online",
@@ -5288,7 +5289,7 @@
         "form": {
           "offline": {
             "label": "Take the site offline",
-            "desc": "Visitors see the offline page instead of the site. Staff keep full access."
+            "desc": "Visitors see the offline page instead of the site. Admins, and moderators with offline access, keep using it."
           },
           "message": {
             "label": "Message",

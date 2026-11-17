@@ -15,10 +15,19 @@ import { isSiteClosedTo, isSiteOfflineBypass } from "./access";
 import { SITE_OFFLINE_NAMESPACES } from "./load";
 import { siteStatusQueryOptions } from "./query";
 
+/** The site status for the signed-in viewer (or a guest). */
+const useViewerSiteStatus = () => {
+  const { data: session } = useSessionQuery();
+
+  return useQuery(
+    siteStatusQueryOptions({ viewerId: session?.user?.id ?? null }),
+  );
+};
+
 const OfflineScreen = () => {
   const locale = useLocale();
   const logo = useLogo();
-  const { data, dataUpdatedAt } = useQuery(siteStatusQueryOptions());
+  const { data, dataUpdatedAt } = useViewerSiteStatus();
   if (!data) return null;
 
   return (
@@ -77,12 +86,11 @@ export const SiteOfflineStaffBanner = () => (
 export type SiteOfflineView = "closed" | "open" | "staff";
 
 /**
- * Which frame this visitor gets, from the status and the session that
+ * Which frame this visitor gets, from the viewer's status and the session that
  * `loadMainShell` already loaded.
  */
 export const useSiteOfflineView = (): SiteOfflineView => {
-  const { data: status } = useQuery(siteStatusQueryOptions());
-  const { data: session } = useSessionQuery();
+  const { data: status } = useViewerSiteStatus();
   const { pathname } = useLocation();
 
   const router = useRouter();
@@ -90,8 +98,8 @@ export const useSiteOfflineView = (): SiteOfflineView => {
 
   let view: SiteOfflineView = "open";
   if (status?.offline) {
-    if (isSiteClosedTo({ pathname, session, status })) view = "closed";
-    else if (isSiteOfflineBypass(session)) view = "staff";
+    if (isSiteClosedTo({ pathname, status })) view = "closed";
+    else if (isSiteOfflineBypass(status)) view = "staff";
   }
 
   // The page behind the offline screen never loaded its data, so it is
