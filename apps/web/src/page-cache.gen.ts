@@ -87,6 +87,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/settings/standing' },
   { path: '/admin/core' },
   { path: '/docs/search' },
+  { path: '/proto/offline' },
   { path: '/admin/containers/*' },
   { path: '/admin/content/*' },
   { path: '/letters/:id/edit' },
