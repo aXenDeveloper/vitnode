@@ -5,6 +5,7 @@ import { SessionModel } from "@/models/session";
 import { SSOModel } from "@/models/sso";
 
 export const callbackRoute = buildRoute({
+  allowWhenOffline: true,
   route: {
     method: "get",
     description: "SSO Callback",

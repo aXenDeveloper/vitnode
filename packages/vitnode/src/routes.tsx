@@ -33,6 +33,7 @@ import { normalizeRolesRouteSearch } from "./tanstack/admin/roles/route-search";
 import { normalizeSearchIndexRouteSearch } from "./tanstack/admin/search-index/route-search";
 import { ADMIN_SIGN_IN_NAMESPACES } from "./tanstack/admin/sign-in-route";
 import { normalizeAdminSignInSearch } from "./tanstack/admin/sign-in-search";
+import { ADMIN_SITE_STATUS_NAMESPACES } from "./tanstack/admin/site-status/route";
 import { ADMIN_STAFF_CREATE_NAMESPACES } from "./tanstack/admin/staff/create-route";
 import { ADMIN_STAFF_EDIT_NAMESPACES } from "./tanstack/admin/staff/edit-route";
 import { ADMIN_STAFF_LOGS_NAMESPACES } from "./tanstack/admin/staff/logs-route";
@@ -366,6 +367,13 @@ export const routes = defineRoutes([
     area: "admin",
     component: lazy(() => import("./pages/admin/system/integrations")),
     messages: ADMIN_INTEGRATIONS_NAMESPACES,
+    pendingComponent: CardsPendingSkeleton,
+  }),
+
+  page("/admin/core/system/site-status", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/system/site-status")),
+    messages: ADMIN_SITE_STATUS_NAMESPACES,
     pendingComponent: CardsPendingSkeleton,
   }),
 

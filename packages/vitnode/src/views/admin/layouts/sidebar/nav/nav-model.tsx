@@ -191,6 +191,11 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           href: "/admin/core/system/notifications",
           permission: staffPermissionArgs(admin.notifications.canView),
         },
+        {
+          title: key("admin.global.nav.system.site_status"),
+          href: "/admin/core/system/site-status",
+          permission: staffPermissionArgs(admin.site_status.canView),
+        },
       ],
     },
     {

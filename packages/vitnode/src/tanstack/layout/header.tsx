@@ -28,8 +28,9 @@ import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
 import { redirectSuspendedSession } from "../moderation/suspension-gate";
 import { NotificationsBell } from "../notifications/bell";
-import { isSharedRenderRequest } from "../prerender";
+import { isPrerenderRequest, isSharedRenderRequest } from "../prerender";
 import { HeaderSearch } from "../search/header-search";
+import { loadSiteStatusGate } from "../site-status/load";
 import { MobileUserMenu } from "./mobile-user-menu";
 
 const NO_MESSAGES: AbstractIntlMessages = {};
@@ -151,7 +152,9 @@ const loadNavigationMessages = async ({
  * the navigation messages: it skips the session and puts a deferred placeholder
  * in place of the deployment configuration. Pass `location` to send a
  * suspended session to the home page from any other page; `MainHeader` does
- * the same for prerendered pages, in the browser.
+ * the same for prerendered pages, in the browser. With `location` it also
+ * loads the site status and answers `503` when the visitor gets the offline
+ * page (see `SiteOfflineGate`).
  *
  * @throws A router redirect to `/` for a suspended session given `location`.
  *
@@ -184,7 +187,14 @@ export const loadMainShell = async (
       middlewareConfigQueryOptions().queryKey,
       DEFERRED_MIDDLEWARE_CONFIG,
     );
-    await loadNavigationMessages(context);
+    // A page-cached render reads the status so every stored page carries its
+    // tag; a build-time prerender must not bake today's status into a file.
+    await Promise.all([
+      loadNavigationMessages(context),
+      isPrerenderRequest() || !location
+        ? undefined
+        : loadSiteStatusGate(context, location.pathname),
+    ]);
 
     return;
   }
@@ -197,6 +207,8 @@ export const loadMainShell = async (
     }),
     loadSession(context.queryClient),
   ]);
-  if (location)
+  if (location) {
     redirectSuspendedSession(context.queryClient, location.pathname);
+    await loadSiteStatusGate(context, location.pathname);
+  }
 };

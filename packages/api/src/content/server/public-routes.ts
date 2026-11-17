@@ -528,6 +528,9 @@ export const buildContentPublicRoutes = <
    *   would hand a reviewer a different language from the one they were sent.
    */
   const preview = buildRoute({
+    // The signed token is the authorization, and reviewers preview while the
+    // site is still offline.
+    allowWhenOffline: true,
     pluginId,
     route: {
       method: "get",

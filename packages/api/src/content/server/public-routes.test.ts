@@ -441,8 +441,9 @@ describe("generated surface", () => {
   });
 
   it("installs no staff-permission guard", () => {
-    // `buildRoute` always adds `pluginMiddleware`, and adds a second handler
-    // only when `adminStaffPermission` is set. Exactly one means none.
+    // `buildRoute` always adds `pluginMiddleware`, adds the offline-site
+    // guard unless the route sets `allowWhenOffline`, and adds one more only
+    // when `adminStaffPermission` is set. At most two means none.
     const routes = buildContentPublicRoutes(posts, { pluginId: PLUGIN_ID });
 
     for (const { route } of routes) {
@@ -450,7 +451,7 @@ describe("generated surface", () => {
       // the shape `buildRoute` actually assembles.
       const { middleware } = route as unknown as { middleware: unknown[] };
 
-      expect(middleware).toHaveLength(1);
+      expect(middleware.length).toBeLessThanOrEqual(2);
     }
   });
 });

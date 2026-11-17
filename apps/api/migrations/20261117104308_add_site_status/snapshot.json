@@ -1,0 +1,225 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "7453f5c0-b352-419a-bc5e-314a1576c86f",
+  "prevIds": [
+    "20d31aad-bc7f-4e35-b1f6-059bd8899c2b"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_site_status"
+      ],
+      "writes": [
+        "s|tbl|public.core_site_status",
+        "n|tbl|public.core_site_status",
+        "e|tbl|public.core_site_status",
+        "n|rel|public.core_site_status",
+        "n|type|public.core_site_status",
+        "n|rel|public.core_site_status_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_site_status"
+      ],
+      "writes": [
+        "s|fk|public.core_site_status.core_site_status_changedById_core_users_id_fkey",
+        "n|fk|public.core_site_status.core_site_status_changedById_core_users_id_fkey",
+        "e|fk|public.core_site_status.core_site_status_changedById_core_users_id_fkey",
+        "n|con|public.core_site_status.core_site_status_changedById_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_site_status",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_site_status.changedById",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_site_status",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_site_status",
+        "name": "id",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_site_status",
+        "name": "offline",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_site_status",
+        "name": "message",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_site_status",
+        "name": "opensAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_site_status",
+        "name": "showCountdown",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_site_status",
+        "name": "changedAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_site_status",
+        "name": "changedById",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_site_status",
+        "name": "updatedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_site_status",
+        "name": "core_site_status_changedById_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "changedById"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_site_status",
+        "name": "core_site_status_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

@@ -23,6 +23,9 @@
   "@vitnode/core:ai": "AI",
   "@vitnode/core:ai:can_view": "Wyświetlanie użycia, ustawień i historii AI",
   "@vitnode/core:ai:can_manage": "Zarządzanie ustawieniami, modelami, cenami i dostępem AI",
+  "@vitnode/core:site_status": "Status strony",
+  "@vitnode/core:site_status:can_view": "Podgląd, czy strona jest dostępna, i jej komunikatu o przerwie",
+  "@vitnode/core:site_status:can_manage": "Wyłączanie i włączanie strony oraz edycja komunikatu o przerwie",
   "@vitnode/core:plugins": "Wtyczki",
   "@vitnode/core:plugins:can_view": "Przeglądanie zainstalowanych wtyczek i ich wersji",
   "@vitnode/core:queue": "Zadania w kolejce",
@@ -492,7 +495,8 @@
           "integrations": "Integracje",
           "plugins": "Wtyczki",
           "title": "System",
-          "notifications": "Powiadomienia"
+          "notifications": "Powiadomienia",
+          "site_status": "Status strony"
         },
         "user_bar": {
           "debug": "Panel debugowania",
@@ -1517,6 +1521,91 @@
             "submit": "Usuń wszystkie powiadomienia",
             "success": "Wszystkie powiadomienia usunięte",
             "success_desc": "{count, plural, =0 {Nie było nic do usunięcia.} one {# powiadomienie zostało usunięte.} few {# powiadomienia zostały usunięte.} many {# powiadomień zostało usuniętych.} other {# powiadomienia zostało usunięte.}}"
+          }
+        }
+      },
+      "site_status": {
+        "title": "Status strony",
+        "desc": "Wyłącz publiczną stronę z komunikatem dla odwiedzających i odliczaj czas do otwarcia.",
+        "retry": "Spróbuj ponownie",
+        "load_error": {
+          "title": "Nie udało się wczytać statusu strony",
+          "desc": "Nie mogliśmy sprawdzić, czy strona jest dostępna. Sprawdź połączenie i spróbuj ponownie."
+        },
+        "badge": {
+          "online": "Dostępna",
+          "offline": "Wyłączona"
+        },
+        "card": {
+          "online": {
+            "title": "Strona jest dostępna",
+            "desc": "Każdy może ją odwiedzić. Wyłącz ją, aby pokazać odwiedzającym komunikat na czas prac."
+          },
+          "offline": {
+            "title": "Strona jest wyłączona",
+            "desc": "Odwiedzający widzą stronę przerwy. Zespół nadal może przeglądać stronę i się logować."
+          }
+        },
+        "details": {
+          "offline_since": "Wyłączona od",
+          "last_change": "Ostatnia zmiana",
+          "by": "przez {name}",
+          "never": "Nigdy nie była wyłączona",
+          "opens_at": "Czas otwarcia",
+          "no_opening_time": "Nie ustawiono"
+        },
+        "actions": {
+          "edit": "Edytuj komunikat",
+          "turn_off": "Wyłącz stronę",
+          "turn_on": "Włącz stronę"
+        },
+        "turn_on_confirm": {
+          "title": "Włączyć stronę?",
+          "desc": "Odwiedzający od razu zobaczą stronę. Otwarte strony przerwy przeładują się same w ciągu minuty."
+        },
+        "turned_on": {
+          "title": "Strona jest dostępna",
+          "desc": "Odwiedzający znów mogą korzystać ze strony."
+        },
+        "preview": {
+          "title": "Podgląd",
+          "desc": "To, co widzą odwiedzający, gdy strona jest wyłączona, w Twoim bieżącym języku."
+        },
+        "sheet": {
+          "edit": {
+            "title": "Edytuj komunikat o przerwie",
+            "desc": "Powód i czas otwarcia, które widzą odwiedzający, gdy strona jest wyłączona."
+          },
+          "turn_off": {
+            "title": "Wyłącz stronę",
+            "desc": "Odwiedzający zobaczą ten komunikat zamiast strony. Zespół zachowuje pełny dostęp."
+          }
+        },
+        "form": {
+          "message": {
+            "label": "Komunikat",
+            "desc": "Dlaczego strona jest wyłączona. Napisz go co najmniej w języku domyślnym; pozostałe języki go przejmą.",
+            "placeholder": "Aktualizujemy forum. Zaraz wracamy!",
+            "required": "Napisz komunikat, aby odwiedzający wiedzieli, co się dzieje."
+          },
+          "opens_at": {
+            "label": "Czas otwarcia",
+            "desc": "Pokazuje odliczanie na stronie przerwy. Strona nigdy nie otworzy się sama - po upływie czasu odwiedzający widzą \"Wkrótce otwarcie\", dopóki jej nie włączysz.",
+            "past": "Wybierz czas w przyszłości."
+          },
+          "show_countdown": {
+            "label": "Pokaż odliczanie",
+            "desc": "Odliczaj czas do otwarcia na stronie przerwy."
+          },
+          "submit": "Zapisz",
+          "submit_turn_off": "Wyłącz stronę",
+          "saved": {
+            "title": "Zapisano komunikat o przerwie",
+            "desc": "Odwiedzający zobaczą nowy komunikat przy następnym wczytaniu strony przerwy."
+          },
+          "turned_off": {
+            "title": "Strona jest wyłączona",
+            "desc": "Odwiedzający widzą teraz stronę przerwy. Zespół nadal może korzystać ze strony."
           }
         }
       }
@@ -5772,6 +5861,26 @@
           "intersection": "Czytelnik musi spełniać regułę każdej kategorii, do której należy treść, więc dwie ograniczone kategorie razem wpuszczają mniej osób niż każda z nich osobno.",
           "missing": "Jedna z wybranych kategorii już nie istnieje. Nikt nie może czytać umieszczonej w niej treści."
         }
+      }
+    },
+    "site_offline": {
+      "title": "Zaraz wracamy",
+      "desc": "Strona jest chwilowo wyłączona. Zajrzyj tu wkrótce.",
+      "staff_sign_in": "Logowanie dla zespołu",
+      "countdown": {
+        "title": "Otwieramy za",
+        "label": "Otwarcie za {days, plural, =0 {} one {# dzień, } other {# dni, }}{hours, plural, one {# godzinę} few {# godziny} many {# godzin} other {# godziny}} i {minutes, plural, one {# minutę} few {# minuty} many {# minut} other {# minuty}}",
+        "opening_soon": "Wkrótce otwarcie",
+        "units": {
+          "days": "{count, plural, one {dzień} other {dni}}",
+          "hours": "{count, plural, one {godzina} few {godziny} many {godzin} other {godziny}}",
+          "minutes": "{count, plural, one {minuta} few {minuty} many {minut} other {minuty}}",
+          "seconds": "{count, plural, one {sekunda} few {sekundy} many {sekund} other {sekundy}}"
+        }
+      },
+      "staff_banner": {
+        "title": "Strona jest wyłączona",
+        "desc": "Widzi ją tylko zespół. Odwiedzający dostają stronę przerwy. <link>Zarządzaj statusem strony</link>"
       }
     }
   },

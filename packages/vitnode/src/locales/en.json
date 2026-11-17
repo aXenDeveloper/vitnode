@@ -35,6 +35,9 @@
   "@vitnode/core:ai": "AI",
   "@vitnode/core:ai:can_view": "View AI usage, settings and history",
   "@vitnode/core:ai:can_manage": "Manage AI settings, models, pricing and access",
+  "@vitnode/core:site_status": "Site status",
+  "@vitnode/core:site_status:can_view": "View whether the site is online and its offline message",
+  "@vitnode/core:site_status:can_manage": "Switch the site off and on, and edit its offline message",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:plugins": "Plugins",
@@ -3022,7 +3025,7 @@
         "duration": {
           "days": "{count, plural, one {# day} other {# days}}",
           "hours": "{count, plural, one {# hour} other {# hours}}",
-            "minutes": "{count, plural, one {# minute} other {# minutes}}"
+          "minutes": "{count, plural, one {# minute} other {# minutes}}"
         },
         "statuses": {
           "active": "Active",
@@ -3627,6 +3630,26 @@
           "missing": "One of the selected categories no longer exists. Nobody can read a record filed there."
         }
       }
+    },
+    "site_offline": {
+      "title": "We'll be right back",
+      "desc": "The site is offline for a moment. Please check back soon.",
+      "staff_sign_in": "Staff sign in",
+      "countdown": {
+        "title": "We open in",
+        "label": "Opens in {days, plural, =0 {} one {# day, } other {# days, }}{hours, plural, one {# hour} other {# hours}} and {minutes, plural, one {# minute} other {# minutes}}",
+        "opening_soon": "Opening soon",
+        "units": {
+          "days": "{count, plural, one {day} other {days}}",
+          "hours": "{count, plural, one {hour} other {hours}}",
+          "minutes": "{count, plural, one {minute} other {minutes}}",
+          "seconds": "{count, plural, one {second} other {seconds}}"
+        }
+      },
+      "staff_banner": {
+        "title": "The site is offline",
+        "desc": "Only staff can see it. Visitors get the offline page. <link>Manage site status</link>"
+      }
     }
   },
   "admin": {
@@ -3818,7 +3841,8 @@
           "integrations": "Integrations",
           "files": "Files",
           "notifications": "Notifications",
-          "plugins": "Plugins"
+          "plugins": "Plugins",
+          "site_status": "Site status"
         },
         "ai": {
           "title": "Artificial Intelligence (AI)",
@@ -5212,6 +5236,91 @@
             "frontend": "web app"
           },
           "version_on_side": "{version} ({side})"
+        }
+      },
+      "site_status": {
+        "title": "Site status",
+        "desc": "Take the public site offline with a message for your visitors, and count down to the opening.",
+        "retry": "Try again",
+        "load_error": {
+          "title": "Site status didn't load",
+          "desc": "We couldn't read whether the site is online. Check your connection and try again."
+        },
+        "badge": {
+          "online": "Online",
+          "offline": "Offline"
+        },
+        "card": {
+          "online": {
+            "title": "Your site is online",
+            "desc": "Everyone can visit it. Turn it off to show visitors a message while you work."
+          },
+          "offline": {
+            "title": "Your site is offline",
+            "desc": "Visitors see the offline page. Staff can still browse the site and sign in."
+          }
+        },
+        "details": {
+          "offline_since": "Offline since",
+          "last_change": "Last switched",
+          "by": "by {name}",
+          "never": "Never switched off",
+          "opens_at": "Opening time",
+          "no_opening_time": "Not set"
+        },
+        "actions": {
+          "edit": "Edit message",
+          "turn_off": "Turn off site",
+          "turn_on": "Turn on site"
+        },
+        "turn_on_confirm": {
+          "title": "Turn the site on?",
+          "desc": "Visitors will see the site again right away. Open offline pages reload on their own within a minute."
+        },
+        "turned_on": {
+          "title": "Site is online",
+          "desc": "Visitors can use the site again."
+        },
+        "preview": {
+          "title": "Preview",
+          "desc": "What visitors see while the site is offline, in your current language."
+        },
+        "sheet": {
+          "edit": {
+            "title": "Edit offline message",
+            "desc": "The reason and the opening time visitors see while the site is offline."
+          },
+          "turn_off": {
+            "title": "Turn off site",
+            "desc": "Visitors will see this message instead of the site. Staff keep full access."
+          }
+        },
+        "form": {
+          "message": {
+            "label": "Message",
+            "desc": "Why the site is offline. Write it in the default language at least; other languages fall back to it.",
+            "placeholder": "We're upgrading the forum. Back shortly!",
+            "required": "Write a message so visitors know what's going on."
+          },
+          "opens_at": {
+            "label": "Opening time",
+            "desc": "Shows a countdown on the offline page. The site never opens by itself - when the time is up, visitors see \"Opening soon\" until you turn it on.",
+            "past": "Pick a time in the future."
+          },
+          "show_countdown": {
+            "label": "Show countdown",
+            "desc": "Count down to the opening time on the offline page."
+          },
+          "submit": "Save",
+          "submit_turn_off": "Turn off site",
+          "saved": {
+            "title": "Offline message saved",
+            "desc": "Visitors see the new message the next time the offline page loads."
+          },
+          "turned_off": {
+            "title": "Site is offline",
+            "desc": "Visitors now see the offline page. Staff can still use the site."
+          }
         }
       }
     },

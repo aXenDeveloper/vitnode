@@ -1,6 +1,29 @@
 # Site offline mode with an opening countdown
 
-Status: planned. Owner: core.
+Status: implemented (phases 0-5). Tests are left for a separate session.
+Owner: core.
+
+## Changes from the plan
+
+- **Lockdown lives in `buildRoute`**, not a path allowlist: every route gets
+  `siteOfflineGuard` unless it sets `allowWhenOffline: true` or
+  `adminStaffPermission`. Core opts in sign-in, password reset, e-mail
+  verification, SSO, passkey sign-in, session, `show-config`, the status
+  itself, cron, payment webhooks and signed content previews. An unreadable
+  status counts as online.
+- **No realtime push.** The socket only serves signed-in users, and the
+  offline page is for guests, so the page polls every minute (and on focus)
+  and calls `router.invalidate()` when it reopens.
+- **`show-config` is unchanged.** The shell loads `siteStatusQueryOptions`
+  next to the session in `loadMainShell`, so there is no extra round trip.
+- **`ThemeLayoutContent` from `@vitnode/core/tanstack/layout` is the gate**, so
+  existing apps get it without changing their `_main` route. `SiteOfflineGate`
+  covers custom layouts.
+- **`503` via `setResponseStatus`** in `markSiteOfflineResponse`; the page
+  cache never stores a non-`200` render, so staff (with cookies) always get
+  their own render. `X-Robots-Tag: noindex` replaces the `<meta>` tag.
+- **Sign-in stays open**, registration does not (`/login` and below only).
+- `AutoFormSheetFooter` gained `allowPristine` and `submitIcon`.
 
 ## Goals
 

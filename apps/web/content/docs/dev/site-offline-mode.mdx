@@ -1,0 +1,130 @@
+---
+title: Site offline mode
+description: Take the public site offline from the AdminCP with a message in every language and an optional countdown to the opening.
+icon: Power
+---
+
+import { ImgDocs } from "@/components/fumadocs/img"
+import siteOfflineAdmin from "./site-offline-admin.webp"
+import siteOfflinePage from "./site-offline-page.webp"
+import siteOfflineSheet from "./site-offline-sheet.webp"
+
+Site offline mode swaps the public site for a "We'll be right back" page while you upgrade, migrate or prepare a launch. Visitors see your message in their language and, if you set an opening time, a countdown. Staff keep using the site as usual, so you can check everything before you open the doors.
+
+## Turn the site off
+
+<Steps>
+
+<Step>
+
+### Open the site status page
+
+Go to **AdminCP → System → Site status**. You need the **Site status → View** staff permission to see the page and **Manage** to change it.
+
+</Step>
+
+<Step>
+
+### Write the message
+
+Select **Turn off site**. Write why the site is offline in **Message**. The editor has a language switcher: write the default language at least. A visitor whose language has no message gets the default one.
+
+<ImgDocs
+  src={siteOfflineSheet}
+  alt="Turn off site sheet with the message editor, its language switcher, the opening time and the Show countdown switch"
+/>
+
+</Step>
+
+<Step>
+
+### Set an opening time (optional)
+
+Pick an **Opening time** to show a countdown with rolling digits. Turn off **Show countdown** to keep the time to yourself.
+
+The site **never opens by itself**. When the countdown reaches zero, visitors see **Opening soon** until an admin turns the site on.
+
+</Step>
+
+<Step>
+
+### Confirm
+
+Select **Turn off site** in the sheet footer. The status card turns to **Offline** and the preview shows what visitors see.
+
+<ImgDocs
+  src={siteOfflineAdmin}
+  alt="Site status page in the AdminCP showing the site offline, who switched it off, the opening time and a preview with the countdown"
+/>
+
+</Step>
+
+</Steps>
+
+To open the site, select **Turn on site** and confirm. Offline pages that are still open check the status every minute and load the site on their own.
+
+## What visitors and staff see
+
+<ImgDocs
+  src={siteOfflinePage}
+  alt="Offline page with the logo, the message and a countdown of days, hours, minutes and seconds"
+/>
+
+| Who | What they get |
+| --- | --- |
+| Guests and members | The offline page on every public URL, with an HTTP `503` status |
+| Staff (admins and moderators) | The full site, with a banner reminding them it is offline |
+| Anyone on `/login` | The sign-in pages, so staff can sign in |
+| AdminCP | Works as usual; it needs an AdminCP session anyway |
+
+The `503` answer tells search engines the outage is temporary, so they keep your pages indexed. It carries `Retry-After` when the opening time is set, and the [page cache](/docs/dev/cache/pages) never stores it.
+
+## Keep a route working while offline
+
+While the site is offline, every API route answers non-staff callers with `503 { "error": "site_offline" }`, so content cannot be read around the offline page. Routes under `/admin/` and routes with `adminStaffPermission` are never blocked.
+
+Set `allowWhenOffline` on a route that an offline site still needs, such as a payment webhook or a sign-in step:
+
+```ts title="plugins/shop/src/api/modules/orders/routes/webhook.route.ts"
+import { buildRoute } from "@/api/builders";
+
+export const orderWebhookRoute = buildRoute({
+  allowWhenOffline: true, // [!code ++]
+  route: {
+    method: "post",
+    path: "/webhook",
+    responses: { 200: { description: "Received" } },
+  },
+  handler: c => c.body(null, 200),
+});
+```
+
+Core already allows signing in, password reset, e-mail verification, SSO, passkey sign-in, cron and payment webhooks.
+
+## Read the status in your code
+
+`siteStatusQueryOptions` reads the public status with the [fetcher](/docs/dev/fetcher), in a loader or a component:
+
+```tsx title="plugins/shop/src/components/launch-badge.tsx"
+import { useQuery } from "@tanstack/react-query";
+import { siteStatusQueryOptions } from "@vitnode/core/tanstack/site-status";
+
+export const LaunchBadge = () => {
+  const { data } = useQuery(siteStatusQueryOptions());
+  if (!data?.offline) return null;
+
+  return <span>Opens {data.opensAt ?? "soon"}</span>;
+};
+```
+
+To react when an admin switches the site, listen to the [`site.status.updated` event](/docs/dev/events/built-in-events#site-status-events).
+
+### Custom public layouts
+
+`ThemeLayoutContent` from `@vitnode/core/tanstack/layout` shows the offline page for you, as long as your `_main` route's loader calls `loadMainShell(context, { location })`. A layout that does not use `ThemeLayoutContent` wraps its content in `SiteOfflineGate` from `@vitnode/core/tanstack/site-status`.
+
+## Related
+
+- [Staff permissions](/docs/dev/working-with-users/staff-permissions)
+- [Built-in events](/docs/dev/events/built-in-events)
+- [API routes](/docs/dev/plugins/api/routes)

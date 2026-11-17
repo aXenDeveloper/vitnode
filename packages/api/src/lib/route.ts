@@ -14,6 +14,7 @@ import type {
 
 import { captchaMiddleware } from "../middlewares/captcha.middleware";
 import { pluginMiddleware } from "../middlewares/plugin.middleware";
+import { siteOfflineGuard } from "../middlewares/site-offline.middleware";
 import { assertStaffPermission } from "./check-staff-permission";
 import { pluginTag } from "./openapi-tags";
 import { isAdminApiPath, setRouteStaffPermissions } from "./route-metadata";
@@ -113,6 +114,14 @@ export interface BuildRouteOptions<
    * guards with that plugin's permission.
    */
   adminStaffPermission?: AdminStaffPermissionRef;
+  /**
+   * Keeps the route working for everyone while the site is offline. Without
+   * it, a visitor who is not staff gets `503 { error: "site_offline" }`. Set
+   * it on what an offline site still needs: signing in, webhooks, cron, and
+   * reads the offline page itself makes. Routes under `/admin/` and routes
+   * with `adminStaffPermission` are never blocked. Defaults to `false`.
+   */
+  allowWhenOffline?: boolean;
   /** The Hono handler, typed from `route`: `c.req.valid(...)` and `c.json(...)` follow its schemas. */
   handler: RouteHandler<R & { path: P }, EnvVitNode>;
   hook?: RouteValidationHook;
@@ -135,7 +144,8 @@ export interface BuildRouteOptions<
  * `bindApiPlugin`, which supplies `pluginId`.
  *
  * The route is tagged with its plugin for OpenAPI and runs behind middleware
- * that sets `c.get("plugin")`, then the admin and moderator staff-permission
+ * that sets `c.get("plugin")`, then the offline-site guard (see
+ * `allowWhenOffline`), then the admin and moderator staff-permission
  * guards and the captcha check when requested, then the route's own
  * `middleware`.
  *
@@ -173,6 +183,7 @@ export const buildRoute = <
   hook,
   pluginId,
   adminStaffPermission,
+  allowWhenOffline = false,
   moderatorStaffPermission,
 }: BuildRouteOptions<P, R> & {
   pluginId: Plugin;
@@ -180,6 +191,10 @@ export const buildRoute = <
   const tags = [pluginTag(pluginId), ...(route.tags ?? [])];
 
   const middleware: MiddlewareHandler[] = [pluginMiddleware(pluginId)];
+
+  if (!allowWhenOffline && !adminStaffPermission) {
+    middleware.push(siteOfflineGuard());
+  }
 
   if (adminStaffPermission) {
     const guard = staffPermissionGuard("admin", adminStaffPermission);

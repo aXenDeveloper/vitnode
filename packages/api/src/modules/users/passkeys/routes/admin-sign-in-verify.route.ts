@@ -12,6 +12,7 @@ import {
 } from "../passkeys.schema";
 
 export const passkeyAdminSignInVerifyRoute = buildRoute({
+  allowWhenOffline: true,
   route: {
     method: "post",
     description:

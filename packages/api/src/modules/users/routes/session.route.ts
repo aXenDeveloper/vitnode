@@ -6,6 +6,7 @@ import { getNotificationState } from "@/models/notifications/inbox";
 import { zodNotificationState } from "@/modules/notifications/notifications.schema";
 
 export const sessionRoute = buildRoute({
+  allowWhenOffline: true,
   route: {
     method: "get",
     description: "Verify session",

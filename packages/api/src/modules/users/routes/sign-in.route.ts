@@ -63,6 +63,7 @@ const revokeIfPasswordChanged = async (
 };
 
 export const signInRoute = buildRoute({
+  allowWhenOffline: true,
   route: {
     method: "post",
     description: "Sign in with email and password",

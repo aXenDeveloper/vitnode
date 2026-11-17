@@ -15,6 +15,7 @@ import { notificationEventDefinitions } from "./events/notifications";
 import { pageEventDefinitions } from "./events/pages";
 import { paymentEventDefinitions } from "./events/payments";
 import { roleEventDefinitions } from "./events/roles";
+import { siteEventDefinitions } from "./events/site";
 import { userEventDefinitions } from "./events/users";
 import {
   altGenerateAiAction,
@@ -36,6 +37,7 @@ import { pagesModule } from "./modules/pages/pages.module";
 import { paymentsModule } from "./modules/payments/payments.module";
 import { queueModule } from "./modules/queue/queue.module";
 import { searchModule } from "./modules/search/search.module";
+import { siteModule } from "./modules/site/site.module";
 import { usersModule } from "./modules/users/users.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
@@ -59,6 +61,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     ...pageEventDefinitions,
     ...paymentEventDefinitions,
     ...roleEventDefinitions,
+    ...siteEventDefinitions,
     ...userEventDefinitions,
   ],
   modules: [
@@ -74,6 +77,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     paymentsModule,
     queueModule,
     searchModule,
+    siteModule,
   ],
   permissionStaff: coreStaffPermissions,
 });
