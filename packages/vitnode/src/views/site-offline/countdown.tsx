@@ -1,6 +1,7 @@
 import { cn } from "cn";
+import { CalendarClockIcon } from "lucide-react";
 import React from "react";
-import { useLocale, useTranslations } from "use-intl";
+import { useFormatter, useLocale, useTranslations } from "use-intl";
 
 import { SlidingNumber } from "@/components/ui/sliding-number";
 
@@ -38,15 +39,31 @@ const useServerClock = (serverNowMs: number, offsetMs: number): number => {
 
 const UNITS = ["days", "hours", "minutes", "seconds"] as const;
 
+const OpensAtDate = ({ opensAt }: { opensAt: string }) => {
+  const format = useFormatter();
+
+  return (
+    <time dateTime={opensAt}>
+      {format.dateTime(new Date(opensAt), {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })}
+    </time>
+  );
+};
+
 /**
- * A countdown to `opensAt` with rolling digits. When it reaches zero it
- * shows "Opening soon" - it never opens anything by itself.
+ * When the site opens, as a compact row: a live countdown with rolling
+ * digits and the date, or (with `showCountdown` off) the date alone. Once the
+ * time has passed it shows "Opening soon" - it never opens anything by
+ * itself.
  */
-export const SiteCountdown = ({
+export const SiteOpening = ({
   className,
   fetchedAt,
   opensAt,
   serverNow,
+  showCountdown,
 }: {
   className?: string;
   /** When the client received `serverNow` (`dataUpdatedAt`), for the skew correction. */
@@ -54,6 +71,8 @@ export const SiteCountdown = ({
   opensAt: string;
   /** The server's clock when it answered. */
   serverNow: string;
+  /** `false` shows the date without the ticking countdown. */
+  showCountdown: boolean;
 }) => {
   const t = useTranslations("core.site_offline.countdown");
   const locale = useLocale();
@@ -65,61 +84,84 @@ export const SiteCountdown = ({
     () => new Intl.NumberFormat(locale, { minimumIntegerDigits: 2 }),
     [locale],
   );
+  const frame = cn(
+    "bg-muted/60 flex flex-col gap-1 rounded-xl px-4 py-3 text-start sm:flex-row sm:items-center sm:justify-between sm:gap-4",
+    className,
+  );
 
   if (parts.done) {
     return (
-      <p
-        className={cn(
-          "bg-card text-foreground inline-flex items-center gap-3 rounded-full border px-5 py-2.5 text-base font-medium shadow-xs",
-          className,
-        )}
-        role="status"
+      <div className={frame}>
+        <p
+          className="inline-flex items-center gap-2.5 text-base font-semibold"
+          role="status"
+        >
+          <span aria-hidden="true" className="relative flex size-2">
+            <span className="bg-primary absolute inline-flex size-full rounded-full opacity-60 motion-safe:animate-ping" />
+            <span className="bg-primary relative inline-flex size-2 rounded-full" />
+          </span>
+          {t("opening_soon")}
+        </p>
+      </div>
+    );
+  }
+
+  if (!showCountdown) {
+    return (
+      <div
+        className={cn(frame, "flex-row items-center gap-3 sm:justify-start")}
       >
-        <span aria-hidden="true" className="relative flex size-2.5">
-          <span className="bg-primary absolute inline-flex size-full rounded-full opacity-75 motion-safe:animate-ping" />
-          <span className="bg-primary relative inline-flex size-2.5 rounded-full" />
-        </span>
-        {t("opening_soon")}
-      </p>
+        <CalendarClockIcon
+          aria-hidden="true"
+          className="text-muted-foreground size-5 shrink-0"
+        />
+        <div className="flex flex-col gap-0.5">
+          <p className="text-muted-foreground text-xs font-medium">
+            {t("expected_back")}
+          </p>
+          <p className="text-base font-semibold">
+            <OpensAtDate opensAt={opensAt} />
+          </p>
+        </div>
+      </div>
     );
   }
 
   const visible = UNITS.filter(unit => unit !== "days" || parts.days > 0);
 
   return (
-    <div className={cn("flex flex-col items-center gap-3", className)}>
-      <p className="text-muted-foreground text-sm leading-relaxed font-medium">
-        {t("title")}
-      </p>
-      <div
-        aria-label={t("label", {
-          days: parts.days,
-          hours: parts.hours,
-          minutes: parts.minutes,
-        })}
-        className="grid grid-flow-col gap-2 sm:gap-3"
-        role="timer"
-      >
-        {visible.map(unit => (
-          <div
-            className="bg-card text-card-foreground flex min-w-16 flex-col items-center gap-1 rounded-xl border px-3 py-3 shadow-xs sm:min-w-20 sm:px-4 sm:py-4"
-            key={unit}
-          >
-            <SlidingNumber
-              aria-hidden="true"
-              className="text-3xl font-semibold tracking-tight sm:text-5xl"
-              formatter={twoDigits}
-              value={parts[unit]}
-            />
+    <div className={frame}>
+      <div className="flex flex-col gap-0.5">
+        <p className="text-muted-foreground text-xs font-medium">
+          {t("back_in")}
+        </p>
+        <p
+          aria-label={t("label", {
+            days: parts.days,
+            hours: parts.hours,
+            minutes: parts.minutes,
+          })}
+          className="flex flex-wrap items-baseline gap-x-2 text-xl font-semibold tabular-nums"
+          role="timer"
+        >
+          {visible.map(unit => (
             <span
               aria-hidden="true"
-              className="text-muted-foreground text-xs font-medium tracking-wide uppercase"
+              className="inline-flex items-baseline"
+              key={unit}
             >
-              {t(`units.${unit}`, { count: parts[unit] })}
+              <SlidingNumber formatter={twoDigits} value={parts[unit]} />
+              <span className="text-muted-foreground ms-0.5 text-sm font-medium">
+                {t(`units.${unit}`)}
+              </span>
             </span>
-          </div>
-        ))}
+          ))}
+        </p>
       </div>
+      <p className="text-muted-foreground inline-flex shrink-0 items-center gap-1.5 text-sm whitespace-nowrap">
+        <CalendarClockIcon aria-hidden="true" className="size-4" />
+        <OpensAtDate opensAt={opensAt} />
+      </p>
     </div>
   );
 };

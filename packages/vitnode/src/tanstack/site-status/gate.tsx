@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, useRouter } from "@tanstack/react-router";
-import { LogInIcon } from "lucide-react";
 import React from "react";
 import { useLocale, useTranslations } from "use-intl";
 
@@ -17,26 +16,17 @@ import { SITE_OFFLINE_NAMESPACES } from "./load";
 import { siteStatusQueryOptions } from "./query";
 
 const OfflineScreen = () => {
-  const t = useTranslations("core.site_offline");
   const locale = useLocale();
   const logo = useLogo();
   const { data, dataUpdatedAt } = useQuery(siteStatusQueryOptions());
   if (!data) return null;
 
   return (
-    <main className="bg-background text-foreground flex min-h-dvh flex-col items-center justify-center">
+    <main className="bg-muted/40 text-foreground flex min-h-dvh items-center justify-center px-4 py-12">
       <SiteOfflineContent
+        className="motion-safe:animate-in motion-safe:fade-in motion-safe:zoom-in-98 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300"
         defaultLanguage={getVitNodeConfig().i18n.defaultLocale}
         fetchedAt={dataUpdatedAt}
-        footer={
-          <HrefLink
-            className="text-muted-foreground inline-flex items-center gap-2 text-sm underline-offset-4 hover:underline"
-            href="/login"
-          >
-            <LogInIcon aria-hidden="true" className="size-4" />
-            {t("staff_sign_in")}
-          </HrefLink>
-        }
         language={locale}
         logo={logo}
         status={data}

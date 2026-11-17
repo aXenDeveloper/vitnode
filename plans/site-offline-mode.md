@@ -25,6 +25,27 @@ Owner: core.
 - **Sign-in stays open**, registration does not (`/login` and below only).
 - `AutoFormSheetFooter` gained `allowPristine` and `submitIcon`.
 
+## Offline page design - decided from /proto/offline
+
+- Direction: **Notice** - one card on a muted page, like a status page:
+  logo + "Maintenance" pill, heading, the message, then one compact row
+  for the opening time.
+- Opening row: "Back in 02d 05h 37m 09s" with rolling digits and the date
+  on the right; with **Show countdown** off, "Expected back" + the date only;
+  once the time has passed (either mode), "Opening soon". No opening time:
+  no row.
+- No sign-in link and no mention of staff on the offline page; staff go to
+  `/login` or `/admin` by address.
+- Card enters with fade + zoom from 0.98 + 8px rise, 300ms, motion-safe only.
+- Rejected:
+  - **Current** (centred stack, big countdown tiles): message and countdown
+    fought for attention, and it read as a launch page rather than a
+    maintenance notice.
+  - **Editorial** (left-aligned split, ruled countdown list): strong for long
+    reasons, but on phones the countdown fell below the fold.
+  - **Clock** (giant digital clock hero): great for launches, but it buried
+    the reason and "Opening soon"/"no time" left a huge empty hero.
+
 ## Goals
 
 1. **On/off switch.** An admin turns the whole public site off and on from

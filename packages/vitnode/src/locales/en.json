@@ -3634,16 +3634,17 @@
     "site_offline": {
       "title": "We'll be right back",
       "desc": "The site is offline for a moment. Please check back soon.",
-      "staff_sign_in": "Staff sign in",
+      "badge": "Maintenance",
       "countdown": {
-        "title": "We open in",
-        "label": "Opens in {days, plural, =0 {} one {# day, } other {# days, }}{hours, plural, one {# hour} other {# hours}} and {minutes, plural, one {# minute} other {# minutes}}",
+        "back_in": "Back in",
+        "expected_back": "Expected back",
         "opening_soon": "Opening soon",
+        "label": "Opens in {days, plural, =0 {} one {# day, } other {# days, }}{hours, plural, one {# hour} other {# hours}} and {minutes, plural, one {# minute} other {# minutes}}",
         "units": {
-          "days": "{count, plural, one {day} other {days}}",
-          "hours": "{count, plural, one {hour} other {hours}}",
-          "minutes": "{count, plural, one {minute} other {minutes}}",
-          "seconds": "{count, plural, one {second} other {seconds}}"
+          "days": "d",
+          "hours": "h",
+          "minutes": "m",
+          "seconds": "s"
         }
       },
       "staff_banner": {
@@ -5304,12 +5305,12 @@
           },
           "opens_at": {
             "label": "Opening time",
-            "desc": "Shows a countdown on the offline page. The site never opens by itself - when the time is up, visitors see \"Opening soon\" until you turn it on.",
+            "desc": "When visitors can expect the site back. The site never opens by itself - when the time is up, visitors see \"Opening soon\" until you turn it on.",
             "past": "Pick a time in the future."
           },
           "show_countdown": {
             "label": "Show countdown",
-            "desc": "Count down to the opening time on the offline page."
+            "desc": "Show a live countdown. When off, visitors see only the date."
           },
           "submit": "Save",
           "submit_turn_off": "Turn off site",

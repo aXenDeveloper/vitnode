@@ -1590,12 +1590,12 @@
           },
           "opens_at": {
             "label": "Czas otwarcia",
-            "desc": "Pokazuje odliczanie na stronie przerwy. Strona nigdy nie otworzy się sama - po upływie czasu odwiedzający widzą \"Wkrótce otwarcie\", dopóki jej nie włączysz.",
+            "desc": "Kiedy odwiedzający mogą spodziewać się powrotu strony. Strona nigdy nie otworzy się sama - po upływie czasu odwiedzający widzą \"Wkrótce otwarcie\", dopóki jej nie włączysz.",
             "past": "Wybierz czas w przyszłości."
           },
           "show_countdown": {
             "label": "Pokaż odliczanie",
-            "desc": "Odliczaj czas do otwarcia na stronie przerwy."
+            "desc": "Pokazuj odliczanie na żywo. Po wyłączeniu odwiedzający widzą tylko datę."
           },
           "submit": "Zapisz",
           "submit_turn_off": "Wyłącz stronę",
@@ -5866,16 +5866,17 @@
     "site_offline": {
       "title": "Zaraz wracamy",
       "desc": "Strona jest chwilowo wyłączona. Zajrzyj tu wkrótce.",
-      "staff_sign_in": "Logowanie dla zespołu",
+      "badge": "Przerwa techniczna",
       "countdown": {
-        "title": "Otwieramy za",
-        "label": "Otwarcie za {days, plural, =0 {} one {# dzień, } other {# dni, }}{hours, plural, one {# godzinę} few {# godziny} many {# godzin} other {# godziny}} i {minutes, plural, one {# minutę} few {# minuty} many {# minut} other {# minuty}}",
+        "back_in": "Wracamy za",
+        "expected_back": "Planowany powrót",
         "opening_soon": "Wkrótce otwarcie",
+        "label": "Otwarcie za {days, plural, =0 {} one {# dzień, } other {# dni, }}{hours, plural, one {# godzinę} few {# godziny} many {# godzin} other {# godziny}} i {minutes, plural, one {# minutę} few {# minuty} many {# minut} other {# minuty}}",
         "units": {
-          "days": "{count, plural, one {dzień} other {dni}}",
-          "hours": "{count, plural, one {godzina} few {godziny} many {godzin} other {godziny}}",
-          "minutes": "{count, plural, one {minuta} few {minuty} many {minut} other {minuty}}",
-          "seconds": "{count, plural, one {sekunda} few {sekundy} many {sekund} other {sekundy}}"
+          "days": "d",
+          "hours": "h",
+          "minutes": "min",
+          "seconds": "s"
         }
       },
       "staff_banner": {

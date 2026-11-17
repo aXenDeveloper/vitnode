@@ -40,9 +40,9 @@ Select **Turn off site**. Write why the site is offline in **Message**. The edit
 
 ### Set an opening time (optional)
 
-Pick an **Opening time** to show a countdown with rolling digits. Turn off **Show countdown** to keep the time to yourself.
+Pick an **Opening time** to show visitors a live countdown with rolling digits and the date. Turn off **Show countdown** to show the date alone.
 
-The site **never opens by itself**. When the countdown reaches zero, visitors see **Opening soon** until an admin turns the site on.
+The site **never opens by itself**. Once the opening time has passed, visitors see **Opening soon** until an admin turns the site on.
 
 </Step>
 
@@ -67,14 +67,14 @@ To open the site, select **Turn on site** and confirm. Offline pages that are st
 
 <ImgDocs
   src={siteOfflinePage}
-  alt="Offline page with the logo, the message and a countdown of days, hours, minutes and seconds"
+  alt="Offline page card with the logo, a Maintenance badge, the message and a Back in countdown next to the opening date"
 />
 
 | Who | What they get |
 | --- | --- |
 | Guests and members | The offline page on every public URL, with an HTTP `503` status |
 | Staff (admins and moderators) | The full site, with a banner reminding them it is offline |
-| Anyone on `/login` | The sign-in pages, so staff can sign in |
+| Anyone on `/login` | The sign-in pages. The offline page has no sign-in link, so staff open `/login` or `/admin` directly |
 | AdminCP | Works as usual; it needs an AdminCP session anyway |
 
 The `503` answer tells search engines the outage is temporary, so they keep your pages indexed. It carries `Retry-After` when the opening time is set, and the [page cache](/docs/dev/cache/pages) never stores it.

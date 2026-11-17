@@ -19,7 +19,6 @@ import { Route as MainPluginsRouteImport } from './routes/_main/plugins'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as DocsSearchRouteImport } from './routes/docs.search'
 import { Route as DocsChar123Char125DotmdRouteImport } from './routes/docs.{$}[.]md'
-import { Route as ProtoOfflineRouteImport } from './routes/proto.offline'
 import { Route as DocsDocsIndexRouteImport } from './routes/_docs/docs.index'
 import { Route as DocsDocsSplatRouteImport } from './routes/_docs/docs.$'
 import { Route as MainSolutionsIndexRouteImport } from './routes/_main/solutions/index'
@@ -73,11 +72,6 @@ const DocsChar123Char125DotmdRoute = DocsChar123Char125DotmdRouteImport.update({
   path: '/docs/{$}.md',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProtoOfflineRoute = ProtoOfflineRouteImport.update({
-  id: '/proto/offline',
-  path: '/proto/offline',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const DocsDocsIndexRoute = DocsDocsIndexRouteImport.update({
   id: '/docs/',
   path: '/docs/',
@@ -112,7 +106,6 @@ export interface FileRoutesByFullPath {
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
-  '/proto/offline': typeof ProtoOfflineRoute
   '/docs/$': typeof DocsDocsSplatRoute
   '/solutions/$slug': typeof MainSolutionsSlugRoute
   '/docs/': typeof DocsDocsIndexRoute
@@ -127,7 +120,6 @@ export interface FileRoutesByTo {
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
-  '/proto/offline': typeof ProtoOfflineRoute
   '/docs/$': typeof DocsDocsSplatRoute
   '/solutions/$slug': typeof MainSolutionsSlugRoute
   '/docs': typeof DocsDocsIndexRoute
@@ -145,7 +137,6 @@ export interface FileRoutesById {
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
-  '/proto/offline': typeof ProtoOfflineRoute
   '/_main/': typeof MainIndexRoute
   '/_docs/docs/$': typeof DocsDocsSplatRoute
   '/_main/solutions/$slug': typeof MainSolutionsSlugRoute
@@ -163,7 +154,6 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/docs/search'
     | '/docs/{$}.md'
-    | '/proto/offline'
     | '/docs/$'
     | '/solutions/$slug'
     | '/docs/'
@@ -178,7 +168,6 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/docs/search'
     | '/docs/{$}.md'
-    | '/proto/offline'
     | '/docs/$'
     | '/solutions/$slug'
     | '/docs'
@@ -195,7 +184,6 @@ export interface FileRouteTypes {
     | '/api/$'
     | '/docs/search'
     | '/docs/{$}.md'
-    | '/proto/offline'
     | '/_main/'
     | '/_docs/docs/$'
     | '/_main/solutions/$slug'
@@ -213,7 +201,6 @@ export interface RootRouteChildren {
   ApiSplatRoute: typeof ApiSplatRoute
   DocsSearchRoute: typeof DocsSearchRoute
   DocsChar123Char125DotmdRoute: typeof DocsChar123Char125DotmdRoute
-  ProtoOfflineRoute: typeof ProtoOfflineRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -286,13 +273,6 @@ declare module '@tanstack/react-router' {
       path: '/docs/{$}.md'
       fullPath: '/docs/{$}.md'
       preLoaderRoute: typeof DocsChar123Char125DotmdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/proto/offline': {
-      id: '/proto/offline'
-      path: '/proto/offline'
-      fullPath: '/proto/offline'
-      preLoaderRoute: typeof ProtoOfflineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_docs/docs/': {
@@ -380,7 +360,6 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSplatRoute: ApiSplatRoute,
   DocsSearchRoute: DocsSearchRoute,
   DocsChar123Char125DotmdRoute: DocsChar123Char125DotmdRoute,
-  ProtoOfflineRoute: ProtoOfflineRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -13,6 +13,7 @@ import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { DateFormat } from "@/components/date-format";
+import { useLogo } from "@/components/logo-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +49,7 @@ export const SiteStatusContent = ({
   const tError = useTranslations("core.global.errors");
   const format = useFormatter();
   const locale = useLocale();
+  const logo = useLogo();
   const [sheetMode, setSheetMode] = React.useState<null | SiteStatusFormMode>(
     null,
   );
@@ -205,17 +207,17 @@ export const SiteStatusContent = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="bg-background overflow-hidden rounded-lg border">
+          <div className="bg-muted/40 flex justify-center rounded-lg border px-4 py-10 sm:py-12">
             <SiteOfflineContent
-              className="py-10 sm:py-12"
               fetchedAt={fetchedAt}
               headingLevel={2}
               language={locale}
+              logo={logo}
               status={{
                 message: data.message,
                 opensAt: data.opensAt,
                 serverNow: new Date(fetchedAt).toISOString(),
-                showCountdown: data.showCountdown && data.opensAt !== null,
+                showCountdown: data.showCountdown,
               }}
             />
           </div>
