@@ -1,7 +1,7 @@
 import { useLogo } from '@vitnode/core/components/logo-context'
 import { RichTextContent } from '@vitnode/core/components/rich-text'
 import { SlidingNumber } from '@vitnode/core/components/ui/sliding-number'
-import { CalendarClockIcon, LogInIcon } from 'lucide-react'
+import { CalendarClockIcon } from 'lucide-react'
 
 import type { VariantProps } from './harness'
 
@@ -112,19 +112,6 @@ export const NoticeVariant = ({
           <InlineCountdown opensAt={opensAt} />
         ) : null}
         {opensAt && !showCountdown ? <ExpectedBack opensAt={opensAt} /> : null}
-
-        <footer className="flex items-center justify-between gap-4 border-t pt-4">
-          <p className="text-muted-foreground text-sm">
-            Staff can still sign in.
-          </p>
-          <a
-            className="text-foreground inline-flex min-h-11 items-center gap-2 text-sm font-medium underline-offset-4 hover:underline"
-            href="/login"
-          >
-            <LogInIcon aria-hidden="true" className="size-4" />
-            Sign in
-          </a>
-        </footer>
       </article>
     </main>
   )
