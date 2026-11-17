@@ -16,6 +16,7 @@ export interface VariantProps {
   message: RichTextDocument
   now: number
   opensAt: null | string
+  showCountdown: boolean
 }
 
 const VARIANTS = [
@@ -182,6 +183,7 @@ export const OfflinePrototype = () => {
         message={MESSAGE}
         now={now}
         opensAt={opensAtFor(scenario, now)}
+        showCountdown={scenario !== 'date'}
       />
       <Pill
         active={SCENARIOS.findIndex((item) => item.id === scenario)}

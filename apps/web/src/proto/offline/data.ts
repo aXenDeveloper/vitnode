@@ -6,10 +6,12 @@ export const SCENARIOS: { id: Scenario; label: string }[] = [
   { id: 'soon', label: '2d' },
   { id: 'far', label: '128d' },
   { id: 'done', label: 'Soon' },
+  { id: 'date', label: 'Date only' },
   { id: 'none', label: 'None' },
 ]
 
 const OFFSETS: Record<Scenario, null | number> = {
+  date: (2 * 24 * 3600 + 5 * 3600 + 37 * 60 + 12) * 1000,
   done: -60_000,
   far: (128 * 24 * 3600 + 3 * 3600 + 7 * 60 + 9) * 1000,
   none: null,

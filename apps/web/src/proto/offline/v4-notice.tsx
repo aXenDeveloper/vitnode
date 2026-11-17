@@ -18,12 +18,31 @@ const Unit = ({ suffix, value }: { suffix: string; value: number }) => (
   </span>
 )
 
-const InlineCountdown = ({ opensAt }: { opensAt: string }) => {
-  const parts = useCountdown(opensAt)
-  const opens = new Intl.DateTimeFormat('en', {
+const formatOpens = (opensAt: string) =>
+  new Intl.DateTimeFormat('en', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(opensAt))
+
+/** Opening time set, countdown turned off: the date alone. */
+const ExpectedBack = ({ opensAt }: { opensAt: string }) => (
+  <div className="bg-muted/60 flex items-center gap-3 rounded-xl px-4 py-3">
+    <CalendarClockIcon
+      aria-hidden="true"
+      className="text-muted-foreground size-5 shrink-0"
+    />
+    <div className="flex flex-col gap-0.5">
+      <p className="text-muted-foreground text-xs font-medium">Expected back</p>
+      <p className="text-base font-semibold">
+        <time dateTime={opensAt}>{formatOpens(opensAt)}</time>
+      </p>
+    </div>
+  </div>
+)
+
+const InlineCountdown = ({ opensAt }: { opensAt: string }) => {
+  const parts = useCountdown(opensAt)
+  const opens = formatOpens(opensAt)
 
   return (
     <div className="bg-muted/60 flex flex-col gap-1 rounded-xl px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
@@ -56,7 +75,11 @@ const InlineCountdown = ({ opensAt }: { opensAt: string }) => {
   )
 }
 
-export const NoticeVariant = ({ message, opensAt }: VariantProps) => {
+export const NoticeVariant = ({
+  message,
+  opensAt,
+  showCountdown,
+}: VariantProps) => {
   const logo = useLogo()
 
   return (
@@ -85,7 +108,10 @@ export const NoticeVariant = ({ message, opensAt }: VariantProps) => {
           />
         </div>
 
-        {opensAt ? <InlineCountdown opensAt={opensAt} /> : null}
+        {opensAt && showCountdown ? (
+          <InlineCountdown opensAt={opensAt} />
+        ) : null}
+        {opensAt && !showCountdown ? <ExpectedBack opensAt={opensAt} /> : null}
 
         <footer className="flex items-center justify-between gap-4 border-t pt-4">
           <p className="text-muted-foreground text-sm">

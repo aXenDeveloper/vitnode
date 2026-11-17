@@ -4,7 +4,12 @@ import { LogInIcon } from 'lucide-react'
 
 import type { VariantProps } from './harness'
 
-export const CurrentVariant = ({ message, now, opensAt }: VariantProps) => {
+export const CurrentVariant = ({
+  message,
+  now,
+  opensAt,
+  showCountdown,
+}: VariantProps) => {
   const logo = useLogo()
 
   return (
@@ -26,7 +31,7 @@ export const CurrentVariant = ({ message, now, opensAt }: VariantProps) => {
           message: [{ languageCode: 'en', value: message }],
           opensAt,
           serverNow: new Date(now).toISOString(),
-          showCountdown: opensAt !== null,
+          showCountdown: showCountdown && opensAt !== null,
         }}
       />
     </main>
