@@ -81,6 +81,44 @@ const resolveSeoTarget = (
     : null;
 };
 
+const assertOpenGraphImageField = ({
+  exposed,
+  fields,
+  id,
+  name,
+}: {
+  exposed: ReadonlySet<string>;
+  fields: ContentFieldMap;
+  id: string;
+  name: string;
+}): void => {
+  const descriptor = fields[name] as ContentFieldDescriptor | undefined;
+  if (!descriptor) {
+    throw new ContentEngineError(
+      `delivery.seo.openGraph.imageField references unknown field "${name}".`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (
+    descriptor.kind !== "file" ||
+    descriptor.multiple ||
+    descriptor.localized === true
+  ) {
+    throw new ContentEngineError(
+      `delivery.seo.openGraph.imageField names "${name}", which is not a shared single \`field.file()\` on the record itself. A page has one social image.`,
+      { contentTypeId: id },
+    );
+  }
+
+  if (!exposed.has(name)) {
+    throw new ContentEngineError(
+      `delivery.seo.openGraph.imageField names "${name}", which is not in publicApi.fields. A social image is shown to everyone the link is shared with, so it has to be public already.`,
+      { contentTypeId: id },
+    );
+  }
+};
+
 const assertSeoField = ({
   exposed,
   fields,
@@ -397,6 +435,25 @@ export const resolveContentDelivery = ({
     });
   }
 
+  if (seo.openGraph?.imageField !== undefined) {
+    assertOpenGraphImageField({
+      exposed,
+      fields,
+      id,
+      name: seo.openGraph.imageField,
+    });
+  }
+
+  if (
+    seo.openGraph?.generateImage !== undefined &&
+    typeof seo.openGraph.generateImage !== "boolean"
+  ) {
+    throw new ContentEngineError(
+      `delivery.seo.openGraph.generateImage is ${JSON.stringify(seo.openGraph.generateImage)}; it is either true or false.`,
+      { contentTypeId: id },
+    );
+  }
+
   if (seo.noIndexField !== undefined) {
     assertSeoField({
       exposed,
@@ -445,6 +502,8 @@ export const resolveContentDelivery = ({
           ? null
           : {
               descriptionField: seo.openGraph.descriptionField ?? null,
+              generateImage: seo.openGraph.generateImage ?? true,
+              imageField: seo.openGraph.imageField ?? null,
               titleField: seo.openGraph.titleField ?? null,
             },
       titleField: seo.titleField ?? null,
@@ -619,6 +678,27 @@ const contentDeliveryLocalesMatch = (a: string, b: string): boolean =>
 export interface ContentDeliverySeo {
   description: null | string;
   title: null | string;
+}
+
+/** The `og:image` of a delivered page. */
+export interface ContentDeliveryOpenGraphImage {
+  /** The image's alt text in the page's language, or the title for a generated card. */
+  alt: null | string;
+  /** `true` for a card the API draws, `false` for the record's own `imageField`. */
+  generated: boolean;
+  /** Pixels, when known. */
+  height: null | number;
+  /** The MIME type, e.g. `image/png`, when known. */
+  type: null | string;
+  /** An absolute URL. */
+  url: string;
+  /** Pixels, when known. */
+  width: null | number;
+}
+
+/** Open Graph title and description, plus the image when the page has one. */
+export interface ContentDeliveryOpenGraph extends ContentDeliverySeo {
+  image: ContentDeliveryOpenGraphImage | null;
 }
 
 export interface ContentDeliveryRobots {

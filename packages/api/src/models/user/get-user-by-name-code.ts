@@ -36,6 +36,7 @@ export const getUserByNameCode = async ({
       birthday: core_users.birthday,
       language: core_users.language,
       avatarKey: avatarFile.key,
+      coverId: core_users.coverId,
       coverKey: coverFile.key,
     })
     .from(core_users)

@@ -32,6 +32,7 @@ import { cronModule } from "./modules/cron/cron.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
 import { moderationModule } from "./modules/moderation/moderation.module";
 import { notificationsModule } from "./modules/notifications/notifications.module";
+import { ogModule } from "./modules/og/og.module";
 import { pagesModule } from "./modules/pages/pages.module";
 import { paymentsModule } from "./modules/payments/payments.module";
 import { queueModule } from "./modules/queue/queue.module";
@@ -66,6 +67,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     usersModule,
     moderationModule,
     notificationsModule,
+    ogModule,
     adminModule,
     aiModule,
     contentModule,

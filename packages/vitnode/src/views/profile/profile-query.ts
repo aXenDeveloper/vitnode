@@ -34,6 +34,14 @@ export interface UserProfile {
   id: number;
   name: string;
   nameCode: string;
+  /** The profile's social card, or `null` when the API draws none. */
+  ogImage?: null | {
+    alt: string;
+    height: number;
+    type: string;
+    url: string;
+    width: number;
+  };
   role: ProfileRole;
   secondaryRoles: ProfileRole[];
 }

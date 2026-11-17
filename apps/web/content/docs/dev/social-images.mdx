@@ -1,0 +1,227 @@
+---
+title: Social images
+description: Give every VitNode page an og:image. The API draws 1200 × 630 cards for content, member profiles and the site, with your own colours, fonts and templates.
+icon: Image
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import cardExample from "./social-images-card.webp";
+
+When someone shares a VitNode link on Facebook, LinkedIn, X, Slack or Discord, the preview shows the page's `og:image`. VitNode fills it for you: the API draws a social card, and every page head points at it. The card is a pull quote headed by the site's logo: the page's description as a large quote, signed with its title, and the page's cover, when it has one, on the right side, fading smoothly into the background beside the quote. No headless browser runs, and nothing is fetched from the internet: the fonts ship with VitNode and covers come from your own storage.
+
+<ImgDocs
+  src={cardExample}
+  alt="A dark social card with the VitNode logo at the top left, the story's excerpt as a large quote, and the title Hello Content Engine and the domain below it"
+/>
+
+## What each page gets
+
+| Page                                                               | `og:image`                                                                                       |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------ |
+| A Content Engine record whose type sets `delivery.seo.openGraph`   | Its card at `/api/{plugin}/content/{path}/delivery/og/{slug}`, with the [`imageField`](/docs/content-engine/seo#social-images) cover in the background |
+| A member profile (`/users/{nameCode}`)                             | The member's card at `/api/@vitnode/core/og/users/{nameCode}`: headline as the quote, name and avatar, profile cover in the background |
+| Any other page with a title                                        | The site card at `/api/@vitnode/core/og/site`                                                     |
+
+A page with a title also gets `og:title`, `og:description`, `og:type`, `og:site_name`, `og:url` (its canonical URL), `og:locale` and `twitter:card`. A layout that only sets `robots` gets none of them.
+
+Each card URL carries a `v` version made from what the card shows. While `v` matches, the API answers with `Cache-Control: public, max-age=31536000, immutable`, so a CDN can keep the image for a year. Edit the title and the page links a new URL. An outdated `v` still gets the current card, cached for an hour.
+
+Cards are drawn only for what anyone may read. A draft, a hidden record, a record behind an [access rule](/docs/content-engine/access) or an unknown member answers `404`.
+
+## Before you begin
+
+The `og:image` URLs are absolute, and a crawler cannot open `localhost`. In production set `VITNODE_API_URL` to the API's public origin and `VITNODE_WEB_URL` to the site's. An app that serves its own API at `/api` sets both to the same origin.
+
+## Change the colours and the site card
+
+Add `ogImage` to the API config. The theme is merged over the defaults, and `metadata.description` appears under the title on the site card:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  metadata: {
+    title: "Acme Community",
+    // [!code ++]
+    description: "Questions, answers and news for Acme makers.",
+  },
+  // [!code ++:4]
+  ogImage: {
+    theme: { accent: "#16a34a", background: "#052e16" },
+    version: "2",
+  },
+  // ...
+});
+```
+
+Raise `version` whenever you change a template or the theme. It is part of every card URL, so crawlers and CDNs fetch the new cards instead of the cached ones.
+
+## Add your logo
+
+Set `ogImage.logo` and every card shows it in the header. Pass SVG markup when you have it: it stays sharp at any size, and nothing is downloaded while a card is drawn. VitNode ships its own logo as `VITNODE_LOGO_SVG` (the full wordmark) and `VITNODE_ICON_SVG` (the hexagon alone):
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+// [!code ++]
+import { VITNODE_LOGO_SVG } from "@vitnode/api/lib/og-image/vitnode-logo";
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:3]
+  ogImage: {
+    logo: { svg: VITNODE_LOGO_SVG, wordmark: true },
+  },
+  // ...
+});
+```
+
+- `wordmark: true` says the logo already spells the site name, so the card does not repeat the name beside it. Leave it out for a square icon, and the card shows the icon followed by `metadata.title`.
+- The root `<svg>` needs a `viewBox` (or `width` and `height`), which keeps the logo's proportions. The logo is drawn 56 px tall by default; set `height` to change it.
+- `currentColor` in the SVG is drawn in `theme.foreground`, so a logo whose text follows the page colour stays readable on a dark card. Use hex or `rgb()` colours inside the SVG.
+- A PNG, JPEG or WebP works too, as `{ src: "data:image/png;base64,...", size: { width, height } }`. A remote URL is refused at startup, because cards are drawn without network access.
+
+Changing the logo changes every card URL, so crawlers fetch the new cards.
+
+## Add a font for another script
+
+The built-in Geist covers Latin, Latin Extended (Polish, Czech, Turkish...) and Cyrillic. For Greek, Arabic or CJK text, register a font that has those glyphs and put its family first in `theme.fontFamily`. VitNode never downloads fonts, so pass the bytes:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { readFileSync } from "node:fs";
+
+export const vitNodeApiConfig = buildApiConfig({
+  ogImage: {
+    fonts: [
+      {
+        name: "Noto Sans",
+        data: readFileSync("./fonts/NotoSans-Regular.ttf"),
+        weight: 400,
+      },
+      {
+        name: "Noto Sans",
+        data: readFileSync("./fonts/NotoSans-Bold.ttf"),
+        weight: 700,
+      },
+    ],
+    theme: { fontFamily: "Noto Sans, VitNode Sans" },
+  },
+  // ...
+});
+```
+
+TTF, OTF, WOFF and WOFF2 all work. Cloudflare Workers have no file system, so there you bundle the bytes into the code instead, for example as a base64 string. That is how VitNode ships Geist.
+
+## Write your own template
+
+A template is a function that takes the card's props and returns JSX. VitNode calls it as a plain function, so it cannot use hooks or context. The renderer understands inline `style` objects and flexbox. Give every element with more than one child `display: "flex"`.
+
+```tsx title="plugins/newsroom/src/api/og/story-card.tsx"
+import type { OgImageTemplate } from "@vitnode/api/lib/og-image";
+
+export const StoryCard: OgImageTemplate = ({ siteName, theme, title }) => (
+  <div
+    style={{
+      background: theme.background,
+      color: theme.foreground,
+      display: "flex",
+      flexDirection: "column",
+      fontFamily: theme.fontFamily,
+      height: "100%",
+      justifyContent: "center",
+      padding: 80,
+      width: "100%",
+    }}
+  >
+    <span style={{ color: theme.accent, fontSize: 32 }}>{siteName} · Story</span>
+    <span style={{ fontSize: 72, fontWeight: 700 }}>{title}</span>
+  </div>
+);
+```
+
+The props are `title`, `description`, `siteName`, `domain`, `locale`, `theme`, `logo` and `kind` (`content`, `profile` or `site`), plus `contentTypeId` and `pluginId` on a content card, `avatar` on a profile card, and `image` (`{ src }`, a `data:` URI) when the record or member has a cover. `logo` is `{ src, width, height, wordmark }`, ready for an `<img>`. A template that puts the logo on a background other than `theme.background` recolors its `currentColor` with `ogImageLogoSrc(logo, "#18181b")` from `@vitnode/api/lib/og-image`.
+
+A plugin registers templates for its own content types in `buildApiPlugin`:
+
+```ts title="plugins/newsroom/src/config.api.ts (excerpt)"
+import { StoryCard } from "./api/og/story-card";
+
+export const newsroomApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    // [!code ++]
+    ogImageTemplates: { "newsroom.story": StoryCard },
+    // ...
+  });
+```
+
+An app replaces any card in `buildApiConfig`. `ogImage.templates` overrides a plugin's template for a content type, and `ogImage.template` draws everything no other template covers, profiles and the site card included. A template registered for an id no plugin defines stops the API at startup.
+
+## Draw a card from your own route
+
+For a page outside the Content Engine, answer from an API route with `ogImageResponse` and point the page head at it. Check that the data is public first, because the card is shown to everyone:
+
+```ts title="plugins/events/src/api/modules/events/routes/og.route.ts"
+import {
+  ogImageBaseProps,
+  ogImageResponse,
+  ogImageVersion,
+} from "@vitnode/api/lib/og-image";
+
+import { buildRoute } from "@/api/builders";
+
+export const eventOgRoute = buildRoute({
+  route: { method: "get", path: "/og/{slug}" /* params, responses */ },
+  handler: async c => {
+    const event = await findPublicEvent(c, c.req.param("slug"));
+    if (!event) return c.json({ error: "Not found" }, 404);
+
+    return await ogImageResponse(
+      c,
+      {
+        ...ogImageBaseProps(c),
+        description: event.summary,
+        kind: "content",
+        locale: null,
+        title: event.title,
+      },
+      { version: ogImageVersion(c, [event.title, event.summary]) },
+    );
+  },
+});
+```
+
+`buildRoute` is your plugin's bound builder from `src/api/builders.ts`, and `findPublicEvent` stands for your own query. In the page's `head`, return `openGraph: { image: { url, width: 1200, height: 630, type: "image/png" } }`, with `url` built from the route and the same `v`. See [`head` arguments and result](/docs/dev/routing/route-module#head-arguments-and-result).
+
+## Turn cards off
+
+Set `ogImage: { enabled: false }` in the API config. Every card route then answers `404`, and content metadata stops linking generated cards. Also set `metadata.ogImage: false` in `src/vitnode.config.ts`, or set it to the URL of a static image that every page without its own should use.
+
+## Check the result
+
+Print a story's social tags, then fetch its card:
+
+```bash
+curl -s http://localhost:3000/stories/hello-content-engine | grep -oE '<meta [^>]*property="og:[^"]*"[^>]*>|<meta [^>]*name="twitter:card"[^>]*>'
+```
+
+```html
+<meta content="Hello Content Engine" property="og:title"/>
+<meta content="article" property="og:type"/>
+<meta content="http://localhost:3000/api/newsroom/content/stories/delivery/og/hello-content-engine?v=0k7ophq" property="og:image"/>
+<meta content="summary_large_image" name="twitter:card"/>
+```
+
+The real output has more tags, and your `v` differs. Open the `og:image` URL in the browser to see the card. A `200` with `Content-Type: image/png` means it works. A `503` means the renderer failed, and the reason is in **AdminCP → Debug Panel → Log explorer** (`/admin/core/debug`).
+
+## Options reference
+
+| Name        | Type                                       | Default         | Description                                                                 |
+| ----------- | ------------------------------------------ | --------------- | --------------------------------------------------------------------------- |
+| `enabled`   | `boolean`                                  | `true`          | `false` turns off every card route and generated `og:image`                  |
+| `fonts`     | `{ name, data, weight?, style? }[]`        | `[]`            | Fonts registered next to the built-in Geist (`VitNode Sans`)                 |
+| `logo`      | `{ svg } \| { src, size }`, plus `height?`, `wordmark?` | -    | The site's logo in every card's header. See [Add your logo](#add-your-logo)  |
+| `template`  | `OgImageTemplate`                          | Built-in card   | Draws every card a more specific template does not cover                    |
+| `templates` | `Record<string, OgImageTemplate>`          | `{}`            | Templates per content type id, over the plugins' `ogImageTemplates`         |
+| `theme`     | `{ accent, background, foreground, muted, fontFamily }` | Dark card, blue accent | Merged over the defaults                                     |
+| `version`   | `string`                                   | `"1"`           | Part of every card URL; raise it after changing a template or the theme     |
+
+## Related
+
+- [SEO for Content Engine pages](/docs/content-engine/seo)
+- [Plugin page `head`](/docs/dev/routing/route-module#head-arguments-and-result)

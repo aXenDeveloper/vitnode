@@ -79,8 +79,10 @@ Throw `notFound()` or `redirect()` from `@tanstack/react-router` to answer with 
 | `description` | `string`                                                    | The `<meta name="description">`.                                                              |
 | `robots`      | `'index, follow' \| 'noindex, follow' \| 'noindex, nofollow'` | What a crawler may do. `noindex, follow` keeps a filtered list out of the index while its links still count. |
 | `alternates`  | `Record<string, string>`                                    | Internal paths of the page in each language, for canonical and `hreflang` links. See [Advanced localized URLs](/docs/dev/i18n/localized-urls-advanced#hreflang-and-canonical-links). |
+| `canonical`   | `string`                                                    | The canonical URL, absolute or a path on the site, for a page without `alternates`. Also becomes `og:url`. |
+| `openGraph`   | `{ title?, description?, type?, image? }`                   | Overrides for link previews. `type` is `article`, `profile` or `website` (the default). `image` is `{ url, width?, height?, type?, alt? }`. See [Social images](/docs/dev/social-images). |
 
-Return only these fields. VitNode turns them into the full set of tags with the app's site metadata.
+Return only these fields. VitNode turns them into the full set of tags with the app's site metadata. A page with a `title` also gets Open Graph and `twitter:card` tags, with the site's [social image](/docs/dev/social-images) when it sets no `openGraph.image`.
 
 ## Translated metadata
 

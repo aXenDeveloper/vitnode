@@ -7,6 +7,13 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentDeliveryService } from "./delivery-service";
 import type { AnyContentModel, ContentModel } from "./model";
 
+import {
+  OG_IMAGE_HEIGHT,
+  OG_IMAGE_TYPE,
+  OG_IMAGE_WIDTH,
+  ogImageBaseProps,
+  ogImageResponse,
+} from "../../lib/og-image";
 import { setPageCacheTags } from "../../lib/page-cache";
 import { buildRoute } from "../../lib/route";
 import {
@@ -24,6 +31,12 @@ import {
 import { ContentDeliveryNotEnabled } from "../errors";
 import { contentIdParamSchema, contentIdSchema } from "../ids";
 import { resolveContentPublicLocale } from "../locale";
+import {
+  contentOgImageCover,
+  contentOgImageEnabled,
+  contentOgImageVersion,
+  contentOwnOgImage,
+} from "./delivery-og-image";
 import { listContentLanguages } from "./language-resolver";
 import { contentRecordPageCacheTags } from "./page-cache";
 import { contentLocaleHeaders } from "./request-locale";
@@ -109,7 +122,20 @@ export const buildContentDeliveryRoutes = <
     // type whose allowlist withholds `id` reports none rather than inventing one.
     itemId: itemIdSchema.nullable(),
     locale: z.string().nullable(),
-    openGraph: zodSeo.nullable(),
+    openGraph: zodSeo
+      .extend({
+        image: z
+          .object({
+            alt: z.string().nullable(),
+            generated: z.boolean(),
+            height: z.number().int().nullable(),
+            type: z.string().nullable(),
+            url: z.string(),
+            width: z.number().int().nullable(),
+          })
+          .nullable(),
+      })
+      .nullable(),
     requestedLocale: z.string().nullable(),
     hidden: z.boolean(),
     robots: z.object({ follow: z.boolean(), index: z.boolean() }).nullable(),
@@ -299,10 +325,114 @@ export const buildContentDeliveryRoutes = <
     },
   });
 
+  // The record's `imageField` cover, read the way the public reads it - so an
+  // access rule that hides the file hides it from the card too.
+  const coverOf = async (c: Context, slug: string, locale?: string) => {
+    const imageField = definition.delivery.seo.openGraph?.imageField ?? null;
+    const buildPublic = model.publicService;
+    if (imageField === null || !buildPublic) return null;
+
+    const row = await buildPublic(c).findBySlug(slug, {
+      fallback: true,
+      locale,
+      select: definition.publicApi.fields.includes("id")
+        ? ["id", imageField]
+        : [imageField],
+    });
+
+    return row
+      ? await contentOwnOgImage(c, definition, row, locale ?? null)
+      : null;
+  };
+
+  const ogImage = buildRoute({
+    pluginId,
+    route: {
+      method: "get",
+      path: "/delivery/og/{slug}",
+      description: `The generated social card (og:image) of one published ${name}, by its slug`,
+      request: {
+        params: z.object({ slug: z.string() }),
+        query: z.object({
+          ...localeQuery,
+          /** The card's version; a matching one is cached for a year. */
+          v: z.string().max(32).optional(),
+        }),
+      },
+      responses: {
+        200: {
+          content: {
+            [OG_IMAGE_TYPE]: {
+              schema: z.string().openapi({ format: "binary", type: "string" }),
+            },
+          },
+          description: `A ${OG_IMAGE_WIDTH} × ${OG_IMAGE_HEIGHT} PNG`,
+        },
+        404: { description: `No public ${name}, or cards are off` },
+        503: { description: "The renderer failed; retry later" },
+      },
+    },
+    handler: async c => {
+      if (!contentOgImageEnabled(c, definition)) throw notFound(name);
+
+      const resolved = await localeFor(c);
+      if (!resolved) throw notFound(name);
+
+      // Drawn for everyone who opens the link, so only a record anyone may
+      // read: nothing behind an access rule, nothing hidden.
+      if (!(await isContentAccessShareable(c, accessModel))) {
+        throw notFound(name);
+      }
+
+      // An old slug's redirect is no card: the page links its current one.
+      const metadata = await service(c).resolveSlug(c.req.param("slug"), {
+        locale: resolved.locale,
+      });
+      if (
+        metadata.type !== "content" ||
+        metadata.hidden ||
+        metadata.openGraph === null
+      ) {
+        throw notFound(name);
+      }
+
+      const text = {
+        description: metadata.openGraph.description,
+        title: metadata.openGraph.title,
+      };
+      const own = await coverOf(c, c.req.param("slug"), resolved.locale);
+      const base = ogImageBaseProps(c);
+      const image = own ? await contentOgImageCover(c, own.fileId) : undefined;
+
+      return await ogImageResponse(
+        c,
+        {
+          ...base,
+          contentTypeId: definition.id,
+          description: text.description,
+          kind: "content",
+          locale: metadata.locale,
+          pluginId,
+          title: text.title ?? base.siteName,
+          ...(image ? { image } : {}),
+        },
+        {
+          template: c.get("core").ogImage.templates.get(definition.id),
+          version: contentOgImageVersion(c, definition, {
+            coverId: own?.fileId ?? null,
+            locale: metadata.locale,
+            text,
+          }),
+        },
+      );
+    },
+  });
+
   return [
     resolve,
     item,
     ...(definition.delivery.sitemap.enabled ? [sitemap] : []),
+    ...(definition.delivery.seo.openGraph?.generateImage ? [ogImage] : []),
   ];
 };
 

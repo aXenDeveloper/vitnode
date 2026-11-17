@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import type {
   ContentDeliveryAlternate,
   ContentDeliveryHreflang,
+  ContentDeliveryOpenGraph,
   ContentDeliveryRobots,
   ContentDeliverySeo,
 } from "../delivery";
@@ -29,6 +30,10 @@ import { parseContentId } from "../ids";
 import { contentLocalesMatch, normalizeContentLocale } from "../locale";
 import { contentPublicHref } from "../public-url";
 import { readDeliveryAlternates } from "./delivery-alternates";
+import {
+  contentGeneratedOgImage,
+  contentOwnOgImage,
+} from "./delivery-og-image";
 import { readContentDeliverySitemapPage } from "./delivery-sitemap";
 import { findViewableHiddenBySlug } from "./hidden-access";
 import { findContentLanguage, listContentLanguages } from "./language-resolver";
@@ -51,8 +56,12 @@ export interface ContentDeliveryMetadata {
   itemId: ContentId | null;
   /** The language this response is actually in. */
   locale: null | string;
-  /** `null` unless `delivery.seo.openGraph` is configured. */
-  openGraph: ContentDeliverySeo | null;
+  /**
+   * `null` unless `delivery.seo.openGraph` is configured. `image` is the
+   * generated card (with the `imageField` cover behind it), else - with cards
+   * off - the cover itself, else `null`.
+   */
+  openGraph: ContentDeliveryOpenGraph | null;
   /** What was asked for, normalized. `null` for a nonlocalized content type. */
   requestedLocale: null | string;
   /** `null` unless `delivery.seo.noIndexField` is configured. */
@@ -169,6 +178,7 @@ export const createContentDeliveryService = <
     seo.fallbackDescriptionField,
     seo.openGraph?.titleField ?? null,
     seo.openGraph?.descriptionField ?? null,
+    seo.openGraph?.imageField ?? null,
     seo.noIndexField,
   ].filter((name): name is string => name !== null);
 
@@ -238,7 +248,7 @@ export const createContentDeliveryService = <
         !contentLocalesMatch(requestedLocale, locale),
       itemId,
       locale,
-      openGraph: contentDeliveryOpenGraph(definition, row),
+      openGraph: await openGraphFor(row, { hidden, locale, slug }),
       requestedLocale,
       hidden,
       robots: hidden
@@ -246,6 +256,36 @@ export const createContentDeliveryService = <
         : contentDeliveryRobots(definition, row),
       seo: contentDeliverySeo(definition, row),
     };
+  };
+
+  const openGraphFor = async (
+    row: Record<string, unknown>,
+    {
+      hidden,
+      locale,
+      slug,
+    }: { hidden: boolean; locale: null | string; slug: null | string },
+  ): Promise<ContentDeliveryOpenGraph | null> => {
+    const text = contentDeliveryOpenGraph(definition, row);
+    if (text === null) return null;
+
+    const own = await contentOwnOgImage(c, definition, row, locale);
+
+    // The card, with the cover behind the quote when there is one. A hidden
+    // record is shown only to people who may moderate it, so nothing about it
+    // is drawn for a crawler - nor without a slug to address the card by.
+    const card =
+      hidden || slug === null
+        ? null
+        : contentGeneratedOgImage(c, definition, {
+            coverId: own?.fileId ?? null,
+            locale,
+            pluginId,
+            slug,
+            text,
+          });
+
+    return { ...text, image: card ?? own?.image ?? null };
   };
 
   const readAlternates = async (

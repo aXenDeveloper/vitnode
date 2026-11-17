@@ -2,7 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { notFound } from "@tanstack/react-router";
 
-import type { PluginRouteTranslator } from "@/routing";
+import type { PluginRouteOpenGraph, PluginRouteTranslator } from "@/routing";
 import type { UserProfile } from "@/views/profile/profile-query";
 
 import {
@@ -28,6 +28,8 @@ export interface ProfileLoaderContext {
 export interface ProfileRouteData {
   description: string;
   nameCode: string;
+  /** `og:type` `profile`, with the member's card when the API draws one. */
+  openGraph: PluginRouteOpenGraph;
   title: string;
 }
 
@@ -101,6 +103,11 @@ export const loadProfileRoute = async ({
   return {
     description: t("core.profile.metaDesc", values),
     nameCode: user.nameCode,
+    openGraph: {
+      title: user.name,
+      type: "profile",
+      ...(user.ogImage ? { image: user.ogImage } : {}),
+    },
     title: t("core.profile.title", values),
   };
 };
