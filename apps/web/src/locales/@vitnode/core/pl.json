@@ -430,6 +430,10 @@
           "ai": "Modele AI",
           "captcha": "Captcha",
           "websocket": "WebSocket"
+        },
+        "site": {
+          "offline": "Publiczna strona jest wyłączona - odwiedzający widzą stronę przerwy",
+          "offline_until": "Publiczna strona jest wyłączona - odwiedzający widzą stronę przerwy do {opensAt, date, medium}, {opensAt, time, short}"
         }
       },
       "actions": {

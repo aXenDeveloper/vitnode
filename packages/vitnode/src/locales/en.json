@@ -5447,6 +5447,10 @@
           "ai": "AI models",
           "captcha": "Captcha",
           "websocket": "WebSocket"
+        },
+        "site": {
+          "offline": "The public site is offline - visitors see the offline page",
+          "offline_until": "The public site is offline - visitors see the offline page until {opensAt, date, medium}, {opensAt, time, short}"
         }
       },
       "actions": {
