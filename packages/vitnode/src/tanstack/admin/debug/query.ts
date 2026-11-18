@@ -17,10 +17,14 @@ import {
   fetchDebugLogsPage,
   fetchDebugQueue,
 } from "@/views/admin/views/core/debug/debug-query";
-import { ADMIN_DEBUG_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
+import {
+  ADMIN_DEBUG_PERMISSIONS,
+  ADMIN_USER_PERMISSIONS,
+} from "@/views/admin/views/core/shared/admin-permissions";
 import { integrationsQueryOptions } from "@/views/admin/views/core/system/integrations/integrations-query";
 import { pluginUpdatesQueryOptions } from "@/views/admin/views/core/system/plugins/plugin-updates-query";
 import { installedPluginsQueryOptions } from "@/views/admin/views/core/system/plugins/plugins-query";
+import { accountDeletionsSummaryQueryOptions } from "@/views/admin/views/core/users/deletions/deletions-query";
 
 import { useAdminPermissions } from "../permissions";
 import { searchIndexQuery } from "../search-index/query";
@@ -38,6 +42,10 @@ export const debugSourceQueries = () =>
     cronHealth: {
       options: cronHealthQueryOptions(),
       permission: ADMIN_DEBUG_PERMISSIONS.cron,
+    },
+    deletions: {
+      options: accountDeletionsSummaryQueryOptions(),
+      permission: ADMIN_USER_PERMISSIONS.view,
     },
     installed: {
       options: installedPluginsQueryOptions(),
@@ -78,6 +86,9 @@ export const warmDebugSources = async (
     warm(sources.cronHealth.permission, async () =>
       queryClient.query({ ...sources.cronHealth.options, ...STATIC }),
     ),
+    warm(sources.deletions.permission, async () =>
+      queryClient.query({ ...sources.deletions.options, ...STATIC }),
+    ),
     warm(sources.installed.permission, async () =>
       queryClient.query({ ...sources.installed.options, ...STATIC }),
     ),
@@ -106,6 +117,10 @@ export const useDebugSources = (): DebugSources => {
     ...sources.cronHealth.options,
     enabled: can(sources.cronHealth.permission),
   });
+  const deletions = useQuery({
+    ...sources.deletions.options,
+    enabled: can(sources.deletions.permission),
+  });
   const installed = useQuery({
     ...sources.installed.options,
     enabled: can(sources.installed.permission),
@@ -129,6 +144,7 @@ export const useDebugSources = (): DebugSources => {
 
   return {
     cronHealth: cronHealth.data,
+    deletions: deletions.data,
     installed: installed.data,
     integrations: integrations.data,
     queue: queue.data,

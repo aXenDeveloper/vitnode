@@ -54,7 +54,8 @@ export const core_users = camelCase.table.withRLS(
       .notNull(),
     birthday: t.timestamp(),
     timeZone: t.varchar({ length: 64 }),
-    ipAddress: t.varchar({ length: 40 }).notNull(),
+    /** The sign-up IP; cleared after `users.ipRetentionDays`. */
+    ipAddress: t.varchar({ length: 40 }),
     language: t
       .varchar({ length: 32 })
       .notNull()

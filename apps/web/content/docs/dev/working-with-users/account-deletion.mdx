@@ -1,0 +1,131 @@
+---
+title: Account Deletion and Data Export
+description: How VitNode lets members download their data and delete their account under GDPR, how staff delete accounts from the AdminCP, and how to configure the grace period and IP retention.
+icon: UserX
+---
+
+import { ImgDocs } from "@/components/fumadocs/img";
+import settingsImg from "./account-deletion-settings.webp";
+import admincpImg from "./account-deletion-admincp.webp";
+import adminDialogImg from "./account-deletion-admin-dialog.webp";
+import debugImg from "./account-deletion-debug.webp";
+import overviewImg from "./account-deletion-overview.webp";
+
+VitNode handles GDPR data requests out of the box. Members download a copy of their data (Art. 15 and 20) and delete their account (Art. 17) from **Settings → Privacy & data**, staff delete accounts from the AdminCP, and the Debug Panel warns you before a request misses GDPR's one-month deadline.
+
+Core exports and erases its own tables. A plugin that stores data about members adds its own handlers, see [Export and Erase Plugin Data](/docs/dev/working-with-users/personal-data).
+
+## Let members delete their account
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={settingsImg}
+  alt="Settings, Privacy & data page with a Download my data button and a red Danger zone holding Delete account and a Delete my account button"
+/>
+
+- **Download my data** saves a JSON file with one key per plugin under `plugins`. The `@vitnode/core` key holds the profile, devices, passkeys, connected accounts, files, payments, warnings and reports filed.
+- **Delete my account** asks for the current password, or a sign-in from the last 15 minutes when the account has no password. The member is then signed out everywhere, their public profile disappears, and an email explains how to cancel.
+- During the grace period the member can still sign in and press **Keep my account**. After it, an hourly job erases the account and sends a goodbye email.
+- AdminCP staff cannot delete their own account this way. Another administrator removes their AdminCP access first.
+
+### Turn self-deletion off for a role
+
+Open **AdminCP → Users → Roles**, edit a role and switch off **Allow deleting own account** on the **Profile** tab. The setting is on by default, and a member needs it on every role they hold.
+
+Without it, **Privacy & data** tells the member to contact staff, and the API answers `403` with `not_allowed`. GDPR still gives that member the right to erasure, so staff delete the account from the AdminCP when asked.
+
+## Delete an account from the AdminCP
+
+In **AdminCP → Users**, an account with an open request shows a **Deletion scheduled** or **Deletion failed** badge, and the **Deletion** filter lists only those accounts.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={admincpImg}
+  alt="AdminCP user list with a Deletion failed badge next to Jane and the Deletion filter open with Deletion scheduled and Deletion failed"
+/>
+
+Open a user and scroll to the red **Danger zone** at the end of their page:
+
+- **Delete account** opens a dialog with a **Delete immediately** switch. Switched on, the account is erased right away. Switched off, the deletion is scheduled with the grace period, and the member is signed out and emailed how to cancel.
+- **Cancel deletion** keeps an account whose deletion is scheduled.
+- **Retry erasure** appears when an erasure failed, next to the reason it failed.
+
+These actions need the **Delete user accounts** staff permission (`users:can_delete`), which depends on **Edit users**.
+
+<ImgDocs
+  withoutBackground
+  src={adminDialogImg}
+  alt="Delete Alex's account dialog with a Delete immediately switch, an I understand checkbox and a Delete account button"
+/>
+
+## Monitor deletions in the Debug Panel
+
+**AdminCP → Debug Panel → Overview** treats account deletion like any other system. A failed erasure is a critical issue and a request past its grace period is a warning. The **Privacy requests** card shows how many of GDPR's 30 days the oldest open request has used, how many requests failed or are scheduled, and when the hourly job last ran.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={overviewImg}
+  alt="Debug Panel overview with a failed erasure and an overdue request in the attention list, and the Privacy requests card with oldest open request 16 of 30 days, 1 failed, 1 scheduled and 2 erased"
+/>
+
+**Diagnostics → Account deletions** has the detail:
+
+- **Checks**: failed erasures, requests past their grace period, the oldest open request against 30 days, and the last run of the `account-deletion` job.
+- **Needs you**: each failed or overdue request with its reason, and **Retry**, **Erase now** or **Cancel deletion**.
+- **All requests**: every request, searchable by name, email, `#id` or `DR-0042` and filterable by status. The details button opens the request's timeline.
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={debugImg}
+  alt="Debug Panel Account deletions tab with Checks, a Needs you list holding a failed and an overdue request, and the All requests table"
+/>
+
+A request outlives its account. It keeps only the erased user's id, the dates and the outcome. That is your proof the request was handled, and it holds nothing about the person.
+
+## Configure the grace period and IP retention
+
+Both options live under `users` in `buildApiConfig`:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  users: {
+    accountDeletion: { graceDays: 14 },
+    ipRetentionDays: 90,
+  },
+});
+```
+
+| Name                        | Type     | Required | Default | Description                                                                                                                                                  |
+| :-------------------------- | :------- | :------- | :------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `accountDeletion.graceDays` | `number` | No       | `14`    | Whole days between the request and the erasure. `0` erases on the next hourly run. Capped at `30`, so every request is handled within the month GDPR allows. |
+| `ipRetentionDays`           | `number` | No       | `180`   | Days IP addresses are kept. A daily job deletes older debug logs and clears the IP on older Activity Logs entries and sign-up records. `0` keeps them.       |
+
+The `account-deletion` job runs every hour at minute 25 and `ip-retention` daily at 03:50. Both are ordinary [cron jobs](/docs/dev/cron), so they need a cron adapter or an external trigger like every other job.
+
+## How an account erasure runs
+
+1. Every session of the account is revoked.
+2. Each file the member uploaded is deleted from storage. A file that live content still shows is kept and counted as **files kept** on the request.
+3. In one database transaction, each plugin's `personalData.erase` runs, core removes the member's name and IP from Activity Logs and deletes their debug logs, and the `core_users` row is deleted. Tables with `onDelete: "cascade"` (sessions, passkeys, notifications, warnings) go with it, and `set null` columns (authors, reporters, payments) lose the link.
+4. The request is marked **Erased**, the [`user.deleted`](/docs/dev/events/built-in-events#core-events-vitnodecore) event is emitted and a goodbye email is sent.
+
+A failure rolls the transaction back, leaves the account in place and stores the error on the request. The hourly job retries it up to five times, then marks it **Failed** and waits for staff. Staff can press **Retry erasure** at any time.
+
+## Check the result
+
+1. Sign in as a test member and open **Settings → Privacy & data**. Press **Download my data** and check that the file's `plugins` object has a `@vitnode/core` key.
+2. Press **Delete my account**, enter the password and confirm. You are signed out.
+3. Sign in as an admin and open **AdminCP → Users**. The member has a **Deletion scheduled** badge.
+4. Open the member, press **Delete account** in the danger zone, switch on **Delete immediately** and confirm. You land back on the user list.
+5. In **Debug Panel → Diagnostics → Account deletions**, the request is **Erased**, and the member's profile URL returns 404.
+
+## Related
+
+- [Export and Erase Plugin Data](/docs/dev/working-with-users/personal-data)
+- [Built-in events](/docs/dev/events/built-in-events)
+- [Staff permissions](/docs/dev/working-with-users/staff-permissions)

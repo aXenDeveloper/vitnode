@@ -41,6 +41,7 @@ export const DebugOverviewTab = () => {
 
   return (
     <DebugOverview
+      deletions={sources.deletions}
       health={debugHealth(sources)}
       isRechecking={isPending}
       onClearCache={onClearCache}

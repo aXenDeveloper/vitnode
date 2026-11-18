@@ -13,6 +13,8 @@
     "staff-permission-refs",
     "presence",
     "presence-in-plugins",
+    "account-deletion",
+    "personal-data",
     "..."
   ]
 }

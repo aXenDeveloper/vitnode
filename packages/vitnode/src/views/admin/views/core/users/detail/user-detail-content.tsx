@@ -28,6 +28,8 @@ export interface UserDetailProps {
   aiAccess?: React.ReactNode;
   canEdit: boolean;
   connectedAccounts: React.ReactNode;
+  /** The GDPR erasure card; omitted without `users:can_delete`. */
+  deleteAccount?: React.ReactNode;
   devices: React.ReactNode;
   notifications: React.ReactNode;
   onRemoveImage: RemoveAdminUserImage;
@@ -46,6 +48,7 @@ export const UserDetailContent = ({
   aiAccess,
   canEdit,
   connectedAccounts,
+  deleteAccount,
   devices,
   notifications,
   onRemoveImage,
@@ -93,6 +96,7 @@ export const UserDetailContent = ({
         {connectedAccounts}
         {devices}
         {aiAccess}
+        {deleteAccount}
       </aside>
 
       <Tabs className="min-w-0 gap-4" defaultValue="activity">

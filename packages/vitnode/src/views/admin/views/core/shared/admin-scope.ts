@@ -17,6 +17,7 @@ export const adminScopedQueryKey = (
 /** The screen names used below, so a typo is a compile error rather than a miss. */
 export const ADMIN_USERS_SCREEN = "users";
 export const ADMIN_ROLES_SCREEN = "roles";
+export const ADMIN_ACCOUNT_DELETIONS_SCREEN = "account-deletions";
 export const ADMIN_STAFF_SCREEN = "staff";
 export const ADMIN_DASHBOARD_SCREEN = "dashboard";
 export const ADMIN_REPORT_REASONS_SCREEN = "report-reasons";

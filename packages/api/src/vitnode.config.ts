@@ -257,6 +257,23 @@ export interface VitNodeApiConfig {
   };
   /** Member profile settings. */
   users?: {
+    /** Members deleting their own account (GDPR Art. 17). */
+    accountDeletion?: {
+      /**
+       * Days between a member's request and the erasure, during which they can
+       * sign in and cancel it. `0` erases on the next hourly run. Whole days,
+       * at most `30` so the request is handled within the month GDPR allows.
+       * Defaults to `14`.
+       */
+      graceDays?: number;
+    };
+    /**
+     * How many days IP addresses are kept: debug logs older than this are
+     * deleted, and the IP is cleared from Activity Logs entries and from the
+     * sign-up IP of accounts. A daily job does it. `0` keeps them. Defaults to
+     * `180`.
+     */
+    ipRetentionDays?: number;
     /**
      * Which personal-information fields this install offers. Every field is on
      * unless it is set to `false`, and turning one off hides it from the

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/builders";
 import { core_users } from "@/database/users";
+import { findOpenAccountDeletion } from "@/lib/account-deletion/requests";
 import { resolveUserRoles, userRoleSchema } from "@/lib/resolve-user-roles";
 import { publicFullNameOf } from "@/lib/user-personal-information";
 import { UserModel } from "@/models/user";
@@ -56,6 +57,14 @@ export const profileRoute = buildRoute({
 
     const user = await new UserModel().getUserByNameCode({ c, nameCode });
     if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+
+    // An account on its way out is hidden from everyone but its owner.
+    if (
+      c.get("user")?.id !== user.id &&
+      (await findOpenAccountDeletion(c, user.id))
+    ) {
       return c.json({ error: "User not found" }, 404);
     }
 

@@ -1,8 +1,14 @@
 import { Link } from "@tanstack/react-router";
-import { CheckIcon, MailIcon, PenIcon, UserSearchIcon } from "lucide-react";
+import {
+  CheckIcon,
+  MailIcon,
+  PenIcon,
+  UserSearchIcon,
+  UserXIcon,
+} from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
-import { useTranslations } from "use-intl";
+import { useFormatter, useTranslations } from "use-intl";
 
 import type { FilterOption } from "@/components/table/filters";
 import type { AdminRoleSearch } from "@/views/admin/views/core/users/roles/roles-query";
@@ -12,6 +18,7 @@ import { DateFormat } from "@/components/date-format";
 import { RoleFormat } from "@/components/role-format";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { ContentDataTable } from "@/components/table/content";
+import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { UserFormat } from "@/components/user-format";
@@ -63,6 +70,25 @@ const UserRowActions = ({
     </>
   );
 };
+
+/** A deletion state next to a member's name; the detail is a tooltip and screen-reader text. */
+const DeletionBadge = ({
+  description,
+  label,
+  status,
+}: {
+  description: string;
+  label: string;
+  status: "failed" | "pending";
+}) => (
+  <TooltipWithContent text={description}>
+    <Badge variant={status === "failed" ? "destructive" : "warning"}>
+      <UserXIcon aria-hidden="true" />
+      {label}
+      <span className="sr-only">: {description}</span>
+    </Badge>
+  </TooltipWithContent>
+);
 
 /**
  * Marks a user's email verified.
@@ -123,6 +149,7 @@ export const UsersAdminTableContent = ({
   searchRoles,
 }: UsersAdminTableProps) => {
   const t = useTranslations("admin.user.list");
+  const format = useFormatter();
 
   /**
    * The filter's options, as the dropdown wants them.
@@ -152,7 +179,29 @@ export const UsersAdminTableContent = ({
               <Avatar size={32} user={row} />
 
               <div className="flex flex-col">
-                <UserFormat user={row} />
+                <div className="flex flex-wrap items-center gap-2">
+                  <UserFormat user={row} />
+                  {row.deletion ? (
+                    <DeletionBadge
+                      description={
+                        row.deletion.status === "failed"
+                          ? t("deletionFailedDesc")
+                          : t("deletionScheduledDesc", {
+                              date: format.dateTime(
+                                new Date(row.deletion.scheduledAt),
+                                { dateStyle: "long" },
+                              ),
+                            })
+                      }
+                      label={t(
+                        row.deletion.status === "failed"
+                          ? "deletionFailed"
+                          : "deletionScheduled",
+                      )}
+                      status={row.deletion.status}
+                    />
+                  ) : null}
+                </div>
                 <span className="text-muted-foreground text-sm">
                   @{row.nameCode}
                 </span>
@@ -227,6 +276,14 @@ export const UsersAdminTableContent = ({
           id: "roleId",
           label: t("roles"),
           onSearch: onSearchRoles,
+        },
+        {
+          id: "deletion",
+          label: t("deletionFilter"),
+          options: [
+            { label: t("deletionScheduled"), value: "pending" },
+            { label: t("deletionFailed"), value: "failed" },
+          ],
         },
       ]}
       id="users-table"

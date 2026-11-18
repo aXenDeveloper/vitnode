@@ -310,7 +310,8 @@
         "services": "Usługi",
         "logs": "Przeglądarka logów",
         "queue": "Kolejka",
-        "ai": "Logi AI"
+        "ai": "Logi AI",
+        "deletions": "Usunięcia kont"
       },
       "tone": {
         "critical": "Krytyczne",
@@ -331,7 +332,8 @@
       "diagnostics": {
         "logs": "Każde ostrzeżenie i błąd zapisane przez API, od najnowszych.",
         "queue": "Zadania w tle i to, co się z nimi stało.",
-        "ai": "Każde zapytanie do AI z modelem, statusem i kosztem."
+        "ai": "Każde zapytanie do AI z modelem, statusem i kosztem.",
+        "deletions": "Każde żądanie usunięcia konta i jego wynik, jako dowód, że każde zostało obsłużone."
       },
       "security": {
         "alert": {
@@ -426,6 +428,17 @@
           "ai": "Modele AI",
           "captcha": "Captcha",
           "websocket": "WebSocket"
+        },
+        "deletions": {
+          "subtitle": "{pending} zaplanowanych · {failed} nieudanych · najstarsze {oldest}/{deadline} dni",
+          "failed": "{count, plural, one {# usuwanie nie powiodło się} few {# usuwania nie powiodły się} many {# usuwań nie powiodło się} other {# usuwania nie powiodło się}} i nie jest ponawiane",
+          "overdue": "{count, plural, one {# żądanie przekroczyło} few {# żądania przekroczyły} many {# żądań przekroczyło} other {# żądania przekroczyło}} okres karencji",
+          "oldest": "Najstarsze otwarte żądanie: {days} z {deadline} dni",
+          "oldest_late": "Żądanie ma {days} dni i przekroczyło limit RODO wynoszący {deadline} dni",
+          "none": "Brak otwartych żądań",
+          "job": "Zadanie account-deletion uruchomiło się {when}",
+          "job_never": "Zadanie account-deletion jeszcze się nie uruchomiło",
+          "job_detail": "Uruchamia się co godzinę i usuwa konta, których okres karencji minął."
         }
       },
       "actions": {
@@ -471,6 +484,25 @@
           "error": "Błąd",
           "warn": "Ostrzeżenie"
         }
+      },
+      "checks": "Sprawdzenia",
+      "privacy": {
+        "title": "Żądania prywatności",
+        "desc": "Usunięcia kont i to, jak blisko każde jest miesięcznego limitu RODO.",
+        "open": "Otwórz usunięcia kont",
+        "oldest": "Najstarsze otwarte żądanie",
+        "oldest_note": "RODO daje miesiąc na działanie",
+        "oldest_none": "Brak otwartych żądań",
+        "failed": "Nieudane",
+        "failed_note": "Ponawianie zatrzymane",
+        "none": "Brak",
+        "scheduled": "Zaplanowane",
+        "overdue_note": "{count} po okresie karencji",
+        "next_note": "Następne {when}",
+        "erased": "Usunięte, ostatnie 30 dni",
+        "job_ran": "Zadanie uruchomiło się {when}",
+        "job_never": "Zadanie jeszcze się nie uruchomiło",
+        "of_deadline": "z {deadline} dni"
       }
     },
     "global": {
@@ -643,6 +675,10 @@
           "allow_desc": "Członkowie tej roli mogą w ustawieniach konta ukryć przed innymi członkami swój status online i ostatnią aktywność.",
           "force": "Zawsze przeglądaj anonimowo",
           "force_desc": "Ukrywa status online i ostatnią aktywność każdego członka tej roli, niezależnie od jego wyboru. Ma pierwszeństwo przed ustawieniem powyżej i przed każdą inną rolą."
+        },
+        "delete_account": {
+          "allow": "Zezwalaj na usuwanie własnego konta",
+          "allow_desc": "Użytkownicy z tą rolą mogą usunąć konto w Ustawienia → Prywatność i dane. Administracja zawsze może usunąć konto w AdminCP."
         }
       },
       "list": {
@@ -1555,7 +1591,12 @@
         },
         "roles": "Role",
         "searchPlaceholder": "Szukaj użytkowników po adresie e-mail lub nazwie...",
-        "user": "Użytkownik"
+        "user": "Użytkownik",
+        "deletionScheduled": "Usunięcie zaplanowane",
+        "deletionScheduledDesc": "To konto zostanie usunięte {date}.",
+        "deletionFailed": "Usunięcie nieudane",
+        "deletionFailedDesc": "Usuwanie tego konta nie powiodło się. Otwórz użytkownika, aby zobaczyć powód i ponowić.",
+        "deletionFilter": "Usunięcie"
       },
       "show": {
         "addSecondaryRole": "Dodaj rolę",
@@ -1789,6 +1830,49 @@
           "visible": "Widoczna dla członków",
           "hiddenFromPublic": "Ukryta przed członkami",
           "unknown": "Ukryta - potrzebujesz uprawnienia, aby ją zobaczyć"
+        },
+        "delete": {
+          "title": "Usuń konto",
+          "desc": "Usuń tego użytkownika i jego dane osobowe (RODO). Zaplanuj usunięcie, aby dać czas na anulowanie, albo usuń od razu.",
+          "scheduled_by_member": "Użytkownik poprosił o usunięcie konta. Zostanie usunięte",
+          "scheduled_by_admin": "Administracja zaplanowała usunięcie konta. Zostanie usunięte",
+          "failed": "Nie udało się usunąć konta",
+          "failed_desc": "Konto zostało zachowane. Powód znajdziesz w strefie zagrożenia poniżej.",
+          "self_desc": "Nie możesz tutaj usunąć własnego konta.",
+          "schedule": {
+            "success": "Usunięcie zaplanowane",
+            "success_desc": "{name} dostał e-mail z instrukcją anulowania."
+          },
+          "now": {
+            "success": "Konto usunięte",
+            "success_desc": "Konto {name} i jego dane osobowe zostały usunięte.",
+            "success_desc_kept": "Konto {name} zostało usunięte. {count, plural, one {# plik zachowano} few {# pliki zachowano} many {# plików zachowano} other {# pliku zachowano}}, bo pokazuje je treść."
+          },
+          "cancel": {
+            "action": "Anuluj usunięcie",
+            "title": "Anulować to usunięcie?",
+            "desc": "Konto {name} zostaje i można się na nie normalnie logować.",
+            "confirm": "Zachowaj konto",
+            "success": "Usunięcie anulowane",
+            "success_desc": "Konto {name} zostaje bez zmian."
+          },
+          "danger_zone": "Strefa zagrożenia",
+          "action": "Usuń konto",
+          "dialog_title": "Usunąć konto {name}?",
+          "dialog_desc": "Konto, metody logowania, urządzenia i przesłane pliki zostaną usunięte. Treści, na które odpowiedzieli inni, zostaną, ale bez powiązania z użytkownikiem.",
+          "immediately": "Usuń natychmiast",
+          "immediately_desc": "Usuń konto od razu. Pozostaw wyłączone, aby zaplanować usunięcie po okresie karencji. Użytkownik zostanie wtedy wylogowany i dostanie e-mail z instrukcją anulowania.",
+          "understand": "Rozumiem, że konto {name} i jego dane osobowe zostaną usunięte na zawsze",
+          "understand_required": "Zaznacz to pole, aby kontynuować.",
+          "submit": "Usuń konto",
+          "failed_title": "Usuwanie konta nie powiodło się po {attempts, plural, one {# próbie} other {# próbach}}.",
+          "failed_hint": "Usuń przyczynę i ponów. Anuluj usunięcie, aby zachować konto.",
+          "retry": {
+            "action": "Ponów usuwanie",
+            "title": "Ponowić usuwanie tego konta?",
+            "desc": "Konto {name} i jego dane osobowe zostaną usunięte od razu, jeśli przyczyna została usunięta. Tego nie da się cofnąć.",
+            "confirm": "Ponów usuwanie"
+          }
         }
       },
       "verify_email": {
@@ -1826,6 +1910,80 @@
             "title": "Zapisano wyjątek",
             "desc": "Obowiązuje od następnej operacji AI użytkownika."
           }
+        }
+      },
+      "deletions": {
+        "status": {
+          "pending": "Oczekuje",
+          "failed": "Nieudane",
+          "completed": "Usunięte",
+          "cancelled": "Anulowane"
+        },
+        "source": {
+          "user": "Na prośbę użytkownika",
+          "admin": "Przez administrację"
+        },
+        "erased_member": "Usunięty użytkownik #{id}",
+        "files": "{deleted, plural, one {usunięto # plik} few {usunięto # pliki} many {usunięto # plików} other {usunięto # pliku}}, {kept, plural, =0 {nic nie zachowano} one {# zachowany, bo pokazuje go treść} few {# zachowane, bo pokazuje je treść} many {# zachowanych, bo pokazuje je treść} other {# zachowanego, bo pokazuje je treść}}",
+        "empty": {
+          "title": "Brak żądań usunięcia",
+          "desc": "Gdy użytkownik usunie konto albo zrobi to administracja, żądanie pojawi się tutaj."
+        },
+        "retry": {
+          "action": "Ponów",
+          "now": "Usuń teraz",
+          "title": "Usunąć to konto teraz?",
+          "desc": "Konto i jego dane osobowe zostaną usunięte od razu. Tego nie da się cofnąć.",
+          "confirm": "Usuń teraz",
+          "success": "Konto usunięte",
+          "success_desc": "Żądanie oznaczono jako usunięte.",
+          "failed": "Usuwanie znowu się nie powiodło",
+          "failed_desc": "Powód jest widoczny przy żądaniu. Napraw go i spróbuj ponownie."
+        },
+        "cancel": {
+          "action": "Anuluj usunięcie",
+          "title": "Anulować to usunięcie?",
+          "desc": "Konto zostaje, a użytkownik może się normalnie logować.",
+          "confirm": "Zachowaj konto",
+          "success": "Usunięcie anulowane",
+          "success_desc": "Konto zostaje bez zmian."
+        },
+        "all": "Wszystkie żądania",
+        "search": "Szukaj po nazwie, e-mailu, #id lub DR-0042",
+        "attention": {
+          "title": "Wymaga Ciebie",
+          "attempts": "{count, plural, one {# próba} few {# próby} many {# prób} other {# próby}}",
+          "due": "termin"
+        },
+        "columns": {
+          "request": "Żądanie",
+          "member": "Użytkownik",
+          "status": "Status",
+          "requested_by": "Zgłoszone przez",
+          "requested": "Zgłoszono",
+          "due": "Termin / zamknięto"
+        },
+        "details": {
+          "requested_by": "Zgłoszone przez",
+          "member": "Użytkownik",
+          "attempts": "Próby",
+          "files": "Pliki",
+          "member_id": "ID użytkownika",
+          "open": "Szczegóły",
+          "open_label": "Otwórz szczegóły {ref}"
+        },
+        "timeline": {
+          "label": "Przebieg żądania",
+          "requested": "Zgłoszono, wylogowano i wysłano e-mail",
+          "cancelled": "Anulowano",
+          "erased": "Usunięto",
+          "failed": "Usuwanie nie powiodło się po {count, plural, one {# próbie} other {# próbach}}",
+          "failed_desc": "Ponawianie zatrzymane. Usuń przyczynę i ponów.",
+          "grace": "Koniec okresu karencji",
+          "erase": "Usunięcie",
+          "erase_waiting": "Czeka na najbliższe cogodzinne uruchomienie",
+          "erase_after": "Cogodzinne zadanie usunie konto po okresie karencji",
+          "files": "{deleted, plural, one {usunięto # plik} few {usunięto # pliki} many {usunięto # plików} other {usunięto # pliku}}, {kept, plural, =0 {nic nie zachowano} one {# zachowany, bo pokazuje go treść} few {# zachowane, bo pokazuje je treść} many {# zachowanych, bo pokazuje je treść} other {# zachowanego, bo pokazuje je treść}}"
         }
       }
     },
@@ -2200,7 +2358,8 @@
           "sso": "Połączone konta",
           "notifications": "Powiadomienia",
           "ai": "Użycie AI",
-          "standing": "Status konta"
+          "standing": "Status konta",
+          "privacy": "Prywatność i dane"
         },
         "overview": {
           "accountTitle": "Konto",
@@ -2617,6 +2776,51 @@
             "title": "Punkty AI",
             "details": "Zobacz swoje funkcje AI"
           }
+        },
+        "privacy": {
+          "title": "Prywatność i dane",
+          "desc": "Pobierz kopię swoich danych albo usuń konto.",
+          "export": {
+            "title": "Pobierz swoje dane",
+            "desc": "Plik JSON ze wszystkim, co ta strona o Tobie przechowuje: profil, urządzenia, metody logowania, pliki, płatności i dane wtyczek.",
+            "action": "Pobierz moje dane",
+            "success": "Pobieranie danych",
+            "success_desc": "Przechowuj plik w bezpiecznym miejscu. Zawiera Twoje dane osobowe.",
+            "error_desc": "Nie udało się przygotować pliku. Spróbuj ponownie za minutę."
+          },
+          "delete": {
+            "title": "Usuń konto",
+            "desc": "{days, plural, =0 {Konto zostanie usunięte w ciągu godziny.} one {Konto zostanie usunięte # dzień po zgłoszeniu. Do tego czasu możesz się zalogować i zmienić zdanie.} other {Konto zostanie usunięte # dni po zgłoszeniu. Do tego czasu możesz się zalogować i zmienić zdanie.}}",
+            "what": "Usuwamy: profil, metody logowania, urządzenia, powiadomienia i przesłane pliki. Posty, na które odpowiedzieli inni, zostaną, ale bez powiązania z Tobą. Faktury przechowujemy tak długo, jak wymaga prawo.",
+            "action": "Usuń moje konto",
+            "staff_title": "Kont administracji nie można tu usunąć",
+            "staff_desc": "Twoje konto ma dostęp do AdminCP. Poproś innego administratora o jego odebranie, a potem wróć tutaj.",
+            "dialog_title": "Usunąć Twoje konto?",
+            "dialog_desc": "Zostaniesz wylogowany na wszystkich urządzeniach, a my wyślemy Ci e-mail z linkiem do anulowania.",
+            "password": "Obecne hasło",
+            "password_invalid": "To hasło jest nieprawidłowe.",
+            "understand": "Rozumiem, że moje konto i dane osobowe zostaną usunięte na zawsze",
+            "understand_required": "Zaznacz to pole, aby kontynuować.",
+            "confirm": "Usuń moje konto",
+            "reauth_title": "Zaloguj się ponownie",
+            "reauth_desc": "Twoje konto nie ma hasła, więc usunięcie wymaga świeżego logowania. Wyloguj się, zaloguj ponownie i wróć tutaj w ciągu 15 minut.",
+            "success": "Usunięcie konta zaplanowane",
+            "success_desc": "Trwa wylogowywanie. Sprawdź e-mail, aby dowiedzieć się, jak anulować.",
+            "pending_title": "Twoje konto zostanie usunięte",
+            "pending_desc": "Zostanie usunięte {date}. Zmieniłeś zdanie? Zachowaj konto poniżej.",
+            "pending_by_admin": "To usunięcie zaplanowała administracja.",
+            "cancel": "Zachowaj moje konto",
+            "cancel_success": "Twoje konto zostaje",
+            "cancel_success_desc": "Usunięcie anulowane. Wszystko jest tak, jak było.",
+            "danger_zone": "Strefa zagrożenia",
+            "not_allowed_title": "Usuwanie konta jest wyłączone dla Twojej roli",
+            "not_allowed_desc": "Skontaktuj się z administracją, a usunie Twoje konto i dane za Ciebie."
+          },
+          "load_error": {
+            "title": "Nie udało się wczytać ustawień prywatności",
+            "desc": "Sprawdź połączenie i spróbuj ponownie."
+          },
+          "retry": "Spróbuj ponownie"
         }
       },
       "sign_in": {
@@ -2865,6 +3069,26 @@
           "security_note": "Ze względów bezpieczeństwa: to żądanie zostało wysłane z adresu IP: {ip}",
           "help": "Jeśli masz problem z powyższym przyciskiem, skopiuj i wklej poniższy adres URL do tej samej przeglądarki:",
           "expire_time": "Ten link wygaśnie {date}"
+        }
+      },
+      "account_deletion": {
+        "email": {
+          "scheduled": {
+            "subject": "Twoje konto zostanie usunięte",
+            "greeting": "Cześć {name}!",
+            "intro": "Otrzymaliśmy prośbę o usunięcie Twojego konta. Zostanie ono trwale usunięte {date}.",
+            "button": "Zachowaj moje konto",
+            "instructions": "Zmieniłeś zdanie? Zaloguj się przed tą datą i anuluj usunięcie w Ustawienia → Prywatność i dane. Do tego czasu jesteś wylogowany na wszystkich urządzeniach, ale konto nadal działa.",
+            "no_action": "Jeśli to nie Ty, zaloguj się i od razu anuluj usunięcie, a potem zmień hasło.",
+            "admin_note": "To usunięcie zaplanowała administracja."
+          },
+          "deleted": {
+            "subject": "Twoje konto zostało usunięte",
+            "greeting": "Do widzenia, {name}",
+            "intro": "Twoje konto i powiązane z nim dane osobowe zostały usunięte, zgodnie z prośbą.",
+            "details": "Posty, na które odpowiedzieli inni, mogą zostać na stronie, ale bez powiązania z Tobą. Dokumenty, które musimy przechowywać z mocy prawa, np. faktury, trzymamy tylko tak długo, jak to wymagane.",
+            "outro": "Dziękujemy, że byłeś częścią społeczności. Zawsze możesz wrócić z nowym kontem."
+          }
         }
       }
     },
@@ -5511,7 +5735,10 @@
           "password_reset": "Zresetowano hasło",
           "email_verified": "Zweryfikowano adres e-mail",
           "device_revoked": "Wylogowano urządzenie",
-          "devices_revoked": "Wylogowano wszystkie urządzenia"
+          "devices_revoked": "Wylogowano wszystkie urządzenia",
+          "deleted": "Usunięto konto",
+          "deletion_scheduled": "Zaplanowano usunięcie konta",
+          "deletion_cancelled": "Anulowano usunięcie konta"
         },
         "settings": {
           "updated": "Zaktualizowano ustawienia"
@@ -5797,6 +6024,7 @@
   },
   "@vitnode/core:plugins:can_check_updates": "Sprawdzanie aktualizacji wtyczek i rdzenia na żądanie",
   "@vitnode/core:users:can_view_hidden_presence": "Wyświetlanie statusu online i ostatniej aktywności użytkowników przeglądających anonimowo",
+  "@vitnode/core:users:can_delete": "Usuwanie kont użytkowników",
   "@vitnode/core:activity_logs": "Dziennik aktywności",
   "@vitnode/core:activity_logs:can_view": "Wyświetlanie dziennika aktywności",
   "@vitnode/core:activity_logs:can_view_sensitive": "Wyświetlanie adresów IP i szczegółów technicznych",

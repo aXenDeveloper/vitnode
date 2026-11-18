@@ -10,6 +10,7 @@ import {
   ScrollTextIcon,
   SearchIcon,
   SparklesIcon,
+  UserXIcon,
   XIcon,
 } from "lucide-react";
 import React from "react";
@@ -49,6 +50,7 @@ export const DEBUG_TAB_ICONS: Record<
   ai: SparklesIcon,
   cache: DatabaseZapIcon,
   cron: ClockIcon,
+  deletions: UserXIcon,
   logs: ScrollTextIcon,
   overview: LayoutGridIcon,
   plugins: PuzzleIcon,
