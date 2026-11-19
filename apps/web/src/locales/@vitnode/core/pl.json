@@ -23,6 +23,10 @@
   "@vitnode/core:ai": "AI",
   "@vitnode/core:ai:can_view": "Wyświetlanie użycia, ustawień i historii AI",
   "@vitnode/core:ai:can_manage": "Zarządzanie ustawieniami, modelami, cenami i dostępem AI",
+  "@vitnode/core:site_status": "Status strony",
+  "@vitnode/core:site_status:can_view": "Podgląd, czy strona jest dostępna, i jej komunikatu o przerwie",
+  "@vitnode/core:site_status:can_manage": "Wyłączanie i włączanie strony oraz edycja komunikatu o przerwie",
+  "@vitnode/core:site_status:can_access_offline": "Dostęp do strony, gdy jest wyłączona",
   "@vitnode/core:plugins": "Wtyczki",
   "@vitnode/core:plugins:can_view": "Przeglądanie zainstalowanych wtyczek i ich wersji",
   "@vitnode/core:queue": "Zadania w kolejce",
@@ -426,6 +430,10 @@
           "ai": "Modele AI",
           "captcha": "Captcha",
           "websocket": "WebSocket"
+        },
+        "site": {
+          "offline": "Publiczna strona jest wyłączona",
+          "offline_until": "Publiczna strona jest wyłączona do {opensAt, date, medium}, {opensAt, time, short}"
         }
       },
       "actions": {
@@ -492,7 +500,8 @@
           "integrations": "Integracje",
           "plugins": "Wtyczki",
           "title": "System",
-          "notifications": "Powiadomienia"
+          "notifications": "Powiadomienia",
+          "site_status": "Status strony"
         },
         "user_bar": {
           "debug": "Panel debugowania",
@@ -1517,6 +1526,78 @@
             "submit": "Usuń wszystkie powiadomienia",
             "success": "Wszystkie powiadomienia usunięte",
             "success_desc": "{count, plural, =0 {Nie było nic do usunięcia.} one {# powiadomienie zostało usunięte.} few {# powiadomienia zostały usunięte.} many {# powiadomień zostało usuniętych.} other {# powiadomienia zostało usunięte.}}"
+          }
+        }
+      },
+      "site_status": {
+        "title": "Status strony",
+        "desc": "Wyłącz publiczną stronę z komunikatem dla odwiedzających i odliczaj czas do otwarcia.",
+        "retry": "Spróbuj ponownie",
+        "load_error": {
+          "title": "Nie udało się wczytać statusu strony",
+          "desc": "Nie mogliśmy sprawdzić, czy strona jest dostępna. Sprawdź połączenie i spróbuj ponownie."
+        },
+        "badge": {
+          "online": "Dostępna",
+          "offline": "Wyłączona"
+        },
+        "status": {
+          "online": "Strona jest dostępna",
+          "offline": "Strona jest wyłączona",
+          "not_saved": "Niezapisane",
+          "last_switched": "Ostatnia zmiana",
+          "by": "przez {name}",
+          "never": "Nigdy nie była wyłączona"
+        },
+        "preview": {
+          "title": "Podgląd na żywo",
+          "now": "To widzą teraz odwiedzający",
+          "offline_only": "Widoczne, gdy strona jest wyłączona"
+        },
+        "save_bar": {
+          "unsaved": "Masz niezapisane zmiany",
+          "discard": "Odrzuć",
+          "save": "Zapisz zmiany",
+          "turn_off": "Wyłącz stronę",
+          "turn_on": "Włącz stronę"
+        },
+        "toast": {
+          "saved": {
+            "title": "Zapisano zmiany",
+            "desc": "Odwiedzający zobaczą je przy następnym wczytaniu strony przerwy."
+          },
+          "turned_off": {
+            "title": "Strona jest wyłączona",
+            "desc": "Odwiedzający widzą teraz stronę przerwy. Administratorzy i moderatorzy z dostępem nadal mogą korzystać ze strony."
+          },
+          "turned_on": {
+            "title": "Strona jest dostępna",
+            "desc": "Odwiedzający znów mogą korzystać ze strony. Otwarte strony przerwy przeładują się same w ciągu minuty."
+          }
+        },
+        "form": {
+          "offline": {
+            "label": "Wyłącz stronę",
+            "desc": "Odwiedzający zobaczą stronę przerwy zamiast strony. Administratorzy i moderatorzy z dostępem nadal z niej korzystają."
+          },
+          "message": {
+            "label": "Komunikat",
+            "desc": "Dlaczego strona jest wyłączona. Napisz go co najmniej w języku domyślnym; pozostałe języki go przejmą.",
+            "placeholder": "Aktualizujemy forum. Zaraz wracamy!",
+            "required": "Napisz komunikat w języku domyślnym, aby każdy odwiedzający wiedział, co się dzieje."
+          },
+          "opening": {
+            "title": "Otwarcie",
+            "desc": "Opcjonalne. Pokazuje odwiedzającym, kiedy wrócić."
+          },
+          "opens_at": {
+            "label": "Czas otwarcia",
+            "desc": "Strona nigdy nie otworzy się sama. Po upływie czasu odwiedzający widzą \"Wkrótce otwarcie\", dopóki jej nie włączysz.",
+            "past": "Wybierz czas w przyszłości."
+          },
+          "show_countdown": {
+            "label": "Pokaż odliczanie",
+            "desc": "Pokazuj odliczanie na żywo. Po wyłączeniu odwiedzający widzą tylko datę."
           }
         }
       }
@@ -5771,6 +5852,27 @@
           "intersection": "Czytelnik musi spełniać regułę każdej kategorii, do której należy treść, więc dwie ograniczone kategorie razem wpuszczają mniej osób niż każda z nich osobno.",
           "missing": "Jedna z wybranych kategorii już nie istnieje. Nikt nie może czytać umieszczonej w niej treści."
         }
+      }
+    },
+    "site_offline": {
+      "title": "Zaraz wracamy",
+      "desc": "Strona jest chwilowo wyłączona. Zajrzyj tu wkrótce.",
+      "badge": "Przerwa techniczna",
+      "countdown": {
+        "back_in": "Wracamy za",
+        "expected_back": "Planowany powrót",
+        "opening_soon": "Wkrótce otwarcie",
+        "label": "Otwarcie za {days, plural, =0 {} one {# dzień, } other {# dni, }}{hours, plural, one {# godzinę} few {# godziny} many {# godzin} other {# godziny}} i {minutes, plural, one {# minutę} few {# minuty} many {# minut} other {# minuty}}",
+        "units": {
+          "days": "d",
+          "hours": "h",
+          "minutes": "min",
+          "seconds": "s"
+        }
+      },
+      "staff_banner": {
+        "title": "Strona jest wyłączona",
+        "desc": "Widzisz ją dzięki uprawnieniom zespołu. Odwiedzający dostają stronę przerwy. <link>Zarządzaj statusem strony</link>"
       }
     }
   },

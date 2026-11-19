@@ -13,6 +13,7 @@ export const zodVerifyEmailSchema = z.object({
 });
 
 export const verifyEmailRoute = buildRoute({
+  allowWhenOffline: true,
   route: {
     method: "post",
     description: "Confirm an email address with the link sent at sign-up",

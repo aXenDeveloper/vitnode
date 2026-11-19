@@ -4,6 +4,7 @@ import { buildRoute } from "@/builders";
 import { SSOModel } from "@/models/sso";
 
 export const createUrlRoute = buildRoute({
+  allowWhenOffline: true,
   route: {
     method: "post",
     description: "Generate SSO URL",

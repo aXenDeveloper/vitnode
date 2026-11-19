@@ -35,6 +35,10 @@
   "@vitnode/core:ai": "AI",
   "@vitnode/core:ai:can_view": "View AI usage, settings and history",
   "@vitnode/core:ai:can_manage": "Manage AI settings, models, pricing and access",
+  "@vitnode/core:site_status": "Site status",
+  "@vitnode/core:site_status:can_view": "View whether the site is online and its offline message",
+  "@vitnode/core:site_status:can_manage": "Switch the site off and on, and edit its offline message",
+  "@vitnode/core:site_status:can_access_offline": "Access the site while it's offline",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:plugins": "Plugins",
@@ -3647,6 +3651,27 @@
           "missing": "One of the selected categories no longer exists. Nobody can read a record filed there."
         }
       }
+    },
+    "site_offline": {
+      "title": "We'll be right back",
+      "desc": "The site is offline for a moment. Please check back soon.",
+      "badge": "Maintenance",
+      "countdown": {
+        "back_in": "Back in",
+        "expected_back": "Expected back",
+        "opening_soon": "Opening soon",
+        "label": "Opens in {days, plural, =0 {} one {# day, } other {# days, }}{hours, plural, one {# hour} other {# hours}} and {minutes, plural, one {# minute} other {# minutes}}",
+        "units": {
+          "days": "d",
+          "hours": "h",
+          "minutes": "m",
+          "seconds": "s"
+        }
+      },
+      "staff_banner": {
+        "title": "The site is offline",
+        "desc": "You can see it because of your staff permissions. Visitors get the offline page. <link>Manage site status</link>"
+      }
     }
   },
   "admin": {
@@ -3838,7 +3863,8 @@
           "integrations": "Integrations",
           "files": "Files",
           "notifications": "Notifications",
-          "plugins": "Plugins"
+          "plugins": "Plugins",
+          "site_status": "Site status"
         },
         "ai": {
           "title": "Artificial Intelligence (AI)",
@@ -5233,6 +5259,78 @@
           },
           "version_on_side": "{version} ({side})"
         }
+      },
+      "site_status": {
+        "title": "Site status",
+        "desc": "Take the public site offline with a message for your visitors, and count down to the opening.",
+        "retry": "Try again",
+        "load_error": {
+          "title": "Site status didn't load",
+          "desc": "We couldn't read whether the site is online. Check your connection and try again."
+        },
+        "badge": {
+          "online": "Online",
+          "offline": "Offline"
+        },
+        "status": {
+          "online": "Site is online",
+          "offline": "Site is offline",
+          "not_saved": "Not saved yet",
+          "last_switched": "Last switched",
+          "by": "by {name}",
+          "never": "Never switched off"
+        },
+        "preview": {
+          "title": "Live preview",
+          "now": "What visitors see now",
+          "offline_only": "Shown while offline"
+        },
+        "save_bar": {
+          "unsaved": "You have unsaved changes",
+          "discard": "Discard",
+          "save": "Save changes",
+          "turn_off": "Turn off site",
+          "turn_on": "Turn on site"
+        },
+        "toast": {
+          "saved": {
+            "title": "Changes saved",
+            "desc": "Visitors see them the next time the offline page loads."
+          },
+          "turned_off": {
+            "title": "Site is offline",
+            "desc": "Visitors now see the offline page. Admins, and moderators with offline access, can still use the site."
+          },
+          "turned_on": {
+            "title": "Site is online",
+            "desc": "Visitors can use the site again. Open offline pages reload on their own within a minute."
+          }
+        },
+        "form": {
+          "offline": {
+            "label": "Take the site offline",
+            "desc": "Visitors see the offline page instead of the site. Admins, and moderators with offline access, keep using it."
+          },
+          "message": {
+            "label": "Message",
+            "desc": "Why the site is offline. Write it in the default language at least; other languages fall back to it.",
+            "placeholder": "We're upgrading the forum. Back shortly!",
+            "required": "Write the message in the default language so every visitor knows what's going on."
+          },
+          "opening": {
+            "title": "Opening",
+            "desc": "Optional. Shows visitors when to come back."
+          },
+          "opens_at": {
+            "label": "Opening time",
+            "desc": "The site never opens by itself. When the time is up, visitors see \"Opening soon\" until you turn it on.",
+            "past": "Pick a time in the future."
+          },
+          "show_countdown": {
+            "label": "Show countdown",
+            "desc": "Show a live countdown. When off, visitors see only the date."
+          }
+        }
       }
     },
     "debug": {
@@ -5369,6 +5467,10 @@
           "ai": "AI models",
           "captcha": "Captcha",
           "websocket": "WebSocket"
+        },
+        "site": {
+          "offline": "The public site is offline",
+          "offline_until": "The public site is offline until {opensAt, date, medium}, {opensAt, time, short}"
         }
       },
       "actions": {

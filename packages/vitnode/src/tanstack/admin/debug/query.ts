@@ -21,6 +21,7 @@ import { ADMIN_DEBUG_PERMISSIONS } from "@/views/admin/views/core/shared/admin-p
 import { integrationsQueryOptions } from "@/views/admin/views/core/system/integrations/integrations-query";
 import { pluginUpdatesQueryOptions } from "@/views/admin/views/core/system/plugins/plugin-updates-query";
 import { installedPluginsQueryOptions } from "@/views/admin/views/core/system/plugins/plugins-query";
+import { adminSiteStatusQueryOptions } from "@/views/admin/views/core/system/site-status/site-status-query";
 
 import { useAdminPermissions } from "../permissions";
 import { searchIndexQuery } from "../search-index/query";
@@ -54,6 +55,10 @@ export const debugSourceQueries = () =>
     search: {
       options: searchIndexQuery(),
       permission: ADMIN_DEBUG_PERMISSIONS.system,
+    },
+    siteStatus: {
+      options: adminSiteStatusQueryOptions(),
+      permission: ADMIN_DEBUG_PERMISSIONS.siteStatus,
     },
     updates: {
       options: pluginUpdatesQueryOptions(),
@@ -90,6 +95,9 @@ export const warmDebugSources = async (
     warm(sources.search.permission, async () =>
       queryClient.query({ ...sources.search.options, ...STATIC }),
     ),
+    warm(sources.siteStatus.permission, async () =>
+      queryClient.query({ ...sources.siteStatus.options, ...STATIC }),
+    ),
     warm(sources.updates.permission, async () =>
       queryClient.query({ ...sources.updates.options, ...STATIC }),
     ),
@@ -122,6 +130,10 @@ export const useDebugSources = (): DebugSources => {
     ...sources.search.options,
     enabled: can(sources.search.permission),
   });
+  const siteStatus = useQuery({
+    ...sources.siteStatus.options,
+    enabled: can(sources.siteStatus.permission),
+  });
   const updates = useQuery({
     ...sources.updates.options,
     enabled: can(sources.updates.permission),
@@ -133,6 +145,7 @@ export const useDebugSources = (): DebugSources => {
     integrations: integrations.data,
     queue: queue.data,
     search: search.data,
+    siteStatus: siteStatus.data,
     updates: updates.data,
   };
 };
