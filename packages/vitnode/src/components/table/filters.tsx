@@ -18,6 +18,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Separator } from "../ui/separator";
 import { Spinner } from "../ui/spinner";
+import { ValueSwap } from "../ui/value-swap";
 import { useDataTableUrl } from "./navigation";
 import { readTableFilter, withTableFilter } from "./url-state";
 
@@ -120,34 +121,36 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
       <PopoverTrigger
         render={
           <Button
+            aria-busy={isPending}
             className="border-dashed"
-            disabled={isPending}
             variant="outline"
           />
         }
       >
         <PlusCircleIcon />
         {filter.label}
-        {selected.length > 0 && (
-          <>
-            <Separator
-              className="mx-0.5 data-[orientation=vertical]:h-4"
-              orientation="vertical"
-            />
-            {isAsync || selectedStaticOptions.length > 2 ? (
-              <Badge>
-                {t.rich("selected_count", {
-                  count: selected.length,
-                  number: chunks => <>{chunks}</>,
-                })}
-              </Badge>
-            ) : (
-              selectedStaticOptions.map(option => (
-                <Badge key={option.value}>{option.label}</Badge>
-              ))
-            )}
-          </>
-        )}
+        <ValueSwap className="-ms-1.5" swapKey={selected.join(",")}>
+          {selected.length > 0 && (
+            <span className="flex items-center gap-2 ps-2">
+              <Separator
+                className="data-[orientation=vertical]:h-4"
+                orientation="vertical"
+              />
+              {isAsync || selectedStaticOptions.length > 2 ? (
+                <Badge>
+                  {t.rich("selected_count", {
+                    count: selected.length,
+                    number: chunks => <>{chunks}</>,
+                  })}
+                </Badge>
+              ) : (
+                selectedStaticOptions.map(option => (
+                  <Badge key={option.value}>{option.label}</Badge>
+                ))
+              )}
+            </span>
+          )}
+        </ValueSwap>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-max max-w-sm min-w-56 p-0">
         <Command shouldFilter={!isAsync}>

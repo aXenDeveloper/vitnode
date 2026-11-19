@@ -68,7 +68,7 @@ const uniqueConflict = JSON.stringify({
 });
 
 aroundEach(async runTest => {
-  await runInStartRequest(`${API_ORIGIN}/admin/content/posts`, runTest);
+  await runInStartRequest(`${API_ORIGIN}/admin/blog/posts`, runTest);
 });
 
 beforeEach(() => {

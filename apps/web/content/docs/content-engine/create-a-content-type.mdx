@@ -86,7 +86,7 @@ export const articleContentType = defineContentType({
 - `tableName` is the Postgres table.
 - The engine fills `slug` from the title when you leave it empty, and keeps it when the title changes later, so links keep working.
 - `body` is [rich text](/docs/content-engine/rich-text). The AdminCP shows an editor, and the database stores a JSON document.
-- `admin.path` puts the screen at `/admin/content/newsroom/articles`. `list.columns` may name your fields and the system columns `id`, `createdAt` and `updatedAt`.
+- `admin.path` puts the screen at `/admin/newsroom/articles`. `list.columns` may name your fields and the system columns `id`, `createdAt` and `updatedAt`.
 
 [Fields](/docs/content-engine/fields) lists every field helper.
 

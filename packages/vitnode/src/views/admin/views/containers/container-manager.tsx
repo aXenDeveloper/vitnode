@@ -56,7 +56,10 @@ import { FinePointerSensor } from "@/lib/dnd/sensors";
 import { isAdminRequestError } from "@/views/admin/admin-request";
 import { ContentAccessDialog } from "@/views/admin/views/access/access-dialog";
 
-import type { ContentContainerSave } from "./container-form-content";
+import type {
+  ContentContainerIconUpload,
+  ContentContainerSave,
+} from "./container-form-content";
 import type { ContentContainerPoliciesSave } from "./container-policies-form";
 import type {
   AdminContentContainer,
@@ -69,6 +72,7 @@ import {
   ContentContainerPoliciesSheet,
   ContentContainerSheet,
 } from "./container-dialogs";
+import { containerLabel } from "./container-display";
 import {
   contentContainerErrorKey,
   invalidateContentContainers,
@@ -110,6 +114,7 @@ export interface ContentContainerManagerProps {
   onRetry: () => void;
   onSave: ContentContainerSave;
   onSavePolicies?: ContentContainerPoliciesSave;
+  onUploadIcon: ContentContainerIconUpload;
   pluginId: string;
   records: AdminContentContainer[] | undefined;
 }
@@ -223,6 +228,7 @@ export const ContentContainerManager = ({
   onRetry,
   onSave,
   onSavePolicies,
+  onUploadIcon,
   pluginId,
   records,
 }: ContentContainerManagerProps) => {
@@ -298,8 +304,11 @@ export const ContentContainerManager = ({
     activeId === null
       ? undefined
       : ordered.find(record => record.id === activeId);
-  const nameOf = (id: UniqueIdentifier) =>
-    ordered.find(record => record.id === Number(id))?.name ?? String(id);
+  const nameOf = (id: UniqueIdentifier) => {
+    const record = ordered.find(candidate => candidate.id === Number(id));
+
+    return record ? containerLabel(record) : String(id);
+  };
 
   const projectionFor = (
     target: null | number,
@@ -710,6 +719,7 @@ export const ContentContainerManager = ({
         mode={sheetMode}
         onOpenChange={sheet.setOpen}
         onSave={onSave}
+        onUploadIcon={onUploadIcon}
         open={sheet.isOpen}
         parentId={sheet.parentId}
         pluginId={pluginId}
@@ -740,9 +750,14 @@ export const ContentContainerManager = ({
           }}
           open={access.isOpen}
           scopeId={accessContainer ? String(accessContainer.id) : null}
-          scopeName={accessContainer?.name ?? ""}
+          scopeName={accessContainer ? containerLabel(accessContainer) : ""}
           scopeNames={
-            new Map(ordered.map(record => [String(record.id), record.name]))
+            new Map(
+              ordered.map(record => [
+                String(record.id),
+                containerLabel(record),
+              ]),
+            )
           }
           target={{
             family: definition.id,

@@ -18,7 +18,7 @@ describe("isExternalHref", () => {
   it.each([
     "/admin/core",
     "/admin/core/",
-    "/admin/content/blog/posts",
+    "/admin/blog/posts",
     "/",
     // A relative path is still a path.
     "core/users",

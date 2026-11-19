@@ -840,7 +840,7 @@ export interface ContentAdminConfig<
   /** Show the content type in the AdminCP sidebar. Defaults to `true`. */
   navigation?: boolean;
   /**
-   * Where the generated screens live under `/admin/content/`. Defaults to the id
+   * Where the generated screens live under `/admin/`. Defaults to the id
    * with its dots as slashes: `blog.post` -> `blog/post`.
    *
    * The one part of a content type that is **read by people rather than by code**,
@@ -850,8 +850,9 @@ export interface ContentAdminConfig<
    * in the AdminCP, so `blog/articles` is what its address should say.
    *
    * Lowercase segments of letters, digits and dashes, separated by `/`. Site-wide
-   * unique: `/admin/content/{path}` carries no plugin id, so two content types
-   * sharing a path would claim one URL - see `validateContentTypes`.
+   * unique: `/admin/{path}` carries no plugin id, so two content types sharing a
+   * path would claim one URL - see `validateContentTypes`. The first segment
+   * cannot be `core`, which the AdminCP's own pages use.
    */
   path?: string;
   /**
@@ -914,7 +915,7 @@ export interface ResolvedContentAdminConfig {
     thumbnailField: null | string;
   };
   navigation: { enabled: boolean };
-  /** The path under `/admin/content/`, e.g. `blog/articles`. Never empty. */
+  /** The path under `/admin/`, e.g. `blog/articles`. Never empty. */
   path: string;
   titleField: null | string;
 }

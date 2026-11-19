@@ -73,8 +73,7 @@ describe("core's route tree", () => {
     );
 
     expect(splats.map(route => route.path).sort()).toEqual([
-      "/admin/containers/*",
-      "/admin/content/*",
+      "/admin/:section/*",
     ]);
   });
 
@@ -103,7 +102,7 @@ describe("core's route tree", () => {
   it("carries the query string through on every route that reads it", () => {
     const declared = new Set(compiled.searchValidators.keys());
 
-    expect(declared).toContain("@vitnode/core:page#/admin/content/*");
+    expect(declared).toContain("@vitnode/core:page#/admin/:section/*");
 
     for (const path of [
       "/admin/core/ai",

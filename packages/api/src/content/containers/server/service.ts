@@ -18,6 +18,8 @@ import type {
   ContentContainerMoveInput,
   ContentContainerPublicRecord,
   ContentContainerRecord,
+  ContentContainerTranslation,
+  ContentContainerTranslations,
   ContentContainerUpdateInput,
 } from "../types";
 
@@ -32,6 +34,8 @@ import { invalidatePageCacheTags } from "../../../page-cache/store.server";
 import { expireContentAccessFamily } from "../../access/server/invalidate";
 import { deleteContentAccessRules } from "../../access/server/rules";
 import { contentContainerTag } from "../../cache";
+import { contentLocalesMatch } from "../../locale";
+import { listContentLanguages } from "../../server/language-resolver";
 import { contentDefinitionOf } from "../../server/model";
 import {
   bumpContentContainerGeneration,
@@ -62,8 +66,23 @@ import {
   planContentContainerDelete,
   planContentContainerMove,
 } from "../tree";
+import {
+  contentContainerIconImages,
+  discardContentContainerIcons,
+  normalizeContentContainerIcons,
+} from "./icons";
 
 type ContainerRow = typeof core_content_containers.$inferSelect;
+
+export const contentContainerSlugs = ({
+  slug,
+  translations,
+}: Pick<ContainerRow, "slug" | "translations">): string[] => [
+  slug,
+  ...Object.values(translations).flatMap(translation =>
+    translation.slug ? [translation.slug] : [],
+  ),
+];
 
 export type ContentContainerUsageCheck = (
   tx: ContentDatabase,
@@ -134,6 +153,7 @@ export interface ContentContainerService<
   policies: (id: number) => Promise<ContentContainerPolicyReport>;
   toPublic: (
     record: ContentContainerRecord<TDefinition>,
+    locale?: string,
   ) => ContentContainerPublicRecord<TDefinition>;
   update: (
     id: number,
@@ -219,6 +239,10 @@ export const createContentContainerService = <
 ): ContentContainerService<TDefinition> => {
   const definitionId = definition.id;
   const fieldNames = Object.keys(definition.fields);
+  const localizedFieldNames = fieldNames.filter(
+    name => definition.fields[name]?.localized === true,
+  );
+  const iconScope = { definition, pluginId };
   const rules = {
     hierarchy: definition.hierarchy.enabled,
     maxDepth: definition.hierarchy.maxDepth,
@@ -283,6 +307,7 @@ export const createContentContainerService = <
       parentId: row.parentId,
       position: row.position,
       slug: row.slug,
+      translations: definition.localization.enabled ? row.translations : {},
       updatedAt: row.updatedAt,
     }) as ContentContainerRecord<TDefinition>;
 
@@ -325,7 +350,7 @@ export const createContentContainerService = <
     }: { explicit?: string; from: string; self?: number },
   ): string => {
     const taken = new Set(
-      rows.filter(row => row.id !== self).map(row => row.slug),
+      rows.filter(row => row.id !== self).flatMap(contentContainerSlugs),
     );
 
     if (explicit !== undefined) {
@@ -345,6 +370,105 @@ export const createContentContainerService = <
 
     return candidate;
   };
+
+  const translationMetadataSchema = definition.schemas.metadataPatch.pick(
+    Object.fromEntries(localizedFieldNames.map(name => [name, true])),
+  );
+
+  const resolveTranslations = async (
+    rows: readonly ContainerRow[],
+    input: ContentContainerTranslations | undefined,
+    self?: number,
+  ): Promise<ContentContainerTranslations | undefined> => {
+    if (input === undefined || !definition.localization.enabled) {
+      return undefined;
+    }
+
+    const { defaultLocale } = definition.localization;
+    const languages = (await listContentLanguages(c)).filter(
+      language => language.isEnabled,
+    );
+    const stored = Object.entries(
+      rows.find(row => row.id === self)?.translations ?? {},
+    );
+    const resolved: ContentContainerTranslations = {};
+
+    for (const [requested, entry] of Object.entries(input)) {
+      const language = languages.find(candidate =>
+        contentLocalesMatch(candidate.locale, requested),
+      );
+      const kept = language
+        ? undefined
+        : stored.find(([locale]) => contentLocalesMatch(locale, requested));
+      if (kept) {
+        const [locale, translation] = kept;
+        resolved[locale] = translation;
+        continue;
+      }
+      if (!language || contentLocalesMatch(language.locale, defaultLocale)) {
+        return refuse(
+          "invalidLocale",
+          `"${requested}" is not a translation language of this collection.`,
+        );
+      }
+
+      const name = entry.name?.trim() ?? "";
+      const metadata = Object.fromEntries(
+        Object.entries(
+          parseMetadata(translationMetadataSchema, entry.metadata ?? {}),
+        ).filter(
+          ([, value]) =>
+            value !== null &&
+            value !== undefined &&
+            !(typeof value === "string" && value.trim() === ""),
+        ),
+      );
+      const explicitSlug = entry.slug?.trim() ?? "";
+      const slug =
+        explicitSlug === "" && name === ""
+          ? undefined
+          : resolveSlug(rows, {
+              explicit: explicitSlug === "" ? undefined : explicitSlug,
+              from: name,
+              self,
+            });
+
+      const translation: ContentContainerTranslation = {
+        ...(Object.keys(metadata).length > 0 ? { metadata } : {}),
+        ...(name === "" ? {} : { name }),
+        ...(slug === undefined ? {} : { slug }),
+      };
+      if (Object.keys(translation).length > 0) {
+        resolved[language.locale] = translation;
+      }
+    }
+
+    return resolved;
+  };
+
+  const localeOf = (locale: string | undefined): null | string => {
+    if (!locale || !definition.localization.enabled) return null;
+
+    return contentLocalesMatch(locale, definition.localization.defaultLocale)
+      ? null
+      : locale;
+  };
+
+  const translationFor = (
+    record: ContentContainerRecord<TDefinition>,
+    locale: null | string,
+  ): ContentContainerTranslation | undefined => {
+    if (locale === null) return undefined;
+
+    return Object.entries(record.translations).find(([code]) =>
+      contentLocalesMatch(code, locale),
+    )?.[1];
+  };
+
+  const iconsInUse = (rows: readonly ContainerRow[]): Set<string> =>
+    new Set(
+      rows.flatMap(row => contentContainerIconImages(definition, row.metadata)),
+    );
 
   const applyPlacements = async (
     tx: ContentDatabase,
@@ -467,11 +591,13 @@ export const createContentContainerService = <
         parentId?: null | number;
         position?: number;
         slug?: string;
+        translations?: ContentContainerTranslations;
       };
-      const metadata = parseMetadata(
-        definition.schemas.metadata,
-        values.metadata,
-      );
+      const metadata = await normalizeContentContainerIcons(c, iconScope, {
+        metadata: parseMetadata(definition.schemas.metadata, values.metadata),
+        previous: {},
+        refuse: message => refuse("invalidIcon", message),
+      });
       const parentId = values.parentId ?? null;
 
       const created = await c.get("db").transaction(async tx => {
@@ -492,6 +618,8 @@ export const createContentContainerService = <
           explicit: values.slug,
           from: values.name,
         });
+        const translations =
+          (await resolveTranslations(rows, values.translations)) ?? {};
 
         await applyPlacements(tx, plan.shifted);
         const [row] = await tx
@@ -504,6 +632,7 @@ export const createContentContainerService = <
             pluginId,
             position: plan.position,
             slug,
+            translations,
           })
           .returning();
 
@@ -542,15 +671,24 @@ export const createContentContainerService = <
         await deleteContentAccessRules(tx, definitionId, [String(id)]);
         await applyPlacements(tx, plan.shifted);
 
-        return row;
+        return {
+          row,
+          stillUsed: iconsInUse(rows.filter(candidate => candidate.id !== id)),
+        };
       });
 
+      await discardContentContainerIcons(
+        c,
+        iconScope,
+        contentContainerIconImages(definition, removed.row.metadata),
+        removed.stillUsed,
+      );
       await expire("hard");
       await c.get("events").emit(contentContainerDeletedEvent, {
         definitionId,
         pluginId,
-        containerId: removed.id,
-        parentId: removed.parentId,
+        containerId: removed.row.id,
+        parentId: removed.row.parentId,
       });
     },
 
@@ -570,7 +708,9 @@ export const createContentContainerService = <
 
     findBySlug: async slug => {
       const rows = await readAll(c.get("db"));
-      const row = rows.find(candidate => candidate.slug === slug);
+      const row = rows.find(candidate =>
+        contentContainerSlugs(candidate).includes(slug),
+      );
 
       return row ? recordOf(rows, row.id) : null;
     },
@@ -626,21 +766,26 @@ export const createContentContainerService = <
       return moved;
     },
 
-    toPublic: record =>
-      ({
+    toPublic: (record, locale) => {
+      const translation = translationFor(record, localeOf(locale));
+
+      return {
         depth: record.depth,
         id: record.id,
         metadata: Object.fromEntries(
           definition.publicApi.fields.map(name => [
             name,
-            (record.metadata as Record<string, unknown>)[name] ?? null,
+            translation?.metadata?.[name] ??
+              (record.metadata as Record<string, unknown>)[name] ??
+              null,
           ]),
         ),
-        name: record.name,
+        name: translation?.name ?? record.name,
         parentId: record.parentId,
         position: record.position,
-        slug: record.slug,
-      }) as ContentContainerPublicRecord<TDefinition>,
+        slug: translation?.slug ?? record.slug,
+      } as ContentContainerPublicRecord<TDefinition>;
+    },
 
     policies: async id => {
       if (!definition.policies.enabled) return refuse("invalidPolicy");
@@ -732,15 +877,15 @@ export const createContentContainerService = <
         metadata?: Record<string, unknown>;
         name?: string;
         slug?: string;
+        translations?: ContentContainerTranslations;
       };
       const patch =
         values.metadata === undefined
           ? undefined
           : parseMetadata(definition.schemas.metadataPatch, values.metadata);
 
-      const { changedFields, record, slugChanged } = await c
-        .get("db")
-        .transaction(async tx => {
+      const { changedFields, discarded, record, slugChanged, stillUsed } =
+        await c.get("db").transaction(async tx => {
           await lock(tx);
           const rows = await readAll(tx);
           const row = rows.find(candidate => candidate.id === id);
@@ -755,20 +900,35 @@ export const createContentContainerService = <
                   self: id,
                 });
           const metadata = patch
-            ? parseMetadata(definition.schemas.metadata, {
-                ...Object.fromEntries(
-                  Object.entries(row.metadata).filter(([key]) =>
-                    Object.hasOwn(definition.fields, key),
+            ? await normalizeContentContainerIcons(c, iconScope, {
+                metadata: parseMetadata(definition.schemas.metadata, {
+                  ...Object.fromEntries(
+                    Object.entries(row.metadata).filter(([key]) =>
+                      Object.hasOwn(definition.fields, key),
+                    ),
                   ),
-                ),
-                ...patch,
+                  ...patch,
+                }),
+                previous: row.metadata,
+                refuse: message => refuse("invalidIcon", message),
               })
             : row.metadata;
           const name = values.name ?? row.name;
+          const translations =
+            (await resolveTranslations(
+              rows.map(candidate =>
+                candidate.id === id ? { ...candidate, slug } : candidate,
+              ),
+              values.translations,
+              id,
+            )) ?? row.translations;
+          const translationsChanged =
+            JSON.stringify(translations) !== JSON.stringify(row.translations);
 
           const changed = [
             ...(name === row.name ? [] : ["name"]),
             ...(slug === row.slug ? [] : ["slug"]),
+            ...(translationsChanged ? ["translations"] : []),
             ...Object.keys(patch ?? {}).filter(
               key =>
                 JSON.stringify(row.metadata[key] ?? null) !==
@@ -781,7 +941,13 @@ export const createContentContainerService = <
               ? [row]
               : await tx
                   .update(core_content_containers)
-                  .set({ metadata, name, slug, updatedAt: new Date() })
+                  .set({
+                    metadata,
+                    name,
+                    slug,
+                    translations,
+                    updatedAt: new Date(),
+                  })
                   .where(
                     and(
                       eq(core_content_containers.id, id),
@@ -790,18 +956,28 @@ export const createContentContainerService = <
                   )
                   .returning();
 
+          const after = rows.map(candidate =>
+            candidate.id === id ? updated : candidate,
+          );
+          const kept = new Set(
+            contentContainerIconImages(definition, metadata),
+          );
+
           return {
             changedFields: changed,
-            record:
-              recordOf(
-                rows.map(candidate =>
-                  candidate.id === id ? updated : candidate,
-                ),
-                id,
-              ) ?? refuse("notFound"),
-            slugChanged: slug !== row.slug,
+            discarded: contentContainerIconImages(
+              definition,
+              row.metadata,
+            ).filter(url => !kept.has(url)),
+            record: recordOf(after, id) ?? refuse("notFound"),
+            slugChanged:
+              JSON.stringify(contentContainerSlugs(updated)) !==
+              JSON.stringify(contentContainerSlugs(row)),
+            stillUsed: iconsInUse(after),
           };
         });
+
+      await discardContentContainerIcons(c, iconScope, discarded, stillUsed);
 
       if (changedFields.length > 0) {
         await expire(slugChanged ? "hard" : "soft");
@@ -814,7 +990,11 @@ export const createContentContainerService = <
         });
       }
 
-      if (changedFields.includes("name") || changedFields.includes("slug")) {
+      if (
+        changedFields.includes("name") ||
+        changedFields.includes("slug") ||
+        changedFields.includes("translations")
+      ) {
         await syncContentSearchContainerDependents(c, {
           container: record,
           containerType: definitionId,

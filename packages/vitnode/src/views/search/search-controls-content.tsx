@@ -222,10 +222,7 @@ export const SearchControlsContent = ({
                   </span>
                 )}
               </SheetTrigger>
-              <SheetContent
-                className="flex max-h-dvh flex-col gap-0"
-                side="bottom"
-              >
+              <SheetContent className="gap-0" side="bottom">
                 <SheetHeader>
                   <SheetTitle>{t("filters.title")}</SheetTitle>
                 </SheetHeader>

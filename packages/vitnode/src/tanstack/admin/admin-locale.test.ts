@@ -21,7 +21,7 @@ describe("the AdminCP is outside the localized URL space", () => {
     "/admin/core",
     "/admin/core/users",
     "/admin/core/users/42",
-    "/admin/content/blog/posts",
+    "/admin/blog/posts",
   ])("%s is ignored by locale routing", pathname => {
     expect(routing.shouldIgnoreLocalePath(pathname)).toBe(true);
   });

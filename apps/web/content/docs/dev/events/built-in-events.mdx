@@ -136,7 +136,7 @@ fires **after** the write it describes has committed.
 | `user.passkey.deleted`         | `{ userId, passkeyId }`                   | A passkey is removed - by its owner or by staff                                                                          |
 | `user.avatar.updated`          | `{ userId, fileId }`                      | An avatar is uploaded or removed - by the user on their profile, or by staff in the AdminCP                              |
 | `user.cover.updated`           | `{ userId, fileId }`                      | A profile cover is uploaded or removed - by the user on their profile, or by staff in the AdminCP                        |
-| `file.editor.uploaded`         | `{ fileId, userId, kind }`                | An image or attachment is dropped, pasted or inserted into an [editor that allows uploads](/docs/ui/editor-images)        |
+| `file.editor.uploaded`         | `{ fileId, userId, kind }`                | An image or attachment is dropped, pasted or inserted into an [editor that allows uploads](/docs/ui/editor#images-and-files)        |
 | `role.created`                 | `{ roleId }`                              | A role is created in the AdminCP                                                                                         |
 | `role.updated`                 | `{ roleId }`                              | A role is edited in the AdminCP                                                                                          |
 | `role.deleted`                 | `{ roleId }`                              | A role is deleted in the AdminCP                                                                                         |

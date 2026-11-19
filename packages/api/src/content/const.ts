@@ -458,6 +458,14 @@ export const CONTENT_ADMIN_EDIT_SEGMENT = "edit";
 
 export const CONTENT_ADMIN_PATH_SEGMENT_PATTERN = /^[a-z][a-z0-9-]*$/;
 
+export const coreAdminPathIssue = (
+  adminPath: string,
+  owner: string,
+): null | string =>
+  adminPath.split("/")[0] === "core"
+    ? `AdminCP path "${adminPath}" starts with "core", which the AdminCP's own pages already use under /admin/core. Give ${owner} an \`admin.path\` that starts with something else, such as its plugin's name.`
+    : null;
+
 export const CONTENT_PERMISSIONS = {
   approve: "can_approve",
   create: "can_create",

@@ -33,8 +33,9 @@ export const forumQueryKeys = {
   all,
   commentLink: (slug: string) => [...commentLinks, slug] as const,
   commentLinks: () => commentLinks,
-  forum: (idOrSlug: string) => [...all, "forum", idOrSlug] as const,
-  forums: () => [...all, "forums"] as const,
+  forum: (idOrSlug: string, locale: string) =>
+    [...all, "forum", locale, idOrSlug] as const,
+  forums: (locale: string) => [...all, "forums", locale] as const,
   forumStats: () => [...all, "forum-stats"] as const,
   pending: (userId: number, page: number) =>
     [...submissions, userId, { page }] as const,
@@ -50,11 +51,11 @@ export const forumQueryKeys = {
 export const isSharedResponse = (res: Response): boolean =>
   !/\b(?:no-store|private)\b/i.test(res.headers.get("cache-control") ?? "");
 
-export const forumsQueryOptions = () =>
+export const forumsQueryOptions = (locale: string) =>
   queryOptions({
     meta: LOADER_DATA_QUERY_META,
-    queryFn: fetchForums,
-    queryKey: forumQueryKeys.forums(),
+    queryFn: async () => await fetchForums(locale),
+    queryKey: forumQueryKeys.forums(locale),
     staleTime: FORUM_TREE_STALE_TIME,
   });
 
@@ -66,7 +67,7 @@ export const forumStatsQueryOptions = () =>
     staleTime: FORUM_ACTIVITY_STALE_TIME,
   });
 
-export const forumQueryOptions = (idOrSlug: string) =>
+export const forumQueryOptions = (idOrSlug: string, locale: string) =>
   queryOptions({
     meta: LOADER_DATA_QUERY_META,
     queryFn: async () => {
@@ -75,7 +76,10 @@ export const forumQueryOptions = (idOrSlug: string) =>
         method: "get",
         module: "content/forums",
         path: "/{idOrSlug}",
-        args: { params: { idOrSlug: encodeURIComponent(idOrSlug) } },
+        args: {
+          params: { idOrSlug: encodeURIComponent(idOrSlug) },
+          query: { locale },
+        },
       });
 
       if (res.status === 404) return null;
@@ -83,7 +87,7 @@ export const forumQueryOptions = (idOrSlug: string) =>
 
       return await res.json();
     },
-    queryKey: forumQueryKeys.forum(idOrSlug),
+    queryKey: forumQueryKeys.forum(idOrSlug, locale),
     staleTime: ({ state }) => (state.data ? FORUM_TREE_STALE_TIME : 0),
   });
 
@@ -98,8 +102,9 @@ export const forumQueryOptions = (idOrSlug: string) =>
 export const queryForum = async (
   queryClient: QueryClient,
   idOrSlug: string,
+  locale: string,
 ) => {
-  const data = await queryClient.query(forumQueryOptions(idOrSlug));
+  const data = await queryClient.query(forumQueryOptions(idOrSlug, locale));
   if (!data) return data;
 
   const { id, slug } = data.container;
@@ -112,7 +117,7 @@ export const queryForum = async (
       .map(
         async key =>
           await queryClient.query({
-            ...forumQueryOptions(key),
+            ...forumQueryOptions(key, locale),
             queryFn: () => data,
           }),
       ),

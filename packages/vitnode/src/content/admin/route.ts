@@ -7,7 +7,7 @@ import {
 } from "@vitnode/api/content/const";
 import { parseContentId } from "@vitnode/api/content/ids";
 
-/** What `/admin/content/[...slug]` was actually asked for. */
+/** What `/admin/[...slug]` was actually asked for. */
 export type ContentAdminAction = "create" | "edit" | "list";
 
 export interface ContentAdminRoute {

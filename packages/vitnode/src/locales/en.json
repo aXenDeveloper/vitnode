@@ -2209,12 +2209,30 @@
       },
       "form": {
         "name": "Name",
+        "nameRequired": "Add a name in {language}. It's the language everyone sees when there's no translation.",
         "slug": "Slug",
-        "slugDesc": "The address part. Leave it empty and it's made from the name.",
+        "slugDesc": "The part of the web address.",
         "parent": "Place it in",
-        "parentDesc": "The tree goes up to {max} levels deep.",
         "parentRoot": "Top level",
-        "fields": "Details"
+        "fields": "Details",
+        "icon": {
+          "drop": "Or drop your own image here",
+          "preview": "Uploaded icon",
+          "inUse": "Your uploaded image is the icon.",
+          "remove": "Remove",
+          "uploaded": "Image uploaded",
+          "uploadedDesc": "Save to use it as the icon.",
+          "uploadFailed": "Upload failed",
+          "uploadFailedDesc": "The image couldn't be stored. Try again, or pick another file.",
+          "forbiddenDesc": "You don't have permission to upload icons here. Ask an administrator for access.",
+          "invalidFileDesc": "The image looks damaged, or its contents don't match its file type. Save it again and upload the new copy.",
+          "unprocessableDesc": "The image is too large to process. Resize it and upload it again.",
+          "storageUnavailableDesc": "This site can't store files yet. Ask an administrator to set up file storage.",
+          "tooLarge": "That image is too big",
+          "tooLargeDesc": "Pick one up to {max}.",
+          "wrongType": "That file isn't a supported image",
+          "wrongTypeDesc": "Use a PNG, JPG, WebP, GIF or AVIF file."
+        }
       },
       "create": {
         "title": "Create {name}",
@@ -2243,7 +2261,9 @@
         "definitionMismatch": "That belongs to a different collection.",
         "hasChildren": "It still has items inside. Move or delete them first.",
         "hasContent": "Content is still filed here. Move or delete that content first.",
+        "invalidIcon": "That icon isn't valid. Pick an emoji or icon, or upload the image again.",
         "invalidInput": "Some of the values aren't valid. Check the form and try again.",
+        "invalidLocale": "A translation uses a language this site doesn't have.",
         "invalidMetadata": "Some of the details don't match what this collection expects.",
         "invalidPolicy": "Some publishing settings aren't valid for this collection.",
         "invalidPosition": "That position is outside the list. Refresh and try again.",
@@ -3022,7 +3042,7 @@
         "duration": {
           "days": "{count, plural, one {# day} other {# days}}",
           "hours": "{count, plural, one {# hour} other {# hours}}",
-            "minutes": "{count, plural, one {# minute} other {# minutes}}"
+          "minutes": "{count, plural, one {# minute} other {# minutes}}"
         },
         "statuses": {
           "active": "Active",

@@ -126,7 +126,7 @@ const loadTopic = async (
   const topic = contentPageItem(loaded.topic);
 
   const [forum, thread] = await Promise.all([
-    queryForum(queryClient, String(topic.forum)).catch(() => null),
+    queryForum(queryClient, String(topic.forum), locale).catch(() => null),
     queryClient.query(threadQueryOptions(topic.id)),
   ]);
 

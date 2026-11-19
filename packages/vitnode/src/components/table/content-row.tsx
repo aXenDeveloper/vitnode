@@ -16,6 +16,7 @@ import { TableBody, TableCell, TableRow } from "../ui/table";
 import { alignClassName } from "./align";
 import { ExpandedRowDataTable } from "./expansion";
 import { NoResultsDataTable } from "./no-results";
+import { AnimatedTableRow, type RowMotionDataTable } from "./row-motion";
 import { RowSelectableDataTable } from "./selection";
 
 const INTERACTIVE_TARGET = "a,button,input,select,textarea,[role=checkbox]";
@@ -40,20 +41,23 @@ const cellContentOf = <T extends DataTableTMin>(
 
 const OpenableRowDataTable = <T extends DataTableTMin>({
   children,
+  motion,
   row,
   rowOpens,
 }: {
   children: React.ReactNode;
+  motion?: RowMotionDataTable;
   row: T;
   rowOpens?: (row: T) => void;
 }) => {
   if (!rowOpens) {
-    return <TableRow>{children}</TableRow>;
+    return <AnimatedTableRow motion={motion}>{children}</AnimatedTableRow>;
   }
 
   return (
-    <TableRow
+    <AnimatedTableRow
       className="focus-visible:bg-muted/50 focus-visible:outline-ring active:not-has-[:is(a,button,input,label,select,textarea):active]:bg-muted cursor-pointer focus-visible:outline-1"
+      motion={motion}
       onClick={event => {
         // A control inside the row answers for itself,
         // and a reader who has selected text in a cell
@@ -78,7 +82,7 @@ const OpenableRowDataTable = <T extends DataTableTMin>({
       tabIndex={0}
     >
       {children}
-    </TableRow>
+    </AnimatedTableRow>
   );
 };
 
@@ -87,6 +91,7 @@ export const RowDataTable = <T extends DataTableTMin>({
   expandable,
   expanded,
   expandedId,
+  motion,
   row,
   rowOpens,
   rows,
@@ -96,6 +101,7 @@ export const RowDataTable = <T extends DataTableTMin>({
   expandable?: ExpandableDataTable<T>;
   expanded: boolean;
   expandedId: string;
+  motion?: RowMotionDataTable;
   row: T;
   rowOpens?: (row: T) => void;
   rows: T[];
@@ -118,9 +124,11 @@ export const RowDataTable = <T extends DataTableTMin>({
   return (
     <>
       {selectable ? (
-        <RowSelectableDataTable id={row.id}>{cells}</RowSelectableDataTable>
+        <RowSelectableDataTable id={row.id} motion={motion}>
+          {cells}
+        </RowSelectableDataTable>
       ) : (
-        <OpenableRowDataTable row={row} rowOpens={rowOpens}>
+        <OpenableRowDataTable motion={motion} row={row} rowOpens={rowOpens}>
           {cells}
         </OpenableRowDataTable>
       )}

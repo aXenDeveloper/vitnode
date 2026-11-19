@@ -2,6 +2,7 @@ import type { AnyContentContainerDefinition } from "@vitnode/api/content/contain
 import type { AnyContentTypeDefinition } from "@vitnode/api/content/types";
 
 import { validateContentContainers } from "@vitnode/api/content/containers/registry";
+import { ContentEngineError } from "@vitnode/api/content/errors";
 import { validateContentTypes } from "@vitnode/api/content/registry";
 
 import type {
@@ -81,7 +82,8 @@ const buildContainerRegistry = (
  * `src/content-registry.gen.ts`; plugin code rarely needs it.
  *
  * @throws A `ContentEngineError` when two content types clash - the same id,
- * table, admin path or delivery path - as `validateContentTypes` reports.
+ * table, admin path or delivery path - as `validateContentTypes` reports, or
+ * when a container and a content type share an admin path.
  */
 export const buildContentFrontendRegistry = (
   plugins: readonly ContentFrontendPluginSource[],
@@ -107,17 +109,28 @@ export const buildContentFrontendRegistry = (
     all.map(entry => [entry.definition.admin.path, entry]),
   );
 
+  const containers = buildContainerRegistry(plugins);
+  for (const container of containers.all()) {
+    const contentType = byAdminPath.get(container.definition.admin.path);
+    if (contentType) {
+      throw new ContentEngineError(
+        `AdminCP path "${container.definition.admin.path}" is claimed by both the content type ${contentType.pluginId} -> ${contentType.definition.id} and the container ${container.pluginId} -> ${container.definition.id}. One catch-all route serves /admin/${container.definition.admin.path} - give one a different \`admin.path\`.`,
+        { contentTypeId: container.definition.id },
+      );
+    }
+  }
+
   return {
     all: () => all,
     byAdminPath: adminPath => byAdminPath.get(adminPath),
     byId: contentTypeId => byId.get(contentTypeId),
-    containers: buildContainerRegistry(plugins),
+    containers,
     lookup: adminPath => byAdminPath.get(adminPath)?.definition,
   };
 };
 
 export const CONTENT_FRONTEND_REGISTRY_MISSING =
-  "No Content Engine registry is registered. src/content-registry.gen.ts calls setContentFrontendRegistry() when it is evaluated, so the application has to load that module before any /admin/content route runs - the router's `loadContentRegistry` import is what does it.";
+  "No Content Engine registry is registered. src/content-registry.gen.ts calls setContentFrontendRegistry() when it is evaluated, so the application has to load that module before any AdminCP content route runs - the router's `loadContentRegistry` import is what does it.";
 
 let registered: ContentFrontendRegistry | undefined;
 

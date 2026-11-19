@@ -20,6 +20,7 @@ import { useTranslations } from "use-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ContainerIcon } from "@/components/ui/container-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,6 +34,7 @@ import {
 
 import type { AdminContentContainer } from "./container-request";
 
+import { containerLabel } from "./container-display";
 import { containerGuideLevels } from "./container-select";
 
 export interface ContainerRowPermissions {
@@ -73,12 +75,18 @@ const IndentGuides = ({ depth }: { depth: number }) =>
     />
   ));
 
-const ContainerGlyph = ({ icon }: { icon?: React.ReactNode }) => (
+const ContainerGlyph = ({
+  glyph,
+  icon,
+}: {
+  glyph?: null | string;
+  icon?: React.ReactNode;
+}) => (
   <span
     aria-hidden
     className="text-muted-foreground flex shrink-0 items-center [&_svg]:size-4"
   >
-    {icon ?? <FolderIcon />}
+    <ContainerIcon fallback={<>{icon ?? <FolderIcon />}</>} value={glyph} />
   </span>
 );
 
@@ -214,7 +222,7 @@ const ContainerRowMenu = ({
                       }}
                     >
                       <IndentGuides depth={parent.depth} />
-                      <span className="truncate">{parent.name}</span>
+                      <span className="truncate">{containerLabel(parent)}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuSubContent>
@@ -293,8 +301,10 @@ const ContainerRowLabel = ({
   isCollapsed: boolean;
 }) => (
   <>
-    <ContainerGlyph icon={icon} />
-    <span className="truncate text-sm font-medium">{container.name}</span>
+    <ContainerGlyph glyph={container.glyph} icon={icon} />
+    <span className="truncate text-sm font-medium">
+      {containerLabel(container)}
+    </span>
     {isCollapsed && childCount > 0 ? (
       <Badge className="tabular-nums" variant="secondary">
         +{childCount}
@@ -373,7 +383,7 @@ export const SortableContainerRow = ({
       >
         {permissions.canMove ? (
           <Button
-            aria-label={t("dragHandle", { name: container.name })}
+            aria-label={t("dragHandle", { name: containerLabel(container) })}
             className="text-muted-foreground cursor-grab touch-none active:cursor-grabbing pointer-coarse:size-10"
             ref={setActivatorNodeRef}
             size="icon-sm"
@@ -389,7 +399,7 @@ export const SortableContainerRow = ({
         <ContainerRowExpander
           childCount={childCount}
           isCollapsed={isCollapsed}
-          name={container.name}
+          name={containerLabel(container)}
           onToggle={() => {
             actions.onToggle(container.id);
           }}
@@ -465,8 +475,10 @@ export const ContainerDragChip = ({
         <GripVerticalIcon className="size-4" />
       </span>
       <span className="flex min-w-0 flex-1 items-center gap-2.5 px-1.5">
-        <ContainerGlyph icon={icon} />
-        <span className="truncate text-sm font-medium">{container.name}</span>
+        <ContainerGlyph glyph={container.glyph} icon={icon} />
+        <span className="truncate text-sm font-medium">
+          {containerLabel(container)}
+        </span>
         {descendants > 0 ? (
           <Badge className="tabular-nums" variant="secondary">
             +{descendants}

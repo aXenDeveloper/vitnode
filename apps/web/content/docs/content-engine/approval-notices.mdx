@@ -33,7 +33,7 @@ Approval only exists for records filed in a container whose definition has `poli
 
 - **A container with policies.** The forum's `forumContainers` in `plugins/forum/src/content/forums.ts` sets `policies: { defaults: { ... } }`.
 - **A record filed in it.** `forum.topic` has `forum: field.container({ definition: forumContainers, required: true })`. A comment can inherit its topic's forum with `field.relation({ target: () => topicContentType, container: true })`.
-- **A rule that waits.** In the AdminCP, open `/admin/containers/forum/forums`, choose **Publishing** in a forum's row menu, set **Edits to published posts** to **Wait for approval** for topics and choose **Save rules**.
+- **A rule that waits.** In the AdminCP, open `/admin/forum/forums`, choose **Publishing** in a forum's row menu, set **Edits to published posts** to **Wait for approval** for topics and choose **Save rules**.
 
 You also need an edit page that loads `GET /{id}/edit` and saves with `useContentPublicWrite`, like the [Edit form](/docs/content-engine/public-write-edit), and a member who is not a moderator in that forum. The excerpts use two names from such a page:
 

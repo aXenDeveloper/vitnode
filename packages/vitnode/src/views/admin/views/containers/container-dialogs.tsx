@@ -28,6 +28,7 @@ import type {
   ContentContainerMutationResult,
 } from "./container-request";
 
+import { containerLabel } from "./container-display";
 import { contentContainerErrorKey } from "./container-query";
 
 const ContentContainerFormContent = React.lazy(async () =>
@@ -78,7 +79,7 @@ export const ContentContainerSheet = ({
           </SheetTitle>
           <SheetDescription className="truncate">
             {isEdit && container
-              ? container.name
+              ? containerLabel(container)
               : t("create.desc", { name: form.labels.singular })}
           </SheetDescription>
         </SheetHeader>
@@ -120,7 +121,7 @@ export const ContentContainerPoliciesSheet = ({
         <SheetHeader className="border-b pe-12">
           <SheetTitle className="text-balance">{t("title")}</SheetTitle>
           <SheetDescription className="truncate">
-            {container?.name}
+            {container ? containerLabel(container) : null}
           </SheetDescription>
         </SheetHeader>
 
@@ -152,6 +153,7 @@ const DeleteBody = ({
   singular: string;
 }) => {
   const t = useTranslations("core.containers");
+  const name = containerLabel(container);
   const [isPending, startTransition] = React.useTransition();
   const [refusal, setRefusal] = React.useState<null | string>(() =>
     childCount > 0 ? t("errors.hasChildren") : null,
@@ -165,7 +167,7 @@ const DeleteBody = ({
       if ("error" in result) {
         const message = t(contentContainerErrorKey(result.error));
         setRefusal(message);
-        toast.error(t("delete.failed", { name: container.name }), {
+        toast.error(t("delete.failed", { name }), {
           description: message,
         });
 
@@ -173,7 +175,7 @@ const DeleteBody = ({
       }
 
       toast.success(t("delete.success", { name: singular }), {
-        description: t("delete.successDesc", { name: container.name }),
+        description: t("delete.successDesc", { name }),
       });
       onOpenChange(false);
     });
@@ -186,7 +188,7 @@ const DeleteBody = ({
           {t("delete.title", { name: singular })}
         </AlertDialogTitle>
         <AlertDialogDescription className="text-pretty">
-          {t("delete.desc", { name: container.name })}
+          {t("delete.desc", { name })}
         </AlertDialogDescription>
       </AlertDialogHeader>
 

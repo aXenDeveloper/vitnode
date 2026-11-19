@@ -92,11 +92,11 @@ const forumTopicsQueryOptions = (request: ForumSearch & { forumId: number }) =>
 
 const loadForum = async (
   queryClient: QueryClient,
-  slug: string,
+  { locale, slug }: { locale: string; slug: string },
   { cursor }: ForumSearch,
 ) => {
   const { ancestors, children, container } = contentPageItem(
-    await queryForum(queryClient, slug),
+    await queryForum(queryClient, slug, locale),
   );
 
   // A forum the viewer may see but not read lists nothing - not even how
@@ -164,7 +164,11 @@ const ForumsCrumb = () => {
 
 export const route = defineRoute<ForumPageData, ForumSearch>({
   load: async ({ context, params, search }) =>
-    await loadForum(context.queryClient, params.slug, search),
+    await loadForum(
+      context.queryClient,
+      { locale: context.locale, slug: params.slug },
+      search,
+    ),
 
   head: ({ loaderData, t }) => ({
     description:

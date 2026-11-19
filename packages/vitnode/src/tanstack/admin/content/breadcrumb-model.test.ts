@@ -59,10 +59,10 @@ describe("a loader that did not resolve", () => {
 });
 
 describe("a list URL", () => {
-  it("is the content namespace plus the content type's own path", () => {
+  it("is the content type's own path", () => {
     expect(contentBreadcrumbModel(route())).toEqual({
       kind: "list",
-      segments: ["content", "blog", "articles"],
+      segments: ["blog", "articles"],
       title: "Articles",
     });
   });
@@ -76,7 +76,7 @@ describe("a list URL", () => {
       segmentsOf(
         contentBreadcrumbModel(route({ adminPath: "docs/guides/pages" })),
       ),
-    ).toEqual(["content", "docs", "guides", "pages"]);
+    ).toEqual(["docs", "guides", "pages"]);
   });
 
   /** The sidebar already labels this href; the heading may still differ. */
@@ -92,8 +92,8 @@ describe("a create URL", () => {
     expect(model).toEqual({
       action: "create",
       kind: "form",
-      listHref: "/admin/content/blog/articles",
-      segments: ["content", "blog", "articles", CONTENT_ADMIN_CREATE_SEGMENT],
+      listHref: "/admin/blog/articles",
+      segments: ["blog", "articles", CONTENT_ADMIN_CREATE_SEGMENT],
       singular: "Article",
       title: "Articles",
     });
@@ -105,8 +105,8 @@ describe("an edit URL", () => {
     expect(contentBreadcrumbModel(route({ action: "edit" }))).toEqual({
       action: "edit",
       kind: "form",
-      listHref: "/admin/content/blog/articles",
-      segments: ["content", "blog", "articles", CONTENT_ADMIN_EDIT_SEGMENT],
+      listHref: "/admin/blog/articles",
+      segments: ["blog", "articles", CONTENT_ADMIN_EDIT_SEGMENT],
       singular: "Article",
       title: "Articles",
     });

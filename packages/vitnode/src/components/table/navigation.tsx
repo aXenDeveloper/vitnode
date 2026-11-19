@@ -30,7 +30,9 @@ export const DataTableNavigationProvider = ({
 
 /**
  * The table's current query string and a `navigate` wrapped in a transition,
- * whose `isPending` controls can show while the next page loads.
+ * whose `isPending` controls can show while the next page loads. While a
+ * navigation started here is pending, `searchParams` already holds its target
+ * query string, so the control shows the new value at once.
  *
  * @throws Outside a {@link DataTableNavigationProvider}.
  */
@@ -49,15 +51,22 @@ export const useDataTableUrl = (): {
 
   const { navigate, searchParams } = navigation;
   const [isPending, startTransition] = React.useTransition();
+  const [optimisticSearchParams, setOptimisticSearchParams] =
+    React.useOptimistic(searchParams);
 
   const navigateInTransition = React.useCallback(
     (nextSearch: string) => {
       startTransition(async () => {
+        setOptimisticSearchParams(new URLSearchParams(nextSearch));
         await navigate(nextSearch);
       });
     },
-    [navigate],
+    [navigate, setOptimisticSearchParams],
   );
 
-  return { isPending, navigate: navigateInTransition, searchParams };
+  return {
+    isPending,
+    navigate: navigateInTransition,
+    searchParams: optimisticSearchParams,
+  };
 };

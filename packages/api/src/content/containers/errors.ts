@@ -10,7 +10,10 @@ const MESSAGES: Record<ContentContainerErrorCode, string> = {
     "The container still has child containers. Move or delete them first.",
   hasContent:
     "The container still holds content. Move or delete that content first.",
+  invalidIcon:
+    "The icon is not an emoji, a Lucide icon or an image uploaded for this collection.",
   invalidInput: "The request does not describe a valid container.",
+  invalidLocale: "The translation names a language this install does not have.",
   invalidMetadata: "The container's values do not match its definition.",
   invalidPolicy:
     "The publishing policy does not match what this collection supports.",
@@ -28,7 +31,9 @@ const STATUS: Record<ContentContainerErrorCode, 400 | 404 | 409> = {
   definitionMismatch: 400,
   hasChildren: 409,
   hasContent: 409,
+  invalidIcon: 400,
   invalidInput: 400,
+  invalidLocale: 400,
   invalidMetadata: 400,
   invalidPolicy: 400,
   invalidPosition: 400,

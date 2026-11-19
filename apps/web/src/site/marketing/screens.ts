@@ -44,7 +44,7 @@ export const SCREENS = {
       small: adminContentCreateLightSmall,
     },
     title: 'Content editor',
-    url: 'yourcommunity.com/admin/content/blog/articles/create',
+    url: 'yourcommunity.com/admin/blog/articles/create',
   },
   dashboard: {
     alt: 'The AdminCP dashboard with a sidebar listing Core, Blog and Example plugin sections, a private notes widget and a send-notification widget.',

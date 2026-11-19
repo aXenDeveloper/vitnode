@@ -20,9 +20,17 @@ import {
 } from "../../access/server/families";
 import { CONTENT_ACCESS_PRIVATE_HEADERS } from "../../access/server/http";
 import { contentAccessTag, contentContainerTag } from "../../cache";
+import { CONTENT_LOCALE_MAX_LENGTH } from "../../const";
+import {
+  contentLocaleHeaders,
+  resolveContentRequestLocale,
+} from "../../server/request-locale";
 import { CONTENT_CONTAINER_SLUG_MAX_LENGTH } from "../const";
 import { contentContainerAncestors } from "../tree";
-import { createContentContainerService } from "./service";
+import {
+  contentContainerSlugs,
+  createContentContainerService,
+} from "./service";
 
 const NUMERIC_ID = /^[1-9][0-9]{0,15}$/;
 
@@ -97,22 +105,53 @@ export const buildContentContainerPublicRoutes = <
     (
       containers: ReturnType<typeof service>,
       flags: Map<number, ContentAccessFlags>,
+      locale: string | undefined,
     ) =>
     (item: Item) => ({
-      ...containers.toPublic(item),
+      ...containers.toPublic(item, locale),
       access: flags.get(item.id) ?? CONTENT_ACCESS_OPEN_FLAGS,
     });
 
-  const respond = <T>(c: Context, body: T, shareable: boolean) => {
-    if (!shareable) return c.json(body, 200, CONTENT_ACCESS_PRIVATE_HEADERS);
+  type ResolvedLocale = NonNullable<
+    Awaited<ReturnType<typeof resolveContentRequestLocale>>
+  >;
+
+  const localeFor = async (c: Context): Promise<ResolvedLocale> => {
+    const resolved = await resolveContentRequestLocale(c, definition);
+    if (!resolved) {
+      throw new HTTPException(404, { message: "This language is not served." });
+    }
+
+    return resolved;
+  };
+
+  const respond = <T>(
+    c: Context,
+    body: T,
+    shareable: boolean,
+    locale: ResolvedLocale,
+  ) => {
+    const headers = contentLocaleHeaders(locale);
+    if (!shareable) {
+      return c.json(body, 200, {
+        ...headers,
+        ...CONTENT_ACCESS_PRIVATE_HEADERS,
+      });
+    }
 
     setPageCacheTags(c, [
       contentContainerTag(definition.id),
       ...(definition.access.enabled ? [contentAccessTag(definition.id)] : []),
     ]);
 
-    return c.json(body, 200);
+    return c.json(body, 200, headers);
   };
+
+  const localeQuery = definition.localization.enabled
+    ? {
+        locale: z.string().min(1).max(CONTENT_LOCALE_MAX_LENGTH).optional(),
+      }
+    : {};
 
   const list = buildRoute({
     pluginId,
@@ -122,6 +161,7 @@ export const buildContentContainerPublicRoutes = <
       description: `List the containers of ${definition.id}, in tree order. \`parent=root\` or \`parent={id}\` narrows the list to one level.`,
       request: {
         query: z.object({
+          ...localeQuery,
           parent: z
             .union([z.literal("root"), z.coerce.number().int().positive()])
             .optional(),
@@ -137,11 +177,15 @@ export const buildContentContainerPublicRoutes = <
           description:
             "Containers, each parent followed by its subtree - nest them with `contentContainerTree`",
         },
-        404: { description: "The parent does not exist" },
+        404: {
+          description:
+            "The parent does not exist, or `locale` names a language this install does not serve",
+        },
       },
     },
     handler: async c => {
       const { parent } = c.req.valid("query");
+      const locale = await localeFor(c);
       const containers = service(c);
       const {
         flags,
@@ -161,8 +205,9 @@ export const buildContentContainerPublicRoutes = <
 
       return respond(
         c,
-        { items: items.map(withAccess(containers, flags)) },
+        { items: items.map(withAccess(containers, flags, locale.locale)) },
         shareable,
+        locale,
       );
     },
   });
@@ -177,6 +222,9 @@ export const buildContentContainerPublicRoutes = <
         params: z.object({
           idOrSlug: z.string().min(1).max(CONTENT_CONTAINER_SLUG_MAX_LENGTH),
         }),
+        ...(definition.localization.enabled
+          ? { query: z.object(localeQuery) }
+          : {}),
       },
       responses: {
         200: {
@@ -196,6 +244,7 @@ export const buildContentContainerPublicRoutes = <
     },
     handler: async c => {
       const { idOrSlug } = c.req.valid("param");
+      const locale = await localeFor(c);
       const containers = service(c);
       const {
         flags,
@@ -206,13 +255,13 @@ export const buildContentContainerPublicRoutes = <
       // existed - its slug and id answer the same.
       const container = NUMERIC_ID.test(idOrSlug)
         ? all.find(item => item.id === Number(idOrSlug))
-        : all.find(item => item.slug === idOrSlug);
+        : all.find(item => contentContainerSlugs(item).includes(idOrSlug));
       if (!container) {
         throw new HTTPException(404, { message: "Container not found." });
       }
 
       const ancestors = contentContainerAncestors(all, container.id);
-      const toPublic = withAccess(containers, flags);
+      const toPublic = withAccess(containers, flags, locale.locale);
 
       return respond(
         c,
@@ -224,6 +273,7 @@ export const buildContentContainerPublicRoutes = <
           container: toPublic(container),
         },
         shareable,
+        locale,
       );
     },
   });

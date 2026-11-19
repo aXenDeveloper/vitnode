@@ -5,7 +5,7 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { AnyContentContainerDefinition } from "./types";
 
 import { declaredStaffPermission } from "../../lib/staff-permissions";
-import { CONTENT_PERMISSIONS } from "../const";
+import { CONTENT_PERMISSIONS, coreAdminPathIssue } from "../const";
 import { ContentEngineError } from "../errors";
 import {
   contentContainerFieldOf,
@@ -50,6 +50,16 @@ export const validateContentContainers = (
       );
     }
     byId.set(definition.id, entry);
+
+    const corePathIssue = coreAdminPathIssue(
+      definition.admin.path,
+      describe(entry),
+    );
+    if (corePathIssue) {
+      throw new ContentEngineError(corePathIssue, {
+        contentTypeId: definition.id,
+      });
+    }
 
     const duplicatePath = byAdminPath.get(definition.admin.path);
     if (duplicatePath) {
