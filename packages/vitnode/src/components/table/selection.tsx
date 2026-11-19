@@ -6,14 +6,15 @@ import { createPortal } from "react-dom";
 import { useTranslations } from "use-intl";
 
 import type { DataTableRowId } from "./data-table-content";
+import type { RowMotionDataTable } from "./row-motion";
 
 import { MotionFeatures } from "../motion-features";
 import { Button } from "../ui/button";
 import { Checkbox } from "../ui/checkbox";
 import { Separator } from "../ui/separator";
 import { SlidingNumber } from "../ui/sliding-number";
-import { TableRow } from "../ui/table";
 import { TooltipWithContent } from "../ui/tooltip";
+import { AnimatedTableRow } from "./row-motion";
 
 /**
  * Row selection on the current page, from {@link useDataTableSelection}.
@@ -161,16 +162,21 @@ export function SelectRowDataTable({ id }: { id: DataTableRowId }) {
 export function RowSelectableDataTable({
   children,
   id,
+  motion,
 }: {
   children: React.ReactNode;
   id: DataTableRowId;
+  motion?: RowMotionDataTable;
 }) {
   const { isSelected } = useDataTableSelection();
 
   return (
-    <TableRow data-state={isSelected(id) ? "selected" : undefined}>
+    <AnimatedTableRow
+      data-state={isSelected(id) ? "selected" : undefined}
+      motion={motion}
+    >
       {children}
-    </TableRow>
+    </AnimatedTableRow>
   );
 }
 

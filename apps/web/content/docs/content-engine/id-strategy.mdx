@@ -46,7 +46,7 @@ Choose by what the ids are for:
 - **`uuid`** suits content whose ids should not be guessable or countable, or records created in several places that must not collide. The newsroom plugin's `newsroom.tag` uses it.
 - **`bigint`** suits tables that may outgrow two billion rows, such as events or logs. The newsroom plugin's `newsroom.event` uses it.
 
-Both types appear in **AdminCP → Newsroom → Tags** and **Events**, and their edit links carry the UUID or the decimal string, such as `/admin/content/newsroom/event/9007199254740994/edit`.
+Both types appear in **AdminCP → Newsroom → Tags** and **Events**, and their edit links carry the UUID or the decimal string, such as `/admin/newsroom/event/9007199254740994/edit`.
 
 ### Why bigint ids are strings
 

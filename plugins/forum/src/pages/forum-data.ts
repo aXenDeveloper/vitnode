@@ -4,13 +4,13 @@ import { z } from "zod";
 
 import { manifest } from "@/manifest.gen";
 
-export const fetchForums = async () => {
+export const fetchForums = async (locale: string) => {
   const res = await fetcher({
     plugin: manifest.id,
     method: "get",
     module: "content/forums",
     path: "/",
-    args: { query: {} },
+    args: { query: { locale } },
   });
 
   if (res.status !== 200) throw new Error("Loading the forums failed.");

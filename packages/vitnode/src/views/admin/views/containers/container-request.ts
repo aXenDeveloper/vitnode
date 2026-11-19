@@ -1,13 +1,17 @@
 import type { ContentContainerPolicyOverrides } from "@vitnode/api/content/containers/policies";
 import type { ContentContainerErrorCode } from "@vitnode/api/content/containers/types";
 
-import { CONTENT_CONTAINER_ERROR_CODES } from "@vitnode/api/content/containers/const";
+import {
+  CONTENT_CONTAINER_ERROR_CODES,
+  CONTENT_CONTAINER_ICON_UPLOAD_ERROR_CODES,
+} from "@vitnode/api/content/containers/const";
 import {
   zodContentContainerPolicyOverrides,
   zodEffectiveContentContainerPolicy,
 } from "@vitnode/api/content/containers/policies";
 import { z } from "zod";
 
+import { rawApiFetch } from "@/lib/fetcher/raw";
 import { rawFetcher } from "@/tanstack/fetcher";
 import { AdminRequestError } from "@/views/admin/admin-request";
 
@@ -27,6 +31,12 @@ export const contentContainerApiTarget = ({
   pluginId,
 });
 
+const translationSchema = z.object({
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  name: z.string().optional(),
+  slug: z.string().optional(),
+});
+
 const adminContentContainerSchema = z.object({
   createdAt: z.string(),
   depth: z.number().int().positive(),
@@ -36,10 +46,20 @@ const adminContentContainerSchema = z.object({
   parentId: z.number().int().positive().nullable(),
   position: z.number().int().min(0),
   slug: z.string(),
+  translations: z.record(z.string(), translationSchema).default({}),
   updatedAt: z.string(),
 });
 
-export type AdminContentContainer = z.infer<typeof adminContentContainerSchema>;
+export type AdminContentContainerTranslation = z.infer<
+  typeof translationSchema
+>;
+
+export type AdminContentContainer = z.infer<
+  typeof adminContentContainerSchema
+> & {
+  glyph?: null | string;
+  label?: string;
+};
 
 const listSchema = z.object({ items: z.array(adminContentContainerSchema) });
 
@@ -126,6 +146,7 @@ export interface ContentContainerWriteBody {
   metadata?: Record<string, unknown>;
   name?: string;
   slug?: string;
+  translations?: Record<string, AdminContentContainerTranslation>;
 }
 
 export const createContentContainer = async (
@@ -236,3 +257,55 @@ export const updateContentContainerPolicies = async (
     params: { id },
     path: "/{id}/policies",
   });
+
+const iconUploadSchema = z.object({ url: z.string(), value: z.string() });
+
+const uploadRefusalSchema = z.object({
+  code: z.enum(CONTENT_CONTAINER_ICON_UPLOAD_ERROR_CODES),
+});
+
+export type ContentContainerIconUploadErrorCode =
+  (typeof CONTENT_CONTAINER_ICON_UPLOAD_ERROR_CODES)[number];
+
+export type ContentContainerIconUploadResult =
+  | { data: z.infer<typeof iconUploadSchema> }
+  | { error: { code?: ContentContainerIconUploadErrorCode; status: number } };
+
+export const uploadContentContainerIcon = async (
+  target: ContentContainerApiTarget,
+  { field, file }: { field: string; file: File },
+): Promise<ContentContainerIconUploadResult> => {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  let response: Response;
+  try {
+    response = await rawApiFetch({
+      ...requestArgs(target),
+      formData,
+      method: "post",
+      options: { credentials: "include" },
+      path: `/uploads/${encodeURIComponent(field)}`,
+    });
+  } catch {
+    return { error: { status: 500 } };
+  }
+
+  const body: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const refusal = uploadRefusalSchema.safeParse(body);
+
+    return {
+      error: {
+        code: refusal.success ? refusal.data.code : undefined,
+        status: response.status,
+      },
+    };
+  }
+
+  const parsed = iconUploadSchema.safeParse(body);
+
+  return parsed.success
+    ? { data: parsed.data }
+    : { error: { status: response.status } };
+};

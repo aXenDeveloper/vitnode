@@ -44,9 +44,10 @@ function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
 }
 
 /**
- * The sheet's panel with a backdrop. `side`: `right` (default), `left`, `top`
- * or `bottom`. `showCloseButton` (default `true`) adds a close button with a
- * translated label; `keepMounted` keeps it in the DOM while closed.
+ * The sheet's panel with a backdrop, floating as a rounded card inset from the
+ * screen edges. `side`: `right` (default), `left`, `top` or `bottom`.
+ * `showCloseButton` (default `true`) adds a close button with a translated
+ * label; `keepMounted` keeps it in the DOM while closed.
  */
 function SheetContent({
   className,
@@ -67,11 +68,11 @@ function SheetContent({
       <SheetOverlay />
       <SheetPrimitive.Popup
         className={cn(
-          "bg-popover text-popover-foreground ease-fluid fixed z-50 flex flex-col gap-4 bg-clip-padding text-sm shadow-lg transition-[translate] duration-300 data-ending-style:duration-200 motion-reduce:transition-none",
-          "data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-full data-[side=bottom]:data-starting-style:translate-y-full",
-          "data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:-translate-y-full data-[side=top]:data-starting-style:-translate-y-full",
-          "data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=left]:data-ending-style:-translate-x-full data-[side=left]:data-starting-style:-translate-x-full data-[side=left]:sm:max-w-sm",
-          "data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=right]:data-ending-style:translate-x-full data-[side=right]:data-starting-style:translate-x-full data-[side=right]:sm:max-w-sm",
+          "bg-popover text-popover-foreground ease-fluid fixed z-50 flex flex-col gap-4 overflow-hidden rounded-xl border bg-clip-padding text-sm shadow-xl transition-[translate] duration-300 data-ending-style:duration-200 motion-reduce:transition-none",
+          "data-[side=bottom]:inset-x-3 data-[side=bottom]:bottom-3 data-[side=bottom]:max-h-[calc(100dvh-(--spacing(6)))] data-[side=bottom]:data-ending-style:translate-y-[calc(100%+--spacing(3))] data-[side=bottom]:data-starting-style:translate-y-[calc(100%+--spacing(3))]",
+          "data-[side=top]:inset-x-3 data-[side=top]:top-3 data-[side=top]:max-h-[calc(100dvh-(--spacing(6)))] data-[side=top]:data-ending-style:-translate-y-[calc(100%+--spacing(3))] data-[side=top]:data-starting-style:-translate-y-[calc(100%+--spacing(3))]",
+          "data-[side=left]:inset-y-3 data-[side=left]:left-3 data-[side=left]:w-3/4 data-[side=left]:max-w-[calc(100%-(--spacing(6)))] data-[side=left]:data-ending-style:-translate-x-[calc(100%+--spacing(3))] data-[side=left]:data-starting-style:-translate-x-[calc(100%+--spacing(3))] data-[side=left]:sm:max-w-sm",
+          "data-[side=right]:inset-y-3 data-[side=right]:right-3 data-[side=right]:w-3/4 data-[side=right]:max-w-[calc(100%-(--spacing(6)))] data-[side=right]:data-ending-style:translate-x-[calc(100%+--spacing(3))] data-[side=right]:data-starting-style:translate-x-[calc(100%+--spacing(3))] data-[side=right]:sm:max-w-sm",
           className,
         )}
         data-side={side}
@@ -100,22 +101,28 @@ function SheetContent({
   );
 }
 
-/** The top area for the title and description. */
+/** The top area for the title and description, divided from the body. */
 function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("flex flex-col gap-1.5 p-4", className)}
+      className={cn("flex flex-col gap-1.5 border-b p-4 pe-14", className)}
       data-slot="sheet-header"
       {...props}
     />
   );
 }
 
-/** The bottom area for actions, pinned to the end of the sheet. */
+/**
+ * The bottom area for actions, pinned to the end of the sheet and divided from
+ * the body. Buttons stack on phones and sit in a row, right-aligned, from `sm`.
+ */
 function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
+      className={cn(
+        "mt-auto flex flex-col-reverse gap-2 border-t p-4 sm:flex-row sm:justify-end",
+        className,
+      )}
       data-slot="sheet-footer"
       {...props}
     />

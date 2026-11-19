@@ -1,5 +1,8 @@
 import type { BlockAllowedSpec } from "../blocks/types";
-import type { AnyContentContainerDefinition } from "./containers/types";
+import type {
+  AnyContentContainerDefinition,
+  ContentContainerIconField,
+} from "./containers/types";
 import type {
   AnyContentTypeDefinition,
   ContentBlocksField,
@@ -23,6 +26,7 @@ import type {
   ContentUserField,
 } from "./types";
 
+import { CONTENT_CONTAINER_ICON_DEFAULT_MAX_BYTES } from "./containers/icon";
 import { ContentEngineError } from "./errors";
 import {
   assertContentFileMaxBytes,
@@ -487,6 +491,28 @@ const container = <
   };
 };
 
+const icon = <
+  TRequired extends boolean = false,
+  TNullable extends boolean = false,
+>(
+  args: SharedArgs<TRequired, TNullable> & {
+    /** The largest image an AdminCP upload accepts, in bytes. Defaults to 1 MB. */
+    maxBytes?: number;
+  } = {},
+): ContentContainerIconField<TRequired, TNullable> => {
+  if (args.maxBytes !== undefined) {
+    assertContentFileMaxBytes(args.maxBytes);
+  }
+
+  return {
+    ...args,
+    ...shared(args),
+    kind: "icon",
+    localized: false,
+    maxBytes: args.maxBytes ?? CONTENT_CONTAINER_ICON_DEFAULT_MAX_BYTES,
+  };
+};
+
 /**
  * Field builders for the `fields` map of `defineContentType()`.
  *
@@ -517,6 +543,11 @@ export const field = {
   blocks,
   /** A `boolean` column. */
   boolean,
+  /**
+   * A container's icon: an emoji, a Lucide icon or an image uploaded in the
+   * AdminCP. Containers only - stored as `emoji:…`, `icon:…` or `image:<url>`.
+   */
+  icon,
   /** The content container (e.g. a forum board) a record belongs to. At most one per content type. */
   container,
   /** A `timestamp` column, read as a `Date`. */

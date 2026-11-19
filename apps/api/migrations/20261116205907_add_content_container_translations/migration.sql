@@ -1,0 +1,1 @@
+ALTER TABLE "core_content_containers" ADD COLUMN "translations" jsonb DEFAULT '{}' NOT NULL;

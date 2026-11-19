@@ -4558,9 +4558,8 @@
       "form": {
         "name": "Nazwa",
         "slug": "Slug",
-        "slugDesc": "Fragment adresu. Zostaw puste, a zostanie utworzony z nazwy.",
+        "slugDesc": "Fragment adresu strony.",
         "parent": "Umieść w",
-        "parentDesc": "Drzewo może mieć do {max} poziomów zagnieżdżenia.",
         "parentRoot": "Najwyższy poziom",
         "fields": "Szczegóły"
       },

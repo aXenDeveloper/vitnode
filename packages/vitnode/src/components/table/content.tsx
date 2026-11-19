@@ -1,4 +1,5 @@
 import { cn } from "cn";
+import { LayoutGroup } from "motion/react";
 import React from "react";
 
 import type {
@@ -8,8 +9,10 @@ import type {
   DataTableTMin,
 } from "./data-table-content";
 
+import { MotionFeatures } from "../motion-features";
 import { Table, TableBody } from "../ui/table";
 import { TooltipGroup } from "../ui/tooltip";
+import { useColumnGlideDataTable } from "./column-motion";
 import { HeadRowDataTable } from "./content-head";
 import { EmptyBodyDataTable, RowDataTable } from "./content-row";
 import {
@@ -28,6 +31,7 @@ import {
   ReorderHeaderDataTable,
 } from "./reorder-handle";
 import { isTableInStoredOrder } from "./reorder-state";
+import { useEnteringRowIdsDataTable } from "./row-motion";
 import { useRowOrderDataTable } from "./row-order";
 import { SearchDataTable } from "./search";
 import {
@@ -202,6 +206,9 @@ export function ContentDataTable<T extends DataTableTMin>({
   });
   // Memoized on the rows so the selection context does not change every render.
   const rowIds = React.useMemo(() => rows.map(row => row.id), [rows]);
+  const enteringRowIds = useEnteringRowIdsDataTable(rowIds);
+  const tableRef = React.useRef<HTMLTableElement>(null);
+  useColumnGlideDataTable(tableRef, rows);
   const expansion = useRowExpansionDataTable({
     defaultExpanded: expandable?.defaultExpanded,
     rowIds,
@@ -228,12 +235,13 @@ export function ContentDataTable<T extends DataTableTMin>({
     expandable !== undefined ||
     reorderable !== undefined;
 
-  const renderRow = (row: T) => (
+  const renderRow = (row: T, animated = false) => (
     <RowDataTable
       columns={allColumns}
       expandable={expandable}
       expanded={canExpand(row) && expansion.isExpanded(row.id)}
       expandedId={expandedIdOf(row)}
+      motion={animated ? { entering: enteringRowIds.has(row.id) } : undefined}
       row={row}
       rowOpens={rowOpens}
       rows={rows}
@@ -281,26 +289,40 @@ export function ContentDataTable<T extends DataTableTMin>({
     }
 
     if (groupBy) {
-      return groupRowsDataTable(rows, groupBy.key).map(group => (
-        <TableBody key={group.key}>
-          <GroupHeadingRowDataTable
-            colSpan={allColumns.length}
-            group={group}
-            label={groupBy.label}
-          />
-          {group.rows.map(row => (
-            <React.Fragment key={row.id}>{renderRow(row)}</React.Fragment>
-          ))}
-        </TableBody>
-      ));
+      return (
+        <MotionFeatures withLayoutAndDrag>
+          <LayoutGroup>
+            {groupRowsDataTable(rows, groupBy.key).map(group => (
+              <TableBody key={group.key}>
+                <GroupHeadingRowDataTable
+                  colSpan={allColumns.length}
+                  group={group}
+                  label={groupBy.label}
+                />
+                {group.rows.map(row => (
+                  <React.Fragment key={row.id}>
+                    {renderRow(row, true)}
+                  </React.Fragment>
+                ))}
+              </TableBody>
+            ))}
+          </LayoutGroup>
+        </MotionFeatures>
+      );
     }
 
     return (
-      <TableBody>
-        {rows.map(row => (
-          <React.Fragment key={row.id}>{renderRow(row)}</React.Fragment>
-        ))}
-      </TableBody>
+      <MotionFeatures withLayoutAndDrag>
+        <LayoutGroup>
+          <TableBody>
+            {rows.map(row => (
+              <React.Fragment key={row.id}>
+                {renderRow(row, true)}
+              </React.Fragment>
+            ))}
+          </TableBody>
+        </LayoutGroup>
+      </MotionFeatures>
     );
   };
 
@@ -347,6 +369,7 @@ export function ContentDataTable<T extends DataTableTMin>({
                 "[&_td:first-child]:pe-4 sm:[&_td:first-child]:pe-5 [&_th:first-child]:pe-4 sm:[&_th:first-child]:pe-5",
               props.className,
             )}
+            ref={tableRef}
           >
             {hasHead && (
               <HeadRowDataTable

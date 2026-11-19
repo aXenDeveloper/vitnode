@@ -6,9 +6,9 @@ import {
   CONTENT_ADMIN_EDIT_SEGMENT,
 } from "@/content/index";
 
-/** `/admin/content/blog/articles` - the list URL the trail passes through. */
+/** `/admin/blog/articles` - the list URL the trail passes through. */
 export const contentBreadcrumbListHref = (adminPath: string): string =>
-  `/admin/content/${adminPath}`;
+  `/admin/${adminPath}`;
 
 /**
  * The trail, as data.
@@ -58,7 +58,7 @@ export interface ContentBreadcrumbInput {
  * missing, which is the branch that reads a label.
  *
  * The **list** crumb needs no label map: the sidebar already has an entry at
- * `/admin/content/{admin.path}` carrying this content type's noun, and
+ * `/admin/{admin.path}` carrying this content type's noun, and
  * `AdminBreadcrumb` resolves labels from the navigation this administrator can
  * see. `title` is carried anyway because the screen's heading may legitimately
  * differ from the sidebar's shorter name.
@@ -76,7 +76,7 @@ export const contentBreadcrumbModel = ({
     return CONTENT_BREADCRUMB_NONE;
   }
 
-  const segments = ["content", ...adminPath.split("/")];
+  const segments = adminPath.split("/");
 
   if (action === "list") {
     return { kind: "list", segments, title: labels.title };

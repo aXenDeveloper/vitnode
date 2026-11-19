@@ -15,6 +15,7 @@ import {
   CONTENT_PERMISSIONS,
   CONTENT_PUBLICATION_FIELDS,
   CONTENT_SYSTEM_FIELDS,
+  coreAdminPathIssue,
   isFilterableFieldKind,
   RESERVED_FILTER_KEYS,
 } from "./const";
@@ -171,7 +172,7 @@ export const validateContentTypes = (
    * AdminCP paths, keyed by the path alone - a site-wide namespace, like delivery
    * and for the same reason.
    *
-   * `/admin/content/{admin.path}` has no plugin id in it, and one catch-all route
+   * `/admin/{admin.path}` has no plugin id in it, and one catch-all route
    * serves every content type: two of them answering to one path would give the
    * screen a first-registered-wins owner, and the other content type would simply
    * have no AdminCP at all. The id-derived default makes that nearly impossible;
@@ -224,10 +225,17 @@ export const validateContentTypes = (
     byPermission.set(permissionKey, entry);
 
     const adminPath = definition.admin.path;
+    const corePathIssue = coreAdminPathIssue(adminPath, describe(entry));
+    if (corePathIssue) {
+      throw new ContentEngineError(corePathIssue, {
+        contentTypeId: definition.id,
+      });
+    }
+
     const duplicateAdminPath = byAdminPath.get(adminPath);
     if (duplicateAdminPath) {
       throw new ContentEngineError(
-        `AdminCP path "${adminPath}" is claimed by both ${describe(duplicateAdminPath)} and ${describe(entry)}. One catch-all route serves /admin/content/${adminPath}, so only one of them would have a screen - give one a different \`admin.path\`.`,
+        `AdminCP path "${adminPath}" is claimed by both ${describe(duplicateAdminPath)} and ${describe(entry)}. One catch-all route serves /admin/${adminPath}, so only one of them would have a screen - give one a different \`admin.path\`.`,
         { contentTypeId: definition.id },
       );
     }
@@ -346,12 +354,12 @@ export const contentTypeToPath = (id: string): string =>
 
 export type ContentAdminAddressable = Pick<AnyContentTypeDefinition, "admin">;
 
-/** `/admin/content/blog/articles` */
+/** `/admin/blog/articles` */
 export const contentAdminHref = (definition: ContentAdminAddressable): string =>
-  `/admin/content/${definition.admin.path}`;
+  `/admin/${definition.admin.path}`;
 
 /**
- * `/admin/content/blog/articles/create` - the generated create **page**.
+ * `/admin/blog/articles/create` - the generated create **page**.
  *
  * Built off `contentAdminHref` rather than spelled out again, so the list URL
  * and the two form URLs cannot drift apart. Only meaningful for a content type
@@ -361,7 +369,7 @@ export const contentCreateHref = (
   definition: ContentAdminAddressable,
 ): string => `${contentAdminHref(definition)}/${CONTENT_ADMIN_CREATE_SEGMENT}`;
 
-/** `/admin/content/blog/articles/42/edit` - the generated edit **page**. */
+/** `/admin/blog/articles/42/edit` - the generated edit **page**. */
 export const contentEditHref = (
   definition: ContentAdminAddressable,
   itemId: ContentId,

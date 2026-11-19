@@ -22,9 +22,9 @@ import { ForumList } from "./forum-list";
 import { forumsQueryOptions, forumStatsQueryOptions } from "./forum-queries";
 import { ForumShell } from "./forum-ui";
 
-const loadForums = async (queryClient: QueryClient) => {
+const loadForums = async (queryClient: QueryClient, locale: string) => {
   const [forums, stats] = await Promise.all([
-    queryClient.query(forumsQueryOptions()),
+    queryClient.query(forumsQueryOptions(locale)),
     queryClient.query(forumStatsQueryOptions()),
   ]);
 
@@ -40,7 +40,8 @@ const ForumsBreadcrumb = () => {
 };
 
 export const route = defineRoute<ForumsPageData>({
-  load: async ({ context }) => await loadForums(context.queryClient),
+  load: async ({ context }) =>
+    await loadForums(context.queryClient, context.locale),
 
   head: ({ t }) => ({
     description: t("@vitnode/forum.forums.desc"),

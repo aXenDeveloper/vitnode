@@ -54,6 +54,7 @@ const row = (
   pluginId: PLUGIN_ID,
   position,
   slug,
+  translations: {},
   updatedAt: CREATED,
 });
 

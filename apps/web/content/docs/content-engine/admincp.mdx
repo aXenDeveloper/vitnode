@@ -12,7 +12,7 @@ import rowActions from "./admincp-row-actions.webp";
 
 Every content type registered in the plugin's `src/admin/content.tsx` gets an AdminCP list and a create and edit form without any UI code. Most changes are options in the definition's `admin` block. For anything the options cannot express, you swap one cell, one field or the whole form layout for your own component.
 
-This page uses the newsroom plugin's `newsroom.story`. Its screen lives at `/admin/content/newsroom/stories`.
+This page uses the newsroom plugin's `newsroom.story`. Its screen lives at `/admin/newsroom/stories`.
 
 ## Choose list columns, search and sorting
 
@@ -66,7 +66,7 @@ Every mistake here, such as an unknown field or a gallery in `columns`, throws a
 
 | Option             | Default                             | What it does                                                                                                     |
 | ------------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `path`             | The id with dots as slashes         | URL under `/admin/content/`. Lowercase segments of letters, digits and dashes; cannot end in `create` or `edit`. |
+| `path`             | The id with dots as slashes         | URL under `/admin/`. Lowercase segments of letters, digits and dashes; cannot start with `core` or end in `create` or `edit`. |
 | `titleField`       | First shared text or textarea field | Names a record in toasts, dialogs and relation pickers. `null` means the type has no title.                      |
 | `colorField`       | none                                | A shared field with a color, shown as a swatch next to the title. The blog's categories use it.                  |
 | `navigation`       | `true`                              | Set it to `false` to keep the screen but drop its sidebar link.                                                  |
@@ -167,7 +167,7 @@ admin: {
 },
 ```
 
-The create form moves to `/admin/content/blog/articles/create` and the edit form to `/admin/content/blog/articles/{id}/edit`. You can set the two modes independently.
+The create form moves to `/admin/blog/articles/create` and the edit form to `/admin/blog/articles/{id}/edit`. You can set the two modes independently.
 
 ## Replace a field or a cell
 

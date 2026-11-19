@@ -3,9 +3,15 @@ import { defineContentContainer, field } from "@vitnode/api/content";
 export const forumContainers = defineContentContainer({
   id: "forum.forums",
 
+  localization: { defaultLocale: "en" },
+
   fields: {
-    description: field.textarea({ maxLength: 500, nullable: true }),
-    icon: field.text({ maxLength: 64, nullable: true }),
+    description: field.textarea({
+      localized: true,
+      maxLength: 500,
+      nullable: true,
+    }),
+    icon: field.icon({ nullable: true }),
   },
 
   hierarchy: { maxDepth: 4 },

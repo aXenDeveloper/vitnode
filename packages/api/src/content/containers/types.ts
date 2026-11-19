@@ -17,8 +17,21 @@ import type {
 } from "./const";
 import type { ResolvedContentContainerPolicies } from "./policies";
 
+export interface ContentContainerIconField<
+  TRequired extends boolean = boolean,
+  TNullable extends boolean = boolean,
+> {
+  description?: string;
+  kind: "icon";
+  localized: false;
+  maxBytes: number;
+  nullable: TNullable;
+  required: TRequired;
+}
+
 export type ContentContainerFieldDescriptor =
   | ContentBooleanField
+  | ContentContainerIconField
   | ContentEnumField
   | ContentNumberField
   | ContentTextareaField
@@ -42,6 +55,30 @@ export interface ContentContainerHierarchyInput {
   maxDepth?: number;
 }
 
+export interface ContentContainerLocalizationInput {
+  /**
+   * The locale the built-in `name` and `slug` columns, and the `localized: true`
+   * fields' stored values, are written in. Every other language is a
+   * translation that falls back to it.
+   */
+  defaultLocale: string;
+}
+
+export type ResolvedContentContainerLocalization =
+  | { defaultLocale: null; enabled: false }
+  | { defaultLocale: string; enabled: true };
+
+export interface ContentContainerTranslation {
+  metadata?: Record<string, unknown>;
+  name?: string;
+  slug?: string;
+}
+
+export type ContentContainerTranslations = Record<
+  string,
+  ContentContainerTranslation
+>;
+
 export interface ContentContainerOrderingInput {
   /** `"manual"` (default, drag to reorder) or `"alphabetical"`. */
   mode?: ContentContainerOrderingMode;
@@ -63,7 +100,7 @@ export interface ContentContainerPublicApiInput<
 export interface ContentContainerAdminInput {
   /** Show the containers screen in the AdminCP sidebar. Defaults to `true`. */
   navigation?: boolean;
-  /** The AdminCP path under `/admin/content/`. Defaults to the id with dots as slashes. */
+  /** The AdminCP path under `/admin/`. Defaults to the id with dots as slashes. */
   path?: string;
   /** Staff permission module. Defaults to the id in snake_case, e.g. `forum_forums`. */
   permissionModule?: string;
@@ -108,6 +145,7 @@ export interface ContentContainerDefinition<
   hierarchy: { enabled: boolean; maxDepth: number };
   id: TId;
   kind: "contentContainer";
+  localization: ResolvedContentContainerLocalization;
   ordering: { mode: ContentContainerOrderingMode };
   policies: ResolvedContentContainerPolicies;
   publicApi: ResolvedContentContainerPublicApi<
@@ -164,6 +202,7 @@ export type ContentContainerRecord<
   ContentContainerColumns & {
     createdAt: Date;
     metadata: ContentContainerMetadata<TDefinition>;
+    translations: ContentContainerTranslations;
     updatedAt: Date;
   }
 >;
@@ -184,6 +223,7 @@ export interface ContentContainerCreateInput<
   parentId?: null | number;
   position?: number;
   slug?: string;
+  translations?: ContentContainerTranslations;
 }
 
 export interface ContentContainerUpdateInput<
@@ -192,6 +232,7 @@ export interface ContentContainerUpdateInput<
   metadata?: Partial<ContentContainerMetadataInput<TDefinition>>;
   name?: string;
   slug?: string;
+  translations?: ContentContainerTranslations;
 }
 
 export interface ContentContainerMoveInput {

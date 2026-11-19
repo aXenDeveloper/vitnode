@@ -3,13 +3,14 @@ import type { ContentLabelTranslator } from "@vitnode/api/content/admin/labels";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { contentContainerLabelsFrom } from "@vitnode/api/content/admin/containers";
 import React from "react";
-import { useTranslations } from "use-intl";
+import { useLocale, useTranslations } from "use-intl";
 
 import type { RegisteredFrontendContentContainer } from "@/content/admin/registry";
 import type { ContentContainerSave } from "@/views/admin/views/containers/container-form-content";
 import type { ContentContainerPoliciesSave } from "@/views/admin/views/containers/container-policies-form";
 import type { ContentContainerMutationResult } from "@/views/admin/views/containers/container-request";
 
+import { decorateContainers } from "@/views/admin/views/containers/container-display";
 import { ContentContainerManager } from "@/views/admin/views/containers/container-manager";
 import { invalidateContentContainers } from "@/views/admin/views/containers/container-query";
 import {
@@ -19,6 +20,7 @@ import {
   moveContentContainer,
   updateContentContainer,
   updateContentContainerPolicies,
+  uploadContentContainerIcon,
 } from "@/views/admin/views/containers/container-request";
 
 import type { ContentContainerRouteData } from "./route";
@@ -75,6 +77,8 @@ const useContentContainerMutations = (
       }) => await settle(await moveContentContainer(target, id, move)),
       onSave,
       onSavePolicies,
+      onUploadIcon: async ({ field, file }: { field: string; file: File }) =>
+        await uploadContentContainerIcon(target, { field, file }),
     };
   }, [entry, queryClient]);
 };
@@ -85,7 +89,18 @@ const ContentContainerScreenBody = ({
   entry: RegisteredFrontendContentContainer;
 }) => {
   const t = useTranslations();
+  const locale = useLocale();
   const query = useQuery(contentContainerRouteQuery(entry));
+  const records = React.useMemo(
+    () =>
+      query.data
+        ? decorateContainers(query.data, {
+            definition: entry.definition,
+            locale,
+          })
+        : undefined,
+    [entry.definition, locale, query.data],
+  );
   const mutations = useContentContainerMutations(entry);
   const labels = contentContainerLabelsFrom(
     entry.definition,
@@ -104,7 +119,7 @@ const ContentContainerScreenBody = ({
         void query.refetch();
       }}
       pluginId={entry.pluginId}
-      records={query.data}
+      records={records}
       {...mutations}
     />
   );

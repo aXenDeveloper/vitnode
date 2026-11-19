@@ -18,7 +18,7 @@ export const ContentContainerBreadcrumbContent = ({
     <RouteMessages namespaces={namespaces ?? []}>
       <AdminBreadcrumb
         overrideLastLabel={title}
-        segments={["containers", ...adminPath.split("/")]}
+        segments={adminPath.split("/")}
       />
     </RouteMessages>
   );

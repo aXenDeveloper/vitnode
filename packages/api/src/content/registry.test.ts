@@ -136,7 +136,7 @@ describe("validateContentTypes", () => {
     ).not.toThrow();
   });
 
-  // `/admin/content/{path}` has no plugin id in it, so two plugins pointing at
+  // `/admin/{path}` has no plugin id in it, so two plugins pointing at
   // one path is the one AdminCP clash the id-derived default cannot rule out.
   it("rejects two plugins claiming the same admin path", () => {
     expect(() =>
@@ -408,33 +408,25 @@ describe("routing helpers", () => {
   it("maps a content type id onto the default catch-all path", () => {
     expect(contentTypeToPath("example.article")).toBe("example/article");
     expect(contentAdminHref(widget({ id: "example.article" }))).toBe(
-      "/admin/content/example/article",
+      "/admin/example/article",
     );
   });
 
   it("addresses a content type by its own admin path", () => {
     const renamed = widget({ admin: { path: "blog/articles" } });
 
-    expect(contentAdminHref(renamed)).toBe("/admin/content/blog/articles");
-    expect(contentCreateHref(renamed)).toBe(
-      "/admin/content/blog/articles/create",
-    );
-    expect(contentEditHref(renamed, 42)).toBe(
-      "/admin/content/blog/articles/42/edit",
-    );
+    expect(contentAdminHref(renamed)).toBe("/admin/blog/articles");
+    expect(contentCreateHref(renamed)).toBe("/admin/blog/articles/create");
+    expect(contentEditHref(renamed, 42)).toBe("/admin/blog/articles/42/edit");
   });
 
   it("builds the generated form page URLs off the list one", () => {
     const article = widget({ id: "example.article" });
 
-    expect(contentCreateHref(article)).toBe(
-      "/admin/content/example/article/create",
-    );
-    expect(contentEditHref(article, 42)).toBe(
-      "/admin/content/example/article/42/edit",
-    );
+    expect(contentCreateHref(article)).toBe("/admin/example/article/create");
+    expect(contentEditHref(article, 42)).toBe("/admin/example/article/42/edit");
     expect(contentEditHrefTemplate(article)).toBe(
-      `/admin/content/example/article/${CONTENT_EDIT_HREF_PLACEHOLDER}/edit`,
+      `/admin/example/article/${CONTENT_EDIT_HREF_PLACEHOLDER}/edit`,
     );
   });
 

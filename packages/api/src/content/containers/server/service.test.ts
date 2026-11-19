@@ -48,6 +48,7 @@ const row = (
   pluginId: PLUGIN_ID,
   position,
   slug: name.toLowerCase().replace(/ /g, "-"),
+  translations: {},
   updatedAt: CREATED,
   ...overrides,
 });

@@ -6,11 +6,14 @@ import type { ContentContainerPoliciesInput } from "./policies";
 import type {
   ContentContainerAdminInput,
   ContentContainerDefinition,
+  ContentContainerFieldDescriptor,
   ContentContainerFieldMap,
   ContentContainerHierarchyInput,
+  ContentContainerLocalizationInput,
   ContentContainerOrderingInput,
   ContentContainerPublicApiInput,
   ContentContainerSchemas,
+  ResolvedContentContainerLocalization,
 } from "./types";
 
 import { resolveContentAccessScopeInput } from "../access/policy";
@@ -25,6 +28,7 @@ import {
 } from "../const";
 import { ContentEngineError } from "../errors";
 import { scalarFieldConstraintIssue } from "../field-constraints";
+import { isContentLocaleShaped } from "../locale";
 import { contentTypeToPath } from "../registry";
 import {
   contentFieldPatchObject,
@@ -35,17 +39,21 @@ import {
   CONTENT_CONTAINER_ABSOLUTE_MAX_DEPTH,
   CONTENT_CONTAINER_DEFAULT_MAX_DEPTH,
   CONTENT_CONTAINER_FIELD_KINDS,
+  CONTENT_CONTAINER_LOCALIZED_FIELD_KINDS,
   CONTENT_CONTAINER_NAME_MAX_LENGTH,
   CONTENT_CONTAINER_ORDERING_MODES,
   CONTENT_CONTAINER_RESERVED_FIELDS,
   CONTENT_CONTAINER_SLUG_MAX_LENGTH,
 } from "./const";
+import { CONTENT_CONTAINER_ICON_MAX_LENGTH } from "./icon";
 import { resolveContentContainerPolicies } from "./policies";
 
 const fieldKinds: ReadonlySet<string> = new Set(CONTENT_CONTAINER_FIELD_KINDS);
 const reservedFields: readonly string[] = CONTENT_CONTAINER_RESERVED_FIELDS;
 const orderingModes: readonly string[] = CONTENT_CONTAINER_ORDERING_MODES;
 const reservedPublicPaths: readonly string[] = CONTENT_PUBLIC_RESERVED_PATHS;
+const localizedKinds: readonly string[] =
+  CONTENT_CONTAINER_LOCALIZED_FIELD_KINDS;
 
 const fail = (id: string, message: string): never => {
   throw new ContentEngineError(message, { contentTypeId: id });
@@ -76,7 +84,8 @@ const assertKnownKeys = (
 const assertContainerField = (
   id: string,
   name: string,
-  fieldValue: ContentFieldDescriptor,
+  fieldValue: ContentContainerFieldDescriptor,
+  localization: ResolvedContentContainerLocalization,
 ): void => {
   if (!CONTENT_FIELD_NAME_PATTERN.test(name)) {
     fail(
@@ -101,10 +110,20 @@ const assertContainerField = (
     );
   }
 
-  if (fieldValue.localized === true) {
+  if (fieldValue.localized === true && !localization.enabled) {
     fail(
       id,
-      `Field "${name}" is \`localized: true\`. Container fields have one value in every language.`,
+      `Field "${name}" is \`localized: true\`, and the collection has no \`localization\`. Add \`localization: { defaultLocale }\` to translate it.`,
+    );
+  }
+
+  if (
+    fieldValue.localized === true &&
+    !localizedKinds.includes(fieldValue.kind)
+  ) {
+    fail(
+      id,
+      `Field "${name}" is a localized "${fieldValue.kind}" field. Only ${localizedKinds.join(" and ")} container fields can be translated.`,
     );
   }
 
@@ -122,9 +141,48 @@ const assertContainerField = (
     );
   }
 
+  if (fieldValue.kind === "icon") return;
+
   const issue = scalarFieldConstraintIssue(name, fieldValue);
   if (issue) fail(id, issue);
 };
+
+const resolveLocalization = (
+  id: string,
+  localization: ContentContainerLocalizationInput | undefined,
+): ResolvedContentContainerLocalization => {
+  if (localization === undefined) {
+    return { defaultLocale: null, enabled: false };
+  }
+
+  assertKnownKeys(id, "localization", localization, ["defaultLocale"]);
+  const { defaultLocale } = localization;
+  if (
+    typeof defaultLocale !== "string" ||
+    !isContentLocaleShaped(defaultLocale)
+  ) {
+    fail(
+      id,
+      `localization.defaultLocale ${JSON.stringify(defaultLocale)} is not a locale code such as "en" or "pt-BR".`,
+    );
+  }
+
+  return { defaultLocale: defaultLocale.trim(), enabled: true };
+};
+
+const schemaFieldOf = (
+  fieldValue: ContentContainerFieldDescriptor,
+): ContentFieldDescriptor =>
+  fieldValue.kind === "icon"
+    ? {
+        defaultValue: undefined,
+        kind: "text",
+        localized: false,
+        maxLength: CONTENT_CONTAINER_ICON_MAX_LENGTH,
+        nullable: fieldValue.nullable,
+        required: fieldValue.required,
+      }
+    : fieldValue;
 
 const resolveHierarchy = (
   id: string,
@@ -265,14 +323,37 @@ const resolveAdmin = (
 const buildSchemas = (
   fields: ContentContainerFieldMap,
   publicFields: readonly string[],
+  localization: ResolvedContentContainerLocalization,
 ): ContentContainerSchemas => {
-  const fieldMap = fields as ContentFieldMap;
+  const fieldMap: ContentFieldMap = Object.fromEntries(
+    Object.entries(fields).map(([name, fieldValue]) => [
+      name,
+      schemaFieldOf(fieldValue),
+    ]),
+  );
   const metadata = contentFieldValuesObject(fieldMap);
   const metadataPatch = contentFieldPatchObject(fieldMap);
+  const localizedFieldMap: ContentFieldMap = Object.fromEntries(
+    Object.entries(fieldMap).filter(
+      ([, fieldValue]) => fieldValue.localized === true,
+    ),
+  );
   const name = z.string().trim().min(1).max(CONTENT_CONTAINER_NAME_MAX_LENGTH);
   const slug = z.string().trim().min(1).max(CONTENT_CONTAINER_SLUG_MAX_LENGTH);
   const id = z.number().int().positive();
   const position = z.number().int().min(0);
+  const translation = z.strictObject({
+    metadata: contentFieldPatchObject(localizedFieldMap).optional(),
+    name: z.string().trim().max(CONTENT_CONTAINER_NAME_MAX_LENGTH).optional(),
+    slug: z.string().trim().max(CONTENT_CONTAINER_SLUG_MAX_LENGTH).optional(),
+  });
+  const translations: z.ZodRawShape = localization.enabled
+    ? {
+        translations: z
+          .record(z.string().refine(isContentLocaleShaped), translation)
+          .optional(),
+      }
+    : {};
 
   const selectShape = (names: readonly string[]) =>
     z.object(
@@ -300,6 +381,7 @@ const buildSchemas = (
       parentId: id.nullable().optional(),
       position: position.optional(),
       slug: slug.optional(),
+      ...translations,
     }),
     metadata,
     metadataPatch,
@@ -312,6 +394,14 @@ const buildSchemas = (
       ...columns,
       createdAt: z.date(),
       metadata: selectShape(Object.keys(fields)),
+      translations: z.record(
+        z.string(),
+        z.object({
+          metadata: z.record(z.string(), z.unknown()).optional(),
+          name: z.string().optional(),
+          slug: z.string().optional(),
+        }),
+      ),
       updatedAt: z.date(),
     }),
     update: z
@@ -319,6 +409,7 @@ const buildSchemas = (
         metadata: metadataPatch.optional(),
         name: name.optional(),
         slug: slug.optional(),
+        ...translations,
       })
       .refine(value => Object.keys(value).length > 0, {
         message: "Provide at least one value to update.",
@@ -368,6 +459,7 @@ export const defineContentContainer = <
   fields = {} as TFields,
   hierarchy,
   id,
+  localization,
   ordering,
   policies,
   publicApi,
@@ -390,6 +482,13 @@ export const defineContentContainer = <
   fields?: TFields;
   hierarchy?: ContentContainerHierarchyInput;
   id: TId;
+  /**
+   * Translate containers: `name`, `slug` and every `localized: true` text or
+   * textarea field get one value per language, falling back to
+   * `defaultLocale`. Public reads take `?locale=`; a slug in any language
+   * finds its container. Omit it and containers have one value for everyone.
+   */
+  localization?: ContentContainerLocalizationInput;
   ordering?: ContentContainerOrderingInput;
   /**
    * Per-container publishing rules for the content types filed here. Omit it
@@ -420,8 +519,10 @@ export const defineContentContainer = <
     fail(id, "fields is an object of `field.*()` descriptors.");
   }
 
+  const resolvedLocalization = resolveLocalization(id, localization);
+
   for (const [name, fieldValue] of Object.entries(fields)) {
-    assertContainerField(id, name, fieldValue);
+    assertContainerField(id, name, fieldValue, resolvedLocalization);
   }
 
   const resolvedPublicApi = resolvePublicApi(id, fields, publicApi);
@@ -440,10 +541,15 @@ export const defineContentContainer = <
     hierarchy: resolveHierarchy(id, hierarchy),
     id,
     kind: "contentContainer",
+    localization: resolvedLocalization,
     ordering: resolveOrdering(id, ordering),
     policies: resolveContentContainerPolicies(id, policies),
     publicApi: resolvedPublicApi as never,
-    schemas: buildSchemas(fields, resolvedPublicApi.fields),
+    schemas: buildSchemas(
+      fields,
+      resolvedPublicApi.fields,
+      resolvedLocalization,
+    ),
   };
 };
 

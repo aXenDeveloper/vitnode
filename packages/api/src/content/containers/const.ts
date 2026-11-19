@@ -1,6 +1,7 @@
 export const CONTENT_CONTAINER_FIELD_KINDS = [
   "boolean",
   "enum",
+  "icon",
   "number",
   "text",
   "textarea",
@@ -23,6 +24,7 @@ export const CONTENT_CONTAINER_RESERVED_FIELDS = [
   "depth",
   "metadata",
   "pluginId",
+  "translations",
 ] as const;
 
 export const CONTENT_CONTAINER_ORDERING_MODES = [
@@ -45,7 +47,9 @@ export const CONTENT_CONTAINER_ERROR_CODES = [
   "definitionMismatch",
   "hasChildren",
   "hasContent",
+  "invalidIcon",
   "invalidInput",
+  "invalidLocale",
   "invalidMetadata",
   "invalidPolicy",
   "invalidPosition",
@@ -55,6 +59,16 @@ export const CONTENT_CONTAINER_ERROR_CODES = [
   "parentNotFound",
   "slugEmpty",
   "slugTaken",
+] as const;
+
+export const CONTENT_CONTAINER_ICON_UPLOAD_ERROR_CODES = [
+  "forbidden",
+  "invalidFile",
+  "notIconField",
+  "storageUnavailable",
+  "tooLarge",
+  "unprocessable",
+  "wrongType",
 ] as const;
 
 export const CONTENT_CONTAINER_POLICY_CREATE = [
@@ -81,3 +95,8 @@ export const CONTENT_CONTAINER_POLICY_KEYS = [
 export const CONTENT_CONTAINER_POLICY_MAX_MINUTES = 60 * 24 * 365;
 
 export const CONTENT_CONTAINER_TREE_SUFFIX = ":tree";
+
+export const CONTENT_CONTAINER_LOCALIZED_FIELD_KINDS = [
+  "text",
+  "textarea",
+] as const;

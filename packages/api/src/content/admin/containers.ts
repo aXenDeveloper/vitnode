@@ -7,7 +7,7 @@ type ContentContainerLabelSubject = Pick<AnyContentContainerDefinition, "id">;
 
 export const contentContainerAdminHref = (
   definition: Pick<AnyContentContainerDefinition, "admin">,
-): string => `/admin/containers/${definition.admin.path}`;
+): string => `/admin/${definition.admin.path}`;
 
 export const contentContainerI18nKeys = (
   definition: ContentContainerLabelSubject,

@@ -493,16 +493,10 @@ export const routes = defineRoutes([
     search: normalizeActivitySearch,
   }),
 
-  page("/admin/content/*", {
+  page("/admin/:section/*", {
     area: "admin",
     component: lazy(() => import("./pages/admin/content")),
     pendingComponent: TablePendingSkeleton,
     search: contentListRouteSearch,
-  }),
-
-  page("/admin/containers/*", {
-    area: "admin",
-    component: lazy(() => import("./pages/admin/containers")),
-    pendingComponent: TablePendingSkeleton,
   }),
 ]);

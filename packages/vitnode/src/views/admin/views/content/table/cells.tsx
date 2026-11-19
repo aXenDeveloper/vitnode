@@ -22,6 +22,7 @@ import type { ContentColumnSpec } from "@/content/admin/spec";
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
+import { ValueSwap } from "@/components/ui/value-swap";
 import { UserFormat } from "@/components/user-format";
 
 import { useContentContainerOptions } from "../lib/container-field";
@@ -265,13 +266,20 @@ const ContentCellValue = ({
       const published = isContentPublished(value);
 
       return (
-        <Badge variant={published ? "default" : "secondary"}>
-          {published ? (
-            <CircleCheckIcon aria-hidden />
-          ) : (
-            <FileClockIcon aria-hidden />
-          )}
-          {published ? statusLabels.published : statusLabels.draft}
+        <Badge
+          className="duration-200 motion-reduce:transition-none"
+          variant={published ? "default" : "secondary"}
+        >
+          <ValueSwap swapKey={published ? "published" : "draft"}>
+            <span className="flex items-center gap-1">
+              {published ? (
+                <CircleCheckIcon aria-hidden className="size-3" />
+              ) : (
+                <FileClockIcon aria-hidden className="size-3" />
+              )}
+              {published ? statusLabels.published : statusLabels.draft}
+            </span>
+          </ValueSwap>
         </Badge>
       );
     }

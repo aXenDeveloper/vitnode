@@ -1,6 +1,7 @@
+import { parseContentContainerIcon } from "@vitnode/api/content/containers/icon";
 import { Avatar } from "@vitnode/core/components/avatar";
 import { DateFormat } from "@vitnode/core/components/date-format";
-import { EmojiIcon } from "@vitnode/core/components/ui/emoji-icon";
+import { ContainerIcon } from "@vitnode/core/components/ui/container-icon";
 import {
   Empty,
   EmptyContent,
@@ -10,7 +11,6 @@ import {
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
 import { UserFormat } from "@vitnode/core/components/user-format";
-import { parseEmojiIcon } from "@vitnode/core/lib/emoji-icon";
 import { cn } from "cn";
 import { MessagesSquareIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
@@ -79,21 +79,22 @@ export const ForumIcon = ({
   className?: string;
   icon: null | string | undefined;
 }) => {
-  const parsed = parseEmojiIcon(icon);
+  const isImage = parseContentContainerIcon(icon)?.type === "image";
 
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "bg-primary/10 text-primary flex size-10 shrink-0 items-center justify-center rounded-lg",
+        "flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-lg",
+        isImage ? "bg-muted" : "bg-primary/10 text-primary",
         className,
       )}
     >
-      {parsed ? (
-        <EmojiIcon className="size-5" value={parsed} />
-      ) : (
-        <MessagesSquareIcon className="size-5" />
-      )}
+      <ContainerIcon
+        className={isImage ? "size-full rounded-none" : "size-5 text-xl"}
+        fallback={<MessagesSquareIcon className="size-5" />}
+        value={icon}
+      />
     </span>
   );
 };

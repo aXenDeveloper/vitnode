@@ -14,16 +14,31 @@ import type {
 } from "../types";
 import type { ContentContainerUsageCheck } from "./service";
 
+import { checkStaffPermission } from "../../../lib/check-staff-permission";
 import { buildRoute } from "../../../lib/route";
+import { storageUrlOf } from "../../../lib/storage-url";
+import { StorageImageUnprocessableError } from "../../../models/storage";
 import { buildContentAccessAdminRoutes } from "../../access/server/admin-routes";
 import { CONTENT_PERMISSIONS } from "../../const";
-import { CONTENT_CONTAINER_ERROR_CODES } from "../const";
+import {
+  CONTENT_CONTAINER_ERROR_CODES,
+  CONTENT_CONTAINER_ICON_UPLOAD_ERROR_CODES,
+} from "../const";
 import { ContentContainerError } from "../errors";
+import {
+  CONTENT_CONTAINER_ICON_MIME_TYPES,
+  serializeContentContainerIcon,
+} from "../icon";
 import {
   zodContentContainerPolicyOverrides,
   zodEffectiveContentContainerPolicy,
 } from "../policies";
 import { contentContainerAdminStaffPermission } from "../registry";
+import {
+  contentContainerIconFieldNames,
+  contentContainerIconFileMetadata,
+  contentContainerIconFolder,
+} from "./icons";
 import {
   contentContainerInputRefusal,
   createContentContainerService,
@@ -261,6 +276,151 @@ export const buildContentContainerAdminRoutes = <
     },
   });
 
+  const iconFields = contentContainerIconFieldNames(definition);
+  const uploadForm = z.object({
+    file: z.instanceof(File).openapi({ format: "binary", type: "string" }),
+  });
+  const zodIconUpload = z.object({ url: z.string(), value: z.string() });
+  const iconMimeTypes: ReadonlySet<string> = new Set(
+    CONTENT_CONTAINER_ICON_MIME_TYPES,
+  );
+  const zodUploadRefusal = z.object({
+    code: z.enum(CONTENT_CONTAINER_ICON_UPLOAD_ERROR_CODES),
+    message: z.string(),
+  });
+
+  const uploadIcon = buildRoute({
+    pluginId,
+    adminStaffPermission: staffPermission(CONTENT_PERMISSIONS.view),
+    route: {
+      method: "post",
+      path: "/uploads/{field}",
+      description: `Upload an image for one icon field of ${definition.id} (Admin only)`,
+      request: {
+        params: z.object({ field: z.string() }),
+        body: {
+          required: true,
+          content: { "multipart/form-data": { schema: uploadForm } },
+        },
+      },
+      responses: {
+        200: {
+          content: { "application/json": { schema: zodIconUpload } },
+          description: "Image stored; `value` is what the icon field saves",
+        },
+        400: {
+          content: { "application/json": { schema: zodUploadRefusal } },
+          description: "Not an icon field, or the image breaks its rules",
+        },
+        403: {
+          content: { "application/json": { schema: zodUploadRefusal } },
+          description: "Not allowed to create or edit containers",
+        },
+        500: {
+          content: { "application/json": { schema: zodUploadRefusal } },
+          description: "The install cannot store files",
+        },
+      },
+    },
+    handler: async c => {
+      const field = c.req.param("field");
+      const fieldValue = definition.fields[field];
+      if (fieldValue?.kind !== "icon") {
+        return c.json(
+          {
+            code: "notIconField" as const,
+            message: `"${field}" is not an icon field of this collection.`,
+          },
+          400,
+        );
+      }
+
+      const allowed = await Promise.all(
+        [CONTENT_PERMISSIONS.create, CONTENT_PERMISSIONS.edit].map(
+          async permission =>
+            await checkStaffPermission(c, {
+              module: definition.admin.permissionModule,
+              permission,
+              plugin: pluginId,
+              type: "admin",
+            }),
+        ),
+      );
+      if (!allowed.some(Boolean)) {
+        return c.json(
+          {
+            code: "forbidden" as const,
+            message: "You do not have permission to upload icons here.",
+          },
+          403,
+        );
+      }
+
+      const { file } = uploadForm.parse(await c.req.parseBody());
+      if (!iconMimeTypes.has(file.type)) {
+        return c.json(
+          {
+            code: "wrongType" as const,
+            message: `"${file.type || "unknown"}" is not an accepted icon image type.`,
+          },
+          400,
+        );
+      }
+      if (file.size > fieldValue.maxBytes) {
+        return c.json(
+          {
+            code: "tooLarge" as const,
+            message: `The icon image is larger than ${String(fieldValue.maxBytes)} bytes.`,
+          },
+          400,
+        );
+      }
+
+      try {
+        const stored = await c.get("storage").upload({
+          allowedMimeTypes: [...CONTENT_CONTAINER_ICON_MIME_TYPES],
+          file,
+          folder: contentContainerIconFolder({ definition, pluginId }),
+          maxBytes: fieldValue.maxBytes,
+          metadata: contentContainerIconFileMetadata(definition, field),
+          visibility: "public",
+        });
+
+        const url = storageUrlOf(c, stored.key) ?? stored.url;
+
+        return c.json(
+          {
+            url,
+            value: serializeContentContainerIcon({ type: "image", value: url }),
+          },
+          200,
+        );
+      } catch (error) {
+        if (!(error instanceof HTTPException)) throw error;
+
+        if (error.status !== 400) {
+          return c.json(
+            { code: "storageUnavailable" as const, message: error.message },
+            500,
+          );
+        }
+
+        return c.json(
+          {
+            code:
+              error instanceof StorageImageUnprocessableError
+                ? ("unprocessable" as const)
+                : ("invalidFile" as const),
+            message: error.message,
+          },
+          400,
+        );
+      }
+    },
+  });
+
+  const uploads = iconFields.length > 0 ? [uploadIcon] : [];
+
   const access = definition.access.enabled
     ? buildContentAccessAdminRoutes({
         familyId: definition.id,
@@ -273,7 +433,7 @@ export const buildContentContainerAdminRoutes = <
     : [];
 
   if (!definition.policies.enabled) {
-    return [list, create, update, move, remove, ...access];
+    return [list, create, update, move, remove, ...uploads, ...access];
   }
 
   const policies = buildRoute({
@@ -360,6 +520,7 @@ export const buildContentContainerAdminRoutes = <
     remove,
     policies,
     updatePolicies,
+    ...uploads,
     ...access,
   ];
 };

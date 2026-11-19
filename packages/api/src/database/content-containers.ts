@@ -5,6 +5,8 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 
+import type { ContentContainerTranslations } from "../content/containers/types";
+
 import {
   CONTENT_CONTAINER_NAME_MAX_LENGTH,
   CONTENT_CONTAINER_SLUG_MAX_LENGTH,
@@ -25,6 +27,11 @@ export const core_content_containers = camelCase.table.withRLS(
     slug: t.varchar({ length: CONTENT_CONTAINER_SLUG_MAX_LENGTH }).notNull(),
     position: t.integer().notNull().default(0),
     metadata: t.jsonb().$type<Record<string, unknown>>().notNull().default({}),
+    translations: t
+      .jsonb()
+      .$type<ContentContainerTranslations>()
+      .notNull()
+      .default({}),
     policies: t
       .jsonb()
       .$type<Record<string, Record<string, unknown>>>()

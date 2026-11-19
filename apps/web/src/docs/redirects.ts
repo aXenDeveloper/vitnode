@@ -14,6 +14,7 @@ const RENAMED_PAGES: Readonly<Record<string, string>> = {
   'content-engine/relations-and-advanced-modeling': 'content-engine/relations',
   'content-engine/services-and-api': 'content-engine/services',
   'dev/plugins/navigation': 'dev/navigation',
+  'ui/editor-images': 'ui/editor',
 }
 
 export const movedDocsPath = (splat: string): string | undefined => {

@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "5941daf3-1607-4ffb-9ffa-1efff1159e1d",
+  "prevIds": [
+    "20d31aad-bc7f-4e35-b1f6-059bd8899c2b"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_content_containers",
+        "translations"
+      ],
+      "writes": [
+        "s|col|public.core_content_containers.translations",
+        "n|col|public.core_content_containers.translations",
+        "e|col|public.core_content_containers.translations"
+      ],
+      "reads": [
+        "n|tbl|public.core_content_containers",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_containers",
+        "name": "translations",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'{}'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

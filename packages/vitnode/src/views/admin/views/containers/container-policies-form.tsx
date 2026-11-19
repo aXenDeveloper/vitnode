@@ -49,6 +49,7 @@ import type {
   ContentContainerMutationResult,
 } from "./container-request";
 
+import { containerLabel } from "./container-display";
 import {
   contentContainerErrorKey,
   contentContainerPoliciesQuery,
@@ -166,9 +167,12 @@ const PoliciesForm = ({
       entry.sources[key];
     if (!source || source.kind === "fallback") return t("source.fallback");
     if (source.kind === "container") {
-      const name =
-        records.find(record => record.id === source.containerId)?.name ??
-        `#${String(source.containerId)}`;
+      const record = records.find(
+        candidate => candidate.id === source.containerId,
+      );
+      const name = record
+        ? containerLabel(record)
+        : `#${String(source.containerId)}`;
 
       return t("source.container", { name });
     }
@@ -268,7 +272,7 @@ const PoliciesForm = ({
     }
 
     toast.success(t("success"), {
-      description: t("successDesc", { name: container.name }),
+      description: t("successDesc", { name: containerLabel(container) }),
     });
     setIsDirty?.(false);
     setOpen?.(false);
@@ -283,7 +287,7 @@ const PoliciesForm = ({
         <>
           <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 py-5">
             <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-              {t("desc", { name: container.name })}
+              {t("desc", { name: containerLabel(container) })}
             </p>
 
             {report.contentTypes.length === 0 ? (

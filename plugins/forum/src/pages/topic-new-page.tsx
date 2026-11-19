@@ -36,8 +36,8 @@ import {
   type TopicCreateFormSchema,
 } from "./topic-form";
 
-const loadForumOptions = async (queryClient: QueryClient) =>
-  (await queryClient.query(forumsQueryOptions())).map(forum => ({
+const loadForumOptions = async (queryClient: QueryClient, locale: string) =>
+  (await queryClient.query(forumsQueryOptions(locale))).map(forum => ({
     label: `${"— ".repeat(forum.depth - 1)}${forum.name}`,
     value: String(forum.id),
   }));
@@ -51,7 +51,8 @@ const TopicNewBreadcrumb = () => {
 };
 
 export const route = defineRoute<TopicNewData, TopicNewSearch>({
-  load: async ({ context }) => await loadForumOptions(context.queryClient),
+  load: async ({ context }) =>
+    await loadForumOptions(context.queryClient, context.locale),
 
   head: ({ t }) => ({
     description: t("@vitnode/forum.topics.new.desc"),

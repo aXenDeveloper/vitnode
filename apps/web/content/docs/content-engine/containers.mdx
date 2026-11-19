@@ -94,7 +94,7 @@ Every container already has `id`, `parentId`, `name`, `slug`, `position` and `de
 | `admin`     | `{ path?; permissionModule?; navigation? }` | No       | see below                        | The AdminCP screen and its staff permissions                                                    |
 | `policies`  | `{ defaults?; contentTypes? }` \| `false`  | No       | off                              | Per-container publishing rules. See [Publishing rules](/docs/content-engine/container-policies) |
 
-`admin.path` defaults to the id with dots turned into slashes (`newsroom/desks`), so the screen opens at `/admin/containers/newsroom/desks`. `admin.permissionModule` defaults to the snake-cased id (`newsroom_desks`), and `admin.navigation: false` hides the sidebar entry.
+`admin.path` defaults to the id with dots turned into slashes (`newsroom/desks`), so the screen opens at `/admin/newsroom/desks`. It shares that URL space with content types, so it cannot match a content type's `admin.path` or start with `core`. `admin.permissionModule` defaults to the snake-cased id (`newsroom_desks`), and `admin.navigation: false` hides the sidebar entry.
 
 </Step>
 
@@ -271,7 +271,7 @@ The collection itself needs no table, because every definition shares `core_cont
 
 ## Manage containers in the AdminCP
 
-Open **AdminCP → Newsroom → Desks** (`/admin/containers/newsroom/desks`). Staff need the collection's `can_view` permission to see it, and `can_create`, `can_edit` or `can_delete` for each action.
+Open **AdminCP → Newsroom → Desks** (`/admin/newsroom/desks`). Staff need the collection's `can_view` permission to see it, and `can_create`, `can_edit` or `can_delete` for each action.
 
 - **The tree** shows every desk with its children nested below it. Drag a desk to reorder it among its siblings or to drop it inside another desk.
 - **Create and edit** open a sheet with the name, the slug and the collection's own fields. A container created without a slug gets one derived from its name.

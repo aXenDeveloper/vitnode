@@ -15,6 +15,8 @@ import {
 
 import type { AdminContentContainer } from "./container-request";
 
+import { containerLabel } from "./container-display";
+
 export const containerGuideLevels = (depth: number): number[] =>
   Array.from({ length: Math.max(0, depth - 1) }, (_, at) => at + 1);
 
@@ -27,12 +29,15 @@ export interface ContainerSelectOption {
 }
 
 export const containerSelectOptions = (
-  records: readonly Pick<AdminContentContainer, "depth" | "id" | "name">[],
+  records: readonly Pick<
+    AdminContentContainer,
+    "depth" | "id" | "label" | "name"
+  >[],
 ): ContainerSelectOption[] =>
   records.map(record => ({
     depth: record.depth,
     id: record.id,
-    label: record.name,
+    label: containerLabel(record),
   }));
 
 const keyOf = (id: null | number) => (id === null ? NONE : String(id));

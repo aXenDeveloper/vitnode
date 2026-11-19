@@ -28,13 +28,18 @@ import { listContentLanguages } from "./language-resolver";
  */
 export const resolveContentRequestLocale = async (
   c: Context,
-  definition: AnyContentTypeDefinition,
+  definition: {
+    localization: Pick<AnyContentTypeDefinition["localization"], "enabled"> & {
+      defaultLocale: null | string;
+    };
+  },
 ): Promise<
   | null
   | { locale: string; source: ContentLocaleResolution["source"] }
   | { locale: undefined; source: "default" }
 > => {
-  if (!definition.localization.enabled) {
+  const { defaultLocale, enabled } = definition.localization;
+  if (!enabled || defaultLocale === null) {
     return { locale: undefined, source: "default" };
   }
 
@@ -48,7 +53,7 @@ export const resolveContentRequestLocale = async (
     available: languages
       .filter(language => language.isEnabled)
       .map(language => language.locale),
-    defaultLocale: definition.localization.defaultLocale,
+    defaultLocale,
     explicit: c.req.query("locale"),
   });
 };

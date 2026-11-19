@@ -116,7 +116,7 @@ const mount = ({
 const API_ORIGIN = "http://api.test";
 
 aroundEach(async runTest => {
-  await runInStartRequest(`${API_ORIGIN}/admin/content/blog/articles`, runTest);
+  await runInStartRequest(`${API_ORIGIN}/admin/blog/articles`, runTest);
 });
 
 beforeEach(() => {
