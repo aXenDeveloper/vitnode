@@ -80,6 +80,12 @@
           "description": "When a moderator lifts a suspension of your account.",
           "title": "A suspension was lifted",
           "body": "A moderator lifted a suspension of your account. Check your account status to see if anything else still applies."
+        },
+        "reaction_received": {
+          "label": "Reactions to your content",
+          "description": "When someone reacts to something you wrote.",
+          "title": "{count, plural, offset:1 =1 {{name} reacted to your post} =2 {{name} and 1 other person reacted to your post} other {{name} and # others reacted to your post}}",
+          "body": "{title}"
         }
       },
       "email": {

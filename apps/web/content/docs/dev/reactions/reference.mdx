@@ -1,0 +1,108 @@
+---
+title: Reference
+description: Reactions API reference for VitNode - defineReactionTarget options, the reactions content type option, ReactionBar, routes, limits, live channel and events.
+icon: BookText
+---
+
+Exact options, routes and limits of VitNode reactions. For a walkthrough, start with [Reactions](/docs/content-engine/reactions).
+
+## `reactions` on a content type
+
+`defineContentType({ reactions })` from `@vitnode/api/content` takes `true`, `false` or an object. It needs `publicApi`.
+
+| Name         | Type      | Default                        | Description                             |
+| ------------ | --------- | ------------------------------ | --------------------------------------- |
+| `reputation` | `boolean` | `true` when there is an author | Reactions move the author's reputation. |
+
+Any other key throws a `ContentEngineError`. Which reactions exist, who may use them, how many and whether authors may react to their own records are [AdminCP settings](/docs/dev/reactions/manage-reactions).
+
+## `ReactionTargetDefinition`
+
+`defineReactionTarget(definition)` from `@vitnode/api/reactions`. Register the result in `buildApiPlugin({ reactions: { targets } })`. Server-only.
+
+| Name         | Type                                                          | Required | Description                                                                                               |
+| ------------ | ------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------- |
+| `type`       | `string`                                                      | Yes      | Stable id stored with every reaction, lowercase and dot-separated, such as `forum.topic`.                 |
+| `parseId`    | `(value: string) => string \| null`                           | Yes      | Validates a client-sent id; `null` rejects it.                                                            |
+| `access`     | `(c, { ids }) => Promise<Map<string, ReactionTargetAccess>>`  | Yes      | For a batch of ids, as the current visitor: `{ canRead, authorId, locked? }`. Missing ids are unreadable. |
+| `preview`    | `(c, { ids }) => Promise<Map<string, ReactionTargetPreview>>` | No       | `{ title, url, label }` for timelines. Without it, the target's reactions stay out of timelines.          |
+| `reputation` | `boolean`                                                     | No       | Defaults to `true`.                                                                                       |
+
+`deleteReactions(c, { pluginId, type, ids })` removes every reaction of the given items and takes back their reputation. Content Engine types call it when a record is deleted; a daily cron cleans up records removed by a database cascade.
+
+## `ReactionBar`
+
+`ReactionBar` from `@vitnode/core/tanstack/reactions` draws a pill per reaction with its count and a picker. Hovering a pill opens a card with the first five people who gave that reaction and a link to the full list; a pill the viewer can't press opens that list on click.
+
+| Name        | Type                                             | Required | Default | Description                                          |
+| ----------- | ------------------------------------------------ | -------- | ------- | ---------------------------------------------------- |
+| `target`    | `{ pluginId: string; type: string; id: string }` | Yes      | -       | The item; build it with `contentTarget` for content. |
+| `enabled`   | `boolean`                                        | No       | `true`  | `false` skips the read and renders nothing.          |
+| `className` | `string`                                         | No       | -       | Classes for the wrapper.                             |
+
+Counts of 1,000 and more are shortened with [Short Number](/docs/ui/short-number). `useContentComments` takes `reactions: id => ContentTarget` to draw a bar under every comment.
+
+The same module exports:
+
+| Export                         | Use                                                                                                        |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `Reputation`                   | The colored reputation pill: `<Reputation value={n} />`. See [Reputation](/docs/dev/reactions/reputation). |
+| `ReactionIcon`                 | One reaction's emoji, icon or image at icon size.                                                          |
+| `reactionsCatalogQueryOptions` | The catalog and what the viewer's roles allow, for a custom picker.                                        |
+| `useReactionsLive`             | Live counts for a target while an element is on screen, for a custom bar.                                  |
+
+## Routes
+
+Every route is under `/api/@vitnode/core`. Call them with `fetcher({ plugin: "@vitnode/core", module: "reactions", ... })`.
+
+| Method      | Path                             | Description                                                                                                    |
+| ----------- | -------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `GET`       | `/reactions/catalog`             | Enabled reactions with `usable` and `remainingToday` for the viewer, plus `maxPerItem`, `live` and `resetsAt`. |
+| `GET`       | `/reactions`                     | Summaries of up to 100 `ids` of one `pluginId` and `type`: `counts`, `total`, `viewer`, `canReact`, `seq`.     |
+| `PUT`       | `/reactions`                     | Add `reaction` to `{ pluginId, type, id }`. At a per-item limit of 1, it replaces the previous one.            |
+| `DELETE`    | `/reactions`                     | Remove `reaction`, or all of the member's reactions on the item without it.                                    |
+| `GET`       | `/reactions/users`               | Who reacted, newest first, 50 per page, optionally one `reaction`.                                             |
+| `GET`       | `/reactions/reputation/{userId}` | Reputation and reactions received per reaction.                                                                |
+| `GET`/`PUT` | `/reactions/me/settings`         | The member's `showReactionsOnProfile`.                                                                         |
+| `GET`       | `/users/{userId}/timeline`       | What the member wrote and the reactions they gave, merged, newest first.                                       |
+
+AdminCP routes live under `/admin/reactions`: list, `/create`, `/{id}`, `/{id}/impact`, `/reorder`, `/upload`, `/recount` and `/roles/{roleId}`. They need `reactions:can_view` or `reactions:can_manage`; role settings need `roles:can_view` or `roles:can_edit`.
+
+### Errors of `PUT /reactions`
+
+| Status | `error`                               | Cause                                                                       |
+| ------ | ------------------------------------- | --------------------------------------------------------------------------- |
+| `401`  | `sign_in`                             | A guest.                                                                    |
+| `403`  | `reacting_disabled`                   | No role of the member can react.                                            |
+| `403`  | `reaction_not_allowed`                | No role of the member may use this reaction.                                |
+| `403`  | `self_reaction`, `locked`             | The member's own item while none of their roles allows reacting to own content, or a locked item.                |
+| `404`  | `not_found`                           | Unknown type, bad id, disabled reaction, or an item the member cannot read. |
+| `409`  | `item_limit`                          | The member reached the per-item limit (2 or more).                          |
+| `429`  | `daily_limit`, `reaction_daily_limit` | A daily limit is used up; `resetsAt` is the member's next midnight.         |
+
+## Limits
+
+| Limit                             | Value                                               |
+| --------------------------------- | --------------------------------------------------- |
+| Reactions in the catalog          | 50                                                  |
+| Points per reaction               | -100 to 100                                         |
+| Reactions per item, per role      | 1 to 50, or unlimited                               |
+| Uploaded image                    | 512 KB, scaled to fit 256x256; PNG, JPEG, WebP, GIF |
+| Targets per summary request       | 100                                                 |
+| Live subscriptions per connection | 200                                                 |
+
+## Live channel
+
+`reactionsLiveChannel` from `@vitnode/api/lib/reactions/live/protocol` runs on the shared [WebSocket](/docs/dev/websocket). The browser joins one room per item on screen with `{ type: "join", clientId, pluginId, targetType, ids }`; the server checks `access` for the whole batch and answers `joined` with the rooms it refused. Each write sends `{ type: "counts", room, counts, total, seq }`; drop messages with a lower `seq` than you have. Memberships are checked again every minute, and a deleted item sends `revoked`. `ReactionBar` does all of this for you.
+
+## Events
+
+| Event                      | Payload                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------ |
+| `reaction.added`           | `{ pluginId, targetType, targetId, targetAuthorId, reaction, points, userId }` |
+| `reaction.removed`         | Same as `reaction.added`.                                                      |
+| `reaction.changed`         | Same, plus `previousReaction`, when a new pick replaced the old one.           |
+| `reputation.changed`       | `{ userId, delta, total, reason: "reaction" \| "recount" }`                    |
+| `reaction.catalog_changed` | `{ action: "created" \| "updated" \| "deleted" \| "reordered", reactionId }`   |
+
+Import the definitions from `@vitnode/api/events/reactions`.

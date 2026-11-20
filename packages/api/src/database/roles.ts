@@ -29,6 +29,12 @@ export const core_roles = camelCase.table.withRLS(
     editOwnContentMinutes: t.integer(),
     allowDeleteOwnContent: t.boolean().notNull().default(false),
     allowHideOwnContent: t.boolean().notNull().default(false),
+    allowReact: t.boolean().notNull().default(true),
+    allowReactOwnContent: t.boolean().notNull().default(true),
+    // Different reactions one member gives one item; null = unlimited.
+    maxReactionsPerItem: t.integer().default(1),
+    // Reactions per day over every reaction; null = unlimited.
+    reactionsPerDay: t.integer(),
   }),
   t => [index("core_roles_updated_at_id_idx").on(t.updatedAt, t.id)],
 );

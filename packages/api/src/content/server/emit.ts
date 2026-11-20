@@ -26,9 +26,11 @@ import type { AnyContentTypeDefinition } from "../types";
 import type { ContentPublicState } from "./page-cache";
 
 import { EventPayloadValidationError } from "../../lib/event-definition";
+import { deleteReactions } from "../../lib/reactions/service";
 import { followContentSubmissionContainer } from "../approvals/server/follow-container";
 import { contentContainerFieldOf } from "../containers/association";
 import { contentEventDefinitionOf } from "../event-definitions";
+import { contentIdKey } from "../ids";
 import { invalidateContentPages } from "./page-cache";
 import { publishContentRefresh } from "./refresh/publish";
 
@@ -153,6 +155,21 @@ export const emitContentEvent = async (
         .get("log")
         ?.error(
           `[content-approvals] ${definition.id}: pending submissions could not follow the record to its new container (${error instanceof Error ? error.message : String(error)}).`,
+        );
+    });
+  }
+
+  // A deleted record takes its reactions, and the reputation they gave, along.
+  if (action === "deleted" && definition.reactions.enabled) {
+    await deleteReactions(c, {
+      ids: [contentIdKey(payload.contentId)],
+      pluginId: options?.pluginId ?? event.pluginId,
+      type: definition.id,
+    }).catch(async (error: unknown) => {
+      await c
+        .get("log")
+        ?.error(
+          `[reactions] ${definition.id}: reactions of a deleted record were not removed (${error instanceof Error ? error.message : String(error)}). The daily cleanup will.`,
         );
     });
   }

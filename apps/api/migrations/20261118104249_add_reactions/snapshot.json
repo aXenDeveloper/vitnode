@@ -1,0 +1,1700 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "54fa0a8d-973a-40d6-bd75-d5c696113c4d",
+  "prevIds": [
+    "20d31aad-bc7f-4e35-b1f6-059bd8899c2b"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_sequence",
+      "statementTarget": [
+        "sequence",
+        "public",
+        "core_reactions_counts_version_seq"
+      ],
+      "writes": [
+        "s|seq|public.core_reactions_counts_version_seq",
+        "n|seq|public.core_reactions_counts_version_seq",
+        "e|seq|public.core_reactions_counts_version_seq",
+        "n|rel|public.core_reactions_counts_version_seq"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions"
+      ],
+      "writes": [
+        "s|tbl|public.core_reactions",
+        "n|tbl|public.core_reactions",
+        "e|tbl|public.core_reactions",
+        "n|rel|public.core_reactions",
+        "n|type|public.core_reactions",
+        "n|rel|public.core_reactions_pkey",
+        "n|rel|public.core_reactions_code_key"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions_counts"
+      ],
+      "writes": [
+        "s|tbl|public.core_reactions_counts",
+        "n|tbl|public.core_reactions_counts",
+        "e|tbl|public.core_reactions_counts",
+        "n|rel|public.core_reactions_counts",
+        "n|type|public.core_reactions_counts",
+        "n|rel|public.core_reactions_counts_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions_entries"
+      ],
+      "writes": [
+        "s|tbl|public.core_reactions_entries",
+        "n|tbl|public.core_reactions_entries",
+        "e|tbl|public.core_reactions_entries",
+        "n|rel|public.core_reactions_entries",
+        "n|type|public.core_reactions_entries",
+        "n|rel|public.core_reactions_entries_pkey",
+        "n|rel|public.core_reactions_entries_unique"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions_roles"
+      ],
+      "writes": [
+        "s|tbl|public.core_reactions_roles",
+        "n|tbl|public.core_reactions_roles",
+        "e|tbl|public.core_reactions_roles",
+        "n|rel|public.core_reactions_roles",
+        "n|type|public.core_reactions_roles",
+        "n|rel|public.core_reactions_roles_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_roles",
+        "allowReact"
+      ],
+      "writes": [
+        "s|col|public.core_roles.allowReact",
+        "n|col|public.core_roles.allowReact",
+        "e|col|public.core_roles.allowReact"
+      ],
+      "reads": [
+        "n|tbl|public.core_roles",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_roles",
+        "maxReactionsPerItem"
+      ],
+      "writes": [
+        "s|col|public.core_roles.maxReactionsPerItem",
+        "n|col|public.core_roles.maxReactionsPerItem",
+        "e|col|public.core_roles.maxReactionsPerItem"
+      ],
+      "reads": [
+        "n|tbl|public.core_roles",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_roles",
+        "reactionsPerDay"
+      ],
+      "writes": [
+        "s|col|public.core_roles.reactionsPerDay",
+        "n|col|public.core_roles.reactionsPerDay",
+        "e|col|public.core_roles.reactionsPerDay"
+      ],
+      "reads": [
+        "n|tbl|public.core_roles",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_users",
+        "reputation"
+      ],
+      "writes": [
+        "s|col|public.core_users.reputation",
+        "n|col|public.core_users.reputation",
+        "e|col|public.core_users.reputation"
+      ],
+      "reads": [
+        "n|tbl|public.core_users",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_users",
+        "showReactionsOnProfile"
+      ],
+      "writes": [
+        "s|col|public.core_users.showReactionsOnProfile",
+        "n|col|public.core_users.showReactionsOnProfile",
+        "e|col|public.core_users.showReactionsOnProfile"
+      ],
+      "reads": [
+        "n|tbl|public.core_users",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_reactions",
+        "core_reactions_position_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_reactions_position_idx",
+        "n|idx|public.core_reactions_position_idx",
+        "e|idx|public.core_reactions_position_idx",
+        "n|rel|public.core_reactions_position_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions",
+        "n|sch|public",
+        "n|col|public.core_reactions.position",
+        "n|col|public.core_reactions.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_reactions_counts",
+        "core_reactions_counts_reaction_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_reactions_counts_reaction_idx",
+        "n|idx|public.core_reactions_counts_reaction_idx",
+        "e|idx|public.core_reactions_counts_reaction_idx",
+        "n|rel|public.core_reactions_counts_reaction_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_counts",
+        "n|sch|public",
+        "n|col|public.core_reactions_counts.reactionId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_reactions_entries",
+        "core_reactions_entries_user_timeline_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_reactions_entries_user_timeline_idx",
+        "n|idx|public.core_reactions_entries_user_timeline_idx",
+        "e|idx|public.core_reactions_entries_user_timeline_idx",
+        "n|rel|public.core_reactions_entries_user_timeline_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_entries",
+        "n|sch|public",
+        "n|col|public.core_reactions_entries.userId",
+        "n|col|public.core_reactions_entries.createdAt",
+        "n|col|public.core_reactions_entries.id"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_reactions_entries",
+        "core_reactions_entries_user_reaction_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_reactions_entries_user_reaction_idx",
+        "n|idx|public.core_reactions_entries_user_reaction_idx",
+        "e|idx|public.core_reactions_entries_user_reaction_idx",
+        "n|rel|public.core_reactions_entries_user_reaction_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_entries",
+        "n|sch|public",
+        "n|col|public.core_reactions_entries.userId",
+        "n|col|public.core_reactions_entries.reactionId",
+        "n|col|public.core_reactions_entries.createdAt"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_reactions_entries",
+        "core_reactions_entries_target_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_reactions_entries_target_idx",
+        "n|idx|public.core_reactions_entries_target_idx",
+        "e|idx|public.core_reactions_entries_target_idx",
+        "n|rel|public.core_reactions_entries_target_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_entries",
+        "n|sch|public",
+        "n|col|public.core_reactions_entries.pluginId",
+        "n|col|public.core_reactions_entries.targetType",
+        "n|col|public.core_reactions_entries.targetId",
+        "n|col|public.core_reactions_entries.reactionId",
+        "n|col|public.core_reactions_entries.createdAt"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_reactions_entries",
+        "core_reactions_entries_author_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_reactions_entries_author_idx",
+        "n|idx|public.core_reactions_entries_author_idx",
+        "e|idx|public.core_reactions_entries_author_idx",
+        "n|rel|public.core_reactions_entries_author_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_entries",
+        "n|sch|public",
+        "n|col|public.core_reactions_entries.targetAuthorId",
+        "n|col|public.core_reactions_entries.reactionId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_reactions_entries",
+        "core_reactions_entries_reaction_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_reactions_entries_reaction_idx",
+        "n|idx|public.core_reactions_entries_reaction_idx",
+        "e|idx|public.core_reactions_entries_reaction_idx",
+        "n|rel|public.core_reactions_entries_reaction_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_entries",
+        "n|sch|public",
+        "n|col|public.core_reactions_entries.reactionId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_reactions_roles",
+        "core_reactions_roles_role_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_reactions_roles_role_id_idx",
+        "n|idx|public.core_reactions_roles_role_id_idx",
+        "e|idx|public.core_reactions_roles_role_id_idx",
+        "n|rel|public.core_reactions_roles_role_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_roles",
+        "n|sch|public",
+        "n|col|public.core_reactions_roles.roleId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_users",
+        "core_users_reputation_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_users_reputation_idx",
+        "n|idx|public.core_users_reputation_idx",
+        "e|idx|public.core_users_reputation_idx",
+        "n|rel|public.core_users_reputation_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_users.reputation"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions"
+      ],
+      "writes": [
+        "s|fk|public.core_reactions.core_reactions_fileId_core_files_id_fkey",
+        "n|fk|public.core_reactions.core_reactions_fileId_core_files_id_fkey",
+        "e|fk|public.core_reactions.core_reactions_fileId_core_files_id_fkey",
+        "n|con|public.core_reactions.core_reactions_fileId_core_files_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions",
+        "n|sch|public",
+        "n|tbl|public.core_files",
+        "n|sch|public",
+        "n|col|public.core_reactions.fileId",
+        "n|col|public.core_files.id",
+        "e|uniqueness|public.core_files.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions"
+      ],
+      "writes": [
+        "s|fk|public.core_reactions.core_reactions_posterFileId_core_files_id_fkey",
+        "n|fk|public.core_reactions.core_reactions_posterFileId_core_files_id_fkey",
+        "e|fk|public.core_reactions.core_reactions_posterFileId_core_files_id_fkey",
+        "n|con|public.core_reactions.core_reactions_posterFileId_core_files_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions",
+        "n|sch|public",
+        "n|tbl|public.core_files",
+        "n|sch|public",
+        "n|col|public.core_reactions.posterFileId",
+        "n|col|public.core_files.id",
+        "e|uniqueness|public.core_files.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions_counts"
+      ],
+      "writes": [
+        "s|fk|public.core_reactions_counts.core_reactions_counts_reactionId_core_reactions_id_fkey",
+        "n|fk|public.core_reactions_counts.core_reactions_counts_reactionId_core_reactions_id_fkey",
+        "e|fk|public.core_reactions_counts.core_reactions_counts_reactionId_core_reactions_id_fkey",
+        "n|con|public.core_reactions_counts.core_reactions_counts_reactionId_core_reactions_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_counts",
+        "n|sch|public",
+        "n|tbl|public.core_reactions",
+        "n|sch|public",
+        "n|col|public.core_reactions_counts.reactionId",
+        "n|col|public.core_reactions.id",
+        "e|uniqueness|public.core_reactions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions_entries"
+      ],
+      "writes": [
+        "s|fk|public.core_reactions_entries.core_reactions_entries_reactionId_core_reactions_id_fkey",
+        "n|fk|public.core_reactions_entries.core_reactions_entries_reactionId_core_reactions_id_fkey",
+        "e|fk|public.core_reactions_entries.core_reactions_entries_reactionId_core_reactions_id_fkey",
+        "n|con|public.core_reactions_entries.core_reactions_entries_reactionId_core_reactions_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_entries",
+        "n|sch|public",
+        "n|tbl|public.core_reactions",
+        "n|sch|public",
+        "n|col|public.core_reactions_entries.reactionId",
+        "n|col|public.core_reactions.id",
+        "e|uniqueness|public.core_reactions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions_entries"
+      ],
+      "writes": [
+        "s|fk|public.core_reactions_entries.core_reactions_entries_userId_core_users_id_fkey",
+        "n|fk|public.core_reactions_entries.core_reactions_entries_userId_core_users_id_fkey",
+        "e|fk|public.core_reactions_entries.core_reactions_entries_userId_core_users_id_fkey",
+        "n|con|public.core_reactions_entries.core_reactions_entries_userId_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_entries",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_reactions_entries.userId",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions_entries"
+      ],
+      "writes": [
+        "s|fk|public.core_reactions_entries.core_reactions_entries_targetAuthorId_core_users_id_fkey",
+        "n|fk|public.core_reactions_entries.core_reactions_entries_targetAuthorId_core_users_id_fkey",
+        "e|fk|public.core_reactions_entries.core_reactions_entries_targetAuthorId_core_users_id_fkey",
+        "n|con|public.core_reactions_entries.core_reactions_entries_targetAuthorId_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_entries",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_reactions_entries.targetAuthorId",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions_roles"
+      ],
+      "writes": [
+        "s|fk|public.core_reactions_roles.core_reactions_roles_reactionId_core_reactions_id_fkey",
+        "n|fk|public.core_reactions_roles.core_reactions_roles_reactionId_core_reactions_id_fkey",
+        "e|fk|public.core_reactions_roles.core_reactions_roles_reactionId_core_reactions_id_fkey",
+        "n|con|public.core_reactions_roles.core_reactions_roles_reactionId_core_reactions_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_roles",
+        "n|sch|public",
+        "n|tbl|public.core_reactions",
+        "n|sch|public",
+        "n|col|public.core_reactions_roles.reactionId",
+        "n|col|public.core_reactions.id",
+        "e|uniqueness|public.core_reactions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_reactions_roles"
+      ],
+      "writes": [
+        "s|fk|public.core_reactions_roles.core_reactions_roles_roleId_core_roles_id_fkey",
+        "n|fk|public.core_reactions_roles.core_reactions_roles_roleId_core_roles_id_fkey",
+        "e|fk|public.core_reactions_roles.core_reactions_roles_roleId_core_roles_id_fkey",
+        "n|con|public.core_reactions_roles.core_reactions_roles_roleId_core_roles_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_reactions_roles",
+        "n|sch|public",
+        "n|tbl|public.core_roles",
+        "n|sch|public",
+        "n|col|public.core_reactions_roles.roleId",
+        "n|col|public.core_roles.id",
+        "e|uniqueness|public.core_roles.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_reactions",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_reactions_counts",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_reactions_entries",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_reactions_roles",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "code",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "kind",
+        "type": "varchar(10)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "icon",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "fileId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "posterFileId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "points",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "allRoles",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "position",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "createdAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "updatedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_counts",
+        "name": "pluginId",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_counts",
+        "name": "targetType",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_counts",
+        "name": "targetId",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_counts",
+        "name": "reactionId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_counts",
+        "name": "count",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_counts",
+        "name": "version",
+        "type": "bigint",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "pluginId",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "targetType",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "targetId",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "reactionId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "userId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "targetAuthorId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "createdAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_roles",
+        "name": "reactionId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_roles",
+        "name": "roleId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_roles",
+        "name": "dailyLimit",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_roles",
+        "name": "allowReact",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_roles",
+        "name": "maxReactionsPerItem",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_roles",
+        "name": "reactionsPerDay",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users",
+        "name": "reputation",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users",
+        "name": "showReactionsOnProfile",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "core_reactions_position_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "position",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_counts",
+        "name": "core_reactions_counts_reaction_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "reactionId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "core_reactions_entries_user_timeline_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "userId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "createdAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "core_reactions_entries_user_reaction_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "userId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "reactionId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "createdAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "core_reactions_entries_target_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "pluginId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "targetType",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "targetId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "reactionId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "createdAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "core_reactions_entries_author_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "targetAuthorId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "reactionId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "core_reactions_entries_reaction_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "reactionId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_roles",
+        "name": "core_reactions_roles_role_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "roleId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users",
+        "name": "core_users_reputation_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "reputation",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "core_reactions_fileId_core_files_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "fileId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_files",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "RESTRICT",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "core_reactions_posterFileId_core_files_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "posterFileId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_files",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_counts",
+        "name": "core_reactions_counts_reactionId_core_reactions_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "reactionId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_reactions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "core_reactions_entries_reactionId_core_reactions_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "reactionId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_reactions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "core_reactions_entries_userId_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "userId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "core_reactions_entries_targetAuthorId_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "targetAuthorId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_roles",
+        "name": "core_reactions_roles_reactionId_core_reactions_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "reactionId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_reactions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_roles",
+        "name": "core_reactions_roles_roleId_core_roles_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "roleId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_roles",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_counts",
+        "name": "core_reactions_counts_pkey",
+        "columns": [
+          "pluginId",
+          "targetType",
+          "targetId",
+          "reactionId"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_roles",
+        "name": "core_reactions_roles_pkey",
+        "columns": [
+          "reactionId",
+          "roleId"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "core_reactions_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "core_reactions_entries_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions_entries",
+        "name": "core_reactions_entries_unique",
+        "nameExplicit": true,
+        "columns": [
+          "pluginId",
+          "targetType",
+          "targetId",
+          "userId",
+          "reactionId"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_reactions",
+        "name": "core_reactions_code_key",
+        "nameExplicit": false,
+        "columns": [
+          "code"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_reactions_counts_version_seq",
+        "incrementBy": "1",
+        "minValue": "1",
+        "maxValue": "9223372036854775807",
+        "startWith": "1",
+        "cacheSize": 1,
+        "cycle": false,
+        "entityType": "sequences"
+      }
+    }
+  ]
+}

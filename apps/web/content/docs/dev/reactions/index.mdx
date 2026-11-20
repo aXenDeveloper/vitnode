@@ -1,0 +1,24 @@
+---
+title: Reactions
+description: How VitNode reactions, reputation and live counts fit together, and which guide to follow for content, custom items and the AdminCP.
+icon: SmilePlus
+---
+
+Reactions let members respond to posts, comments and anything else your plugin stores with an emoji, a Lucide icon or a custom image. Each reaction is worth reputation points to the author, and counts update live while the item is on screen.
+
+| You want to                                             | Guide                                                                                 |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Add reactions to Content Engine records or comments     | [Reactions](/docs/content-engine/reactions), with `reactions: true` and `ReactionBar` |
+| Add reactions to your own plugin's items                | [Custom targets](/docs/dev/reactions/custom-targets) with `defineReactionTarget`      |
+| Choose the reactions, their points and who can use them | [Manage reactions](/docs/dev/reactions/manage-reactions) in the AdminCP               |
+| Understand and show reputation                          | [Reputation](/docs/dev/reactions/reputation)                                          |
+| Look up routes, options, limits and events              | [Reference](/docs/dev/reactions/reference)                                            |
+
+## How the pieces fit
+
+- **Targets.** Anything members react to is a target: `{ pluginId, type, id }`. A content type with `reactions` registers its target on its own; other items register one with `defineReactionTarget`. The same `ReactionBar` works for both.
+- **Catalog.** Admins manage the reactions in **AdminCP → Users → Reactions**. The catalog is shared by every target.
+- **Roles.** Each role decides whether its members can react, whether they may react to their own posts, how many different reactions they give one item (1 by default, so a new pick replaces the old one), how many a day in total and how many of each reaction.
+- **Reputation.** The target's author collects each reaction's points, which can be negative. Changing a reaction's points applies to past reactions too.
+- **Live counts.** With the [WebSocket](/docs/dev/websocket) running, every reaction pushes the new counts to everyone who has the item on screen. Without it, reactions still work over HTTP.
+- **Timeline and notifications.** Reactions a member gives appear in their profile timeline unless they turn off **Show my reactions on my profile** in **Settings → Overview**. Authors get a **Reactions to your content** notification, grouped per item and day.

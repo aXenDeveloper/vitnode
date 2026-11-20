@@ -73,6 +73,7 @@ import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
 import type { PaymentProviderApiPlugin } from "../lib/payments/provider";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { QueueTaskConfig } from "../lib/queue";
+import type { ReactionsRegistry } from "../lib/reactions/targets";
 import type { UpdateComponent } from "../lib/updates/components";
 import type { WebSocketConfig } from "../lib/websocket";
 import type { EventsApiPlugin } from "../models/events";
@@ -104,6 +105,7 @@ import { createNotificationRegistry } from "../lib/notifications/registry";
 import { resolvePasskeysConfig } from "../lib/passkey-config";
 import { validatePaymentProviders } from "../lib/payments/provider";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
+import { validateReactionsRegistry } from "../lib/reactions/targets";
 import { collectUpdateComponents } from "../lib/updates/components";
 import { resolveUpdatesConfig } from "../lib/updates/config";
 
@@ -264,6 +266,8 @@ export interface EnvVariablesVitNode {
     personalInformationFields: PersonalInformationFields;
     plugins: { id: string }[];
     queue: QueueTaskConfig[];
+    /** Every reaction target: custom ones and one per content type with `reactions`. */
+    reactions: ReactionsRegistry;
     search: { adapter: SearchProviderApiPlugin };
     searchIndexers: SearchIndexerConfig[];
     storage?: VitNodeApiConfig["storage"];
@@ -657,6 +661,15 @@ export const globalMiddleware = ({
     ),
   });
 
+  const reactionsMetadata = validateReactionsRegistry(
+    plugins.flatMap(plugin =>
+      (plugin.reactions?.targets ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  );
+
   // Everything in `core` but the two values below is fixed once the plugins are
   // in, so it is built once here - adapters, nested config objects and all.
   const staticCore: Omit<CoreVariables, "contentPreviewSecret" | "cronSecret"> =
@@ -708,6 +721,7 @@ export const globalMiddleware = ({
       permissionStaff: permissionStaffMetadata,
       moderation: moderationMetadata,
       notifications: notificationsMetadata,
+      reactions: reactionsMetadata,
       notificationWorkers,
       payments: paymentsMetadata,
       contentContainers: contentContainersMetadata,

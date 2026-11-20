@@ -28,6 +28,7 @@ export const commentContentType = defineContentType({
   publication: true,
   visibility: true,
   reports: { titleField: "body", snapshotFields: ["body"] },
+  reactions: true,
 
   publicApi: {
     path: "article-comments",

@@ -31,6 +31,7 @@ import {
   withContentPermissions,
 } from "@/content/registry";
 import { contentDefinitionOf } from "@/content/server/model";
+import { contentReactionTarget } from "@/content/server/reaction-target";
 import { contentReportTarget } from "@/content/server/report-target";
 import { CONFIG } from "@/lib/config";
 import { assertPluginManifest } from "@/lib/plugin-manifest";
@@ -47,6 +48,10 @@ import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
 import type { AnyNotificationTypeDefinition } from "./notifications/registry";
 import type { PermissionStaffConfig } from "./permission-staff";
 import type { QueueTaskConfig } from "./queue";
+import type {
+  ReactionsPluginConfig,
+  ReactionTargetDefinition,
+} from "./reactions/targets";
 import type { WebSocketConfig } from "./websocket";
 
 import { validateSearchIndexers } from "../models/search";
@@ -115,6 +120,8 @@ export interface BuildPluginApiReturn<
   publicContentTypes?: AnyContentTypeDefinition[];
   /** Each task keeps its own `pluginId`, which always equals the plugin's. */
   queueTasks?: QueueTaskConfig[];
+  /** Declared reaction targets plus one per content model with reactions enabled. */
+  reactions?: Required<ReactionsPluginConfig>;
   searchIndexers?: SearchIndexer[];
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
 }
@@ -181,6 +188,7 @@ export function buildApiPlugin<
   modules = [] as unknown as Modules,
   notificationTypes,
   permissionStaff,
+  reactions,
   searchIndexers,
 }: {
   /**
@@ -233,6 +241,8 @@ export function buildApiPlugin<
    * object. Must be declared for this plugin's manifest.
    */
   permissionStaff?: Pick<DefinedStaffPermissions<P>, "config" | "pluginId">;
+  /** Reaction targets beyond those content models add (`reactions: true`). */
+  reactions?: ReactionsPluginConfig;
   /** Search indexers in addition to those modules declare. */
   searchIndexers?: SearchIndexer[];
 }): BuildPluginApiReturn<P, Modules> {
@@ -386,6 +396,13 @@ export function buildApiPlugin<
       .map(model => contentReportTarget(model, pluginId)),
   ];
 
+  const reactionTargets: ReactionTargetDefinition[] = [
+    ...(reactions?.targets ?? []),
+    ...contentModels
+      .filter(model => contentDefinitionOf(model).reactions.enabled)
+      .map(model => contentReactionTarget(model, pluginId)),
+  ];
+
   return {
     pluginId,
     aiActions,
@@ -423,6 +440,7 @@ export function buildApiPlugin<
       reportTargets,
       new Set(Object.keys(permissionStaff?.config.moderator ?? {})),
     ),
+    reactions: { targets: reactionTargets },
     moderation: {
       reportTargets,
       scopes: [

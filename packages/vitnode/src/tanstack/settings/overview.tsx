@@ -36,6 +36,7 @@ import {
 } from "@/views/auth/settings/overview/personal-update";
 import { PrivacySettings } from "@/views/auth/settings/overview/privacy-settings";
 import { updatePrivacyInBrowser } from "@/views/auth/settings/overview/privacy-update";
+import { ReactionPrivacySetting } from "@/views/auth/settings/overview/reaction-privacy-setting";
 import { updateTimeZoneInBrowser } from "@/views/auth/settings/overview/time-zone-update";
 import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
 import { PRESENCE_QUERY_ROOT } from "@/views/presence/presence-query";
@@ -168,11 +169,14 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
       onUpdate={onUpdate}
       personalFields={policy.fields}
       privacy={
-        <PrivacySettings
-          hideOnlineStatus={session.user.hideOnlineStatus}
-          onUpdate={onPrivacyUpdate}
-          policy={policy.browseAnonymously}
-        />
+        <>
+          <PrivacySettings
+            hideOnlineStatus={session.user.hideOnlineStatus}
+            onUpdate={onPrivacyUpdate}
+            policy={policy.browseAnonymously}
+          />
+          <ReactionPrivacySetting />
+        </>
       }
       user={{
         ...profile,

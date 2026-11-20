@@ -29,6 +29,7 @@ import type {
   ContentPublicWritableField,
   ContentPublicWriteInput,
   ContentPublicWriteResolved,
+  ContentReactionsInput,
   ContentReportsInput,
   ContentSchedulingEnabled,
   ContentSearchAuthorField,
@@ -78,6 +79,7 @@ import {
 } from "./define-lifecycle";
 import { resolvePublicApi } from "./define-public-api";
 import { resolvePublicWrite } from "./define-public-write";
+import { resolveReactions } from "./define-reactions";
 import { resolveReports } from "./define-reports";
 import { resolveSearch } from "./define-search";
 import {
@@ -318,6 +320,7 @@ export const defineContentType = <
   publicApi,
   publicWrite,
   publication,
+  reactions,
   reports,
   search,
   tableName,
@@ -437,6 +440,13 @@ export const defineContentType = <
    * and `update.own` to `true`. Not available on localized content types.
    */
   publicWrite?: TPublicWrite;
+  /**
+   * Lets members react to records (and earn their authors reputation). Needs
+   * `publicApi`. Which reactions exist, who may use them, how many per item
+   * and how many a day are AdminCP settings, not options here.
+   */
+  reactions?: ContentReactionsInput;
+
   /**
    * Lets users report records to moderators. Needs `publicApi`. `true` uses
    * `admin.titleField` (when public) as the report title and snapshots the
@@ -747,6 +757,11 @@ export const defineContentType = <
     Object.keys(localizedFields).length > 0,
   );
 
+  const resolvedReactions = resolveReactions(id, reactions, {
+    authorField: resolvedSearch.authorField ?? resolvedPublicWrite.ownerField,
+    publicApi: resolvedPublicApi,
+  });
+
   const resolvedDuplication = resolveDuplication(
     id,
     duplication,
@@ -802,6 +817,7 @@ export const defineContentType = <
     publication: {
       enabled: publicationEnabled as TPublication,
     },
+    reactions: resolvedReactions,
     reports: resolvedReports,
     thread: resolvedThread,
     publicApi: resolvedPublicApi as ResolvedContentPublicApiConfig<

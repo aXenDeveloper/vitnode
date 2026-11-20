@@ -22,6 +22,8 @@ export interface ContentPublicPerson {
   name: string;
   /** The profile URL segment: `/users/{nameCode}`. */
   nameCode: string;
+  /** Points from reactions to the member's content; can be negative. */
+  reputation?: number;
   /** The role's name color and prefix icon, both optional. */
   role: { color: null | string; prefix: null | string };
 }
@@ -35,6 +37,7 @@ export const zodContentPublicPerson = z.object({
   id: z.number(),
   name: z.string(),
   nameCode: z.string(),
+  reputation: z.number().int().optional(),
   role: z.object({
     color: z.string().nullable(),
     prefix: z.string().nullable(),

@@ -183,6 +183,12 @@ export interface ContentCommentsConfig<
    */
   queryKey: QueryKey;
   /**
+   * The reacted-to record for the reaction bar - `contentTarget(manifest.id,
+   * commentContentType, id)` from `@vitnode/core/content`. Shows only where
+   * the server answers `canReact` (the content type has `reactions`).
+   */
+  reactions?: (id: ContentCommentIdOf<R>) => ContentTarget;
+  /**
    * Validates each loaded comment's public record, for custom rendering that
    * reads its fields: the thread route types records loosely, so this is
    * what gives `TRecord` its shape. A record that does not match fails the
@@ -352,6 +358,8 @@ export interface ContentCommentsController<
     delete: boolean;
     edit: boolean;
     hide: boolean;
+    /** A reaction bar under each comment, from `reactions`. */
+    reactions: boolean;
     replies: boolean;
     report: boolean;
     /** Warning authors reuses `report`'s target, so it is on whenever `report` is. */
@@ -388,6 +396,8 @@ export interface ContentCommentsController<
   loadMore: () => Promise<boolean>;
   /** The visitor's permissions for one comment, all `false` until known or after a failure. */
   permissionsOf: (id: TId) => ContentPermissions;
+  /** The reacted-to target of one comment, or `null` without `reactions`. */
+  reactionTarget: (id: TId) => ContentTarget | null;
   /** Re-reads every loaded page, its permissions and `onChanged`'s queries. */
   refresh: () => Promise<void>;
   /**
@@ -637,6 +647,7 @@ export const useContentComments = <
     onChanged,
     pageSize,
     queryKey,
+    reactions,
     record,
     report,
     thread,
@@ -806,6 +817,7 @@ export const useContentComments = <
       delete: Boolean(remove),
       edit: Boolean(edit),
       hide: Boolean(visibility),
+      reactions: Boolean(reactions),
       replies: maxDepth !== undefined,
       report: Boolean(report),
       warn: Boolean(report),
@@ -849,6 +861,7 @@ export const useContentComments = <
     remove: async id =>
       remove ? await run(id, "delete", async () => await remove(id)) : missing,
     replyCount: pages?.at(-1)?.replyCount ?? 0,
+    reactionTarget: id => reactions?.(id) ?? null,
     reportTarget: id => report?.(id) ?? null,
     requestCreate: async input => {
       if (!create) throw new Error("This thread has no `create`.");

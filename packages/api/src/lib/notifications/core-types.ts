@@ -145,10 +145,49 @@ export const suspensionRevokedNotification = buildNotificationType({
   }),
 });
 
+/**
+ * Sent to the author of something members reacted to. Repeat reactions to
+ * the same target within a day are grouped into one inbox item.
+ */
+export const reactionReceivedNotification = buildNotificationType({
+  id: "core.reaction_received",
+  version: 1,
+  schema: z.object({
+    pluginId: z.string(),
+    reaction: z.string(),
+    targetId: z.string(),
+    targetType: z.string(),
+    title: z.string(),
+    url: z.string().nullable(),
+  }),
+  category: "social",
+  label: "core.notifications.types.reaction_received.label",
+  description: "core.notifications.types.reaction_received.description",
+  defaults: { email: "none", inApp: true },
+  email: true,
+  grouping: {
+    key: ({ data }) => `${data.pluginId}:${data.targetType}:${data.targetId}`,
+    windowMinutes: 60 * 24,
+  },
+  present: ({ actorCount, actors, data, t }) => ({
+    body: data.title
+      ? t("core.notifications.types.reaction_received.body", {
+          title: data.title,
+        })
+      : undefined,
+    target: data.url,
+    title: t("core.notifications.types.reaction_received.title", {
+      count: Math.max(actorCount, 1),
+      name: actors[0]?.name ?? t("core.notifications.someone"),
+    }),
+  }),
+});
+
 export const coreNotificationTypes = [
   adminMessageNotification,
   warningIssuedNotification,
   warningRevokedNotification,
   accountSuspendedNotification,
   suspensionRevokedNotification,
+  reactionReceivedNotification,
 ];

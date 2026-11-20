@@ -90,6 +90,10 @@ export const coreStaffPermissions = defineStaffPermissions(manifest, {
       "can_view",
       { permission: "can_manage", dependsOn: ["can_view"] },
     ],
+    reactions: [
+      "can_view",
+      { permission: "can_manage", dependsOn: ["can_view"] },
+    ],
     staff_moderators: [
       "can_view",
       { permission: "can_create", dependsOn: ["can_view"] },

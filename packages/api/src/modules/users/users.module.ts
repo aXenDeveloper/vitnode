@@ -18,6 +18,7 @@ import { sessionRoute } from "./routes/session.route";
 import { signInRoute } from "./routes/sign-in.route";
 import { signOutRoute } from "./routes/sign-out.route";
 import { signUpRoute } from "./routes/sign-up.route";
+import { userTimelineRoute } from "./routes/timeline.route";
 import { updateMeRoute } from "./routes/update-me.route";
 import { updateMyPrivacyRoute } from "./routes/update-privacy.route";
 import { updateMyTimeZoneRoute } from "./routes/update-time-zone.route";
@@ -46,6 +47,7 @@ export const usersModule = buildModule({
     presenceHeartbeatRoute,
     presenceBatchRoute,
     presenceRoute,
+    userTimelineRoute,
   ],
   modules: [
     ssoUserModule,

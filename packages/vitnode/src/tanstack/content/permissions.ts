@@ -21,6 +21,13 @@ export interface ContentPermissions {
    */
   canHide: boolean;
   /**
+   * A reaction bar makes sense: `reactions` is on, the record is public and
+   * not the visitor's - unless one of their roles allows reacting to own
+   * content.
+   * Guests get `true`; reacting asks them to sign in.
+   */
+  canReact: boolean;
+  /**
    * A Report button makes sense: `reports` is on, the record is public and not
    * the visitor's - unless `reports.selfReport` lets authors report their own.
    */
@@ -34,7 +41,8 @@ export interface ContentPermissions {
 
 /** The permissions route's answer, as `fetch` returns it. */
 export interface ContentPermissionsResponse<TId extends number | string> {
-  items: (Omit<ContentPermissions, "canWarn"> & {
+  items: (Omit<ContentPermissions, "canReact" | "canWarn"> & {
+    canReact?: boolean;
     canWarn?: boolean;
     id: TId;
   })[];
@@ -44,6 +52,7 @@ const NO_PERMISSIONS: ContentPermissions = {
   canDelete: false,
   canEdit: false,
   canHide: false,
+  canReact: false,
   canReport: false,
   canWarn: false,
 };
@@ -201,6 +210,7 @@ export const useContentPermissions = <TId extends number | string>({
             canDelete: item.canDelete,
             canEdit: item.canEdit,
             canHide: item.canHide,
+            canReact: item.canReact ?? false,
             canReport: item.canReport,
             canWarn: item.canWarn ?? false,
           }

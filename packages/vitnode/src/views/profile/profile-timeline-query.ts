@@ -1,15 +1,19 @@
 import { infiniteQueryOptions } from "@tanstack/react-query";
 import { manifest } from "@vitnode/api/manifest";
 
+import type { SearchTimelineEntry } from "@/views/search/types";
+
 import { RECORD_STALE_TIME } from "@/lib/query-freshness";
 import { fetcher } from "@/tanstack/fetcher";
 import {
-  nextSearchFeedCursor,
-  SEARCH_FEED_FIRST_PAGE,
+  SEARCH_FEED_PAGE_SIZE,
   SEARCH_QUERY_ROOT,
-  searchTimelineQuery,
 } from "@/views/search/search-feed-query";
 
+/**
+ * A member's profile timeline: what they wrote and the reactions they gave
+ * (unless they hide them), newest first, from `GET /users/{userId}/timeline`.
+ */
 export const profileTimelineQueryOptions = ({
   locale,
   userId,
@@ -20,28 +24,44 @@ export const profileTimelineQueryOptions = ({
   viewerId: null | number;
 }) =>
   infiniteQueryOptions({
-    getNextPageParam: nextSearchFeedCursor,
-    initialPageParam: SEARCH_FEED_FIRST_PAGE,
+    getNextPageParam: (page: {
+      pageInfo: { endCursor: null | string; hasNextPage: boolean };
+    }) =>
+      page.pageInfo.hasNextPage && page.pageInfo.endCursor
+        ? page.pageInfo.endCursor
+        : undefined,
+    initialPageParam: null as null | string,
     queryFn: async ({ pageParam, signal }) => {
       const response = await fetcher({
         plugin: manifest.id,
         args: {
           params: { userId: String(userId) },
-          query: searchTimelineQuery({ cursor: pageParam, locale }),
+          query: {
+            first: SEARCH_FEED_PAGE_SIZE,
+            lang: locale,
+            ...(pageParam ? { cursor: pageParam } : {}),
+          },
         },
         method: "get",
-        module: "search",
+        module: "users",
         options: { signal },
-        path: "/timeline/{userId}",
+        path: "/{userId}/timeline",
       });
 
       if (!response.ok) {
         throw new Error(
-          `The search API answered ${response.status} for the timeline of user ${userId} (locale "${locale}", cursor ${pageParam ?? "none"}).`,
+          `The users API answered ${response.status} for the timeline of user ${userId} (locale "${locale}", cursor ${pageParam ?? "none"}).`,
         );
       }
 
-      return await response.json();
+      const page = await response.json();
+
+      return {
+        edges: page.edges.map((edge): SearchTimelineEntry =>
+          edge.kind === "content" ? edge.item : edge,
+        ),
+        pageInfo: page.pageInfo,
+      };
     },
     queryKey: [
       ...SEARCH_QUERY_ROOT,

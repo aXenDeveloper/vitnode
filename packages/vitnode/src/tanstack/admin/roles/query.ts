@@ -9,6 +9,8 @@ import type { AdminRolesParams } from "@/views/admin/views/core/users/roles/role
 import type { RolesAdminTableProps } from "@/views/admin/views/core/users/roles/roles-table-content";
 
 import { updateAdminAiRoleAccess } from "@/views/admin/views/core/ai/ai-mutations";
+import { updateAdminRoleReactions } from "@/views/admin/views/core/reactions/reactions-mutations";
+import { adminReactionsQueryRoot } from "@/views/admin/views/core/reactions/reactions-query";
 import { isAdminMutationError } from "@/views/admin/views/core/shared/admin-mutation";
 import {
   createAdminRole,
@@ -103,6 +105,17 @@ export const useAdminRoleMutations = (): {
               );
         if (isAdminMutationError(result)) return result;
         await invalidateAfterAdminRoleChange(queryClient, adminUserId);
+
+        if (values.reactions) {
+          const reactionsResult = await updateAdminRoleReactions(
+            result.data.id,
+            values.reactions,
+          );
+          await queryClient.invalidateQueries({
+            queryKey: adminReactionsQueryRoot(adminUserId),
+          });
+          if (isAdminMutationError(reactionsResult)) return reactionsResult;
+        }
 
         if (values.ai) {
           const aiResult = await updateAdminAiRoleAccess({

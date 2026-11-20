@@ -10,6 +10,8 @@ import { UserRoundPenIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
+import type { SearchTimelineOwner } from "@/views/search/types";
+
 import { buttonVariants } from "@/components/ui/button";
 import { UserPresenceStatus } from "@/components/user-presence-status";
 import { USER_HEADER_HREF } from "@/views/layouts/theme/header/user/user-header-model";
@@ -92,17 +94,17 @@ const ProfileWarningsSlot = ({
 );
 
 const ProfileTimeline = ({
-  userId,
+  owner,
   viewerId,
 }: {
-  userId: number;
+  owner: SearchTimelineOwner;
   viewerId: null | number;
 }) => {
   const t = useTranslations("core.profile");
   const locale = useLocale();
   const titleId = React.useId();
   const query = useInfiniteQuery(
-    profileTimelineQueryOptions({ locale, userId, viewerId }),
+    profileTimelineQueryOptions({ locale, userId: owner.id, viewerId }),
   );
 
   return (
@@ -113,7 +115,7 @@ const ProfileTimeline = ({
       >
         {t("timeline")}
       </h2>
-      <SearchFeedList ownerId={userId} query={query} variant="timeline" />
+      <SearchFeedList owner={owner} query={query} variant="timeline" />
     </section>
   );
 };
@@ -151,7 +153,7 @@ const ProfileScreen = ({ children, nameCode }: ProfileRouteProps) => {
       }
       user={user}
     >
-      <ProfileTimeline userId={user.id} viewerId={viewerId} />
+      <ProfileTimeline owner={user} viewerId={viewerId} />
       {children}
     </ProfileContent>
   );

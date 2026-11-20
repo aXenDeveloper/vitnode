@@ -28,7 +28,7 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { ImgDocs } from "@/components/fumadocs/img";
 import section from "./threads-comments.webp";
 
-Comments are records of their own, in a comment content type that points at the article it answers. The `thread` option gives that type a route that returns an article's comments a page at a time, and the server checks where every comment may go. On the page, `useContentComments` from `@vitnode/core/tanstack/comments` connects that route to your plugin with a few typed calls. `ContentComments` then renders the whole section: the list, the composer, loading, empty and error states, and a sign-in link for guests.
+Comments are records of their own, in a comment content type that points at the article it answers. The `thread` option gives that type a route that returns an article's comments a page at a time, and the server checks where every comment may go. On the page, `useContentComments` from `@vitnode/core/tanstack/comments` connects that route to your plugin with a few typed calls. `ContentComments` then renders the whole section: the list, the composer, and the loading, empty and error states. Guests can read the comments but get no composer.
 
 This page adds flat comments under each article. [Comment actions](/docs/content-engine/threads-editing) adds editing, deleting, hiding and reports to the same section, and [Replies](/docs/content-engine/threads-frontend) nests answers.
 
@@ -354,18 +354,20 @@ Finally, load the section's messages with the page, so they arrive with its HTML
 
 Open `/news/welcome-to-the-newsroom`, the article staff created in [First content type](/docs/content-engine/create-a-content-type) and published in [Drafts & publishing](/docs/content-engine/publication):
 
-1. Signed out, the section shows **No comments yet** and **Sign in to comment**. The link brings you back to the article after signing in.
+1. Signed out, the section shows **No comments yet** and no composer. Guests can read comments, not write them.
 2. Sign in as a member, click **Write a comment…**, write something and click **Post comment**. **Comment posted** appears, the comment shows with your name, the heading reads **1 comment**, and the editor is empty again.
 3. Reload the page. The comment is still there, which proves it came from the server and not from the form's memory.
 4. Sign in as another member and comment too. The heading reads **2 comments**.
 
 To try a draft, set `create.status` to `"draft"` in `src/content/comment.ts`, rebuild and post again. **Comment saved as a draft** appears, and the list and the count stay as they were, because a draft is not public. Set it back to `"published"` afterwards.
 
+The Newsroom in the screenshot also has [Reactions](/docs/content-engine/reactions), so each comment starts with a reaction button. Without them, the row holds only **Reply** and **More actions**.
+
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={section}
-  alt="A comment section under a Newsroom article titled 2 comments, with comments by Ada Lovelace and Grace Hopper and a Leave a comment card with a Write a comment button"
+  alt="A comment section under a Newsroom article titled 2 comments, with comments by Ada Lovelace and Grace Hopper, each followed by a reaction button, Reply and More actions, and a Leave a comment card with a Write a comment button"
 />
 
 ## What a new comment can become
@@ -393,7 +395,7 @@ A moderator then sets **New posts** to **Wait for approval** for comments in a f
 
 ## What the server checks
 
-- **Signed out.** `POST /article-comments` answers `401`; the section offers guests a sign-in link instead of the composer.
+- **Signed out.** `POST /article-comments` answers `401`, and the section shows guests no composer.
 - **Placement.** The article must be public (or hidden, for a reader allowed to see it), the parent must belong to the same article, and nothing may nest deeper than `maxDepth`. A broken rule answers `400`, and the section shows why without losing the text.
 - **Hidden articles.** A comment is only as public as its article. Once the article is unpublished, its comments drop out of the thread and their own routes answer `404`. A *hidden* article keeps its conversation going for the people who can still see it, which means its authors, editors and moderators. Their response is never cached, and everybody else gets `404`.
 - **Repeated clicks.** **Post comment** is disabled while the request runs, so one click sends one comment.

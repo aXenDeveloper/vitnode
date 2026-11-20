@@ -8,6 +8,7 @@ import { debugAdminModule } from "./debug/debug.module";
 import { filesAdminModule } from "./files/files.module";
 import { notificationsAdminModule } from "./notifications/notifications.module";
 import { pluginsAdminModule } from "./plugins/plugins.module";
+import { reactionsAdminModule } from "./reactions/reactions.module";
 import { reportReasonsAdminModule } from "./report-reasons/report-reasons.module";
 import { rolesAdminModule } from "./roles/roles.module";
 import { sendNotificationRoute } from "./routes/send-notification.route";
@@ -31,6 +32,7 @@ export const adminModule = buildModule({
     dashboardAdminModule,
     notificationsAdminModule,
     pluginsAdminModule,
+    reactionsAdminModule,
     reportReasonsAdminModule,
     warningsAdminModule,
   ],

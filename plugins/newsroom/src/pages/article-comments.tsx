@@ -110,6 +110,7 @@ export const ArticleComments = ({ articleId }: { articleId: number }) => {
         }),
     },
     report: id => contentTarget(manifest.id, commentContentType, id),
+    reactions: id => contentTarget(manifest.id, commentContentType, id),
   });
 
   return <ContentComments className="border-t pt-8" comments={comments} />;

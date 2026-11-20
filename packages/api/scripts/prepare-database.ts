@@ -9,9 +9,11 @@ import { core_admin_permissions } from "@/database/admins.js";
 import { core_languages, core_languages_words } from "@/database/languages.js";
 import { core_moderation_report_reasons } from "@/database/moderation.js";
 import { core_moderators_permissions } from "@/database/moderators.js";
+import { core_reactions } from "@/database/reactions.js";
 import { core_roles } from "@/database/roles.js";
 import { SEARCH_TEXT_CONFIGS } from "@/database/search.js";
 import { MODERATION_DEFAULT_REPORT_REASONS } from "@/lib/moderation/const.js";
+import { REACTIONS_DEFAULT } from "@/lib/reactions/const.js";
 
 import type { VitNodeApiI18nConfig } from "../src/lib/i18n/types.js";
 import type { VitNodeApiConfig } from "../src/vitnode.config.js";
@@ -661,6 +663,7 @@ export const initialDataForDatabase = async (given?: VitNodeApiConfig) => {
           // Guest role
           protected: true,
           guest: true,
+          allowReact: false,
         },
         {
           // Member role
@@ -736,6 +739,54 @@ export const initialDataForDatabase = async (given?: VitNodeApiConfig) => {
   }
 
   await seedReportReasons(dbClient, defaultLanguageCode);
+  await seedReactions(dbClient, defaultLanguageCode);
+};
+
+/** The default reactions, once - into an empty catalog only, so a deleted one stays deleted. */
+const seedReactions = async (
+  dbClient: VitNodeApiConfig["dbProvider"],
+  languageCode: string,
+) => {
+  const [reactionCount] = await dbClient
+    .select({ count: count() })
+    .from(core_reactions)
+    .limit(1);
+  if (reactionCount.count > 0) return;
+
+  const reactions = await dbClient
+    .insert(core_reactions)
+    .values(
+      REACTIONS_DEFAULT.map((reaction, position) => ({
+        code: reaction.code,
+        icon: reaction.icon,
+        kind: reaction.icon.startsWith("emoji:")
+          ? ("emoji" as const)
+          : ("icon" as const),
+        points: reaction.points,
+        position,
+      })),
+    )
+    .onConflictDoNothing({ target: core_reactions.code })
+    .returning({ code: core_reactions.code, id: core_reactions.id });
+
+  const words = reactions.flatMap(({ code, id }) => {
+    const reaction = REACTIONS_DEFAULT.find(item => item.code === code);
+    if (!reaction) return [];
+
+    return [
+      {
+        itemId: id,
+        languageCode,
+        pluginCode: "core",
+        tableName: "core_reactions",
+        value: reaction.title,
+        variable: "title",
+      },
+    ];
+  });
+  if (words.length > 0) {
+    await dbClient.insert(core_languages_words).values(words);
+  }
 };
 
 const seedReportReasons = async (

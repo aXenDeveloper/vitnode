@@ -17,6 +17,7 @@ import { userProfileQuery } from "./query";
 export const PROFILE_NAMESPACES = [
   "core.global",
   "core.profile",
+  "core.reactions",
   "core.search",
 ] as const;
 

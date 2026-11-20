@@ -17,6 +17,7 @@ export const topicContentType = defineContentType({
   publication: true,
   visibility: true,
   reports: true,
+  reactions: true,
   editorial: { revisions: { retention: 20 } },
 
   indexes: [{ on: ["forum", "publishedAt"] }],

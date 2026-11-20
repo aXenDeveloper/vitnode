@@ -50,7 +50,7 @@ import {
 import { contentContainerFieldOf } from "../containers/association";
 import { createContentContainerService } from "../containers/server/service";
 import { ContentEngineError } from "../errors";
-import { parseContentId } from "../ids";
+import { contentIdKey, parseContentId } from "../ids";
 import { CONTENT_THREAD_BRANCHES_MAX } from "../live/refresh";
 import { partitionContentFields } from "../localization";
 import {
@@ -77,6 +77,10 @@ import {
   pinContentPublicGeneration,
   rememberContentPublicRead,
 } from "./public-cache";
+import {
+  contentPublicHistoryRoutes,
+  loadContentEditCounts,
+} from "./public-history-routes";
 import { contentPermissionsRoute } from "./public-permissions";
 import { resolveContentPublicRowPeople } from "./public-row-hydration";
 import {
@@ -619,12 +623,13 @@ export const buildContentPublicRoutes = <
     };
 
   const serializeThreadNode = <
-    T extends { deleted: ContentThreadNode<unknown>["deleted"] },
-  >({
-    deleted,
-    ...item
-  }: T) => ({
+    T extends { deleted: ContentThreadNode<unknown>["deleted"]; id: unknown },
+  >(
+    { deleted, ...item }: T,
+    editCounts: ReadonlyMap<string, number>,
+  ) => ({
     ...item,
+    editCount: editCounts.get(contentIdKey(item.id as ContentId)) ?? 0,
     deleted: deleted
       ? {
           byAuthor: deleted.byAuthor,
@@ -638,6 +643,7 @@ export const buildContentPublicRoutes = <
       .object({ byAuthor: z.boolean(), createdAt: z.string() })
       .nullable(),
     depth: z.number(),
+    editCount: z.number().int(),
     hidden: z.boolean(),
     hiddenReason: z.string().nullable(),
     id: schemas.params.shape.id,
@@ -704,9 +710,14 @@ export const buildContentPublicRoutes = <
         root: readable.rootId,
       });
 
+      const editCounts = await loadContentEditCounts(
+        c,
+        definition,
+        page.items.filter(item => item.record).map(item => item.id),
+      );
       const body = {
         ...page,
-        items: page.items.map(serializeThreadNode),
+        items: page.items.map(item => serializeThreadNode(item, editCounts)),
       };
 
       if (
@@ -819,11 +830,26 @@ export const buildContentPublicRoutes = <
           root: readable.rootId,
         });
 
+        const editCounts = await loadContentEditCounts(
+          c,
+          definition,
+          result.branches.flatMap(branch =>
+            branch.status === "ok"
+              ? branch.items.filter(item => item.record).map(item => item.id)
+              : [],
+          ),
+        );
+
         return {
           ...result,
           branches: result.branches.map(branch =>
             branch.status === "ok"
-              ? { ...branch, items: branch.items.map(serializeThreadNode) }
+              ? {
+                  ...branch,
+                  items: branch.items.map(item =>
+                    serializeThreadNode(item, editCounts),
+                  ),
+                }
               : branch,
           ),
         };
@@ -990,6 +1016,9 @@ export const buildContentPublicRoutes = <
       ? buildContentDeliveryRoutes(model, { pluginId })
       : []),
     ...(definition.thread.enabled ? [thread, threadBranches] : []),
+    ...(definition.thread.enabled && definition.editorial.enabled
+      ? contentPublicHistoryRoutes(model, { pluginId })
+      : []),
     ...(definition.publicWrite.enabled ||
     definition.reports.enabled ||
     definition.visibility.enabled

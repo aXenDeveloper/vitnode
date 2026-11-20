@@ -41,6 +41,7 @@ export const blogPostContentType = defineContentType({
   visibility: true,
 
   reports: true,
+  reactions: true,
 
   editorial: {
     revisions: { retention: 20 },

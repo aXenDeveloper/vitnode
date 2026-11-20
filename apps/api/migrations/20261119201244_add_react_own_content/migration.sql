@@ -1,0 +1,1 @@
+ALTER TABLE "core_roles" ADD COLUMN "allowReactOwnContent" boolean DEFAULT true NOT NULL;

@@ -16,6 +16,8 @@ import type {
   AdminAiRoleAccess,
   adminAiRoleAccessQueryOptions,
 } from "@/views/admin/views/core/ai/ai-query";
+import type { AdminRoleReactionsInput } from "@/views/admin/views/core/reactions/reactions-mutations";
+import type { AdminRoleReactions } from "@/views/admin/views/core/reactions/reactions-query";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
 import { AutoForm } from "@/components/form/auto-form";
@@ -30,12 +32,19 @@ import {
   type AiActionTranslate,
   withTranslatedAiActionText,
 } from "@/lib/ai/action-text";
+import { useAdminIdentity } from "@/tanstack/admin/identity";
 import {
   fromAiDecimal,
   toAiDecimal,
 } from "@/views/admin/views/core/ai/ai-decimal";
+import { adminRoleReactionsQueryOptions } from "@/views/admin/views/core/reactions/reactions-query";
 
 import { AutoFormAiPermission } from "./ai-permission-field";
+import {
+  roleReactionsFields,
+  roleReactionsShape,
+  roleReactionsValuesOf,
+} from "./role-reactions-fields";
 
 export const ROLE_IMAGE_SIZE_MAX_KB = 1024 * 1024;
 export const ROLE_DEFAULT_AVATAR_SIZE_KB = 2048;
@@ -74,6 +83,8 @@ export interface AdminRoleFormValues {
   maxStorageForSubmit: null | number;
   name: { languageCode: string; value: string }[];
   prefix: string;
+  /** The Reactions tab, saved with `PUT /admin/reactions/roles/{roleId}`. */
+  reactions?: AdminRoleReactionsInput;
   totalMaxStorage: null | number;
 }
 
@@ -109,6 +120,8 @@ export interface AdminRoleFormProps {
   }) => Promise<AdminMutationResult<unknown>>;
   /** Called once, after a save the API accepted. */
   onSaved?: () => void;
+  /** The role's reaction settings; adds the Reactions tab. */
+  reactions?: AdminRoleReactions;
 }
 
 const aiShape = (
@@ -255,6 +268,7 @@ export const AdminRoleFormContent = ({
   data,
   onSave,
   onSaved,
+  reactions,
 }: AdminRoleFormProps) => {
   const t = useTranslations("admin.role");
   const tAll = useTranslations() as unknown as AiActionTranslate;
@@ -334,12 +348,17 @@ export const AdminRoleFormContent = ({
       .nullable()
       .default(data?.totalMaxStorage ?? null),
     ...aiShape(ai),
+    ...roleReactionsShape(reactions),
   });
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
     const result = await onSave({
       id: data?.id,
-      values: { ...values, ai: ai ? aiValuesOf(ai, values) : undefined },
+      values: {
+        ...values,
+        ai: ai ? aiValuesOf(ai, values) : undefined,
+        reactions: reactions ? roleReactionsValuesOf(values) : undefined,
+      },
     });
 
     if ("error" in result) {
@@ -549,6 +568,7 @@ export const AdminRoleFormContent = ({
           tab: "profile",
         },
         ...(ai ? aiFields(ai, t, tAll) : []),
+        ...(reactions ? roleReactionsFields(t) : []),
       ]}
       formSchema={formSchema}
       onSubmit={onSubmit}
@@ -560,6 +580,9 @@ export const AdminRoleFormContent = ({
         { label: t("tabs.content"), value: "content" },
         { label: t("tabs.profile"), value: "profile" },
         ...(ai ? [{ label: t("tabs.ai"), value: "ai" }] : []),
+        ...(reactions
+          ? [{ label: t("tabs.reactions"), value: "reactions" }]
+          : []),
       ]}
     />
   );
@@ -569,25 +592,36 @@ export type AdminRoleAiAccessQuery = (
   roleId: null | number,
 ) => ReturnType<typeof adminAiRoleAccessQueryOptions>;
 
+const AdminRoleFormWithReactions = (
+  props: Omit<AdminRoleFormProps, "reactions">,
+) => {
+  const adminUserId = useAdminIdentity();
+  const { data } = useSuspenseQuery(
+    adminRoleReactionsQueryOptions(adminUserId, props.data?.id ?? null),
+  );
+
+  return <AdminRoleFormContent reactions={data} {...props} />;
+};
+
 const AdminRoleFormWithAi = ({
   aiAccessQuery,
   ...props
-}: Omit<AdminRoleFormProps, "ai"> & {
+}: Omit<AdminRoleFormProps, "ai" | "reactions"> & {
   aiAccessQuery: AdminRoleAiAccessQuery;
 }) => {
   const { data } = useSuspenseQuery(aiAccessQuery(props.data?.id ?? null));
 
-  return <AdminRoleFormContent ai={data} {...props} />;
+  return <AdminRoleFormWithReactions ai={data} {...props} />;
 };
 
 export const AdminRoleFormDialogContent = ({
   aiAccessQuery,
   ...props
-}: Omit<AdminRoleFormProps, "ai"> & {
+}: Omit<AdminRoleFormProps, "ai" | "reactions"> & {
   aiAccessQuery?: AdminRoleAiAccessQuery;
 }) =>
   aiAccessQuery ? (
     <AdminRoleFormWithAi aiAccessQuery={aiAccessQuery} {...props} />
   ) : (
-    <AdminRoleFormContent {...props} />
+    <AdminRoleFormWithReactions {...props} />
   );

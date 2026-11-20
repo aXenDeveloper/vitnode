@@ -185,6 +185,7 @@ const PostDates = ({ item }: { item: BlogArticleItem }) => {
 export const BlogArticle = ({
   categories,
   children,
+  footer,
   hidden,
   item,
   locale,
@@ -192,6 +193,7 @@ export const BlogArticle = ({
 }: {
   categories: BlogCategory[];
   children?: React.ReactNode;
+  footer?: React.ReactNode;
   hidden: boolean;
   item: BlogArticleItem;
   locale: null | string;
@@ -312,6 +314,12 @@ export const BlogArticle = ({
             content={item.content}
             nodes={nodes}
           />
+
+          {footer ? (
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t pt-6">
+              {footer}
+            </footer>
+          ) : null}
         </div>
 
         {hasToc ? (

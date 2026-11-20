@@ -31,12 +31,16 @@ const FORM_FIELDS = ["body"] as const;
 export type ContentCommentComposerFormProps = {
   /** Puts the cursor in the editor when it opens. */
   autoFocus?: boolean;
+  hideLabel?: boolean;
   /** The editor's accessible name, already translated. */
   label: string;
   /** Shows **Cancel**, which calls it. */
   onCancel?: () => void;
-  /** Called after the server accepted the comment, with what it became. */
-  onDone?: (outcome: ContentCommentWriteOutcome) => void;
+  /**
+   * Called after the server accepted the comment, with what it became and
+   * its id (`null` when the answer carried none).
+   */
+  onDone?: (outcome: ContentCommentWriteOutcome, id: ContentId | null) => void;
   /**
    * Why this form can no longer be sent, already translated - e.g. the
    * comment it edits or answers was removed meanwhile. Keeps the editor and
@@ -45,8 +49,14 @@ export type ContentCommentComposerFormProps = {
   unavailable?: string;
 } & (
   | { editable: ContentCommentEditable; id: ContentId; mode: "edit" }
-  | { mode: "create"; parentId: ContentId | null }
+  | {
+      initialBody?: RichTextDocument;
+      mode: "create";
+      parentId: ContentId | null;
+    }
 );
+
+const zodWrittenId = z.object({ id: z.union([z.number(), z.string()]) });
 
 const useBodySchema = (defaultBody: RichTextDocument) => {
   const t = useTranslations("core.comments.form");
@@ -65,7 +75,7 @@ const useBodySchema = (defaultBody: RichTextDocument) => {
  * shows the version-conflict alert. Lazy-loaded by `ContentCommentComposer`.
  */
 const ContentCommentComposerForm = (props: ContentCommentComposerFormProps) => {
-  const { autoFocus, label, onCancel, onDone, unavailable } = props;
+  const { autoFocus, hideLabel, label, onCancel, onDone, unavailable } = props;
   const t = useTranslations("core.comments");
   const { comments } = useContentCommentsContext();
   const editId = props.mode === "edit" ? props.id : null;
@@ -83,10 +93,15 @@ const ContentCommentComposerForm = (props: ContentCommentComposerFormProps) => {
     version: props.mode === "edit" ? props.editable.version : undefined,
   });
   const formSchema = useBodySchema(
-    props.mode === "edit" ? props.editable.body : emptyRichTextDocument(),
+    props.mode === "edit"
+      ? props.editable.body
+      : (props.initialBody ?? emptyRichTextDocument()),
   );
 
-  const announce = (outcome: ContentCommentWriteOutcome) => {
+  const announce = (
+    outcome: ContentCommentWriteOutcome,
+    id: ContentId | null,
+  ) => {
     const key =
       props.mode === "edit"
         ? outcome === "pending"
@@ -97,7 +112,7 @@ const ContentCommentComposerForm = (props: ContentCommentComposerFormProps) => {
     show(t(`outcome.${key}.title`), {
       description: t(`outcome.${key}.desc`),
     });
-    onDone?.(outcome);
+    onDone?.(outcome, id);
   };
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async (
@@ -113,7 +128,8 @@ const ContentCommentComposerForm = (props: ContentCommentComposerFormProps) => {
 
     const outcome = await comments.written(record);
     if (props.mode === "create") form.reset();
-    announce(outcome);
+    const written = zodWrittenId.safeParse(record);
+    announce(outcome, written.success ? written.data.id : null);
   };
 
   return (
@@ -140,6 +156,7 @@ const ContentCommentComposerForm = (props: ContentCommentComposerFormProps) => {
                 {...fieldProps}
                 format="json"
                 label={label}
+                labelClassName={hideLabel ? "sr-only" : undefined}
                 onEditor={
                   autoFocus
                     ? editor => {

@@ -20,7 +20,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FEEDBACK_TONE_TEXT } from "@/components/ui/feedback-tone";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipWithContent } from "@/components/ui/tooltip";
-import { userProfileHref } from "@/components/user-format";
+import { UserFormat, userProfileHref } from "@/components/user-format";
+import { reactionTitle } from "@/tanstack/reactions/query";
+import { ReactionIcon } from "@/tanstack/reactions/reaction-icon";
 
 import type { SearchActivityKey } from "./registry";
 import type { SearchFeedQueryOptions } from "./search-feed-query";
@@ -28,6 +30,9 @@ import type {
   SearchFeedPage,
   SearchResultAuthor,
   SearchResultItem,
+  SearchTimelineEntry,
+  SearchTimelineOwner,
+  SearchTimelineReactionEntry,
 } from "./types";
 
 import { getSearchTypeRenderer } from "./registry";
@@ -40,6 +45,14 @@ import {
 } from "./search-highlight";
 import { SearchHighlightText } from "./search-highlight-text";
 import { SearchTimelineSkeleton } from "./search-timeline-skeleton";
+import {
+  groupTimelineReactions,
+  isTimelineReactionGroup,
+  TIMELINE_GROUP_VISIBLE_ITEMS,
+  type TimelineReactionGroup,
+  type TimelineRow,
+} from "./timeline-reaction-groups";
+import { isSearchTimelineReaction } from "./types";
 
 const SNIPPET_LENGTH = 240;
 
@@ -356,7 +369,7 @@ const SURFACE = "bg-card rounded-xl shadow-xs ring-1 ring-foreground/8";
 const CARD_OVERLAY_LINK_XL =
   "after:absolute after:inset-0 after:rounded-xl focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-ring";
 
-const dateOf = (item: SearchResultItem): Date =>
+const dateOf = (item: SearchTimelineEntry): Date =>
   typeof item.createdAt === "string"
     ? new Date(item.createdAt)
     : item.createdAt;
@@ -428,7 +441,9 @@ const DayTile = ({ date, isToday }: { date: Date; isToday: boolean }) => {
     <time
       className={cn(
         "bg-card flex w-12 shrink-0 flex-col items-center rounded-xl pt-1.5 pb-1 shadow-sm",
-        isToday ? "ring-destructive/60 ring-2" : "ring-foreground/8 ring-1",
+        isToday
+          ? "ring-destructive/60 z-10 ring-2"
+          : "ring-foreground/8 ring-1",
       )}
       dateTime={date.toISOString().slice(0, 10)}
     >
@@ -444,6 +459,125 @@ const DayTile = ({ date, isToday }: { date: Date; isToday: boolean }) => {
         {format.dateTime(date, { day: "numeric" })}
       </span>
     </time>
+  );
+};
+
+type TimelineReaction = SearchTimelineReactionEntry["reaction"];
+
+const ReactionRailNode = ({ reaction }: { reaction: TimelineReaction }) => {
+  const locale = useLocale();
+
+  return (
+    <TooltipWithContent text={reactionTitle(reaction, locale)}>
+      <span className="bg-card ring-foreground/8 flex size-9 shrink-0 items-center justify-center rounded-full shadow-xs ring-1">
+        <ReactionIcon className="size-4" reaction={reaction} />
+      </span>
+    </TooltipWithContent>
+  );
+};
+
+const ReactionTitle = ({ reaction }: { reaction: TimelineReaction }) => {
+  const locale = useLocale();
+
+  return <span className="sr-only">{reactionTitle(reaction, locale)}: </span>;
+};
+
+const ReactionOwner = ({ owner }: { owner?: SearchTimelineOwner }) =>
+  owner ? (
+    <UserFormat className="relative z-10" format link user={owner} />
+  ) : null;
+
+const REACTION_LINE =
+  "text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 py-1.5 text-sm leading-relaxed";
+const REACTION_TARGET_LINK =
+  "text-foreground font-medium underline-offset-4 hover:underline";
+
+const ReactionCard = ({
+  entry,
+  owner,
+}: {
+  entry: SearchTimelineReactionEntry;
+  owner?: SearchTimelineOwner;
+}) => {
+  const t = useTranslations("core.reactions.timeline");
+
+  return (
+    <article className={REACTION_LINE}>
+      <p className="flex min-w-0 flex-wrap items-center gap-x-1.5">
+        <ReactionTitle reaction={entry.reaction} />
+        {t.rich("reacted", {
+          target: chunks => (
+            <ResultLink
+              className={REACTION_TARGET_LINK}
+              href={entry.target.url}
+            >
+              {chunks}
+            </ResultLink>
+          ),
+          title: entry.target.title,
+          user: () => <ReactionOwner owner={owner} />,
+        })}
+      </p>
+      <span aria-hidden="true">·</span>
+      <DateFormat date={entry.createdAt} />
+    </article>
+  );
+};
+
+const ReactionGroupCard = ({
+  group,
+  owner,
+}: {
+  group: TimelineReactionGroup;
+  owner?: SearchTimelineOwner;
+}) => {
+  const t = useTranslations("core.reactions.timeline");
+  const visible = group.entries.slice(0, TIMELINE_GROUP_VISIBLE_ITEMS);
+  const hidden = group.entries.length - visible.length;
+
+  return (
+    <article className="flex min-w-0 flex-1 flex-col">
+      <div className={REACTION_LINE}>
+        <p className="flex min-w-0 flex-wrap items-center gap-x-1.5">
+          <ReactionTitle reaction={group.reaction} />
+          {t.rich("reacted_in", {
+            count: group.entries.length,
+            kind: group.targetKind,
+            target: chunks => (
+              <ActivityLink href={group.context.url}>{chunks}</ActivityLink>
+            ),
+            title: group.context.title,
+            user: () => <ReactionOwner owner={owner} />,
+          })}
+        </p>
+        <span aria-hidden="true">·</span>
+        <DateFormat date={group.createdAt} />
+      </div>
+      <ol className="flex flex-col gap-1 pb-2">
+        {visible.map(entry => (
+          <li
+            className="text-muted-foreground flex min-w-0 items-center gap-2 text-sm leading-relaxed"
+            key={entryKey(entry)}
+          >
+            <ResultLink
+              className={cn(REACTION_TARGET_LINK, "min-w-0 truncate")}
+              href={entry.target.url}
+            >
+              {entry.target.title}
+            </ResultLink>
+            <span aria-hidden="true">·</span>
+            <span className="shrink-0">
+              <DateFormat date={entry.createdAt} />
+            </span>
+          </li>
+        ))}
+      </ol>
+      {hidden > 0 && (
+        <p className="text-muted-foreground pb-2 text-sm leading-relaxed">
+          {t("more", { count: hidden })}
+        </p>
+      )}
+    </article>
   );
 };
 
@@ -712,12 +846,22 @@ const TimelineCard = ({
   return <ArticleCard item={item} ownerId={ownerId} />;
 };
 
+const entryKey = (entry: SearchTimelineEntry): string =>
+  isSearchTimelineReaction(entry)
+    ? `reaction-${entry.target.pluginId}-${entry.target.type}-${entry.target.id}-${entry.reaction.code}`
+    : `${entry.itemType}-${entry.itemId}`;
+
+const rowKey = (row: TimelineRow): string =>
+  isTimelineReactionGroup(row)
+    ? `group-${row.entries.map(entryKey).join("|")}`
+    : entryKey(row);
+
 const SearchTimeline = ({
   items,
-  ownerId,
+  owner,
 }: {
-  items: SearchResultItem[];
-  ownerId?: number;
+  items: SearchTimelineEntry[];
+  owner?: SearchTimelineOwner;
 }) => {
   const t = useTranslations("core.search");
   const format = useFormatter();
@@ -776,33 +920,49 @@ const SearchTimeline = ({
                     </p>
                   </div>
                   <ol className="flex flex-col">
-                    {day.items.map((item, itemIndex) => {
-                      const isLast =
-                        monthIndex === months.length - 1 &&
-                        dayIndex === days.length - 1 &&
-                        itemIndex === day.items.length - 1;
+                    {groupTimelineReactions(day.items).map(
+                      (item, itemIndex, rows) => {
+                        const isLast =
+                          monthIndex === months.length - 1 &&
+                          dayIndex === days.length - 1 &&
+                          itemIndex === rows.length - 1;
 
-                      return (
-                        <li
-                          className="flex gap-3 sm:gap-4"
-                          key={`${item.itemType}-${item.itemId}`}
-                        >
-                          <div className="flex w-12 shrink-0 flex-col items-center">
-                            <span aria-hidden className="bg-border h-4 w-px" />
-                            <RailNode item={item} />
-                            {!isLast && (
+                        return (
+                          <li
+                            className="flex gap-3 sm:gap-4"
+                            key={rowKey(item)}
+                          >
+                            <div className="flex w-12 shrink-0 flex-col items-center">
                               <span
                                 aria-hidden
-                                className="bg-border w-px grow"
+                                className="bg-border h-4 w-px"
                               />
-                            )}
-                          </div>
-                          <div className="flex min-w-0 flex-1 pt-4">
-                            <TimelineCard item={item} ownerId={ownerId} />
-                          </div>
-                        </li>
-                      );
-                    })}
+                              {isTimelineReactionGroup(item) ||
+                              isSearchTimelineReaction(item) ? (
+                                <ReactionRailNode reaction={item.reaction} />
+                              ) : (
+                                <RailNode item={item} />
+                              )}
+                              {!isLast && (
+                                <span
+                                  aria-hidden
+                                  className="bg-border w-px grow"
+                                />
+                              )}
+                            </div>
+                            <div className="flex min-w-0 flex-1 pt-4">
+                              {isTimelineReactionGroup(item) ? (
+                                <ReactionGroupCard group={item} owner={owner} />
+                              ) : isSearchTimelineReaction(item) ? (
+                                <ReactionCard entry={item} owner={owner} />
+                              ) : (
+                                <TimelineCard item={item} ownerId={owner?.id} />
+                              )}
+                            </div>
+                          </li>
+                        );
+                      },
+                    )}
                   </ol>
                 </li>
               ))}
@@ -888,7 +1048,12 @@ const SearchResultCard = ({ item }: { item: SearchResultItem }) => {
 };
 
 export interface SearchFeedListQuery {
-  data?: { pages: readonly SearchFeedPage[] };
+  data?: {
+    pages: readonly (
+      | SearchFeedPage
+      | { edges: readonly SearchTimelineEntry[] }
+    )[];
+  };
   fetchNextPage: () => Promise<unknown>;
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
@@ -897,12 +1062,12 @@ export interface SearchFeedListQuery {
 
 export const SearchFeedList = ({
   highlight,
-  ownerId,
+  owner,
   query: { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading },
   variant = "list",
 }: {
   highlight?: string;
-  ownerId?: number;
+  owner?: SearchTimelineOwner;
   query: SearchFeedListQuery;
   variant?: SearchFeedVariant;
 }) => {
@@ -927,7 +1092,11 @@ export const SearchFeedList = ({
     return () => observer.disconnect();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const items = data?.pages.flatMap(page => page.edges) ?? [];
+  const entries: SearchTimelineEntry[] =
+    data?.pages.flatMap(page => [...page.edges]) ?? [];
+  const items = entries.filter(
+    (entry): entry is SearchResultItem => !isSearchTimelineReaction(entry),
+  );
 
   if (isLoading) {
     return variant === "timeline" ? (
@@ -941,7 +1110,7 @@ export const SearchFeedList = ({
     );
   }
 
-  if (items.length === 0) {
+  if ((variant === "timeline" ? entries : items).length === 0) {
     return (
       <p className="text-muted-foreground py-10 text-center">{t("empty")}</p>
     );
@@ -968,7 +1137,7 @@ export const SearchFeedList = ({
     return (
       <SearchHighlightContext value={pattern}>
         <div className="flex flex-col gap-6">
-          <SearchTimeline items={items} ownerId={ownerId} />
+          <SearchTimeline items={entries} owner={owner} />
           {loadMore}
         </div>
       </SearchHighlightContext>

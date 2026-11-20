@@ -128,11 +128,13 @@ describe("switchLocaleOn", () => {
     );
   });
 
-  it("goes to the target locale's home page when the page has no version in it", async () => {
+  it("stays on the page through the default locale's URL when it has no version in the target locale", async () => {
     configure();
-    const router = await routerAt("/articles/hello-world?ref=x#top");
+    const router = await routerAt("/pl/artykuly/witaj-swiecie?ref=x#top");
 
-    expect((await publicHrefAfterSwitch(router, "de")).href).toBe("/de");
+    expect((await publicHrefAfterSwitch(router, "de")).href).toBe(
+      "/de/articles/hello-world?ref=x#top",
+    );
   });
 
   it("ignores a locale the app does not serve", async () => {
