@@ -25,6 +25,7 @@ export const adminUserFixture = (
   name: "Moderator",
   nameCode: "moderator",
   newsletter: false,
+  pendingDeletion: null,
   phone: null,
   role: MEMBER_ROLE,
   roleId: MEMBER_ROLE.id,

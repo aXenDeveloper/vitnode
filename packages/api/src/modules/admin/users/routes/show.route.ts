@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/builders";
+import { findOpenAccountDeletion } from "@/lib/account-deletion/requests";
 import { isStaff } from "@/lib/check-staff-permission";
 import { coreStaffPermissions } from "@/lib/core-staff-permissions";
 import { resolveUserRoles, userRoleSchema } from "@/lib/resolve-user-roles";
@@ -46,6 +47,17 @@ export const showUserAdminRoute = buildRoute({
               timeZone: z.string().nullable(),
               isStaff: z.boolean(),
               imagePolicy: zodUserImagePolicy,
+              /** The open deletion request: pending, or failed and waiting for a retry. */
+              pendingDeletion: z
+                .object({
+                  attempts: z.number(),
+                  id: z.number(),
+                  lastError: z.string().nullable(),
+                  scheduledAt: z.date(),
+                  source: z.enum(["user", "admin"]),
+                  status: z.enum(["pending", "failed"]),
+                })
+                .nullable(),
             }),
           },
         },
@@ -82,18 +94,30 @@ export const showUserAdminRoute = buildRoute({
       return c.json({ error: "User not found" }, 404);
     }
 
-    const [roles, adminStaff, moderatorStaff, imagePolicy] = await Promise.all([
-      resolveUserRoles(c, user),
-      isStaff(c, { type: "admin", userId: user.id }),
-      isStaff(c, { type: "moderator", userId: user.id }),
-      resolveUserImagePolicy(c, user, { ignoreAllow: true }),
-    ]);
+    const [roles, adminStaff, moderatorStaff, imagePolicy, pendingDeletion] =
+      await Promise.all([
+        resolveUserRoles(c, user),
+        isStaff(c, { type: "admin", userId: user.id }),
+        isStaff(c, { type: "moderator", userId: user.id }),
+        resolveUserImagePolicy(c, user, { ignoreAllow: true }),
+        findOpenAccountDeletion(c, user.id),
+      ]);
 
     return c.json(
       {
         ...user,
         imagePolicy,
         isStaff: adminStaff || moderatorStaff,
+        pendingDeletion: pendingDeletion
+          ? {
+              attempts: pendingDeletion.attempts,
+              id: pendingDeletion.id,
+              lastError: pendingDeletion.lastError,
+              scheduledAt: pendingDeletion.scheduledAt,
+              source: pendingDeletion.source,
+              status: pendingDeletion.status,
+            }
+          : null,
         ...roles,
       },
       200,

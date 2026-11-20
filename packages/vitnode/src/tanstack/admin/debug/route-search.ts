@@ -3,8 +3,13 @@ import type {
   DebugLogsOrderBy,
   DebugLogsParams,
 } from "@/views/admin/views/core/debug/debug-query";
+import type {
+  AccountDeletionsOrderBy,
+  AccountDeletionsParams,
+} from "@/views/admin/views/core/users/deletions/deletions-query";
 
 import { DEBUG_LOGS_TABLE_CONTRACT } from "@/views/admin/views/core/debug/debug-query";
+import { ACCOUNT_DELETIONS_TABLE_CONTRACT } from "@/views/admin/views/core/users/deletions/deletions-query";
 
 import type { CronRouteSearch } from "../cron/route-search";
 import type {
@@ -30,6 +35,7 @@ export const DEBUG_TABS = [
   "services",
   "logs",
   "queue",
+  "deletions",
   "ai",
 ] as const;
 
@@ -73,3 +79,26 @@ export const debugLogsSearchParams = (
 
 export const debugLogsSearchFrom = (nextSearch: string): DebugLogsRouteSearch =>
   adminTableSearchFrom(nextSearch, DEBUG_LOGS_TABLE_CONTRACT);
+
+export type DebugDeletionsRouteSearch =
+  AdminTableRouteSearch<AccountDeletionsOrderBy>;
+
+export const debugDeletionsRouteParams = (
+  input: UncheckedAdminTableSearch<AccountDeletionsOrderBy>,
+): AccountDeletionsParams =>
+  adminTableRouteParams(input, ACCOUNT_DELETIONS_TABLE_CONTRACT);
+
+export const normalizeDebugDeletionsSearch = (
+  input: UncheckedAdminTableSearch<AccountDeletionsOrderBy>,
+): DebugDeletionsRouteSearch =>
+  normalizeAdminTableSearch(input, ACCOUNT_DELETIONS_TABLE_CONTRACT);
+
+export const debugDeletionsSearchParams = (
+  input: UncheckedAdminTableSearch<AccountDeletionsOrderBy>,
+): URLSearchParams =>
+  adminTableSearchParams(input, ACCOUNT_DELETIONS_TABLE_CONTRACT);
+
+export const debugDeletionsSearchFrom = (
+  nextSearch: string,
+): DebugDeletionsRouteSearch =>
+  adminTableSearchFrom(nextSearch, ACCOUNT_DELETIONS_TABLE_CONTRACT);

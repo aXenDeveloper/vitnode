@@ -23,6 +23,8 @@ export const core_roles = camelCase.table.withRLS(
     allowUploadCover: t.boolean().notNull().default(true),
     maxCoverSize: t.integer().notNull().default(5120),
     allowEditPersonalInfo: t.boolean().notNull().default(true),
+    /** Members of this role may delete their own account from their settings. */
+    allowDeleteAccount: t.boolean().notNull().default(true),
     allowBrowseAnonymously: t.boolean().notNull().default(true),
     forceBrowseAnonymously: t.boolean().notNull().default(false),
     allowEditOwnContent: t.boolean().notNull().default(true),

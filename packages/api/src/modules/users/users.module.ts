@@ -3,10 +3,16 @@ import { buildModule } from "@/builders";
 import { userFilesModule } from "./files/files.module";
 import { userImagesModule } from "./images/images.module";
 import { passkeysUserModule } from "./passkeys/passkeys.module";
+import {
+  accountDeletionStatusRoute,
+  cancelAccountDeletionRoute,
+  requestAccountDeletionRoute,
+} from "./routes/account-deletion.route";
 import { changePasswordRoute } from "./routes/change-password.route";
 import { listDevicesRoute } from "./routes/devices.route";
 import { mePolicyRoute } from "./routes/me-policy.route";
 import { permissionsRoute } from "./routes/permissions.route";
+import { personalDataExportRoute } from "./routes/personal-data.route";
 import { presenceBatchRoute } from "./routes/presence-batch.route";
 import { presenceHeartbeatRoute } from "./routes/presence-heartbeat.route";
 import { presenceRoute } from "./routes/presence.route";
@@ -44,6 +50,10 @@ export const usersModule = buildModule({
     updateMeRoute,
     updateMyTimeZoneRoute,
     updateMyPrivacyRoute,
+    accountDeletionStatusRoute,
+    requestAccountDeletionRoute,
+    cancelAccountDeletionRoute,
+    personalDataExportRoute,
     presenceHeartbeatRoute,
     presenceBatchRoute,
     presenceRoute,

@@ -216,6 +216,12 @@ const DEBUG_TAB_CONTENT_PENDING: Record<DebugTab, () => React.ReactNode> = {
     </>
   ),
   cache: () => <FramePending rows={["check", "fact", "fact"]} />,
+  deletions: () => (
+    <>
+      <SectionHeaderPending />
+      <DataTableSkeleton columns={3} rows={6} />
+    </>
+  ),
   cron: () => (
     <>
       <SectionHeaderPending badge />
@@ -289,6 +295,7 @@ export const DebugSearchPending = debugTabPending("search");
 export const DebugServicesPending = debugTabPending("services");
 export const DebugLogsPending = debugTabPending("logs");
 export const DebugQueuePending = debugTabPending("queue");
+export const DebugDeletionsPending = debugTabPending("deletions");
 export const DebugAiPending = debugTabPending("ai");
 
 const NAV_PENDING_GROUPS = [
@@ -298,7 +305,11 @@ const NAV_PENDING_GROUPS = [
     tabs: ["vitnode", "plugins", "cron", "cache", "search", "services"],
     withTitle: true,
   },
-  { id: "diagnostics", tabs: ["logs", "queue", "ai"], withTitle: true },
+  {
+    id: "diagnostics",
+    tabs: ["logs", "queue", "deletions", "ai"],
+    withTitle: true,
+  },
 ] as const satisfies readonly {
   id: string;
   tabs: readonly DebugTab[];

@@ -1,0 +1,119 @@
+---
+title: Export and Erase Plugin Data
+description: Make a VitNode plugin include its rows in a member's GDPR data download and erase them when the account is deleted, with definePersonalData.
+icon: DatabaseZap
+---
+
+When a member downloads their data or deletes their account, VitNode asks every plugin for its part. Declare `personalData` with `definePersonalData` in any plugin that stores something about members, so its rows land in the download and are deleted or anonymized with the account.
+
+The member and staff side of this is covered in [Account Deletion and Data Export](/docs/dev/working-with-users/account-deletion).
+
+## Add personal data handlers to a plugin
+
+This page uses a polls plugin that stores one row per vote, with the voter and their IP:
+
+```ts title="plugins/polls/src/database/votes.ts"
+import { core_users } from "@vitnode/api/database/users";
+import { camelCase } from "drizzle-orm/pg-core";
+
+export const polls_votes = camelCase.table.withRLS("polls_votes", (t) => ({
+  id: t.serial().primaryKey(),
+  pollId: t.integer().notNull(),
+  optionId: t.integer().notNull(),
+  userId: t.integer().references(() => core_users.id, { onDelete: "set null" }),
+  ipAddress: t.varchar({ length: 45 }),
+  createdAt: t.timestamp().notNull().defaultNow(),
+}));
+```
+
+<Steps>
+<Step>
+
+### Declare the handlers
+
+Create `personal-data.ts` in your plugin's API folder:
+
+```ts title="plugins/polls/src/api/personal-data.ts"
+import { definePersonalData } from "@vitnode/api/lib/personal-data";
+import { eq } from "drizzle-orm";
+
+import { polls_votes } from "@/database/votes";
+
+export const pollsPersonalData = definePersonalData({
+  export: async ({ c, userId }) => ({
+    votes: await c
+      .get("db")
+      .select({
+        pollId: polls_votes.pollId,
+        optionId: polls_votes.optionId,
+        createdAt: polls_votes.createdAt,
+      })
+      .from(polls_votes)
+      .where(eq(polls_votes.userId, userId)),
+  }),
+  erase: async ({ tx, userId }) => {
+    await tx
+      .update(polls_votes)
+      .set({ ipAddress: null, userId: null })
+      .where(eq(polls_votes.userId, userId));
+  },
+});
+```
+
+`export` returns plain JSON for the member's download. `Date` values become ISO strings, and password hashes, tokens and keys never belong here.
+
+`erase` keeps the votes, so poll results stay correct, but removes who cast them and from where. It runs inside the erasure transaction, before core deletes the account. Write through `tx`, never `c.get("db")`, so a failure rolls the whole erasure back.
+
+</Step>
+<Step>
+
+### Register the handlers
+
+Pass them as `personalData` to `buildApiPlugin` in your plugin's API config:
+
+```ts title="plugins/polls/src/config.api.ts"
+import { buildApiPlugin } from "@vitnode/api/lib/plugin";
+
+import { pollsPersonalData } from "@/api/personal-data";
+import { votesModule } from "@/api/modules/votes/votes.module";
+import { manifest } from "@/manifest.gen";
+
+export const pollsApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    modules: [votesModule],
+    personalData: pollsPersonalData,
+  });
+```
+
+Both handlers are optional. Plugins run in the order they are registered, and core always runs last, so the account row still exists while your `erase` runs.
+
+</Step>
+</Steps>
+
+## Decide what to delete and what to keep
+
+- **Delete** what only describes the member: preferences, drafts, private messages, tokens.
+- **Anonymize** content other members depend on, like a vote or a post with replies. Clear the user, IP and email, and keep the rest.
+- **Keep** records a law requires, such as invoices, but unlinked from the member. Core does this for payments.
+- **Leave alone** rows whose foreign key to `core_users` uses `onDelete: "cascade"`. They are deleted with the account, so `erase` only needs the columns the database keeps.
+- **Clean outside the database** (a newsletter provider, an external search index) in a [`user.deleted`](/docs/dev/events/built-in-events#core-events-vitnodecore) listener. It fires after the commit with the `userId` and the address the account had.
+
+<Callout type="warn" title="A required foreign key blocks the erasure">
+  A column that references `core_users` with `onDelete: "restrict"`, such as a
+  required Content Engine `user` field, makes the account delete fail. The
+  hourly job retries it, then marks the request **Failed** with the constraint
+  name on the user's AdminCP page. Delete or reassign those rows in your
+  `erase`.
+</Callout>
+
+## Check the result
+
+1. Sign in as a test member who has rows in your plugin, open **Settings → Privacy & data** and press **Download my data**. The file's `plugins` object has a key named after your plugin id, for example `@vitnode/polls`, holding what `export` returned.
+2. As an admin, open the member in **AdminCP → Users**, press **Delete account** with **Delete immediately** switched on, and confirm.
+3. Query your table. The member's rows are deleted or anonymized the way `erase` describes. If the erasure failed, the error is on the request in **Debug Panel → Diagnostics → Account deletions**.
+
+## Related
+
+- [Account Deletion and Data Export](/docs/dev/working-with-users/account-deletion)
+- [Built-in events](/docs/dev/events/built-in-events)

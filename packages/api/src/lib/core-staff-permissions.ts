@@ -36,6 +36,7 @@ export const coreStaffPermissions = defineStaffPermissions(manifest, {
       { permission: "can_edit", dependsOn: ["can_view"] },
       { permission: "can_edit_admin", dependsOn: ["can_view"] },
       { permission: "can_view_hidden_presence", dependsOn: ["can_view"] },
+      { permission: "can_delete", dependsOn: ["can_edit"] },
     ],
     roles: [
       "can_view",

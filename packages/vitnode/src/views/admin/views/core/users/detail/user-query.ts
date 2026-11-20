@@ -48,6 +48,16 @@ export interface AdminUserDetail {
   name: string;
   nameCode: string;
   newsletter: boolean;
+  /** The open deletion request: pending, or failed and waiting for a retry. */
+  pendingDeletion: null | {
+    attempts: number;
+    id: number;
+    /** Why the last erasure attempt failed. */
+    lastError: null | string;
+    scheduledAt: Date | string;
+    source: "admin" | "user";
+    status: "failed" | "pending";
+  };
   phone: null | string;
   role: AdminUserRole;
   roleId: number;

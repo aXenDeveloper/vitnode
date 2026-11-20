@@ -1,4 +1,9 @@
-import { useInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -12,7 +17,16 @@ import {
 } from "@/components/staff-permission/provider";
 import { AiUserOverrideCardContent } from "@/views/admin/views/core/ai/access/user-override-card-content";
 import { ADMIN_AI_PERMISSIONS } from "@/views/admin/views/core/ai/ai-permissions";
+import { isAdminMutationError } from "@/views/admin/views/core/shared/admin-mutation";
+import { ADMIN_USER_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
+import {
+  cancelAdminAccountDeletion,
+  deleteAdminUser,
+  retryAccountDeletion,
+} from "@/views/admin/views/core/users/deletions/deletions-mutations";
+import { ACCOUNT_DELETIONS_QUERY_ROOT } from "@/views/admin/views/core/users/deletions/deletions-query";
 import { UserConnectedAccountsCard } from "@/views/admin/views/core/users/detail/user-connected-accounts";
+import { UserDeleteCard } from "@/views/admin/views/core/users/detail/user-delete-card";
 import { UserDetailContent } from "@/views/admin/views/core/users/detail/user-detail-content";
 import { UserDevicesCard } from "@/views/admin/views/core/users/detail/user-devices";
 import { UserNotificationsPanel } from "@/views/admin/views/core/users/detail/user-notifications";
@@ -28,7 +42,11 @@ import type { AdminUserRouteData } from "./detail-route";
 import { RouteMessages } from "../../i18n/route-messages";
 import { adminAiUserOverrideQuery, useAdminAiMutations } from "../ai/query";
 import { ADMIN_USER_NAMESPACES } from "./detail-route";
-import { adminUserQuery, useAdminUserMutations } from "./query";
+import {
+  adminUserQuery,
+  invalidateAdminUsers,
+  useAdminUserMutations,
+} from "./query";
 
 export type AdminUserRouteProps = AdminUserRouteData;
 
@@ -85,6 +103,20 @@ const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
   const permissions = useAdminStaffPermissions();
   const canEdit = canEditAdminUser(permissions, user);
   const canViewAi = useAdminStaffPermission(ADMIN_AI_PERMISSIONS.view);
+  const hasDeletePermission = useAdminStaffPermission(
+    ADMIN_USER_PERMISSIONS.delete,
+  );
+  const canDelete = canEdit && hasDeletePermission;
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const refreshAfterDeletion = async () => {
+    await Promise.all([
+      invalidateAdminUsers(queryClient, adminUserId),
+      queryClient.invalidateQueries({
+        queryKey: ACCOUNT_DELETIONS_QUERY_ROOT,
+      }),
+    ]);
+  };
 
   return (
     <div className="p-4 md:p-6">
@@ -103,6 +135,42 @@ const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
             canEdit={canEdit}
             user={user}
           />
+        }
+        deleteAccount={
+          canDelete && adminUserId !== user.id ? (
+            <UserDeleteCard
+              onCancel={async deletionId => {
+                const result = await cancelAdminAccountDeletion(deletionId);
+                if (!isAdminMutationError(result)) await refreshAfterDeletion();
+
+                return result;
+              }}
+              onDelete={async ({ immediately }) => {
+                const result = await deleteAdminUser(user.id, { immediately });
+                if (!isAdminMutationError(result) && !immediately) {
+                  await refreshAfterDeletion();
+                }
+
+                return result;
+              }}
+              onErased={async () => {
+                await navigate({ to: "/admin/core/users" });
+                await refreshAfterDeletion();
+              }}
+              onRetry={async deletionId => {
+                const result = await retryAccountDeletion(deletionId);
+                if (
+                  !isAdminMutationError(result) &&
+                  result.data.status === "failed"
+                ) {
+                  await refreshAfterDeletion();
+                }
+
+                return result;
+              }}
+              user={user}
+            />
+          ) : null
         }
         devices={
           <UserDevicesCard

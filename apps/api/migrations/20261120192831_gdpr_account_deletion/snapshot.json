@@ -1,0 +1,615 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d68f291f-7e91-4b91-b606-bca1ba71055c",
+  "prevIds": [
+    "87dc294c-d906-4784-83d9-3d9c814ef7a4"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_users_deletions"
+      ],
+      "writes": [
+        "s|tbl|public.core_users_deletions",
+        "n|tbl|public.core_users_deletions",
+        "e|tbl|public.core_users_deletions",
+        "n|rel|public.core_users_deletions",
+        "n|type|public.core_users_deletions",
+        "n|rel|public.core_users_deletions_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_roles",
+        "allowDeleteAccount"
+      ],
+      "writes": [
+        "s|col|public.core_roles.allowDeleteAccount",
+        "n|col|public.core_roles.allowDeleteAccount",
+        "e|col|public.core_roles.allowDeleteAccount"
+      ],
+      "reads": [
+        "n|tbl|public.core_roles",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "alter_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_users",
+        "ipAddress"
+      ],
+      "writes": [
+        "s|colprop|public.core_users.ipAddress.notNull"
+      ],
+      "reads": [
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_users.ipAddress"
+      ],
+      "sqlHash": "0676d6f8140f127a"
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_users_deletions",
+        "core_users_deletions_pending_user_unique"
+      ],
+      "writes": [
+        "s|idx|public.core_users_deletions_pending_user_unique",
+        "n|idx|public.core_users_deletions_pending_user_unique",
+        "e|idx|public.core_users_deletions_pending_user_unique",
+        "n|rel|public.core_users_deletions_pending_user_unique"
+      ],
+      "reads": [
+        "n|tbl|public.core_users_deletions",
+        "n|sch|public",
+        "n|col|public.core_users_deletions.userId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_users_deletions",
+        "core_users_deletions_status_scheduled_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_users_deletions_status_scheduled_idx",
+        "n|idx|public.core_users_deletions_status_scheduled_idx",
+        "e|idx|public.core_users_deletions_status_scheduled_idx",
+        "n|rel|public.core_users_deletions_status_scheduled_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_users_deletions",
+        "n|sch|public",
+        "n|col|public.core_users_deletions.status",
+        "n|col|public.core_users_deletions.scheduledAt"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_users_deletions",
+        "core_users_deletions_erased_user_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_users_deletions_erased_user_idx",
+        "n|idx|public.core_users_deletions_erased_user_idx",
+        "e|idx|public.core_users_deletions_erased_user_idx",
+        "n|rel|public.core_users_deletions_erased_user_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_users_deletions",
+        "n|sch|public",
+        "n|col|public.core_users_deletions.erasedUserId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_users_deletions",
+        "core_users_deletions_created_at_id_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_users_deletions_created_at_id_idx",
+        "n|idx|public.core_users_deletions_created_at_id_idx",
+        "e|idx|public.core_users_deletions_created_at_id_idx",
+        "n|rel|public.core_users_deletions_created_at_id_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_users_deletions",
+        "n|sch|public",
+        "n|col|public.core_users_deletions.createdAt",
+        "n|col|public.core_users_deletions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_users_deletions"
+      ],
+      "writes": [
+        "s|fk|public.core_users_deletions.core_users_deletions_userId_core_users_id_fkey",
+        "n|fk|public.core_users_deletions.core_users_deletions_userId_core_users_id_fkey",
+        "e|fk|public.core_users_deletions.core_users_deletions_userId_core_users_id_fkey",
+        "n|con|public.core_users_deletions.core_users_deletions_userId_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_users_deletions",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_users_deletions.userId",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_users_deletions"
+      ],
+      "writes": [
+        "s|fk|public.core_users_deletions.core_users_deletions_requestedById_core_users_id_fkey",
+        "n|fk|public.core_users_deletions.core_users_deletions_requestedById_core_users_id_fkey",
+        "e|fk|public.core_users_deletions.core_users_deletions_requestedById_core_users_id_fkey",
+        "n|con|public.core_users_deletions.core_users_deletions_requestedById_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_users_deletions",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_users_deletions.requestedById",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_users_deletions",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "userId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "erasedUserId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "source",
+        "type": "varchar(16)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "requestedById",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "status",
+        "type": "varchar(16)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'pending'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "scheduledAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "attempts",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "lastError",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "filesDeleted",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "filesKept",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "createdAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "cancelledAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "completedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_roles",
+        "name": "allowDeleteAccount",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "core_users_deletions_pending_user_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "userId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": "\"status\" = 'pending'",
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "core_users_deletions_status_scheduled_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "status",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "scheduledAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "core_users_deletions_erased_user_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "erasedUserId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "core_users_deletions_created_at_id_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "createdAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "id",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "concurrently": false,
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "core_users_deletions_userId_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "userId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "core_users_deletions_requestedById_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "requestedById"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users_deletions",
+        "name": "core_users_deletions_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "alter",
+      "key": "columns\u0000[\"public\",\"core_users\",\"ipAddress\"]",
+      "set": {
+        "notNull": false
+      }
+    }
+  ]
+}

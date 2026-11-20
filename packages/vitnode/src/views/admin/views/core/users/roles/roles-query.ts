@@ -51,6 +51,7 @@ export const normalizeAdminRolesParams = (
 /** One row of the roles table - everything the edit dialog re-opens with. */
 export interface AdminRoleRow {
   allowBrowseAnonymously: boolean;
+  allowDeleteAccount?: boolean;
   allowDeleteOwnContent: boolean;
   allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;

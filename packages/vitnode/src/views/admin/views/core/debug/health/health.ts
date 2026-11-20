@@ -11,6 +11,7 @@ import type {
   AdminInstalledPlugin,
   AdminInstalledPlugins,
 } from "@/views/admin/views/core/system/plugins/plugins-query";
+import type { AccountDeletionsSummary } from "@/views/admin/views/core/users/deletions/deletions-query";
 
 import type { DebugQueueSnapshot } from "../debug-query";
 
@@ -18,6 +19,7 @@ export type DebugTone = "critical" | "off" | "ok" | "warn";
 
 export interface DebugSources {
   cronHealth?: CronHealth;
+  deletions?: AccountDeletionsSummary;
   installed?: AdminInstalledPlugins;
   integrations?: AdminIntegrations;
   queue?: DebugQueueSnapshot;
@@ -57,6 +59,14 @@ export type DebugMessageKey =
   | "cron.stopped"
   | "cron.subtitle_adapter"
   | "cron.subtitle_external"
+  | "deletions.failed"
+  | "deletions.job"
+  | "deletions.job_never"
+  | "deletions.none"
+  | "deletions.oldest"
+  | "deletions.oldest_late"
+  | "deletions.overdue"
+  | "deletions.subtitle"
   | "plugins.ok"
   | "plugins.subtitle"
   | "search.engine_down"
@@ -80,8 +90,11 @@ export interface DebugMessage {
   values?: Record<string, number | string>;
 }
 
+/** An area of the health report: every system, plus account deletions. */
+export type DebugAreaId = "deletions" | DebugSystemTab;
+
 export interface DebugCheck {
-  area: DebugSystemTab;
+  area: DebugAreaId;
   detail?: string;
   id: string;
   message: DebugMessage;
@@ -91,7 +104,7 @@ export interface DebugCheck {
 
 export interface DebugArea {
   checks: DebugCheck[];
-  id: DebugSystemTab;
+  id: DebugAreaId;
   subtitle: DebugMessage;
   tone: DebugTone;
 }
@@ -402,8 +415,73 @@ const serviceChecks = (integrations: AdminIntegrations): DebugCheck[] =>
     tone: isServiceActive(integrations, service) ? "ok" : "off",
   }));
 
+/** Days before the one-month deadline at which an open request turns amber. */
+const DEADLINE_WARNING_DAYS = 5;
+
+const DAY_MS = 86_400_000;
+
+const deletionChecks = (
+  summary: AccountDeletionsSummary,
+  now: number,
+): DebugCheck[] => {
+  const checks: DebugCheck[] = [];
+  const check = (
+    id: string,
+    tone: DebugTone,
+    message: DebugMessage,
+    detail?: string,
+  ) => {
+    checks.push({
+      area: "deletions",
+      detail,
+      id: `deletions-${id}`,
+      message,
+      tab: "deletions",
+      tone,
+    });
+  };
+
+  if (summary.failed > 0) {
+    const first = summary.attention.find(item => item.status === "failed");
+    check(
+      "failed",
+      "critical",
+      { key: "deletions.failed", values: { count: summary.failed } },
+      first?.lastError ?? undefined,
+    );
+  }
+  if (summary.overdue > 0) {
+    check("overdue", "warn", {
+      key: "deletions.overdue",
+      values: { count: summary.overdue },
+    });
+  }
+  if (summary.oldestOpenAt) {
+    const days = Math.floor(
+      (now - new Date(summary.oldestOpenAt).getTime()) / DAY_MS,
+    );
+    const late = days >= summary.deadlineDays;
+    check(
+      "oldest",
+      late
+        ? "critical"
+        : days >= summary.deadlineDays - DEADLINE_WARNING_DAYS
+          ? "warn"
+          : "ok",
+      {
+        key: late ? "deletions.oldest_late" : "deletions.oldest",
+        values: { days, deadline: summary.deadlineDays },
+      },
+    );
+  } else {
+    check("none", "ok", { key: "deletions.none" });
+  }
+
+  return checks;
+};
+
 const area = (
-  id: DebugSystemTab,
+  id: DebugAreaId,
   subtitle: DebugMessage,
   checks: DebugCheck[],
 ): DebugArea => ({
@@ -415,6 +493,7 @@ const area = (
 
 export const debugHealth = ({
   cronHealth,
+  deletions,
   installed,
   integrations,
   queue,
@@ -490,6 +569,28 @@ export const debugHealth = ({
           values: { active, total: DEBUG_SERVICES.length },
         },
         serviceChecks(integrations),
+      ),
+    );
+  }
+
+  if (deletions) {
+    const now = Date.now();
+    const oldest = deletions.oldestOpenAt
+      ? Math.floor((now - new Date(deletions.oldestOpenAt).getTime()) / DAY_MS)
+      : 0;
+    areas.push(
+      area(
+        "deletions",
+        {
+          key: "deletions.subtitle",
+          values: {
+            deadline: deletions.deadlineDays,
+            failed: deletions.failed,
+            oldest,
+            pending: deletions.pending,
+          },
+        },
+        deletionChecks(deletions, now),
       ),
     );
   }

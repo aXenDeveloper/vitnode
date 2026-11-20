@@ -83,6 +83,8 @@ const AUTH_RATE_LIMITED_PATHS = [
   "/@vitnode/core/users/change-password",
   "/@vitnode/core/users/passkeys/sign-in",
   "/@vitnode/core/users/passkeys/admin-sign-in",
+  // Checks the password.
+  "/@vitnode/core/users/me/account-deletion",
 ] as const;
 
 const AUTH_RATE_LIMITED_PATTERNS = [

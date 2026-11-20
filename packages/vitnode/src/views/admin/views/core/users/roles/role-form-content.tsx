@@ -68,6 +68,7 @@ export type AdminRoleAiValues = Omit<AdminAiRoleAccessInput, "roleId">;
 export interface AdminRoleFormValues {
   ai?: AdminRoleAiValues;
   allowBrowseAnonymously: boolean;
+  allowDeleteAccount?: boolean;
   allowDeleteOwnContent: boolean;
   allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;
@@ -91,6 +92,7 @@ export interface AdminRoleFormValues {
 /** The row an edit re-opens with. Absent for a create. */
 export interface AdminRoleFormData {
   allowBrowseAnonymously: boolean;
+  allowDeleteAccount?: boolean;
   allowDeleteOwnContent: boolean;
   allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;
@@ -302,6 +304,7 @@ export const AdminRoleFormContent = ({
     allowEditPersonalInfo: z
       .boolean()
       .default(data?.allowEditPersonalInfo ?? true),
+    allowDeleteAccount: z.boolean().default(data?.allowDeleteAccount ?? true),
     allowBrowseAnonymously: z
       .boolean()
       .default(data?.allowBrowseAnonymously ?? true),
@@ -499,6 +502,17 @@ export const AdminRoleFormContent = ({
             />
           ),
           id: "allowEditPersonalInfo",
+          tab: "profile",
+        },
+        {
+          component: props => (
+            <AutoFormSwitch
+              {...props}
+              description={t("form.delete_account.allow_desc")}
+              label={t("form.delete_account.allow")}
+            />
+          ),
+          id: "allowDeleteAccount",
           tab: "profile",
         },
         {
