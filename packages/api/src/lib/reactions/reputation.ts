@@ -65,22 +65,24 @@ export const recountReputation = async (
   for (let index = 0; index < ids.length; index += BATCH) {
     const batch = ids.slice(index, index + BATCH);
     const db = c.get("db");
-    const sums = await db
-      .select({
-        total: sql<number>`coalesce(sum(${core_reactions.points}), 0)::int`,
-        userId: core_reactions_entries.targetAuthorId,
-      })
-      .from(core_reactions_entries)
-      .innerJoin(
-        core_reactions,
-        eq(core_reactions.id, core_reactions_entries.reactionId),
-      )
-      .where(inArray(core_reactions_entries.targetAuthorId, batch))
-      .groupBy(core_reactions_entries.targetAuthorId);
-    const current = await db
-      .select({ id: core_users.id, reputation: core_users.reputation })
-      .from(core_users)
-      .where(inArray(core_users.id, batch));
+    const [sums, current] = await Promise.all([
+      db
+        .select({
+          total: sql<number>`coalesce(sum(${core_reactions.points}), 0)::int`,
+          userId: core_reactions_entries.targetAuthorId,
+        })
+        .from(core_reactions_entries)
+        .innerJoin(
+          core_reactions,
+          eq(core_reactions.id, core_reactions_entries.reactionId),
+        )
+        .where(inArray(core_reactions_entries.targetAuthorId, batch))
+        .groupBy(core_reactions_entries.targetAuthorId),
+      db
+        .select({ id: core_users.id, reputation: core_users.reputation })
+        .from(core_users)
+        .where(inArray(core_users.id, batch)),
+    ]);
 
     for (const user of current) {
       const total = sums.find(row => row.userId === user.id)?.total ?? 0;

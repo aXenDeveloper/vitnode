@@ -34,20 +34,21 @@ export const reactionDeleteImpactAdminRoute = buildRoute({
   },
   handler: async c => {
     const { id } = c.req.valid("param");
-    const [row] = await c
-      .get("db")
-      .select({
-        reactions: sql<number>`count(*)::int`,
-        withAuthor: sql<number>`count(${core_reactions_entries.targetAuthorId})::int`,
-      })
-      .from(core_reactions_entries)
-      .where(eq(core_reactions_entries.reactionId, id));
-    const [reaction] = await c
-      .get("db")
-      .select({ points: core_reactions.points })
-      .from(core_reactions)
-      .where(eq(core_reactions.id, id))
-      .limit(1);
+    const db = c.get("db");
+    const [[row], [reaction]] = await Promise.all([
+      db
+        .select({
+          reactions: sql<number>`count(*)::int`,
+          withAuthor: sql<number>`count(${core_reactions_entries.targetAuthorId})::int`,
+        })
+        .from(core_reactions_entries)
+        .where(eq(core_reactions_entries.reactionId, id)),
+      db
+        .select({ points: core_reactions.points })
+        .from(core_reactions)
+        .where(eq(core_reactions.id, id))
+        .limit(1),
+    ]);
 
     return c.json(
       {

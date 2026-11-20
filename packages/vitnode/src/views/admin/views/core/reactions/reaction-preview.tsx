@@ -62,7 +62,7 @@ export const ReactionLivePreview = ({
   return (
     <figure className="flex flex-col items-center gap-3 px-3 pt-2 pb-4 text-center">
       <span className="bg-background flex size-16 items-center justify-center rounded-2xl border shadow-xs">
-        <span className="flex will-change-transform" ref={glyphRef}>
+        <span className="flex" ref={glyphRef}>
           {glyph("size-8 text-3xl")}
         </span>
       </span>

@@ -42,15 +42,17 @@ export const reputationRoute = buildRoute({
       .limit(1);
     if (!user) return c.json({ error: "not_found" }, 404);
 
-    const counts = await db
-      .select({
-        reactionId: core_reactions_entries.reactionId,
-        total: sql<number>`count(*)::int`,
-      })
-      .from(core_reactions_entries)
-      .where(eq(core_reactions_entries.targetAuthorId, userId))
-      .groupBy(core_reactions_entries.reactionId);
-    const catalog = await getReactionCatalog(c);
+    const [counts, catalog] = await Promise.all([
+      db
+        .select({
+          reactionId: core_reactions_entries.reactionId,
+          total: sql<number>`count(*)::int`,
+        })
+        .from(core_reactions_entries)
+        .where(eq(core_reactions_entries.targetAuthorId, userId))
+        .groupBy(core_reactions_entries.reactionId),
+      getReactionCatalog(c),
+    ]);
 
     return c.json(
       {

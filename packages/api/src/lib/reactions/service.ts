@@ -632,8 +632,10 @@ export const removeReaction = async (
   const user = c.get("user");
   if (!user) throw new ReactionWriteError(401, "sign_in");
 
-  const catalog = await getReactionCatalog(c);
-  const access = await findAccess(c, registered, id);
+  const [catalog, access] = await Promise.all([
+    getReactionCatalog(c),
+    findAccess(c, registered, id),
+  ]);
   const policy = await resolveReactionPolicy(c, catalog);
   const target = {
     pluginId: registered.pluginId,

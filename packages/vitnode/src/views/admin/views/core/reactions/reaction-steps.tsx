@@ -77,9 +77,7 @@ const invalidStepsOf = (state: AnyFormState): ReactionStepId[] =>
 
 const useInvalidSteps = (): ReactionStepId[] => {
   const { form } = useFormApi();
-  const key = useSelector(form.store, state =>
-    invalidStepsOf(state).join(","),
-  );
+  const key = useSelector(form.store, state => invalidStepsOf(state).join(","));
 
   return key ? (key.split(",") as ReactionStepId[]) : [];
 };
@@ -132,33 +130,67 @@ const useStepSummary = (values: ReactionFormValues, title: string) => {
   };
 };
 
-const StepBadge = ({
+type StepBadgeState = "active" | "done" | "error" | "todo";
+
+const STEP_BADGE = {
+  active: {
+    className: "border-foreground text-foreground",
+    label: "state_todo",
+  },
+  done: {
+    className: "border-primary bg-primary text-primary-foreground",
+    label: "state_done",
+  },
+  error: {
+    className: "border-destructive bg-destructive text-white",
+    label: "state_error",
+  },
+  todo: { className: "text-muted-foreground", label: "state_todo" },
+} as const satisfies Record<
+  StepBadgeState,
+  { className: string; label: string }
+>;
+
+const NO_MOTION = { duration: 0 } as const;
+const BADGE_GLYPH_HIDDEN = {
+  filter: "blur(2px)",
+  opacity: 0,
+  scale: 0.5,
+} as const;
+
+const stepBadgeStateOf = ({
   done,
   hasError,
-  index,
   isActive,
 }: {
   done: boolean;
   hasError: boolean;
-  index: number;
   isActive: boolean;
+}): StepBadgeState => {
+  if (hasError) return "error";
+  if (done) return "done";
+
+  return isActive ? "active" : "todo";
+};
+
+const StepBadge = ({
+  index,
+  state,
+}: {
+  index: number;
+  state: StepBadgeState;
 }) => {
   const t = useTranslations("admin.reactions.form.steps");
   const reduceMotion = useReducedMotion();
-  const showCheck = done && !hasError;
+  const shake = state === "error" && !reduceMotion;
+  const showCheck = state === "done";
 
   return (
     <m.span
-      animate={{ x: hasError && !reduceMotion ? ERROR_SHAKE : 0 }}
+      animate={{ x: shake ? ERROR_SHAKE : 0 }}
       className={cn(
         "flex size-5 shrink-0 items-center justify-center overflow-hidden rounded-full border text-xs font-medium tabular-nums transition-[background-color,border-color,color] duration-200 ease-out motion-reduce:transition-none",
-        hasError
-          ? "border-destructive bg-destructive text-white"
-          : showCheck
-            ? "border-primary bg-primary text-primary-foreground"
-            : isActive
-              ? "border-foreground text-foreground"
-              : "text-muted-foreground",
+        STEP_BADGE[state].className,
       )}
       initial={false}
       transition={{ duration: 0.32, ease: "easeOut" }}
@@ -168,17 +200,15 @@ const StepBadge = ({
           animate={{ filter: "blur(0px)", opacity: 1, scale: 1 }}
           className="flex items-center justify-center"
           exit={{
-            filter: "blur(2px)",
-            opacity: 0,
-            scale: 0.5,
+            ...BADGE_GLYPH_HIDDEN,
             transition: reduceMotion
-              ? { duration: 0 }
+              ? NO_MOTION
               : { duration: 0.12, ease: "easeIn" },
           }}
-          initial={{ filter: "blur(2px)", opacity: 0, scale: 0.5 }}
+          initial={BADGE_GLYPH_HIDDEN}
           key={showCheck ? "done" : "number"}
           transition={
-            reduceMotion ? { duration: 0 } : { duration: 0.2, ease: EASE_OUT }
+            reduceMotion ? NO_MOTION : { duration: 0.2, ease: EASE_OUT }
           }
         >
           {showCheck ? (
@@ -188,9 +218,7 @@ const StepBadge = ({
           )}
         </m.span>
       </AnimatePresence>
-      <span className="sr-only">
-        {t(hasError ? "state_error" : showCheck ? "state_done" : "state_todo")}
-      </span>
+      <span className="sr-only">{t(STEP_BADGE[state].label)}</span>
     </m.span>
   );
 };
@@ -257,10 +285,12 @@ export const ReactionStepNav = ({
               ) : null}
               <span className="md:mt-0.5">
                 <StepBadge
-                  done={visited.has(step.id) && isStepDone(step.id, values)}
-                  hasError={invalid.includes(step.id)}
                   index={index}
-                  isActive={isActive}
+                  state={stepBadgeStateOf({
+                    done: visited.has(step.id) && isStepDone(step.id, values),
+                    hasError: invalid.includes(step.id),
+                    isActive,
+                  })}
                 />
               </span>
               <span className="flex min-w-0 flex-col gap-0.5">

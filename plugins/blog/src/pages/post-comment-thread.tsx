@@ -490,7 +490,12 @@ const HiddenGate = ({
   entry: Entry;
 }) => {
   const t = useTranslations("@vitnode/blog.comments");
-  const [shown, setShown] = React.useState(entry.isHighlighted);
+  const [shown, setShown] = React.useState(false);
+  const [wasHighlighted, setWasHighlighted] = React.useState(false);
+  if (entry.isHighlighted !== wasHighlighted) {
+    setWasHighlighted(entry.isHighlighted);
+    if (entry.isHighlighted) setShown(true);
+  }
   const open = shown || !!entry.item.editing;
 
   if (!entry.node.hidden) return <>{children}</>;

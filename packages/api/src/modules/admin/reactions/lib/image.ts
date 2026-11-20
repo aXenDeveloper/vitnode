@@ -132,11 +132,10 @@ export const deleteReactionFiles = async (
   c: Context,
   ids: readonly (null | number)[],
 ): Promise<void> => {
-  for (const id of ids) {
-    if (id === null) continue;
-    await c
-      .get("storage")
-      .deleteFile(id)
-      .catch(() => undefined);
-  }
+  const storage = c.get("storage");
+  await Promise.all(
+    ids
+      .filter(id => id !== null)
+      .map(async id => storage.deleteFile(id).catch(() => undefined)),
+  );
 };

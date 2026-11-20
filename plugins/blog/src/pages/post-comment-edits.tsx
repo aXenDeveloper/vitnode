@@ -114,6 +114,36 @@ type HistoryEdit = NonNullable<
   ReturnType<typeof useCommentHistory>["data"]
 >["edits"][number];
 
+const HistoryLoadError = ({
+  copy,
+  isRetrying,
+  onRetry,
+}: {
+  copy: "entry_error" | "load_error";
+  isRetrying: boolean;
+  onRetry: () => void;
+}) => {
+  const t = useTranslations("@vitnode/blog.comments.edits");
+
+  return (
+    <Empty className="p-6" role="alert">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <HistoryIcon aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>{t(`${copy}.title`)}</EmptyTitle>
+        <EmptyDescription>{t(`${copy}.desc`)}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button isLoading={isRetrying} onClick={onRetry} variant="outline">
+          <RotateCwIcon aria-hidden="true" />
+          {t("retry")}
+        </Button>
+      </EmptyContent>
+    </Empty>
+  );
+};
+
 const EditDiff = ({
   commentId,
   edit,
@@ -161,27 +191,13 @@ const EditDiff = ({
 
   if (entry.isError) {
     return (
-      <Empty className="p-6" role="alert">
-        <EmptyHeader>
-          <EmptyMedia variant="icon">
-            <HistoryIcon aria-hidden="true" />
-          </EmptyMedia>
-          <EmptyTitle>{t("entry_error.title")}</EmptyTitle>
-          <EmptyDescription>{t("entry_error.desc")}</EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <Button
-            isLoading={entry.isFetching}
-            onClick={() => {
-              void entry.refetch();
-            }}
-            variant="outline"
-          >
-            <RotateCwIcon aria-hidden="true" />
-            {t("retry")}
-          </Button>
-        </EmptyContent>
-      </Empty>
+      <HistoryLoadError
+        copy="entry_error"
+        isRetrying={entry.isFetching}
+        onRetry={() => {
+          void entry.refetch();
+        }}
+      />
     );
   }
 
@@ -374,27 +390,13 @@ export const CommentEdits = ({
               ))}
             </div>
           ) : history.isError ? (
-            <Empty className="p-6" role="alert">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <HistoryIcon aria-hidden="true" />
-                </EmptyMedia>
-                <EmptyTitle>{t("load_error.title")}</EmptyTitle>
-                <EmptyDescription>{t("load_error.desc")}</EmptyDescription>
-              </EmptyHeader>
-              <EmptyContent>
-                <Button
-                  isLoading={history.isFetching}
-                  onClick={() => {
-                    void history.refetch();
-                  }}
-                  variant="outline"
-                >
-                  <RotateCwIcon aria-hidden="true" />
-                  {t("retry")}
-                </Button>
-              </EmptyContent>
-            </Empty>
+            <HistoryLoadError
+              copy="load_error"
+              isRetrying={history.isFetching}
+              onRetry={() => {
+                void history.refetch();
+              }}
+            />
           ) : (
             <>
               <ul className="py-1">
