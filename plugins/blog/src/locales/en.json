@@ -234,7 +234,8 @@
       "access_required": "Members only",
       "preview": {
         "title": "Preview of {title}"
-      }
+      },
+      "share": "Share"
     },
     "comments": {
       "article_author": "Author",
@@ -242,8 +243,53 @@
         "label": "Share",
         "description": "Comment by {name}"
       },
-      "replying_to": "Replying to {name}",
-      "removed_comment": "a removed comment"
+      "in_reply_to": "In reply to <name></name>",
+      "reply_count": "<number>{count}</number> {count, plural, one {reply} other {replies}}",
+      "write_reply": "Write a reply",
+      "hidden": {
+        "notice": "This comment was hidden.",
+        "show": "Show comment",
+        "hide": "Hide comment"
+      },
+      "sort": {
+        "label": "Sort comments",
+        "newest": "Newest",
+        "oldest": "Oldest",
+        "top": "Top"
+      },
+      "gap": {
+        "hidden": "{count, plural, one {# hidden conversation} other {# hidden conversations}}",
+        "load": "Load more…"
+      },
+      "edits": {
+        "trigger": "edited",
+        "trigger_label": "Edited {count, plural, one {# time} other {# times}}. Show the edit history",
+        "title": "Edited {count, plural, one {# time} other {# times}}",
+        "edited": "<name></name> edited <date></date>",
+        "created": "<name></name> created <date></date>",
+        "most_recent": "(most recent)",
+        "incomplete": "Older edits are no longer kept.",
+        "loading": "Loading the edit history",
+        "retry": "Try again",
+        "added": "Added",
+        "removed": "Removed",
+        "formatting_only": "Only the formatting changed in this edit.",
+        "load_error": {
+          "title": "History didn't load",
+          "desc": "Try again in a moment."
+        },
+        "entry_error": {
+          "title": "This edit didn't load",
+          "desc": "Try again in a moment."
+        },
+        "dialog": {
+          "edited_title": "{name}'s edit",
+          "created_title": "{name}'s first version",
+          "edited_desc": "Edited <date></date>",
+          "created_desc": "Written <date></date>"
+        }
+      },
+      "quote_reply": "Quote reply"
     }
   },
   "@vitnode/blog:posts": "Articles",

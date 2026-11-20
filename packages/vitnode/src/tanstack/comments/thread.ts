@@ -21,6 +21,7 @@ export interface ContentCommentNode<
   deleted: null | { byAuthor: boolean; createdAt: string };
   /** How deep it sits: 1 for a comment on the root record, 2 for a reply to it. */
   depth: number;
+  editCount?: number;
   /**
    * `true` for a hidden comment shown only because this reader may see it -
    * its author or a moderator. Never set for anyone else.
@@ -116,6 +117,7 @@ const sameNode = <TRecord, TId extends ContentId>(
 ): boolean =>
   a.id === b.id &&
   a.depth === b.depth &&
+  a.editCount === b.editCount &&
   a.deleted === b.deleted &&
   a.hidden === b.hidden &&
   a.hiddenReason === b.hiddenReason &&

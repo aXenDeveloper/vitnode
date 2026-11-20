@@ -146,6 +146,7 @@ export const usePostComments = (articleId: number, canComment = true) =>
         }),
     },
     report: id => contentTarget(manifest.id, blogCommentContentType, id),
+    reactions: id => contentTarget(manifest.id, blogCommentContentType, id),
   });
 
 /** The element id a comment's permalink scrolls to: `comment-{slug}`. */

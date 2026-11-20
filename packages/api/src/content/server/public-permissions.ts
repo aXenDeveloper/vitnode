@@ -11,6 +11,8 @@ import type { ContentModel } from "./model";
 
 import { resolveStaffPermissions } from "../../lib/check-staff-permission";
 import { canWarnForContent } from "../../lib/moderation/warnings/access";
+import { getReactionCatalog } from "../../lib/reactions/catalog";
+import { resolveReactionPolicy } from "../../lib/reactions/policy";
 import { buildRoute } from "../../lib/route";
 import { CONTENT_ACCESS_OPEN_FLAGS } from "../access/policy";
 import { contentRecordAccessFlags } from "../access/server/decide";
@@ -52,6 +54,14 @@ export interface ContentViewerPermissions extends ContentAccessFlags {
    * Only for published records of a type with `visibility`.
    */
   canHide: boolean;
+  /**
+   * A reaction bar makes sense: the type has `reactions`, the record is public
+   * and the visitor did not write it - unless one of their roles allows
+   * reacting to own content. Guests get `true`; reacting asks them to sign in. Role
+   * settings (who may react, which reactions, limits) come from
+   * `GET /reactions/catalog`.
+   */
+  canReact: boolean;
   /**
    * A Report button makes sense: the type has `reports`, the record is public
    * and the visitor did not write it - unless `reports.selfReport` lets
@@ -137,6 +147,15 @@ export const resolveContentViewerPermissions = async (
     });
   };
 
+  const ownsAnyRow =
+    user !== null &&
+    rows.some(row => contentPublicWriteOwnerOf(definition, row) === user.id);
+  const canReactOwnContent =
+    definition.reactions.enabled && ownsAnyRow
+      ? (await resolveReactionPolicy(c, await getReactionCatalog(c)))
+          .canReactOwnContent
+      : false;
+
   const decided = await Promise.all(
     rows.map(async row => {
       const id = row.id as ContentId;
@@ -186,6 +205,10 @@ export const resolveContentViewerPermissions = async (
         canDelete,
         canEdit,
         canHide,
+        canReact:
+          definition.reactions.enabled &&
+          isPublic &&
+          (!isOwner || canReactOwnContent),
         canReport:
           definition.reports.enabled &&
           isPublic &&
@@ -251,6 +274,7 @@ export const contentPermissionsRoute = <
                     canEdit: z.boolean(),
                     canHide: z.boolean(),
                     canRead: z.boolean(),
+                    canReact: z.boolean(),
                     canReport: z.boolean(),
                     canView: z.boolean(),
                     canWarn: z.boolean(),

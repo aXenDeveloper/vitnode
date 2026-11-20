@@ -163,7 +163,8 @@ const snapshotValue = async (
 
 const REPORT_TITLE_EXCERPT_LENGTH = 120;
 
-const reportTitleOf = (value: unknown): null | string => {
+/** A short plain-text title from a text or rich text value, or `null`. */
+export const reportTitleOf = (value: unknown): null | string => {
   if (typeof value === "string") return value;
   if (!isRichTextDocument(value)) return null;
 
@@ -175,7 +176,8 @@ const reportTitleOf = (value: unknown): null | string => {
     : text;
 };
 
-const contentUrlOf = (
+/** The public link of one record from its slug: delivery URL, else search URL. */
+export const contentUrlOf = (
   c: Context,
   definition: AnyContentTypeDefinition,
   { locale, slug }: { locale: null | string; slug: unknown },

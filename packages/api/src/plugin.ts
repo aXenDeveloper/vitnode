@@ -14,6 +14,7 @@ import { moderationEventDefinitions } from "./events/moderation";
 import { notificationEventDefinitions } from "./events/notifications";
 import { pageEventDefinitions } from "./events/pages";
 import { paymentEventDefinitions } from "./events/payments";
+import { reactionEventDefinitions } from "./events/reactions";
 import { roleEventDefinitions } from "./events/roles";
 import { userEventDefinitions } from "./events/users";
 import {
@@ -35,6 +36,7 @@ import { notificationsModule } from "./modules/notifications/notifications.modul
 import { pagesModule } from "./modules/pages/pages.module";
 import { paymentsModule } from "./modules/payments/payments.module";
 import { queueModule } from "./modules/queue/queue.module";
+import { reactionsModule } from "./modules/reactions/reactions.module";
 import { searchModule } from "./modules/search/search.module";
 import { usersModule } from "./modules/users/users.module";
 
@@ -58,6 +60,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     ...notificationEventDefinitions,
     ...pageEventDefinitions,
     ...paymentEventDefinitions,
+    ...reactionEventDefinitions,
     ...roleEventDefinitions,
     ...userEventDefinitions,
   ],
@@ -73,6 +76,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     pagesModule,
     paymentsModule,
     queueModule,
+    reactionsModule,
     searchModule,
   ],
   permissionStaff: coreStaffPermissions,

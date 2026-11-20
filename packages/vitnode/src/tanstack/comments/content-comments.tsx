@@ -1,12 +1,10 @@
 import type { ContentId } from "@vitnode/api/content/ids";
 
-import { Link, useRouterState } from "@tanstack/react-router";
 import { zodRichTextDocument } from "@vitnode/api/content/rich-text";
 import { cn } from "cn";
 import {
   ChevronDownIcon,
   EyeOffIcon,
-  LogInIcon,
   MessageSquareIcon,
   MessageSquareWarningIcon,
   PencilIcon,
@@ -20,7 +18,7 @@ import { useTranslations } from "use-intl";
 import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
 import { RichTextContent } from "@/components/rich-text/rich-text-content";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Empty,
   EmptyContent,
@@ -32,11 +30,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserFormat } from "@/components/user-format";
 import { useRevealHashTarget } from "@/hooks/use-reveal-hash-target";
+import { ReactionBar } from "@/tanstack/reactions/reaction-bar";
 
 import type { ContentCommentNode, ContentCommentTreeNode } from "./thread";
 import type { ContentCommentsController } from "./use-content-comments";
 
-import { LOGIN_PATH, returnToFor } from "../auth/redirects";
 import { ContentAccessRequired } from "../content/access-required";
 import { contentCommentAuthor, contentCommentAuthorName } from "./author";
 import {
@@ -219,7 +217,7 @@ export const ContentCommentItem = <TRecord,>({
           className="bg-muted size-8 shrink-0 rounded-full"
         />
       )}
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-1 flex-col gap-2">
         <article
           aria-labelledby={authorId}
           className={cn(
@@ -290,7 +288,10 @@ export const ContentCommentItem = <TRecord,>({
           ) : null}
         </article>
 
-        <div className="flex flex-wrap items-center gap-x-1 ps-2">
+        <div className="flex flex-wrap items-center gap-1 ps-2">
+          {item.reactionTarget && !node.hidden ? (
+            <ReactionBar className="me-1" target={item.reactionTarget} />
+          ) : null}
           {item.canReply ? (
             <Button
               aria-expanded={item.isReplying}
@@ -300,7 +301,7 @@ export const ContentCommentItem = <TRecord,>({
               }}
               onFocus={preloadContentCommentComposer}
               onPointerEnter={preloadContentCommentComposer}
-              size="xs"
+              size="sm"
               variant="ghost"
             >
               <ReplyIcon aria-hidden="true" />
@@ -522,24 +523,33 @@ export const ContentCommentsLiveStatus = ({
 };
 
 /**
- * The new-comment card: the composer for a signed-in visitor, a sign-in link
- * for a guest that returns here, or nothing when the thread has no `create`.
+ * The new-comment card: the composer for a visitor who may comment, the
+ * access notice when commenting is locked, or nothing for a guest or when the
+ * thread has no `create`.
  */
 export const ContentCommentsComposer = ({
   className,
+  hideLabel = false,
+  showTitle = true,
 }: {
   className?: string;
+  hideLabel?: boolean;
+  showTitle?: boolean;
 }) => {
   const t = useTranslations("core.comments");
   const { comments } = useContentCommentsContext();
-  const returnTo = useRouterState({
-    select: state => returnToFor(state.location),
-  });
   const [state, setState] = React.useState<"closed" | "open" | "opening">(
     "closed",
   );
   const [formKey, setFormKey] = React.useState(0);
   if (!comments.features.create) return null;
+  if (
+    !comments.isSessionPending &&
+    !comments.commentLocked &&
+    !comments.canComment
+  ) {
+    return null;
+  }
 
   return (
     <div
@@ -548,55 +558,42 @@ export const ContentCommentsComposer = ({
         className,
       )}
     >
-      <h3 className="font-semibold text-balance">{t("compose.title")}</h3>
+      <h3 className={showTitle ? "font-semibold text-balance" : "sr-only"}>
+        {t("compose.title")}
+      </h3>
       {comments.isSessionPending ? (
         <Skeleton aria-hidden="true" className="h-12 w-full rounded-lg" />
       ) : comments.commentLocked ? (
         <ContentAccessRequired headingLevel="h3" kind="comment" />
-      ) : comments.canComment ? (
-        state === "closed" ? (
-          <Button
-            className="text-muted-foreground h-auto justify-start py-3 font-normal"
-            onClick={() => {
-              setState("opening");
-            }}
-            onFocus={preloadContentCommentComposer}
-            onPointerEnter={preloadContentCommentComposer}
-            variant="outline"
-          >
-            <PencilIcon aria-hidden="true" />
-            {t("compose.open")}
-          </Button>
-        ) : (
-          <ContentCommentComposer
-            autoFocus={state === "opening"}
-            key={formKey}
-            label={t("form.body_label")}
-            mode="create"
-            onCancel={() => {
-              setState("closed");
-            }}
-            onDone={() => {
-              setState("open");
-              setFormKey(formKey + 1);
-            }}
-            parentId={null}
-          />
-        )
+      ) : state === "closed" ? (
+        <Button
+          className="text-muted-foreground h-auto justify-start py-3 font-normal"
+          onClick={() => {
+            setState("opening");
+          }}
+          onFocus={preloadContentCommentComposer}
+          onPointerEnter={preloadContentCommentComposer}
+          variant="outline"
+        >
+          <PencilIcon aria-hidden="true" />
+          {t("compose.open")}
+        </Button>
       ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-muted-foreground leading-relaxed text-pretty">
-            {t("compose.guest")}
-          </p>
-          <Link
-            className={buttonVariants({ size: "sm", variant: "outline" })}
-            search={{ returnTo }}
-            to={LOGIN_PATH}
-          >
-            <LogInIcon aria-hidden="true" />
-            {t("compose.sign_in")}
-          </Link>
-        </div>
+        <ContentCommentComposer
+          autoFocus={state === "opening"}
+          hideLabel={hideLabel}
+          key={formKey}
+          label={t("form.body_label")}
+          mode="create"
+          onCancel={() => {
+            setState("closed");
+          }}
+          onDone={() => {
+            setState("open");
+            setFormKey(formKey + 1);
+          }}
+          parentId={null}
+        />
       )}
     </div>
   );

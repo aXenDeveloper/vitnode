@@ -34,6 +34,8 @@ export interface UserProfile {
   id: number;
   name: string;
   nameCode: string;
+  /** Points from reactions to the member's content; can be negative. Absent from older APIs. */
+  reputation?: number;
   role: ProfileRole;
   secondaryRoles: ProfileRole[];
 }

@@ -153,6 +153,7 @@ const NONE = {
   canDelete: false,
   canEdit: false,
   canHide: false,
+  canReact: false,
   canReport: false,
   canWarn: false,
 };

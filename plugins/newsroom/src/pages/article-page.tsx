@@ -12,6 +12,7 @@ import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
+import { ReactionBar } from "@vitnode/core/tanstack/reactions";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
@@ -137,6 +138,10 @@ const ArticlePage = ({
       <RichTextContent
         className="leading-relaxed text-pretty"
         content={item.body}
+      />
+
+      <ReactionBar
+        target={contentTarget(manifest.id, articleContentType, item.id)}
       />
 
       <ArticleComments articleId={item.id} />

@@ -19,6 +19,7 @@ import. You never register another plugin's definition yourself.
 | [Core](#core-events-vitnodecore)                     | `user.*`, `file.editor.uploaded`, `role.*`  | `@vitnode/api/events/users`, `files`, `roles` |
 | [Notifications](#notification-events)                | `notifications.*`                           | `@vitnode/api/events/notifications`      |
 | [Moderation](#moderation-events)                     | `moderation.*`                              | `@vitnode/api/events/moderation`         |
+| [Reactions](#reaction-events)                        | `reaction.*`, `reputation.changed`          | `@vitnode/api/events/reactions`          |
 | [AI](#ai-events)                                     | `ai.run.*`, `files.alt.updated`             | `@vitnode/api/events/ai`, `files`        |
 | [Payments](#payment-events)                          | `payment.*`                                 | `@vitnode/api/events/payments`           |
 | [Page layouts](#page-layout-events)                  | `core.page-layout.updated`                  | `@vitnode/api/events/pages`              |
@@ -582,6 +583,25 @@ own preferences are saved, by them or by staff on their AdminCP user page.
 **A listener would** post an audit entry to your staff channel when someone
 pauses, deletes or resets everything, or note when staff changed how a single
 member is notified.
+
+## Reaction events
+
+Five names, exported from `@vitnode/api/events/reactions`: `reactionAddedEvent`,
+`reactionRemovedEvent`, `reactionChangedEvent`, `reputationChangedEvent` and
+`reactionCatalogChangedEvent`. Core emits them with `pluginId: "@vitnode/core"`,
+after the write commits. The envelope's `actor` is the member who reacted, or the
+administrator for `reaction.catalog_changed`. See [Reactions](/docs/dev/reactions).
+
+| Event                      | Payload                                                                        | Fires when                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `reaction.added`           | `{ pluginId, targetType, targetId, targetAuthorId, reaction, points, userId }` | A member adds a reaction to an item                                                        |
+| `reaction.removed`         | Same as `reaction.added`                                                       | A member removes a reaction                                                                |
+| `reaction.changed`         | Same, plus `previousReaction`                                                  | A new pick replaced the member's reaction, because their roles allow one reaction per item |
+| `reputation.changed`       | `{ userId, delta, total, reason }`                                             | A reaction moved an author's reputation (`reaction`), or a recount changed it (`recount`)  |
+| `reaction.catalog_changed` | `{ action, reactionId }`                                                       | An administrator creates, edits, deletes or reorders reactions in the AdminCP              |
+
+`targetAuthorId` is `null` for a self reaction and for targets without reputation.
+Deleting an item emits `reputation.changed` for its authors but no `reaction.removed`.
 
 ## Moderation events
 

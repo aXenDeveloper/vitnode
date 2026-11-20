@@ -48,6 +48,7 @@ export const blogCommentContentType = defineContentType({
   publication: true,
   visibility: true,
   reports: { titleField: "body", snapshotFields: ["body"], selfReport: true },
+  reactions: true,
   editorial: { revisions: { retention: 20 } },
 
   indexes: [{ on: ["article", "parent", "createdAt"] }],

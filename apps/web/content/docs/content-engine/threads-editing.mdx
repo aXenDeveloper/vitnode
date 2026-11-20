@@ -26,6 +26,8 @@ import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 import { ImgDocs } from "@/components/fumadocs/img";
 import deleted from "./comment-actions-delete.webp";
 import editing from "./comment-actions-edit.webp";
+import editDiff from "./comment-edit-diff.webp";
+import editHistory from "./comment-edit-history.webp";
 import hidden from "./comment-actions-hidden.webp";
 import menu from "./comment-actions-menu.webp";
 import modcp from "./comment-actions-modcp.webp";
@@ -475,17 +477,17 @@ Open an article with two comments by **Ada**, a member. Then check each action w
      withoutBackground
      className="*:max-w-full"
      src={editing}
-     alt="A comment open in the inline editor under the label Edit your comment, with Save and Cancel buttons, above the replies to it"
+     alt="Ada's comment open in the inline editor under the label Edit your comment, with Save and Cancel buttons, below a comment by Grace Hopper"
    />
 
 2. **As Grace**, another member, the menu on Ada's comment offers **Report**. Pick **Spam** and click **Send report**.
-3. **As the moderator**, the menu offers **Edit**, **Report**, **Hide** and **Delete**:
+3. **As the moderator**, the menu offers **Edit**, **Report**, **Hide** and **Delete**. It also shows **Warn author**, which comes from [warnings](/docs/dev/moderation/warn-content), not from this page:
 
    <ImgDocs
      withoutBackground
      className="*:max-w-full"
      src={menu}
-     alt="The More actions menu open on a comment, with Edit, Report, Hide and Delete, Delete in red"
+     alt="The More actions menu open on a comment by Ada Lovelace, with Edit, Report, Warn author, Hide and Delete, Delete in red"
    />
 
 4. Click **Hide**, type a reason and click **Hide**. The comment stays visible to you and to Ada, marked **Hidden** with the reason. Signed out, it is gone, and the count drops by one:
@@ -494,7 +496,7 @@ Open an article with two comments by **Ada**, a member. Then check each action w
      withoutBackground
      className="*:max-w-full"
      src={hidden}
-     alt="A comment marked Hidden with the reason Off topic for this article, seen by a moderator, above a visible comment"
+     alt="A comment by Ada Lovelace in a dashed box marked Hidden, with the reason Off topic for this article, seen by a moderator below a visible comment by Grace Hopper"
    />
 
 5. Open **More actions** again and click **Unhide**. Everyone sees the comment again.
@@ -513,12 +515,56 @@ Open an article with two comments by **Ada**, a member. Then check each action w
      withoutBackground
      className="*:max-w-full"
      src={modcp}
-     alt="A ModCP report for a comment by Ada Lovelace, reason Spam, with the snapshot of its text and an Open current content link"
+     alt="A ModCP report for a comment by Ada Lovelace, reason Spam, reported by Grace Hopper, with the snapshot of its text, an Open current content link and the Details panel"
    />
 
 With [Replies](/docs/content-engine/threads-frontend), a hidden or deleted comment that has answers stays in the thread as a placeholder, so its replies keep their place.
 
 To let members delete or hide their own comments, turn on **Allow deleting own content** or **Allow hiding own content** in their role (**AdminCP → Core → Users → Roles**). Ada's menu then offers **Delete** or **Hide** too. With a **Time to edit** of a few minutes, **Edit** disappears from Ada's comments once it runs out.
+
+## Edit history
+
+Give the comment type editorial revisions and every edit is kept, so readers can see what changed, like on a code review:
+
+```ts title="src/content/comment.ts"
+editorial: { revisions: { retention: 20 } },
+```
+
+The thread then counts real edits for each comment as `editCount` (hiding and unhiding don't count), and two read-only routes open up:
+
+| Route | Answers |
+| ----- | ------- |
+| `GET /{publicApi.path}/{id}/history` | who created and who edited the comment, newest first, with `complete: false` once older edits fell out of the retention window |
+| `GET /{publicApi.path}/{id}/history/{revisionId}` | the text before and after that edit, as plain text, for each changed text field |
+
+```ts
+const history = await fetcher({
+  plugin: manifest.id,
+  method: "get",
+  module: "content/comments",
+  path: "/{id}/history",
+  args: { params: { id: comment.id } },
+});
+```
+
+Signed-in members who can see the comment can read its history; a guest gets a `401`. Only the public text fields are returned, never the stored snapshot, and the routes exist only for thread content types, so an article's unpublished drafts never leak through them.
+
+`ContentComments` doesn't render the history; a [custom layout](/docs/content-engine/comments-api#your-own-layout) calls these routes itself. The Blog plugin shows it as an **edited ▾** menu next to the date, listing who created the comment and every edit since:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={editHistory}
+  alt="A Blog comment by Ada Lovelace with the edited menu open: Edited 1 time, then Ada Lovelace edited 7 seconds ago (most recent) and Ada Lovelace created 2 minutes ago"
+/>
+
+Each entry opens the text before and after that edit, the removed line marked red and the added one green:
+
+<ImgDocs
+  withoutBackground
+  src={editDiff}
+  alt="A dialog titled Ada Lovelace's edit showing the old sentence with a red bar and the new, longer sentence with a green bar"
+/>
 
 ## What the server checks
 
@@ -526,6 +572,7 @@ To let members delete or hide their own comments, turn on **Allow deleting own c
 - **One action at a time.** While one action runs, the comment's menu waits, and **Post comment**, **Save** and the dialogs' buttons are disabled until the server answers. Nothing is shown as done before it accepts.
 - **Edit window.** A save after the window closed answers `403` with the `edit_window_closed` issue, even from a page loaded before it closed, and the editor says **The time to edit this has run out** without losing the text.
 - **Hidden comments.** Only the author and moderators get `hidden: true` and the reason; everyone else gets a placeholder or nothing.
+- **Edit history.** Both history routes answer `404` for a comment the reader can't see, or one under an article they can't open.
 
 ## Related
 

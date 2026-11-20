@@ -17,6 +17,7 @@ import { ContentAccessRequired } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
+import { ReactionBar } from "@vitnode/core/tanstack/reactions";
 import { cn } from "cn";
 import {
   ChevronDownIcon,
@@ -205,6 +206,10 @@ const CommentBody = ({
 
       {editing ? null : (
         <div className="flex flex-wrap items-center gap-1">
+          <ReactionBar
+            className="me-1"
+            target={contentTarget(manifest.id, commentContentType, comment.id)}
+          />
           {canAnswer ? (
             <Button
               aria-expanded={mode === "reply"}

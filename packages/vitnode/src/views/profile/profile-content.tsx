@@ -12,6 +12,7 @@ import { Avatar } from "@/components/avatar";
 import { RoleFormat } from "@/components/role-format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserCoverImage } from "@/components/user-cover-image";
+import { Reputation } from "@/tanstack/reactions/reputation";
 
 import type { UserImageEditor } from "./images/types";
 import type { ProfileRole, UserProfile } from "./profile-query";
@@ -168,6 +169,12 @@ export const ProfileContent = ({
               <MetaItem Icon={CalendarDaysIcon} label={t("memberSince")}>
                 <time dateTime={joinedIso}>{joinedLabel}</time>
               </MetaItem>
+
+              {typeof user.reputation === "number" ? (
+                <li className="flex min-w-0 items-center">
+                  <Reputation value={user.reputation} />
+                </li>
+              ) : null}
             </ul>
           </div>
 

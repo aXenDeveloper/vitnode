@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { ImgDocs } from '@/components/fumadocs/img'
+import blogComments from './blog-comments.webp'
 import blogIndex from './blog-index.webp'
 
 `@vitnode/blog` is the Content Engine reference plugin. It brings articles,
@@ -181,30 +182,46 @@ you scroll, highlighting every section you are looking at. On phones it folds
 into a box above the cover. Headings get their own link anchors, so you can
 share `/blog/article/building-a-plugin#why-plugins`.
 
+Under the text, the article's footer holds the reactions on the left and, on the right, **Share** (copy the link or post it to a social network) and **Report**, which sends the article to the ModCP.
+
 ### Comments
 
-Below the article sits the conversation, styled like a chat: every comment is a
-bubble on a timeline, with your own comments tinted, and replies nest up to
-six levels deep. Signed-in members write with the rich text editor. Guests can
-read everything and get a **Sign in to comment** button that brings them back to
-the article afterwards.
+Below the article sits the conversation. Every top-level comment opens its own
+card, and the replies to it (and the replies to those, up to six levels deep)
+line up inside that card, joined by one line down the side, in the order they
+were written. A reply to a reply says who it answers (**In reply to Ada**), so
+nobody loses track. Signed-in members write with the rich text editor. Guests
+can read everything; the composer, the reaction picker and "who reacted" only
+show up once they sign in.
 
-Under each bubble sit three actions:
+Each comment has its menu in the top-right corner and its reactions in the
+bottom-left:
 
-- **Reply** opens the editor right under the comment.
+- **Reply** opens the editor right under the comment, and every card ends with
+  a **Write a reply** field for the conversation. Once your reply is posted,
+  the page scrolls to it.
 - **Share** copies a link to the comment (`#comment-{slug}`); opening it loads
   more comments until the linked one is on screen, and highlights it.
+- **Quote reply**, the quote button next to **Reply**, opens the reply editor
+  with the comment already quoted, so you can answer one point at a time.
+  Select part of the comment first and only that part gets quoted.
 - **⋯** holds **Edit** for your own comments and **Report**, which sends the
   comment to the ModCP. That includes your own comments, in case you want a
   moderator to look at something you wrote. Moderators also get **Hide** and
-  **Unhide**. A hidden comment disappears for readers, while moderators and its
-  author still see it as a dashed bubble marked **Hidden**.
+  **Unhide**. A hidden comment disappears for readers; moderators and its author
+  see a **This comment was hidden.** bar with **Show comment** and
+  **Hide comment** to peek at it.
 
-A comment with replies gets a round button on the timeline that folds them
-away (**Hide 2 replies**) and back (**Show 2 replies**). Replies stop moving
-right after four levels on a computer and two on a phone; deeper ones line up
-with their parent and say who they answer (**Replying to Ada**), so a long
-thread stays readable on any screen.
+An edited comment shows **edited ▾** next to its date. It lists who wrote the comment and every edit since, newest first, and clicking an entry shows the text before and after that edit, removed lines in red and added ones in green. Signed-in members who can see the comment can open it; guests just see **edited**.
+
+Above the conversation, **Oldest** (the default) reads them in the order they
+started, **Newest** puts the conversations with the latest activity first, and
+**Top** puts the most-reacted comments first, then the ones with the most
+replies. The order holds while you read: a new reply shows up live but doesn't
+move its conversation, and a new conversation joins at the top (Newest) or the
+bottom. Pick a sort again to re-sort.
+
+A busy article doesn't turn into a wall: past 10 conversations, the middle folds into a **12 hidden conversations** box between the first five and the last two. **Load more…** brings back ten at a time, and a link to one comment always shows them all.
 
 Comments are a Content Engine [thread](/docs/content-engine/threads): the
 `blog.comment` content type, stored in `blog_comments`, with the article as the
@@ -214,7 +231,12 @@ old conversation. Hiding or unpublishing an article takes its comments with it;
 deleting it deletes them. Comments have no AdminCP screen. Moderate them from
 the article itself and the ModCP.
 
-{/* Image prompt: VitNode blog article page, the comments section below the article text: heading "3 comments", chat-style bubbles on a thin vertical timeline line, each bubble with the author name and "· 2 hours ago" in its first line, and a small "Reply · Share · ⋯" row under it; one smaller nested reply bubble; a "Leave a comment" card at the end. Light theme, 1280x900. */}
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={blogComments}
+  alt="A blog article's 5 comments with the Oldest, Newest and Top switch, a conversation card by Ada Lovelace marked edited with two replies joined by a line and a Write a reply field, two more cards, and a Write a comment field"
+/>
 
 ### Categories and article counts in your own pages
 

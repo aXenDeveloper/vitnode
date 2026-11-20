@@ -33,6 +33,7 @@ export const articleContentType = defineContentType({
   editorial: true,
 
   reports: true,
+  reactions: true,
 
   publicWrite: {
     ownership: { field: "author" },

@@ -18,7 +18,7 @@ export const themeIndicatorClassName =
   "bg-background dark:border-input dark:bg-input/30 pointer-events-none absolute top-0 left-0 rounded-md border border-transparent opacity-0 shadow-sm";
 
 export const themeSegmentClassName =
-  "text-muted-foreground relative flex h-12 min-w-0 cursor-default touch-manipulation flex-col items-center justify-center gap-1 rounded-md px-1 text-xs font-medium outline-none transition-colors duration-150 select-none [&_svg]:size-4 [&_svg]:shrink-0";
+  "text-muted-foreground relative flex h-12 min-w-0 cursor-pointer touch-manipulation flex-col items-center justify-center gap-1 rounded-md px-1 text-xs font-medium outline-none transition-colors duration-150 select-none [&_svg]:size-4 [&_svg]:shrink-0";
 
 export const themeSegmentPressedClassName =
   "aria-pressed:text-foreground focus-visible:ring-ring/50 cursor-pointer focus-visible:ring-2";

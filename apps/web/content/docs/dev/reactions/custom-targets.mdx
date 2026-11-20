@@ -1,0 +1,145 @@
+---
+title: Custom targets
+description: Add VitNode reactions to items that are not Content Engine records with defineReactionTarget, buildApiPlugin and ReactionBar.
+icon: Target
+---
+
+`defineReactionTarget` lets members react to anything your plugin stores in its own tables. This page adds reactions to the newsroom's corrections, a table the plugin manages itself, and shows those reactions in members' profile timelines.
+
+## Before you begin
+
+You need a plugin with its own table and a page that lists the items. For Content Engine records, use [`reactions: true`](/docs/content-engine/reactions) instead; it registers the target for you.
+
+<Steps>
+
+<Step>
+
+### Define the target
+
+Create `src/api/lib/reactions.ts`. A target tells core three things: how to read an id, who may read each item, and who wrote it. This is the complete file:
+
+```ts title="plugins/newsroom/src/api/lib/reactions.ts"
+import type { Context } from 'hono'
+
+import { defineReactionTarget } from '@vitnode/api/reactions'
+import { eq, inArray } from 'drizzle-orm'
+
+import { newsroom_articles } from '@/database/articles'
+import { newsroom_corrections } from '@/database/corrections'
+
+const readCorrections = async (c: Context, ids: string[]) =>
+  await c
+    .get('db')
+    .select({
+      id: newsroom_corrections.id,
+      body: newsroom_corrections.body,
+      createdById: newsroom_corrections.createdById,
+      articleSlug: newsroom_articles.slug,
+    })
+    .from(newsroom_corrections)
+    .innerJoin(
+      newsroom_articles,
+      eq(newsroom_articles.id, newsroom_corrections.articleId),
+    )
+    .where(inArray(newsroom_corrections.id, ids.map(Number)))
+
+export const correctionReactionTarget = defineReactionTarget({
+  type: 'newsroom.correction',
+  // Editors file corrections as part of their job: no reputation for them.
+  reputation: false,
+  parseId: (value) => (/^[1-9]\d{0,9}$/.test(value) ? value : null),
+  access: async (c, { ids }) =>
+    new Map(
+      (await readCorrections(c, ids)).map((row) => [
+        String(row.id),
+        { canRead: true, authorId: row.createdById },
+      ]),
+    ),
+  preview: async (c, { ids }) =>
+    new Map(
+      (await readCorrections(c, ids)).map((row) => [
+        String(row.id),
+        {
+          title: row.body,
+          url: `/news/${row.articleSlug}#corrections`,
+          label: 'newsroom.corrections.label',
+        },
+      ]),
+    ),
+})
+```
+
+- `parseId` rejects anything that is not an id before your code reads it.
+- `access` answers for a whole batch, as the visitor in `c.get("user")`. An id missing from the map is unreadable, and its reactions stay hidden. Return `locked: true` to keep counts visible but stop new reactions.
+- `preview` is optional. Without it, reactions to this target never appear in timelines. Its `label` is an i18n key naming the kind of item, sent with each timeline entry for apps that render their own timeline.
+
+</Step>
+
+<Step>
+
+### Register it
+
+Pass the target to `buildApiPlugin` in `src/config.api.ts`. This is an excerpt:
+
+```ts title="plugins/newsroom/src/config.api.ts"
+import { correctionReactionTarget } from '@/api/lib/reactions'
+
+export const newsroomApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    reactions: { targets: [correctionReactionTarget] }, // [!code ++]
+    // modules, permissions and the rest as before
+  })
+```
+
+</Step>
+
+<Step>
+
+### Show the reaction bar
+
+In the component that renders one correction, render `ReactionBar` with a target you build yourself. `correction` is the row your page already shows:
+
+```tsx title="Your correction component"
+import { ReactionBar } from '@vitnode/core/tanstack/reactions'
+
+import { manifest } from '@/manifest.gen'
+
+;<ReactionBar
+  target={{
+    pluginId: manifest.id,
+    type: 'newsroom.correction',
+    id: String(correction.id),
+  }}
+/>
+```
+
+</Step>
+
+<Step>
+
+### Delete reactions with the item
+
+Call `deleteReactions` in the API route that deletes a correction, after the delete commits. `c` is the route's Hono context and `correction` the deleted row. It removes the reactions, takes back their reputation and tells live subscribers the item is gone:
+
+```ts title="Your delete route handler"
+import { deleteReactions } from '@vitnode/api/reactions'
+
+await deleteReactions(c, {
+  pluginId: manifest.id,
+  type: 'newsroom.correction',
+  ids: [String(correction.id)],
+})
+```
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Rebuild the plugin and open a page with a correction while signed in as a member. React to it. The pill appears with a count, and your profile timeline shows "reacted to" with the correction's text, linking to the article.
+
+## Related
+
+- [Reactions reference](/docs/dev/reactions/reference#reactiontargetdefinition): every option of `defineReactionTarget`.

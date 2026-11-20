@@ -48,17 +48,18 @@ const internalTargetOf = ({
   const current = new URL(internalHref, RELATIVE_BASE);
   const alternates = declaredLocaleAlternates(matches);
   const retained = { hash: current.hash, search: current.search };
+  const alternate =
+    alternates?.get(locale) ?? alternates?.get(localeRouting.defaultLocale);
 
-  if (!alternates) return { ...retained, pathname: current.pathname };
-
-  const alternate = alternates.get(locale);
-  if (alternate === undefined) return { hash: "", pathname: "/", search: "" };
+  if (alternate === undefined) {
+    return { ...retained, pathname: current.pathname };
+  }
 
   let url: URL;
   try {
     url = new URL(alternate);
   } catch {
-    return { hash: "", pathname: "/", search: "" };
+    return { ...retained, pathname: current.pathname };
   }
 
   return {

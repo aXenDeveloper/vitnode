@@ -38,6 +38,11 @@ export const ADMIN_ROLE_PERMISSIONS = {
   view: admin.roles.canView,
 } as const;
 
+export const ADMIN_REACTION_PERMISSIONS = {
+  manage: admin.reactions.canManage,
+  view: admin.reactions.canView,
+} as const;
+
 export const ADMIN_REPORT_REASON_PERMISSIONS = {
   create: admin.report_reasons.canCreate,
   delete: admin.report_reasons.canDelete,

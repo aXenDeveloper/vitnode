@@ -25,6 +25,7 @@ import { HrefLink } from "@vitnode/core/tanstack/link";
 import { localeAlternateLinks } from "@vitnode/core/tanstack/metadata";
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
+import { ReactionBar } from "@vitnode/core/tanstack/reactions";
 import { useRecordView } from "@vitnode/core/tanstack/search";
 import { PencilIcon } from "lucide-react";
 import { Fragment, useEffect, useRef } from "react";
@@ -258,6 +259,9 @@ const TopicViewerActions = ({
           typeLabel={t("report_type")}
         />
       ) : null}
+      <ReactionBar
+        target={contentTarget(manifest.id, topicContentType, topicId)}
+      />
     </>
   );
 };

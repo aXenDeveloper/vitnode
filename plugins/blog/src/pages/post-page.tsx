@@ -2,7 +2,12 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { PluginRoutePageProps } from "@vitnode/core/routing";
 
 import { useRouter } from "@tanstack/react-router";
-import { buttonVariants } from "@vitnode/core/components/ui/button";
+import { SharePopover } from "@vitnode/core/components/share-popover";
+import { Button, buttonVariants } from "@vitnode/core/components/ui/button";
+import {
+  TooltipGroup,
+  TooltipGroupTrigger,
+} from "@vitnode/core/components/ui/tooltip";
 import { contentTarget } from "@vitnode/core/content";
 import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import {
@@ -13,8 +18,9 @@ import {
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
+import { ReactionBar } from "@vitnode/core/tanstack/reactions";
 import { useRecordView } from "@vitnode/core/tanstack/search";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, Share2Icon } from "lucide-react";
 import React from "react";
 import { useFormatter, useTranslations } from "use-intl";
 
@@ -144,33 +150,64 @@ const BlogPostArticle = ({
   return (
     <BlogArticle
       categories={categories}
+      footer={
+        !metadata.hidden && metadata.itemId !== null ? (
+          <>
+            <ReactionBar
+              target={contentTarget(
+                manifest.id,
+                blogPostContentType,
+                metadata.itemId,
+              )}
+            />
+            <div className="ms-auto flex items-center gap-1">
+              <TooltipGroup>
+                <SharePopover
+                  title={item.title}
+                  url={blogPostHref(item.friendlyUrl)}
+                >
+                  <TooltipGroupTrigger
+                    content={t("share")}
+                    render={
+                      <Button
+                        aria-label={t("share")}
+                        className="text-muted-foreground"
+                        size="icon-sm"
+                        variant="ghost"
+                      />
+                    }
+                  >
+                    <Share2Icon aria-hidden="true" />
+                  </TooltipGroupTrigger>
+                </SharePopover>
+              </TooltipGroup>
+              <ReportButton
+                className="text-muted-foreground"
+                locale={metadata.locale}
+                preview={{
+                  imageUrl: item.coverImage?.url ?? null,
+                  meta: item.publishedAt
+                    ? format.dateTime(new Date(item.publishedAt), {
+                        dateStyle: "medium",
+                      })
+                    : null,
+                  title: item.title,
+                }}
+                requestedLocale={metadata.requestedLocale}
+                target={contentTarget(
+                  manifest.id,
+                  blogPostContentType,
+                  metadata.itemId,
+                )}
+                typeLabel={t("report_type")}
+              />
+            </div>
+          </>
+        ) : null
+      }
       hidden={metadata.hidden}
       item={item}
       locale={metadata.locale}
-      meta={
-        !metadata.hidden && metadata.itemId !== null ? (
-          <ReportButton
-            className="text-muted-foreground"
-            locale={metadata.locale}
-            preview={{
-              imageUrl: item.coverImage?.url ?? null,
-              meta: item.publishedAt
-                ? format.dateTime(new Date(item.publishedAt), {
-                    dateStyle: "medium",
-                  })
-                : null,
-              title: item.title,
-            }}
-            requestedLocale={metadata.requestedLocale}
-            target={contentTarget(
-              manifest.id,
-              blogPostContentType,
-              metadata.itemId,
-            )}
-            typeLabel={t("report_type")}
-          />
-        ) : null
-      }
     >
       {metadata.itemId !== null ? (
         <PostComments

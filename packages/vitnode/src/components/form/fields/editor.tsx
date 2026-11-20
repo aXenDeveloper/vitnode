@@ -108,6 +108,7 @@ type AutoFormEditorProps = ItemAutoFormComponentProps &
      * collaborative editing). Defaults to `html`.
      */
     format?: "html" | "json";
+    labelClassName?: string;
     /** Edits one document per enabled language. */
     multiLang?: boolean;
   };
@@ -373,6 +374,7 @@ const CollapsedEditor = ({
 export const AutoFormEditor = ({
   collapsed = false,
   label,
+  labelClassName,
   labelRight,
   description,
   otherProps: { isOptional },
@@ -452,6 +454,7 @@ export const AutoFormEditor = ({
     <>
       {!!label && (
         <AutoFormLabel
+          className={labelClassName}
           isOptional={isOptional}
           labelRight={labelRight}
           tip={tip}

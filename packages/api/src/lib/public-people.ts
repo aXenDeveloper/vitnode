@@ -41,6 +41,7 @@ export const loadPublicPeople = async (
       nameCode: core_users.nameCode,
       roleColor: core_roles.color,
       rolePrefix: core_roles.prefix,
+      reputation: core_users.reputation,
       showRealName: core_users.showRealName,
     })
     .from(core_users)
@@ -58,6 +59,7 @@ export const loadPublicPeople = async (
         id: row.id,
         name: row.name,
         nameCode: row.nameCode,
+        reputation: row.reputation,
         role: { color: row.roleColor ?? null, prefix: row.rolePrefix ?? null },
       },
     ]),

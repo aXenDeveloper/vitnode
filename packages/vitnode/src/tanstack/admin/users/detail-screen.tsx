@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
+import type { SearchTimelineOwner } from "@/views/search/types";
 
 import {
   useAdminStaffPermission,
@@ -34,17 +35,17 @@ export type AdminUserRouteProps = AdminUserRouteData;
 const UserTimeline = ({
   adminUserId,
   locale,
-  userId,
+  owner,
 }: {
   adminUserId: AdminIdentity;
   locale: string;
-  userId: number;
+  owner: SearchTimelineOwner;
 }) => {
   const query = useInfiniteQuery(
-    adminUserTimelineQueryOptions({ adminUserId, locale, userId }),
+    adminUserTimelineQueryOptions({ adminUserId, locale, userId: owner.id }),
   );
 
-  return <SearchFeedList ownerId={userId} query={query} variant="timeline" />;
+  return <SearchFeedList owner={owner} query={query} variant="timeline" />;
 };
 
 const UserAiAccess = ({
@@ -147,7 +148,7 @@ const AdminUserScreen = ({ adminUserId, id, locale }: AdminUserRouteProps) => {
           <UserTimeline
             adminUserId={adminUserId}
             locale={locale}
-            userId={user.id}
+            owner={user}
           />
         }
         user={user}

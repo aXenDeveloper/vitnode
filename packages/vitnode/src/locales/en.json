@@ -3647,6 +3647,72 @@
           "missing": "One of the selected categories no longer exists. Nobody can read a record filed there."
         }
       }
+    },
+    "reactions": {
+      "label": "Reactions",
+      "add": "Add a reaction",
+      "picker_title": "React",
+      "pill": "{reaction}: {count, plural, one {# reaction} other {# reactions}}",
+      "pill_mine": "{reaction}: {count, plural, one {# reaction} other {# reactions}}, including yours",
+      "pill_hint_who": "See who reacted with {reaction}",
+      "peek": {
+        "hint_add": "Click to react",
+        "see_all": "See all {count, number}",
+        "see_everyone": "See all reactions"
+      },
+      "left_today": "{count, number} left today",
+      "used_up": "None left today",
+      "not_allowed": "Your role can't use this one",
+      "remove_one_first": "Remove one of your reactions to pick another",
+      "total": "{count, plural, =0 {No reactions} one {# reaction} other {# reactions}}",
+      "load_error": {
+        "title": "Reactions didn't load",
+        "desc": "Try again in a moment."
+      },
+      "retry": "Try again",
+      "errors": {
+        "title": "Your reaction wasn't saved",
+        "daily_limit": "You've used all of today's reactions. They come back {time}.",
+        "reaction_daily_limit": "You've used all of today's {reaction}. It comes back {time}.",
+        "item_limit": "You already gave as many reactions here as your role allows. Remove one first.",
+        "reacting_disabled": "Your role can't react.",
+        "reaction_not_allowed": "Your role can't use this reaction.",
+        "self_reaction": "You can't react to your own content.",
+        "locked": "Reactions are closed here.",
+        "not_found": "This isn't available any more.",
+        "sign_in": "Sign in to react.",
+        "generic": "Something went wrong. Try again."
+      },
+      "who": {
+        "title": "Reactions",
+        "desc": "{count, plural, one {# person reacted} other {# people reacted}}",
+        "all": "All",
+        "filter": "Show",
+        "empty_title": "No reactions yet",
+        "empty_desc": "Be the first to react.",
+        "load_more": "Show more",
+        "load_error": {
+          "title": "People didn't load",
+          "desc": "Try again in a moment."
+        }
+      },
+      "reputation": {
+        "label": "Reputation",
+        "value": "Reputation: {count}",
+        "unit": "reputation"
+      },
+      "timeline": {
+        "reacted": "<user></user> reacted to <target>{title}</target>",
+        "reacted_in": "<user></user> reacted to {kind, select, comment {{count, plural, one {# comment} other {# comments}}} topic {{count, plural, one {# topic} other {# topics}}} other {{count, plural, one {# item} other {# items}}}} in <target>{title}</target>",
+        "more": "and {count} more"
+      },
+      "settings": {
+        "title": "Reactions",
+        "show_on_profile": "Show my reactions on my profile",
+        "show_on_profile_desc": "Reactions you give appear in your profile timeline. Only people who can see the content you reacted to see them.",
+        "saved": "Reaction settings saved",
+        "saved_desc": "Your profile timeline follows the new setting."
+      }
     }
   },
   "admin": {
@@ -3813,7 +3879,8 @@
         "users": {
           "title": "Users",
           "list": "User List",
-          "roles": "Roles"
+          "roles": "Roles",
+          "reactions": "Reactions"
         },
         "staff": {
           "title": "Staff",
@@ -4305,7 +4372,8 @@
         "general": "General",
         "content": "Content",
         "profile": "Profile",
-        "ai": "Artificial intelligence (AI)"
+        "ai": "Artificial intelligence (AI)",
+        "reactions": "Reactions"
       },
       "form": {
         "name": "Name",
@@ -4375,6 +4443,23 @@
           "allow_desc": "Members of this role can hide their online status and last activity from other members in their account settings.",
           "force": "Always browse anonymously",
           "force_desc": "Hide the online status and last activity of every member of this role, whatever they chose. Wins over the setting above, and over any other role."
+        },
+        "reactions": {
+          "allow": "Can react",
+          "allow_desc": "Members with this role can react to posts and comments.",
+          "per_reaction_note": "Choose which reactions it can use, and their daily limits, on the <link>Reactions</link> page.",
+          "allow_own": "Can react to own content",
+          "allow_own_desc": "Reactions to their own posts and comments never earn them reputation.",
+          "per_item": "Reactions per item",
+          "per_item_desc": "How many different reactions a member can leave on one item. At 1, a new pick replaces the old one.",
+          "per_day": "Reactions per day",
+          "per_day_desc": "Covers every reaction a member gives. The count resets at midnight in their time zone.",
+          "unlimited": "Unlimited",
+          "or": "or",
+          "per_day_unit": "per day",
+          "per_item_unit": "per item",
+          "save_error": "The role was saved, but its reaction settings weren't",
+          "load_error": "Reaction settings didn't load. Close the dialog and try again."
         }
       }
     },
@@ -5716,6 +5801,117 @@
             "change": "{from} → {to}"
           }
         }
+      }
+    },
+    "reactions": {
+      "title": "Reactions",
+      "desc": "What members can react with, and what each reaction is worth.",
+      "create": "Add reaction",
+      "limit": "You can have up to {max} reactions",
+      "recount": "Recount reputation",
+      "recount_success": "Recount started",
+      "recount_success_desc": "Reputation is recalculated in the background. It can take a few minutes on a big site.",
+      "recount_error": "The recount didn't start",
+      "recount_confirm": {
+        "title": "Recount every member's reputation?",
+        "submit": "Recount",
+        "desc": "VitNode replaces each member's reputation with the total of the reactions they received, at today's points. Reputation from anywhere else, like a manual edit, is lost. You can't undo this."
+      },
+      "columns": {
+        "reaction": "Reaction",
+        "points": "Points",
+        "enabled": "Enabled"
+      },
+      "points": "{points, plural, =0 {0} other {{points, number}}}",
+      "disabled": "Disabled",
+      "toggle": "Enable {reaction}",
+      "toggle_success": "Reaction updated",
+      "toggle_success_desc": "{reaction} is now {enabled, select, true {available} other {hidden}} for members.",
+      "actions": {
+        "label": "Actions for {reaction}",
+        "edit": "Edit",
+        "delete": "Delete"
+      },
+      "reorder": {
+        "success": "Order saved",
+        "success_desc": "Members see the reactions in the new order."
+      },
+      "delete": {
+        "title": "Delete {reaction}?",
+        "desc": "It disappears from every post and comment, and the reputation it gave is taken back.",
+        "impact": "{reactions, plural, =0 {Nobody used it yet.} one {It was given # time} other {It was given # times}}{reputation, select, 0 {.} other {, worth {reputation} reputation in total.}}",
+        "confirm": "Delete reaction",
+        "success": "Reaction deleted",
+        "success_desc": "{reaction} is gone. Reputation is being recounted.",
+        "error": "The reaction wasn't deleted",
+        "unknown": "Something went wrong. Try again."
+      },
+      "form": {
+        "create_title": "Add a reaction",
+        "edit_title": "Edit reaction",
+        "dialog_desc": "Pick a look, name it, set its points and choose who can use it.",
+        "steps": {
+          "label": "Reaction steps",
+          "progress": "Step <number>{current}</number> of {total}",
+          "back": "Back",
+          "state_done": "Done",
+          "state_todo": "Not done yet",
+          "state_error": "Needs a fix"
+        },
+        "summary": {
+          "hidden": "{title} · hidden",
+          "points": "{points} per reaction",
+          "all_roles": "All roles",
+          "roles": "{count, plural, one {# role} other {# roles}}"
+        },
+        "sections": {
+          "look": "Look",
+          "details": "Details",
+          "reputation": "Reputation",
+          "permissions": "Permissions"
+        },
+        "kind": "Type",
+        "kind_symbol": "Emoji or icon",
+        "kind_symbol_desc": "Any emoji, or a line icon drawn in your theme's text color.",
+        "symbol": "Emoji or icon",
+        "kind_emoji": "Emoji",
+        "kind_icon": "Icon",
+        "kind_image": "Upload",
+        "kind_image_desc": "Your own PNG, JPEG, WebP or GIF. Animated GIFs work too.",
+        "image": "Image",
+        "image_error": "The image wasn't uploaded",
+        "image_current": "Current image",
+        "image_animated_note": "This one is animated.",
+        "image_required": "Upload an image first.",
+        "preview": "Preview",
+        "look_required": "Pick an emoji or icon.",
+        "code": "Code",
+        "code_desc": "The id the API and your code use, like party-parrot. Lowercase letters, digits and dashes only.",
+        "title": "Title",
+        "enabled": "Enabled",
+        "enabled_desc": "Turn off to hide it from members. Its counts and reputation stay, and come back when you turn it on.",
+        "points": "Reputation points",
+        "points_desc": "What one reaction is worth to the author, from -100 to 100. Changing it applies to past reactions too.",
+        "all_roles": "All roles can use it",
+        "all_roles_desc": "Turn off to pick the roles. Either way, you can set a daily limit per role.",
+        "roles": "Roles",
+        "role_limit": "Per day",
+        "role_can_use": "{role} can use this reaction",
+        "role_unlimited": "Unlimited",
+        "role_per_day": "per day",
+        "role_or": "or",
+        "roles_load_error": "Roles didn't load.",
+        "submit_create": "Add reaction",
+        "submit_edit": "Save reaction",
+        "created": "Reaction added",
+        "created_desc": "{reaction} is ready for members.",
+        "updated": "Reaction saved",
+        "updated_desc": "Members see the change right away.",
+        "recounting": "VitNode is recounting reputation with the new points.",
+        "error": "The reaction wasn't saved",
+        "error_desc": "Nothing was changed. Check your connection and try again.",
+        "code_taken": "Another reaction already uses this code.",
+        "limit_reached": "You can have up to {max} reactions."
       }
     }
   },

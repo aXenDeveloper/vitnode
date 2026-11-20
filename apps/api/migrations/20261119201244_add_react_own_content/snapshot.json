@@ -1,0 +1,48 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "87dc294c-d906-4784-83d9-3d9c814ef7a4",
+  "prevIds": [
+    "54fa0a8d-973a-40d6-bd75-d5c696113c4d",
+    "5941daf3-1607-4ffb-9ffa-1efff1159e1d"
+  ],
+  "footprints": [
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_roles",
+        "allowReactOwnContent"
+      ],
+      "writes": [
+        "s|col|public.core_roles.allowReactOwnContent",
+        "n|col|public.core_roles.allowReactOwnContent",
+        "e|col|public.core_roles.allowReactOwnContent"
+      ],
+      "reads": [
+        "n|tbl|public.core_roles",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_roles",
+        "name": "allowReactOwnContent",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    }
+  ]
+}

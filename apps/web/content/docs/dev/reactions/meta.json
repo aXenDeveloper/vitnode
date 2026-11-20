@@ -1,0 +1,6 @@
+{
+  "title": "Reactions",
+  "description": "Reactions, reputation and live counts for content and your own items",
+  "icon": "SmilePlus",
+  "pages": ["index", "custom-targets", "manage-reactions", "reputation", "reference"]
+}

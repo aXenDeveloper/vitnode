@@ -1,0 +1,73 @@
+---
+title: Reputation
+description: How VitNode reputation is calculated from reaction points, where it shows, and how to read or display it in your plugin.
+icon: TrendingUp
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import profile from './reactions-reputation-profile.webp'
+
+Reputation is the sum of the points of every reaction a member's posts and comments received. A **Like** worth +1 adds one point to the author, a **Disagree** worth -1 takes one away, so reputation can go below zero.
+
+## How points add up
+
+- **The author collects the points.** For a Content Engine type, the author is the `search.authorField` or the `publicWrite.ownership` field. A custom target names it in `access` as `authorId`.
+- **Self reactions never count**, even where a role's **Can react to own content** allows them.
+- **Targets can opt out.** `reactions: { reputation: false }` on a content type, or `reputation: false` on a custom target, keeps reactions without moving anyone's reputation. A content type without an author field never moves reputation.
+- **Point changes are retroactive.** Saving new points for a reaction in **AdminCP → Users → Reactions** recounts the reputation of everyone who received it, in the background. **Recount reputation** on the same page recounts everyone.
+- **Deletes take points back.** Removing a reaction, deleting the reacted item or deleting the reaction from the catalog subtracts its points again.
+
+Reputation is stored on the member (`core_users.reputation`) and updated in the same transaction as the reaction, so showing it needs no extra query.
+
+## Where reputation shows
+
+Profiles show reputation next to the member's role and join date. The pill is green above zero, red below and gray at zero. The sign is always written out, so the color is never the only signal. Values of 1,000 and more are shortened, with the full number in a tooltip:
+
+<ImgDocs
+  withoutBackground
+  className="*:max-w-full"
+  src={profile}
+  alt="The Writer profile header with a green +12.5K reputation pill and a tooltip showing +12,480"
+/>
+
+## Show reputation in your plugin
+
+Render the same pill with `Reputation` from `@vitnode/core/tanstack/reactions`. It loads its own messages:
+
+```tsx
+import { Reputation } from '@vitnode/core/tanstack/reactions'
+
+;<Reputation value={author.reputation} />
+```
+
+Where reputation comes from:
+
+| Source                                                 | Field                                                                  |
+| ------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `GET /api/@vitnode/core/users/profile/{nameCode}`      | `reputation`                                                           |
+| People on Content Engine records, such as `author`     | `reputation`, optional                                                 |
+| `GET /api/@vitnode/core/reactions/reputation/{userId}` | `reputation` plus `received`, how many of each reaction the member got |
+
+```ts
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+const res = await fetcher({
+  plugin: '@vitnode/core',
+  method: 'get',
+  module: 'reactions',
+  path: '/reputation/{userId}',
+  args: { params: { userId: 3 } },
+})
+const { reputation, received } = await res.json()
+```
+
+To show a plain number your own way, use [Short Number](/docs/ui/short-number) with `formatOptions={{ signDisplay: "exceptZero" }}`.
+
+## React to reputation changes
+
+Core emits `reputation.changed` with `{ userId, delta, total, reason }` after every change. `reason` is `"reaction"` for a reaction added, removed or replaced, and `"recount"` after a recount. Listen to it to award badges or unlock features; see [Built-in events](/docs/dev/events/built-in-events#reaction-events).
+
+## Related
+
+- [Manage reactions](/docs/dev/reactions/manage-reactions): set each reaction's points.
+- [Reference](/docs/dev/reactions/reference): routes, limits and events.

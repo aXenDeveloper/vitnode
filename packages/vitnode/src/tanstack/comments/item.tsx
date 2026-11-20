@@ -106,6 +106,8 @@ export const useContentCommentItem = (node: ContentCommentNode<unknown>) => {
     canReply: comments.canReply(node),
     /** The values the edit form opened with, or `null` when not editing. */
     editing,
+    /** The reacted-to record of this comment, or `null` without `reactions`. */
+    reactionTarget: comments.reactionTarget(node.id),
     /** `true` while any action runs on the thread; start no other. */
     isAnyBusy: comments.busy !== null,
     /** `true` while an action runs on this comment. */
@@ -122,6 +124,7 @@ export const useContentCommentItem = (node: ContentCommentNode<unknown>) => {
       canDelete: comments.features.delete && permissions.canDelete,
       canEdit: comments.features.edit && permissions.canEdit,
       canHide: comments.features.hide && permissions.canHide,
+      canReact: comments.features.reactions && permissions.canReact,
       canReport: comments.features.report && permissions.canReport,
       canWarn:
         comments.features.warn &&
@@ -243,7 +246,7 @@ export const ContentCommentActions = ({
               className={cn("text-muted-foreground font-semibold", className)}
               disabled={item.isAnyBusy && !item.isBusy}
               isLoading={item.isBusy}
-              size="icon-xs"
+              size="icon-sm"
               variant="ghost"
             />
           }
@@ -380,7 +383,7 @@ const DropdownMenuShell = ({
         <Button
           aria-label={label}
           className={cn("text-muted-foreground font-semibold", className)}
-          size="icon-xs"
+          size="icon-sm"
           variant="ghost"
         />
       }

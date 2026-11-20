@@ -208,6 +208,11 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           href: "/admin/core/users/roles",
           permission: staffPermissionArgs(admin.roles.canView),
         },
+        {
+          title: key("admin.global.nav.users.reactions"),
+          href: "/admin/core/users/reactions",
+          permission: staffPermissionArgs(admin.reactions.canView),
+        },
       ],
     },
     {

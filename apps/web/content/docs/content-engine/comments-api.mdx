@@ -77,6 +77,7 @@ Each entry of `tree` and `items` is a `ContentCommentNode`:
 | `record`                 | The public record, or `null` for a placeholder                               |
 | `deleted`                | For a placeholder: `{ byAuthor, createdAt }`, with no text and no author     |
 | `hidden`, `hiddenReason` | Set only for a hidden comment this reader may see: its author or a moderator |
+| `editCount`              | How many times the comment was edited, from the type's [editorial revisions](/docs/content-engine/threads-editing#edit-history). `0` without `editorial` or for a placeholder; hiding and unhiding don't count |
 
 `buildContentCommentTree(items)` and `countContentCommentReplies(node)` are exported for layouts that work on the flat list.
 
@@ -94,7 +95,7 @@ Its `queryFn` throws when the thread route answers anything but `2xx`.
 
 ## `ContentComments`
 
-The complete section: the count, the thread, **Load more comments**, the composer or a sign-in link, the actions menu, the delete confirmation and the report dialog. It scrolls to and rings the comment a `#comment-...` link points to, loading more pages until it appears.
+The complete section: the count, the thread, **Load more comments**, the composer (hidden from guests), the actions menu, the delete confirmation and the report dialog. It scrolls to and rings the comment a `#comment-...` link points to, loading more pages until it appears.
 
 ```tsx
 <ContentComments comments={comments} />
@@ -166,11 +167,11 @@ const MyComment = ({ node }) => {
 | `ContentCommentsRoot`                                              | Provides `comments` to the components below; takes a `fallback` shown while the messages load                                                                                         |
 | `useContentCommentItem(node)`                                      | One comment's state: `permissions` (the server's answers limited to wired actions), `canReply`, `editing`, `startEditing()`, `stopEditing()`, `isReplying`, `setIsReplying`, `isBusy`, and `isRemoved` when a live update removed the comment under an open form |
 | `ContentCommentActions`                                            | The **More actions** menu with the hide-reason prompt. `children` adds your own menu items                                                                                            |
-| `ContentCommentComposer`                                           | The comment form, lazy-loaded: `mode="create"` with `parentId`, or `mode="edit"` with `id` and `editable`. `unavailable` (a translated reason) keeps the text but hides the submit button |
+| `ContentCommentComposer`                                           | The comment form, lazy-loaded: `mode="create"` with `parentId` and an optional `initialBody` (a quote, say), or `mode="edit"` with `id` and `editable`. `onDone(outcome, id)` gets what the comment became and its id. `hideLabel` keeps the editor's label for screen readers only. `unavailable` (a translated reason) keeps the text but hides the submit button |
 | `ContentCommentsLiveStatus`                                        | **Show new comments** and the refresh-failed notice, with a polite screen reader announcement. Renders nothing while there is nothing to say                                           |
 | `ContentCommentItem`                                               | One comment as the default section draws it                                                                                                                                           |
 | `ContentCommentPlaceholder`                                        | The anonymous stand-in for a removed comment                                                                                                                                          |
-| `ContentCommentsComposer`, `ContentCommentsLoadMore`               | The new-comment card and the load-more button                                                                                                                                         |
+| `ContentCommentsComposer`, `ContentCommentsLoadMore`               | The new-comment card and the load-more button. The card renders nothing for guests; `showTitle={false}` keeps its **Leave a comment** heading for screen readers only, and `hideLabel` does the same for the editor's label |
 | `contentCommentAuthor(record)`, `contentCommentAuthorName(person)` | Read the `author` person and the name to show                                                                                                                                         |
 | `useContentCommentErrorToast()`                                    | Shows the section's message for a failed action's status                                                                                                                              |
 

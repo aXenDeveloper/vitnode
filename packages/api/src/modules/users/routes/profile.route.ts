@@ -1,6 +1,8 @@
 import { z } from "@hono/zod-openapi";
+import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/builders";
+import { core_users } from "@/database/users";
 import { resolveUserRoles, userRoleSchema } from "@/lib/resolve-user-roles";
 import { publicFullNameOf } from "@/lib/user-personal-information";
 import { UserModel } from "@/models/user";
@@ -28,6 +30,8 @@ export const profileRoute = buildRoute({
               avatarUrl: z.string().nullable(),
               coverUrl: z.string().nullable(),
               createdAt: z.date(),
+              /** Points from reactions to the member's content; can be negative. */
+              reputation: z.number().int(),
               role: userRoleSchema,
               secondaryRoles: z.array(userRoleSchema),
             }),
@@ -56,6 +60,12 @@ export const profileRoute = buildRoute({
     }
 
     const roles = await resolveUserRoles(c, user);
+    const [standing] = await c
+      .get("db")
+      .select({ reputation: core_users.reputation })
+      .from(core_users)
+      .where(eq(core_users.id, user.id))
+      .limit(1);
 
     return c.json(
       {
@@ -71,6 +81,7 @@ export const profileRoute = buildRoute({
         avatarUrl: user.avatarUrl,
         coverUrl: user.coverUrl,
         createdAt: user.createdAt,
+        reputation: standing?.reputation ?? 0,
         ...roles,
       },
       200,

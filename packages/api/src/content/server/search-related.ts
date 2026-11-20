@@ -25,7 +25,7 @@ const RELATED_PUBLICATION_COLUMNS = ["status", "publishedAt", "hiddenAt"];
 const TRANSLATION_STATUS = "__translationStatus";
 const TRANSLATION_PUBLISHED_AT = "__translationPublishedAt";
 
-const contextIdOf = (
+export const contextIdOf = (
   source: ContentSearchContextSource,
   value: unknown,
 ): null | number | string => {

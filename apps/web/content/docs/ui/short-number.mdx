@@ -1,0 +1,43 @@
+---
+title: Short Number
+description: Show large numbers as 1.2K or 3.4M in the user's language, with the full formatted number in a tooltip.
+icon: Hash
+---
+
+`ShortNumber` turns 12,480 into **12.5K** and 3,456,789 into **3.5M**, using the user's language. Hover a shortened number to see it in full.
+
+## Preview
+
+<Preview name="short-number" />
+
+## Usage
+
+```ts
+import { ShortNumber } from '@vitnode/core/components/ui/short-number'
+```
+
+```tsx
+<ShortNumber value={12480} />
+```
+
+Numbers under 1,000 stay as they are. The component inherits font size and color and uses tabular figures, so a number does not shift its neighbors when it changes.
+
+## Options
+
+<Preview name="short-number-options" />
+
+| Name            | Type                       | Required | Default | Description                                                                                                          |
+| --------------- | -------------------------- | -------- | ------- | -------------------------------------------------------------------------------------------------------------------- |
+| `value`         | `number`                   | Yes      | -       | The number to show.                                                                                                  |
+| `tooltip`       | `boolean`                  | No       | `true`  | Show the full number on hover. Turn it off when the parent already explains it, such as a button with its own label. |
+| `formatOptions` | `Intl.NumberFormatOptions` | No       | -       | Applied to both forms, without `notation`. `{ signDisplay: "exceptZero" }` gives `+1.3K` and `-37`.                  |
+| `threshold`     | `number`                   | No       | `1000`  | Values below this are shown in full.                                                                                 |
+
+Any other prop goes to the `<span>`. The tooltip appears only when the number was shortened.
+
+To format outside React, `formatShortNumber(value, { locale })` from the same module returns `{ short, full, shortened }`.
+
+## Accessibility
+
+- Screen readers hear the full number, not the short form.
+- Mouse users find the full number in the tooltip. Keyboard and touch users see the short value, such as 12.5K.

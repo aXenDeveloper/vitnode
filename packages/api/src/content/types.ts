@@ -1051,6 +1051,28 @@ export type ContentReportsInput<TField extends string = string> =
   | boolean
   | ContentReportsConfig<TField>;
 
+/** Options for `reactions`. */
+export interface ContentReactionsConfig {
+  /**
+   * Reactions move the author's reputation by each reaction's points. Needs
+   * an author field (`search.authorField` or `publicWrite.ownership`); on by
+   * default when there is one.
+   */
+  reputation?: boolean;
+}
+
+/**
+ * `true` for the defaults, an options object, or `false`/omitted to disable
+ * reactions. Which reactions, how many per item and how many a day are role
+ * settings in the AdminCP.
+ */
+export type ContentReactionsInput = boolean | ContentReactionsConfig;
+
+export interface ResolvedContentReactionsConfig {
+  enabled: boolean;
+  reputation: boolean;
+}
+
 export interface ContentThreadInput<TField extends string = string> {
   /** Deepest nesting level a reply may sit at. 1 is a flat list. Defaults to 8. */
   maxDepth?: number;
@@ -2134,6 +2156,7 @@ export interface ContentTypeDefinition<
   >;
   publication: ResolvedContentPublicationConfig<TPublication>;
   publicWrite: TPublicWrite;
+  reactions: ResolvedContentReactionsConfig;
   reports: ResolvedContentReportsConfig;
   /** Zod schemas generated from `fields`. */
   schemas: ContentSchemas<
