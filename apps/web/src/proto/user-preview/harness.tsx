@@ -4,6 +4,12 @@ import './picker.css'
 import { Link } from '@tanstack/react-router'
 import { Avatar } from '@vitnode/core/components/avatar'
 import {
+  Drawer,
+  DrawerContent,
+  DrawerTitle,
+  DrawerTrigger,
+} from '@vitnode/core/components/ui/drawer'
+import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
@@ -77,7 +83,80 @@ const POSTS = [
   },
 ]
 
-const PreviewTrigger = ({
+// Touch screens have no hover: there the card opens as a bottom sheet on tap.
+const COARSE_QUERY = '(hover: none) and (pointer: coarse)'
+
+const subscribeCoarse = (onChange: () => void) => {
+  const query = window.matchMedia(COARSE_QUERY)
+  query.addEventListener('change', onChange)
+
+  return () => query.removeEventListener('change', onChange)
+}
+
+const useCoarsePointer = () =>
+  React.useSyncExternalStore(
+    subscribeCoarse,
+    () => window.matchMedia(COARSE_QUERY).matches,
+    () => false,
+  )
+
+const PreviewSheet = ({
+  children,
+  decorative,
+  defaultOpen,
+  nameCode,
+  variant,
+}: {
+  children: React.ReactNode
+  decorative?: boolean
+  defaultOpen?: boolean
+  nameCode: string
+  variant: Variant
+}) => {
+  const [open, setOpen] = React.useState(defaultOpen ?? false)
+  // Stays mounted after the first open, so the sheet keeps its content while it slides away.
+  const [opened, setOpened] = React.useState(defaultOpen ?? false)
+  const Content = variant.Content
+
+  return (
+    <Drawer
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (next) setOpened(true)
+      }}
+      open={open}
+    >
+      <DrawerTrigger asChild>
+        <button
+          aria-haspopup="dialog"
+          aria-hidden={decorative ? true : undefined}
+          className="focus-visible:ring-ring/50 inline-flex min-w-0 cursor-pointer touch-manipulation rounded-sm text-start outline-none focus-visible:ring-3"
+          tabIndex={decorative ? -1 : undefined}
+          type="button"
+        >
+          {children}
+        </button>
+      </DrawerTrigger>
+      <DrawerContent
+        aria-describedby={undefined}
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <DrawerTitle className="sr-only">Profile of @{nameCode}</DrawerTitle>
+        <div className="mx-auto w-full max-w-md overflow-y-auto">
+          {opened ? (
+            <React.Suspense fallback={<UserPreviewSkeleton />}>
+              <RouteMessages namespaces={['core.global', 'core.profile']}>
+                <Content nameCode={nameCode} />
+              </RouteMessages>
+            </React.Suspense>
+          ) : null}
+        </div>
+      </DrawerContent>
+    </Drawer>
+  )
+}
+
+const PreviewHoverCard = ({
   children,
   decorative,
   defaultOpen,
@@ -126,6 +205,13 @@ const PreviewTrigger = ({
   )
 }
 
+const PreviewTrigger = (props: React.ComponentProps<typeof PreviewHoverCard>) =>
+  useCoarsePointer() ? (
+    <PreviewSheet {...props} />
+  ) : (
+    <PreviewHoverCard {...props} />
+  )
+
 const Thread = ({ variant }: { variant: Variant }) => (
   <main className="container mx-auto flex max-w-3xl flex-col gap-6 p-4 pb-32 sm:p-8 sm:pb-32">
     <header className="flex flex-col gap-2">
@@ -137,7 +223,8 @@ const Thread = ({ variant }: { variant: Variant }) => (
         Which switches for a first mechanical keyboard?
       </h1>
       <p className="text-muted-foreground text-sm leading-relaxed">
-        Hover a name or an avatar. The first card opens on load.
+        Hover a name or an avatar (tap on touch screens). The first card opens
+        on load.
       </p>
     </header>
 
@@ -183,6 +270,7 @@ const Picker = ({
   onReplay: () => void
   onSelect: (index: number) => void
 }) => {
+  const coarse = useCoarsePointer()
   const navRef = React.useRef<HTMLElement>(null)
   const highlightRef = React.useRef<HTMLSpanElement>(null)
   const itemRefs = React.useRef<(HTMLButtonElement | null)[]>([])
@@ -212,7 +300,12 @@ const Picker = ({
   }, [])
 
   return (
-    <nav aria-label="Prototype variants" className="proto-picker" ref={navRef}>
+    <nav
+      aria-label="Prototype variants"
+      className="proto-picker"
+      data-position={coarse ? 'top' : undefined}
+      ref={navRef}
+    >
       <span
         aria-hidden="true"
         className="proto-picker-highlight"

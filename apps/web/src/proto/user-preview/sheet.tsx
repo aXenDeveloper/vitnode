@@ -113,7 +113,7 @@ const Body = ({ nameCode }: { nameCode: string }) => {
 }
 
 export const sheet: Variant = {
-  name: 'Round 3',
+  name: 'Before',
   contentClassName: 'w-80 overflow-hidden p-0',
   Content: Body,
 }
