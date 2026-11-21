@@ -17,12 +17,10 @@ import React from 'react'
 
 import type { Variant } from './shared'
 
-import { ambient } from './ambient'
-import { lean } from './lean'
+import { refined } from './refined'
 import { sheet } from './sheet'
-import { stats } from './stats'
 
-const VARIANTS: Variant[] = [ambient, sheet, stats, lean]
+const VARIANTS: Variant[] = [refined, sheet]
 
 interface Person {
   avatarColor: string
@@ -284,7 +282,7 @@ export const UserPreviewPrototype = ({ initial }: { initial: number }) => {
     return () => document.removeEventListener('keydown', onKey)
   }, [active, select])
 
-  const variant = VARIANTS[active] ?? ambient
+  const variant = VARIANTS[active] ?? refined
 
   return (
     <>
