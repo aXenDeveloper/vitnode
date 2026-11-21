@@ -1,0 +1,23 @@
+.proto-blob {
+  clip-path: ellipse(85% 100% at 50% 0%);
+}
+
+@keyframes proto-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .proto-pop {
+    animation: proto-pop 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  }
+}

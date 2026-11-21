@@ -1,11 +1,9 @@
 // Prototype - variant 4: Badge. Axis: symmetric layout + stats + one explicit action.
 import { Link } from '@tanstack/react-router'
-import { Avatar } from '@vitnode/core/components/avatar'
 import { RoleFormat } from '@vitnode/core/components/role-format'
 import { buttonVariants } from '@vitnode/core/components/ui/button'
 import { Skeleton } from '@vitnode/core/components/ui/skeleton'
 import { UserCoverImage } from '@vitnode/core/components/user-cover-image'
-import { UserPresenceStatus } from '@vitnode/core/components/user-presence-status'
 import { userProfileHref } from '@vitnode/core/components/user-profile-href'
 import { userCoverStyle } from '@vitnode/core/views/profile/images/cover-style'
 import { cn } from 'cn'
@@ -16,6 +14,7 @@ import type { Variant } from './shared'
 import {
   NameLink,
   PendingLabel,
+  PresenceAvatar,
   ProfileError,
   SignedReputation,
   useJoined,
@@ -61,7 +60,6 @@ const Body = ({ nameCode }: { nameCode: string }) => {
   if (query.isError) return <ProfileError query={query} />
 
   const user = query.data
-  const online = presence?.status === 'online'
 
   return (
     <div className="flex flex-col">
@@ -73,12 +71,14 @@ const Body = ({ nameCode }: { nameCode: string }) => {
       </div>
 
       <div className="flex flex-col items-center gap-3 px-4 pb-4 text-center">
-        <Avatar
-          alt=""
-          className="border-popover -mt-9 size-18 border-4"
-          size={72}
-          user={user}
-        />
+        <div className="-mt-9">
+          <PresenceAvatar
+            className="border-popover border-4"
+            presence={presence}
+            size={72}
+            user={user}
+          />
+        </div>
 
         <div className="flex max-w-full min-w-0 flex-col items-center gap-0.5">
           <NameLink
@@ -111,20 +111,7 @@ const Body = ({ nameCode }: { nameCode: string }) => {
             <SignedReputation value={user.reputation ?? 0} />
           </Stat>
           <Stat label="Joined">{joinedYear}</Stat>
-          <Stat label="Status">
-            {presence ? (
-              <>
-                <UserPresenceStatus presence={presence} variant="dot" />
-                {presence.status === 'hidden'
-                  ? 'Hidden'
-                  : online
-                    ? 'Online'
-                    : 'Offline'}
-              </>
-            ) : (
-              '-'
-            )}
-          </Stat>
+          <Stat label="Roles">{1 + user.secondaryRoles.length}</Stat>
         </dl>
 
         <Link

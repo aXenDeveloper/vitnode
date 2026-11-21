@@ -17,12 +17,31 @@ import React from 'react'
 
 import type { Variant } from './shared'
 
+import { ambient } from './ambient'
 import { centered } from './centered'
 import { compact } from './compact'
 import { current } from './current'
+import { details } from './details'
+import { glass } from './glass'
+import { group } from './group'
+import { idCard } from './id-card'
 import { immersive } from './immersive'
+import { playful } from './playful'
+import { split } from './split'
 
-const VARIANTS: Variant[] = [current, compact, immersive, centered]
+const VARIANTS: Variant[] = [
+  current,
+  compact,
+  immersive,
+  centered,
+  split,
+  idCard,
+  ambient,
+  glass,
+  group,
+  details,
+  playful,
+]
 
 interface Person {
   avatarColor: string

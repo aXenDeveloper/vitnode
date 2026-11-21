@@ -1,9 +1,7 @@
 // Prototype - variant 3: Immersive. Axis: media-forward - identity sits on the cover.
-import { Avatar } from '@vitnode/core/components/avatar'
 import { RoleFormat } from '@vitnode/core/components/role-format'
 import { Skeleton } from '@vitnode/core/components/ui/skeleton'
 import { UserCoverImage } from '@vitnode/core/components/user-cover-image'
-import { UserPresenceStatus } from '@vitnode/core/components/user-presence-status'
 import { Reputation } from '@vitnode/core/tanstack/reactions'
 import { userCoverStyle } from '@vitnode/core/views/profile/images/cover-style'
 
@@ -12,6 +10,7 @@ import type { Variant } from './shared'
 import {
   NameLink,
   PendingLabel,
+  PresenceAvatar,
   ProfileError,
   useJoined,
   usePresence,
@@ -85,9 +84,10 @@ const Body = ({ nameCode }: { nameCode: string }) => {
           style={{ backgroundImage: SCRIM }}
         />
         <div className="absolute inset-x-0 bottom-0 flex items-end gap-3 p-4">
-          <Avatar
-            alt=""
-            className="size-14 shrink-0 ring-2 ring-white/90"
+          <PresenceAvatar
+            className="ring-2 ring-white/90"
+            presence={presence}
+            ringClassName="ring-white/90"
             size={56}
             user={user}
           />
@@ -117,10 +117,7 @@ const Body = ({ nameCode }: { nameCode: string }) => {
         ) : null}
 
         <div className="text-muted-foreground flex items-center justify-between gap-3 text-sm">
-          <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-            <span>Joined {joined}</span>
-            {presence ? <UserPresenceStatus presence={presence} /> : null}
-          </span>
+          <span>Joined {joined}</span>
           {typeof user.reputation === 'number' ? (
             <Reputation value={user.reputation} />
           ) : null}

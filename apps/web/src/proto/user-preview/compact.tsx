@@ -1,9 +1,7 @@
 // Prototype - variant 2: Compact. Axis: density - one identity row, cover as a framed band.
-import { Avatar } from '@vitnode/core/components/avatar'
 import { RoleFormat } from '@vitnode/core/components/role-format'
 import { Skeleton } from '@vitnode/core/components/ui/skeleton'
 import { UserCoverImage } from '@vitnode/core/components/user-cover-image'
-import { UserPresenceStatus } from '@vitnode/core/components/user-presence-status'
 import { userCoverStyle } from '@vitnode/core/views/profile/images/cover-style'
 
 import type { Variant } from './shared'
@@ -11,6 +9,7 @@ import type { Variant } from './shared'
 import {
   NameLink,
   PendingLabel,
+  PresenceAvatar,
   ProfileError,
   SignedReputation,
   useJoined,
@@ -53,14 +52,7 @@ const Body = ({ nameCode }: { nameCode: string }) => {
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="relative shrink-0">
-          <Avatar alt="" className="size-11" size={44} user={user} />
-          {presence ? (
-            <span className="ring-popover bg-popover absolute -end-0.5 -bottom-0.5 flex rounded-full ring-2">
-              <UserPresenceStatus presence={presence} variant="dot" />
-            </span>
-          ) : null}
-        </span>
+        <PresenceAvatar presence={presence} size={44} user={user} />
         <div className="flex min-w-0 flex-1 flex-col">
           <NameLink
             className="text-foreground truncate font-semibold"

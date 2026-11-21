@@ -1,6 +1,8 @@
 // Prototype - throwaway. Deleted after a direction is picked.
 import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
+import { Avatar } from '@vitnode/core/components/avatar'
+import { RoleFormat } from '@vitnode/core/components/role-format'
 import { Button } from '@vitnode/core/components/ui/button'
 import {
   Empty,
@@ -20,7 +22,7 @@ import {
 import { userPresenceQueryOptions } from '@vitnode/core/views/presence/presence-query'
 import { cn } from 'cn'
 import { IdCardIcon, RotateCwIcon, UserRoundXIcon } from 'lucide-react'
-import { useFormatter, useTranslations } from 'use-intl'
+import { useFormatter, useNow, useTranslations } from 'use-intl'
 
 export const useProfile = (nameCode: string) =>
   useQuery(userProfileQueryOptions({ nameCode }))
@@ -31,7 +33,7 @@ export const usePresence = (userId: number) =>
     enabled: userId > 0,
   }).data
 
-export const useJoined = (createdAt: Date | string, year = false) => {
+export const useJoined = (createdAt: Date | number | string, year = false) => {
   const format = useFormatter()
 
   return format.dateTime(
@@ -136,3 +138,109 @@ export interface Variant {
   contentClassName: string
   name: string
 }
+
+export type Profile = NonNullable<ReturnType<typeof useProfile>['data']>
+export type Presence = ReturnType<typeof usePresence>
+export type Role = Profile['role']
+
+export const useCard = (nameCode: string) => {
+  const query = useProfile(nameCode)
+  const presence = usePresence(query.data?.id ?? 0)
+
+  return { presence, query }
+}
+
+const usePresenceLabel = (presence: Presence) => {
+  const t = useTranslations('core.global.presence')
+  const format = useFormatter()
+  const now = useNow({ updateInterval: 60_000 })
+  if (!presence || presence.status === 'hidden') return null
+  if (presence.status === 'online') return t('online_now')
+  if (presence.lastSeenAt) {
+    return t('last_seen', {
+      time: format.relativeTime(new Date(presence.lastSeenAt), now),
+    })
+  }
+
+  return t('offline')
+}
+
+/**
+ * The avatar with the member's online status as a dot on its bottom-right
+ * edge. `ringClassName` must match the surface behind the avatar so the dot
+ * reads as cut out of it.
+ */
+export const PresenceAvatar = ({
+  className,
+  presence,
+  ringClassName = 'ring-popover',
+  shape = 'circle',
+  size,
+  user,
+}: {
+  className?: string
+  presence: Presence
+  ringClassName?: string
+  shape?: 'circle' | 'square'
+  size: number
+  user: Profile
+}) => {
+  const label = usePresenceLabel(presence)
+  const online = presence?.status === 'online'
+  const dot = Math.max(10, Math.round(size * 0.2))
+  // On a circle the bottom-right point of the edge sits ~15% in from the box.
+  const offset =
+    shape === 'circle'
+      ? Math.round(size * 0.146 - dot / 2)
+      : -Math.round(dot / 3)
+
+  return (
+    <span className="relative inline-flex size-fit shrink-0">
+      <Avatar
+        alt=""
+        className={cn(shape === 'square' && 'rounded-xl', className)}
+        size={size}
+        style={{ height: size, width: size }}
+        user={user}
+      />
+      {label ? (
+        <span
+          aria-label={label}
+          className={cn(
+            'absolute rounded-full ring-2',
+            ringClassName,
+            online ? 'bg-success' : 'bg-muted-foreground',
+          )}
+          role="img"
+          style={{ bottom: offset, height: dot, right: offset, width: dot }}
+          title={label}
+        />
+      ) : null}
+    </span>
+  )
+}
+
+export const AllRoles = ({
+  className,
+  user,
+}: {
+  className?: string
+  user: Profile
+}) => (
+  <ul
+    aria-label="Roles"
+    className={cn(
+      'flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm',
+      className,
+    )}
+  >
+    <li className="min-w-0">
+      <RoleFormat role={user.role} />
+    </li>
+    {user.secondaryRoles.map((role) => (
+      <li className="min-w-0" key={role.id}>
+        <RoleFormat className="font-normal" role={role} />
+      </li>
+    ))}
+  </ul>
+)
