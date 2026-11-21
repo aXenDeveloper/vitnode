@@ -26,6 +26,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { UserFormat } from "@/components/user-format";
+import { UserPreview } from "@/components/user-preview";
 
 import type { ReactionCatalogItem } from "./query";
 
@@ -161,12 +162,18 @@ const WhoReactedSheet = ({
                       key={`${edge.user.id}-${edge.reaction}`}
                     >
                       <span className="relative shrink-0">
-                        <Avatar
-                          alt=""
-                          className="size-8"
-                          size={32}
-                          user={edge.user}
-                        />
+                        <UserPreview
+                          className="flex rounded-full"
+                          decorative
+                          nameCode={edge.user.nameCode}
+                        >
+                          <Avatar
+                            alt=""
+                            className="size-8"
+                            size={32}
+                            user={edge.user}
+                          />
+                        </UserPreview>
                         {item ? (
                           <span className="bg-background absolute -end-1 -bottom-1 flex size-5 items-center justify-center rounded-full border">
                             <ReactionIcon

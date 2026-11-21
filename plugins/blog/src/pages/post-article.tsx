@@ -11,6 +11,7 @@ import {
 } from "@vitnode/core/components/ui/alert";
 import { TooltipWithContent } from "@vitnode/core/components/ui/tooltip";
 import { UserFormat } from "@vitnode/core/components/user-format";
+import { UserPreview } from "@vitnode/core/components/user-preview";
 import { richTextNodeElement } from "@vitnode/core/content/rich-text";
 import { resolveImageAlt } from "@vitnode/core/lib/files/resolve-alt";
 import { getIntlRuntime } from "@vitnode/core/tanstack/i18n";
@@ -106,17 +107,20 @@ const PostAuthors = ({ authors }: { authors: BlogArticleItem["authorId"] }) => {
     <div className="flex items-center gap-2.5">
       <span className="isolate flex shrink-0">
         {authors.map((author, index) => (
-          <Avatar
-            alt=""
-            className={cn(
-              "ring-background relative ring-2",
-              index > 0 && "-ms-2",
-            )}
+          <UserPreview
+            className={cn("relative rounded-full", index > 0 && "-ms-2")}
+            decorative
             key={author.id}
-            size={28}
+            nameCode={author.nameCode}
             style={{ zIndex: authors.length - index }}
-            user={author}
-          />
+          >
+            <Avatar
+              alt=""
+              className="ring-background ring-2"
+              size={28}
+              user={author}
+            />
+          </UserPreview>
         ))}
       </span>
       <p className="text-start text-balance">

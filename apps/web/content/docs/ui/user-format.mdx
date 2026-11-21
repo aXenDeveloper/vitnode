@@ -4,6 +4,10 @@ description: Show a member's name in their role color, with the role's icon or e
 icon: UserCheck
 ---
 
+import { ImgDocs } from "@/components/fumadocs/img";
+import previewCard from "./user-format-preview.webp";
+import previewSheet from "./user-format-preview-sheet.webp";
+
 `UserFormat` prints a member's name the way the rest of the site does. Use it
 anywhere a name shows up: article bylines, tables, comments, notifications.
 
@@ -89,6 +93,57 @@ Leave `link` off when the name sits inside another link or a button, such as a
 table row that already opens something. Nested links are invalid HTML and
 confuse screen readers.
 
+## Profile preview
+
+A linked name opens a profile preview when someone rests the pointer on it or
+tabs to it. The card shows the member's cover, avatar with an online dot, name,
+`@nameCode` and primary role, then their reputation, how long ago they joined
+and when they were last here, with a **View profile** button at the bottom.
+
+<ImgDocs alt="A profile preview card under a linked username, with cover, avatar with an online dot, name, role, reputation, join time, last visit and a View profile button" src={previewCard} />
+
+Phones and tablets have no hover, so there a tap opens the same preview as a
+bottom sheet. Swipe it down to close it, or tap **View profile** to go on to
+the profile.
+
+<ImgDocs alt="The same profile preview as a bottom sheet on a phone, with a drag handle over the cover" src={previewSheet} />
+
+Moderators also see the member's warnings in the preview: their active warning
+points, how many warnings are active and in total, and a **Review** link to the
+member's warnings in the ModCP. Everyone else never loads them.
+
+You don't pass the preview any data. When it opens, it loads the member's
+public profile from `GET /users/profile/{nameCode}` and shows a skeleton until
+the answer arrives. The preview shares its cache with the profile page, so
+opening it and then going to the profile renders the page right away. Nothing
+is fetched for names nobody opens.
+
+The preview is on by default for every `UserFormat` with `link`. Turn it off
+with `preview={false}` when the name already sits inside another hover card:
+
+```tsx
+<UserFormat format link preview={false} user={user} />
+```
+
+### Preview on an avatar
+
+Wrap any element in `UserPreview` to give it the same preview. It renders a
+link to the profile (a button that opens the sheet on touch screens), so only
+pass the `nameCode`:
+
+```tsx
+import { Avatar } from '@vitnode/core/components/avatar'
+import { UserPreview } from '@vitnode/core/components/user-preview'
+
+<UserPreview decorative nameCode={user.nameCode}>
+  <Avatar alt="" size={32} user={user} />
+</UserPreview>
+```
+
+Add `decorative` when a linked name sits right next to the avatar. It keeps the
+duplicate link out of the tab order and away from screen readers, while mouse
+and touch users still get the preview.
+
 ## Names inside a sentence
 
 `UserFormat` is an `inline-flex` row, which keeps the icon centered on the
@@ -111,6 +166,7 @@ words around it:
 | `avatarSize` | `number`                                                                             | No       | `20`    | The avatar's width and height in pixels                      |
 | `format`     | `boolean`                                                                            | No       | `false` | Adds the role color and prefix                               |
 | `link`       | `boolean`                                                                            | No       | `false` | Links to `/users/<nameCode>` when it is set                  |
+| `preview`    | `boolean`                                                                            | No       | `true`  | With `link`, opens the profile preview (hover card, or bottom sheet on touch) |
 | `className`  | `string`                                                                             | No       | -       | Extra classes on the outer element                           |
 
 Other `<span>` props go to the outer `<span>`. With `link`, only `className`,
