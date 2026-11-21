@@ -4,17 +4,18 @@ import { cn } from "cn";
 
 import { Avatar } from "./avatar";
 import { EmojiIcon } from "./ui/emoji-icon";
+import { UserPreview } from "./user-preview";
+import { userProfileHref } from "./user-profile-href";
+
+export { userProfileHref } from "./user-profile-href";
 
 const FALLBACK_AVATAR_COLOR = "64748b";
-
-/** The path of a user's public profile page. */
-export const userProfileHref = (nameCode: string): string =>
-  `/users/${encodeURIComponent(nameCode)}`;
 
 /**
  * A user's name, optionally styled by their role, led by their avatar and
  * linked to their profile. Shows `user.fullName` in place of the nickname when
- * the API sends one.
+ * the API sends one. A linked name opens the member's preview card on hover or
+ * focus, which fetches its own data.
  */
 export const UserFormat = ({
   user,
@@ -22,6 +23,7 @@ export const UserFormat = ({
   avatarSize = 20,
   format,
   link,
+  preview = true,
   className,
   style,
   ...props
@@ -38,6 +40,12 @@ export const UserFormat = ({
   format?: boolean;
   /** Links to the profile page; needs `user.nameCode`. */
   link?: boolean;
+  /**
+   * With `link`, opens the member's preview card (cover, avatar, group) when
+   * the link is hovered or focused. Turn it off inside another hover card.
+   * Defaults to `true`.
+   */
+  preview?: boolean;
   user: {
     /** The letter avatar's background, a hex color without `#`. */
     avatarColor?: string;
@@ -82,6 +90,19 @@ export const UserFormat = ({
       <span className="truncate">{user.fullName ?? user.name}</span>
     </>
   );
+
+  if (link && user.nameCode && preview) {
+    return (
+      <UserPreview
+        className={cn(classes, "underline-offset-4 hover:underline")}
+        nameCode={user.nameCode}
+        style={colorStyle}
+        title={props.title}
+      >
+        {content}
+      </UserPreview>
+    );
+  }
 
   if (link && user.nameCode) {
     return (

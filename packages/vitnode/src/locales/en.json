@@ -852,6 +852,14 @@
       "secondaryRoles": "Secondary roles",
       "editProfile": "Edit profile",
       "timeline": "Timeline",
+      "preview": {
+        "joined": "Joined {date}",
+        "retry": "Try again",
+        "load_error": {
+          "title": "Profile didn't load",
+          "desc": "Check your connection and try again."
+        }
+      },
       "notFound": {
         "title": "Profile not found",
         "desc": "This user doesn't exist, or their username has changed."

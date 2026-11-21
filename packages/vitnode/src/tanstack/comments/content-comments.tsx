@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserFormat } from "@/components/user-format";
+import { UserPreview } from "@/components/user-preview";
 import { useRevealHashTarget } from "@/hooks/use-reveal-hash-target";
 import { ReactionBar } from "@/tanstack/reactions/reaction-bar";
 
@@ -210,7 +211,13 @@ export const ContentCommentItem = <TRecord,>({
   return (
     <div className="flex min-w-0 flex-1 gap-3">
       {person ? (
-        <Avatar alt="" className="size-8 shrink-0" size={32} user={person} />
+        <UserPreview
+          className="shrink-0 rounded-full"
+          decorative
+          nameCode={person.nameCode}
+        >
+          <Avatar alt="" className="size-8" size={32} user={person} />
+        </UserPreview>
       ) : (
         <span
           aria-hidden="true"

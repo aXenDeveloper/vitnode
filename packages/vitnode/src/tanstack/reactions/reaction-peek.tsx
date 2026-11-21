@@ -87,6 +87,7 @@ const PeekPeople = ({
             className="min-w-0 truncate text-sm"
             format
             link
+            preview={false}
             user={edge.user}
           />
         </li>
