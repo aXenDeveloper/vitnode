@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/builders";
+import {
+  holdSignInForAccountDeletion,
+  zodAccountDeletionHold,
+} from "@/lib/account-deletion/sign-in-hold";
 import { SessionModel } from "@/models/session";
 import { SsoEmailCompletionModel } from "@/models/sso-email-completion";
 
@@ -41,6 +45,13 @@ export const ssoPendingConfirmRoute = buildRoute({
         description:
           "`invalid_pending`: no pending sign-in in this browser (another browser, or expired). `invalid_link`: the link expired, was replaced or was already used",
       },
+      403: {
+        content: {
+          "application/json": { schema: zodAccountDeletionHold },
+        },
+        description:
+          "The account is scheduled for deletion. No session starts until `POST /sign_in/cancel-deletion` confirms with `token`",
+      },
       409: {
         content: {
           "application/json": {
@@ -80,6 +91,9 @@ export const ssoPendingConfirmRoute = buildRoute({
         409,
       );
     }
+
+    const hold = await holdSignInForAccountDeletion(c, outcome.userId);
+    if (hold) return c.json(hold, 403);
 
     await new SessionModel(c).createSessionByUserId(outcome.userId);
 

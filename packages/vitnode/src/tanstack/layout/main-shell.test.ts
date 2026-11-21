@@ -27,6 +27,7 @@ const unreachable = () => {
 };
 
 setAuthTransport({
+  cancelDeletionSignIn: unreachable,
   changePasswordFromReset: unreachable,
   completeSso: unreachable,
   finishAdminPasskeySignIn: unreachable,

@@ -39,6 +39,7 @@ const fakeDb = () => {
   const chain = {
     from: () => chain,
     limit: () => chain,
+    orderBy: () => chain,
     then: async (onFulfilled: (value: typeof rows) => unknown) =>
       await Promise.resolve(onFulfilled(rows)),
     where: () => chain,
@@ -160,7 +161,7 @@ describe("authorization.password on (the default)", () => {
     const response = await app.request("/sign_in", post(CREDENTIALS));
 
     expect(response.status).toBe(201);
-    expect(selects).toHaveBeenCalledTimes(2);
+    expect(selects).toHaveBeenCalledTimes(3);
     expect(createSession).toHaveBeenCalledWith(1);
   });
 });

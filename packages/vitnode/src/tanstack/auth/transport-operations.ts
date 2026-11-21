@@ -1,5 +1,7 @@
 import type {
   AdminPasskeySignInResult,
+  CancelDeletionSignInInput,
+  CancelDeletionSignInResult,
   ChangePasswordInput,
   ChangePasswordResult,
   CompleteSsoResult,
@@ -29,6 +31,7 @@ import type {
 import { callUsersApi, readJson, readText } from "./api-helpers";
 import {
   adminPasskeySignInResultFromStatus,
+  cancelDeletionSignInResultFromStatus,
   changePasswordResultFromStatus,
   completeSsoResultFromStatus,
   isUsableSessionStatus,
@@ -59,7 +62,7 @@ export interface AuthApiJsonOrText<TBody> extends AuthApiJson<TBody> {
 }
 
 /**
- * The fifteen calls an auth transport makes, as requests rather than as results.
+ * The sixteen calls an auth transport makes, as requests rather than as results.
  *
  * A requester says *where* a call goes and *how* it travels - which fetcher,
  * and whether the answer's cookies may be relayed. Everything after the answer
@@ -72,6 +75,9 @@ export interface AuthApiJsonOrText<TBody> extends AuthApiJson<TBody> {
  * type for every consumer of `readSession`.
  */
 export interface AuthApiRequester<TSession> {
+  cancelDeletionSignIn: (
+    input: CancelDeletionSignInInput,
+  ) => Promise<AuthApiStatus>;
   changePasswordFromReset: (
     input: ChangePasswordInput,
   ) => Promise<AuthApiStatus>;
@@ -82,7 +88,7 @@ export interface AuthApiRequester<TSession> {
   finishPasskeySignIn: (
     input: PasskeySignInInput,
   ) => Promise<AuthApiJson<unknown>>;
-  linkSso: (input: SsoLinkInput) => Promise<AuthApiStatus>;
+  linkSso: (input: SsoLinkInput) => Promise<AuthApiJson<unknown>>;
   readSession: () => Promise<AuthApiJson<TSession>>;
   requestPasswordReset: (
     input: PasswordResetRequestInput,
@@ -100,6 +106,9 @@ export interface AuthApiRequester<TSession> {
 }
 
 export interface AuthOperations<TSession> {
+  cancelDeletionSignIn: (
+    input: CancelDeletionSignInInput,
+  ) => Promise<CancelDeletionSignInResult>;
   changePasswordFromReset: (
     input: ChangePasswordInput,
   ) => Promise<ChangePasswordResult>;
@@ -148,6 +157,16 @@ const startPasskeyCeremony = async (
 export const createAuthOperations = <TSession>(
   request: AuthApiRequester<TSession>,
 ): AuthOperations<TSession> => ({
+  cancelDeletionSignIn: async data => {
+    const response = await callUsersApi(async () =>
+      request.cancelDeletionSignIn(data),
+    );
+
+    if (!response) return { ok: false, reason: "server_error" };
+
+    return cancelDeletionSignInResultFromStatus(response.status);
+  },
+
   changePasswordFromReset: async data => {
     const response = await callUsersApi(async () =>
       request.changePasswordFromReset(data),
@@ -163,7 +182,11 @@ export const createAuthOperations = <TSession>(
 
     if (!response) return { ok: false, reason: "server_error" };
 
-    if (response.status === 409 || response.status === 202) {
+    if (
+      response.status === 409 ||
+      response.status === 202 ||
+      response.status === 403
+    ) {
       return completeSsoResultFromStatus(
         response.status,
         await readJson(response),
@@ -203,6 +226,9 @@ export const createAuthOperations = <TSession>(
     const response = await callUsersApi(async () => request.linkSso(data));
 
     if (!response) return { ok: false, reason: "server_error" };
+    if (response.status === 403) {
+      return ssoLinkResultFromStatus(403, await readJson(response));
+    }
 
     return ssoLinkResultFromStatus(response.status);
   },

@@ -76,6 +76,7 @@ export const rateLimitKey = (ipAddress: string): string => {
 
 const AUTH_RATE_LIMITED_PATHS = [
   "/@vitnode/core/users/sign_in",
+  "/@vitnode/core/users/sign_in/cancel-deletion",
   "/@vitnode/core/users/sign_up",
   "/@vitnode/core/users/reset-password",
   "/@vitnode/core/users/verify-email",
@@ -83,6 +84,7 @@ const AUTH_RATE_LIMITED_PATHS = [
   "/@vitnode/core/users/change-password",
   "/@vitnode/core/users/passkeys/sign-in",
   "/@vitnode/core/users/passkeys/admin-sign-in",
+  "/@vitnode/core/users/me/account-deletion",
 ] as const;
 
 const AUTH_RATE_LIMITED_PATTERNS = [

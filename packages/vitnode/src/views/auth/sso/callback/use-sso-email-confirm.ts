@@ -32,6 +32,9 @@ export const useSSOEmailConfirm = ({
 
   if (isError) return { kind: "error" };
   if (!data || data.ok) return { kind: "pending" };
+  if (data.failure === "deletion_pending") {
+    return { hold: data.hold, kind: "deletion_pending" };
+  }
   if (data.failure === "link_required") {
     return { kind: "email_exists", offer: data.offer };
   }

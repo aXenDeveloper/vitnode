@@ -27,6 +27,7 @@ import { Activity } from "react";
 </Activity>;
 ```
 
+- Always use skeletons for loading feedback. Use `<Loader />` only if its necessary.
 - Add a breadcrumb with the route's `staticData.breadcrumb`; a crumb that renders strings needs its own `RouteMessages`.
 - Route files are topology only - `validateSearch`, `loaderDeps`, `loader`, `head`, `staticData`. The query, the permissions, the namespaces and the screen live in `@vitnode/core/tanstack/*`.
 - Write `head` **after** `loader` in the same object literal: `loaderData` is inferred from `loader`, and TypeScript reads members in order.

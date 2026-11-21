@@ -1,5 +1,6 @@
 import {
   BellIcon,
+  DatabaseIcon,
   KeyRoundIcon,
   LinkIcon,
   MenuIcon,
@@ -34,6 +35,7 @@ const ICONS: Record<
   devices: MonitorSmartphoneIcon,
   notifications: BellIcon,
   overview: UserRoundIcon,
+  privacy: DatabaseIcon,
   security: KeyRoundIcon,
   sso: LinkIcon,
   standing: ShieldCheckIcon,

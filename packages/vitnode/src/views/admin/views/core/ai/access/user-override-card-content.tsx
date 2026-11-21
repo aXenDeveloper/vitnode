@@ -9,14 +9,6 @@ import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-ac
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -27,6 +19,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { formatAiPoints } from "@/lib/ai/format-points";
+import { DetailFrame } from "@/views/admin/views/core/users/detail/user-profile-cards";
 
 import type { AdminAiUserOverride } from "../ai-query";
 import type { AiUserOverrideFormProps } from "./user-override-form";
@@ -93,24 +86,17 @@ export const AiUserOverrideCardContent = ({
   const [removeOpen, setRemoveOpen] = React.useState(false);
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <SparklesIcon className="text-muted-foreground size-5" />
-          {t("title")}
-        </CardTitle>
-        <CardDescription className="leading-relaxed text-pretty">
-          {t("desc")}
-        </CardDescription>
-        {canManage ? (
-          <CardAction className="flex items-center gap-1">
+    <DetailFrame
+      action={
+        canManage ? (
+          <>
             <Dialog>
               <TooltipWithContent text={t("edit")}>
                 <DialogTrigger
                   render={
                     <Button
                       aria-label={t("edit")}
-                      size="icon"
+                      size="icon-sm"
                       variant="ghost"
                     />
                   }
@@ -146,7 +132,7 @@ export const AiUserOverrideCardContent = ({
                     onClick={() => {
                       setRemoveOpen(true);
                     }}
-                    size="icon"
+                    size="icon-sm"
                     variant="ghost"
                   >
                     <Trash2Icon />
@@ -176,12 +162,14 @@ export const AiUserOverrideCardContent = ({
                 />
               </>
             ) : null}
-          </CardAction>
-        ) : null}
-      </CardHeader>
-      <CardContent>
-        <OverrideSummary override={override} />
-      </CardContent>
-    </Card>
+          </>
+        ) : null
+      }
+      description={t("desc")}
+      icon={SparklesIcon}
+      title={t("title")}
+    >
+      <OverrideSummary override={override} />
+    </DetailFrame>
   );
 };

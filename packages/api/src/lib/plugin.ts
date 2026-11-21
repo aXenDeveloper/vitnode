@@ -47,6 +47,7 @@ import type { ModerationReportTargetDefinition } from "./moderation/targets";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
 import type { AnyNotificationTypeDefinition } from "./notifications/registry";
 import type { PermissionStaffConfig } from "./permission-staff";
+import type { PersonalDataHandlers } from "./personal-data";
 import type { QueueTaskConfig } from "./queue";
 import type {
   ReactionsPluginConfig,
@@ -114,6 +115,8 @@ export interface BuildPluginApiReturn<
   openApiTags?: string[];
   /** The declared permissions, plus the ones content types, containers and report targets add. */
   permissionStaff?: PermissionStaffConfig;
+  /** How the plugin exports and erases a member's data. */
+  personalData?: PersonalDataHandlers;
   /** The plugin's npm package name, taken from `manifest.id`. */
   pluginId: P;
   /** Content types the plugin serves public URLs for. */
@@ -188,6 +191,7 @@ export function buildApiPlugin<
   modules = [] as unknown as Modules,
   notificationTypes,
   permissionStaff,
+  personalData,
   reactions,
   searchIndexers,
 }: {
@@ -241,6 +245,12 @@ export function buildApiPlugin<
    * object. Must be declared for this plugin's manifest.
    */
   permissionStaff?: Pick<DefinedStaffPermissions<P>, "config" | "pluginId">;
+  /**
+   * How the plugin exports a member's data and erases it when the account is
+   * deleted, from `definePersonalData`. Declare it whenever the plugin stores
+   * anything about members - core's own tables are handled by core.
+   */
+  personalData?: PersonalDataHandlers;
   /** Reaction targets beyond those content models add (`reactions: true`). */
   reactions?: ReactionsPluginConfig;
   /** Search indexers in addition to those modules declare. */
@@ -424,6 +434,7 @@ export function buildApiPlugin<
     events,
     queueTasks: collectPluginQueueTasks(pluginId, queueTasks),
     notificationTypes: pluginNotificationTypes,
+    personalData,
     searchIndexers: indexers,
     webSockets,
     // Every content type contributes can_view/can_create/can_edit/can_delete

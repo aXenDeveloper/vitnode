@@ -5,9 +5,11 @@ import { HTTPException } from "hono/http-exception";
 import type { RegisteredContentType } from "@/content/registry";
 import type { RegisteredContentModel } from "@/content/server/model";
 import type { ContentNotificationRegistry } from "@/content/server/notifications/registry";
+import type { PrivacySettings } from "@/lib/account-deletion/settings";
 import type { CacheClient, DomainCache } from "@/lib/cache";
 import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
+import type { RegisteredPersonalData } from "@/lib/personal-data";
 import type { UpdateChannel } from "@/lib/updates/manifest";
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
 import type { VitNodeApiConfig } from "@/vitnode.config";
@@ -25,6 +27,7 @@ import { ensureContentLocalizationLanguages } from "@/content/server/language-re
 import { createContentNotificationRegistry } from "@/content/server/notifications/registry";
 import { warnAboutContentPreviewConfig } from "@/content/server/preview-config";
 import { ensureContentPreviewSecret } from "@/content/server/preview-secret";
+import { resolvePrivacySettings } from "@/lib/account-deletion/settings";
 import { runAfterResponse } from "@/lib/after-response";
 import { DEFAULT_SESSION_COOKIE_NAME } from "@/lib/auth-cookie";
 import { CacheModel, domainCacheOf } from "@/lib/cache";
@@ -35,6 +38,7 @@ import { collectLocaleCodes } from "@/lib/i18n/load-messages";
 import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
 import { findActiveSuspension } from "@/lib/moderation/warnings/suspension";
+import { collectPersonalData } from "@/lib/personal-data";
 import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
 import { manifest as coreManifest } from "@/manifest";
 import { AIModel } from "@/models/ai";
@@ -262,9 +266,13 @@ export interface EnvVariablesVitNode {
       providers: PaymentProviderApiPlugin[];
     };
     permissionStaff: PermissionStaffCatalogEntry[];
+    /** Each plugin's export and erasure handlers, core last. */
+    personalData: RegisteredPersonalData[];
     /** Which personal-information fields this install offers. */
     personalInformationFields: PersonalInformationFields;
     plugins: { id: string }[];
+    /** Account deletion grace period and IP retention (`users` in the API config). */
+    privacy: PrivacySettings;
     queue: QueueTaskConfig[];
     /** Every reaction target: custom ones and one per content type with `reactions`. */
     reactions: ReactionsRegistry;
@@ -707,9 +715,11 @@ export const globalMiddleware = ({
         password: { enabled: authorization?.password ?? true },
       },
       captcha,
+      personalData: collectPersonalData(plugins, coreManifest.id),
       personalInformationFields: resolvePersonalInformationFields(
         users?.personalInformation,
       ),
+      privacy: resolvePrivacySettings(users),
       hasCronAdapter: !!cron,
       plugins: pluginsMetadata,
       installedPlugins,

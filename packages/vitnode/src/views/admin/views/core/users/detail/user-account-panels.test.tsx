@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { IntlProvider } from "use-intl";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -147,7 +153,7 @@ describe("UserDevicesCard", () => {
     device("e5", "Opera"),
   ];
 
-  it("lists the first three devices until all are revealed", async () => {
+  it("lists the first three devices and the rest in the sessions sheet", async () => {
     mount(
       <UserDevicesCard adminUserId={ADMIN_ID} canEdit user={user} />,
       client => {
@@ -160,12 +166,15 @@ describe("UserDevicesCard", () => {
     ).toHaveLength(3);
 
     fireEvent.click(
-      screen.getByRole("button", { name: "admin.user.show.devices.showAll" }),
+      screen.getByRole("button", { name: "admin.user.show.devices.manageAll" }),
     );
 
-    expect(
-      screen.getAllByText("admin.user.show.devices.deviceName"),
-    ).toHaveLength(5);
+    const sheet = await screen.findByRole("dialog");
+    await waitFor(() => {
+      expect(
+        within(sheet).getAllByText("admin.user.show.devices.deviceName"),
+      ).toHaveLength(5);
+    });
   });
 
   it("signs one device out after the confirmation", async () => {

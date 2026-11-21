@@ -28,9 +28,16 @@ export const signInFormResult = (
 ): SignInMutationResult => {
   if (result.ok) return undefined;
 
-  return result.reason === "server_error"
-    ? { message: "Internal Server Error" }
-    : { message: result.reason };
+  if (result.reason === "server_error") {
+    return { message: "Internal Server Error" };
+  }
+
+  return {
+    message:
+      result.reason === "account_deletion_pending"
+        ? "access_denied"
+        : result.reason,
+  };
 };
 
 export const ssoStartFeedback = (result: SsoStartResult): SsoButtonFeedback =>
@@ -41,6 +48,9 @@ export const ssoCallbackResult = (
 ): SSOCallbackResult => {
   if (result.ok) return {};
 
+  if (result.reason === "account_deletion_pending") {
+    return { failure: "deletion_pending", hold: result.hold };
+  }
   if (result.reason === "email_required") {
     return { emailSuggestion: result.email, failure: "email_required" };
   }
@@ -59,7 +69,12 @@ export const ssoLinkFormResult = (
 ): SSOLinkMutationResult => {
   if (result.ok) return undefined;
 
-  if (result.reason === "access_denied") return { message: "access_denied" };
+  if (
+    result.reason === "access_denied" ||
+    result.reason === "account_deletion_pending"
+  ) {
+    return { message: "access_denied" };
+  }
   if (result.reason === "invalid_token" || result.reason === "already_linked") {
     return { message: "invalid_token" };
   }

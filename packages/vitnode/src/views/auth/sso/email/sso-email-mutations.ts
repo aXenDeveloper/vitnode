@@ -2,8 +2,10 @@ import { manifest } from "@vitnode/api/manifest";
 
 import { fetcherClient } from "@/lib/fetcher-client";
 
+import type { AccountDeletionHold } from "../../sign-in/deletion-hold/schema";
 import type { SSOLinkOffer } from "../link/schema";
 
+import { accountDeletionHoldOf } from "../../sign-in/deletion-hold/schema";
 import { errorCodeOf } from "../error-code-of";
 
 const CREDENTIALS = { credentials: "include" } as const;
@@ -16,6 +18,7 @@ export type SSOSendEmailLinkResult =
   | { ok: true };
 
 export type SSOConfirmEmailResult =
+  | { failure: "deletion_pending"; hold: AccountDeletionHold; ok: false }
   | { failure: "invalid_link" | "invalid_pending" | "server_error"; ok: false }
   | { failure: "link_required"; offer: SSOLinkOffer; ok: false }
   | { ok: true };
@@ -70,6 +73,10 @@ export const confirmSsoEmailInBrowser = async ({
     });
 
     if (response.status === 200) return { ok: true };
+    if (response.status === 403) {
+      const hold = accountDeletionHoldOf(await response.json());
+      if (hold) return { failure: "deletion_pending", hold, ok: false };
+    }
     if (response.status === 409) {
       const body = await response.json();
       if ("linkToken" in body) {

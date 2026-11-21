@@ -8,12 +8,11 @@ import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope"
 
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserPresenceStatus } from "@/components/user-presence-status";
 
 import { adminUserPresenceQueryOptions } from "./user-presence-query";
-import { DetailCardTitle, DetailRow } from "./user-profile-cards";
+import { DetailFrame, DetailRow } from "./user-profile-cards";
 
 export const UserPresenceCardContent = ({
   presence,
@@ -79,21 +78,16 @@ export const UserPresenceCard = ({
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <DetailCardTitle icon={ActivityIcon}>{t("title")}</DetailCardTitle>
-      </CardHeader>
-      <CardContent>
-        {data ? (
-          <UserPresenceCardContent presence={data} />
-        ) : (
-          <div className="flex flex-col gap-3">
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-full" />
-            <Skeleton className="h-5 w-full" />
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <DetailFrame icon={ActivityIcon} title={t("title")}>
+      {data ? (
+        <UserPresenceCardContent presence={data} />
+      ) : (
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-full" />
+          <Skeleton className="h-5 w-full" />
+        </div>
+      )}
+    </DetailFrame>
   );
 };

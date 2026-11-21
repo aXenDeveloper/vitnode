@@ -11,12 +11,22 @@ import { createAuthOperations } from "./transport-operations";
  * The server's own transport: the server fetcher, and the cookie relay.
  *
  * `allowSaveCookies: true` on exactly the flows whose answer carries the
- * session cookie - sign-in, every passkey sign-in step, sign-out, the three SSO
+ * session cookie - sign-in and its deletion-hold confirmation, every passkey sign-in step, sign-out, the three SSO
  * steps and sign-up. A password reset request, a token-based password change
  * and both email confirmation calls never mint a session, so none of them
  * relays a cookie.
  */
 const operations = createAuthOperations<SessionApi>({
+  cancelDeletionSignIn: async data =>
+    await fetcher({
+      plugin: manifest.id,
+      allowSaveCookies: true,
+      args: { body: data },
+      method: "post",
+      module: "users",
+      path: "/sign_in/cancel-deletion",
+    }),
+
   changePasswordFromReset: async data =>
     await fetcher({
       plugin: manifest.id,
@@ -173,6 +183,7 @@ const operations = createAuthOperations<SessionApi>({
     }),
 });
 
+export const cancelDeletionSignInOnApi = operations.cancelDeletionSignIn;
 export const changePasswordFromResetOnApi = operations.changePasswordFromReset;
 export const completeSsoOnApi = operations.completeSso;
 export const finishAdminPasskeySignInOnApi =

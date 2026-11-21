@@ -108,23 +108,26 @@ while the envelope's `pluginId` names the content type's owner (see
 
 ## Core events (`@vitnode/core`)
 
-Nineteen names. The `user.*` definitions are exported from
+Twenty-one names. The `user.*` definitions are exported from
 `@vitnode/api/events/users` (`userCreatedEvent`, `userUpdatedEvent`,
-`userDeletedEvent`, `userEmailVerifiedEvent`, `userPasswordUpdatedEvent`,
+`userDeletedEvent`, `userDeletionRequestedEvent`,
+`userDeletionCancelledEvent`, `userEmailVerifiedEvent`, `userPasswordUpdatedEvent`,
 `userSessionsRevokedEvent`, `userSsoLinkedEvent`, `userSsoUnlinkedEvent`,
 `userSsoPreferencesUpdatedEvent`, `userSsoProfileSyncedEvent`,
 `userPasskeyCreatedEvent`, `userPasskeyUpdatedEvent`, `userPasskeyDeletedEvent`,
 `userAvatarUpdatedEvent`, `userCoverUpdatedEvent`), `file.editor.uploaded` from
 `@vitnode/api/events/files` (`fileEditorUploadedEvent`) and `role.*` from
 `@vitnode/api/events/roles` (`roleCreatedEvent`, `roleUpdatedEvent`,
-`roleDeletedEvent`). Every one except `user.deleted`, which core never emits,
-fires **after** the write it describes has committed.
+`roleDeletedEvent`). Every one fires **after** the write it describes has
+committed.
 
 | Event                          | Payload                                   | Fires when                                                                                                               |
 | ------------------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `user.created`                 | `{ userId, email, name, emailVerified }`  | A user row is inserted - public sign-up, AdminCP creation, or SSO sign-up                                                |
 | `user.updated`                 | `{ userId, email, name }`                 | A user is edited in the AdminCP, or a member saves their own profile, time zone or **Browse anonymously** in **Settings → Overview** |
-| `user.deleted`                 | `{ userId, email }`                       | Never - the name is declared for plugins, core has no deletion flow                                                      |
+| `user.deletion.requested`      | `{ userId, scheduledAt, source }`         | An [account deletion](/docs/dev/working-with-users/account-deletion) is scheduled by the member in **Settings → Privacy & data** or by staff |
+| `user.deletion.cancelled`      | `{ userId }`                              | The member or staff cancel a pending deletion                                                             |
+| `user.deleted`                 | `{ userId, email }`                       | An account was erased, after every plugin's `personalData.erase` ran and the account row was deleted                           |
 | `user.email.verified`          | `{ userId, email }`                       | An address is [confirmed](/docs/dev/working-with-users/email-verification) - by its link, a completed reset, or by staff  |
 | `user.password.updated`        | `{ userId }`                              | A password is set - by a member completing a reset, or by staff on the AdminCP user page                                 |
 | `user.sessions.revoked`        | `{ userId, deviceId, sessions }`          | A user is signed out remotely - one device or all of them, by the member or by staff, or after a password change         |
@@ -478,17 +481,19 @@ even when nothing changed.
 from.
 
 </Accordion>
-<Accordion title="user.deleted (declared, never emitted)">
+<Accordion title="user.deleted">
 
-Its definition, `userDeletedEvent`, exists so listeners type-check, but
-**core never emits it**: there is no user-deletion flow yet. It is the
-agreed-upon name for plugins that implement account deletion themselves, and
-core will emit it once deletion lands.
+Emitted once an account is erased: every plugin's `personalData.erase` ran and
+the `core_users` row is gone, in one committed transaction. The account no
+longer exists, so look nothing up by `userId`. Use it to clean systems outside
+the database (a newsletter provider, an external search index). `email` is the
+address the account had; never store it. See
+[Export and Erase Plugin Data](/docs/dev/working-with-users/personal-data).
 
 <TypeTable
   type={{
     userId: {
-      description: 'Id of the deleted user.',
+      description: 'Id of the erased user.',
       type: 'number',
     },
     email: {
@@ -497,6 +502,36 @@ core will emit it once deletion lands.
     },
   }}
 />
+
+</Accordion>
+<Accordion title="user.deletion.requested and user.deletion.cancelled">
+
+`user.deletion.requested` fires when a deletion is scheduled: the member asked
+in **Settings → Privacy & data**, or staff scheduled it in the AdminCP. The
+account is already signed out everywhere and is erased at `scheduledAt`.
+`user.deletion.cancelled` fires when the member or staff keep the account.
+
+<TypeTable
+  type={{
+    userId: {
+      description: 'Id of the user.',
+      type: 'number',
+    },
+    scheduledAt: {
+      description:
+        'ISO date when the account is erased (`user.deletion.requested` only).',
+      type: 'string',
+    },
+    source: {
+      description:
+        'Who asked: the member or staff (`user.deletion.requested` only).',
+      type: '"user" | "admin"',
+    },
+  }}
+/>
+
+**A listener would** pause a member's subscriptions or hide their listings
+during the grace period, and restore them on cancel.
 
 </Accordion>
 <Accordion title="role.created and role.updated">
@@ -1684,8 +1719,7 @@ High-frequency or consumer-less events are added only when a listener needs
 them, so the catalog stays meaningful. There is currently no `user.signedIn`,
 `user.passwordResetRequested`, or `file.uploaded`. If you need one, open an
 issue or PR - adding an event is a `defineEvent` in `packages/vitnode/src/api/events/`
-plus an `emit`. (`user.deleted` is the special case: its definition already
-exists, and waits on core growing a user-deletion flow.)
+plus an `emit`.
 
 Live editing is quiet on the bus too. Taking or giving back a field lock,
 autosaving the shared draft and every keystroke in a co-edited rich text field

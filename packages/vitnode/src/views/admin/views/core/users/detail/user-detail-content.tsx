@@ -28,6 +28,9 @@ export interface UserDetailProps {
   aiAccess?: React.ReactNode;
   canEdit: boolean;
   connectedAccounts: React.ReactNode;
+  /** The GDPR erasure card; omitted without `users:can_delete`. */
+  deleteAccount?: React.ReactNode;
+  deletionNotice?: React.ReactNode;
   devices: React.ReactNode;
   notifications: React.ReactNode;
   onRemoveImage: RemoveAdminUserImage;
@@ -46,6 +49,8 @@ export const UserDetailContent = ({
   aiAccess,
   canEdit,
   connectedAccounts,
+  deleteAccount,
+  deletionNotice,
   devices,
   notifications,
   onRemoveImage,
@@ -62,10 +67,13 @@ export const UserDetailContent = ({
   const t = useTranslations("admin.user.show.tabs");
 
   return (
-    <div className="mx-auto grid w-full max-w-7xl items-start gap-6 lg:grid-cols-[24rem_minmax(0,1fr)]">
+    <div className="mx-auto grid w-full max-w-7xl items-start gap-6 lg:grid-cols-[24rem_minmax(0,1fr)] lg:grid-rows-[auto_1fr]">
+      {deletionNotice ? (
+        <div className="min-w-0 lg:col-start-2">{deletionNotice}</div>
+      ) : null}
       <aside
         aria-label={t("profileLabel")}
-        className="flex min-w-0 flex-col gap-6"
+        className="flex min-w-0 flex-col gap-6 lg:col-start-1 lg:row-span-2 lg:row-start-1"
       >
         <UserIdentityCard
           canEdit={canEdit}
@@ -93,9 +101,10 @@ export const UserDetailContent = ({
         {connectedAccounts}
         {devices}
         {aiAccess}
+        {deleteAccount}
       </aside>
 
-      <Tabs className="min-w-0 gap-4" defaultValue="activity">
+      <Tabs className="min-w-0 gap-4 lg:col-start-2" defaultValue="activity">
         <h2 className="sr-only">{t("detailsLabel")}</h2>
         <div className="-mx-4 overflow-x-auto px-4 md:mx-0 md:px-0">
           <TabsList className="w-full min-w-max">

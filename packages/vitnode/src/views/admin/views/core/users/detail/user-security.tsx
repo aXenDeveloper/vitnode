@@ -20,7 +20,6 @@ import type { SsoConnectionsApi } from "@/views/auth/settings/sso/sso-connection
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
 import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
   Empty,
@@ -49,7 +48,7 @@ import {
   adminUserSsoQueryOptions,
   countSignInMethods,
 } from "./user-account-query";
-import { DetailCardTitle } from "./user-profile-cards";
+import { DetailFrame } from "./user-profile-cards";
 import { adminUserQueryKey } from "./user-query";
 
 const PasswordForm = React.lazy(async () =>
@@ -382,31 +381,30 @@ export const UserSecurityPanel = ({
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <DetailCardTitle icon={LockIcon}>{t("title")}</DetailCardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-6">
-        <PasswordSection
-          canEdit={canEdit}
-          onSaved={refresh}
-          sso={sso}
-          user={user}
-        />
-        <PasskeysSection
-          canEdit={canEdit}
-          enabled={!sso.isSuccess || passkeysEnabled}
-          isCapabilityError={sso.isError}
-          isLastMethod={isLastMethod}
-          isRetrying={sso.isFetching || passkeys.isFetching}
-          onRetry={() => {
-            void (sso.isError ? sso.refetch() : passkeys.refetch());
-          }}
-          onSaved={refresh}
-          query={passkeys}
-          user={user}
-        />
-      </CardContent>
-    </Card>
+    <DetailFrame
+      contentClassName="flex flex-col gap-6"
+      icon={LockIcon}
+      title={t("title")}
+    >
+      <PasswordSection
+        canEdit={canEdit}
+        onSaved={refresh}
+        sso={sso}
+        user={user}
+      />
+      <PasskeysSection
+        canEdit={canEdit}
+        enabled={!sso.isSuccess || passkeysEnabled}
+        isCapabilityError={sso.isError}
+        isLastMethod={isLastMethod}
+        isRetrying={sso.isFetching || passkeys.isFetching}
+        onRetry={() => {
+          void (sso.isError ? sso.refetch() : passkeys.refetch());
+        }}
+        onSaved={refresh}
+        query={passkeys}
+        user={user}
+      />
+    </DetailFrame>
   );
 };

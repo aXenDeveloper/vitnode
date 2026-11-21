@@ -1,6 +1,13 @@
 import { buildModule } from "@/builders";
 
 import { createUserAdminRoute } from "./routes/create.route";
+import { deleteUserAdminRoute } from "./routes/delete.route";
+import { accountDeletionsSummaryAdminRoute } from "./routes/deletions-summary.route";
+import {
+  cancelAccountDeletionAdminRoute,
+  listAccountDeletionsAdminRoute,
+  retryAccountDeletionAdminRoute,
+} from "./routes/deletions.route";
 import { listUserDevicesAdminRoute } from "./routes/devices.route";
 import { deleteUserImageAdminRoute } from "./routes/image-delete.route";
 import { uploadUserImageAdminRoute } from "./routes/image-upload.route";
@@ -25,6 +32,10 @@ import { verifyEmailUserAdminRoute } from "./routes/verify-email.route";
 export const usersAdminModule = buildModule({
   name: "users",
   routes: [
+    accountDeletionsSummaryAdminRoute,
+    listAccountDeletionsAdminRoute,
+    retryAccountDeletionAdminRoute,
+    cancelAccountDeletionAdminRoute,
     listUsersAdminRoute,
     createUserAdminRoute,
     showUserAdminRoute,
@@ -46,5 +57,6 @@ export const usersAdminModule = buildModule({
     updateUserNotificationPreferencesAdminRoute,
     uploadUserImageAdminRoute,
     deleteUserImageAdminRoute,
+    deleteUserAdminRoute,
   ],
 });

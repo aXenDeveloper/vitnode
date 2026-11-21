@@ -16,6 +16,7 @@ const unreachable = () => {
 };
 
 const stub: AuthTransport = {
+  cancelDeletionSignIn: unreachable,
   changePasswordFromReset: unreachable,
   completeSso: unreachable,
   finishAdminPasskeySignIn: unreachable,

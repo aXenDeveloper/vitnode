@@ -18,12 +18,6 @@ import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-ac
 import { DateFormat } from "@/components/date-format";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-} from "@/components/ui/card";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import {
   Empty,
@@ -61,7 +55,7 @@ import {
   adminUserSsoQueryOptions,
   countSignInMethods,
 } from "./user-account-query";
-import { DetailCardTitle } from "./user-profile-cards";
+import { DetailFrame } from "./user-profile-cards";
 import { adminUserQueryKey } from "./user-query";
 
 type Provider = SsoConnectionsApi["providers"][number];
@@ -303,139 +297,135 @@ export const UserConnectedAccountsCard = ({
     1;
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <DetailCardTitle icon={KeyRoundIcon}>{t("title")}</DetailCardTitle>
-        {canEdit && data && connected.length > 0 && (
-          <CardAction>
-            <EditSsoDialog data={data} onSaved={refresh} user={user} />
-          </CardAction>
-        )}
-      </CardHeader>
-      <CardContent>
-        {isPending ? (
-          <div className="flex flex-col gap-3">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        ) : isError ? (
-          <Empty className="md:p-6" role="alert">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <UnplugIcon aria-hidden="true" />
-              </EmptyMedia>
-              <EmptyTitle>{t("loadError.title")}</EmptyTitle>
-              <EmptyDescription>{t("loadError.desc")}</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <Button
-                isLoading={isFetching}
-                onClick={() => {
-                  void refetch();
-                }}
-                size="sm"
-                variant="outline"
-              >
-                <RotateCwIcon aria-hidden="true" />
-                {tError("try_again")}
-              </Button>
-            </EmptyContent>
-          </Empty>
-        ) : connected.length === 0 ? (
-          <p className="text-muted-foreground text-sm leading-relaxed">
-            {t("empty")}
-          </p>
-        ) : (
-          <ul className="divide-border -my-3 flex flex-col divide-y">
-            {connected.map(provider => {
-              const fields = sourcedFields(data, provider.id);
-              const { connection } = provider;
+    <DetailFrame
+      action={
+        canEdit && data && connected.length > 0 ? (
+          <EditSsoDialog data={data} onSaved={refresh} user={user} />
+        ) : null
+      }
+      icon={KeyRoundIcon}
+      title={t("title")}
+    >
+      {isPending ? (
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
+      ) : isError ? (
+        <Empty className="md:p-6" role="alert">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <UnplugIcon aria-hidden="true" />
+            </EmptyMedia>
+            <EmptyTitle>{t("loadError.title")}</EmptyTitle>
+            <EmptyDescription>{t("loadError.desc")}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              isLoading={isFetching}
+              onClick={() => {
+                void refetch();
+              }}
+              size="sm"
+              variant="outline"
+            >
+              <RotateCwIcon aria-hidden="true" />
+              {tError("try_again")}
+            </Button>
+          </EmptyContent>
+        </Empty>
+      ) : connected.length === 0 ? (
+        <p className="text-muted-foreground text-sm leading-relaxed">
+          {t("empty")}
+        </p>
+      ) : (
+        <ul className="divide-border -my-3 flex flex-col divide-y">
+          {connected.map(provider => {
+            const fields = sourcedFields(data, provider.id);
+            const { connection } = provider;
 
-              return (
-                <li className="flex items-start gap-3 py-3" key={provider.id}>
-                  <SsoProviderMark
-                    provider={
-                      views.find(view => view.id === provider.id) ?? {
-                        id: provider.id,
-                        name: provider.name,
-                      }
+            return (
+              <li className="flex items-start gap-3 py-3" key={provider.id}>
+                <SsoProviderMark
+                  provider={
+                    views.find(view => view.id === provider.id) ?? {
+                      id: provider.id,
+                      name: provider.name,
                     }
-                  />
-                  <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
-                    <span className="flex min-w-0 flex-col">
-                      <span className="text-foreground truncate font-medium">
-                        {connection.accountLabel ?? provider.name}
-                      </span>
-                      <span className="text-muted-foreground truncate text-xs">
-                        {provider.name}
-                        {connection.email ? ` · ${connection.email}` : ""}
-                      </span>
-                      <span className="text-muted-foreground text-xs">
-                        {t("connected")}{" "}
-                        <DateFormat date={connection.connectedAt} />
-                      </span>
+                  }
+                />
+                <div className="flex min-w-0 flex-1 flex-col gap-1 text-sm">
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-foreground truncate font-medium">
+                      {connection.accountLabel ?? provider.name}
                     </span>
-                    {(fields.length > 0 || connection.syncOnSignIn) && (
-                      <span className="flex flex-wrap gap-1">
-                        {fields.length > 0 && (
-                          <Badge variant="outline">
-                            {t("sourceBadge", {
-                              fields: fields
-                                .map(field => tSso(`fields.${field}`))
-                                .join(", "),
-                            })}
-                          </Badge>
-                        )}
-                        {connection.syncOnSignIn && (
-                          <Badge variant="secondary">
-                            <RefreshCwIcon />
-                            {t("syncsBadge")}
-                          </Badge>
-                        )}
-                      </span>
-                    )}
-                  </div>
-                  {canEdit && (
-                    <DisconnectButton
-                      disabledReason={
-                        isLastMethod ? t("lastMethod") : undefined
-                      }
-                      onDisconnect={async () => {
-                        const result = await disconnectAdminUserSso(
-                          user.id,
-                          provider.id,
-                        );
-                        if ("error" in result) {
-                          if (result.error.status === 409) {
-                            toast.error(t("lastMethod"), {
-                              description: t("lastMethodDesc"),
-                            });
-                          } else {
-                            showFailure();
-                          }
-
-                          return;
-                        }
-                        await refresh();
-                        toast.success(
-                          t("disconnected", { provider: provider.name }),
-                          {
-                            description: t("disconnectedDesc", {
-                              name: user.name,
-                            }),
-                          },
-                        );
-                      }}
-                      provider={provider}
-                      userName={user.name}
-                    />
+                    <span className="text-muted-foreground truncate text-xs">
+                      {provider.name}
+                      {connection.email ? ` · ${connection.email}` : ""}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {t("connected")}{" "}
+                      <DateFormat date={connection.connectedAt} />
+                    </span>
+                  </span>
+                  {(fields.length > 0 || connection.syncOnSignIn) && (
+                    <span className="flex flex-wrap gap-1">
+                      {fields.length > 0 && (
+                        <Badge variant="outline">
+                          {t("sourceBadge", {
+                            fields: fields
+                              .map(field => tSso(`fields.${field}`))
+                              .join(", "),
+                          })}
+                        </Badge>
+                      )}
+                      {connection.syncOnSignIn && (
+                        <Badge variant="secondary">
+                          <RefreshCwIcon />
+                          {t("syncsBadge")}
+                        </Badge>
+                      )}
+                    </span>
                   )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+                </div>
+                {canEdit && (
+                  <DisconnectButton
+                    disabledReason={isLastMethod ? t("lastMethod") : undefined}
+                    onDisconnect={async () => {
+                      const result = await disconnectAdminUserSso(
+                        user.id,
+                        provider.id,
+                      );
+                      if ("error" in result) {
+                        if (result.error.status === 409) {
+                          toast.error(t("lastMethod"), {
+                            description: t("lastMethodDesc"),
+                          });
+                        } else {
+                          showFailure();
+                        }
+
+                        return;
+                      }
+                      await refresh();
+                      toast.success(
+                        t("disconnected", { provider: provider.name }),
+                        {
+                          description: t("disconnectedDesc", {
+                            name: user.name,
+                          }),
+                        },
+                      );
+                    }}
+                    provider={provider}
+                    userName={user.name}
+                  />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </DetailFrame>
   );
 };

@@ -19,13 +19,32 @@ export const userCreatedEvent = defineEvent({
 });
 
 /**
- * Declared for plugins implementing account deletion - core has no user
- * deletion flow yet and never emits this itself.
+ * An account was erased, after its row and every plugin's `personalData.erase`
+ * committed. `email` is the address it had, for cleaning up systems outside
+ * the database (a newsletter provider, a search index) - never store it.
  */
 export const userDeletedEvent = defineEvent({
   pluginId,
   name: "user.deleted",
   payload: z.object({ email: z.string(), userId: z.number().int() }),
+});
+
+/** A deletion request was opened; the account is erased at `scheduledAt`. */
+export const userDeletionRequestedEvent = defineEvent({
+  pluginId,
+  name: "user.deletion.requested",
+  payload: z.object({
+    scheduledAt: z.string(),
+    source: z.enum(["user", "admin"]),
+    userId: z.number().int(),
+  }),
+});
+
+/** A pending deletion request was cancelled; the account stays. */
+export const userDeletionCancelledEvent = defineEvent({
+  pluginId,
+  name: "user.deletion.cancelled",
+  payload: z.object({ userId: z.number().int() }),
 });
 
 export const userUpdatedEvent = defineEvent({
@@ -147,6 +166,8 @@ export const userSsoProfileSyncedEvent = defineEvent({
 export const userEventDefinitions = [
   userCreatedEvent,
   userDeletedEvent,
+  userDeletionRequestedEvent,
+  userDeletionCancelledEvent,
   userUpdatedEvent,
   userEmailVerifiedEvent,
   userPasswordUpdatedEvent,

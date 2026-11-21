@@ -41,12 +41,17 @@ export const ADMIN_USERS_TABLE_CONTRACT: AdminTableContract<AdminUsersOrderBy> =
   };
 
 export interface AdminUsersParams extends AdminTableParams<AdminUsersOrderBy> {
+  /** `pending`, `failed` or both, comma-separated. */
+  deletion?: string;
   roleId?: string;
 }
 
 export type RawAdminUsersParams = RawAdminTableParams & {
+  deletion?: null | string | string[] | undefined;
   roleId?: null | string | string[] | undefined;
 };
+
+export const ADMIN_USER_DELETION_FILTERS = ["pending", "failed"] as const;
 
 /** The first value for a key, since only one can reach the API. */
 const readOne = (value: null | string | string[] | undefined): string => {
@@ -70,6 +75,20 @@ export const normalizeAdminRoleFilter = (
   return ids.length > 0 ? ids.join(",") : undefined;
 };
 
+/** Keeps the known deletion states, deduplicated and in a stable order. */
+export const normalizeAdminDeletionFilter = (
+  value: null | string | string[] | undefined,
+): string | undefined => {
+  const picked = new Set(
+    (Array.isArray(value) ? value.join(",") : (value ?? ""))
+      .split(",")
+      .map(part => part.trim()),
+  );
+  const states = ADMIN_USER_DELETION_FILTERS.filter(state => picked.has(state));
+
+  return states.length > 0 ? states.join(",") : undefined;
+};
+
 export const normalizeAdminUsersParams = (
   raw: RawAdminUsersParams = {},
 ): AdminUsersParams => {
@@ -79,6 +98,8 @@ export const normalizeAdminUsersParams = (
   );
   const roleId = normalizeAdminRoleFilter(raw.roleId);
   if (roleId !== undefined) params.roleId = roleId;
+  const deletion = normalizeAdminDeletionFilter(raw.deletion);
+  if (deletion !== undefined) params.deletion = deletion;
 
   return params;
 };
@@ -96,6 +117,10 @@ export interface AdminUserRow {
   avatarUrl: null | string;
   birthday: Date | null | string;
   createdAt: Date | string;
+  deletion?: null | {
+    scheduledAt: Date | string;
+    status: "failed" | "pending";
+  };
   email: string;
   emailVerified: boolean;
   id: number;

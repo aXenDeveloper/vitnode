@@ -123,43 +123,65 @@ html[data-header-search-morph="close"] {
   animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-::view-transition-image-pair(vitnode-auth-card) {
-  overflow: clip;
-  border-radius: var(--radius-xl);
-  background: var(--card);
-  box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
-    var(--shadow-xs, 0 1px 2px 0 rgb(0 0 0 / 0.05));
-}
-
 ::view-transition-old(vitnode-auth-card),
 ::view-transition-new(vitnode-auth-card) {
   inline-size: 100%;
   block-size: 100%;
+  overflow: clip;
+  border-radius: var(--radius-xl);
+  background: var(--muted);
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent),
+    0 1px 2px 0 rgb(0 0 0 / 0.05);
   object-fit: none;
   object-position: top center;
 }
 
-@keyframes vitnode-auth-card-out {
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes vitnode-auth-card-in {
+@keyframes vitnode-auth-card-fade-in {
   from {
     opacity: 0;
   }
 }
 
+@keyframes vitnode-auth-card-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes vitnode-auth-card-enter {
+  from {
+    opacity: 0;
+    scale: 0.97;
+    translate: 0 8px;
+  }
+}
+
+@keyframes vitnode-auth-card-leave {
+  to {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+
 ::view-transition-old(vitnode-auth-card) {
-  mix-blend-mode: normal;
-  animation: vitnode-auth-card-out 100ms ease-in both;
+  mix-blend-mode: plus-lighter;
+  animation: vitnode-auth-card-fade-out 160ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 ::view-transition-new(vitnode-auth-card) {
+  mix-blend-mode: plus-lighter;
+  animation: vitnode-auth-card-fade-in 160ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+::view-transition-new(vitnode-auth-card):only-child {
   mix-blend-mode: normal;
-  animation: vitnode-auth-card-in 200ms cubic-bezier(0.23, 1, 0.32, 1) 80ms both;
+  animation: vitnode-auth-card-enter 260ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+::view-transition-old(vitnode-auth-card):only-child {
+  mix-blend-mode: normal;
+  animation: vitnode-auth-card-leave 150ms ease-in both;
 }
 
 :root {

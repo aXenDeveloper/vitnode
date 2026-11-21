@@ -6,6 +6,7 @@ const { admin } = coreStaffPermissions;
 
 export const ADMIN_USER_PERMISSIONS = {
   create: admin.users.canCreate,
+  delete: admin.users.canDelete,
   edit: admin.users.canEdit,
   editAdmin: admin.users.canEditAdmin,
   view: admin.users.canView,

@@ -1,11 +1,15 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
+import type { DebugAreaId } from "@/views/admin/views/core/debug/health/health";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
-import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
+import {
+  AdminStaffPermissionGate,
+  useAdminStaffPermission,
+} from "@/components/staff-permission/provider";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
 import { cronHealthQueryOptions } from "@/views/admin/views/core/advanced/cron/cron-query";
 import { CronSchedulerStatus } from "@/views/admin/views/core/advanced/cron/cron-scheduler-status";
@@ -18,15 +22,32 @@ import { debugHealth } from "@/views/admin/views/core/debug/health/health";
 import { SectionHeader } from "@/views/admin/views/core/debug/sections/frame-row";
 import { SystemLogsContent } from "@/views/admin/views/core/debug/system-logs/system-logs-content";
 import { ToneBadge } from "@/views/admin/views/core/debug/tone";
-import { ADMIN_SEARCH_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
+import { isAdminMutationError } from "@/views/admin/views/core/shared/admin-mutation";
+import {
+  ADMIN_SEARCH_PERMISSIONS,
+  ADMIN_USER_PERMISSIONS,
+} from "@/views/admin/views/core/shared/admin-permissions";
+import { AccountDeletionsAttention } from "@/views/admin/views/core/users/deletions/deletions-attention";
+import {
+  cancelAdminAccountDeletion,
+  retryAccountDeletion,
+} from "@/views/admin/views/core/users/deletions/deletions-mutations";
+import {
+  ACCOUNT_DELETIONS_QUERY_ROOT,
+  accountDeletionsQueryOptions,
+  accountDeletionsSummaryQueryOptions,
+} from "@/views/admin/views/core/users/deletions/deletions-query";
+import { AccountDeletionsTable } from "@/views/admin/views/core/users/deletions/deletions-table";
 
 import type { AiHistoryRouteSearch } from "../ai/route-search";
 import type { CronRouteSearch } from "../cron/route-search";
 import type { QueueRouteSearch } from "../queue/route-search";
 import type { SearchIndexRouteSearch } from "../search-index/route-search";
 import type { AdminTableNavigate } from "../table-search";
-import type { DebugLogsRouteSearch } from "./route-search";
-import type { DebugSystemTab } from "./tabs";
+import type {
+  DebugDeletionsRouteSearch,
+  DebugLogsRouteSearch,
+} from "./route-search";
 
 import {
   adminAiActionsQuery,
@@ -42,6 +63,7 @@ import {
 } from "../ai/route-search";
 import { cronQuery, useCronRunCallback } from "../cron/query";
 import { cronSearchFrom, cronSearchParams } from "../cron/route-search";
+import { useAdminIdentity } from "../identity";
 import { queueQuery } from "../queue/query";
 import {
   queueRouteParams,
@@ -53,9 +75,13 @@ import {
   searchIndexSearchFrom,
   searchIndexSearchParams,
 } from "../search-index/route-search";
+import { invalidateAdminUsers } from "../users/query";
 import { debugLogsQuery, useDebugSources } from "./query";
 import {
   debugCronParams,
+  debugDeletionsRouteParams,
+  debugDeletionsSearchFrom,
+  debugDeletionsSearchParams,
   debugLogsRouteParams,
   debugLogsSearchFrom,
   debugLogsSearchParams,
@@ -88,7 +114,7 @@ const AreaHeader = ({
   tab,
 }: {
   action?: React.ReactNode;
-  tab: DebugSystemTab;
+  tab: DebugAreaId;
 }) => {
   const t = useTranslations("admin.debug");
   const tHealth = useTranslations("admin.debug.health");
@@ -107,7 +133,11 @@ const AreaHeader = ({
   );
 };
 
-const DiagnosticHeader = ({ tab }: { tab: "ai" | "logs" | "queue" }) => {
+const DiagnosticHeader = ({
+  tab,
+}: {
+  tab: "ai" | "deletions" | "logs" | "queue";
+}) => {
   const t = useTranslations("admin.debug");
 
   return (
@@ -241,6 +271,83 @@ export const DebugQueueTab = ({
       <DataTableNavigationProvider value={navigation}>
         <QueueTableContent data={data} />
       </DataTableNavigationProvider>
+    </div>
+  );
+};
+
+export const DebugDeletionsTab = ({
+  navigate,
+  search,
+}: {
+  navigate: AdminTableNavigate<DebugDeletionsRouteSearch>;
+  search: DebugDeletionsRouteSearch;
+}) => {
+  const t = useTranslations("admin.user.deletions");
+  const queryClient = useQueryClient();
+  const adminUserId = useAdminIdentity();
+  const canDelete = useAdminStaffPermission(ADMIN_USER_PERMISSIONS.delete);
+  const { data } = useSuspenseQuery(
+    accountDeletionsQueryOptions({ params: debugDeletionsRouteParams(search) }),
+  );
+  const { data: summary } = useSuspenseQuery(
+    accountDeletionsSummaryQueryOptions(),
+  );
+  const searchParams = React.useMemo(
+    () => debugDeletionsSearchParams(search),
+    [search],
+  );
+  const navigation = useTableNavigation({
+    from: debugDeletionsSearchFrom,
+    navigate,
+    searchParams,
+  });
+
+  const refresh = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ACCOUNT_DELETIONS_QUERY_ROOT }),
+      invalidateAdminUsers(queryClient, adminUserId),
+    ]);
+  };
+  const onCancel = async (deletionId: number) => {
+    const result = await cancelAdminAccountDeletion(deletionId);
+    if (!isAdminMutationError(result)) await refresh();
+
+    return result;
+  };
+  const onErase = async (deletionId: number) => {
+    const result = await retryAccountDeletion(deletionId);
+    await refresh();
+
+    return result;
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      <AreaHeader tab="deletions" />
+
+      <AccountDeletionsAttention
+        canDelete={canDelete}
+        onCancel={onCancel}
+        onErase={onErase}
+        summary={summary}
+      />
+
+      <section
+        aria-labelledby="deletions-all-title"
+        className="flex flex-col gap-3"
+      >
+        <h3 className="text-base font-semibold" id="deletions-all-title">
+          {t("all")}
+        </h3>
+        <DataTableNavigationProvider value={navigation}>
+          <AccountDeletionsTable
+            canDelete={canDelete}
+            data={data}
+            onCancel={onCancel}
+            onErase={onErase}
+          />
+        </DataTableNavigationProvider>
+      </section>
     </div>
   );
 };

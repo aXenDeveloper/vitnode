@@ -1,13 +1,20 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
 import { ssoConnectionIntentOfState } from "@vitnode/api/lib/shared/sso-profile";
+import React from "react";
 import { useTranslations } from "use-intl";
 
+import type { HeldSignIn } from "@/views/auth/sign-in/deletion-hold/schema";
+import type { SSOCallbackState } from "@/views/auth/sso/callback/use-sso-callback";
+
 import { Spinner } from "@/components/ui/spinner";
+import { AUTH_HREF } from "@/views/auth/auth-link";
+import { ssoSignInMethod } from "@/views/auth/last-sign-in-method";
 import { ssoConnectionCallbackTarget } from "@/views/auth/settings/sso/connection-callback";
 import { useSsoConnectionNotice } from "@/views/auth/settings/sso/connection-notice";
 import { completeSsoConnectionInBrowser } from "@/views/auth/settings/sso/sso-connections-mutations";
 import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
+import { AccountDeletionHoldDialog } from "@/views/auth/sign-in/deletion-hold/account-deletion-hold-dialog";
 import { SSOCallbackContent } from "@/views/auth/sso/callback/sso-callback-content";
 import { useSSOCallback } from "@/views/auth/sso/callback/use-sso-callback";
 import { useSSOEmailConfirm } from "@/views/auth/sso/callback/use-sso-email-confirm";
@@ -17,6 +24,7 @@ import { ssoSettingsHref } from "../sso-connections/route-search";
 import {
   requestPasswordResetAction,
   ssoEmailCompletionActions,
+  useCancelDeletionSignInAction,
   useCompleteSsoAction,
   useConfirmSsoEmailAction,
   useLinkSsoAction,
@@ -165,6 +173,38 @@ const useSignedInDestination = () => {
   };
 };
 
+const useSsoDeletionHold = ({
+  onSignedIn,
+  providerId,
+  state,
+}: {
+  onSignedIn: () => void;
+  providerId: string;
+  state: SSOCallbackState;
+}) => {
+  const [linkHold, setLinkHold] = React.useState<HeldSignIn | null>(null);
+  const confirm = useCancelDeletionSignInAction({ onSignedIn });
+  const router = useRouter();
+  const hold =
+    linkHold ??
+    (state.kind === "deletion_pending"
+      ? { ...state.hold, method: ssoSignInMethod(providerId) }
+      : null);
+
+  const dialog = (
+    <AccountDeletionHoldDialog
+      hold={hold}
+      onConfirm={confirm}
+      onKeep={() => {
+        setLinkHold(null);
+        void router.navigate(parseInternalDestination(AUTH_HREF.signIn));
+      }}
+    />
+  );
+
+  return { dialog, onDeletionHold: setLinkHold };
+};
+
 const SsoEmailConfirmRoute = ({
   errorActions,
   providerId,
@@ -172,7 +212,6 @@ const SsoEmailConfirmRoute = ({
 }: SsoCallbackRouteProps & { token: string }) => {
   const { data: config } = useMiddlewareConfigQuery();
   const onSignedIn = useSignedInDestination();
-  const linkSso = useLinkSsoAction({ onSignedIn, providerId });
   const confirm = useConfirmSsoEmailAction(providerId);
 
   const state = useSSOEmailConfirm({
@@ -181,9 +220,16 @@ const SsoEmailConfirmRoute = ({
     providerId,
     token,
   });
+  const deletionHold = useSsoDeletionHold({ onSignedIn, providerId, state });
+  const linkSso = useLinkSsoAction({
+    onDeletionHold: deletionHold.onDeletionHold,
+    onSignedIn,
+    providerId,
+  });
 
   return (
     <RouteMessages namespaces={SSO_CALLBACK_NAMESPACES}>
+      {deletionHold.dialog}
       <SSOCallbackContent
         errorActions={errorActions}
         onLink={linkSso}
@@ -206,7 +252,6 @@ const SsoSignInCallbackRoute = ({
   const parsed = parseSsoCallback({ providerId, query: search });
   const completeSso = useCompleteSsoAction(parsed.ok ? parsed.params : null);
   const onSignedIn = useSignedInDestination();
-  const linkSso = useLinkSsoAction({ onSignedIn, providerId });
 
   const state = useSSOCallback({
     code: parsed.ok ? parsed.params.code : "",
@@ -215,9 +260,16 @@ const SsoSignInCallbackRoute = ({
     onSignedIn,
     providerId,
   });
+  const deletionHold = useSsoDeletionHold({ onSignedIn, providerId, state });
+  const linkSso = useLinkSsoAction({
+    onDeletionHold: deletionHold.onDeletionHold,
+    onSignedIn,
+    providerId,
+  });
 
   return (
     <RouteMessages namespaces={SSO_CALLBACK_NAMESPACES}>
+      {deletionHold.dialog}
       <SSOCallbackContent
         captcha={config.captcha}
         emailCompletion={ssoEmailCompletionActions(providerId)}

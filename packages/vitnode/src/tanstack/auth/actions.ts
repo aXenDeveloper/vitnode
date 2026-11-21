@@ -3,6 +3,10 @@ import { useRouter } from "@tanstack/react-router";
 
 import type { ChangePasswordSubmit } from "@/views/auth/password-reset/change-password-form/change-password-form-content";
 import type { PasswordResetSubmit } from "@/views/auth/password-reset/form/use-password-reset-form";
+import type {
+  CancelDeletionSignInSubmit,
+  HeldSignIn,
+} from "@/views/auth/sign-in/deletion-hold/schema";
 import type { SignInSubmit } from "@/views/auth/sign-in/form/sign-in-form-content";
 import type { PasskeySignInSubmit } from "@/views/auth/sign-in/passkey/passkey-sign-in-button";
 import type { SignUpSubmit } from "@/views/auth/sign-up/form/sign-up-form-content";
@@ -17,6 +21,7 @@ import type {
 
 import {
   rememberSignInMethod,
+  type SignInMethod,
   ssoSignInMethod,
 } from "@/views/auth/last-sign-in-method";
 import { getPasskeyInBrowser } from "@/views/auth/passkeys/webauthn";
@@ -51,16 +56,30 @@ import {
 import { shouldRefreshSessionAfterSignUp } from "./sign-up-session";
 import { authTransport } from "./transport";
 
+export type OnDeletionHold = (hold: HeldSignIn) => void;
+
 export const useSignInAction = ({
   destination,
+  onDeletionHold,
 }: {
   destination: () => string;
+  onDeletionHold?: OnDeletionHold;
 }): SignInSubmit => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
   return async values => {
     const result = await authTransport().signIn(values);
+
+    if (
+      !result.ok &&
+      result.reason === "account_deletion_pending" &&
+      onDeletionHold
+    ) {
+      onDeletionHold({ ...result.hold, method: "password" });
+
+      return undefined;
+    }
 
     if (!result.ok) return signInFormResult(result);
 
@@ -83,8 +102,10 @@ export const useSignInAction = ({
 
 export const usePasskeySignInAction = ({
   destination,
+  onDeletionHold,
 }: {
   destination: () => string;
+  onDeletionHold?: OnDeletionHold;
 }): PasskeySignInSubmit => {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -103,6 +124,14 @@ export const usePasskeySignInAction = ({
     const result = await authTransport().finishPasskeySignIn({
       response: ceremony.response,
     });
+
+    if (!result.ok && result.reason === "account_deletion_pending") {
+      if (!onDeletionHold) return "rejected";
+
+      onDeletionHold({ ...result.hold, method: "passkey" });
+
+      return undefined;
+    }
 
     if (!result.ok) {
       return result.reason === "access_denied" ? "rejected" : result.reason;
@@ -155,9 +184,11 @@ export const useCompleteSsoAction = (params: null | SsoCallbackInput) => {
 };
 
 export const useLinkSsoAction = ({
+  onDeletionHold,
   onSignedIn,
   providerId,
 }: {
+  onDeletionHold?: OnDeletionHold;
   onSignedIn: () => void;
   providerId: string;
 }): SSOLinkSubmit => {
@@ -169,6 +200,16 @@ export const useLinkSsoAction = ({
       providerId,
       token,
     });
+
+    if (
+      !result.ok &&
+      result.reason === "account_deletion_pending" &&
+      onDeletionHold
+    ) {
+      onDeletionHold({ ...result.hold, method: ssoSignInMethod(providerId) });
+
+      return undefined;
+    }
 
     if (!result.ok) return ssoLinkFormResult(result);
 
@@ -211,6 +252,28 @@ export const useConfirmSsoEmailAction = (providerId: string) => {
     }
 
     return result;
+  };
+};
+
+export const useCancelDeletionSignInAction = ({
+  onSignedIn,
+}: {
+  onSignedIn: () => Promise<void> | void;
+}): CancelDeletionSignInSubmit => {
+  const queryClient = useQueryClient();
+
+  return async ({ method, token }: { method: SignInMethod; token: string }) => {
+    const result = await authTransport().cancelDeletionSignIn({ token });
+
+    if (!result.ok) return result.reason;
+
+    rememberSignInMethod(method);
+    removeAdminIdentityQueries(queryClient);
+    removeUserIdentityQueries(queryClient);
+    await invalidateSession(queryClient);
+    await onSignedIn();
+
+    return undefined;
   };
 };
 

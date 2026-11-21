@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/builders";
+import {
+  holdSignInForAccountDeletion,
+  zodAccountDeletionHold,
+} from "@/lib/account-deletion/sign-in-hold";
 import { assertPasswordSignInEnabled } from "@/lib/password-sign-in";
 import { SessionModel } from "@/models/session";
 import { SSOModel } from "@/models/sso";
@@ -50,7 +54,11 @@ export const linkRoute = buildRoute({
         description: "The link token is invalid or has expired",
       },
       403: {
-        description: "Wrong password",
+        content: {
+          "application/json": { schema: zodAccountDeletionHold },
+        },
+        description:
+          "Wrong password (no body). For an account scheduled for deletion the identity is linked but no session starts: `{ error: 'account_deletion_pending', scheduledAt, token }` until `POST /sign_in/cancel-deletion` confirms with that token",
       },
       409: {
         description: "The provider account is already linked to another user",
@@ -66,6 +74,9 @@ export const linkRoute = buildRoute({
       providerId,
       token,
     });
+    const hold = await holdSignInForAccountDeletion(c, userId);
+    if (hold) return c.json(hold, 403);
+
     await new SessionModel(c).createSessionByUserId(userId);
 
     return c.json({ id: userId }, 201);

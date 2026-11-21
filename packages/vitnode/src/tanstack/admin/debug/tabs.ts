@@ -1,6 +1,9 @@
 import type { PermissionsStaffArgs } from "@vitnode/api/lib/permission-staff";
 
-import { ADMIN_DEBUG_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
+import {
+  ADMIN_DEBUG_PERMISSIONS,
+  ADMIN_USER_PERMISSIONS,
+} from "@/views/admin/views/core/shared/admin-permissions";
 
 import type { DebugTab } from "./route-search";
 
@@ -10,6 +13,7 @@ export const DEBUG_TAB_PERMISSION: Record<DebugTab, PermissionsStaffArgs> = {
   ai: ADMIN_DEBUG_PERMISSIONS.ai,
   cache: ADMIN_DEBUG_PERMISSIONS.system,
   cron: ADMIN_DEBUG_PERMISSIONS.cron,
+  deletions: ADMIN_USER_PERMISSIONS.view,
   logs: ADMIN_DEBUG_PERMISSIONS.view,
   overview: ADMIN_DEBUG_PERMISSIONS.view,
   plugins: ADMIN_DEBUG_PERMISSIONS.plugins,
@@ -31,6 +35,7 @@ export const DEBUG_SYSTEM_TABS = [
 export const DEBUG_DIAGNOSTIC_TABS = [
   "logs",
   "queue",
+  "deletions",
   "ai",
 ] as const satisfies readonly DebugTab[];
 
