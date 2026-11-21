@@ -56,6 +56,7 @@ const fakeDb = (accounts: Account[]) => {
       },
       innerJoin: () => chain,
       limit: () => chain,
+      orderBy: () => chain,
       then: async (onFulfilled: (value: unknown) => unknown) =>
         await Promise.resolve(
           onFulfilled(

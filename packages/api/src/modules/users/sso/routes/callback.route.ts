@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { buildRoute } from "@/builders";
+import {
+  holdSignInForAccountDeletion,
+  zodAccountDeletionHold,
+} from "@/lib/account-deletion/sign-in-hold";
 import { SessionModel } from "@/models/session";
 import { SSOModel } from "@/models/sso";
 
@@ -48,6 +52,13 @@ export const callbackRoute = buildRoute({
       400: {
         description:
           "The state is unknown, expired, already used, from another browser or for another provider",
+      },
+      403: {
+        content: {
+          "application/json": { schema: zodAccountDeletionHold },
+        },
+        description:
+          "The account is scheduled for deletion. No session starts until `POST /sign_in/cancel-deletion` confirms with `token`",
       },
       409: {
         content: {
@@ -104,6 +115,9 @@ export const callbackRoute = buildRoute({
         409,
       );
     }
+
+    const hold = await holdSignInForAccountDeletion(c, outcome.userId);
+    if (hold) return c.json(hold, 403);
 
     await new SessionModel(c).createSessionByUserId(outcome.userId);
 

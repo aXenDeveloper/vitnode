@@ -6,13 +6,20 @@ describe("visibleSettingsNavItems", () => {
   it("shows Security while passkeys are on", () => {
     expect(
       visibleSettingsNavItems({ passkeys: true }).map(item => item.key),
-    ).toEqual(["overview", "notifications", "devices", "security", "standing"]);
+    ).toEqual([
+      "overview",
+      "notifications",
+      "devices",
+      "security",
+      "standing",
+      "privacy",
+    ]);
   });
 
   it("hides Security when passkeys are switched off", () => {
     expect(
       visibleSettingsNavItems({ passkeys: false }).map(item => item.key),
-    ).toEqual(["overview", "notifications", "devices", "standing"]);
+    ).toEqual(["overview", "notifications", "devices", "standing", "privacy"]);
   });
 
   it("shows Connected accounts only while an SSO provider is configured", () => {
@@ -21,12 +28,19 @@ describe("visibleSettingsNavItems", () => {
         passkeys: false,
         sso: [{ id: "google", name: "Google" }],
       }).map(item => item.key),
-    ).toEqual(["overview", "notifications", "devices", "sso", "standing"]);
+    ).toEqual([
+      "overview",
+      "notifications",
+      "devices",
+      "sso",
+      "standing",
+      "privacy",
+    ]);
     expect(
       visibleSettingsNavItems({ passkeys: false, sso: [] }).map(
         item => item.key,
       ),
-    ).toEqual(["overview", "notifications", "devices", "standing"]);
+    ).toEqual(["overview", "notifications", "devices", "standing", "privacy"]);
   });
 
   it("shows AI usage only while the site has an AI model configured", () => {
@@ -35,12 +49,19 @@ describe("visibleSettingsNavItems", () => {
         ai: { models: [{ id: "fast" }] },
         passkeys: false,
       }).map(item => item.key),
-    ).toEqual(["overview", "notifications", "devices", "ai", "standing"]);
+    ).toEqual([
+      "overview",
+      "notifications",
+      "devices",
+      "ai",
+      "standing",
+      "privacy",
+    ]);
     expect(
       visibleSettingsNavItems({ ai: { models: [] }, passkeys: false }).map(
         item => item.key,
       ),
-    ).toEqual(["overview", "notifications", "devices", "standing"]);
+    ).toEqual(["overview", "notifications", "devices", "standing", "privacy"]);
   });
 
   it("hides AI usage from a member without any AI feature", () => {
@@ -50,6 +71,6 @@ describe("visibleSettingsNavItems", () => {
         aiFeatures: false,
         passkeys: false,
       }).map(item => item.key),
-    ).toEqual(["overview", "notifications", "devices", "standing"]);
+    ).toEqual(["overview", "notifications", "devices", "standing", "privacy"]);
   });
 });

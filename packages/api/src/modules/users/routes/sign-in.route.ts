@@ -7,6 +7,11 @@ import { z } from "zod";
 import { buildRoute } from "@/builders";
 import { core_admin_sessions } from "@/database/admins";
 import { core_sessions } from "@/database/sessions";
+import {
+  assertNoAccountDeletion,
+  holdSignInForAccountDeletion,
+  zodAccountDeletionHold,
+} from "@/lib/account-deletion/sign-in-hold";
 import { deleteAuthCookie } from "@/lib/auth-cookie";
 import { assertPasswordSignInEnabled } from "@/lib/password-sign-in";
 import { hashSessionToken } from "@/lib/session-token";
@@ -81,11 +86,14 @@ export const signInRoute = buildRoute({
       403: {
         content: {
           "application/json": {
-            schema: z.object({ error: z.literal(EMAIL_NOT_VERIFIED) }),
+            schema: z.union([
+              z.object({ error: z.literal(EMAIL_NOT_VERIFIED) }),
+              zodAccountDeletionHold,
+            ]),
           },
         },
         description:
-          "Access Denied. Wrong credentials answer with no body; a correct password for an account whose email is not confirmed yet answers `{ error: 'email_not_verified' }`.",
+          "Access Denied. Wrong credentials answer with no body; a correct password for an account whose email is not confirmed yet answers `{ error: 'email_not_verified' }`; for an account scheduled for deletion it answers `{ error: 'account_deletion_pending', scheduledAt, token }` and no session starts until `POST /sign_in/cancel-deletion` confirms with that token. An AdminCP sign-in of such an account answers with no body.",
       },
       201: {
         content: {
@@ -109,6 +117,7 @@ export const signInRoute = buildRoute({
     });
 
     if (isAdmin) {
+      await assertNoAccountDeletion(c, data.id);
       const { token } = await new SessionAdminModel(c).createSessionByUserId(
         data.id,
       );
@@ -120,6 +129,9 @@ export const signInRoute = buildRoute({
     if (mustVerifyEmail(c, data)) {
       return c.json({ error: EMAIL_NOT_VERIFIED } as const, 403);
     }
+
+    const hold = await holdSignInForAccountDeletion(c, data.id);
+    if (hold) return c.json(hold, 403);
 
     const { token } = await new SessionModel(c).createSessionByUserId(data.id);
     await revokeIfPasswordChanged(c, data, { admin: false, token });

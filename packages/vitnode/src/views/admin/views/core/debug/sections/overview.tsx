@@ -3,6 +3,7 @@ import { ChevronRightIcon, RefreshCwIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import type { AdminPluginUpdates } from "@/views/admin/views/core/system/plugins/plugin-updates-query";
+import type { AccountDeletionsSummary } from "@/views/admin/views/core/users/deletions/deletions-query";
 
 import { AdminStaffPermissionGate } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
@@ -23,12 +24,14 @@ import { ClearCacheAction } from "../actions/clear-cache/clear-cache";
 import { DEBUG_TAB_ICONS } from "../nav/debug-nav";
 import { ToneIcon } from "../tone";
 import { FRAME_ACTION_STACKED } from "./frame-row";
+import { PrivacyRequestsFrame } from "./privacy-requests";
 import { SecurityUpdateAlert } from "./security";
 
 const ROW_LINK =
   "hover:bg-muted/50 focus-visible:bg-muted/50 flex items-center gap-3 px-4 py-3 text-start transition-colors outline-none";
 
 export const DebugOverview = ({
+  deletions,
   health,
   isRechecking,
   onClearCache,
@@ -36,6 +39,8 @@ export const DebugOverview = ({
   updates,
   version,
 }: {
+  /** Account deletion health; the Privacy requests card is left out without it. */
+  deletions?: AccountDeletionsSummary;
   health: DebugHealth;
   isRechecking: boolean;
   onClearCache: () => Promise<void>;
@@ -108,6 +113,8 @@ export const DebugOverview = ({
           </FramePanel>
         ) : null}
       </Frame>
+
+      {deletions ? <PrivacyRequestsFrame summary={deletions} /> : null}
 
       {health.areas.length > 0 ? (
         <Frame>

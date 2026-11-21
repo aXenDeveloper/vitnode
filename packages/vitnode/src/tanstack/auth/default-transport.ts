@@ -14,6 +14,15 @@ import { createAuthOperations } from "./transport-operations";
  * it is the only difference between the two.
  */
 const operations = createAuthOperations<SessionApi>({
+  cancelDeletionSignIn: async data =>
+    await fetcher({
+      plugin: manifest.id,
+      args: { body: data },
+      method: "post",
+      module: "users",
+      path: "/sign_in/cancel-deletion",
+    }),
+
   changePasswordFromReset: async data =>
     await fetcher({
       plugin: manifest.id,
@@ -163,6 +172,7 @@ const operations = createAuthOperations<SessionApi>({
 export const readSessionFromApi = operations.readSession;
 
 export const defaultAuthTransport = {
+  cancelDeletionSignIn: operations.cancelDeletionSignIn,
   changePasswordFromReset: operations.changePasswordFromReset,
   completeSso: operations.completeSso,
   finishAdminPasskeySignIn: operations.finishAdminPasskeySignIn,

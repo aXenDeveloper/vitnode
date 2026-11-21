@@ -5,6 +5,7 @@ import type {
 
 import {
   ADMIN_USERS_TABLE_CONTRACT,
+  normalizeAdminDeletionFilter,
   normalizeAdminRoleFilter,
 } from "@/views/admin/views/core/users/list/users-query";
 
@@ -21,6 +22,7 @@ import {
 } from "../table-search";
 
 export interface UsersRouteSearch extends AdminTableRouteSearch<AdminUsersOrderBy> {
+  deletion?: string;
   roleId?: string;
 }
 
@@ -44,6 +46,21 @@ const readRoleFilter = (input: UncheckedUsersSearch): string | undefined => {
   return undefined;
 };
 
+/** The `deletion` filter in whatever shape the router parsed it into. */
+const readDeletionFilter = (
+  input: UncheckedUsersSearch,
+): string | undefined => {
+  const value = (input as { deletion?: unknown }).deletion;
+  if (typeof value === "string") return normalizeAdminDeletionFilter(value);
+  if (Array.isArray(value)) {
+    return normalizeAdminDeletionFilter(
+      value.filter(item => typeof item === "string"),
+    );
+  }
+
+  return undefined;
+};
+
 /** The request this URL is asking for, and therefore the query key. */
 export const usersRouteParams = (
   input: UncheckedUsersSearch,
@@ -54,6 +71,8 @@ export const usersRouteParams = (
   );
   const roleId = readRoleFilter(input);
   if (roleId !== undefined) params.roleId = roleId;
+  const deletion = readDeletionFilter(input);
+  if (deletion !== undefined) params.deletion = deletion;
 
   return params;
 };
@@ -68,6 +87,8 @@ export const normalizeUsersRouteSearch = (
   );
   const roleId = readRoleFilter(input);
   if (roleId !== undefined) search.roleId = roleId;
+  const deletion = readDeletionFilter(input);
+  if (deletion !== undefined) search.deletion = deletion;
 
   return search;
 };
@@ -82,6 +103,8 @@ export const usersSearchParams = (
   );
   const roleId = readRoleFilter(input);
   if (roleId !== undefined) params.set("roleId", roleId);
+  const deletion = readDeletionFilter(input);
+  if (deletion !== undefined) params.set("deletion", deletion);
 
   return params;
 };
@@ -95,6 +118,8 @@ export const usersSearchFrom = (nextSearch: string): UsersRouteSearch => {
   );
   const roleId = readRoleFilter(parsed);
   if (roleId !== undefined) search.roleId = roleId;
+  const deletion = readDeletionFilter(parsed);
+  if (deletion !== undefined) search.deletion = deletion;
 
   return search;
 };

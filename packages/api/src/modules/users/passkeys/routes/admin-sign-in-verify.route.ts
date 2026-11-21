@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
 import { buildRoute } from "@/builders";
+import { assertNoAccountDeletion } from "@/lib/account-deletion/sign-in-hold";
 import { isStaff } from "@/lib/check-staff-permission";
 import { PasskeyError, PasskeyModel } from "@/models/passkey";
 import { SessionAdminModel } from "@/models/session-admin";
@@ -52,6 +53,7 @@ export const passkeyAdminSignInVerifyRoute = buildRoute({
       if (!(await isStaff(c, { live: true, type: "admin", userId }))) {
         throw new PasskeyError("not_staff", 403);
       }
+      await assertNoAccountDeletion(c, userId);
       await new SessionAdminModel(c).createSessionByUserId(userId);
 
       return c.json({ id: userId }, 201);

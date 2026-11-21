@@ -4,6 +4,10 @@ import { eq } from "drizzle-orm";
 import { buildRoute } from "@/builders";
 import { core_users } from "@/database/users";
 import {
+  holdSignInForAccountDeletion,
+  zodAccountDeletionHold,
+} from "@/lib/account-deletion/sign-in-hold";
+import {
   EMAIL_NOT_VERIFIED,
   mustVerifyEmail,
 } from "@/models/email-verification";
@@ -14,6 +18,7 @@ import { passkeyFailure } from "../lib/failure";
 import {
   PASSKEY_ERROR_RESPONSES,
   zodPasskeyAuthenticationResponseSchema,
+  zodPasskeyErrorSchema,
 } from "../passkeys.schema";
 
 export const passkeyAuthenticationVerifyRoute = buildRoute({
@@ -44,6 +49,15 @@ export const passkeyAuthenticationVerifyRoute = buildRoute({
         description: "Signed in",
       },
       ...PASSKEY_ERROR_RESPONSES,
+      403: {
+        content: {
+          "application/json": {
+            schema: z.union([zodPasskeyErrorSchema, zodAccountDeletionHold]),
+          },
+        },
+        description:
+          "The passkey could not be verified or the email is not confirmed yet. For an account scheduled for deletion: `{ error: 'account_deletion_pending', scheduledAt, token }`, and no session starts until `POST /sign_in/cancel-deletion` confirms with that token",
+      },
     },
   },
   handler: async c => {
@@ -63,6 +77,9 @@ export const passkeyAuthenticationVerifyRoute = buildRoute({
       if (user && mustVerifyEmail(c, user)) {
         throw new PasskeyError(EMAIL_NOT_VERIFIED, 403);
       }
+
+      const hold = await holdSignInForAccountDeletion(c, userId);
+      if (hold) return c.json(hold, 403);
 
       await new SessionModel(c).createSessionByUserId(userId);
 

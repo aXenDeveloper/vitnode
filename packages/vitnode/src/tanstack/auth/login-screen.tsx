@@ -1,7 +1,13 @@
+import { useRouter } from "@tanstack/react-router";
+import React from "react";
+
+import type { HeldSignIn } from "@/views/auth/sign-in/deletion-hold/schema";
+
 import {
   ssoProviderOfMethod,
   useLastSignInMethod,
 } from "@/views/auth/last-sign-in-method";
+import { AccountDeletionHoldDialog } from "@/views/auth/sign-in/deletion-hold/account-deletion-hold-dialog";
 import { SignInFormContent } from "@/views/auth/sign-in/form/sign-in-form-content";
 import { PasskeySignInButton } from "@/views/auth/sign-in/passkey/passkey-sign-in-button";
 import { SignInContent } from "@/views/auth/sign-in/sign-in-content";
@@ -11,6 +17,7 @@ import { RouteMessages } from "../i18n/route-messages";
 import {
   requestPasswordResetAction,
   startSsoAction,
+  useCancelDeletionSignInAction,
   usePasskeySignInAction,
   useSignInAction,
 } from "./actions";
@@ -20,6 +27,7 @@ import {
   hasSignInMethod,
   useMiddlewareConfigQuery,
 } from "./middleware-config";
+import { internalDestination } from "./navigation";
 import { postAuthDestination } from "./redirects";
 
 export interface LoginRouteProps {
@@ -31,15 +39,31 @@ export const LoginRouteContent = ({ returnTo }: LoginRouteProps) => {
   const { data: config } = useMiddlewareConfigQuery();
   const methods = authMethodsOf(config);
   const lastMethod = useLastSignInMethod();
+  const router = useRouter();
+  const [hold, setHold] = React.useState<HeldSignIn | null>(null);
   const signIn = useSignInAction({
     destination: () => postAuthDestination(returnTo),
+    onDeletionHold: setHold,
   });
   const passkeySignIn = usePasskeySignInAction({
     destination: () => postAuthDestination(returnTo),
+    onDeletionHold: setHold,
+  });
+  const cancelDeletionSignIn = useCancelDeletionSignInAction({
+    onSignedIn: async () => {
+      await router.navigate(internalDestination(postAuthDestination(returnTo)));
+    },
   });
 
   return (
     <RouteMessages namespaces={LOGIN_NAMESPACES}>
+      <AccountDeletionHoldDialog
+        hold={hold}
+        onConfirm={cancelDeletionSignIn}
+        onKeep={() => {
+          setHold(null);
+        }}
+      />
       <SignInContent
         form={
           methods.password ? (

@@ -83,6 +83,8 @@ export const UserIdentityCard = ({
   user: AdminUserDetail;
 }) => {
   const t = useTranslations("admin.user.show");
+  const showVerifyEmail = canEdit && !user.emailVerified;
+  const showPublicProfile = !user.pendingDeletion;
 
   return (
     <Card className="w-full overflow-hidden pt-0">
@@ -188,19 +190,23 @@ export const UserIdentityCard = ({
           </p>
         </div>
 
-        <div className="flex w-full flex-col gap-2">
-          {canEdit && !user.emailVerified && (
-            <VerifyEmailButton onVerifyEmail={onVerifyEmail} user={user} />
-          )}
-          <Button
-            className="w-full"
-            nativeButton={false}
-            render={<Link target="_blank" to={`/users/${user.nameCode}`} />}
-            variant="outline"
-          >
-            {t("goToProfile")} <ExternalLinkIcon />
-          </Button>
-        </div>
+        {showVerifyEmail || showPublicProfile ? (
+          <div className="flex w-full flex-col gap-2">
+            {showVerifyEmail ? (
+              <VerifyEmailButton onVerifyEmail={onVerifyEmail} user={user} />
+            ) : null}
+            {showPublicProfile ? (
+              <Button
+                className="w-full"
+                nativeButton={false}
+                render={<Link target="_blank" to={`/users/${user.nameCode}`} />}
+                variant="outline"
+              >
+                {t("goToProfile")} <ExternalLinkIcon />
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

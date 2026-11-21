@@ -31,6 +31,7 @@ export const zodUpdateRoleAdminSchema = z
     maxStorageForSubmit: zodRoleStorageSchema,
     allowUploadAvatar: z.boolean(),
     allowEditPersonalInfo: z.boolean(),
+    allowDeleteAccount: z.boolean(),
     allowBrowseAnonymously: z.boolean(),
     forceBrowseAnonymously: z.boolean(),
     allowEditOwnContent: z.boolean(),
@@ -131,6 +132,9 @@ export const updateRoleAdminRoute = buildRoute({
     }
     if (body.allowEditPersonalInfo !== undefined) {
       values.allowEditPersonalInfo = body.allowEditPersonalInfo;
+    }
+    if (body.allowDeleteAccount !== undefined) {
+      values.allowDeleteAccount = body.allowDeleteAccount;
     }
     if (body.allowBrowseAnonymously !== undefined) {
       values.allowBrowseAnonymously = body.allowBrowseAnonymously;

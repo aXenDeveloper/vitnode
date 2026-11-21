@@ -39,6 +39,26 @@
           "help": "If you're having trouble with the button above, copy and paste the URL below into the same browser:",
           "expire_time": "This link will expire on {date}"
         }
+      },
+      "account_deletion": {
+        "email": {
+          "scheduled": {
+            "subject": "Your account is scheduled for deletion",
+            "greeting": "Hello {name}!",
+            "intro": "We received a request to delete your account. It will be deleted for good on {date}.",
+            "button": "Keep my account",
+            "instructions": "Changed your mind? Sign in before that date and confirm that you want to keep your account. Until then you're signed out everywhere, and signing in always asks you to cancel the deletion first.",
+            "no_action": "If you didn't ask for this, sign in and cancel the deletion right away, then change your password.",
+            "admin_note": "An administrator scheduled this deletion."
+          },
+          "deleted": {
+            "subject": "Your account has been deleted",
+            "greeting": "Goodbye, {name}",
+            "intro": "Your account and the personal data tied to it have been deleted, as you asked.",
+            "details": "Posts other members replied to may stay on the site, no longer linked to you. Records the law makes us keep, such as invoices, are kept only for as long as required.",
+            "outro": "Thanks for being part of the community. You're always welcome back with a new account."
+          }
+        }
       }
     },
     "notifications": {

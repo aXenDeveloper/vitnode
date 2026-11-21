@@ -17,6 +17,7 @@ import { paymentEventDefinitions } from "./events/payments";
 import { reactionEventDefinitions } from "./events/reactions";
 import { roleEventDefinitions } from "./events/roles";
 import { userEventDefinitions } from "./events/users";
+import { corePersonalData } from "./lib/account-deletion/core-personal-data";
 import {
   altGenerateAiAction,
   altTranslateAiAction,
@@ -80,6 +81,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     searchModule,
   ],
   permissionStaff: coreStaffPermissions,
+  personalData: corePersonalData,
 });
 
 export type VitNodeApiPlugin = ApiPluginContract<typeof newBuildPluginApiCore>;

@@ -28,6 +28,7 @@ const unreachable = () => {
 const requester = (
   overrides: Partial<AuthApiRequester<unknown>>,
 ): AuthApiRequester<unknown> => ({
+  cancelDeletionSignIn: unreachable,
   changePasswordFromReset: unreachable,
   completeSso: unreachable,
   finishAdminPasskeySignIn: unreachable,

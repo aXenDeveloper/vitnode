@@ -1,17 +1,19 @@
+import { cn } from "cn";
 import { IdCardIcon, PencilIcon, SlidersHorizontalIcon } from "lucide-react";
 import React from "react";
 import { useFormatter, useTranslations } from "use-intl";
 
 import { useLanguages } from "@/components/languages-provider";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Frame,
+  FrameAction,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { timeZoneLabel } from "@/views/auth/settings/overview/time-zone-update";
 
@@ -47,18 +49,45 @@ export const DetailRow = ({
   </div>
 );
 
-export const DetailCardTitle = ({
+export const DetailFrame = ({
+  action,
   children,
+  contentClassName,
+  description,
   icon: Icon,
+  title,
 }: {
+  action?: React.ReactNode;
   children: React.ReactNode;
+  contentClassName?: string;
+  description?: React.ReactNode;
   icon: React.ElementType<{ className?: string }>;
-}) => (
-  <CardTitle className="flex items-center gap-2">
-    <Icon className="text-muted-foreground size-5" />
-    {children}
-  </CardTitle>
-);
+  title: React.ReactNode;
+}) => {
+  const titleId = React.useId();
+
+  return (
+    <Frame aria-labelledby={titleId} className="w-full" render={<section />}>
+      <FrameHeader>
+        <FrameTitle
+          className="flex items-center gap-2"
+          id={titleId}
+          render={<h2 />}
+        >
+          <Icon className="text-muted-foreground size-4 shrink-0" />
+          {title}
+        </FrameTitle>
+        {description ? (
+          <FrameDescription>{description}</FrameDescription>
+        ) : null}
+        {action ? <FrameAction>{action}</FrameAction> : null}
+      </FrameHeader>
+      <FramePanel>
+        <div className={cn("p-4", contentClassName)}>{children}</div>
+      </FramePanel>
+    </Frame>
+  );
+};
 
 const EditGroupDialog = ({
   children,
@@ -100,60 +129,55 @@ export const UserPersonalCard = ({
   const notSet = <span className="text-muted-foreground">{t("notSet")}</span>;
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <DetailCardTitle icon={IdCardIcon}>{t("title")}</DetailCardTitle>
-        {canEdit && (
-          <CardAction>
-            <EditGroupDialog
-              description={t("editDesc")}
-              label={t("edit")}
-              title={t("title")}
-            >
-              <PersonalForm onUpdate={onUpdate} user={user} />
-            </EditGroupDialog>
-          </CardAction>
-        )}
-      </CardHeader>
-      <CardContent>
-        <dl className="divide-border -my-2.5 flex flex-col divide-y">
-          <DetailRow label={t("memberId")}>
-            <span className="tabular-nums">#{user.id}</span>
-          </DetailRow>
-          <DetailRow label={t("realName")}>
-            {realName ? (
-              <>
-                {realName}
-                {!user.showRealName && (
-                  <span className="text-muted-foreground">
-                    {" "}
-                    · {t("hidden")}
-                  </span>
-                )}
-              </>
-            ) : (
-              notSet
-            )}
-          </DetailRow>
-          <DetailRow label={t("headline")}>{user.headline ?? notSet}</DetailRow>
-          <DetailRow label={t("phone")}>
-            {user.phone ? (
-              <span className="tabular-nums">{user.phone}</span>
-            ) : (
-              notSet
-            )}
-          </DetailRow>
-          <DetailRow label={t("birthday")}>
-            {user.birthday
-              ? format.dateTime(new Date(user.birthday), {
-                  dateStyle: "long",
-                  timeZone: "UTC",
-                })
-              : notSet}
-          </DetailRow>
-        </dl>
-      </CardContent>
-    </Card>
+    <DetailFrame
+      action={
+        canEdit ? (
+          <EditGroupDialog
+            description={t("editDesc")}
+            label={t("edit")}
+            title={t("title")}
+          >
+            <PersonalForm onUpdate={onUpdate} user={user} />
+          </EditGroupDialog>
+        ) : null
+      }
+      icon={IdCardIcon}
+      title={t("title")}
+    >
+      <dl className="divide-border -my-2.5 flex flex-col divide-y">
+        <DetailRow label={t("memberId")}>
+          <span className="tabular-nums">#{user.id}</span>
+        </DetailRow>
+        <DetailRow label={t("realName")}>
+          {realName ? (
+            <>
+              {realName}
+              {!user.showRealName && (
+                <span className="text-muted-foreground"> · {t("hidden")}</span>
+              )}
+            </>
+          ) : (
+            notSet
+          )}
+        </DetailRow>
+        <DetailRow label={t("headline")}>{user.headline ?? notSet}</DetailRow>
+        <DetailRow label={t("phone")}>
+          {user.phone ? (
+            <span className="tabular-nums">{user.phone}</span>
+          ) : (
+            notSet
+          )}
+        </DetailRow>
+        <DetailRow label={t("birthday")}>
+          {user.birthday
+            ? format.dateTime(new Date(user.birthday), {
+                dateStyle: "long",
+                timeZone: "UTC",
+              })
+            : notSet}
+        </DetailRow>
+      </dl>
+    </DetailFrame>
   );
 };
 
@@ -172,38 +196,34 @@ export const UserPreferencesCard = ({
     languages.find(item => item.code === user.language)?.name ?? user.language;
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <DetailCardTitle icon={SlidersHorizontalIcon}>
-          {t("title")}
-        </DetailCardTitle>
-        {canEdit && (
-          <CardAction>
-            <EditGroupDialog
-              description={t("editDesc")}
-              label={t("edit")}
-              title={t("title")}
-            >
-              <PreferencesForm onUpdate={onUpdate} user={user} />
-            </EditGroupDialog>
-          </CardAction>
-        )}
-      </CardHeader>
-      <CardContent>
-        <dl className="divide-border -my-2.5 flex flex-col divide-y">
-          <DetailRow label={t("language")}>{language}</DetailRow>
-          <DetailRow label={t("timeZone")}>
-            {user.timeZone ? (
-              timeZoneLabel(user.timeZone)
-            ) : (
-              <span className="text-muted-foreground">{t("timeZoneAuto")}</span>
-            )}
-          </DetailRow>
-          <DetailRow label={t("newsletter")}>
-            {user.newsletter ? t("subscribed") : t("notSubscribed")}
-          </DetailRow>
-        </dl>
-      </CardContent>
-    </Card>
+    <DetailFrame
+      action={
+        canEdit ? (
+          <EditGroupDialog
+            description={t("editDesc")}
+            label={t("edit")}
+            title={t("title")}
+          >
+            <PreferencesForm onUpdate={onUpdate} user={user} />
+          </EditGroupDialog>
+        ) : null
+      }
+      icon={SlidersHorizontalIcon}
+      title={t("title")}
+    >
+      <dl className="divide-border -my-2.5 flex flex-col divide-y">
+        <DetailRow label={t("language")}>{language}</DetailRow>
+        <DetailRow label={t("timeZone")}>
+          {user.timeZone ? (
+            timeZoneLabel(user.timeZone)
+          ) : (
+            <span className="text-muted-foreground">{t("timeZoneAuto")}</span>
+          )}
+        </DetailRow>
+        <DetailRow label={t("newsletter")}>
+          {user.newsletter ? t("subscribed") : t("notSubscribed")}
+        </DetailRow>
+      </dl>
+    </DetailFrame>
   );
 };

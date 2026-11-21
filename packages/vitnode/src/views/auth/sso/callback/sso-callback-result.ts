@@ -1,6 +1,8 @@
+import type { AccountDeletionHold } from "../../sign-in/deletion-hold/schema";
 import type { SSOLinkOffer } from "../link/schema";
 
 export type SSOCallbackFailure =
+  | "deletion_pending"
   | "email_exists"
   | "email_required"
   | "email_unavailable"
@@ -12,6 +14,7 @@ export type SSOCallbackResult =
       /** The provider's unverified address, offered as a starting point when `failure` is `email_required`. */
       emailSuggestion?: null | string;
       failure?: SSOCallbackFailure;
+      hold?: AccountDeletionHold;
       offer?: SSOLinkOffer;
     };
 

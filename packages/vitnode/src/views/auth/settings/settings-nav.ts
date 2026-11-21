@@ -8,6 +8,7 @@ export type SettingsNavKey =
   | "devices"
   | "notifications"
   | "overview"
+  | "privacy"
   | "security"
   | "sso"
   | "standing";
@@ -26,6 +27,7 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { href: "/settings/sso", key: "sso" },
   { href: "/settings/ai", key: "ai" },
   { href: "/settings/standing", key: "standing" },
+  { href: "/settings/privacy", key: "privacy" },
 ];
 
 export const visibleSettingsNavItems = ({

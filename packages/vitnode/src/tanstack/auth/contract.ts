@@ -6,7 +6,10 @@ import type {
 
 import { z } from "zod";
 
+import type { AccountDeletionHold } from "@/views/auth/sign-in/deletion-hold/schema";
+
 import { RATE_LIMIT_STATUS } from "@/lib/fetcher/rate-limit";
+import { accountDeletionHoldOf } from "@/views/auth/sign-in/deletion-hold/schema";
 import { signUpConflictReason } from "@/views/auth/sign-up/form/schema";
 
 export const providerIdSchema = z
@@ -47,12 +50,46 @@ export const ssoCallbackInputSchema = z.object({
 
 export type SsoCallbackInput = z.infer<typeof ssoCallbackInputSchema>;
 
+export interface AccountDeletionHeld {
+  hold: AccountDeletionHold;
+  ok: false;
+  reason: "account_deletion_pending";
+}
+
 export type SignInResult =
+  | AccountDeletionHeld
   | {
       ok: false;
       reason: "access_denied" | "email_not_verified" | "server_error";
     }
   | { ok: true };
+
+export const cancelDeletionSignInInputSchema = z.object({
+  token: z.string().min(16).max(2048),
+});
+
+export type CancelDeletionSignInInput = z.infer<
+  typeof cancelDeletionSignInInputSchema
+>;
+
+export type CancelDeletionSignInResult =
+  | { ok: false; reason: "invalid_hold" | "server_error" }
+  | { ok: true };
+
+export const cancelDeletionSignInResultFromStatus = (
+  status: number,
+): CancelDeletionSignInResult => {
+  if (status === 201) return { ok: true };
+  if (status === 400) return { ok: false, reason: "invalid_hold" };
+
+  return { ok: false, reason: "server_error" };
+};
+
+const accountDeletionHeldOf = (body: unknown): AccountDeletionHeld | null => {
+  const hold = accountDeletionHoldOf(body);
+
+  return hold ? { hold, ok: false, reason: "account_deletion_pending" } : null;
+};
 
 export type PasskeySignInOptions = z.infer<
   typeof zodPasskeyAuthenticationOptionsSchema
@@ -71,6 +108,7 @@ export type PasskeySignInStartResult =
   | { ok: true; options: PasskeySignInOptions };
 
 export type PasskeySignInResult =
+  | AccountDeletionHeld
   | {
       ok: false;
       reason:
@@ -105,6 +143,7 @@ export const ssoLinkOfferSchema = z.object({
 export type SsoLinkOffer = z.infer<typeof ssoLinkOfferSchema>;
 
 export type CompleteSsoResult =
+  | AccountDeletionHeld
   | { email: null | string; ok: false; reason: "email_required" }
   | { offer?: SsoLinkOffer; ok: false; reason: "email_exists" }
   | {
@@ -131,6 +170,7 @@ export const ssoLinkInputSchema = z.object({
 export type SsoLinkInput = z.infer<typeof ssoLinkInputSchema>;
 
 export type SsoLinkResult =
+  | AccountDeletionHeld
   | {
       ok: false;
       reason:
@@ -162,6 +202,9 @@ export const signInResultFromStatus = (
 ): SignInResult => {
   if (status === 201) return { ok: true };
   if (status === 403) {
+    const held = accountDeletionHeldOf(body);
+    if (held) return held;
+
     return isEmailNotVerifiedBody(body)
       ? { ok: false, reason: "email_not_verified" }
       : { ok: false, reason: "access_denied" };
@@ -199,10 +242,16 @@ const passkeyCeremonyResultFromStatus = (
 export const passkeySignInResultFromStatus = (
   status: number,
   body?: unknown,
-): PasskeySignInResult =>
-  status === 403 && isEmailNotVerifiedBody(body)
+): PasskeySignInResult => {
+  if (status !== 403) return passkeyCeremonyResultFromStatus(status);
+
+  const held = accountDeletionHeldOf(body);
+  if (held) return held;
+
+  return isEmailNotVerifiedBody(body)
     ? { ok: false, reason: "email_not_verified" }
     : passkeyCeremonyResultFromStatus(status);
+};
 
 const notStaffBodySchema = z.object({ error: z.literal("not_staff") });
 
@@ -264,6 +313,9 @@ export const completeSsoResultFromStatus = (
     };
   }
   if (status === 400) return { ok: false, reason: "invalid_state" };
+  if (status === 403) {
+    return accountDeletionHeldOf(body) ?? { ok: false, reason: "server_error" };
+  }
   if (status === 404) return { ok: false, reason: "unknown_provider" };
   if (status === 422) return { ok: false, reason: "email_unavailable" };
   if (status === 409) {
@@ -277,10 +329,17 @@ export const completeSsoResultFromStatus = (
   return { ok: false, reason: "server_error" };
 };
 
-export const ssoLinkResultFromStatus = (status: number): SsoLinkResult => {
+export const ssoLinkResultFromStatus = (
+  status: number,
+  body?: unknown,
+): SsoLinkResult => {
   if (status === 201) return { ok: true };
   if (status === 400) return { ok: false, reason: "invalid_token" };
-  if (status === 403) return { ok: false, reason: "access_denied" };
+  if (status === 403) {
+    return (
+      accountDeletionHeldOf(body) ?? { ok: false, reason: "access_denied" }
+    );
+  }
   if (status === 404) return { ok: false, reason: "unknown_provider" };
   if (status === 409) return { ok: false, reason: "already_linked" };
 

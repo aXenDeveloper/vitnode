@@ -10,6 +10,7 @@ import {
   DebugAiPending,
   DebugCachePending,
   DebugCronPending,
+  DebugDeletionsPending,
   DebugLayoutPending,
   DebugLogsPending,
   DebugOverviewPending,
@@ -20,7 +21,10 @@ import {
   DebugVitnodePending,
 } from "./tanstack/admin/debug/pending";
 import { ADMIN_DEBUG_NAMESPACES } from "./tanstack/admin/debug/route";
-import { normalizeDebugLogsSearch } from "./tanstack/admin/debug/route-search";
+import {
+  normalizeDebugDeletionsSearch,
+  normalizeDebugLogsSearch,
+} from "./tanstack/admin/debug/route-search";
 import { ADMIN_FILES_NAMESPACES } from "./tanstack/admin/files/route";
 import { normalizeAdminFilesRouteSearch } from "./tanstack/admin/files/route-search";
 import { ADMIN_INTEGRATIONS_NAMESPACES } from "./tanstack/admin/integrations/route";
@@ -209,6 +213,11 @@ export const routes = defineRoutes([
         pendingComponent: () => <FeedPendingSkeleton rows={4} />,
       }),
 
+      page("privacy", {
+        component: lazy(() => import("./pages/settings/privacy")),
+        pendingComponent: FormPendingSkeleton,
+      }),
+
       page("standing", {
         component: lazy(() => import("./pages/settings/standing")),
         messages: STANDING_NAMESPACES,
@@ -346,6 +355,11 @@ export const routes = defineRoutes([
         component: lazy(() => import("./pages/admin/debug/queue")),
         pendingComponent: DebugQueuePending,
         search: normalizeQueueRouteSearch,
+      }),
+      page("deletions", {
+        component: lazy(() => import("./pages/admin/debug/deletions")),
+        pendingComponent: DebugDeletionsPending,
+        search: normalizeDebugDeletionsSearch,
       }),
       page("ai", {
         component: lazy(() => import("./pages/admin/debug/ai")),

@@ -7,6 +7,7 @@ export const SSO_CALLBACK_NAMESPACES = [
   "core.global",
   "core.auth.sso",
   "core.auth.reset_password",
+  "core.auth.sign_in",
 ] as const;
 
 /**

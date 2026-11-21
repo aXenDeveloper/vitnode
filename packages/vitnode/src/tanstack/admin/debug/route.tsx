@@ -4,13 +4,21 @@ import type { PluginRouteTranslator } from "@/routing";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
 import { ADMIN_DEBUG_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
+import {
+  accountDeletionsQueryOptions,
+  accountDeletionsSummaryQueryOptions,
+} from "@/views/admin/views/core/users/deletions/deletions-query";
 
 import type { AiHistoryRouteSearch } from "../ai/route-search";
 import type { CronRouteSearch } from "../cron/route-search";
 import type { QueueRouteSearch } from "../queue/route-search";
 import type { AdminScreenContext } from "../screen";
 import type { SearchIndexRouteSearch } from "../search-index/route-search";
-import type { DebugLogsRouteSearch, DebugTab } from "./route-search";
+import type {
+  DebugDeletionsRouteSearch,
+  DebugLogsRouteSearch,
+  DebugTab,
+} from "./route-search";
 
 import { defineAdminRoute } from "../../plugin-routes/authoring";
 import {
@@ -27,7 +35,11 @@ import { requireAdminPermission } from "../screen";
 import { hasAdminPermission } from "../state";
 import { debugTabCrumb } from "./crumb";
 import { debugLogsQuery, warmDebugSources } from "./query";
-import { debugCronParams, debugLogsRouteParams } from "./route-search";
+import {
+  debugCronParams,
+  debugDeletionsRouteParams,
+  debugLogsRouteParams,
+} from "./route-search";
 import { DEBUG_TAB_PERMISSION } from "./tabs";
 
 export const ADMIN_DEBUG_NAMESPACES = [
@@ -35,6 +47,7 @@ export const ADMIN_DEBUG_NAMESPACES = [
   "admin.advanced.queue",
   "admin.ai",
   "admin.debug",
+  "admin.user.deletions",
   "admin.system.integrations",
   "admin.system.plugins",
   "ai_actions",
@@ -120,6 +133,23 @@ export const debugQueueRoute = debugTabRoute<QueueRouteSearch>(
       ...queueQuery({ params: queueRouteParams(search) }),
       ...STATIC,
     }),
+);
+
+export const debugDeletionsRoute = debugTabRoute<DebugDeletionsRouteSearch>(
+  "deletions",
+  async ({ context, search }) =>
+    await Promise.all([
+      context.queryClient.query({
+        ...accountDeletionsQueryOptions({
+          params: debugDeletionsRouteParams(search),
+        }),
+        ...STATIC,
+      }),
+      context.queryClient.query({
+        ...accountDeletionsSummaryQueryOptions(),
+        ...STATIC,
+      }),
+    ]),
 );
 
 export const debugAiRoute = debugTabRoute<AiHistoryRouteSearch>(

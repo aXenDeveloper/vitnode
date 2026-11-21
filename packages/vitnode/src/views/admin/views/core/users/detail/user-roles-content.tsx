@@ -23,13 +23,6 @@ import { resolveRoleName } from "@/components/role-name";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardAction,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -37,7 +30,13 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Dialog, DialogTrigger, useDialog } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogClose,
+  DialogFooter,
+  DialogTrigger,
+  useDialog,
+} from "@/components/ui/dialog";
 import {
   Popover,
   PopoverContent,
@@ -47,6 +46,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 
 import { EditSheetContent } from "./edit-sheet-content";
+import { DetailFrame } from "./user-profile-cards";
 
 export type UpdateAdminUserRoles = (
   id: number,
@@ -175,6 +175,7 @@ const EditRolesForm = ({
 }) => {
   const t = useTranslations("admin.user.show");
   const tError = useTranslations("core.global.errors");
+  const tGlobal = useTranslations("core.global");
   const locale = useLocale();
   const { setIsDirty, setOpen } = useDialog();
   const [isPending, startTransition] = React.useTransition();
@@ -223,7 +224,8 @@ const EditRolesForm = ({
     markDirty(primaryId, nextSecondary);
   };
 
-  const onSubmit = () => {
+  const onSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
     startTransition(async () => {
       const result = await onUpdateRoles(id, {
         roleId: primaryId,
@@ -247,7 +249,7 @@ const EditRolesForm = ({
   const primary = knownRoles.get(primaryId);
 
   return (
-    <>
+    <form className="flex flex-col gap-6" onSubmit={onSubmit}>
       <div className="flex flex-col gap-2">
         <span className="text-sm font-medium">{t("primaryRole")}</span>
         <RolePicker
@@ -269,6 +271,7 @@ const EditRolesForm = ({
           triggerRender={
             <Button
               className="w-full justify-start font-normal"
+              type="button"
               variant="outline"
             />
           }
@@ -328,18 +331,22 @@ const EditRolesForm = ({
             <Button
               className="w-fit border-dashed"
               size="sm"
+              type="button"
               variant="outline"
             />
           }
         />
       </div>
 
-      <div className="flex justify-end">
-        <Button isLoading={isPending} onClick={onSubmit} type="button">
+      <DialogFooter>
+        <DialogClose
+          render={<Button variant="ghost">{tGlobal("cancel")}</Button>}
+        />
+        <Button isLoading={isPending} type="submit">
           {t("saveRoles")}
         </Button>
-      </div>
-    </>
+      </DialogFooter>
+    </form>
   );
 };
 
@@ -361,72 +368,67 @@ export const UserRolesCardContent = ({
   const t = useTranslations("admin.user.show");
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <UsersIcon className="text-muted-foreground size-5" />
-          {t("rolesTitle")}
-        </CardTitle>
-        {canEdit && (
-          <CardAction>
-            <Dialog>
-              <TooltipWithContent text={t("editRoles")}>
-                <DialogTrigger
-                  render={
-                    <Button
-                      aria-label={t("editRoles")}
-                      size="icon-sm"
-                      variant="ghost"
-                    />
-                  }
-                >
-                  <PencilIcon />
-                </DialogTrigger>
-              </TooltipWithContent>
-
-              <EditSheetContent
-                description={t("editRolesDesc")}
-                title={
-                  <>
-                    <UsersIcon className="size-5" />
-                    {t("editRoles")}
-                  </>
+    <DetailFrame
+      action={
+        canEdit ? (
+          <Dialog>
+            <TooltipWithContent text={t("editRoles")}>
+              <DialogTrigger
+                render={
+                  <Button
+                    aria-label={t("editRoles")}
+                    size="icon-sm"
+                    variant="ghost"
+                  />
                 }
               >
-                <EditRolesForm
-                  id={id}
-                  onUpdateRoles={onUpdateRoles}
-                  primaryRole={role}
-                  searchRoles={searchRoles}
-                  secondaryRoles={secondaryRoles}
-                />
-              </EditSheetContent>
-            </Dialog>
-          </CardAction>
-        )}
-      </CardHeader>
+                <PencilIcon />
+              </DialogTrigger>
+            </TooltipWithContent>
 
-      <CardContent className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
+            <EditSheetContent
+              description={t("editRolesDesc")}
+              title={
+                <>
+                  <UsersIcon className="size-5" />
+                  {t("editRoles")}
+                </>
+              }
+            >
+              <EditRolesForm
+                id={id}
+                onUpdateRoles={onUpdateRoles}
+                primaryRole={role}
+                searchRoles={searchRoles}
+                secondaryRoles={secondaryRoles}
+              />
+            </EditSheetContent>
+          </Dialog>
+        ) : null
+      }
+      contentClassName="flex flex-col gap-4"
+      icon={UsersIcon}
+      title={t("rolesTitle")}
+    >
+      <div className="flex flex-col gap-1">
+        <span className="text-muted-foreground text-sm">
+          {t("primaryRole")}
+        </span>
+        <RoleFormat role={role} />
+      </div>
+
+      {secondaryRoles.length > 0 && (
+        <div className="flex flex-col gap-1.5">
           <span className="text-muted-foreground text-sm">
-            {t("primaryRole")}
+            {t("secondaryRoles")}
           </span>
-          <RoleFormat role={role} />
-        </div>
-
-        {secondaryRoles.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-muted-foreground text-sm">
-              {t("secondaryRoles")}
-            </span>
-            <div className="flex flex-wrap gap-x-3 gap-y-1">
-              {secondaryRoles.map(item => (
-                <RoleFormat key={item.id} role={item} />
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {secondaryRoles.map(item => (
+              <RoleFormat key={item.id} role={item} />
+            ))}
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </DetailFrame>
   );
 };

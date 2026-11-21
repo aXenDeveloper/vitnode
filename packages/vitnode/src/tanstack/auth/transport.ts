@@ -1,5 +1,7 @@
 import type {
   AdminPasskeySignInResult,
+  CancelDeletionSignInInput,
+  CancelDeletionSignInResult,
   ChangePasswordInput,
   ChangePasswordResult,
   CompleteSsoResult,
@@ -29,6 +31,9 @@ import type { SessionApi } from "./session-api";
 import { defaultAuthTransport } from "./default-transport";
 
 export interface AuthTransport {
+  cancelDeletionSignIn: (
+    input: CancelDeletionSignInInput,
+  ) => Promise<CancelDeletionSignInResult>;
   changePasswordFromReset: (
     input: ChangePasswordInput,
   ) => Promise<ChangePasswordResult>;

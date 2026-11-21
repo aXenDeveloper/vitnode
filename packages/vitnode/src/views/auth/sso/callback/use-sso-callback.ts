@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 
+import type { AccountDeletionHold } from "../../sign-in/deletion-hold/schema";
 import type { SSOLinkOffer } from "../link/schema";
 import type { SSOCallbackResult } from "./sso-callback-result";
 
 export type SSOCallbackState =
   | { emailSuggestion: null | string; kind: "email_required" }
+  | { hold: AccountDeletionHold; kind: "deletion_pending" }
   | { kind: "email_exists"; offer: null | SSOLinkOffer }
   | {
       kind:
@@ -45,6 +47,9 @@ export const useSSOCallback = ({
 
   if (denied) return { kind: "access_denied" };
   if (isError) return { kind: "error" };
+  if (data?.failure === "deletion_pending" && data.hold) {
+    return { hold: data.hold, kind: "deletion_pending" };
+  }
   if (data?.failure === "email_exists") {
     return { kind: "email_exists", offer: data.offer ?? null };
   }

@@ -11,6 +11,7 @@
   "@vitnode/core:users:can_edit": "Edit users",
   "@vitnode/core:users:can_edit_admin": "Edit users with administrator permission",
   "@vitnode/core:users:can_view_hidden_presence": "See the online status and last activity of members who browse anonymously",
+  "@vitnode/core:users:can_delete": "Delete user accounts",
   "@vitnode/core:roles": "Roles",
   "@vitnode/core:roles:can_view": "View roles list",
   "@vitnode/core:roles:can_create": "Create roles",
@@ -1141,7 +1142,24 @@
           "title": "Signing in is unavailable",
           "desc": "This site has no sign-in method switched on right now. Please check back later."
         },
-        "last_used": "Last used"
+        "last_used": "Last used",
+        "deletion_hold": {
+          "title": "Keep your account?",
+          "desc": "Signing in cancels the deletion. Nothing has been deleted yet.",
+          "days_left": "{count, plural, one {day left} other {days left}}",
+          "deleted_on": "Deleted on <date></date>",
+          "confirm": "Keep my account and sign in",
+          "keep": "Stay signed out",
+          "back": "Back to sign in",
+          "expired": {
+            "title": "This confirmation expired",
+            "desc": "You had 10 minutes to confirm. Sign in again to get a new one."
+          },
+          "success": {
+            "title": "Welcome back",
+            "desc": "Your account is no longer scheduled for deletion."
+          }
+        }
       },
       "reset_password": {
         "title": "Reset Password",
@@ -1176,7 +1194,8 @@
           "sso": "Connected accounts",
           "notifications": "Notifications",
           "ai": "AI usage",
-          "standing": "Account status"
+          "standing": "Account status",
+          "privacy": "Privacy & data"
         },
         "overview": {
           "desc": "Your avatar and the details on your account.",
@@ -1615,6 +1634,56 @@
             "title": "AI points",
             "details": "See your AI features"
           }
+        },
+        "privacy": {
+          "title": "Privacy & data",
+          "desc": "Download a copy of your data or delete your account.",
+          "export": {
+            "title": "Download your data",
+            "desc": "A JSON file with everything this site stores about you: your profile, devices, sign-in methods, files, payments and what plugins keep.",
+            "action": "Download my data",
+            "success": "Your data is downloading",
+            "success_desc": "Keep the file somewhere safe. It holds your personal details.",
+            "error_desc": "We couldn't prepare the file. Try again in a minute."
+          },
+          "delete": {
+            "title": "Delete account",
+            "desc": "{days, plural, =0 {Your account is deleted within the hour.} one {Your account is deleted # day after you ask. Until then you can sign in and change your mind.} other {Your account is deleted # days after you ask. Until then you can sign in and change your mind.}}",
+            "what": "Deleted: your profile, sign-in methods, devices, notifications and uploaded files. Posts other members replied to stay, no longer linked to you. Invoices are kept as long as the law requires.",
+            "action": "Delete my account",
+            "staff_title": "Staff accounts can't be deleted here",
+            "staff_desc": "Your account has AdminCP access. Ask another administrator to remove it first, then come back.",
+            "dialog_title": "Delete your account?",
+            "dialog_desc": "You'll be signed out on every device and we'll email you a link to cancel.",
+            "grace_days": "{count, plural, one {day to change your mind} other {days to change your mind}}",
+            "deleted_on": "Deleted on <date></date>",
+            "password": "Current password",
+            "password_required": "Enter your current password.",
+            "password_invalid": "That password isn't right.",
+            "confirm_name": "Type <b>{name}</b> to confirm",
+            "confirm_name_invalid": "That doesn't match your name. Type it exactly as shown.",
+            "confirm": "Delete account",
+            "reauth_title": "Please sign in again",
+            "reauth_desc": "Your account has no password, so deleting it needs a fresh sign-in. Sign out, sign back in, and come back here within 15 minutes.",
+            "success": "Your account is scheduled for deletion",
+            "done_desc": "You're signed out on every device, and the cancel link is in your inbox.",
+            "done_hint": "Sign in before then to keep your account.",
+            "done_action": "Go to the home page",
+            "pending_title": "Your account will be deleted",
+            "pending_desc": "It will be erased on {date}. Changed your mind? Keep your account below.",
+            "pending_by_admin": "An administrator scheduled this deletion.",
+            "cancel": "Keep my account",
+            "cancel_success": "Your account stays",
+            "cancel_success_desc": "The deletion is cancelled. Everything is as it was.",
+            "danger_zone": "Danger zone",
+            "not_allowed_title": "Account deletion is turned off for your role",
+            "not_allowed_desc": "Contact the site staff and they will delete your account and data for you."
+          },
+          "load_error": {
+            "title": "Privacy settings didn't load",
+            "desc": "Check your connection and try again."
+          },
+          "retry": "Try again"
         }
       },
       "verify_email": {
@@ -3386,7 +3455,10 @@
           "password_reset": "Reset password",
           "email_verified": "Verified email address",
           "device_revoked": "Signed out a device",
-          "devices_revoked": "Signed out all devices"
+          "devices_revoked": "Signed out all devices",
+          "deleted": "Deleted an account",
+          "deletion_scheduled": "Scheduled an account for deletion",
+          "deletion_cancelled": "Cancelled an account deletion"
         },
         "settings": {
           "updated": "Updated settings"
@@ -4037,7 +4109,12 @@
         "noResults": {
           "title": "No users found",
           "description": "Try adjusting your search criteria."
-        }
+        },
+        "deletionScheduled": "Deletion scheduled",
+        "deletionScheduledDesc": "This account will be erased on {date}.",
+        "deletionFailed": "Deletion failed",
+        "deletionFailedDesc": "Erasing this account failed. Open the member to see why and retry.",
+        "deletionFilter": "Deletion"
       },
       "show": {
         "title": "User Profile",
@@ -4198,8 +4275,21 @@
           "signedOutAll": "Signed out everywhere",
           "signedOutAllDesc": "{name} needs to sign in again on every device.",
           "admincp": "AdminCP",
-          "showAll": "Show all {count} devices",
-          "showFewer": "Show fewer",
+          "manageAll": "Manage all {count} sessions",
+          "sheetDesc": "{count, plural, one {# session} other {# sessions}} where {name} is signed in.",
+          "search": "Search sessions",
+          "filter": "Filter",
+          "filterLabel": "{count, plural, =0 {Filter sessions} other {Filter sessions, # active}}",
+          "sessionType": "Session type",
+          "public": "Public",
+          "clearFilters": "Clear filters",
+          "showing": "Showing {shown} of {total}",
+          "showMore": "Show {count} more",
+          "noMatch": {
+            "title": "No sessions match",
+            "desc": "Try another browser, system or IP address, or clear the filters."
+          },
+          "signOutAllHint": "Ends every session at once.",
           "loadError": {
             "title": "Devices didn't load",
             "desc": "Something went wrong while fetching this member's devices. Give it another go."
@@ -4271,6 +4361,50 @@
           "visible": "Visible to members",
           "hiddenFromPublic": "Hidden from members",
           "unknown": "Hidden - you need permission to see it"
+        },
+        "delete": {
+          "title": "Delete account",
+          "desc": "Erase this member and their personal data (GDPR). Schedule it to give them time to cancel, or delete it now.",
+          "pending_title": "Scheduled for deletion",
+          "scheduled_by_member": "The member asked to delete this account. It will be erased on",
+          "scheduled_by_admin": "Staff scheduled this account for deletion. It will be erased on",
+          "failed": "The account couldn't be erased",
+          "failed_desc": "The account was kept. The notice at the top of the page shows why.",
+          "self_desc": "You can't delete your own account here.",
+          "schedule": {
+            "success": "Deletion scheduled",
+            "success_desc": "{name} has been emailed how to cancel."
+          },
+          "now": {
+            "success": "Account deleted",
+            "success_desc": "{name}'s account and personal data are gone.",
+            "success_desc_kept": "{name}'s account is gone. {count, plural, one {# file was} other {# files were}} kept because content still shows {count, plural, one {it} other {them}}."
+          },
+          "cancel": {
+            "action": "Cancel deletion",
+            "title": "Cancel this deletion?",
+            "desc": "{name}'s account stays and they can sign in as usual.",
+            "confirm": "Keep the account",
+            "success": "Deletion cancelled",
+            "success_desc": "{name}'s account stays as it was."
+          },
+          "danger_zone": "Danger zone",
+          "action": "Delete account",
+          "dialog_title": "Delete {name}'s account?",
+          "dialog_desc": "The account, its sign-in methods, devices and uploaded files are erased. Content others replied to stays, no longer linked to the member.",
+          "immediately": "Delete immediately",
+          "immediately_desc": "Erase the account right now. Leave it off to schedule the deletion after the grace period. The member is then signed out and emailed how to cancel.",
+          "understand": "I understand {name}'s account and personal data will be deleted for good",
+          "understand_required": "Tick this box to continue.",
+          "submit": "Delete account",
+          "failed_title": "Erasing this account failed after {attempts, plural, one {# attempt} other {# attempts}}.",
+          "failed_hint": "Fix the cause, then retry. Cancel the deletion to keep the account.",
+          "retry": {
+            "action": "Retry erasure",
+            "title": "Retry erasing this account?",
+            "desc": "{name}'s account and personal data are erased right away if the cause is fixed. This can't be undone.",
+            "confirm": "Retry erasure"
+          }
         }
       },
       "verify_email": {
@@ -4329,6 +4463,80 @@
             "title": "Exception saved",
             "desc": "It applies to the member's next AI operation."
           }
+        }
+      },
+      "deletions": {
+        "status": {
+          "pending": "Pending",
+          "failed": "Failed",
+          "completed": "Erased",
+          "cancelled": "Cancelled"
+        },
+        "source": {
+          "user": "Asked by member",
+          "admin": "By staff"
+        },
+        "erased_member": "Erased member #{id}",
+        "files": "{deleted, plural, one {# file deleted} other {# files deleted}}, {kept, plural, =0 {none kept} one {# kept because content still shows it} other {# kept because content still shows them}}",
+        "empty": {
+          "title": "No deletion requests",
+          "desc": "When a member deletes their account, or staff delete one, the request shows up here."
+        },
+        "retry": {
+          "action": "Retry",
+          "now": "Erase now",
+          "title": "Erase this account now?",
+          "desc": "The account and its personal data are deleted right away. This can't be undone.",
+          "confirm": "Erase now",
+          "success": "Account erased",
+          "success_desc": "The request is marked as erased.",
+          "failed": "Erasure failed again",
+          "failed_desc": "The reason is shown on the request. Fix it and retry."
+        },
+        "cancel": {
+          "action": "Cancel deletion",
+          "title": "Cancel this deletion?",
+          "desc": "The account stays and the member can sign in as usual.",
+          "confirm": "Keep the account",
+          "success": "Deletion cancelled",
+          "success_desc": "The account stays as it was."
+        },
+        "all": "All requests",
+        "search": "Search by name, email, #id or DR-0042",
+        "attention": {
+          "title": "Needs you",
+          "attempts": "{count, plural, one {# attempt} other {# attempts}}",
+          "due": "due"
+        },
+        "columns": {
+          "request": "Request",
+          "member": "Member",
+          "status": "Status",
+          "requested_by": "Requested by",
+          "requested": "Requested",
+          "due": "Due / closed"
+        },
+        "details": {
+          "requested_by": "Requested by",
+          "member": "Member",
+          "attempts": "Attempts",
+          "files": "Files",
+          "member_id": "Member ID",
+          "open": "Details",
+          "open_label": "Open details of {ref}"
+        },
+        "timeline": {
+          "label": "Request timeline",
+          "requested": "Requested, signed out and emailed",
+          "cancelled": "Cancelled",
+          "erased": "Erased",
+          "failed": "Erasure failed after {count, plural, one {# attempt} other {# attempts}}",
+          "failed_desc": "Retries stopped. Fix the cause, then retry.",
+          "grace": "Grace period ends",
+          "erase": "Erase",
+          "erase_waiting": "Waiting for the next hourly run",
+          "erase_after": "The hourly job erases it after the grace period",
+          "files": "{deleted, plural, one {# file deleted} other {# files deleted}}, {kept, plural, =0 {none kept} one {# kept because content still shows it} other {# kept because content still shows them}}"
         }
       }
     },
@@ -4460,6 +4668,10 @@
           "per_item_unit": "per item",
           "save_error": "The role was saved, but its reaction settings weren't",
           "load_error": "Reaction settings didn't load. Close the dialog and try again."
+        },
+        "delete_account": {
+          "allow": "Allow deleting own account",
+          "allow_desc": "Members of this role can delete their account in Settings → Privacy & data. Staff can always delete an account in the AdminCP."
         }
       }
     },
@@ -5338,7 +5550,8 @@
         "services": "Services",
         "logs": "Log explorer",
         "queue": "Queue",
-        "ai": "AI logs"
+        "ai": "AI logs",
+        "deletions": "Account deletions"
       },
       "tone": {
         "critical": "Critical",
@@ -5359,7 +5572,8 @@
       "diagnostics": {
         "logs": "Every warning and error the API recorded, newest first.",
         "queue": "Background tasks and what happened to them.",
-        "ai": "Every AI request, with its model, status and cost."
+        "ai": "Every AI request, with its model, status and cost.",
+        "deletions": "Every request to delete an account and what happened to it, as proof that each one was handled."
       },
       "security": {
         "alert": {
@@ -5454,6 +5668,14 @@
           "ai": "AI models",
           "captcha": "Captcha",
           "websocket": "WebSocket"
+        },
+        "deletions": {
+          "subtitle": "{pending} scheduled · {failed} failed · oldest {oldest}/{deadline} days",
+          "failed": "{count, plural, one {# erasure failed} other {# erasures failed}} and stopped retrying",
+          "overdue": "{count, plural, one {# request is} other {# requests are}} past the grace period",
+          "oldest": "Oldest open request: {days} of {deadline} days",
+          "oldest_late": "A request is {days} days old, past GDPR's {deadline}-day limit",
+          "none": "No open requests"
         }
       },
       "actions": {
@@ -5499,6 +5721,24 @@
             "full_log": "Full Log Message"
           }
         }
+      },
+      "privacy": {
+        "title": "Privacy requests",
+        "desc": "Account deletions, and how close each one is to GDPR's one-month limit.",
+        "open": "Open Account deletions",
+        "oldest": "Oldest open request",
+        "oldest_note": "GDPR gives you a month to act",
+        "oldest_none": "No open requests",
+        "failed": "Failed",
+        "failed_note": "Retries stopped",
+        "none": "None",
+        "scheduled": "Scheduled",
+        "overdue_note": "{count} past the grace period",
+        "next_note": "Next {when}",
+        "erased": "Erased, last 30 days",
+        "job_ran": "Job ran {when}",
+        "job_never": "Job hasn't run yet",
+        "of_deadline": "of {deadline} days"
       }
     },
     "ai": {
