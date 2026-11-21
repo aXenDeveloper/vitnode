@@ -1,7 +1,10 @@
+import { DrawerIndent } from "@/components/ui/drawer";
+
 /**
  * The public site's page frame: `listeners`, then `header`, then `breadcrumb`,
  * then the page inside `<main>`. Each slot is optional and renders nothing
- * when unset. Universal.
+ * when unset. The frame sits in a `DrawerIndent`, so a bottom drawer opened
+ * with `indent` shrinks the page behind it. Universal.
  *
  * @example
  * ```tsx
@@ -30,10 +33,10 @@ export const ThemeLayoutContent = ({
   /** Invisible components rendered before the header, e.g. event listeners. */
   listeners?: React.ReactNode;
 }) => (
-  <>
+  <DrawerIndent>
     {listeners}
     {header}
     {breadcrumb}
     <main>{children}</main>
-  </>
+  </DrawerIndent>
 );

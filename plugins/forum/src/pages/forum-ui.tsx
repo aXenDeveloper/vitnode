@@ -11,6 +11,7 @@ import {
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
 import { UserFormat } from "@vitnode/core/components/user-format";
+import { UserPreview } from "@vitnode/core/components/user-preview";
 import { cn } from "cn";
 import { MessagesSquareIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
@@ -109,12 +110,18 @@ export const PersonAvatar = ({
   size?: keyof typeof AVATAR_SIZE_CLASS;
 }) =>
   person ? (
-    <Avatar
-      alt=""
-      className={cn("shrink-0", AVATAR_SIZE_CLASS[size])}
-      size={size}
-      user={person}
-    />
+    <UserPreview
+      className="shrink-0 rounded-full"
+      decorative
+      nameCode={person.nameCode}
+    >
+      <Avatar
+        alt=""
+        className={AVATAR_SIZE_CLASS[size]}
+        size={size}
+        user={person}
+      />
+    </UserPreview>
   ) : (
     <span
       aria-hidden="true"

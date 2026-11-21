@@ -47,7 +47,7 @@ function HoverCardContent({
       >
         <PreviewCardPrimitive.Popup
           className={cn(
-            "bg-popover/90 text-popover-foreground ring-foreground/10 ease-fluid z-50 w-64 origin-(--transform-origin) rounded-xl p-4 text-sm shadow-lg ring-1 outline-hidden backdrop-blur-sm transition-[opacity,scale] duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:duration-100 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none",
+            "bg-popover/90 text-popover-foreground ring-foreground/10 ease-fluid z-50 w-64 origin-(--transform-origin) rounded-xl p-4 text-sm shadow-lg ring-1 outline-hidden backdrop-blur-sm transition-[opacity,scale,translate] duration-200 will-change-[opacity,scale,translate] data-ending-style:scale-98 data-ending-style:opacity-0 data-ending-style:duration-120 data-ending-style:ease-in data-starting-style:scale-96 data-starting-style:opacity-0 data-[side=bottom]:data-ending-style:-translate-y-0.5 data-[side=bottom]:data-starting-style:-translate-y-1 data-[side=left]:data-ending-style:translate-x-0.5 data-[side=left]:data-starting-style:translate-x-1 data-[side=right]:data-ending-style:-translate-x-0.5 data-[side=right]:data-starting-style:-translate-x-1 data-[side=top]:data-ending-style:translate-y-0.5 data-[side=top]:data-starting-style:translate-y-1 motion-reduce:transition-none",
             className,
           )}
           data-slot="hover-card-content"

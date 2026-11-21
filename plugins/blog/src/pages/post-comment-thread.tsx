@@ -16,6 +16,7 @@ import {
   TooltipGroupTrigger,
 } from "@vitnode/core/components/ui/tooltip";
 import { UserFormat } from "@vitnode/core/components/user-format";
+import { UserPreview } from "@vitnode/core/components/user-preview";
 import {
   ContentCommentActions,
   contentCommentAuthorName,
@@ -139,12 +140,13 @@ const anchorProps = (node: CommentTreeNode, className?: string) => ({
 
 const CommentAvatar = ({ node }: { node: CommentTreeNode }) =>
   node.record?.author ? (
-    <Avatar
-      alt=""
-      className="size-8 shrink-0"
-      size={32}
-      user={node.record.author}
-    />
+    <UserPreview
+      className="shrink-0 rounded-full"
+      decorative
+      nameCode={node.record.author.nameCode}
+    >
+      <Avatar alt="" className="size-8" size={32} user={node.record.author} />
+    </UserPreview>
   ) : (
     <span
       aria-hidden="true"

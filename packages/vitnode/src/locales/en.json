@@ -853,6 +853,30 @@
       "secondaryRoles": "Secondary roles",
       "editProfile": "Edit profile",
       "timeline": "Timeline",
+      "preview": {
+        "sheet_title": "Profile of @{nameCode}",
+        "reputation": "Reputation",
+        "joined": "Joined",
+        "last_visited": "Last visited",
+        "online_now": "Online now",
+        "hidden": "Hidden",
+        "never": "Never",
+        "view_profile": "View profile",
+        "retry": "Try again",
+        "load_error": {
+          "title": "Profile didn't load",
+          "desc": "Check your connection and try again."
+        },
+        "warnings": {
+          "label": "Warnings, visible to moderators",
+          "points": "{count, plural, one {# warning point} other {# warning points}}",
+          "none": "No active warnings",
+          "summary": "{active} active · {total} in total",
+          "clean": "Clean record",
+          "review": "Review",
+          "load_error": "Warnings didn't load."
+        }
+      },
       "notFound": {
         "title": "Profile not found",
         "desc": "This user doesn't exist, or their username has changed."

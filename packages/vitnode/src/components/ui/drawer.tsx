@@ -1,4 +1,5 @@
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
+import { useRender } from "@base-ui/react/use-render";
 import { cn } from "cn";
 import React from "react";
 
@@ -30,15 +31,90 @@ const asChildProps = (
  */
 function Drawer({
   direction = "bottom",
+  indent = direction === "bottom",
   ...props
 }: Omit<DrawerPrimitive.Root.Props, "swipeDirection"> & {
   direction?: DrawerDirection;
+  /**
+   * Shrinks the page behind the drawer while it is open, following the
+   * swipe, like an iOS sheet. Needs a `DrawerIndent` around the page (the
+   * public theme layout has one); without it nothing changes. Defaults to
+   * `true` for bottom drawers and `false` for the other directions.
+   */
+  indent?: boolean;
 }) {
-  return (
+  const root = (
     <DrawerPrimitive.Root
       swipeDirection={SWIPE_DIRECTION[direction]}
       {...props}
     />
+  );
+
+  return indent ? (
+    root
+  ) : (
+    <DrawerPrimitive.Provider>{root}</DrawerPrimitive.Provider>
+  );
+}
+
+const IndentedPage = ({
+  active,
+  children,
+  ref,
+  ...props
+}: React.ComponentProps<"div"> & { active: boolean }) => {
+  const pageRef = React.useRef<HTMLDivElement>(null);
+
+  React.useLayoutEffect(() => {
+    const page = pageRef.current;
+    if (!active || !page) return;
+
+    page.style.setProperty(
+      "--page-indent-bottom",
+      `${window.scrollY + window.innerHeight}px`,
+    );
+    page.style.setProperty("--page-indent-top", `${window.scrollY}px`);
+  }, [active]);
+
+  return useRender({
+    props: {
+      ...props,
+      children: (
+        <>
+          <span
+            aria-hidden="true"
+            className="ease-fluid pointer-events-none absolute inset-x-0 top-[var(--page-indent-top,0px)] z-40 h-3 bg-[radial-gradient(circle_at_100%_100%,transparent_12px,black_12.5px),radial-gradient(circle_at_0_100%,transparent_12px,black_12.5px)] bg-size-[12px_12px] bg-position-[left_top,right_top] bg-no-repeat opacity-0 transition-opacity duration-200 group-data-active/indent:duration-300 motion-safe:group-data-active/indent:opacity-100"
+          />
+          {children}
+        </>
+      ),
+    },
+    ref: ref ? [ref, pageRef] : pageRef,
+  });
+};
+
+/**
+ * Wraps the page so bottom drawers (and any drawer with `indent`) shrink it behind
+ * them: the page scales down around the visible screen, gets rounded top
+ * corners over a black backdrop and grows back as the drawer is swiped away.
+ * Fixed elements inside the page are positioned against the scaled page
+ * while it is indented; pin them to `--page-indent-bottom` /
+ * `--page-indent-top` under `group-data-active/indent:` (see the mobile tab
+ * bar). Skipped under reduced motion. Universal.
+ */
+function DrawerIndent({ children }: { children: React.ReactNode }) {
+  return (
+    <DrawerPrimitive.Provider>
+      <DrawerPrimitive.IndentBackground className="ease-fluid pointer-events-none fixed inset-0 bg-black opacity-0 transition-opacity duration-200 data-active:duration-300 motion-safe:data-active:opacity-100" />
+      <DrawerPrimitive.Indent
+        className="group/indent ease-fluid bg-background relative min-h-dvh origin-[50%_var(--page-indent-top,0px)] transition-[scale,translate] duration-200 data-active:duration-300 motion-safe:data-active:translate-y-[calc((1-var(--drawer-swipe-progress))*(env(safe-area-inset-top)+12px))] motion-safe:data-active:scale-[calc(0.94+0.06*var(--drawer-swipe-progress))] [:root:has([data-swiping])_&]:duration-0"
+        render={(props, state) => (
+          <IndentedPage {...props} active={state.active} />
+        )}
+      >
+        {children}
+      </DrawerPrimitive.Indent>
+    </DrawerPrimitive.Provider>
   );
 }
 
@@ -101,13 +177,21 @@ function DrawerOverlay({
 
 /**
  * The drawer panel, rendered in a portal over a scrim, with a decorative drag
- * handle.
+ * handle on bottom drawers.
  */
 function DrawerContent({
   className,
   children,
+  handle = true,
   ...props
-}: DrawerPrimitive.Popup.Props) {
+}: DrawerPrimitive.Popup.Props & {
+  /**
+   * Renders the drag handle row above `children` on bottom drawers. Turn it
+   * off to let content such as a cover image reach the top edge and draw your
+   * own handle over it. Defaults to `true`.
+   */
+  handle?: boolean;
+}) {
   return (
     <DrawerPortal>
       <DrawerOverlay />
@@ -124,10 +208,12 @@ function DrawerContent({
           data-slot="drawer-content"
           {...props}
         >
-          <div
-            aria-hidden="true"
-            className="bg-muted mx-auto mt-4 hidden h-1.5 w-24 shrink-0 rounded-full group-data-[swipe-direction=down]/drawer-content:block"
-          />
+          {handle ? (
+            <div
+              aria-hidden="true"
+              className="bg-muted mx-auto mt-4 hidden h-1.5 w-24 shrink-0 rounded-full group-data-[swipe-direction=down]/drawer-content:block"
+            />
+          ) : null}
           {children}
         </DrawerPrimitive.Popup>
       </DrawerPrimitive.Viewport>
@@ -192,6 +278,7 @@ export {
   DrawerDescription,
   DrawerFooter,
   DrawerHeader,
+  DrawerIndent,
   DrawerOverlay,
   DrawerPortal,
   DrawerTitle,

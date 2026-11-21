@@ -92,7 +92,7 @@ export const MobileNavBar = ({
       </style>
       <nav
         aria-label={t("label")}
-        className="bg-card text-card-foreground fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] sm:hidden"
+        className="bg-card text-card-foreground fixed inset-x-0 bottom-0 z-30 border-t pb-[env(safe-area-inset-bottom)] transition-[top,bottom,translate] transition-discrete delay-200 duration-0 group-data-active/indent:delay-0 motion-safe:group-data-active/indent:top-(--page-indent-bottom) motion-safe:group-data-active/indent:bottom-auto motion-safe:group-data-active/indent:-translate-y-full sm:hidden"
         data-slot="mobile-nav"
       >
         <ul className="mx-auto flex max-w-lg items-stretch">
