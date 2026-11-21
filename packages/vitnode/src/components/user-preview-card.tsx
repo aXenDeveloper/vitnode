@@ -49,9 +49,9 @@ import { userProfileHref } from "./user-profile-href";
 const USER_PREVIEW_NAMESPACES = ["core.global", "core.profile"] as const;
 const AVATAR_SIZE = 56;
 const PRESENCE_DOT_SIZE = 12;
+const CIRCLE_EDGE_INSET_AT_45_DEG = (1 - Math.SQRT1_2) / 2;
 
-// Eased stops: a two-stop fade bands and leaves a visible edge mid-cover.
-const COVER_FADE =
+const EASED_COVER_FADE =
   "linear-gradient(to bottom, black 0%, rgb(0 0 0 / 0.85) 30%, rgb(0 0 0 / 0.45) 60%, rgb(0 0 0 / 0.12) 85%, transparent 100%)";
 
 /** Where the preview renders: a hover card, or a bottom sheet on touch screens. */
@@ -65,7 +65,6 @@ const ELAPSED_UNITS = [
   ["minute", 60],
 ] as const;
 
-/** Short elapsed time since `date`, like "7 yrs" or "14 hr". */
 const formatElapsed = (date: Date | string, now: Date, locale: string) => {
   const seconds = Math.max(
     0,
@@ -103,8 +102,9 @@ const PresenceAvatar = ({
         })
       : t("offline");
   }
-  // The dot's centre sits on the circle's edge at 45°, ~14.6% in from the box.
-  const offset = Math.round(AVATAR_SIZE * 0.146 - PRESENCE_DOT_SIZE / 2);
+  const offset = Math.round(
+    AVATAR_SIZE * CIRCLE_EDGE_INSET_AT_45_DEG - PRESENCE_DOT_SIZE / 2,
+  );
 
   return (
     <span className="relative inline-flex size-fit shrink-0">
@@ -169,7 +169,6 @@ const LastVisited = ({ presence }: { presence: undefined | UserPresence }) => {
   );
 };
 
-/** Moderators only; the API answers 403 to everyone else anyway. */
 const ModeratorWarnings = ({ userId }: { userId: number }) => {
   const t = useTranslations("core.profile.preview.warnings");
   const tPreview = useTranslations("core.profile.preview");
@@ -184,7 +183,6 @@ const ModeratorWarnings = ({ userId }: { userId: number }) => {
   }
 
   if (query.isError) {
-    // A moderator without the warnings permission: nothing to show or retry.
     if (
       query.error instanceof ModcpRequestError &&
       query.error.status === 403
@@ -278,6 +276,7 @@ const PreviewProfile = ({
     enabled: !isSessionPending,
   });
   const href = userProfileHref(user.nameCode);
+  const reputation = user.reputation ?? 0;
 
   return (
     <div
@@ -294,8 +293,8 @@ const PreviewProfile = ({
           data-slot="user-preview-cover"
           style={{
             ...userCoverStyle(user.avatarColor),
-            maskImage: COVER_FADE,
-            WebkitMaskImage: COVER_FADE,
+            maskImage: EASED_COVER_FADE,
+            WebkitMaskImage: EASED_COVER_FADE,
           }}
         >
           <UserCoverImage url={user.coverUrl} />
@@ -319,11 +318,11 @@ const PreviewProfile = ({
         <Stat label={t("reputation")}>
           <ShortNumber
             className={cn(
-              (user.reputation ?? 0) > 0 && FEEDBACK_TONE_TEXT.success,
-              (user.reputation ?? 0) < 0 && FEEDBACK_TONE_TEXT.destructive,
+              reputation > 0 && FEEDBACK_TONE_TEXT.success,
+              reputation < 0 && FEEDBACK_TONE_TEXT.destructive,
             )}
             formatOptions={{ signDisplay: "exceptZero" }}
-            value={user.reputation ?? 0}
+            value={reputation}
           />
         </Stat>
         <Stat label={t("joined")}>
@@ -439,9 +438,7 @@ export const UserPreviewCard = ({
   nameCode: string;
   surface?: UserPreviewSurface;
 }) => (
-  <React.Suspense fallback={<UserPreviewSkeleton />}>
-    <RouteMessages namespaces={USER_PREVIEW_NAMESPACES}>
-      <PreviewBody nameCode={nameCode} surface={surface} />
-    </RouteMessages>
-  </React.Suspense>
+  <RouteMessages namespaces={USER_PREVIEW_NAMESPACES}>
+    <PreviewBody nameCode={nameCode} surface={surface} />
+  </RouteMessages>
 );

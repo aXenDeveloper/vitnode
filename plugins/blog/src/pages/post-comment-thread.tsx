@@ -145,12 +145,7 @@ const CommentAvatar = ({ node }: { node: CommentTreeNode }) =>
       decorative
       nameCode={node.record.author.nameCode}
     >
-      <Avatar
-        alt=""
-        className="size-8 shrink-0"
-        size={32}
-        user={node.record.author}
-      />
+      <Avatar alt="" className="size-8" size={32} user={node.record.author} />
     </UserPreview>
   ) : (
     <span

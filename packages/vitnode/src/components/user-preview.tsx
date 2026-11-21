@@ -115,7 +115,6 @@ const UserPreviewSheet = ({
   const warmPreview = useWarmPreview(nameCode);
   const [open, setOpen] = React.useState(false);
 
-  // Following a link inside the sheet - "View profile", the name - closes it.
   React.useEffect(
     () =>
       router.subscribe("onBeforeNavigate", () => {
@@ -124,14 +123,13 @@ const UserPreviewSheet = ({
     [router],
   );
 
-  // Kept after the first open, so the sheet still has content while it slides away.
-  const [opened, setOpened] = React.useState(false);
+  const [hasOpened, setHasOpened] = React.useState(false);
 
   return (
     <Drawer
       onOpenChange={next => {
         setOpen(next);
-        if (next) setOpened(true);
+        if (next) setHasOpened(true);
       }}
       open={open}
     >
@@ -159,13 +157,12 @@ const UserPreviewSheet = ({
         handle={false}
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        {/* Drawn over the cover, which runs to the sheet's top edge. */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 top-2.5 z-10 mx-auto h-1.5 w-12 rounded-full bg-black/25 dark:bg-white/40"
         />
         <div className="mx-auto w-full max-w-md overflow-y-auto">
-          {opened ? (
+          {hasOpened ? (
             <PreviewContent nameCode={nameCode} surface="sheet" />
           ) : null}
         </div>

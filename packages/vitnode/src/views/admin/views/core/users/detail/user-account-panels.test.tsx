@@ -7,7 +7,15 @@ import {
   within,
 } from "@testing-library/react";
 import { IntlProvider } from "use-intl";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 
 import type { SsoConnectionsApi } from "@/views/auth/settings/sso/sso-connections-query";
 import type { NotificationPreferenceTypeView } from "@/views/notifications/notifications-query";
@@ -126,6 +134,10 @@ const requestOf = (index: number) => {
           : (input ?? ""),
   };
 };
+
+beforeAll(async () => {
+  await import("./user-devices-sheet");
+});
 
 beforeEach(() => {
   fetchMock.mockReset();

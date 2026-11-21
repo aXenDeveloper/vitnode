@@ -1,4 +1,5 @@
 import { Drawer as DrawerPrimitive } from "@base-ui/react/drawer";
+import { useRender } from "@base-ui/react/use-render";
 import { cn } from "cn";
 import React from "react";
 
@@ -56,50 +57,40 @@ function Drawer({
   );
 }
 
-interface IndentViewport {
-  bottom: number;
-  top: number;
-}
-
 const IndentedPage = ({
   active,
   children,
-  style,
+  ref,
   ...props
 }: React.ComponentProps<"div"> & { active: boolean }) => {
-  const [wasActive, setWasActive] = React.useState(active);
-  const [viewport, setViewport] = React.useState<IndentViewport | null>(null);
+  const pageRef = React.useRef<HTMLDivElement>(null);
 
-  if (active !== wasActive) {
-    setWasActive(active);
-    if (active) {
-      setViewport({
-        bottom: window.scrollY + window.innerHeight,
-        top: window.scrollY,
-      });
-    }
-  }
+  React.useLayoutEffect(() => {
+    const page = pageRef.current;
+    if (!active || !page) return;
 
-  return (
-    <div
-      {...props}
-      style={
-        viewport
-          ? ({
-              ...style,
-              "--page-indent-bottom": `${viewport.bottom}px`,
-              "--page-indent-top": `${viewport.top}px`,
-            } as React.CSSProperties)
-          : style
-      }
-    >
-      <span
-        aria-hidden="true"
-        className="ease-fluid pointer-events-none absolute inset-x-0 top-[var(--page-indent-top,0px)] z-40 h-3 bg-[radial-gradient(circle_at_100%_100%,transparent_12px,black_12.5px),radial-gradient(circle_at_0_100%,transparent_12px,black_12.5px)] bg-size-[12px_12px] bg-position-[left_top,right_top] bg-no-repeat opacity-0 transition-opacity duration-200 group-data-active/indent:duration-300 motion-safe:group-data-active/indent:opacity-100"
-      />
-      {children}
-    </div>
-  );
+    page.style.setProperty(
+      "--page-indent-bottom",
+      `${window.scrollY + window.innerHeight}px`,
+    );
+    page.style.setProperty("--page-indent-top", `${window.scrollY}px`);
+  }, [active]);
+
+  return useRender({
+    props: {
+      ...props,
+      children: (
+        <>
+          <span
+            aria-hidden="true"
+            className="ease-fluid pointer-events-none absolute inset-x-0 top-[var(--page-indent-top,0px)] z-40 h-3 bg-[radial-gradient(circle_at_100%_100%,transparent_12px,black_12.5px),radial-gradient(circle_at_0_100%,transparent_12px,black_12.5px)] bg-size-[12px_12px] bg-position-[left_top,right_top] bg-no-repeat opacity-0 transition-opacity duration-200 group-data-active/indent:duration-300 motion-safe:group-data-active/indent:opacity-100"
+          />
+          {children}
+        </>
+      ),
+    },
+    ref: ref ? [ref, pageRef] : pageRef,
+  });
 };
 
 /**

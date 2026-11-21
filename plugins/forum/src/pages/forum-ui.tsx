@@ -117,7 +117,7 @@ export const PersonAvatar = ({
     >
       <Avatar
         alt=""
-        className={cn("shrink-0", AVATAR_SIZE_CLASS[size])}
+        className={AVATAR_SIZE_CLASS[size]}
         size={size}
         user={person}
       />
