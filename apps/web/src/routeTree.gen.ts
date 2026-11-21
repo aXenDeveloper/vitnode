@@ -21,6 +21,7 @@ import { Route as DocsSearchRouteImport } from './routes/docs.search'
 import { Route as DocsChar123Char125DotmdRouteImport } from './routes/docs.{$}[.]md'
 import { Route as DocsDocsIndexRouteImport } from './routes/_docs/docs.index'
 import { Route as DocsDocsSplatRouteImport } from './routes/_docs/docs.$'
+import { Route as MainProtoUserPreviewRouteImport } from './routes/_main/proto.user-preview'
 import { Route as MainSolutionsIndexRouteImport } from './routes/_main/solutions/index'
 import { Route as MainSolutionsSlugRouteImport } from './routes/_main/solutions/$slug'
 import { Route as AdminAdminCoreIndexRouteImport } from './routes/_admin/admin.core.index'
@@ -82,6 +83,11 @@ const DocsDocsSplatRoute = DocsDocsSplatRouteImport.update({
   path: '/docs/$',
   getParentRoute: () => DocsRoute,
 } as any)
+const MainProtoUserPreviewRoute = MainProtoUserPreviewRouteImport.update({
+  id: '/proto/user-preview',
+  path: '/proto/user-preview',
+  getParentRoute: () => MainRoute,
+} as any)
 const MainSolutionsIndexRoute = MainSolutionsIndexRouteImport.update({
   id: '/solutions/',
   path: '/solutions/',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/docs/search': typeof DocsSearchRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/docs/$': typeof DocsDocsSplatRoute
+  '/proto/user-preview': typeof MainProtoUserPreviewRoute
   '/solutions/$slug': typeof MainSolutionsSlugRoute
   '/docs/': typeof DocsDocsIndexRoute
   '/solutions/': typeof MainSolutionsIndexRoute
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/docs/search': typeof DocsSearchRoute
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/docs/$': typeof DocsDocsSplatRoute
+  '/proto/user-preview': typeof MainProtoUserPreviewRoute
   '/solutions/$slug': typeof MainSolutionsSlugRoute
   '/docs': typeof DocsDocsIndexRoute
   '/solutions': typeof MainSolutionsIndexRoute
@@ -139,6 +147,7 @@ export interface FileRoutesById {
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/_main/': typeof MainIndexRoute
   '/_docs/docs/$': typeof DocsDocsSplatRoute
+  '/_main/proto/user-preview': typeof MainProtoUserPreviewRoute
   '/_main/solutions/$slug': typeof MainSolutionsSlugRoute
   '/_docs/docs/': typeof DocsDocsIndexRoute
   '/_main/solutions/': typeof MainSolutionsIndexRoute
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/docs/search'
     | '/docs/{$}.md'
     | '/docs/$'
+    | '/proto/user-preview'
     | '/solutions/$slug'
     | '/docs/'
     | '/solutions/'
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/docs/search'
     | '/docs/{$}.md'
     | '/docs/$'
+    | '/proto/user-preview'
     | '/solutions/$slug'
     | '/docs'
     | '/solutions'
@@ -186,6 +197,7 @@ export interface FileRouteTypes {
     | '/docs/{$}.md'
     | '/_main/'
     | '/_docs/docs/$'
+    | '/_main/proto/user-preview'
     | '/_main/solutions/$slug'
     | '/_docs/docs/'
     | '/_main/solutions/'
@@ -289,6 +301,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DocsDocsSplatRouteImport
       parentRoute: typeof DocsRoute
     }
+    '/_main/proto/user-preview': {
+      id: '/_main/proto/user-preview'
+      path: '/proto/user-preview'
+      fullPath: '/proto/user-preview'
+      preLoaderRoute: typeof MainProtoUserPreviewRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/solutions/': {
       id: '/_main/solutions/'
       path: '/solutions'
@@ -338,6 +357,7 @@ const DocsRouteWithChildren = DocsRoute._addFileChildren(DocsRouteChildren)
 interface MainRouteChildren {
   MainPluginsRoute: typeof MainPluginsRoute
   MainIndexRoute: typeof MainIndexRoute
+  MainProtoUserPreviewRoute: typeof MainProtoUserPreviewRoute
   MainSolutionsSlugRoute: typeof MainSolutionsSlugRoute
   MainSolutionsIndexRoute: typeof MainSolutionsIndexRoute
 }
@@ -345,6 +365,7 @@ interface MainRouteChildren {
 const MainRouteChildren: MainRouteChildren = {
   MainPluginsRoute: MainPluginsRoute,
   MainIndexRoute: MainIndexRoute,
+  MainProtoUserPreviewRoute: MainProtoUserPreviewRoute,
   MainSolutionsSlugRoute: MainSolutionsSlugRoute,
   MainSolutionsIndexRoute: MainSolutionsIndexRoute,
 }
