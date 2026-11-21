@@ -18,30 +18,11 @@ import React from 'react'
 import type { Variant } from './shared'
 
 import { ambient } from './ambient'
-import { centered } from './centered'
-import { compact } from './compact'
-import { current } from './current'
-import { details } from './details'
-import { glass } from './glass'
-import { group } from './group'
-import { idCard } from './id-card'
-import { immersive } from './immersive'
-import { playful } from './playful'
-import { split } from './split'
+import { lean } from './lean'
+import { sheet } from './sheet'
+import { stats } from './stats'
 
-const VARIANTS: Variant[] = [
-  current,
-  compact,
-  immersive,
-  centered,
-  split,
-  idCard,
-  ambient,
-  glass,
-  group,
-  details,
-  playful,
-]
+const VARIANTS: Variant[] = [ambient, sheet, stats, lean]
 
 interface Person {
   avatarColor: string
@@ -303,7 +284,7 @@ export const UserPreviewPrototype = ({ initial }: { initial: number }) => {
     return () => document.removeEventListener('keydown', onKey)
   }, [active, select])
 
-  const variant = VARIANTS[active] ?? current
+  const variant = VARIANTS[active] ?? ambient
 
   return (
     <>
