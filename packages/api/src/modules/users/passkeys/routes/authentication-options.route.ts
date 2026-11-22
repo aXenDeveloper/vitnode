@@ -8,6 +8,7 @@ import {
 } from "../passkeys.schema";
 
 export const passkeyAuthenticationOptionsRoute = buildRoute({
+  allowWhenOffline: true,
   route: {
     method: "post",
     description:

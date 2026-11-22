@@ -19,6 +19,8 @@ export const ADMIN_DEBUG_PERMISSIONS = {
   cron: admin.cron.canView,
   plugins: admin.plugins.canView,
   queue: admin.queue.canView,
+  manageSiteStatus: admin.site_status.canManage,
+  siteStatus: admin.site_status.canView,
   system: admin.system.canView,
   testAi: admin.system.canTestAi,
   testEmail: admin.system.canSendTestEmail,

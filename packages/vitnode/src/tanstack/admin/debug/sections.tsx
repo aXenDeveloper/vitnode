@@ -1,7 +1,19 @@
+import { PowerOffIcon, RotateCwIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
+import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import { debugHealth } from "@/views/admin/views/core/debug/health/health";
 import { DebugOverview } from "@/views/admin/views/core/debug/sections/overview";
+import { SiteStatusFrame } from "@/views/admin/views/core/debug/sections/site-status";
 import {
   CacheSection,
   PluginsSection,
@@ -13,6 +25,7 @@ import type { DebugSystemTab } from "./tabs";
 
 import {
   useClearAdminCache,
+  useDebugSiteStatus,
   useDebugSources,
   useRecheckDebugSources,
 } from "./query";
@@ -34,6 +47,56 @@ const useDebugArea = (tab: DebugSystemTab) => {
   return { area, sources };
 };
 
+const SiteStatusSkeleton = () => (
+  <div
+    aria-hidden="true"
+    className="bg-muted/50 ring-foreground/10 flex flex-col gap-1 rounded-lg p-1 ring-1"
+  >
+    <div className="flex items-center gap-3 px-3 py-2">
+      <Skeleton className="size-10 rounded-lg" />
+      <div className="flex flex-1 flex-col gap-2">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="h-3 w-52" />
+      </div>
+    </div>
+    <Skeleton className="h-24 rounded-md" />
+  </div>
+);
+
+const DebugSiteStatus = () => {
+  const t = useTranslations("admin.system.site_status");
+  const { canManage, canView, onSave, query } = useDebugSiteStatus();
+  if (!canView) return null;
+  if (query.isPending) return <SiteStatusSkeleton />;
+  if (!query.data) {
+    return (
+      <Empty className="border" role="alert">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <PowerOffIcon aria-hidden="true" />
+          </EmptyMedia>
+          <EmptyTitle>{t("load_error.title")}</EmptyTitle>
+          <EmptyDescription>{t("load_error.desc")}</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button
+            isLoading={query.isFetching}
+            onClick={() => void query.refetch()}
+            variant="outline"
+          >
+            <RotateCwIcon aria-hidden="true" />
+            {t("retry")}
+          </Button>
+        </EmptyContent>
+      </Empty>
+    );
+  }
+
+  return (
+    <SiteStatusFrame canManage={canManage} data={query.data} onSave={onSave} />
+  );
+};
+
 export const DebugOverviewTab = () => {
   const sources = useDebugSources();
   const onClearCache = useClearAdminCache();
@@ -46,6 +109,7 @@ export const DebugOverviewTab = () => {
       isRechecking={isPending}
       onClearCache={onClearCache}
       onRecheck={recheck}
+      siteStatus={<DebugSiteStatus />}
       updates={sources.updates}
       version={sources.installed?.core.version ?? null}
     />

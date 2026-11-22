@@ -55,13 +55,13 @@ Each session expires on its own. A member with a laptop and a phone stays online
 
 ## Browse anonymously
 
-Members who'd rather lurk in peace open **Settings → Overview** (`/settings`) and turn on **Browse anonymously** under **Privacy**, as long as their [roles allow it](#role-settings).
+Members who'd rather lurk in peace open **Settings → Privacy & data** (`/settings/privacy`) and turn on **Browse anonymously** under **Privacy**, as long as their [roles allow it](#role-settings).
 
 <ImgDocs
   withoutBackground
   className="*:max-w-full"
   src={anonymousImg}
-  alt="Privacy section in Settings Overview with the Browse anonymously switch turned on"
+  alt="Privacy section on the Privacy & data settings page with the Browse anonymously switch turned on"
 />
 
 The switch saves `core_users.hideOnlineStatus` through `PUT /users/me/privacy` and takes effect on the next presence read. Everybody else then gets `{ "status": "hidden" }`, with no timestamp at all, and the profile shows **Activity hidden**.

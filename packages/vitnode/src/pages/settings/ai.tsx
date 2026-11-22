@@ -4,7 +4,6 @@ import type { PluginRoutePageProps } from "@/routing";
 
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
 import { AiUsagePanelContent } from "@/tanstack/settings-ai/panel";
-import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
 import {
   aiUsageQueryOptions,
   hasAiFeatures,
@@ -34,8 +33,6 @@ export const route = defineAuthenticatedRoute<AiUsageData>({
   head: ({ t }) => ({
     title: `${t("core.auth.settings.nav.ai")} - ${t("core.auth.settings.title")}`,
   }),
-
-  breadcrumb: settingsBreadcrumb("ai"),
 });
 
 export default AiUsagePage;

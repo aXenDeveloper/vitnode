@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { AnyRouter } from "@tanstack/react-router";
 import type { PermissionsStaffArgs } from "@vitnode/api/lib/permission-staff";
+import type { SiteStatusUpdate } from "@vitnode/api/lib/site-status";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
@@ -24,9 +25,14 @@ import {
 import { integrationsQueryOptions } from "@/views/admin/views/core/system/integrations/integrations-query";
 import { pluginUpdatesQueryOptions } from "@/views/admin/views/core/system/plugins/plugin-updates-query";
 import { installedPluginsQueryOptions } from "@/views/admin/views/core/system/plugins/plugins-query";
+import {
+  adminSiteStatusQueryOptions,
+  updateAdminSiteStatus,
+} from "@/views/admin/views/core/system/site-status/site-status-query";
 import { accountDeletionsSummaryQueryOptions } from "@/views/admin/views/core/users/deletions/deletions-query";
 
-import { useAdminPermissions } from "../permissions";
+import { siteStatusQueryKey } from "../../site-status/query";
+import { useAdminPermission, useAdminPermissions } from "../permissions";
 import { searchIndexQuery } from "../search-index/query";
 
 export const debugLogsQuery = ({ params }: { params: DebugLogsParams }) =>
@@ -62,6 +68,10 @@ export const debugSourceQueries = () =>
     search: {
       options: searchIndexQuery(),
       permission: ADMIN_DEBUG_PERMISSIONS.system,
+    },
+    siteStatus: {
+      options: adminSiteStatusQueryOptions(),
+      permission: ADMIN_DEBUG_PERMISSIONS.siteStatus,
     },
     updates: {
       options: pluginUpdatesQueryOptions(),
@@ -101,6 +111,9 @@ export const warmDebugSources = async (
     warm(sources.search.permission, async () =>
       queryClient.query({ ...sources.search.options, ...STATIC }),
     ),
+    warm(sources.siteStatus.permission, async () =>
+      queryClient.query({ ...sources.siteStatus.options, ...STATIC }),
+    ),
     warm(sources.updates.permission, async () =>
       queryClient.query({ ...sources.updates.options, ...STATIC }),
     ),
@@ -137,6 +150,10 @@ export const useDebugSources = (): DebugSources => {
     ...sources.search.options,
     enabled: can(sources.search.permission),
   });
+  const siteStatus = useQuery({
+    ...sources.siteStatus.options,
+    enabled: can(sources.siteStatus.permission),
+  });
   const updates = useQuery({
     ...sources.updates.options,
     enabled: can(sources.updates.permission),
@@ -149,6 +166,7 @@ export const useDebugSources = (): DebugSources => {
     integrations: integrations.data,
     queue: queue.data,
     search: search.data,
+    siteStatus: siteStatus.data,
     updates: updates.data,
   };
 };
@@ -194,4 +212,35 @@ export const useClearAdminCache = (): (() => Promise<void>) => {
     },
     [queryClient, router],
   );
+};
+
+export const useDebugSiteStatus = () => {
+  const queryClient = useQueryClient();
+  const canView = useAdminPermission(ADMIN_DEBUG_PERMISSIONS.siteStatus);
+  const canManage = useAdminPermission(
+    ADMIN_DEBUG_PERMISSIONS.manageSiteStatus,
+  );
+  const query = useQuery({
+    ...adminSiteStatusQueryOptions(),
+    enabled: canView,
+  });
+
+  const onSave = React.useCallback(
+    async (values: SiteStatusUpdate) => {
+      const result = await updateAdminSiteStatus(values);
+      if ("data" in result) {
+        await Promise.all([
+          queryClient.invalidateQueries({
+            queryKey: adminSiteStatusQueryOptions().queryKey,
+          }),
+          queryClient.invalidateQueries({ queryKey: siteStatusQueryKey }),
+        ]);
+      }
+
+      return result;
+    },
+    [queryClient],
+  );
+
+  return { canManage, canView, onSave, query };
 };

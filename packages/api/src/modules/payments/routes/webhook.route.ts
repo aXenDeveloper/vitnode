@@ -17,6 +17,7 @@ const outcomeSchema = z.object({
 });
 
 export const paymentWebhookRoute = buildRoute({
+  allowWhenOffline: true,
   route: {
     method: "post",
     path: "/webhooks/{providerId}",

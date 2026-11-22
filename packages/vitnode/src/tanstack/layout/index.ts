@@ -7,6 +7,6 @@ export { MainHeader } from "./main-header";
 export { Error500Page, NotFound } from "./not-found";
 export { VitNodeRootProviders } from "./root-providers";
 export { RouteErrorPage } from "./route-error";
-export { UserHeader } from "./user-header";
+export { ThemeLayoutContent } from "./theme-layout-content";
 
-export { ThemeLayoutContent } from "@/views/layouts/theme/layout-content";
+export { UserHeader } from "./user-header";

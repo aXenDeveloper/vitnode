@@ -8,7 +8,6 @@ import {
 } from "@/tanstack/auth/middleware-config";
 import { PasskeysPanelContent } from "@/tanstack/passkeys/panel";
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
-import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
 import { passkeysQueryOptions } from "@/views/auth/settings/passkeys/passkeys-query";
 import { SecuritySettings } from "@/views/auth/settings/security/security";
 
@@ -43,8 +42,6 @@ export const route = defineAuthenticatedRoute<SecurityData>({
   head: ({ t }) => ({
     title: `${t("core.auth.settings.nav.security")} - ${t("core.auth.settings.title")}`,
   }),
-
-  breadcrumb: settingsBreadcrumb("security"),
 });
 
 export default SecurityPage;

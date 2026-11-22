@@ -16,6 +16,7 @@ import { pageEventDefinitions } from "./events/pages";
 import { paymentEventDefinitions } from "./events/payments";
 import { reactionEventDefinitions } from "./events/reactions";
 import { roleEventDefinitions } from "./events/roles";
+import { siteEventDefinitions } from "./events/site";
 import { userEventDefinitions } from "./events/users";
 import { corePersonalData } from "./lib/account-deletion/core-personal-data";
 import {
@@ -39,6 +40,7 @@ import { paymentsModule } from "./modules/payments/payments.module";
 import { queueModule } from "./modules/queue/queue.module";
 import { reactionsModule } from "./modules/reactions/reactions.module";
 import { searchModule } from "./modules/search/search.module";
+import { siteModule } from "./modules/site/site.module";
 import { usersModule } from "./modules/users/users.module";
 
 export const newBuildPluginApiCore = buildApiPlugin({
@@ -63,6 +65,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     ...paymentEventDefinitions,
     ...reactionEventDefinitions,
     ...roleEventDefinitions,
+    ...siteEventDefinitions,
     ...userEventDefinitions,
   ],
   modules: [
@@ -79,6 +82,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     queueModule,
     reactionsModule,
     searchModule,
+    siteModule,
   ],
   permissionStaff: coreStaffPermissions,
   personalData: corePersonalData,

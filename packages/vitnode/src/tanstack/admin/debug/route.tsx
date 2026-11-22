@@ -50,6 +50,7 @@ export const ADMIN_DEBUG_NAMESPACES = [
   "admin.user.deletions",
   "admin.system.integrations",
   "admin.system.plugins",
+  "admin.system.site_status",
   "ai_actions",
   "core.global",
   "core.search",

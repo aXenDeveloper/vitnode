@@ -11,6 +11,7 @@ export const coreStaffPermissions = defineStaffPermissions(manifest, {
   moderator: {
     users: ["can_edit", "can_view_hidden_presence"],
     widgets: ["can_edit"],
+    site_status: ["can_access_offline"],
     warnings: [
       "can_view",
       "can_warn",
@@ -75,6 +76,10 @@ export const coreStaffPermissions = defineStaffPermissions(manifest, {
       { permission: "can_manage", dependsOn: ["can_view"] },
     ],
     ai: ["can_view", { permission: "can_manage", dependsOn: ["can_view"] }],
+    site_status: [
+      "can_view",
+      { permission: "can_manage", dependsOn: ["can_view"] },
+    ],
     cron: ["can_view", { permission: "can_run", dependsOn: ["can_view"] }],
     activity_logs: [
       "can_view",

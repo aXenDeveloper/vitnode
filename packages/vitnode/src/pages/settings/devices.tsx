@@ -2,7 +2,6 @@ import type { PluginRoutePageProps } from "@/routing";
 
 import { DevicesPanelContent } from "@/tanstack/devices/panel";
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
-import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
 import { devicesQueryOptions } from "@/views/auth/settings/devices/devices-query";
 
 interface DevicesData {
@@ -27,8 +26,6 @@ export const route = defineAuthenticatedRoute<DevicesData>({
   head: ({ t }) => ({
     title: `${t("core.auth.settings.nav.devices")} - ${t("core.auth.settings.title")}`,
   }),
-
-  breadcrumb: settingsBreadcrumb("devices"),
 });
 
 export default DevicesPage;
