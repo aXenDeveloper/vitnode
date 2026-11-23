@@ -11,7 +11,17 @@ import { normalizeHost, resolveLocaleDomains } from "./locale-domains";
 import { negotiateLocale } from "./negotiate-locale";
 import { compileRoutePaths } from "./route-paths";
 
-export const DEFAULT_IGNORED_LOCALE_PATHS = ["/admin", "/api"] as const;
+/**
+ * Paths that are never localized: the AdminCP, the API and the crawler files
+ * (`robots.txt` and sitemaps), which live at the root of the site.
+ */
+export const DEFAULT_IGNORED_LOCALE_PATHS = [
+  "/admin",
+  "/api",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/sitemaps",
+] as const;
 
 /** How a locale is (or is not) written into a public URL. */
 export type LocalePrefixMode = NonNullable<VitNodeI18nConfig["localePrefix"]>;

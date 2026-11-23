@@ -11,6 +11,7 @@ import type { PasskeysConfig } from "./lib/passkey-config";
 import type { PaymentProviderApiPlugin } from "./lib/payments/provider";
 import type { BuildPluginApiReturn } from "./lib/plugin";
 import type { FrontendPluginInventory } from "./lib/plugin-manifest";
+import type { SeoApiConfig } from "./lib/seo/config";
 import type { UpdateChannel } from "./lib/updates/manifest";
 import type { PersonalInformationFieldsConfig } from "./lib/user-personal-information";
 import type { RateLimiterConfig } from "./middlewares/rate-limiter-config";
@@ -229,6 +230,12 @@ export interface VitNodeApiConfig {
     /** The search provider. Defaults to PostgreSQL full-text search. */
     adapter?: SearchProviderApiPlugin;
   };
+  /**
+   * `robots.txt` and XML sitemaps. Both work without it; use it to disallow
+   * more paths or to add pages and sources to the sitemap. Admins manage the
+   * rest in AdminCP → System → SEO.
+   */
+  seo?: SeoApiConfig;
 
   /** File uploads, served through `c.get("storage")`. */
   storage?: {

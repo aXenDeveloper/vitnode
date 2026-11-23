@@ -163,10 +163,8 @@ articles in that language, and offers **See all articles**.
 The first page of `/blog` and of every category is indexed by search engines,
 with a canonical link and `hreflang` alternates that use each language's own
 slug. Later pages get `noindex, follow`, so crawlers still reach every
-article. Add `/blog` to your app's `/sitemap.xml`
-next to the article entries; the
-[sitemap route](/docs/content-engine/seo#sitemap) lists articles, not the
-index.
+article. The site's [`/sitemap.xml`](/docs/dev/robots-and-sitemaps) lists
+`/blog` and every published article in each language on its own.
 
 ### Read an article
 

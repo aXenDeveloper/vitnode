@@ -1,0 +1,242 @@
+{
+  "type": "diff",
+  "version": "9",
+  "dialect": "postgres",
+  "id": "d185c917-2729-4144-b3d6-9e1b9ba1d3da",
+  "prevIds": [
+    "d68f291f-7e91-4b91-b606-bca1ba71055c",
+    "7453f5c0-b352-419a-bc5e-314a1576c86f"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_seo_settings"
+      ],
+      "writes": [
+        "s|tbl|public.core_seo_settings",
+        "n|tbl|public.core_seo_settings",
+        "e|tbl|public.core_seo_settings",
+        "n|rel|public.core_seo_settings",
+        "n|type|public.core_seo_settings",
+        "n|rel|public.core_seo_settings_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_seo_settings"
+      ],
+      "writes": [
+        "s|fk|public.core_seo_settings.core_seo_settings_updatedById_core_users_id_fkey",
+        "n|fk|public.core_seo_settings.core_seo_settings_updatedById_core_users_id_fkey",
+        "e|fk|public.core_seo_settings.core_seo_settings_updatedById_core_users_id_fkey",
+        "n|con|public.core_seo_settings.core_seo_settings_updatedById_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_seo_settings",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_seo_settings.updatedById",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_seo_settings",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "id",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "allowIndexing",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "blockAiCrawlers",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "customRobots",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "''",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "sitemapEnabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "true",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "sitemapMaxUrls",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "10000",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "disabledSitemapSources",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "updatedById",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "updatedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "core_seo_settings_updatedById_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "updatedById"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_seo_settings",
+        "name": "core_seo_settings_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

@@ -52,6 +52,9 @@ import { manifest } from "@/manifest.gen";
 export const blogApiPlugin = () =>
   buildApiPlugin({
     manifest,
+    sitemap: {
+      paths: [{ path: "/blog", changeFrequency: "daily", priority: 0.8 }],
+    },
     aiActions: blogAiActions,
     contentNotifications: [commentNotifications],
     eventDefinitions: blogEventDefinitions,

@@ -191,6 +191,11 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           href: "/admin/core/system/notifications",
           permission: staffPermissionArgs(admin.notifications.canView),
         },
+        {
+          title: key("admin.global.nav.system.seo"),
+          href: "/admin/core/system/seo",
+          permission: staffPermissionArgs(admin.seo.canView),
+        },
       ],
     },
     {

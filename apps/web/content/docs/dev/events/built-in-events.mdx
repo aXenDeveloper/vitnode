@@ -799,6 +799,53 @@ message fires it too, with `switched: false`. See
 </Accordion>
 </Accordions>
 
+## SEO events
+
+One name, exported from `@vitnode/api/events/seo` as
+`seoSettingsUpdatedEvent`. It fires **after** the save has committed and the
+cached settings are expired.
+
+| Event                  | Payload                                                                            | Fires when                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `seo.settings.updated` | `{ allowIndexing, blockAiCrawlers, sitemapEnabled, disabledSitemapSources, changedById }` | An admin saves anything in **AdminCP → System → SEO**, including a sitemap source switch |
+
+<Accordions>
+<Accordion title="seo.settings.updated">
+
+Emitted by `PATCH /admin/seo/settings`. See
+[Robots and sitemaps](/docs/dev/robots-and-sitemaps).
+
+<TypeTable
+  type={{
+    allowIndexing: {
+      description: 'Whether search engines may index the site after this save.',
+      type: 'boolean',
+    },
+    blockAiCrawlers: {
+      description: 'Whether robots.txt blocks the AI training crawlers.',
+      type: 'boolean',
+    },
+    sitemapEnabled: {
+      description: 'Whether /sitemap.xml is switched on.',
+      type: 'boolean',
+    },
+    disabledSitemapSources: {
+      description: 'Ids of the sitemap sources switched off, sorted.',
+      type: 'string[]',
+    },
+    changedById: {
+      description: 'Id of the admin who saved it.',
+      type: 'number',
+    },
+  }}
+/>
+
+**A listener would** ping a chat channel when `allowIndexing` turns `false`
+on a production site, or ask a search console to refetch the sitemap.
+
+</Accordion>
+</Accordions>
+
 ## Page layout events
 
 One name, exported from `@vitnode/api/events/pages` as

@@ -62,6 +62,7 @@ import type {
   ReactionsPluginConfig,
   ReactionTargetDefinition,
 } from "./reactions/targets";
+import type { SeoSitemapContribution } from "./seo/config";
 import type { WebSocketConfig } from "./websocket";
 
 import { validateSearchIndexers } from "../models/search";
@@ -139,6 +140,8 @@ export interface BuildPluginApiReturn<
   /** Declared reaction targets plus one per content model with reactions enabled. */
   reactions?: Required<ReactionsPluginConfig>;
   searchIndexers?: SearchIndexer[];
+  /** Pages and sources the plugin adds to the sitemap. */
+  sitemap?: SeoSitemapContribution;
   webSockets?: Omit<WebSocketConfig, "pluginId">[];
 }
 
@@ -209,6 +212,7 @@ export function buildApiPlugin<
   personalData,
   reactions,
   searchIndexers,
+  sitemap,
 }: {
   /**
    * Managed AI actions the plugin runs with `c.get("ai").run()` or
@@ -283,6 +287,12 @@ export function buildApiPlugin<
   reactions?: ReactionsPluginConfig;
   /** Search indexers in addition to those modules declare. */
   searchIndexers?: SearchIndexer[];
+  /**
+   * Pages and sources the plugin adds to the sitemap: `paths` join core's
+   * `static` source (localized for every language), `sources` get their own
+   * files. Content types with `delivery.sitemap` are added automatically.
+   */
+  sitemap?: SeoSitemapContribution;
 }): BuildPluginApiReturn<P, Modules> {
   const pluginId = manifest.id;
   // Run for checking if the plugin is valid
@@ -474,6 +484,7 @@ export function buildApiPlugin<
     personalData,
     ogImageTemplates,
     searchIndexers: indexers,
+    sitemap,
     webSockets,
     // Every content type contributes can_view/can_create/can_edit/can_delete
     // unless the plugin declared that module itself.

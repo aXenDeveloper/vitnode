@@ -40,6 +40,9 @@
   "@vitnode/core:site_status:can_view": "View whether the site is online and its offline message",
   "@vitnode/core:site_status:can_manage": "Switch the site off and on, and edit its offline message",
   "@vitnode/core:site_status:can_access_offline": "Access the site while it's offline",
+  "@vitnode/core:seo": "SEO",
+  "@vitnode/core:seo:can_view": "View the robots.txt and sitemap settings",
+  "@vitnode/core:seo:can_manage": "Change the robots.txt and sitemap settings",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:plugins": "Plugins",
@@ -4047,7 +4050,8 @@
           "integrations": "Integrations",
           "files": "Files",
           "notifications": "Notifications",
-          "plugins": "Plugins"
+          "plugins": "Plugins",
+          "seo": "SEO"
         },
         "ai": {
           "title": "Artificial Intelligence (AI)",
@@ -5663,6 +5667,80 @@
           "show_countdown": {
             "label": "Show countdown",
             "desc": "Show a live countdown. When off, visitors see only the date."
+          }
+        }
+      },
+      "seo": {
+        "title": "SEO",
+        "desc": "Decide what search engines and AI crawlers may visit, and which pages your sitemap lists.",
+        "tabs": {
+          "general": "General & robots.txt",
+          "sitemaps": "Sitemaps"
+        },
+        "submit": "Save",
+        "saved": {
+          "title": "SEO settings saved",
+          "desc": "Crawlers pick up the new robots.txt and sitemap on their next visit."
+        },
+        "robots": {
+          "allow_indexing": {
+            "label": "Allow search engines to index this site",
+            "desc": "Turn it off for a staging or private site: every crawler is told to stay away and the sitemaps stop answering."
+          },
+          "indexing_off": {
+            "title": "Search engines are blocked",
+            "desc": "robots.txt says \"Disallow: /\" to everyone. Pages already in search results drop out over the next weeks, so only use this on a site that shouldn't be found."
+          },
+          "block_ai": {
+            "label": "Block AI training crawlers",
+            "desc": "Asks bots that collect pages to train AI models (GPTBot, ClaudeBot, Google-Extended, CCBot and friends) to skip the site. Regular search keeps working."
+          },
+          "custom": {
+            "label": "Custom robots.txt rules",
+            "desc": "Added to the end of the file exactly as written, one rule per line."
+          },
+          "preview": {
+            "title": "Live preview",
+            "desc": "What /robots.txt serves once you save. It updates as you type.",
+            "offline": "The site is offline right now, so /robots.txt answers 503 and crawlers come back later. This is what they get once it opens.",
+            "open": "Open robots.txt",
+            "copy": "Copy robots.txt"
+          }
+        },
+        "sitemaps": {
+          "enabled": {
+            "label": "Enable XML sitemaps",
+            "desc": "Serves /sitemap.xml with every public page your plugins and content types list, split into smaller files."
+          },
+          "open": "Open {url}",
+          "indexing_off": "Sitemaps are hidden while search engine indexing is turned off.",
+          "max_urls": {
+            "label": "URLs per sitemap file",
+            "desc": "Bigger files mean fewer requests; the protocol allows up to {max, number}.",
+            "unit": "URLs"
+          }
+        },
+        "sources": {
+          "title": "Sources",
+          "desc": "Everything that adds pages to your sitemap. Switch a source off to drop its pages from /sitemap.xml right away.",
+          "columns": {
+            "source": "Source",
+            "urls": "URLs",
+            "files": "Files",
+            "preview": "Preview",
+            "enabled": "In sitemap"
+          },
+          "preview": "First file",
+          "empty": "No public pages yet",
+          "not_served": "Not served",
+          "error": "Failed to count",
+          "static": "Pages",
+          "toggle_label": "Include {label} in the sitemap",
+          "toggled": {
+            "on": "{label} added to the sitemap",
+            "on_desc": "Its pages show up in /sitemap.xml again.",
+            "off": "{label} removed from the sitemap",
+            "off_desc": "Its pages and files are gone from /sitemap.xml."
           }
         }
       }

@@ -53,6 +53,11 @@ export const ADMIN_REPORT_REASON_PERMISSIONS = {
   view: admin.report_reasons.canView,
 } as const;
 
+export const ADMIN_SEO_PERMISSIONS = {
+  manage: admin.seo.canManage,
+  view: admin.seo.canView,
+} as const;
+
 export const ADMIN_WARNING_PERMISSIONS = {
   manage: admin.warning_settings.canManage,
   view: admin.warning_settings.canView,

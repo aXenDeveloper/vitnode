@@ -81,6 +81,7 @@ import type { PaymentProviderApiPlugin } from "../lib/payments/provider";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
 import type { QueueTaskConfig } from "../lib/queue";
 import type { ReactionsRegistry } from "../lib/reactions/targets";
+import type { ResolvedSeoConfig } from "../lib/seo/config";
 import type { UpdateComponent } from "../lib/updates/components";
 import type { WebSocketConfig } from "../lib/websocket";
 import type { EventsApiPlugin } from "../models/events";
@@ -90,6 +91,7 @@ import type {
 } from "../models/search";
 import type { SSOApiPlugin } from "../models/sso";
 
+import { contentSitemapSources } from "../content/server/sitemap-source";
 import { assertAiModelPricing } from "../lib/ai/pricing";
 import { assertContentAiActions, collectAiActions } from "../lib/ai/registry";
 import { collectAuditActions } from "../lib/audit/registry";
@@ -115,6 +117,7 @@ import { resolvePasskeysConfig } from "../lib/passkey-config";
 import { validatePaymentProviders } from "../lib/payments/provider";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
 import { validateReactionsRegistry } from "../lib/reactions/targets";
+import { resolveSeoConfig } from "../lib/seo/config";
 import { collectUpdateComponents } from "../lib/updates/components";
 import { resolveUpdatesConfig } from "../lib/updates/config";
 
@@ -284,6 +287,8 @@ export interface EnvVariablesVitNode {
     reactions: ReactionsRegistry;
     search: { adapter: SearchProviderApiPlugin };
     searchIndexers: SearchIndexerConfig[];
+    /** `robots.txt` paths and every declared sitemap source, resolved at boot. */
+    seo: ResolvedSeoConfig;
     storage?: VitNodeApiConfig["storage"];
     /** Core and every catalog plugin, with the update source and versions to check. */
     updates: {
@@ -396,6 +401,7 @@ export const globalMiddleware = ({
   ogImage,
   payments,
   search,
+  seo,
   storage,
   updates,
   users,
@@ -419,6 +425,7 @@ export const globalMiddleware = ({
     | "payments"
     | "plugins"
     | "search"
+    | "seo"
     | "storage"
     | "updates"
     | "users"
@@ -566,6 +573,12 @@ export const globalMiddleware = ({
         pluginId: plugin.pluginId,
       })),
   );
+
+  const seoMetadata = resolveSeoConfig({
+    config: seo,
+    contentSources: contentSitemapSources(contentModelsMetadata),
+    plugins,
+  });
 
   // Computed at boot, outside the request: "does anything need the languages
   // table" is a property of the installed plugins, not of a request.
@@ -764,6 +777,7 @@ export const globalMiddleware = ({
       payments: paymentsMetadata,
       contentContainers: contentContainersMetadata,
       contentModels: contentModelsMetadata,
+      seo: seoMetadata,
       contentNotifications: contentNotificationsMetadata,
       contentRevalidateOrigins: content?.revalidateOrigins,
       contentTypes: contentTypesMetadata,

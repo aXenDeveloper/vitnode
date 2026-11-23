@@ -176,7 +176,42 @@ delivery: {
 
 ## Sitemap
 
-`delivery.sitemap` adds a public route that lists every published URL of the content type, oldest record first. Pass `true` or `{ changeFrequency, priority }`. It needs `publication: true`, since a sitemap lists only what readers can reach.
+`delivery.sitemap` puts every published record of the content type in the site's [`/sitemap.xml`](/docs/dev/robots-and-sitemaps). Pass `true` or `{ changeFrequency, priority }`. It needs `publication: true`, since a sitemap lists only what readers can reach.
+
+```ts title="plugins/newsroom/src/content/story.ts"
+delivery: {
+  sitemap: { changeFrequency: "weekly", priority: 0.7 },
+},
+```
+
+The content type gets its own files, named after its id with the dot swapped for `_`: `newsroom.story` is served at `/sitemaps/newsroom_story-1.xml`, `-2.xml` and so on.
+
+```xml title="/sitemaps/newsroom_story-1.xml"
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://example.com/stories/hello-content-engine</loc>
+    <lastmod>2026-10-10T11:06:30.518Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+</urlset>
+```
+
+A record is listed only when a guest could open its page:
+
+- It is published, and its `publishedAt` has passed. Drafts, scheduled records, [hidden](/docs/content-engine/content-visibility) and deleted ones stay out.
+- A guest may read it under the type's [access rules](/docs/content-engine/access-behavior), whoever requests the sitemap.
+- Its `noIndexField` is not `true`.
+- The URL uses the current slug, never one from slug history.
+
+A localized type lists one URL per published translation. Each one carries `xhtml:link` alternates for every published language, plus `x-default` with `delivery.hreflang`. With `delivery.seo.openGraph.imageField`, the record's cover is added as `<image:image>`. Records come in id order, so a file always holds the same records between visits.
+
+Admins switch a content type out of the sitemap in **AdminCP → System → SEO → Sitemaps**.
+
+### Sitemap API for external front ends
+
+A front end that builds its own sitemap reads the same records, one language at a time, from a JSON route:
 
 ```bash
 curl "http://localhost:3000/api/newsroom/content/stories/delivery/sitemap?cursor=1&limit=1"
@@ -198,84 +233,9 @@ curl "http://localhost:3000/api/newsroom/content/stories/delivery/sitemap?cursor
 }
 ```
 
-- A page holds 1,000 entries by default and up to 50,000 with `?limit=`. `cursor` is the `itemId` to continue after, so pass `nextCursor` back as `?cursor=` until it is `null`.
-- `lastModified` is the record's `updatedAt`, or the translation's when that is newer.
-- Records whose `noIndexField` is `true` are left out, and so are [hidden](/docs/content-engine/content-visibility) records.
-- Entries come in id order. For a [uuid](/docs/content-engine/id-strategy) content type that order is lexical, not creation order, and every record still appears once.
-- A localized type returns one language per request. Ask for another with `?locale=`:
-
-```bash
-curl "http://localhost:3000/api/@vitnode/blog/content/blog/delivery/sitemap?locale=pl&limit=1"
-```
-
-```json
-{
-  "entries": [
-    {
-      "changeFrequency": "weekly",
-      "itemId": 4,
-      "lastModified": "2026-08-12T18:00:43.308Z",
-      "locale": "pl",
-      "path": "/pl/wpisy/polish-title",
-      "priority": 0.7
-    }
-  ],
-  "nextCursor": 4
-}
-```
-
-The app's `/sitemap.xml` does not read these routes for you, so add the entries where you build it. `contentSitemapXml` from `@vitnode/core/content` writes the XML:
-
-```ts
-import {
-  contentSitemapXml,
-  isContentSitemapChangeFrequency,
-} from "@vitnode/core/content";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-
-const response = await fetcher({
-  plugin: "newsroom",
-  method: "get",
-  module: "content/stories",
-  path: "/delivery/sitemap",
-  args: { query: { limit: 1000 } },
-});
-if (!response.ok) throw new Error("Could not load the story sitemap.");
-const { entries } = await response.json();
-
-const xml = contentSitemapXml({
-  origin: "https://example.com",
-  entries: entries.map(entry => ({
-    ...entry,
-    changeFrequency: isContentSitemapChangeFrequency(entry.changeFrequency)
-      ? entry.changeFrequency
-      : null,
-    lastModified: new Date(entry.lastModified),
-  })),
-});
-```
-
-With the newsroom plugin's two published stories, `xml` is:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://example.com/stories/jbbjk-1</loc>
-    <lastmod>2026-08-30T09:18:25.398Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://example.com/stories/hello-content-engine</loc>
-    <lastmod>2026-10-10T11:06:30.518Z</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
-  </url>
-</urlset>
-```
-
-`contentSitemapIndexXml` writes a `<sitemapindex>` once one file is not enough, for example one file per content type and language.
+- A page holds 1,000 entries by default and up to 50,000 with `?limit=`. Pass `nextCursor` back as `?cursor=` until it is `null`.
+- A localized type returns one language per request; ask for another with `?locale=pl`.
+- `contentSitemapXml` and `contentSitemapIndexXml` from `@vitnode/core/content` turn the entries into XML.
 
 ## Retired slugs
 
@@ -305,4 +265,4 @@ Then ask the resolve route what the page was given, `openGraph` and `robots` inc
 curl http://localhost:3000/api/newsroom/content/stories/delivery/resolve/hello-content-engine
 ```
 
-Set `noIndex` on a test story, publish it, and run both commands again. The page gains the `robots` tag, and the [sitemap](#sitemap) route stops listing it.
+Set `noIndex` on a test story, publish it, and run both commands again. The page gains the `robots` tag, and `/sitemaps/newsroom_story-1.xml` stops listing it.

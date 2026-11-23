@@ -16,8 +16,10 @@ import { newsroomApiPlugin } from 'newsroom/config.api'
 import { paymentsDemoApiPlugin } from 'payments-demo/config.api'
 
 import { contentModules } from './content-modules.gen'
+import { docsSitemapSource } from './docs/sitemap-source'
 import { appMessages } from './locales/app'
 import { frontendPlugins } from './plugin-inventory.gen'
+import { PRERENDERED_PATHS } from './site/prerender'
 import { vitNodeConfig } from './vitnode.config'
 
 config({ quiet: true })
@@ -47,6 +49,16 @@ export const vitNodeApiConfig = buildApiConfig({
   ],
   contentModules,
   frontendPlugins,
+  seo: {
+    sitemap: {
+      paths: PRERENDERED_PATHS.map((path) => ({
+        changeFrequency: 'monthly',
+        path,
+        priority: path === '/' ? 1 : 0.8,
+      })),
+      sources: [docsSitemapSource],
+    },
+  },
   storage: {
     // Re-encoding needs sharp, a native module Workers cannot load: there,
     // images are stored as uploaded.

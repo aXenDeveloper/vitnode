@@ -27,6 +27,9 @@
   "@vitnode/core:site_status:can_view": "Podgląd, czy strona jest dostępna, i jej komunikatu o przerwie",
   "@vitnode/core:site_status:can_manage": "Wyłączanie i włączanie strony oraz edycja komunikatu o przerwie",
   "@vitnode/core:site_status:can_access_offline": "Dostęp do strony, gdy jest wyłączona",
+  "@vitnode/core:seo": "SEO",
+  "@vitnode/core:seo:can_view": "Podgląd ustawień robots.txt i map witryny",
+  "@vitnode/core:seo:can_manage": "Zmiana ustawień robots.txt i map witryny",
   "@vitnode/core:plugins": "Wtyczki",
   "@vitnode/core:plugins:can_view": "Przeglądanie zainstalowanych wtyczek i ich wersji",
   "@vitnode/core:queue": "Zadania w kolejce",
@@ -528,7 +531,8 @@
           "integrations": "Integracje",
           "plugins": "Wtyczki",
           "title": "System",
-          "notifications": "Powiadomienia"
+          "notifications": "Powiadomienia",
+          "seo": "SEO"
         },
         "user_bar": {
           "debug": "Panel debugowania",
@@ -1622,6 +1626,80 @@
           "show_countdown": {
             "label": "Pokaż odliczanie",
             "desc": "Pokazuj odliczanie na żywo. Po wyłączeniu odwiedzający widzą tylko datę."
+          }
+        }
+      },
+      "seo": {
+        "title": "SEO",
+        "desc": "Zdecyduj, co mogą odwiedzać wyszukiwarki i roboty AI oraz które strony trafiają do mapy witryny.",
+        "tabs": {
+          "general": "Ogólne i robots.txt",
+          "sitemaps": "Mapy witryny"
+        },
+        "submit": "Zapisz",
+        "saved": {
+          "title": "Zapisano ustawienia SEO",
+          "desc": "Roboty pobiorą nowy robots.txt i mapę witryny przy następnej wizycie."
+        },
+        "robots": {
+          "allow_indexing": {
+            "label": "Pozwól wyszukiwarkom indeksować stronę",
+            "desc": "Wyłącz na stronie testowej lub prywatnej: każdy robot dostaje zakaz wstępu, a mapy witryny przestają odpowiadać."
+          },
+          "indexing_off": {
+            "title": "Wyszukiwarki są zablokowane",
+            "desc": "robots.txt mówi wszystkim \"Disallow: /\". Strony znikną z wyników wyszukiwania w ciągu kilku tygodni, więc używaj tego tylko na stronie, której nikt nie powinien znaleźć."
+          },
+          "block_ai": {
+            "label": "Blokuj roboty trenujące AI",
+            "desc": "Prosi boty zbierające strony do trenowania modeli AI (GPTBot, ClaudeBot, Google-Extended, CCBot i inne), żeby omijały stronę. Zwykłe wyszukiwanie działa dalej."
+          },
+          "custom": {
+            "label": "Własne reguły robots.txt",
+            "desc": "Dopisywane na końcu pliku dokładnie tak, jak je wpiszesz, jedna reguła na linię."
+          },
+          "preview": {
+            "title": "Podgląd na żywo",
+            "desc": "Tak będzie wyglądał /robots.txt po zapisaniu. Zmienia się w trakcie pisania.",
+            "offline": "Strona jest teraz wyłączona, więc /robots.txt odpowiada 503 i roboty wrócą później. Po otwarciu strony dostaną ten plik.",
+            "open": "Otwórz robots.txt",
+            "copy": "Kopiuj robots.txt"
+          }
+        },
+        "sitemaps": {
+          "enabled": {
+            "label": "Włącz mapy witryny XML",
+            "desc": "Udostępnia /sitemap.xml ze wszystkimi publicznymi stronami z wtyczek i typów treści, podzielonymi na mniejsze pliki."
+          },
+          "open": "Otwórz {url}",
+          "indexing_off": "Mapy witryny są ukryte, dopóki indeksowanie przez wyszukiwarki jest wyłączone.",
+          "max_urls": {
+            "label": "Adresów URL w jednym pliku",
+            "desc": "Większe pliki to mniej zapytań; protokół pozwala na maksymalnie {max, number}.",
+            "unit": "adresów"
+          }
+        },
+        "sources": {
+          "title": "Źródła",
+          "desc": "Wszystko, co dodaje strony do mapy witryny. Wyłącz źródło, a jego strony od razu znikną z /sitemap.xml.",
+          "columns": {
+            "source": "Źródło",
+            "urls": "Adresy",
+            "files": "Pliki",
+            "preview": "Podgląd",
+            "enabled": "W mapie"
+          },
+          "preview": "Pierwszy plik",
+          "empty": "Brak publicznych stron",
+          "not_served": "Niedostępne",
+          "error": "Nie udało się policzyć",
+          "static": "Strony",
+          "toggle_label": "Uwzględnij {label} w mapie witryny",
+          "toggled": {
+            "on": "Dodano {label} do mapy witryny",
+            "on_desc": "Jego strony znów są w /sitemap.xml.",
+            "off": "Usunięto {label} z mapy witryny",
+            "off_desc": "Jego strony i pliki zniknęły z /sitemap.xml."
           }
         }
       }

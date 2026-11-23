@@ -271,6 +271,7 @@ export function VitNodeAPI({
       activityLogs: vitNodeApiConfig.activityLogs,
       payments: vitNodeApiConfig.payments,
       search: vitNodeApiConfig.search,
+      seo: vitNodeApiConfig.seo,
       storage: vitNodeApiConfig.storage,
       updates: vitNodeApiConfig.updates,
       users: vitNodeApiConfig.users,

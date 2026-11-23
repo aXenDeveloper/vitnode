@@ -1,0 +1,105 @@
+---
+title: Sitemap sources
+description: Add pages and custom sources to the VitNode XML sitemap from a plugin or an app with buildApiPlugin({ sitemap }), buildApiConfig({ seo }) and registerSitemapSource.
+icon: Network
+---
+
+A sitemap source is a list of public URLs with its own files in `/sitemap.xml`. VitNode makes one for the site's fixed pages (`static`) and one per [content type with `delivery.sitemap`](/docs/content-engine/seo#sitemap). Add your own when a plugin or an app has pages the Content Engine doesn't know about, such as a listing page, a docs site or records from an external service.
+
+## Add plugin pages
+
+A listing page like `/news` belongs in the `static` source. Name it in the plugin's API config:
+
+```ts title="plugins/newsroom/src/config.api.ts"
+export const newsroomApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    sitemap: {
+      paths: [{ path: "/news", changeFrequency: "daily", priority: 0.8 }],
+    },
+    modules: [
+      // ...
+    ],
+  });
+```
+
+A path is the internal, unlocalized route. VitNode writes one URL per language with the translated route path (`/pl/wiadomosci` when the app's `routePaths` translate it) and `hreflang` alternates plus `x-default`. A plain string such as `"/news"` works too. The blog and forum plugins add `/blog` and `/forum` this way.
+
+## Add app pages
+
+The app adds pages, more disallowed paths and whole sources in `buildApiConfig({ seo })`:
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/api/vitnode.config";
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  seo: {
+    robots: { disallow: ["/checkout"] },
+    sitemap: {
+      paths: ["/", "/pricing", { path: "/about", priority: 0.5 }],
+      sources: [docsSitemapSource],
+    },
+  },
+});
+```
+
+`robots.disallow` adds paths to the private areas `/robots.txt` always disallows, in every language.
+
+## Write a source
+
+Build a source with `defineSitemapSource` when its URLs come from data. It needs a `count` and a page of entries at an `offset`, both in a stable order so file 2 always holds the same URLs:
+
+```ts title="src/docs/sitemap-source.ts"
+import { defineSitemapSource } from "@vitnode/api/lib/seo/sitemap";
+
+const docsUrls = async (): Promise<string[]> => {
+  const { source } = await import("./source.server");
+
+  return source
+    .getPages()
+    .map(page => page.url)
+    .sort((a, b) => a.localeCompare(b));
+};
+
+export const docsSitemapSource = defineSitemapSource({
+  id: "docs",
+  label: "Documentation",
+  count: async () => (await docsUrls()).length,
+  getEntries: async (_c, { limit, offset }) =>
+    (await docsUrls())
+      .slice(offset, offset + limit)
+      .map(loc => ({ changeFrequency: "weekly", loc, priority: 0.6 })),
+});
+```
+
+This is the source `apps/web` uses for its documentation. Pass it to `buildApiConfig({ seo: { sitemap: { sources } } })` or, from a plugin, to `buildApiPlugin({ sitemap: { sources } })`. Both functions receive the Hono context, so a source can query `c.get("db")`. They run for anonymous crawlers: return only what a guest may open.
+
+For a fixed list that should be localized like the `static` source but get its own files, use `staticSitemapSource({ id, label, paths })` from `@vitnode/api/lib/seo/static-source`.
+
+### Register at runtime
+
+`registerSitemapSource(source)` from `@vitnode/api/lib/seo/registry` adds a source from code that runs at startup, for example an integration that is only configured sometimes. Registering the same id again replaces the earlier source. A declared source with the same id wins over a registered one.
+
+## Source reference
+
+| Name               | Type                                                         | Required | Description                                                                                   |
+| ------------------ | ------------------------------------------------------------ | -------- | --------------------------------------------------------------------------------------------- |
+| `id`               | `string`                                                     | Yes      | Unique, lowercase letters, digits, `_` and `-` (`/^[a-z0-9_-]+$/`). Files are `/sitemaps/{id}-{n}.xml` |
+| `label`            | `string`                                                     | Yes      | An i18n key or plain text, shown in **AdminCP → System → SEO**                                |
+| `count`            | `(c) => Promise<number>`                                     | Yes      | Total entries. `0` keeps the source out of the index                                          |
+| `getEntries`       | `(c, { limit, offset }) => Promise<SitemapEntry[]>`          | Yes      | One page of entries                                                                           |
+| `getLastModified`  | `(c) => Promise<Date \| null>`                              | No       | The newest change, written as `<lastmod>` of the source's files in the index                  |
+
+A `SitemapEntry` has `loc` (an absolute URL or a path on the site origin) and, optionally, `lastModified`, `changeFrequency` (`"always"` to `"never"`), `priority` (`0` to `1`), `alternates` (`{ hreflang, href }[]`, including the entry's own language and `x-default` if you want one) and `images` (`{ loc }[]`). The `xhtml` and `image` namespaces are only declared in a file that uses them, and every value is XML-escaped.
+
+Boot stops with an error when an id is invalid or two declared sources share one. Content type sources take their id from the content type (`newsroom.story` becomes `newsroom_story`), so pick a different id for your own.
+
+## Check the result
+
+Restart the dev server and open `/sitemap.xml`: your source's files are listed once `count` returns more than `0`, and **AdminCP → System → SEO → Sitemaps** shows it in **Sources** with its URL count. Open its first file, such as `/sitemaps/docs-1.xml`, to see the entries.
+
+## Related
+
+- [Robots and sitemaps](/docs/dev/robots-and-sitemaps): the AdminCP settings and the files VitNode serves.
+- [Content Engine SEO](/docs/content-engine/seo#sitemap): sitemaps for content types.

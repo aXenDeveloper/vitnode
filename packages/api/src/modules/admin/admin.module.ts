@@ -13,6 +13,7 @@ import { reportReasonsAdminModule } from "./report-reasons/report-reasons.module
 import { rolesAdminModule } from "./roles/roles.module";
 import { sendNotificationRoute } from "./routes/send-notification.route";
 import { sessionAdminRoute } from "./routes/session.route";
+import { seoAdminModule } from "./seo/seo.module";
 import { siteAdminModule } from "./site/site.module";
 import { staffAdminModule } from "./staff/staff.module";
 import { usersAdminModule } from "./users/users.module";
@@ -36,6 +37,7 @@ export const adminModule = buildModule({
     reactionsAdminModule,
     reportReasonsAdminModule,
     warningsAdminModule,
+    seoAdminModule,
     siteAdminModule,
   ],
   cronJobs: [],

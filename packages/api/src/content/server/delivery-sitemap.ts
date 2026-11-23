@@ -51,6 +51,47 @@ const noIndexColumn = (
   return leaf === undefined ? null : (columns[leaf.columnName] ?? null);
 };
 
+/**
+ * What every sitemap line of a content type must satisfy, on its base table:
+ * published (not scheduled, hidden or deleted), readable by a guest, and not
+ * marked `noIndex`. Localized types also need their translation published.
+ */
+export const contentSitemapConditions = async <
+  TDefinition extends AnyContentTypeDefinition,
+>({
+  c,
+  model,
+}: {
+  c: Context;
+  model: ContentModel<TDefinition>;
+}): Promise<SQL[]> => {
+  const { columns, definition } = model;
+  const exclude = noIndexColumn(definition, columns);
+  const conditions: (SQL | undefined)[] = [
+    publishedCondition(publicationColumns(definition, columns)),
+    // A sitemap is public, so it lists only what a guest may read - whoever
+    // happens to be asking for it.
+    await contentPublicAccessCondition(c, definition, {
+      actor: CONTENT_ACCESS_GUEST,
+    }),
+    // `IS DISTINCT FROM TRUE`, which is the only spelling that agrees with the
+    // metadata. `contentDeliveryRobots` reads `value !== true`, so a `noIndex` of
+    // `null` means `index: true` - and the sitemap has to list exactly what claims
+    // to be indexable, because "absent from the sitemap" and "robots says index
+    // me" is a contradiction a crawler resolves however it likes.
+    //
+    // `<> TRUE` cannot say it. In SQL `NULL <> TRUE` is `NULL`, not `TRUE`, and a
+    // `WHERE` clause drops every row it cannot prove - so a nullable `noIndexField`
+    // would quietly empty the sitemap of every record nobody had ever set the flag
+    // on, while every one of their pages rendered `index: true`. `IS DISTINCT
+    // FROM` is the null-aware comparison: `true` excludes, `false` and `null`
+    // include, which is the metadata rule written once more in SQL.
+    exclude === null ? undefined : sql`${exclude} is distinct from true`,
+  ];
+
+  return conditions.filter((part): part is SQL => part !== undefined);
+};
+
 export const readContentDeliverySitemapPage = async <
   TDefinition extends AnyContentTypeDefinition,
 >({
@@ -87,8 +128,6 @@ export const readContentDeliverySitemapPage = async <
     ),
   );
   const slugField = definition.publicApi.slugField;
-  const base = publicationColumns(definition, columns);
-  const exclude = noIndexColumn(definition, columns);
   const localized = definition.localization.enabled;
   // Widened, not cast - see `readDeliveryAlternatesMany` for why. The translation
   // table needs the same treatment for the join below.
@@ -96,26 +135,8 @@ export const readContentDeliverySitemapPage = async <
   const joinedTranslations: null | PgTable = model.translationTable;
 
   const conditions: (SQL | undefined)[] = [
-    publishedCondition(base),
-    // A sitemap is public, so it lists only what a guest may read - whoever
-    // happens to be asking for it.
-    await contentPublicAccessCondition(c, definition, {
-      actor: CONTENT_ACCESS_GUEST,
-    }),
+    ...(await contentSitemapConditions({ c, model })),
     cursor === null ? undefined : gt(columns.id, cursor),
-    // `IS DISTINCT FROM TRUE`, which is the only spelling that agrees with the
-    // metadata. `contentDeliveryRobots` reads `value !== true`, so a `noIndex` of
-    // `null` means `index: true` - and the sitemap has to list exactly what claims
-    // to be indexable, because "absent from the sitemap" and "robots says index
-    // me" is a contradiction a crawler resolves however it likes.
-    //
-    // `<> TRUE` cannot say it. In SQL `NULL <> TRUE` is `NULL`, not `TRUE`, and a
-    // `WHERE` clause drops every row it cannot prove - so a nullable `noIndexField`
-    // would quietly empty the sitemap of every record nobody had ever set the flag
-    // on, while every one of their pages rendered `index: true`. `IS DISTINCT
-    // FROM` is the null-aware comparison: `true` excludes, `false` and `null`
-    // include, which is the metadata rule written once more in SQL.
-    exclude === null ? undefined : sql`${exclude} is distinct from true`,
   ];
 
   if (!localized) {

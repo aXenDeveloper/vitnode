@@ -18,6 +18,9 @@ import { manifest } from "@/manifest.gen";
 export const forumApiPlugin = () =>
   buildApiPlugin({
     manifest,
+    sitemap: {
+      paths: [{ path: "/forum", changeFrequency: "hourly", priority: 0.8 }],
+    },
     contentNotifications: [commentNotifications, topicNotifications],
     messages,
     modules: [

@@ -21,6 +21,7 @@ import * as queue from "./queue";
 import * as roles from "./roles";
 import * as search from "./search";
 import * as secrets from "./secrets";
+import * as seo from "./seo";
 import * as sessions from "./sessions";
 import * as site from "./site";
 import * as users from "./users";
@@ -47,6 +48,7 @@ export const coreSchema = {
   ...roles,
   ...search,
   ...secrets,
+  ...seo,
   ...sessions,
   ...site,
   ...users,
