@@ -1,6 +1,11 @@
+import type { QueryClient } from '@tanstack/react-query'
+import type { AbstractIntlMessages } from 'use-intl'
+
+import { intlQueryOptions } from '@vitnode/core/tanstack/i18n'
 import { pageHead } from '@vitnode/core/tanstack/metadata'
 
 import { HOME_DESCRIPTION, HOME_TITLE } from '@/site/home/metadata'
+import { vitNodeConfig } from '@/vitnode.config'
 
 import {
   AUTHOR_NAME,
@@ -23,6 +28,51 @@ export interface MarketingPageMeta {
   path: string
   title: string
 }
+
+export interface MarketingPageText {
+  description: string
+  locale: string
+  title: string
+}
+
+const MARKETING_META_NAMESPACE = 'site.meta'
+
+type TranslatedMarketingPage = 'home' | 'plugins' | 'solutions'
+
+const messageAt = (
+  messages: AbstractIntlMessages,
+  path: readonly string[],
+): string | undefined => {
+  let node: AbstractIntlMessages | string | undefined = messages
+  for (const segment of path) {
+    if (typeof node !== 'object') return undefined
+    node = node[segment]
+  }
+
+  return typeof node === 'string' ? node : undefined
+}
+
+export const loadMarketingPageText = async (
+  { locale, queryClient }: { locale: string; queryClient: QueryClient },
+  page: TranslatedMarketingPage,
+): Promise<MarketingPageText> => {
+  const { messages } = await queryClient.query({
+    ...intlQueryOptions({ locale, namespaces: [MARKETING_META_NAMESPACE] }),
+    staleTime: 'static',
+  })
+  const pagePath = [...MARKETING_META_NAMESPACE.split('.'), page]
+  const fallback = MARKETING_PAGES[page]
+
+  return {
+    description:
+      messageAt(messages, [...pagePath, 'description']) ?? fallback.description,
+    locale,
+    title: messageAt(messages, [...pagePath, 'title']) ?? fallback.title,
+  }
+}
+
+const everyLocale = (path: string) =>
+  Object.fromEntries(vitNodeConfig.i18n.locales.map(({ code }) => [code, path]))
 
 export const MARKETING_PAGES = {
   home: { description: HOME_DESCRIPTION, path: '/', title: HOME_TITLE },
@@ -69,7 +119,11 @@ const breadcrumbNode = (crumbs: MarketingCrumb[]) => ({
   ],
 })
 
-const structuredData = (page: MarketingPageMeta, url: string) => ({
+const structuredData = (
+  page: MarketingPageMeta,
+  url: string,
+  locale: string,
+) => ({
   '@context': 'https://schema.org',
   '@graph': [
     {
@@ -84,7 +138,7 @@ const structuredData = (page: MarketingPageMeta, url: string) => ({
       '@type': 'WebPage',
       about: { '@id': softwareNode['@id'] },
       description: page.description,
-      inLanguage: 'en',
+      inLanguage: locale,
       isPartOf: { '@id': `${SITE_ORIGIN}/#website` },
       name: `${page.title} - VitNode`,
       url,
@@ -106,35 +160,34 @@ const structuredData = (page: MarketingPageMeta, url: string) => ({
   ],
 })
 
-export const marketingHead = (page: MarketingPageMeta) => {
-  const { description, path, title } = page
-  const url = new URL(path, SITE_ORIGIN).href
+export const marketingHead = (
+  page: MarketingPageMeta,
+  text: Partial<MarketingPageText> = {},
+) => {
+  const description = text.description ?? page.description
+  const title = text.title ?? page.title
+  const locale = text.locale ?? vitNodeConfig.i18n.defaultLocale
   const socialTitle = `${title} - VitNode`
   const head = pageHead({
+    alternates: everyLocale(page.path),
     description,
+    locale,
     openGraph: { description, title: socialTitle, type: 'website' },
     robots: 'index, follow',
     title,
   })
+  const url =
+    head.links?.find(({ rel }) => rel === 'canonical')?.href ??
+    new URL(page.path, SITE_ORIGIN).href
 
   return {
-    links: [{ href: url, rel: 'canonical' }],
-    meta: [
-      ...head.meta,
-      { content: BRAND_BLUE, name: 'theme-color' },
-      { content: url, property: 'og:url' },
-      { content: 'VitNode', property: 'og:site_name' },
-      { content: 'en_US', property: 'og:locale' },
-      { content: 'summary_large_image', name: 'twitter:card' },
-      { content: socialTitle, name: 'twitter:title' },
-      { content: description, name: 'twitter:description' },
-    ],
+    links: head.links ?? [],
+    meta: [...head.meta, { content: BRAND_BLUE, name: 'theme-color' }],
     scripts: [
       {
-        children: JSON.stringify(structuredData(page, url)).replaceAll(
-          '<',
-          '\\u003c',
-        ),
+        children: JSON.stringify(
+          structuredData({ ...page, description, title }, url, locale),
+        ).replaceAll('<', '\\u003c'),
         type: 'application/ld+json',
       },
     ],

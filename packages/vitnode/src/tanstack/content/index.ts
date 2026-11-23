@@ -6,6 +6,7 @@ export {
 export type {
   ContentDeliveryPageAlternate,
   ContentDeliveryPageMetadata,
+  ContentDeliveryPageOpenGraphImage,
   ContentDeliveryPageResolution,
 } from "./delivery-page";
 export {

@@ -1658,14 +1658,31 @@ export type ContentDeliveryNoIndexField<
  * Separate fields rather than a flag, because the two audiences differ: a
  * `<title>` competes in a search result and an `og:title` competes in a chat
  * preview, and an author who wants them identical simply names the same field
- * twice. There is deliberately no `imageField` - see
- * `apps/web/content/docs/dev/content-engine/content-delivery-limitations.mdx`.
+ * twice.
+ *
+ * The image is a card the API draws from the title and description, or with
+ * `generateImage: false` the record's `imageField` cover itself. See
+ * `apps/web/content/docs/content-engine/seo.mdx#social-images`.
  */
 export interface ContentDeliveryOpenGraphConfig<
   TTitle extends string = string,
   TDescription extends string = string,
 > {
   descriptionField?: TDescription;
+  /**
+   * Draw a social card (1200 × 630 PNG) for `og:image`. Defaults to `true`.
+   * `false` uses the `imageField` image itself instead, and no image when the
+   * record has none. The API's `ogImage.enabled: false` turns cards off for
+   * every content type.
+   */
+  generateImage?: boolean;
+  /**
+   * A shared, single `field.file()` in `publicApi.fields`: with
+   * `generateImage: false`, the `og:image` itself. Generated cards ignore it.
+   * Only a public image counts: a file that is private, restricted by an access
+   * rule or not a GIF, JPEG, PNG or WebP is skipped.
+   */
+  imageField?: string;
   titleField?: TTitle;
 }
 
@@ -1788,6 +1805,8 @@ export interface ResolvedContentDeliverySeoConfig {
   noIndexField: null | string;
   openGraph: null | {
     descriptionField: null | string;
+    generateImage: boolean;
+    imageField: null | string;
     titleField: null | string;
   };
   titleField: null | string;

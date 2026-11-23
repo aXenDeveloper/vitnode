@@ -149,6 +149,7 @@ describe("a profile that exists", () => {
     expect(data).toEqual({
       description: "See Maciej's profile (@aXen).",
       nameCode: "aXen",
+      openGraph: { title: "Maciej", type: "profile" },
       title: "Maciej's profile",
     });
   });

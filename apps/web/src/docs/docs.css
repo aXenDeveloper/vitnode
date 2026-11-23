@@ -35,6 +35,18 @@
   }
 }
 
+#nd-page-panel > div:has(> #nd-page) {
+  background-image: radial-gradient(
+    ellipse 70% 100% at 50% 0%,
+    color-mix(in oklab, var(--color-fd-primary) 14%, transparent),
+    color-mix(in oklab, var(--color-fd-primary) 5%, transparent) 50%,
+    transparent 100%
+  );
+  background-repeat: no-repeat;
+  background-size: 100% --spacing(96);
+  background-attachment: local;
+}
+
 :root:not(.dark) #fd-spacious-layout .prose {
   --tw-prose-body: oklch(0.373 0.003 264);
 }

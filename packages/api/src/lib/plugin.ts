@@ -46,6 +46,7 @@ import type { ModerationPluginConfig } from "./moderation/registry";
 import type { ModerationReportTargetDefinition } from "./moderation/targets";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
 import type { AnyNotificationTypeDefinition } from "./notifications/registry";
+import type { OgImageTemplate } from "./og-image/types";
 import type { PermissionStaffConfig } from "./permission-staff";
 import type { PersonalDataHandlers } from "./personal-data";
 import type { QueueTaskConfig } from "./queue";
@@ -112,6 +113,8 @@ export interface BuildPluginApiReturn<
   /** The module tuple as passed in; the fetcher's types resolve calls through it. */
   modules: Modules;
   notificationTypes?: AnyNotificationTypeDefinition[];
+  /** Social card templates per content type id; see `buildApiPlugin`. */
+  ogImageTemplates?: Readonly<Record<string, OgImageTemplate>>;
   openApiTags?: string[];
   /** The declared permissions, plus the ones content types, containers and report targets add. */
   permissionStaff?: PermissionStaffConfig;
@@ -190,6 +193,7 @@ export function buildApiPlugin<
   moderation,
   modules = [] as unknown as Modules,
   notificationTypes,
+  ogImageTemplates,
   permissionStaff,
   personalData,
   reactions,
@@ -239,6 +243,14 @@ export function buildApiPlugin<
   modules?: Modules;
   /** Notification types in addition to those modules declare. */
   notificationTypes?: AnyNotificationTypeDefinition[];
+  /**
+   * Social card (`og:image`) templates for the plugin's content types, keyed
+   * by content type id (`"blog.post"`). A type without one uses the app's
+   * `ogImage.template`, then the built-in card; the app's
+   * `ogImage.templates` override these. Server-only components, called as
+   * plain functions - see `OgImageTemplate` in `@vitnode/api/lib/og-image`.
+   */
+  ogImageTemplates?: Readonly<Record<string, OgImageTemplate>>;
   /**
    * The plugin's staff permissions, from `defineStaffPermissions(manifest, ...)`
    * - the references routes and the AdminCP navigation use come from the same
@@ -435,6 +447,7 @@ export function buildApiPlugin<
     queueTasks: collectPluginQueueTasks(pluginId, queueTasks),
     notificationTypes: pluginNotificationTypes,
     personalData,
+    ogImageTemplates,
     searchIndexers: indexers,
     webSockets,
     // Every content type contributes can_view/can_create/can_edit/can_delete

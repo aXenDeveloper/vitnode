@@ -149,6 +149,7 @@ export const blogPostContentType = defineContentType({
     seo: {
       titleField: "title",
       descriptionField: "content",
+      openGraph: { generateImage: false, imageField: "coverImage" },
     },
     sitemap: { changeFrequency: "weekly", priority: 0.7 },
     hreflang: { xDefault: "defaultLocale" },

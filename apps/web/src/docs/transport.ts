@@ -3,7 +3,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { getBreadcrumbItems } from 'fumadocs-core/breadcrumb'
 import { z } from 'zod'
 
-import { loadDocsPageTreeIcons } from './icons.server'
+import { docsSectionTitle, loadDocsPageTreeIcons } from './icons.server'
 import { docsGithubUrl, encodeMarkdownUrl } from './shared'
 import { source } from './source.server'
 
@@ -20,10 +20,13 @@ export const getDocsPage = createServerFn({ method: 'GET' })
     // oxlint-disable-next-line typescript/only-throw-error
     if (!page) throw notFound()
 
-    const ancestors = getBreadcrumbItems(page.url, source.getPageTree(), {})
+    const tree = source.getPageTree()
+    const ancestors = getBreadcrumbItems(page.url, tree, {})
       .slice(0, -1)
       .reverse()
       .flatMap((item) => (typeof item.name === 'string' ? [item.name] : []))
+    const section = page.slugs[0]
+    const sectionTitle = docsSectionTitle(tree, page.url)
 
     return {
       description: page.data.description,
@@ -31,6 +34,8 @@ export const getDocsPage = createServerFn({ method: 'GET' })
       markdownUrl: encodeMarkdownUrl(page.slugs),
       metaTitle: [page.data.title, ...ancestors].join(' - '),
       path: page.path,
+      section:
+        section && sectionTitle ? { id: section, title: sectionTitle } : null,
       url: page.url,
     }
   })

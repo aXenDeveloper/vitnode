@@ -4,6 +4,19 @@
  */
 export interface VitNodeMetadata {
   /**
+   * A sentence about the site. The site's social card shows it under the
+   * title. Optional.
+   */
+  description?: string;
+  /**
+   * The `og:image` of pages that set none of their own. Defaults to
+   * `"generated"`: the site card the API draws at
+   * `/api/@vitnode/core/og/site`, with each page's own title and description
+   * on it. A URL uses that image instead; `false` emits no default image.
+   * Read by the web app only.
+   */
+  ogImage?: false | string;
+  /**
    * A shorter name for page titles (`{page} - {shortTitle}`), the email
    * footer and the passkey RP name. Defaults to `title`.
    */
@@ -13,6 +26,11 @@ export interface VitNodeMetadata {
    * image's alt text) when the email logo sets no `text`.
    */
   title: string;
+  /**
+   * The site's X (Twitter) handle, e.g. `@vitnode`, emitted as `twitter:site`
+   * on every page with a title. The `@` is optional. Read by the web app only.
+   */
+  twitterSite?: string;
 }
 
 /** The page title template, `%s - {shortTitle ?? title}`. */
@@ -24,3 +42,13 @@ export const formatPageTitle = (
   metadata: VitNodeMetadata,
   pageTitle: string,
 ): string => titleTemplate(metadata).replace("%s", pageTitle);
+
+export const SITE_OG_IMAGE_TITLE_MAX = 200;
+
+export const SITE_OG_IMAGE_DESCRIPTION_MAX = 300;
+
+export const SITE_OG_IMAGE_CATEGORY_MAX = 60;
+
+export const SITE_OG_IMAGE_ACCENT_PATTERN = /^#[\da-f]{6}$/i;
+
+export const SITE_OG_IMAGE_LAYOUTS = ["headline", "quote"] as const;

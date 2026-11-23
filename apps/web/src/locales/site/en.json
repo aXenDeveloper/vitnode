@@ -358,6 +358,20 @@
       "browse": "Browse",
       "browse_description": "A paginated list, shipped by the newsroom plugin.",
       "search": "Search"
+    },
+    "meta": {
+      "home": {
+        "title": "Open-Source Community Framework",
+        "description": "VitNode is a free, open-source community framework with plugins, a Content Engine, AdminCP, real-time updates, AI building blocks and search."
+      },
+      "plugins": {
+        "title": "Plugins - The Blog, the Example and Features of Your Own",
+        "description": "Every VitNode feature ships as a plugin. Meet the blog plugin, the example plugin for learning, and see what a plugin of your own looks like."
+      },
+      "solutions": {
+        "title": "Solutions - Five Sites Built with VitNode",
+        "description": "Five sites built with VitNode: a help center, a membership site, an open-source hub, a gaming guild hub and a multilingual magazine, with roles and screens."
+      }
     }
   }
 }
