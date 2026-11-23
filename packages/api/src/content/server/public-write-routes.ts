@@ -363,9 +363,8 @@ export type ContentPublicWriteRoutesOf<
       ? PublicWriteRoutes<TDefinition, P>["create"]
       : never)
   | (TDefinition extends { publicWrite: { update: { enabled: true } } }
-      ?
-          | PublicWriteRoutes<TDefinition, P>["editable"]
-          | PublicWriteRoutes<TDefinition, P>["update"]
+      ? | PublicWriteRoutes<TDefinition, P>["editable"]
+        | PublicWriteRoutes<TDefinition, P>["update"]
       : never);
 
 /**

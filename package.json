@@ -28,17 +28,17 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "@vitnode/config": "workspace:*",
-    "oxfmt": "^0.77.0",
-    "react-doctor": "^0.9.22",
+    "oxfmt": "^0.79.0",
+    "react-doctor": "^0.9.23",
     "tsx": "^4.23.15",
-    "turbo": "^2.11.10",
+    "turbo": "^2.11.13",
     "typescript": "7.1.0-beta",
     "zod": "^4.6.6"
   },
   "engines": {
     "node": "^22.22.0 || ^24.11.0 || >=26.0.0"
   },
-  "packageManager": "pnpm@12.21.0",
+  "packageManager": "pnpm@12.23.0",
   "workspaces": [
     "apps/*",
     "packages/*",

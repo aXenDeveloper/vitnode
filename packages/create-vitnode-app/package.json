@@ -38,7 +38,7 @@
     "typescript"
   ],
   "dependencies": {
-    "@inquirer/prompts": "^8.7.5",
+    "@inquirer/prompts": "^8.8.1",
     "commander": "^15.1.0",
     "ora": "^10.0.0",
     "picocolors": "^1.1.1",
@@ -49,9 +49,9 @@
     "@types/prompts": "^2.4.9",
     "@types/validate-npm-package-name": "^4.0.2",
     "@vitnode/config": "workspace:*",
-    "oxlint": "^1.92.0",
-    "oxlint-tsgolint": "^7.0.2006",
+    "oxlint": "^1.94.0",
+    "oxlint-tsgolint": "^7.0.2008",
     "typescript": "7.1.0-beta",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.1"
   }
 }

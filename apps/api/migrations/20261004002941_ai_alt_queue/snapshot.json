@@ -1,6 +1,6 @@
 {
   "type": "diff",
-  "version": "9",
+  "version": "10",
   "dialect": "postgres",
   "id": "9ac46019-5dbb-4e3b-8ce6-33f41b5ddacf",
   "prevIds": [
@@ -770,7 +770,6 @@
         "where": null,
         "with": "",
         "method": "btree",
-        "concurrently": false,
         "entityType": "indexes"
       }
     },
@@ -801,7 +800,6 @@
         "where": null,
         "with": "",
         "method": "btree",
-        "concurrently": false,
         "entityType": "indexes"
       }
     },
@@ -825,7 +823,6 @@
         "where": "status <> 'completed'",
         "with": "",
         "method": "btree",
-        "concurrently": false,
         "entityType": "indexes"
       }
     },
@@ -856,7 +853,6 @@
         "where": "\"dedupeKey\" IS NOT NULL AND status IN ('pending', 'processing')",
         "with": "",
         "method": "btree",
-        "concurrently": false,
         "entityType": "indexes"
       }
     },

@@ -1787,14 +1787,13 @@ export type ContentDeliveryInput<
 > =
   | false
   | (TPublicEnabled extends true
-      ?
-          | ContentDeliveryConfig<
-              TEditorialEnabled,
-              TTitle,
-              TDescription,
-              TNoIndex
-            >
-          | true
+      ? | ContentDeliveryConfig<
+            TEditorialEnabled,
+            TTitle,
+            TDescription,
+            TNoIndex
+          >
+        | true
       : never);
 
 export type ContentDeliveryEnabled<TDelivery> = ContentOptionEnabled<TDelivery>;

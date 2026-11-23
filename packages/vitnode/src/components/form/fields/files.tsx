@@ -125,19 +125,19 @@ export const AutoFormFiles = ({
   });
 
   const queueRef = React.useRef<FileUploadQueue | null>(null);
-  queueRef.current ??= createFileUploadQueue({
-    ids: () => idsRef.current,
-    onChange: next => {
-      latestRef.current.commit(next);
-    },
-    onSettled: result => {
-      latestRef.current.settle(result);
-    },
-    onStateChange: setQueued,
-    upload: async (file, options) =>
-      await latestRef.current.upload.mutateAsync({ file, options }),
-  });
-  const queue = queueRef.current;
+  const getQueue = () =>
+    (queueRef.current ??= createFileUploadQueue({
+      ids: () => idsRef.current,
+      onChange: next => {
+        latestRef.current.commit(next);
+      },
+      onSettled: result => {
+        latestRef.current.settle(result);
+      },
+      onStateChange: setQueued,
+      upload: async (file, options) =>
+        await latestRef.current.upload.mutateAsync({ file, options }),
+    }));
 
   const pending = queued.pending;
   const remaining = maxItems - ids.length - pending.length;
@@ -183,7 +183,7 @@ export const AutoFormFiles = ({
 
     if (refused.length > 0) setRejections([...new Set(refused)]);
 
-    queue.enqueue(accepted);
+    getQueue().enqueue(accepted);
   };
 
   const descriptors = new Map(resolved.map(entry => [entry.id, entry.file]));
@@ -297,15 +297,15 @@ export const AutoFormFiles = ({
             <FileGallery
               canRemove={ids.length > minItems}
               onCancel={order => {
-                queue.cancel(order);
+                getQueue().cancel(order);
               }}
               onDismiss={order => {
-                queue.dismiss(order);
+                getQueue().dismiss(order);
               }}
               onRemove={remove}
               onReorder={commit}
               onRetry={order => {
-                if (remaining > 0) queue.retry(order);
+                if (remaining > 0) getQueue().retry(order);
               }}
               ordered={ordered}
               rows={galleryRows}

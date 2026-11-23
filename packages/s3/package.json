@@ -31,13 +31,13 @@
     "lint:fix": "oxlint --type-aware --fix"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1164.0"
+    "@aws-sdk/client-s3": "^3.1175.0"
   },
   "devDependencies": {
     "@vitnode/api": "workspace:*",
     "@vitnode/config": "workspace:*",
-    "oxlint": "^1.92.0",
-    "oxlint-tsgolint": "^7.0.2006",
+    "oxlint": "^1.94.0",
+    "oxlint-tsgolint": "^7.0.2008",
     "tsdown": "^0.23.7",
     "typescript": "7.1.0-beta"
   }

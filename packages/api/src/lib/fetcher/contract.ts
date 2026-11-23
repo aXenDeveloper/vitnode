@@ -114,9 +114,8 @@ type EndpointsOfModule<
   M extends ApiModuleContract,
 > = M extends ApiModuleContract
   ? IsTypedModule<M> extends true
-    ?
-        | EndpointsOfModules<Plugin, `${Prefix}${M["name"]}/`, ChildrenOf<M>>
-        | EndpointsOfRoutes<Plugin, `${Prefix}${M["name"]}`, M["routes"]>
+    ? | EndpointsOfModules<Plugin, `${Prefix}${M["name"]}/`, ChildrenOf<M>>
+      | EndpointsOfRoutes<Plugin, `${Prefix}${M["name"]}`, M["routes"]>
     : never
   : never;
 
