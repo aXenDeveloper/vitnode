@@ -11,6 +11,7 @@ import type {
   AdminInstalledPlugin,
   AdminInstalledPlugins,
 } from "@/views/admin/views/core/system/plugins/plugins-query";
+import type { AdminSiteStatus } from "@/views/admin/views/core/system/site-status/site-status-query";
 import type { AccountDeletionsSummary } from "@/views/admin/views/core/users/deletions/deletions-query";
 
 import type { DebugQueueSnapshot } from "../debug-query";
@@ -24,6 +25,7 @@ export interface DebugSources {
   integrations?: AdminIntegrations;
   queue?: DebugQueueSnapshot;
   search?: SearchIndexStatus;
+  siteStatus?: AdminSiteStatus;
   updates?: AdminPluginUpdates;
 }
 
@@ -73,6 +75,8 @@ export type DebugMessageKey =
   | "search.subtitle"
   | "search.sync_errors"
   | "services.subtitle"
+  | "site.offline"
+  | "site.offline_until"
   | "vitnode.not_checked"
   | "vitnode.security_update"
   | "vitnode.source_unreachable"
@@ -92,8 +96,11 @@ export interface DebugMessage {
 export type DebugAreaId = "deletions" | DebugSystemTab;
 
 export interface DebugCheck {
-  area: DebugAreaId;
+  /** The system area it belongs to; `undefined` for a site-wide state. */
+  area?: DebugAreaId;
   detail?: string;
+  /** Where the issue is fixed, when that is not a debug tab. */
+  href?: string;
   id: string;
   message: DebugMessage;
   tab: DebugTab;
@@ -489,6 +496,25 @@ const area = (
   tone: worstTone(checks.map(check => check.tone)),
 });
 
+/** The public site is switched off: worth a warning until someone turns it on. */
+const siteStatusChecks = (siteStatus: AdminSiteStatus): DebugCheck[] =>
+  siteStatus.offline
+    ? [
+        {
+          href: "/admin/core/debug#site-status",
+          id: "site.offline",
+          message: siteStatus.opensAt
+            ? {
+                key: "site.offline_until",
+                values: { opensAt: Date.parse(siteStatus.opensAt) },
+              }
+            : { key: "site.offline" },
+          tab: "overview",
+          tone: "warn",
+        },
+      ]
+    : [];
+
 export const debugHealth = ({
   cronHealth,
   deletions,
@@ -496,6 +522,7 @@ export const debugHealth = ({
   integrations,
   queue,
   search,
+  siteStatus,
   updates,
 }: DebugSources): DebugHealth => {
   const areas: DebugArea[] = [];
@@ -593,8 +620,10 @@ export const debugHealth = ({
     );
   }
 
-  const issues = areas
-    .flatMap(entry => entry.checks)
+  const issues = [
+    ...(siteStatus ? siteStatusChecks(siteStatus) : []),
+    ...areas.flatMap(entry => entry.checks),
+  ]
     .filter(check => isProblem(check.tone))
     .sort((a, b) => TONE_RANK[b.tone] - TONE_RANK[a.tone]);
 

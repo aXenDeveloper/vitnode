@@ -23,12 +23,12 @@ const LANGUAGE_ROWS = [
 
 const languageDatabase = {
   select: () => ({
-    from: async (table: unknown) => {
+    from: (table: unknown) => {
       if (table !== core_languages) {
         throw new Error("Only core_languages is read directly by this route.");
       }
 
-      return await Promise.resolve(LANGUAGE_ROWS);
+      return LANGUAGE_ROWS;
     },
   }),
 };

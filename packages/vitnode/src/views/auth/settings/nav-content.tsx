@@ -13,7 +13,12 @@ import {
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import { SideNav, SideNavLink, SideNavList } from "@/components/side-nav";
+import {
+  SideNav,
+  SideNavGroup,
+  SideNavLink,
+  SideNavList,
+} from "@/components/side-nav";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -25,7 +30,11 @@ import {
 
 import type { SettingsNavItem, SettingsNavKey } from "./settings-nav";
 
-import { isSettingsNavItemActive, SETTINGS_NAV_ITEMS } from "./settings-nav";
+import {
+  groupSettingsNavItems,
+  isSettingsNavItemActive,
+  SETTINGS_NAV_ITEMS,
+} from "./settings-nav";
 
 const ICONS: Record<
   SettingsNavKey,
@@ -51,21 +60,24 @@ const SettingsNavList = ({
   pathname: string;
 }) => {
   const tNav = useTranslations("core.auth.settings.nav");
+  const tGroups = useTranslations("core.auth.settings.nav_groups");
 
-  return (
-    <SideNavList>
-      {items.map(item => (
-        <SideNavLink
-          icon={ICONS[item.key]}
-          isActive={isSettingsNavItemActive(item, pathname)}
-          key={item.href}
-          label={tNav(item.key)}
-          onNavigate={onNavigate}
-          to={item.href}
-        />
-      ))}
-    </SideNavList>
-  );
+  return groupSettingsNavItems(items).map(group => (
+    <SideNavGroup key={group.key} title={tGroups(group.key)}>
+      <SideNavList>
+        {group.items.map(item => (
+          <SideNavLink
+            icon={ICONS[item.key]}
+            isActive={isSettingsNavItemActive(item, pathname)}
+            key={item.href}
+            label={tNav(item.key)}
+            onNavigate={onNavigate}
+            to={item.href}
+          />
+        ))}
+      </SideNavList>
+    </SideNavGroup>
+  ));
 };
 
 const SettingsNavDrawer = ({

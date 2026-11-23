@@ -30,7 +30,7 @@ export const SettingsShellContent = ({
   );
 
   return (
-    <div className="container mx-auto flex flex-col gap-6 px-4">
+    <div className="container mx-auto flex flex-col gap-6 px-4 pt-6 md:pt-8">
       {header}
 
       <div

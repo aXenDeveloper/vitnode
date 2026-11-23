@@ -8,7 +8,6 @@ import {
   MiddlewareConfigUnknownError,
 } from "@/tanstack/auth/middleware-config";
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
-import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
 import { SsoConnectionsPanelContent } from "@/tanstack/sso-connections/panel";
 import { ssoConnectionsQueryOptions } from "@/views/auth/settings/sso/sso-connections-query";
 
@@ -51,8 +50,6 @@ export const route = defineAuthenticatedRoute<SsoData, SsoSettingsSearch>({
   head: ({ t }) => ({
     title: `${t("core.auth.settings.nav.sso")} - ${t("core.auth.settings.title")}`,
   }),
-
-  breadcrumb: settingsBreadcrumb("sso"),
 });
 
 export default SsoPage;

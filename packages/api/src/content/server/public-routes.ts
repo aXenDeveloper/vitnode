@@ -532,6 +532,7 @@ export const buildContentPublicRoutes = <
    *   would hand a reviewer a different language from the one they were sent.
    */
   const preview = buildRoute({
+    allowWhenOffline: true,
     pluginId,
     route: {
       method: "get",

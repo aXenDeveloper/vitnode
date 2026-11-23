@@ -48,6 +48,8 @@ export interface PrivacySettingsContentProps {
   }) => Promise<RequestAccountDeletionResult>;
   status: AccountDeletionStatus;
   userName: string;
+  /** Who can see the member's activity: online status, reactions. Rendered above the data export. */
+  visibility?: React.ReactNode;
 }
 
 export const PrivacySettingsHeading = () => {
@@ -358,9 +360,11 @@ export const PrivacySettingsContent = ({
   onRequestDeletion,
   status,
   userName,
+  visibility,
 }: PrivacySettingsContentProps) => (
   <>
     <PrivacySettingsHeading />
+    {visibility}
     <DownloadDataGroup onDownload={onDownload} />
     <DeleteAccountGroup
       onCancelDeletion={onCancelDeletion}

@@ -22,6 +22,7 @@ import * as roles from "./roles";
 import * as search from "./search";
 import * as secrets from "./secrets";
 import * as sessions from "./sessions";
+import * as site from "./site";
 import * as users from "./users";
 
 export const coreSchema = {
@@ -47,6 +48,7 @@ export const coreSchema = {
   ...search,
   ...secrets,
   ...sessions,
+  ...site,
   ...users,
 };
 

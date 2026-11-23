@@ -13,22 +13,46 @@ export type SettingsNavKey =
   | "sso"
   | "standing";
 
+/** The `core.auth.settings.nav_groups` key a group's heading comes from, in display order. */
+export const SETTINGS_NAV_GROUPS = [
+  "account",
+  "preferences",
+  "safety",
+] as const;
+
+export type SettingsNavGroupKey = (typeof SETTINGS_NAV_GROUPS)[number];
+
 export interface SettingsNavItem {
+  /** The heading the item is listed under. */
+  group: SettingsNavGroupKey;
   href: string;
   /** The `core.auth.settings.nav` key this item's label comes from. */
   key: SettingsNavKey;
 }
 
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
-  { href: SETTINGS_ROOT_HREF, key: "overview" },
-  { href: "/settings/notifications", key: "notifications" },
-  { href: "/settings/devices", key: "devices" },
-  { href: "/settings/security", key: "security" },
-  { href: "/settings/sso", key: "sso" },
-  { href: "/settings/ai", key: "ai" },
-  { href: "/settings/standing", key: "standing" },
-  { href: "/settings/privacy", key: "privacy" },
+  { group: "account", href: SETTINGS_ROOT_HREF, key: "overview" },
+  {
+    group: "preferences",
+    href: "/settings/notifications",
+    key: "notifications",
+  },
+  { group: "account", href: "/settings/devices", key: "devices" },
+  { group: "account", href: "/settings/security", key: "security" },
+  { group: "account", href: "/settings/sso", key: "sso" },
+  { group: "preferences", href: "/settings/ai", key: "ai" },
+  { group: "safety", href: "/settings/standing", key: "standing" },
+  { group: "safety", href: "/settings/privacy", key: "privacy" },
 ];
+
+/** The items under each non-empty group, groups in display order. */
+export const groupSettingsNavItems = (
+  items: readonly SettingsNavItem[],
+): { items: SettingsNavItem[]; key: SettingsNavGroupKey }[] =>
+  SETTINGS_NAV_GROUPS.map(key => ({
+    items: items.filter(item => item.group === key),
+    key,
+  })).filter(group => group.items.length > 0);
 
 export const visibleSettingsNavItems = ({
   ai,

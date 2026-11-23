@@ -41,7 +41,6 @@ export const OverviewSettingsContent = ({
   personalFields,
   onTimeZoneUpdate,
   onUpdate,
-  privacy,
   user,
 }: {
   aiPoints?: React.ReactNode;
@@ -50,7 +49,6 @@ export const OverviewSettingsContent = ({
   onTimeZoneUpdate: UpdateTimeZone;
   onUpdate: UpdatePersonalInformation;
   personalFields: PersonalInformationFields;
-  privacy?: React.ReactNode;
   user: SettingsOverviewUser;
 }) => {
   const t = useTranslations("core.auth.settings.overview");
@@ -165,8 +163,6 @@ export const OverviewSettingsContent = ({
           </FramePanel>
         </Frame>
       </div>
-
-      {privacy}
 
       {aiPoints}
     </>

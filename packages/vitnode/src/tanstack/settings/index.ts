@@ -9,8 +9,6 @@ export type { SettingsOverviewUser } from "@/views/auth/settings/overview/overvi
 export { OverviewSettingsContent } from "@/views/auth/settings/overview/overview";
 export { SecuritySettings } from "@/views/auth/settings/security/security";
 
-export type { SettingsBreadcrumbContentProps } from "@/views/auth/settings/settings-breadcrumb-content";
-export { SettingsBreadcrumbContent } from "@/views/auth/settings/settings-breadcrumb-content";
 export {
   activeSettingsNavKey,
   isSettingsNavItemActive,

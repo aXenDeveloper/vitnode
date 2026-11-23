@@ -2,7 +2,6 @@ import type { PluginRoutePageProps } from "@/routing";
 
 import { NotificationSettingsPanel } from "@/tanstack/notifications/settings-screen";
 import { defineAuthenticatedRoute } from "@/tanstack/plugin-routes";
-import { settingsBreadcrumb } from "@/tanstack/settings/breadcrumb";
 import { notificationPreferencesQueryOptions } from "@/views/notifications/notifications-query";
 
 interface NotificationSettingsData {
@@ -29,8 +28,6 @@ export const route = defineAuthenticatedRoute<NotificationSettingsData>({
   head: ({ t }) => ({
     title: `${t("core.auth.settings.nav.notifications")} - ${t("core.auth.settings.title")}`,
   }),
-
-  breadcrumb: settingsBreadcrumb("notifications"),
 });
 
 export default NotificationSettingsPage;

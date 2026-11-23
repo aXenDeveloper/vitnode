@@ -5,6 +5,7 @@ import { SessionModel } from "@/models/session";
 import { SessionAdminModel } from "@/models/session-admin";
 
 export const signOutRoute = buildRoute({
+  allowWhenOffline: true,
   route: {
     method: "delete",
     description: "Sign out the current admin",

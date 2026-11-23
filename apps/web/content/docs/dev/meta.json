@@ -54,6 +54,7 @@
     "cli",
     "deployments",
     "updates",
+    "site-offline-mode",
     "debugging",
     "swagger",
     "contribution",

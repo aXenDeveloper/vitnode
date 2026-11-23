@@ -36,6 +36,10 @@
   "@vitnode/core:ai": "AI",
   "@vitnode/core:ai:can_view": "View AI usage, settings and history",
   "@vitnode/core:ai:can_manage": "Manage AI settings, models, pricing and access",
+  "@vitnode/core:site_status": "Site status",
+  "@vitnode/core:site_status:can_view": "View whether the site is online and its offline message",
+  "@vitnode/core:site_status:can_manage": "Switch the site off and on, and edit its offline message",
+  "@vitnode/core:site_status:can_access_offline": "Access the site while it's offline",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:plugins": "Plugins",
@@ -1221,6 +1225,11 @@
           "standing": "Account status",
           "privacy": "Privacy & data"
         },
+        "nav_groups": {
+          "account": "Account",
+          "preferences": "Preferences",
+          "safety": "Privacy & safety"
+        },
         "overview": {
           "desc": "Your avatar and the details on your account.",
           "profileTitle": "Profile",
@@ -1661,7 +1670,7 @@
         },
         "privacy": {
           "title": "Privacy & data",
-          "desc": "Download a copy of your data or delete your account.",
+          "desc": "Choose who sees your activity, download a copy of your data, or delete your account.",
           "export": {
             "title": "Download your data",
             "desc": "A JSON file with everything this site stores about you: your profile, devices, sign-in methods, files, payments and what plugins keep.",
@@ -3809,6 +3818,31 @@
         "saved": "Reaction settings saved",
         "saved_desc": "Your profile timeline follows the new setting."
       }
+    },
+    "site_offline": {
+      "title": "We'll be right back",
+      "desc": "The site is offline for a moment. Please check back soon.",
+      "badge": "Maintenance",
+      "countdown": {
+        "back_in": "Back in",
+        "expected_back": "Expected back",
+        "opening_soon": "Opening soon",
+        "label": "Opens in {days, plural, =0 {} one {# day, } other {# days, }}{hours, plural, one {# hour} other {# hours}} and {minutes, plural, one {# minute} other {# minutes}}",
+        "units": {
+          "days": "d",
+          "hours": "h",
+          "minutes": "m",
+          "seconds": "s"
+        }
+      },
+      "staff_banner": {
+        "trigger": "Offline",
+        "trigger_label": "The site is offline for visitors. Show details",
+        "title": "The site is offline",
+        "desc": "Visitors get the offline page. You can browse it because of your staff permissions.",
+        "manage": "Manage site status",
+        "document_title": "(Offline) {title}"
+      }
     }
   },
   "admin": {
@@ -5554,6 +5588,62 @@
           },
           "version_on_side": "{version} ({side})"
         }
+      },
+      "site_status": {
+        "title": "Site status",
+        "retry": "Try again",
+        "load_error": {
+          "title": "Site status didn't load",
+          "desc": "We couldn't read whether the site is online. Check your connection and try again."
+        },
+        "status": {
+          "online": "Site is online",
+          "offline": "Site is offline",
+          "not_saved": "Not saved yet",
+          "last_switched": "Last switched",
+          "by": "by {name}",
+          "never": "Never switched off"
+        },
+        "save_bar": {
+          "unsaved": "You have unsaved changes",
+          "discard": "Discard",
+          "save": "Save changes",
+          "turn_off": "Turn off site",
+          "turn_on": "Turn on site"
+        },
+        "toast": {
+          "saved": {
+            "title": "Changes saved",
+            "desc": "Visitors see them the next time the offline page loads."
+          },
+          "turned_off": {
+            "title": "Site is offline",
+            "desc": "Visitors now see the offline page. Admins, and moderators with offline access, can still use the site."
+          },
+          "turned_on": {
+            "title": "Site is online",
+            "desc": "Visitors can use the site again. Open offline pages reload on their own within a minute."
+          }
+        },
+        "form": {
+          "offline": {
+            "label": "Take the site offline",
+            "desc": "Visitors see the offline page instead of the site. Admins, and moderators with offline access, keep using it."
+          },
+          "message": {
+            "label": "Message",
+            "required": "Write the message in the default language so every visitor knows what's going on."
+          },
+          "opens_at": {
+            "label": "Opening time",
+            "desc": "The site never opens by itself. When the time is up, visitors see \"Opening soon\" until you turn it on.",
+            "past": "Pick a time in the future."
+          },
+          "show_countdown": {
+            "label": "Show countdown",
+            "desc": "Show a live countdown. When off, visitors see only the date."
+          }
+        }
       }
     },
     "debug": {
@@ -5700,6 +5790,10 @@
           "oldest": "Oldest open request: {days} of {deadline} days",
           "oldest_late": "A request is {days} days old, past GDPR's {deadline}-day limit",
           "none": "No open requests"
+        },
+        "site": {
+          "offline": "The public site is offline",
+          "offline_until": "The public site is offline until {opensAt, date, medium}, {opensAt, time, short}"
         }
       },
       "actions": {

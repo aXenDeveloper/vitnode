@@ -5,6 +5,7 @@ import { HTTPException } from "hono/http-exception";
 import { describe, expect, it, vi } from "vitest";
 
 import { core_content_containers } from "@/database/content-containers";
+import { siteOfflineGuard } from "@/middlewares/site-offline.middleware";
 import {
   testCategoryContentType,
   testPostContentType,
@@ -441,8 +442,6 @@ describe("generated surface", () => {
   });
 
   it("installs no staff-permission guard", () => {
-    // `buildRoute` always adds `pluginMiddleware`, and adds a second handler
-    // only when `adminStaffPermission` is set. Exactly one means none.
     const routes = buildContentPublicRoutes(posts, { pluginId: PLUGIN_ID });
 
     for (const { route } of routes) {
@@ -450,7 +449,9 @@ describe("generated surface", () => {
       // the shape `buildRoute` actually assembles.
       const { middleware } = route as unknown as { middleware: unknown[] };
 
-      expect(middleware).toHaveLength(1);
+      expect(
+        middleware.filter(handler => handler !== siteOfflineGuard),
+      ).toHaveLength(1);
     }
   });
 });

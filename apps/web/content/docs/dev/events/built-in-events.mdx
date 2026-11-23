@@ -737,6 +737,50 @@ these events for side effects such as a thank-you notification.
 **A listener would** send a receipt notification, post to a sales channel, or
 clear a cached page that shows the buyer's purchases.
 
+## Site status events
+
+One name, exported from `@vitnode/api/events/site` as
+`siteStatusUpdatedEvent`. It fires **after** the save has committed and the
+cached status is expired.
+
+| Event                 | Payload                                         | Fires when                                                                      |
+| --------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------- |
+| `site.status.updated` | `{ offline, switched, opensAt, changedById }`   | An admin switches the site off or on, or edits its message, in the **Site status** card on **AdminCP → Debug Panel** |
+
+<Accordions>
+<Accordion title="site.status.updated">
+
+Emitted by `PUT /admin/site/status`. A save that only edits the offline
+message fires it too, with `switched: false`. See
+[Site offline mode](/docs/dev/site-offline-mode).
+
+<TypeTable
+  type={{
+    offline: {
+      description: 'Whether the site is offline after this save.',
+      type: 'boolean',
+    },
+    switched: {
+      description: 'Whether this save flipped `offline`.',
+      type: 'boolean',
+    },
+    opensAt: {
+      description: 'The planned opening time as an ISO string, or `null` without a countdown.',
+      type: 'string | null',
+    },
+    changedById: {
+      description: 'Id of the admin who saved it.',
+      type: 'number | null',
+    },
+  }}
+/>
+
+**A listener would** post "We're back!" to a chat webhook when
+`switched && !offline`.
+
+</Accordion>
+</Accordions>
+
 ## Page layout events
 
 One name, exported from `@vitnode/api/events/pages` as

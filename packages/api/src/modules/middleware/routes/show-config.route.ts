@@ -3,6 +3,7 @@ import { buildRoute } from "@/builders";
 import { routeMiddlewareSchema } from "../middleware.schema";
 
 export const routeMiddleware = buildRoute({
+  allowWhenOffline: true,
   route: {
     path: "/",
     method: "get",
