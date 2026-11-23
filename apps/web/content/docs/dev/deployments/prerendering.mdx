@@ -107,6 +107,29 @@ curl -sI http://localhost:3000/login
 
 The prerendered page answers with an `etag` and a `last-modified` date. The server-rendered page answers with `cache-control: private, no-store` instead, because VitNode renders it for one visitor - unless its route has a [page cache](/docs/dev/cache/pages) policy, which renders it once for everybody.
 
+## When a page fails to prerender
+
+A page that answers with an error is listed under **Errors prerendering** at the end of the build, and no file is written for it. It still works: the server renders it on each request, just without the static speed-up.
+
+VitNode also catches the sneaky case. When part of a page throws inside a `<Suspense>` boundary, React still answers `200` - with the boundary's loading skeleton in place of the content. VitNode reports that page as failed too, so a skeleton is never saved as your page. Open the page in `vite dev` to see the real error.
+
+Nitro keeps going after a failed page by default. To make the build stop instead, so a broken page never reaches production, turn on `failOnError`:
+
+```ts title="vite.config.ts"
+vitnode({
+  appRoot: import.meta.dirname,
+  nitro: {
+    prerender: {
+      failOnError: true, // [!code highlight]
+      routes: prerenderRoutes({
+        i18n: vitNodeConfig.i18n,
+        paths: PRERENDERED_PATHS,
+      }),
+    },
+  },
+})
+```
+
 ## What a prerendered page leaves out
 
 A prerendered file is shared by every visitor and built without your API, so VitNode leaves out anything that comes from the database or belongs to one visitor. Your build does not need a database.

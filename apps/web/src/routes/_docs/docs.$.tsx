@@ -8,6 +8,7 @@ import { DocsPagePendingSkeleton } from '@/docs/pending'
 import { movedDocsPath } from '@/docs/redirects'
 import { docsSectionOgCategory } from '@/docs/section'
 import { DOCS_STALE_TIME } from '@/docs/shared'
+import { docsStructuredDataScript } from '@/docs/structured-data'
 import { getDocsPage } from '@/docs/transport'
 
 export const Route = createFileRoute('/_docs/docs/$')({
@@ -33,8 +34,8 @@ export const Route = createFileRoute('/_docs/docs/$')({
 
     return page
   },
-  head: ({ loaderData }) =>
-    pageHead({
+  head: ({ loaderData }) => ({
+    ...pageHead({
       canonical: loaderData?.url,
       description: loaderData?.description,
       locale: 'en',
@@ -47,6 +48,8 @@ export const Route = createFileRoute('/_docs/docs/$')({
       robots: loaderData ? 'index, follow' : 'noindex, nofollow',
       title: loaderData?.metaTitle,
     }),
+    scripts: loaderData ? [docsStructuredDataScript(loaderData)] : [],
+  }),
   staleTime: DOCS_STALE_TIME,
   component: DocsRoute,
   errorComponent: DocsError,

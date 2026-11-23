@@ -57,6 +57,13 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
         sizes: '32x32',
         type: 'image/x-icon',
       },
+      { href: '/logo_vitnode_icon.svg', rel: 'icon', type: 'image/svg+xml' },
+      {
+        href: '/apple-touch-icon.png',
+        rel: 'apple-touch-icon',
+        sizes: '180x180',
+      },
+      { href: '/site.webmanifest', rel: 'manifest' },
     ],
     meta: [
       { charSet: 'utf-8' },
@@ -92,6 +99,16 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <style href={STYLESHEET_ORDER_ANCHOR} precedence="default" />
         <DocumentHead />
+        <meta
+          content="#f9fafb"
+          media="(prefers-color-scheme: light)"
+          name="theme-color"
+        />
+        <meta
+          content="#0c0e12"
+          media="(prefers-color-scheme: dark)"
+          name="theme-color"
+        />
         <ThemeScript {...theme} />
       </head>
 

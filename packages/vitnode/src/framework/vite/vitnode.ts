@@ -10,6 +10,7 @@ import { vitNodeDevError } from "./dev-error";
 import { vitNodeEnv } from "./env";
 import { vitNodeOptimizeDeps } from "./optimize-deps";
 import { vitNodePluginRoutes } from "./plugin-routes";
+import { vitNodePrerenderGuard } from "./prerender-guard";
 import { vitNodeSsrExternals } from "./ssr-externals";
 import { vitNodeTailwindSources } from "./tailwind-sources";
 import { vitNodeWebSocket } from "./websocket";
@@ -24,6 +25,11 @@ export interface VitNodeViteOptions
    * build, the development error page in `vite dev` and, with `webSocket`, the
    * `/api/ws` route. Arrays are merged, so your `handlers` are kept alongside
    * VitNode's.
+   *
+   * A prerendered page that rendered only a `<Suspense>` fallback, because
+   * part of it threw on the server, is reported as failed and not written, so
+   * it is server-rendered at runtime rather than served as a skeleton. Set
+   * `prerender.failOnError` to fail the build instead.
    *
    * `features.fastResponse` defaults to `false`: srvx's `FastResponse` loses
    * the status of a response rebuilt from another response, which Hono does
@@ -75,5 +81,6 @@ export const vitnode = ({
   ...nitroPlugin({
     ...nitro,
     features: { fastResponse: false, ...nitro?.features },
+    modules: [...(nitro?.modules ?? []), vitNodePrerenderGuard],
   }),
 ];
