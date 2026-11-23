@@ -453,7 +453,7 @@ describe.skipIf(!POSTGRES_TEST_URL)(
           expect.objectContaining({ actorId: null, recipientIds: [WATCHER] }),
         ]);
         await expect(inbox(WATCHER)).resolves.toEqual([
-          expect.objectContaining({ available: true, title: "A topic" }),
+          expect.objectContaining({ title: "A topic" }),
         ]);
       });
 
@@ -630,7 +630,6 @@ describe.skipIf(!POSTGRES_TEST_URL)(
         await drain();
         await expect(inbox(COMMENTER)).resolves.toEqual([
           expect.objectContaining({
-            available: true,
             target: "/pending",
             title: "ntest.decision.rejected",
           }),
@@ -642,11 +641,9 @@ describe.skipIf(!POSTGRES_TEST_URL)(
         await expect(events(DECISION_TYPE)).resolves.toHaveLength(2);
         await expect(inbox(COMMENTER)).resolves.toEqual([
           expect.objectContaining({
-            available: true,
             title: "ntest.decision.approved",
           }),
           expect.objectContaining({
-            available: true,
             title: "ntest.decision.rejected",
           }),
         ]);
@@ -777,7 +774,6 @@ describe.skipIf(!POSTGRES_TEST_URL)(
 
         await expect(inbox(TOPIC_AUTHOR)).resolves.toEqual([
           expect.objectContaining({
-            available: true,
             target: expect.stringMatching(/#comment-\d+$/),
             title: "ntest.reply.reply",
           }),
@@ -975,26 +971,23 @@ describe.skipIf(!POSTGRES_TEST_URL)(
           },
         ],
       ])(
-        "shows a placeholder while %s, and the notification again once restored",
+        "deletes the notification for good once %s",
         async (_, hide, restore) => {
           const ids = await notifiedComment();
           await expect(inbox(TOPIC_AUTHOR)).resolves.toMatchObject([
-            { available: true, title: "ntest.reply.comment" },
+            { title: "ntest.reply.comment" },
           ]);
 
           await hide(ids);
-          await expect(inbox(TOPIC_AUTHOR)).resolves.toMatchObject([
-            {
-              available: false,
-              target: null,
-              title: "core.notifications.unavailable",
-            },
-          ]);
+          await expect(inbox(TOPIC_AUTHOR)).resolves.toEqual([]);
+          await expect(
+            (await contextAs(TOPIC_AUTHOR))
+              .get("notifications")
+              .state(TOPIC_AUTHOR),
+          ).resolves.toMatchObject({ unread: 0 });
 
           await restore(ids);
-          await expect(inbox(TOPIC_AUTHOR)).resolves.toMatchObject([
-            { available: true, title: "ntest.reply.comment" },
-          ]);
+          await expect(inbox(TOPIC_AUTHOR)).resolves.toEqual([]);
         },
       );
 

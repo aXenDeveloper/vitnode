@@ -22,6 +22,7 @@ import { useEditorConfig } from "@/components/editor-provider";
 import { TipTapDragHandle } from "./drag-handle";
 import { EditorSkeleton } from "./editor-skeleton";
 import { createTipTapExtensions } from "./extension";
+import { useCanMention } from "./mention/use-can-mention";
 import { editorEmojiItems, toRichTextDocument } from "./rich-text-json";
 import { TipTapToolbar } from "./toolbar/tiptap-toolbar";
 import { ReusableUploadsBar } from "./uploads/reusable-uploads-bar";
@@ -67,6 +68,13 @@ export type TipTapEditorBaseProps = Omit<
 > & {
   disableScroll?: boolean;
   extensions?: Extensions;
+  /**
+   * Typing `@` offers members to mention, who are notified once the content
+   * is published and they can read it. On by default; it only opens for
+   * signed-in members whose role may mention. Set `false` for a field whose
+   * Content Engine definition has `mentions: false`.
+   */
+  mentions?: boolean;
   onEditor?: (editor: Editor | null) => void;
   placeholder?: string;
   /**
@@ -121,6 +129,19 @@ const ON_CHANGE_DELAY_MS = 200;
 
 const NO_REUSABLE_UPLOADS: EditorReusableUpload[] = [];
 
+/** Whether the `@` popup may open, read by the mention extension on each `@`. */
+class MentionsSwitch {
+  private enabled = false;
+
+  isEnabled(): boolean {
+    return this.enabled;
+  }
+
+  set(enabled: boolean): void {
+    this.enabled = enabled;
+  }
+}
+
 const EDITOR_CLASS =
   "max-w-full min-h-40 py-4 ps-5 pe-4 text-base focus:outline-none md:text-sm";
 
@@ -132,6 +153,7 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
     disableScroll,
     extensions,
     format: _format,
+    mentions = true,
     placeholder,
     undoRedo,
     reusableUploads,
@@ -148,6 +170,14 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
   const emojiItems = React.useMemo(() => editorEmojiItems(emojis), [emojis]);
   const placeholderText = placeholder ?? t("placeholder");
   const invalid = rest["aria-invalid"];
+  const canMention = useCanMention();
+  const mentionsEnabled = mentions && canMention;
+  // Read by the extension, so the extension list stays stable when the
+  // session or the prop changes.
+  const [mentionsSwitch] = React.useState(() => new MentionsSwitch());
+  React.useEffect(() => {
+    mentionsSwitch.set(mentionsEnabled);
+  }, [mentionsEnabled, mentionsSwitch]);
 
   const uploadOptions: EditorUploadsOptions =
     typeof uploads === "object" ? uploads : {};
@@ -200,13 +230,21 @@ export const TipTapEditor = (props: TipTapEditorProps) => {
     () => [
       ...createTipTapExtensions({
         customEmojis: emojis,
+        getMentionsEnabled: () => mentionsSwitch.isEnabled(),
         getUploadRuntime: () => uploadRuntime,
         placeholder: placeholderText,
         undoRedo,
       }),
       ...(extensions ?? []),
     ],
-    [emojis, extensions, placeholderText, undoRedo, uploadRuntime],
+    [
+      emojis,
+      extensions,
+      mentionsSwitch,
+      placeholderText,
+      undoRedo,
+      uploadRuntime,
+    ],
   );
   const editorProps = React.useMemo(
     () => ({

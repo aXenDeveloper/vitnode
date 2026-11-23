@@ -94,7 +94,7 @@ export const useNotificationActions = (userId: number) => {
           );
         }
 
-        if (!newTab && item.available && item.target) {
+        if (!newTab && item.target) {
           void router.navigate({ href: item.target });
         }
       },

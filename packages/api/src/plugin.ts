@@ -10,6 +10,7 @@ import { contentAccessEventDefinitions } from "./events/content-access";
 import { contentApprovalEventDefinitions } from "./events/content-approvals";
 import { contentContainerEventDefinitions } from "./events/content-containers";
 import { fileEventDefinitions } from "./events/files";
+import { mentionEventDefinitions } from "./events/mentions";
 import { moderationEventDefinitions } from "./events/moderation";
 import { notificationEventDefinitions } from "./events/notifications";
 import { pageEventDefinitions } from "./events/pages";
@@ -60,6 +61,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     ...contentApprovalEventDefinitions,
     ...contentContainerEventDefinitions,
     ...fileEventDefinitions,
+    ...mentionEventDefinitions,
     ...moderationEventDefinitions,
     ...notificationEventDefinitions,
     ...pageEventDefinitions,

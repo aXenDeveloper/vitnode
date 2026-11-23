@@ -1,5 +1,7 @@
 import { camelCase, index } from "drizzle-orm/pg-core";
 
+import { ROLE_DEFAULT_MAX_MENTIONS_PER_ITEM } from "@/lib/mentions/limits";
+
 export const core_roles = camelCase.table.withRLS(
   "core_roles",
   t => ({
@@ -37,6 +39,10 @@ export const core_roles = camelCase.table.withRLS(
     maxReactionsPerItem: t.integer().default(1),
     // Reactions per day over every reaction; null = unlimited.
     reactionsPerDay: t.integer(),
+    /** Members of this role may `@mention` others and so notify them. */
+    allowMentions: t.boolean().notNull().default(true),
+    // Members one post of theirs notifies by mentions; null = unlimited.
+    maxMentionsPerItem: t.integer().default(ROLE_DEFAULT_MAX_MENTIONS_PER_ITEM),
   }),
   t => [index("core_roles_updated_at_id_idx").on(t.updatedAt, t.id)],
 );

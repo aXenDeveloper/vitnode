@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { NotificationItemProps } from "./notification-item";
 import type { NotificationItemView } from "./notifications-query";
 
+import { MarkAllReadConfirm } from "./mark-all-read-confirm";
 import { NotificationItem } from "./notification-item";
 
 const NOTIFICATIONS_HREF = "/notifications";
@@ -40,7 +41,7 @@ const formatUnreadBadge = (count: number): null | string => {
 };
 
 export interface NotificationsBellContentProps {
-  onMarkAllRead: () => void;
+  onMarkAllRead: () => Promise<void>;
   onOpenChange: (open: boolean) => void;
   onOpenItem: NotificationItemProps["onOpen"];
   onRetry: () => void;
@@ -97,15 +98,12 @@ export const NotificationsBellContent = ({
       <PopoverContent align="end" className="w-80 gap-2 p-2 sm:w-96">
         <div className="flex items-center justify-between gap-2 px-2 pt-1">
           <PopoverTitle className="text-base">{t("title")}</PopoverTitle>
-          <Button
-            disabled={unread === 0}
-            onClick={onMarkAllRead}
-            size="sm"
-            variant="ghost"
-          >
-            <CheckCheckIcon />
-            {t("mark_all_read")}
-          </Button>
+          <MarkAllReadConfirm onConfirm={onMarkAllRead} unread={unread}>
+            <Button disabled={unread === 0} size="sm" variant="ghost">
+              <CheckCheckIcon />
+              {t("mark_all_read")}
+            </Button>
+          </MarkAllReadConfirm>
         </div>
 
         <div aria-busy={recent.isPending} className="max-h-96 overflow-y-auto">

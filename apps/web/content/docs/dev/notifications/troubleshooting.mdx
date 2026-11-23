@@ -37,6 +37,8 @@ Digests follow the time zone the member set under **Region** on `/settings`, the
 
 Every inbox change updates the count in the same transaction, so a wrong count is a bug worth reporting. To check and repair counts, call `POST /reconcile` from the [AdminCP endpoints](/docs/dev/notifications/reference#admincp-endpoints). It only reports mismatches unless you send `{ "dryRun": false }`, which also pushes the corrected badge to open tabs.
 
-## Items say "This notification is no longer available"
+## Items disappear from the inbox
 
-The item is a placeholder. The content was deleted, the member lost access, the plugin was uninstalled, or the stored data no longer matches the type's schema and `migrate` could not upgrade it. Members can still read or archive the item. Plugins can tidy these up with [`remove()`](/docs/dev/notifications/access#remove-notifications-when-content-goes-away).
+Core deletes an item when it loads and finds the content gone or hidden, the member without access, the plugin uninstalled, or stored data that no longer matches the type's schema and that `migrate` could not upgrade. See [Items that are no longer available](/docs/dev/notifications/inbox-and-realtime#items-that-are-no-longer-available). Plugins can clean up sooner with [`remove()`](/docs/dev/notifications/access#remove-notifications-when-content-goes-away).
+
+An item that stays in the unread count but never shows up has a `present` or `access` that fails. Check the server log for `[Notifications] "<type>" failed to render`.

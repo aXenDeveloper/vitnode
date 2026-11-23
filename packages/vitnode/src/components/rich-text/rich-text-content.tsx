@@ -12,6 +12,7 @@ import {
   richTextNodeElement,
 } from "@vitnode/api/content/rich-text/elements";
 import { richTextToHtml } from "@vitnode/api/content/rich-text/html";
+import { richTextMentionOf } from "@vitnode/api/content/rich-text/mentions";
 import { cn } from "cn";
 import React from "react";
 
@@ -21,6 +22,7 @@ import {
   isRestrictedUploadNode,
   RestrictedUpload,
 } from "./deleted-upload";
+import { RichTextMentionLink } from "./mention";
 
 export interface RichTextNodeRendererProps {
   children?: React.ReactNode;
@@ -172,6 +174,12 @@ const renderNode = (
 
   if (isRestrictedUploadNode(node)) return <RestrictedUpload key={key} />;
 
+  if (node.type === "mention") {
+    const mention = richTextMentionOf(node);
+
+    return mention ? <RichTextMentionLink key={key} mention={mention} /> : null;
+  }
+
   const element = richTextNodeElement(node);
 
   return element ? (
@@ -185,7 +193,8 @@ const renderNode = (
  * Renders a stored rich-text document as React elements, without an editor
  * and without `dangerouslySetInnerHTML`. Built-in nodes and marks map to
  * sanitised HTML elements; unknown ones render only their children unless
- * `nodes` or `marks` supplies a renderer. Universal - works in SSR.
+ * `nodes` or `marks` supplies a renderer. An `@mention` links to the
+ * member's current profile with the preview card. Universal - works in SSR.
  */
 export const RichTextContent = ({
   className,

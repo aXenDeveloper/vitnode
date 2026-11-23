@@ -28,7 +28,7 @@ import { Activity } from "react";
 ```
 
 - Always use skeletons for loading feedback. Use `<Loader />` only if its necessary.
-- Add a breadcrumb with the route's `staticData.breadcrumb`; a crumb that renders strings needs its own `RouteMessages`.
+- Breadcrumbs are optional on every page. Add one with the route's `staticData.breadcrumb` (or a plugin page's `route.breadcrumb`) only when the trail helps; leaving it out adds no crumb, and with no crumbs the breadcrumb bar is not rendered. A crumb that renders strings needs its own `RouteMessages`.
 - Route files are topology only - `validateSearch`, `loaderDeps`, `loader`, `head`, `staticData`. The query, the permissions, the namespaces and the screen live in `@vitnode/core/tanstack/*`.
 - Write `head` **after** `loader` in the same object literal: `loaderData` is inferred from `loader`, and TypeScript reads members in order.
 - Name files `x.server.ts` when they must never reach the browser bundle.

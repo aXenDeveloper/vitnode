@@ -626,6 +626,15 @@
           },
           "in_unit": "kB"
         },
+        "mentions": {
+          "allow": "Zezwalaj na wspominanie osób",
+          "allow_desc": "Wpisanie @ w edytorze podpowiada osoby do wspomnienia, a one dostają powiadomienie.",
+          "max_per_item": "Powiadomione osoby na wpis",
+          "max_per_item_desc": "Ile wspomnianych osób może powiadomić jeden wpis. Dalsze wzmianki nadal się wyświetlają, ale bez powiadomienia.",
+          "in_unit": "osób",
+          "or": "lub",
+          "unlimited": "Bez limitu"
+        },
         "name": "Nazwa",
         "personal_info": {
           "allow_edit": "Zezwalaj na edycję informacji osobistych",
@@ -3568,6 +3577,15 @@
           "uploading": "Przesyłanie…",
           "open": "Otwórz {name}"
         },
+        "mention": {
+          "label": "Osoby do wspomnienia",
+          "hint": "Wpisz nazwę, aby wspomnieć osobę.",
+          "loading": "Szukam osób…",
+          "empty": "Nie znaleziono osób.",
+          "load_error": "Nie udało się wczytać osób. Sprawdź połączenie i spróbuj ponownie.",
+          "forbidden": "Twoja rola nie może wspominać osób.",
+          "retry": "Spróbuj ponownie"
+        },
         "uploads": {
           "errors": {
             "title": "Nie dodano pliku",
@@ -4242,15 +4260,19 @@
     "notifications": {
       "title": "Powiadomienia",
       "desc": "Wszystko, co wydarzyło się pod Twoją nieobecność. Otwarcie tej strony niczego nie oznacza jako przeczytanego.",
-      "list_label": "Powiadomienia",
-      "filter_all": "Wszystkie",
       "filter_unread": "Nieprzeczytane",
-      "all_categories": "Wszystkie kategorie",
-      "category_label": "Filtruj według kategorii",
       "mark_all_read": "Oznacz wszystkie jako przeczytane",
-      "settings": "Ustawienia powiadomień",
-      "loading": "Wczytywanie…",
-      "load_more": "Wczytaj więcej",
+      "settings_button": "Ustawienia",
+      "summary": "<b>{total}</b> {total, plural, one {powiadomienie} few {powiadomienia} many {powiadomień} other {powiadomienia}} · <b>{unread}</b> nieprzeczytane",
+      "column_status": "Status",
+      "column_notification": "Powiadomienie",
+      "column_category": "Kategoria",
+      "column_received": "Otrzymano",
+      "column_actions": "Akcje",
+      "filter_status": "Status",
+      "filter_status_all": "Dowolny status",
+      "filter_category": "Kategoria",
+      "status_read": "Przeczytane",
       "load_error": {
         "title": "Nie udało się wczytać powiadomień",
         "desc": "Coś poszło nie tak podczas pobierania. Sprawdź połączenie i spróbuj ponownie."
@@ -4419,8 +4441,7 @@
         "by_moderator": "Komentarz usunięty przez moderatora"
       },
       "live": {
-        "new_comments": "Pojawiły się nowe komentarze.",
-        "show_new": "Pokaż nowe komentarze",
+        "new_count": "{count, plural, one {# nowy komentarz} few {# nowe komentarze} many {# nowych komentarzy} other {# nowego komentarza}}",
         "refresh_failed": "Nie udało się odświeżyć komentarzy, więc część z nich może być nieaktualna.",
         "retry": "Spróbuj ponownie",
         "edit_removed": "Ten komentarz został usunięty w trakcie edycji. Twój tekst nadal tu jest, ale nie da się go już zapisać.",

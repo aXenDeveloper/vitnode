@@ -22,7 +22,7 @@ implementation:
 import { ImgDocs } from "@/components/fumadocs/img";
 import newComments from "./threads-live-new-comments.webp";
 
-Live comments keep a comment section current while people read it. When someone replies, edits, hides or deletes a comment, every open copy of the article re-reads only the branch that changed. New top-level comments wait behind a **Show new comments** button, because nobody enjoys a page that rearranges itself mid-sentence. Loaded pages, open reply forms and the reading position stay where they were.
+Live comments keep a comment section current while people read it. When someone replies, edits, hides or deletes a comment, every open copy of the article re-reads only the branch that changed. New top-level comments show up at the end of the thread right away, under a blue **2 new comments** divider so you can tell what's fresh. Loaded pages, open reply forms and the reading position stay where they were, because nobody enjoys a page that rearranges itself mid-sentence.
 
 ## Before you begin
 
@@ -71,7 +71,7 @@ import { commentContentType } from "@/content/comment"; // [!code ++]
     live: { contentTypeId: commentContentType.id, rootId: articleId }, // [!code ++]
 ```
 
-That's the whole change. `live` needs `branches` and is ignored without it. `ContentComments` shows **Show new comments** and refresh errors on its own. A custom layout renders `ContentCommentsLiveStatus` inside its `ContentCommentsRoot`, as the Blog plugin does; see [Comments API](/docs/content-engine/comments-api#your-own-layout).
+That's the whole change. `live` needs `branches` and is ignored without it. `ContentComments` shows the new-comments divider and refresh errors on its own. A custom layout renders `ContentCommentsNewSeparator` before the first id in `newCommentIds` and `ContentCommentsLiveStatus` inside its `ContentCommentsRoot`, as the Blog plugin does; see [Comments API](/docs/content-engine/comments-api#your-own-layout).
 
 </Step>
 
@@ -83,7 +83,7 @@ Use two browser windows, one of them private, so they hold different sessions. S
 
 1. In window A, reply to a comment. Window B shows the reply within a second or two, without a reload.
 2. In window B, click **Reply** under a comment and type a few words without sending. In window A, reply to the same comment. Window B shows the new reply and keeps your unsent text.
-3. In window A, post a new top-level comment. Window B shows **New comments were posted.** at the end of the thread. Click **Show new comments** to add it below the others.
+3. In window A, post a new top-level comment. Window B adds it at the end of the thread right away, under a **1 new comment** divider. Window A shows its own comment without the divider.
 
 A signed-out window gets the same updates; it just can't reply.
 
@@ -91,7 +91,7 @@ A signed-out window gets the same updates; it just can't reply.
   withoutBackground
   className="*:max-w-full"
   src={newComments}
-  alt="Two Blog plugin conversation cards by Ada Lovelace and Grace Hopper, then a 'New comments were posted.' notice with a Show new comments button above the Write a comment field"
+  alt="Two Blog plugin conversation cards by Ada Lovelace and Grace Hopper, then a blue '1 new comment' divider above a comment that just arrived"
 />
 
 ## What arrives live
@@ -100,7 +100,7 @@ A signed-out window gets the same updates; it just can't reply.
 | --- | --- |
 | A reply, edit, hide, unhide or delete in a loaded branch | Re-reads that branch and puts it back in place |
 | A burst of changes to one branch | Re-reads it once, 0.4 seconds after the last change and never more than 2 seconds after the first |
-| A new top-level comment, with every page loaded | Shows **Show new comments**; clicking it reads only what follows the last loaded comment |
+| A new top-level comment, with every page loaded | Reads only what follows the last loaded comment and adds it at the end, under the **new comments** divider. Your own comments never get the divider |
 | A new top-level comment, with more pages on the server | Nothing yet. Comments are oldest first, so **Load more comments** reaches it |
 | A change in a branch that isn't loaded | Nothing; it's read fresh when its page loads |
 | A comment that is a draft or waits for a moderator | Nothing. It isn't public, so other readers aren't told |

@@ -6,6 +6,7 @@ import {
   notificationsScheduleCron,
 } from "./cron/notifications.cron";
 import { archiveNotificationRoute } from "./routes/archive.route";
+import { inboxNotificationsRoute } from "./routes/inbox.route";
 import { listNotificationsRoute } from "./routes/list.route";
 import { markAllNotificationsReadRoute } from "./routes/mark-all-read.route";
 import { markNotificationReadRoute } from "./routes/mark-read.route";
@@ -23,6 +24,7 @@ export const notificationsModule = buildModule({
   name: "notifications",
   routes: [
     listNotificationsRoute,
+    inboxNotificationsRoute,
     notificationStateRoute,
     markAllNotificationsReadRoute,
     markNotificationReadRoute,

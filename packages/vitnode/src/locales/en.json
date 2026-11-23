@@ -463,6 +463,14 @@
             "title": "Error panel",
             "hint": "Flag a blocker or a risk"
           }
+        },
+        "mention": {
+          "label": "Members to mention",
+          "loading": "Looking for members…",
+          "empty": "No members found.",
+          "load_error": "Members didn't load. Check your connection and try again.",
+          "forbidden": "Your role can't mention members.",
+          "retry": "Try again"
         }
       },
       "theme": {
@@ -703,6 +711,10 @@
         "mark_all_read": "Mark all as read",
         "all_read": "All caught up",
         "all_read_desc": "Every notification is marked as read.",
+        "mark_all_read_confirm": {
+          "title": "Mark {count, plural, one {# notification} other {all # notifications}} as read?",
+          "desc": "They stay in your inbox, but nothing will stand out as new anymore. You can still mark single ones as unread later."
+        },
         "mark_read": "Mark as read",
         "mark_unread": "Mark as unread",
         "archive": "Archive",
@@ -1855,8 +1867,7 @@
       },
       "warn": "Warn author",
       "live": {
-        "new_comments": "New comments were posted.",
-        "show_new": "Show new comments",
+        "new_count": "{count, plural, one {# new comment} other {# new comments}}",
         "refresh_failed": "Could not refresh the comments, so some may be out of date.",
         "retry": "Try again",
         "edit_removed": "This comment was removed while you were editing it. Your text is still here, but it can no longer be saved.",
@@ -2616,15 +2627,19 @@
     "notifications": {
       "title": "Notifications",
       "desc": "Everything that happened while you were away. Opening this page never marks anything as read.",
-      "list_label": "Notifications",
-      "filter_all": "All",
       "filter_unread": "Unread",
-      "all_categories": "All categories",
-      "category_label": "Filter by category",
       "mark_all_read": "Mark all as read",
-      "settings": "Notification settings",
-      "loading": "Loading…",
-      "load_more": "Load more",
+      "settings_button": "Settings",
+      "summary": "<b>{total}</b> {total, plural, one {notification} other {notifications}} · <b>{unread}</b> unread",
+      "column_status": "Status",
+      "column_notification": "Notification",
+      "column_category": "Category",
+      "column_received": "Received",
+      "column_actions": "Actions",
+      "filter_status": "Status",
+      "filter_status_all": "Any status",
+      "filter_category": "Category",
+      "status_read": "Read",
       "load_error": {
         "title": "Notifications didn't load",
         "desc": "Something went wrong while fetching them. Check your connection and try again."
@@ -4730,6 +4745,15 @@
         "delete_account": {
           "allow": "Allow deleting own account",
           "allow_desc": "Members of this role can delete their account in Settings → Privacy & data. Staff can always delete an account in the AdminCP."
+        },
+        "mentions": {
+          "allow": "Allow mentioning members",
+          "allow_desc": "Typing @ in the editor offers members to mention, and they get a notification.",
+          "max_per_item": "Members notified per post",
+          "max_per_item_desc": "How many mentioned members one post can notify. Extra mentions still show, without a notification.",
+          "in_unit": "members",
+          "or": "or",
+          "unlimited": "Unlimited"
         }
       }
     },

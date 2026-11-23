@@ -380,30 +380,20 @@ describe("createContentCommentsLive", () => {
         readPage: 0,
         threadReads: 0,
       });
-      expect(live.getSnapshot().hasNew).toBe(false);
+      expect(live.getSnapshot().arrived).toStrictEqual([]);
     });
 
-    it("a new comment at the end of the thread: 0 requests, then 1 page read on showNew", async () => {
+    it("a new comment at the end of the thread: 1 page read, appended right away", async () => {
       const { data, live, readPage, requests, server } = await setup({
         branches: 6,
         loadedPages: 3,
       });
       server.state.branches.push([node(90)]);
+      const before = data()?.pages.map(item => item.items) ?? [];
 
       live.signal({ branchId: 90, kind: "branch" });
       await vi.advanceTimersByTimeAsync(SETTLE_MS);
 
-      expect(requests()).toStrictEqual({
-        readBranches: 0,
-        readPage: 0,
-        threadReads: 0,
-      });
-      expect(live.getSnapshot().hasNew).toBe(true);
-
-      const before = data()?.pages.map(item => item.items) ?? [];
-      const shown = await live.showNew();
-
-      expect(shown).toBe(true);
       expect(requests()).toStrictEqual({
         readBranches: 0,
         readPage: 1,
@@ -416,7 +406,7 @@ describe("createContentCommentsLive", () => {
         expect(after[index].items).toBe(items);
       });
       expect(ids(after[3].items)).toStrictEqual([90]);
-      expect(live.getSnapshot().hasNew).toBe(false);
+      expect(live.getSnapshot().arrived).toStrictEqual(["90"]);
     });
 
     it("five quick signals for one loaded branch: 1 branch read", async () => {

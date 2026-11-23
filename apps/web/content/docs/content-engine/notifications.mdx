@@ -294,11 +294,11 @@ A comment notifies **once, the first time it becomes public**. VitNode tells tha
 | Waiting for approval, then approved | Sent once, at approval |
 | Rejected | None about the comment. A [`moderationDecision` rule](#tell-authors-about-moderation-decisions) can tell its author |
 | Edited, or an edit approved | No new one |
-| Hidden, then shown again | Shows "This notification is no longer available." while hidden, then comes back. A comment hidden before the notification went out is never announced |
-| Unpublished, then published again | Unavailable meanwhile, then back. No new one |
+| Hidden, then shown again | Deleted from the inbox while hidden, and not brought back. A comment hidden before the notification went out is never announced |
+| Unpublished, then published again | Deleted meanwhile. No new one |
 | Deleted without replies | Removed from inboxes |
-| Deleted while it has replies | It stays as a placeholder in the thread, and its notification is unavailable. Notifications about its replies stay |
-| Its article unpublished, hidden or deleted | Unavailable while the article is not public; removed with a deleted article |
+| Deleted while it has replies | It stays as a placeholder in the thread, and its notification is deleted. Notifications about its replies stay |
+| Its article unpublished, hidden or deleted | Deleted from the inbox |
 
 Comments that were already public before you added the rules never notify, so deploying them doesn't bury every author under a year of old news.
 
@@ -368,7 +368,7 @@ You need two members, Ada and Grace. For setup B, first make Ada the author of a
 
 3. As Ada, reply to Grace's comment. Grace gets "replied to your comment" and Ada gets nothing. Open it as Grace, and the reply is highlighted below Grace's comment.
 4. As Grace, open **Settings → Notifications**, expand **Comments and replies** and turn **Notification list** off. Have Ada reply again. Nothing new arrives. Turn it back on.
-5. As a moderator, hide Grace's comment. Ada's notification now says it is no longer available. Show the comment again and the notification comes back.
+5. As a moderator, hide Grace's comment. Ada's notification is gone the next time their inbox loads, and showing the comment again does not bring it back.
 6. Delete the article. Both notifications disappear from the inboxes.
 
 ## Related

@@ -135,6 +135,13 @@ const richText = <
       /** Largest serialised document accepted, in bytes. Defaults to 1 MiB. */
       maxBytes?: number;
       /**
+       * `@mentions` in this field notify the mentioned members once the record
+       * is public and they can read it. On by default; `false` turns it off -
+       * pass `mentions={false}` to the field's `AutoFormEditor` too, so the
+       * `@` popup doesn't open.
+       */
+      mentions?: boolean;
+      /**
        * Lets the AdminCP editor accept dropped, pasted and inserted images,
        * stored in `core_files`. Needs the staff permission `files:can_upload`.
        */

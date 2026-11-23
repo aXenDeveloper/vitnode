@@ -221,7 +221,7 @@ const readBaseRow = async (
   return row ?? null;
 };
 
-const readTranslationRow = async (
+export const readTranslationRow = async (
   c: Context,
   db: ContentDatabase,
   model: AnyContentModel,

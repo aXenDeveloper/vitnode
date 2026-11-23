@@ -30,9 +30,9 @@ Types with [`grouping`](/docs/dev/notifications/notification-types#grouping) mer
 
 ## Items that are no longer available
 
-Before returning a page of the inbox, core checks every item again: the type is still registered, its stored data still parses, `access` still allows the member and `present` still renders. If any check fails, the item comes back as a placeholder with the title "This notification is no longer available." and no link.
+Before returning a page of the inbox, core checks every item again: the type is still registered, its stored data still parses, `access` still allows the member and `present` still renders. If the type is gone, the data no longer parses or `access` says no, the item is deleted for good and the unread count drops with it. That covers deleted or hidden content, revoked access and uninstalled plugins. Showing the content again does not bring the item back.
 
-The placeholder keeps its read state, so members can still read or archive it, and the unread count never includes an item they cannot clear. This covers deleted content, revoked access and uninstalled plugins.
+If `access` throws or `present` fails, the item is left out of that page but kept, since the cause may be a passing error or a bug about to be fixed. The error is logged.
 
 ## The live unread count
 
@@ -48,6 +48,14 @@ WebSocket messages missed while a tab was offline are not replayed. Instead, the
 
 When the count changes, open notification lists refresh once per burst: 1 second after the last change and at most 5 seconds after the first.
 
+## Toasts for new notifications
+
+When a new notification lands in a member's inbox while a tab is open, it also pops up as a toast: the sender's avatar with a small badge for the kind of notification (@ for a mention, an arrow for a reply, a smile for a reaction), their name, what happened and the text. The whole toast is one button. Clicking it opens the notification and marks it read, just like clicking it in the bell. The server adds the member's own `notificationId` to the `created` message, and the browser fetches that item and shows it if it is still unread.
+
+The same badge marks each item in the bell and on the notifications page. Admin messages skip it, because the AdminCP already sends them as a live toast of their own.
+
+Every open tab shows the toast. Without a socket there are no toasts; the count still catches up through `/state`.
+
 <Callout type="warn" title="Several API instances need Redis for realtime">
   With `REDIS_URL` set, realtime messages travel between API instances over
   Redis, so delivery on instance A reaches a tab connected to instance B.
@@ -58,10 +66,10 @@ When the count changes, open notification lists refresh once per burst: 1 second
 
 ## What core ships in the UI
 
-| Piece                  | Where                                                                                     |
-| ---------------------- | ----------------------------------------------------------------------------------------- |
-| Bell with unread badge | Site header on every screen size. Loads the recent list only when opened                  |
-| Notifications page     | `/notifications`, with **All** and **Unread** tabs, a category filter and infinite scroll |
-| Preferences            | `/settings/notifications`, see [Preferences](/docs/dev/notifications/preferences)         |
+| Piece                  | Where                                                                                              |
+| ---------------------- | -------------------------------------------------------------------------------------------------- |
+| Bell with unread badge | Site header on every screen size. Loads the recent list only when opened                           |
+| Notifications page     | `/notifications`, a paged table you can sort by date or category and filter by status and category |
+| Preferences            | `/settings/notifications`, see [Preferences](/docs/dev/notifications/preferences)                  |
 
 A default theme needs no wiring. To build your own bell, call the [member endpoints](/docs/dev/notifications/reference#member-endpoints) and listen to the [realtime channel](/docs/dev/notifications/reference#realtime-channel).

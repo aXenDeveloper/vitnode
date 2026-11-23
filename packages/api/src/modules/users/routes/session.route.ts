@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { buildRoute } from "@/builders";
 import { getStaffFlags } from "@/lib/check-staff-permission";
+import { resolveMentionPolicy } from "@/lib/mentions/policy";
 import { getNotificationState } from "@/models/notifications/inbox";
 import { zodNotificationState } from "@/modules/notifications/notifications.schema";
 
@@ -39,6 +40,9 @@ export const sessionRoute = buildRoute({
                   birthday: z.date().nullable(),
                   isAdmin: z.boolean(),
                   isModerator: z.boolean(),
+                  canMention: z
+                    .boolean()
+                    .describe("One of the user's roles may `@mention` members"),
                   notifications: zodNotificationState,
                 })
                 .nullable(),
@@ -67,11 +71,21 @@ export const sessionRoute = buildRoute({
       });
     }
 
-    const [{ isAdmin, isModerator }, notifications] = await Promise.all([
-      getStaffFlags(c, user),
-      getNotificationState(c.get("db"), user.id),
-    ]);
+    const [{ isAdmin, isModerator }, notifications, mentions] =
+      await Promise.all([
+        getStaffFlags(c, user),
+        getNotificationState(c.get("db"), user.id),
+        resolveMentionPolicy(c),
+      ]);
 
-    return c.json({ user: { ...user, isAdmin, isModerator, notifications } });
+    return c.json({
+      user: {
+        ...user,
+        canMention: mentions.canMention,
+        isAdmin,
+        isModerator,
+        notifications,
+      },
+    });
   },
 });

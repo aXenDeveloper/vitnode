@@ -154,7 +154,7 @@ Core cleans what `present` returns before anyone sees it:
 
 - `title` and `body` are plain text. Markup is never rendered, whitespace is collapsed and each string is cut at 500 characters.
 - `target` must be a path on the same site, such as `/forum/topics/42`. Absolute URLs, `//host`, `javascript:` and backslashes are dropped, and the item renders without a link.
-- If `present` throws or returns an empty title, the item shows "This notification is no longer available." and the error is logged.
+- If `present` throws or returns an empty title, the item is left out of the list and the error is logged.
 
 ## `access`
 
@@ -194,7 +194,7 @@ export const topicReplyNotification = buildNotificationType({
 })
 ```
 
-Data that cannot be upgraded is never shown. That covers a missing `migrate`, a stored version newer than the code, a thrown error or a failed parse. A notification not yet delivered is marked failed, and inbox items show the "no longer available" placeholder.
+Data that cannot be upgraded is never shown. That covers a missing `migrate`, a stored version newer than the code, a thrown error or a failed parse. A notification not yet delivered is marked failed, and inbox items are deleted when they next load.
 
 ## `mandatory`
 

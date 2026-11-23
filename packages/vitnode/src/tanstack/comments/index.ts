@@ -9,6 +9,7 @@ export {
   ContentCommentsComposer,
   ContentCommentsLiveStatus,
   ContentCommentsLoadMore,
+  ContentCommentsNewSeparator,
 } from "./content-comments";
 export type { ContentCommentItemState } from "./item";
 export {

@@ -439,11 +439,48 @@ export const ContentCommentsLoadMore = ({
 };
 
 /**
+ * The divider above the first comment that other people posted while the
+ * thread was open, such as "2 new comments", in the primary color. Renders a
+ * list item, so place it inside the thread's `<ol>` right before that
+ * comment; renders nothing when there are no new comments.
+ *
+ * @example
+ * ```tsx
+ * {comments.tree.map(node => (
+ *   <React.Fragment key={String(node.id)}>
+ *     {node.id === comments.newCommentIds[0] ? <ContentCommentsNewSeparator /> : null}
+ *     <CommentBranch node={node} />
+ *   </React.Fragment>
+ * ))}
+ * ```
+ */
+export const ContentCommentsNewSeparator = ({
+  className,
+}: {
+  className?: string;
+}) => {
+  const t = useTranslations("core.comments");
+  const { comments } = useContentCommentsContext();
+  const count = comments.newCommentIds.length;
+  if (count === 0) return null;
+
+  return (
+    <li className={cn("flex items-center gap-2", className)}>
+      <span aria-hidden="true" className="bg-primary/60 h-px min-w-0 flex-1" />
+      <span className="border-primary/60 bg-background text-primary shrink-0 rounded-full border px-3 py-1 text-sm font-semibold tabular-nums">
+        {t("live.new_count", { count })}
+      </span>
+      <span aria-hidden="true" className="bg-primary/60 h-px min-w-0 flex-1" />
+    </li>
+  );
+};
+
+/**
  * The live state of the thread, for a section that renders its own layout:
- * **Show new comments** when comments appeared after the loaded ones, and a
- * notice with **Try again** when a background refresh failed - the comments
- * on screen stay. Both are announced politely to screen readers. Renders
- * nothing while there is nothing to say.
+ * a polite screen reader announcement when other people's comments were
+ * added, and a notice with **Try again** when a background refresh failed -
+ * the comments on screen stay. Renders nothing visible while there is
+ * nothing to say.
  */
 export const ContentCommentsLiveStatus = ({
   className,
@@ -452,10 +489,10 @@ export const ContentCommentsLiveStatus = ({
 }) => {
   const t = useTranslations("core.comments");
   const { comments } = useContentCommentsContext();
-  const [isShowing, setIsShowing] = React.useState(false);
   const [isRetrying, setIsRetrying] = React.useState(false);
+  const newCount = comments.newCommentIds.length;
   const announcement = [
-    comments.hasNewComments ? t("live.new_comments") : null,
+    newCount > 0 ? t("live.new_count", { count: newCount }) : null,
     comments.refreshError ? t("live.refresh_failed") : null,
   ]
     .filter(Boolean)
@@ -467,38 +504,6 @@ export const ContentCommentsLiveStatus = ({
       <p aria-live="polite" className="sr-only">
         {announcement}
       </p>
-      {comments.hasNewComments ? (
-        <div
-          className={cn(
-            "bg-muted text-foreground flex flex-wrap items-center gap-3 self-start rounded-2xl px-4 py-2.5",
-            className,
-          )}
-        >
-          <p aria-hidden="true" className="text-sm leading-relaxed">
-            {t("live.new_comments")}
-          </p>
-          <Button
-            isLoading={isShowing}
-            onClick={async () => {
-              setIsShowing(true);
-              try {
-                if (!(await comments.showNewComments())) {
-                  toast.error(t("load_failed.title"), {
-                    description: t("load_failed.desc"),
-                  });
-                }
-              } finally {
-                setIsShowing(false);
-              }
-            }}
-            size="sm"
-            variant="outline"
-          >
-            <ChevronDownIcon aria-hidden="true" />
-            {t("live.show_new")}
-          </Button>
-        </div>
-      ) : null}
       {comments.refreshError ? (
         <div className={cn("flex flex-wrap items-center gap-3", className)}>
           <p
@@ -682,12 +687,16 @@ const ContentCommentsSection = ({
       ) : (
         <ol aria-busy={comments.isRefreshing} className="flex flex-col gap-6">
           {comments.tree.map(node => (
-            <CommentBranch
-              display={display}
-              highlightedId={highlightedId}
-              key={String(node.id)}
-              node={node}
-            />
+            <React.Fragment key={String(node.id)}>
+              {node.id === comments.newCommentIds[0] ? (
+                <ContentCommentsNewSeparator />
+              ) : null}
+              <CommentBranch
+                display={display}
+                highlightedId={highlightedId}
+                node={node}
+              />
+            </React.Fragment>
           ))}
         </ol>
       )}

@@ -24,7 +24,6 @@ export const zodNotificationItem = z.object({
   activitySeq: z.number(),
   actorCount: z.number(),
   actors: z.array(zodNotificationActor),
-  available: z.boolean(),
   body: z.string().nullable(),
   category: z.string(),
   createdAt: z.date(),

@@ -30,6 +30,10 @@ import {
   validateContentTypes,
   withContentPermissions,
 } from "@/content/registry";
+import {
+  contentMentionFields,
+  contentMentionTarget,
+} from "@/content/server/mention-target";
 import { contentDefinitionOf } from "@/content/server/model";
 import { contentReactionTarget } from "@/content/server/reaction-target";
 import { contentReportTarget } from "@/content/server/report-target";
@@ -42,6 +46,10 @@ import type { CronJobConfig } from "./cron";
 import type { RegisteredEditablePage } from "./editable-pages";
 import type { EventDefinition } from "./event-definition";
 import type { EventListenerConfig } from "./events";
+import type {
+  MentionsPluginConfig,
+  MentionTargetDefinition,
+} from "./mentions/targets";
 import type { ModerationPluginConfig } from "./moderation/registry";
 import type { ModerationReportTargetDefinition } from "./moderation/targets";
 import type { BaseBuildModuleReturn, BuildModuleReturn } from "./module";
@@ -104,6 +112,8 @@ export interface BuildPluginApiReturn<
   /** Every module's routes, each module mounted at `/{module.name}`. */
   hono: OpenAPIHono;
   manifest?: PluginManifest<P>;
+  /** Declared mention targets plus one per content model with mention fields. */
+  mentions?: Required<MentionsPluginConfig>;
   messages?: LocaleMessagesMap;
   /**
    * Declared targets and scopes, plus one report target per content model with
@@ -189,6 +199,7 @@ export function buildApiPlugin<
   editablePages,
   eventDefinitions,
   manifest,
+  mentions,
   messages,
   moderation,
   modules = [] as unknown as Modules,
@@ -232,6 +243,11 @@ export function buildApiPlugin<
   eventDefinitions?: readonly EventDefinition[];
   /** The plugin's generated manifest (`src/manifest.gen.ts`). */
   manifest: PluginManifest<P>;
+  /**
+   * `@mention` targets beyond those content models add (every rich-text
+   * field keeps mentions on unless it sets `mentions: false`).
+   */
+  mentions?: MentionsPluginConfig;
   /**
    * Lazy loaders for the plugin's server-side messages (emails, notifications),
    * keyed by locale code. Separate from the frontend tree `buildPlugin` takes.
@@ -425,6 +441,15 @@ export function buildApiPlugin<
       .map(model => contentReactionTarget(model, pluginId)),
   ];
 
+  const mentionTargets: MentionTargetDefinition[] = [
+    ...(mentions?.targets ?? []),
+    ...contentModels
+      .filter(
+        model => contentMentionFields(contentDefinitionOf(model)).length > 0,
+      )
+      .map(model => contentMentionTarget(model)),
+  ];
+
   return {
     pluginId,
     aiActions,
@@ -464,6 +489,7 @@ export function buildApiPlugin<
       reportTargets,
       new Set(Object.keys(permissionStaff?.config.moderator ?? {})),
     ),
+    mentions: { targets: mentionTargets },
     reactions: { targets: reactionTargets },
     moderation: {
       reportTargets,

@@ -21,6 +21,7 @@ import {
   ContentCommentsComposer,
   ContentCommentsLiveStatus,
   ContentCommentsLoadMore,
+  ContentCommentsNewSeparator,
   ContentCommentsRoot,
 } from "@vitnode/core/tanstack/comments";
 import { reactionSummaryQueryOptions } from "@vitnode/core/tanstack/reactions";
@@ -261,11 +262,27 @@ const subscribeToHash = (onChange: () => void) => {
 const linksToComment = () =>
   window.location.hash.startsWith(`#${CONTENT_COMMENT_ANCHOR_PREFIX}`);
 
+const ConversationRows = ({
+  firstNewId,
+  nodes,
+}: {
+  firstNewId: CommentTreeNode["id"] | undefined;
+  nodes: readonly CommentTreeNode[];
+}) =>
+  nodes.map(node => (
+    <React.Fragment key={node.id}>
+      {node.id === firstNewId ? <ContentCommentsNewSeparator /> : null}
+      <CommentThread node={node} />
+    </React.Fragment>
+  ));
+
 const CommentList = ({
+  newCommentIds,
   reactionTarget,
   tree,
   viewerId,
 }: {
+  newCommentIds: readonly CommentTreeNode["id"][];
   reactionTarget: (id: number) => ContentTarget | null;
   tree: readonly CommentTreeNode[];
   viewerId: null | number;
@@ -296,6 +313,8 @@ const CommentList = ({
   const head =
     hiddenCount > 0 ? visible.slice(0, HEAD_COUNT + revealed) : visible;
   const tail = hiddenCount > 0 ? visible.slice(-TAIL_COUNT) : [];
+  const newIdSet = new Set(newCommentIds);
+  const firstNewId = visible.find(node => newIdSet.has(node.id))?.id;
 
   const revealMore = () => {
     const firstNew = visible[head.length]?.record;
@@ -360,17 +379,13 @@ const CommentList = ({
           isRanking && "opacity-60",
         )}
       >
-        {head.map(node => (
-          <CommentThread key={node.id} node={node} />
-        ))}
+        <ConversationRows firstNewId={firstNewId} nodes={head} />
       </ol>
       {hiddenCount > 0 ? (
         <>
           <HiddenConversations count={hiddenCount} onLoad={revealMore} />
           <ol className="flex flex-col gap-4">
-            {tail.map(node => (
-              <CommentThread key={node.id} node={node} />
-            ))}
+            <ConversationRows firstNewId={firstNewId} nodes={tail} />
           </ol>
         </>
       ) : null}
@@ -477,6 +492,7 @@ const PostCommentsThread = ({
       ) : (
         <div aria-busy={comments.isRefreshing}>
           <CommentList
+            newCommentIds={comments.newCommentIds}
             reactionTarget={comments.reactionTarget}
             tree={comments.tree}
             viewerId={comments.userId}

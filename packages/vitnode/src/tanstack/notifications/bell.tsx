@@ -27,7 +27,7 @@ const SignedInBell = ({
 
   return (
     <NotificationsBellContent
-      onMarkAllRead={() => void actions.markAllRead()}
+      onMarkAllRead={actions.markAllRead}
       onOpenChange={setOpen}
       onOpenItem={(item, options) => {
         actions.open(item, options);

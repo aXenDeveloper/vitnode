@@ -1,12 +1,13 @@
 import { cn } from "cn";
-import { ArchiveIcon, BellOffIcon, MailIcon, MailOpenIcon } from "lucide-react";
+import { ArchiveIcon, MailIcon, MailOpenIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
-import { Avatar } from "@/components/avatar";
 import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";
 
 import type { NotificationItemView } from "./notifications-query";
+
+import { NotificationAvatar } from "./notification-avatar";
 
 export interface NotificationItemProps {
   item: NotificationItemView;
@@ -16,7 +17,7 @@ export interface NotificationItemProps {
   variant?: "compact" | "full";
 }
 
-const isModifiedClick = (event: React.MouseEvent) =>
+export const isModifiedClick = (event: React.MouseEvent) =>
   event.metaKey ||
   event.ctrlKey ||
   event.shiftKey ||
@@ -31,26 +32,13 @@ const NotificationItemContent = ({
   variant: NonNullable<NotificationItemProps["variant"]>;
 }) => {
   const t = useTranslations("core.global.notifications");
-  const actor = item.actors.at(0);
 
   return (
     <>
-      <span className="relative shrink-0">
-        {actor && item.available ? (
-          <Avatar size={36} user={actor} />
-        ) : (
-          <span
-            aria-hidden
-            className="bg-muted text-muted-foreground flex size-9 items-center justify-center rounded-full"
-          >
-            {item.available ? (
-              <MailIcon className="size-4" />
-            ) : (
-              <BellOffIcon className="size-4" />
-            )}
-          </span>
-        )}
-      </span>
+      <NotificationAvatar
+        item={item}
+        surface={variant === "compact" ? "popover" : "background"}
+      />
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span
           className={cn(
@@ -58,7 +46,6 @@ const NotificationItemContent = ({
             item.unread
               ? "text-foreground font-medium"
               : "text-muted-foreground",
-            !item.available && "italic",
           )}
         >
           {item.title}
@@ -128,7 +115,6 @@ export const NotificationItem = ({
   onToggleRead,
   variant = "full",
 }: NotificationItemProps) => {
-  const linkTarget = item.available ? item.target : null;
   const content = <NotificationItemContent item={item} variant={variant} />;
 
   return (
@@ -138,10 +124,10 @@ export const NotificationItem = ({
         item.unread && "bg-primary/5",
       )}
     >
-      {linkTarget !== null ? (
+      {item.target !== null ? (
         <a
           className={itemClassName}
-          href={linkTarget}
+          href={item.target}
           onClick={event => {
             const newTab = isModifiedClick(event);
             if (!newTab) event.preventDefault();

@@ -197,7 +197,7 @@ Core checks a notification type's `access` before delivering it, before every im
 | `"submission"` (`moderationDecision`) | The member is the submission's author, the submission still has that decision and the record exists. An approval also needs the record to be public; a rejection does not. The root must stay public |
 | `"approval"` (`approvalPending`) | The submission is still pending, the record exists, and the member holds `can_approve` both for the container the queue lists the submission under and for the one the record is filed in now. The record does not have to be public |
 
-A notification that fails the check shows "This notification is no longer available", with no title, text or link, and its email is skipped. Content Engine reads are not role-based, so add `access` to `buildContentNotifications` when your plugin limits content to some members. An email that was already sent cannot be taken back.
+A notification that fails the check is deleted from the inbox, and its email is skipped. Content Engine reads are not role-based, so add `access` to `buildContentNotifications` when your plugin limits content to some members. An email that was already sent cannot be taken back.
 
 ## Delivery and retries
 
@@ -212,9 +212,9 @@ A failure retries with backoff up to 5 attempts, then the task is marked `failed
 
 Deleting a record stores a cleanup intent in the same transaction. Once it runs, the record's notifications leave every inbox, and so do notifications about records in its thread when the record was the root, including replies a database cascade removed. A grouped item loses only the deleted contributions and points at the newest one left; it disappears when none is left. Pending emails for those notifications are dropped.
 
-A submission that stops waiting, because a moderator decided it, the author replaced it with a newer proposal or the record was deleted, stores a cleanup intent in the same transaction, and its `approvalPending` notifications leave the moderators' inboxes. Delivery that has not reached an inbox yet is stopped by the access check; in the rare case that delivery and cleanup cross, the item stays behind as "no longer available".
+A submission that stops waiting, because a moderator decided it, the author replaced it with a newer proposal or the record was deleted, stores a cleanup intent in the same transaction, and its `approvalPending` notifications leave the moderators' inboxes. Delivery that has not reached an inbox yet is stopped by the access check; in the rare case that delivery and cleanup cross, the item is deleted the next time the inbox loads.
 
-Hiding is not deleting. A hidden record's notifications are only unavailable until it is shown again. A delete that races with a notification being sent is safe either way, because the access check runs again at every step.
+Hiding a record deletes its notifications the next time each inbox loads, and showing it again does not bring them back. A delete that races with a notification being sent is safe either way, because the access check runs again at every step.
 
 ## `useRevealHashTarget()`
 

@@ -53,7 +53,7 @@ Declare `breadcrumb` after `load`, so TypeScript types `loaderData` from the loa
 
 ## Leave a route out
 
-A route without `breadcrumb` adds nothing, and the crumbs above it stay. Write `breadcrumb: false` (or `null`) to make that explicit, for example on an `index()` page whose layout already names the screen. The trail then ends at the deepest route that declares a crumb, and that crumb gets `aria-current="page"`.
+Breadcrumbs are optional on every page. A route without `breadcrumb` adds nothing, and the crumbs above it stay. When no matched route declares one, the breadcrumb bar is not rendered at all. Write `breadcrumb: false` (or `null`) to make that explicit, for example on an `index()` page whose layout already names the screen. The trail then ends at the deepest route that declares a crumb, and that crumb gets `aria-current="page"`.
 
 ## Several crumbs from one route
 

@@ -1,6 +1,7 @@
 import { z } from "@hono/zod-openapi";
 
 import { EMOJI_ICON_MAX_LENGTH } from "@/lib/emoji-icon";
+import { ROLE_MAX_MENTIONS_PER_ITEM } from "@/lib/mentions/limits";
 import { ROLE_EDIT_OWN_CONTENT_MAX_MINUTES } from "@/lib/own-content";
 
 // Role names are not a column on `core_roles` - every translation lives in
@@ -25,6 +26,14 @@ export const zodRoleImageSizeSchema = z
   .max(ROLE_IMAGE_SIZE_MAX_KB);
 
 export const zodRolePrefixSchema = z.string().max(EMOJI_ICON_MAX_LENGTH);
+
+// Members one record notifies by `@mentions`. `null` means unlimited.
+export const zodRoleMaxMentionsPerItemSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(ROLE_MAX_MENTIONS_PER_ITEM)
+  .nullable();
 
 export const zodRoleEditOwnContentMinutesSchema = z
   .number()

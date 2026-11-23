@@ -62,7 +62,6 @@
       }
     },
     "notifications": {
-      "unavailable": "This notification is no longer available.",
       "someone": "Someone",
       "categories": {
         "account": "Account",
@@ -106,6 +105,12 @@
           "description": "When someone reacts to something you wrote.",
           "title": "{count, plural, offset:1 =1 {{name} reacted to your post} =2 {{name} and 1 other person reacted to your post} other {{name} and # others reacted to your post}}",
           "body": "{title}"
+        },
+        "mention": {
+          "label": "Mentions",
+          "description": "When someone mentions you with @.",
+          "title": "{count, plural, offset:1 =1 {{name} mentioned you} =2 {{name} and 1 other person mentioned you} other {{name} and # others mentioned you}}",
+          "title_in": "{count, plural, offset:1 =1 {{name} mentioned you in \"{title}\"} =2 {{name} and 1 other person mentioned you in \"{title}\"} other {{name} and # others mentioned you in \"{title}\"}}"
         }
       },
       "email": {

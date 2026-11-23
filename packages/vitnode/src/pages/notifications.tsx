@@ -1,9 +1,8 @@
 import type { PluginRoutePageProps } from "@/routing";
 
 import type { NotificationsRouteData } from "../tanstack/notifications/route";
-import type { NotificationsRouteSearch } from "../tanstack/notifications/route-search";
+import type { UncheckedNotificationsSearch } from "../tanstack/notifications/route-search";
 
-import { NotificationsBreadcrumb } from "../tanstack/notifications/breadcrumb";
 import { loadNotificationsRoute } from "../tanstack/notifications/route";
 import { NotificationsRouteContent } from "../tanstack/notifications/screen";
 import { defineAuthenticatedRoute } from "../tanstack/plugin-routes";
@@ -12,7 +11,10 @@ const NotificationsPage = ({
   loaderData,
   navigate,
   search,
-}: PluginRoutePageProps<NotificationsRouteData, NotificationsRouteSearch>) => (
+}: PluginRoutePageProps<
+  NotificationsRouteData,
+  UncheckedNotificationsSearch
+>) => (
   <NotificationsRouteContent
     {...loaderData}
     navigate={navigate}
@@ -22,13 +24,11 @@ const NotificationsPage = ({
 
 export const route = defineAuthenticatedRoute<
   NotificationsRouteData,
-  NotificationsRouteSearch
+  UncheckedNotificationsSearch
 >({
   load: async ({ context, search, t }) =>
     await loadNotificationsRoute({ ...context, search, t }),
   head: ({ loaderData }) => ({ robots: "noindex, nofollow", ...loaderData }),
-
-  breadcrumb: NotificationsBreadcrumb,
 });
 
 export default NotificationsPage;
