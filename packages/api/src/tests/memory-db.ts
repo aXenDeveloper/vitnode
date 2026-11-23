@@ -33,6 +33,7 @@ type Node =
   | { item: Node; kind: "not" }
   | { items: Node[]; kind: "and" | "or" }
   | { kind: "compare"; left: Node; operator: string; right: Node }
+  | { kind: "distinct"; left: Node; negated: boolean; right: Node }
   | { kind: "in"; left: Node; negated: boolean; options: Node[] }
   | { kind: "value"; value: unknown };
 
@@ -242,6 +243,12 @@ const parseTokens = (tokens: Token[], source: string) => {
       position++;
       const negated = isWord("not");
       if (negated) position++;
+      if (isWord("distinct")) {
+        position++;
+        expect("from");
+
+        return { kind: "distinct", left, negated, right: parseConcat() };
+      }
       expect("null");
 
       return { item: left, kind: "isNull", negated };
@@ -478,6 +485,16 @@ const evaluate = (
     }
     case "compare":
       return compare(of(node.left), node.operator, of(node.right));
+    case "distinct": {
+      const left = of(node.left);
+      const right = of(node.right);
+      const same =
+        isMissing(left) || isMissing(right)
+          ? isMissing(left) && isMissing(right)
+          : compare(left, "=", right) === true;
+
+      return same === node.negated;
+    }
     case "in": {
       const left = of(node.left);
       if (isMissing(left)) return null;
@@ -579,6 +596,7 @@ const isAggregate = (node: Node): boolean => {
     case "not":
       return isAggregate(node.item);
     case "compare":
+    case "distinct":
     case "like":
       return isAggregate(node.left) || isAggregate(node.right);
     case "in":
