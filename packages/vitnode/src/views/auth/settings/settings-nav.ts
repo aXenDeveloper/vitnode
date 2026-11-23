@@ -35,16 +35,20 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
 export const visibleSettingsNavItems = ({
   ai,
   aiFeatures = true,
+  chat = true,
   passkeys,
   sso = [],
 }: {
   ai?: { models: readonly unknown[] };
   aiFeatures?: boolean;
+  /** Chat is on in the app and API config. */
+  chat?: boolean;
   passkeys: boolean;
   sso?: readonly unknown[];
 }): readonly SettingsNavItem[] =>
   SETTINGS_NAV_ITEMS.filter(
     item =>
+      (item.key !== "chat" || chat) &&
       (item.key !== "security" || passkeys) &&
       (item.key !== "sso" || sso.length > 0) &&
       (item.key !== "ai" || ((ai?.models.length ?? 0) > 0 && aiFeatures)),

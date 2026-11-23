@@ -18,6 +18,7 @@ import { useChatErrorToast } from "./composer";
 import { ChatPeoplePicker } from "./people-picker";
 import {
   canChatQueryOptions,
+  chatStateQueryOptions,
   invalidateChatOverview,
   startChatRequest,
 } from "./query";
@@ -51,6 +52,8 @@ export const NewChat = ({
     ...canChatQueryOptions({ targetId: single?.id ?? 0, userId: me.id }),
     enabled: !!single,
   });
+  const state = useQuery(chatStateQueryOptions(me.id));
+  const groups = state.data?.groups ?? true;
   const isGroup = people.length > 1;
   const trimmed = body.trim();
   const blocked = !!single && canChat.data?.allowed === false;
@@ -106,7 +109,7 @@ export const NewChat = ({
       </header>
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
         <ChatPeoplePicker
-          max={CHAT_LIMITS.maxGroupSize - 1}
+          max={groups ? CHAT_LIMITS.maxGroupSize - 1 : 1}
           onChange={setPeople}
           userId={me.id}
           value={people}

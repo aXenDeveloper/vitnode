@@ -111,6 +111,8 @@ export interface ChatDetails {
 /** The unread counts on the Chat button. Browser-safe. */
 export interface ChatState {
   enabled: boolean;
+  /** Members may start group chats (`chat.groups` in the API config). */
+  groups: boolean;
   /** The WebSocket is mounted, so the browser may follow live updates. */
   live: boolean;
   requests: number;

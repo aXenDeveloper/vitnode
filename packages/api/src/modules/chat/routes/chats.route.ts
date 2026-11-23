@@ -53,13 +53,14 @@ export const chatStateRoute = buildRoute({
   },
   handler: async c => {
     const user = c.get("user");
-    const { enabled } = c.get("core").chat;
+    const { enabled, groups } = c.get("core").chat;
     const policy = await resolveChatPolicy(c);
     const counts = user && enabled ? await readChatState(c, user.id) : null;
 
     return c.json(
       {
         enabled: enabled && policy.allowChat,
+        groups,
         live: isWebSocketEnabled(),
         requests: counts?.requests ?? 0,
         unreadChats: counts?.unreadChats ?? 0,
@@ -301,7 +302,9 @@ export const showChatSettingsRoute = buildRoute({
   },
   handler: async c => {
     const user = c.get("user");
-    if (!user) return chatErrorJson(c, new ChatError("not_found"));
+    if (!user || !c.get("core").chat.enabled) {
+      return chatErrorJson(c, new ChatError("not_found"));
+    }
     const [row] = await c
       .get("db")
       .select({
@@ -341,7 +344,9 @@ export const updateChatSettingsRoute = buildRoute({
   },
   handler: async c => {
     const user = c.get("user");
-    if (!user) return chatErrorJson(c, new ChatError("not_found"));
+    if (!user || !c.get("core").chat.enabled) {
+      return chatErrorJson(c, new ChatError("not_found"));
+    }
     const settings = c.req.valid("json");
     await c
       .get("db")

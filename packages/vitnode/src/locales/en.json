@@ -981,7 +981,8 @@
           "request_limit": "Wait for them to accept your chat request before sending more.",
           "requests_paused": "Your chat requests are paused for a while because many were ignored.",
           "too_many_invites": "That's too many people at once.",
-          "too_many_reactions": "This message has as many different reactions as it can hold."
+          "too_many_reactions": "This message has as many different reactions as it can hold.",
+          "groups_disabled": "Group chats are turned off on this site."
         },
         "request": {
           "label": "Chat request",

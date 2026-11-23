@@ -14,6 +14,7 @@ import { visibleSettingsNavItems } from "@/views/auth/settings/settings-nav";
 import { SettingsShellContent } from "@/views/auth/settings/shell-content";
 
 import { useMiddlewareConfigQuery } from "../auth/middleware-config";
+import { isChatUiEnabled } from "../chat/config";
 import { RouteMessages } from "../i18n/route-messages";
 import { PageWidgets, PageWidgetsZone } from "../widgets";
 import { SETTINGS_NAMESPACES } from "./route";
@@ -44,6 +45,7 @@ export const SettingsLayoutContent = ({
               items={visibleSettingsNavItems({
                 ...config,
                 aiFeatures: aiUsage !== undefined && hasAiFeatures(aiUsage),
+                chat: isChatUiEnabled() && config.chat?.enabled !== false,
               })}
               pathname={pathname}
             />

@@ -4,6 +4,8 @@ description: Private chats between members in VitNode - direct and group chats, 
 icon: MessageCircle
 ---
 
+import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+
 Members can talk privately in **chats**: one-to-one or in a group of up to 100 people. A chat button sits next to the notification bell. On wide screens it opens a chat window docked in the corner that stays open while you browse, and on phones it opens `/chat`. Think of the chat corner of a big community site, minus the spam - strangers knock first.
 
 <Callout type="info">
@@ -41,20 +43,60 @@ A sender whose requests keep getting ignored is paused automatically: when at le
 
 ## Configure chat
 
-Every option has a default, so the `chat` block is optional:
+Chat has two `chat` blocks, both optional: one in the API config for what the server allows, one in the frontend config for what the site shows. Every option defaults to on.
 
-```ts title="src/vitnode.api.config.ts"
+### Turn chat off
+
+Set `enabled: false` in **both** configs:
+
+<Tabs groupId="chat-config" items={["API", "Frontend"]}>
+
+```ts tab="API" title="src/vitnode.api.config.ts"
 import { buildApiConfig } from "@vitnode/api/vitnode.config";
 
 export const vitNodeApiConfig = buildApiConfig({
   // ...
-  chat: {
-    enabled: true, // false hides the button and answers 404 on every chat route
-    editWindowMinutes: 15, // 0 turns editing off
-    establishedAccountDays: 30, // for "Established accounts"
-    maxGroupSize: 100, // 2..200, the creator included
-  },
+  chat: { enabled: false },
 });
+```
+
+```ts tab="Frontend" title="src/vitnode.config.ts"
+import { buildConfig } from "@vitnode/core/vitnode.config";
+
+export const vitNodeConfig = buildConfig({
+  // ...
+  chat: { enabled: false },
+});
+```
+
+</Tabs>
+
+- **The API one is the switch that counts.** Every chat route answers `404`, no chat emails go out, and the site hides chat on its own: it reads the setting from the API.
+- **The frontend one saves the round trips.** Without it, every page still asks the API whether chat is on. With it, the Chat button, the dock, **Settings → Chat** and the **Chat** buttons on profiles are never rendered, and `/chat` answers `404` straight from the router.
+- **Nothing is deleted.** Chats, messages and blocks stay in the database, so turning chat back on brings everything back.
+
+Want to close chat for some members only? Turn off **Can chat** on their role instead (see [Who may chat](#who-may-chat)).
+
+### All options
+
+| Config      | Option                   | Default | What it does                                                                                                     |
+| ----------- | ------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| API         | `enabled`                | `true`  | `false` turns chat off for everyone, as above.                                                                   |
+| API         | `groups`                 | `true`  | `false` allows direct chats only: nobody can start a group or add people to one. Existing groups keep working.   |
+| API         | `editWindowMinutes`      | `15`    | Minutes the author can edit a message for; `0` turns editing off.                                               |
+| API         | `establishedAccountDays` | `30`    | How old an account must be for members who accept requests from **Established accounts** only.                  |
+| API         | `maxGroupSize`           | `100`   | Members of one group, the creator included, `2..200`.                                                            |
+| Frontend    | `enabled`                | `true`  | `false` removes chat from the site's UI without asking the API.                                                  |
+| Frontend    | `dock`                   | `true`  | `false` drops the chat window in the corner: the Chat button opens the `/chat` page on every screen size.        |
+
+For example, a site that wants direct messages only, on their own page:
+
+```ts title="src/vitnode.api.config.ts"
+chat: { groups: false, editWindowMinutes: 5 },
+```
+
+```ts title="src/vitnode.config.ts"
+chat: { dock: false },
 ```
 
 ## Moderation and privacy

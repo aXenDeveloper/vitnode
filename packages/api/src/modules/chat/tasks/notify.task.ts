@@ -24,6 +24,7 @@ export const chatNotifyQueueTask = buildQueueTask({
     "Notify a member about chat messages they did not read within a couple of minutes",
   maxAttempts: 3,
   handler: async (c, { chatId, messageId, userId }) => {
+    if (!c.get("core").chat.enabled) return;
     const db = c.get("db");
     const [row] = await db
       .select({

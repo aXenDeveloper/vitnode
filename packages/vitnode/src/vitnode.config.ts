@@ -26,6 +26,11 @@ export type { LocaleConfig };
 export interface VitNodeConfig<
   AppLocales extends LocaleConfig[] = LocaleConfig[],
 > {
+  /**
+   * Private chat in the site's UI. To turn chat off for the API too (routes,
+   * emails), set `chat.enabled: false` in the API config as well.
+   */
+  chat?: VitNodeChatConfig;
   /** Editor settings shared by every `Editor` in the app. */
   editor?: VitNodeEditorConfig;
   /** Languages and locale routing. */
@@ -61,6 +66,22 @@ export interface VitNodeConfig<
    * from `@vitnode/core/tanstack/view-transitions`. Defaults to on.
    */
   viewTransitions?: boolean;
+}
+
+/** Chat in the site's UI - `chat` in {@link VitNodeConfig}. */
+export interface VitNodeChatConfig {
+  /**
+   * `false` docks nothing: the header's Chat button opens the `/chat` page on
+   * every screen size instead of the chat window in the corner. Defaults to
+   * `true`.
+   */
+  dock?: boolean;
+  /**
+   * `false` removes chat from the site: no Chat button, dock, Settings ->
+   * Chat page or Chat buttons on profiles, `/chat` answers 404, and no page
+   * asks the API for unread chats. Defaults to `true`.
+   */
+  enabled?: boolean;
 }
 
 /**

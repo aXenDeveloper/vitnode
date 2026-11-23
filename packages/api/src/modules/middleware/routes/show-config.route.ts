@@ -24,6 +24,10 @@ export const routeMiddleware = buildRoute({
     return c.json(
       {
         ai: { models: c.get("ai").models() },
+        chat: {
+          enabled: c.get("core").chat.enabled,
+          groups: c.get("core").chat.groups,
+        },
         isEmail: !!c.get("core").email?.adapter,
         passkeys: c.get("core").authorization.passkeys.enabled,
         password: c.get("core").authorization.password.enabled,

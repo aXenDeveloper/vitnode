@@ -55,6 +55,7 @@ const KNOWN_ERRORS = [
   "daily_limit",
   "edit_window",
   "group_full",
+  "groups_disabled",
   "not_allowed",
   "recipient_unavailable",
   "request_limit",

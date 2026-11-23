@@ -36,7 +36,7 @@ export const chatErrorResponses = {
   400: json(chatErrorSchema, "Invalid input (`invalid`, `too_many_invites`)"),
   403: json(
     chatErrorSchema,
-    "Not allowed (`not_allowed`, `blocked`, `recipient_unavailable`, `edit_window`)",
+    "Not allowed (`not_allowed`, `blocked`, `recipient_unavailable`, `edit_window`, `groups_disabled`)",
   ),
   404: json(
     chatErrorSchema,
@@ -177,6 +177,7 @@ export const chatDetailsSchema = z
 export const chatStateSchema = z
   .object({
     enabled: z.boolean(),
+    groups: z.boolean(),
     live: z.boolean(),
     requests: z.number().int(),
     unreadChats: z.number().int(),

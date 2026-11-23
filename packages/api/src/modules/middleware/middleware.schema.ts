@@ -22,6 +22,8 @@ export const routeMiddlewareSchema = z.object({
       brandColor: z.string().optional(),
     }),
   ),
+  /** Whether chat is on and allows group chats (`chat` in the API config). */
+  chat: z.object({ enabled: z.boolean(), groups: z.boolean() }).optional(),
   isEmail: z.boolean(),
   passkeys: z.boolean(),
   password: z.boolean(),

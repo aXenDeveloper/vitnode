@@ -56,6 +56,7 @@ export type ChatErrorCode =
   | "daily_limit"
   | "edit_window"
   | "group_full"
+  | "groups_disabled"
   | "invalid"
   | "not_allowed"
   | "not_found"
@@ -67,6 +68,7 @@ export type ChatErrorCode =
 
 const STATUS: Record<ChatErrorCode, 400 | 403 | 404 | 409 | 429> = {
   blocked: 403,
+  groups_disabled: 403,
   chat_disabled: 404,
   daily_limit: 429,
   edit_window: 403,
@@ -426,6 +428,9 @@ export const startChat = async (
   if (userIds.length + 1 > maxGroupSize) throw new ChatError("group_full");
   const body = input.body ? normalizeBody(input.body) : null;
   const kind: ChatKind = userIds.length === 1 ? "direct" : "group";
+  if (kind === "group" && !c.get("core").chat.groups) {
+    throw new ChatError("groups_disabled");
+  }
   if (kind === "direct" && !body) throw new ChatError("invalid");
   const title = kind === "group" ? cleanTitle(input.title) : null;
   const db = c.get("db");
@@ -1062,6 +1067,7 @@ export const addChatMembers = async (
   const policy = await resolveChatPolicy(c);
   if (!policy.allowChat) throw new ChatError("not_allowed");
   const { chat, participant } = await requireMembership(c, chatId, userId);
+  if (!c.get("core").chat.groups) throw new ChatError("groups_disabled");
   if (
     chat.kind !== "group" ||
     participant.status !== "accepted" ||

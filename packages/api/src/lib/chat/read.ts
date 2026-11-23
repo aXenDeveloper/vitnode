@@ -553,6 +553,7 @@ export const readChatDetails = async (
       blockedOther: otherIds.some(id => blocks.blockedByMe.has(id)),
       canInvite:
         chat.kind === "group" &&
+        c.get("core").chat.groups &&
         accepted &&
         policy.allowChat &&
         (isHost || chat.membersCanInvite),

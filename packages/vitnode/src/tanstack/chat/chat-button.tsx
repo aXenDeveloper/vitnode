@@ -6,6 +6,7 @@ import { useTranslations } from "use-intl";
 import { Button } from "@/components/ui/button";
 
 import { useChatSessionUser } from "./chat-view";
+import { isChatUiEnabled } from "./config";
 import { setChatDock, useChatDock, useDockAvailable } from "./dock-store";
 import { chatStateQueryOptions } from "./query";
 
@@ -19,11 +20,12 @@ export const ChatButton = () => {
   const me = useChatSessionUser();
   const dock = useChatDock();
   const dockAvailable = useDockAvailable();
+  const uiEnabled = isChatUiEnabled();
   const state = useQuery({
     ...chatStateQueryOptions(me?.id ?? 0),
-    enabled: !!me,
+    enabled: !!me && uiEnabled,
   });
-  if (!me || !state.data?.enabled) return null;
+  if (!me || !uiEnabled || !state.data?.enabled) return null;
 
   const unread = state.data.unreadChats;
   const requests = state.data.requests;

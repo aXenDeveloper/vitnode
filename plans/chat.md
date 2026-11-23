@@ -11,8 +11,11 @@ Status: implemented (v1, phases 1-8 except images and search). Owner: core
   on the start side. The dock is one window with list and chat stacked.
 - **Install settings live in the API config** (`chat: { enabled,
   editWindowMinutes, establishedAccountDays, maxGroupSize }`), like
-  `users.accountDeletion`, not in an AdminCP sheet. Throttle thresholds are
-  constants in `CHAT_LIMITS`.
+  `users.accountDeletion`, not in an AdminCP sheet, plus `groups: false` for
+  direct chats only. The frontend `vitnode.config.ts` has its own `chat: {
+  enabled, dock }` to drop chat (or just the dock) from the UI without asking
+  the API; the API's `enabled` and `groups` also reach the UI through the
+  middleware config. Throttle thresholds are constants in `CHAT_LIMITS`.
 - **Role settings are columns saved by the role form itself** (the role
   create/update routes take `allowChat`, `chatRequestsPerDay`,
   `chatMaxInvites`), not a separate endpoint.

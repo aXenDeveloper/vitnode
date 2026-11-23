@@ -4,6 +4,8 @@ import React from "react";
 
 import type { ChatListFilter } from "./query";
 
+import { isChatDockEnabled } from "./config";
+
 /** What the chat dock shows. */
 export type ChatDockView =
   | { chatId: number; type: "chat" }
@@ -98,6 +100,6 @@ const subscribeMedia = (listener: () => void) => {
 export const useDockAvailable = (): boolean =>
   React.useSyncExternalStore(
     subscribeMedia,
-    () => window.matchMedia(DOCK_QUERY).matches,
+    () => isChatDockEnabled() && window.matchMedia(DOCK_QUERY).matches,
     () => false,
   );

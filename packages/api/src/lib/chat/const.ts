@@ -86,6 +86,8 @@ export interface ChatSettings {
   enabled: boolean;
   /** Accounts younger than this many days count as not `established`. */
   establishedAccountDays: number;
+  /** `false` allows direct chats only; existing groups stay usable. */
+  groups: boolean;
   /** Members of a group, the creator included. */
   maxGroupSize: number;
 }
@@ -108,6 +110,7 @@ export const resolveChatSettings = (
     min: 0,
   }),
   enabled: config?.enabled ?? true,
+  groups: config?.groups ?? true,
   establishedAccountDays: wholeNumber(config?.establishedAccountDays, {
     fallback: CHAT_LIMITS.establishedAccountDays,
     max: 3650,

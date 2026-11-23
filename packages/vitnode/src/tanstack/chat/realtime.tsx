@@ -1,6 +1,7 @@
 import React from "react";
 
 import { useChatSessionUser } from "./chat-view";
+import { isChatDockEnabled, isChatUiEnabled } from "./config";
 import { ChatLiveSync } from "./live";
 
 const ChatDock = React.lazy(async () => ({
@@ -13,14 +14,16 @@ const ChatDock = React.lazy(async () => ({
  */
 export const ChatRealtime = () => {
   const me = useChatSessionUser();
-  if (!me) return null;
+  if (!me || !isChatUiEnabled()) return null;
 
   return (
     <>
       <ChatLiveSync />
-      <React.Suspense fallback={null}>
-        <ChatDock me={me} />
-      </React.Suspense>
+      {isChatDockEnabled() ? (
+        <React.Suspense fallback={null}>
+          <ChatDock me={me} />
+        </React.Suspense>
+      ) : null}
     </>
   );
 };

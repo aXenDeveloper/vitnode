@@ -88,18 +88,30 @@ export interface VitNodeApiConfig {
    */
   /**
    * Private chat between members. Every option has a default, so the block
-   * is optional.
+   * is optional. To remove chat from the site's UI without asking the API,
+   * also set `chat.enabled: false` in the frontend `vitnode.config.ts`.
    */
   chat?: {
     /** Minutes the author may edit a message for; `0` turns editing off. Defaults to `15`. */
     editWindowMinutes?: number;
-    /** `false` turns chat off: the button disappears and every chat route answers `404`. Defaults to `true`. */
+    /**
+     * `false` turns chat off for everyone: every chat route answers `404`, the
+     * Chat button, dock and settings page disappear, and no chat emails go
+     * out. Stored chats stay in the database, so turning it back on restores
+     * them. Defaults to `true`.
+     */
     enabled?: boolean;
     /**
      * Members who allow chat requests only from established accounts get none
      * from accounts younger than this many days. Defaults to `30`.
      */
     establishedAccountDays?: number;
+    /**
+     * `false` allows direct chats only: members can't start group chats or add
+     * people to one. Groups that already exist stay readable and writable.
+     * Defaults to `true`.
+     */
+    groups?: boolean;
     /** Members of one group chat, the creator included, `2..200`. Defaults to `100`. */
     maxGroupSize?: number;
   };
