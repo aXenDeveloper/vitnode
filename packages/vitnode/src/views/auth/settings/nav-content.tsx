@@ -4,6 +4,7 @@ import {
   KeyRoundIcon,
   LinkIcon,
   MenuIcon,
+  MessageCircleIcon,
   MonitorSmartphoneIcon,
   ShieldCheckIcon,
   SparklesIcon,
@@ -32,6 +33,7 @@ const ICONS: Record<
   React.ComponentType<{ className?: string }>
 > = {
   ai: SparklesIcon,
+  chat: MessageCircleIcon,
   devices: MonitorSmartphoneIcon,
   notifications: BellIcon,
   overview: UserRoundIcon,

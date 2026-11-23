@@ -5,6 +5,7 @@ export const SETTINGS_ROOT_HREF = "/settings";
 
 export type SettingsNavKey =
   | "ai"
+  | "chat"
   | "devices"
   | "notifications"
   | "overview"
@@ -22,6 +23,7 @@ export interface SettingsNavItem {
 export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
   { href: SETTINGS_ROOT_HREF, key: "overview" },
   { href: "/settings/notifications", key: "notifications" },
+  { href: "/settings/chat", key: "chat" },
   { href: "/settings/devices", key: "devices" },
   { href: "/settings/security", key: "security" },
   { href: "/settings/sso", key: "sso" },

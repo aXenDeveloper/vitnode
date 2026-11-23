@@ -125,6 +125,7 @@ export const chatListItemSchema = z
     lastMessage: z
       .object({
         authorId: z.number().int().nullable(),
+        authorName: z.string().nullable(),
         createdAt: z.string(),
         id: z.number().int(),
         preview: z.string().nullable(),

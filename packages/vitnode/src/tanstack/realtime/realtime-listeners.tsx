@@ -7,6 +7,7 @@ import { WebSocketAuthSync } from "@/views/layouts/theme/web-socket-auth-sync";
 
 import { removeUserIdentityQueries } from "../auth/queries";
 import { invalidateSession, useSessionQuery } from "../auth/session-query";
+import { ChatRealtime } from "../chat/realtime";
 import { NotificationStateSync } from "../notifications/state-sync";
 import { socketUserIdFromSession } from "./session";
 
@@ -32,6 +33,7 @@ export const RealtimeListeners = () => {
     <>
       <NotificationListener />
       <NotificationStateSync />
+      <ChatRealtime />
       <WebSocketAuthSync userId={socketUserIdFromSession(session)} />
     </>
   );

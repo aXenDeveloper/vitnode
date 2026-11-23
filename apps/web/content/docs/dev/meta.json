@@ -32,6 +32,7 @@
     "working-with-users",
     "moderation",
     "reactions",
+    "chat",
     "audit-logs",
     "events",
     "notifications",

@@ -207,44 +207,65 @@ const reactionParams = messageParams.extend({
   emoji: z.string().min(1).max(64),
 });
 
-const reactionRoute = (method: "delete" | "put") =>
-  buildRoute({
-    route: {
-      method,
-      path: "/{chatId}/messages/{messageId}/reactions/{emoji}",
-      description:
-        method === "put"
-          ? "Add your emoji reaction to a message (URL-encoded emoji)"
-          : "Remove your emoji reaction from a message",
-      request: { params: reactionParams },
-      responses: {
-        200: json(
-          z.object({ reactions: z.array(reactionSummarySchema) }),
-          "The message's reactions",
-        ),
-        ...chatErrorResponses,
-      },
-    },
-    handler: async c => {
-      const params = c.req.valid("param");
-      try {
-        const reactions = await setChatReaction(
-          c,
-          Number(params.chatId),
-          Number(params.messageId),
-          decodeURIComponent(params.emoji),
-          method === "put",
-        );
+const reactionResponses = {
+  200: json(
+    z.object({ reactions: z.array(reactionSummarySchema) }),
+    "The message's reactions",
+  ),
+  ...chatErrorResponses,
+};
 
-        return c.json({ reactions }, 200, privateHeaders);
-      } catch (error) {
-        return rethrow(c, error);
-      }
-    },
-  });
+export const addReactionRoute = buildRoute({
+  route: {
+    method: "put",
+    path: "/{chatId}/messages/{messageId}/reactions/{emoji}",
+    description: "Add your emoji reaction to a message (URL-encoded emoji)",
+    request: { params: reactionParams },
+    responses: reactionResponses,
+  },
+  handler: async c => {
+    const params = c.req.valid("param");
+    try {
+      const reactions = await setChatReaction(
+        c,
+        Number(params.chatId),
+        Number(params.messageId),
+        decodeURIComponent(params.emoji),
+        true,
+      );
 
-export const addReactionRoute = reactionRoute("put");
-export const removeReactionRoute = reactionRoute("delete");
+      return c.json({ reactions }, 200, privateHeaders);
+    } catch (error) {
+      return rethrow(c, error);
+    }
+  },
+});
+
+export const removeReactionRoute = buildRoute({
+  route: {
+    method: "delete",
+    path: "/{chatId}/messages/{messageId}/reactions/{emoji}",
+    description: "Remove your emoji reaction from a message",
+    request: { params: reactionParams },
+    responses: reactionResponses,
+  },
+  handler: async c => {
+    const params = c.req.valid("param");
+    try {
+      const reactions = await setChatReaction(
+        c,
+        Number(params.chatId),
+        Number(params.messageId),
+        decodeURIComponent(params.emoji),
+        false,
+      );
+
+      return c.json({ reactions }, 200, privateHeaders);
+    } catch (error) {
+      return rethrow(c, error);
+    }
+  },
+});
 
 export const markReadRoute = buildRoute({
   route: {

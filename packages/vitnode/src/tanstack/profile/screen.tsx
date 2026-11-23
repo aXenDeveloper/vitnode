@@ -26,6 +26,7 @@ import {
 import { SearchFeedList } from "@/views/search/search-feed-content";
 
 import { useSessionQuery } from "../auth/session-query";
+import { ChatWithButton } from "../chat/chat-with-button";
 import { useLocale } from "../i18n/locale";
 import { RouteMessages } from "../i18n/route-messages";
 import { REPORT_NAMESPACES } from "../moderation/report-button";
@@ -137,7 +138,22 @@ const ProfileScreen = ({ children, nameCode }: ProfileRouteProps) => {
 
   return (
     <ProfileContent
-      action={isOwner ? <EditProfileAction /> : null}
+      action={
+        isOwner ? (
+          <EditProfileAction />
+        ) : (
+          <ChatWithButton
+            person={{
+              avatarColor: user.avatarColor,
+              avatarUrl: user.avatarUrl,
+              id: user.id,
+              name: user.name,
+              nameCode: user.nameCode,
+              role: { color: user.role.color, prefix: user.role.prefix },
+            }}
+          />
+        )
+      }
       aside={
         isOwner || session?.user?.isModerator ? (
           <ProfileWarningsSlot isOwner={isOwner} userId={user.id} />

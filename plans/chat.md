@@ -1,6 +1,30 @@
 # Chat (Reddit-style private messages)
 
-Status: planned. Owner: core (`@vitnode/api` + `@vitnode/core`).
+Status: implemented (v1, phases 1-8 except images and search). Owner: core
+(`@vitnode/api` + `@vitnode/core`). Docs: `dev/chat` and the chat events in
+`dev/events/built-in-events`.
+
+## Implemented differently from this plan
+
+- **No prototype round.** Messages use the existing `Bubble` / `Message` UI
+  components: own messages on the end side in the primary color, others muted
+  on the start side. The dock is one window with list and chat stacked.
+- **Install settings live in the API config** (`chat: { enabled,
+  editWindowMinutes, establishedAccountDays, maxGroupSize }`), like
+  `users.accountDeletion`, not in an AdminCP sheet. Throttle thresholds are
+  constants in `CHAT_LIMITS`.
+- **Role settings are columns saved by the role form itself** (the role
+  create/update routes take `allowChat`, `chatRequestsPerDay`,
+  `chatMaxInvites`), not a separate endpoint.
+- **`can_message_anyone` is a moderator permission of the `users` module**;
+  the `chat` module holds the report permissions the report target generates.
+- **Replying to a chat request accepts it.**
+- **Ignoring a request** removes the recipient's row; the sender's chat stays
+  and further messages reach nobody until the recipient writes to them, which
+  rejoins the chat without the ignored history.
+- **People search** (`GET /chat/people?q=`) was added for the recipient picker.
+- **Not built yet:** images in messages (phase 7 attachments), message search
+  (phase 9) and the AdminCP user-detail counters.
 
 Members talk in **chats**, the way they do on Reddit: a chat button in the
 header opens a chat window docked in the corner, which stays open while you

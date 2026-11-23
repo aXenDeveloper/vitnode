@@ -24,6 +24,7 @@ import {
   middlewareConfigQueryOptions,
 } from "../auth/middleware-config";
 import { loadSession } from "../auth/session-query";
+import { ChatButton } from "../chat/chat-button";
 import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
 import { redirectSuspendedSession } from "../moderation/suspension-gate";
@@ -121,7 +122,12 @@ export const Header = ({
         }
         moreNavigationLabel={t("more_navigation")}
         navigation={navigation}
-        notifications={<NotificationsBell />}
+        notifications={
+          <>
+            <ChatButton />
+            <NotificationsBell />
+          </>
+        }
         search={<HeaderSearch firstSourceId={firstSearchSourceId} />}
         user={user}
         variant={variant}

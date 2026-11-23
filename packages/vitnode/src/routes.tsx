@@ -66,6 +66,10 @@ import {
   normalizeVerifyEmailSearch,
   VERIFY_EMAIL_NAMESPACES,
 } from "./tanstack/auth/verify-email";
+import {
+  CHAT_NAMESPACES,
+  normalizeChatRouteSearch,
+} from "./tanstack/chat/screen";
 import { MY_FILES_NAMESPACES } from "./tanstack/files/route";
 import { normalizeMyFilesRouteSearch } from "./tanstack/files/route-search";
 import { normalizeModcpApprovalsSearch } from "./tanstack/moderation/approvals-route-search";
@@ -197,6 +201,11 @@ export const routes = defineRoutes([
         pendingComponent: FormPendingSkeleton,
       }),
 
+      page("chat", {
+        component: lazy(() => import("./pages/settings/chat")),
+        pendingComponent: FormPendingSkeleton,
+      }),
+
       page("devices", {
         component: lazy(() => import("./pages/settings/devices")),
         pendingComponent: () => <FeedPendingSkeleton rows={4} />,
@@ -265,6 +274,27 @@ export const routes = defineRoutes([
         component: lazy(() => import("./pages/modcp/warnings")),
         pendingComponent: () => <FeedPendingSkeleton rows={5} />,
         search: normalizeModcpWarningsSearch,
+      }),
+    ],
+  }),
+
+  layout("/chat", {
+    component: lazy(() => import("./pages/chat/layout")),
+    messages: CHAT_NAMESPACES,
+    pendingComponent: () => <FeedPendingSkeleton rows={6} />,
+    requires: "authenticated",
+    children: [
+      index({
+        component: lazy(() => import("./pages/chat/index")),
+        search: normalizeChatRouteSearch,
+      }),
+
+      page("new", {
+        component: lazy(() => import("./pages/chat/new")),
+      }),
+
+      page(":id", {
+        component: lazy(() => import("./pages/chat/chat")),
       }),
     ],
   }),

@@ -16,6 +16,7 @@ import React from "react";
 import { useFormatter, useLocale, useNow, useTranslations } from "use-intl";
 
 import { useSessionQuery } from "@/tanstack/auth/session-query";
+import { ChatWithButton } from "@/tanstack/chat/chat-with-button";
 import { RouteMessages } from "@/tanstack/i18n/route-messages";
 import { ModcpRequestError } from "@/views/moderation/modcp/modcp-query";
 import { memberStandingQueryOptions } from "@/views/moderation/warnings/warnings-api";
@@ -339,7 +340,7 @@ const PreviewProfile = ({
         <ModeratorWarnings userId={user.id} />
       ) : null}
 
-      <div className="border-t p-4">
+      <div className="flex flex-col gap-2 border-t p-4">
         <Link
           className={cn(buttonVariants({ size: "sm" }), "w-full")}
           to={href}
@@ -347,6 +348,17 @@ const PreviewProfile = ({
           {t("view_profile")}
           <ArrowRightIcon aria-hidden="true" />
         </Link>
+        <ChatWithButton
+          className="w-full"
+          person={{
+            avatarColor: user.avatarColor,
+            avatarUrl: user.avatarUrl,
+            id: user.id,
+            name: user.name,
+            nameCode: user.nameCode,
+            role: { color: user.role.color, prefix: user.role.prefix },
+          }}
+        />
       </div>
     </div>
   );

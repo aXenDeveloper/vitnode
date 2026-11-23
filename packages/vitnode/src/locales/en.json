@@ -841,6 +841,273 @@
         "last_seen": "Last seen {time}",
         "hidden": "Activity hidden",
         "status": "Online status"
+      },
+      "chat": {
+        "title": "Chat",
+        "settings": {
+          "title": "Chat",
+          "saved": "Chat settings saved",
+          "saved_desc": "Your changes apply right away.",
+          "load_error": {
+            "title": "Chat settings didn't load",
+            "desc": "Check your connection and try again."
+          },
+          "retry": "Try again",
+          "requests_from": "Who can send me chat requests",
+          "requests_from_desc": "People you already chat with can always reach you.",
+          "from": {
+            "everyone": "Everyone",
+            "everyone_desc": "Any member can send a request.",
+            "established": "Established accounts",
+            "established_desc": "Only accounts that are at least a month old.",
+            "nobody": "Nobody",
+            "nobody_desc": "No new chat requests. Staff can still reach you."
+          },
+          "receipts": "Read receipts and typing",
+          "receipts_desc": "Show others when you've read their messages and when you're typing. Turn it off and you won't see theirs either."
+        },
+        "new_chat": "New chat",
+        "loading": "Loading chats…",
+        "retry": "Try again",
+        "loading_older": "Loading earlier messages…",
+        "log_label": "Messages",
+        "empty_chat": "No messages yet. Say hi! 👋",
+        "new_messages": "New messages",
+        "jump_latest": "Jump to latest",
+        "refetch_error": "Couldn't refresh the messages. What you see may be out of date.",
+        "typing": "{count, plural, =1 {{name} is typing…} other {{name} and others are typing…}}",
+        "seen": "Seen",
+        "seen_by": "{count, plural, =1 {Seen by {names}} other {Seen by {names} and others}}",
+        "waiting": "Waiting for {name} to accept your chat request. {count, plural, =0 {You can't send more messages until then.} =1 {You can send 1 more message.} other {You can send # more messages.}}",
+        "not_found": {
+          "title": "Chat not found",
+          "desc": "This chat doesn't exist or you left it."
+        },
+        "load_error": {
+          "title": "Chat didn't load",
+          "desc": "Check your connection and try again."
+        },
+        "spoiler_show": "Show spoiler",
+        "report_target": "{count, plural, =1 {chat message} other {chat messages}}",
+        "report": {
+          "message": "Reported message",
+          "context": "Messages before it"
+        },
+        "list": {
+          "label": "Chats",
+          "all": "All",
+          "unread_tab": "Unread",
+          "requests": "Requests",
+          "unread": "Unread",
+          "muted": "Muted",
+          "you": "You: {text}",
+          "no_messages": "No messages yet",
+          "group_invite": "{name} invited you to this group",
+          "load_more": "Load more",
+          "load_error": {
+            "title": "Chats didn't load",
+            "desc": "Check your connection and try again."
+          },
+          "empty": {
+            "all": {
+              "title": "No chats yet",
+              "desc": "Start one from someone's profile or with New chat."
+            },
+            "unread": {
+              "title": "You're all caught up",
+              "desc": "No unread messages. Enjoy the quiet."
+            },
+            "requests": {
+              "title": "No chat requests",
+              "desc": "When someone you don't chat with yet writes to you, it shows up here first."
+            }
+          }
+        },
+        "message": {
+          "react": "Add reaction",
+          "reply": "Reply",
+          "more": "More actions",
+          "copy": "Copy text",
+          "edit": "Edit",
+          "delete": "Delete",
+          "report": "Report",
+          "reply_to": "Replying to {name}",
+          "deleted_member": "Deleted member",
+          "original_deleted": "Original message deleted",
+          "hidden": "Hidden by a moderator",
+          "deleted": "Message deleted",
+          "edited": "edited",
+          "sending": "Sending…",
+          "reactions": "Reactions",
+          "reaction_label": "{emoji} {count, plural, =1 {1 reaction} other {# reactions}}",
+          "not_loaded": "Message not loaded",
+          "not_loaded_desc": "Scroll up to load earlier messages, then try again.",
+          "delete_title": "Delete this message?",
+          "delete_desc": "It disappears for everyone in the chat. Replies to it will say it was deleted.",
+          "deleted_toast": "Message deleted",
+          "deleted_toast_desc": "It's gone for everyone in the chat.",
+          "report_type": "message"
+        },
+        "system": {
+          "someone": "Someone",
+          "created": "{name} created the group",
+          "joined": "{count, plural, =1 {{name} added {names}} other {{name} added {names}}}",
+          "left": "{name} left",
+          "removed": "{name} removed {target}",
+          "renamed": "{name} renamed the group to {title}",
+          "renamed_cleared": "{name} removed the group name"
+        },
+        "composer": {
+          "label": "Message",
+          "placeholder": "Write a message…",
+          "disabled": "You can't send messages here right now",
+          "send": "Send",
+          "save": "Save changes",
+          "editing": "Editing message",
+          "replying_to": "Replying to {name}",
+          "cancel_edit": "Cancel editing",
+          "cancel_reply": "Cancel reply",
+          "counter": "{count} / {max}"
+        },
+        "errors": {
+          "title": "Couldn't do that",
+          "unknown": "Something went wrong. Please try again.",
+          "blocked": "You can't message this member.",
+          "daily_limit": "You've started as many new chats as you can today. Try again tomorrow.",
+          "edit_window": "This message can't be edited anymore.",
+          "group_full": "This group is full.",
+          "not_allowed": "You don't have permission to do that.",
+          "recipient_unavailable": "This member isn't accepting chat requests from you.",
+          "request_limit": "Wait for them to accept your chat request before sending more.",
+          "requests_paused": "Your chat requests are paused for a while because many were ignored.",
+          "too_many_invites": "That's too many people at once.",
+          "too_many_reactions": "This message has as many different reactions as it can hold."
+        },
+        "request": {
+          "label": "Chat request",
+          "direct_desc": "{name} wants to chat with you. Links in their messages stay unclickable until you accept.",
+          "group_desc": "{name} invited you to {title} ({count, plural, =1 {1 member} other {# members}}). Accept to see the messages.",
+          "accept": "Accept",
+          "ignore": "Ignore",
+          "block": "Block",
+          "report": "Report",
+          "report_type": "chat request",
+          "accepted": "Request accepted",
+          "accepted_desc": "You can now chat freely.",
+          "ignored": "Request ignored",
+          "ignored_desc": "They won't be told.",
+          "blocked": "Member blocked",
+          "blocked_desc": "They can't send you chat requests anymore.",
+          "group_hidden": "Accept the invite to see this group's messages."
+        },
+        "header": {
+          "back": "Back to chats",
+          "members": "{count, plural, =1 {1 member} other {# members}}",
+          "waiting": "Chat request sent",
+          "direct": "Direct chat",
+          "muted": "Muted",
+          "menu": "Chat options",
+          "add_people": "Add people",
+          "rename": "Rename group",
+          "unmute": "Unmute",
+          "unmuted": "Chat unmuted",
+          "unmuted_desc": "You'll get notifications again.",
+          "mute": "Mute",
+          "mute_8h": "For 8 hours",
+          "mute_week": "For a week",
+          "mute_forever": "Until I unmute",
+          "muted_title": "Chat muted",
+          "muted_desc": "No notifications from this chat for now.",
+          "hide": "Hide chat",
+          "hidden": "Chat hidden",
+          "hidden_desc": "It comes back when there's a new message.",
+          "block": "Block {name}",
+          "unblock": "Unblock {name}",
+          "block_title": "Block {name}?",
+          "unblock_title": "Unblock {name}?",
+          "block_desc": "{name} won't be able to message you or add you to groups. They won't be told.",
+          "unblock_desc": "{name} will be able to message you again.",
+          "blocked": "Member blocked",
+          "blocked_desc": "{name} can't message you anymore.",
+          "unblocked": "Member unblocked",
+          "unblocked_desc": "{name} can message you again.",
+          "leave": "Leave group",
+          "leave_title": "Leave this group?",
+          "leave_desc": "You won't get its messages anymore. Someone has to add you back to rejoin.",
+          "left": "You left the group",
+          "left_desc": "It's gone from your chats."
+        },
+        "people": {
+          "label": "To",
+          "selected": "Selected people",
+          "remove": "Remove {name}",
+          "placeholder": "Search by name…",
+          "full": "That's the most you can add ({max})",
+          "searching": "Searching…",
+          "error": "Search didn't work. Try again.",
+          "no_results": "No members found",
+          "results": "Members"
+        },
+        "add_people": {
+          "title": "Add people",
+          "desc": "People you don't chat with yet get an invite to accept first.",
+          "cancel": "Cancel",
+          "submit": "Add",
+          "done": "People added",
+          "done_desc": "{count, plural, =1 {1 person was added.} other {# people were added.}}"
+        },
+        "rename": {
+          "title": "Rename group",
+          "desc": "Everyone in the group sees the new name.",
+          "field": "Group name",
+          "submit": "Save name",
+          "done": "Group renamed",
+          "done_desc": "Everyone sees the new name."
+        },
+        "new": {
+          "title": "New chat",
+          "back": "Back to chats",
+          "request_sent": "Chat request sent",
+          "request_sent_desc": "{name} will see it in their requests.",
+          "unavailable": "{name} isn't accepting chat requests from you.",
+          "as_request": "{name} will get this as a chat request. You can send up to {count} messages until they accept.",
+          "group_name": "Group name",
+          "group_name_placeholder": "Optional, like Weekend plans",
+          "message": "Message",
+          "message_optional": "First message (optional)",
+          "message_placeholder": "Write something friendly…",
+          "start_group": "Start group",
+          "send": "Send"
+        },
+        "dock": {
+          "title": "Chat",
+          "new": "New chat",
+          "full_screen": "Open full screen",
+          "minimize": "Minimize"
+        },
+        "button": {
+          "label": "Chat",
+          "label_unread": "{count, plural, =1 {Chat, 1 unread chat} other {Chat, # unread chats}}",
+          "label_requests": "{count, plural, =1 {Chat, 1 new request} other {Chat, # new requests}}",
+          "chat": "Chat",
+          "send_request": "Send chat request"
+        },
+        "pick": {
+          "title": "Pick a chat",
+          "desc": "Choose a chat on the left, or start a new one.",
+          "new": "New chat"
+        },
+        "blocks": {
+          "title": "Blocked members",
+          "unblocked": "Member unblocked",
+          "unblocked_desc": "They can message you again.",
+          "load_error": "Blocked members didn't load.",
+          "retry": "Try again",
+          "empty": "You haven't blocked anyone. Peace and quiet. ✌️",
+          "since": "Blocked",
+          "unblock": "Unblock"
+        },
+        "settings_link": "Chat settings"
       }
     },
     "profile": {
@@ -1219,7 +1486,8 @@
           "notifications": "Notifications",
           "ai": "AI usage",
           "standing": "Account status",
-          "privacy": "Privacy & data"
+          "privacy": "Privacy & data",
+          "chat": "Chat"
         },
         "overview": {
           "desc": "Your avatar and the details on your account.",
@@ -4605,7 +4873,8 @@
         "content": "Content",
         "profile": "Profile",
         "ai": "Artificial intelligence (AI)",
-        "reactions": "Reactions"
+        "reactions": "Reactions",
+        "chat": "Chat"
       },
       "form": {
         "name": "Name",
@@ -4696,6 +4965,19 @@
         "delete_account": {
           "allow": "Allow deleting own account",
           "allow_desc": "Members of this role can delete their account in Settings → Privacy & data. Staff can always delete an account in the AdminCP."
+        },
+        "chat": {
+          "allow": "Can chat",
+          "allow_desc": "Members with this role can send and receive private chats. Turn it off for guests or for roles you don't trust yet.",
+          "per_day": "New chats per day",
+          "per_day_desc": "Chat requests and new groups a member can start in 24 hours. Replies in existing chats never count.",
+          "per_day_unit": "chats",
+          "max_invites": "People added at once",
+          "max_invites_desc": "How many people a member can add to a group in one go.",
+          "max_invites_unit": "people",
+          "or": "or",
+          "unlimited": "Unlimited",
+          "up_to_group": "Up to the group limit"
         }
       }
     },
@@ -6212,5 +6494,14 @@
   "@vitnode/core:warning_settings": "Warning settings",
   "@vitnode/core:warning_settings:can_view": "View warning reasons and actions",
   "@vitnode/core:warning_settings:can_manage": "Manage warning reasons and actions",
-  "@vitnode/core:moderation:can_warn": "Warn authors of this content"
+  "@vitnode/core:moderation:can_warn": "Warn authors of this content",
+  "@vitnode/core:chat:can_view_reports": "View reports",
+  "@vitnode/core:chat:can_manage_reports": "Claim, assign, annotate and resolve reports",
+  "@vitnode/core:chat:can_edit_notes": "Edit any moderator's notes",
+  "@vitnode/core:chat:can_delete_notes": "Delete any moderator's notes",
+  "@vitnode/core:chat:can_view_hidden": "Open hidden chat messages",
+  "@vitnode/core:chat:can_hide": "Hide and restore chat messages",
+  "@vitnode/core:chat:can_warn": "Warn authors of this chat messages",
+  "@vitnode/core:chat": "Chat",
+  "@vitnode/core:users:can_message_anyone": "Message any member: skip chat requests, \"nobody\" settings and blocks (for warnings and support)"
 }

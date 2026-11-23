@@ -20,6 +20,7 @@ import. You never register another plugin's definition yourself.
 | [Notifications](#notification-events)                | `notifications.*`                           | `@vitnode/api/events/notifications`      |
 | [Moderation](#moderation-events)                     | `moderation.*`                              | `@vitnode/api/events/moderation`         |
 | [Reactions](#reaction-events)                        | `reaction.*`, `reputation.changed`          | `@vitnode/api/events/reactions`          |
+| [Chat](#chat-events)                                 | `chat.*`, `user.blocked`, `user.unblocked`  | `@vitnode/api/events/chat`               |
 | [AI](#ai-events)                                     | `ai.run.*`, `files.alt.updated`             | `@vitnode/api/events/ai`, `files`        |
 | [Payments](#payment-events)                          | `payment.*`                                 | `@vitnode/api/events/payments`           |
 | [Page layouts](#page-layout-events)                  | `core.page-layout.updated`                  | `@vitnode/api/events/pages`              |
@@ -637,6 +638,28 @@ administrator for `reaction.catalog_changed`. See [Reactions](/docs/dev/reaction
 
 `targetAuthorId` is `null` for a self reaction and for targets without reputation.
 Deleting an item emits `reputation.changed` for its authors but no `reaction.removed`.
+
+## Chat events
+
+Ten names, exported from `@vitnode/api/events/chat`: `chatCreatedEvent`,
+`chatRequestAcceptedEvent`, `chatRequestIgnoredEvent`, `chatMemberAddedEvent`,
+`chatMemberRemovedEvent`, `chatMessageCreatedEvent`, `chatMessageUpdatedEvent`,
+`chatMessageDeletedEvent`, `userBlockedEvent` and `userUnblockedEvent`. Core emits
+them with `pluginId: "@vitnode/core"`, after the write commits. Payloads carry ids
+only, never message text. See [Chat](/docs/dev/chat).
+
+| Event                   | Payload                                                  | Fires when                                                       |
+| ----------------------- | -------------------------------------------------------- | ---------------------------------------------------------------- |
+| `chat.created`          | `{ chatId, kind, userId, memberIds, pendingUserIds }`    | A member starts a chat; `pendingUserIds` got it as a request     |
+| `chat.request_accepted` | `{ chatId, kind, userId }`                               | A member accepts a chat request or a group invite                |
+| `chat.request_ignored`  | `{ chatId, kind, userId, blocked }`                      | A member ignores a request; `blocked` when they blocked too      |
+| `chat.member_added`     | `{ chatId, kind, addedById, userIds }`                   | People are added to a group                                      |
+| `chat.member_removed`   | `{ chatId, kind, userId, reason }`                       | A member leaves (`left`) or the host removes them (`removed`)    |
+| `chat.message_created`  | `{ chatId, kind, authorId, messageId }`                  | A message is sent                                                |
+| `chat.message_updated`  | Same as `chat.message_created`                           | The author edits a message                                       |
+| `chat.message_deleted`  | Same as `chat.message_created`                           | The author deletes a message                                     |
+| `user.blocked`          | `{ userId, blockedUserId }`                              | A member blocks another                                          |
+| `user.unblocked`        | `{ userId, blockedUserId }`                              | A member removes a block                                         |
 
 ## Moderation events
 

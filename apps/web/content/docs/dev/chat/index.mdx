@@ -1,0 +1,108 @@
+---
+title: Chat
+description: Private chats between members in VitNode - direct and group chats, chat requests, blocking, live updates, roles, settings and the API to start a chat from your plugin.
+icon: MessageCircle
+---
+
+Members can talk privately in **chats**: one-to-one or in a group of up to 100 people. A chat button sits next to the notification bell. On wide screens it opens a chat window docked in the corner that stays open while you browse, and on phones it opens `/chat`. Think of the chat corner of a big community site, minus the spam - strangers knock first.
+
+<Callout type="info">
+  Chat is part of `@vitnode/core`. There is nothing to install: run the migration from your next update and the Chat button appears for every member whose role allows it.
+</Callout>
+
+## What members get
+
+- **Direct and group chats.** Start one from **New chat**, from the **Chat** button on a profile, or from a member's preview card. Messaging someone you already chat with opens that chat.
+- **Chat requests.** A first message from someone you don't chat with yet lands in **Requests**. You choose **Accept**, **Ignore** (the sender isn't told), **Block** or **Report**. Until you accept, the sender can send 3 text messages and their links stay unclickable. Replying accepts the request too.
+- **Light formatting.** `**bold**`, `*italic*`, `` `code` ``, fenced code blocks, `>!spoilers!<` and links. No HTML, ever.
+- **Replies and reactions.** Reply to one message to quote it, and react with any emoji.
+- **Edit and delete.** Edit your message for 15 minutes; delete it any time. A deleted message leaves "Message deleted" so replies keep their context.
+- **Read receipts and typing.** "Seen" under your last message and "Anna is typing…", both switchable in **Settings → Chat** (off means you don't see other people's either).
+- **Mute, hide, leave.** Mute a chat for 8 hours, a week or until you unmute. Hide a direct chat until the next message, or leave a group.
+- **Blocking.** A blocked member can't send you requests, add you to groups or write to you in a direct chat. Manage the list in **Settings → Chat**.
+
+## Who may chat
+
+Each role has a **Chat** tab in **AdminCP → Users → Roles**:
+
+| Setting                 | Default             | What it does                                                                          |
+| ----------------------- | ------------------- | ------------------------------------------------------------------------------------- |
+| **Can chat**            | On (off for guests) | Members with the role can send and receive chats.                                     |
+| **New chats per day**   | 20                  | Chat requests and new groups a member can start in 24 hours. Replies never count.     |
+| **People added at once** | 10                 | How many people a member can add to a group in one go.                                |
+
+When a member has several roles, the most generous one wins, like every other role setting.
+
+Members choose who may send them chat requests in **Settings → Chat**: **Everyone**, **Established accounts** (at least 30 days old by default) or **Nobody**. People they already chat with can always reach them.
+
+### Spam protection
+
+A sender whose requests keep getting ignored is paused automatically: when at least 10 requests in the last 7 days were sent and 70% of them were ignored or blocked, new requests are refused for 24 hours. Moderators can still message anyone with the **Users → Message any member** permission, which skips requests, "Nobody" and blocks - handy for warnings and support.
+
+## Configure chat
+
+Every option has a default, so the `chat` block is optional:
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from "@vitnode/api/vitnode.config";
+
+export const vitNodeApiConfig = buildApiConfig({
+  // ...
+  chat: {
+    enabled: true, // false hides the button and answers 404 on every chat route
+    editWindowMinutes: 15, // 0 turns editing off
+    establishedAccountDays: 30, // for "Established accounts"
+    maxGroupSize: 100, // 2..200, the creator included
+  },
+});
+```
+
+## Moderation and privacy
+
+- **Reports.** Members report a message (or a whole chat request) from its menu. Moderators see the reported message and the 5 before it in the ModCP - never the rest of the chat - and can hide it, warn the author, or both. The report permissions live in the **Chat** module of moderator permissions.
+- **No staff browsing.** No permission lets staff read chats nobody reported.
+- **Suspended members** can't open chat while the suspension lasts.
+- **GDPR.** The data export includes a member's own messages, reactions, chats and block list. Erasing an account removes them from their chats; their messages stay for the other side, shown as **Deleted member**.
+- **Notifications.** Unread messages send one email per chat after 2 minutes (nothing if you read them in time); chat requests notify right away. Members change both in **Settings → Notifications → Chat**. Emails never contain the message text.
+
+## Live updates
+
+With the [WebSocket](/docs/dev/websocket) running, messages, edits, reactions, read receipts and "typing…" arrive instantly on the `@vitnode/core` `chat/live` channel. Without it chat still works: the open chat and the unread counts refresh by polling.
+
+## Start a chat from your plugin
+
+Send members to a chat from your own UI with `fetcher`. One recipient starts (or continues) a direct chat; more start a group:
+
+```tsx title="src/components/contact-seller.tsx"
+import { manifest } from "@vitnode/api/manifest";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+
+export const contactSeller = async (sellerId: number, itemTitle: string) => {
+  const response = await fetcher({
+    plugin: manifest.id,
+    module: "chat",
+    method: "post",
+    path: "/",
+    args: {
+      body: {
+        userIds: [sellerId],
+        body: `Hi! Is "${itemTitle}" still available?`,
+      },
+    },
+  });
+  if (!response.ok) return null; // e.g. 403 recipient_unavailable
+
+  const { chatId } = await response.json();
+
+  return `/chat/${chatId}`;
+};
+```
+
+Ask first whether the button makes sense with `GET /chat/can-chat/{userId}`: it answers `{ allowed, asRequest, chatId }`, which is how the built-in **Chat** button decides between **Chat**, **Send chat request** and nothing.
+
+## Related
+
+- [Chat events](/docs/dev/events/built-in-events#chat-events)
+- [Notifications](/docs/dev/notifications)
+- [Moderation](/docs/dev/moderation)
+- [WebSocket](/docs/dev/websocket)

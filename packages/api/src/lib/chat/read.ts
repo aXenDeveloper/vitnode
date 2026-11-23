@@ -221,6 +221,7 @@ export const listChats = async (
   const people = await loadPublicPeople(c, [
     ...[...members.values()].flat(),
     ...page.map(row => row.participant.invitedById),
+    ...lastMessages.map(row => row.authorId),
   ]);
 
   const items = page.map(({ chat, participant }): ChatListItem => {
@@ -239,6 +240,9 @@ export const listChats = async (
         last && !pendingGroup && last.id >= participant.firstVisibleMessageId
           ? {
               authorId: last.authorId,
+              authorName: last.authorId
+                ? (people.get(last.authorId)?.name ?? null)
+                : null,
               createdAt: last.createdAt.toISOString(),
               id: last.id,
               preview: previewOf(last),

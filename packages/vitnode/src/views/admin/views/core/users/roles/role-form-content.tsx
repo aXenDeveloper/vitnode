@@ -41,6 +41,11 @@ import { adminRoleReactionsQueryOptions } from "@/views/admin/views/core/reactio
 
 import { AutoFormAiPermission } from "./ai-permission-field";
 import {
+  type AdminRoleChat,
+  roleChatFields,
+  roleChatShape,
+} from "./role-chat-fields";
+import {
   roleReactionsFields,
   roleReactionsShape,
   roleReactionsValuesOf,
@@ -68,6 +73,7 @@ export type AdminRoleAiValues = Omit<AdminAiRoleAccessInput, "roleId">;
 export interface AdminRoleFormValues {
   ai?: AdminRoleAiValues;
   allowBrowseAnonymously: boolean;
+  allowChat: boolean;
   allowDeleteAccount?: boolean;
   allowDeleteOwnContent: boolean;
   allowEditOwnContent: boolean;
@@ -76,6 +82,8 @@ export interface AdminRoleFormValues {
   allowUploadAvatar: boolean;
   allowUploadCover: boolean;
   allowUploadFiles: boolean;
+  chatMaxInvites: null | number;
+  chatRequestsPerDay: null | number;
   color: string;
   editOwnContentMinutes: null | number;
   forceBrowseAnonymously: boolean;
@@ -90,7 +98,7 @@ export interface AdminRoleFormValues {
 }
 
 /** The row an edit re-opens with. Absent for a create. */
-export interface AdminRoleFormData {
+export interface AdminRoleFormData extends Partial<AdminRoleChat> {
   allowBrowseAnonymously: boolean;
   allowDeleteAccount?: boolean;
   allowDeleteOwnContent: boolean;
@@ -350,6 +358,15 @@ export const AdminRoleFormContent = ({
       .min(0)
       .nullable()
       .default(data?.totalMaxStorage ?? null),
+    ...roleChatShape(
+      data?.allowChat === undefined
+        ? undefined
+        : {
+            allowChat: data.allowChat,
+            chatMaxInvites: data.chatMaxInvites ?? null,
+            chatRequestsPerDay: data.chatRequestsPerDay ?? null,
+          },
+    ),
     ...aiShape(ai),
     ...roleReactionsShape(reactions),
   });
@@ -582,6 +599,7 @@ export const AdminRoleFormContent = ({
           tab: "profile",
         },
         ...(ai ? aiFields(ai, t, tAll) : []),
+        ...roleChatFields(t),
         ...(reactions ? roleReactionsFields(t) : []),
       ]}
       formSchema={formSchema}
@@ -593,6 +611,7 @@ export const AdminRoleFormContent = ({
         { label: t("tabs.general"), value: "general" },
         { label: t("tabs.content"), value: "content" },
         { label: t("tabs.profile"), value: "profile" },
+        { label: t("tabs.chat"), value: "chat" },
         ...(ai ? [{ label: t("tabs.ai"), value: "ai" }] : []),
         ...(reactions
           ? [{ label: t("tabs.reactions"), value: "reactions" }]

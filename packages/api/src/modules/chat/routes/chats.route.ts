@@ -1,5 +1,5 @@
 import { z } from "@hono/zod-openapi";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, ilike, isNull, ne } from "drizzle-orm";
 
 import { buildRoute } from "@/builders";
 import {
@@ -26,6 +26,7 @@ import {
   startChat,
   updateChat,
 } from "@/lib/chat/service";
+import { loadPublicPeople, zodPublicPerson } from "@/lib/public-people";
 import { isWebSocketEnabled } from "@/ws/registry";
 
 import {
@@ -414,6 +415,54 @@ export const canChatRoute = buildRoute({
         allowed: true,
         asRequest: !existing && check.asRequest,
         chatId: existing?.id ?? null,
+      },
+      200,
+      privateHeaders,
+    );
+  },
+});
+
+const PEOPLE_LIMIT = 8;
+
+export const searchPeopleRoute = buildRoute({
+  route: {
+    method: "get",
+    path: "/people",
+    description:
+      "Members whose name starts with `q`, to pick chat recipients. Leaves out the signed-in member",
+    request: {
+      query: z.object({ q: z.string().trim().min(1).max(64) }),
+    },
+    responses: {
+      200: json(z.object({ items: z.array(zodPublicPerson) }), "Members"),
+      ...chatErrorResponses,
+    },
+  },
+  handler: async c => {
+    const user = c.get("user");
+    if (!user || !c.get("core").chat.enabled) {
+      return chatErrorJson(c, new ChatError("not_found"));
+    }
+    const q = c.req.valid("query").q.replace(/[\\%_]/gu, char => `\\${char}`);
+    const rows = await c
+      .get("db")
+      .select({ id: core_users.id })
+      .from(core_users)
+      .where(and(ilike(core_users.name, `${q}%`), ne(core_users.id, user.id)))
+      .orderBy(asc(core_users.name))
+      .limit(PEOPLE_LIMIT);
+    const people = await loadPublicPeople(
+      c,
+      rows.map(row => row.id),
+    );
+
+    return c.json(
+      {
+        items: rows.flatMap(row => {
+          const person = people.get(row.id);
+
+          return person ? [person] : [];
+        }),
       },
       200,
       privateHeaders,

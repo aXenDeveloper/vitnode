@@ -72,41 +72,72 @@ export const listBlocksRoute = buildRoute({
   },
 });
 
-const blockRoute = (method: "delete" | "put") =>
-  buildRoute({
-    route: {
-      method,
-      path: "/blocks/{userId}",
-      description: method === "put" ? "Block a member" : "Unblock a member",
-      request: { params },
-      responses: {
-        200: json(z.object({ ok: z.boolean() }), "Saved"),
-        400: json(errorSchema, "Yourself, or the block list is full"),
-        401: { description: "Sign in first" },
-        404: json(errorSchema, "No such member"),
-      },
-    },
-    handler: async c => {
-      const user = c.get("user");
-      if (!user) throw new HTTPException(401, { message: "Unauthorized" });
-      const userId = Number(c.req.valid("param").userId);
-      try {
-        if (method === "put") {
-          await blockUser(c, userId);
-        } else {
-          await unblockUser(c, userId);
-        }
-      } catch (error) {
-        if (!(error instanceof ChatError)) throw error;
+const blockResponses = {
+  200: json(z.object({ ok: z.boolean() }), "Saved"),
+  400: json(errorSchema, "Yourself, or the block list is full"),
+  401: { description: "Sign in first" },
+  404: json(errorSchema, "No such member"),
+};
 
-        return error.status === 400
-          ? c.json({ error: error.code }, 400)
-          : c.json({ error: error.code }, 404);
-      }
+const runBlock = async (
+  c: Parameters<typeof blockUser>[0],
+  userId: number,
+  block: boolean,
+): Promise<ChatError | null> => {
+  try {
+    if (block) {
+      await blockUser(c, userId);
+    } else {
+      await unblockUser(c, userId);
+    }
 
-      return c.json({ ok: true }, 200, noStore);
-    },
-  });
+    return null;
+  } catch (error) {
+    if (error instanceof ChatError) return error;
+    throw error;
+  }
+};
 
-export const blockUserRoute = blockRoute("put");
-export const unblockUserRoute = blockRoute("delete");
+export const blockUserRoute = buildRoute({
+  route: {
+    method: "put",
+    path: "/blocks/{userId}",
+    description: "Block a member",
+    request: { params },
+    responses: blockResponses,
+  },
+  handler: async c => {
+    if (!c.get("user"))
+      throw new HTTPException(401, { message: "Unauthorized" });
+    const error = await runBlock(c, Number(c.req.valid("param").userId), true);
+    if (error) {
+      return error.status === 400
+        ? c.json({ error: error.code }, 400)
+        : c.json({ error: error.code }, 404);
+    }
+
+    return c.json({ ok: true }, 200, noStore);
+  },
+});
+
+export const unblockUserRoute = buildRoute({
+  route: {
+    method: "delete",
+    path: "/blocks/{userId}",
+    description: "Unblock a member",
+    request: { params },
+    responses: blockResponses,
+  },
+  handler: async c => {
+    if (!c.get("user"))
+      throw new HTTPException(401, { message: "Unauthorized" });
+    const error = await runBlock(c, Number(c.req.valid("param").userId), false);
+    if (error) {
+      return error.status === 400
+        ? c.json({ error: error.code }, 400)
+        : c.json({ error: error.code }, 404);
+    }
+
+    return c.json({ ok: true }, 200, noStore);
+  },
+});

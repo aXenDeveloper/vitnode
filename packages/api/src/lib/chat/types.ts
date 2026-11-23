@@ -53,6 +53,8 @@ export interface ChatListItem {
   kind: ChatKind;
   lastMessage: null | {
     authorId: null | number;
+    /** The author's name, for system lines such as "Anna left". */
+    authorName: null | string;
     createdAt: string;
     id: number;
     /** Plain-text preview, `null` for a deleted message. */

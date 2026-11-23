@@ -66,7 +66,7 @@ const hideAction = (hidden: boolean) => ({
  */
 export const chatMessageReportTarget = defineReportTarget({
   type: "chat.message",
-  label: "core.chat.report_target",
+  label: "core.global.chat.report_target",
   permissionModule: "chat",
   parseId: parseMessageId,
   capture: async (c, { targetId }) => {
@@ -119,13 +119,13 @@ export const chatMessageReportTarget = defineReportTarget({
       fields: [
         {
           kind: "text",
-          label: "core.chat.report.message",
+          label: "core.global.chat.report.message",
           name: "message",
           value: message.body,
         },
         {
           kind: "text",
-          label: "core.chat.report.context",
+          label: "core.global.chat.report.context",
           name: "context",
           value: context || null,
         },

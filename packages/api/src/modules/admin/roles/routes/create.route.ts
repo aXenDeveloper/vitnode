@@ -29,6 +29,15 @@ export const zodCreateRoleAdminSchema = z.object({
   allowEditPersonalInfo: z.boolean().optional(),
   allowDeleteAccount: z.boolean().optional(),
   allowBrowseAnonymously: z.boolean().optional(),
+  allowChat: z.boolean().optional(),
+  chatRequestsPerDay: z
+    .number()
+    .int()
+    .min(1)
+    .max(100_000)
+    .nullable()
+    .optional(),
+  chatMaxInvites: z.number().int().min(1).max(100_000).nullable().optional(),
   forceBrowseAnonymously: z.boolean().optional(),
   allowEditOwnContent: z.boolean().optional(),
   editOwnContentMinutes: zodRoleEditOwnContentMinutesSchema.optional(),
@@ -81,6 +90,9 @@ export const createRoleAdminRoute = buildRoute({
       allowEditPersonalInfo,
       allowDeleteAccount,
       allowBrowseAnonymously,
+      allowChat,
+      chatRequestsPerDay,
+      chatMaxInvites,
       forceBrowseAnonymously,
       allowEditOwnContent,
       editOwnContentMinutes,
@@ -105,6 +117,9 @@ export const createRoleAdminRoute = buildRoute({
             ? {}
             : { allowEditPersonalInfo }),
           ...(allowDeleteAccount === undefined ? {} : { allowDeleteAccount }),
+          ...(allowChat === undefined ? {} : { allowChat }),
+          ...(chatRequestsPerDay === undefined ? {} : { chatRequestsPerDay }),
+          ...(chatMaxInvites === undefined ? {} : { chatMaxInvites }),
           ...(allowBrowseAnonymously === undefined
             ? {}
             : { allowBrowseAnonymously }),
