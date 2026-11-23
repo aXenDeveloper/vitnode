@@ -70,9 +70,11 @@ import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventDefinition } from "../lib/event-definition";
 import type { EventListenerConfig } from "../lib/events";
 import type { InstalledPluginRegistry } from "../lib/installed-plugins";
+import type { VitNodeMetadata } from "../lib/metadata";
 import type { ModerationRegistry } from "../lib/moderation/registry";
 import type { NotificationWorkerSettings } from "../lib/notifications/preferences";
 import type { NotificationRegistry } from "../lib/notifications/registry";
+import type { ResolvedOgImageConfig } from "../lib/og-image/types";
 import type { ResolvedPasskeysConfig } from "../lib/passkey-config";
 import type { PaymentProviderApiPlugin } from "../lib/payments/provider";
 import type { PermissionStaffCatalogEntry } from "../lib/permission-staff";
@@ -106,6 +108,7 @@ import {
 import { validateModerationRegistry } from "../lib/moderation/registry";
 import { resolveNotificationWorkerSettings } from "../lib/notifications/preferences";
 import { createNotificationRegistry } from "../lib/notifications/registry";
+import { resolveOgImageConfig } from "../lib/og-image";
 import { resolvePasskeysConfig } from "../lib/passkey-config";
 import { validatePaymentProviders } from "../lib/payments/provider";
 import { normalizePermissionStaffModules } from "../lib/permission-staff";
@@ -253,13 +256,12 @@ export interface EnvVariablesVitNode {
       sources: MessagesSource[];
     };
     installedPlugins: InstalledPluginRegistry;
-    metadata: {
-      shortTitle?: string;
-      title: string;
-    };
+    metadata: VitNodeMetadata;
     moderation: ModerationRegistry;
     notifications?: NotificationRegistry;
     notificationWorkers?: NotificationWorkerSettings;
+    /** Generated social cards: fonts, theme and templates, with defaults applied. */
+    ogImage: ResolvedOgImageConfig;
     /** Payment provider instances and the checkout lifetime, in milliseconds. */
     payments: {
       checkoutTtlMs: number;
@@ -387,6 +389,7 @@ export const globalMiddleware = ({
   plugins,
   i18n,
   notifications,
+  ogImage,
   payments,
   search,
   storage,
@@ -408,6 +411,7 @@ export const globalMiddleware = ({
     | "frontendPlugins"
     | "i18n"
     | "notifications"
+    | "ogImage"
     | "payments"
     | "plugins"
     | "search"
@@ -733,6 +737,16 @@ export const globalMiddleware = ({
       notifications: notificationsMetadata,
       reactions: reactionsMetadata,
       notificationWorkers,
+      ogImage: resolveOgImageConfig({
+        config: ogImage,
+        contentTypeIds: new Set(
+          contentTypesMetadata.map(entry => entry.definition.id),
+        ),
+        pluginTemplates: plugins.map(plugin => ({
+          pluginId: plugin.pluginId,
+          templates: plugin.ogImageTemplates,
+        })),
+      }),
       payments: paymentsMetadata,
       contentContainers: contentContainersMetadata,
       contentModels: contentModelsMetadata,

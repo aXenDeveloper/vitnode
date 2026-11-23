@@ -99,9 +99,7 @@ const pluginRouteHead =
       }),
     );
 
-    return pageHead(
-      head.alternates ? { ...head, locale: match.context.locale } : head,
-    );
+    return pageHead({ ...head, locale: match.context.locale });
   };
 
 const pluginRouteLoader =

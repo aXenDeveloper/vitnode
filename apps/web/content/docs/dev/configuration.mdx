@@ -56,7 +56,7 @@ export const vitNodeConfig = buildConfig({
 | Name              | Type                     | Required | Default        | Description                                                                                      |
 | :---------------- | :----------------------- | :------- | :------------- | :----------------------------------------------------------------------------------------------- |
 | `i18n`            | object                   | Yes      | -              | Languages and locale routing. See [Languages & Localization](/docs/dev/i18n)                     |
-| `metadata`        | object                   | Yes      | -              | Site title, used in page titles as `{page} - {shortTitle ?? title}`                              |
+| `metadata`        | object                   | Yes      | -              | Site title, used in page titles as `{page} - {shortTitle ?? title}`. `metadata.ogImage` sets the default social image and `metadata.twitterSite` the X handle, see [Social images](/docs/dev/social-images) |
 | `plugins`         | `buildPlugin()` results  | Yes      | -              | The installed plugins' frontend factories. See [Enabled plugins](#enabled-plugins)               |
 | `editor`          | object                   | No       | -              | Settings shared by every `Editor` in the app                                                     |
 | `logo`            | component                | No       | VitNode logo   | The header logo. See [Logo](#logo)                                                               |

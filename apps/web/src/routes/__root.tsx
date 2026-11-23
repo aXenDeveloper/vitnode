@@ -13,6 +13,7 @@ import {
   DocumentScripts,
   VitNodeRootProviders,
 } from '@vitnode/core/tanstack/layout'
+import { documentSocialMeta } from '@vitnode/core/tanstack/metadata'
 
 import type { Locale } from '@/vitnode.config'
 
@@ -29,9 +30,14 @@ export interface RootRouterContext {
 }
 
 export const Route = createRootRouteWithContext<RootRouterContext>()({
-  beforeLoad: ({ location }) => ({
-    locale: resolveLocale<Locale>(publicPathnameOf(location)),
-  }),
+  beforeLoad: ({ location }) => {
+    const publicPathname = publicPathnameOf(location)
+
+    return {
+      locale: resolveLocale<Locale>(publicPathname),
+      publicPathname,
+    }
+  },
   component: RootComponent,
   loader: async ({ context }) => {
     await context.queryClient.query({
@@ -39,7 +45,7 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
       staleTime: 'static',
     })
   },
-  head: ({ matches }) => ({
+  head: ({ match, matches }) => ({
     links: [
       ...(matches.some(({ routeId }) => isDocsRouteId(routeId))
         ? []
@@ -59,6 +65,10 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
         name: 'viewport',
       },
       { title: metadata.title },
+      ...documentSocialMeta({
+        locale: match.context.locale,
+        pathname: match.context.publicPathname,
+      }),
     ],
   }),
   shellComponent: RootDocument,

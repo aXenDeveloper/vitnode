@@ -15,20 +15,21 @@ const SolutionRoute = () => {
   return <SolutionPage solution={solution} />
 }
 
-const headFor = (slug: string) => {
+const headFor = (slug: string, locale: string) => {
   const solution = findSolutionEntry(slug)
 
-  return solution ? marketingHead(solutionPageMeta(solution)) : {}
+  return solution ? marketingHead(solutionPageMeta(solution), { locale }) : {}
 }
 
 export const Route = createFileRoute('/_main/solutions/$slug')({
-  loader: ({ params }) => {
+  loader: ({ context, params }) => {
     // oxlint-disable-next-line typescript/only-throw-error
     if (!findSolutionEntry(params.slug)) throw notFound()
 
-    return { slug: params.slug }
+    return { locale: context.locale, slug: params.slug }
   },
-  head: ({ loaderData }) => (loaderData ? headFor(loaderData.slug) : {}),
+  head: ({ loaderData }) =>
+    loaderData ? headFor(loaderData.slug, loaderData.locale) : {},
   staticData: { breadcrumb: SolutionBreadcrumb },
   component: SolutionRoute,
 })

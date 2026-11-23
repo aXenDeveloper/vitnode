@@ -49,6 +49,7 @@ export const vitNodeConfig = buildConfig({
   metadata: {
     shortTitle: 'VitNode',
     title: 'VitNode',
+    twitterSite: '@vitnode',
   },
   navigation: {
     header: [

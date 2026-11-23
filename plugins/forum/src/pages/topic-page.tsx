@@ -118,6 +118,25 @@ const topicQueryOptions = (slug: string) =>
     staleTime: ({ state }) => (state.data?.shared ? TOPIC_STALE_TIME : 0),
   });
 
+const topicOgImageQueryOptions = (id: number) =>
+  queryOptions({
+    meta: LOADER_DATA_QUERY_META,
+    queryFn: async () => {
+      const res = await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "content/topics",
+        path: "/delivery/item/{id}",
+        args: { params: { id } },
+      });
+      if (res.status !== 200) return null;
+
+      return (await res.json()).openGraph?.image ?? null;
+    },
+    queryKey: [...forumQueryKeys.topic(String(id)), "og-image"],
+    staleTime: TOPIC_STALE_TIME,
+  });
+
 const loadTopic = async (
   queryClient: QueryClient,
   { locale, slug }: { locale: string; slug: string },
@@ -126,9 +145,10 @@ const loadTopic = async (
   if ("accessRequired" in loaded) return { accessRequired: true as const };
   const topic = contentPageItem(loaded.topic);
 
-  const [forum, thread] = await Promise.all([
+  const [forum, thread, ogImage] = await Promise.all([
     queryForum(queryClient, String(topic.forum), locale).catch(() => null),
     queryClient.query(threadQueryOptions(topic.id)),
+    queryClient.query(topicOgImageQueryOptions(topic.id)).catch(() => null),
   ]);
 
   const trail = forum ? [...forum.ancestors, forum.container] : [];
@@ -147,6 +167,7 @@ const loadTopic = async (
       richTextToPlainText(topic.body).replace(/\s+/g, " "),
     ),
     locale,
+    ogImage,
     thread: thread ?? {
       items: [],
       pageInfo: { endCursor: null, hasNextPage: false, totalCount: 0 },
@@ -188,6 +209,10 @@ export const route = defineRoute<TopicPageData, TopicSearch>({
             [loaderData.locale]: topicHref(loaderData.topic.slug),
           },
           description: loaderData.description,
+          openGraph: {
+            type: "article",
+            ...(loaderData.ogImage ? { image: loaderData.ogImage } : {}),
+          },
           title: loaderData.topic.title,
         },
 

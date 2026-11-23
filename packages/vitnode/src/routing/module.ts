@@ -8,10 +8,41 @@ export type PluginRouteRobots =
   | "noindex, follow"
   | "noindex, nofollow";
 
+/** A plugin page's `og:image`. */
+export interface PluginRouteOpenGraphImage {
+  /** What the image shows. */
+  alt?: null | string;
+  /** Pixels, when known. */
+  height?: null | number;
+  /** The MIME type, e.g. `image/png`. */
+  type?: null | string;
+  /** An absolute `http(s)` URL, or a path on the web app's origin. */
+  url: string;
+  /** Pixels, when known. */
+  width?: null | number;
+}
+
+/** How a plugin page looks when its link is shared. Every field defaults to the page's own. */
+export interface PluginRouteOpenGraph {
+  description?: string;
+  /** Defaults to the site's image (`metadata.ogImage`). */
+  image?: PluginRouteOpenGraphImage;
+  title?: string;
+  /** `article` for a document, `profile` for a member, `website` (the default) otherwise. */
+  type?: "article" | "profile" | "website";
+}
+
 export interface PluginRouteHead {
   alternates?: Readonly<Record<string, string>>;
+  /**
+   * The canonical URL, absolute or a path on the web app's origin, for a page
+   * without `alternates` (those emit their own).
+   */
+  canonical?: string;
   /** The `<meta name="description">`, when the page has one. */
   description?: string;
+  /** Open Graph overrides: title, description, type and image. */
+  openGraph?: PluginRouteOpenGraph;
 
   robots?: PluginRouteRobots;
   /** The page's own title, already translated. */

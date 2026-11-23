@@ -6,6 +6,7 @@ import { DocsError, DocsNotFound } from '@/docs/error-views'
 import { DocsPageContent } from '@/docs/page-content'
 import { DocsPagePendingSkeleton } from '@/docs/pending'
 import { movedDocsPath } from '@/docs/redirects'
+import { docsSectionOgCategory } from '@/docs/section'
 import { DOCS_STALE_TIME } from '@/docs/shared'
 import { getDocsPage } from '@/docs/transport'
 
@@ -34,9 +35,12 @@ export const Route = createFileRoute('/_docs/docs/$')({
   },
   head: ({ loaderData }) =>
     pageHead({
+      canonical: loaderData?.url,
       description: loaderData?.description,
+      locale: 'en',
       openGraph: {
         description: loaderData?.description,
+        imageCategory: docsSectionOgCategory(loaderData?.section),
         title: loaderData?.metaTitle,
         type: 'article',
       },

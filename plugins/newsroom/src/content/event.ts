@@ -94,7 +94,11 @@ export const eventContentType = defineContentType({
   delivery: {
     redirects: true,
     hreflang: { xDefault: "defaultLocale" },
-    seo: { titleField: "title", descriptionField: "body" },
+    seo: {
+      titleField: "title",
+      descriptionField: "body",
+      openGraph: {},
+    },
     sitemap: { changeFrequency: "weekly" },
   },
 

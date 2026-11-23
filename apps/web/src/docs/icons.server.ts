@@ -1,6 +1,6 @@
 import '@tanstack/react-start/server-only'
 
-import type { Root } from 'fumadocs-core/page-tree'
+import type { Node, Root } from 'fumadocs-core/page-tree'
 
 import { visit } from 'fumadocs-core/page-tree'
 import dynamicIconImports from 'lucide-react/dynamicIconImports.mjs'
@@ -56,4 +56,25 @@ export const loadDocsPageTreeIcons = async (
   )
 
   return Object.fromEntries(entries.flat())
+}
+
+const treePathOf = (nodes: readonly Node[], url: string): Node[] | null => {
+  for (const node of nodes) {
+    if (node.type === 'page' && node.url === url) return [node]
+    if (node.type !== 'folder') continue
+    if (node.index?.url === url) return [node, node.index]
+
+    const path = treePathOf(node.children, url)
+    if (path) return [node, ...path]
+  }
+
+  return null
+}
+
+export const docsSectionTitle = (tree: Root, url: string) => {
+  const [top] = treePathOf(tree.children, url) ?? []
+
+  return top?.type === 'folder' && top.root && typeof top.name === 'string'
+    ? top.name
+    : undefined
 }

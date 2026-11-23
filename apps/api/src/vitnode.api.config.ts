@@ -3,6 +3,7 @@ import { DiscordSSOApiPlugin } from "@vitnode/api/adapters/sso/discord";
 import { FacebookSSOApiPlugin } from "@vitnode/api/adapters/sso/facebook";
 import { GoogleSSOApiPlugin } from "@vitnode/api/adapters/sso/google";
 import { coreRelations } from "@vitnode/api/database/relations";
+import { VITNODE_LOGO_SVG } from "@vitnode/api/lib/og-image/vitnode-logo";
 // import { LocalStorageAdapter } from "@vitnode/api/adapters/storage/local";
 import { buildApiConfig } from "@vitnode/api/vitnode.config";
 import { blogApiPlugin } from "@vitnode/blog/config.api";
@@ -186,5 +187,8 @@ export const vitNodeApiConfig = buildApiConfig({
   metadata: {
     title: "VitNode API",
     shortTitle: "VitNode",
+  },
+  ogImage: {
+    logo: { svg: VITNODE_LOGO_SVG, wordmark: true },
   },
 });

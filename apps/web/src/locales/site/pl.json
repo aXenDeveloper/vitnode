@@ -358,6 +358,20 @@
       "browse": "Przeglądaj",
       "browse_description": "Lista ze stronicowaniem z wtyczki newsroom.",
       "search": "Szukaj"
+    },
+    "meta": {
+      "home": {
+        "title": "Open-source framework dla społeczności",
+        "description": "VitNode to darmowy, open-source framework dla społeczności z wtyczkami, Content Engine, AdminCP, aktualizacjami na żywo, klockami AI i wyszukiwarką."
+      },
+      "plugins": {
+        "title": "Wtyczki - blog, przykład i funkcje Twojego autorstwa",
+        "description": "Każda funkcja VitNode to wtyczka. Poznaj wtyczkę bloga, przykładową wtyczkę do nauki i zobacz, jak wygląda Twoja własna wtyczka."
+      },
+      "solutions": {
+        "title": "Rozwiązania - pięć stron zbudowanych na VitNode",
+        "description": "Pięć stron zbudowanych na VitNode: centrum pomocy, serwis z członkostwem, hub open source, hub gildii graczy i wielojęzyczny magazyn, z rolami i ekranami."
+      }
     }
   }
 }

@@ -34,6 +34,14 @@ export interface UserProfile {
   id: number;
   name: string;
   nameCode: string;
+  /** The profile's social card, or `null` when the API draws none. */
+  ogImage?: null | {
+    alt: string;
+    height: number;
+    type: string;
+    url: string;
+    width: number;
+  };
   /** Points from reactions to the member's content; can be negative. Absent from older APIs. */
   reputation?: number;
   role: ProfileRole;
