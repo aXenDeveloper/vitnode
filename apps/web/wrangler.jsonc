@@ -39,7 +39,8 @@
   "vars": {
     "CLOUDFLARE_TURNSTILE_SITE_KEY": "0x4AAAAAABi06L36gFn13BlF",
     "SUPABASE_URL": "https://wvmvsazvuzfvwydifigd.supabase.co",
-    "VITNODE_INSTALLATION_ID": "default"
+    "VITNODE_INSTALLATION_ID": "default",
+    "VITNODE_WEB_URL": "https://vitnode.com/"
   },
   "observability": {
     "logs": {
