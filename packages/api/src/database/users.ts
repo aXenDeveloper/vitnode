@@ -11,11 +11,13 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 
+import type { ChatRequestsFrom } from "@/lib/chat/const";
 import type {
   SsoOperationIntent,
   SsoProfileField,
 } from "@/lib/shared/sso-profile";
 
+import { CHAT_REQUESTS_FROM } from "@/lib/chat/const";
 import {
   SSO_OPERATION_INTENTS,
   SSO_PROFILE_FIELDS,
@@ -74,6 +76,12 @@ export const core_users = camelCase.table.withRLS(
     // Sum of the points of reactions this user's content received.
     reputation: t.integer().notNull().default(0),
     showReactionsOnProfile: t.boolean().notNull().default(true),
+    chatRequestsFrom: t
+      .varchar({ enum: CHAT_REQUESTS_FROM, length: 16 })
+      .$type<ChatRequestsFrom>()
+      .notNull()
+      .default("everyone"),
+    showReadReceipts: t.boolean().notNull().default(true),
   }),
   t => [
     index("core_users_avatar_id_idx").on(t.avatarId),

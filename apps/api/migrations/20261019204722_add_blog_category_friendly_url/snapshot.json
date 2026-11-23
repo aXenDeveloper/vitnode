@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "b6bca15a-328c-4015-a556-d27dc44c76e5",
-  "prevIds": [
-    "48d4174b-1986-4fa5-8919-80bd98f443d6"
-  ],
+  "prevIds": ["48d4174b-1986-4fa5-8919-80bd98f443d6"],
   "footprints": [
     {
       "statementType": "add_column",
@@ -20,10 +18,7 @@
         "n|col|public.blog_categories_translations.friendlyUrl",
         "e|col|public.blog_categories_translations.friendlyUrl"
       ],
-      "reads": [
-        "n|tbl|public.blog_categories_translations",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_categories_translations", "n|sch|public"]
     },
     {
       "statementType": "create_index",

@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "54fa0a8d-973a-40d6-bd75-d5c696113c4d",
-  "prevIds": [
-    "20d31aad-bc7f-4e35-b1f6-059bd8899c2b"
-  ],
+  "prevIds": ["20d31aad-bc7f-4e35-b1f6-059bd8899c2b"],
   "footprints": [
     {
       "statementType": "create_sequence",
@@ -20,17 +18,11 @@
         "e|seq|public.core_reactions_counts_version_seq",
         "n|rel|public.core_reactions_counts_version_seq"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions"
-      ],
+      "statementTarget": ["table", "public", "core_reactions"],
       "writes": [
         "s|tbl|public.core_reactions",
         "n|tbl|public.core_reactions",
@@ -40,17 +32,11 @@
         "n|rel|public.core_reactions_pkey",
         "n|rel|public.core_reactions_code_key"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions_counts"
-      ],
+      "statementTarget": ["table", "public", "core_reactions_counts"],
       "writes": [
         "s|tbl|public.core_reactions_counts",
         "n|tbl|public.core_reactions_counts",
@@ -59,17 +45,11 @@
         "n|type|public.core_reactions_counts",
         "n|rel|public.core_reactions_counts_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions_entries"
-      ],
+      "statementTarget": ["table", "public", "core_reactions_entries"],
       "writes": [
         "s|tbl|public.core_reactions_entries",
         "n|tbl|public.core_reactions_entries",
@@ -79,17 +59,11 @@
         "n|rel|public.core_reactions_entries_pkey",
         "n|rel|public.core_reactions_entries_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions_roles"
-      ],
+      "statementTarget": ["table", "public", "core_reactions_roles"],
       "writes": [
         "s|tbl|public.core_reactions_roles",
         "n|tbl|public.core_reactions_roles",
@@ -98,27 +72,17 @@
         "n|type|public.core_reactions_roles",
         "n|rel|public.core_reactions_roles_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_roles",
-        "allowReact"
-      ],
+      "statementTarget": ["column", "public", "core_roles", "allowReact"],
       "writes": [
         "s|col|public.core_roles.allowReact",
         "n|col|public.core_roles.allowReact",
         "e|col|public.core_roles.allowReact"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -133,46 +97,27 @@
         "n|col|public.core_roles.maxReactionsPerItem",
         "e|col|public.core_roles.maxReactionsPerItem"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_roles",
-        "reactionsPerDay"
-      ],
+      "statementTarget": ["column", "public", "core_roles", "reactionsPerDay"],
       "writes": [
         "s|col|public.core_roles.reactionsPerDay",
         "n|col|public.core_roles.reactionsPerDay",
         "e|col|public.core_roles.reactionsPerDay"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "reputation"
-      ],
+      "statementTarget": ["column", "public", "core_users", "reputation"],
       "writes": [
         "s|col|public.core_users.reputation",
         "n|col|public.core_users.reputation",
         "e|col|public.core_users.reputation"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -187,10 +132,7 @@
         "n|col|public.core_users.showReactionsOnProfile",
         "e|col|public.core_users.showReactionsOnProfile"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -384,11 +326,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions"
-      ],
+      "statementTarget": ["table", "public", "core_reactions"],
       "writes": [
         "s|fk|public.core_reactions.core_reactions_fileId_core_files_id_fkey",
         "n|fk|public.core_reactions.core_reactions_fileId_core_files_id_fkey",
@@ -407,11 +345,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions"
-      ],
+      "statementTarget": ["table", "public", "core_reactions"],
       "writes": [
         "s|fk|public.core_reactions.core_reactions_posterFileId_core_files_id_fkey",
         "n|fk|public.core_reactions.core_reactions_posterFileId_core_files_id_fkey",
@@ -430,11 +364,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions_counts"
-      ],
+      "statementTarget": ["table", "public", "core_reactions_counts"],
       "writes": [
         "s|fk|public.core_reactions_counts.core_reactions_counts_reactionId_core_reactions_id_fkey",
         "n|fk|public.core_reactions_counts.core_reactions_counts_reactionId_core_reactions_id_fkey",
@@ -453,11 +383,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions_entries"
-      ],
+      "statementTarget": ["table", "public", "core_reactions_entries"],
       "writes": [
         "s|fk|public.core_reactions_entries.core_reactions_entries_reactionId_core_reactions_id_fkey",
         "n|fk|public.core_reactions_entries.core_reactions_entries_reactionId_core_reactions_id_fkey",
@@ -476,11 +402,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions_entries"
-      ],
+      "statementTarget": ["table", "public", "core_reactions_entries"],
       "writes": [
         "s|fk|public.core_reactions_entries.core_reactions_entries_userId_core_users_id_fkey",
         "n|fk|public.core_reactions_entries.core_reactions_entries_userId_core_users_id_fkey",
@@ -499,11 +421,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions_entries"
-      ],
+      "statementTarget": ["table", "public", "core_reactions_entries"],
       "writes": [
         "s|fk|public.core_reactions_entries.core_reactions_entries_targetAuthorId_core_users_id_fkey",
         "n|fk|public.core_reactions_entries.core_reactions_entries_targetAuthorId_core_users_id_fkey",
@@ -522,11 +440,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions_roles"
-      ],
+      "statementTarget": ["table", "public", "core_reactions_roles"],
       "writes": [
         "s|fk|public.core_reactions_roles.core_reactions_roles_reactionId_core_reactions_id_fkey",
         "n|fk|public.core_reactions_roles.core_reactions_roles_reactionId_core_reactions_id_fkey",
@@ -545,11 +459,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_reactions_roles"
-      ],
+      "statementTarget": ["table", "public", "core_reactions_roles"],
       "writes": [
         "s|fk|public.core_reactions_roles.core_reactions_roles_roleId_core_roles_id_fkey",
         "n|fk|public.core_reactions_roles.core_reactions_roles_roleId_core_roles_id_fkey",
@@ -1441,14 +1351,10 @@
         "table": "core_reactions",
         "name": "core_reactions_fileId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "fileId"
-        ],
+        "columns": ["fileId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -1461,14 +1367,10 @@
         "table": "core_reactions",
         "name": "core_reactions_posterFileId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "posterFileId"
-        ],
+        "columns": ["posterFileId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1481,14 +1383,10 @@
         "table": "core_reactions_counts",
         "name": "core_reactions_counts_reactionId_core_reactions_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "reactionId"
-        ],
+        "columns": ["reactionId"],
         "schemaTo": "public",
         "tableTo": "core_reactions",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1501,14 +1399,10 @@
         "table": "core_reactions_entries",
         "name": "core_reactions_entries_reactionId_core_reactions_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "reactionId"
-        ],
+        "columns": ["reactionId"],
         "schemaTo": "public",
         "tableTo": "core_reactions",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1521,14 +1415,10 @@
         "table": "core_reactions_entries",
         "name": "core_reactions_entries_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1541,14 +1431,10 @@
         "table": "core_reactions_entries",
         "name": "core_reactions_entries_targetAuthorId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "targetAuthorId"
-        ],
+        "columns": ["targetAuthorId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1561,14 +1447,10 @@
         "table": "core_reactions_roles",
         "name": "core_reactions_roles_reactionId_core_reactions_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "reactionId"
-        ],
+        "columns": ["reactionId"],
         "schemaTo": "public",
         "tableTo": "core_reactions",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1581,14 +1463,10 @@
         "table": "core_reactions_roles",
         "name": "core_reactions_roles_roleId_core_roles_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "roleId"
-        ],
+        "columns": ["roleId"],
         "schemaTo": "public",
         "tableTo": "core_roles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1600,12 +1478,7 @@
         "schema": "public",
         "table": "core_reactions_counts",
         "name": "core_reactions_counts_pkey",
-        "columns": [
-          "pluginId",
-          "targetType",
-          "targetId",
-          "reactionId"
-        ],
+        "columns": ["pluginId", "targetType", "targetId", "reactionId"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1616,10 +1489,7 @@
         "schema": "public",
         "table": "core_reactions_roles",
         "name": "core_reactions_roles_pkey",
-        "columns": [
-          "reactionId",
-          "roleId"
-        ],
+        "columns": ["reactionId", "roleId"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1630,9 +1500,7 @@
         "schema": "public",
         "table": "core_reactions",
         "name": "core_reactions_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1643,9 +1511,7 @@
         "schema": "public",
         "table": "core_reactions_entries",
         "name": "core_reactions_entries_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1675,9 +1541,7 @@
         "table": "core_reactions",
         "name": "core_reactions_code_key",
         "nameExplicit": false,
-        "columns": [
-          "code"
-        ],
+        "columns": ["code"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }

@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "4dce261e-67cc-4ef1-9c6f-95994b801466",
-  "prevIds": [
-    "bb799038-c9f7-4c6a-83ac-68898c684511"
-  ],
+  "prevIds": ["bb799038-c9f7-4c6a-83ac-68898c684511"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_action_settings"
-      ],
+      "statementTarget": ["table", "public", "core_ai_action_settings"],
       "writes": [
         "s|tbl|public.core_ai_action_settings",
         "n|tbl|public.core_ai_action_settings",
@@ -22,17 +16,11 @@
         "n|type|public.core_ai_action_settings",
         "n|rel|public.core_ai_action_settings_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_budget_periods"
-      ],
+      "statementTarget": ["table", "public", "core_ai_budget_periods"],
       "writes": [
         "s|tbl|public.core_ai_budget_periods",
         "n|tbl|public.core_ai_budget_periods",
@@ -41,17 +29,11 @@
         "n|type|public.core_ai_budget_periods",
         "n|rel|public.core_ai_budget_periods_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_calls"
-      ],
+      "statementTarget": ["table", "public", "core_ai_calls"],
       "writes": [
         "s|tbl|public.core_ai_calls",
         "n|tbl|public.core_ai_calls",
@@ -60,17 +42,11 @@
         "n|type|public.core_ai_calls",
         "n|rel|public.core_ai_calls_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_cost_adjustments"
-      ],
+      "statementTarget": ["table", "public", "core_ai_cost_adjustments"],
       "writes": [
         "s|tbl|public.core_ai_cost_adjustments",
         "n|tbl|public.core_ai_cost_adjustments",
@@ -79,17 +55,11 @@
         "n|type|public.core_ai_cost_adjustments",
         "n|rel|public.core_ai_cost_adjustments_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_pricing"
-      ],
+      "statementTarget": ["table", "public", "core_ai_pricing"],
       "writes": [
         "s|tbl|public.core_ai_pricing",
         "n|tbl|public.core_ai_pricing",
@@ -98,17 +68,11 @@
         "n|type|public.core_ai_pricing",
         "n|rel|public.core_ai_pricing_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_reservations"
-      ],
+      "statementTarget": ["table", "public", "core_ai_reservations"],
       "writes": [
         "s|tbl|public.core_ai_reservations",
         "n|tbl|public.core_ai_reservations",
@@ -117,17 +81,11 @@
         "n|type|public.core_ai_reservations",
         "n|rel|public.core_ai_reservations_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_role_permissions"
-      ],
+      "statementTarget": ["table", "public", "core_ai_role_permissions"],
       "writes": [
         "s|tbl|public.core_ai_role_permissions",
         "n|tbl|public.core_ai_role_permissions",
@@ -136,17 +94,11 @@
         "n|type|public.core_ai_role_permissions",
         "n|rel|public.core_ai_role_permissions_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_role_policies"
-      ],
+      "statementTarget": ["table", "public", "core_ai_role_policies"],
       "writes": [
         "s|tbl|public.core_ai_role_policies",
         "n|tbl|public.core_ai_role_policies",
@@ -155,17 +107,11 @@
         "n|type|public.core_ai_role_policies",
         "n|rel|public.core_ai_role_policies_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_runs"
-      ],
+      "statementTarget": ["table", "public", "core_ai_runs"],
       "writes": [
         "s|tbl|public.core_ai_runs",
         "n|tbl|public.core_ai_runs",
@@ -174,17 +120,11 @@
         "n|type|public.core_ai_runs",
         "n|rel|public.core_ai_runs_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_settings"
-      ],
+      "statementTarget": ["table", "public", "core_ai_settings"],
       "writes": [
         "s|tbl|public.core_ai_settings",
         "n|tbl|public.core_ai_settings",
@@ -193,17 +133,11 @@
         "n|type|public.core_ai_settings",
         "n|rel|public.core_ai_settings_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_user_overrides"
-      ],
+      "statementTarget": ["table", "public", "core_ai_user_overrides"],
       "writes": [
         "s|tbl|public.core_ai_user_overrides",
         "n|tbl|public.core_ai_user_overrides",
@@ -212,9 +146,7 @@
         "n|type|public.core_ai_user_overrides",
         "n|rel|public.core_ai_user_overrides_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -468,11 +400,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_calls"
-      ],
+      "statementTarget": ["table", "public", "core_ai_calls"],
       "writes": [
         "s|fk|public.core_ai_calls.core_ai_calls_runId_core_ai_runs_id_fkey",
         "n|fk|public.core_ai_calls.core_ai_calls_runId_core_ai_runs_id_fkey",
@@ -491,11 +419,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_cost_adjustments"
-      ],
+      "statementTarget": ["table", "public", "core_ai_cost_adjustments"],
       "writes": [
         "s|fk|public.core_ai_cost_adjustments.core_ai_cost_adjustments_callId_core_ai_calls_id_fkey",
         "n|fk|public.core_ai_cost_adjustments.core_ai_cost_adjustments_callId_core_ai_calls_id_fkey",
@@ -514,11 +438,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_cost_adjustments"
-      ],
+      "statementTarget": ["table", "public", "core_ai_cost_adjustments"],
       "writes": [
         "s|fk|public.core_ai_cost_adjustments.core_ai_cost_adjustments_runId_core_ai_runs_id_fkey",
         "n|fk|public.core_ai_cost_adjustments.core_ai_cost_adjustments_runId_core_ai_runs_id_fkey",
@@ -537,11 +457,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_pricing"
-      ],
+      "statementTarget": ["table", "public", "core_ai_pricing"],
       "writes": [
         "s|fk|public.core_ai_pricing.core_ai_pricing_createdById_core_users_id_fkey",
         "n|fk|public.core_ai_pricing.core_ai_pricing_createdById_core_users_id_fkey",
@@ -560,11 +476,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_reservations"
-      ],
+      "statementTarget": ["table", "public", "core_ai_reservations"],
       "writes": [
         "s|fk|public.core_ai_reservations.core_ai_reservations_runId_core_ai_runs_id_fkey",
         "n|fk|public.core_ai_reservations.core_ai_reservations_runId_core_ai_runs_id_fkey",
@@ -583,11 +495,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_reservations"
-      ],
+      "statementTarget": ["table", "public", "core_ai_reservations"],
       "writes": [
         "s|fk|public.core_ai_reservations.core_ai_reservations_FClYpPXZwvsm_fkey",
         "n|fk|public.core_ai_reservations.core_ai_reservations_FClYpPXZwvsm_fkey",
@@ -606,11 +514,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_role_permissions"
-      ],
+      "statementTarget": ["table", "public", "core_ai_role_permissions"],
       "writes": [
         "s|fk|public.core_ai_role_permissions.core_ai_role_permissions_roleId_core_roles_id_fkey",
         "n|fk|public.core_ai_role_permissions.core_ai_role_permissions_roleId_core_roles_id_fkey",
@@ -629,11 +533,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_role_policies"
-      ],
+      "statementTarget": ["table", "public", "core_ai_role_policies"],
       "writes": [
         "s|fk|public.core_ai_role_policies.core_ai_role_policies_roleId_core_roles_id_fkey",
         "n|fk|public.core_ai_role_policies.core_ai_role_policies_roleId_core_roles_id_fkey",
@@ -652,11 +552,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_runs"
-      ],
+      "statementTarget": ["table", "public", "core_ai_runs"],
       "writes": [
         "s|fk|public.core_ai_runs.core_ai_runs_userId_core_users_id_fkey",
         "n|fk|public.core_ai_runs.core_ai_runs_userId_core_users_id_fkey",
@@ -675,11 +571,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_user_overrides"
-      ],
+      "statementTarget": ["table", "public", "core_ai_user_overrides"],
       "writes": [
         "s|fk|public.core_ai_user_overrides.core_ai_user_overrides_userId_core_users_id_fkey",
         "n|fk|public.core_ai_user_overrides.core_ai_user_overrides_userId_core_users_id_fkey",
@@ -3290,14 +3182,10 @@
         "table": "core_ai_calls",
         "name": "core_ai_calls_runId_core_ai_runs_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "runId"
-        ],
+        "columns": ["runId"],
         "schemaTo": "public",
         "tableTo": "core_ai_runs",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3310,14 +3198,10 @@
         "table": "core_ai_cost_adjustments",
         "name": "core_ai_cost_adjustments_callId_core_ai_calls_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "callId"
-        ],
+        "columns": ["callId"],
         "schemaTo": "public",
         "tableTo": "core_ai_calls",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3330,14 +3214,10 @@
         "table": "core_ai_cost_adjustments",
         "name": "core_ai_cost_adjustments_runId_core_ai_runs_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "runId"
-        ],
+        "columns": ["runId"],
         "schemaTo": "public",
         "tableTo": "core_ai_runs",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3350,14 +3230,10 @@
         "table": "core_ai_pricing",
         "name": "core_ai_pricing_createdById_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "createdById"
-        ],
+        "columns": ["createdById"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -3370,14 +3246,10 @@
         "table": "core_ai_reservations",
         "name": "core_ai_reservations_runId_core_ai_runs_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "runId"
-        ],
+        "columns": ["runId"],
         "schemaTo": "public",
         "tableTo": "core_ai_runs",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3390,14 +3262,10 @@
         "table": "core_ai_reservations",
         "name": "core_ai_reservations_FClYpPXZwvsm_fkey",
         "nameExplicit": false,
-        "columns": [
-          "budgetPeriodId"
-        ],
+        "columns": ["budgetPeriodId"],
         "schemaTo": "public",
         "tableTo": "core_ai_budget_periods",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3410,14 +3278,10 @@
         "table": "core_ai_role_permissions",
         "name": "core_ai_role_permissions_roleId_core_roles_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "roleId"
-        ],
+        "columns": ["roleId"],
         "schemaTo": "public",
         "tableTo": "core_roles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3430,14 +3294,10 @@
         "table": "core_ai_role_policies",
         "name": "core_ai_role_policies_roleId_core_roles_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "roleId"
-        ],
+        "columns": ["roleId"],
         "schemaTo": "public",
         "tableTo": "core_roles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3450,14 +3310,10 @@
         "table": "core_ai_runs",
         "name": "core_ai_runs_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -3470,14 +3326,10 @@
         "table": "core_ai_user_overrides",
         "name": "core_ai_user_overrides_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3489,10 +3341,7 @@
         "schema": "public",
         "table": "core_ai_role_permissions",
         "name": "core_ai_role_permissions_pkey",
-        "columns": [
-          "roleId",
-          "permission"
-        ],
+        "columns": ["roleId", "permission"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3503,9 +3352,7 @@
         "schema": "public",
         "table": "core_ai_action_settings",
         "name": "core_ai_action_settings_pkey",
-        "columns": [
-          "actionKey"
-        ],
+        "columns": ["actionKey"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3516,9 +3363,7 @@
         "schema": "public",
         "table": "core_ai_budget_periods",
         "name": "core_ai_budget_periods_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3529,9 +3374,7 @@
         "schema": "public",
         "table": "core_ai_calls",
         "name": "core_ai_calls_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3542,9 +3385,7 @@
         "schema": "public",
         "table": "core_ai_cost_adjustments",
         "name": "core_ai_cost_adjustments_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3555,9 +3396,7 @@
         "schema": "public",
         "table": "core_ai_pricing",
         "name": "core_ai_pricing_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3568,9 +3407,7 @@
         "schema": "public",
         "table": "core_ai_reservations",
         "name": "core_ai_reservations_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3581,9 +3418,7 @@
         "schema": "public",
         "table": "core_ai_role_policies",
         "name": "core_ai_role_policies_pkey",
-        "columns": [
-          "roleId"
-        ],
+        "columns": ["roleId"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3594,9 +3429,7 @@
         "schema": "public",
         "table": "core_ai_runs",
         "name": "core_ai_runs_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3607,9 +3440,7 @@
         "schema": "public",
         "table": "core_ai_settings",
         "name": "core_ai_settings_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3620,9 +3451,7 @@
         "schema": "public",
         "table": "core_ai_user_overrides",
         "name": "core_ai_user_overrides_pkey",
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "nameExplicit": false,
         "entityType": "pks"
       }

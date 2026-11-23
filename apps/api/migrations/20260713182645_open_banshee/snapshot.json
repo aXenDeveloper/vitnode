@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "15c0ae48-a0fe-47f7-81ac-94607e8e8013",
-  "prevIds": [
-    "7fd0cead-725d-42f5-bc00-7e1d8954ea75"
-  ],
+  "prevIds": ["7fd0cead-725d-42f5-bc00-7e1d8954ea75"],
   "footprints": [
     {
       "statementType": "add_column",
@@ -20,10 +18,7 @@
         "n|col|public.core_admin_permissions.unrestricted",
         "e|col|public.core_admin_permissions.unrestricted"
       ],
-      "reads": [
-        "n|tbl|public.core_admin_permissions",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_admin_permissions", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -38,10 +33,7 @@
         "n|col|public.core_admin_permissions.permissions",
         "e|col|public.core_admin_permissions.permissions"
       ],
-      "reads": [
-        "n|tbl|public.core_admin_permissions",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_admin_permissions", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -56,10 +48,7 @@
         "n|col|public.core_moderators_permissions.unrestricted",
         "e|col|public.core_moderators_permissions.unrestricted"
       ],
-      "reads": [
-        "n|tbl|public.core_moderators_permissions",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_moderators_permissions", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -74,28 +63,17 @@
         "n|col|public.core_moderators_permissions.permissions",
         "e|col|public.core_moderators_permissions.permissions"
       ],
-      "reads": [
-        "n|tbl|public.core_moderators_permissions",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_moderators_permissions", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_admin_permissions",
-        "data"
-      ],
+      "statementTarget": ["column", "public", "core_admin_permissions", "data"],
       "writes": [
         "s|col|public.core_admin_permissions.data",
         "n|col|public.core_admin_permissions.data",
         "e|col|public.core_admin_permissions.data"
       ],
-      "reads": [
-        "n|tbl|public.core_admin_permissions",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_admin_permissions", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
@@ -110,10 +88,7 @@
         "n|col|public.core_moderators_permissions.data",
         "e|col|public.core_moderators_permissions.data"
       ],
-      "reads": [
-        "n|tbl|public.core_moderators_permissions",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_moderators_permissions", "n|sch|public"]
     }
   ],
   "deltas": [

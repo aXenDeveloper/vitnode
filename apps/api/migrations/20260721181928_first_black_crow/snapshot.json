@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "82af3376-1642-4472-9f72-22225d7570e8",
-  "prevIds": [
-    "0e8ddc92-35d6-44fd-bc60-3d0b728babbd"
-  ],
+  "prevIds": ["0e8ddc92-35d6-44fd-bc60-3d0b728babbd"],
   "footprints": [
     {
       "statementType": "recreate_column",
@@ -20,10 +18,7 @@
         "n|col|public.core_search_index.search_vector",
         "e|col|public.core_search_index.search_vector"
       ],
-      "reads": [
-        "n|tbl|public.core_search_index",
-        "n|sch|public"
-      ],
+      "reads": ["n|tbl|public.core_search_index", "n|sch|public"],
       "sqlHash": "16960994b948c1ba"
     },
     {

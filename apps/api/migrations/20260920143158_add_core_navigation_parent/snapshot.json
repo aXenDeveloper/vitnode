@@ -3,27 +3,17 @@
   "version": "9",
   "dialect": "postgres",
   "id": "c72ef89d-3844-481d-a093-6ba633fb5b12",
-  "prevIds": [
-    "f562d14b-e94a-400d-bb7c-5d9457d0dcb3"
-  ],
+  "prevIds": ["f562d14b-e94a-400d-bb7c-5d9457d0dcb3"],
   "footprints": [
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_navigation",
-        "parentId"
-      ],
+      "statementTarget": ["column", "public", "core_navigation", "parentId"],
       "writes": [
         "s|col|public.core_navigation.parentId",
         "n|col|public.core_navigation.parentId",
         "e|col|public.core_navigation.parentId"
       ],
-      "reads": [
-        "n|tbl|public.core_navigation",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_navigation", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -47,11 +37,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_navigation"
-      ],
+      "statementTarget": ["table", "public", "core_navigation"],
       "writes": [
         "s|fk|public.core_navigation.core_navigation_parentId_core_navigation_id_fkey",
         "n|fk|public.core_navigation.core_navigation_parentId_core_navigation_id_fkey",
@@ -117,14 +103,10 @@
         "table": "core_navigation",
         "name": "core_navigation_parentId_core_navigation_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "parentId"
-        ],
+        "columns": ["parentId"],
         "schemaTo": "public",
         "tableTo": "core_navigation",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"

@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "4b58db56-325c-4831-b75f-e83dede76099",
-  "prevIds": [
-    "cf42dffe-b907-487c-a3e1-f268f2aff5ec"
-  ],
+  "prevIds": ["cf42dffe-b907-487c-a3e1-f268f2aff5ec"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_secondary_roles"
-      ],
+      "statementTarget": ["table", "public", "core_users_secondary_roles"],
       "writes": [
         "s|tbl|public.core_users_secondary_roles",
         "n|tbl|public.core_users_secondary_roles",
@@ -22,9 +16,7 @@
         "n|type|public.core_users_secondary_roles",
         "n|rel|public.core_users_secondary_roles_userId_roleId_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -68,11 +60,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_secondary_roles"
-      ],
+      "statementTarget": ["table", "public", "core_users_secondary_roles"],
       "writes": [
         "s|fk|public.core_users_secondary_roles.core_users_secondary_roles_userId_core_users_id_fk",
         "n|fk|public.core_users_secondary_roles.core_users_secondary_roles_userId_core_users_id_fk",
@@ -91,11 +79,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_secondary_roles"
-      ],
+      "statementTarget": ["table", "public", "core_users_secondary_roles"],
       "writes": [
         "s|fk|public.core_users_secondary_roles.core_users_secondary_roles_roleId_core_roles_id_fk",
         "n|fk|public.core_users_secondary_roles.core_users_secondary_roles_roleId_core_roles_id_fk",
@@ -226,14 +210,10 @@
         "table": "core_users_secondary_roles",
         "name": "core_users_secondary_roles_userId_core_users_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -246,14 +226,10 @@
         "table": "core_users_secondary_roles",
         "name": "core_users_secondary_roles_roleId_core_roles_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "roleId"
-        ],
+        "columns": ["roleId"],
         "schemaTo": "public",
         "tableTo": "core_roles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -265,10 +241,7 @@
         "schema": "public",
         "table": "core_users_secondary_roles",
         "name": "core_users_secondary_roles_userId_roleId_pk",
-        "columns": [
-          "userId",
-          "roleId"
-        ],
+        "columns": ["userId", "roleId"],
         "nameExplicit": false,
         "entityType": "pks"
       }

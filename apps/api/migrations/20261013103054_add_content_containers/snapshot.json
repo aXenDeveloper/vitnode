@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "72797947-1eaf-4920-aae7-3bba9cbd49eb",
-  "prevIds": [
-    "875ad620-968c-4b59-8795-345a5fbd5fb6"
-  ],
+  "prevIds": ["875ad620-968c-4b59-8795-345a5fbd5fb6"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_containers"
-      ],
+      "statementTarget": ["table", "public", "core_content_containers"],
       "writes": [
         "s|tbl|public.core_content_containers",
         "n|tbl|public.core_content_containers",
@@ -22,27 +16,17 @@
         "n|type|public.core_content_containers",
         "n|rel|public.core_content_containers_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "example_discussions",
-        "board"
-      ],
+      "statementTarget": ["column", "public", "example_discussions", "board"],
       "writes": [
         "s|col|public.example_discussions.board",
         "n|col|public.example_discussions.board",
         "e|col|public.example_discussions.board"
       ],
-      "reads": [
-        "n|tbl|public.example_discussions",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.example_discussions", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -130,11 +114,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_containers"
-      ],
+      "statementTarget": ["table", "public", "core_content_containers"],
       "writes": [
         "s|fk|public.core_content_containers.core_content_containers_q6QIucJ4HJ7B_fkey",
         "n|fk|public.core_content_containers.core_content_containers_q6QIucJ4HJ7B_fkey",
@@ -153,11 +133,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_discussions"
-      ],
+      "statementTarget": ["table", "public", "example_discussions"],
       "writes": [
         "s|fk|public.example_discussions.example_discussions_board_core_content_containers_id_fkey",
         "n|fk|public.example_discussions.example_discussions_board_core_content_containers_id_fkey",
@@ -492,14 +468,10 @@
         "table": "core_content_containers",
         "name": "core_content_containers_q6QIucJ4HJ7B_fkey",
         "nameExplicit": false,
-        "columns": [
-          "parentId"
-        ],
+        "columns": ["parentId"],
         "schemaTo": "public",
         "tableTo": "core_content_containers",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -512,14 +484,10 @@
         "table": "example_discussions",
         "name": "example_discussions_board_core_content_containers_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "board"
-        ],
+        "columns": ["board"],
         "schemaTo": "public",
         "tableTo": "core_content_containers",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -531,9 +499,7 @@
         "schema": "public",
         "table": "core_content_containers",
         "name": "core_content_containers_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

@@ -75,16 +75,33 @@ export interface VitNodeApiConfig {
     /** Single sign-on providers. Defaults to none. */
     ssoAdapters?: SSOApiPlugin[];
   };
-  /**
-   * Requires a captcha on routes built with `withCaptcha`. Without it those
-   * routes skip the check.
-   */
   captcha?: {
     /** The provider's secret key. A missing key fails every captcha check. */
     secretKey: string | undefined;
     /** The public key the browser renders the widget with. */
     siteKey: string | undefined;
     type: "cloudflare_turnstile" | "recaptcha_v3";
+  };
+  /**
+   * Requires a captcha on routes built with `withCaptcha`. Without it those
+   * routes skip the check.
+   */
+  /**
+   * Private chat between members. Every option has a default, so the block
+   * is optional.
+   */
+  chat?: {
+    /** Minutes the author may edit a message for; `0` turns editing off. Defaults to `15`. */
+    editWindowMinutes?: number;
+    /** `false` turns chat off: the button disappears and every chat route answers `404`. Defaults to `true`. */
+    enabled?: boolean;
+    /**
+     * Members who allow chat requests only from established accounts get none
+     * from accounts younger than this many days. Defaults to `30`.
+     */
+    establishedAccountDays?: number;
+    /** Members of one group chat, the creator included, `2..200`. Defaults to `100`. */
+    maxGroupSize?: number;
   };
   /** Content Engine settings that are deployment-shaped rather than per type. */
   content?: {

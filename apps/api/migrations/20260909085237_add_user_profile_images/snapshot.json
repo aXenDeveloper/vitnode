@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "5e8dfba2-b152-4f6c-894c-4df75533033a",
-  "prevIds": [
-    "2b102f53-72ec-4798-a12d-94d3b1f81b6a"
-  ],
+  "prevIds": ["2b102f53-72ec-4798-a12d-94d3b1f81b6a"],
   "footprints": [
     {
       "statementType": "add_column",
@@ -20,108 +18,61 @@
         "n|col|public.core_roles.allowUploadAvatar",
         "e|col|public.core_roles.allowUploadAvatar"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_roles",
-        "maxAvatarSize"
-      ],
+      "statementTarget": ["column", "public", "core_roles", "maxAvatarSize"],
       "writes": [
         "s|col|public.core_roles.maxAvatarSize",
         "n|col|public.core_roles.maxAvatarSize",
         "e|col|public.core_roles.maxAvatarSize"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_roles",
-        "allowUploadCover"
-      ],
+      "statementTarget": ["column", "public", "core_roles", "allowUploadCover"],
       "writes": [
         "s|col|public.core_roles.allowUploadCover",
         "n|col|public.core_roles.allowUploadCover",
         "e|col|public.core_roles.allowUploadCover"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_roles",
-        "maxCoverSize"
-      ],
+      "statementTarget": ["column", "public", "core_roles", "maxCoverSize"],
       "writes": [
         "s|col|public.core_roles.maxCoverSize",
         "n|col|public.core_roles.maxCoverSize",
         "e|col|public.core_roles.maxCoverSize"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "avatarId"
-      ],
+      "statementTarget": ["column", "public", "core_users", "avatarId"],
       "writes": [
         "s|col|public.core_users.avatarId",
         "n|col|public.core_users.avatarId",
         "e|col|public.core_users.avatarId"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "coverId"
-      ],
+      "statementTarget": ["column", "public", "core_users", "coverId"],
       "writes": [
         "s|col|public.core_users.coverId",
         "n|col|public.core_users.coverId",
         "e|col|public.core_users.coverId"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users"
-      ],
+      "statementTarget": ["table", "public", "core_users"],
       "writes": [
         "s|fk|public.core_users.core_users_avatarId_core_files_id_fkey",
         "n|fk|public.core_users.core_users_avatarId_core_files_id_fkey",
@@ -140,11 +91,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users"
-      ],
+      "statementTarget": ["table", "public", "core_users"],
       "writes": [
         "s|fk|public.core_users.core_users_coverId_core_files_id_fkey",
         "n|fk|public.core_users.core_users_coverId_core_files_id_fkey",
@@ -266,14 +213,10 @@
         "table": "core_users",
         "name": "core_users_avatarId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "avatarId"
-        ],
+        "columns": ["avatarId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -286,14 +229,10 @@
         "table": "core_users",
         "name": "core_users_coverId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "coverId"
-        ],
+        "columns": ["coverId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"

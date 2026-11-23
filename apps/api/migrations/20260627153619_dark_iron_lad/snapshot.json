@@ -3,27 +3,17 @@
   "version": "9",
   "dialect": "postgres",
   "id": "81056263-a299-4cc5-a965-07deade32e3e",
-  "prevIds": [
-    "4b58db56-325c-4831-b75f-e83dede76099"
-  ],
+  "prevIds": ["4b58db56-325c-4831-b75f-e83dede76099"],
   "footprints": [
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_admin_permissions",
-        "data"
-      ],
+      "statementTarget": ["column", "public", "core_admin_permissions", "data"],
       "writes": [
         "s|col|public.core_admin_permissions.data",
         "n|col|public.core_admin_permissions.data",
         "e|col|public.core_admin_permissions.data"
       ],
-      "reads": [
-        "n|tbl|public.core_admin_permissions",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_admin_permissions", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -38,10 +28,7 @@
         "n|col|public.core_moderators_permissions.data",
         "e|col|public.core_moderators_permissions.data"
       ],
-      "reads": [
-        "n|tbl|public.core_moderators_permissions",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_moderators_permissions", "n|sch|public"]
     }
   ],
   "deltas": [

@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "0ff9baa5-66a0-4397-a25d-dde7167fcbbe",
-  "prevIds": [
-    "96777a97-258a-46b1-ac80-a6f1b19e32ed"
-  ],
+  "prevIds": ["96777a97-258a-46b1-ac80-a6f1b19e32ed"],
   "footprints": [
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_subscriptions"
-      ],
+      "statementTarget": ["table", "public", "core_notification_subscriptions"],
       "writes": [
         "s|tbl|public.core_notification_subscriptions",
         "n|tbl|public.core_notification_subscriptions",
@@ -21,27 +15,17 @@
         "n|rel|public.core_notification_subscriptions",
         "n|type|public.core_notification_subscriptions"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "timeZone"
-      ],
+      "statementTarget": ["column", "public", "core_users", "timeZone"],
       "writes": [
         "s|col|public.core_users.timeZone",
         "n|col|public.core_users.timeZone",
         "e|col|public.core_users.timeZone"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
@@ -56,10 +40,7 @@
         "n|col|public.core_notification_events.followersOf",
         "e|col|public.core_notification_events.followersOf"
       ],
-      "reads": [
-        "n|tbl|public.core_notification_events",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_notification_events", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
@@ -74,10 +55,7 @@
         "n|col|public.core_notification_events.followerSubjectCursor",
         "e|col|public.core_notification_events.followerSubjectCursor"
       ],
-      "reads": [
-        "n|tbl|public.core_notification_events",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_notification_events", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
@@ -92,10 +70,7 @@
         "n|col|public.core_notification_events.followerUserCursor",
         "e|col|public.core_notification_events.followerUserCursor"
       ],
-      "reads": [
-        "n|tbl|public.core_notification_events",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_notification_events", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
@@ -110,10 +85,7 @@
         "n|col|public.core_notification_user_state.timeZone",
         "e|col|public.core_notification_user_state.timeZone"
       ],
-      "reads": [
-        "n|tbl|public.core_notification_user_state",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_notification_user_state", "n|sch|public"]
     }
   ],
   "deltas": [

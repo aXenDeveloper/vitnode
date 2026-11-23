@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "9ac46019-5dbb-4e3b-8ce6-33f41b5ddacf",
-  "prevIds": [
-    "4dce261e-67cc-4ef1-9c6f-95994b801466"
-  ],
+  "prevIds": ["4dce261e-67cc-4ef1-9c6f-95994b801466"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files_alt"
-      ],
+      "statementTarget": ["table", "public", "core_files_alt"],
       "writes": [
         "s|tbl|public.core_files_alt",
         "n|tbl|public.core_files_alt",
@@ -22,17 +16,11 @@
         "n|type|public.core_files_alt",
         "n|rel|public.core_files_alt_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files_alt_analysis"
-      ],
+      "statementTarget": ["table", "public", "core_files_alt_analysis"],
       "writes": [
         "s|tbl|public.core_files_alt_analysis",
         "n|tbl|public.core_files_alt_analysis",
@@ -41,17 +29,11 @@
         "n|type|public.core_files_alt_analysis",
         "n|rel|public.core_files_alt_analysis_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files_alt_state"
-      ],
+      "statementTarget": ["table", "public", "core_files_alt_state"],
       "writes": [
         "s|tbl|public.core_files_alt_state",
         "n|tbl|public.core_files_alt_state",
@@ -60,63 +42,37 @@
         "n|type|public.core_files_alt_state",
         "n|rel|public.core_files_alt_state_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_files",
-        "fingerprint"
-      ],
+      "statementTarget": ["column", "public", "core_files", "fingerprint"],
       "writes": [
         "s|col|public.core_files.fingerprint",
         "n|col|public.core_files.fingerprint",
         "e|col|public.core_files.fingerprint"
       ],
-      "reads": [
-        "n|tbl|public.core_files",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_files", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_files",
-        "altPolicy"
-      ],
+      "statementTarget": ["column", "public", "core_files", "altPolicy"],
       "writes": [
         "s|col|public.core_files.altPolicy",
         "n|col|public.core_files.altPolicy",
         "e|col|public.core_files.altPolicy"
       ],
-      "reads": [
-        "n|tbl|public.core_files",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_files", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_queue",
-        "dedupeKey"
-      ],
+      "statementTarget": ["column", "public", "core_queue", "dedupeKey"],
       "writes": [
         "s|col|public.core_queue.dedupeKey",
         "n|col|public.core_queue.dedupeKey",
         "e|col|public.core_queue.dedupeKey"
       ],
-      "reads": [
-        "n|tbl|public.core_queue",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_queue", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -203,11 +159,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files_alt"
-      ],
+      "statementTarget": ["table", "public", "core_files_alt"],
       "writes": [
         "s|fk|public.core_files_alt.core_files_alt_fileId_core_files_id_fkey",
         "n|fk|public.core_files_alt.core_files_alt_fileId_core_files_id_fkey",
@@ -226,11 +178,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files_alt"
-      ],
+      "statementTarget": ["table", "public", "core_files_alt"],
       "writes": [
         "s|fk|public.core_files_alt.core_files_alt_languageCode_core_languages_code_fkey",
         "n|fk|public.core_files_alt.core_files_alt_languageCode_core_languages_code_fkey",
@@ -249,11 +197,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files_alt"
-      ],
+      "statementTarget": ["table", "public", "core_files_alt"],
       "writes": [
         "s|fk|public.core_files_alt.core_files_alt_runId_core_ai_runs_id_fkey",
         "n|fk|public.core_files_alt.core_files_alt_runId_core_ai_runs_id_fkey",
@@ -272,11 +216,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files_alt"
-      ],
+      "statementTarget": ["table", "public", "core_files_alt"],
       "writes": [
         "s|fk|public.core_files_alt.core_files_alt_updatedById_core_users_id_fkey",
         "n|fk|public.core_files_alt.core_files_alt_updatedById_core_users_id_fkey",
@@ -295,11 +235,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files_alt_analysis"
-      ],
+      "statementTarget": ["table", "public", "core_files_alt_analysis"],
       "writes": [
         "s|fk|public.core_files_alt_analysis.core_files_alt_analysis_fileId_core_files_id_fkey",
         "n|fk|public.core_files_alt_analysis.core_files_alt_analysis_fileId_core_files_id_fkey",
@@ -318,11 +254,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files_alt_analysis"
-      ],
+      "statementTarget": ["table", "public", "core_files_alt_analysis"],
       "writes": [
         "s|fk|public.core_files_alt_analysis.core_files_alt_analysis_runId_core_ai_runs_id_fkey",
         "n|fk|public.core_files_alt_analysis.core_files_alt_analysis_runId_core_ai_runs_id_fkey",
@@ -341,11 +273,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files_alt_state"
-      ],
+      "statementTarget": ["table", "public", "core_files_alt_state"],
       "writes": [
         "s|fk|public.core_files_alt_state.core_files_alt_state_fileId_core_files_id_fkey",
         "n|fk|public.core_files_alt_state.core_files_alt_state_fileId_core_files_id_fkey",
@@ -867,14 +795,10 @@
         "table": "core_files_alt",
         "name": "core_files_alt_fileId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "fileId"
-        ],
+        "columns": ["fileId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -887,14 +811,10 @@
         "table": "core_files_alt",
         "name": "core_files_alt_languageCode_core_languages_code_fkey",
         "nameExplicit": false,
-        "columns": [
-          "languageCode"
-        ],
+        "columns": ["languageCode"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "code"
-        ],
+        "columnsTo": ["code"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -907,14 +827,10 @@
         "table": "core_files_alt",
         "name": "core_files_alt_runId_core_ai_runs_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "runId"
-        ],
+        "columns": ["runId"],
         "schemaTo": "public",
         "tableTo": "core_ai_runs",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -927,14 +843,10 @@
         "table": "core_files_alt",
         "name": "core_files_alt_updatedById_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "updatedById"
-        ],
+        "columns": ["updatedById"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -947,14 +859,10 @@
         "table": "core_files_alt_analysis",
         "name": "core_files_alt_analysis_fileId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "fileId"
-        ],
+        "columns": ["fileId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -967,14 +875,10 @@
         "table": "core_files_alt_analysis",
         "name": "core_files_alt_analysis_runId_core_ai_runs_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "runId"
-        ],
+        "columns": ["runId"],
         "schemaTo": "public",
         "tableTo": "core_ai_runs",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -987,14 +891,10 @@
         "table": "core_files_alt_state",
         "name": "core_files_alt_state_fileId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "fileId"
-        ],
+        "columns": ["fileId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1006,9 +906,7 @@
         "schema": "public",
         "table": "core_files_alt",
         "name": "core_files_alt_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1019,9 +917,7 @@
         "schema": "public",
         "table": "core_files_alt_analysis",
         "name": "core_files_alt_analysis_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1032,9 +928,7 @@
         "schema": "public",
         "table": "core_files_alt_state",
         "name": "core_files_alt_state_pkey",
-        "columns": [
-          "fileId"
-        ],
+        "columns": ["fileId"],
         "nameExplicit": false,
         "entityType": "pks"
       }

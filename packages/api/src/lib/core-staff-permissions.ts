@@ -9,7 +9,7 @@ import { defineStaffPermissions } from "./staff-permissions";
  */
 export const coreStaffPermissions = defineStaffPermissions(manifest, {
   moderator: {
-    users: ["can_edit", "can_view_hidden_presence"],
+    users: ["can_edit", "can_view_hidden_presence", "can_message_anyone"],
     widgets: ["can_edit"],
     warnings: [
       "can_view",

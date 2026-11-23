@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "c3a84fce-ca99-43a8-8b83-a8be82faeed9",
-  "prevIds": [
-    "5bc8c627-98d3-4dc7-992e-3958232a8780"
-  ],
+  "prevIds": ["5bc8c627-98d3-4dc7-992e-3958232a8780"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles"],
       "writes": [
         "s|tbl|public.example_advanced_articles",
         "n|tbl|public.example_advanced_articles",
@@ -22,9 +16,7 @@
         "n|type|public.example_advanced_articles",
         "n|rel|public.example_advanced_articles_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
@@ -41,17 +33,11 @@
         "n|type|public.example_advanced_articles_categories",
         "n|rel|public.example_advanced_articles_categories_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles_faq"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles_faq"],
       "writes": [
         "s|tbl|public.example_advanced_articles_faq",
         "n|tbl|public.example_advanced_articles_faq",
@@ -60,9 +46,7 @@
         "n|type|public.example_advanced_articles_faq",
         "n|rel|public.example_advanced_articles_faq_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
@@ -79,9 +63,7 @@
         "n|type|public.example_advanced_articles_related_articles",
         "n|rel|public.example_advanced_articles_related_articles_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
@@ -98,9 +80,7 @@
         "n|type|public.example_advanced_articles_translations",
         "n|rel|public.example_advanced_articles_translations_item_id_language_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -376,11 +356,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles_faq"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles_faq"],
       "writes": [
         "s|fk|public.example_advanced_articles_faq.example_advanced_articles_faq_itemId_example_advanced_articles_",
         "n|fk|public.example_advanced_articles_faq.example_advanced_articles_faq_itemId_example_advanced_articles_",
@@ -1393,14 +1369,10 @@
         "table": "example_advanced_articles_categories",
         "name": "example_advanced_articles_categories_itemId_example_advanced_ar",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_advanced_articles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1413,14 +1385,10 @@
         "table": "example_advanced_articles_categories",
         "name": "example_advanced_articles_categories_relatedItemId_example_cate",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "example_categories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -1433,14 +1401,10 @@
         "table": "example_advanced_articles_faq",
         "name": "example_advanced_articles_faq_itemId_example_advanced_articles_",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_advanced_articles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1453,14 +1417,10 @@
         "table": "example_advanced_articles_related_articles",
         "name": "example_advanced_articles_related_articles_itemId_example_advan",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_advanced_articles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1473,14 +1433,10 @@
         "table": "example_advanced_articles_related_articles",
         "name": "example_advanced_articles_related_articles_relatedItemId_exampl",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "example_advanced_articles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1493,14 +1449,10 @@
         "table": "example_advanced_articles_translations",
         "name": "example_advanced_articles_translations_itemId_example_advanced_",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_advanced_articles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1513,14 +1465,10 @@
         "table": "example_advanced_articles_translations",
         "name": "example_advanced_articles_translations_languageId_core_language",
         "nameExplicit": false,
-        "columns": [
-          "languageId"
-        ],
+        "columns": ["languageId"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -1532,9 +1480,7 @@
         "schema": "public",
         "table": "example_advanced_articles",
         "name": "example_advanced_articles_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1545,10 +1491,7 @@
         "schema": "public",
         "table": "example_advanced_articles_categories",
         "name": "example_advanced_articles_categories_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -1559,9 +1502,7 @@
         "schema": "public",
         "table": "example_advanced_articles_faq",
         "name": "example_advanced_articles_faq_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1572,10 +1513,7 @@
         "schema": "public",
         "table": "example_advanced_articles_related_articles",
         "name": "example_advanced_articles_related_articles_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -1586,10 +1524,7 @@
         "schema": "public",
         "table": "example_advanced_articles_translations",
         "name": "example_advanced_articles_translations_item_id_language_id_pk",
-        "columns": [
-          "itemId",
-          "languageId"
-        ],
+        "columns": ["itemId", "languageId"],
         "nameExplicit": true,
         "entityType": "pks"
       }

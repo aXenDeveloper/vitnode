@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "fccd21b7-233b-4117-a5ec-d77d40e7b9e1",
-  "prevIds": [
-    "6ae0eca5-a023-4d60-ac86-17e1546af370"
-  ],
+  "prevIds": ["6ae0eca5-a023-4d60-ac86-17e1546af370"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_page_layouts"
-      ],
+      "statementTarget": ["table", "public", "core_page_layouts"],
       "writes": [
         "s|tbl|public.core_page_layouts",
         "n|tbl|public.core_page_layouts",
@@ -22,17 +16,11 @@
         "n|type|public.core_page_layouts",
         "n|rel|public.core_page_layouts_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_zones_layouts"
-      ],
+      "statementTarget": ["table", "public", "example_zones_layouts"],
       "writes": [
         "s|tbl|public.example_zones_layouts",
         "n|tbl|public.example_zones_layouts",
@@ -40,9 +28,7 @@
         "n|rel|public.example_zones_layouts",
         "n|type|public.example_zones_layouts"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     }
   ],
   "deltas": [
@@ -125,9 +111,7 @@
         "schema": "public",
         "table": "core_page_layouts",
         "name": "core_page_layouts_pkey",
-        "columns": [
-          "pageId"
-        ],
+        "columns": ["pageId"],
         "nameExplicit": false,
         "entityType": "pks"
       }

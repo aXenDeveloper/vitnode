@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "0c4efb07-e5e5-4e06-b87e-88d08c84a3a8",
-  "prevIds": [
-    "ffba1781-4577-4084-998a-f9a6ce6e5d1f"
-  ],
+  "prevIds": ["ffba1781-4577-4084-998a-f9a6ce6e5d1f"],
   "footprints": [
     {
       "statementType": "alter_check",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso_operations"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso_operations"],
       "writes": [
         "s|ck|public.core_users_sso_operations.core_users_sso_operations_intent_check"
       ],

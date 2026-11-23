@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "05ff21f4-ccac-4428-a015-8aec4547b8ea",
-  "prevIds": [
-    "62c3a2be-f65f-40be-94cf-ae96f691a04c"
-  ],
+  "prevIds": ["62c3a2be-f65f-40be-94cf-ae96f691a04c"],
   "footprints": [
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_navigation"
-      ],
+      "statementTarget": ["table", "public", "core_navigation"],
       "writes": [
         "s|tbl|public.core_navigation",
         "n|tbl|public.core_navigation",
@@ -21,9 +15,7 @@
         "n|rel|public.core_navigation",
         "n|type|public.core_navigation"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     }
   ],
   "deltas": [

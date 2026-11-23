@@ -6,6 +6,7 @@ import { manifest } from "@/manifest";
 import { settingsPage } from "@/modules/pages/settings-page";
 
 import { aiEventDefinitions } from "./events/ai";
+import { chatEventDefinitions } from "./events/chat";
 import { contentAccessEventDefinitions } from "./events/content-access";
 import { contentApprovalEventDefinitions } from "./events/content-approvals";
 import { contentContainerEventDefinitions } from "./events/content-containers";
@@ -26,9 +27,11 @@ import {
   editorQuickAskAiAction,
   editorRewriteAiAction,
 } from "./lib/ai/editor-actions";
+import { chatMessageReportTarget } from "./lib/chat/report-target";
 import { buildApiPlugin } from "./lib/plugin";
 import { adminModule } from "./modules/admin/admin.module";
 import { aiModule } from "./modules/ai/ai.module";
+import { chatModule } from "./modules/chat/chat.module";
 import { contentModule } from "./modules/content/content.module";
 import { cronModule } from "./modules/cron/cron.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
@@ -53,6 +56,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
   editablePages: [settingsPage],
   eventDefinitions: [
     ...aiEventDefinitions,
+    ...chatEventDefinitions,
     ...contentAccessEventDefinitions,
     ...contentApprovalEventDefinitions,
     ...contentContainerEventDefinitions,
@@ -72,6 +76,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     notificationsModule,
     adminModule,
     aiModule,
+    chatModule,
     contentModule,
     cronModule,
     pagesModule,
@@ -80,6 +85,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     reactionsModule,
     searchModule,
   ],
+  moderation: { reportTargets: [chatMessageReportTarget] },
   permissionStaff: coreStaffPermissions,
   personalData: corePersonalData,
 });

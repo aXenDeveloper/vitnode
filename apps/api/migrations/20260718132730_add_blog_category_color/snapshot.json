@@ -3,27 +3,17 @@
   "version": "9",
   "dialect": "postgres",
   "id": "dec2205e-4a91-468b-b163-10eed9f40bb3",
-  "prevIds": [
-    "56d1a840-cd2e-400f-aa41-e847a6799dde"
-  ],
+  "prevIds": ["56d1a840-cd2e-400f-aa41-e847a6799dde"],
   "footprints": [
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_categories",
-        "color"
-      ],
+      "statementTarget": ["column", "public", "blog_categories", "color"],
       "writes": [
         "s|col|public.blog_categories.color",
         "n|col|public.blog_categories.color",
         "e|col|public.blog_categories.color"
       ],
-      "reads": [
-        "n|tbl|public.blog_categories",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_categories", "n|sch|public"]
     }
   ],
   "deltas": [

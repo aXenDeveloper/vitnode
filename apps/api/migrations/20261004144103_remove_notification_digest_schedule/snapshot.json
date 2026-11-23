@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "5fb751b5-4856-4019-9249-b28a868bfefe",
-  "prevIds": [
-    "0ff9baa5-66a0-4397-a25d-dde7167fcbbe"
-  ],
+  "prevIds": ["0ff9baa5-66a0-4397-a25d-dde7167fcbbe"],
   "footprints": [
     {
       "statementType": "drop_column",
@@ -20,10 +18,7 @@
         "n|col|public.core_notification_user_state.digestHour",
         "e|col|public.core_notification_user_state.digestHour"
       ],
-      "reads": [
-        "n|tbl|public.core_notification_user_state",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_notification_user_state", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
@@ -38,10 +33,7 @@
         "n|col|public.core_notification_user_state.digestWeekday",
         "e|col|public.core_notification_user_state.digestWeekday"
       ],
-      "reads": [
-        "n|tbl|public.core_notification_user_state",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_notification_user_state", "n|sch|public"]
     }
   ],
   "deltas": [

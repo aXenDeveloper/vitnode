@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "f56f3fa4-bc19-468a-9bb0-04e398dfc3d4",
-  "prevIds": [
-    "4ca32b27-ee74-4516-a0e6-303456070af3"
-  ],
+  "prevIds": ["4ca32b27-ee74-4516-a0e6-303456070af3"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_documents"
-      ],
+      "statementTarget": ["table", "public", "core_content_documents"],
       "writes": [
         "s|tbl|public.core_content_documents",
         "n|tbl|public.core_content_documents",
@@ -22,17 +16,11 @@
         "n|type|public.core_content_documents",
         "n|rel|public.core_content_documents_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_drafts"
-      ],
+      "statementTarget": ["table", "public", "core_content_drafts"],
       "writes": [
         "s|tbl|public.core_content_drafts",
         "n|tbl|public.core_content_drafts",
@@ -41,17 +29,11 @@
         "n|type|public.core_content_drafts",
         "n|rel|public.core_content_drafts_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_field_locks"
-      ],
+      "statementTarget": ["table", "public", "core_content_field_locks"],
       "writes": [
         "s|tbl|public.core_content_field_locks",
         "n|tbl|public.core_content_field_locks",
@@ -60,9 +42,7 @@
         "n|type|public.core_content_field_locks",
         "n|rel|public.core_content_field_locks_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "alter_column",
@@ -273,11 +253,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_documents"
-      ],
+      "statementTarget": ["table", "public", "core_content_documents"],
       "writes": [
         "s|fk|public.core_content_documents.core_content_documents_updatedBy_core_users_id_fkey",
         "n|fk|public.core_content_documents.core_content_documents_updatedBy_core_users_id_fkey",
@@ -296,11 +272,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_drafts"
-      ],
+      "statementTarget": ["table", "public", "core_content_drafts"],
       "writes": [
         "s|fk|public.core_content_drafts.core_content_drafts_updatedBy_core_users_id_fkey",
         "n|fk|public.core_content_drafts.core_content_drafts_updatedBy_core_users_id_fkey",
@@ -319,11 +291,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_field_locks"
-      ],
+      "statementTarget": ["table", "public", "core_content_field_locks"],
       "writes": [
         "s|fk|public.core_content_field_locks.core_content_field_locks_userId_core_users_id_fkey",
         "n|fk|public.core_content_field_locks.core_content_field_locks_userId_core_users_id_fkey",
@@ -1048,14 +1016,10 @@
         "table": "core_content_documents",
         "name": "core_content_documents_updatedBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "updatedBy"
-        ],
+        "columns": ["updatedBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1068,14 +1032,10 @@
         "table": "core_content_drafts",
         "name": "core_content_drafts_updatedBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "updatedBy"
-        ],
+        "columns": ["updatedBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1088,14 +1048,10 @@
         "table": "core_content_field_locks",
         "name": "core_content_field_locks_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1107,9 +1063,7 @@
         "schema": "public",
         "table": "core_content_documents",
         "name": "core_content_documents_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1120,9 +1074,7 @@
         "schema": "public",
         "table": "core_content_drafts",
         "name": "core_content_drafts_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1133,9 +1085,7 @@
         "schema": "public",
         "table": "core_content_field_locks",
         "name": "core_content_field_locks_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

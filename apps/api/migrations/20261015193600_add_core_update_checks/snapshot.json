@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "62c3a2be-f65f-40be-94cf-ae96f691a04c",
-  "prevIds": [
-    "efc06477-7761-4b25-85d1-ede72f9306ce"
-  ],
+  "prevIds": ["efc06477-7761-4b25-85d1-ede72f9306ce"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_update_lock"
-      ],
+      "statementTarget": ["table", "public", "core_update_lock"],
       "writes": [
         "s|tbl|public.core_update_lock",
         "n|tbl|public.core_update_lock",
@@ -22,17 +16,11 @@
         "n|type|public.core_update_lock",
         "n|rel|public.core_update_lock_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_update_results"
-      ],
+      "statementTarget": ["table", "public", "core_update_results"],
       "writes": [
         "s|tbl|public.core_update_results",
         "n|tbl|public.core_update_results",
@@ -41,17 +29,11 @@
         "n|type|public.core_update_results",
         "n|rel|public.core_update_results_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_update_sources"
-      ],
+      "statementTarget": ["table", "public", "core_update_sources"],
       "writes": [
         "s|tbl|public.core_update_sources",
         "n|tbl|public.core_update_sources",
@@ -60,9 +42,7 @@
         "n|type|public.core_update_sources",
         "n|rel|public.core_update_sources_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     }
   ],
   "deltas": [
@@ -435,9 +415,7 @@
         "schema": "public",
         "table": "core_update_lock",
         "name": "core_update_lock_pkey",
-        "columns": [
-          "name"
-        ],
+        "columns": ["name"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -448,9 +426,7 @@
         "schema": "public",
         "table": "core_update_results",
         "name": "core_update_results_pkey",
-        "columns": [
-          "componentId"
-        ],
+        "columns": ["componentId"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -461,9 +437,7 @@
         "schema": "public",
         "table": "core_update_sources",
         "name": "core_update_sources_pkey",
-        "columns": [
-          "url"
-        ],
+        "columns": ["url"],
         "nameExplicit": false,
         "entityType": "pks"
       }

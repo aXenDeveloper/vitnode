@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "5813f899-b4ab-4c93-a75e-2f9ce9dcd2bd",
-  "prevIds": [
-    "4821b844-f167-4596-9539-fc95a47b0e4d"
-  ],
+  "prevIds": ["4821b844-f167-4596-9539-fc95a47b0e4d"],
   "footprints": [
     {
       "statementType": "rename_column",

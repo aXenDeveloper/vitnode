@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "9546a008-f27f-462c-a449-e28a54650a5d",
-  "prevIds": [
-    "34389650-950c-49e6-8f6f-6ffa68c26fd9"
-  ],
+  "prevIds": ["34389650-950c-49e6-8f6f-6ffa68c26fd9"],
   "footprints": [
     {
       "statementType": "alter_column",
@@ -15,9 +13,7 @@
         "core_admin_permissions",
         "updatedAt"
       ],
-      "writes": [
-        "s|colprop|public.core_admin_permissions.updatedAt.default"
-      ],
+      "writes": ["s|colprop|public.core_admin_permissions.updatedAt.default"],
       "reads": [
         "n|tbl|public.core_admin_permissions",
         "n|sch|public",
@@ -27,15 +23,8 @@
     },
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_languages",
-        "updatedAt"
-      ],
-      "writes": [
-        "s|colprop|public.core_languages.updatedAt.default"
-      ],
+      "statementTarget": ["column", "public", "core_languages", "updatedAt"],
+      "writes": ["s|colprop|public.core_languages.updatedAt.default"],
       "reads": [
         "n|tbl|public.core_languages",
         "n|sch|public",
@@ -63,15 +52,8 @@
     },
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users_sso",
-        "updatedAt"
-      ],
-      "writes": [
-        "s|colprop|public.core_users_sso.updatedAt.default"
-      ],
+      "statementTarget": ["column", "public", "core_users_sso", "updatedAt"],
+      "writes": ["s|colprop|public.core_users_sso.updatedAt.default"],
       "reads": [
         "n|tbl|public.core_users_sso",
         "n|sch|public",
@@ -81,15 +63,8 @@
     },
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_queue",
-        "updatedAt"
-      ],
-      "writes": [
-        "s|colprop|public.core_queue.updatedAt.default"
-      ],
+      "statementTarget": ["column", "public", "core_queue", "updatedAt"],
+      "writes": ["s|colprop|public.core_queue.updatedAt.default"],
       "reads": [
         "n|tbl|public.core_queue",
         "n|sch|public",

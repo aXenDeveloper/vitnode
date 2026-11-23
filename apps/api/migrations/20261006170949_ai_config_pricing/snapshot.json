@@ -10,11 +10,7 @@
   "footprints": [
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_pricing"
-      ],
+      "statementTarget": ["table", "public", "core_ai_pricing"],
       "writes": [
         "s|tbl|public.core_ai_pricing",
         "n|tbl|public.core_ai_pricing",
@@ -22,9 +18,7 @@
         "n|rel|public.core_ai_pricing",
         "n|type|public.core_ai_pricing"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     }
   ],
   "deltas": [

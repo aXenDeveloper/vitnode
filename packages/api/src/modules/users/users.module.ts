@@ -8,6 +8,11 @@ import {
   cancelAccountDeletionRoute,
   requestAccountDeletionRoute,
 } from "./routes/account-deletion.route";
+import {
+  blockUserRoute,
+  listBlocksRoute,
+  unblockUserRoute,
+} from "./routes/blocks.route";
 import { cancelDeletionSignInRoute } from "./routes/cancel-deletion-sign-in.route";
 import { changePasswordRoute } from "./routes/change-password.route";
 import { listDevicesRoute } from "./routes/devices.route";
@@ -60,6 +65,9 @@ export const usersModule = buildModule({
     presenceBatchRoute,
     presenceRoute,
     userTimelineRoute,
+    listBlocksRoute,
+    blockUserRoute,
+    unblockUserRoute,
   ],
   modules: [
     ssoUserModule,

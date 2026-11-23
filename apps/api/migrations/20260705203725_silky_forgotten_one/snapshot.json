@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "4829773c-6615-48c5-bebb-5ece6e9a38a5",
-  "prevIds": [
-    "9546a008-f27f-462c-a449-e28a54650a5d"
-  ],
+  "prevIds": ["9546a008-f27f-462c-a449-e28a54650a5d"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files"
-      ],
+      "statementTarget": ["table", "public", "core_files"],
       "writes": [
         "s|tbl|public.core_files",
         "n|tbl|public.core_files",
@@ -23,9 +17,7 @@
         "n|rel|public.core_files_pkey",
         "n|rel|public.core_files_key_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -49,11 +41,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_files"
-      ],
+      "statementTarget": ["table", "public", "core_files"],
       "writes": [
         "s|fk|public.core_files.core_files_userId_core_users_id_fk",
         "n|fk|public.core_files.core_files_userId_core_users_id_fk",
@@ -272,14 +260,10 @@
         "table": "core_files",
         "name": "core_files_userId_core_users_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -291,9 +275,7 @@
         "schema": "public",
         "table": "core_files",
         "name": "core_files_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -305,9 +287,7 @@
         "table": "core_files",
         "name": "core_files_key_unique",
         "nameExplicit": false,
-        "columns": [
-          "key"
-        ],
+        "columns": ["key"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }

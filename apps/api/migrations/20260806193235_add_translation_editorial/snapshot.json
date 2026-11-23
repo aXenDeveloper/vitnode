@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "5bc8c627-98d3-4dc7-992e-3958232a8780",
-  "prevIds": [
-    "48b24402-18d7-4bf2-88e4-f0c651f02a1d"
-  ],
+  "prevIds": ["48b24402-18d7-4bf2-88e4-f0c651f02a1d"],
   "footprints": [
     {
       "statementType": "drop_index",
@@ -41,10 +39,7 @@
         "n|col|public.core_content_revisions.languageId",
         "e|col|public.core_content_revisions.languageId"
       ],
-      "reads": [
-        "n|tbl|public.core_content_revisions",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_content_revisions", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -59,10 +54,7 @@
         "n|col|public.example_localized_articles.publishedAt",
         "e|col|public.example_localized_articles.publishedAt"
       ],
-      "reads": [
-        "n|tbl|public.example_localized_articles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.example_localized_articles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -77,10 +69,7 @@
         "n|col|public.example_localized_articles.status",
         "e|col|public.example_localized_articles.status"
       ],
-      "reads": [
-        "n|tbl|public.example_localized_articles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.example_localized_articles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -95,10 +84,7 @@
         "n|col|public.example_localized_articles.version",
         "e|col|public.example_localized_articles.version"
       ],
-      "reads": [
-        "n|tbl|public.example_localized_articles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.example_localized_articles", "n|sch|public"]
     },
     {
       "statementType": "add_column",

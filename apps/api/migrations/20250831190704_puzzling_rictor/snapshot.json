@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "b50634b4-ce97-4649-a0e6-49706c351987",
-  "prevIds": [
-    "00000000-0000-0000-0000-000000000000"
-  ],
+  "prevIds": ["00000000-0000-0000-0000-000000000000"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_admin_permissions"
-      ],
+      "statementTarget": ["table", "public", "core_admin_permissions"],
       "writes": [
         "s|tbl|public.core_admin_permissions",
         "n|tbl|public.core_admin_permissions",
@@ -22,17 +16,11 @@
         "n|type|public.core_admin_permissions",
         "n|rel|public.core_admin_permissions_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_admin_sessions"
-      ],
+      "statementTarget": ["table", "public", "core_admin_sessions"],
       "writes": [
         "s|tbl|public.core_admin_sessions",
         "n|tbl|public.core_admin_sessions",
@@ -42,17 +30,11 @@
         "n|rel|public.core_admin_sessions_pkey",
         "n|rel|public.core_admin_sessions_token_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_cron"
-      ],
+      "statementTarget": ["table", "public", "core_cron"],
       "writes": [
         "s|tbl|public.core_cron",
         "n|tbl|public.core_cron",
@@ -61,17 +43,11 @@
         "n|type|public.core_cron",
         "n|rel|public.core_cron_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_languages"
-      ],
+      "statementTarget": ["table", "public", "core_languages"],
       "writes": [
         "s|tbl|public.core_languages",
         "n|tbl|public.core_languages",
@@ -81,17 +57,11 @@
         "n|rel|public.core_languages_pkey",
         "n|rel|public.core_languages_code_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_languages_words"
-      ],
+      "statementTarget": ["table", "public", "core_languages_words"],
       "writes": [
         "s|tbl|public.core_languages_words",
         "n|tbl|public.core_languages_words",
@@ -100,17 +70,11 @@
         "n|type|public.core_languages_words",
         "n|rel|public.core_languages_words_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_logs"
-      ],
+      "statementTarget": ["table", "public", "core_logs"],
       "writes": [
         "s|tbl|public.core_logs",
         "n|tbl|public.core_logs",
@@ -119,17 +83,11 @@
         "n|type|public.core_logs",
         "n|rel|public.core_logs_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderators_permissions"
-      ],
+      "statementTarget": ["table", "public", "core_moderators_permissions"],
       "writes": [
         "s|tbl|public.core_moderators_permissions",
         "n|tbl|public.core_moderators_permissions",
@@ -138,17 +96,11 @@
         "n|type|public.core_moderators_permissions",
         "n|rel|public.core_moderators_permissions_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_roles"
-      ],
+      "statementTarget": ["table", "public", "core_roles"],
       "writes": [
         "s|tbl|public.core_roles",
         "n|tbl|public.core_roles",
@@ -157,17 +109,11 @@
         "n|type|public.core_roles",
         "n|rel|public.core_roles_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_sessions"
-      ],
+      "statementTarget": ["table", "public", "core_sessions"],
       "writes": [
         "s|tbl|public.core_sessions",
         "n|tbl|public.core_sessions",
@@ -177,17 +123,11 @@
         "n|rel|public.core_sessions_pkey",
         "n|rel|public.core_sessions_token_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_sessions_known_devices"
-      ],
+      "statementTarget": ["table", "public", "core_sessions_known_devices"],
       "writes": [
         "s|tbl|public.core_sessions_known_devices",
         "n|tbl|public.core_sessions_known_devices",
@@ -197,17 +137,11 @@
         "n|rel|public.core_sessions_known_devices_pkey",
         "n|rel|public.core_sessions_known_devices_publicId_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users"
-      ],
+      "statementTarget": ["table", "public", "core_users"],
       "writes": [
         "s|tbl|public.core_users",
         "n|tbl|public.core_users",
@@ -219,17 +153,11 @@
         "n|rel|public.core_users_name_unique",
         "n|rel|public.core_users_email_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_confirm_emails"
-      ],
+      "statementTarget": ["table", "public", "core_users_confirm_emails"],
       "writes": [
         "s|tbl|public.core_users_confirm_emails",
         "n|tbl|public.core_users_confirm_emails",
@@ -239,17 +167,11 @@
         "n|rel|public.core_users_confirm_emails_pkey",
         "n|rel|public.core_users_confirm_emails_token_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_forgot_password"
-      ],
+      "statementTarget": ["table", "public", "core_users_forgot_password"],
       "writes": [
         "s|tbl|public.core_users_forgot_password",
         "n|tbl|public.core_users_forgot_password",
@@ -260,17 +182,11 @@
         "n|rel|public.core_users_forgot_password_userId_unique",
         "n|rel|public.core_users_forgot_password_token_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso"],
       "writes": [
         "s|tbl|public.core_users_sso",
         "n|tbl|public.core_users_sso",
@@ -278,17 +194,11 @@
         "n|rel|public.core_users_sso",
         "n|type|public.core_users_sso"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_categories"
-      ],
+      "statementTarget": ["table", "public", "blog_categories"],
       "writes": [
         "s|tbl|public.blog_categories",
         "n|tbl|public.blog_categories",
@@ -298,17 +208,11 @@
         "n|rel|public.blog_categories_pkey",
         "n|rel|public.blog_categories_titleSeo_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts"
-      ],
+      "statementTarget": ["table", "public", "blog_posts"],
       "writes": [
         "s|tbl|public.blog_posts",
         "n|tbl|public.blog_posts",
@@ -318,9 +222,7 @@
         "n|rel|public.blog_posts_pkey",
         "n|rel|public.blog_posts_titleSeo_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -624,11 +526,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_admin_permissions"
-      ],
+      "statementTarget": ["table", "public", "core_admin_permissions"],
       "writes": [
         "s|fk|public.core_admin_permissions.core_admin_permissions_roleId_core_roles_id_fk",
         "n|fk|public.core_admin_permissions.core_admin_permissions_roleId_core_roles_id_fk",
@@ -647,11 +545,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_admin_permissions"
-      ],
+      "statementTarget": ["table", "public", "core_admin_permissions"],
       "writes": [
         "s|fk|public.core_admin_permissions.core_admin_permissions_userId_core_users_id_fk",
         "n|fk|public.core_admin_permissions.core_admin_permissions_userId_core_users_id_fk",
@@ -670,11 +564,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_admin_sessions"
-      ],
+      "statementTarget": ["table", "public", "core_admin_sessions"],
       "writes": [
         "s|fk|public.core_admin_sessions.core_admin_sessions_userId_core_users_id_fk",
         "n|fk|public.core_admin_sessions.core_admin_sessions_userId_core_users_id_fk",
@@ -693,11 +583,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_admin_sessions"
-      ],
+      "statementTarget": ["table", "public", "core_admin_sessions"],
       "writes": [
         "s|fk|public.core_admin_sessions.core_admin_sessions_deviceId_core_sessions_known_devices_id_fk",
         "n|fk|public.core_admin_sessions.core_admin_sessions_deviceId_core_sessions_known_devices_id_fk",
@@ -716,11 +602,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_languages_words"
-      ],
+      "statementTarget": ["table", "public", "core_languages_words"],
       "writes": [
         "s|fk|public.core_languages_words.core_languages_words_languageCode_core_languages_code_fk",
         "n|fk|public.core_languages_words.core_languages_words_languageCode_core_languages_code_fk",
@@ -739,11 +621,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_logs"
-      ],
+      "statementTarget": ["table", "public", "core_logs"],
       "writes": [
         "s|fk|public.core_logs.core_logs_userId_core_users_id_fk",
         "n|fk|public.core_logs.core_logs_userId_core_users_id_fk",
@@ -762,11 +640,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderators_permissions"
-      ],
+      "statementTarget": ["table", "public", "core_moderators_permissions"],
       "writes": [
         "s|fk|public.core_moderators_permissions.core_moderators_permissions_roleId_core_roles_id_fk",
         "n|fk|public.core_moderators_permissions.core_moderators_permissions_roleId_core_roles_id_fk",
@@ -785,11 +659,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderators_permissions"
-      ],
+      "statementTarget": ["table", "public", "core_moderators_permissions"],
       "writes": [
         "s|fk|public.core_moderators_permissions.core_moderators_permissions_userId_core_users_id_fk",
         "n|fk|public.core_moderators_permissions.core_moderators_permissions_userId_core_users_id_fk",
@@ -808,11 +678,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_sessions"
-      ],
+      "statementTarget": ["table", "public", "core_sessions"],
       "writes": [
         "s|fk|public.core_sessions.core_sessions_userId_core_users_id_fk",
         "n|fk|public.core_sessions.core_sessions_userId_core_users_id_fk",
@@ -831,11 +697,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_sessions"
-      ],
+      "statementTarget": ["table", "public", "core_sessions"],
       "writes": [
         "s|fk|public.core_sessions.core_sessions_deviceId_core_sessions_known_devices_id_fk",
         "n|fk|public.core_sessions.core_sessions_deviceId_core_sessions_known_devices_id_fk",
@@ -854,11 +716,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users"
-      ],
+      "statementTarget": ["table", "public", "core_users"],
       "writes": [
         "s|fk|public.core_users.core_users_roleId_core_roles_id_fk",
         "n|fk|public.core_users.core_users_roleId_core_roles_id_fk",
@@ -877,11 +735,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users"
-      ],
+      "statementTarget": ["table", "public", "core_users"],
       "writes": [
         "s|fk|public.core_users.core_users_language_core_languages_code_fk",
         "n|fk|public.core_users.core_users_language_core_languages_code_fk",
@@ -900,11 +754,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_confirm_emails"
-      ],
+      "statementTarget": ["table", "public", "core_users_confirm_emails"],
       "writes": [
         "s|fk|public.core_users_confirm_emails.core_users_confirm_emails_userId_core_users_id_fk",
         "n|fk|public.core_users_confirm_emails.core_users_confirm_emails_userId_core_users_id_fk",
@@ -923,11 +773,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_forgot_password"
-      ],
+      "statementTarget": ["table", "public", "core_users_forgot_password"],
       "writes": [
         "s|fk|public.core_users_forgot_password.core_users_forgot_password_userId_core_users_id_fk",
         "n|fk|public.core_users_forgot_password.core_users_forgot_password_userId_core_users_id_fk",
@@ -946,11 +792,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso"],
       "writes": [
         "s|fk|public.core_users_sso.core_users_sso_userId_core_users_id_fk",
         "n|fk|public.core_users_sso.core_users_sso_userId_core_users_id_fk",
@@ -969,11 +811,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts"
-      ],
+      "statementTarget": ["table", "public", "blog_posts"],
       "writes": [
         "s|fk|public.blog_posts.blog_posts_categoryId_blog_categories_id_fk",
         "n|fk|public.blog_posts.blog_posts_categoryId_blog_categories_id_fk",
@@ -2916,14 +2754,10 @@
       "table": "core_admin_permissions",
       "name": "core_admin_permissions_roleId_core_roles_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "roleId"
-      ],
+      "columns": ["roleId"],
       "schemaTo": "public",
       "tableTo": "core_roles",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -2933,14 +2767,10 @@
       "table": "core_admin_permissions",
       "name": "core_admin_permissions_userId_core_users_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "userId"
-      ],
+      "columns": ["userId"],
       "schemaTo": "public",
       "tableTo": "core_users",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -2950,14 +2780,10 @@
       "table": "core_admin_sessions",
       "name": "core_admin_sessions_userId_core_users_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "userId"
-      ],
+      "columns": ["userId"],
       "schemaTo": "public",
       "tableTo": "core_users",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -2967,14 +2793,10 @@
       "table": "core_admin_sessions",
       "name": "core_admin_sessions_deviceId_core_sessions_known_devices_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "deviceId"
-      ],
+      "columns": ["deviceId"],
       "schemaTo": "public",
       "tableTo": "core_sessions_known_devices",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -2984,14 +2806,10 @@
       "table": "core_languages_words",
       "name": "core_languages_words_languageCode_core_languages_code_fk",
       "nameExplicit": false,
-      "columns": [
-        "languageCode"
-      ],
+      "columns": ["languageCode"],
       "schemaTo": "public",
       "tableTo": "core_languages",
-      "columnsTo": [
-        "code"
-      ],
+      "columnsTo": ["code"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -3001,14 +2819,10 @@
       "table": "core_logs",
       "name": "core_logs_userId_core_users_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "userId"
-      ],
+      "columns": ["userId"],
       "schemaTo": "public",
       "tableTo": "core_users",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "CASCADE",
       "onDelete": "SET NULL",
       "entityType": "fks"
@@ -3018,14 +2832,10 @@
       "table": "core_moderators_permissions",
       "name": "core_moderators_permissions_roleId_core_roles_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "roleId"
-      ],
+      "columns": ["roleId"],
       "schemaTo": "public",
       "tableTo": "core_roles",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -3035,14 +2845,10 @@
       "table": "core_moderators_permissions",
       "name": "core_moderators_permissions_userId_core_users_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "userId"
-      ],
+      "columns": ["userId"],
       "schemaTo": "public",
       "tableTo": "core_users",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -3052,14 +2858,10 @@
       "table": "core_sessions",
       "name": "core_sessions_userId_core_users_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "userId"
-      ],
+      "columns": ["userId"],
       "schemaTo": "public",
       "tableTo": "core_users",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -3069,14 +2871,10 @@
       "table": "core_sessions",
       "name": "core_sessions_deviceId_core_sessions_known_devices_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "deviceId"
-      ],
+      "columns": ["deviceId"],
       "schemaTo": "public",
       "tableTo": "core_sessions_known_devices",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -3086,14 +2884,10 @@
       "table": "core_users",
       "name": "core_users_roleId_core_roles_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "roleId"
-      ],
+      "columns": ["roleId"],
       "schemaTo": "public",
       "tableTo": "core_roles",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "entityType": "fks"
@@ -3103,14 +2897,10 @@
       "table": "core_users",
       "name": "core_users_language_core_languages_code_fk",
       "nameExplicit": false,
-      "columns": [
-        "language"
-      ],
+      "columns": ["language"],
       "schemaTo": "public",
       "tableTo": "core_languages",
-      "columnsTo": [
-        "code"
-      ],
+      "columnsTo": ["code"],
       "onUpdate": "NO ACTION",
       "onDelete": "SET DEFAULT",
       "entityType": "fks"
@@ -3120,14 +2910,10 @@
       "table": "core_users_confirm_emails",
       "name": "core_users_confirm_emails_userId_core_users_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "userId"
-      ],
+      "columns": ["userId"],
       "schemaTo": "public",
       "tableTo": "core_users",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -3137,14 +2923,10 @@
       "table": "core_users_forgot_password",
       "name": "core_users_forgot_password_userId_core_users_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "userId"
-      ],
+      "columns": ["userId"],
       "schemaTo": "public",
       "tableTo": "core_users",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -3154,14 +2936,10 @@
       "table": "core_users_sso",
       "name": "core_users_sso_userId_core_users_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "userId"
-      ],
+      "columns": ["userId"],
       "schemaTo": "public",
       "tableTo": "core_users",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "entityType": "fks"
@@ -3171,14 +2949,10 @@
       "table": "blog_posts",
       "name": "blog_posts_categoryId_blog_categories_id_fk",
       "nameExplicit": false,
-      "columns": [
-        "categoryId"
-      ],
+      "columns": ["categoryId"],
       "schemaTo": "public",
       "tableTo": "blog_categories",
-      "columnsTo": [
-        "id"
-      ],
+      "columnsTo": ["id"],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
       "entityType": "fks"
@@ -3187,9 +2961,7 @@
       "schema": "public",
       "table": "core_admin_permissions",
       "name": "core_admin_permissions_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3197,9 +2969,7 @@
       "schema": "public",
       "table": "core_admin_sessions",
       "name": "core_admin_sessions_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3207,9 +2977,7 @@
       "schema": "public",
       "table": "core_cron",
       "name": "core_cron_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3217,9 +2985,7 @@
       "schema": "public",
       "table": "core_languages",
       "name": "core_languages_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3227,9 +2993,7 @@
       "schema": "public",
       "table": "core_languages_words",
       "name": "core_languages_words_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3237,9 +3001,7 @@
       "schema": "public",
       "table": "core_logs",
       "name": "core_logs_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3247,9 +3009,7 @@
       "schema": "public",
       "table": "core_moderators_permissions",
       "name": "core_moderators_permissions_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3257,9 +3017,7 @@
       "schema": "public",
       "table": "core_roles",
       "name": "core_roles_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3267,9 +3025,7 @@
       "schema": "public",
       "table": "core_sessions",
       "name": "core_sessions_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3277,9 +3033,7 @@
       "schema": "public",
       "table": "core_sessions_known_devices",
       "name": "core_sessions_known_devices_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3287,9 +3041,7 @@
       "schema": "public",
       "table": "core_users",
       "name": "core_users_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3297,9 +3049,7 @@
       "schema": "public",
       "table": "core_users_confirm_emails",
       "name": "core_users_confirm_emails_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3307,9 +3057,7 @@
       "schema": "public",
       "table": "core_users_forgot_password",
       "name": "core_users_forgot_password_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3317,9 +3065,7 @@
       "schema": "public",
       "table": "blog_categories",
       "name": "blog_categories_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3327,9 +3073,7 @@
       "schema": "public",
       "table": "blog_posts",
       "name": "blog_posts_pkey",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },
@@ -3338,9 +3082,7 @@
       "table": "core_admin_sessions",
       "name": "core_admin_sessions_token_unique",
       "nameExplicit": false,
-      "columns": [
-        "token"
-      ],
+      "columns": ["token"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3349,9 +3091,7 @@
       "table": "core_languages",
       "name": "core_languages_code_unique",
       "nameExplicit": false,
-      "columns": [
-        "code"
-      ],
+      "columns": ["code"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3360,9 +3100,7 @@
       "table": "core_sessions",
       "name": "core_sessions_token_unique",
       "nameExplicit": false,
-      "columns": [
-        "token"
-      ],
+      "columns": ["token"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3371,9 +3109,7 @@
       "table": "core_sessions_known_devices",
       "name": "core_sessions_known_devices_publicId_unique",
       "nameExplicit": false,
-      "columns": [
-        "publicId"
-      ],
+      "columns": ["publicId"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3382,9 +3118,7 @@
       "table": "core_users",
       "name": "core_users_nameCode_unique",
       "nameExplicit": false,
-      "columns": [
-        "nameCode"
-      ],
+      "columns": ["nameCode"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3393,9 +3127,7 @@
       "table": "core_users",
       "name": "core_users_name_unique",
       "nameExplicit": false,
-      "columns": [
-        "name"
-      ],
+      "columns": ["name"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3404,9 +3136,7 @@
       "table": "core_users",
       "name": "core_users_email_unique",
       "nameExplicit": false,
-      "columns": [
-        "email"
-      ],
+      "columns": ["email"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3415,9 +3145,7 @@
       "table": "core_users_confirm_emails",
       "name": "core_users_confirm_emails_token_unique",
       "nameExplicit": false,
-      "columns": [
-        "token"
-      ],
+      "columns": ["token"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3426,9 +3154,7 @@
       "table": "core_users_forgot_password",
       "name": "core_users_forgot_password_userId_unique",
       "nameExplicit": false,
-      "columns": [
-        "userId"
-      ],
+      "columns": ["userId"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3437,9 +3163,7 @@
       "table": "core_users_forgot_password",
       "name": "core_users_forgot_password_token_unique",
       "nameExplicit": false,
-      "columns": [
-        "token"
-      ],
+      "columns": ["token"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3448,9 +3172,7 @@
       "table": "blog_categories",
       "name": "blog_categories_titleSeo_unique",
       "nameExplicit": false,
-      "columns": [
-        "titleSeo"
-      ],
+      "columns": ["titleSeo"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     },
@@ -3459,9 +3181,7 @@
       "table": "blog_posts",
       "name": "blog_posts_titleSeo_unique",
       "nameExplicit": false,
-      "columns": [
-        "titleSeo"
-      ],
+      "columns": ["titleSeo"],
       "nullsNotDistinct": false,
       "entityType": "uniques"
     }

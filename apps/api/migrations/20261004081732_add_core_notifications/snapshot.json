@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "15b0095b-281b-4385-a618-2208244a53f7",
-  "prevIds": [
-    "0c4efb07-e5e5-4e06-b87e-88d08c84a3a8"
-  ],
+  "prevIds": ["0c4efb07-e5e5-4e06-b87e-88d08c84a3a8"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_deliveries"
-      ],
+      "statementTarget": ["table", "public", "core_notification_deliveries"],
       "writes": [
         "s|tbl|public.core_notification_deliveries",
         "n|tbl|public.core_notification_deliveries",
@@ -23,17 +17,11 @@
         "n|rel|public.core_notification_deliveries_pkey",
         "n|rel|public.core_notification_deliveries_idempotencyKey_key"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_events"
-      ],
+      "statementTarget": ["table", "public", "core_notification_events"],
       "writes": [
         "s|tbl|public.core_notification_events",
         "n|tbl|public.core_notification_events",
@@ -42,17 +30,11 @@
         "n|type|public.core_notification_events",
         "n|rel|public.core_notification_events_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_receipts"
-      ],
+      "statementTarget": ["table", "public", "core_notification_receipts"],
       "writes": [
         "s|tbl|public.core_notification_receipts",
         "n|tbl|public.core_notification_receipts",
@@ -61,17 +43,11 @@
         "n|type|public.core_notification_receipts",
         "n|rel|public.core_notification_receipts_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_settings"
-      ],
+      "statementTarget": ["table", "public", "core_notification_settings"],
       "writes": [
         "s|tbl|public.core_notification_settings",
         "n|tbl|public.core_notification_settings",
@@ -80,17 +56,11 @@
         "n|type|public.core_notification_settings",
         "n|rel|public.core_notification_settings_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_subscriptions"
-      ],
+      "statementTarget": ["table", "public", "core_notification_subscriptions"],
       "writes": [
         "s|tbl|public.core_notification_subscriptions",
         "n|tbl|public.core_notification_subscriptions",
@@ -99,17 +69,11 @@
         "n|type|public.core_notification_subscriptions",
         "n|rel|public.core_notification_subscriptions_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_user_state"
-      ],
+      "statementTarget": ["table", "public", "core_notification_user_state"],
       "writes": [
         "s|tbl|public.core_notification_user_state",
         "n|tbl|public.core_notification_user_state",
@@ -118,17 +82,11 @@
         "n|type|public.core_notification_user_state",
         "n|rel|public.core_notification_user_state_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notifications"
-      ],
+      "statementTarget": ["table", "public", "core_notifications"],
       "writes": [
         "s|tbl|public.core_notifications",
         "n|tbl|public.core_notifications",
@@ -137,9 +95,7 @@
         "n|type|public.core_notifications",
         "n|rel|public.core_notifications_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -502,11 +458,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_deliveries"
-      ],
+      "statementTarget": ["table", "public", "core_notification_deliveries"],
       "writes": [
         "s|fk|public.core_notification_deliveries.core_notification_deliveries_userId_core_users_id_fkey",
         "n|fk|public.core_notification_deliveries.core_notification_deliveries_userId_core_users_id_fkey",
@@ -525,11 +477,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_deliveries"
-      ],
+      "statementTarget": ["table", "public", "core_notification_deliveries"],
       "writes": [
         "s|fk|public.core_notification_deliveries.core_notification_deliveries_vcf37BytIa0M_fkey",
         "n|fk|public.core_notification_deliveries.core_notification_deliveries_vcf37BytIa0M_fkey",
@@ -548,11 +496,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_events"
-      ],
+      "statementTarget": ["table", "public", "core_notification_events"],
       "writes": [
         "s|fk|public.core_notification_events.core_notification_events_actorId_core_users_id_fkey",
         "n|fk|public.core_notification_events.core_notification_events_actorId_core_users_id_fkey",
@@ -571,11 +515,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_receipts"
-      ],
+      "statementTarget": ["table", "public", "core_notification_receipts"],
       "writes": [
         "s|fk|public.core_notification_receipts.core_notification_receipts_UQ7ZEs0I6ijx_fkey",
         "n|fk|public.core_notification_receipts.core_notification_receipts_UQ7ZEs0I6ijx_fkey",
@@ -594,11 +534,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_receipts"
-      ],
+      "statementTarget": ["table", "public", "core_notification_receipts"],
       "writes": [
         "s|fk|public.core_notification_receipts.core_notification_receipts_userId_core_users_id_fkey",
         "n|fk|public.core_notification_receipts.core_notification_receipts_userId_core_users_id_fkey",
@@ -617,11 +553,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_receipts"
-      ],
+      "statementTarget": ["table", "public", "core_notification_receipts"],
       "writes": [
         "s|fk|public.core_notification_receipts.core_notification_receipts_Vxye2Cs6MgcL_fkey",
         "n|fk|public.core_notification_receipts.core_notification_receipts_Vxye2Cs6MgcL_fkey",
@@ -640,11 +572,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_subscriptions"
-      ],
+      "statementTarget": ["table", "public", "core_notification_subscriptions"],
       "writes": [
         "s|fk|public.core_notification_subscriptions.core_notification_subscriptions_userId_core_users_id_fkey",
         "n|fk|public.core_notification_subscriptions.core_notification_subscriptions_userId_core_users_id_fkey",
@@ -663,11 +591,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notification_user_state"
-      ],
+      "statementTarget": ["table", "public", "core_notification_user_state"],
       "writes": [
         "s|fk|public.core_notification_user_state.core_notification_user_state_userId_core_users_id_fkey",
         "n|fk|public.core_notification_user_state.core_notification_user_state_userId_core_users_id_fkey",
@@ -686,11 +610,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notifications"
-      ],
+      "statementTarget": ["table", "public", "core_notifications"],
       "writes": [
         "s|fk|public.core_notifications.core_notifications_userId_core_users_id_fkey",
         "n|fk|public.core_notifications.core_notifications_userId_core_users_id_fkey",
@@ -709,11 +629,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_notifications"
-      ],
+      "statementTarget": ["table", "public", "core_notifications"],
       "writes": [
         "s|fk|public.core_notifications.core_notifications_I8QoGbTal5Wt_fkey",
         "n|fk|public.core_notifications.core_notifications_I8QoGbTal5Wt_fkey",
@@ -2623,14 +2539,10 @@
         "table": "core_notification_deliveries",
         "name": "core_notification_deliveries_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -2643,14 +2555,10 @@
         "table": "core_notification_deliveries",
         "name": "core_notification_deliveries_vcf37BytIa0M_fkey",
         "nameExplicit": false,
-        "columns": [
-          "eventId"
-        ],
+        "columns": ["eventId"],
         "schemaTo": "public",
         "tableTo": "core_notification_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -2663,14 +2571,10 @@
         "table": "core_notification_events",
         "name": "core_notification_events_actorId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "actorId"
-        ],
+        "columns": ["actorId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -2683,14 +2587,10 @@
         "table": "core_notification_receipts",
         "name": "core_notification_receipts_UQ7ZEs0I6ijx_fkey",
         "nameExplicit": false,
-        "columns": [
-          "eventId"
-        ],
+        "columns": ["eventId"],
         "schemaTo": "public",
         "tableTo": "core_notification_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -2703,14 +2603,10 @@
         "table": "core_notification_receipts",
         "name": "core_notification_receipts_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -2723,14 +2619,10 @@
         "table": "core_notification_receipts",
         "name": "core_notification_receipts_Vxye2Cs6MgcL_fkey",
         "nameExplicit": false,
-        "columns": [
-          "notificationId"
-        ],
+        "columns": ["notificationId"],
         "schemaTo": "public",
         "tableTo": "core_notifications",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -2743,14 +2635,10 @@
         "table": "core_notification_subscriptions",
         "name": "core_notification_subscriptions_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -2763,14 +2651,10 @@
         "table": "core_notification_user_state",
         "name": "core_notification_user_state_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -2783,14 +2667,10 @@
         "table": "core_notifications",
         "name": "core_notifications_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -2803,14 +2683,10 @@
         "table": "core_notifications",
         "name": "core_notifications_I8QoGbTal5Wt_fkey",
         "nameExplicit": false,
-        "columns": [
-          "latestEventId"
-        ],
+        "columns": ["latestEventId"],
         "schemaTo": "public",
         "tableTo": "core_notification_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -2822,10 +2698,7 @@
         "schema": "public",
         "table": "core_notification_receipts",
         "name": "core_notification_receipts_pkey",
-        "columns": [
-          "eventId",
-          "userId"
-        ],
+        "columns": ["eventId", "userId"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -2836,11 +2709,7 @@
         "schema": "public",
         "table": "core_notification_subscriptions",
         "name": "core_notification_subscriptions_pkey",
-        "columns": [
-          "userId",
-          "subjectType",
-          "subjectId"
-        ],
+        "columns": ["userId", "subjectType", "subjectId"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -2851,9 +2720,7 @@
         "schema": "public",
         "table": "core_notification_deliveries",
         "name": "core_notification_deliveries_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -2864,9 +2731,7 @@
         "schema": "public",
         "table": "core_notification_events",
         "name": "core_notification_events_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -2877,9 +2742,7 @@
         "schema": "public",
         "table": "core_notification_settings",
         "name": "core_notification_settings_pkey",
-        "columns": [
-          "key"
-        ],
+        "columns": ["key"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -2890,9 +2753,7 @@
         "schema": "public",
         "table": "core_notification_user_state",
         "name": "core_notification_user_state_pkey",
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -2903,9 +2764,7 @@
         "schema": "public",
         "table": "core_notifications",
         "name": "core_notifications_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -2917,9 +2776,7 @@
         "table": "core_notification_deliveries",
         "name": "core_notification_deliveries_idempotencyKey_key",
         "nameExplicit": false,
-        "columns": [
-          "idempotencyKey"
-        ],
+        "columns": ["idempotencyKey"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }

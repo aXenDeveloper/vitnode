@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "dde898da-7c8a-40ad-af0f-8d221bc7c5c9",
-  "prevIds": [
-    "911db9d8-9728-4c60-8aad-6788fdda067f"
-  ],
+  "prevIds": ["911db9d8-9728-4c60-8aad-6788fdda067f"],
   "footprints": [
     {
       "statementType": "add_column",
@@ -20,100 +18,57 @@
         "n|col|public.core_roles.allowEditPersonalInfo",
         "e|col|public.core_roles.allowEditPersonalInfo"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "firstName"
-      ],
+      "statementTarget": ["column", "public", "core_users", "firstName"],
       "writes": [
         "s|col|public.core_users.firstName",
         "n|col|public.core_users.firstName",
         "e|col|public.core_users.firstName"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "lastName"
-      ],
+      "statementTarget": ["column", "public", "core_users", "lastName"],
       "writes": [
         "s|col|public.core_users.lastName",
         "n|col|public.core_users.lastName",
         "e|col|public.core_users.lastName"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "phone"
-      ],
+      "statementTarget": ["column", "public", "core_users", "phone"],
       "writes": [
         "s|col|public.core_users.phone",
         "n|col|public.core_users.phone",
         "e|col|public.core_users.phone"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "headline"
-      ],
+      "statementTarget": ["column", "public", "core_users", "headline"],
       "writes": [
         "s|col|public.core_users.headline",
         "n|col|public.core_users.headline",
         "e|col|public.core_users.headline"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "showRealName"
-      ],
+      "statementTarget": ["column", "public", "core_users", "showRealName"],
       "writes": [
         "s|col|public.core_users.showRealName",
         "n|col|public.core_users.showRealName",
         "e|col|public.core_users.showRealName"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     }
   ],
   "deltas": [

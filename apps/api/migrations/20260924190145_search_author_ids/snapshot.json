@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "729e82c0-c384-4279-98f1-94bfd4eb39a2",
-  "prevIds": [
-    "8c131737-ec22-4b44-99f5-cf46e2b11645"
-  ],
+  "prevIds": ["8c131737-ec22-4b44-99f5-cf46e2b11645"],
   "footprints": [
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_search_index"
-      ],
+      "statementTarget": ["table", "public", "core_search_index"],
       "writes": [
         "s|fk|public.core_search_index.core_search_index_authorId_core_users_id_fk",
         "n|fk|public.core_search_index.core_search_index_authorId_core_users_id_fk",
@@ -49,39 +43,23 @@
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_search_index",
-        "authorIds"
-      ],
+      "statementTarget": ["column", "public", "core_search_index", "authorIds"],
       "writes": [
         "s|col|public.core_search_index.authorIds",
         "n|col|public.core_search_index.authorIds",
         "e|col|public.core_search_index.authorIds"
       ],
-      "reads": [
-        "n|tbl|public.core_search_index",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_search_index", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_search_index",
-        "authorId"
-      ],
+      "statementTarget": ["column", "public", "core_search_index", "authorId"],
       "writes": [
         "s|col|public.core_search_index.authorId",
         "n|col|public.core_search_index.authorId",
         "e|col|public.core_search_index.authorId"
       ],
-      "reads": [
-        "n|tbl|public.core_search_index",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_search_index", "n|sch|public"]
     },
     {
       "statementType": "create_index",

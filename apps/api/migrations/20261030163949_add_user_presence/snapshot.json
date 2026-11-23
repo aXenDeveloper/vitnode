@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "4f7f60d7-9030-4dba-af3c-549a3ec2fa80",
-  "prevIds": [
-    "2ab8ec9e-8d1a-4774-8f8c-b04d780efaaf"
-  ],
+  "prevIds": ["2ab8ec9e-8d1a-4774-8f8c-b04d780efaaf"],
   "footprints": [
     {
       "statementType": "add_column",
@@ -20,10 +18,7 @@
         "n|col|public.core_roles.allowBrowseAnonymously",
         "e|col|public.core_roles.allowBrowseAnonymously"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -38,46 +33,27 @@
         "n|col|public.core_roles.forceBrowseAnonymously",
         "e|col|public.core_roles.forceBrowseAnonymously"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "lastSeenAt"
-      ],
+      "statementTarget": ["column", "public", "core_users", "lastSeenAt"],
       "writes": [
         "s|col|public.core_users.lastSeenAt",
         "n|col|public.core_users.lastSeenAt",
         "e|col|public.core_users.lastSeenAt"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "hideOnlineStatus"
-      ],
+      "statementTarget": ["column", "public", "core_users", "hideOnlineStatus"],
       "writes": [
         "s|col|public.core_users.hideOnlineStatus",
         "n|col|public.core_users.hideOnlineStatus",
         "e|col|public.core_users.hideOnlineStatus"
       ],
-      "reads": [
-        "n|tbl|public.core_users",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users", "n|sch|public"]
     }
   ],
   "deltas": [

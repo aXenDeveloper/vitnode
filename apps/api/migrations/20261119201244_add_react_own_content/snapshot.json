@@ -21,10 +21,7 @@
         "n|col|public.core_roles.allowReactOwnContent",
         "e|col|public.core_roles.allowReactOwnContent"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     }
   ],
   "deltas": [

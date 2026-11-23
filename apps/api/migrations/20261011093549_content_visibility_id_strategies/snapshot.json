@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "680724d8-a62f-48ca-aa75-7e3f07114a50",
-  "prevIds": [
-    "f56f3fa4-bc19-468a-9bb0-04e398dfc3d4"
-  ],
+  "prevIds": ["f56f3fa4-bc19-468a-9bb0-04e398dfc3d4"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles_tags"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles_tags"],
       "writes": [
         "s|tbl|public.example_advanced_articles_tags",
         "n|tbl|public.example_advanced_articles_tags",
@@ -22,17 +16,11 @@
         "n|type|public.example_advanced_articles_tags",
         "n|rel|public.example_advanced_articles_tags_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events"
-      ],
+      "statementTarget": ["table", "public", "example_events"],
       "writes": [
         "s|tbl|public.example_events",
         "n|tbl|public.example_events",
@@ -41,17 +29,11 @@
         "n|type|public.example_events",
         "n|rel|public.example_events_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_gallery"
-      ],
+      "statementTarget": ["table", "public", "example_events_gallery"],
       "writes": [
         "s|tbl|public.example_events_gallery",
         "n|tbl|public.example_events_gallery",
@@ -60,17 +42,11 @@
         "n|type|public.example_events_gallery",
         "n|rel|public.example_events_gallery_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_related_events"
-      ],
+      "statementTarget": ["table", "public", "example_events_related_events"],
       "writes": [
         "s|tbl|public.example_events_related_events",
         "n|tbl|public.example_events_related_events",
@@ -79,17 +55,11 @@
         "n|type|public.example_events_related_events",
         "n|rel|public.example_events_related_events_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_sessions"
-      ],
+      "statementTarget": ["table", "public", "example_events_sessions"],
       "writes": [
         "s|tbl|public.example_events_sessions",
         "n|tbl|public.example_events_sessions",
@@ -98,17 +68,11 @@
         "n|type|public.example_events_sessions",
         "n|rel|public.example_events_sessions_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_tags"
-      ],
+      "statementTarget": ["table", "public", "example_events_tags"],
       "writes": [
         "s|tbl|public.example_events_tags",
         "n|tbl|public.example_events_tags",
@@ -117,17 +81,11 @@
         "n|type|public.example_events_tags",
         "n|rel|public.example_events_tags_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_translations"
-      ],
+      "statementTarget": ["table", "public", "example_events_translations"],
       "writes": [
         "s|tbl|public.example_events_translations",
         "n|tbl|public.example_events_translations",
@@ -136,17 +94,11 @@
         "n|type|public.example_events_translations",
         "n|rel|public.example_events_translations_item_id_language_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags"],
       "writes": [
         "s|tbl|public.example_tags",
         "n|tbl|public.example_tags",
@@ -155,17 +107,11 @@
         "n|type|public.example_tags",
         "n|rel|public.example_tags_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_related_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags_related_tags"],
       "writes": [
         "s|tbl|public.example_tags_related_tags",
         "n|tbl|public.example_tags_related_tags",
@@ -174,17 +120,11 @@
         "n|type|public.example_tags_related_tags",
         "n|rel|public.example_tags_related_tags_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_translations"
-      ],
+      "statementTarget": ["table", "public", "example_tags_translations"],
       "writes": [
         "s|tbl|public.example_tags_translations",
         "n|tbl|public.example_tags_translations",
@@ -193,54 +133,31 @@
         "n|type|public.example_tags_translations",
         "n|rel|public.example_tags_translations_item_id_language_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "hiddenAt"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "hiddenAt"],
       "writes": [
         "s|col|public.blog_posts.hiddenAt",
         "n|col|public.blog_posts.hiddenAt",
         "e|col|public.blog_posts.hiddenAt"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "hiddenBy"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "hiddenBy"],
       "writes": [
         "s|col|public.blog_posts.hiddenBy",
         "n|col|public.blog_posts.hiddenBy",
         "e|col|public.blog_posts.hiddenBy"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_search_index",
-        "itemId"
-      ],
+      "statementTarget": ["column", "public", "core_search_index", "itemId"],
       "writes": [
         "s|colprop|public.core_search_index.itemId.type",
         "s|colprop|public.core_search_index.itemId.default"
@@ -349,12 +266,7 @@
     },
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_content_drafts",
-        "itemId"
-      ],
+      "statementTarget": ["column", "public", "core_content_drafts", "itemId"],
       "writes": [
         "s|colprop|public.core_content_drafts.itemId.type",
         "s|colprop|public.core_content_drafts.itemId.default"
@@ -939,11 +851,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts"
-      ],
+      "statementTarget": ["table", "public", "blog_posts"],
       "writes": [
         "s|fk|public.blog_posts.blog_posts_hiddenBy_core_users_id_fkey",
         "n|fk|public.blog_posts.blog_posts_hiddenBy_core_users_id_fkey",
@@ -962,11 +870,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles_tags"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles_tags"],
       "writes": [
         "s|fk|public.example_advanced_articles_tags.example_advanced_articles_tags_ATchHLRtvoCM_fkey",
         "n|fk|public.example_advanced_articles_tags.example_advanced_articles_tags_ATchHLRtvoCM_fkey",
@@ -985,11 +889,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles_tags"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles_tags"],
       "writes": [
         "s|fk|public.example_advanced_articles_tags.example_advanced_articles_tags_dEsWdkDmu7nW_fkey",
         "n|fk|public.example_advanced_articles_tags.example_advanced_articles_tags_dEsWdkDmu7nW_fkey",
@@ -1008,11 +908,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events"
-      ],
+      "statementTarget": ["table", "public", "example_events"],
       "writes": [
         "s|fk|public.example_events.example_events_hiddenBy_core_users_id_fkey",
         "n|fk|public.example_events.example_events_hiddenBy_core_users_id_fkey",
@@ -1031,11 +927,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events"
-      ],
+      "statementTarget": ["table", "public", "example_events"],
       "writes": [
         "s|fk|public.example_events.example_events_primaryTag_example_tags_id_fkey",
         "n|fk|public.example_events.example_events_primaryTag_example_tags_id_fkey",
@@ -1054,11 +946,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events"
-      ],
+      "statementTarget": ["table", "public", "example_events"],
       "writes": [
         "s|fk|public.example_events.example_events_category_example_categories_id_fkey",
         "n|fk|public.example_events.example_events_category_example_categories_id_fkey",
@@ -1077,11 +965,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_gallery"
-      ],
+      "statementTarget": ["table", "public", "example_events_gallery"],
       "writes": [
         "s|fk|public.example_events_gallery.example_events_gallery_itemId_example_events_id_fkey",
         "n|fk|public.example_events_gallery.example_events_gallery_itemId_example_events_id_fkey",
@@ -1100,11 +984,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_gallery"
-      ],
+      "statementTarget": ["table", "public", "example_events_gallery"],
       "writes": [
         "s|fk|public.example_events_gallery.example_events_gallery_relatedItemId_core_files_id_fkey",
         "n|fk|public.example_events_gallery.example_events_gallery_relatedItemId_core_files_id_fkey",
@@ -1123,11 +1003,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_related_events"
-      ],
+      "statementTarget": ["table", "public", "example_events_related_events"],
       "writes": [
         "s|fk|public.example_events_related_events.example_events_related_events_itemId_example_events_id_fkey",
         "n|fk|public.example_events_related_events.example_events_related_events_itemId_example_events_id_fkey",
@@ -1146,11 +1022,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_related_events"
-      ],
+      "statementTarget": ["table", "public", "example_events_related_events"],
       "writes": [
         "s|fk|public.example_events_related_events.example_events_related_events_oaRvqnKyAS7L_fkey",
         "n|fk|public.example_events_related_events.example_events_related_events_oaRvqnKyAS7L_fkey",
@@ -1169,11 +1041,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_sessions"
-      ],
+      "statementTarget": ["table", "public", "example_events_sessions"],
       "writes": [
         "s|fk|public.example_events_sessions.example_events_sessions_itemId_example_events_id_fkey",
         "n|fk|public.example_events_sessions.example_events_sessions_itemId_example_events_id_fkey",
@@ -1192,11 +1060,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_tags"
-      ],
+      "statementTarget": ["table", "public", "example_events_tags"],
       "writes": [
         "s|fk|public.example_events_tags.example_events_tags_itemId_example_events_id_fkey",
         "n|fk|public.example_events_tags.example_events_tags_itemId_example_events_id_fkey",
@@ -1215,11 +1079,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_tags"
-      ],
+      "statementTarget": ["table", "public", "example_events_tags"],
       "writes": [
         "s|fk|public.example_events_tags.example_events_tags_relatedItemId_example_tags_id_fkey",
         "n|fk|public.example_events_tags.example_events_tags_relatedItemId_example_tags_id_fkey",
@@ -1238,11 +1098,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_translations"
-      ],
+      "statementTarget": ["table", "public", "example_events_translations"],
       "writes": [
         "s|fk|public.example_events_translations.example_events_translations_itemId_example_events_id_fkey",
         "n|fk|public.example_events_translations.example_events_translations_itemId_example_events_id_fkey",
@@ -1261,11 +1117,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_translations"
-      ],
+      "statementTarget": ["table", "public", "example_events_translations"],
       "writes": [
         "s|fk|public.example_events_translations.example_events_translations_languageId_core_languages_id_fkey",
         "n|fk|public.example_events_translations.example_events_translations_languageId_core_languages_id_fkey",
@@ -1284,11 +1136,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags"],
       "writes": [
         "s|fk|public.example_tags.example_tags_hiddenBy_core_users_id_fkey",
         "n|fk|public.example_tags.example_tags_hiddenBy_core_users_id_fkey",
@@ -1307,11 +1155,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags"],
       "writes": [
         "s|fk|public.example_tags.example_tags_category_example_categories_id_fkey",
         "n|fk|public.example_tags.example_tags_category_example_categories_id_fkey",
@@ -1330,11 +1174,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_related_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags_related_tags"],
       "writes": [
         "s|fk|public.example_tags_related_tags.example_tags_related_tags_itemId_example_tags_id_fkey",
         "n|fk|public.example_tags_related_tags.example_tags_related_tags_itemId_example_tags_id_fkey",
@@ -1353,11 +1193,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_related_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags_related_tags"],
       "writes": [
         "s|fk|public.example_tags_related_tags.example_tags_related_tags_relatedItemId_example_tags_id_fkey",
         "n|fk|public.example_tags_related_tags.example_tags_related_tags_relatedItemId_example_tags_id_fkey",
@@ -1376,11 +1212,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_translations"
-      ],
+      "statementTarget": ["table", "public", "example_tags_translations"],
       "writes": [
         "s|fk|public.example_tags_translations.example_tags_translations_itemId_example_tags_id_fkey",
         "n|fk|public.example_tags_translations.example_tags_translations_itemId_example_tags_id_fkey",
@@ -1399,11 +1231,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_translations"
-      ],
+      "statementTarget": ["table", "public", "example_tags_translations"],
       "writes": [
         "s|fk|public.example_tags_translations.example_tags_translations_languageId_core_languages_id_fkey",
         "n|fk|public.example_tags_translations.example_tags_translations_languageId_core_languages_id_fkey",
@@ -3332,14 +3160,10 @@
         "table": "blog_posts",
         "name": "blog_posts_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -3352,14 +3176,10 @@
         "table": "example_advanced_articles_tags",
         "name": "example_advanced_articles_tags_ATchHLRtvoCM_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_advanced_articles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3372,14 +3192,10 @@
         "table": "example_advanced_articles_tags",
         "name": "example_advanced_articles_tags_dEsWdkDmu7nW_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "example_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -3392,14 +3208,10 @@
         "table": "example_events",
         "name": "example_events_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -3412,14 +3224,10 @@
         "table": "example_events",
         "name": "example_events_primaryTag_example_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "primaryTag"
-        ],
+        "columns": ["primaryTag"],
         "schemaTo": "public",
         "tableTo": "example_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -3432,14 +3240,10 @@
         "table": "example_events",
         "name": "example_events_category_example_categories_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "category"
-        ],
+        "columns": ["category"],
         "schemaTo": "public",
         "tableTo": "example_categories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -3452,14 +3256,10 @@
         "table": "example_events_gallery",
         "name": "example_events_gallery_itemId_example_events_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3472,14 +3272,10 @@
         "table": "example_events_gallery",
         "name": "example_events_gallery_relatedItemId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -3492,14 +3288,10 @@
         "table": "example_events_related_events",
         "name": "example_events_related_events_itemId_example_events_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3512,14 +3304,10 @@
         "table": "example_events_related_events",
         "name": "example_events_related_events_oaRvqnKyAS7L_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "example_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3532,14 +3320,10 @@
         "table": "example_events_sessions",
         "name": "example_events_sessions_itemId_example_events_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3552,14 +3336,10 @@
         "table": "example_events_tags",
         "name": "example_events_tags_itemId_example_events_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3572,14 +3352,10 @@
         "table": "example_events_tags",
         "name": "example_events_tags_relatedItemId_example_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "example_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -3592,14 +3368,10 @@
         "table": "example_events_translations",
         "name": "example_events_translations_itemId_example_events_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3612,14 +3384,10 @@
         "table": "example_events_translations",
         "name": "example_events_translations_languageId_core_languages_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "languageId"
-        ],
+        "columns": ["languageId"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -3632,14 +3400,10 @@
         "table": "example_tags",
         "name": "example_tags_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -3652,14 +3416,10 @@
         "table": "example_tags",
         "name": "example_tags_category_example_categories_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "category"
-        ],
+        "columns": ["category"],
         "schemaTo": "public",
         "tableTo": "example_categories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -3672,14 +3432,10 @@
         "table": "example_tags_related_tags",
         "name": "example_tags_related_tags_itemId_example_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3692,14 +3448,10 @@
         "table": "example_tags_related_tags",
         "name": "example_tags_related_tags_relatedItemId_example_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "example_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3712,14 +3464,10 @@
         "table": "example_tags_translations",
         "name": "example_tags_translations_itemId_example_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -3732,14 +3480,10 @@
         "table": "example_tags_translations",
         "name": "example_tags_translations_languageId_core_languages_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "languageId"
-        ],
+        "columns": ["languageId"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -3751,10 +3495,7 @@
         "schema": "public",
         "table": "example_advanced_articles_tags",
         "name": "example_advanced_articles_tags_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -3765,10 +3506,7 @@
         "schema": "public",
         "table": "example_events_gallery",
         "name": "example_events_gallery_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -3779,10 +3517,7 @@
         "schema": "public",
         "table": "example_events_related_events",
         "name": "example_events_related_events_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -3793,10 +3528,7 @@
         "schema": "public",
         "table": "example_events_tags",
         "name": "example_events_tags_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -3807,10 +3539,7 @@
         "schema": "public",
         "table": "example_events_translations",
         "name": "example_events_translations_item_id_language_id_pk",
-        "columns": [
-          "itemId",
-          "languageId"
-        ],
+        "columns": ["itemId", "languageId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -3821,10 +3550,7 @@
         "schema": "public",
         "table": "example_tags_related_tags",
         "name": "example_tags_related_tags_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -3835,10 +3561,7 @@
         "schema": "public",
         "table": "example_tags_translations",
         "name": "example_tags_translations_item_id_language_id_pk",
-        "columns": [
-          "itemId",
-          "languageId"
-        ],
+        "columns": ["itemId", "languageId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -3849,9 +3572,7 @@
         "schema": "public",
         "table": "example_events",
         "name": "example_events_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3862,9 +3583,7 @@
         "schema": "public",
         "table": "example_events_sessions",
         "name": "example_events_sessions_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -3875,9 +3594,7 @@
         "schema": "public",
         "table": "example_tags",
         "name": "example_tags_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

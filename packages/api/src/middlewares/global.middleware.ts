@@ -32,6 +32,7 @@ import { runAfterResponse } from "@/lib/after-response";
 import { DEFAULT_SESSION_COOKIE_NAME } from "@/lib/auth-cookie";
 import { CacheModel, domainCacheOf } from "@/lib/cache";
 import { MemoryCacheStore } from "@/lib/cache-memory";
+import { type ChatSettings, resolveChatSettings } from "@/lib/chat/const";
 import { CONFIG } from "@/lib/config";
 import { collectEventDefinitions } from "@/lib/event-definition";
 import { collectLocaleCodes } from "@/lib/i18n/load-messages";
@@ -222,11 +223,13 @@ export interface EnvVariablesVitNode {
     };
     captcha?: Pick<VitNodeApiConfig, "captcha">["captcha"];
 
+    /** Chat settings (`chat` in the API config) with defaults applied. */
+    chat: ChatSettings;
     contentContainers: RegisteredContentContainer[];
     contentModels: RegisteredContentModel[];
+
     /** Content notification rules of every plugin. */
     contentNotifications?: ContentNotificationRegistry;
-
     contentPreviewSecret?: string;
     /** Web origins the background cache bridge posts to. */
     contentRevalidateOrigins?: string[];
@@ -381,6 +384,7 @@ export const globalMiddleware = ({
   email,
   dbProvider,
   captcha,
+  chat,
   cron,
   events,
   frontendPlugins,
@@ -400,6 +404,7 @@ export const globalMiddleware = ({
     | "ai"
     | "authorization"
     | "captcha"
+    | "chat"
     | "content"
     | "cron"
     | "dbProvider"
@@ -720,6 +725,7 @@ export const globalMiddleware = ({
         users?.personalInformation,
       ),
       privacy: resolvePrivacySettings(users),
+      chat: resolveChatSettings(chat),
       hasCronAdapter: !!cron,
       plugins: pluginsMetadata,
       installedPlugins,

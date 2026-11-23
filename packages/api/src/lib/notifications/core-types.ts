@@ -183,6 +183,72 @@ export const reactionReceivedNotification = buildNotificationType({
   }),
 });
 
+/**
+ * New messages in a chat the member hasn't read for a couple of minutes,
+ * grouped per chat. Off in the bell by default: the Chat button shows them.
+ * Never carries the message text.
+ */
+export const chatMessageNotification = buildNotificationType({
+  id: "core.chat_message",
+  version: 1,
+  schema: z.object({
+    chatId: z.number().int(),
+    kind: z.enum(["direct", "group"]),
+    title: z.string().max(100).nullable(),
+  }),
+  category: "chat",
+  label: "core.notifications.types.chat_message.label",
+  description: "core.notifications.types.chat_message.description",
+  defaults: { email: "immediate", inApp: false },
+  email: true,
+  subjectType: "core.chat",
+  grouping: { windowMinutes: 60 },
+  present: ({ actors, data, eventCount, t }) => ({
+    target: `/chat/${data.chatId}`,
+    title:
+      data.kind === "group" && data.title
+        ? t("core.notifications.types.chat_message.title_group", {
+            count: eventCount,
+            title: data.title,
+          })
+        : t("core.notifications.types.chat_message.title", {
+            count: eventCount,
+            name: actors[0]?.name ?? t("core.notifications.someone"),
+          }),
+  }),
+});
+
+/** Someone sent the member a chat request or invited them to a group. */
+export const chatRequestNotification = buildNotificationType({
+  id: "core.chat_request",
+  version: 1,
+  schema: z.object({
+    chatId: z.number().int(),
+    kind: z.enum(["direct", "group"]),
+    title: z.string().max(100).nullable(),
+  }),
+  category: "chat",
+  label: "core.notifications.types.chat_request.label",
+  description: "core.notifications.types.chat_request.description",
+  defaults: { email: "immediate", inApp: false },
+  email: true,
+  subjectType: "core.chat",
+  present: ({ actors, data, t }) => {
+    const name = actors[0]?.name ?? t("core.notifications.someone");
+
+    return {
+      target: `/chat/${data.chatId}`,
+      title:
+        data.kind === "group"
+          ? t("core.notifications.types.chat_request.title_group", {
+              name,
+              title: data.title ?? "",
+            })
+          : t("core.notifications.types.chat_request.title", { name }),
+    };
+  },
+});
+
 export const coreNotificationTypes = [
   adminMessageNotification,
   warningIssuedNotification,
@@ -190,4 +256,6 @@ export const coreNotificationTypes = [
   accountSuspendedNotification,
   suspensionRevokedNotification,
   reactionReceivedNotification,
+  chatMessageNotification,
+  chatRequestNotification,
 ];

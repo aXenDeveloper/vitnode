@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "9ddac84b-1d56-431b-afab-e8e20b8f1731",
-  "prevIds": [
-    "72797947-1eaf-4920-aae7-3bba9cbd49eb"
-  ],
+  "prevIds": ["72797947-1eaf-4920-aae7-3bba9cbd49eb"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_submissions"
-      ],
+      "statementTarget": ["table", "public", "core_content_submissions"],
       "writes": [
         "s|tbl|public.core_content_submissions",
         "n|tbl|public.core_content_submissions",
@@ -22,17 +16,11 @@
         "n|type|public.core_content_submissions",
         "n|rel|public.core_content_submissions_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_replies"
-      ],
+      "statementTarget": ["table", "public", "forum_replies"],
       "writes": [
         "s|tbl|public.forum_replies",
         "n|tbl|public.forum_replies",
@@ -41,17 +29,11 @@
         "n|type|public.forum_replies",
         "n|rel|public.forum_replies_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_topics"
-      ],
+      "statementTarget": ["table", "public", "forum_topics"],
       "writes": [
         "s|tbl|public.forum_topics",
         "n|tbl|public.forum_topics",
@@ -60,9 +42,7 @@
         "n|type|public.forum_topics",
         "n|rel|public.forum_topics_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -77,10 +57,7 @@
         "n|col|public.core_content_containers.policies",
         "e|col|public.core_content_containers.policies"
       ],
-      "reads": [
-        "n|tbl|public.core_content_containers",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_content_containers", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -495,11 +472,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_submissions"
-      ],
+      "statementTarget": ["table", "public", "core_content_submissions"],
       "writes": [
         "s|fk|public.core_content_submissions.core_content_submissions_authorId_core_users_id_fkey",
         "n|fk|public.core_content_submissions.core_content_submissions_authorId_core_users_id_fkey",
@@ -518,11 +491,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_submissions"
-      ],
+      "statementTarget": ["table", "public", "core_content_submissions"],
       "writes": [
         "s|fk|public.core_content_submissions.core_content_submissions_reviewerId_core_users_id_fkey",
         "n|fk|public.core_content_submissions.core_content_submissions_reviewerId_core_users_id_fkey",
@@ -541,11 +510,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_replies"
-      ],
+      "statementTarget": ["table", "public", "forum_replies"],
       "writes": [
         "s|fk|public.forum_replies.forum_replies_hiddenBy_core_users_id_fkey",
         "n|fk|public.forum_replies.forum_replies_hiddenBy_core_users_id_fkey",
@@ -564,11 +529,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_replies"
-      ],
+      "statementTarget": ["table", "public", "forum_replies"],
       "writes": [
         "s|fk|public.forum_replies.forum_replies_author_core_users_id_fkey",
         "n|fk|public.forum_replies.forum_replies_author_core_users_id_fkey",
@@ -587,11 +548,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_replies"
-      ],
+      "statementTarget": ["table", "public", "forum_replies"],
       "writes": [
         "s|fk|public.forum_replies.forum_replies_topic_forum_topics_id_fkey",
         "n|fk|public.forum_replies.forum_replies_topic_forum_topics_id_fkey",
@@ -610,11 +567,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_replies"
-      ],
+      "statementTarget": ["table", "public", "forum_replies"],
       "writes": [
         "s|fk|public.forum_replies.forum_replies_parent_forum_replies_id_fkey",
         "n|fk|public.forum_replies.forum_replies_parent_forum_replies_id_fkey",
@@ -633,11 +586,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_topics"
-      ],
+      "statementTarget": ["table", "public", "forum_topics"],
       "writes": [
         "s|fk|public.forum_topics.forum_topics_hiddenBy_core_users_id_fkey",
         "n|fk|public.forum_topics.forum_topics_hiddenBy_core_users_id_fkey",
@@ -656,11 +605,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_topics"
-      ],
+      "statementTarget": ["table", "public", "forum_topics"],
       "writes": [
         "s|fk|public.forum_topics.forum_topics_author_core_users_id_fkey",
         "n|fk|public.forum_topics.forum_topics_author_core_users_id_fkey",
@@ -679,11 +624,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_topics"
-      ],
+      "statementTarget": ["table", "public", "forum_topics"],
       "writes": [
         "s|fk|public.forum_topics.forum_topics_forum_core_content_containers_id_fkey",
         "n|fk|public.forum_topics.forum_topics_forum_core_content_containers_id_fkey",
@@ -2029,14 +1970,10 @@
         "table": "core_content_submissions",
         "name": "core_content_submissions_authorId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "authorId"
-        ],
+        "columns": ["authorId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -2049,14 +1986,10 @@
         "table": "core_content_submissions",
         "name": "core_content_submissions_reviewerId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "reviewerId"
-        ],
+        "columns": ["reviewerId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -2069,14 +2002,10 @@
         "table": "forum_replies",
         "name": "forum_replies_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -2089,14 +2018,10 @@
         "table": "forum_replies",
         "name": "forum_replies_author_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "author"
-        ],
+        "columns": ["author"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -2109,14 +2034,10 @@
         "table": "forum_replies",
         "name": "forum_replies_topic_forum_topics_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "topic"
-        ],
+        "columns": ["topic"],
         "schemaTo": "public",
         "tableTo": "forum_topics",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -2129,14 +2050,10 @@
         "table": "forum_replies",
         "name": "forum_replies_parent_forum_replies_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "parent"
-        ],
+        "columns": ["parent"],
         "schemaTo": "public",
         "tableTo": "forum_replies",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -2149,14 +2066,10 @@
         "table": "forum_topics",
         "name": "forum_topics_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -2169,14 +2082,10 @@
         "table": "forum_topics",
         "name": "forum_topics_author_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "author"
-        ],
+        "columns": ["author"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -2189,14 +2098,10 @@
         "table": "forum_topics",
         "name": "forum_topics_forum_core_content_containers_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "forum"
-        ],
+        "columns": ["forum"],
         "schemaTo": "public",
         "tableTo": "core_content_containers",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -2208,9 +2113,7 @@
         "schema": "public",
         "table": "core_content_submissions",
         "name": "core_content_submissions_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -2221,9 +2124,7 @@
         "schema": "public",
         "table": "forum_replies",
         "name": "forum_replies_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -2234,9 +2135,7 @@
         "schema": "public",
         "table": "forum_topics",
         "name": "forum_topics_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

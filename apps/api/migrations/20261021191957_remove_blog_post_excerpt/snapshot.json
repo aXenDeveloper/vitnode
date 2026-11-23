@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "0c989133-91e8-46c3-86d3-f9b7ac8ec7a3",
-  "prevIds": [
-    "b6bca15a-328c-4015-a556-d27dc44c76e5"
-  ],
+  "prevIds": ["b6bca15a-328c-4015-a556-d27dc44c76e5"],
   "footprints": [
     {
       "statementType": "drop_column",
@@ -20,10 +18,7 @@
         "n|col|public.blog_posts_translations.excerpt",
         "e|col|public.blog_posts_translations.excerpt"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts_translations",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts_translations", "n|sch|public"]
     }
   ],
   "deltas": [

@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "875ad620-968c-4b59-8795-345a5fbd5fb6",
-  "prevIds": [
-    "3ad3093b-71a8-4478-b2ce-1bbcaa1ff602"
-  ],
+  "prevIds": ["3ad3093b-71a8-4478-b2ce-1bbcaa1ff602"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_discussions"
-      ],
+      "statementTarget": ["table", "public", "example_discussions"],
       "writes": [
         "s|tbl|public.example_discussions",
         "n|tbl|public.example_discussions",
@@ -22,9 +16,7 @@
         "n|type|public.example_discussions",
         "n|rel|public.example_discussions_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -149,11 +141,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_discussions"
-      ],
+      "statementTarget": ["table", "public", "example_discussions"],
       "writes": [
         "s|fk|public.example_discussions.example_discussions_hiddenBy_core_users_id_fkey",
         "n|fk|public.example_discussions.example_discussions_hiddenBy_core_users_id_fkey",
@@ -172,11 +160,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_discussions"
-      ],
+      "statementTarget": ["table", "public", "example_discussions"],
       "writes": [
         "s|fk|public.example_discussions.example_discussions_author_core_users_id_fkey",
         "n|fk|public.example_discussions.example_discussions_author_core_users_id_fkey",
@@ -554,14 +538,10 @@
         "table": "example_discussions",
         "name": "example_discussions_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -574,14 +554,10 @@
         "table": "example_discussions",
         "name": "example_discussions_author_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "author"
-        ],
+        "columns": ["author"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -593,9 +569,7 @@
         "schema": "public",
         "table": "example_discussions",
         "name": "example_discussions_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

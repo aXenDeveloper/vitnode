@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "14c067b3-663a-4b57-b81c-695fc106cc77",
-  "prevIds": [
-    "7734935b-4c55-40b8-ba19-41961e485bb4"
-  ],
+  "prevIds": ["7734935b-4c55-40b8-ba19-41961e485bb4"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_file_refs"
-      ],
+      "statementTarget": ["table", "public", "core_content_file_refs"],
       "writes": [
         "s|tbl|public.core_content_file_refs",
         "n|tbl|public.core_content_file_refs",
@@ -22,27 +16,17 @@
         "n|type|public.core_content_file_refs",
         "n|rel|public.core_content_file_refs_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "coverImage"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "coverImage"],
       "writes": [
         "s|col|public.blog_posts.coverImage",
         "n|col|public.blog_posts.coverImage",
         "e|col|public.blog_posts.coverImage"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -57,28 +41,17 @@
         "n|col|public.blog_posts_translations.coverImageAlt",
         "e|col|public.blog_posts_translations.coverImageAlt"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts_translations",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts_translations", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "example_articles",
-        "animation"
-      ],
+      "statementTarget": ["column", "public", "example_articles", "animation"],
       "writes": [
         "s|col|public.example_articles.animation",
         "n|col|public.example_articles.animation",
         "e|col|public.example_articles.animation"
       ],
-      "reads": [
-        "n|tbl|public.example_articles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.example_articles", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -163,11 +136,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_file_refs"
-      ],
+      "statementTarget": ["table", "public", "core_content_file_refs"],
       "writes": [
         "s|fk|public.core_content_file_refs.core_content_file_refs_5get6SfhBPHr_fkey",
         "n|fk|public.core_content_file_refs.core_content_file_refs_5get6SfhBPHr_fkey",
@@ -186,11 +155,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_file_refs"
-      ],
+      "statementTarget": ["table", "public", "core_content_file_refs"],
       "writes": [
         "s|fk|public.core_content_file_refs.core_content_file_refs_fileId_core_files_id_fkey",
         "n|fk|public.core_content_file_refs.core_content_file_refs_fileId_core_files_id_fkey",
@@ -209,11 +174,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts"
-      ],
+      "statementTarget": ["table", "public", "blog_posts"],
       "writes": [
         "s|fk|public.blog_posts.blog_posts_coverImage_core_files_id_fkey",
         "n|fk|public.blog_posts.blog_posts_coverImage_core_files_id_fkey",
@@ -232,11 +193,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_articles"
-      ],
+      "statementTarget": ["table", "public", "example_articles"],
       "writes": [
         "s|fk|public.example_articles.example_articles_animation_core_files_id_fkey",
         "n|fk|public.example_articles.example_articles_animation_core_files_id_fkey",
@@ -486,14 +443,10 @@
         "table": "core_content_file_refs",
         "name": "core_content_file_refs_5get6SfhBPHr_fkey",
         "nameExplicit": false,
-        "columns": [
-          "revisionId"
-        ],
+        "columns": ["revisionId"],
         "schemaTo": "public",
         "tableTo": "core_content_revisions",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -506,14 +459,10 @@
         "table": "core_content_file_refs",
         "name": "core_content_file_refs_fileId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "fileId"
-        ],
+        "columns": ["fileId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -526,14 +475,10 @@
         "table": "blog_posts",
         "name": "blog_posts_coverImage_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "coverImage"
-        ],
+        "columns": ["coverImage"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -546,14 +491,10 @@
         "table": "example_articles",
         "name": "example_articles_animation_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "animation"
-        ],
+        "columns": ["animation"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -565,9 +506,7 @@
         "schema": "public",
         "table": "core_content_file_refs",
         "name": "core_content_file_refs_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

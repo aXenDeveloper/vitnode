@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "42b7098a-c42b-4c70-8673-087b8ff56ce4",
-  "prevIds": [
-    "0f660415-9144-44ed-9d96-78cd76711ebf"
-  ],
+  "prevIds": ["0f660415-9144-44ed-9d96-78cd76711ebf"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_categories_translations"
-      ],
+      "statementTarget": ["table", "public", "blog_categories_translations"],
       "writes": [
         "s|tbl|public.blog_categories_translations",
         "n|tbl|public.blog_categories_translations",
@@ -22,17 +16,11 @@
         "n|type|public.blog_categories_translations",
         "n|rel|public.blog_categories_translations_item_id_language_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts_translations"
-      ],
+      "statementTarget": ["table", "public", "blog_posts_translations"],
       "writes": [
         "s|tbl|public.blog_posts_translations",
         "n|tbl|public.blog_posts_translations",
@@ -41,75 +29,42 @@
         "n|type|public.blog_posts_translations",
         "n|rel|public.blog_posts_translations_item_id_language_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "publishedAt"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "publishedAt"],
       "writes": [
         "s|col|public.blog_posts.publishedAt",
         "n|col|public.blog_posts.publishedAt",
         "e|col|public.blog_posts.publishedAt"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "status"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "status"],
       "writes": [
         "s|col|public.blog_posts.status",
         "n|col|public.blog_posts.status",
         "e|col|public.blog_posts.status"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "version"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "version"],
       "writes": [
         "s|col|public.blog_posts.version",
         "n|col|public.blog_posts.version",
         "e|col|public.blog_posts.version"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_categories",
-        "updatedAt"
-      ],
-      "writes": [
-        "s|colprop|public.blog_categories.updatedAt.default"
-      ],
+      "statementTarget": ["column", "public", "blog_categories", "updatedAt"],
+      "writes": ["s|colprop|public.blog_categories.updatedAt.default"],
       "reads": [
         "n|tbl|public.blog_categories",
         "n|sch|public",
@@ -119,15 +74,8 @@
     },
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "updatedAt"
-      ],
-      "writes": [
-        "s|colprop|public.blog_posts.updatedAt.default"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "updatedAt"],
+      "writes": ["s|colprop|public.blog_posts.updatedAt.default"],
       "reads": [
         "n|tbl|public.blog_posts",
         "n|sch|public",
@@ -361,11 +309,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_categories_translations"
-      ],
+      "statementTarget": ["table", "public", "blog_categories_translations"],
       "writes": [
         "s|fk|public.blog_categories_translations.blog_categories_translations_itemId_blog_categories_id_fk",
         "n|fk|public.blog_categories_translations.blog_categories_translations_itemId_blog_categories_id_fk",
@@ -384,11 +328,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_categories_translations"
-      ],
+      "statementTarget": ["table", "public", "blog_categories_translations"],
       "writes": [
         "s|fk|public.blog_categories_translations.blog_categories_translations_languageId_core_languages_id_fk",
         "n|fk|public.blog_categories_translations.blog_categories_translations_languageId_core_languages_id_fk",
@@ -407,11 +347,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts_translations"
-      ],
+      "statementTarget": ["table", "public", "blog_posts_translations"],
       "writes": [
         "s|fk|public.blog_posts_translations.blog_posts_translations_itemId_blog_posts_id_fk",
         "n|fk|public.blog_posts_translations.blog_posts_translations_itemId_blog_posts_id_fk",
@@ -430,11 +366,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts_translations"
-      ],
+      "statementTarget": ["table", "public", "blog_posts_translations"],
       "writes": [
         "s|fk|public.blog_posts_translations.blog_posts_translations_languageId_core_languages_id_fk",
         "n|fk|public.blog_posts_translations.blog_posts_translations_languageId_core_languages_id_fk",
@@ -453,11 +385,7 @@
     },
     {
       "statementType": "recreate_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts"
-      ],
+      "statementTarget": ["table", "public", "blog_posts"],
       "writes": [
         "s|fk|public.blog_posts.blog_posts_categoryId_blog_categories_id_fk",
         "n|fk|public.blog_posts.blog_posts_categoryId_blog_categories_id_fk",
@@ -1098,14 +1026,10 @@
         "table": "blog_categories_translations",
         "name": "blog_categories_translations_itemId_blog_categories_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "blog_categories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1118,14 +1042,10 @@
         "table": "blog_categories_translations",
         "name": "blog_categories_translations_languageId_core_languages_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "languageId"
-        ],
+        "columns": ["languageId"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -1138,14 +1058,10 @@
         "table": "blog_posts_translations",
         "name": "blog_posts_translations_itemId_blog_posts_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "blog_posts",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1158,14 +1074,10 @@
         "table": "blog_posts_translations",
         "name": "blog_posts_translations_languageId_core_languages_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "languageId"
-        ],
+        "columns": ["languageId"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -1177,10 +1089,7 @@
         "schema": "public",
         "table": "blog_categories_translations",
         "name": "blog_categories_translations_item_id_language_id_pk",
-        "columns": [
-          "itemId",
-          "languageId"
-        ],
+        "columns": ["itemId", "languageId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -1191,10 +1100,7 @@
         "schema": "public",
         "table": "blog_posts_translations",
         "name": "blog_posts_translations_item_id_language_id_pk",
-        "columns": [
-          "itemId",
-          "languageId"
-        ],
+        "columns": ["itemId", "languageId"],
         "nameExplicit": true,
         "entityType": "pks"
       }

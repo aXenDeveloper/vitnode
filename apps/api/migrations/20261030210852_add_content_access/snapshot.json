@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "2d32a353-3dc9-4b47-8d67-0bca5da5a89e",
-  "prevIds": [
-    "ac6bc2f3-4afc-4768-be17-a5b36fd6180e"
-  ],
+  "prevIds": ["ac6bc2f3-4afc-4768-be17-a5b36fd6180e"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_access_rule_roles"
-      ],
+      "statementTarget": ["table", "public", "core_content_access_rule_roles"],
       "writes": [
         "s|tbl|public.core_content_access_rule_roles",
         "n|tbl|public.core_content_access_rule_roles",
@@ -22,17 +16,11 @@
         "n|type|public.core_content_access_rule_roles",
         "n|rel|public.core_content_access_rule_roles_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_access_rules"
-      ],
+      "statementTarget": ["table", "public", "core_content_access_rules"],
       "writes": [
         "s|tbl|public.core_content_access_rules",
         "n|tbl|public.core_content_access_rules",
@@ -41,27 +29,17 @@
         "n|type|public.core_content_access_rules",
         "n|rel|public.core_content_access_rules_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_files",
-        "visibility"
-      ],
+      "statementTarget": ["column", "public", "core_files", "visibility"],
       "writes": [
         "s|col|public.core_files.visibility",
         "n|col|public.core_files.visibility",
         "e|col|public.core_files.visibility"
       ],
-      "reads": [
-        "n|tbl|public.core_files",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_files", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -76,10 +54,7 @@
         "n|col|public.core_search_index.accessScopes",
         "e|col|public.core_search_index.accessScopes"
       ],
-      "reads": [
-        "n|tbl|public.core_search_index",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_search_index", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -145,11 +120,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_access_rule_roles"
-      ],
+      "statementTarget": ["table", "public", "core_content_access_rule_roles"],
       "writes": [
         "s|fk|public.core_content_access_rule_roles.core_content_access_rule_roles_AM3iX4qZcV8y_fkey",
         "n|fk|public.core_content_access_rule_roles.core_content_access_rule_roles_AM3iX4qZcV8y_fkey",
@@ -168,11 +139,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_access_rule_roles"
-      ],
+      "statementTarget": ["table", "public", "core_content_access_rule_roles"],
       "writes": [
         "s|fk|public.core_content_access_rule_roles.core_content_access_rule_roles_roleId_core_roles_id_fkey",
         "n|fk|public.core_content_access_rule_roles.core_content_access_rule_roles_roleId_core_roles_id_fkey",
@@ -478,14 +445,10 @@
         "table": "core_content_access_rule_roles",
         "name": "core_content_access_rule_roles_AM3iX4qZcV8y_fkey",
         "nameExplicit": false,
-        "columns": [
-          "ruleId"
-        ],
+        "columns": ["ruleId"],
         "schemaTo": "public",
         "tableTo": "core_content_access_rules",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -498,14 +461,10 @@
         "table": "core_content_access_rule_roles",
         "name": "core_content_access_rule_roles_roleId_core_roles_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "roleId"
-        ],
+        "columns": ["roleId"],
         "schemaTo": "public",
         "tableTo": "core_roles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -517,10 +476,7 @@
         "schema": "public",
         "table": "core_content_access_rule_roles",
         "name": "core_content_access_rule_roles_pkey",
-        "columns": [
-          "ruleId",
-          "roleId"
-        ],
+        "columns": ["ruleId", "roleId"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -531,9 +487,7 @@
         "schema": "public",
         "table": "core_content_access_rules",
         "name": "core_content_access_rules_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

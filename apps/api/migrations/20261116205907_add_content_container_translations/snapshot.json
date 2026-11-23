@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "5941daf3-1607-4ffb-9ffa-1efff1159e1d",
-  "prevIds": [
-    "20d31aad-bc7f-4e35-b1f6-059bd8899c2b"
-  ],
+  "prevIds": ["20d31aad-bc7f-4e35-b1f6-059bd8899c2b"],
   "footprints": [
     {
       "statementType": "add_column",
@@ -20,10 +18,7 @@
         "n|col|public.core_content_containers.translations",
         "e|col|public.core_content_containers.translations"
       ],
-      "reads": [
-        "n|tbl|public.core_content_containers",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_content_containers", "n|sch|public"]
     }
   ],
   "deltas": [

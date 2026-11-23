@@ -3,36 +3,21 @@
   "version": "9",
   "dialect": "postgres",
   "id": "0663358e-88f9-4f61-9a6d-14443d4c0d92",
-  "prevIds": [
-    "00fdb642-637a-48f3-ac4d-ca662b0547bf"
-  ],
+  "prevIds": ["00fdb642-637a-48f3-ac4d-ca662b0547bf"],
   "footprints": [
     {
       "statementType": "drop_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_logs",
-        "test123"
-      ],
+      "statementTarget": ["column", "public", "core_logs", "test123"],
       "writes": [
         "s|col|public.core_logs.test123",
         "n|col|public.core_logs.test123",
         "e|col|public.core_logs.test123"
       ],
-      "reads": [
-        "n|tbl|public.core_logs",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_logs", "n|sch|public"]
     },
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_logs",
-        "userId"
-      ],
+      "statementTarget": ["column", "public", "core_logs", "userId"],
       "writes": [
         "s|colprop|public.core_logs.userId.type",
         "s|colprop|public.core_logs.userId.default"

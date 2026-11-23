@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "48b24402-18d7-4bf2-88e4-f0c651f02a1d",
-  "prevIds": [
-    "ad292f66-b888-469c-84fc-5b2fb5dd0dcd"
-  ],
+  "prevIds": ["ad292f66-b888-469c-84fc-5b2fb5dd0dcd"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_localized_articles"
-      ],
+      "statementTarget": ["table", "public", "example_localized_articles"],
       "writes": [
         "s|tbl|public.example_localized_articles",
         "n|tbl|public.example_localized_articles",
@@ -22,9 +16,7 @@
         "n|type|public.example_localized_articles",
         "n|rel|public.example_localized_articles_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
@@ -41,9 +33,7 @@
         "n|type|public.example_localized_articles_translations",
         "n|rel|public.example_localized_articles_translations_item_id_language_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -494,14 +484,10 @@
         "table": "example_localized_articles_translations",
         "name": "example_localized_articles_translations_itemId_example_localize",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_localized_articles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -514,14 +500,10 @@
         "table": "example_localized_articles_translations",
         "name": "example_localized_articles_translations_languageId_core_languag",
         "nameExplicit": false,
-        "columns": [
-          "languageId"
-        ],
+        "columns": ["languageId"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -533,9 +515,7 @@
         "schema": "public",
         "table": "example_localized_articles",
         "name": "example_localized_articles_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -546,10 +526,7 @@
         "schema": "public",
         "table": "example_localized_articles_translations",
         "name": "example_localized_articles_translations_item_id_language_id_pk",
-        "columns": [
-          "itemId",
-          "languageId"
-        ],
+        "columns": ["itemId", "languageId"],
         "nameExplicit": true,
         "entityType": "pks"
       }

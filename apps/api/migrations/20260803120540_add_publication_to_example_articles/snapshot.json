@@ -3,18 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "32678677-ed07-41e5-a08e-d7a6887a0395",
-  "prevIds": [
-    "5bd0b1de-db52-41b3-86a7-4f4a9a7ca0b7"
-  ],
+  "prevIds": ["5bd0b1de-db52-41b3-86a7-4f4a9a7ca0b7"],
   "footprints": [
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "example_articles",
-        "status"
-      ],
+      "statementTarget": ["column", "public", "example_articles", "status"],
       "writes": [
         "s|colprop|public.example_articles.status.type",
         "s|colprop|public.example_articles.status.default"

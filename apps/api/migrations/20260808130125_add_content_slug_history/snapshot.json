@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "b7094309-91e5-43f2-b9f9-d5666d73f0f4",
-  "prevIds": [
-    "c3a84fce-ca99-43a8-8b83-a8be82faeed9"
-  ],
+  "prevIds": ["c3a84fce-ca99-43a8-8b83-a8be82faeed9"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_slug_history"
-      ],
+      "statementTarget": ["table", "public", "core_content_slug_history"],
       "writes": [
         "s|tbl|public.core_content_slug_history",
         "n|tbl|public.core_content_slug_history",
@@ -22,9 +16,7 @@
         "n|type|public.core_content_slug_history",
         "n|rel|public.core_content_slug_history_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -403,9 +395,7 @@
         "schema": "public",
         "table": "core_content_slug_history",
         "name": "core_content_slug_history_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

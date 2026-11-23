@@ -3,27 +3,17 @@
   "version": "9",
   "dialect": "postgres",
   "id": "56fff4d4-495f-4005-a13f-07fcc543ac42",
-  "prevIds": [
-    "729e82c0-c384-4279-98f1-94bfd4eb39a2"
-  ],
+  "prevIds": ["729e82c0-c384-4279-98f1-94bfd4eb39a2"],
   "footprints": [
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_navigation",
-        "location"
-      ],
+      "statementTarget": ["column", "public", "core_navigation", "location"],
       "writes": [
         "s|col|public.core_navigation.location",
         "n|col|public.core_navigation.location",
         "e|col|public.core_navigation.location"
       ],
-      "reads": [
-        "n|tbl|public.core_navigation",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_navigation", "n|sch|public"]
     },
     {
       "statementType": "create_index",

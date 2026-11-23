@@ -3,35 +3,21 @@
   "version": "9",
   "dialect": "postgres",
   "id": "56d1a840-cd2e-400f-aa41-e847a6799dde",
-  "prevIds": [
-    "8d673943-2bd8-41c5-9633-0f1e9d85fa0a"
-  ],
+  "prevIds": ["8d673943-2bd8-41c5-9633-0f1e9d85fa0a"],
   "footprints": [
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "authorId"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "authorId"],
       "writes": [
         "s|col|public.blog_posts.authorId",
         "n|col|public.blog_posts.authorId",
         "e|col|public.blog_posts.authorId"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts"
-      ],
+      "statementTarget": ["table", "public", "blog_posts"],
       "writes": [
         "s|fk|public.blog_posts.blog_posts_authorId_core_users_id_fk",
         "n|fk|public.blog_posts.blog_posts_authorId_core_users_id_fk",
@@ -73,14 +59,10 @@
         "table": "blog_posts",
         "name": "blog_posts_authorId_core_users_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "authorId"
-        ],
+        "columns": ["authorId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"

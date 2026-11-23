@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "20d31aad-bc7f-4e35-b1f6-059bd8899c2b",
-  "prevIds": [
-    "d570f1d0-d1f8-46f1-8f78-6723845cfb49"
-  ],
+  "prevIds": ["d570f1d0-d1f8-46f1-8f78-6723845cfb49"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_corrections"
-      ],
+      "statementTarget": ["table", "public", "newsroom_corrections"],
       "writes": [
         "s|tbl|public.newsroom_corrections",
         "n|tbl|public.newsroom_corrections",
@@ -22,9 +16,7 @@
         "n|type|public.newsroom_corrections",
         "n|rel|public.newsroom_corrections_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -48,11 +40,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_corrections"
-      ],
+      "statementTarget": ["table", "public", "newsroom_corrections"],
       "writes": [
         "s|fk|public.newsroom_corrections.newsroom_corrections_articleId_newsroom_articles_id_fkey",
         "n|fk|public.newsroom_corrections.newsroom_corrections_articleId_newsroom_articles_id_fkey",
@@ -71,11 +59,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_corrections"
-      ],
+      "statementTarget": ["table", "public", "newsroom_corrections"],
       "writes": [
         "s|fk|public.newsroom_corrections.newsroom_corrections_createdById_core_users_id_fkey",
         "n|fk|public.newsroom_corrections.newsroom_corrections_createdById_core_users_id_fkey",
@@ -214,14 +198,10 @@
         "table": "newsroom_corrections",
         "name": "newsroom_corrections_articleId_newsroom_articles_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "articleId"
-        ],
+        "columns": ["articleId"],
         "schemaTo": "public",
         "tableTo": "newsroom_articles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -234,14 +214,10 @@
         "table": "newsroom_corrections",
         "name": "newsroom_corrections_createdById_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "createdById"
-        ],
+        "columns": ["createdById"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -253,9 +229,7 @@
         "schema": "public",
         "table": "newsroom_corrections",
         "name": "newsroom_corrections_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

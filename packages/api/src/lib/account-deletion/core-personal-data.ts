@@ -20,6 +20,7 @@ import {
   core_moderation_sanctions,
   core_moderation_warnings,
 } from "@/database/warnings";
+import { eraseChatData, exportChatData } from "@/lib/chat/personal-data";
 import { manifest } from "@/manifest";
 
 import { definePersonalData } from "../personal-data";
@@ -217,6 +218,7 @@ export const corePersonalData = definePersonalData({
         ...row,
         createdAt: iso(row.createdAt),
       })),
+      chat: await exportChatData(c, userId),
       accountDeletionRequests: deletions.map(row => ({
         ...row,
         scheduledAt: iso(row.scheduledAt),
@@ -228,6 +230,7 @@ export const corePersonalData = definePersonalData({
 
   erase: async ({ tx, userId }) => {
     await tx.delete(core_logs).where(eq(core_logs.userId, userId));
+    await eraseChatData(tx, userId);
 
     await tx
       .update(core_audit_logs)

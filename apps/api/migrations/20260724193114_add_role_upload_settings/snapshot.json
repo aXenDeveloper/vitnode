@@ -3,45 +3,27 @@
   "version": "9",
   "dialect": "postgres",
   "id": "ed8aa4e9-a5da-481d-930e-5a8e3d994ec4",
-  "prevIds": [
-    "82af3376-1642-4472-9f72-22225d7570e8"
-  ],
+  "prevIds": ["82af3376-1642-4472-9f72-22225d7570e8"],
   "footprints": [
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_roles",
-        "allowUploadFiles"
-      ],
+      "statementTarget": ["column", "public", "core_roles", "allowUploadFiles"],
       "writes": [
         "s|col|public.core_roles.allowUploadFiles",
         "n|col|public.core_roles.allowUploadFiles",
         "e|col|public.core_roles.allowUploadFiles"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_roles",
-        "totalMaxStorage"
-      ],
+      "statementTarget": ["column", "public", "core_roles", "totalMaxStorage"],
       "writes": [
         "s|col|public.core_roles.totalMaxStorage",
         "n|col|public.core_roles.totalMaxStorage",
         "e|col|public.core_roles.totalMaxStorage"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -56,10 +38,7 @@
         "n|col|public.core_roles.maxStorageForSubmit",
         "e|col|public.core_roles.maxStorageForSubmit"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     }
   ],
   "deltas": [

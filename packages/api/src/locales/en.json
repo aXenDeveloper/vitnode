@@ -69,7 +69,8 @@
         "content": "Content",
         "moderation": "Moderation",
         "social": "Social",
-        "system": "System"
+        "system": "System",
+        "chat": "Chat"
       },
       "types": {
         "admin_message": {
@@ -106,6 +107,18 @@
           "description": "When someone reacts to something you wrote.",
           "title": "{count, plural, offset:1 =1 {{name} reacted to your post} =2 {{name} and 1 other person reacted to your post} other {{name} and # others reacted to your post}}",
           "body": "{title}"
+        },
+        "chat_message": {
+          "label": "Chat messages",
+          "description": "New messages in your chats that you haven't read yet.",
+          "title": "{count, plural, =1 {New message from {name}} other {# new messages from {name}}}",
+          "title_group": "{count, plural, =1 {New message in {title}} other {# new messages in {title}}}"
+        },
+        "chat_request": {
+          "label": "Chat requests",
+          "description": "When someone you don't chat with yet sends you a message or adds you to a group.",
+          "title": "{name} wants to chat with you",
+          "title_group": "{name} invited you to {title}"
         }
       },
       "email": {

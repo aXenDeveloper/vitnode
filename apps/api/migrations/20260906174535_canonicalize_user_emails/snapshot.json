@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "6f431da8-4f7b-4bc2-bbf8-619d66d0ffea",
-  "prevIds": [
-    "b5e69006-8218-4b5c-b1ce-2d4060b75a34"
-  ],
+  "prevIds": ["b5e69006-8218-4b5c-b1ce-2d4060b75a34"],
   "footprints": [],
   "deltas": []
 }

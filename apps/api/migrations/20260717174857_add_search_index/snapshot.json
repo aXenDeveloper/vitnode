@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "c417a56d-cd4a-4dd4-b8f5-4df9e85ea783",
-  "prevIds": [
-    "15c0ae48-a0fe-47f7-81ac-94607e8e8013"
-  ],
+  "prevIds": ["15c0ae48-a0fe-47f7-81ac-94607e8e8013"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_search_index"
-      ],
+      "statementTarget": ["table", "public", "core_search_index"],
       "writes": [
         "s|tbl|public.core_search_index",
         "n|tbl|public.core_search_index",
@@ -23,9 +17,7 @@
         "n|rel|public.core_search_index_pkey",
         "n|rel|public.core_search_index_item_unique"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -109,11 +101,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_search_index"
-      ],
+      "statementTarget": ["table", "public", "core_search_index"],
       "writes": [
         "s|fk|public.core_search_index.core_search_index_authorId_core_users_id_fk",
         "n|fk|public.core_search_index.core_search_index_authorId_core_users_id_fk",
@@ -484,14 +472,10 @@
         "table": "core_search_index",
         "name": "core_search_index_authorId_core_users_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "authorId"
-        ],
+        "columns": ["authorId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -503,9 +487,7 @@
         "schema": "public",
         "table": "core_search_index",
         "name": "core_search_index_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -517,10 +499,7 @@
         "table": "core_search_index",
         "name": "core_search_index_item_unique",
         "nameExplicit": true,
-        "columns": [
-          "itemType",
-          "itemId"
-        ],
+        "columns": ["itemType", "itemId"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }

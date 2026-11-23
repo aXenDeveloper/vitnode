@@ -37,6 +37,11 @@ export const core_roles = camelCase.table.withRLS(
     maxReactionsPerItem: t.integer().default(1),
     // Reactions per day over every reaction; null = unlimited.
     reactionsPerDay: t.integer(),
+    allowChat: t.boolean().notNull().default(true),
+    // New chats (requests and groups) a member starts per day; null = unlimited.
+    chatRequestsPerDay: t.integer().default(20),
+    // People a member may add to a group at once; null = up to the group cap.
+    chatMaxInvites: t.integer().default(10),
   }),
   t => [index("core_roles_updated_at_id_idx").on(t.updatedAt, t.id)],
 );

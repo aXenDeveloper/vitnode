@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "4821b844-f167-4596-9539-fc95a47b0e4d",
-  "prevIds": [
-    "2cc93fc1-e03a-4dd4-876e-89f6875a47f8"
-  ],
+  "prevIds": ["2cc93fc1-e03a-4dd4-876e-89f6875a47f8"],
   "footprints": [
     {
       "statementType": "alter_column",

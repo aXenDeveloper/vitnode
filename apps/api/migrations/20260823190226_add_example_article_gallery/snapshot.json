@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "b5e69006-8218-4b5c-b1ce-2d4060b75a34",
-  "prevIds": [
-    "14c067b3-663a-4b57-b81c-695fc106cc77"
-  ],
+  "prevIds": ["14c067b3-663a-4b57-b81c-695fc106cc77"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_articles_gallery"
-      ],
+      "statementTarget": ["table", "public", "example_articles_gallery"],
       "writes": [
         "s|tbl|public.example_articles_gallery",
         "n|tbl|public.example_articles_gallery",
@@ -22,9 +16,7 @@
         "n|type|public.example_articles_gallery",
         "n|rel|public.example_articles_gallery_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -69,11 +61,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_articles_gallery"
-      ],
+      "statementTarget": ["table", "public", "example_articles_gallery"],
       "writes": [
         "s|fk|public.example_articles_gallery.example_articles_gallery_itemId_example_articles_id_fkey",
         "n|fk|public.example_articles_gallery.example_articles_gallery_itemId_example_articles_id_fkey",
@@ -92,11 +80,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_articles_gallery"
-      ],
+      "statementTarget": ["table", "public", "example_articles_gallery"],
       "writes": [
         "s|fk|public.example_articles_gallery.example_articles_gallery_relatedItemId_core_files_id_fkey",
         "n|fk|public.example_articles_gallery.example_articles_gallery_relatedItemId_core_files_id_fkey",
@@ -250,14 +234,10 @@
         "table": "example_articles_gallery",
         "name": "example_articles_gallery_itemId_example_articles_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "example_articles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -270,14 +250,10 @@
         "table": "example_articles_gallery",
         "name": "example_articles_gallery_relatedItemId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -289,10 +265,7 @@
         "schema": "public",
         "table": "example_articles_gallery",
         "name": "example_articles_gallery_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }

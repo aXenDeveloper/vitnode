@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "4b66f492-fb3f-4ba0-a722-b4787d0ef9b8",
-  "prevIds": [
-    "0c989133-91e8-46c3-86d3-f9b7ac8ec7a3"
-  ],
+  "prevIds": ["0c989133-91e8-46c3-86d3-f9b7ac8ec7a3"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_articles"
-      ],
+      "statementTarget": ["table", "public", "newsroom_articles"],
       "writes": [
         "s|tbl|public.newsroom_articles",
         "n|tbl|public.newsroom_articles",
@@ -22,17 +16,11 @@
         "n|type|public.newsroom_articles",
         "n|rel|public.newsroom_articles_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_bulletins"
-      ],
+      "statementTarget": ["table", "public", "newsroom_bulletins"],
       "writes": [
         "s|tbl|public.newsroom_bulletins",
         "n|tbl|public.newsroom_bulletins",
@@ -41,17 +29,11 @@
         "n|type|public.newsroom_bulletins",
         "n|rel|public.newsroom_bulletins_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_bulletins_translations"
-      ],
+      "statementTarget": ["table", "public", "newsroom_bulletins_translations"],
       "writes": [
         "s|tbl|public.newsroom_bulletins_translations",
         "n|tbl|public.newsroom_bulletins_translations",
@@ -60,17 +42,11 @@
         "n|type|public.newsroom_bulletins_translations",
         "n|rel|public.newsroom_bulletins_translations_item_id_language_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_categories"
-      ],
+      "statementTarget": ["table", "public", "newsroom_categories"],
       "writes": [
         "s|tbl|public.newsroom_categories",
         "n|tbl|public.newsroom_categories",
@@ -79,17 +55,11 @@
         "n|type|public.newsroom_categories",
         "n|rel|public.newsroom_categories_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_comments"
-      ],
+      "statementTarget": ["table", "public", "newsroom_comments"],
       "writes": [
         "s|tbl|public.newsroom_comments",
         "n|tbl|public.newsroom_comments",
@@ -98,17 +68,11 @@
         "n|type|public.newsroom_comments",
         "n|rel|public.newsroom_comments_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events"],
       "writes": [
         "s|tbl|public.newsroom_events",
         "n|tbl|public.newsroom_events",
@@ -117,17 +81,11 @@
         "n|type|public.newsroom_events",
         "n|rel|public.newsroom_events_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_gallery"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_gallery"],
       "writes": [
         "s|tbl|public.newsroom_events_gallery",
         "n|tbl|public.newsroom_events_gallery",
@@ -136,17 +94,11 @@
         "n|type|public.newsroom_events_gallery",
         "n|rel|public.newsroom_events_gallery_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_related_events"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_related_events"],
       "writes": [
         "s|tbl|public.newsroom_events_related_events",
         "n|tbl|public.newsroom_events_related_events",
@@ -155,17 +107,11 @@
         "n|type|public.newsroom_events_related_events",
         "n|rel|public.newsroom_events_related_events_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_sessions"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_sessions"],
       "writes": [
         "s|tbl|public.newsroom_events_sessions",
         "n|tbl|public.newsroom_events_sessions",
@@ -174,17 +120,11 @@
         "n|type|public.newsroom_events_sessions",
         "n|rel|public.newsroom_events_sessions_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_tags"],
       "writes": [
         "s|tbl|public.newsroom_events_tags",
         "n|tbl|public.newsroom_events_tags",
@@ -193,17 +133,11 @@
         "n|type|public.newsroom_events_tags",
         "n|rel|public.newsroom_events_tags_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_translations"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_translations"],
       "writes": [
         "s|tbl|public.newsroom_events_translations",
         "n|tbl|public.newsroom_events_translations",
@@ -212,17 +146,11 @@
         "n|type|public.newsroom_events_translations",
         "n|rel|public.newsroom_events_translations_item_id_language_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_explainers"
-      ],
+      "statementTarget": ["table", "public", "newsroom_explainers"],
       "writes": [
         "s|tbl|public.newsroom_explainers",
         "n|tbl|public.newsroom_explainers",
@@ -231,17 +159,11 @@
         "n|type|public.newsroom_explainers",
         "n|rel|public.newsroom_explainers_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_explainers_categories"
-      ],
+      "statementTarget": ["table", "public", "newsroom_explainers_categories"],
       "writes": [
         "s|tbl|public.newsroom_explainers_categories",
         "n|tbl|public.newsroom_explainers_categories",
@@ -250,17 +172,11 @@
         "n|type|public.newsroom_explainers_categories",
         "n|rel|public.newsroom_explainers_categories_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_explainers_faq"
-      ],
+      "statementTarget": ["table", "public", "newsroom_explainers_faq"],
       "writes": [
         "s|tbl|public.newsroom_explainers_faq",
         "n|tbl|public.newsroom_explainers_faq",
@@ -269,9 +185,7 @@
         "n|type|public.newsroom_explainers_faq",
         "n|rel|public.newsroom_explainers_faq_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
@@ -288,17 +202,11 @@
         "n|type|public.newsroom_explainers_related_explainers",
         "n|rel|public.newsroom_explainers_related_explainers_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_explainers_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_explainers_tags"],
       "writes": [
         "s|tbl|public.newsroom_explainers_tags",
         "n|tbl|public.newsroom_explainers_tags",
@@ -307,9 +215,7 @@
         "n|type|public.newsroom_explainers_tags",
         "n|rel|public.newsroom_explainers_tags_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
@@ -326,17 +232,11 @@
         "n|type|public.newsroom_explainers_translations",
         "n|rel|public.newsroom_explainers_translations_item_id_language_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_letters"
-      ],
+      "statementTarget": ["table", "public", "newsroom_letters"],
       "writes": [
         "s|tbl|public.newsroom_letters",
         "n|tbl|public.newsroom_letters",
@@ -345,17 +245,11 @@
         "n|type|public.newsroom_letters",
         "n|rel|public.newsroom_letters_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_pages"
-      ],
+      "statementTarget": ["table", "public", "newsroom_pages"],
       "writes": [
         "s|tbl|public.newsroom_pages",
         "n|tbl|public.newsroom_pages",
@@ -364,17 +258,11 @@
         "n|type|public.newsroom_pages",
         "n|rel|public.newsroom_pages_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_stories"
-      ],
+      "statementTarget": ["table", "public", "newsroom_stories"],
       "writes": [
         "s|tbl|public.newsroom_stories",
         "n|tbl|public.newsroom_stories",
@@ -383,17 +271,11 @@
         "n|type|public.newsroom_stories",
         "n|rel|public.newsroom_stories_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_stories_gallery"
-      ],
+      "statementTarget": ["table", "public", "newsroom_stories_gallery"],
       "writes": [
         "s|tbl|public.newsroom_stories_gallery",
         "n|tbl|public.newsroom_stories_gallery",
@@ -402,17 +284,11 @@
         "n|type|public.newsroom_stories_gallery",
         "n|rel|public.newsroom_stories_gallery_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_tags"],
       "writes": [
         "s|tbl|public.newsroom_tags",
         "n|tbl|public.newsroom_tags",
@@ -421,17 +297,11 @@
         "n|type|public.newsroom_tags",
         "n|rel|public.newsroom_tags_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_tags_related_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_tags_related_tags"],
       "writes": [
         "s|tbl|public.newsroom_tags_related_tags",
         "n|tbl|public.newsroom_tags_related_tags",
@@ -440,17 +310,11 @@
         "n|type|public.newsroom_tags_related_tags",
         "n|rel|public.newsroom_tags_related_tags_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_tags_translations"
-      ],
+      "statementTarget": ["table", "public", "newsroom_tags_translations"],
       "writes": [
         "s|tbl|public.newsroom_tags_translations",
         "n|tbl|public.newsroom_tags_translations",
@@ -459,17 +323,11 @@
         "n|type|public.newsroom_tags_translations",
         "n|rel|public.newsroom_tags_translations_item_id_language_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_articles"
-      ],
+      "statementTarget": ["table", "public", "example_articles"],
       "writes": [
         "s|fk|public.example_articles.example_articles_category_example_categories_id_fk",
         "n|fk|public.example_articles.example_articles_category_example_categories_id_fk",
@@ -541,11 +399,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles_faq"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles_faq"],
       "writes": [
         "s|fk|public.example_advanced_articles_faq.example_advanced_articles_faq_itemId_example_advanced_articles_",
         "n|fk|public.example_advanced_articles_faq.example_advanced_articles_faq_itemId_example_advanced_articles_",
@@ -617,11 +471,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_articles_gallery"
-      ],
+      "statementTarget": ["table", "public", "example_articles_gallery"],
       "writes": [
         "s|fk|public.example_articles_gallery.example_articles_gallery_itemId_example_articles_id_fkey",
         "n|fk|public.example_articles_gallery.example_articles_gallery_itemId_example_articles_id_fkey",
@@ -636,11 +486,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles_tags"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles_tags"],
       "writes": [
         "s|fk|public.example_advanced_articles_tags.example_advanced_articles_tags_ATchHLRtvoCM_fkey",
         "n|fk|public.example_advanced_articles_tags.example_advanced_articles_tags_ATchHLRtvoCM_fkey",
@@ -655,11 +501,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles_tags"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles_tags"],
       "writes": [
         "s|fk|public.example_advanced_articles_tags.example_advanced_articles_tags_dEsWdkDmu7nW_fkey",
         "n|fk|public.example_advanced_articles_tags.example_advanced_articles_tags_dEsWdkDmu7nW_fkey",
@@ -674,11 +516,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events"
-      ],
+      "statementTarget": ["table", "public", "example_events"],
       "writes": [
         "s|fk|public.example_events.example_events_primaryTag_example_tags_id_fkey",
         "n|fk|public.example_events.example_events_primaryTag_example_tags_id_fkey",
@@ -693,11 +531,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events"
-      ],
+      "statementTarget": ["table", "public", "example_events"],
       "writes": [
         "s|fk|public.example_events.example_events_category_example_categories_id_fkey",
         "n|fk|public.example_events.example_events_category_example_categories_id_fkey",
@@ -712,11 +546,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_gallery"
-      ],
+      "statementTarget": ["table", "public", "example_events_gallery"],
       "writes": [
         "s|fk|public.example_events_gallery.example_events_gallery_itemId_example_events_id_fkey",
         "n|fk|public.example_events_gallery.example_events_gallery_itemId_example_events_id_fkey",
@@ -731,11 +561,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_related_events"
-      ],
+      "statementTarget": ["table", "public", "example_events_related_events"],
       "writes": [
         "s|fk|public.example_events_related_events.example_events_related_events_itemId_example_events_id_fkey",
         "n|fk|public.example_events_related_events.example_events_related_events_itemId_example_events_id_fkey",
@@ -750,11 +576,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_related_events"
-      ],
+      "statementTarget": ["table", "public", "example_events_related_events"],
       "writes": [
         "s|fk|public.example_events_related_events.example_events_related_events_oaRvqnKyAS7L_fkey",
         "n|fk|public.example_events_related_events.example_events_related_events_oaRvqnKyAS7L_fkey",
@@ -769,11 +591,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_sessions"
-      ],
+      "statementTarget": ["table", "public", "example_events_sessions"],
       "writes": [
         "s|fk|public.example_events_sessions.example_events_sessions_itemId_example_events_id_fkey",
         "n|fk|public.example_events_sessions.example_events_sessions_itemId_example_events_id_fkey",
@@ -788,11 +606,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_tags"
-      ],
+      "statementTarget": ["table", "public", "example_events_tags"],
       "writes": [
         "s|fk|public.example_events_tags.example_events_tags_itemId_example_events_id_fkey",
         "n|fk|public.example_events_tags.example_events_tags_itemId_example_events_id_fkey",
@@ -807,11 +621,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_tags"
-      ],
+      "statementTarget": ["table", "public", "example_events_tags"],
       "writes": [
         "s|fk|public.example_events_tags.example_events_tags_relatedItemId_example_tags_id_fkey",
         "n|fk|public.example_events_tags.example_events_tags_relatedItemId_example_tags_id_fkey",
@@ -826,11 +636,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_translations"
-      ],
+      "statementTarget": ["table", "public", "example_events_translations"],
       "writes": [
         "s|fk|public.example_events_translations.example_events_translations_itemId_example_events_id_fkey",
         "n|fk|public.example_events_translations.example_events_translations_itemId_example_events_id_fkey",
@@ -845,11 +651,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags"],
       "writes": [
         "s|fk|public.example_tags.example_tags_category_example_categories_id_fkey",
         "n|fk|public.example_tags.example_tags_category_example_categories_id_fkey",
@@ -864,11 +666,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_related_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags_related_tags"],
       "writes": [
         "s|fk|public.example_tags_related_tags.example_tags_related_tags_itemId_example_tags_id_fkey",
         "n|fk|public.example_tags_related_tags.example_tags_related_tags_itemId_example_tags_id_fkey",
@@ -883,11 +681,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_related_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags_related_tags"],
       "writes": [
         "s|fk|public.example_tags_related_tags.example_tags_related_tags_relatedItemId_example_tags_id_fkey",
         "n|fk|public.example_tags_related_tags.example_tags_related_tags_relatedItemId_example_tags_id_fkey",
@@ -902,11 +696,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_translations"
-      ],
+      "statementTarget": ["table", "public", "example_tags_translations"],
       "writes": [
         "s|fk|public.example_tags_translations.example_tags_translations_itemId_example_tags_id_fkey",
         "n|fk|public.example_tags_translations.example_tags_translations_itemId_example_tags_id_fkey",
@@ -921,11 +711,7 @@
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_articles"
-      ],
+      "statementTarget": ["table", "public", "example_articles"],
       "writes": [
         "s|tbl|public.example_articles",
         "n|tbl|public.example_articles",
@@ -933,17 +719,11 @@
         "n|rel|public.example_articles",
         "n|type|public.example_articles"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_categories"
-      ],
+      "statementTarget": ["table", "public", "example_categories"],
       "writes": [
         "s|tbl|public.example_categories",
         "n|tbl|public.example_categories",
@@ -951,17 +731,11 @@
         "n|rel|public.example_categories",
         "n|type|public.example_categories"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_localized_articles"
-      ],
+      "statementTarget": ["table", "public", "example_localized_articles"],
       "writes": [
         "s|tbl|public.example_localized_articles",
         "n|tbl|public.example_localized_articles",
@@ -969,9 +743,7 @@
         "n|rel|public.example_localized_articles",
         "n|type|public.example_localized_articles"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
@@ -987,17 +759,11 @@
         "n|rel|public.example_localized_articles_translations",
         "n|type|public.example_localized_articles_translations"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles"],
       "writes": [
         "s|tbl|public.example_advanced_articles",
         "n|tbl|public.example_advanced_articles",
@@ -1005,9 +771,7 @@
         "n|rel|public.example_advanced_articles",
         "n|type|public.example_advanced_articles"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
@@ -1023,17 +787,11 @@
         "n|rel|public.example_advanced_articles_categories",
         "n|type|public.example_advanced_articles_categories"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles_faq"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles_faq"],
       "writes": [
         "s|tbl|public.example_advanced_articles_faq",
         "n|tbl|public.example_advanced_articles_faq",
@@ -1041,9 +799,7 @@
         "n|rel|public.example_advanced_articles_faq",
         "n|type|public.example_advanced_articles_faq"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
@@ -1059,9 +815,7 @@
         "n|rel|public.example_advanced_articles_related_articles",
         "n|type|public.example_advanced_articles_related_articles"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
@@ -1077,17 +831,11 @@
         "n|rel|public.example_advanced_articles_translations",
         "n|type|public.example_advanced_articles_translations"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_articles_gallery"
-      ],
+      "statementTarget": ["table", "public", "example_articles_gallery"],
       "writes": [
         "s|tbl|public.example_articles_gallery",
         "n|tbl|public.example_articles_gallery",
@@ -1095,17 +843,11 @@
         "n|rel|public.example_articles_gallery",
         "n|type|public.example_articles_gallery"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_pages"
-      ],
+      "statementTarget": ["table", "public", "example_pages"],
       "writes": [
         "s|tbl|public.example_pages",
         "n|tbl|public.example_pages",
@@ -1113,17 +855,11 @@
         "n|rel|public.example_pages",
         "n|type|public.example_pages"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_advanced_articles_tags"
-      ],
+      "statementTarget": ["table", "public", "example_advanced_articles_tags"],
       "writes": [
         "s|tbl|public.example_advanced_articles_tags",
         "n|tbl|public.example_advanced_articles_tags",
@@ -1131,17 +867,11 @@
         "n|rel|public.example_advanced_articles_tags",
         "n|type|public.example_advanced_articles_tags"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events"
-      ],
+      "statementTarget": ["table", "public", "example_events"],
       "writes": [
         "s|tbl|public.example_events",
         "n|tbl|public.example_events",
@@ -1149,17 +879,11 @@
         "n|rel|public.example_events",
         "n|type|public.example_events"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_gallery"
-      ],
+      "statementTarget": ["table", "public", "example_events_gallery"],
       "writes": [
         "s|tbl|public.example_events_gallery",
         "n|tbl|public.example_events_gallery",
@@ -1167,17 +891,11 @@
         "n|rel|public.example_events_gallery",
         "n|type|public.example_events_gallery"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_related_events"
-      ],
+      "statementTarget": ["table", "public", "example_events_related_events"],
       "writes": [
         "s|tbl|public.example_events_related_events",
         "n|tbl|public.example_events_related_events",
@@ -1185,17 +903,11 @@
         "n|rel|public.example_events_related_events",
         "n|type|public.example_events_related_events"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_sessions"
-      ],
+      "statementTarget": ["table", "public", "example_events_sessions"],
       "writes": [
         "s|tbl|public.example_events_sessions",
         "n|tbl|public.example_events_sessions",
@@ -1203,17 +915,11 @@
         "n|rel|public.example_events_sessions",
         "n|type|public.example_events_sessions"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_tags"
-      ],
+      "statementTarget": ["table", "public", "example_events_tags"],
       "writes": [
         "s|tbl|public.example_events_tags",
         "n|tbl|public.example_events_tags",
@@ -1221,17 +927,11 @@
         "n|rel|public.example_events_tags",
         "n|type|public.example_events_tags"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_events_translations"
-      ],
+      "statementTarget": ["table", "public", "example_events_translations"],
       "writes": [
         "s|tbl|public.example_events_translations",
         "n|tbl|public.example_events_translations",
@@ -1239,17 +939,11 @@
         "n|rel|public.example_events_translations",
         "n|type|public.example_events_translations"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags"],
       "writes": [
         "s|tbl|public.example_tags",
         "n|tbl|public.example_tags",
@@ -1257,17 +951,11 @@
         "n|rel|public.example_tags",
         "n|type|public.example_tags"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_related_tags"
-      ],
+      "statementTarget": ["table", "public", "example_tags_related_tags"],
       "writes": [
         "s|tbl|public.example_tags_related_tags",
         "n|tbl|public.example_tags_related_tags",
@@ -1275,17 +963,11 @@
         "n|rel|public.example_tags_related_tags",
         "n|type|public.example_tags_related_tags"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_tags_translations"
-      ],
+      "statementTarget": ["table", "public", "example_tags_translations"],
       "writes": [
         "s|tbl|public.example_tags_translations",
         "n|tbl|public.example_tags_translations",
@@ -1293,17 +975,11 @@
         "n|rel|public.example_tags_translations",
         "n|type|public.example_tags_translations"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_discussions"
-      ],
+      "statementTarget": ["table", "public", "example_discussions"],
       "writes": [
         "s|tbl|public.example_discussions",
         "n|tbl|public.example_discussions",
@@ -1311,9 +987,7 @@
         "n|rel|public.example_discussions",
         "n|type|public.example_discussions"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -2966,11 +2640,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_articles"
-      ],
+      "statementTarget": ["table", "public", "newsroom_articles"],
       "writes": [
         "s|fk|public.newsroom_articles.newsroom_articles_author_core_users_id_fkey",
         "n|fk|public.newsroom_articles.newsroom_articles_author_core_users_id_fkey",
@@ -2989,11 +2659,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_articles"
-      ],
+      "statementTarget": ["table", "public", "newsroom_articles"],
       "writes": [
         "s|fk|public.newsroom_articles.newsroom_articles_category_newsroom_categories_id_fkey",
         "n|fk|public.newsroom_articles.newsroom_articles_category_newsroom_categories_id_fkey",
@@ -3012,11 +2678,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_bulletins_translations"
-      ],
+      "statementTarget": ["table", "public", "newsroom_bulletins_translations"],
       "writes": [
         "s|fk|public.newsroom_bulletins_translations.newsroom_bulletins_translations_kgMZwrpzwwU7_fkey",
         "n|fk|public.newsroom_bulletins_translations.newsroom_bulletins_translations_kgMZwrpzwwU7_fkey",
@@ -3035,11 +2697,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_bulletins_translations"
-      ],
+      "statementTarget": ["table", "public", "newsroom_bulletins_translations"],
       "writes": [
         "s|fk|public.newsroom_bulletins_translations.newsroom_bulletins_translations_rkkiMJQiOrEo_fkey",
         "n|fk|public.newsroom_bulletins_translations.newsroom_bulletins_translations_rkkiMJQiOrEo_fkey",
@@ -3058,11 +2716,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_comments"
-      ],
+      "statementTarget": ["table", "public", "newsroom_comments"],
       "writes": [
         "s|fk|public.newsroom_comments.newsroom_comments_hiddenBy_core_users_id_fkey",
         "n|fk|public.newsroom_comments.newsroom_comments_hiddenBy_core_users_id_fkey",
@@ -3081,11 +2735,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_comments"
-      ],
+      "statementTarget": ["table", "public", "newsroom_comments"],
       "writes": [
         "s|fk|public.newsroom_comments.newsroom_comments_author_core_users_id_fkey",
         "n|fk|public.newsroom_comments.newsroom_comments_author_core_users_id_fkey",
@@ -3104,11 +2754,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_comments"
-      ],
+      "statementTarget": ["table", "public", "newsroom_comments"],
       "writes": [
         "s|fk|public.newsroom_comments.newsroom_comments_article_newsroom_articles_id_fkey",
         "n|fk|public.newsroom_comments.newsroom_comments_article_newsroom_articles_id_fkey",
@@ -3127,11 +2773,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_comments"
-      ],
+      "statementTarget": ["table", "public", "newsroom_comments"],
       "writes": [
         "s|fk|public.newsroom_comments.newsroom_comments_parent_newsroom_comments_id_fkey",
         "n|fk|public.newsroom_comments.newsroom_comments_parent_newsroom_comments_id_fkey",
@@ -3150,11 +2792,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events"],
       "writes": [
         "s|fk|public.newsroom_events.newsroom_events_hiddenBy_core_users_id_fkey",
         "n|fk|public.newsroom_events.newsroom_events_hiddenBy_core_users_id_fkey",
@@ -3173,11 +2811,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events"],
       "writes": [
         "s|fk|public.newsroom_events.newsroom_events_primaryTag_newsroom_tags_id_fkey",
         "n|fk|public.newsroom_events.newsroom_events_primaryTag_newsroom_tags_id_fkey",
@@ -3196,11 +2830,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events"],
       "writes": [
         "s|fk|public.newsroom_events.newsroom_events_category_newsroom_categories_id_fkey",
         "n|fk|public.newsroom_events.newsroom_events_category_newsroom_categories_id_fkey",
@@ -3219,11 +2849,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_gallery"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_gallery"],
       "writes": [
         "s|fk|public.newsroom_events_gallery.newsroom_events_gallery_itemId_newsroom_events_id_fkey",
         "n|fk|public.newsroom_events_gallery.newsroom_events_gallery_itemId_newsroom_events_id_fkey",
@@ -3242,11 +2868,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_gallery"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_gallery"],
       "writes": [
         "s|fk|public.newsroom_events_gallery.newsroom_events_gallery_relatedItemId_core_files_id_fkey",
         "n|fk|public.newsroom_events_gallery.newsroom_events_gallery_relatedItemId_core_files_id_fkey",
@@ -3265,11 +2887,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_related_events"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_related_events"],
       "writes": [
         "s|fk|public.newsroom_events_related_events.newsroom_events_related_events_itemId_newsroom_events_id_fkey",
         "n|fk|public.newsroom_events_related_events.newsroom_events_related_events_itemId_newsroom_events_id_fkey",
@@ -3288,11 +2906,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_related_events"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_related_events"],
       "writes": [
         "s|fk|public.newsroom_events_related_events.newsroom_events_related_events_0xHNSLM3JAJj_fkey",
         "n|fk|public.newsroom_events_related_events.newsroom_events_related_events_0xHNSLM3JAJj_fkey",
@@ -3311,11 +2925,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_sessions"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_sessions"],
       "writes": [
         "s|fk|public.newsroom_events_sessions.newsroom_events_sessions_itemId_newsroom_events_id_fkey",
         "n|fk|public.newsroom_events_sessions.newsroom_events_sessions_itemId_newsroom_events_id_fkey",
@@ -3334,11 +2944,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_tags"],
       "writes": [
         "s|fk|public.newsroom_events_tags.newsroom_events_tags_itemId_newsroom_events_id_fkey",
         "n|fk|public.newsroom_events_tags.newsroom_events_tags_itemId_newsroom_events_id_fkey",
@@ -3357,11 +2963,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_tags"],
       "writes": [
         "s|fk|public.newsroom_events_tags.newsroom_events_tags_relatedItemId_newsroom_tags_id_fkey",
         "n|fk|public.newsroom_events_tags.newsroom_events_tags_relatedItemId_newsroom_tags_id_fkey",
@@ -3380,11 +2982,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_translations"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_translations"],
       "writes": [
         "s|fk|public.newsroom_events_translations.newsroom_events_translations_itemId_newsroom_events_id_fkey",
         "n|fk|public.newsroom_events_translations.newsroom_events_translations_itemId_newsroom_events_id_fkey",
@@ -3403,11 +3001,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_events_translations"
-      ],
+      "statementTarget": ["table", "public", "newsroom_events_translations"],
       "writes": [
         "s|fk|public.newsroom_events_translations.newsroom_events_translations_languageId_core_languages_id_fkey",
         "n|fk|public.newsroom_events_translations.newsroom_events_translations_languageId_core_languages_id_fkey",
@@ -3426,11 +3020,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_explainers_categories"
-      ],
+      "statementTarget": ["table", "public", "newsroom_explainers_categories"],
       "writes": [
         "s|fk|public.newsroom_explainers_categories.newsroom_explainers_categories_9dOmLv3k6xDX_fkey",
         "n|fk|public.newsroom_explainers_categories.newsroom_explainers_categories_9dOmLv3k6xDX_fkey",
@@ -3449,11 +3039,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_explainers_categories"
-      ],
+      "statementTarget": ["table", "public", "newsroom_explainers_categories"],
       "writes": [
         "s|fk|public.newsroom_explainers_categories.newsroom_explainers_categories_mnxKvproEUm5_fkey",
         "n|fk|public.newsroom_explainers_categories.newsroom_explainers_categories_mnxKvproEUm5_fkey",
@@ -3472,11 +3058,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_explainers_faq"
-      ],
+      "statementTarget": ["table", "public", "newsroom_explainers_faq"],
       "writes": [
         "s|fk|public.newsroom_explainers_faq.newsroom_explainers_faq_itemId_newsroom_explainers_id_fkey",
         "n|fk|public.newsroom_explainers_faq.newsroom_explainers_faq_itemId_newsroom_explainers_id_fkey",
@@ -3541,11 +3123,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_explainers_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_explainers_tags"],
       "writes": [
         "s|fk|public.newsroom_explainers_tags.newsroom_explainers_tags_itemId_newsroom_explainers_id_fkey",
         "n|fk|public.newsroom_explainers_tags.newsroom_explainers_tags_itemId_newsroom_explainers_id_fkey",
@@ -3564,11 +3142,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_explainers_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_explainers_tags"],
       "writes": [
         "s|fk|public.newsroom_explainers_tags.newsroom_explainers_tags_relatedItemId_newsroom_tags_id_fkey",
         "n|fk|public.newsroom_explainers_tags.newsroom_explainers_tags_relatedItemId_newsroom_tags_id_fkey",
@@ -3633,11 +3207,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_letters"
-      ],
+      "statementTarget": ["table", "public", "newsroom_letters"],
       "writes": [
         "s|fk|public.newsroom_letters.newsroom_letters_hiddenBy_core_users_id_fkey",
         "n|fk|public.newsroom_letters.newsroom_letters_hiddenBy_core_users_id_fkey",
@@ -3656,11 +3226,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_letters"
-      ],
+      "statementTarget": ["table", "public", "newsroom_letters"],
       "writes": [
         "s|fk|public.newsroom_letters.newsroom_letters_author_core_users_id_fkey",
         "n|fk|public.newsroom_letters.newsroom_letters_author_core_users_id_fkey",
@@ -3679,11 +3245,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_letters"
-      ],
+      "statementTarget": ["table", "public", "newsroom_letters"],
       "writes": [
         "s|fk|public.newsroom_letters.newsroom_letters_desk_core_content_containers_id_fkey",
         "n|fk|public.newsroom_letters.newsroom_letters_desk_core_content_containers_id_fkey",
@@ -3702,11 +3264,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_stories"
-      ],
+      "statementTarget": ["table", "public", "newsroom_stories"],
       "writes": [
         "s|fk|public.newsroom_stories.newsroom_stories_author_core_users_id_fkey",
         "n|fk|public.newsroom_stories.newsroom_stories_author_core_users_id_fkey",
@@ -3725,11 +3283,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_stories"
-      ],
+      "statementTarget": ["table", "public", "newsroom_stories"],
       "writes": [
         "s|fk|public.newsroom_stories.newsroom_stories_animation_core_files_id_fkey",
         "n|fk|public.newsroom_stories.newsroom_stories_animation_core_files_id_fkey",
@@ -3748,11 +3302,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_stories"
-      ],
+      "statementTarget": ["table", "public", "newsroom_stories"],
       "writes": [
         "s|fk|public.newsroom_stories.newsroom_stories_category_newsroom_categories_id_fkey",
         "n|fk|public.newsroom_stories.newsroom_stories_category_newsroom_categories_id_fkey",
@@ -3771,11 +3321,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_stories_gallery"
-      ],
+      "statementTarget": ["table", "public", "newsroom_stories_gallery"],
       "writes": [
         "s|fk|public.newsroom_stories_gallery.newsroom_stories_gallery_itemId_newsroom_stories_id_fkey",
         "n|fk|public.newsroom_stories_gallery.newsroom_stories_gallery_itemId_newsroom_stories_id_fkey",
@@ -3794,11 +3340,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_stories_gallery"
-      ],
+      "statementTarget": ["table", "public", "newsroom_stories_gallery"],
       "writes": [
         "s|fk|public.newsroom_stories_gallery.newsroom_stories_gallery_relatedItemId_core_files_id_fkey",
         "n|fk|public.newsroom_stories_gallery.newsroom_stories_gallery_relatedItemId_core_files_id_fkey",
@@ -3817,11 +3359,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_tags"],
       "writes": [
         "s|fk|public.newsroom_tags.newsroom_tags_hiddenBy_core_users_id_fkey",
         "n|fk|public.newsroom_tags.newsroom_tags_hiddenBy_core_users_id_fkey",
@@ -3840,11 +3378,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_tags"],
       "writes": [
         "s|fk|public.newsroom_tags.newsroom_tags_category_newsroom_categories_id_fkey",
         "n|fk|public.newsroom_tags.newsroom_tags_category_newsroom_categories_id_fkey",
@@ -3863,11 +3397,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_tags_related_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_tags_related_tags"],
       "writes": [
         "s|fk|public.newsroom_tags_related_tags.newsroom_tags_related_tags_itemId_newsroom_tags_id_fkey",
         "n|fk|public.newsroom_tags_related_tags.newsroom_tags_related_tags_itemId_newsroom_tags_id_fkey",
@@ -3886,11 +3416,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_tags_related_tags"
-      ],
+      "statementTarget": ["table", "public", "newsroom_tags_related_tags"],
       "writes": [
         "s|fk|public.newsroom_tags_related_tags.newsroom_tags_related_tags_relatedItemId_newsroom_tags_id_fkey",
         "n|fk|public.newsroom_tags_related_tags.newsroom_tags_related_tags_relatedItemId_newsroom_tags_id_fkey",
@@ -3909,11 +3435,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_tags_translations"
-      ],
+      "statementTarget": ["table", "public", "newsroom_tags_translations"],
       "writes": [
         "s|fk|public.newsroom_tags_translations.newsroom_tags_translations_itemId_newsroom_tags_id_fkey",
         "n|fk|public.newsroom_tags_translations.newsroom_tags_translations_itemId_newsroom_tags_id_fkey",
@@ -3932,11 +3454,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_tags_translations"
-      ],
+      "statementTarget": ["table", "public", "newsroom_tags_translations"],
       "writes": [
         "s|fk|public.newsroom_tags_translations.newsroom_tags_translations_languageId_core_languages_id_fkey",
         "n|fk|public.newsroom_tags_translations.newsroom_tags_translations_languageId_core_languages_id_fkey",
@@ -9310,14 +8828,10 @@
         "table": "newsroom_articles",
         "name": "newsroom_articles_author_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "author"
-        ],
+        "columns": ["author"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9330,14 +8844,10 @@
         "table": "newsroom_articles",
         "name": "newsroom_articles_category_newsroom_categories_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "category"
-        ],
+        "columns": ["category"],
         "schemaTo": "public",
         "tableTo": "newsroom_categories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9350,14 +8860,10 @@
         "table": "newsroom_bulletins_translations",
         "name": "newsroom_bulletins_translations_kgMZwrpzwwU7_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_bulletins",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9370,14 +8876,10 @@
         "table": "newsroom_bulletins_translations",
         "name": "newsroom_bulletins_translations_rkkiMJQiOrEo_fkey",
         "nameExplicit": false,
-        "columns": [
-          "languageId"
-        ],
+        "columns": ["languageId"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -9390,14 +8892,10 @@
         "table": "newsroom_comments",
         "name": "newsroom_comments_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9410,14 +8908,10 @@
         "table": "newsroom_comments",
         "name": "newsroom_comments_author_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "author"
-        ],
+        "columns": ["author"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9430,14 +8924,10 @@
         "table": "newsroom_comments",
         "name": "newsroom_comments_article_newsroom_articles_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "article"
-        ],
+        "columns": ["article"],
         "schemaTo": "public",
         "tableTo": "newsroom_articles",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9450,14 +8940,10 @@
         "table": "newsroom_comments",
         "name": "newsroom_comments_parent_newsroom_comments_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "parent"
-        ],
+        "columns": ["parent"],
         "schemaTo": "public",
         "tableTo": "newsroom_comments",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9470,14 +8956,10 @@
         "table": "newsroom_events",
         "name": "newsroom_events_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9490,14 +8972,10 @@
         "table": "newsroom_events",
         "name": "newsroom_events_primaryTag_newsroom_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "primaryTag"
-        ],
+        "columns": ["primaryTag"],
         "schemaTo": "public",
         "tableTo": "newsroom_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9510,14 +8988,10 @@
         "table": "newsroom_events",
         "name": "newsroom_events_category_newsroom_categories_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "category"
-        ],
+        "columns": ["category"],
         "schemaTo": "public",
         "tableTo": "newsroom_categories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9530,14 +9004,10 @@
         "table": "newsroom_events_gallery",
         "name": "newsroom_events_gallery_itemId_newsroom_events_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9550,14 +9020,10 @@
         "table": "newsroom_events_gallery",
         "name": "newsroom_events_gallery_relatedItemId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -9570,14 +9036,10 @@
         "table": "newsroom_events_related_events",
         "name": "newsroom_events_related_events_itemId_newsroom_events_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9590,14 +9052,10 @@
         "table": "newsroom_events_related_events",
         "name": "newsroom_events_related_events_0xHNSLM3JAJj_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9610,14 +9068,10 @@
         "table": "newsroom_events_sessions",
         "name": "newsroom_events_sessions_itemId_newsroom_events_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9630,14 +9084,10 @@
         "table": "newsroom_events_tags",
         "name": "newsroom_events_tags_itemId_newsroom_events_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9650,14 +9100,10 @@
         "table": "newsroom_events_tags",
         "name": "newsroom_events_tags_relatedItemId_newsroom_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -9670,14 +9116,10 @@
         "table": "newsroom_events_translations",
         "name": "newsroom_events_translations_itemId_newsroom_events_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_events",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9690,14 +9132,10 @@
         "table": "newsroom_events_translations",
         "name": "newsroom_events_translations_languageId_core_languages_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "languageId"
-        ],
+        "columns": ["languageId"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -9710,14 +9148,10 @@
         "table": "newsroom_explainers_categories",
         "name": "newsroom_explainers_categories_9dOmLv3k6xDX_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_explainers",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9730,14 +9164,10 @@
         "table": "newsroom_explainers_categories",
         "name": "newsroom_explainers_categories_mnxKvproEUm5_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_categories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -9750,14 +9180,10 @@
         "table": "newsroom_explainers_faq",
         "name": "newsroom_explainers_faq_itemId_newsroom_explainers_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_explainers",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9770,14 +9196,10 @@
         "table": "newsroom_explainers_related_explainers",
         "name": "newsroom_explainers_related_explainers_TFvIU3TogSGy_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_explainers",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9790,14 +9212,10 @@
         "table": "newsroom_explainers_related_explainers",
         "name": "newsroom_explainers_related_explainers_74JhaXF5PsDV_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_explainers",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9810,14 +9228,10 @@
         "table": "newsroom_explainers_tags",
         "name": "newsroom_explainers_tags_itemId_newsroom_explainers_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_explainers",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9830,14 +9244,10 @@
         "table": "newsroom_explainers_tags",
         "name": "newsroom_explainers_tags_relatedItemId_newsroom_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -9850,14 +9260,10 @@
         "table": "newsroom_explainers_translations",
         "name": "newsroom_explainers_translations_hcPB0jdTm8MV_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_explainers",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -9870,14 +9276,10 @@
         "table": "newsroom_explainers_translations",
         "name": "newsroom_explainers_translations_qqggtF6jhcsZ_fkey",
         "nameExplicit": false,
-        "columns": [
-          "languageId"
-        ],
+        "columns": ["languageId"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -9890,14 +9292,10 @@
         "table": "newsroom_letters",
         "name": "newsroom_letters_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9910,14 +9308,10 @@
         "table": "newsroom_letters",
         "name": "newsroom_letters_author_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "author"
-        ],
+        "columns": ["author"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9930,14 +9324,10 @@
         "table": "newsroom_letters",
         "name": "newsroom_letters_desk_core_content_containers_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "desk"
-        ],
+        "columns": ["desk"],
         "schemaTo": "public",
         "tableTo": "core_content_containers",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -9950,14 +9340,10 @@
         "table": "newsroom_stories",
         "name": "newsroom_stories_author_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "author"
-        ],
+        "columns": ["author"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -9970,14 +9356,10 @@
         "table": "newsroom_stories",
         "name": "newsroom_stories_animation_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "animation"
-        ],
+        "columns": ["animation"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -9990,14 +9372,10 @@
         "table": "newsroom_stories",
         "name": "newsroom_stories_category_newsroom_categories_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "category"
-        ],
+        "columns": ["category"],
         "schemaTo": "public",
         "tableTo": "newsroom_categories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -10010,14 +9388,10 @@
         "table": "newsroom_stories_gallery",
         "name": "newsroom_stories_gallery_itemId_newsroom_stories_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_stories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -10030,14 +9404,10 @@
         "table": "newsroom_stories_gallery",
         "name": "newsroom_stories_gallery_relatedItemId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -10050,14 +9420,10 @@
         "table": "newsroom_tags",
         "name": "newsroom_tags_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -10070,14 +9436,10 @@
         "table": "newsroom_tags",
         "name": "newsroom_tags_category_newsroom_categories_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "category"
-        ],
+        "columns": ["category"],
         "schemaTo": "public",
         "tableTo": "newsroom_categories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -10090,14 +9452,10 @@
         "table": "newsroom_tags_related_tags",
         "name": "newsroom_tags_related_tags_itemId_newsroom_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -10110,14 +9468,10 @@
         "table": "newsroom_tags_related_tags",
         "name": "newsroom_tags_related_tags_relatedItemId_newsroom_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -10130,14 +9484,10 @@
         "table": "newsroom_tags_translations",
         "name": "newsroom_tags_translations_itemId_newsroom_tags_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "newsroom_tags",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -10150,14 +9500,10 @@
         "table": "newsroom_tags_translations",
         "name": "newsroom_tags_translations_languageId_core_languages_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "languageId"
-        ],
+        "columns": ["languageId"],
         "schemaTo": "public",
         "tableTo": "core_languages",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -10169,10 +9515,7 @@
         "schema": "public",
         "table": "newsroom_bulletins_translations",
         "name": "newsroom_bulletins_translations_item_id_language_id_pk",
-        "columns": [
-          "itemId",
-          "languageId"
-        ],
+        "columns": ["itemId", "languageId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10183,10 +9526,7 @@
         "schema": "public",
         "table": "newsroom_events_gallery",
         "name": "newsroom_events_gallery_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10197,10 +9537,7 @@
         "schema": "public",
         "table": "newsroom_events_related_events",
         "name": "newsroom_events_related_events_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10211,10 +9548,7 @@
         "schema": "public",
         "table": "newsroom_events_tags",
         "name": "newsroom_events_tags_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10225,10 +9559,7 @@
         "schema": "public",
         "table": "newsroom_events_translations",
         "name": "newsroom_events_translations_item_id_language_id_pk",
-        "columns": [
-          "itemId",
-          "languageId"
-        ],
+        "columns": ["itemId", "languageId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10239,10 +9570,7 @@
         "schema": "public",
         "table": "newsroom_explainers_categories",
         "name": "newsroom_explainers_categories_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10253,10 +9581,7 @@
         "schema": "public",
         "table": "newsroom_explainers_related_explainers",
         "name": "newsroom_explainers_related_explainers_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10267,10 +9592,7 @@
         "schema": "public",
         "table": "newsroom_explainers_tags",
         "name": "newsroom_explainers_tags_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10281,10 +9603,7 @@
         "schema": "public",
         "table": "newsroom_explainers_translations",
         "name": "newsroom_explainers_translations_item_id_language_id_pk",
-        "columns": [
-          "itemId",
-          "languageId"
-        ],
+        "columns": ["itemId", "languageId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10295,10 +9614,7 @@
         "schema": "public",
         "table": "newsroom_stories_gallery",
         "name": "newsroom_stories_gallery_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10309,10 +9625,7 @@
         "schema": "public",
         "table": "newsroom_tags_related_tags",
         "name": "newsroom_tags_related_tags_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10323,10 +9636,7 @@
         "schema": "public",
         "table": "newsroom_tags_translations",
         "name": "newsroom_tags_translations_item_id_language_id_pk",
-        "columns": [
-          "itemId",
-          "languageId"
-        ],
+        "columns": ["itemId", "languageId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -10337,9 +9647,7 @@
         "schema": "public",
         "table": "newsroom_articles",
         "name": "newsroom_articles_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10350,9 +9658,7 @@
         "schema": "public",
         "table": "newsroom_bulletins",
         "name": "newsroom_bulletins_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10363,9 +9669,7 @@
         "schema": "public",
         "table": "newsroom_categories",
         "name": "newsroom_categories_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10376,9 +9680,7 @@
         "schema": "public",
         "table": "newsroom_comments",
         "name": "newsroom_comments_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10389,9 +9691,7 @@
         "schema": "public",
         "table": "newsroom_events",
         "name": "newsroom_events_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10402,9 +9702,7 @@
         "schema": "public",
         "table": "newsroom_events_sessions",
         "name": "newsroom_events_sessions_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10415,9 +9713,7 @@
         "schema": "public",
         "table": "newsroom_explainers",
         "name": "newsroom_explainers_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10428,9 +9724,7 @@
         "schema": "public",
         "table": "newsroom_explainers_faq",
         "name": "newsroom_explainers_faq_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10441,9 +9735,7 @@
         "schema": "public",
         "table": "newsroom_letters",
         "name": "newsroom_letters_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10454,9 +9746,7 @@
         "schema": "public",
         "table": "newsroom_pages",
         "name": "newsroom_pages_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10467,9 +9757,7 @@
         "schema": "public",
         "table": "newsroom_stories",
         "name": "newsroom_stories_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -10480,9 +9768,7 @@
         "schema": "public",
         "table": "newsroom_tags",
         "name": "newsroom_tags_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

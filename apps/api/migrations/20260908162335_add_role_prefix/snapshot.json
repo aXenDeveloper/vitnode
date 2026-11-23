@@ -3,27 +3,17 @@
   "version": "9",
   "dialect": "postgres",
   "id": "2b102f53-72ec-4798-a12d-94d3b1f81b6a",
-  "prevIds": [
-    "6f431da8-4f7b-4bc2-bbf8-619d66d0ffea"
-  ],
+  "prevIds": ["6f431da8-4f7b-4bc2-bbf8-619d66d0ffea"],
   "footprints": [
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_roles",
-        "prefix"
-      ],
+      "statementTarget": ["column", "public", "core_roles", "prefix"],
       "writes": [
         "s|col|public.core_roles.prefix",
         "n|col|public.core_roles.prefix",
         "e|col|public.core_roles.prefix"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     }
   ],
   "deltas": [

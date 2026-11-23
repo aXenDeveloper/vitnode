@@ -3,27 +3,17 @@
   "version": "9",
   "dialect": "postgres",
   "id": "27a31513-4f49-4cab-aa26-2538019a87d9",
-  "prevIds": [
-    "a3b555f1-3780-4d7e-9714-a4fa88b4b704"
-  ],
+  "prevIds": ["a3b555f1-3780-4d7e-9714-a4fa88b4b704"],
   "footprints": [
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_search_index",
-        "imageId"
-      ],
+      "statementTarget": ["column", "public", "core_search_index", "imageId"],
       "writes": [
         "s|col|public.core_search_index.imageId",
         "n|col|public.core_search_index.imageId",
         "e|col|public.core_search_index.imageId"
       ],
-      "reads": [
-        "n|tbl|public.core_search_index",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_search_index", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -47,11 +37,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_search_index"
-      ],
+      "statementTarget": ["table", "public", "core_search_index"],
       "writes": [
         "s|fk|public.core_search_index.core_search_index_imageId_core_files_id_fkey",
         "n|fk|public.core_search_index.core_search_index_imageId_core_files_id_fkey",
@@ -117,14 +103,10 @@
         "table": "core_search_index",
         "name": "core_search_index_imageId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "imageId"
-        ],
+        "columns": ["imageId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"

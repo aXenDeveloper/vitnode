@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "2ab8ec9e-8d1a-4774-8f8c-b04d780efaaf",
-  "prevIds": [
-    "50263672-7a4f-48ea-9374-78b5474879d5"
-  ],
+  "prevIds": ["50263672-7a4f-48ea-9374-78b5474879d5"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_sso_attempts"
-      ],
+      "statementTarget": ["table", "public", "core_sso_attempts"],
       "writes": [
         "s|tbl|public.core_sso_attempts",
         "n|tbl|public.core_sso_attempts",
@@ -23,17 +17,11 @@
         "n|rel|public.core_sso_attempts_pkey",
         "n|rel|public.core_sso_attempts_stateHash_key"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_sso_pending"
-      ],
+      "statementTarget": ["table", "public", "core_sso_pending"],
       "writes": [
         "s|tbl|public.core_sso_pending",
         "n|tbl|public.core_sso_pending",
@@ -43,9 +31,7 @@
         "n|rel|public.core_sso_pending_pkey",
         "n|rel|public.core_sso_pending_tokenHash_key"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -60,10 +46,7 @@
         "n|col|public.core_users_sso_operations.codeVerifier",
         "e|col|public.core_users_sso_operations.codeVerifier"
       ],
-      "reads": [
-        "n|tbl|public.core_users_sso_operations",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users_sso_operations", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -78,10 +61,7 @@
         "n|col|public.core_users_sso_operations.nonce",
         "e|col|public.core_users_sso_operations.nonce"
       ],
-      "reads": [
-        "n|tbl|public.core_users_sso_operations",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users_sso_operations", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -565,9 +545,7 @@
         "schema": "public",
         "table": "core_sso_attempts",
         "name": "core_sso_attempts_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -578,9 +556,7 @@
         "schema": "public",
         "table": "core_sso_pending",
         "name": "core_sso_pending_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -592,9 +568,7 @@
         "table": "core_sso_attempts",
         "name": "core_sso_attempts_stateHash_key",
         "nameExplicit": false,
-        "columns": [
-          "stateHash"
-        ],
+        "columns": ["stateHash"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }
@@ -606,9 +580,7 @@
         "table": "core_sso_pending",
         "name": "core_sso_pending_tokenHash_key",
         "nameExplicit": false,
-        "columns": [
-          "tokenHash"
-        ],
+        "columns": ["tokenHash"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }

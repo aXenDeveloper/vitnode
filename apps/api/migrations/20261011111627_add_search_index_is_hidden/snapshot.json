@@ -3,27 +3,17 @@
   "version": "9",
   "dialect": "postgres",
   "id": "a3b555f1-3780-4d7e-9714-a4fa88b4b704",
-  "prevIds": [
-    "680724d8-a62f-48ca-aa75-7e3f07114a50"
-  ],
+  "prevIds": ["680724d8-a62f-48ca-aa75-7e3f07114a50"],
   "footprints": [
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_search_index",
-        "isHidden"
-      ],
+      "statementTarget": ["column", "public", "core_search_index", "isHidden"],
       "writes": [
         "s|col|public.core_search_index.isHidden",
         "n|col|public.core_search_index.isHidden",
         "e|col|public.core_search_index.isHidden"
       ],
-      "reads": [
-        "n|tbl|public.core_search_index",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_search_index", "n|sch|public"]
     }
   ],
   "deltas": [

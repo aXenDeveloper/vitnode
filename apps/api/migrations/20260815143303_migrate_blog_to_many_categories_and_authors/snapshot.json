@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "7734935b-4c55-40b8-ba19-41961e485bb4",
-  "prevIds": [
-    "73f97c77-4699-41af-83fc-fe63a1f6196a"
-  ],
+  "prevIds": ["73f97c77-4699-41af-83fc-fe63a1f6196a"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts_author_id"
-      ],
+      "statementTarget": ["table", "public", "blog_posts_author_id"],
       "writes": [
         "s|tbl|public.blog_posts_author_id",
         "n|tbl|public.blog_posts_author_id",
@@ -22,17 +16,11 @@
         "n|type|public.blog_posts_author_id",
         "n|rel|public.blog_posts_author_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts_category_id"
-      ],
+      "statementTarget": ["table", "public", "blog_posts_category_id"],
       "writes": [
         "s|tbl|public.blog_posts_category_id",
         "n|tbl|public.blog_posts_category_id",
@@ -41,17 +29,11 @@
         "n|type|public.blog_posts_category_id",
         "n|rel|public.blog_posts_category_id_pk"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts"
-      ],
+      "statementTarget": ["table", "public", "blog_posts"],
       "writes": [
         "s|fk|public.blog_posts.blog_posts_categoryId_blog_categories_id_fk",
         "n|fk|public.blog_posts.blog_posts_categoryId_blog_categories_id_fk",
@@ -66,11 +48,7 @@
     },
     {
       "statementType": "drop_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts"
-      ],
+      "statementTarget": ["table", "public", "blog_posts"],
       "writes": [
         "s|fk|public.blog_posts.blog_posts_authorId_core_users_id_fk",
         "n|fk|public.blog_posts.blog_posts_authorId_core_users_id_fk",
@@ -127,39 +105,23 @@
     },
     {
       "statementType": "drop_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "categoryId"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "categoryId"],
       "writes": [
         "s|col|public.blog_posts.categoryId",
         "n|col|public.blog_posts.categoryId",
         "e|col|public.blog_posts.categoryId"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "authorId"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "authorId"],
       "writes": [
         "s|col|public.blog_posts.authorId",
         "n|col|public.blog_posts.authorId",
         "e|col|public.blog_posts.authorId"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -245,11 +207,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts_author_id"
-      ],
+      "statementTarget": ["table", "public", "blog_posts_author_id"],
       "writes": [
         "s|fk|public.blog_posts_author_id.blog_posts_author_id_itemId_blog_posts_id_fk",
         "n|fk|public.blog_posts_author_id.blog_posts_author_id_itemId_blog_posts_id_fk",
@@ -268,11 +226,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts_author_id"
-      ],
+      "statementTarget": ["table", "public", "blog_posts_author_id"],
       "writes": [
         "s|fk|public.blog_posts_author_id.blog_posts_author_id_relatedItemId_core_users_id_fk",
         "n|fk|public.blog_posts_author_id.blog_posts_author_id_relatedItemId_core_users_id_fk",
@@ -291,11 +245,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts_category_id"
-      ],
+      "statementTarget": ["table", "public", "blog_posts_category_id"],
       "writes": [
         "s|fk|public.blog_posts_category_id.blog_posts_category_id_itemId_blog_posts_id_fk",
         "n|fk|public.blog_posts_category_id.blog_posts_category_id_itemId_blog_posts_id_fk",
@@ -314,11 +264,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts_category_id"
-      ],
+      "statementTarget": ["table", "public", "blog_posts_category_id"],
       "writes": [
         "s|fk|public.blog_posts_category_id.blog_posts_category_id_relatedItemId_blog_categories_id_fk",
         "n|fk|public.blog_posts_category_id.blog_posts_category_id_relatedItemId_blog_categories_id_fk",
@@ -600,14 +546,10 @@
         "table": "blog_posts_author_id",
         "name": "blog_posts_author_id_itemId_blog_posts_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "blog_posts",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -620,14 +562,10 @@
         "table": "blog_posts_author_id",
         "name": "blog_posts_author_id_relatedItemId_core_users_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -640,14 +578,10 @@
         "table": "blog_posts_category_id",
         "name": "blog_posts_category_id_itemId_blog_posts_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "itemId"
-        ],
+        "columns": ["itemId"],
         "schemaTo": "public",
         "tableTo": "blog_posts",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -660,14 +594,10 @@
         "table": "blog_posts_category_id",
         "name": "blog_posts_category_id_relatedItemId_blog_categories_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "relatedItemId"
-        ],
+        "columns": ["relatedItemId"],
         "schemaTo": "public",
         "tableTo": "blog_categories",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "RESTRICT",
         "entityType": "fks"
@@ -679,10 +609,7 @@
         "schema": "public",
         "table": "blog_posts_author_id",
         "name": "blog_posts_author_id_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }
@@ -693,10 +620,7 @@
         "schema": "public",
         "table": "blog_posts_category_id",
         "name": "blog_posts_category_id_pk",
-        "columns": [
-          "itemId",
-          "relatedItemId"
-        ],
+        "columns": ["itemId", "relatedItemId"],
         "nameExplicit": true,
         "entityType": "pks"
       }

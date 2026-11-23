@@ -3,18 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "7fd0cead-725d-42f5-bc00-7e1d8954ea75",
-  "prevIds": [
-    "4829773c-6615-48c5-bebb-5ece6e9a38a5"
-  ],
+  "prevIds": ["4829773c-6615-48c5-bebb-5ece6e9a38a5"],
   "footprints": [
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_roles",
-        "color"
-      ],
+      "statementTarget": ["column", "public", "core_roles", "color"],
       "writes": [
         "s|colprop|public.core_roles.color.type",
         "s|colprop|public.core_roles.color.default"

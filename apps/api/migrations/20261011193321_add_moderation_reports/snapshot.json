@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "3ad3093b-71a8-4478-b2ce-1bbcaa1ff602",
-  "prevIds": [
-    "27a31513-4f49-4cab-aa26-2538019a87d9"
-  ],
+  "prevIds": ["27a31513-4f49-4cab-aa26-2538019a87d9"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderation_report_events"
-      ],
+      "statementTarget": ["table", "public", "core_moderation_report_events"],
       "writes": [
         "s|tbl|public.core_moderation_report_events",
         "n|tbl|public.core_moderation_report_events",
@@ -22,17 +16,11 @@
         "n|type|public.core_moderation_report_events",
         "n|rel|public.core_moderation_report_events_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderation_reports"
-      ],
+      "statementTarget": ["table", "public", "core_moderation_reports"],
       "writes": [
         "s|tbl|public.core_moderation_reports",
         "n|tbl|public.core_moderation_reports",
@@ -42,9 +30,7 @@
         "n|rel|public.core_moderation_reports_pkey",
         "n|rel|public.core_moderation_reports_openKey_key"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -174,11 +160,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderation_report_events"
-      ],
+      "statementTarget": ["table", "public", "core_moderation_report_events"],
       "writes": [
         "s|fk|public.core_moderation_report_events.core_moderation_report_events_4CqHOxfheaUm_fkey",
         "n|fk|public.core_moderation_report_events.core_moderation_report_events_4CqHOxfheaUm_fkey",
@@ -197,11 +179,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderation_report_events"
-      ],
+      "statementTarget": ["table", "public", "core_moderation_report_events"],
       "writes": [
         "s|fk|public.core_moderation_report_events.core_moderation_report_events_actorId_core_users_id_fkey",
         "n|fk|public.core_moderation_report_events.core_moderation_report_events_actorId_core_users_id_fkey",
@@ -220,11 +198,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderation_reports"
-      ],
+      "statementTarget": ["table", "public", "core_moderation_reports"],
       "writes": [
         "s|fk|public.core_moderation_reports.core_moderation_reports_reporterId_core_users_id_fkey",
         "n|fk|public.core_moderation_reports.core_moderation_reports_reporterId_core_users_id_fkey",
@@ -243,11 +217,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderation_reports"
-      ],
+      "statementTarget": ["table", "public", "core_moderation_reports"],
       "writes": [
         "s|fk|public.core_moderation_reports.core_moderation_reports_assigneeId_core_users_id_fkey",
         "n|fk|public.core_moderation_reports.core_moderation_reports_assigneeId_core_users_id_fkey",
@@ -266,11 +236,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderation_reports"
-      ],
+      "statementTarget": ["table", "public", "core_moderation_reports"],
       "writes": [
         "s|fk|public.core_moderation_reports.core_moderation_reports_resolvedById_core_users_id_fkey",
         "n|fk|public.core_moderation_reports.core_moderation_reports_resolvedById_core_users_id_fkey",
@@ -932,14 +898,10 @@
         "table": "core_moderation_report_events",
         "name": "core_moderation_report_events_4CqHOxfheaUm_fkey",
         "nameExplicit": false,
-        "columns": [
-          "reportId"
-        ],
+        "columns": ["reportId"],
         "schemaTo": "public",
         "tableTo": "core_moderation_reports",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -952,14 +914,10 @@
         "table": "core_moderation_report_events",
         "name": "core_moderation_report_events_actorId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "actorId"
-        ],
+        "columns": ["actorId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -972,14 +930,10 @@
         "table": "core_moderation_reports",
         "name": "core_moderation_reports_reporterId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "reporterId"
-        ],
+        "columns": ["reporterId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -992,14 +946,10 @@
         "table": "core_moderation_reports",
         "name": "core_moderation_reports_assigneeId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "assigneeId"
-        ],
+        "columns": ["assigneeId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1012,14 +962,10 @@
         "table": "core_moderation_reports",
         "name": "core_moderation_reports_resolvedById_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "resolvedById"
-        ],
+        "columns": ["resolvedById"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1031,9 +977,7 @@
         "schema": "public",
         "table": "core_moderation_report_events",
         "name": "core_moderation_report_events_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1044,9 +988,7 @@
         "schema": "public",
         "table": "core_moderation_reports",
         "name": "core_moderation_reports_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -1058,9 +1000,7 @@
         "table": "core_moderation_reports",
         "name": "core_moderation_reports_openKey_key",
         "nameExplicit": false,
-        "columns": [
-          "openKey"
-        ],
+        "columns": ["openKey"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }

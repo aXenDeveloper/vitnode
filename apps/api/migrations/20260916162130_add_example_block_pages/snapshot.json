@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "daa83f36-dc27-41a6-a8b0-726b10060385",
-  "prevIds": [
-    "dde898da-7c8a-40ad-af0f-8d221bc7c5c9"
-  ],
+  "prevIds": ["dde898da-7c8a-40ad-af0f-8d221bc7c5c9"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_pages"
-      ],
+      "statementTarget": ["table", "public", "example_pages"],
       "writes": [
         "s|tbl|public.example_pages",
         "n|tbl|public.example_pages",
@@ -22,9 +16,7 @@
         "n|type|public.example_pages",
         "n|rel|public.example_pages_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -355,9 +347,7 @@
         "schema": "public",
         "table": "example_pages",
         "name": "example_pages_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

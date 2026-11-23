@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "b9feeb04-d716-42fb-8a93-ddced63b0b5b",
-  "prevIds": [
-    "9ddac84b-1d56-431b-afab-e8e20b8f1731"
-  ],
+  "prevIds": ["9ddac84b-1d56-431b-afab-e8e20b8f1731"],
   "footprints": [
     {
       "statementType": "rename_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_replies"
-      ],
+      "statementTarget": ["table", "public", "forum_replies"],
       "writes": [
         "s|tbl|public.forum_replies",
         "n|tbl|public.forum_replies",
@@ -24,9 +18,7 @@
         "n|rel|public.forum_comments",
         "n|type|public.forum_comments"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "rename_index",

@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "4f1c20aa-86f5-4d5b-9b4f-75101d57d8de",
-  "prevIds": [
-    "f73d7a47-f42f-4629-8af1-b388c220a427"
-  ],
+  "prevIds": ["f73d7a47-f42f-4629-8af1-b388c220a427"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_revisions"
-      ],
+      "statementTarget": ["table", "public", "core_content_revisions"],
       "writes": [
         "s|tbl|public.core_content_revisions",
         "n|tbl|public.core_content_revisions",
@@ -22,9 +16,7 @@
         "n|type|public.core_content_revisions",
         "n|rel|public.core_content_revisions_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -90,11 +82,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_revisions"
-      ],
+      "statementTarget": ["table", "public", "core_content_revisions"],
       "writes": [
         "s|fk|public.core_content_revisions.core_content_revisions_actorUserId_core_users_id_fk",
         "n|fk|public.core_content_revisions.core_content_revisions_actorUserId_core_users_id_fk",
@@ -407,14 +395,10 @@
         "table": "core_content_revisions",
         "name": "core_content_revisions_actorUserId_core_users_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "actorUserId"
-        ],
+        "columns": ["actorUserId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -426,9 +410,7 @@
         "schema": "public",
         "table": "core_content_revisions",
         "name": "core_content_revisions_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

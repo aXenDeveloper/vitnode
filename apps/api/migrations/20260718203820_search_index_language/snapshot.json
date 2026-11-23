@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "ee907a2c-c47b-45bd-9ece-4df32cdcbf31",
-  "prevIds": [
-    "dec2205e-4a91-468b-b163-10eed9f40bb3"
-  ],
+  "prevIds": ["dec2205e-4a91-468b-b163-10eed9f40bb3"],
   "footprints": [
     {
       "statementType": "add_column",
@@ -20,21 +18,12 @@
         "n|col|public.core_search_index.languageCode",
         "e|col|public.core_search_index.languageCode"
       ],
-      "reads": [
-        "n|tbl|public.core_search_index",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_search_index", "n|sch|public"]
     },
     {
       "statementType": "alter_unique",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_search_index"
-      ],
-      "writes": [
-        "s|uq|public.core_search_index.core_search_index_item_unique"
-      ],
+      "statementTarget": ["table", "public", "core_search_index"],
+      "writes": ["s|uq|public.core_search_index.core_search_index_item_unique"],
       "reads": [
         "n|tbl|public.core_search_index",
         "n|sch|public",
@@ -44,9 +33,7 @@
         "e|col|public.core_search_index.itemType",
         "e|col|public.core_search_index.itemId"
       ],
-      "sharedWrites": [
-        "e|uniqueness|public.core_search_index.itemId.itemType"
-      ],
+      "sharedWrites": ["e|uniqueness|public.core_search_index.itemId.itemType"],
       "sqlHash": "84e968edc39d5fee"
     },
     {
@@ -115,11 +102,7 @@
       "op": "alter",
       "key": "uniques\u0000[\"public\",\"core_search_index\",\"core_search_index_item_unique\"]",
       "set": {
-        "columns": [
-          "itemType",
-          "itemId",
-          "languageCode"
-        ]
+        "columns": ["itemType", "itemId", "languageCode"]
       }
     }
   ]

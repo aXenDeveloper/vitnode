@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "6ae0eca5-a023-4d60-ac86-17e1546af370",
-  "prevIds": [
-    "daa83f36-dc27-41a6-a8b0-726b10060385"
-  ],
+  "prevIds": ["daa83f36-dc27-41a6-a8b0-726b10060385"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "example_zones_layouts"
-      ],
+      "statementTarget": ["table", "public", "example_zones_layouts"],
       "writes": [
         "s|tbl|public.example_zones_layouts",
         "n|tbl|public.example_zones_layouts",
@@ -22,9 +16,7 @@
         "n|type|public.example_zones_layouts",
         "n|rel|public.example_zones_layouts_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -319,9 +311,7 @@
         "schema": "public",
         "table": "example_zones_layouts",
         "name": "example_zones_layouts_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

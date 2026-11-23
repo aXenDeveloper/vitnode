@@ -3,27 +3,17 @@
   "version": "9",
   "dialect": "postgres",
   "id": "84502ce8-5b3b-4e35-86c7-5ee029e89898",
-  "prevIds": [
-    "b50634b4-ce97-4649-a0e6-49706c351987"
-  ],
+  "prevIds": ["b50634b4-ce97-4649-a0e6-49706c351987"],
   "footprints": [
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_cron",
-        "nextRun"
-      ],
+      "statementTarget": ["column", "public", "core_cron", "nextRun"],
       "writes": [
         "s|col|public.core_cron.nextRun",
         "n|col|public.core_cron.nextRun",
         "e|col|public.core_cron.nextRun"
       ],
-      "reads": [
-        "n|tbl|public.core_cron",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_cron", "n|sch|public"]
     }
   ],
   "deltas": [

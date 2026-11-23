@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "2aeb7eed-603b-4821-b407-5d0b55ccab90",
-  "prevIds": [
-    "9ac46019-5dbb-4e3b-8ce6-33f41b5ddacf"
-  ],
+  "prevIds": ["9ac46019-5dbb-4e3b-8ce6-33f41b5ddacf"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_translation_sources"
-      ],
+      "statementTarget": ["table", "public", "core_ai_translation_sources"],
       "writes": [
         "s|tbl|public.core_ai_translation_sources",
         "n|tbl|public.core_ai_translation_sources",
@@ -22,9 +16,7 @@
         "n|type|public.core_ai_translation_sources",
         "n|rel|public.core_ai_translation_sources_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -51,11 +43,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_ai_translation_sources"
-      ],
+      "statementTarget": ["table", "public", "core_ai_translation_sources"],
       "writes": [
         "s|fk|public.core_ai_translation_sources.core_ai_translation_sources_updatedById_core_users_id_fkey",
         "n|fk|public.core_ai_translation_sources.core_ai_translation_sources_updatedById_core_users_id_fkey",
@@ -311,14 +299,10 @@
         "table": "core_ai_translation_sources",
         "name": "core_ai_translation_sources_updatedById_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "updatedById"
-        ],
+        "columns": ["updatedById"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -330,9 +314,7 @@
         "schema": "public",
         "table": "core_ai_translation_sources",
         "name": "core_ai_translation_sources_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

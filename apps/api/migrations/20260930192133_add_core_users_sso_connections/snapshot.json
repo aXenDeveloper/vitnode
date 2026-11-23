@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "ffba1781-4577-4084-998a-f9a6ce6e5d1f",
-  "prevIds": [
-    "c1eb3581-341a-484b-92c7-eedd030ab3c9"
-  ],
+  "prevIds": ["c1eb3581-341a-484b-92c7-eedd030ab3c9"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso_operations"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso_operations"],
       "writes": [
         "s|tbl|public.core_users_sso_operations",
         "n|tbl|public.core_users_sso_operations",
@@ -23,17 +17,11 @@
         "n|rel|public.core_users_sso_operations_pkey",
         "n|rel|public.core_users_sso_operations_tokenHash_key"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso_profile_sources"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso_profile_sources"],
       "writes": [
         "s|tbl|public.core_users_sso_profile_sources",
         "n|tbl|public.core_users_sso_profile_sources",
@@ -42,9 +30,7 @@
         "n|type|public.core_users_sso_profile_sources",
         "n|rel|public.core_users_sso_profile_sources_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -59,10 +45,7 @@
         "n|col|public.core_users_sso.providerEmail",
         "e|col|public.core_users_sso.providerEmail"
       ],
-      "reads": [
-        "n|tbl|public.core_users_sso",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users_sso", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -77,28 +60,17 @@
         "n|col|public.core_users_sso.providerUsername",
         "e|col|public.core_users_sso.providerUsername"
       ],
-      "reads": [
-        "n|tbl|public.core_users_sso",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users_sso", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users_sso",
-        "syncOnSignIn"
-      ],
+      "statementTarget": ["column", "public", "core_users_sso", "syncOnSignIn"],
       "writes": [
         "s|col|public.core_users_sso.syncOnSignIn",
         "n|col|public.core_users_sso.syncOnSignIn",
         "e|col|public.core_users_sso.syncOnSignIn"
       ],
-      "reads": [
-        "n|tbl|public.core_users_sso",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users_sso", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -113,54 +85,31 @@
         "n|col|public.core_users_sso.avatarSourceUrl",
         "e|col|public.core_users_sso.avatarSourceUrl"
       ],
-      "reads": [
-        "n|tbl|public.core_users_sso",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users_sso", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users_sso",
-        "avatarSha256"
-      ],
+      "statementTarget": ["column", "public", "core_users_sso", "avatarSha256"],
       "writes": [
         "s|col|public.core_users_sso.avatarSha256",
         "n|col|public.core_users_sso.avatarSha256",
         "e|col|public.core_users_sso.avatarSha256"
       ],
-      "reads": [
-        "n|tbl|public.core_users_sso",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users_sso", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users_sso",
-        "avatarFileId"
-      ],
+      "statementTarget": ["column", "public", "core_users_sso", "avatarFileId"],
       "writes": [
         "s|col|public.core_users_sso.avatarFileId",
         "n|col|public.core_users_sso.avatarFileId",
         "e|col|public.core_users_sso.avatarFileId"
       ],
-      "reads": [
-        "n|tbl|public.core_users_sso",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_users_sso", "n|sch|public"]
     },
     {
       "statementType": "add_unique",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso"],
       "writes": [
         "s|uq|public.core_users_sso.core_users_sso_provider_account_key",
         "n|uq|public.core_users_sso.core_users_sso_provider_account_key",
@@ -177,11 +126,7 @@
     },
     {
       "statementType": "add_unique",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso"],
       "writes": [
         "s|uq|public.core_users_sso.core_users_sso_user_provider_key",
         "n|uq|public.core_users_sso.core_users_sso_user_provider_key",
@@ -239,11 +184,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso"],
       "writes": [
         "s|fk|public.core_users_sso.core_users_sso_avatarFileId_core_files_id_fkey",
         "n|fk|public.core_users_sso.core_users_sso_avatarFileId_core_files_id_fkey",
@@ -262,11 +203,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso_operations"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso_operations"],
       "writes": [
         "s|fk|public.core_users_sso_operations.core_users_sso_operations_userId_core_users_id_fkey",
         "n|fk|public.core_users_sso_operations.core_users_sso_operations_userId_core_users_id_fkey",
@@ -285,11 +222,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso_profile_sources"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso_profile_sources"],
       "writes": [
         "s|fk|public.core_users_sso_profile_sources.core_users_sso_profile_sources_userId_core_users_id_fkey",
         "n|fk|public.core_users_sso_profile_sources.core_users_sso_profile_sources_userId_core_users_id_fkey",
@@ -308,11 +241,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_sso_profile_sources"
-      ],
+      "statementTarget": ["table", "public", "core_users_sso_profile_sources"],
       "writes": [
         "s|fk|public.core_users_sso_profile_sources.core_users_sso_profile_sources_connection_fkey",
         "n|fk|public.core_users_sso_profile_sources.core_users_sso_profile_sources_connection_fkey",
@@ -733,14 +662,10 @@
         "table": "core_users_sso",
         "name": "core_users_sso_avatarFileId_core_files_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "avatarFileId"
-        ],
+        "columns": ["avatarFileId"],
         "schemaTo": "public",
         "tableTo": "core_files",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -753,14 +678,10 @@
         "table": "core_users_sso_operations",
         "name": "core_users_sso_operations_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -773,14 +694,10 @@
         "table": "core_users_sso_profile_sources",
         "name": "core_users_sso_profile_sources_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -793,16 +710,10 @@
         "table": "core_users_sso_profile_sources",
         "name": "core_users_sso_profile_sources_connection_fkey",
         "nameExplicit": true,
-        "columns": [
-          "userId",
-          "providerId"
-        ],
+        "columns": ["userId", "providerId"],
         "schemaTo": "public",
         "tableTo": "core_users_sso",
-        "columnsTo": [
-          "userId",
-          "providerId"
-        ],
+        "columnsTo": ["userId", "providerId"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -814,10 +725,7 @@
         "schema": "public",
         "table": "core_users_sso_profile_sources",
         "name": "core_users_sso_profile_sources_pkey",
-        "columns": [
-          "userId",
-          "field"
-        ],
+        "columns": ["userId", "field"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -828,9 +736,7 @@
         "schema": "public",
         "table": "core_users_sso_operations",
         "name": "core_users_sso_operations_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -842,10 +748,7 @@
         "table": "core_users_sso",
         "name": "core_users_sso_provider_account_key",
         "nameExplicit": true,
-        "columns": [
-          "providerId",
-          "providerAccountId"
-        ],
+        "columns": ["providerId", "providerAccountId"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }
@@ -857,10 +760,7 @@
         "table": "core_users_sso",
         "name": "core_users_sso_user_provider_key",
         "nameExplicit": true,
-        "columns": [
-          "userId",
-          "providerId"
-        ],
+        "columns": ["userId", "providerId"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }
@@ -872,9 +772,7 @@
         "table": "core_users_sso_operations",
         "name": "core_users_sso_operations_tokenHash_key",
         "nameExplicit": false,
-        "columns": [
-          "tokenHash"
-        ],
+        "columns": ["tokenHash"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }

@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "d68f291f-7e91-4b91-b606-bca1ba71055c",
-  "prevIds": [
-    "87dc294c-d906-4784-83d9-3d9c814ef7a4"
-  ],
+  "prevIds": ["87dc294c-d906-4784-83d9-3d9c814ef7a4"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_deletions"
-      ],
+      "statementTarget": ["table", "public", "core_users_deletions"],
       "writes": [
         "s|tbl|public.core_users_deletions",
         "n|tbl|public.core_users_deletions",
@@ -22,9 +16,7 @@
         "n|type|public.core_users_deletions",
         "n|rel|public.core_users_deletions_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -39,22 +31,12 @@
         "n|col|public.core_roles.allowDeleteAccount",
         "e|col|public.core_roles.allowDeleteAccount"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "alter_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "core_users",
-        "ipAddress"
-      ],
-      "writes": [
-        "s|colprop|public.core_users.ipAddress.notNull"
-      ],
+      "statementTarget": ["column", "public", "core_users", "ipAddress"],
+      "writes": ["s|colprop|public.core_users.ipAddress.notNull"],
       "reads": [
         "n|tbl|public.core_users",
         "n|sch|public",
@@ -146,11 +128,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_deletions"
-      ],
+      "statementTarget": ["table", "public", "core_users_deletions"],
       "writes": [
         "s|fk|public.core_users_deletions.core_users_deletions_userId_core_users_id_fkey",
         "n|fk|public.core_users_deletions.core_users_deletions_userId_core_users_id_fkey",
@@ -169,11 +147,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_deletions"
-      ],
+      "statementTarget": ["table", "public", "core_users_deletions"],
       "writes": [
         "s|fk|public.core_users_deletions.core_users_deletions_requestedById_core_users_id_fkey",
         "n|fk|public.core_users_deletions.core_users_deletions_requestedById_core_users_id_fkey",
@@ -558,14 +532,10 @@
         "table": "core_users_deletions",
         "name": "core_users_deletions_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -578,14 +548,10 @@
         "table": "core_users_deletions",
         "name": "core_users_deletions_requestedById_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "requestedById"
-        ],
+        "columns": ["requestedById"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -597,9 +563,7 @@
         "schema": "public",
         "table": "core_users_deletions",
         "name": "core_users_deletions_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "f41b683b-bb2e-49a7-8377-a244c3654bb4",
-  "prevIds": [
-    "ee907a2c-c47b-45bd-9ece-4df32cdcbf31"
-  ],
+  "prevIds": ["ee907a2c-c47b-45bd-9ece-4df32cdcbf31"],
   "footprints": [
     {
       "statementType": "drop_unique",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_categories"
-      ],
+      "statementTarget": ["table", "public", "blog_categories"],
       "writes": [
         "s|uq|public.blog_categories.blog_categories_titleSeo_unique",
         "n|uq|public.blog_categories.blog_categories_titleSeo_unique",
@@ -26,17 +20,11 @@
         "n|sch|public",
         "e|col|public.blog_categories.titleSeo"
       ],
-      "sharedWrites": [
-        "e|uniqueness|public.blog_categories.titleSeo"
-      ]
+      "sharedWrites": ["e|uniqueness|public.blog_categories.titleSeo"]
     },
     {
       "statementType": "drop_unique",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_posts"
-      ],
+      "statementTarget": ["table", "public", "blog_posts"],
       "writes": [
         "s|uq|public.blog_posts.blog_posts_titleSeo_unique",
         "n|uq|public.blog_posts.blog_posts_titleSeo_unique",
@@ -49,99 +37,57 @@
         "n|sch|public",
         "e|col|public.blog_posts.titleSeo"
       ],
-      "sharedWrites": [
-        "e|uniqueness|public.blog_posts.titleSeo"
-      ]
+      "sharedWrites": ["e|uniqueness|public.blog_posts.titleSeo"]
     },
     {
       "statementType": "drop_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_categories",
-        "title"
-      ],
+      "statementTarget": ["column", "public", "blog_categories", "title"],
       "writes": [
         "s|col|public.blog_categories.title",
         "n|col|public.blog_categories.title",
         "e|col|public.blog_categories.title"
       ],
-      "reads": [
-        "n|tbl|public.blog_categories",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_categories", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_categories",
-        "titleSeo"
-      ],
+      "statementTarget": ["column", "public", "blog_categories", "titleSeo"],
       "writes": [
         "s|col|public.blog_categories.titleSeo",
         "n|col|public.blog_categories.titleSeo",
         "e|col|public.blog_categories.titleSeo"
       ],
-      "reads": [
-        "n|tbl|public.blog_categories",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_categories", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "title"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "title"],
       "writes": [
         "s|col|public.blog_posts.title",
         "n|col|public.blog_posts.title",
         "e|col|public.blog_posts.title"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "titleSeo"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "titleSeo"],
       "writes": [
         "s|col|public.blog_posts.titleSeo",
         "n|col|public.blog_posts.titleSeo",
         "e|col|public.blog_posts.titleSeo"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "drop_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "content"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "content"],
       "writes": [
         "s|col|public.blog_posts.content",
         "n|col|public.blog_posts.content",
         "e|col|public.blog_posts.content"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     }
   ],
   "deltas": [

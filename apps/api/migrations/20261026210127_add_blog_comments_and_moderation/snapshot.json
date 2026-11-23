@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "50263672-7a4f-48ea-9374-78b5474879d5",
-  "prevIds": [
-    "4b66f492-fb3f-4ba0-a722-b4787d0ef9b8"
-  ],
+  "prevIds": ["4b66f492-fb3f-4ba0-a722-b4787d0ef9b8"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_comments"
-      ],
+      "statementTarget": ["table", "public", "blog_comments"],
       "writes": [
         "s|tbl|public.blog_comments",
         "n|tbl|public.blog_comments",
@@ -22,9 +16,7 @@
         "n|type|public.blog_comments",
         "n|rel|public.blog_comments_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -39,10 +31,7 @@
         "n|col|public.core_roles.allowEditOwnContent",
         "e|col|public.core_roles.allowEditOwnContent"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -57,10 +46,7 @@
         "n|col|public.core_roles.editOwnContentMinutes",
         "e|col|public.core_roles.editOwnContentMinutes"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -75,10 +61,7 @@
         "n|col|public.core_roles.allowDeleteOwnContent",
         "e|col|public.core_roles.allowDeleteOwnContent"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -93,100 +76,57 @@
         "n|col|public.core_roles.allowHideOwnContent",
         "e|col|public.core_roles.allowHideOwnContent"
       ],
-      "reads": [
-        "n|tbl|public.core_roles",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_roles", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "blog_posts",
-        "hiddenReason"
-      ],
+      "statementTarget": ["column", "public", "blog_posts", "hiddenReason"],
       "writes": [
         "s|col|public.blog_posts.hiddenReason",
         "n|col|public.blog_posts.hiddenReason",
         "e|col|public.blog_posts.hiddenReason"
       ],
-      "reads": [
-        "n|tbl|public.blog_posts",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.blog_posts", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "forum_comments",
-        "hiddenReason"
-      ],
+      "statementTarget": ["column", "public", "forum_comments", "hiddenReason"],
       "writes": [
         "s|col|public.forum_comments.hiddenReason",
         "n|col|public.forum_comments.hiddenReason",
         "e|col|public.forum_comments.hiddenReason"
       ],
-      "reads": [
-        "n|tbl|public.forum_comments",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.forum_comments", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "forum_comments",
-        "deletedAt"
-      ],
+      "statementTarget": ["column", "public", "forum_comments", "deletedAt"],
       "writes": [
         "s|col|public.forum_comments.deletedAt",
         "n|col|public.forum_comments.deletedAt",
         "e|col|public.forum_comments.deletedAt"
       ],
-      "reads": [
-        "n|tbl|public.forum_comments",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.forum_comments", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "forum_comments",
-        "deletedBy"
-      ],
+      "statementTarget": ["column", "public", "forum_comments", "deletedBy"],
       "writes": [
         "s|col|public.forum_comments.deletedBy",
         "n|col|public.forum_comments.deletedBy",
         "e|col|public.forum_comments.deletedBy"
       ],
-      "reads": [
-        "n|tbl|public.forum_comments",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.forum_comments", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "forum_topics",
-        "hiddenReason"
-      ],
+      "statementTarget": ["column", "public", "forum_topics", "hiddenReason"],
       "writes": [
         "s|col|public.forum_topics.hiddenReason",
         "n|col|public.forum_topics.hiddenReason",
         "e|col|public.forum_topics.hiddenReason"
       ],
-      "reads": [
-        "n|tbl|public.forum_topics",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.forum_topics", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -201,46 +141,27 @@
         "n|col|public.newsroom_comments.hiddenReason",
         "e|col|public.newsroom_comments.hiddenReason"
       ],
-      "reads": [
-        "n|tbl|public.newsroom_comments",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.newsroom_comments", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "newsroom_comments",
-        "deletedAt"
-      ],
+      "statementTarget": ["column", "public", "newsroom_comments", "deletedAt"],
       "writes": [
         "s|col|public.newsroom_comments.deletedAt",
         "n|col|public.newsroom_comments.deletedAt",
         "e|col|public.newsroom_comments.deletedAt"
       ],
-      "reads": [
-        "n|tbl|public.newsroom_comments",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.newsroom_comments", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "newsroom_comments",
-        "deletedBy"
-      ],
+      "statementTarget": ["column", "public", "newsroom_comments", "deletedBy"],
       "writes": [
         "s|col|public.newsroom_comments.deletedBy",
         "n|col|public.newsroom_comments.deletedBy",
         "e|col|public.newsroom_comments.deletedBy"
       ],
-      "reads": [
-        "n|tbl|public.newsroom_comments",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.newsroom_comments", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -255,10 +176,7 @@
         "n|col|public.newsroom_events.hiddenReason",
         "e|col|public.newsroom_events.hiddenReason"
       ],
-      "reads": [
-        "n|tbl|public.newsroom_events",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.newsroom_events", "n|sch|public"]
     },
     {
       "statementType": "add_column",
@@ -273,28 +191,17 @@
         "n|col|public.newsroom_letters.hiddenReason",
         "e|col|public.newsroom_letters.hiddenReason"
       ],
-      "reads": [
-        "n|tbl|public.newsroom_letters",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.newsroom_letters", "n|sch|public"]
     },
     {
       "statementType": "add_column",
-      "statementTarget": [
-        "column",
-        "public",
-        "newsroom_tags",
-        "hiddenReason"
-      ],
+      "statementTarget": ["column", "public", "newsroom_tags", "hiddenReason"],
       "writes": [
         "s|col|public.newsroom_tags.hiddenReason",
         "n|col|public.newsroom_tags.hiddenReason",
         "e|col|public.newsroom_tags.hiddenReason"
       ],
-      "reads": [
-        "n|tbl|public.newsroom_tags",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.newsroom_tags", "n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -541,11 +448,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_comments"
-      ],
+      "statementTarget": ["table", "public", "blog_comments"],
       "writes": [
         "s|fk|public.blog_comments.blog_comments_hiddenBy_core_users_id_fkey",
         "n|fk|public.blog_comments.blog_comments_hiddenBy_core_users_id_fkey",
@@ -564,11 +467,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_comments"
-      ],
+      "statementTarget": ["table", "public", "blog_comments"],
       "writes": [
         "s|fk|public.blog_comments.blog_comments_deletedBy_core_users_id_fkey",
         "n|fk|public.blog_comments.blog_comments_deletedBy_core_users_id_fkey",
@@ -587,11 +486,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_comments"
-      ],
+      "statementTarget": ["table", "public", "blog_comments"],
       "writes": [
         "s|fk|public.blog_comments.blog_comments_author_core_users_id_fkey",
         "n|fk|public.blog_comments.blog_comments_author_core_users_id_fkey",
@@ -610,11 +505,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_comments"
-      ],
+      "statementTarget": ["table", "public", "blog_comments"],
       "writes": [
         "s|fk|public.blog_comments.blog_comments_article_blog_posts_id_fkey",
         "n|fk|public.blog_comments.blog_comments_article_blog_posts_id_fkey",
@@ -633,11 +524,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "blog_comments"
-      ],
+      "statementTarget": ["table", "public", "blog_comments"],
       "writes": [
         "s|fk|public.blog_comments.blog_comments_parent_blog_comments_id_fkey",
         "n|fk|public.blog_comments.blog_comments_parent_blog_comments_id_fkey",
@@ -656,11 +543,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "forum_comments"
-      ],
+      "statementTarget": ["table", "public", "forum_comments"],
       "writes": [
         "s|fk|public.forum_comments.forum_comments_deletedBy_core_users_id_fkey",
         "n|fk|public.forum_comments.forum_comments_deletedBy_core_users_id_fkey",
@@ -679,11 +562,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "newsroom_comments"
-      ],
+      "statementTarget": ["table", "public", "newsroom_comments"],
       "writes": [
         "s|fk|public.newsroom_comments.newsroom_comments_deletedBy_core_users_id_fkey",
         "n|fk|public.newsroom_comments.newsroom_comments_deletedBy_core_users_id_fkey",
@@ -1523,14 +1402,10 @@
         "table": "blog_comments",
         "name": "blog_comments_hiddenBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "hiddenBy"
-        ],
+        "columns": ["hiddenBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1543,14 +1418,10 @@
         "table": "blog_comments",
         "name": "blog_comments_deletedBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "deletedBy"
-        ],
+        "columns": ["deletedBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1563,14 +1434,10 @@
         "table": "blog_comments",
         "name": "blog_comments_author_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "author"
-        ],
+        "columns": ["author"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1583,14 +1450,10 @@
         "table": "blog_comments",
         "name": "blog_comments_article_blog_posts_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "article"
-        ],
+        "columns": ["article"],
         "schemaTo": "public",
         "tableTo": "blog_posts",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -1603,14 +1466,10 @@
         "table": "blog_comments",
         "name": "blog_comments_parent_blog_comments_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "parent"
-        ],
+        "columns": ["parent"],
         "schemaTo": "public",
         "tableTo": "blog_comments",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1623,14 +1482,10 @@
         "table": "forum_comments",
         "name": "forum_comments_deletedBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "deletedBy"
-        ],
+        "columns": ["deletedBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1643,14 +1498,10 @@
         "table": "newsroom_comments",
         "name": "newsroom_comments_deletedBy_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "deletedBy"
-        ],
+        "columns": ["deletedBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -1662,9 +1513,7 @@
         "schema": "public",
         "table": "blog_comments",
         "name": "blog_comments_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "c1eb3581-341a-484b-92c7-eedd030ab3c9",
-  "prevIds": [
-    "56fff4d4-495f-4005-a13f-07fcc543ac42"
-  ],
+  "prevIds": ["56fff4d4-495f-4005-a13f-07fcc543ac42"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_passkey_challenges"
-      ],
+      "statementTarget": ["table", "public", "core_users_passkey_challenges"],
       "writes": [
         "s|tbl|public.core_users_passkey_challenges",
         "n|tbl|public.core_users_passkey_challenges",
@@ -23,17 +17,11 @@
         "n|rel|public.core_users_passkey_challenges_pkey",
         "n|rel|public.core_users_passkey_challenges_tokenHash_key"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_passkeys"
-      ],
+      "statementTarget": ["table", "public", "core_users_passkeys"],
       "writes": [
         "s|tbl|public.core_users_passkeys",
         "n|tbl|public.core_users_passkeys",
@@ -43,9 +31,7 @@
         "n|rel|public.core_users_passkeys_pkey",
         "n|rel|public.core_users_passkeys_credentialId_key"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -129,11 +115,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_passkey_challenges"
-      ],
+      "statementTarget": ["table", "public", "core_users_passkey_challenges"],
       "writes": [
         "s|fk|public.core_users_passkey_challenges.core_users_passkey_challenges_userId_core_users_id_fkey",
         "n|fk|public.core_users_passkey_challenges.core_users_passkey_challenges_userId_core_users_id_fkey",
@@ -152,11 +134,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_users_passkeys"
-      ],
+      "statementTarget": ["table", "public", "core_users_passkeys"],
       "writes": [
         "s|fk|public.core_users_passkeys.core_users_passkeys_userId_core_users_id_fkey",
         "n|fk|public.core_users_passkeys.core_users_passkeys_userId_core_users_id_fkey",
@@ -648,14 +626,10 @@
         "table": "core_users_passkey_challenges",
         "name": "core_users_passkey_challenges_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -668,14 +642,10 @@
         "table": "core_users_passkeys",
         "name": "core_users_passkeys_userId_core_users_id_fkey",
         "nameExplicit": false,
-        "columns": [
-          "userId"
-        ],
+        "columns": ["userId"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "NO ACTION",
         "onDelete": "CASCADE",
         "entityType": "fks"
@@ -687,9 +657,7 @@
         "schema": "public",
         "table": "core_users_passkey_challenges",
         "name": "core_users_passkey_challenges_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -700,9 +668,7 @@
         "schema": "public",
         "table": "core_users_passkeys",
         "name": "core_users_passkeys_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -714,9 +680,7 @@
         "table": "core_users_passkey_challenges",
         "name": "core_users_passkey_challenges_tokenHash_key",
         "nameExplicit": false,
-        "columns": [
-          "tokenHash"
-        ],
+        "columns": ["tokenHash"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }
@@ -728,9 +692,7 @@
         "table": "core_users_passkeys",
         "name": "core_users_passkeys_credentialId_key",
         "nameExplicit": false,
-        "columns": [
-          "credentialId"
-        ],
+        "columns": ["credentialId"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }

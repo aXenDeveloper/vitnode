@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "48d4174b-1986-4fa5-8919-80bd98f443d6",
-  "prevIds": [
-    "fa39e13e-f0d1-451d-9e0f-5c0cf68593db"
-  ],
+  "prevIds": ["fa39e13e-f0d1-451d-9e0f-5c0cf68593db"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_moderation_report_reasons"
-      ],
+      "statementTarget": ["table", "public", "core_moderation_report_reasons"],
       "writes": [
         "s|tbl|public.core_moderation_report_reasons",
         "n|tbl|public.core_moderation_report_reasons",
@@ -23,9 +17,7 @@
         "n|rel|public.core_moderation_report_reasons_pkey",
         "n|rel|public.core_moderation_report_reasons_code_key"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -184,9 +176,7 @@
         "schema": "public",
         "table": "core_moderation_report_reasons",
         "name": "core_moderation_report_reasons_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }
@@ -198,9 +188,7 @@
         "table": "core_moderation_report_reasons",
         "name": "core_moderation_report_reasons_code_key",
         "nameExplicit": false,
-        "columns": [
-          "code"
-        ],
+        "columns": ["code"],
         "nullsNotDistinct": false,
         "entityType": "uniques"
       }

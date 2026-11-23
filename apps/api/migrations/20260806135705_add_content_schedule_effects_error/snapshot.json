@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "ad292f66-b888-469c-84fc-5b2fb5dd0dcd",
-  "prevIds": [
-    "949a0b2c-84b1-43ba-83fa-2e2ab286905c"
-  ],
+  "prevIds": ["949a0b2c-84b1-43ba-83fa-2e2ab286905c"],
   "footprints": [
     {
       "statementType": "add_column",
@@ -20,10 +18,7 @@
         "n|col|public.core_content_schedules.effectsError",
         "e|col|public.core_content_schedules.effectsError"
       ],
-      "reads": [
-        "n|tbl|public.core_content_schedules",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_content_schedules", "n|sch|public"]
     }
   ],
   "deltas": [

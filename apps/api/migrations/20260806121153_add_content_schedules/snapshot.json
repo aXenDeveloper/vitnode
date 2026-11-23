@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "949a0b2c-84b1-43ba-83fa-2e2ab286905c",
-  "prevIds": [
-    "410ddb95-6db7-4923-96be-141fc9454cb6"
-  ],
+  "prevIds": ["410ddb95-6db7-4923-96be-141fc9454cb6"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_schedules"
-      ],
+      "statementTarget": ["table", "public", "core_content_schedules"],
       "writes": [
         "s|tbl|public.core_content_schedules",
         "n|tbl|public.core_content_schedules",
@@ -22,9 +16,7 @@
         "n|type|public.core_content_schedules",
         "n|rel|public.core_content_schedules_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -132,11 +124,7 @@
     },
     {
       "statementType": "create_fk",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_content_schedules"
-      ],
+      "statementTarget": ["table", "public", "core_content_schedules"],
       "writes": [
         "s|fk|public.core_content_schedules.core_content_schedules_createdBy_core_users_id_fk",
         "n|fk|public.core_content_schedules.core_content_schedules_createdBy_core_users_id_fk",
@@ -527,14 +515,10 @@
         "table": "core_content_schedules",
         "name": "core_content_schedules_createdBy_core_users_id_fk",
         "nameExplicit": false,
-        "columns": [
-          "createdBy"
-        ],
+        "columns": ["createdBy"],
         "schemaTo": "public",
         "tableTo": "core_users",
-        "columnsTo": [
-          "id"
-        ],
+        "columnsTo": ["id"],
         "onUpdate": "CASCADE",
         "onDelete": "SET NULL",
         "entityType": "fks"
@@ -546,9 +530,7 @@
         "schema": "public",
         "table": "core_content_schedules",
         "name": "core_content_schedules_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

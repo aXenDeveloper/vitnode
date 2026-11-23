@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "34389650-950c-49e6-8f6f-6ffa68c26fd9",
-  "prevIds": [
-    "755b9c3b-3019-488c-b361-448bcdeedb47"
-  ],
+  "prevIds": ["755b9c3b-3019-488c-b361-448bcdeedb47"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_queue"
-      ],
+      "statementTarget": ["table", "public", "core_queue"],
       "writes": [
         "s|tbl|public.core_queue",
         "n|tbl|public.core_queue",
@@ -22,9 +16,7 @@
         "n|type|public.core_queue",
         "n|rel|public.core_queue_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -335,9 +327,7 @@
         "schema": "public",
         "table": "core_queue",
         "name": "core_queue_pkey",
-        "columns": [
-          "id"
-        ],
+        "columns": ["id"],
         "nameExplicit": false,
         "entityType": "pks"
       }

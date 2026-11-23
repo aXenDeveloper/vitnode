@@ -3,17 +3,11 @@
   "version": "9",
   "dialect": "postgres",
   "id": "dc7801fa-455e-407a-9c8c-918adc89447f",
-  "prevIds": [
-    "b9feeb04-d716-42fb-8a93-ddced63b0b5b"
-  ],
+  "prevIds": ["b9feeb04-d716-42fb-8a93-ddced63b0b5b"],
   "footprints": [
     {
       "statementType": "create_table",
-      "statementTarget": [
-        "table",
-        "public",
-        "core_search_popularity"
-      ],
+      "statementTarget": ["table", "public", "core_search_popularity"],
       "writes": [
         "s|tbl|public.core_search_popularity",
         "n|tbl|public.core_search_popularity",
@@ -22,9 +16,7 @@
         "n|type|public.core_search_popularity",
         "n|rel|public.core_search_popularity_pkey"
       ],
-      "reads": [
-        "n|sch|public"
-      ]
+      "reads": ["n|sch|public"]
     },
     {
       "statementType": "create_index",
@@ -199,10 +191,7 @@
         "schema": "public",
         "table": "core_search_popularity",
         "name": "core_search_popularity_pkey",
-        "columns": [
-          "itemType",
-          "itemId"
-        ],
+        "columns": ["itemType", "itemId"],
         "nameExplicit": false,
         "entityType": "pks"
       }

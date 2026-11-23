@@ -3,9 +3,7 @@
   "version": "9",
   "dialect": "postgres",
   "id": "efc06477-7761-4b25-85d1-ede72f9306ce",
-  "prevIds": [
-    "dc7801fa-455e-407a-9c8c-918adc89447f"
-  ],
+  "prevIds": ["dc7801fa-455e-407a-9c8c-918adc89447f"],
   "footprints": [
     {
       "statementType": "create_index",
@@ -21,10 +19,7 @@
         "e|idx|public.core_search_index_title_vector_idx",
         "n|rel|public.core_search_index_title_vector_idx"
       ],
-      "reads": [
-        "n|tbl|public.core_search_index",
-        "n|sch|public"
-      ]
+      "reads": ["n|tbl|public.core_search_index", "n|sch|public"]
     }
   ],
   "deltas": [

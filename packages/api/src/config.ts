@@ -262,6 +262,7 @@ export function VitNodeAPI({
       authorization: vitNodeApiConfig.authorization,
       dbProvider: vitNodeApiConfig.dbProvider,
       captcha: vitNodeApiConfig.captcha,
+      chat: vitNodeApiConfig.chat,
       content: vitNodeApiConfig.content,
       cron: vitNodeApiConfig.cron,
       events: vitNodeApiConfig.events,
