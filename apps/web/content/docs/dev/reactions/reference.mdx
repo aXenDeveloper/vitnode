@@ -63,7 +63,6 @@ Every route is under `/api/@vitnode/core`. Call them with `fetcher({ plugin: "@v
 | `DELETE`    | `/reactions`                     | Remove `reaction`, or all of the member's reactions on the item without it.                                    |
 | `GET`       | `/reactions/users`               | Who reacted, newest first, 50 per page, optionally one `reaction`.                                             |
 | `GET`       | `/reactions/reputation/{userId}` | Reputation and reactions received per reaction.                                                                |
-| `GET`/`PUT` | `/reactions/me/settings`         | The member's `showReactionsOnProfile`.                                                                         |
 | `GET`       | `/users/{userId}/timeline`       | What the member wrote and the reactions they gave, merged, newest first.                                       |
 
 AdminCP routes live under `/admin/reactions`: list, `/create`, `/{id}`, `/{id}/impact`, `/reorder`, `/upload`, `/recount` and `/roles/{roleId}`. They need `reactions:can_view` or `reactions:can_manage`; role settings need `roles:can_view` or `roles:can_edit`.

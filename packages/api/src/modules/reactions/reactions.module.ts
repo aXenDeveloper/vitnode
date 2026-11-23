@@ -5,10 +5,6 @@ import { reactionsCleanupCron } from "./cron/cleanup.cron";
 import { reactionsCatalogRoute } from "./routes/catalog.route";
 import { reactRoute } from "./routes/react.route";
 import { reputationRoute } from "./routes/reputation.route";
-import {
-  showMyReactionSettingsRoute,
-  updateMyReactionSettingsRoute,
-} from "./routes/settings.route";
 import { reactionsSummariesRoute } from "./routes/summaries.route";
 import { unreactRoute } from "./routes/unreact.route";
 import { reactionUsersRoute } from "./routes/users.route";
@@ -23,8 +19,6 @@ export const reactionsModule = buildModule({
     unreactRoute,
     reactionUsersRoute,
     reputationRoute,
-    showMyReactionSettingsRoute,
-    updateMyReactionSettingsRoute,
   ],
   cronJobs: [reactionsCleanupCron],
   queueTasks: [recountReputationQueueTask],

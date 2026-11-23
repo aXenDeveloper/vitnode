@@ -9,6 +9,7 @@ import type {
 import { TableHead, TableHeader, TableRow } from "../ui/table";
 import { alignClassName } from "./align";
 import { OrderTableHeadDataTable } from "./order-table-head";
+import { isPinnedColumn, pinnedHeadClassName } from "./pinned";
 import { readTableOrder } from "./url-state";
 
 type SortStateDataTable = "ascending" | "descending" | "none";
@@ -52,7 +53,12 @@ export const HeadRowDataTable = <T extends DataTableTMin>({
         {columns.map(column => (
           <TableHead
             aria-sort={sortStateOf(column)}
-            className={cn(alignClassName(column.align), column.className)}
+            className={cn(
+              alignClassName(column.align),
+              isPinnedColumn(column) && pinnedHeadClassName,
+              column.className,
+            )}
+            data-pinned={isPinnedColumn(column) ? "end" : undefined}
             key={column.id ?? String(column.accessorKey)}
           >
             {isOrderable(column) && column.accessorKey ? (

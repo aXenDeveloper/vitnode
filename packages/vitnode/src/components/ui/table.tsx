@@ -4,7 +4,7 @@ import React from "react";
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
-      className="supports-[animation-timeline:scroll()]:scroll-fade-x relative w-full overflow-x-auto"
+      className="supports-[animation-timeline:scroll()]:scroll-fade-x relative w-full overflow-x-auto has-data-pinned:[--scroll-fade-e-size:0px] has-data-pinned:[container:data-table/scroll-state]"
       data-slot="table-container"
     >
       <table

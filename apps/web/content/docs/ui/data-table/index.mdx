@@ -93,6 +93,10 @@ badges) has no field and needs a string `id`.
 `'left'` (default), `'center'` or `'right'` for the header and cells. Right
 suits numbers and actions.
 
+A display column with `id: 'actions'` is pinned to the end edge. When a wide
+table scrolls sideways, the other columns slide under it, so the row menu never
+wanders off screen.
+
 ## Sorting
 
 List sortable columns in `order.columns`. Clicking a header flips between

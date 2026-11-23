@@ -85,7 +85,26 @@ Cards are drawn only for what anyone may read. A draft, a hidden record, a recor
 
 ## Before you begin
 
-The `og:image` URLs are absolute, and a crawler cannot open `localhost`. In production set `VITNODE_API_URL` to the API's public origin and `VITNODE_WEB_URL` to the site's. An app that serves its own API at `/api` sets both to the same origin.
+<Callout type="warn" title="Set VITNODE_WEB_URL before you deploy">
+  Social tags are absolute URLs. VitNode builds `og:url` and the site card's `og:image` from `VITNODE_WEB_URL` (the site card uses `VITNODE_API_URL` instead when it is set), and both fall back to `http://localhost:3000`. Nothing breaks on the page itself, so the first sign is a link preview with no picture: a crawler cannot open `localhost`.
+</Callout>
+
+In production set `VITNODE_WEB_URL` to the site's public origin, and `VITNODE_API_URL` to the API's when the API runs on its own. An app that serves its own API at `/api` needs only `VITNODE_WEB_URL`.
+
+Set it where the server runs, not only in a local `.env`. On Cloudflare Workers that is `vars` in `wrangler.jsonc`:
+
+```jsonc title="wrangler.jsonc"
+{
+  "vars": {
+    // [!code ++]
+    "VITNODE_WEB_URL": "https://acme.example",
+  },
+}
+```
+
+On Docker, Vercel or a Node/Bun host, add it to the environment variables of the deployment. The browser bundle reads its copy at build time, so the build environment needs it too.
+
+Check a deployed page with the `curl` command from [Check the result](#check-the-result): no `og:image` or `og:url` should start with `http://localhost`.
 
 ## Change the colours and the site card
 

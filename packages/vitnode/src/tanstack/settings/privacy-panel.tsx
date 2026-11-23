@@ -15,7 +15,6 @@ import {
 } from "@/views/auth/settings/privacy/privacy-query";
 import { PrivacySettings } from "@/views/auth/settings/privacy/privacy-settings";
 import { updatePrivacyInBrowser } from "@/views/auth/settings/privacy/privacy-update";
-import { ReactionPrivacySetting } from "@/views/auth/settings/privacy/reaction-privacy-setting";
 import { PRESENCE_QUERY_ROOT } from "@/views/presence/presence-query";
 
 import { useSignOutAction } from "../auth/actions";
@@ -77,16 +76,13 @@ export const PrivacyPanelContent = ({
       status={data}
       userName={userName}
       visibility={
-        <>
-          {session.user ? (
-            <PrivacySettings
-              hideOnlineStatus={session.user.hideOnlineStatus}
-              onUpdate={onPrivacyUpdate}
-              policy={policy.browseAnonymously}
-            />
-          ) : null}
-          <ReactionPrivacySetting />
-        </>
+        session.user ? (
+          <PrivacySettings
+            hideOnlineStatus={session.user.hideOnlineStatus}
+            onUpdate={onPrivacyUpdate}
+            policy={policy.browseAnonymously}
+          />
+        ) : null
       }
     />
   );

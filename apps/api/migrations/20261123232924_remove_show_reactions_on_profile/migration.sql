@@ -1,0 +1,1 @@
+ALTER TABLE "core_users" DROP COLUMN "showReactionsOnProfile";

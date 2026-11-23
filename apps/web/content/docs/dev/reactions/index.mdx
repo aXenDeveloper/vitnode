@@ -21,4 +21,4 @@ Reactions let members respond to posts, comments and anything else your plugin s
 - **Roles.** Each role decides whether its members can react, whether they may react to their own posts, how many different reactions they give one item (1 by default, so a new pick replaces the old one), how many a day in total and how many of each reaction.
 - **Reputation.** The target's author collects each reaction's points, which can be negative. Changing a reaction's points applies to past reactions too.
 - **Live counts.** With the [WebSocket](/docs/dev/websocket) running, every reaction pushes the new counts to everyone who has the item on screen. Without it, reactions still work over HTTP.
-- **Timeline and notifications.** Reactions a member gives appear in their profile timeline unless they turn off **Show my reactions on my profile** in **Settings → Overview**. Authors get a **Reactions to your content** notification, grouped per item and day.
+- **Timeline and notifications.** Reactions a member gives appear in their profile timeline, to people who can see the content they reacted to. Authors get a **Reactions to your content** notification, grouped per item and day.

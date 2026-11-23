@@ -50,6 +50,10 @@ interface AccessorColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
 
 interface DisplayColumnDef<T extends DataTableTMin> extends ColumnDefBase<T> {
   accessorKey?: never;
+  /**
+   * `"actions"` pins the column to the end edge, so row actions stay visible
+   * while a wide table scrolls sideways.
+   */
   id: string;
 }
 

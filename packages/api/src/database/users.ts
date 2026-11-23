@@ -73,7 +73,6 @@ export const core_users = camelCase.table.withRLS(
     hideOnlineStatus: t.boolean().notNull().default(false),
     // Sum of the points of reactions this user's content received.
     reputation: t.integer().notNull().default(0),
-    showReactionsOnProfile: t.boolean().notNull().default(true),
   }),
   t => [
     index("core_users_avatar_id_idx").on(t.avatarId),

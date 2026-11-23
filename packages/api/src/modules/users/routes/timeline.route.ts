@@ -4,10 +4,7 @@ import { buildRoute } from "@/builders";
 import { contentSearchHiddenAccess } from "@/content/server/hidden-access";
 import { reactionImageSchema } from "@/lib/reactions/catalog";
 import { REACTION_KINDS } from "@/lib/reactions/const";
-import {
-  canSeeReactionsOf,
-  readReactionTimeline,
-} from "@/lib/reactions/timeline";
+import { readReactionTimeline } from "@/lib/reactions/timeline";
 import { searchTimeline } from "@/modules/search/lib/timeline";
 import {
   zodSearchHitSchema,
@@ -135,7 +132,7 @@ export const userTimelineRoute = buildRoute({
               ...(cursor.s === null ? {} : { cursor: String(cursor.s) }),
             },
           }),
-      cursor.rd || !(await canSeeReactionsOf(c, userId))
+      cursor.rd
         ? { done: true, items: [] }
         : readReactionTimeline(c, { before: cursor.r, first, userId }),
     ]);

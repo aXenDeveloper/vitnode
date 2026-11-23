@@ -1,0 +1,36 @@
+{
+  "type": "diff",
+  "version": "10",
+  "dialect": "postgres",
+  "id": "2658a40c-37e9-4292-a232-0f25bf323363",
+  "prevIds": [
+    "a15b8ebf-81b6-45d3-bc42-24cfbaaf11b5",
+    "7453f5c0-b352-419a-bc5e-314a1576c86f"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_users",
+        "showReactionsOnProfile"
+      ],
+      "writes": [
+        "s|col|public.core_users.showReactionsOnProfile",
+        "n|col|public.core_users.showReactionsOnProfile",
+        "e|col|public.core_users.showReactionsOnProfile"
+      ],
+      "reads": [
+        "n|tbl|public.core_users",
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"core_users\",\"showReactionsOnProfile\"]"
+    }
+  ]
+}

@@ -3,7 +3,6 @@ import type { Context } from "hono";
 import { and, desc, eq, lt } from "drizzle-orm";
 
 import { core_reactions_entries } from "@/database/reactions";
-import { core_users } from "@/database/users";
 
 import type { ReactionCatalogEntry } from "./catalog";
 import type { ReactionTargetPreview } from "./targets";
@@ -26,22 +25,6 @@ export interface ReactionTimelineItem {
     type: string;
   };
 }
-
-/** Whether the visitor may see `userId`'s reactions on their profile. */
-export const canSeeReactionsOf = async (
-  c: Context,
-  userId: number,
-): Promise<boolean> => {
-  if (c.get("user")?.id === userId) return true;
-  const [row] = await c
-    .get("db")
-    .select({ show: core_users.showReactionsOnProfile })
-    .from(core_users)
-    .where(eq(core_users.id, userId))
-    .limit(1);
-
-  return row?.show ?? false;
-};
 
 /**
  * Up to `first` reactions `userId` gave before entry `before`, newest first,

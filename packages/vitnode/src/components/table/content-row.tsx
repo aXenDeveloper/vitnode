@@ -16,6 +16,7 @@ import { TableBody, TableCell, TableRow } from "../ui/table";
 import { alignClassName } from "./align";
 import { ExpandedRowDataTable } from "./expansion";
 import { NoResultsDataTable } from "./no-results";
+import { isPinnedColumn, pinnedCellClassName } from "./pinned";
 import { AnimatedTableRow, type RowMotionDataTable } from "./row-motion";
 import { RowSelectableDataTable } from "./selection";
 
@@ -114,7 +115,12 @@ export const RowDataTable = <T extends DataTableTMin>({
       // neither align a value under its own header nor let a
       // long name wrap, and both had to be redone on an element
       // inside the cell.
-      className={cn(alignClassName(column.align), column.className)}
+      className={cn(
+        alignClassName(column.align),
+        isPinnedColumn(column) && pinnedCellClassName,
+        column.className,
+      )}
+      data-pinned={isPinnedColumn(column) ? "end" : undefined}
       key={`${row.id}_${column.id ?? String(column.accessorKey)}`}
     >
       {cellContentOf(column, row, rows)}

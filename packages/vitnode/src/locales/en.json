@@ -3825,13 +3825,6 @@
         "reacted": "<user></user> reacted to <target>{title}</target>",
         "reacted_in": "<user></user> reacted to {kind, select, comment {{count, plural, one {# comment} other {# comments}}} topic {{count, plural, one {# topic} other {# topics}}} other {{count, plural, one {# item} other {# items}}}} in <target>{title}</target>",
         "more": "and {count} more"
-      },
-      "settings": {
-        "title": "Reactions",
-        "show_on_profile": "Show my reactions on my profile",
-        "show_on_profile_desc": "Reactions you give appear in your profile timeline. Only people who can see the content you reacted to see them.",
-        "saved": "Reaction settings saved",
-        "saved_desc": "Your profile timeline follows the new setting."
       }
     },
     "site_offline": {
