@@ -156,8 +156,11 @@ interface SiteImagePage {
   title: string;
 }
 
+const siteImageOrigin = (): URL =>
+  process.env.VITNODE_API_URL ? CONFIG.api : CONFIG.web;
+
 const generatedSiteImageUrl = (page: SiteImagePage): string => {
-  const imageUrl = new URL(SITE_OG_IMAGE_PATH, CONFIG.api);
+  const imageUrl = new URL(SITE_OG_IMAGE_PATH, siteImageOrigin());
   imageUrl.searchParams.set(
     "title",
     truncate(page.title, SITE_OG_IMAGE_TITLE_MAX),

@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "pnpm --filter api db:prepare && vitnode dev --port 3000",
     "build": "vitnode build",
-    "build:cloudflare": "NITRO_PRESET=cloudflare-module vitnode build",
+    "build:cloudflare": "NITRO_PRESET=cloudflare-module VITNODE_WEB_URL=${VITNODE_WEB_URL:-https://vitnode.com} vitnode build",
     "preview": "vite preview",
     "preview:cloudflare": "wrangler dev",
     "check:cloudflare": "wrangler deploy --dry-run --outdir .output/wrangler-dry-run",

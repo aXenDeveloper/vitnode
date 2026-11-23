@@ -23,19 +23,33 @@ export const getDocsPage = createServerFn({ method: 'GET' })
     const tree = source.getPageTree()
     const ancestors = getBreadcrumbItems(page.url, tree, {})
       .slice(0, -1)
-      .reverse()
-      .flatMap((item) => (typeof item.name === 'string' ? [item.name] : []))
+      .flatMap(({ name, url }) =>
+        typeof name === 'string' ? [{ name, url: url ?? null }] : [],
+      )
     const section = page.slugs[0]
     const sectionTitle = docsSectionTitle(tree, page.url)
+    const titleTrail =
+      ancestors.length > 0 || !sectionTitle
+        ? ancestors.map(({ name }) => name).reverse()
+        : [sectionTitle]
+    const sectionUrl = section ? `/docs/${section}` : null
 
     return {
+      breadcrumbs: [
+        ...(sectionTitle && sectionUrl && sectionUrl !== page.url
+          ? [{ name: sectionTitle, url: sectionUrl }]
+          : []),
+        ...ancestors,
+        { name: page.data.title, url: page.url },
+      ],
       description: page.data.description,
       githubUrl: docsGithubUrl(page.path),
       markdownUrl: encodeMarkdownUrl(page.slugs),
-      metaTitle: [page.data.title, ...ancestors].join(' - '),
+      metaTitle: [page.data.title, ...titleTrail].join(' - '),
       path: page.path,
       section:
         section && sectionTitle ? { id: section, title: sectionTitle } : null,
+      title: page.data.title,
       url: page.url,
     }
   })

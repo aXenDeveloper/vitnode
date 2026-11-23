@@ -26,6 +26,7 @@ const config = defineConfig({
       nitro: {
         ...(CLOUDFLARE ? { preset: 'cloudflare-module' } : {}),
         prerender: {
+          failOnError: true,
           routes: prerenderRoutes({
             i18n: vitNodeConfig.i18n,
             paths: [...PRERENDERED_PATHS, ...docsPrerenderPaths()],
