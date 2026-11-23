@@ -123,8 +123,8 @@ export interface NotificationTypeDefinition<TData = Record<string, unknown>> {
   migrate?: (data: unknown, fromVersion: number) => unknown;
   /**
    * Renders one inbox item in the recipient's language. Runs on the API each
-   * time the item is listed or emailed; a throw or empty title shows a "no
-   * longer available" placeholder.
+   * time the item is listed or emailed; a throw or empty title leaves the item
+   * out of the list.
    */
   present: (args: NotificationPresentArgs<TData>) => NotificationPresentation;
   /** Validates `data` on publish and whenever stored data is read. */

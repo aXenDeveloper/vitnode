@@ -12,6 +12,8 @@ import { cancelDeletionSignInRoute } from "./routes/cancel-deletion-sign-in.rout
 import { changePasswordRoute } from "./routes/change-password.route";
 import { listDevicesRoute } from "./routes/devices.route";
 import { mePolicyRoute } from "./routes/me-policy.route";
+import { mentionedUsersRoute } from "./routes/mentioned.route";
+import { mentionSuggestionsRoute } from "./routes/mentions.route";
 import { permissionsRoute } from "./routes/permissions.route";
 import { personalDataExportRoute } from "./routes/personal-data.route";
 import { presenceBatchRoute } from "./routes/presence-batch.route";
@@ -60,6 +62,8 @@ export const usersModule = buildModule({
     presenceBatchRoute,
     presenceRoute,
     userTimelineRoute,
+    mentionSuggestionsRoute,
+    mentionedUsersRoute,
   ],
   modules: [
     ssoUserModule,

@@ -48,6 +48,7 @@ export const CONTENT_COMMENTS_MAX_BRANCH_REQUESTS = 2;
 
 /** Spreads the reads of every viewer of a busy thread after a server restart. */
 const RECONNECT_JITTER_MS = 1_500;
+const OWN_POST_HOLD_MS = 15_000;
 
 const keyOf = (id: ContentId): string => String(id);
 
@@ -208,8 +209,7 @@ const tailCursor = <TRecord, TId extends ContentId>(
 };
 
 export interface ContentCommentsLiveSnapshot {
-  /** A comment appeared after the loaded ones, at the end of the thread. */
-  hasNew: boolean;
+  arrived: readonly string[];
   /** A background refresh failed; what is on screen may be out of date. */
   refreshError: boolean;
 }
@@ -250,9 +250,10 @@ const DETACHED = async (): Promise<never> =>
  *   `/thread/branches`, and merges it in place. Changes to the same branches
  *   within `debounceMs` (at most `maxWaitMs`) share one request; at most
  *   `maxRequests` run at once, never two for the same branch.
- * - A change in a branch that is not loaded is not fetched. At the end of the
- *   thread it raises `hasNew`, and `showNew()` reads only what follows the
- *   last loaded comment; before the end, "Load more" will read it anyway.
+ * - A change in a branch that is not loaded is not fetched before the end of
+ *   the thread - "Load more" will read it anyway. At the end, it reads only
+ *   what follows the last loaded comment and appends it right away, listing
+ *   the new top-level comments in `arrived`.
  * - Nothing is merged while the thread query fetches - an infinite fetch
  *   writes back the pages it started from - and an answer that started
  *   before a full refetch is dropped and asked again.
@@ -292,7 +293,7 @@ export const createContentCommentsLive = <TRecord, TId extends ContentId>({
   const idleWaiters: (() => void)[] = [];
   const listeners = new Set<() => void>();
   let snapshot: ContentCommentsLiveSnapshot = {
-    hasNew: false,
+    arrived: [],
     refreshError: false,
   };
   let epoch = 0;
@@ -300,11 +301,12 @@ export const createContentCommentsLive = <TRecord, TId extends ContentId>({
   let active = 0;
   let disposed = false;
   let reconcileTimer: ReturnType<typeof setTimeout> | undefined;
+  let ownPosts = 0;
 
   const setSnapshot = (next: Partial<ContentCommentsLiveSnapshot>): void => {
     const merged = { ...snapshot, ...next };
     if (
-      merged.hasNew === snapshot.hasNew &&
+      merged.arrived === snapshot.arrived &&
       merged.refreshError === snapshot.refreshError
     ) {
       return;
@@ -354,7 +356,7 @@ export const createContentCommentsLive = <TRecord, TId extends ContentId>({
     removals.clear();
     failed.clear();
     newBranches.clear();
-    setSnapshot({ hasNew: false, refreshError: false });
+    setSnapshot({ arrived: [], refreshError: false });
     beforeChange();
     await queryClient.resetQueries({ exact: true, queryKey: threadKey });
   };
@@ -555,7 +557,7 @@ export const createContentCommentsLive = <TRecord, TId extends ContentId>({
     failed.clear();
     const loaded = loadedBranches(data());
     for (const key of newBranches) if (loaded.has(key)) newBranches.delete(key);
-    setSnapshot({ hasNew: newBranches.size > 0, refreshError: false });
+    setSnapshot({ refreshError: false });
   };
 
   let reconciling: null | Promise<void> = null;
@@ -592,19 +594,62 @@ export const createContentCommentsLive = <TRecord, TId extends ContentId>({
     }
 
     beforeChange();
+    const loadedBefore = loadedBranches(data());
     queryClient.setQueryData<Data>(threadKey, old =>
       old ? appendContentCommentsTail(old, tail, tailCursor(old)) : old,
     );
     refreshPermissions(new Set(tail.items.map(item => keyOf(item.id))));
 
     const loaded = loadedBranches(data());
+    const appended = tail.items
+      .filter(item => item.depth === 1)
+      .map(item => keyOf(item.id))
+      .filter(key => loaded.has(key) && !loadedBefore.has(key));
     const missing = [...newBranches].filter(key => !loaded.has(key));
     newBranches.clear();
-    setSnapshot({ hasNew: false });
+    setSnapshot({
+      ...(appended.length > 0
+        ? { arrived: [...snapshot.arrived, ...appended] }
+        : {}),
+      refreshError: false,
+    });
     // Published long after it was written, so it sits among loaded ones.
     if (missing.length > 0) await reconcileNow();
 
     return true;
+  };
+
+  let autoShowing: null | Promise<void> = null;
+  let showAgain = false;
+
+  const pendingAtEnd = (): boolean => {
+    const current = data();
+    if (!current || current.pages.at(-1)?.pageInfo.hasNextPage !== false) {
+      return false;
+    }
+    const loaded = loadedBranches(current);
+
+    return [...newBranches].some(key => !loaded.has(key));
+  };
+
+  const showArrived = (): void => {
+    if (disposed || ownPosts > 0) return;
+    if (autoShowing) {
+      showAgain = true;
+
+      return;
+    }
+    autoShowing = (async () => {
+      if (!(await showNew()) && !disposed && pendingAtEnd()) {
+        setSnapshot({ refreshError: true });
+      }
+    })().finally(() => {
+      autoShowing = null;
+      if (showAgain) {
+        showAgain = false;
+        if (pendingAtEnd()) showArrived();
+      }
+    });
   };
 
   const onCacheEvent = (event: QueryCacheNotifyEvent): void => {
@@ -698,6 +743,11 @@ export const createContentCommentsLive = <TRecord, TId extends ContentId>({
      * loaded pages when that is what failed - and resolves once it is done.
      */
     retry: async (): Promise<void> => {
+      if (failed.size === 0 && pendingAtEnd()) {
+        await showNew();
+
+        return;
+      }
       if (failed.size === 0) {
         await reconcileNow();
 
@@ -715,6 +765,24 @@ export const createContentCommentsLive = <TRecord, TId extends ContentId>({
         if (disposed) return;
         await request(keys.slice(start, start + CONTENT_THREAD_BRANCHES_MAX));
       }
+    },
+    holdNew: (): (() => void) => {
+      ownPosts++;
+      let held = true;
+      const release = (): void => {
+        if (!held) return;
+        held = false;
+        clearTimeout(timer);
+        ownPosts--;
+        const loaded = loadedBranches(data());
+        for (const key of newBranches) {
+          if (loaded.has(key)) newBranches.delete(key);
+        }
+        if (ownPosts === 0 && pendingAtEnd()) showArrived();
+      };
+      const timer = setTimeout(release, OWN_POST_HOLD_MS);
+
+      return release;
     },
     /** One signal from the thread's live room. */
     signal: (signal: ContentRefreshSignal): void => {
@@ -739,11 +807,9 @@ export const createContentCommentsLive = <TRecord, TId extends ContentId>({
 
         return;
       }
-      // Not on screen: "Load more" reads it fresh when it is reached, and at
-      // the end of the thread the reader decides when to show it.
       if (current && current.pages.at(-1)?.pageInfo.hasNextPage === false) {
         newBranches.add(key);
-        setSnapshot({ hasNew: true });
+        showArrived();
       }
     },
     subscribe: (listener: () => void): (() => void) => {
@@ -777,8 +843,6 @@ export const createContentCommentsLive = <TRecord, TId extends ContentId>({
         }
       }
     },
-    /** Shows the comments that appeared at the end of the thread. */
-    showNew: async (): Promise<boolean> => await showNew(),
   };
 };
 

@@ -383,6 +383,9 @@ export const CONTENT_QUEUE_TASK_SCHEDULE_EFFECTS = "content-schedule-effects";
 /** Processes the notification intents content operations store in their transactions. */
 export const CONTENT_QUEUE_TASK_NOTIFICATIONS = "content-notifications";
 
+/** Syncs a record's `@mentions` with its text after a committed write. */
+export const CONTENT_QUEUE_TASK_MENTIONS = "content-mentions";
+
 /** Finishes a dependent reindex too big for the request that started it. */
 export const CONTENT_QUEUE_TASK_SEARCH_DEPENDENTS = "content-search-dependents";
 

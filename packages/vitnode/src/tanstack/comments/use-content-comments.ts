@@ -19,7 +19,7 @@ import type {
   ContentPermissions,
   ContentPermissionsResponse,
 } from "../content/permissions";
-import type { ContentCommentsLive } from "./live";
+import type { ContentCommentsLive, ContentCommentsLiveSnapshot } from "./live";
 import type {
   ContentCommentNode,
   ContentCommentsBranches,
@@ -31,6 +31,7 @@ import type {
 import { useSessionQuery } from "../auth/session-query";
 import { useContentLiveRefresh } from "../content/live-refresh";
 import { useContentPermissions } from "../content/permissions";
+import { contentCommentAuthor } from "./author";
 import { ContentCommentsRequestError, createContentCommentsLive } from "./live";
 import {
   buildContentCommentTree,
@@ -219,7 +220,10 @@ type WriteTarget<TId> = { id: TId } | { parentId: null | TId };
 
 const noopSubscribe = () => () => undefined;
 
-const EMPTY_LIVE_SNAPSHOT = { hasNew: false, refreshError: false };
+const EMPTY_LIVE_SNAPSHOT: ContentCommentsLiveSnapshot = {
+  arrived: [],
+  refreshError: false,
+};
 
 const emptySnapshot = () => EMPTY_LIVE_SNAPSHOT;
 
@@ -369,11 +373,6 @@ export interface ContentCommentsController<
   field: string;
   /** Whether more top-level comments wait on the server. */
   hasMore: boolean;
-  /**
-   * Live only: comments appeared after the last loaded one, at the end of the
-   * thread. They stay off screen until `showNewComments()`.
-   */
-  hasNewComments: boolean;
   /** Hides one comment, with an optional reason of at most 500 characters. */
   hide: (id: TId, reason: null | string) => Promise<ContentCommentActionResult>;
   /** `true` while the next page loads. */
@@ -394,6 +393,12 @@ export interface ContentCommentsController<
   >;
   /** Loads the next page; resolves to `false` when it failed. */
   loadMore: () => Promise<boolean>;
+  /**
+   * Live only: top-level comments by other people that were added at the end
+   * of the thread while it was open, oldest first. Render
+   * `ContentCommentsNewSeparator` before the first of them.
+   */
+  newCommentIds: readonly TId[];
   /** The visitor's permissions for one comment, all `false` until known or after a failure. */
   permissionsOf: (id: TId) => ContentPermissions;
   /** The reacted-to target of one comment, or `null` without `reactions`. */
@@ -427,11 +432,6 @@ export interface ContentCommentsController<
   retryRefresh: () => Promise<void>;
   /** Marks one comment busy while its editor loads, so its menu waits. */
   setEditing: (id: null | TId) => void;
-  /**
-   * Live only: reads the comments that appeared at the end of the thread and
-   * appends them below the loaded ones. Resolves to `false` when that failed.
-   */
-  showNewComments: () => Promise<boolean>;
   /**
    * `pending` before the first page, `error` when it failed, then `success` -
    * also after a failed background refresh, which `refreshError` reports.
@@ -696,6 +696,20 @@ export const useContentComments = <
     live?.getSnapshot ?? emptySnapshot,
   );
 
+  const viewerId = session.data?.user?.id ?? null;
+  const newCommentIds = React.useMemo(() => {
+    if (liveSnapshot.arrived.length === 0) return [];
+    const byKey = new Map(items.map(item => [String(item.id), item]));
+
+    return liveSnapshot.arrived.flatMap(key => {
+      const node = byKey.get(key);
+      if (!node?.record) return [];
+      const author = contentCommentAuthor(node.record);
+
+      return viewerId !== null && author?.id === viewerId ? [] : [node.id];
+    });
+  }, [items, liveSnapshot.arrived, viewerId]);
+
   const liveContentTypeId = liveConfig?.contentTypeId;
   const liveRootId = liveConfig?.rootId;
   const liveScope = React.useMemo(
@@ -729,6 +743,11 @@ export const useContentComments = <
 
   // Where the last write landed, so `written` refreshes only that branch.
   const lastWriteRef = React.useRef<null | WriteTarget<TId>>(null);
+  const releaseNewHoldRef = React.useRef<(() => void) | null>(null);
+  const releaseNewHold = () => {
+    releaseNewHoldRef.current?.();
+    releaseNewHoldRef.current = null;
+  };
 
   const requestPermissions = config.permissions;
   const permissions = useContentPermissions<TId>({
@@ -824,7 +843,7 @@ export const useContentComments = <
     },
     field,
     hasMore: comments.hasNextPage,
-    hasNewComments: liveSnapshot.hasNew,
+    newCommentIds,
     hide: async (id, reason) =>
       visibility
         ? await run(
@@ -866,8 +885,19 @@ export const useContentComments = <
     requestCreate: async input => {
       if (!create) throw new Error("This thread has no `create`.");
       lastWriteRef.current = { parentId: input.parentId };
+      releaseNewHold();
+      if (input.parentId !== null) return await create(input);
 
-      return await create(input);
+      releaseNewHoldRef.current = live?.holdNew() ?? null;
+      try {
+        const res = await create(input);
+        if (!res.ok) releaseNewHold();
+
+        return res;
+      } catch (error) {
+        releaseNewHold();
+        throw error;
+      }
     },
     requestSave: async (id, input) => {
       if (!edit) throw new Error("This thread has no `edit`.");
@@ -887,7 +917,6 @@ export const useContentComments = <
     setEditing: id => {
       markBusy(id === null ? null : { action: "edit", id });
     },
-    showNewComments: async () => (live ? await live.showNew() : false),
     status: comments.data ? "success" : comments.status,
     trackDraft,
     tree,
@@ -900,7 +929,11 @@ export const useContentComments = <
     written: async record => {
       const target = lastWriteRef.current;
       lastWriteRef.current = null;
-      await refreshAfterWrite(target);
+      try {
+        await refreshAfterWrite(target);
+      } finally {
+        releaseNewHold();
+      }
       const parsed = zodWrittenRecord.safeParse(record);
 
       return parsed.success ? contentCommentWriteOutcome(parsed.data) : "draft";

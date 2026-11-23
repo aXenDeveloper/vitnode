@@ -1,25 +1,21 @@
-import type { InfiniteData, QueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 
 import type {
   NotificationItemView,
   NotificationsPage,
+  NotificationsTablePage,
 } from "@/views/notifications/notifications-query";
 
 import { notificationsListRoot } from "@/views/notifications/notifications-query";
 
-type ListData = InfiniteData<NotificationsPage> | NotificationsPage;
+type ListData = NotificationsPage | NotificationsTablePage;
 
 const mapPages = (
   data: ListData | undefined,
   map: (items: NotificationItemView[]) => NotificationItemView[],
 ): ListData | undefined => {
   if (!data) return data;
-  if ("pages" in data) {
-    return {
-      ...data,
-      pages: data.pages.map(page => ({ ...page, items: map(page.items) })),
-    };
-  }
+  if ("edges" in data) return { ...data, edges: map(data.edges) };
 
   return { ...data, items: map(data.items) };
 };

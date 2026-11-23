@@ -31,6 +31,7 @@ import { followContentSubmissionContainer } from "../approvals/server/follow-con
 import { contentContainerFieldOf } from "../containers/association";
 import { contentEventDefinitionOf } from "../event-definitions";
 import { contentIdKey } from "../ids";
+import { queueContentMentions } from "./mentions";
 import { invalidateContentPages } from "./page-cache";
 import { publishContentRefresh } from "./refresh/publish";
 
@@ -173,6 +174,15 @@ export const emitContentEvent = async (
         );
     });
   }
+
+  // Mentions follow the text: new ones notify, removed ones are retracted.
+  await queueContentMentions(c, {
+    action,
+    contentId: payload.contentId,
+    definition,
+    payload,
+    pluginId: options?.pluginId ?? event.pluginId,
+  });
 
   // After the caches above, so whoever reads again on this signal misses them.
   await publishContentRefresh(c, {

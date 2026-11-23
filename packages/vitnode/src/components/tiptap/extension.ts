@@ -18,6 +18,7 @@ import { EditorAttachment } from "./attachment/attachment";
 import { customEmojiToTipTap } from "./emoji/custom-emoji";
 import { emojiSuggestion } from "./emoji/emoji-suggestion";
 import { EditorImage } from "./image/image";
+import { createEditorMention } from "./mention/mention";
 import { Panel } from "./panel";
 import { SlashCommand } from "./slash-command/slash-command";
 import { SubmitFormShortcut } from "./submit-form-shortcut";
@@ -25,13 +26,18 @@ import { EditorUploads } from "./uploads/extension";
 
 export const SUPPORTED_HEADINGS_LEVELS = [1, 2, 3, 4] as const;
 
+const mentionsOff = () => false;
+
 export const createTipTapExtensions = ({
   customEmojis,
+  getMentionsEnabled = mentionsOff,
   getUploadRuntime = () => null,
   placeholder,
   undoRedo = true,
 }: {
   customEmojis?: EditorEmojiSection[];
+  /** Whether typing `@` opens the member popup right now. Off by default. */
+  getMentionsEnabled?: () => boolean;
   getUploadRuntime?: () => EditorUploadRuntime | null;
   placeholder?: string;
   undoRedo?: boolean;
@@ -86,6 +92,7 @@ export const createTipTapExtensions = ({
       resizable: true,
     },
   }),
+  createEditorMention({ isEnabled: getMentionsEnabled }),
   EditorImage,
   EditorAttachment,
   EditorUploads.configure({ getRuntime: getUploadRuntime }),

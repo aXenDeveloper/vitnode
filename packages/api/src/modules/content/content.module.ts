@@ -4,6 +4,7 @@ import { contentRefreshWebSocket } from "@/content/server/refresh/socket";
 
 import { contentEditorialCleanupCron } from "./cron/content-editorial-cleanup.cron";
 import { contentSearchAccessCron } from "./cron/content-search-access.cron";
+import { contentMentionsQueueTask } from "./tasks/content-mentions.task";
 import { contentNotificationsQueueTask } from "./tasks/content-notifications.task";
 import { contentScheduleEffectsQueueTask } from "./tasks/content-schedule-effects.task";
 import { contentScheduleQueueTask } from "./tasks/content-schedule.task";
@@ -18,6 +19,7 @@ export const contentModule = buildModule({
     contentScheduleEffectsQueueTask,
     contentSearchDependentsQueueTask,
     contentNotificationsQueueTask,
+    contentMentionsQueueTask,
   ],
   webSockets: [contentLiveWebSocket, contentRefreshWebSocket],
 });

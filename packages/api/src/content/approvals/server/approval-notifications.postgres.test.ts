@@ -383,12 +383,6 @@ describe.skipIf(!POSTGRES_TEST_URL)(
       (await listNotifications(await contextAs(userId), { limit: 50, userId }))
         .items;
 
-    const UNAVAILABLE = {
-      available: false,
-      target: null,
-      title: "core.notifications.unavailable",
-    };
-
     const modelOf = (kind: "reply" | "topic") =>
       kind === "topic" ? policyTopics : policyReplies;
 
@@ -711,19 +705,18 @@ describe.skipIf(!POSTGRES_TEST_URL)(
             },
           ]),
         );
-        const delivered = (await inbox(USER.ROOT)).map(
-          ({ available, target, title }) => ({ available, target, title }),
-        );
+        const delivered = (await inbox(USER.ROOT)).map(({ target, title }) => ({
+          target,
+          title,
+        }));
         expect(delivered).toHaveLength(2);
         expect(delivered).toEqual(
           expect.arrayContaining([
             {
-              available: true,
               target: `/modcp/approvals/${reply}`,
               title: "ptest.reply_pending.pending",
             },
             {
-              available: true,
               target: `/modcp/approvals/${topic}`,
               title: "ptest.topic_pending.pending",
             },
@@ -956,7 +949,7 @@ describe.skipIf(!POSTGRES_TEST_URL)(
           { data: { submissionId: second } },
         ]);
         await expect(inbox(USER.MOD_A)).resolves.toMatchObject([
-          { available: true, target: `/modcp/approvals/${second}` },
+          { target: `/modcp/approvals/${second}` },
         ]);
       });
     });
@@ -1041,18 +1034,18 @@ describe.skipIf(!POSTGRES_TEST_URL)(
         await drain();
 
         await expect(inbox(USER.MOD_A)).resolves.toMatchObject([
-          { available: true, target: `/modcp/approvals/${second}` },
+          { target: `/modcp/approvals/${second}` },
         ]);
         expect(
           (await inbox(USER.MOD_A)).map(item => item.target),
         ).not.toContain(`/modcp/approvals/${first}`);
       });
 
-      it("shows a placeholder to a moderator who lost can_approve, whose link answers 404", async () => {
+      it("deletes the item of a moderator who lost can_approve, whose link answers 404", async () => {
         const id = await open({ id: TOPIC.A });
         await drain();
         await expect(inbox(USER.MOD_A)).resolves.toMatchObject([
-          { available: true, target: `/modcp/approvals/${id}` },
+          { target: `/modcp/approvals/${id}` },
         ]);
         expect((await showSubmission(id, USER.MOD_A)).status).toBe(200);
 
@@ -1064,22 +1057,22 @@ describe.skipIf(!POSTGRES_TEST_URL)(
           }),
         ]);
 
-        await expect(inbox(USER.MOD_A)).resolves.toMatchObject([UNAVAILABLE]);
+        await expect(inbox(USER.MOD_A)).resolves.toEqual([]);
         expect((await showSubmission(id, USER.MOD_A)).status).toBe(404);
         await expect(inbox(USER.MOD_ALL)).resolves.toMatchObject([
-          { available: true },
+          { type: TOPIC_PENDING },
         ]);
       });
 
-      it("shows a placeholder to a moderator of the old board once the record moves", async () => {
+      it("deletes the item of a moderator of the old board once the record moves", async () => {
         await open({ id: TOPIC.A });
         await drain();
 
         await moveTopic(TOPIC.A, B);
 
-        await expect(inbox(USER.MOD_A)).resolves.toMatchObject([UNAVAILABLE]);
+        await expect(inbox(USER.MOD_A)).resolves.toEqual([]);
         await expect(inbox(USER.MOD_AB)).resolves.toMatchObject([
-          { available: true },
+          { type: TOPIC_PENDING },
         ]);
       });
     });

@@ -33,6 +33,7 @@
     "working-with-users",
     "moderation",
     "reactions",
+    "mentions",
     "audit-logs",
     "events",
     "notifications",

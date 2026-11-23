@@ -252,6 +252,14 @@
     }
   }
 
+  .mention {
+    @apply text-primary font-medium no-underline underline-offset-4 hover:underline;
+  }
+
+  &.ProseMirror .mention {
+    @apply bg-primary/10 rounded-sm px-0.5 hover:no-underline;
+  }
+
   [data-type="emoji"] {
     @apply inline-block align-middle;
 

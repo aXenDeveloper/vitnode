@@ -1,5 +1,7 @@
 import type { RichTextNode } from "./document";
 
+import { richTextMentionOf } from "./mentions";
+
 const PLAIN_TEXT_MAX_DEPTH = 256;
 
 const ROW_TYPES: ReadonlySet<string> = new Set(["tableRow"]);
@@ -15,6 +17,11 @@ const inlineText = (node: RichTextNode): string => {
     }
     case "hardBreak":
       return "\n";
+    case "mention": {
+      const mention = richTextMentionOf(node);
+
+      return mention ? `@${mention.label}` : "";
+    }
     case "text":
       return typeof node.text === "string" ? node.text : "";
     default: {

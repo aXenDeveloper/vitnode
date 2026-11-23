@@ -664,6 +664,7 @@ export const initialDataForDatabase = async (given?: VitNodeApiConfig) => {
           protected: true,
           guest: true,
           allowReact: false,
+          allowMentions: false,
         },
         {
           // Member role

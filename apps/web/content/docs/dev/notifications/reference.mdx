@@ -113,16 +113,17 @@ It also throws when two transactions publish the same key at the same moment and
 
 Every route acts on the signed-in member and answers `401` to guests. Paths are relative to `/api/@vitnode/core/notifications`.
 
-| Method | Path            | Behavior                                                                                                               |
-| ------ | --------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `GET`  | `/`             | One page of items, newest activity first. Query: `limit` (1 to 50, default 20), `cursor`, `unread`, `category`, `type` |
-| `GET`  | `/state`        | `{ unread, revision }`                                                                                                 |
-| `POST` | `/{id}/read`    | Marks one item read. Optional body `{ throughSeq }`                                                                    |
-| `POST` | `/{id}/unread`  | Marks one item unread again                                                                                            |
-| `POST` | `/{id}/archive` | Hides one item from the inbox. New activity brings it back                                                             |
-| `POST` | `/read-all`     | Marks everything read. Optional body `{ category }`                                                                    |
-| `GET`  | `/preferences`  | Every type the member can see, with their channels                                                                     |
-| `PUT`  | `/preferences`  | Saves `{ types: { [typeId]: { inApp?, push?, email? } } }`. Other types keep their choices                             |
+| Method | Path            | Behavior                                                                                                                                                                                                                    |
+| ------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET`  | `/`             | One page of items, newest activity first. Query: `limit` (1 to 50, default 20), `cursor`, `unread`, `category`, `type`                                                                                                      |
+| `GET`  | `/inbox`        | One numbered page for the notifications table, with `pageInfo` totals. Query: `page`, `first` (page size), `orderBy` (`lastActivityAt` or `category`), `order`, `status` (`unread` or `read`), `category` (comma-separated) |
+| `GET`  | `/state`        | `{ unread, revision }`                                                                                                                                                                                                      |
+| `POST` | `/{id}/read`    | Marks one item read. Optional body `{ throughSeq }`                                                                                                                                                                         |
+| `POST` | `/{id}/unread`  | Marks one item unread again                                                                                                                                                                                                 |
+| `POST` | `/{id}/archive` | Hides one item from the inbox. New activity brings it back                                                                                                                                                                  |
+| `POST` | `/read-all`     | Marks everything read. Optional body `{ category }`                                                                                                                                                                         |
+| `GET`  | `/preferences`  | Every type the member can see, with their channels                                                                                                                                                                          |
+| `PUT`  | `/preferences`  | Saves `{ types: { [typeId]: { inApp?, push?, email? } } }`. Other types keep their choices                                                                                                                                  |
 
 The mark routes return the new `{ unread, revision }`. Another member's item id answers `404`, like a missing one. Call these routes with the [fetcher](/docs/dev/fetcher):
 

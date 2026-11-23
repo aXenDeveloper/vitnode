@@ -153,10 +153,12 @@ describe("pluginRouteBreadcrumb", () => {
     const { load, ready, ref } = moduleWith({});
     const deferred = pluginRouteBreadcrumb(ref, []);
 
+    expect(deferred.resolve()).toBeUndefined();
+
     ready();
     await load();
 
-    expect(deferred.resolve()).toBeUndefined();
+    expect(deferred.resolve()).toBe(false);
   });
 });
 

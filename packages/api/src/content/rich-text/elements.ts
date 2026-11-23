@@ -11,6 +11,7 @@ import {
   type RichTextMark,
   type RichTextNode,
 } from "./document";
+import { richTextMentionHref, richTextMentionOf } from "./mentions";
 import { richTextToPlainText } from "./plain-text";
 
 export const RICH_TEXT_SLOT = 0;
@@ -372,6 +373,32 @@ const attachmentElement = (node: RichTextNode): null | RichTextElement => {
   };
 };
 
+const mentionElement = (node: RichTextNode): null | RichTextElement => {
+  const mention = richTextMentionOf(node);
+  if (!mention) return null;
+
+  const attrs: Record<string, RichTextElementAttrValue> = {
+    class: "mention",
+    "data-id": mention.id,
+    "data-label": mention.label,
+    "data-type": "mention",
+  };
+
+  if (mention.nameCode === null) {
+    return { attrs, children: [`@${mention.label}`], tag: "span" };
+  }
+
+  return {
+    attrs: {
+      ...attrs,
+      "data-name-code": mention.nameCode,
+      href: richTextMentionHref(mention.nameCode),
+    },
+    children: [`@${mention.label}`],
+    tag: "a",
+  };
+};
+
 export const richTextNodeElement = (
   node: RichTextNode,
 ): null | RichTextElement => {
@@ -441,6 +468,8 @@ export const richTextNodeElement = (
       return imageElement(node);
     case "listItem":
       return { children: [RICH_TEXT_SLOT], tag: "li" };
+    case "mention":
+      return mentionElement(node);
     case "orderedList": {
       const start = positiveInteger(node.attrs?.start);
 

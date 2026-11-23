@@ -159,6 +159,8 @@ export interface ContentRichTextField<
   kind: "richText";
   localized: TLocalized;
   maxBytes?: number;
+  /** `@mentions` notify members; `undefined` means on. */
+  mentions?: boolean;
   uploads?: boolean;
 }
 

@@ -2,6 +2,10 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { AI_ACTION_LIMITS } from "@vitnode/api/lib/ai/action";
 import { EMOJI_ICON_MAX_LENGTH } from "@vitnode/api/lib/emoji-icon";
 import { multiLangValueSchema } from "@vitnode/api/lib/helpers/multi-lang";
+import {
+  ROLE_DEFAULT_MAX_MENTIONS_PER_ITEM,
+  ROLE_MAX_MENTIONS_PER_ITEM,
+} from "@vitnode/api/lib/mentions/limits";
 import { ROLE_EDIT_OWN_CONTENT_MAX_MINUTES } from "@vitnode/api/lib/own-content";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
@@ -73,6 +77,7 @@ export interface AdminRoleFormValues {
   allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;
   allowHideOwnContent: boolean;
+  allowMentions: boolean;
   allowUploadAvatar: boolean;
   allowUploadCover: boolean;
   allowUploadFiles: boolean;
@@ -81,6 +86,7 @@ export interface AdminRoleFormValues {
   forceBrowseAnonymously: boolean;
   maxAvatarSize: number;
   maxCoverSize: number;
+  maxMentionsPerItem: null | number;
   maxStorageForSubmit: null | number;
   name: { languageCode: string; value: string }[];
   prefix: string;
@@ -97,6 +103,7 @@ export interface AdminRoleFormData {
   allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;
   allowHideOwnContent: boolean;
+  allowMentions: boolean;
   allowUploadAvatar: boolean;
   allowUploadCover: boolean;
   allowUploadFiles: boolean;
@@ -106,6 +113,7 @@ export interface AdminRoleFormData {
   id: number;
   maxAvatarSize: number;
   maxCoverSize: number;
+  maxMentionsPerItem: null | number;
   maxStorageForSubmit: null | number;
   name: { languageCode: string; name: string }[];
   prefix: null | string;
@@ -301,6 +309,17 @@ export const AdminRoleFormContent = ({
       .nullable()
       .default(data?.editOwnContentMinutes ?? null)
       .describe(t("form.edit_own_content.minutes_desc")),
+    allowMentions: z.boolean().default(data?.allowMentions ?? true),
+    maxMentionsPerItem: z
+      .number()
+      .int()
+      .min(1)
+      .max(ROLE_MAX_MENTIONS_PER_ITEM)
+      .nullable()
+      .default(
+        data ? data.maxMentionsPerItem : ROLE_DEFAULT_MAX_MENTIONS_PER_ITEM,
+      )
+      .describe(t("form.mentions.max_per_item_desc")),
     allowEditPersonalInfo: z
       .boolean()
       .default(data?.allowEditPersonalInfo ?? true),
@@ -491,6 +510,35 @@ export const AdminRoleFormContent = ({
             />
           ),
           id: "allowHideOwnContent",
+          tab: "content",
+        },
+        {
+          children: [
+            {
+              component: props => (
+                <AutoFormNullableNumber
+                  label={t("form.mentions.max_per_item")}
+                  max={ROLE_MAX_MENTIONS_PER_ITEM}
+                  min={1}
+                  orLabel={t("form.mentions.or")}
+                  resumeValue={ROLE_DEFAULT_MAX_MENTIONS_PER_ITEM}
+                  step={1}
+                  toggleLabel={t("form.mentions.unlimited")}
+                  unitLabel={t("form.mentions.in_unit")}
+                  {...props}
+                />
+              ),
+              id: "maxMentionsPerItem",
+            },
+          ],
+          component: props => (
+            <AutoFormSwitch
+              {...props}
+              description={t("form.mentions.allow_desc")}
+              label={t("form.mentions.allow")}
+            />
+          ),
+          id: "allowMentions",
           tab: "content",
         },
         {

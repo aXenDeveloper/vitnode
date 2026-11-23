@@ -16,6 +16,7 @@ import { assertCanManageAdminRole } from "../lib/assert-manage-admin-role";
 import {
   zodRoleEditOwnContentMinutesSchema,
   zodRoleImageSizeSchema,
+  zodRoleMaxMentionsPerItemSchema,
   zodRoleNameSchema,
   zodRolePrefixSchema,
   zodRoleStorageSchema,
@@ -38,6 +39,8 @@ export const zodUpdateRoleAdminSchema = z
     editOwnContentMinutes: zodRoleEditOwnContentMinutesSchema,
     allowDeleteOwnContent: z.boolean(),
     allowHideOwnContent: z.boolean(),
+    allowMentions: z.boolean(),
+    maxMentionsPerItem: zodRoleMaxMentionsPerItemSchema,
     maxAvatarSize: zodRoleImageSizeSchema,
     allowUploadCover: z.boolean(),
     maxCoverSize: zodRoleImageSizeSchema,
@@ -153,6 +156,12 @@ export const updateRoleAdminRoute = buildRoute({
     }
     if (body.allowHideOwnContent !== undefined) {
       values.allowHideOwnContent = body.allowHideOwnContent;
+    }
+    if (body.allowMentions !== undefined) {
+      values.allowMentions = body.allowMentions;
+    }
+    if (body.maxMentionsPerItem !== undefined) {
+      values.maxMentionsPerItem = body.maxMentionsPerItem;
     }
 
     if (body.allowUploadAvatar !== undefined) {

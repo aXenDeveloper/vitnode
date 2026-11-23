@@ -374,7 +374,14 @@ const processBatch = async (
       const deltas = new Map(
         inApp.map(userId => [userId, wasCounted.get(userId) ? 0 : 1]),
       );
-      states.push(...(await applyUnreadDeltas(tx, deltas, "created")));
+      const itemIdOf = new Map(items.map(item => [item.userId, item.id]));
+      const created = await applyUnreadDeltas(tx, deltas, "created");
+      states.push(
+        ...created.map(update => ({
+          ...update,
+          notificationId: itemIdOf.get(update.userId),
+        })),
+      );
       delivered = inApp.length;
     }
 

@@ -35,4 +35,12 @@ export type {
   RichTextElementChild,
 } from "./elements";
 export { escapeRichTextHtml, richTextToHtml } from "./html";
+export {
+  RICH_TEXT_MENTION_LABEL_MAX,
+  RICH_TEXT_MENTION_NODE,
+  richTextMentionHref,
+  richTextMentionOf,
+  richTextMentionsOf,
+} from "./mentions";
+export type { RichTextMention } from "./mentions";
 export { richTextToPlainText } from "./plain-text";

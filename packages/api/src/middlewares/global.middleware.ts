@@ -70,6 +70,7 @@ import type { RegisteredEditablePage } from "../lib/editable-pages";
 import type { EventDefinition } from "../lib/event-definition";
 import type { EventListenerConfig } from "../lib/events";
 import type { InstalledPluginRegistry } from "../lib/installed-plugins";
+import type { MentionsRegistry } from "../lib/mentions/targets";
 import type { VitNodeMetadata } from "../lib/metadata";
 import type { ModerationRegistry } from "../lib/moderation/registry";
 import type { NotificationWorkerSettings } from "../lib/notifications/preferences";
@@ -105,6 +106,7 @@ import {
   loggerMiddleware,
   type LoggerMiddlewareType,
 } from "../lib/logger-middleware";
+import { validateMentionsRegistry } from "../lib/mentions/targets";
 import { validateModerationRegistry } from "../lib/moderation/registry";
 import { resolveNotificationWorkerSettings } from "../lib/notifications/preferences";
 import { createNotificationRegistry } from "../lib/notifications/registry";
@@ -256,6 +258,8 @@ export interface EnvVariablesVitNode {
       sources: MessagesSource[];
     };
     installedPlugins: InstalledPluginRegistry;
+    /** Every mention target: custom ones and one per content type with mention fields. */
+    mentions: MentionsRegistry;
     metadata: VitNodeMetadata;
     moderation: ModerationRegistry;
     notifications?: NotificationRegistry;
@@ -673,6 +677,15 @@ export const globalMiddleware = ({
     ),
   });
 
+  const mentionsMetadata = validateMentionsRegistry(
+    plugins.flatMap(plugin =>
+      (plugin.mentions?.targets ?? []).map(definition => ({
+        definition,
+        pluginId: plugin.pluginId,
+      })),
+    ),
+  );
+
   const reactionsMetadata = validateReactionsRegistry(
     plugins.flatMap(plugin =>
       (plugin.reactions?.targets ?? []).map(definition => ({
@@ -735,6 +748,7 @@ export const globalMiddleware = ({
       permissionStaff: permissionStaffMetadata,
       moderation: moderationMetadata,
       notifications: notificationsMetadata,
+      mentions: mentionsMetadata,
       reactions: reactionsMetadata,
       notificationWorkers,
       ogImage: resolveOgImageConfig({

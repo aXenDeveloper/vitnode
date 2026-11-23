@@ -168,13 +168,13 @@ export const pluginRouteBreadcrumb = (
 
   return breadcrumbDeferred(
     () => {
-      const declared = module.current?.route.breadcrumb;
+      const loaded = module.current;
 
-      // `undefined` is "the module has not arrived yet, ask again"; `false` and
-      // `null` are both "this route contributes no crumb". They are kept apart
-      // here because only the first is worth re-resolving.
-      if (declared === undefined) return undefined;
-      if (declared === false || declared === null) return false;
+      if (loaded === undefined) return undefined;
+      const declared = loaded.route.breadcrumb;
+      if (declared === undefined || declared === false || declared === null) {
+        return false;
+      }
 
       // A group draws its own `<BreadcrumbItem>`s, so it stays a group all the
       // way to the trail - wrapping it in one would nest items inside an item.

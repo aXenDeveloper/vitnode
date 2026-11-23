@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { resolveLangValue } from "@/lib/helpers/multi-lang";
+import { mentionNotification } from "@/lib/mentions/notification";
 
 import { buildNotificationType } from "./registry";
 
@@ -190,4 +191,5 @@ export const coreNotificationTypes = [
   accountSuspendedNotification,
   suspensionRevokedNotification,
   reactionReceivedNotification,
+  mentionNotification,
 ];

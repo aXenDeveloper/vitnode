@@ -25,7 +25,6 @@ const item = (
   activitySeq: 2,
   actorCount: 0,
   actors: [],
-  available: true,
   body: null,
   category: "social",
   createdAt: "2026-10-04T08:00:00.000Z",

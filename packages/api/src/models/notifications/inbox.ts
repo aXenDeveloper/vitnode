@@ -6,6 +6,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  or,
   sql,
 } from "drizzle-orm";
 import { HTTPException } from "hono/http-exception";
@@ -23,8 +24,9 @@ import {
   core_notification_user_state,
   core_notifications,
 } from "@/database/notifications";
+import { withPagination } from "@/lib/with-pagination";
 
-import type { NotificationActor } from "./render";
+import type { NotificationActor, NotificationEventRow } from "./render";
 import type { NotificationsContext, NotificationsDb } from "./shared";
 
 import { applyUnreadDeltas, lockUserStates } from "./fanout";
@@ -46,7 +48,6 @@ export interface NotificationListItem {
   activitySeq: number;
   actorCount: number;
   actors: NotificationActor[];
-  available: boolean;
   body: null | string;
   category: string;
   createdAt: Date;
@@ -87,6 +88,36 @@ const parseCursorJson = (raw: string): unknown => {
   }
 };
 
+type PresentedListItem = "gone" | "skipped" | NotificationListItem;
+
+const removeGoneItems = async (
+  c: NotificationsContext,
+  userId: number,
+  gone: readonly { eventId: number; id: number }[],
+) => {
+  try {
+    await removeNotificationItems(c, {
+      where: and(
+        eq(core_notifications.userId, userId),
+        or(
+          ...gone.map(({ eventId, id }) =>
+            and(
+              eq(core_notifications.id, id),
+              eq(core_notifications.latestEventId, eventId),
+            ),
+          ),
+        ),
+      ),
+    });
+  } catch (error) {
+    void c
+      .get("log")
+      .error(
+        `[Notifications] Failed to remove unavailable inbox items: ${error instanceof Error ? error.message : String(error)}`,
+      );
+  }
+};
+
 const decodeCursor = (raw: string) => {
   const cursor = cursorSchema.safeParse(parseCursorJson(raw));
   if (!cursor.success) {
@@ -112,6 +143,94 @@ export const getNotificationState = async (
     .limit(1);
 
   return row ?? { revision: 0, unread: 0 };
+};
+
+interface NotificationRow {
+  event: NotificationEventRow;
+  item: typeof core_notifications.$inferSelect;
+}
+
+const presentNotificationRows = async (
+  c: NotificationsContext,
+  {
+    language,
+    page,
+    userId,
+  }: {
+    language?: string;
+    page: readonly NotificationRow[];
+    userId: number;
+  },
+): Promise<NotificationListItem[]> => {
+  const summaries = await loadActorSummaries(
+    c,
+    page.map(row => row.item.id),
+  );
+  const translator = createTranslatorCache(c);
+  const { locale, t } = await translator(language);
+
+  const presentItem = async ({
+    event,
+    item,
+  }: NotificationRow): Promise<PresentedListItem> => {
+    const resolved = resolveEvent(c, event);
+    if (!resolved) return "gone";
+
+    try {
+      const allowed = await checkNotificationAccess({
+        c,
+        data: resolved.data,
+        event,
+        registered: resolved.registered,
+        userIds: [userId],
+      });
+      if (!allowed.has(userId)) return "gone";
+    } catch {
+      return "skipped";
+    }
+
+    const actors = summaries.get(item.id) ?? { actorCount: 0, actors: [] };
+    const presented = presentNotification(c, {
+      actors,
+      data: resolved.data,
+      event,
+      eventCount: item.eventCount,
+      locale,
+      registered: resolved.registered,
+      t,
+    });
+    if (!presented) return "skipped";
+
+    return {
+      activitySeq: item.activitySeq,
+      actorCount: actors.actorCount,
+      actors: actors.actors,
+      body: presented.body ?? null,
+      category: item.category,
+      createdAt: item.createdAt,
+      eventCount: item.eventCount,
+      id: item.id,
+      lastActivityAt: item.lastActivityAt,
+      pluginId: item.pluginId,
+      readAt: item.readAt,
+      subject:
+        item.subjectType && item.subjectId
+          ? { id: item.subjectId, type: item.subjectType }
+          : null,
+      target: presented.target,
+      title: presented.title,
+      type: item.type,
+      unread: item.readSeq < item.activitySeq,
+    };
+  };
+
+  const presented = await Promise.all(page.map(presentItem));
+  const gone = page
+    .filter((_, index) => presented[index] === "gone")
+    .map(({ event, item }) => ({ eventId: event.id, id: item.id }));
+  if (gone.length > 0) await removeGoneItems(c, userId, gone);
+
+  return presented.filter(result => typeof result !== "string");
 };
 
 export const listNotifications = async (
@@ -166,81 +285,11 @@ export const listNotifications = async (
 
   const page = rows.slice(0, limit);
   const last = page.at(-1);
-  const summaries = await loadActorSummaries(
-    c,
-    page.map(row => row.item.id),
-  );
-  const translator = createTranslatorCache(c);
-  const { locale, t } = await translator(language);
-
-  const items = await Promise.all(
-    page.map(async ({ event, item }): Promise<NotificationListItem> => {
-      const base = {
-        activitySeq: item.activitySeq,
-        category: item.category,
-        createdAt: item.createdAt,
-        eventCount: item.eventCount,
-        id: item.id,
-        lastActivityAt: item.lastActivityAt,
-        pluginId: item.pluginId,
-        readAt: item.readAt,
-        type: item.type,
-        unread: item.readSeq < item.activitySeq,
-      };
-      const unavailable: NotificationListItem = {
-        ...base,
-        actorCount: 0,
-        actors: [],
-        available: false,
-        body: null,
-        subject: null,
-        target: null,
-        title: t("core.notifications.unavailable"),
-      };
-
-      const resolved = resolveEvent(c, event);
-      if (!resolved) return unavailable;
-
-      try {
-        const allowed = await checkNotificationAccess({
-          c,
-          data: resolved.data,
-          event,
-          registered: resolved.registered,
-          userIds: [userId],
-        });
-        if (!allowed.has(userId)) return unavailable;
-      } catch {
-        return unavailable;
-      }
-
-      const actors = summaries.get(item.id) ?? { actorCount: 0, actors: [] };
-      const presented = presentNotification(c, {
-        actors,
-        data: resolved.data,
-        event,
-        eventCount: item.eventCount,
-        locale,
-        registered: resolved.registered,
-        t,
-      });
-      if (!presented) return unavailable;
-
-      return {
-        ...base,
-        actorCount: actors.actorCount,
-        actors: actors.actors,
-        available: true,
-        body: presented.body ?? null,
-        subject:
-          item.subjectType && item.subjectId
-            ? { id: item.subjectId, type: item.subjectType }
-            : null,
-        target: presented.target,
-        title: presented.title,
-      };
-    }),
-  );
+  const items = await presentNotificationRows(c, {
+    language,
+    page,
+    userId,
+  });
 
   return {
     items,
@@ -249,6 +298,86 @@ export const listNotifications = async (
         ? encodeCursor({ id: last.item.id, ts: last.cursorAt })
         : null,
   };
+};
+
+export const NOTIFICATION_TABLE_ORDER_BY = [
+  "lastActivityAt",
+  "category",
+] as const;
+
+export type NotificationTableOrderBy =
+  (typeof NOTIFICATION_TABLE_ORDER_BY)[number];
+
+/**
+ * One numbered page of the signed-in user's inbox with totals, for the
+ * notifications table. Archived items never count. Items whose source is gone
+ * are dropped from the page and removed, so a page can hold fewer rows than
+ * `pageSize` until the next read.
+ */
+export const listNotificationsTable = async (
+  c: NotificationsContext,
+  {
+    categories,
+    language,
+    order,
+    orderBy,
+    query,
+    status,
+    userId,
+  }: {
+    categories: string[];
+    language?: string;
+    order: "asc" | "desc";
+    orderBy: NotificationTableOrderBy;
+    query: { cursor?: string; first?: string; last?: string; page?: string };
+    status?: "read" | "unread";
+    userId: number;
+  },
+) => {
+  const { edges, pageInfo } = await withPagination({
+    c,
+    orderBy: { column: core_notifications[orderBy], order },
+    params: { query },
+    primaryCursor: core_notifications.id,
+    query: async ({ cursorSelection, limit, offset, orderBy: order, where }) =>
+      await c
+        .get("db")
+        .select({
+          ...cursorSelection,
+          event: notificationEventColumns,
+          id: core_notifications.id,
+          item: core_notifications,
+        })
+        .from(core_notifications)
+        .innerJoin(
+          core_notification_events,
+          eq(core_notification_events.id, core_notifications.latestEventId),
+        )
+        .where(where)
+        .orderBy(order)
+        .limit(limit)
+        .offset(offset),
+    table: core_notifications,
+    where: and(
+      eq(core_notifications.userId, userId),
+      isNull(core_notifications.archivedAt),
+      status === "unread" ? UNREAD_SQL : undefined,
+      status === "read"
+        ? sql`${core_notifications.readSeq} >= ${core_notifications.activitySeq}`
+        : undefined,
+      categories.length > 0
+        ? inArray(core_notifications.category, categories)
+        : undefined,
+    ),
+  });
+
+  const items = await presentNotificationRows(c, {
+    language,
+    page: edges,
+    userId,
+  });
+
+  return { edges: items, pageInfo: { ...pageInfo, count: items.length } };
 };
 
 type ItemRow = typeof core_notifications.$inferSelect;

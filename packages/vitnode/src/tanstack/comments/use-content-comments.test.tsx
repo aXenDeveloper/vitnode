@@ -71,6 +71,7 @@ const user: AuthUser = {
   avatarColor: "#101010",
   avatarUrl: null,
   birthday: null,
+  canMention: true,
   coverUrl: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   email: "test@test.com",

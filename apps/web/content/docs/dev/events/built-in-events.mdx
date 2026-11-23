@@ -638,6 +638,24 @@ administrator for `reaction.catalog_changed`. See [Reactions](/docs/dev/reaction
 `targetAuthorId` is `null` for a self reaction and for targets without reputation.
 Deleting an item emits `reputation.changed` for its authors but no `reaction.removed`.
 
+## Mention events
+
+Two names, exported from `@vitnode/api/events/mentions`: `mentionCreatedEvent`
+and `mentionRemovedEvent`. Core emits them with `pluginId: "@vitnode/core"`
+after `syncMentions` commits, which for Content Engine records happens in the
+`content-mentions` queue task right after the write. See
+[Mentions](/docs/dev/mentions).
+
+| Event             | Payload                                                       | Fires when                                                                 |
+| ----------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `mention.created` | `{ pluginId, targetType, targetId, actorId, users }`          | Members are `@mentioned` in a target for the first time                    |
+| `mention.removed` | `{ pluginId, targetType, targetId, actorId, userIds }`        | An edit removed mentions; their notifications are already retracted        |
+
+`users` is `{ id, notified }[]`. `notified` is `false` for a member who got no
+notification: they can't read the target, the author's role may not mention,
+or the role's per-post cap was reached. Deleting a target forgets its mentions
+without `mention.removed`.
+
 ## Moderation events
 
 Twenty names, exported from `@vitnode/api/events/moderation` as

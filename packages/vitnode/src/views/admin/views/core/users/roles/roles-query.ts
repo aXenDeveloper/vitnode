@@ -56,6 +56,7 @@ export interface AdminRoleRow {
   allowEditOwnContent: boolean;
   allowEditPersonalInfo: boolean;
   allowHideOwnContent: boolean;
+  allowMentions: boolean;
   allowUploadAvatar: boolean;
   allowUploadCover: boolean;
   allowUploadFiles: boolean;
@@ -70,6 +71,7 @@ export interface AdminRoleRow {
   id: number;
   maxAvatarSize: number;
   maxCoverSize: number;
+  maxMentionsPerItem: null | number;
   maxStorageForSubmit: null | number;
   name: { languageCode: string; name: string }[];
   prefix: null | string;

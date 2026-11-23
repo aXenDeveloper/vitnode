@@ -272,7 +272,9 @@ export const routes = defineRoutes([
   page("/notifications", {
     component: lazy(() => import("./pages/notifications")),
     messages: NOTIFICATIONS_NAMESPACES,
-    pendingComponent: () => <FeedPendingSkeleton rows={6} />,
+    pendingComponent: () => (
+      <TablePendingSkeleton className="container mx-auto max-w-6xl" />
+    ),
     requires: "authenticated",
     search: normalizeNotificationsRouteSearch,
   }),

@@ -4,10 +4,12 @@ import type { PluginRouteTranslator } from "@/routing";
 
 import {
   notificationPreferencesQueryOptions,
-  notificationsInfiniteQueryOptions,
+  notificationsTableQueryOptions,
 } from "@/views/notifications/notifications-query";
 
-import type { NotificationsRouteSearch } from "./route-search";
+import type { UncheckedNotificationsSearch } from "./route-search";
+
+import { notificationsRouteParams } from "./route-search";
 
 export interface NotificationsRouteData {
   description: string;
@@ -23,18 +25,15 @@ export const loadNotificationsRoute = async ({
 }: {
   auth: { user: { id: number } };
   queryClient: QueryClient;
-  search: NotificationsRouteSearch;
+  search: UncheckedNotificationsSearch;
   t: PluginRouteTranslator;
 }): Promise<NotificationsRouteData> => {
   const userId = auth.user.id;
 
   await Promise.all([
-    queryClient.infiniteQuery({
-      ...notificationsInfiniteQueryOptions({
-        filter: {
-          category: search.category,
-          unread: search.filter === "unread",
-        },
+    queryClient.query({
+      ...notificationsTableQueryOptions({
+        params: notificationsRouteParams(search),
         userId,
       }),
       staleTime: "static",
