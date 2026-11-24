@@ -63,6 +63,10 @@ import {
   pluginsFromLoadedConfig,
   routeDeclarationsFromRoutesModule,
 } from "../plugin-routes";
+import {
+  contentSitemapSourcesFrom,
+  generateSitemapSourcesSource,
+} from "../sitemap-sources";
 import { createGenerationQueue } from "./generation-queue";
 import { versionedModuleUrl } from "./module-version";
 import { buildRouteReport } from "./route-report";
@@ -124,6 +128,8 @@ const pathsFor = (appRoot: string) => ({
   pluginInventory: join(appRoot, "src", "plugin-inventory.gen.ts"),
 
   registry: join(appRoot, "src", "plugin-routes.gen.ts"),
+
+  sitemapSources: join(appRoot, "src", "sitemap-sources.gen.ts"),
 
   staleManifest: join(appRoot, "src", "plugin-route-manifest.gen.ts"),
   /** The file-based router's config, read only for where the routes are. */
@@ -605,6 +611,11 @@ const discover = async (
     pluginRoutes: compiled.manifest,
   });
 
+  const sitemapSources = contentSitemapSourcesFrom({
+    contentUrls,
+    locales: i18n?.locales.map(locale => locale.code) ?? [],
+  });
+
   return {
     adminNav: adminNav.modules,
     apiRegistry: apiRegistry.modules,
@@ -621,6 +632,7 @@ const discover = async (
     packageMessages,
     pageCache,
     pageCacheRoutes,
+    sitemapSources,
     watch,
   };
 };
@@ -646,7 +658,7 @@ type DiscoveredRoutes = Omit<
   pageCacheRoutes: ResolvedPageCacheRoute[];
 };
 
-/** All nine generated files, from one discovery pass. */
+/** All ten generated files, from one discovery pass. */
 const writeGenerated = async (
   appRoot: string,
   options: VitNodePluginRoutesOptions,
@@ -666,6 +678,7 @@ const writeGenerated = async (
     packageMessages,
     pageCache,
     pageCacheRoutes,
+    sitemapSources,
   } = await discover(appRoot, options, onLoaded);
 
   await Promise.all([
@@ -695,6 +708,10 @@ const writeGenerated = async (
     writeIfChanged(
       paths.pluginInventory,
       generatePluginInventorySource(inventory),
+    ),
+    writeIfChanged(
+      paths.sitemapSources,
+      generateSitemapSourcesSource(sitemapSources),
     ),
     removeIfPresent(paths.staleManifest),
   ]);
@@ -726,15 +743,29 @@ const SERVER_ENTRY_FILES = [
   "server.mjs",
 ];
 
+const serverEntryUses = (appRoot: string, name: string): boolean =>
+  SERVER_ENTRY_FILES.some(entry => {
+    const file = join(appRoot, "src", entry);
+
+    return existsSync(file) && readFileSync(file, "utf8").includes(name);
+  });
+
 /** Whether `src/server.*` - TanStack Start's custom server entry - uses the page cache. */
 const serverEntryUsesPageCache = (appRoot: string): boolean =>
-  SERVER_ENTRY_FILES.some(name => {
-    const file = join(appRoot, "src", name);
+  serverEntryUses(appRoot, "withPageCache");
 
-    return (
-      existsSync(file) && readFileSync(file, "utf8").includes("withPageCache")
-    );
-  });
+/**
+ * Static files a host serves before the server entry runs, so they would
+ * shadow what `withSeo` generates for the same URLs.
+ */
+const shadowedSeoAssets = (appRoot: string): string[] => {
+  const publicDir = join(appRoot, "public");
+  if (!existsSync(publicDir)) return [];
+
+  return readdirSync(publicDir).filter(
+    name => name === "robots.txt" || /^sitemap.*\.xml$/.test(name),
+  );
+};
 
 /**
  * Identifies one build, so deployments sharing a cache never serve each other's
@@ -747,8 +778,8 @@ const newBuildId = (): string =>
 /**
  * Generates the app's `src/*.gen.ts` registries from the plugins configured in
  * `src/vitnode.config.ts` - plugin routes, API registry, AdminCP navigation and
- * content registry, widgets, package messages, page cache and plugin
- * inventory - and regenerates them in `vite dev` when a plugin changes.
+ * content registry, widgets, package messages, page cache, sitemap sources
+ * and plugin inventory - and regenerates them in `vite dev` when a plugin changes.
  *
  * Fails `vite dev` and `vite build` when plugin routes collide with each other
  * or the app's routes, translated route paths are invalid, or a public content
@@ -793,6 +824,16 @@ export const vitNodePluginRoutes = (
           "import.meta.env.VITNODE_BUILD_ID": JSON.stringify(buildId),
         },
       };
+    },
+
+    configResolved: resolved => {
+      if (!serverEntryUses(appRoot, "withSeo")) return;
+      const shadowed = shadowedSeoAssets(appRoot);
+      if (shadowed.length === 0) return;
+
+      resolved.logger.warn(
+        `${ERROR_PREFIX} public/${shadowed.join(", public/")} is served as a static file before \`withSeo\` runs, so it replaces the generated one whenever \`seo\` is set in vitnode.server.config.ts. Delete it to serve the generated file, or leave \`seo\` out to keep your own.`,
+      );
     },
 
     configureServer: server => {

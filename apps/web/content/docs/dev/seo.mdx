@@ -1,0 +1,343 @@
+---
+title: SEO, robots.txt and sitemaps
+description: Control search indexing, robots.txt, AI crawler rules and a generated sitemap for a VitNode site from vitnode.server.config.ts, with production and preview examples.
+icon: SearchCheck
+---
+
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
+VitNode can serve your site's `/robots.txt`, a `/sitemap.xml` index and the `noindex` signals for a whole deployment from one `seo` block in `vitnode.server.config.ts`. Use it to keep a preview deployment out of search results, to publish every public page and Content Engine record in a sitemap, and to decide which AI crawlers may read the site.
+
+The `seo` block is optional. Leave it out and nothing changes: a site that serves its own `public/robots.txt` or sitemap route keeps them.
+
+## Turn it on
+
+<Steps>
+<Step>
+
+### Add `seo` to the server config
+
+Open `src/vitnode.server.config.ts` and add the smallest working policy:
+
+```ts title="src/vitnode.server.config.ts"
+import '@tanstack/react-start/server-only'
+import { buildServerConfig } from '@vitnode/core/vitnode.config'
+
+import { appMessages } from '@/locales/app'
+import { packageMessages } from '@/package-messages.gen'
+import { vitNodeConfig } from '@/vitnode.config'
+
+export const vitNodeServerConfig = buildServerConfig({
+  config: vitNodeConfig,
+  messages: appMessages,
+  packageMessages,
+  seo: {
+    indexing: true, // [!code ++]
+  },
+})
+```
+
+`indexing` is the one required field. There is no default on purpose, so a copied config can never make a preview site indexable by accident.
+
+</Step>
+<Step>
+
+### Wrap the server entry with `withSeo`
+
+`withSeo` from `@vitnode/core/tanstack/seo/server` goes **outside** `withPageCache` in `src/server.ts`, so pages served from the [page cache](/docs/dev/cache/pages) get the same policy as fresh renders. Apps created with `create-vitnode-app` already have it:
+
+```ts title="src/server.ts"
+import handler from '@tanstack/react-start/server-entry'
+import { withPageCache } from '@vitnode/core/tanstack/page-cache/server'
+import { withSeo } from '@vitnode/core/tanstack/seo/server'
+
+import { pageCacheBuildId, pageCacheRoutes } from '@/page-cache.gen'
+import { sitemapManifest } from '@/sitemap-sources.gen'
+import { vitNodeConfig } from '@/vitnode.config'
+import { vitNodeServerConfig } from '@/vitnode.server.config'
+
+export default withSeo(
+  withPageCache(handler, {
+    buildId: pageCacheBuildId,
+    config: vitNodeConfig,
+    routes: pageCacheRoutes,
+  }),
+  { config: vitNodeServerConfig, sitemap: sitemapManifest },
+)
+```
+
+`src/sitemap-sources.gen.ts` is written by VitNode's Vite plugin on every `vitnode dev` and `vitnode build`, like the other `*.gen.ts` files. It lists the content types whose records go into the sitemap.
+
+</Step>
+<Step>
+
+### Remove static robots and sitemap files
+
+Delete `public/robots.txt` and any `public/sitemap*.xml`. Hosts serve files from `public/` before your server runs, so they would replace the generated ones. The build prints a warning while one is still there.
+
+</Step>
+</Steps>
+
+Every URL VitNode writes uses `VITNODE_WEB_URL`, or a language's own origin from [`i18n.domains`](/docs/dev/i18n/localized-urls) when the request is for that host. The request's `Host` header only picks between those configured origins, so nobody can make your sitemap point at another domain.
+
+## Options and defaults
+
+<TypeTable
+  type={{
+    'indexing': {
+      description: 'false adds noindex to every HTML page and hides the sitemap. No default.',
+      type: 'boolean',
+      required: true,
+    },
+    'sitemap.enabled': {
+      description: 'false hides the sitemap and its Sitemap: line but keeps the indexing decision.',
+      type: 'boolean',
+      default: 'indexing',
+    },
+    'sitemap.paths': {
+      description: 'Canonical pages of the app, unlocalized, such as "/" and "/about".',
+      type: 'string[]',
+      default: '[]',
+    },
+    'crawlers.openai.search': {
+      description: 'OAI-SearchBot, used for ChatGPT search results.',
+      type: 'boolean',
+      default: 'follows *',
+    },
+    'crawlers.openai.training': {
+      description: 'GPTBot, used to collect training data.',
+      type: 'boolean',
+      default: 'follows *',
+    },
+    'crawlers.anthropic.search': {
+      description: 'Claude-SearchBot, used for Claude search results.',
+      type: 'boolean',
+      default: 'follows *',
+    },
+    'crawlers.anthropic.training': {
+      description: 'ClaudeBot, used to collect training data.',
+      type: 'boolean',
+      default: 'follows *',
+    },
+    'crawlers.googleExtended': {
+      description: 'The Google-Extended token: Gemini training and grounding, as Google describes it.',
+      type: 'boolean',
+      default: 'follows *',
+    },
+  }}
+/>
+
+With `indexing: false` the sitemap is always off, whatever `sitemap.enabled` says. A sitemap invites crawlers to index what it lists, so the two cannot disagree.
+
+The config is read when the server starts. A change takes effect with the next deployment, and search engines then need days to weeks to recrawl and reprocess pages. Removing a page from results is not instant.
+
+## What robots.txt contains
+
+`/robots.txt` is built from config alone: no API call, no session and no database. With `seo: { indexing: true }` on a site with English and Polish:
+
+```txt title="https://example.com/robots.txt"
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /settings
+Disallow: /pl/settings
+
+Sitemap: https://example.com/sitemap.xml
+```
+
+- `/admin` and the account settings are excluded in every language's URL, including translated [route paths](/docs/dev/i18n/localized-urls). Those pages are still protected by sign-in; the rule only stops well-behaved crawlers from asking.
+- With `indexing: false` the file keeps the same rules but loses the `Sitemap:` line. Pages stay crawlable on purpose: a search engine has to fetch a page to read its `noindex`.
+- `HEAD` returns the same headers with no body.
+
+## Control AI crawlers
+
+Each bot you leave out follows `User-agent: *`. Set a bot to `false` to give it its own `Disallow: /` group, or to `true` to give it an explicit allow group:
+
+```ts title="src/vitnode.server.config.ts"
+seo: {
+  indexing: true,
+  crawlers: {
+    openai: { search: true, training: false },
+    anthropic: { search: true, training: false },
+    googleExtended: false,
+  },
+},
+```
+
+That adds these groups after `User-agent: *`:
+
+```txt
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /admin
+Disallow: /settings
+Disallow: /pl/settings
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /admin
+Disallow: /settings
+Disallow: /pl/settings
+
+User-agent: ClaudeBot
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+```
+
+An allowed bot gets the `/admin` and settings rules again because a crawler obeys only the most specific group that names it. Without them, `Allow: /` alone would open the AdminCP paths to that bot.
+
+Crawler rules state a policy that well-behaved bots follow. They do not block HTTP requests, and they do not cover fetches a person starts, such as asking an assistant to open one page. `Google-Extended` never changes how Google Search crawls or ranks the site.
+
+## Production and preview
+
+Decide `indexing` from the environment so the same code serves both deployments:
+
+```ts title="src/vitnode.server.config.ts"
+seo: {
+  indexing: process.env.VITNODE_SEO_INDEXING === 'true',
+  sitemap: { paths: ['/', '/about'] },
+},
+```
+
+| Deployment | `VITNODE_SEO_INDEXING` | Result                                                    |
+| ---------- | ---------------------- | --------------------------------------------------------- |
+| Production | `true`                 | Indexable pages, `/sitemap.xml`, `Sitemap:` in robots.txt |
+| Preview    | unset or `false`       | `X-Robots-Tag: noindex` on every page, sitemap `404`      |
+
+`VITNODE_SEO_INDEXING` is the starter's convention, not a variable VitNode reads by itself, so any expression works. vitnode.com, for example, indexes only when `VITNODE_WEB_URL` is `https://vitnode.com`.
+
+<Callout type="warn" title="Set it for the build and the server">
+  [Prerendered pages](/docs/dev/deployments/prerendering) are written at build time and
+  served as files, without the server. When `indexing` is `false` during the
+  build, VitNode writes `<meta name="robots" content="noindex"/>` into each of
+  them; the server adds `X-Robots-Tag: noindex` to everything it renders. Give
+  the build and the running server the same value, or the two kinds of page
+  will disagree.
+</Callout>
+
+`indexing: false` keeps a record's own robots settings. A page that already sends `noindex, nofollow` keeps it, and with `indexing: true` a Content Engine record with its [`noIndexField`](/docs/content-engine/seo#hide-a-record-from-search-engines) set still answers `noindex`.
+
+## What the sitemap lists
+
+`/sitemap.xml` is a sitemap index. Each child file sits at the site root, so it may list any URL on the host:
+
+| Child file                     | Source                                                                 |
+| ------------------------------ | ---------------------------------------------------------------------- |
+| `/sitemap-pages-1.xml`         | `seo.sitemap.paths`, once per language, with `hreflang` alternates      |
+| `/sitemap-blog-pl-1.xml`       | A content type with `delivery.sitemap`, one file per language and part |
+| `/sitemap-docs-1.xml`          | A list source you pass to `withSeo`, such as your own docs             |
+
+### Your own pages
+
+List canonical, public, indexable pages in `seo.sitemap.paths`, without a language prefix. VitNode adds each language's URL through your [locale routing](/docs/dev/i18n/localized-urls): `"/plugins"` becomes `/plugins` and `/pl/plugins`, each with `xhtml:link` alternates and an `x-default`. A path must start with `/` and has no query, hash or `..` segment; `/admin` and `/api` paths are refused. A trailing slash is dropped and duplicates are merged. Leave `lastmod` to pages with a real modification date: app paths get none.
+
+### Content Engine records
+
+A plugin author only adds `delivery.sitemap` to a content type. At build time VitNode finds every such type in your configured plugins and lists its published records, one file per language. See [Content SEO](/docs/content-engine/seo#sitemap) for what a record needs to appear.
+
+VitNode reads each type's `/delivery/sitemap` route as a guest, sending no cookie or `Authorization` header, so the XML is the same when a signed-in admin opens it. Drafts, hidden and restricted records, unpublished translations and records marked `noindex` stay out.
+
+### App-owned lists
+
+Pass any other bounded list of URLs as a source. vitnode.com publishes its Fumadocs pages this way:
+
+```ts title="apps/web/src/docs/sitemap.server.ts"
+import '@tanstack/react-start/server-only'
+
+import type { SeoSitemapListSource } from '@vitnode/core/tanstack/seo/server'
+
+export const docsSitemapSource: SeoSitemapListSource = {
+  id: 'docs',
+  urls: async () => {
+    const { source } = await import('./source.server')
+
+    return source.getPages().map((page) => ({ path: page.url }))
+  },
+}
+```
+
+Add it with `withSeo(entry, { config, sitemap: sitemapManifest, sources: [docsSitemapSource] })`. A URL may carry `lastModified` and `alternates`; one on a host you have not configured is dropped. The list is read once per server process.
+
+## How the sitemap stays fresh
+
+Generated XML is kept in the page cache's store, configured by [`pageCache.storage`](/docs/dev/cache/pages): one process's memory by default, or Redis shared by every instance. Nothing else needs setting up.
+
+- A child file holds at most 1,000 URLs and stays under the protocol's 50 MB limit.
+- A content file is cached for an hour. A publish, edit, slug change, delete, hide, or a change to a record's `noindex` field expires it at once. Removals are hard: XML that lists a removed URL is never served again. Additions may take one more request to appear.
+- The index lives for 10 minutes and is rebuilt as soon as any file it lists changes, so every child it links to exists.
+- A large content type is built a few API pages per request and finished in the background. Until every part is ready the previous complete sitemap is served. A crawler gets `503` with `Retry-After` only while there is no complete, valid copy, for example right after a deployment or a removal; failures are never cached.
+
+In a [separate front end](/docs/content-engine/caching#notify-a-separate-front-end), list its origin in the API's `content.revalidateOrigins`. `withSeo` answers that `POST /api/vitnode/content/revalidate` itself, checks `CRON_SECRET` and expires the affected sitemap files. Give the front end the same `CRON_SECRET` as the API.
+
+## Migrate and verify
+
+<Steps>
+<Step>
+
+### Check robots.txt
+
+```bash
+curl -i https://example.com/robots.txt
+```
+
+Expect `200`, `content-type: text/plain; charset=utf-8` and exactly one `Sitemap:` line with your origin.
+
+</Step>
+<Step>
+
+### Check the sitemap index and one child
+
+```bash
+curl -s https://example.com/sitemap.xml
+curl -s https://example.com/sitemap-pages-1.xml | head -n 20
+```
+
+Both answer `application/xml; charset=utf-8`. Every `<loc>` in the index opens a child file on the same host.
+
+</Step>
+<Step>
+
+### Publish and hide a record
+
+Publish an article, then request its file again. Its URL appears. Set the record's `noIndexField` to `true`, or hide it, and the next request no longer lists it. With the blog plugin:
+
+```bash
+curl -s https://example.com/sitemap-blog-en-1.xml | grep english-title
+```
+
+</Step>
+<Step>
+
+### Check a page with indexing off
+
+On a preview deployment, look at the headers of any page:
+
+```bash
+curl -sI https://preview.example.com/ | grep -i x-robots-tag
+curl -s https://preview.example.com/ | grep -o '<meta name="robots" content="noindex"/>'
+```
+
+The first line shows `x-robots-tag: noindex` for a server-rendered page. The second matches only on a prerendered page, which a host serves as a file without the header. `/sitemap.xml` answers `404`.
+
+</Step>
+</Steps>
+
+<Callout type="info" title="Cloudflare managed robots.txt">
+  Cloudflare's managed robots.txt feature (in the zone's AI crawler and bot
+  settings) prepends Cloudflare's own rules to the file visitors receive, on
+  top of what your server answers. If it is on, `curl` your live `/robots.txt` after deploying and turn
+  the setting off when its rules conflict with `seo.crawlers`. Static files in
+  `public/` are also served before the Worker runs, which is why the old ones
+  have to go.
+</Callout>
+
+## Related
+
+- [Content SEO](/docs/content-engine/seo): page metadata, `noindex` and the per-type sitemap route.
+- [Cache pages](/docs/dev/cache/pages): the store the sitemap shares.
+- [Configuration](/docs/dev/configuration#server-config): every file that configures a web app.

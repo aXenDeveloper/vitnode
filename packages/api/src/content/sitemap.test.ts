@@ -66,6 +66,20 @@ describe("contentSitemapXml", () => {
     expect(xml).toContain("<loc>https://example.com/articles/my-article</loc>");
   });
 
+  it.each<[string, Date | null | undefined]>([
+    ["absent", undefined],
+    ["null", null],
+    ["an invalid date", new Date("not a date")],
+  ])("omits lastmod when lastModified is %s", (_, lastModified) => {
+    const xml = contentSitemapXml({
+      entries: [{ itemId: 1, lastModified, path: "/about" }],
+      origin: "https://example.com",
+    });
+
+    expect(xml).not.toContain("lastmod");
+    expect(xml).toContain("<loc>https://example.com/about</loc>");
+  });
+
   it("drops an entry whose path will not resolve rather than emitting a bad loc", () => {
     const xml = contentSitemapXml({
       entries: [entry(), entry({ itemId: 2, path: "http://" })],
@@ -143,6 +157,10 @@ describe("contentSitemapIndexXml", () => {
           path: "/sitemaps/blog.article-1.xml",
         },
         { path: "/sitemaps/blog.article-2.xml" },
+        {
+          lastModified: new Date("not a date"),
+          path: "/sitemaps/blog.article-3.xml",
+        },
       ],
       origin: "https://example.com",
     });
@@ -153,7 +171,7 @@ describe("contentSitemapIndexXml", () => {
       "<loc>https://example.com/sitemaps/blog.article-1.xml</loc>",
     );
     expect(xml).toContain("<lastmod>2026-01-02T03:04:05.000Z</lastmod>");
-    // The second entry has no timestamp, so it carries no `lastmod` element.
+    // The others have no valid timestamp, so they carry no `lastmod` element.
     expect(xml.match(/<lastmod>/g)).toHaveLength(1);
   });
 });

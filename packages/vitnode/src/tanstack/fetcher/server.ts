@@ -181,6 +181,40 @@ export const rawFetcher = async ({
   return response;
 };
 
+/**
+ * An anonymous server-side API call, for work no visitor may influence -
+ * public data rendered once for everybody, such as sitemaps. Unlike
+ * {@link rawFetcher} it sends no cookie, no `Authorization`, no visitor IP or
+ * user agent, and never relays `Set-Cookie`: the API answers as it would a
+ * guest, even while a signed-in admin is the one asking. It keeps the same
+ * transport choice: in process when the API is mounted here, else
+ * `VITNODE_API_URL` or `VITNODE_WEB_URL` over the network. Server-only.
+ */
+export const guestRawFetcher = async ({
+  localTransport,
+  options,
+  origin,
+  ...args
+}: Omit<RawApiFetchArgs, "additionalHeaders"> & {
+  /**
+   * Answers the request in this process when the API is served here but its
+   * direct handler is not registered yet - the app's own server entry, say.
+   */
+  localTransport?: ApiTransport;
+}): Promise<Response> =>
+  await rawApiFetch(
+    {
+      ...args,
+      additionalHeaders: { accept: "application/json" },
+      options,
+      origin: origin ?? resolveApiOrigin(),
+    },
+    inProcessTransport(origin) ??
+      (origin === undefined && isApiOnThisOrigin()
+        ? localTransport
+        : undefined),
+  );
+
 /** What the server-only {@link fetcher} accepts besides the route and `args`. */
 export type FetcherServerOptions = FetcherRequestOptions & {
   /**

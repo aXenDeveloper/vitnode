@@ -260,6 +260,8 @@ export {
   contentListPageCacheTags,
   contentPublicStateOf,
   contentRecordPageCacheTags,
+  contentSitemapInvalidationMode,
+  contentSitemapPageCacheTags,
 } from "./page-cache";
 export type { ContentPublicState } from "./page-cache";
 export {

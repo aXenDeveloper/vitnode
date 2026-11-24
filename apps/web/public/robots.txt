@@ -1,6 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /admin
-Disallow: /settings
-
-Sitemap: https://vitnode.com/sitemap.xml

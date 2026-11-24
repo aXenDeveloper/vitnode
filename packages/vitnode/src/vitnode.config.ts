@@ -12,10 +12,11 @@ import type { VitNodeLogo } from "./components/logo-context";
 import type { ThemeProviderProps } from "./components/theme-provider";
 import type { NavigationConfig } from "./lib/navigation";
 import type { BuildPluginReturn } from "./lib/plugin";
+import type { VitNodeSeoConfig } from "./tanstack/seo/types";
 
 import { assertNavigationConfig } from "./lib/navigation";
 
-export type { LocaleConfig };
+export type { LocaleConfig, VitNodeSeoConfig };
 
 /**
  * An app's frontend configuration, written in `src/vitnode.config.ts` with
@@ -82,6 +83,26 @@ export interface VitNodeServerConfig<
 
   /** Each package's message loaders - the generated `src/package-messages.gen.ts`. */
   packageMessages?: Record<string, LocaleMessagesMap | undefined>;
+
+  /**
+   * Search indexing, `/robots.txt`, the sitemap and AI crawler rules, served
+   * by `withSeo` from `@vitnode/core/tanstack/seo/server`. Left out, nothing
+   * changes: the app keeps whatever robots and sitemap files it serves. Once
+   * set, `indexing` is required; the sitemap defaults to on while indexing is
+   * on, and each omitted crawler follows `User-agent: *`. Read when the server
+   * starts, so a change takes effect with the next deployment. See
+   * {@link VitNodeSeoConfig}.
+   *
+   * @example
+   * ```ts
+   * seo: {
+   *   indexing: true,
+   *   sitemap: { paths: ["/", "/about"] },
+   *   crawlers: { openai: { search: true, training: false } },
+   * }
+   * ```
+   */
+  seo?: VitNodeSeoConfig;
 }
 
 const DEFAULT_TIME_ZONE = "UTC";
@@ -138,8 +159,8 @@ export function buildConfig<const AppLocales extends LocaleConfig[]>(
 
 /**
  * Declares the server-only part of the frontend configuration: app message
- * overrides and the generated package message loaders. Import it only from
- * server code.
+ * overrides, the generated package message loaders and the site's `seo`
+ * policy. Import it only from server code.
  */
 export function buildServerConfig<const AppLocales extends LocaleConfig[]>(
   args: VitNodeServerConfig<AppLocales>,

@@ -543,7 +543,11 @@ export {
   contentSitemapXml,
   escapeXml,
 } from "./sitemap";
-export type { ContentSitemapEntry, ContentSitemapIndexEntry } from "./sitemap";
+export type {
+  ContentSitemapEntry,
+  ContentSitemapIndexEntry,
+  ContentSitemapXmlEntry,
+} from "./sitemap";
 export { slugify } from "./slug";
 export { contentTarget } from "./target";
 export type { ContentTarget } from "./target";
