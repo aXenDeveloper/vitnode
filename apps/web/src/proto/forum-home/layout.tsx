@@ -18,18 +18,18 @@ import type { VariantProps } from './data'
 import { useFeed, useHomeData } from './data'
 import { ForumChips, ForumTree } from './parts'
 
-/** The dot between meta items. It travels with the item after it, so a
- * wrapped line never starts or ends with a lone dot. */
-export const MetaItem = ({
-  children,
-  first,
-}: {
-  children: React.ReactNode
-  first?: boolean
-}) => (
-  <span className="flex min-w-0 items-center gap-2">
-    {first ? null : <span aria-hidden="true">·</span>}
-    {children}
+/** A wrapping line of meta items with a dot between them. Every item carries
+ * a leading dot, and the line is shifted left by one dot and clipped, so the
+ * dot that would start a line - the first, or one after a wrap - is hidden. */
+export const MetaLine = ({ children }: { children: React.ReactNode }) => (
+  <div className="text-muted-foreground overflow-hidden text-sm leading-relaxed">
+    <p className="-ms-6 flex flex-wrap items-center gap-y-1">{children}</p>
+  </div>
+)
+
+export const MetaItem = ({ children }: { children: React.ReactNode }) => (
+  <span className="flex min-w-0 items-center before:w-6 before:shrink-0 before:text-center before:content-['·']">
+    <span className="flex min-w-0 items-center gap-2">{children}</span>
   </span>
 )
 

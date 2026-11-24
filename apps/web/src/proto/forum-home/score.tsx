@@ -18,7 +18,7 @@ import { useFormatter, useTranslations } from 'use-intl'
 
 import type { VariantProps } from './data'
 
-import { CardsLayout, MetaItem } from './layout'
+import { CardsLayout, MetaItem, MetaLine } from './layout'
 import { useLivePoints } from './parts'
 
 const ScoreColumn = ({ topic }: { topic: FeedTopic }) => {
@@ -67,9 +67,9 @@ const ScoreCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
         <ScoreColumn topic={topic} />
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex flex-col gap-2 p-4 md:px-5">
-            <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-relaxed">
+            <MetaLine>
               {forum ? (
-                <MetaItem first>
+                <MetaItem>
                   <HrefLink
                     className="text-foreground flex min-w-0 items-center gap-2 font-semibold underline-offset-4 hover:underline"
                     href={forumHref(forum.slug)}
@@ -79,8 +79,8 @@ const ScoreCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
                   </HrefLink>
                 </MetaItem>
               ) : null}
-              <MetaItem first={!forum}>
-                <span className="min-w-0 truncate">
+              <MetaItem>
+                <span className="flex min-w-0">
                   <PersonName person={topic.author} />
                 </span>
               </MetaItem>
@@ -89,7 +89,7 @@ const ScoreCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
                   <TimeAgo date={topic.publishedAt} />
                 </MetaItem>
               ) : null}
-            </p>
+            </MetaLine>
             <h3
               className="text-foreground text-xl leading-snug font-semibold tracking-tight text-balance"
               id={titleId}

@@ -20,7 +20,7 @@ import { useTranslations } from 'use-intl'
 
 import type { VariantProps } from './data'
 
-import { CardsLayout, MetaItem } from './layout'
+import { CardsLayout, MetaItem, MetaLine } from './layout'
 
 const ShareButton = ({ topic }: { topic: FeedTopic }) => {
   const share = async () => {
@@ -74,9 +74,9 @@ const PostCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
             <span className="text-foreground min-w-0 truncate font-semibold">
               <PersonName person={topic.author} />
             </span>
-            <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-sm">
+            <MetaLine>
               {forum ? (
-                <MetaItem first>
+                <MetaItem>
                   <span className="min-w-0 truncate">
                     in{' '}
                     <HrefLink
@@ -89,11 +89,11 @@ const PostCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
                 </MetaItem>
               ) : null}
               {topic.publishedAt ? (
-                <MetaItem first={!forum}>
+                <MetaItem>
                   <TimeAgo date={topic.publishedAt} />
                 </MetaItem>
               ) : null}
-            </p>
+            </MetaLine>
           </div>
         </header>
 

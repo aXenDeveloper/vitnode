@@ -20,7 +20,7 @@ import { useFormatter } from 'use-intl'
 
 import type { VariantProps } from './data'
 
-import { CardsLayout, MetaItem } from './layout'
+import { CardsLayout, MetaItem, MetaLine } from './layout'
 
 const GridCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
   const format = useFormatter()
@@ -59,19 +59,21 @@ const GridCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
             {topic.excerpt}
           </p>
         ) : null}
-        <p className="text-muted-foreground mt-auto flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-          <MetaItem first>
-            <PersonAvatar person={topic.author} size={24} />
-            <span className="min-w-0 truncate">
-              <PersonName person={topic.author} />
-            </span>
-          </MetaItem>
-          {topic.publishedAt ? (
+        <div className="mt-auto">
+          <MetaLine>
             <MetaItem>
-              <TimeAgo date={topic.publishedAt} />
+              <PersonAvatar person={topic.author} size={24} />
+              <span className="flex min-w-0">
+                <PersonName person={topic.author} />
+              </span>
             </MetaItem>
-          ) : null}
-        </p>
+            {topic.publishedAt ? (
+              <MetaItem>
+                <TimeAgo date={topic.publishedAt} />
+              </MetaItem>
+            ) : null}
+          </MetaLine>
+        </div>
         <footer className="flex flex-wrap items-center gap-2 border-t pt-3">
           <ReactionPoints initial={topic.points} target={target} />
           <ReactionBar target={target} />
@@ -93,7 +95,7 @@ export const Grid = (props: VariantProps) => (
   <CardsLayout
     {...props}
     list={(topics, forums) => (
-      <ul className="grid gap-3 md:grid-cols-2">
+      <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {topics.map((topic) => (
           <GridCard
             forum={forums.get(topic.forum)}

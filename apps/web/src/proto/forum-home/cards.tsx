@@ -20,7 +20,7 @@ import { useTranslations } from 'use-intl'
 
 import type { VariantProps } from './data'
 
-import { CardsLayout, MetaItem } from './layout'
+import { CardsLayout, MetaItem, MetaLine } from './layout'
 
 const TopicCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
   const t = useTranslations('@vitnode/forum.forums')
@@ -45,9 +45,9 @@ const TopicCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
             </HrefLink>
           ) : null}
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-relaxed">
+            <MetaLine>
               {forum ? (
-                <MetaItem first>
+                <MetaItem>
                   <HrefLink
                     className="text-foreground font-semibold underline-offset-4 hover:underline"
                     href={forumHref(forum.slug)}
@@ -56,9 +56,9 @@ const TopicCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
                   </HrefLink>
                 </MetaItem>
               ) : null}
-              <MetaItem first={!forum}>
+              <MetaItem>
                 <PersonAvatar person={topic.author} size={24} />
-                <span className="min-w-0 truncate">
+                <span className="flex min-w-0">
                   <PersonName person={topic.author} />
                 </span>
               </MetaItem>
@@ -67,7 +67,7 @@ const TopicCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
                   <TimeAgo date={topic.publishedAt} />
                 </MetaItem>
               ) : null}
-            </p>
+            </MetaLine>
             <h3
               className="text-foreground text-xl leading-snug font-semibold tracking-tight text-balance"
               id={titleId}
