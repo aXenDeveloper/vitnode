@@ -1,62 +1,58 @@
 import { useEffect, useState } from 'react'
 
 import {
-  ArticleScreen,
-  CategoriesScreen,
-  DashboardScreen,
-  FilesScreen,
-  NavigationScreen,
-} from './content-screens'
-import { DevicesScreen, LoginScreen, ProfileScreen } from './member-screens'
-import {
-  ModeratorsScreen,
-  NotificationsScreen,
-  RolesScreen,
-  UsersScreen,
-} from './people-screens'
-import {
-  AiScreen,
-  CronScreen,
-  IntegrationsScreen,
-  SearchScreen,
-} from './system-screens'
-import { whenIdle } from './when-idle'
+  ArticlePage,
+  BlogIndexPage,
+  DiscoverPage,
+  ForumIndexPage,
+  ForumPage,
+  ModcpPage,
+  NotificationsPage,
+  PaymentsPage,
+  ProfilePage,
+  SearchPage,
+  TopicPage,
+} from './app-pages'
+import { ArticleScreen, DashboardScreen } from './content-screens'
+import { RolesScreen, UsersScreen } from './people-screens'
+import { AiScreen } from './system-screens'
+import { whenIdle } from '@/site/marketing/when-idle'
 
 const COLUMNS = [
   {
-    key: 'content',
+    key: 'activity',
     screens: [
-      { key: 'categories', Screen: CategoriesScreen },
-      { key: 'login', Screen: LoginScreen },
-      { key: 'notifications', Screen: NotificationsScreen },
-      { key: 'cron', Screen: CronScreen },
-    ],
-  },
-  {
-    key: 'overview',
-    screens: [
-      { key: 'ai', Screen: AiScreen },
-      { key: 'dashboard', Screen: DashboardScreen },
       { key: 'users', Screen: UsersScreen },
-      { key: 'files', Screen: FilesScreen },
+      { key: 'discover', Screen: DiscoverPage },
+      { key: 'modcp', Screen: ModcpPage },
+      { key: 'ai', Screen: AiScreen },
     ],
   },
   {
-    key: 'publishing',
+    key: 'members',
     screens: [
-      { key: 'navigation', Screen: NavigationScreen },
-      { key: 'article', Screen: ArticleScreen },
-      { key: 'integrations', Screen: IntegrationsScreen },
-      { key: 'devices', Screen: DevicesScreen },
+      { key: 'payments', Screen: PaymentsPage },
+      { key: 'profile', Screen: ProfilePage },
+      { key: 'article', Screen: ArticlePage },
+      { key: 'forum', Screen: ForumPage },
     ],
   },
   {
-    key: 'people',
+    key: 'community',
     screens: [
-      { key: 'moderators', Screen: ModeratorsScreen },
+      { key: 'notifications', Screen: NotificationsPage },
+      { key: 'blog', Screen: BlogIndexPage },
+      { key: 'forums', Screen: ForumIndexPage },
+      { key: 'search', Screen: SearchPage },
+    ],
+  },
+  {
+    key: 'staff',
+    screens: [
       { key: 'roles', Screen: RolesScreen },
-      { key: 'profile', Screen: ProfileScreen },
-      { key: 'search', Screen: SearchScreen },
+      { key: 'topic', Screen: TopicPage },
+      { key: 'dashboard', Screen: DashboardScreen },
+      { key: 'editor', Screen: ArticleScreen },
     ],
   },
 ]

@@ -2,7 +2,7 @@ import { lazy, startTransition, Suspense, useEffect, useState } from 'react'
 
 import { useScrollProgress } from '@/site/home/use-scroll-progress'
 
-import { whenIdle } from './when-idle'
+import { whenIdle } from '@/site/marketing/when-idle'
 
 const HeroWallColumns = lazy(async () =>
   import('./hero-wall-columns').then((module) => ({
