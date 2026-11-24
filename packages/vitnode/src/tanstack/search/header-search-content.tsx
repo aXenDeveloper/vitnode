@@ -265,12 +265,12 @@ const ItemRow = ({
     >
       {thumbnail}
       <span className="flex min-h-10 min-w-0 flex-1 flex-col justify-center">
-        <span className="flex items-baseline gap-2 text-sm">
-          <span className="text-foreground min-w-0 truncate font-medium">
+        <span className="flex flex-wrap items-baseline gap-x-2 text-sm">
+          <span className="text-foreground max-w-full min-w-0 truncate font-medium">
             <SearchHighlightText pattern={pattern} text={title} />
           </span>
           {context && context !== title && (
-            <span className="text-muted-foreground min-w-0 shrink truncate text-xs">
+            <span className="text-muted-foreground max-w-full min-w-0 truncate text-xs">
               {t("dialog.in_context", { context })}
             </span>
           )}

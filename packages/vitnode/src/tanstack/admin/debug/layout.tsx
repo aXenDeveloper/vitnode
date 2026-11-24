@@ -34,10 +34,10 @@ export const AdminDebugLayoutContent = ({
 
   return (
     <RouteMessages namespaces={ADMIN_DEBUG_NAMESPACES}>
-      <div className="flex flex-col gap-6 p-4 sm:p-6">
+      <div className="@container/debug flex flex-col gap-6 p-4 sm:p-6">
         <PageTitle className="mb-0" desc={description} h1={title} />
 
-        <div className="grid gap-6 md:grid-cols-[14rem_minmax(0,1fr)] lg:grid-cols-[16rem_minmax(0,1fr)]">
+        <div className="grid gap-6 @2xl/debug:grid-cols-[14rem_minmax(0,1fr)] @4xl/debug:grid-cols-[16rem_minmax(0,1fr)]">
           <DebugNav active={tab} health={health} tabs={tabs} />
           <div className="min-w-0">{children}</div>
         </div>

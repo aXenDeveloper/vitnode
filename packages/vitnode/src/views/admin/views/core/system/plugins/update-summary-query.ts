@@ -2,6 +2,7 @@ import type { updatesSummarySchema } from "@vitnode/api/modules/admin/plugins/up
 import type { z } from "zod";
 
 import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useHydrated } from "@tanstack/react-router";
 import { coreStaffPermissions } from "@vitnode/api/lib/core-staff-permissions";
 import { manifest } from "@vitnode/api/manifest";
 
@@ -46,14 +47,21 @@ export const updateSummaryQueryOptions = () =>
       query.state.data?.running === true ? RUNNING_REFETCH_MS : false,
   });
 
+/**
+ * The plugin update summary for the header pill, sidebar badges and dashboard
+ * widget. `undefined` until hydration: the server never fetches it, so cached
+ * data must not reach a boundary that hydrates later than the shell.
+ */
 export const useAdminUpdateSummary = () => {
   const canView = useAdminStaffPermission(
     coreStaffPermissions.admin.plugins.canView,
   );
+  const hydrated = useHydrated();
   const { data, isError } = useQuery({
     ...updateSummaryQueryOptions(),
     enabled: canView,
   });
+  const visible = canView && hydrated;
 
-  return { data: canView ? data : undefined, isError: canView && isError };
+  return { data: visible ? data : undefined, isError: visible && isError };
 };

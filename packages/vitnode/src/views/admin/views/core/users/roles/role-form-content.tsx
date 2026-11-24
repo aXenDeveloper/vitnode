@@ -356,7 +356,7 @@ export const AdminRoleFormContent = ({
       .default(data?.prefix ?? "")
       .describe(t("form.prefix_desc")),
     name: multiLangValueSchema({ maxLength: 255, minLength: 1 })
-      .min(1)
+      .min(1, { message: tCore("field_required") })
       .default(
         data?.name.map(item => ({
           languageCode: item.languageCode,

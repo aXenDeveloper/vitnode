@@ -20,6 +20,7 @@ export {
   CardsPendingSkeleton,
   DiscoverPendingSkeleton,
   FeedPendingSkeleton,
+  FormFieldsPendingSkeleton,
   FormPendingSkeleton,
   ProfilePendingSkeleton,
   SearchPendingSkeleton,

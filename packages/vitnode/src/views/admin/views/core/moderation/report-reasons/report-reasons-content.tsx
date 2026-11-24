@@ -161,6 +161,7 @@ export const ReportReasonsContent = ({
                   </span>
                 );
               },
+              className: "min-w-48",
               header: t("columns.reason"),
             },
             {

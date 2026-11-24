@@ -182,7 +182,7 @@ const NumberedPaginationDataTable = ({
           />
         </PaginationItem>
 
-        <PaginationItem className="sm:hidden">
+        <PaginationItem className="@lg:hidden">
           <span className="text-muted-foreground px-2 text-sm tabular-nums">
             {t("page_of", { page, total: totalPages })}
           </span>
@@ -191,7 +191,7 @@ const NumberedPaginationDataTable = ({
         {tablePageWindow({ current: page, total: totalPages }).map(
           (slot, index) => (
             <PaginationItem
-              className="hidden sm:block"
+              className="hidden @lg:block"
               key={
                 slot === "ellipsis"
                   ? `gap-${index === 1 ? "start" : "end"}`
@@ -274,61 +274,70 @@ export const PaginationDataTable = ({
     totalPages: number;
   };
 }) => {
-  const { isPending, navigate, searchParams } = useDataTableUrl();
+  const { committedSearchParams, isPending, navigate, searchParams } =
+    useDataTableUrl();
   const isCursor = currentPage === null && hasTableCursor(searchParams);
   const page = isCursor ? null : (currentPage ?? readTablePage(searchParams));
+  // The summary describes the rows on screen, so it waits for the committed
+  // URL - the API leaves `currentPage` null when the URL names no page.
+  const shownPage =
+    currentPage === null && hasTableCursor(committedSearchParams)
+      ? null
+      : (currentPage ?? readTablePage(committedSearchParams));
   const showCursorPagination = isCursor && (hasPreviousPage || hasNextPage);
   const showNumberedPagination = page != null && totalPages > 1;
 
   return (
-    <div
-      aria-busy={isPending}
-      className={cn(
-        "border-foreground/10 flex w-full flex-col gap-4 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6",
-        isPending && "pointer-events-none opacity-60",
-      )}
-    >
-      <p
-        aria-live="polite"
-        className="text-muted-foreground text-sm tabular-nums"
+    <div className="@container w-full">
+      <div
+        aria-busy={isPending}
+        className={cn(
+          "border-foreground/10 flex w-full flex-col gap-4 border-t px-4 py-3 @2xl:flex-row @2xl:items-center @2xl:justify-between @2xl:px-6",
+          isPending && "pointer-events-none opacity-60",
+        )}
       >
-        <RangeSummaryDataTable
-          count={count}
-          page={page}
-          pageSize={pageSize}
-          totalCount={totalCount}
-        />
-      </p>
+        <p
+          aria-live="polite"
+          className="text-muted-foreground text-sm tabular-nums"
+        >
+          <RangeSummaryDataTable
+            count={count}
+            page={shownPage}
+            pageSize={pageSize}
+            totalCount={totalCount}
+          />
+        </p>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 sm:justify-end sm:gap-6">
-        <PageSizeSelectDataTable
-          isPending={isPending}
-          navigate={navigate}
-          pageSize={pageSize}
-          searchParams={searchParams}
-        />
-
-        {showCursorPagination && (
-          <CursorPaginationDataTable
-            endCursor={endCursor}
-            hasNextPage={hasNextPage}
-            hasPreviousPage={hasPreviousPage}
+        <div className="flex flex-wrap items-center justify-between gap-4 @2xl:justify-end @2xl:gap-6">
+          <PageSizeSelectDataTable
+            isPending={isPending}
             navigate={navigate}
             pageSize={pageSize}
             searchParams={searchParams}
-            startCursor={startCursor}
           />
-        )}
-        {showNumberedPagination && (
-          <NumberedPaginationDataTable
-            hasNextPage={hasNextPage}
-            hasPreviousPage={hasPreviousPage}
-            navigate={navigate}
-            page={page}
-            searchParams={searchParams}
-            totalPages={totalPages}
-          />
-        )}
+
+          {showCursorPagination && (
+            <CursorPaginationDataTable
+              endCursor={endCursor}
+              hasNextPage={hasNextPage}
+              hasPreviousPage={hasPreviousPage}
+              navigate={navigate}
+              pageSize={pageSize}
+              searchParams={searchParams}
+              startCursor={startCursor}
+            />
+          )}
+          {showNumberedPagination && (
+            <NumberedPaginationDataTable
+              hasNextPage={hasNextPage}
+              hasPreviousPage={hasPreviousPage}
+              navigate={navigate}
+              page={page}
+              searchParams={searchParams}
+              totalPages={totalPages}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

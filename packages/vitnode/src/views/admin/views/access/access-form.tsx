@@ -335,7 +335,9 @@ const AccessBody = ({
               aria-hidden="true"
               className="mt-0.5 size-4 shrink-0"
             />
-            {t.rich("attachments.unsupported", { docs: privateStorageLink })}
+            <span>
+              {t.rich("attachments.unsupported", { docs: privateStorageLink })}
+            </span>
           </p>
         ) : null}
 

@@ -869,6 +869,10 @@
       "secondaryRoles": "Secondary roles",
       "editProfile": "Edit profile",
       "timeline": "Timeline",
+      "timeline_load_error": {
+        "title": "Timeline didn't load",
+        "desc": "Something went wrong on our side. Try again in a moment."
+      },
       "preview": {
         "sheet_title": "Profile of @{nameCode}",
         "reputation": "Reputation",

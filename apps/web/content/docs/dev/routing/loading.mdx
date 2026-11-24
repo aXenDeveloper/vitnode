@@ -83,7 +83,8 @@ Import pre-built skeletons directly from `@vitnode/core/tanstack/pending`:
 | `FeedPendingSkeleton`  | Card timeline with avatars and text rows      | Activity feeds, note lists, blog posts  |
 | `TablePendingSkeleton` | Search toolbar, column headers, and rows      | AdminCP data tables, member directories |
 | `CardsPendingSkeleton` | Responsive 1/2/3 column card grid             | Dashboard widgets, product catalogs     |
-| `FormPendingSkeleton`  | Stacked input placeholders and action buttons | Settings forms, modal dialogs           |
+| `FormPendingSkeleton`  | Stacked input placeholders and action buttons | Settings forms on a page                |
+| `FormFieldsPendingSkeleton` | Fields and footer buttons, no heading or card | A lazy form inside a dialog or sheet |
 | `AuthPendingSkeleton`  | Centered authentication card with form inputs | Sign-in, sign-up, password reset        |
 | `ProfilePendingSkeleton` | Cover, avatar, name and side cards          | Member profiles                         |
 | `DiscoverPendingSkeleton` | Heading and a timeline of results          | Discover-style activity pages           |
@@ -91,6 +92,30 @@ Import pre-built skeletons directly from `@vitnode/core/tanstack/pending`:
 | `BreadcrumbPendingSkeleton` | Two short crumb placeholders             | A breadcrumb that is still loading      |
 | `RoutePendingSkeleton` | Heading and text blocks                       | A page with no closer shape             |
 | `RoutePendingSpinner`  | Centered accessible spinner                   | Suspense fallback with no known shape   |
+
+## Lazy forms in dialogs and sheets
+
+A dialog or sheet already draws its own title and frame, so the fallback of a lazily loaded form inside it should only stand in for the fields. `FormFieldsPendingSkeleton` does exactly that, and its footer matches the one your form ends with - so nothing jumps when the real form arrives:
+
+```tsx title="plugins/site-notes/src/pages/note-settings-sheet.tsx"
+import { FormFieldsPendingSkeleton } from '@vitnode/core/tanstack/pending'
+import { Suspense, lazy } from 'react'
+
+const NoteSettingsForm = lazy(async () => import('./note-settings-form'))
+
+// Inside your <SheetContent>, below the <SheetHeader>:
+<Suspense fallback={<FormFieldsPendingSkeleton footer="sheet" rows={5} />}>
+  <NoteSettingsForm />
+</Suspense>
+```
+
+| Prop       | Type                              | Default    | Description |
+| :--------- | :-------------------------------- | :--------- | :---------- |
+| `footer`   | `'dialog' \| 'sheet'`            | `'dialog'` | `'dialog'` mimics `DialogFooter` (buttons stack full-width on phones), `'sheet'` mimics `AutoFormSheetFooter` (a bar pinned to the bottom) |
+| `withTabs` | `boolean`                         | `false`    | Draws a tab bar above the fields, for an `AutoForm` with `tabs` |
+| `rows`     | `number`                          | `3`        | Number of field placeholders |
+
+It announces itself to screen readers with the translated `core.global.loading`, so you don't need to pass a `label`.
 
 ## Customizing skeleton props
 

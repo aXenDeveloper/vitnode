@@ -40,7 +40,11 @@ export const Avatar = ({
   return (
     <img
       alt={name}
-      className={cn("bg-muted rounded-full object-cover", className)}
+      className={cn(
+        // `max-w-none`: a table sizing its columns would count the image as 0px.
+        "bg-muted max-w-none shrink-0 rounded-full object-cover",
+        className,
+      )}
       decoding="async"
       height={size}
       loading="lazy"

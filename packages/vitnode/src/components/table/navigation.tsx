@@ -32,11 +32,13 @@ export const DataTableNavigationProvider = ({
  * The table's current query string and a `navigate` wrapped in a transition,
  * whose `isPending` controls can show while the next page loads. While a
  * navigation started here is pending, `searchParams` already holds its target
- * query string, so the control shows the new value at once.
+ * query string, so the control shows the new value at once, and
+ * `committedSearchParams` still holds the one the rows on screen came from.
  *
  * @throws Outside a {@link DataTableNavigationProvider}.
  */
 export const useDataTableUrl = (): {
+  committedSearchParams: URLSearchParams;
   isPending: boolean;
   navigate: (nextSearch: string) => void;
   searchParams: URLSearchParams;
@@ -65,6 +67,7 @@ export const useDataTableUrl = (): {
   );
 
   return {
+    committedSearchParams: searchParams,
     isPending,
     navigate: navigateInTransition,
     searchParams: optimisticSearchParams,

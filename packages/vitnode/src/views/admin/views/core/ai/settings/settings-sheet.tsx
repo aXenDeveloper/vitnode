@@ -14,7 +14,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Spinner } from "@/components/ui/spinner";
+import { FormFieldsPendingSkeleton } from "@/tanstack/pending/shapes";
 
 import type { AiSettingsFormProps } from "./settings-form-content";
 
@@ -64,11 +64,7 @@ export const AiSettingsSheet = ({
           </SheetDescription>
         </SheetHeader>
         <React.Suspense
-          fallback={
-            <div className="flex flex-1 items-center justify-center">
-              <Spinner size="xl" />
-            </div>
-          }
+          fallback={<FormFieldsPendingSkeleton footer="sheet" rows={5} />}
         >
           <AiSettingsSheetBody adminUserId={adminUserId} onSave={onSave} />
         </React.Suspense>

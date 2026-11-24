@@ -58,6 +58,7 @@ const SOURCES = ["symbol", "image"] as const;
 const reactionFormSchema = (
   reaction: AdminReaction | undefined,
   codeMessage: string,
+  requiredMessage: string,
 ) => {
   const imageDefault: null | ReactionImageValue =
     reaction?.kind === "image" && reaction.image && reaction.fileId !== null
@@ -93,7 +94,7 @@ const reactionFormSchema = (
       maxLength: REACTIONS_LIMITS.titleMaxLength,
       minLength: 1,
     })
-      .min(1)
+      .min(1, { message: requiredMessage })
       .default(reaction?.title ?? []),
     code: z
       .string()
@@ -232,8 +233,13 @@ export const ReactionForm = ({
   reaction,
 }: ReactionFormProps) => {
   const t = useTranslations("admin.reactions.form");
+  const tErrors = useTranslations("core.global.errors");
   const locale = useLocale();
-  const formSchema = reactionFormSchema(reaction, t("code_desc"));
+  const formSchema = reactionFormSchema(
+    reaction,
+    t("code_desc"),
+    tErrors("field_required"),
+  );
 
   const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
     const lookKey = missingLookKey(values);

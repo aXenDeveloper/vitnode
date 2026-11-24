@@ -114,54 +114,55 @@ export const OverviewSettingsContent = ({
           </div>
         </FramePanel>
       </Frame>
+      <div className="@container">
+        <div className="grid gap-4 @2xl:grid-cols-2">
+          <ProfileSummary
+            canEdit={canEditPersonalInfo}
+            fields={personalFields}
+            user={user}
+          />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <ProfileSummary
-          canEdit={canEditPersonalInfo}
-          fields={personalFields}
-          user={user}
-        />
-
-        <Frame>
-          <FrameHeader>
-            <FrameTitle render={<h2 />}>{t("accountTitle")}</FrameTitle>
-          </FrameHeader>
-          <FramePanel render={<ul />}>
-            <OverviewFact
-              icon={AtSignIcon}
-              label={t("nickname")}
-              value={user.name}
-            />
-            <OverviewFact
-              badge={
-                user.emailVerified ? (
-                  <Badge variant="success">{t("emailVerified")}</Badge>
-                ) : null
-              }
-              icon={MailIcon}
-              label={t("email")}
-              value={user.email}
-            />
-            <OverviewFact
-              icon={ShieldIcon}
-              label={t("role")}
-              value={<RoleFormat role={user.role} />}
-            />
-            {user.secondaryRoles.length === 0 ? null : (
+          <Frame>
+            <FrameHeader>
+              <FrameTitle render={<h2 />}>{t("accountTitle")}</FrameTitle>
+            </FrameHeader>
+            <FramePanel render={<ul />}>
               <OverviewFact
-                icon={UsersIcon}
-                label={t("secondaryRoles")}
-                value={
-                  <span className="flex flex-wrap gap-x-3 gap-y-1">
-                    {user.secondaryRoles.map(role => (
-                      <RoleFormat key={role.id} role={role} />
-                    ))}
-                  </span>
-                }
+                icon={AtSignIcon}
+                label={t("nickname")}
+                value={user.name}
               />
-            )}
-          </FramePanel>
-        </Frame>
+              <OverviewFact
+                badge={
+                  user.emailVerified ? (
+                    <Badge variant="success">{t("emailVerified")}</Badge>
+                  ) : null
+                }
+                icon={MailIcon}
+                label={t("email")}
+                value={user.email}
+              />
+              <OverviewFact
+                icon={ShieldIcon}
+                label={t("role")}
+                value={<RoleFormat role={user.role} />}
+              />
+              {user.secondaryRoles.length === 0 ? null : (
+                <OverviewFact
+                  icon={UsersIcon}
+                  label={t("secondaryRoles")}
+                  value={
+                    <span className="flex flex-wrap gap-x-3 gap-y-1">
+                      {user.secondaryRoles.map(role => (
+                        <RoleFormat key={role.id} role={role} />
+                      ))}
+                    </span>
+                  }
+                />
+              )}
+            </FramePanel>
+          </Frame>
+        </div>
       </div>
 
       {aiPoints}

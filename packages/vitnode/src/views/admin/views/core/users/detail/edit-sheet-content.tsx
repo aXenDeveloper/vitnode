@@ -6,7 +6,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Spinner } from "@/components/ui/spinner";
+import { FormFieldsPendingSkeleton } from "@/tanstack/pending/shapes";
 
 export const EditSheetContent = ({
   children,
@@ -23,13 +23,7 @@ export const EditSheetContent = ({
       <SheetDescription className="text-pretty">{description}</SheetDescription>
     </SheetHeader>
     <div className="[&_[data-slot=dialog-footer]]:bg-popover flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 has-data-[slot=dialog-footer]:pb-0 [&_[data-slot=dialog-footer]]:sticky [&_[data-slot=dialog-footer]]:bottom-0 [&_[data-slot=dialog-footer]]:-mx-4 [&_[data-slot=dialog-footer]]:mt-auto [&_[data-slot=dialog-footer]]:mb-0 [&_[data-slot=dialog-footer]]:px-4 [&_[data-slot=dialog-footer]]:pb-[max(--spacing(4),env(safe-area-inset-bottom))] [&>form]:flex-1">
-      <React.Suspense
-        fallback={
-          <div className="flex items-center justify-center">
-            <Spinner size="xl" />
-          </div>
-        }
-      >
+      <React.Suspense fallback={<FormFieldsPendingSkeleton />}>
         {children}
       </React.Suspense>
     </div>

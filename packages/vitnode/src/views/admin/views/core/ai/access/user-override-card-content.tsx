@@ -16,9 +16,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { formatAiPoints } from "@/lib/ai/format-points";
+import { FormFieldsPendingSkeleton } from "@/tanstack/pending/shapes";
 import { DetailFrame } from "@/views/admin/views/core/users/detail/user-profile-cards";
 
 import type { AdminAiUserOverride } from "../ai-query";
@@ -109,13 +109,7 @@ export const AiUserOverrideCardContent = ({
                   <DialogTitle>{t("edit")}</DialogTitle>
                   <DialogDescription>{t("form_desc")}</DialogDescription>
                 </DialogHeader>
-                <React.Suspense
-                  fallback={
-                    <div className="flex items-center justify-center">
-                      <Spinner size="xl" />
-                    </div>
-                  }
-                >
+                <React.Suspense fallback={<FormFieldsPendingSkeleton />}>
                   <AiUserOverrideForm
                     data={override}
                     onSave={onSave}

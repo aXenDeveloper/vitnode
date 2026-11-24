@@ -54,6 +54,7 @@ import {
 } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
 import { TooltipWithContent } from "@/components/ui/tooltip";
+import { FormFieldsPendingSkeleton } from "@/tanstack/pending/shapes";
 import { ADMIN_ROLE_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 
 import type {
@@ -324,13 +325,7 @@ const EditRoleAction = ({
           <DialogTitle>{t("title")}</DialogTitle>
         </DialogHeader>
 
-        <React.Suspense
-          fallback={
-            <div className="flex items-center justify-center">
-              <Spinner size="xl" />
-            </div>
-          }
-        >
+        <React.Suspense fallback={<FormFieldsPendingSkeleton withTabs />}>
           <AdminRoleFormDialogContent
             aiAccessQuery={aiAccessQuery}
             data={role}
@@ -421,13 +416,7 @@ export const CreateRoleAction = ({
           <DialogDescription>{t("desc")}</DialogDescription>
         </DialogHeader>
 
-        <React.Suspense
-          fallback={
-            <div className="flex items-center justify-center">
-              <Spinner size="xl" />
-            </div>
-          }
-        >
+        <React.Suspense fallback={<FormFieldsPendingSkeleton withTabs />}>
           <AdminRoleFormDialogContent
             aiAccessQuery={aiAccessQuery}
             onSave={onSave}

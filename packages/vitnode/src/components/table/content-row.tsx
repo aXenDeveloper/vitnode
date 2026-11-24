@@ -165,7 +165,10 @@ export const EmptyBodyDataTable = ({
   <TableBody>
     <TableRow className="hover:bg-transparent">
       <TableCell className="!p-0 whitespace-normal" colSpan={colSpan}>
-        <Empty data-testid="table-no-results">
+        <Empty
+          className="sticky start-0 w-[100cqi]"
+          data-testid="table-no-results"
+        >
           <EmptyHeader>
             <EmptyMedia variant="icon">
               {customNoResults?.icon ?? <SearchXIcon />}

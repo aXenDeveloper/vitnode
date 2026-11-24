@@ -19,7 +19,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Spinner } from "@/components/ui/spinner";
+import { FormFieldsPendingSkeleton } from "@/tanstack/pending/shapes";
 
 import type { ContentContainerFormProps } from "./container-form-content";
 import type { ContentContainerPoliciesFormProps } from "./container-policies-form";
@@ -41,12 +41,6 @@ const ContentContainerPoliciesFormContent = React.lazy(async () =>
   import("./container-policies-form").then(module => ({
     default: module.ContentContainerPoliciesFormContent,
   })),
-);
-
-const SheetFallback = () => (
-  <div className="flex flex-1 items-center justify-center p-6">
-    <Spinner size="xl" />
-  </div>
 );
 
 export const ContentContainerSheet = ({
@@ -85,7 +79,9 @@ export const ContentContainerSheet = ({
         </SheetHeader>
 
         {isEdit && !container ? null : (
-          <React.Suspense fallback={<SheetFallback />}>
+          <React.Suspense
+            fallback={<FormFieldsPendingSkeleton footer="sheet" />}
+          >
             <ContentContainerFormContent
               container={isEdit ? container : undefined}
               key={formKey}
@@ -126,7 +122,9 @@ export const ContentContainerPoliciesSheet = ({
         </SheetHeader>
 
         {container ? (
-          <React.Suspense fallback={<SheetFallback />}>
+          <React.Suspense
+            fallback={<FormFieldsPendingSkeleton footer="sheet" />}
+          >
             <ContentContainerPoliciesFormContent
               container={container}
               key={formKey}

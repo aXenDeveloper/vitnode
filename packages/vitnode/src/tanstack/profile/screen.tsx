@@ -1,18 +1,27 @@
 import {
-  useInfiniteQuery,
   useQuery,
   useQueryClient,
+  useQueryErrorResetBoundary,
+  useSuspenseInfiniteQuery,
   useSuspenseQuery,
 } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { CatchBoundary, Link } from "@tanstack/react-router";
 import { cn } from "cn";
-import { UserRoundPenIcon } from "lucide-react";
+import { HistoryIcon, RotateCwIcon, UserRoundPenIcon } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { SearchTimelineOwner } from "@/views/search/types";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { UserPresenceStatus } from "@/components/user-presence-status";
 import { USER_HEADER_HREF } from "@/views/layouts/theme/header/user/user-header-model";
 import { userPresenceQueryOptions } from "@/views/presence/presence-query";
@@ -24,6 +33,7 @@ import {
   ProfileWarningsSkeleton,
 } from "@/views/profile/warnings/profile-warnings";
 import { SearchFeedList } from "@/views/search/search-feed-content";
+import { SearchTimelineSkeleton } from "@/views/search/search-timeline-skeleton";
 
 import { useSessionQuery } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
@@ -93,6 +103,53 @@ const ProfileWarningsSlot = ({
   </React.Suspense>
 );
 
+// Suspense, not `isPending`: the loader streams this query, so a plain read
+// renders the skeleton on the server and the list in the browser.
+const ProfileTimelineList = ({
+  owner,
+  viewerId,
+}: {
+  owner: SearchTimelineOwner;
+  viewerId: null | number;
+}) => {
+  const locale = useLocale();
+  const query = useSuspenseInfiniteQuery(
+    profileTimelineQueryOptions({ locale, userId: owner.id, viewerId }),
+  );
+
+  return <SearchFeedList owner={owner} query={query} variant="timeline" />;
+};
+
+const ProfileTimelineError = ({ reset }: { reset: () => void }) => {
+  const t = useTranslations("core.profile.timeline_load_error");
+  const tErrors = useTranslations("core.global.errors");
+  const { reset: resetQueries } = useQueryErrorResetBoundary();
+
+  return (
+    <Empty className="border" role="alert">
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <HistoryIcon aria-hidden="true" />
+        </EmptyMedia>
+        <EmptyTitle>{t("title")}</EmptyTitle>
+        <EmptyDescription>{t("desc")}</EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button
+          onClick={() => {
+            resetQueries();
+            reset();
+          }}
+          variant="outline"
+        >
+          <RotateCwIcon aria-hidden="true" />
+          {tErrors("try_again")}
+        </Button>
+      </EmptyContent>
+    </Empty>
+  );
+};
+
 const ProfileTimeline = ({
   owner,
   viewerId,
@@ -101,11 +158,7 @@ const ProfileTimeline = ({
   viewerId: null | number;
 }) => {
   const t = useTranslations("core.profile");
-  const locale = useLocale();
   const titleId = React.useId();
-  const query = useInfiniteQuery(
-    profileTimelineQueryOptions({ locale, userId: owner.id, viewerId }),
-  );
 
   return (
     <section aria-labelledby={titleId} className="flex flex-col gap-4">
@@ -115,7 +168,14 @@ const ProfileTimeline = ({
       >
         {t("timeline")}
       </h2>
-      <SearchFeedList owner={owner} query={query} variant="timeline" />
+      <CatchBoundary
+        errorComponent={ProfileTimelineError}
+        getResetKey={() => `${owner.id}:${viewerId}`}
+      >
+        <React.Suspense fallback={<SearchTimelineSkeleton />}>
+          <ProfileTimelineList owner={owner} viewerId={viewerId} />
+        </React.Suspense>
+      </CatchBoundary>
     </section>
   );
 };

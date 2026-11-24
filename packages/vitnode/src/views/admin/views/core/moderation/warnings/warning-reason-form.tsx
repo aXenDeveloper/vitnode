@@ -79,6 +79,7 @@ export const WarningReasonForm = ({
   thresholds,
 }: WarningReasonFormProps) => {
   const t = useTranslations("admin.moderation.warning_reasons.form");
+  const tErrors = useTranslations("core.global.errors");
   const locale = useLocale();
 
   const formSchema = z.object({
@@ -86,7 +87,7 @@ export const WarningReasonForm = ({
       maxLength: WARNING_LIMITS.reasonTitleMaxLength,
       minLength: 1,
     })
-      .min(1)
+      .min(1, { message: tErrors("field_required") })
       .default(reason?.title ?? []),
     description: multiLangValueSchema({
       maxLength: WARNING_LIMITS.reasonDescriptionMaxLength,

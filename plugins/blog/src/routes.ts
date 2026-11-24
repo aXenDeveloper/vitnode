@@ -5,7 +5,7 @@ import {
   BlogCategoryPendingSkeleton,
   BlogPendingSkeleton,
 } from "./pages/blog-skeleton";
-import { blogPostPreviewSearch } from "./pages/post-preview";
+import { blogPostPreviewSearch } from "./pages/post-preview-search";
 
 /**
  * The blog's public pages: the `/blog` index, one page per category at

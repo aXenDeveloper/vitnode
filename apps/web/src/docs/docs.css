@@ -51,6 +51,14 @@
   --tw-prose-body: oklch(0.373 0.003 264);
 }
 
+/* Fumadocs' scroll margin clears only its own header; on phones the site header
+   and the TOC bar sit above it too. */
+@media (width < 48rem) {
+  #nd-page :is(h1, h2, h3, h4, h5, h6)[id] {
+    scroll-margin-top: calc(var(--fd-docs-row-3) + --spacing(4));
+  }
+}
+
 /* Long paths and file names in inline code would otherwise widen the page on phones. */
 .prose :not(pre) > code {
   overflow-wrap: anywhere;

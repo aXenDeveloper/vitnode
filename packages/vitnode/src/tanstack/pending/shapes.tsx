@@ -1,4 +1,5 @@
 import { cn } from "cn";
+import { useTranslations } from "use-intl";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { SearchTimelineSkeleton } from "@/views/search/search-timeline-skeleton";
@@ -153,6 +154,82 @@ export const TablePendingSkeleton = ({
     </div>
   </PendingFrame>
 );
+
+/**
+ * Placeholder for a lazily loaded form inside a dialog or sheet - the fields
+ * and the footer's buttons, without the heading and card of
+ * `FormPendingSkeleton`, which the dialog or sheet already draws. Use it as
+ * the form's `Suspense` fallback. Draws 3 fields by default.
+ *
+ * @example
+ * ```tsx
+ * import { FormFieldsPendingSkeleton } from "@vitnode/core/tanstack/pending";
+ *
+ * <React.Suspense fallback={<FormFieldsPendingSkeleton footer="sheet" />}>
+ *   <LazySettingsForm />
+ * </React.Suspense>
+ * ```
+ */
+export const FormFieldsPendingSkeleton = ({
+  className,
+  footer = "dialog",
+  label,
+  rows = 3,
+  withTabs = false,
+}: Pick<RoutePendingSkeletonProps, "className" | "label" | "rows"> & {
+  /**
+   * The form's footer: `"dialog"` for `DialogFooter` (full-width buttons
+   * stacked on phones) or `"sheet"` for `AutoFormSheetFooter` (a bar pinned
+   * to the bottom of the sheet). Defaults to `"dialog"`.
+   */
+  footer?: "dialog" | "sheet";
+  /** Draws a tab bar above the fields, for an `AutoForm` with `tabs`. Defaults to `false`. */
+  withTabs?: boolean;
+}) => {
+  const t = useTranslations("core.global");
+  const isSheet = footer === "sheet";
+
+  return (
+    <PendingFrame
+      className={cn("p-0", isSheet && "min-h-0 flex-1 gap-0", className)}
+      label={label ?? t("loading")}
+    >
+      <div
+        aria-hidden="true"
+        className={cn(
+          "flex flex-col",
+          isSheet ? "flex-1 gap-5 overflow-hidden p-4" : "gap-6",
+        )}
+      >
+        {withTabs ? <Skeleton className="h-9 w-full max-w-md" /> : null}
+        {pendingRowKeys(rows).map(key => (
+          <div className="flex flex-col gap-2" key={key}>
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-9 w-full" />
+          </div>
+        ))}
+      </div>
+
+      {isSheet ? (
+        <div
+          aria-hidden="true"
+          className="flex items-center justify-end gap-2 border-t p-4"
+        >
+          <Skeleton className="h-9 w-20" />
+          <Skeleton className="h-9 w-24" />
+        </div>
+      ) : (
+        <div
+          aria-hidden="true"
+          className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"
+        >
+          <Skeleton className="h-9 w-full sm:w-24" />
+          <Skeleton className="h-9 w-full sm:w-32" />
+        </div>
+      )}
+    </PendingFrame>
+  );
+};
 
 /** Placeholder for a form in a card. Draws 4 fields by default. */
 export const FormPendingSkeleton = ({

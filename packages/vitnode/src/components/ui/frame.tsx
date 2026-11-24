@@ -53,7 +53,7 @@ function FrameTitle({
     props: mergeProps<"div">(
       {
         className: cn(
-          "text-foreground text-base leading-normal font-semibold text-balance",
+          "text-foreground col-start-1 text-base leading-normal font-semibold text-balance",
           className,
         ),
       },
@@ -69,7 +69,7 @@ function FrameDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       className={cn(
-        "text-muted-foreground text-sm leading-relaxed text-pretty",
+        "text-muted-foreground col-start-1 text-sm leading-relaxed text-pretty",
         className,
       )}
       data-slot="frame-description"
