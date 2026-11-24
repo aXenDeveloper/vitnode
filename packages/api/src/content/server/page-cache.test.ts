@@ -5,22 +5,57 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { EventEmitResult } from "@/models/events";
 import type { PageCacheStore } from "@/page-cache/store.server";
 
+import { defineContentType } from "@/content/define";
+import { field } from "@/content/fields";
 import {
   configurePageCacheStore,
   createMemoryPageCacheStore,
   latestPageCacheInvalidation,
   resetPageCacheStore,
 } from "@/page-cache/store.server";
-import { testPostContentType } from "@/tests/content-fixtures";
+import {
+  testDeliveredLocalizedContentType,
+  testDeliveredPostContentType,
+  testDuplicableArticleContentType,
+  testPostContentType,
+} from "@/tests/content-fixtures";
 
 import type { ContentEventAction } from "../events";
 
-import { contentPublicItemTag, contentPublicListTag } from "../cache";
+import {
+  contentDeliverySitemapTag,
+  contentPublicItemTag,
+  contentPublicListTag,
+} from "../cache";
 import { emitContentEvent } from "./emit";
-import { contentPageInvalidationMode } from "./page-cache";
+import {
+  contentPageInvalidationMode,
+  contentSitemapInvalidationMode,
+  contentSitemapPageCacheTags,
+} from "./page-cache";
 
 const RECORD_TAG = contentPublicItemTag(testPostContentType.id, 7);
 const LIST_TAG = contentPublicListTag(testPostContentType.id);
+
+/** A type whose noindex flag sits in a group, `seo.noIndex`. */
+const nestedNoIndexType = defineContentType({
+  id: "test.nested-noindex",
+  tableName: "test_nested_noindex",
+  fields: {
+    title: field.text({ required: true, maxLength: 200 }),
+    slug: field.slug({ source: "title" }),
+    seo: field.group({
+      fields: { noIndex: field.boolean({ defaultValue: false }) },
+    }),
+  },
+  publication: true,
+  publicApi: {
+    path: "nested-noindex",
+    fields: ["id", "title", "slug", "seo.noIndex", "publishedAt"],
+    defaultOrderBy: "publishedAt",
+  },
+  delivery: { seo: { noIndexField: "seo.noIndex" }, sitemap: true },
+});
 
 describe("contentPageInvalidationMode", () => {
   it.each<
@@ -46,6 +81,96 @@ describe("contentPageInvalidationMode", () => {
     expect(
       contentPageInvalidationMode(testPostContentType, action, payload),
     ).toBe(mode);
+  });
+});
+
+describe("contentSitemapInvalidationMode", () => {
+  it.each<
+    [
+      string,
+      Parameters<typeof contentSitemapInvalidationMode>[0],
+      ContentEventAction,
+      Record<string, unknown>,
+      "hard" | "soft" | null,
+    ]
+  >([
+    [
+      "noindex toggled",
+      testDeliveredPostContentType,
+      "updated",
+      { changedFields: ["hidden"] },
+      "hard",
+    ],
+    [
+      "noindex toggled through its parent path",
+      testDeliveredPostContentType,
+      "updated",
+      { changedFields: ["data.hidden"] },
+      "hard",
+    ],
+    [
+      "another field",
+      testDeliveredPostContentType,
+      "updated",
+      { changedFields: ["title"] },
+      "soft",
+    ],
+    [
+      "a field that only starts like it",
+      testDeliveredPostContentType,
+      "updated",
+      { changedFields: ["hiddenAt"] },
+      "soft",
+    ],
+    ["a removal", testDeliveredPostContentType, "deleted", {}, "hard"],
+    [
+      "no invalidation",
+      testDeliveredPostContentType,
+      "scheduled",
+      { changedFields: ["hidden"] },
+      null,
+    ],
+    [
+      "the group holding the flag",
+      nestedNoIndexType,
+      "updated",
+      { changedFields: ["seo"] },
+      "hard",
+    ],
+    [
+      "the nested flag",
+      nestedNoIndexType,
+      "updated",
+      { changedFields: ["seo.noIndex"] },
+      "hard",
+    ],
+    [
+      "no noIndexField",
+      testDeliveredLocalizedContentType,
+      "updated",
+      { changedFields: ["seo"] },
+      "soft",
+    ],
+  ])("%s → %s", (_, definition, action, payload, mode) => {
+    expect(contentSitemapInvalidationMode(definition, action, payload)).toBe(
+      mode,
+    );
+  });
+});
+
+describe("contentSitemapPageCacheTags", () => {
+  it.each<
+    [string, Parameters<typeof contentSitemapPageCacheTags>[0], string[]]
+  >([
+    [
+      "delivery.sitemap",
+      testDeliveredPostContentType,
+      [contentDeliverySitemapTag(testDeliveredPostContentType.id)],
+    ],
+    ["delivery without a sitemap", testDuplicableArticleContentType, []],
+    ["no delivery", testPostContentType, []],
+  ])("%s", (_, definition, tags) => {
+    expect(contentSitemapPageCacheTags(definition)).toEqual(tags);
   });
 });
 
@@ -99,6 +224,36 @@ describe("emitContentEvent invalidates cached pages", () => {
 
     expect(await stamp(RECORD_TAG, "soft")).toBeGreaterThan(0);
     expect(await stamp(RECORD_TAG, "hard")).toBe(0);
+  });
+
+  it("hard-invalidates the sitemap of an edit that toggles noindex", async () => {
+    const recordTag = contentPublicItemTag(testDeliveredPostContentType.id, 7);
+    const sitemapTag = contentDeliverySitemapTag(
+      testDeliveredPostContentType.id,
+    );
+
+    await emitContentEvent(context(), testDeliveredPostContentType, "updated", {
+      changedFields: ["hidden"],
+      contentId: 7,
+    });
+
+    expect(await stamp(sitemapTag, "hard")).toBeGreaterThan(0);
+    expect(await stamp(recordTag, "soft")).toBeGreaterThan(0);
+    expect(await stamp(recordTag, "hard")).toBe(0);
+  });
+
+  it("expires the sitemap with the pages for an ordinary edit", async () => {
+    const sitemapTag = contentDeliverySitemapTag(
+      testDeliveredPostContentType.id,
+    );
+
+    await emitContentEvent(context(), testDeliveredPostContentType, "updated", {
+      changedFields: ["title"],
+      contentId: 7,
+    });
+
+    expect(await stamp(sitemapTag, "soft")).toBeGreaterThan(0);
+    expect(await stamp(sitemapTag, "hard")).toBe(0);
   });
 
   it("reports a store that could not be written with the event's failures", async () => {
