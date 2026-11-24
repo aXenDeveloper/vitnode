@@ -35,6 +35,12 @@ import type {
 
 import { CHAT_LIMITS } from "./const";
 import { chatMessagePlainText } from "./format";
+import {
+  type ChatPublicKeyInfo,
+  loadGrantVersions,
+  loadOwnGrant,
+  loadPublicKeys,
+} from "./keys";
 import { blockedBetween, resolveChatPolicy } from "./policy";
 
 export type ChatParticipantRow = typeof core_chat_participants.$inferSelect;
@@ -152,12 +158,14 @@ const otherMembers = async (
 const previewOf = (
   message: Pick<
     ChatMessageRow,
-    "body" | "deletedAt" | "hiddenByModeratorAt" | "sentAsRequest"
+    "body" | "deletedAt" | "encrypted" | "hiddenByModeratorAt" | "sentAsRequest"
   >,
 ): null | string => {
   if (message.deletedAt || message.hiddenByModeratorAt || !message.body) {
     return null;
   }
+  // The browser decrypts it when it holds the chat's key.
+  if (message.encrypted) return message.body;
 
   return chatMessagePlainText(message.body, CHAT_LIMITS.previewLength);
 };
@@ -230,6 +238,7 @@ export const listChats = async (
       participant.status === "pending" && chat.kind === "group";
 
     return {
+      encrypted: chat.encrypted,
       id: chat.id,
       invitedBy:
         participant.status === "pending" && participant.invitedById
@@ -244,6 +253,7 @@ export const listChats = async (
                 ? (people.get(last.authorId)?.name ?? null)
                 : null,
               createdAt: last.createdAt.toISOString(),
+              encrypted: last.encrypted,
               id: last.id,
               preview: previewOf(last),
               system: last.system,
@@ -358,6 +368,7 @@ export const toChatMessages = async (
       createdAt: row.createdAt.toISOString(),
       deleted: !!row.deletedAt,
       editedAt: row.editedAt?.toISOString() ?? null,
+      encrypted: row.encrypted,
       hidden: !!row.hiddenByModeratorAt,
       id: row.id,
       kind: row.kind,
@@ -366,16 +377,19 @@ export const toChatMessages = async (
         ? {
             author: person(reply?.authorId ?? null),
             deleted: !reply || !!reply.deletedAt || !!reply.hiddenByModeratorAt,
+            encrypted: reply?.encrypted ?? false,
             id: row.replyToMessageId,
             text:
               reply &&
               !reply.deletedAt &&
               !reply.hiddenByModeratorAt &&
               reply.body
-                ? chatMessagePlainText(
-                    reply.body,
-                    CHAT_LIMITS.replyPreviewLength,
-                  )
+                ? reply.encrypted
+                  ? reply.body
+                  : chatMessagePlainText(
+                      reply.body,
+                      CHAT_LIMITS.replyPreviewLength,
+                    )
                 : null,
           }
         : null,
@@ -524,6 +538,15 @@ export const readChatDetails = async (
   }
   const isHost = chat.hostId === viewerId;
   const accepted = participant.status === "accepted";
+  const memberIds = memberRows.map(row => row.participant.userId);
+  const [publicKeys, grantVersions, ownGrant] = chat.encrypted
+    ? await Promise.all([
+        loadPublicKeys(c, memberIds),
+        loadGrantVersions(c, chat.id),
+        loadOwnGrant(c, chat.id, viewerId),
+      ])
+    : [new Map<number, ChatPublicKeyInfo>(), new Map<number, number>(), null];
+  const ownKeyVersion = publicKeys.get(viewerId)?.keyVersion;
 
   return {
     createdAt: chat.createdAt.toISOString(),
@@ -537,7 +560,14 @@ export const readChatDetails = async (
 
       return [
         {
+          hasChatKey:
+            !chat.encrypted ||
+            (grantVersions.get(row.participant.userId) ?? -1) ===
+              publicKeys.get(row.participant.userId)?.keyVersion,
           isHost: chat.hostId === row.participant.userId,
+          keyVersion:
+            publicKeys.get(row.participant.userId)?.keyVersion ?? null,
+          publicKey: publicKeys.get(row.participant.userId)?.publicKey ?? null,
           lastReadMessageId:
             viewerReceipts && row.showReadReceipts
               ? row.participant.lastReadMessageId
@@ -549,8 +579,11 @@ export const readChatDetails = async (
     }),
     membersCanInvite: chat.membersCanInvite,
     membersCount: chat.membersCount,
+    encrypted: chat.encrypted,
     me: {
       blockedOther: otherIds.some(id => blocks.blockedByMe.has(id)),
+      chatKey:
+        ownGrant && ownGrant.keyVersion === ownKeyVersion ? ownGrant : null,
       canInvite:
         chat.kind === "group" &&
         c.get("core").chat.groups &&

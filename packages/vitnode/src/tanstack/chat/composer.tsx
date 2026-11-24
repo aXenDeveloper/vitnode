@@ -86,6 +86,7 @@ export const ChatComposer = ({
   chatId,
   disabled,
   editing,
+  encryptText,
   me,
   onCancelEdit,
   onCancelReply,
@@ -95,6 +96,8 @@ export const ChatComposer = ({
   chatId: number;
   disabled: boolean;
   editing: ChatMessage | null;
+  /** Encrypted chats: turns text into the body and commitment to send. */
+  encryptText?: (text: string) => Promise<{ body: string; commitment: string }>;
   me: ChatSessionUser;
   onCancelEdit: () => void;
   onCancelReply: () => void;
@@ -135,9 +138,11 @@ export const ChatComposer = ({
     if (editing) {
       setIsSaving(true);
       try {
+        const sealed = encryptText ? await encryptText(body) : null;
         const updated = await editChatMessageRequest({
-          body,
+          body: sealed?.body ?? body,
           chatId,
+          commitment: sealed?.commitment,
           messageId: editing.id,
         });
         upsertCachedMessage(queryClient, me.id, updated);
@@ -165,6 +170,7 @@ export const ChatComposer = ({
       createdAt: new Date().toISOString(),
       deleted: false,
       editedAt: null,
+      encrypted: false,
       hidden: false,
       id,
       kind: "message",
@@ -173,6 +179,7 @@ export const ChatComposer = ({
         ? {
             author: replyTo.author,
             deleted: false,
+            encrypted: false,
             id: replyTo.id,
             text: replyTo.body,
           }
@@ -185,10 +192,12 @@ export const ChatComposer = ({
     onCancelReply();
     onSent();
     try {
+      const sealed = encryptText ? await encryptText(body) : null;
       const message = await sendChatMessageRequest({
-        body,
+        body: sealed?.body ?? body,
         chatId,
         clientId,
+        commitment: sealed?.commitment,
         replyToMessageId: replyTo?.id,
       });
       upsertCachedMessage(queryClient, me.id, message);

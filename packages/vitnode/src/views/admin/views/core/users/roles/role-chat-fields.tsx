@@ -12,6 +12,7 @@ const CHAT_LIMIT_MAX = 100_000;
 /** What the Chat tab reads from a role. */
 export interface AdminRoleChat {
   allowChat: boolean;
+  chatForcePasscode?: boolean;
   chatMaxInvites: null | number;
   chatRequestsPerDay: null | number;
 }
@@ -19,6 +20,7 @@ export interface AdminRoleChat {
 /** The Chat tab's part of the role form schema. */
 export const roleChatShape = (data: AdminRoleChat | undefined) => ({
   allowChat: z.boolean().default(data?.allowChat ?? true),
+  chatForcePasscode: z.boolean().default(data?.chatForcePasscode ?? false),
   chatRequestsPerDay: z
     .number()
     .int()
@@ -90,6 +92,18 @@ export const roleChatFields = (
       ),
       hidden: cannotChat,
       id: "chatMaxInvites",
+      tab: "chat",
+    },
+    {
+      component: (props: ItemAutoFormComponentProps) => (
+        <AutoFormSwitch
+          {...props}
+          description={t("form.chat.force_passcode_desc")}
+          label={t("form.chat.force_passcode")}
+        />
+      ),
+      hidden: cannotChat,
+      id: "chatForcePasscode",
       tab: "chat",
     },
   ];

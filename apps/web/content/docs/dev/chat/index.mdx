@@ -32,8 +32,9 @@ Each role has a **Chat** tab in **AdminCP → Users → Roles**:
 | **Can chat**            | On (off for guests) | Members with the role can send and receive chats.                                     |
 | **New chats per day**   | 20                  | Chat requests and new groups a member can start in 24 hours. Replies never count.     |
 | **People added at once** | 10                 | How many people a member can add to a group in one go.                                |
+| **Require a chat passcode** | Off             | Members must set a passcode before chatting, and every chat they start is end-to-end encrypted. See [Encrypted chats](#end-to-end-encrypted-chats). |
 
-When a member has several roles, the most generous one wins, like every other role setting.
+When a member has several roles, the most generous one wins, like every other role setting - except **Require a chat passcode**, which applies as soon as any of their roles turns it on.
 
 Members choose who may send them chat requests in **Settings → Chat**: **Everyone**, **Established accounts** (at least 30 days old by default) or **Nobody**. People they already chat with can always reach them.
 
@@ -99,12 +100,50 @@ chat: { groups: false, editWindowMinutes: 5 },
 chat: { dock: false },
 ```
 
+## End-to-end encrypted chats
+
+Members can start a chat that only its members can read - not the site, not its staff, not someone with a copy of the database. Toggle **End-to-end encrypted** on the **New chat** screen. Encrypted chats carry a lock next to their name, and an encrypted chat with someone is separate from your plain chat with them.
+
+### The passcode
+
+Encrypted chats need a **chat passcode**, set in **Settings → Chat → End-to-end encryption**:
+
+1. Your browser creates a key pair. The private key is encrypted with your passcode and stored on the site, so the same passcode opens your chats on any device.
+2. You get a **recovery key** (like `5GCJJ-N8XCZ-LAB7A-LKKXV-RN2F3-T2WFZ`), shown once. Save it in a password manager.
+3. On each device you **unlock** with the passcode. **Keep unlocked on this device** skips the passcode there until you lock or sign out.
+
+From the same settings you can change the passcode, create a new recovery key, use the recovery key when you forget the passcode, or lock right away.
+
+<Callout type="warn" title="Nobody can reset your passcode for you">
+  Lost both the passcode and the recovery key? **Reset keys** creates new ones. Your encrypted chats come back once someone else in each chat opens it - their browser shares the chat's key with your new keys on its own. A chat where nobody else can do that stays locked for you.
+</Callout>
+
+### Requiring encryption for a role
+
+Turn on **Require a chat passcode** in the role's **Chat** tab. Members with that role see **Set up your chat passcode** above their chats, and every chat they start is encrypted (they can still read and reply in plain chats others start). People they write to need a passcode too.
+
+### Reports from encrypted chats
+
+Moderators can't read encrypted messages, so reporting works differently: the reporter's browser reveals the reported message and the 5 before it. Every message carries a cryptographic commitment saved when it was sent, and the server only accepts revealed text that matches it - nobody can report words that were never sent. The ModCP labels it **Reported message (revealed by the reporter, checked against the original)**. Moderators can still hide the message and warn its author.
+
+### What encryption covers - and what it doesn't
+
+| Encrypted                          | Not encrypted (the site needs it to work)                               |
+| ---------------------------------- | ----------------------------------------------------------------------- |
+| Message text, edits, quoted replies | Who chats with whom, when, chat names, reactions, read and typing state |
+
+- **Pick a strong passcode.** The encrypted private key is stored on the site, so a weak passcode could be guessed by anyone who gets the database. VitNode asks for at least 8 characters and uses 600,000 PBKDF2 rounds; a few random words are far better than a PIN.
+- **You trust the site's code.** As with any web app, encryption runs in JavaScript the site serves. It protects against database leaks and curious staff, not against someone who changes the site's code.
+- **No previews outside the chat.** Emails never contain message text anyway; the chat list shows encrypted previews only on devices that already opened the chat.
+
+For the technically curious: ECDH P-256 key pairs, a random AES-GCM-256 key per chat wrapped for each member (ECIES with HKDF-SHA-256), AES-GCM messages, and HMAC-SHA-256 commitments for reports - all with the browser's built-in WebCrypto.
+
 ## Moderation and privacy
 
 - **Reports.** Members report a message (or a whole chat request) from its menu. Moderators see the reported message and the 5 before it in the ModCP - never the rest of the chat - and can hide it, warn the author, or both. The report permissions live in the **Chat** module of moderator permissions.
-- **No staff browsing.** No permission lets staff read chats nobody reported.
+- **No staff browsing.** No permission lets staff read chats nobody reported - and in [encrypted chats](#end-to-end-encrypted-chats) nobody can.
 - **Suspended members** can't open chat while the suspension lasts.
-- **GDPR.** The data export includes a member's own messages, reactions, chats and block list. Erasing an account removes them from their chats; their messages stay for the other side, shown as **Deleted member**.
+- **GDPR.** The data export includes a member's own messages (encrypted ones as ciphertext), reactions, chats, block list and public key. Erasing an account removes them from their chats; their messages stay for the other side, shown as **Deleted member**.
 - **Notifications.** Unread messages send one email per chat after 2 minutes (nothing if you read them in time); chat requests notify right away. Members change both in **Settings → Notifications → Chat**. Emails never contain the message text.
 
 ## Live updates

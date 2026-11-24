@@ -15,6 +15,7 @@ import type {
   ChatRequestOutcome,
   ChatSystemEvent,
 } from "@/lib/chat/const";
+import type { ChatWrappedKey, ChatWrappedPrivateKey } from "@/lib/chat/e2e";
 
 import {
   CHAT_KINDS,
@@ -40,6 +41,8 @@ export const core_chat_conversations = camelCase.table.withRLS(
       .integer()
       .references(() => core_users.id, { onDelete: "set null" }),
     membersCanInvite: t.boolean().notNull().default(true),
+    /** End-to-end encrypted: bodies are ciphertext the server can't read. */
+    encrypted: t.boolean().notNull().default(false),
     lastMessageId: t.bigint({ mode: "number" }),
     lastMessageAt: t.timestamp(),
     membersCount: t.integer().notNull().default(0),
@@ -113,6 +116,10 @@ export const core_chat_messages = camelCase.table.withRLS(
     clientId: t.varchar({ length: 64 }),
     /** Sent while the chat was a pending request: links render as text. */
     sentAsRequest: t.boolean().notNull().default(false),
+    /** `body` is a `ChatCipher` JSON string (end-to-end encrypted chat). */
+    encrypted: t.boolean().notNull().default(false),
+    /** HMAC-SHA-256(frankingKey, text) in hex, for verifiable reports. */
+    commitment: t.varchar({ length: 64 }),
     hiddenByModeratorAt: t.timestamp(),
     createdAt: t.timestamp().notNull().defaultNow(),
     editedAt: t.timestamp(),
@@ -188,5 +195,85 @@ export const core_users_blocks = camelCase.table.withRLS(
     primaryKey({ columns: [t.userId, t.blockedUserId] }),
     index("core_users_blocks_blocked_idx").on(t.blockedUserId),
     check("core_users_blocks_not_self", sql`${t.userId} <> ${t.blockedUserId}`),
+  ],
+);
+
+/**
+ * A member's end-to-end encryption keys. The private key is stored only
+ * wrapped - under their passcode and under their recovery key.
+ */
+export const core_chat_user_keys = camelCase.table.withRLS(
+  "core_chat_user_keys",
+  t => ({
+    userId: t
+      .integer()
+      .primaryKey()
+      .references(() => core_users.id, { onDelete: "cascade" }),
+    /** Raw uncompressed P-256 public key, base64. */
+    publicKey: t.varchar({ length: 128 }).notNull(),
+    passcodeKey: t.jsonb().$type<ChatWrappedPrivateKey>().notNull(),
+    recoveryKey: t.jsonb().$type<ChatWrappedPrivateKey>().notNull(),
+    /** Grows on every reset with new keys; chat keys name the one they used. */
+    keyVersion: t.integer().notNull().default(1),
+    createdAt: t.timestamp().notNull().defaultNow(),
+    updatedAt: t
+      .timestamp()
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  }),
+);
+
+/** An encrypted chat's key, wrapped for one member's public key. */
+export const core_chat_conversation_keys = camelCase.table.withRLS(
+  "core_chat_conversation_keys",
+  t => ({
+    conversationId: t
+      .integer()
+      .notNull()
+      .references(() => core_chat_conversations.id, { onDelete: "cascade" }),
+    userId: t
+      .integer()
+      .notNull()
+      .references(() => core_users.id, { onDelete: "cascade" }),
+    /** The member's `keyVersion` this was wrapped for. */
+    keyVersion: t.integer().notNull(),
+    wrappedKey: t.jsonb().$type<ChatWrappedKey>().notNull(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+  }),
+  t => [
+    primaryKey({ columns: [t.conversationId, t.userId] }),
+    index("core_chat_conversation_keys_user_idx").on(t.userId),
+  ],
+);
+
+/**
+ * Text a reporter revealed from an encrypted message, checked against the
+ * message's commitment. Read once by the report's snapshot, then pruned.
+ */
+export const core_chat_disclosures = camelCase.table.withRLS(
+  "core_chat_disclosures",
+  t => ({
+    id: t.serial().primaryKey(),
+    reportedMessageId: t
+      .bigint({ mode: "number" })
+      .notNull()
+      .references(() => core_chat_messages.id, { onDelete: "cascade" }),
+    messageId: t
+      .bigint({ mode: "number" })
+      .notNull()
+      .references(() => core_chat_messages.id, { onDelete: "cascade" }),
+    reporterId: t
+      .integer()
+      .notNull()
+      .references(() => core_users.id, { onDelete: "cascade" }),
+    text: t.text().notNull(),
+    createdAt: t.timestamp().notNull().defaultNow(),
+  }),
+  t => [
+    index("core_chat_disclosures_lookup_idx").on(
+      t.reporterId,
+      t.reportedMessageId,
+    ),
   ],
 );

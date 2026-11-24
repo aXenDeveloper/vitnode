@@ -26,6 +26,12 @@ export interface ChatPolicy {
   allowChat: boolean;
   /** Staff who skip requests, `nobody` and blocks (moderator permission). */
   canMessageAnyone: boolean;
+  /**
+   * A role requires a chat passcode: the member sets one before chatting,
+   * and every chat they start is end-to-end encrypted. Any role forcing it
+   * is enough - it's a protection, not a limit.
+   */
+  forcePasscode: boolean;
   /** People added to a group at once; `null` = up to the group cap. */
   maxInvites: null | number;
   /** New chats started per 24 hours; `null` = unlimited. */
@@ -35,6 +41,7 @@ export interface ChatPolicy {
 const NO_CHAT: ChatPolicy = {
   allowChat: false,
   canMessageAnyone: false,
+  forcePasscode: false,
   maxInvites: 0,
   requestsPerDay: 0,
 };
@@ -50,6 +57,7 @@ const readPolicy = async (c: Context): Promise<ChatPolicy> => {
     .get("db")
     .select({
       allowChat: core_roles.allowChat,
+      chatForcePasscode: core_roles.chatForcePasscode,
       chatMaxInvites: core_roles.chatMaxInvites,
       chatRequestsPerDay: core_roles.chatRequestsPerDay,
     })
@@ -68,6 +76,7 @@ const readPolicy = async (c: Context): Promise<ChatPolicy> => {
   return {
     allowChat: true,
     canMessageAnyone,
+    forcePasscode: roles.some(role => role.chatForcePasscode),
     maxInvites: mostGenerousLimit(chatting.map(role => role.chatMaxInvites)),
     requestsPerDay: mostGenerousLimit(
       chatting.map(role => role.chatRequestsPerDay),
@@ -132,7 +141,10 @@ const acceptedDirectPartners = async (
   others: readonly number[],
 ): Promise<Set<number>> => {
   if (others.length === 0) return new Set();
-  const keys = others.map(other => chatDirectKey(userId, other));
+  const keys = others.flatMap(other => [
+    chatDirectKey(userId, other),
+    chatDirectKey(userId, other, true),
+  ]);
   const rows = await c
     .get("db")
     .select({
@@ -152,7 +164,11 @@ const acceptedDirectPartners = async (
   );
 
   return new Set(
-    others.filter(other => accepted.has(chatDirectKey(userId, other))),
+    others.filter(
+      other =>
+        accepted.has(chatDirectKey(userId, other)) ||
+        accepted.has(chatDirectKey(userId, other, true)),
+    ),
   );
 };
 

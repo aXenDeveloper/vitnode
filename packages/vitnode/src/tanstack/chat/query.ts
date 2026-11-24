@@ -1,6 +1,10 @@
 import type { ContentPublicPerson } from "@vitnode/api/content/public-person";
 import type { ChatRequestsFrom } from "@vitnode/api/lib/chat/const";
 import type {
+  ChatKeyGrant,
+  ChatWrappedPrivateKey,
+} from "@vitnode/api/lib/chat/e2e";
+import type {
   ChatDetails,
   ChatListItem,
   ChatMessage,
@@ -269,6 +273,9 @@ export const searchChatPeople = async (
 export const startChatRequest = async (body: {
   body?: string;
   clientId?: string;
+  commitment?: string;
+  encrypted?: boolean;
+  keys?: ChatKeyGrant[];
   title?: string;
   userIds: number[];
 }): Promise<{ chatId: number; created: boolean }> => {
@@ -291,6 +298,7 @@ export const sendChatMessageRequest = async ({
   body: string;
   chatId: number;
   clientId?: string;
+  commitment?: string;
   replyToMessageId?: number;
 }): Promise<ChatMessage> => {
   const response = await fetcher({
@@ -308,16 +316,18 @@ export const sendChatMessageRequest = async ({
 export const editChatMessageRequest = async ({
   body,
   chatId,
+  commitment,
   messageId,
 }: {
   body: string;
   chatId: number;
+  commitment?: string;
   messageId: number;
 }): Promise<ChatMessage> => {
   const response = await fetcher({
     plugin: manifest.id,
     args: {
-      body: { body },
+      body: { body, commitment },
       params: { chatId: String(chatId), messageId: String(messageId) },
     },
     method: "patch",
@@ -454,14 +464,16 @@ export const updateChatRequest = async ({
 
 export const addChatMembersRequest = async ({
   chatId,
+  keys,
   userIds,
 }: {
   chatId: number;
+  keys?: ChatKeyGrant[];
   userIds: number[];
 }): Promise<void> => {
   const response = await fetcher({
     plugin: manifest.id,
-    args: { body: { userIds }, params: { chatId: String(chatId) } },
+    args: { body: { keys, userIds }, params: { chatId: String(chatId) } },
     method: "post",
     module: "chat",
     path: "/{chatId}/members",
@@ -620,4 +632,113 @@ export const removeCachedMessage = (
         })),
       },
   );
+};
+
+export interface OwnChatKeys {
+  keyVersion: number;
+  passcodeKey: ChatWrappedPrivateKey;
+  publicKey: string;
+  recoveryKey: ChatWrappedPrivateKey;
+}
+
+export const ownChatKeysQueryOptions = (userId: number) =>
+  queryOptions({
+    queryFn: async ({
+      signal,
+    }): Promise<{ keys: null | OwnChatKeys; required: boolean }> => {
+      const response = await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "chat",
+        options: { signal },
+        path: "/keys/me",
+      });
+      if (!response.ok) return await failed(response);
+
+      return await response.json();
+    },
+    queryKey: [...chatRoot(userId), "keys", "me"] as const,
+    retry: false,
+    staleTime: Infinity,
+  });
+
+export const saveOwnChatKeysRequest = async (
+  body:
+    | {
+        mode: "reset" | "setup";
+        passcodeKey: ChatWrappedPrivateKey;
+        publicKey: string;
+        recoveryKey: ChatWrappedPrivateKey;
+      }
+    | {
+        mode: "update";
+        passcodeKey?: ChatWrappedPrivateKey;
+        recoveryKey?: ChatWrappedPrivateKey;
+      },
+): Promise<{ keyVersion: number }> => {
+  const response = await fetcher({
+    plugin: manifest.id,
+    args: { body },
+    method: "put",
+    module: "chat",
+    path: "/keys/me",
+  });
+  if (!response.ok) return await failed(response);
+
+  return await response.json();
+};
+
+export const fetchPublicChatKeys = async (
+  userIds: readonly number[],
+): Promise<{ keyVersion: number; publicKey: string; userId: number }[]> => {
+  if (userIds.length === 0) return [];
+  const response = await fetcher({
+    plugin: manifest.id,
+    args: { query: { userIds: userIds.join(",") } },
+    method: "get",
+    module: "chat",
+    path: "/keys",
+  });
+  if (!response.ok) return await failed(response);
+
+  return (await response.json()).items;
+};
+
+export const rewrapChatKeysRequest = async ({
+  chatId,
+  keys,
+}: {
+  chatId: number;
+  keys: ChatKeyGrant[];
+}): Promise<void> => {
+  const response = await fetcher({
+    plugin: manifest.id,
+    args: { body: { keys }, params: { chatId: String(chatId) } },
+    method: "put",
+    module: "chat",
+    path: "/{chatId}/keys",
+  });
+  if (!response.ok) await failed(response);
+};
+
+export const discloseChatMessagesRequest = async ({
+  chatId,
+  messageId,
+  messages,
+}: {
+  chatId: number;
+  messageId: number;
+  messages: { frankingKey: string; messageId: number; text: string }[];
+}): Promise<void> => {
+  const response = await fetcher({
+    plugin: manifest.id,
+    args: {
+      body: { messages },
+      params: { chatId: String(chatId), messageId: String(messageId) },
+    },
+    method: "post",
+    module: "chat",
+    path: "/{chatId}/messages/{messageId}/disclose",
+  });
+  if (!response.ok) await failed(response);
 };

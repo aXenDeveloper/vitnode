@@ -90,6 +90,7 @@ export const useAdminRoleMutations = (): {
           allowUploadCover: values.allowUploadCover,
           allowUploadFiles: values.allowUploadFiles,
           allowChat: values.allowChat,
+          chatForcePasscode: values.chatForcePasscode,
           chatMaxInvites: values.chatMaxInvites,
           chatRequestsPerDay: values.chatRequestsPerDay,
           color: values.color,

@@ -82,6 +82,7 @@ export interface AdminRoleFormValues {
   allowUploadAvatar: boolean;
   allowUploadCover: boolean;
   allowUploadFiles: boolean;
+  chatForcePasscode: boolean;
   chatMaxInvites: null | number;
   chatRequestsPerDay: null | number;
   color: string;
@@ -363,6 +364,7 @@ export const AdminRoleFormContent = ({
         ? undefined
         : {
             allowChat: data.allowChat,
+            chatForcePasscode: data.chatForcePasscode ?? false,
             chatMaxInvites: data.chatMaxInvites ?? null,
             chatRequestsPerDay: data.chatRequestsPerDay ?? null,
           },

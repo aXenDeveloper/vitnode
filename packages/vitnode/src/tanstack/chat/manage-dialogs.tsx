@@ -1,4 +1,5 @@
 import type { ContentPublicPerson } from "@vitnode/api/content/public-person";
+import type { ChatKeyGrant } from "@vitnode/api/lib/chat/e2e";
 import type { ChatDetails } from "@vitnode/api/lib/chat/types";
 
 import { useQueryClient } from "@tanstack/react-query";
@@ -25,9 +26,12 @@ import {
 } from "@/components/ui/dialog";
 
 import { useChatErrorToast } from "./composer";
+import { wrapChatKey } from "./e2e/crypto";
 import { ChatPeoplePicker } from "./people-picker";
 import {
   addChatMembersRequest,
+  ChatRequestError,
+  fetchPublicChatKeys,
   invalidateChatOverview,
   updateChatRequest,
 } from "./query";
@@ -35,10 +39,13 @@ import {
 /** Adds people to a group chat. */
 export const AddPeopleDialog = ({
   chat,
+  chatKey,
   onClose,
   userId,
 }: {
   chat: ChatDetails;
+  /** Encrypted chats: the key to share with the people added. */
+  chatKey?: CryptoKey | null;
   onClose: () => void;
   userId: number;
 }) => {
@@ -78,9 +85,27 @@ export const AddPeopleDialog = ({
               void (async () => {
                 setIsSaving(true);
                 try {
+                  const userIds = people.map(person => person.id);
+                  let keys: ChatKeyGrant[] | undefined;
+                  if (chat.encrypted) {
+                    if (!chatKey)
+                      throw new ChatRequestError(403, "not_allowed");
+                    const found = await fetchPublicChatKeys(userIds);
+                    if (found.length !== userIds.length) {
+                      throw new ChatRequestError(403, "recipient_no_passcode");
+                    }
+                    keys = await Promise.all(
+                      found.map(async key => ({
+                        keyVersion: key.keyVersion,
+                        userId: key.userId,
+                        wrappedKey: await wrapChatKey(chatKey, key.publicKey),
+                      })),
+                    );
+                  }
                   await addChatMembersRequest({
                     chatId: chat.id,
-                    userIds: people.map(person => person.id),
+                    keys,
+                    userIds,
                   });
                   toast.success(t("done"), {
                     description: t("done_desc", { count: people.length }),

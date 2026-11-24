@@ -5,7 +5,11 @@ import {
   core_chat_participants,
   core_chat_request_outcomes,
 } from "@/database/chat";
-import { deleteChats, orphanChatIds } from "@/lib/chat/service";
+import {
+  deleteChats,
+  orphanChatIds,
+  pruneChatDisclosures,
+} from "@/lib/chat/service";
 import { buildCron } from "@/lib/cron";
 
 const OUTCOME_RETENTION_DAYS = 30;
@@ -23,6 +27,7 @@ export const chatCleanupCron = buildCron({
   handler: async c => {
     const db = c.get("db");
     await deleteChats(db, await orphanChatIds(db));
+    await pruneChatDisclosures(db);
 
     const hidden = await db
       .select({ id: core_chat_conversations.id })

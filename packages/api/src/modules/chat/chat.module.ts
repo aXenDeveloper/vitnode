@@ -16,6 +16,13 @@ import {
   updateChatSettingsRoute,
 } from "./routes/chats.route";
 import {
+  discloseMessagesRoute,
+  listPublicKeysRoute,
+  rewrapChatKeysRoute,
+  saveOwnKeysRoute,
+  showOwnKeysRoute,
+} from "./routes/e2e.route";
+import {
   addMembersRoute,
   addReactionRoute,
   deleteMessageRoute,
@@ -35,6 +42,9 @@ export const chatModule = buildModule({
     showChatSettingsRoute,
     updateChatSettingsRoute,
     canChatRoute,
+    showOwnKeysRoute,
+    saveOwnKeysRoute,
+    listPublicKeysRoute,
     searchPeopleRoute,
     listChatsRoute,
     startChatRoute,
@@ -51,6 +61,8 @@ export const chatModule = buildModule({
     markReadRoute,
     addMembersRoute,
     removeMemberRoute,
+    rewrapChatKeysRoute,
+    discloseMessagesRoute,
   ],
   cronJobs: [chatCleanupCron],
   queueTasks: [chatNotifyQueueTask],

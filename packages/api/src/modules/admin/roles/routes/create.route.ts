@@ -30,6 +30,7 @@ export const zodCreateRoleAdminSchema = z.object({
   allowDeleteAccount: z.boolean().optional(),
   allowBrowseAnonymously: z.boolean().optional(),
   allowChat: z.boolean().optional(),
+  chatForcePasscode: z.boolean().optional(),
   chatRequestsPerDay: z
     .number()
     .int()
@@ -91,6 +92,7 @@ export const createRoleAdminRoute = buildRoute({
       allowDeleteAccount,
       allowBrowseAnonymously,
       allowChat,
+      chatForcePasscode,
       chatRequestsPerDay,
       chatMaxInvites,
       forceBrowseAnonymously,
@@ -118,6 +120,7 @@ export const createRoleAdminRoute = buildRoute({
             : { allowEditPersonalInfo }),
           ...(allowDeleteAccount === undefined ? {} : { allowDeleteAccount }),
           ...(allowChat === undefined ? {} : { allowChat }),
+          ...(chatForcePasscode === undefined ? {} : { chatForcePasscode }),
           ...(chatRequestsPerDay === undefined ? {} : { chatRequestsPerDay }),
           ...(chatMaxInvites === undefined ? {} : { chatMaxInvites }),
           ...(allowBrowseAnonymously === undefined

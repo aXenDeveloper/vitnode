@@ -34,6 +34,7 @@ import {
 
 import type { ChatSettingsView } from "./query";
 
+import { ChatEncryptionSettings } from "./e2e/encryption-settings";
 import {
   blockedMembersQueryOptions,
   chatSettingsQueryOptions,
@@ -255,6 +256,7 @@ const BlockedMembers = ({ userId }: { userId: number }) => {
 export const ChatSettingsPanel = ({ userId }: { userId: number }) => (
   <div className="flex flex-col gap-6">
     <ChatPreferences userId={userId} />
+    <ChatEncryptionSettings userId={userId} />
     <BlockedMembers userId={userId} />
   </div>
 );

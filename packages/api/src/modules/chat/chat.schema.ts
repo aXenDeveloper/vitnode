@@ -16,6 +16,12 @@ import {
   CHAT_MEMBER_STATUSES,
   CHAT_MESSAGE_KINDS,
 } from "@/lib/chat/const";
+import {
+  CHAT_E2E,
+  zodChatKeyGrant,
+  zodCommitment,
+  zodWrappedChatKey,
+} from "@/lib/chat/e2e";
 import { zodPublicPerson } from "@/lib/public-people";
 
 export const json = <T extends z.ZodType>(schema: T, description: string) => ({
@@ -100,6 +106,7 @@ export const chatMessageSchema = z
     createdAt: z.string(),
     deleted: z.boolean(),
     editedAt: z.string().nullable(),
+    encrypted: z.boolean(),
     hidden: z.boolean(),
     id: z.number().int(),
     kind: z.enum(CHAT_MESSAGE_KINDS),
@@ -108,6 +115,7 @@ export const chatMessageSchema = z
       .object({
         author: zodPublicPerson.nullable(),
         deleted: z.boolean(),
+        encrypted: z.boolean(),
         id: z.number().int(),
         text: z.string().nullable(),
       })
@@ -119,6 +127,7 @@ export const chatMessageSchema = z
 
 export const chatListItemSchema = z
   .object({
+    encrypted: z.boolean(),
     id: z.number().int(),
     invitedBy: zodPublicPerson.nullable(),
     kind: z.enum(CHAT_KINDS),
@@ -127,6 +136,7 @@ export const chatListItemSchema = z
         authorId: z.number().int().nullable(),
         authorName: z.string().nullable(),
         createdAt: z.string(),
+        encrypted: z.boolean(),
         id: z.number().int(),
         preview: z.string().nullable(),
         system: systemSchema.nullable(),
@@ -144,14 +154,18 @@ export const chatListItemSchema = z
 export const chatDetailsSchema = z
   .object({
     createdAt: z.string(),
+    encrypted: z.boolean(),
     hostId: z.number().int().nullable(),
     id: z.number().int(),
     kind: z.enum(CHAT_KINDS),
     lastMessageId: z.number().int().nullable(),
     members: z.array(
       z.object({
+        hasChatKey: z.boolean(),
         isHost: z.boolean(),
+        keyVersion: z.number().int().nullable(),
         lastReadMessageId: z.number().int().nullable(),
+        publicKey: z.string().nullable(),
         status: z.enum(CHAT_MEMBER_STATUSES),
         user: zodPublicPerson,
       }),
@@ -161,6 +175,9 @@ export const chatDetailsSchema = z
     me: z.object({
       blockedOther: z.boolean(),
       canInvite: z.boolean(),
+      chatKey: z
+        .object({ keyVersion: z.number().int(), wrappedKey: zodWrappedChatKey })
+        .nullable(),
       canManage: z.boolean(),
       canWrite: z.boolean(),
       invitedBy: zodPublicPerson.nullable(),
@@ -179,15 +196,25 @@ export const chatStateSchema = z
     enabled: z.boolean(),
     groups: z.boolean(),
     live: z.boolean(),
+    passcode: z.object({
+      keyVersion: z.number().int().nullable(),
+      required: z.boolean(),
+      set: z.boolean(),
+    }),
     requests: z.number().int(),
     unreadChats: z.number().int(),
   })
   .openapi("ChatState") satisfies z.ZodType<ChatState>;
 
+/** Text up to the message limit, or an encrypted envelope (checked later). */
 export const messageBodySchema = z
   .string()
   .min(1)
-  .max(CHAT_LIMITS.messageMaxLength);
+  .max(Math.max(CHAT_LIMITS.messageMaxLength, CHAT_E2E.messageMaxChars + 200));
+
+export const commitmentSchema = zodCommitment.optional();
+
+export const keyGrantsSchema = z.array(zodChatKeyGrant).max(200);
 
 export const clientIdSchema = z.string().min(1).max(64);
 

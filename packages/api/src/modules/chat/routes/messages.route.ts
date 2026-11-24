@@ -20,7 +20,9 @@ import {
   chatMessageSchema,
   chatParams,
   clientIdSchema,
+  commitmentSchema,
   json,
+  keyGrantsSchema,
   messageBodySchema,
   messageParams,
   privateHeaders,
@@ -111,6 +113,7 @@ export const sendMessageRoute = buildRoute({
             schema: z.object({
               body: messageBodySchema,
               clientId: clientIdSchema.optional(),
+              commitment: commitmentSchema,
               replyToMessageId: z.number().int().positive().optional(),
             }),
           },
@@ -148,7 +151,10 @@ export const editMessageRoute = buildRoute({
         required: true,
         content: {
           "application/json": {
-            schema: z.object({ body: messageBodySchema }),
+            schema: z.object({
+              body: messageBodySchema,
+              commitment: commitmentSchema,
+            }),
           },
         },
       },
@@ -316,6 +322,7 @@ export const addMembersRoute = buildRoute({
         content: {
           "application/json": {
             schema: z.object({
+              keys: keyGrantsSchema.optional(),
               userIds: z.array(z.number().int().positive()).min(1).max(200),
             }),
           },

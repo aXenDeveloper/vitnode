@@ -9,12 +9,13 @@ import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
 import {
   BellOffIcon,
+  LockIcon,
   MessageCircleIcon,
   MessageCircleOffIcon,
   RotateCwIcon,
 } from "lucide-react";
 import React from "react";
-import { useTranslations } from "use-intl";
+import { useNow, useTranslations } from "use-intl";
 
 import { DateFormat } from "@/components/date-format";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ChatListFilter } from "./query";
 
 import { ChatAvatar, chatDisplayName } from "./chat-avatar";
+import { useEncryptedPreview } from "./e2e/encrypted-preview";
+import { ChatPasscodeRequired } from "./e2e/passcode-required";
 import { chatListQueryOptions, chatStateQueryOptions } from "./query";
 import { useSystemLine } from "./system-line";
 
@@ -82,6 +85,11 @@ const Row = ({
     [item.lastMessage],
   );
   const systemLine = useSystemLine(names);
+  const now = useNow();
+  const encryptedPreview = useEncryptedPreview(
+    item.id,
+    item.lastMessage?.encrypted ? item.lastMessage.preview : null,
+  );
   const name = chatDisplayName(item);
   const last = item.lastMessage;
   let preview: string;
@@ -94,10 +102,8 @@ const Row = ({
   } else if (last.preview === null) {
     preview = t("message.deleted");
   } else {
-    preview =
-      last.authorId === userId
-        ? t("list.you", { text: last.preview })
-        : last.preview;
+    const text = last.encrypted ? encryptedPreview : last.preview;
+    preview = last.authorId === userId ? t("list.you", { text }) : text;
   }
   const content = (
     <>
@@ -112,6 +118,12 @@ const Row = ({
           >
             {name}
           </span>
+          {item.encrypted ? (
+            <LockIcon
+              aria-label={t("e2e.list_label")}
+              className="text-muted-foreground size-3.5 shrink-0"
+            />
+          ) : null}
           {item.muted ? (
             <BellOffIcon
               aria-label={t("list.muted")}
@@ -122,9 +134,9 @@ const Row = ({
             <span className="text-muted-foreground ms-auto shrink-0 text-xs">
               <DateFormat
                 date={
-                  // A server clock a second ahead must not read "in 1 second".
-                  // oxlint-disable-next-line react/purity
-                  new Date(Math.min(Date.parse(last.createdAt), Date.now()))
+                  // Relative to the formatter's "now" (render time), a fresh
+                  // message must not read "in 13 seconds".
+                  new Date(Math.min(Date.parse(last.createdAt), now.getTime()))
                 }
               />
             </span>
@@ -208,6 +220,9 @@ export const ChatList = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {hydrated && state.data?.passcode.required && !state.data.passcode.set ? (
+        <ChatPasscodeRequired userId={userId} />
+      ) : null}
       <Tabs
         className="px-2 pt-2"
         onValueChange={value => {

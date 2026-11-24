@@ -1,11 +1,22 @@
 import type { Context } from "hono";
 
-import { and, asc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  ne,
+  sql,
+} from "drizzle-orm";
 
 import type { ContentDatabase } from "@/content/server/service";
 
 import {
   core_chat_conversations,
+  core_chat_disclosures,
   core_chat_message_reactions,
   core_chat_messages,
   core_chat_participants,
@@ -29,10 +40,21 @@ import { chatRequestNotification } from "@/lib/notifications/core-types";
 import { chatNotifyQueueTask } from "@/modules/chat/tasks/notify.task";
 
 import type { ChatKind, ChatSystemEvent } from "./const";
+import type { ChatKeyGrant } from "./e2e";
 import type { ChatMembership, ChatMessageRow } from "./read";
 import type { ChatMessage } from "./types";
 
 import { CHAT_LIMITS, chatDirectKey } from "./const";
+import { CHAT_E2E } from "./e2e";
+import {
+  grantsCover,
+  loadGrantVersions,
+  loadOwnGrant,
+  loadPublicKeys,
+  readCipherBody,
+  storeGrants,
+  verifyCommitment,
+} from "./keys";
 import { pushChat, pushChatEach, pushChatState } from "./live/publish";
 import {
   blockedBetween,
@@ -55,11 +77,15 @@ export type ChatErrorCode =
   | "chat_disabled"
   | "daily_limit"
   | "edit_window"
+  | "encryption_required"
   | "group_full"
   | "groups_disabled"
   | "invalid"
+  | "invalid_keys"
   | "not_allowed"
   | "not_found"
+  | "passcode_required"
+  | "recipient_no_passcode"
   | "recipient_unavailable"
   | "request_limit"
   | "requests_paused"
@@ -68,7 +94,11 @@ export type ChatErrorCode =
 
 const STATUS: Record<ChatErrorCode, 400 | 403 | 404 | 409 | 429> = {
   blocked: 403,
+  encryption_required: 403,
   groups_disabled: 403,
+  invalid_keys: 400,
+  passcode_required: 403,
+  recipient_no_passcode: 403,
   chat_disabled: 404,
   daily_limit: 429,
   edit_window: 403,
@@ -128,6 +158,25 @@ const normalizeBody = (body: string): string => {
   return text;
 };
 
+/**
+ * A message body as it is stored: trimmed text in a plain chat, a checked
+ * cipher with its commitment in an encrypted one.
+ */
+const prepareBody = (
+  encrypted: boolean,
+  input: { body: string; commitment?: null | string },
+): { body: string; commitment: null | string; encrypted: boolean } => {
+  if (!encrypted) {
+    if (input.commitment) throw new ChatError("invalid");
+
+    return { body: normalizeBody(input.body), commitment: null, encrypted };
+  }
+  const cipher = readCipherBody(input.body, input.commitment);
+  if (!cipher) throw new ChatError("invalid");
+
+  return { ...cipher, encrypted };
+};
+
 const cleanTitle = (title: null | string | undefined): null | string => {
   const trimmed = title?.trim().slice(0, CHAT_LIMITS.titleMaxLength) ?? "";
 
@@ -147,6 +196,8 @@ const insertMessage = async (
     body?: null | string;
     chatId: number;
     clientId?: null | string;
+    commitment?: null | string;
+    encrypted?: boolean;
     replyToMessageId?: null | number;
     sentAsRequest?: boolean;
     system?: ChatSystemEvent;
@@ -159,7 +210,9 @@ const insertMessage = async (
       authorId: values.authorId,
       body: values.body ?? null,
       clientId: values.clientId ?? null,
+      commitment: values.commitment ?? null,
       conversationId: values.chatId,
+      encrypted: values.encrypted ?? false,
       kind: values.system ? "system" : "message",
       replyToMessageId: values.replyToMessageId ?? null,
       sentAsRequest: values.sentAsRequest ?? false,
@@ -286,8 +339,11 @@ const pendingOtherInDirect = async (
 };
 
 export interface SendMessageInput {
+  /** Text, or a `ChatCipher` JSON string in an encrypted chat. */
   body: string;
   clientId?: null | string;
+  /** HMAC commitment of the plain text; encrypted chats only. */
+  commitment?: null | string;
   replyToMessageId?: null | number;
 }
 
@@ -303,7 +359,7 @@ export const sendChatMessage = async (
   const membership = await requireMembership(c, chatId, userId);
   const { chat, participant } = membership;
   if (!canReadMessages(membership)) throw new ChatError("not_allowed");
-  const body = normalizeBody(input.body);
+  const prepared = prepareBody(chat.encrypted, input);
   const db = c.get("db");
 
   if (input.clientId) {
@@ -387,8 +443,8 @@ export const sendChatMessage = async (
     }
 
     return await insertMessage(tx, {
+      ...prepared,
       authorId: userId,
-      body,
       chatId,
       clientId: input.clientId,
       replyToMessageId: input.replyToMessageId,
@@ -401,8 +457,13 @@ export const sendChatMessage = async (
 };
 
 export interface StartChatInput {
+  /** Text, or a `ChatCipher` JSON string for an encrypted chat. */
   body?: null | string;
   clientId?: null | string;
+  commitment?: null | string;
+  /** Start an end-to-end encrypted chat; `keys` must wrap its key for everyone. */
+  encrypted?: boolean;
+  keys?: ChatKeyGrant[];
   title?: null | string;
   userIds: number[];
 }
@@ -426,7 +487,14 @@ export const startChat = async (
     throw new ChatError("too_many_invites");
   }
   if (userIds.length + 1 > maxGroupSize) throw new ChatError("group_full");
-  const body = input.body ? normalizeBody(input.body) : null;
+  const encrypted = input.encrypted === true;
+  if (policy.forcePasscode && !encrypted) {
+    throw new ChatError("encryption_required");
+  }
+  const prepared = input.body
+    ? prepareBody(encrypted, { body: input.body, commitment: input.commitment })
+    : null;
+  const body = prepared?.body ?? null;
   const kind: ChatKind = userIds.length === 1 ? "direct" : "group";
   if (kind === "group" && !c.get("core").chat.groups) {
     throw new ChatError("groups_disabled");
@@ -434,6 +502,16 @@ export const startChat = async (
   if (kind === "direct" && !body) throw new ChatError("invalid");
   const title = kind === "group" ? cleanTitle(input.title) : null;
   const db = c.get("db");
+  if (encrypted) {
+    const keys = await loadPublicKeys(c, [userId, ...userIds]);
+    if (!keys.has(userId)) throw new ChatError("passcode_required");
+    if (userIds.some(id => !keys.has(id))) {
+      throw new ChatError("recipient_no_passcode");
+    }
+    if (!grantsCover(input.keys ?? [], [userId, ...userIds], keys)) {
+      throw new ChatError("invalid_keys");
+    }
+  }
 
   if (kind === "direct") {
     const [existing] = await db
@@ -442,11 +520,19 @@ export const startChat = async (
       .where(
         eq(
           core_chat_conversations.directKey,
-          chatDirectKey(userId, userIds[0]),
+          chatDirectKey(userId, userIds[0], encrypted),
         ),
       )
       .limit(1);
-    if (existing) {
+    if (
+      existing &&
+      encrypted &&
+      !(await loadMembership(c, existing.id, userId))
+    ) {
+      // An encrypted request this member once ignored: they never got its key,
+      // so start over instead of rejoining a chat they can't read.
+      await deleteChats(db, [existing.id]);
+    } else if (existing) {
       const mine = await loadMembership(c, existing.id, userId);
       if (!mine) {
         // The member once ignored this chat's request: rejoin it, without
@@ -486,8 +572,9 @@ export const startChat = async (
         });
       }
       await sendChatMessage(c, existing.id, {
-        body: body ?? "",
+        body: input.body ?? "",
         clientId: input.clientId,
+        commitment: input.commitment,
       });
 
       return { chatId: existing.id, created: false };
@@ -518,11 +605,12 @@ export const startChat = async (
 
   const { chatId, row } = await db.transaction(async (tx: ContentDatabase) => {
     const directKey =
-      kind === "direct" ? chatDirectKey(userId, userIds[0]) : null;
+      kind === "direct" ? chatDirectKey(userId, userIds[0], encrypted) : null;
     const [chat] = await tx
       .insert(core_chat_conversations)
       .values({
         directKey,
+        encrypted,
         hostId: userId,
         kind,
         membersCount: userIds.length + 1,
@@ -552,6 +640,7 @@ export const startChat = async (
           : [],
       ),
     ]);
+    if (encrypted) await storeGrants(tx, chat.id, input.keys ?? []);
     if (kind === "group") {
       await insertMessage(tx, {
         authorId: userId,
@@ -559,10 +648,10 @@ export const startChat = async (
         system: { type: "created" },
       });
     }
-    const message = body
+    const message = prepared
       ? await insertMessage(tx, {
+          ...prepared,
           authorId: userId,
-          body,
           chatId: chat.id,
           clientId: input.clientId,
           sentAsRequest: kind === "direct" && pendingIds.length > 0,
@@ -629,7 +718,7 @@ export const editChatMessage = async (
   c: Context,
   chatId: number,
   messageId: number,
-  input: { body: string },
+  input: { body: string; commitment?: null | string },
 ): Promise<ChatMessage> => {
   const userId = requireUserId(c);
   const membership = await requireMembership(c, chatId, userId);
@@ -639,11 +728,15 @@ export const editChatMessage = async (
   if (Date.now() - row.createdAt.getTime() > editWindowMinutes * 60 * 1000) {
     throw new ChatError("edit_window");
   }
-  const body = normalizeBody(input.body);
+  const prepared = prepareBody(membership.chat.encrypted, input);
   const [updated] = await c
     .get("db")
     .update(core_chat_messages)
-    .set({ body, editedAt: new Date() })
+    .set({
+      body: prepared.body,
+      commitment: prepared.commitment,
+      editedAt: new Date(),
+    })
     .where(eq(core_chat_messages.id, messageId))
     .returning();
   const members = await activeMembers(c, chatId);
@@ -1061,7 +1154,7 @@ export const updateChat = async (
 export const addChatMembers = async (
   c: Context,
   chatId: number,
-  input: { userIds: number[] },
+  input: { keys?: ChatKeyGrant[]; userIds: number[] },
 ): Promise<void> => {
   const userId = requireUserId(c);
   const policy = await resolveChatPolicy(c);
@@ -1103,6 +1196,15 @@ export const addChatMembers = async (
     const until = await chatRequestsPausedUntil(c, userId);
     if (until) throw new ChatError("requests_paused", until);
   }
+  if (chat.encrypted) {
+    const keys = await loadPublicKeys(c, userIds);
+    if (userIds.some(id => !keys.has(id))) {
+      throw new ChatError("recipient_no_passcode");
+    }
+    if (!grantsCover(input.keys ?? [], userIds, keys)) {
+      throw new ChatError("invalid_keys");
+    }
+  }
 
   const row = await db.transaction(async (tx: ContentDatabase) => {
     await lockChat(tx, chatId);
@@ -1136,6 +1238,13 @@ export const addChatMembers = async (
         });
     }
     await recountMembers(tx, chatId);
+    if (chat.encrypted) {
+      await storeGrants(
+        tx,
+        chatId,
+        (input.keys ?? []).filter(grant => userIds.includes(grant.userId)),
+      );
+    }
 
     return await insertMessage(tx, {
       authorId: userId,
@@ -1355,4 +1464,144 @@ export const deleteChats = async (
   await db
     .delete(core_chat_conversations)
     .where(inArray(core_chat_conversations.id, [...ids]));
+};
+
+/**
+ * Re-shares an encrypted chat's key with members who lost theirs (they reset
+ * their passcode). Any member who holds the key may do it; it only fills
+ * missing or outdated keys, never replaces a current one.
+ */
+export const rewrapChatKeys = async (
+  c: Context,
+  chatId: number,
+  grants: ChatKeyGrant[],
+): Promise<{ updated: number }> => {
+  const userId = requireUserId(c);
+  const { chat, participant } = await requireMembership(c, chatId, userId);
+  if (!chat.encrypted || participant.status !== "accepted") {
+    throw new ChatError("not_allowed");
+  }
+  const own = await loadOwnGrant(c, chatId, userId);
+  const keys = await loadPublicKeys(c, [userId]);
+  if (!own || own.keyVersion !== keys.get(userId)?.keyVersion) {
+    throw new ChatError("not_allowed");
+  }
+  const members = await activeMembers(c, chatId);
+  const memberIds = new Set(members.map(member => member.userId));
+  const current = await loadPublicKeys(c, [...memberIds]);
+  const stored = await loadGrantVersions(c, chatId);
+  const wanted = grants.filter(grant => {
+    const key = current.get(grant.userId);
+
+    return (
+      memberIds.has(grant.userId) &&
+      !!key &&
+      grant.keyVersion === key.keyVersion &&
+      stored.get(grant.userId) !== key.keyVersion
+    );
+  });
+  if (wanted.length === 0) return { updated: 0 };
+  await c.get("db").transaction(async (tx: ContentDatabase) => {
+    await storeGrants(tx, chatId, wanted);
+  });
+  pushChat(
+    c,
+    wanted.map(grant => grant.userId),
+    { chatId, type: "chat" },
+  );
+
+  return { updated: wanted.length };
+};
+
+/** One message a reporter reveals: its text and franking key. */
+export interface ChatDisclosureInput {
+  frankingKey: string;
+  messageId: number;
+  text: string;
+}
+
+/**
+ * Stores what a reporter revealed from an encrypted chat, before they file
+ * the report: the reported message and up to 5 before it. Each text must
+ * match the commitment stored when it was sent, so nobody can put words in
+ * someone else's mouth.
+ */
+export const discloseChatMessages = async (
+  c: Context,
+  chatId: number,
+  reportedMessageId: number,
+  items: ChatDisclosureInput[],
+): Promise<void> => {
+  const userId = requireUserId(c);
+  const { chat, participant } = await requireMembership(c, chatId, userId);
+  if (!chat.encrypted) throw new ChatError("invalid");
+  const ids = [...new Set(items.map(item => item.messageId))];
+  if (!ids.includes(reportedMessageId) || ids.length !== items.length) {
+    throw new ChatError("invalid");
+  }
+  const db = c.get("db");
+  const rows = await db
+    .select({
+      commitment: core_chat_messages.commitment,
+      deletedAt: core_chat_messages.deletedAt,
+      encrypted: core_chat_messages.encrypted,
+      id: core_chat_messages.id,
+    })
+    .from(core_chat_messages)
+    .where(
+      and(
+        eq(core_chat_messages.conversationId, chatId),
+        inArray(core_chat_messages.id, ids),
+        sql`${core_chat_messages.id} >= ${participant.firstVisibleMessageId}`,
+      ),
+    );
+  const byId = new Map(rows.map(row => [row.id, row]));
+  for (const item of items) {
+    const row = byId.get(item.messageId);
+    if (
+      !row?.encrypted ||
+      !row.commitment ||
+      row.deletedAt ||
+      item.text.length > CHAT_LIMITS.messageMaxLength ||
+      !(await verifyCommitment({
+        commitment: row.commitment,
+        frankingKey: item.frankingKey,
+        text: item.text,
+      }))
+    ) {
+      throw new ChatError("invalid");
+    }
+  }
+  await db.transaction(async (tx: ContentDatabase) => {
+    await tx
+      .delete(core_chat_disclosures)
+      .where(
+        and(
+          eq(core_chat_disclosures.reporterId, userId),
+          eq(core_chat_disclosures.reportedMessageId, reportedMessageId),
+        ),
+      );
+    await tx.insert(core_chat_disclosures).values(
+      items.map(item => ({
+        messageId: item.messageId,
+        reportedMessageId,
+        reporterId: userId,
+        text: item.text,
+      })),
+    );
+  });
+};
+
+/** Drops disclosures older than their time to be picked up by a report. */
+export const pruneChatDisclosures = async (
+  db: ContentDatabase,
+): Promise<void> => {
+  await db
+    .delete(core_chat_disclosures)
+    .where(
+      lt(
+        core_chat_disclosures.createdAt,
+        new Date(Date.now() - CHAT_E2E.disclosureTtlMinutes * 60 * 1000),
+      ),
+    );
 };

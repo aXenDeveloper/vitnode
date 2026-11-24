@@ -1,14 +1,15 @@
 import type { Context } from "hono";
 
-import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
 
 import type { ContentDatabase } from "@/content/server/service";
 
-import { core_chat_messages } from "@/database/chat";
+import { core_chat_disclosures, core_chat_messages } from "@/database/chat";
 import { core_users } from "@/database/users";
 import { defineReportTarget } from "@/lib/moderation/targets";
 
 import { CHAT_LIMITS } from "./const";
+import { CHAT_E2E } from "./e2e";
 import { chatMessagePlainText } from "./format";
 import { loadMembership } from "./read";
 import { pushModeratedMessage, setChatMessageHidden } from "./service";
@@ -39,6 +40,81 @@ const namesOf = async (c: Context, ids: (null | number)[]) => {
     .where(inArray(core_users.id, unique));
 
   return new Map(rows.map(row => [row.id, row.name]));
+};
+
+/**
+ * The snapshot of an encrypted message: only what the reporter revealed and
+ * the server checked against each message's commitment. Without a fresh
+ * disclosure there is nothing to show, so the report is refused.
+ */
+const captureEncrypted = async (
+  c: Context,
+  message: typeof core_chat_messages.$inferSelect,
+  reporterId: number,
+) => {
+  const disclosed = await c
+    .get("db")
+    .select({
+      authorId: core_chat_messages.authorId,
+      messageId: core_chat_disclosures.messageId,
+      text: core_chat_disclosures.text,
+    })
+    .from(core_chat_disclosures)
+    .innerJoin(
+      core_chat_messages,
+      eq(core_chat_messages.id, core_chat_disclosures.messageId),
+    )
+    .where(
+      and(
+        eq(core_chat_disclosures.reporterId, reporterId),
+        eq(core_chat_disclosures.reportedMessageId, message.id),
+        gte(
+          core_chat_disclosures.createdAt,
+          new Date(Date.now() - CHAT_E2E.disclosureTtlMinutes * 60 * 1000),
+        ),
+      ),
+    )
+    .orderBy(asc(core_chat_disclosures.messageId));
+  const reported = disclosed.find(row => row.messageId === message.id);
+  if (!reported) return null;
+  const names = await namesOf(
+    c,
+    disclosed.map(row => row.authorId),
+  );
+  const nameOf = (id: null | number) => (id ? names.get(id) : undefined) ?? "—";
+  const context = disclosed
+    .filter(row => row.messageId !== message.id)
+    .map(row => `${nameOf(row.authorId)}: ${row.text}`)
+    .join("\n");
+
+  return {
+    authors: message.authorId
+      ? [{ id: message.authorId, name: nameOf(message.authorId) }]
+      : [],
+    fields: [
+      {
+        kind: "text" as const,
+        label: "core.global.chat.report.message_verified",
+        name: "message",
+        value: reported.text,
+      },
+      {
+        kind: "text" as const,
+        label: "core.global.chat.report.context",
+        name: "context",
+        value: context || null,
+      },
+    ],
+    locale: { fallback: false, requested: null, served: null },
+    scope: null,
+    source: {
+      publishedAt: message.createdAt.toISOString(),
+      updatedAt: message.editedAt?.toISOString() ?? null,
+      version: null,
+    },
+    title: chatMessagePlainText(reported.text, CHAT_LIMITS.previewLength),
+    url: null,
+  };
 };
 
 const hideAction = (hidden: boolean) => ({
@@ -82,6 +158,9 @@ export const chatMessageReportTarget = defineReportTarget({
       message.authorId === user.id
     ) {
       return null;
+    }
+    if (message.encrypted) {
+      return await captureEncrypted(c, message, user.id);
     }
     const before = await c
       .get("db")
@@ -155,9 +234,10 @@ export const chatMessageReportTarget = defineReportTarget({
 
     return {
       authorIds: message.authorId ? [message.authorId] : [],
-      title: message.body
-        ? chatMessagePlainText(message.body, CHAT_LIMITS.previewLength)
-        : null,
+      title:
+        message.body && !message.encrypted
+          ? chatMessagePlainText(message.body, CHAT_LIMITS.previewLength)
+          : null,
     };
   },
   actions: { hide: hideAction(true), unhide: hideAction(false) },

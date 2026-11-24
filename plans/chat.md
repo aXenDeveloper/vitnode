@@ -26,6 +26,11 @@ Status: implemented (v1, phases 1-8 except images and search). Owner: core
   and further messages reach nobody until the recipient writes to them, which
   rejoins the chat without the ignored history.
 - **People search** (`GET /chat/people?q=`) was added for the recipient picker.
+- **End-to-end encrypted chats** (added after v1): per-chat opt-in, a
+  passcode-wrapped ECDH key pair per member with a recovery key, a role
+  setting that requires a passcode, self-healing key re-share after a reset,
+  and message franking so reports from encrypted chats carry verified text.
+  See `dev/chat` "End-to-end encrypted chats".
 - **Not built yet:** images in messages (phase 7 attachments), message search
   (phase 9) and the AdminCP user-detail counters.
 

@@ -40,7 +40,10 @@ export const ChatWithButton = ({
     enabled: isOther && !!state.data?.enabled,
   });
   if (!isOther || !state.data?.enabled || !canChat.data) return null;
-  const { allowed, asRequest, chatId } = canChat.data;
+  const forced = state.data.passcode.required;
+  const { allowed, asRequest } = canChat.data;
+  // Members whose role requires encryption go to the encrypted chat.
+  const chatId = forced ? canChat.data.encryptedChatId : canChat.data.chatId;
   if (!allowed && chatId === null) return null;
 
   const open = () => {

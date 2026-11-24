@@ -891,7 +891,8 @@
         "report_target": "{count, plural, =1 {chat message} other {chat messages}}",
         "report": {
           "message": "Reported message",
-          "context": "Messages before it"
+          "context": "Messages before it",
+          "message_verified": "Reported message (revealed by the reporter, checked against the original)"
         },
         "list": {
           "label": "Chats",
@@ -982,7 +983,11 @@
           "requests_paused": "Your chat requests are paused for a while because many were ignored.",
           "too_many_invites": "That's too many people at once.",
           "too_many_reactions": "This message has as many different reactions as it can hold.",
-          "groups_disabled": "Group chats are turned off on this site."
+          "groups_disabled": "Group chats are turned off on this site.",
+          "encryption_required": "Your role requires end-to-end encrypted chats. Turn encryption on to start one.",
+          "invalid_keys": "The encryption keys didn't match. Reload the page and try again.",
+          "passcode_required": "Set up a chat passcode first, in Settings → Chat.",
+          "recipient_no_passcode": "Someone you picked hasn't set a chat passcode yet, so an encrypted chat with them isn't possible."
         },
         "request": {
           "label": "Chat request",
@@ -1036,7 +1041,8 @@
           "leave_title": "Leave this group?",
           "leave_desc": "You won't get its messages anymore. Someone has to add you back to rejoin.",
           "left": "You left the group",
-          "left_desc": "It's gone from your chats."
+          "left_desc": "It's gone from your chats.",
+          "encrypted": "End-to-end encrypted"
         },
         "people": {
           "label": "To",
@@ -1108,7 +1114,105 @@
           "since": "Blocked",
           "unblock": "Unblock"
         },
-        "settings_link": "Chat settings"
+        "settings_link": "Chat settings",
+        "e2e": {
+          "cant_decrypt": "This message can't be decrypted",
+          "missing_key": "You reset your chat passcode, so this chat's key isn't on your account yet. It comes back as soon as someone else in the chat opens it.",
+          "key_error": "This chat's key couldn't be opened with your keys.",
+          "encrypted_message": "Encrypted message",
+          "list_label": "End-to-end encrypted chat",
+          "unlock": {
+            "title": "Unlock encrypted chats",
+            "desc": "Enter your chat passcode to read and send end-to-end encrypted messages on this device.",
+            "setup_title": "Set up a chat passcode",
+            "setup_desc": "Encrypted chats need a passcode. It protects your keys - not even the site can read these messages.",
+            "setup": "Set up passcode",
+            "passcode": "Chat passcode",
+            "remember": "Keep unlocked on this device",
+            "submit": "Unlock",
+            "wrong": "That passcode isn't right.",
+            "forgot": "Forgot your passcode?"
+          },
+          "dialog": {
+            "setup_title": "Set up a chat passcode",
+            "setup_desc": "Your passcode protects the keys to your encrypted chats. Nobody can reset it for you - not even the admins - so pick something you'll remember.",
+            "setup_submit": "Create passcode",
+            "setup_done": "Passcode set",
+            "setup_done_desc": "You can now start end-to-end encrypted chats.",
+            "change_title": "Change chat passcode",
+            "change_desc": "Your encrypted chats stay readable; only the passcode that opens your keys changes.",
+            "change_submit": "Change passcode",
+            "recover_title": "Use your recovery key",
+            "recover_desc": "Enter the recovery key you saved when you set up your passcode, then choose a new passcode.",
+            "recover_submit": "Recover and set passcode",
+            "recovery_key_title": "New recovery key",
+            "recovery_key_desc": "Enter your passcode to create a new recovery key. The old one stops working.",
+            "recovery_key_submit": "Create recovery key",
+            "recovery_key_done": "New recovery key saved",
+            "recovery_key_done_desc": "Your old recovery key no longer works.",
+            "reset_title": "Reset chat keys",
+            "reset_desc": "Lost both your passcode and recovery key? Reset creates new keys. Messages in your encrypted chats stay locked until someone in each chat opens it and shares the key again. Chats where nobody else can do that are lost for you.",
+            "reset_submit": "Reset keys",
+            "reset_done": "Keys reset",
+            "reset_done_desc": "Your encrypted chats come back as other members open them.",
+            "current": "Current passcode",
+            "recovery": "Recovery key",
+            "passcode": "New passcode",
+            "passcode_desc": "At least {min} characters. A few random words make a strong one.",
+            "confirm": "Repeat new passcode",
+            "remember": "Keep unlocked on this device",
+            "remember_desc": "Skip the passcode here until you lock or sign out. Leave it off on shared computers.",
+            "mismatch": "The passcodes don't match.",
+            "wrong_passcode": "That passcode isn't right.",
+            "wrong_recovery": "That recovery key isn't right.",
+            "changed": "Passcode changed",
+            "changed_desc": "Use the new one from now on.",
+            "recovered": "Passcode reset",
+            "recovered_desc": "Your encrypted chats are unlocked again."
+          },
+          "recovery": {
+            "title": "Save your recovery key",
+            "desc": "If you forget your passcode, this key is the only way back into your encrypted chats. We'll show it only once.",
+            "label": "Recovery key",
+            "copy": "Copy",
+            "copied": "Recovery key copied",
+            "copied_desc": "Paste it somewhere safe, like a password manager.",
+            "download": "Download",
+            "file_intro": "Your chat recovery key. Keep it private - anyone with it and access to your account can read your encrypted chats.",
+            "saved": "I saved my recovery key somewhere safe",
+            "done": "Done"
+          },
+          "settings": {
+            "title": "End-to-end encryption",
+            "loading": "Checking your keys…",
+            "status_none": "No chat passcode yet",
+            "status_locked": "Passcode set · locked on this device",
+            "status_unlocked": "Passcode set · unlocked on this device",
+            "desc": "Encrypted chats are readable only by their members - not by the site or its staff. Your passcode protects your keys.",
+            "required": "Your role requires a passcode, and the chats you start are encrypted.",
+            "change": "Change passcode",
+            "new_recovery": "New recovery key",
+            "forgot": "Use recovery key",
+            "lock": "Lock now",
+            "locked": "Encrypted chats locked",
+            "locked_desc": "Enter your passcode to open them again.",
+            "reset": "Reset keys",
+            "setup": "Set up passcode"
+          },
+          "new": {
+            "toggle": "End-to-end encrypted",
+            "toggle_desc": "Only the people in this chat can read it. Everyone needs a chat passcode.",
+            "forced": "Your role requires encrypted chats.",
+            "need_setup": "Set up a chat passcode in Settings → Chat to start encrypted chats.",
+            "unlock_first": "Unlock your encrypted chats to start one.",
+            "missing": "{names} {count, plural, =1 {hasn't} other {haven't}} set a chat passcode yet."
+          },
+          "required": {
+            "title": "Set up your chat passcode",
+            "desc": "Your role keeps chats end-to-end encrypted. Set a passcode to start chatting - it protects the keys only you hold.",
+            "setup": "Set up passcode"
+          }
+        }
       }
     },
     "profile": {
@@ -4978,7 +5082,9 @@
           "max_invites_unit": "people",
           "or": "or",
           "unlimited": "Unlimited",
-          "up_to_group": "Up to the group limit"
+          "up_to_group": "Up to the group limit",
+          "force_passcode": "Require a chat passcode",
+          "force_passcode_desc": "Members must set a passcode before chatting, and every chat they start is end-to-end encrypted. Staff can't read those chats; reports carry only what the reporter reveals."
         }
       }
     },

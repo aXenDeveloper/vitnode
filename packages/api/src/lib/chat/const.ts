@@ -75,8 +75,16 @@ export const CHAT_LIMITS = {
 } as const;
 
 /** Builds the unique key of a direct chat between two members. */
-export const chatDirectKey = (a: number, b: number): string =>
-  a < b ? `${a}:${b}` : `${b}:${a}`;
+export const chatDirectKey = (
+  a: number,
+  b: number,
+  encrypted = false,
+): string => {
+  const pair = a < b ? `${a}:${b}` : `${b}:${a}`;
+
+  // An encrypted chat with someone is a separate chat from the plain one.
+  return encrypted ? `e:${pair}` : pair;
+};
 
 /** Install-wide chat settings, `chat` in the API config with defaults applied. */
 export interface ChatSettings {

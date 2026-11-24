@@ -42,6 +42,8 @@ export const core_roles = camelCase.table.withRLS(
     chatRequestsPerDay: t.integer().default(20),
     // People a member may add to a group at once; null = up to the group cap.
     chatMaxInvites: t.integer().default(10),
+    // Members must set a chat passcode; chats they start are end-to-end encrypted.
+    chatForcePasscode: t.boolean().notNull().default(false),
   }),
   t => [index("core_roles_updated_at_id_idx").on(t.updatedAt, t.id)],
 );

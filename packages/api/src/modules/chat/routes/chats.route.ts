@@ -12,6 +12,7 @@ import {
   CHAT_REQUESTS_FROM,
   chatDirectKey,
 } from "@/lib/chat/const";
+import { loadPublicKeys } from "@/lib/chat/keys";
 import { checkChatRecipients, resolveChatPolicy } from "@/lib/chat/policy";
 import {
   listChats,
@@ -37,7 +38,9 @@ import {
   chatParams,
   chatStateSchema,
   clientIdSchema,
+  commitmentSchema,
   json,
+  keyGrantsSchema,
   messageBodySchema,
   privateHeaders,
   zodId,
@@ -56,12 +59,19 @@ export const chatStateRoute = buildRoute({
     const { enabled, groups } = c.get("core").chat;
     const policy = await resolveChatPolicy(c);
     const counts = user && enabled ? await readChatState(c, user.id) : null;
+    const keys = user ? await loadPublicKeys(c, [user.id]) : new Map();
+    const own = user ? keys.get(user.id) : undefined;
 
     return c.json(
       {
         enabled: enabled && policy.allowChat,
         groups,
         live: isWebSocketEnabled(),
+        passcode: {
+          keyVersion: own?.keyVersion ?? null,
+          required: policy.forcePasscode,
+          set: !!own,
+        },
         requests: counts?.requests ?? 0,
         unreadChats: counts?.unreadChats ?? 0,
       },
@@ -123,6 +133,9 @@ export const startChatRoute = buildRoute({
             schema: z.object({
               body: messageBodySchema.optional(),
               clientId: clientIdSchema.optional(),
+              commitment: commitmentSchema,
+              encrypted: z.boolean().optional(),
+              keys: keyGrantsSchema.optional(),
               title: z.string().max(CHAT_LIMITS.titleMaxLength).optional(),
               userIds: z.array(z.number().int().positive()).min(1).max(200),
             }),
@@ -371,6 +384,12 @@ export const canChatRoute = buildRoute({
           allowed: z.boolean(),
           asRequest: z.boolean(),
           chatId: z.number().int().nullable(),
+          /** The existing end-to-end encrypted chat with them. */
+          encryptedChatId: z.number().int().nullable(),
+          /** Their public key, when they set a chat passcode. */
+          publicKey: z
+            .object({ keyVersion: z.number().int(), publicKey: z.string() })
+            .nullable(),
         }),
         "The answer",
       ),
@@ -379,47 +398,69 @@ export const canChatRoute = buildRoute({
   handler: async c => {
     const user = c.get("user");
     const userId = Number(c.req.valid("param").userId);
-    const none = { allowed: false, asRequest: false, chatId: null };
+    const none = {
+      allowed: false,
+      asRequest: false,
+      chatId: null,
+      encryptedChatId: null,
+      publicKey: null,
+    };
     if (!user || user.id === userId || !c.get("core").chat.enabled) {
       return c.json(none, 200, privateHeaders);
     }
     const policy = await resolveChatPolicy(c);
     if (!policy.allowChat) return c.json(none, 200, privateHeaders);
 
-    const [existing] = await c
-      .get("db")
-      .select({ id: core_chat_conversations.id })
-      .from(core_chat_conversations)
-      .innerJoin(
-        core_chat_participants,
-        and(
-          eq(core_chat_participants.conversationId, core_chat_conversations.id),
-          eq(core_chat_participants.userId, user.id),
-          isNull(core_chat_participants.leftAt),
-        ),
-      )
-      .where(
-        eq(core_chat_conversations.directKey, chatDirectKey(user.id, userId)),
-      )
-      .limit(1);
+    const findDirect = async (encrypted: boolean) => {
+      const [row] = await c
+        .get("db")
+        .select({ id: core_chat_conversations.id })
+        .from(core_chat_conversations)
+        .innerJoin(
+          core_chat_participants,
+          and(
+            eq(
+              core_chat_participants.conversationId,
+              core_chat_conversations.id,
+            ),
+            eq(core_chat_participants.userId, user.id),
+            isNull(core_chat_participants.leftAt),
+          ),
+        )
+        .where(
+          eq(
+            core_chat_conversations.directKey,
+            chatDirectKey(user.id, userId, encrypted),
+          ),
+        )
+        .limit(1);
+
+      return row?.id ?? null;
+    };
+    const [chatId, encryptedChatId, keys] = await Promise.all([
+      findDirect(false),
+      findDirect(true),
+      loadPublicKeys(c, [userId]),
+    ]);
+    const found = {
+      chatId,
+      encryptedChatId,
+      publicKey: keys.get(userId) ?? null,
+    };
     const [check] = await checkChatRecipients(c, {
       policy,
       recipientIds: [userId],
       senderId: user.id,
     });
     if (!check?.allowed) {
-      return c.json(
-        { ...none, chatId: existing?.id ?? null },
-        200,
-        privateHeaders,
-      );
+      return c.json({ ...none, ...found }, 200, privateHeaders);
     }
 
     return c.json(
       {
+        ...found,
         allowed: true,
-        asRequest: !existing && check.asRequest,
-        chatId: existing?.id ?? null,
+        asRequest: check.asRequest,
       },
       200,
       privateHeaders,

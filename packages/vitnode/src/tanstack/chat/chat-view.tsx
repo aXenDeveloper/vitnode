@@ -18,6 +18,7 @@ import {
   EllipsisVerticalIcon,
   EyeOffIcon,
   FlagIcon,
+  LockIcon,
   LogOutIcon,
   MessagesSquareIcon,
   PencilIcon,
@@ -59,6 +60,15 @@ import { RouteMessages } from "../i18n/route-messages";
 import { REPORT_NAMESPACES, ReportDialog } from "../moderation/report-button";
 import { ChatAvatar, chatDisplayName } from "./chat-avatar";
 import { ChatComposer, useChatErrorToast } from "./composer";
+import { encryptChatMessage } from "./e2e/crypto";
+import {
+  peekDecrypted,
+  useChatE2E,
+  useChatKey,
+  useChatKeyReshare,
+  useDecryptedMessages,
+} from "./e2e/hooks";
+import { ChatUnlockPanel } from "./e2e/unlock-panel";
 import { useChatTyping } from "./live";
 import { type ChatMessageActions, ChatMessageItem } from "./message-item";
 import {
@@ -66,6 +76,7 @@ import {
   chatDetailsQueryOptions,
   chatMessagesQueryOptions,
   deleteChatMessageRequest,
+  discloseChatMessagesRequest,
   ignoreChatRequest,
   invalidateChatOverview,
   markChatReadRequest,
@@ -275,11 +286,13 @@ const muteOptions = [
 
 const ChatHeader = ({
   chat,
+  chatKey,
   me,
   onBack,
   onLeft,
 }: {
   chat: ChatDetails;
+  chatKey: CryptoKey | null;
   me: ChatSessionUser;
   onBack?: () => void;
   onLeft?: () => void;
@@ -354,6 +367,13 @@ const ChatHeader = ({
               ? t("waiting")
               : t("direct")}
           {muted ? ` · ${t("muted")}` : null}
+          {chat.encrypted ? (
+            <span className="ms-1 inline-flex items-center gap-1">
+              ·
+              <LockIcon aria-hidden="true" className="size-3" />
+              {t("encrypted")}
+            </span>
+          ) : null}
         </p>
       </div>
       {chat.me.status === "accepted" ? (
@@ -553,6 +573,7 @@ const ChatHeader = ({
           {dialog === "add" ? (
             <LazyAddPeopleDialog
               chat={chat}
+              chatKey={chatKey}
               onClose={() => {
                 setDialog(null);
               }}
@@ -610,10 +631,18 @@ export const ChatView = ({
   const [unreadFrom, setUnreadFrom] = React.useState<null | number>(null);
 
   const chat = details.data;
-  const items = React.useMemo(
+  const e2e = useChatE2E(me.id);
+  const { key: chatKey, status: keyStatus } = useChatKey(chat, e2e.privateKey);
+  useChatKeyReshare(chat, chatKey, me.id);
+  const rawItems = React.useMemo(
     () =>
       [...(messages.data?.pages ?? [])].reverse().flatMap(page => page.items),
     [messages.data],
+  );
+  const items = useDecryptedMessages(
+    rawItems,
+    chatKey,
+    `*${t("e2e.cant_decrypt")}*`,
   );
   const names = React.useMemo(() => {
     const map = new Map<number, string>();
@@ -777,7 +806,37 @@ export const ChatView = ({
       setEditing(null);
       setReplyTo(message);
     },
-    onReport: setReporting,
+    onReport: message => {
+      if (!message.encrypted) {
+        setReporting(message);
+
+        return;
+      }
+      // Moderators can't read an encrypted chat: reveal the reported message
+      // and the few before it, checked by the server against each commitment.
+      const index = rawItems.findIndex(item => item.id === message.id);
+      const disclosed = rawItems
+        .slice(Math.max(0, index - 5), index + 1)
+        .flatMap(item => {
+          if (item.kind !== "message" || !item.encrypted || !item.body) {
+            return [];
+          }
+          const value = peekDecrypted(item.body);
+
+          return value && value !== "error"
+            ? [{ frankingKey: value.fk, messageId: item.id, text: value.t }]
+            : [];
+        });
+      void discloseChatMessagesRequest({
+        chatId,
+        messageId: message.id,
+        messages: disclosed,
+      })
+        .then(() => {
+          setReporting(message);
+        })
+        .catch(showError);
+    },
   };
 
   if (details.isPending || messages.isPending) return <ChatViewSkeleton />;
@@ -838,10 +897,21 @@ export const ChatView = ({
     .map(id => names.get(id))
     .filter((name): name is string => !!name);
   const pendingGroup = chat.me.status === "pending" && chat.kind === "group";
+  const lockedOut = chat.encrypted && keyStatus === "locked";
+  const encryptText =
+    chat.encrypted && chatKey
+      ? async (text: string) => await encryptChatMessage(chatKey, text)
+      : undefined;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <ChatHeader chat={chat} me={me} onBack={onBack} onLeft={onLeft} />
+      <ChatHeader
+        chat={chat}
+        chatKey={chatKey}
+        me={me}
+        onBack={onBack}
+        onLeft={onLeft}
+      />
       {chat.me.status === "pending" ? (
         <RequestBar chat={chat} onDone={onLeft} userId={me.id} />
       ) : null}
@@ -854,6 +924,20 @@ export const ChatView = ({
                 .name ?? "",
           })}
         </p>
+      ) : null}
+      {chat.encrypted && keyStatus === "locked" ? (
+        <ChatUnlockPanel userId={me.id} />
+      ) : null}
+      {chat.encrypted &&
+      (keyStatus === "missing" || keyStatus === "error") &&
+      !pendingGroup ? (
+        <Alert className="m-2" variant="warning">
+          <AlertDescription>
+            {keyStatus === "missing"
+              ? t("e2e.missing_key")
+              : t("e2e.key_error")}
+          </AlertDescription>
+        </Alert>
       ) : null}
       {messages.isError && items.length > 0 ? (
         <Alert className="m-2" variant="warning">
@@ -872,7 +956,7 @@ export const ChatView = ({
         </Alert>
       ) : null}
 
-      <div className="relative flex min-h-0 flex-1 flex-col">
+      <div className="relative flex min-h-0 flex-1 flex-col" hidden={lockedOut}>
         <div
           aria-busy={messages.isFetchingNextPage}
           aria-label={t("log_label")}
@@ -999,22 +1083,27 @@ export const ChatView = ({
         ) : null}
       </div>
 
-      <ChatComposer
-        chatId={chatId}
-        disabled={!chat.me.canWrite || pendingGroup}
-        editing={editing}
-        me={me}
-        onCancelEdit={() => {
-          setEditing(null);
-        }}
-        onCancelReply={() => {
-          setReplyTo(null);
-        }}
-        onSent={() => {
-          stickToBottom.current = true;
-        }}
-        replyTo={replyTo}
-      />
+      {lockedOut ? null : (
+        <ChatComposer
+          chatId={chatId}
+          disabled={
+            !chat.me.canWrite || pendingGroup || (chat.encrypted && !chatKey)
+          }
+          editing={editing}
+          encryptText={encryptText}
+          me={me}
+          onCancelEdit={() => {
+            setEditing(null);
+          }}
+          onCancelReply={() => {
+            setReplyTo(null);
+          }}
+          onSent={() => {
+            stickToBottom.current = true;
+          }}
+          replyTo={replyTo}
+        />
+      )}
 
       <ConfirmActionAlertDialog
         description={t("message.delete_desc")}

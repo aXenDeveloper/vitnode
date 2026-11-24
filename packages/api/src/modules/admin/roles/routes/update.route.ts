@@ -34,6 +34,7 @@ export const zodUpdateRoleAdminSchema = z
     allowDeleteAccount: z.boolean(),
     allowBrowseAnonymously: z.boolean(),
     allowChat: z.boolean(),
+    chatForcePasscode: z.boolean(),
     chatRequestsPerDay: z.number().int().min(1).max(100_000).nullable(),
     chatMaxInvites: z.number().int().min(1).max(100_000).nullable(),
     forceBrowseAnonymously: z.boolean(),
@@ -140,6 +141,9 @@ export const updateRoleAdminRoute = buildRoute({
       values.allowDeleteAccount = body.allowDeleteAccount;
     }
     if (body.allowChat !== undefined) values.allowChat = body.allowChat;
+    if (body.chatForcePasscode !== undefined) {
+      values.chatForcePasscode = body.chatForcePasscode;
+    }
     if (body.chatRequestsPerDay !== undefined) {
       values.chatRequestsPerDay = body.chatRequestsPerDay;
     }
