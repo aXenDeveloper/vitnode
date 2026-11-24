@@ -38,6 +38,7 @@ export interface AdminIntegrations {
   redis: { active: boolean; configuredButDown: boolean };
   storage: { active: boolean };
   websocket: { active: boolean; crossInstance: boolean };
+  webUrl: { configured: boolean };
 }
 
 /** The read, as arguments to whichever fetcher is carrying it. */

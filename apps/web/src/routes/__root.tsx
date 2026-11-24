@@ -21,6 +21,8 @@ import { isDocsRouteId, STYLESHEET_ORDER_ANCHOR } from '@/docs/stylesheet'
 import { withoutHmrTimestamp } from '@/lib/without-hmr-timestamp'
 import { vitNodeConfig } from '@/vitnode.config'
 
+import geistLatin from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url'
+
 import appCss from '../styles.css?url'
 
 const { editor, i18n, logo, metadata, theme } = vitNodeConfig
@@ -50,6 +52,13 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
       ...(matches.some(({ routeId }) => isDocsRouteId(routeId))
         ? []
         : [{ href: withoutHmrTimestamp(appCss), rel: 'stylesheet' }]),
+      {
+        as: 'font',
+        crossOrigin: 'anonymous',
+        href: geistLatin,
+        rel: 'preload',
+        type: 'font/woff2',
+      },
 
       {
         href: '/favicon.ico',

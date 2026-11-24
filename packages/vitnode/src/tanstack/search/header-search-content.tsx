@@ -530,153 +530,157 @@ const HeaderSearchMorph = ({
   );
 
   return (
-    <div className="bg-popover/90 text-popover-foreground ring-foreground/10 overflow-hidden rounded-2xl shadow-2xl ring-1 backdrop-blur-sm">
-      <div className="flex h-14 items-center gap-3 px-4 sm:h-16 sm:px-5">
-        <SearchIcon
-          aria-hidden
-          className="text-muted-foreground size-5 shrink-0 sm:size-6"
-        />
-        <div className="relative min-w-0 flex-1">
-          <span
+    <div className="bg-muted text-popover-foreground ring-border flex flex-col rounded-xl p-1 shadow-2xl ring-1">
+      <div className="bg-popover ring-border overflow-hidden rounded-lg ring-1">
+        <div className="flex h-14 items-center gap-3 px-4 sm:h-16 sm:px-5">
+          <SearchIcon
             aria-hidden
-            className="pointer-events-none absolute inset-0 flex items-center overflow-hidden text-lg whitespace-pre sm:text-xl"
-          >
-            <span className="invisible">{query}</span>
-            <span className="text-muted-foreground/50">{ghost}</span>
-          </span>
-          <input
-            aria-activedescendant={
-              activeEntry ? `${listId}-${optionId(activeEntry.id)}` : undefined
-            }
-            aria-autocomplete="both"
-            aria-controls={listId}
-            aria-expanded={expanded}
-            aria-label={t("dialog.label")}
-            autoComplete="off"
-            autoFocus
-            className="placeholder:text-muted-foreground relative w-full bg-transparent text-lg outline-none sm:text-xl"
-            maxLength={100}
-            onChange={event => changeQuery(event.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={tGlobal("search_placeholder")}
-            ref={inputRef}
-            role="combobox"
-            spellCheck={false}
-            type="text"
-            value={query}
+            className="text-muted-foreground size-5 shrink-0 sm:size-6"
           />
-        </div>
-        {ghost && (
-          <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-xs max-sm:hidden">
-            <Kbd>Tab</Kbd>
-            {t("dialog.complete")}
-          </span>
-        )}
-      </div>
-
-      <div aria-live="polite" className="sr-only">
-        {isLoading ? t("loading") : t("dialog.count", { count: resultCount })}
-      </div>
-
-      {showRecent && (
-        <div className="flex flex-wrap items-center gap-1.5 border-t px-4 py-3 sm:px-5">
-          <ClockIcon
-            aria-label={t("dialog.recent")}
-            className="text-muted-foreground size-3.5"
-            role="img"
-          />
-          {recent.map(entry => (
-            <button
-              className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring h-7 rounded-full px-2.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
-              key={entry}
-              onClick={() => {
-                changeQuery(entry);
-                inputRef.current?.focus();
-              }}
-              type="button"
+          <div className="relative min-w-0 flex-1">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 flex items-center overflow-hidden text-lg whitespace-pre sm:text-xl"
             >
-              {entry}
-            </button>
-          ))}
-        </div>
-      )}
-
-      <AutoHeight open={expanded}>
-        <div className="max-h-[min(28rem,60vh)] overflow-y-auto border-t p-2">
-          {isLoading ? (
-            <div aria-hidden className="flex flex-col gap-1 p-1">
-              {SKELETON_ROWS.map(id => (
-                <div className="flex items-center gap-3 p-1" key={id}>
-                  <Skeleton className="size-10 shrink-0 rounded-md" />
-                  <Skeleton className="h-4 w-full rounded-sm" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            resultCount === 0 && (
-              <p className="text-muted-foreground px-3 py-6 text-center text-sm leading-relaxed text-pretty">
-                {active.isError
-                  ? t("dialog.error")
-                  : isSuggesting
-                    ? t("dialog.no_results")
-                    : t("dialog.popular_empty")}
-              </p>
-            )
+              <span className="invisible">{query}</span>
+              <span className="text-muted-foreground/50">{ghost}</span>
+            </span>
+            <input
+              aria-activedescendant={
+                activeEntry
+                  ? `${listId}-${optionId(activeEntry.id)}`
+                  : undefined
+              }
+              aria-autocomplete="both"
+              aria-controls={listId}
+              aria-expanded={expanded}
+              aria-label={t("dialog.label")}
+              autoComplete="off"
+              autoFocus
+              className="placeholder:text-muted-foreground relative w-full bg-transparent text-lg outline-none sm:text-xl"
+              maxLength={100}
+              onChange={event => changeQuery(event.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={tGlobal("search_placeholder")}
+              ref={inputRef}
+              role="combobox"
+              spellCheck={false}
+              type="text"
+              value={query}
+            />
+          </div>
+          {ghost && (
+            <span className="text-muted-foreground flex shrink-0 items-center gap-1.5 text-xs max-sm:hidden">
+              <Kbd>Tab</Kbd>
+              {t("dialog.complete")}
+            </span>
           )}
-          <div
-            aria-label={t("dialog.label")}
-            className="flex flex-col gap-2"
-            id={listId}
-            role="listbox"
-          >
-            {!isLoading && leadingGroups.map(renderSourceGroup)}
-            {!isLoading && items.length > 0 && (
-              <ResultGroup
-                label={
-                  isSuggesting ? t("dialog.suggestions") : t("dialog.popular")
-                }
+        </div>
+
+        <div aria-live="polite" className="sr-only">
+          {isLoading ? t("loading") : t("dialog.count", { count: resultCount })}
+        </div>
+
+        {showRecent && (
+          <div className="flex flex-wrap items-center gap-1.5 border-t px-4 py-3 sm:px-5">
+            <ClockIcon
+              aria-label={t("dialog.recent")}
+              className="text-muted-foreground size-3.5"
+              role="img"
+            />
+            {recent.map(entry => (
+              <button
+                className="text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-ring h-7 rounded-full px-2.5 text-sm focus-visible:ring-2 focus-visible:outline-none"
+                key={entry}
+                onClick={() => {
+                  changeQuery(entry);
+                  inputRef.current?.focus();
+                }}
+                type="button"
               >
-                {entries.map(
+                {entry}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <AutoHeight open={expanded}>
+          <div className="max-h-[min(28rem,60vh)] overflow-y-auto border-t p-2">
+            {isLoading ? (
+              <div aria-hidden className="flex flex-col gap-1 p-1">
+                {SKELETON_ROWS.map(id => (
+                  <div className="flex items-center gap-3 p-1" key={id}>
+                    <Skeleton className="size-10 shrink-0 rounded-md" />
+                    <Skeleton className="h-4 w-full rounded-sm" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              resultCount === 0 && (
+                <p className="text-muted-foreground px-3 py-6 text-center text-sm leading-relaxed text-pretty">
+                  {active.isError
+                    ? t("dialog.error")
+                    : isSuggesting
+                      ? t("dialog.no_results")
+                      : t("dialog.popular_empty")}
+                </p>
+              )
+            )}
+            <div
+              aria-label={t("dialog.label")}
+              className="flex flex-col gap-2"
+              id={listId}
+              role="listbox"
+            >
+              {!isLoading && leadingGroups.map(renderSourceGroup)}
+              {!isLoading && items.length > 0 && (
+                <ResultGroup
+                  label={
+                    isSuggesting ? t("dialog.suggestions") : t("dialog.popular")
+                  }
+                >
+                  {entries.map(
+                    entry =>
+                      entry.kind === "item" && (
+                        <ItemRow
+                          active={activeEntry?.id === entry.id}
+                          context={entry.item.context}
+                          date={entry.item.createdAt}
+                          excerpt={entry.item.excerpt}
+                          key={entry.id}
+                          optionProps={optionProps(entry, positionOf(entry))}
+                          pattern={pattern}
+                          thumbnail={<ItemThumbnail item={entry.item} />}
+                          title={entry.item.title}
+                        />
+                      ),
+                  )}
+                </ResultGroup>
+              )}
+              {!isLoading && trailingGroups.map(renderSourceGroup)}
+              {!isLoading &&
+                entries.map(
                   entry =>
-                    entry.kind === "item" && (
-                      <ItemRow
-                        active={activeEntry?.id === entry.id}
-                        context={entry.item.context}
-                        date={entry.item.createdAt}
-                        excerpt={entry.item.excerpt}
+                    entry.kind === "see-all" && (
+                      <div
+                        className={cn(
+                          "text-primary flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium",
+                          activeEntry?.id === entry.id && "bg-muted",
+                        )}
                         key={entry.id}
-                        optionProps={optionProps(entry, positionOf(entry))}
-                        pattern={pattern}
-                        thumbnail={<ItemThumbnail item={entry.item} />}
-                        title={entry.item.title}
-                      />
+                        {...optionProps(entry, positionOf(entry))}
+                      >
+                        <ArrowRightIcon aria-hidden className="size-4" />
+                        {t("dialog.see_all", { term: trimmedQuery })}
+                      </div>
                     ),
                 )}
-              </ResultGroup>
-            )}
-            {!isLoading && trailingGroups.map(renderSourceGroup)}
-            {!isLoading &&
-              entries.map(
-                entry =>
-                  entry.kind === "see-all" && (
-                    <div
-                      className={cn(
-                        "text-primary flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium",
-                        activeEntry?.id === entry.id && "bg-muted",
-                      )}
-                      key={entry.id}
-                      {...optionProps(entry, positionOf(entry))}
-                    >
-                      <ArrowRightIcon aria-hidden className="size-4" />
-                      {t("dialog.see_all", { term: trimmedQuery })}
-                    </div>
-                  ),
-              )}
+            </div>
           </div>
-        </div>
-      </AutoHeight>
+        </AutoHeight>
+      </div>
 
-      <footer className="text-muted-foreground flex items-center gap-4 border-t px-5 py-2.5 text-xs max-sm:hidden">
+      <footer className="text-muted-foreground [&_[data-slot=kbd]]:bg-popover flex items-center gap-4 px-5 pt-2 pb-1.5 text-xs max-sm:hidden">
         <span className="flex items-center gap-1.5">
           <KbdGroup>
             <Kbd aria-label={t("dialog.key_up")}>↑</Kbd>

@@ -72,8 +72,6 @@ import { normalizeModcpApprovalsSearch } from "./tanstack/moderation/approvals-r
 import { MODCP_NAMESPACES } from "./tanstack/moderation/namespaces";
 import { normalizeModcpReportsSearch } from "./tanstack/moderation/route-search";
 import { normalizeModcpWarningsSearch } from "./tanstack/moderation/warnings-route";
-import { NOTIFICATIONS_NAMESPACES } from "./tanstack/notifications/namespaces";
-import { normalizeNotificationsRouteSearch } from "./tanstack/notifications/route-search";
 import {
   AuthPendingSkeleton,
   CardsPendingSkeleton,
@@ -267,16 +265,6 @@ export const routes = defineRoutes([
         search: normalizeModcpWarningsSearch,
       }),
     ],
-  }),
-
-  page("/notifications", {
-    component: lazy(() => import("./pages/notifications")),
-    messages: NOTIFICATIONS_NAMESPACES,
-    pendingComponent: () => (
-      <TablePendingSkeleton className="container mx-auto max-w-6xl" />
-    ),
-    requires: "authenticated",
-    search: normalizeNotificationsRouteSearch,
   }),
 
   page("/files", {

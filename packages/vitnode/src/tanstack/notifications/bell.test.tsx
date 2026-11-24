@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NotificationItemView } from "@/views/notifications/notifications-query";
 
 import { notificationStateStore } from "@/views/notifications/notification-state-store";
-import { recentNotificationsQueryOptions } from "@/views/notifications/notifications-query";
+import { notificationsFeedQueryOptions } from "@/views/notifications/notifications-query";
 
 import { SESSION_QUERY_KEY } from "../auth/state";
 import { NotificationsBell } from "./bell";
@@ -47,13 +47,19 @@ const mount = async () => {
     user: { id: USER_ID, notifications: { revision: 4, unread: 2 } },
   });
   queryClient.setQueryData(
-    recentNotificationsQueryOptions({ userId: USER_ID }).queryKey,
+    notificationsFeedQueryOptions({ filter: "unread", userId: USER_ID })
+      .queryKey,
     {
-      items: [
-        item({}),
-        item({ id: 12, target: null, title: "Older", unread: false }),
+      pageParams: [null],
+      pages: [
+        {
+          items: [
+            item({}),
+            item({ id: 12, target: null, title: "Older", unread: false }),
+          ],
+          nextCursor: null,
+        },
       ],
-      nextCursor: null,
     },
   );
 
@@ -75,6 +81,11 @@ const mount = async () => {
   });
 };
 
+const badgeValue = () =>
+  screen
+    .getByTestId("notifications-badge")
+    .querySelector('[data-slot="sliding-number-value"]')?.textContent;
+
 describe("NotificationsBell", () => {
   const fetchMock = vi.fn<typeof fetch>(
     async () =>
@@ -90,16 +101,27 @@ describe("NotificationsBell", () => {
     notificationStateStore.reset();
     fetchMock.mockClear();
     vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        disconnect() {}
+        observe() {}
+        unobserve() {}
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(448);
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(384);
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it("shows the session's unread count without loading the inbox", async () => {
     await mount();
 
-    expect(screen.getByTestId("notifications-badge").textContent).toBe("2");
+    expect(badgeValue()).toBe("2");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -110,7 +132,7 @@ describe("NotificationsBell", () => {
     expect(await screen.findByText("Two new replies")).toBeTruthy();
     expect(screen.getByText("Older")).toBeTruthy();
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(screen.getByTestId("notifications-badge").textContent).toBe("2");
+    expect(badgeValue()).toBe("2");
   });
 
   it("marks an item read through the activity shown, when it is clicked", async () => {
@@ -124,8 +146,6 @@ describe("NotificationsBell", () => {
     expect(init.method?.toUpperCase()).toBe("POST");
     expect(JSON.parse(init.body as string)).toEqual({ throughSeq: 2 });
 
-    await waitFor(() =>
-      expect(screen.getByTestId("notifications-badge").textContent).toBe("1"),
-    );
+    await waitFor(() => expect(badgeValue()).toBe("1"));
   });
 });

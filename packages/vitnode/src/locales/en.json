@@ -707,7 +707,6 @@
         "title": "Notifications",
         "bell_label": "Notifications",
         "bell_label_unread": "Notifications, {count, plural, one {# unread} other {# unread}}",
-        "recent": "Recent notifications",
         "mark_all_read": "Mark all as read",
         "all_read": "All caught up",
         "all_read_desc": "Every notification is marked as read.",
@@ -726,11 +725,29 @@
           "desc": "Check your connection and try again."
         },
         "retry": "Try again",
-        "empty_title": "You're all caught up",
-        "empty_desc": "New activity will show up here.",
-        "view_all": "View all notifications",
         "settings": "Notification settings",
-        "action_failed": "That didn't work. Your notifications were refreshed."
+        "action_failed": "That didn't work. Your notifications were refreshed.",
+        "filters_label": "Filter notifications",
+        "filter": {
+          "unread": "Unread",
+          "all": "All",
+          "mentions": "Mentions"
+        },
+        "empty": {
+          "unread": {
+            "title": "You're all caught up",
+            "desc": "New notifications show up here the moment they arrive."
+          },
+          "all": {
+            "title": "No notifications yet",
+            "desc": "Replies, mentions and reactions to your posts show up here."
+          },
+          "mentions": {
+            "title": "No mentions yet",
+            "desc": "When someone @mentions you, it lands here."
+          }
+        },
+        "load_more_error": "Older notifications didn't load."
       },
       "tab_has_errors": "Has errors",
       "calendar": {
@@ -1566,7 +1583,6 @@
               "enable": "Turn on push in this browser",
               "denied": "Blocked by your browser. Allow notifications for this site in its settings to turn push on.",
               "unsupported": "This browser can't receive push notifications.",
-              "soon": "Push delivery is on its way - the choices below are saved for when it lands.",
               "enabled_toast": "Push is on",
               "enabled_toast_desc": "This browser can now get your notifications.",
               "enable_short": "Turn on"
@@ -2627,31 +2643,6 @@
         },
         "full": "This area already holds as many widgets as it can."
       }
-    },
-    "notifications": {
-      "title": "Notifications",
-      "desc": "Everything that happened while you were away. Opening this page never marks anything as read.",
-      "filter_unread": "Unread",
-      "mark_all_read": "Mark all as read",
-      "settings_button": "Settings",
-      "summary": "<b>{total}</b> {total, plural, one {notification} other {notifications}} · <b>{unread}</b> unread",
-      "column_status": "Status",
-      "column_notification": "Notification",
-      "column_category": "Category",
-      "column_received": "Received",
-      "column_actions": "Actions",
-      "filter_status": "Status",
-      "filter_status_all": "Any status",
-      "filter_category": "Category",
-      "status_read": "Read",
-      "load_error": {
-        "title": "Notifications didn't load",
-        "desc": "Something went wrong while fetching them. Check your connection and try again."
-      },
-      "retry": "Try again",
-      "empty_title": "Nothing here yet",
-      "empty_unread_title": "No unread notifications",
-      "empty_desc": "When something needs your attention, it lands here."
     },
     "moderation": {
       "reason_removed": "Removed reason",
@@ -5814,7 +5805,8 @@
         },
         "site": {
           "offline": "The public site is offline",
-          "offline_until": "The public site is offline until {opensAt, date, medium}, {opensAt, time, short}"
+          "offline_until": "The public site is offline until {opensAt, date, medium}, {opensAt, time, short}",
+          "web_url_missing": "VITNODE_WEB_URL is not set, so links, CORS and sign-in fall back to http://localhost:3000"
         }
       },
       "actions": {

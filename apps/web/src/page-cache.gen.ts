@@ -114,7 +114,6 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/modcp' },
   { path: '/news' },
   { path: '/newsroom' },
-  { path: '/notifications' },
   { path: '/payments-demo' },
   { path: '/register' },
   { path: '/search' },

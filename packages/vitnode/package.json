@@ -240,6 +240,7 @@
     "@ferrucc-io/emoji-picker": "^0.1.2",
     "@simplewebauthn/browser": "^14.0.0",
     "@tanstack/charts": "^1.5.0",
+    "@tanstack/react-virtual": "^3.14.13",
     "@tanstack/router-core": "^1.171.39",
     "@tiptap/extension-audio": "^3.35.0",
     "@tiptap/extension-collaboration": "^3.35.0",

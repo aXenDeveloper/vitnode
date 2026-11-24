@@ -123,7 +123,7 @@ const StatusHeader = ({ data }: { data: AdminSiteStatus }) => {
   return (
     <FrameHeader className="grid-cols-[auto_1fr] gap-y-0.5">
       <StatusIcon offline={offline} />
-      <FrameTitle className="flex min-w-0 flex-wrap items-center gap-2">
+      <FrameTitle className="col-start-2 flex min-w-0 flex-wrap items-center gap-2">
         <ValueSwap swapKey={String(offline)}>
           {offline ? t("status.offline") : t("status.online")}
         </ValueSwap>

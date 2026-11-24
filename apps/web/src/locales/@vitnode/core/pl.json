@@ -2742,7 +2742,6 @@
               "enable": "Włącz push w tej przeglądarce",
               "denied": "Zablokowane przez przeglądarkę. Zezwól tej stronie na powiadomienia w jej ustawieniach, aby włączyć push.",
               "unsupported": "Ta przeglądarka nie obsługuje powiadomień push.",
-              "soon": "Wysyłka push jest w drodze - wybory poniżej zapiszemy na czas, gdy ruszy.",
               "enabled_toast": "Push włączony",
               "enabled_toast_desc": "Ta przeglądarka może teraz otrzymywać Twoje powiadomienia.",
               "enable_short": "Włącz"
@@ -3900,7 +3899,6 @@
         "title": "Powiadomienia",
         "bell_label": "Powiadomienia",
         "bell_label_unread": "Powiadomienia, {count, plural, one {# nieprzeczytane} few {# nieprzeczytane} many {# nieprzeczytanych} other {# nieprzeczytanych}}",
-        "recent": "Ostatnie powiadomienia",
         "mark_all_read": "Oznacz wszystkie jako przeczytane",
         "all_read": "Wszystko przeczytane",
         "all_read_desc": "Wszystkie powiadomienia są oznaczone jako przeczytane.",
@@ -3915,11 +3913,29 @@
           "desc": "Sprawdź połączenie i spróbuj ponownie."
         },
         "retry": "Spróbuj ponownie",
-        "empty_title": "Jesteś na bieżąco",
-        "empty_desc": "Tutaj pojawi się nowa aktywność.",
-        "view_all": "Zobacz wszystkie powiadomienia",
         "settings": "Ustawienia powiadomień",
-        "action_failed": "Nie udało się. Powiadomienia zostały odświeżone."
+        "action_failed": "Nie udało się. Powiadomienia zostały odświeżone.",
+        "filters_label": "Filtruj powiadomienia",
+        "filter": {
+          "unread": "Nieprzeczytane",
+          "all": "Wszystkie",
+          "mentions": "Wzmianki"
+        },
+        "empty": {
+          "unread": {
+            "title": "Wszystko przeczytane",
+            "desc": "Nowe powiadomienia pojawią się tutaj, gdy tylko przyjdą."
+          },
+          "all": {
+            "title": "Brak powiadomień",
+            "desc": "Tutaj pojawią się odpowiedzi, wzmianki i reakcje na Twoje posty."
+          },
+          "mentions": {
+            "title": "Brak wzmianek",
+            "desc": "Gdy ktoś Cię @oznaczy, zobaczysz to tutaj."
+          }
+        },
+        "load_more_error": "Nie udało się wczytać starszych powiadomień."
       },
       "tab_has_errors": "Zawiera błędy",
       "calendar": {
@@ -4256,83 +4272,6 @@
         "posted_in": "<profile>{author}</profile> publikuje w <target>{context}</target>",
         "posted_in_self": "Opublikowano w <target>{context}</target>"
       }
-    },
-    "notifications": {
-      "title": "Powiadomienia",
-      "desc": "Wszystko, co wydarzyło się pod Twoją nieobecność. Otwarcie tej strony niczego nie oznacza jako przeczytanego.",
-      "filter_unread": "Nieprzeczytane",
-      "mark_all_read": "Oznacz wszystkie jako przeczytane",
-      "settings_button": "Ustawienia",
-      "summary": "<b>{total}</b> {total, plural, one {powiadomienie} few {powiadomienia} many {powiadomień} other {powiadomienia}} · <b>{unread}</b> nieprzeczytane",
-      "column_status": "Status",
-      "column_notification": "Powiadomienie",
-      "column_category": "Kategoria",
-      "column_received": "Otrzymano",
-      "column_actions": "Akcje",
-      "filter_status": "Status",
-      "filter_status_all": "Dowolny status",
-      "filter_category": "Kategoria",
-      "status_read": "Przeczytane",
-      "load_error": {
-        "title": "Nie udało się wczytać powiadomień",
-        "desc": "Coś poszło nie tak podczas pobierania. Sprawdź połączenie i spróbuj ponownie."
-      },
-      "retry": "Spróbuj ponownie",
-      "empty_title": "Na razie pusto",
-      "empty_unread_title": "Brak nieprzeczytanych powiadomień",
-      "empty_desc": "Gdy coś będzie wymagało Twojej uwagi, pojawi się tutaj.",
-      "unavailable": "To powiadomienie nie jest już dostępne.",
-      "categories": {
-        "account": "Konto",
-        "content": "Treści",
-        "moderation": "Moderacja",
-        "social": "Społeczność",
-        "system": "System"
-      },
-      "types": {
-        "admin_message": {
-          "label": "Wiadomości od administratorów",
-          "description": "Ogłoszenia, które administrator wysyła bezpośrednio do Ciebie."
-        },
-        "warning_issued": {
-          "label": "Ostrzeżenia od moderatorów",
-          "description": "Gdy moderator udzieli Ci ostrzeżenia. Zawsze włączone, żeby żadne Ci nie umknęło.",
-          "title": "Otrzymujesz ostrzeżenie ({points, plural, one {# punkt} few {# punkty} many {# punktów} other {# punktu}})",
-          "title_reason": "Otrzymujesz ostrzeżenie za: {reason} ({points, plural, one {# punkt} few {# punkty} many {# punktów} other {# punktu}})"
-        },
-        "warning_revoked": {
-          "label": "Cofnięte ostrzeżenia",
-          "description": "Gdy moderator cofnie otrzymane przez Ciebie ostrzeżenie.",
-          "title": "Ostrzeżenie zostało cofnięte",
-          "body": "{points, plural, one {Jego # punkt nie jest już doliczany} few {Jego # punkty nie są już doliczane} many {Jego # punktów nie jest już doliczanych} other {Jego # punktu nie jest już doliczane}} do Twojego konta."
-        },
-        "account_suspended": {
-          "label": "Zawieszenia konta",
-          "description": "Gdy Twoje konto zostanie zawieszone po osiągnięciu limitu ostrzeżeń.",
-          "title": "Twoje konto jest zawieszone",
-          "body_until": "Z konta możesz ponownie korzystać po {endsAt} (UTC).",
-          "body_indefinite": "Twoje konto pozostaje zawieszone, dopóki moderator nie zdejmie zawieszenia."
-        },
-        "suspension_revoked": {
-          "label": "Zdjęte zawieszenia",
-          "description": "Gdy moderator zdejmie zawieszenie Twojego konta.",
-          "title": "Zawieszenie zostało zdjęte",
-          "body": "Moderator zdjął zawieszenie Twojego konta. Sprawdź status konta, aby zobaczyć, czy obowiązują jeszcze inne ograniczenia."
-        }
-      },
-      "email": {
-        "action": "Zobacz",
-        "preferences": "Zarządzaj ustawieniami powiadomień",
-        "digest_subject_daily": "Twoje dzienne podsumowanie: {count, plural, one {# powiadomienie} few {# powiadomienia} many {# powiadomień} other {# powiadomienia}}",
-        "digest_subject_weekly": "Twoje tygodniowe podsumowanie: {count, plural, one {# powiadomienie} few {# powiadomienia} many {# powiadomień} other {# powiadomienia}}",
-        "digest_heading_daily": "Oto co wydarzyło się dzisiaj",
-        "digest_heading_weekly": "Oto co wydarzyło się w tym tygodniu",
-        "digest_more": "I {count, plural, one {# kolejne powiadomienie czeka} few {# kolejne powiadomienia czekają} many {# kolejnych powiadomień czeka} other {# kolejnego powiadomienia czeka}} na Ciebie.",
-        "test_subject": "Testowy e-mail z powiadomieniem",
-        "test_title": "E-maile z powiadomieniami działają",
-        "test_body": "Jeśli to czytasz, e-maile z powiadomieniami z tej strony docierają do Twojej skrzynki. Nic nie musisz robić."
-      },
-      "someone": "Ktoś"
     },
     "comments": {
       "title": "{count, plural, =0 {Komentarze} one {# komentarz} few {# komentarze} many {# komentarzy} other {# komentarza}}",
