@@ -1,26 +1,29 @@
-import type { ContentTarget } from "@vitnode/core/content";
-import type {
-  ReactionsCatalog,
-  ReactionSummary,
-} from "@vitnode/core/tanstack/reactions";
+import type { ContentTarget } from "@vitnode/api/content/target";
 
 import { useQuery } from "@tanstack/react-query";
-import { FEEDBACK_TONE_TEXT } from "@vitnode/core/components/ui/feedback-tone";
-import { ShortNumber } from "@vitnode/core/components/ui/short-number";
-import { Skeleton } from "@vitnode/core/components/ui/skeleton";
-import { useSessionQuery } from "@vitnode/core/tanstack/auth";
+import { cn } from "cn";
+import React from "react";
+import { useTranslations } from "use-intl";
+
+import { FEEDBACK_TONE_TEXT } from "@/components/ui/feedback-tone";
+import { ShortNumber } from "@/components/ui/short-number";
+import { Skeleton } from "@/components/ui/skeleton";
+
+import type { ReactionsCatalog, ReactionSummary } from "./query";
+
+import { useSessionQuery } from "../auth/session-query";
+import { RouteMessages } from "../i18n/route-messages";
 import {
   reactionsCatalogQueryOptions,
   reactionSummaryQueryOptions,
-} from "@vitnode/core/tanstack/reactions";
-import { cn } from "cn";
-import { useTranslations } from "use-intl";
+} from "./query";
 
 /**
- * Points from the reactions on screen: each reaction's count times its points
- * from the catalog - the same sum the server ranks by.
+ * The points of one item's reactions: each reaction's count times its points
+ * from the catalog (AdminCP → Reactions). Disabled reactions are not in the
+ * summary, so they add nothing. Universal.
  */
-export const pointsFromSummary = (
+export const reactionPoints = (
   summary: Pick<ReactionSummary, "counts">,
   catalog: Pick<ReactionsCatalog, "items">,
 ): number => {
@@ -32,14 +35,14 @@ export const pointsFromSummary = (
   );
 };
 
-export const PointsBadge = ({
+const PointsBadge = ({
   className,
   value,
 }: {
   className?: string;
   value: number;
 }) => {
-  const t = useTranslations("@vitnode/forum.forums.points");
+  const t = useTranslations("core.reactions.points");
 
   return (
     <span
@@ -68,13 +71,7 @@ export const PointsBadge = ({
   );
 };
 
-/**
- * The points of one topic or comment, live. Render it next to the item's
- * `ReactionBar`: it reads the summary and catalog the bar loads (it never
- * fetches them itself) and follows the bar's live counts. Until they load it
- * shows `initial`, the server's number, or a placeholder of the same size.
- */
-export const ReactionPoints = ({
+const ReactionPointsInner = ({
   className,
   initial,
   target,
@@ -101,14 +98,42 @@ export const ReactionPoints = ({
     return (
       <PointsBadge
         className={className}
-        value={pointsFromSummary(summary.data, catalog.data)}
+        value={reactionPoints(summary.data, catalog.data)}
       />
     );
   }
-
   if (initial !== undefined) {
     return <PointsBadge className={className} value={initial} />;
   }
 
   return <Skeleton className={cn("h-7 w-20 rounded-full", className)} />;
 };
+
+/**
+ * One item's points from reactions as a tinted pill, such as "+12 points":
+ * green above zero, red below, gray at zero, the sign always written. Render
+ * it next to the item's `ReactionBar`: it reads the summary and catalog the
+ * bar loads (it never fetches them itself) and follows the bar's live counts.
+ * Until they load it shows `initial` - a number the server ranked by - or a
+ * placeholder of the same size. Loads its own messages.
+ *
+ * @example
+ * ```tsx
+ * import { ReactionBar, ReactionPoints } from "@vitnode/core/tanstack/reactions";
+ *
+ * <ReactionPoints target={target} />
+ * <ReactionBar target={target} />
+ * ```
+ */
+export const ReactionPoints = (props: {
+  className?: string;
+  /** The server's points, shown until the bar's live data is in. */
+  initial?: number;
+  target: ContentTarget;
+}) => (
+  <React.Suspense fallback={null}>
+    <RouteMessages namespaces={["core.reactions"]}>
+      <ReactionPointsInner {...props} />
+    </RouteMessages>
+  </React.Suspense>
+);

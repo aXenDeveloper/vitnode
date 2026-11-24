@@ -15,10 +15,11 @@ Owner: `@vitnode/forum` (no core changes).
   reaction summary and catalog `ReactionBar` already loads, read-only
   (`enabled: false`): fetching them itself made the bar hydrate with data the
   server never rendered. Feed cards pass the ranking's number as `initial`.
-- **Comment order**: `GET /forum/topics/{id}/comments/order?sort=new|points`
-  returns root ids with an offset cursor; the browser reads them through
-  `/content/comments/thread/branches`, ten per request. Hidden roots are left
-  out of the sorted views, also for moderators.
+- **Comment order** first shipped as a forum route
+  (`GET /forum/topics/{id}/comments/order`). It was removed when forum comments
+  moved to the shared Content Engine section (`ContentComments`, the blog's
+  look): that section sorts the loaded conversations by Oldest, Newest or
+  Most points (reaction points) in the browser, like the blog always did.
 - Decisions taken: Hot keeps comments in its engagement; comments default to
   oldest first.
 

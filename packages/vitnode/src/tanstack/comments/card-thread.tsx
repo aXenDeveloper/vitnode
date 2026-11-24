@@ -1,31 +1,7 @@
-import type { RichTextDocument } from "@vitnode/core/content/rich-text";
+import type { ContentId } from "@vitnode/api/content/ids";
+import type { RichTextDocument } from "@vitnode/api/content/rich-text";
 
-import { Avatar } from "@vitnode/core/components/avatar";
-import { DateFormat } from "@vitnode/core/components/date-format";
-import { RichTextContent } from "@vitnode/core/components/rich-text";
-import { SharePopover } from "@vitnode/core/components/share-popover";
-import { Badge } from "@vitnode/core/components/ui/badge";
-import { Button } from "@vitnode/core/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@vitnode/core/components/ui/collapsible";
-import { SlidingNumber } from "@vitnode/core/components/ui/sliding-number";
-import {
-  TooltipGroup,
-  TooltipGroupTrigger,
-} from "@vitnode/core/components/ui/tooltip";
-import { UserFormat } from "@vitnode/core/components/user-format";
-import { UserPreview } from "@vitnode/core/components/user-preview";
-import {
-  ContentCommentActions,
-  contentCommentAuthorName,
-  ContentCommentComposer,
-  type ContentCommentTreeNode,
-  preloadContentCommentComposer,
-  useContentCommentItem,
-} from "@vitnode/core/tanstack/comments";
-import { ReactionBar } from "@vitnode/core/tanstack/reactions";
+import { zodRichTextDocument } from "@vitnode/api/content/rich-text";
 import { cn } from "cn";
 import {
   ChevronsDownUpIcon,
@@ -38,31 +14,94 @@ import {
 import React from "react";
 import { useTranslations } from "use-intl";
 
-import type { PostComment } from "./post-comments-data";
+import { Avatar } from "@/components/avatar";
+import { DateFormat } from "@/components/date-format";
+import { RichTextContent } from "@/components/rich-text/rich-text-content";
+import { SharePopover } from "@/components/share-popover";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent } from "@/components/ui/collapsible";
+import { SlidingNumber } from "@/components/ui/sliding-number";
+import { TooltipGroup, TooltipGroupTrigger } from "@/components/ui/tooltip";
+import { UserFormat } from "@/components/user-format";
+import { UserPreview } from "@/components/user-preview";
+import { ReactionBar } from "@/tanstack/reactions/reaction-bar";
+import { ReactionPoints } from "@/tanstack/reactions/reaction-points";
 
-import { CommentEdits } from "./post-comment-edits";
-import { commentAnchorId } from "./post-comments-data";
+import type { ContentCommentNode, ContentCommentTreeNode } from "./thread";
 
-export type CommentTreeNode = ContentCommentTreeNode<PostComment, number>;
+import { contentCommentAuthor, contentCommentAuthorName } from "./author";
+import { ContentCommentEditHistory } from "./edit-history";
+import {
+  ContentCommentActions,
+  ContentCommentComposer,
+  preloadContentCommentComposer,
+  useContentCommentItem,
+} from "./item";
+import { useContentCommentsContext } from "./root";
+import { CONTENT_COMMENT_ANCHOR_PREFIX } from "./thread";
 
-export interface ThreadContextValue {
+/** How the default comments section links, labels and renders comments. */
+export interface ContentCommentsDisplay<TRecord> {
+  /**
+   * What follows `comment-` in a comment's element id, for links such as
+   * `#comment-42`. Defaults to the comment's id; return its slug to match
+   * permalinks built from slugs.
+   */
+  anchorKey?: (record: TRecord) => string;
+  /**
+   * Users marked with an **Author** badge on their comments - the people who
+   * wrote the commented record, such as an article's authors or a topic's
+   * starter.
+   */
+  authorIds?: readonly number[];
+  /**
+   * The link on a comment's date, and what **Share** shares. Gets the element
+   * id, e.g. `comment-42`. Defaults to `#comment-42` on the current page.
+   */
+  permalink?: (anchorId: string) => string;
+  /**
+   * A points pill (`ReactionPoints`) next to each comment's reactions: the sum
+   * of its reactions' points from AdminCP → Reactions. Off by default.
+   */
+  points?: boolean;
+  /** Replaces parts of a comment. Each gets the comment's public record. */
+  render?: {
+    /** Extra buttons in the row under the comment, next to **Reply**. */
+    actions?: (record: TRecord) => React.ReactNode;
+    /** The author's name; defaults to the `author` field's person. */
+    author?: (record: TRecord) => React.ReactNode;
+    /** The text; defaults to the rich-text `field`. */
+    body?: (record: TRecord) => React.ReactNode;
+    /** Extra details after the date, such as a badge. */
+    meta?: (record: TRecord) => React.ReactNode;
+  };
+  /** The title **Share** sends along, usually the commented record's. */
+  shareTitle?: string;
+}
+
+export type AnyCommentsDisplay = ContentCommentsDisplay<unknown>;
+
+export type CommentTreeNode = ContentCommentTreeNode<unknown>;
+
+export interface CardThreadContextValue {
   animateEntries: boolean;
-  articleAuthorIds: ReadonlySet<number>;
-  articleHref: string;
-  articleTitle: string;
+  authorIds: ReadonlySet<number>;
+  display: AnyCommentsDisplay;
   highlightedId: null | string;
-  postedReplyId: null | number;
-  setPostedReplyId: (id: null | number) => void;
+  postedReplyId: ContentId | null;
+  setPostedReplyId: (id: ContentId | null) => void;
   signedIn: boolean;
 }
 
-export const ThreadContext = React.createContext<null | ThreadContextValue>(
-  null,
-);
+export const CardThreadContext =
+  React.createContext<CardThreadContextValue | null>(null);
 
-const useThread = () => {
-  const thread = React.use(ThreadContext);
-  if (!thread) throw new Error("useThread must be used inside ThreadContext");
+const useCardThread = () => {
+  const thread = React.use(CardThreadContext);
+  if (!thread) {
+    throw new Error("Comment cards render inside CardThreadContext.");
+  }
 
   return thread;
 };
@@ -73,12 +112,41 @@ const ENTER_CLASS =
 const COLLAPSIBLE_PANEL_CLASS =
   "ease-fluid h-(--collapsible-panel-height) overflow-hidden transition-[height,opacity] duration-200 data-ending-style:h-0 data-ending-style:opacity-0 data-starting-style:h-0 data-starting-style:opacity-0 motion-reduce:transition-[opacity]";
 
-export const nodeTime = (node: CommentTreeNode) =>
-  node.record
-    ? new Date(node.record.publishedAt ?? node.record.createdAt).getTime()
-    : 0;
+const recordField = (record: unknown, name: string): unknown =>
+  typeof record === "object" && record !== null && name in record
+    ? (record as Record<string, unknown>)[name]
+    : undefined;
 
-export const flattenReplies = (
+const readDate = (record: unknown, name: string): null | string => {
+  const value = recordField(record, name);
+
+  return typeof value === "string" ? value : null;
+};
+
+/** When a comment was published, or created before that. */
+export const commentDate = (record: unknown): null | string =>
+  readDate(record, "publishedAt") ?? readDate(record, "createdAt");
+
+export const nodeTime = (node: ContentCommentNode<unknown>): number => {
+  const date = node.record ? commentDate(node.record) : null;
+
+  return date ? new Date(date).getTime() : 0;
+};
+
+/** The element id of a comment, e.g. `comment-42`. */
+export const commentAnchorIdOf = (
+  node: ContentCommentNode<unknown>,
+  display: AnyCommentsDisplay,
+): null | string =>
+  node.record
+    ? `${CONTENT_COMMENT_ANCHOR_PREFIX}${display.anchorKey ? display.anchorKey(node.record) : String(node.id)}`
+    : null;
+
+const permalinkOf = (display: AnyCommentsDisplay, anchorId: string) =>
+  display.permalink ? display.permalink(anchorId) : `#${anchorId}`;
+
+/** Every reply below `node`, at any depth, each with the comment it answers. */
+const flattenReplies = (
   node: CommentTreeNode,
 ): { node: CommentTreeNode; parent: CommentTreeNode }[] =>
   node.children.flatMap(child => [
@@ -87,24 +155,28 @@ export const flattenReplies = (
   ]);
 
 const useEntry = (node: CommentTreeNode) => {
-  const thread = useThread();
-  const tc = useTranslations("core.comments");
+  const thread = useCardThread();
+  const { comments } = useContentCommentsContext();
+  const t = useTranslations("core.comments");
   const item = useContentCommentItem(node);
-  const comment = node.record;
-  const anchorId = comment ? commentAnchorId(comment.slug) : null;
+  const record = node.record;
+  const anchorId = commentAnchorIdOf(node, thread.display);
+  const author = record ? contentCommentAuthor(record) : null;
+  const body = record
+    ? zodRichTextDocument.safeParse(recordField(record, comments.field))
+    : null;
 
   return {
     anchorId,
+    author,
     authorId: anchorId ? `${anchorId}-author` : undefined,
-    authorName: comment
-      ? (contentCommentAuthorName(comment.author) ?? tc("deleted_user"))
-      : tc("deleted_user"),
-    comment,
-    isArticleAuthor:
-      !!comment?.author && thread.articleAuthorIds.has(comment.author.id),
+    authorName: contentCommentAuthorName(author) ?? t("deleted_user"),
+    body: body?.success ? body.data : null,
+    isRecordAuthor: !!author && thread.authorIds.has(author.id),
     isHighlighted: anchorId !== null && anchorId === thread.highlightedId,
     item,
     node,
+    record,
     thread,
   };
 };
@@ -112,8 +184,8 @@ const useEntry = (node: CommentTreeNode) => {
 type Entry = ReturnType<typeof useEntry>;
 
 const usePostedReplyRef = (entry: Entry) => {
-  const { comment, thread } = entry;
-  const posted = comment !== null && comment.id === thread.postedReplyId;
+  const { node, thread } = entry;
+  const posted = node.record !== null && node.id === thread.postedReplyId;
 
   return React.useCallback(
     (element: HTMLLIElement | null) => {
@@ -132,20 +204,20 @@ const usePostedReplyRef = (entry: Entry) => {
   );
 };
 
-const anchorProps = (node: CommentTreeNode, className?: string) => ({
+const anchorProps = (entry: Entry, className?: string) => ({
   className: cn("scroll-mt-24 outline-none", className),
-  id: node.record ? commentAnchorId(node.record.slug) : undefined,
-  tabIndex: node.record ? -1 : undefined,
+  id: entry.anchorId ?? undefined,
+  tabIndex: entry.anchorId ? -1 : undefined,
 });
 
-const CommentAvatar = ({ node }: { node: CommentTreeNode }) =>
-  node.record?.author ? (
+const CommentAvatar = ({ entry }: { entry: Entry }) =>
+  entry.author ? (
     <UserPreview
       className="shrink-0 rounded-full"
       decorative
-      nameCode={node.record.author.nameCode}
+      nameCode={entry.author.nameCode}
     >
-      <Avatar alt="" className="size-8" size={32} user={node.record.author} />
+      <Avatar alt="" className="size-8" size={32} user={entry.author} />
     </UserPreview>
   ) : (
     <span
@@ -190,7 +262,7 @@ const quoteDocument = (entry: Entry): RichTextDocument => {
           content: [{ text: line, type: "text" }],
           type: "paragraph",
         }))
-      : (entry.comment?.body.content ?? []);
+      : (entry.body?.content ?? []);
 
   return {
     content: [{ content: quoted, type: "blockquote" }, { type: "paragraph" }],
@@ -220,8 +292,8 @@ const QuoteButton = ({
   entry: Entry;
   onQuote: () => void;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments");
-  if (!entry.item.canReply || entry.node.hidden) return null;
+  const t = useTranslations("core.comments");
+  if (!entry.item.canReply || entry.node.hidden || !entry.body) return null;
 
   return (
     <TooltipGroupTrigger
@@ -248,44 +320,47 @@ const QuoteButton = ({
 };
 
 const CommentHeader = ({ entry }: { entry: Entry }) => {
-  const t = useTranslations("@vitnode/blog.comments");
-  const tc = useTranslations("core.comments");
-  const { comment } = entry;
-  if (!comment) return null;
-  const date = comment.publishedAt ?? comment.createdAt;
+  const t = useTranslations("core.comments");
+  const { comments } = useContentCommentsContext();
+  const { record } = entry;
+  if (!record) return null;
+  const date = commentDate(record);
+  const { render } = entry.thread.display;
 
   return (
     <div className="flex min-h-8 min-w-0 items-center gap-2">
       <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 text-sm">
-        {comment.author ? (
-          <UserFormat
-            className="text-foreground min-w-0 truncate font-semibold"
-            format
-            id={entry.authorId}
-            link
-            user={comment.author}
-          />
-        ) : (
-          <span
-            className="text-muted-foreground min-w-0 truncate font-medium"
-            id={entry.authorId}
+        <span className="min-w-0 truncate" id={entry.authorId}>
+          {render?.author ? (
+            render.author(record)
+          ) : entry.author ? (
+            <UserFormat
+              className="text-foreground min-w-0 truncate font-semibold"
+              format
+              link
+              user={entry.author}
+            />
+          ) : (
+            <span className="text-muted-foreground font-medium">
+              {t("deleted_user")}
+            </span>
+          )}
+        </span>
+        {date && entry.anchorId ? (
+          <a
+            className="text-muted-foreground hover:text-foreground rounded-sm tabular-nums underline-offset-4 hover:underline"
+            href={permalinkOf(entry.thread.display, entry.anchorId)}
           >
-            {tc("deleted_user")}
-          </span>
-        )}
-        <a
-          className="text-muted-foreground hover:text-foreground decoration-muted-foreground/50 rounded-sm tabular-nums"
-          href={`${entry.thread.articleHref}#${entry.anchorId}`}
-        >
-          <time dateTime={new Date(date).toISOString()}>
-            <DateFormat date={date} />
-          </time>
-          <span className="sr-only"> {tc("permalink")}</span>
-        </a>
+            <time dateTime={new Date(date).toISOString()}>
+              <DateFormat date={date} />
+            </time>
+            <span className="sr-only"> {t("permalink")}</span>
+          </a>
+        ) : null}
         {entry.node.editCount ? (
-          entry.thread.signedIn ? (
-            <CommentEdits
-              commentId={comment.id}
+          entry.thread.signedIn && comments.history ? (
+            <ContentCommentEditHistory
+              commentId={entry.node.id}
               editCount={entry.node.editCount}
             />
           ) : (
@@ -297,17 +372,18 @@ const CommentHeader = ({ entry }: { entry: Entry }) => {
         {entry.node.hidden ? (
           <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium">
             · <EyeOffIcon aria-hidden="true" className="size-3.5" />
-            {tc("visibility.hidden_label")}
+            {t("visibility.hidden_label")}
           </span>
         ) : null}
+        {render?.meta?.(record)}
       </div>
       <div className="-me-2 flex shrink-0 items-center gap-1">
-        {entry.isArticleAuthor ? (
+        {entry.isRecordAuthor ? (
           <Badge
             className="text-muted-foreground font-medium"
             variant="outline"
           >
-            {t("article_author")}
+            {t("author_badge")}
           </Badge>
         ) : null}
         <ContentCommentActions item={entry.item} node={entry.node} />
@@ -317,25 +393,29 @@ const CommentHeader = ({ entry }: { entry: Entry }) => {
 };
 
 const CommentBody = ({ entry }: { entry: Entry }) => {
-  const tc = useTranslations("core.comments");
-  if (!entry.comment) return null;
+  const t = useTranslations("core.comments");
+  const { record } = entry;
+  if (!record) return null;
+  const custom = entry.thread.display.render?.body;
 
   return (
     <>
       <div data-comment-body={entry.anchorId ?? undefined}>
-        <RichTextContent
-          className={cn(
-            "text-base leading-relaxed text-pretty",
-            entry.node.hidden ? "text-muted-foreground" : "text-foreground",
-          )}
-          content={entry.comment.body}
-        />
+        {custom ? (
+          custom(record)
+        ) : entry.body ? (
+          <RichTextContent
+            className={cn(
+              "text-base leading-relaxed text-pretty",
+              entry.node.hidden ? "text-muted-foreground" : "text-foreground",
+            )}
+            content={entry.body}
+          />
+        ) : null}
       </div>
       {entry.node.hidden && entry.node.hiddenReason ? (
         <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-          {tc("visibility.hidden_reason", {
-            reason: entry.node.hiddenReason,
-          })}
+          {t("visibility.hidden_reason", { reason: entry.node.hiddenReason })}
         </p>
       ) : null}
     </>
@@ -343,14 +423,14 @@ const CommentBody = ({ entry }: { entry: Entry }) => {
 };
 
 const ShareButton = ({ entry }: { entry: Entry }) => {
-  const t = useTranslations("@vitnode/blog.comments");
-  if (entry.node.hidden || !entry.comment) return null;
+  const t = useTranslations("core.comments");
+  if (entry.node.hidden || !entry.record || !entry.anchorId) return null;
 
   return (
     <SharePopover
       description={t("share.description", { name: entry.authorName })}
-      title={entry.thread.articleTitle}
-      url={`${entry.thread.articleHref}#${entry.anchorId}`}
+      title={entry.thread.display.shareTitle ?? ""}
+      url={permalinkOf(entry.thread.display, entry.anchorId)}
     >
       <TooltipGroupTrigger
         content={t("share.label")}
@@ -370,10 +450,24 @@ const ShareButton = ({ entry }: { entry: Entry }) => {
   );
 };
 
-const Reactions = ({ entry }: { entry: Entry }) =>
-  entry.item.reactionTarget && !entry.node.hidden ? (
-    <ReactionBar target={entry.item.reactionTarget} />
-  ) : null;
+const Reactions = ({ entry }: { entry: Entry }) => {
+  const target = entry.item.reactionTarget;
+  if (!target || entry.node.hidden) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {entry.thread.display.points ? <ReactionPoints target={target} /> : null}
+      <ReactionBar target={target} />
+    </div>
+  );
+};
+
+const ExtraActions = ({ entry }: { entry: Entry }) => {
+  const actions = entry.thread.display.render?.actions;
+  if (!entry.record || !actions) return null;
+
+  return <>{actions(entry.record)}</>;
+};
 
 const ReplyComposer = ({
   className,
@@ -386,8 +480,8 @@ const ReplyComposer = ({
   onClose: () => void;
   quote: null | Quote;
 }) => {
-  const tc = useTranslations("core.comments");
-  if (!entry.comment || !entry.item.isReplying) return null;
+  const t = useTranslations("core.comments");
+  if (!entry.record || !entry.item.isReplying) return null;
   const close = () => {
     entry.item.setIsReplying(false);
     onClose();
@@ -399,37 +493,35 @@ const ReplyComposer = ({
         autoFocus
         initialBody={quote?.body}
         key={quote?.key ?? "reply"}
-        label={tc("form.answer_label", { name: entry.authorName })}
+        label={t("form.answer_label", { name: entry.authorName })}
         mode="create"
         onCancel={close}
         onDone={(_outcome, id) => {
           close();
-          if (typeof id === "number") entry.thread.setPostedReplyId(id);
+          if (id !== null) entry.thread.setPostedReplyId(id);
         }}
-        parentId={entry.comment.id}
-        unavailable={
-          entry.item.isRemoved ? tc("live.reply_removed") : undefined
-        }
+        parentId={entry.node.id}
+        unavailable={entry.item.isRemoved ? t("live.reply_removed") : undefined}
       />
     </div>
   );
 };
 
 const EditComposer = ({ entry }: { entry: Entry }) => {
-  const tc = useTranslations("core.comments");
-  if (!entry.comment || !entry.item.editing) return null;
+  const t = useTranslations("core.comments");
+  if (!entry.record || !entry.item.editing) return null;
 
   return (
     <ContentCommentComposer
       autoFocus
       editable={entry.item.editing}
       hideLabel
-      id={entry.comment.id}
-      label={tc("form.edit_label")}
+      id={entry.node.id}
+      label={t("form.edit_label")}
       mode="edit"
       onCancel={entry.item.stopEditing}
       onDone={entry.item.stopEditing}
-      unavailable={entry.item.isRemoved ? tc("live.edit_removed") : undefined}
+      unavailable={entry.item.isRemoved ? t("live.edit_removed") : undefined}
     />
   );
 };
@@ -443,7 +535,7 @@ const Notice = ({
   expanded?: boolean;
   onToggle?: () => void;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments");
+  const t = useTranslations("core.comments");
 
   return (
     <div
@@ -491,7 +583,7 @@ const HiddenGate = ({
   children: React.ReactNode;
   entry: Entry;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments");
+  const t = useTranslations("core.comments");
   const [shown, setShown] = React.useState(false);
   const [wasHighlighted, setWasHighlighted] = React.useState(false);
   if (entry.isHighlighted !== wasHighlighted) {
@@ -530,18 +622,20 @@ const ReplyRow = ({
   node: CommentTreeNode;
   replyingTo: CommentTreeNode | null;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments");
-  const tc = useTranslations("core.comments");
+  const t = useTranslations("core.comments");
   const entry = useEntry(node);
   const { clearQuote, quote, startQuote } = useQuoteReply(entry);
   const postedReplyRef = usePostedReplyRef(entry);
+  const replyingToAuthor = replyingTo?.record
+    ? contentCommentAuthor(replyingTo.record)
+    : null;
 
   return (
     <li
-      {...anchorProps(node, cn(entry.thread.animateEntries && ENTER_CLASS))}
+      {...anchorProps(entry, cn(entry.thread.animateEntries && ENTER_CLASS))}
       ref={postedReplyRef}
     >
-      {entry.comment ? (
+      {entry.record ? (
         <HiddenGate entry={entry}>
           <div
             className={cn(
@@ -559,7 +653,7 @@ const ReplyRow = ({
                     isFirst ? "bg-transparent" : "bg-border",
                   )}
                 />
-                <CommentAvatar node={node} />
+                <CommentAvatar entry={entry} />
                 <span
                   aria-hidden="true"
                   className={cn(
@@ -579,16 +673,16 @@ const ReplyRow = ({
                         <p className="text-muted-foreground flex min-w-0 flex-wrap items-center gap-x-1 text-xs">
                           {t.rich("in_reply_to", {
                             name: () =>
-                              replyingTo.record?.author ? (
+                              replyingToAuthor ? (
                                 <UserFormat
                                   className="min-w-0 truncate font-medium"
                                   format
                                   link
-                                  user={replyingTo.record.author}
+                                  user={replyingToAuthor}
                                 />
                               ) : (
                                 <span className="font-medium">
-                                  {tc("deleted_user")}
+                                  {t("deleted_user")}
                                 </span>
                               ),
                           })}
@@ -599,15 +693,16 @@ const ReplyRow = ({
                     <div className="-ms-2 flex min-h-8 items-center justify-between gap-2">
                       <Reactions entry={entry} />
                       <div className="ms-auto -me-2 flex items-center">
+                        <ExtraActions entry={entry} />
                         <TooltipGroup>
                           <QuoteButton entry={entry} onQuote={startQuote} />
                           {entry.item.canReply ? (
                             <TooltipGroupTrigger
-                              content={tc("reply")}
+                              content={t("reply")}
                               render={
                                 <Button
                                   aria-expanded={entry.item.isReplying}
-                                  aria-label={tc("reply")}
+                                  aria-label={t("reply")}
                                   className="text-muted-foreground"
                                   onClick={() => {
                                     entry.item.setIsReplying(
@@ -653,8 +748,8 @@ const ThreadReplyField = ({
   onClose: () => void;
   quote: null | Quote;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments");
-  if (!entry.comment || !entry.item.canReply) return null;
+  const t = useTranslations("core.comments");
+  if (!entry.record || !entry.item.canReply) return null;
   if (entry.item.isReplying) {
     return (
       <ReplyComposer
@@ -683,23 +778,31 @@ const ThreadReplyField = ({
   );
 };
 
-export const CommentThread = ({ node }: { node: CommentTreeNode }) => {
-  const t = useTranslations("@vitnode/blog.comments");
+/**
+ * One conversation as a card: the top-level comment with its avatar, author,
+ * date and actions on a tinted header, its text, reactions, **Quote** and
+ * **Share**, then every reply below it in the order written - each naming
+ * whom it answers - and a reply field at the bottom.
+ */
+export const ContentCommentCard = ({ node }: { node: CommentTreeNode }) => {
+  const t = useTranslations("core.comments");
   const entry = useEntry(node);
   const { clearQuote, quote, startQuote } = useQuoteReply(entry);
   const replies = React.useMemo(
     () =>
       flattenReplies(node)
         .filter(reply => reply.node.record !== null)
-        .sort((a, b) => nodeTime(a.node) - nodeTime(b.node)),
+        .toSorted((a, b) => nodeTime(a.node) - nodeTime(b.node)),
     [node],
   );
   const replyCount = replies.length;
 
   return (
     <li
-      {...anchorProps(node, cn(entry.thread.animateEntries && ENTER_CLASS))}
-      style={{ viewTransitionName: `blog-comment-thread-${node.id}` }}
+      {...anchorProps(entry, cn(entry.thread.animateEntries && ENTER_CLASS))}
+      style={{
+        viewTransitionName: `content-comment-thread-${String(node.id)}`,
+      }}
     >
       <div
         className={cn(
@@ -707,7 +810,7 @@ export const CommentThread = ({ node }: { node: CommentTreeNode }) => {
           entry.isHighlighted && "ring-primary/50 ring-2",
         )}
       >
-        {entry.comment ? (
+        {entry.record ? (
           <HiddenGate entry={entry}>
             {entry.item.editing ? (
               <div className="p-4">
@@ -717,7 +820,7 @@ export const CommentThread = ({ node }: { node: CommentTreeNode }) => {
               <>
                 <div className="bg-muted/40 border-b px-4 py-2">
                   <div className="flex items-center gap-3">
-                    <CommentAvatar node={node} />
+                    <CommentAvatar entry={entry} />
                     <div className="min-w-0 flex-1">
                       <CommentHeader entry={entry} />
                     </div>
@@ -737,6 +840,7 @@ export const CommentThread = ({ node }: { node: CommentTreeNode }) => {
                         </span>
                       ) : null}
                       <div className="flex items-center">
+                        <ExtraActions entry={entry} />
                         <TooltipGroup>
                           <QuoteButton entry={entry} onQuote={startQuote} />
                           <ShareButton entry={entry} />
@@ -748,12 +852,14 @@ export const CommentThread = ({ node }: { node: CommentTreeNode }) => {
               </>
             )}
           </HiddenGate>
-        ) : null}
-        {replies.length > 0 || entry.comment ? (
+        ) : (
+          <RemovedHeader node={node} />
+        )}
+        {replies.length > 0 || entry.record ? (
           <div
             className={cn(
               "bg-muted/40 dark:bg-background",
-              entry.comment && "border-t",
+              (entry.record !== null || replies.length > 0) && "border-t",
             )}
           >
             {replies.length > 0 ? (
@@ -762,7 +868,7 @@ export const CommentThread = ({ node }: { node: CommentTreeNode }) => {
                   <ReplyRow
                     isFirst={index === 0}
                     isLast={index === replies.length - 1}
-                    key={reply.node.id}
+                    key={String(reply.node.id)}
                     node={reply.node}
                     replyingTo={reply.parent === node ? null : reply.parent}
                   />
@@ -780,5 +886,24 @@ export const CommentThread = ({ node }: { node: CommentTreeNode }) => {
         ) : null}
       </div>
     </li>
+  );
+};
+
+/**
+ * The header of a conversation whose first comment was deleted or hidden from
+ * this reader while it still had replies: no text, no author.
+ */
+const RemovedHeader = ({ node }: { node: CommentTreeNode }) => {
+  const t = useTranslations("core.comments");
+  const { deleted } = node;
+
+  return (
+    <Notice>
+      {deleted
+        ? deleted.byAuthor
+          ? t("placeholder.by_author")
+          : t("placeholder.by_moderator")
+        : t("removed")}
+    </Notice>
   );
 };

@@ -1,8 +1,11 @@
 import type { ContentId } from "@vitnode/api/content/ids";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { zodRichTextDocument } from "@vitnode/api/content/rich-text";
 import { cn } from "cn";
 import {
+  ArrowDownWideNarrowIcon,
+  ArrowUpNarrowWideIcon,
   ChevronDownIcon,
   EyeOffIcon,
   MessageSquareIcon,
@@ -10,8 +13,10 @@ import {
   PencilIcon,
   ReplyIcon,
   RotateCwIcon,
+  TrendingUpIcon,
 } from "lucide-react";
 import React from "react";
+import { flushSync } from "react-dom";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
@@ -28,16 +33,34 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { UserFormat } from "@/components/user-format";
 import { UserPreview } from "@/components/user-preview";
 import { useRevealHashTarget } from "@/hooks/use-reveal-hash-target";
+import {
+  reactionsCatalogQueryOptions,
+  reactionSummaryQueryOptions,
+} from "@/tanstack/reactions/query";
 import { ReactionBar } from "@/tanstack/reactions/reaction-bar";
+import { reactionPoints } from "@/tanstack/reactions/reaction-points";
 
-import type { ContentCommentNode, ContentCommentTreeNode } from "./thread";
+import type {
+  AnyCommentsDisplay,
+  CardThreadContextValue,
+  CommentTreeNode,
+  ContentCommentsDisplay,
+} from "./card-thread";
+import type { ContentCommentNode } from "./thread";
 import type { ContentCommentsController } from "./use-content-comments";
 
 import { ContentAccessRequired } from "../content/access-required";
 import { contentCommentAuthor, contentCommentAuthorName } from "./author";
+import {
+  CardThreadContext,
+  commentAnchorIdOf,
+  ContentCommentCard,
+  nodeTime,
+} from "./card-thread";
 import {
   ContentCommentActions,
   ContentCommentComposer,
@@ -51,33 +74,9 @@ const EDITED_AFTER_MS = 60_000;
 
 export { CONTENT_COMMENT_ANCHOR_PREFIX };
 
-/** How the default comments section links, labels and renders comments. */
-export interface ContentCommentsDisplay<TRecord> {
-  /**
-   * What follows `comment-` in a comment's element id, for links such as
-   * `#comment-42`. Defaults to the comment's id; return its slug to match
-   * permalinks built from slugs.
-   */
-  anchorKey?: (record: TRecord) => string;
-  /**
-   * The link on a comment's date. Gets the element id, e.g. `comment-42`.
-   * Defaults to `#comment-42` on the current page.
-   */
-  permalink?: (anchorId: string) => string;
-  /** Replaces parts of a comment. Each gets the comment's public record. */
-  render?: {
-    /** Extra buttons in the row under the comment, next to **Reply**. */
-    actions?: (record: TRecord) => React.ReactNode;
-    /** The author's name; defaults to the `author` field's person. */
-    author?: (record: TRecord) => React.ReactNode;
-    /** The text; defaults to the rich-text `field`. */
-    body?: (record: TRecord) => React.ReactNode;
-    /** Extra details after the date, such as a badge. */
-    meta?: (record: TRecord) => React.ReactNode;
-  };
-}
+export type { ContentCommentsDisplay };
 
-type AnyDisplay = ContentCommentsDisplay<unknown>;
+type AnyDisplay = AnyCommentsDisplay;
 
 const recordField = (record: unknown, name: string): unknown =>
   typeof record === "object" && record !== null && name in record
@@ -341,66 +340,25 @@ export const ContentCommentItem = <TRecord,>({
   );
 };
 
-/** Deeper replies stop indenting here, so narrow screens keep their width. */
-const INDENT_UNTIL_DEPTH = 3;
-
-const CommentBranch = ({
-  display,
-  highlightedId,
-  node,
-}: {
-  display: AnyDisplay;
-  highlightedId: null | string;
-  node: ContentCommentTreeNode<unknown>;
-}) => {
-  const anchorId = anchorIdOf(node, display);
-
-  return (
-    <li
-      className="flex scroll-mt-24 flex-col gap-4 outline-none"
-      id={anchorId ?? undefined}
-      tabIndex={anchorId ? -1 : undefined}
-    >
-      <ContentCommentItem
-        display={display}
-        highlighted={anchorId !== null && anchorId === highlightedId}
-        node={node}
-      />
-      {node.children.length > 0 ? (
-        <ol
-          className={cn(
-            "flex flex-col gap-4",
-            node.depth < INDENT_UNTIL_DEPTH && "ms-4 border-s ps-4",
-          )}
-        >
-          {node.children.map(child => (
-            <CommentBranch
-              display={display}
-              highlightedId={highlightedId}
-              key={String(child.id)}
-              node={child}
-            />
-          ))}
-        </ol>
-      ) : null}
-    </li>
-  );
-};
-
 const COMMENT_SKELETON_KEYS = ["first", "second", "third"];
 
 const CommentsSkeleton = ({ label }: { label: string }) => (
-  <div aria-busy="true" className="flex flex-col gap-6">
+  <div aria-busy="true" className="flex flex-col gap-4">
     <span className="sr-only" role="status">
       {label}
     </span>
     {COMMENT_SKELETON_KEYS.map(key => (
-      <div aria-hidden="true" className="flex items-start gap-3" key={key}>
-        <Skeleton className="size-8 shrink-0 rounded-full" />
-        <div className="flex w-full max-w-md flex-col gap-2">
-          <Skeleton className="h-20 w-full rounded-2xl rounded-ss-sm" />
-          <Skeleton className="h-3 w-28" />
+      <div
+        aria-hidden="true"
+        className="flex flex-col gap-3 rounded-lg border p-4"
+        key={key}
+      >
+        <div className="flex items-center gap-3">
+          <Skeleton className="size-8 shrink-0 rounded-full" />
+          <Skeleton className="h-4 w-40" />
         </div>
+        <Skeleton className="h-4 w-full max-w-md" />
+        <Skeleton className="h-4 w-2/3 max-w-sm" />
       </div>
     ))}
   </div>
@@ -611,6 +569,333 @@ export const ContentCommentsComposer = ({
   );
 };
 
+/** A long thread shows its first and last conversations and folds the rest. */
+const COLLAPSE_AFTER = 10;
+const HEAD_COUNT = 5;
+const TAIL_COUNT = 2;
+const REVEAL_STEP = 10;
+
+type CommentSort = "newest" | "oldest" | "top";
+
+type PointTotals = ReadonlyMap<ContentId, number>;
+
+const latestTime = (node: CommentTreeNode): number =>
+  Math.max(nodeTime(node), ...node.children.map(latestTime));
+
+const replyTotal = (node: CommentTreeNode): number =>
+  node.children.reduce((sum, child) => sum + 1 + replyTotal(child), 0);
+
+const sortConversations = (
+  nodes: readonly CommentTreeNode[],
+  sort: CommentSort,
+  points: PointTotals,
+) =>
+  nodes.toSorted((a, b) => {
+    if (sort === "oldest") return nodeTime(a) - nodeTime(b);
+    if (sort === "top") {
+      return (
+        (points.get(b.id) ?? 0) - (points.get(a.id) ?? 0) ||
+        replyTotal(b) - replyTotal(a) ||
+        latestTime(b) - latestTime(a)
+      );
+    }
+
+    return latestTime(b) - latestTime(a);
+  });
+
+/**
+ * The order on screen. A conversation that arrives later (a new page, a live
+ * update) joins at the end - or the top for `newest` - instead of reshuffling
+ * what the reader is looking at; picking a sort orders everything again.
+ */
+const useStableOrder = (
+  tree: readonly CommentTreeNode[],
+  sort: CommentSort,
+  points: PointTotals,
+) => {
+  const [order, setOrder] = React.useState<readonly ContentId[]>(() =>
+    sortConversations(tree, sort, points).map(node => node.id),
+  );
+  const byId = new Map(tree.map(node => [node.id, node]));
+  const known = new Set(order);
+  const kept = order.flatMap(id => byId.get(id) ?? []);
+  const fresh = sortConversations(
+    tree.filter(node => !known.has(node.id)),
+    sort,
+    points,
+  );
+  const visible = sort === "newest" ? [...fresh, ...kept] : [...kept, ...fresh];
+  if (fresh.length > 0) setOrder(visible.map(node => node.id));
+
+  return {
+    resort: (nextSort: CommentSort, nextPoints: PointTotals) => {
+      setOrder(
+        sortConversations(tree, nextSort, nextPoints).map(node => node.id),
+      );
+    },
+    visible,
+  };
+};
+
+/** Each top-level comment's points from reactions, read when **Most points** is picked. */
+const usePointTotals = (tree: readonly CommentTreeNode[]) => {
+  const queryClient = useQueryClient();
+  const { comments } = useContentCommentsContext();
+
+  return async (): Promise<PointTotals> => {
+    const catalog = await queryClient
+      .query(reactionsCatalogQueryOptions(comments.userId))
+      .catch(() => null);
+    const totals = await Promise.all(
+      tree.map(async node => {
+        const target = node.record ? comments.reactionTarget(node.id) : null;
+        if (!target || !catalog) return [node.id, 0] as const;
+        try {
+          const summary = await queryClient.query(
+            reactionSummaryQueryOptions(target, comments.userId),
+          );
+
+          return [node.id, reactionPoints(summary, catalog)] as const;
+        } catch {
+          return [node.id, 0] as const;
+        }
+      }),
+    );
+
+    return new Map<ContentId, number>(totals);
+  };
+};
+
+const withViewTransition = (update: () => void) => {
+  if (
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+    !("startViewTransition" in document)
+  ) {
+    update();
+
+    return;
+  }
+  document.startViewTransition(() => {
+    flushSync(update);
+  });
+};
+
+/** `false` on the first paint, so comments already there don't animate in. */
+const useAnimateEntries = () => {
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      setReady(true);
+    });
+
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  return ready;
+};
+
+const Zigzag = () => {
+  const patternId = React.useId();
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="text-border h-2 min-w-0 flex-1"
+      preserveAspectRatio="none"
+    >
+      <defs>
+        <pattern
+          height="8"
+          id={patternId}
+          patternUnits="userSpaceOnUse"
+          width="12"
+        >
+          <path
+            d="M0 6 L6 1.5 L12 6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.25"
+          />
+        </pattern>
+      </defs>
+      <rect fill={`url(#${patternId})`} height="100%" width="100%" />
+    </svg>
+  );
+};
+
+const HiddenConversations = ({
+  count,
+  onLoad,
+}: {
+  count: number;
+  onLoad: () => void;
+}) => {
+  const t = useTranslations("core.comments");
+
+  return (
+    <div className="flex items-center gap-2 py-2">
+      <Zigzag />
+      <div className="bg-background flex shrink-0 flex-col items-center rounded-lg border px-6 py-2 text-center">
+        <span className="text-muted-foreground text-sm tabular-nums">
+          {t("gap.hidden", { count })}
+        </span>
+        <button
+          className="text-primary focus-visible:ring-ring/50 rounded-sm text-sm font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-3"
+          onClick={onLoad}
+          type="button"
+        >
+          {t("gap.load")}
+        </button>
+      </div>
+      <Zigzag />
+    </div>
+  );
+};
+
+const subscribeToHash = (onChange: () => void) => {
+  window.addEventListener("hashchange", onChange);
+
+  return () => {
+    window.removeEventListener("hashchange", onChange);
+  };
+};
+
+const linksToComment = () =>
+  window.location.hash.startsWith(`#${CONTENT_COMMENT_ANCHOR_PREFIX}`);
+
+const ConversationRows = ({
+  firstNewId,
+  nodes,
+}: {
+  firstNewId: ContentId | undefined;
+  nodes: readonly CommentTreeNode[];
+}) =>
+  nodes.map(node => (
+    <React.Fragment key={String(node.id)}>
+      {node.id === firstNewId ? <ContentCommentsNewSeparator /> : null}
+      <ContentCommentCard node={node} />
+    </React.Fragment>
+  ));
+
+const SORT_ICONS = {
+  newest: ArrowDownWideNarrowIcon,
+  oldest: ArrowUpNarrowWideIcon,
+  top: TrendingUpIcon,
+} as const;
+
+const CommentList = ({ display }: { display: AnyDisplay }) => {
+  const t = useTranslations("core.comments");
+  const { comments } = useContentCommentsContext();
+  const tree = comments.tree as CommentTreeNode[];
+  const [sort, setSort] = React.useState<CommentSort>("oldest");
+  const [points, setPoints] = React.useState<PointTotals>(new Map());
+  const { resort, visible } = useStableOrder(tree, sort, points);
+  const [isRanking, setIsRanking] = React.useState(false);
+  const loadPoints = usePointTotals(tree);
+  const [revealed, setRevealed] = React.useState(0);
+  const showAll = React.useSyncExternalStore(
+    subscribeToHash,
+    linksToComment,
+    () => false,
+  );
+
+  const hiddenCount =
+    !showAll && visible.length > COLLAPSE_AFTER
+      ? Math.max(0, visible.length - HEAD_COUNT - TAIL_COUNT - revealed)
+      : 0;
+  const head =
+    hiddenCount > 0 ? visible.slice(0, HEAD_COUNT + revealed) : visible;
+  const tail = hiddenCount > 0 ? visible.slice(-TAIL_COUNT) : [];
+  const newIdSet = new Set<ContentId>(comments.newCommentIds);
+  const firstNewId = visible.find(node => newIdSet.has(node.id))?.id;
+
+  const revealMore = () => {
+    const firstRevealed = visible.at(head.length);
+    setRevealed(current => current + REVEAL_STEP);
+    const anchorId = firstRevealed
+      ? commentAnchorIdOf(firstRevealed, display)
+      : null;
+    if (!anchorId) return;
+    requestAnimationFrame(() => {
+      document.getElementById(anchorId)?.focus();
+    });
+  };
+
+  const pick = async (next: CommentSort) => {
+    if (next === sort || isRanking) return;
+    if (next !== "top") {
+      withViewTransition(() => {
+        setSort(next);
+        resort(next, points);
+        setRevealed(0);
+      });
+
+      return;
+    }
+    setIsRanking(true);
+    try {
+      const totals = await loadPoints();
+      withViewTransition(() => {
+        setPoints(totals);
+        setSort("top");
+        resort("top", totals);
+        setRevealed(0);
+      });
+    } finally {
+      setIsRanking(false);
+    }
+  };
+
+  return (
+    <div className="flex min-w-0 flex-col gap-4">
+      {tree.length > 1 ? (
+        <div className="flex justify-end">
+          <ToggleGroup
+            aria-label={t("sort.label")}
+            onValueChange={next => {
+              const picked = next[0] as CommentSort | undefined;
+              if (picked) void pick(picked);
+            }}
+            value={[sort]}
+            variant="outline"
+          >
+            {(["oldest", "newest", "top"] as const).map(item => {
+              const Icon = SORT_ICONS[item];
+
+              return (
+                <ToggleGroupItem className="gap-1.5" key={item} value={item}>
+                  <Icon aria-hidden="true" />
+                  {t(`sort.${item}`)}
+                </ToggleGroupItem>
+              );
+            })}
+          </ToggleGroup>
+        </div>
+      ) : null}
+      <ol
+        aria-busy={isRanking}
+        className={cn(
+          "flex flex-col gap-4 transition-opacity duration-150 ease-out motion-reduce:transition-none",
+          isRanking && "opacity-60",
+        )}
+      >
+        <ConversationRows firstNewId={firstNewId} nodes={head} />
+      </ol>
+      {hiddenCount > 0 ? (
+        <>
+          <HiddenConversations count={hiddenCount} onLoad={revealMore} />
+          <ol className="flex flex-col gap-4">
+            <ConversationRows firstNewId={firstNewId} nodes={tail} />
+          </ol>
+        </>
+      ) : null}
+    </div>
+  );
+};
+
 const ContentCommentsSection = ({
   className,
   display,
@@ -623,6 +908,14 @@ const ContentCommentsSection = ({
   const t = useTranslations("core.comments");
   const { comments } = useContentCommentsContext();
   const headingId = React.useId();
+  const animateEntries = useAnimateEntries();
+  const [postedReplyId, setPostedReplyId] = React.useState<ContentId | null>(
+    null,
+  );
+  const authorIds = React.useMemo(
+    () => new Set(display.authorIds ?? []),
+    [display.authorIds],
+  );
   const anchor = useRevealHashTarget({
     hasMore: comments.hasMore,
     isLoadingMore: comments.isLoadingMore,
@@ -632,6 +925,25 @@ const ContentCommentsSection = ({
     renderedCount: comments.items.length,
   });
   const highlightedId = anchor.status === "found" ? anchor.targetId : null;
+  const thread = React.useMemo<CardThreadContextValue>(
+    () => ({
+      animateEntries,
+      authorIds,
+      display,
+      highlightedId,
+      postedReplyId,
+      setPostedReplyId,
+      signedIn: comments.userId !== null,
+    }),
+    [
+      animateEntries,
+      authorIds,
+      comments.userId,
+      display,
+      highlightedId,
+      postedReplyId,
+    ],
+  );
 
   return (
     <section
@@ -639,101 +951,102 @@ const ContentCommentsSection = ({
       className={cn("flex flex-col gap-6", className)}
       id="comments"
     >
-      <h2
-        className="text-foreground flex items-center gap-2 text-2xl font-semibold tracking-tight text-balance"
-        id={headingId}
-      >
-        <MessageSquareIcon
-          aria-hidden="true"
-          className="text-muted-foreground size-5"
-        />
-        {title ?? t("title", { count: comments.replyCount })}
-      </h2>
-
-      {comments.status === "pending" ? (
-        <CommentsSkeleton label={t("loading")} />
-      ) : comments.status === "error" ? (
-        <Empty className="border" role="alert">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <MessageSquareWarningIcon aria-hidden="true" />
-            </EmptyMedia>
-            <EmptyTitle render={<h3 />}>{t("load_failed.title")}</EmptyTitle>
-            <EmptyDescription>{t("load_failed.desc")}</EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent>
-            <Button
-              isLoading={comments.isRefreshing}
-              onClick={() => {
-                void comments.retry();
-              }}
-              variant="outline"
-            >
-              <RotateCwIcon aria-hidden="true" />
-              {t("load_failed.retry")}
-            </Button>
-          </EmptyContent>
-        </Empty>
-      ) : comments.tree.length === 0 ? (
-        <Empty className="border">
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <MessageSquareIcon aria-hidden="true" />
-            </EmptyMedia>
-            <EmptyTitle render={<h3 />}>{t("empty.title")}</EmptyTitle>
-            <EmptyDescription>{t("empty.desc")}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
-      ) : (
-        <ol aria-busy={comments.isRefreshing} className="flex flex-col gap-6">
-          {comments.tree.map(node => (
-            <React.Fragment key={String(node.id)}>
-              {node.id === comments.newCommentIds[0] ? (
-                <ContentCommentsNewSeparator />
-              ) : null}
-              <CommentBranch
-                display={display}
-                highlightedId={highlightedId}
-                node={node}
-              />
-            </React.Fragment>
-          ))}
-        </ol>
-      )}
-
-      {anchor.status === "missing" ? (
-        <p
-          className="text-muted-foreground text-sm leading-relaxed"
-          role="status"
+      <CardThreadContext value={thread}>
+        <h2
+          className="text-foreground flex items-center gap-2 text-2xl font-semibold tracking-tight text-balance"
+          id={headingId}
         >
-          {t("anchor_missing")}
-        </p>
-      ) : null}
-      {comments.truncated ? (
-        <p className="text-muted-foreground text-sm leading-relaxed">
-          {t("truncated")}
-        </p>
-      ) : null}
-      <ContentCommentsLiveStatus />
-      <ContentCommentsLoadMore />
-      <ContentCommentsComposer />
+          <MessageSquareIcon
+            aria-hidden="true"
+            className="text-muted-foreground size-5"
+          />
+          {title ?? t("title", { count: comments.replyCount })}
+        </h2>
+
+        {comments.status === "pending" ? (
+          <CommentsSkeleton label={t("loading")} />
+        ) : comments.status === "error" ? (
+          <Empty className="border" role="alert">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <MessageSquareWarningIcon aria-hidden="true" />
+              </EmptyMedia>
+              <EmptyTitle render={<h3 />}>{t("load_failed.title")}</EmptyTitle>
+              <EmptyDescription>{t("load_failed.desc")}</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent>
+              <Button
+                isLoading={comments.isRefreshing}
+                onClick={() => {
+                  void comments.retry();
+                }}
+                variant="outline"
+              >
+                <RotateCwIcon aria-hidden="true" />
+                {t("load_failed.retry")}
+              </Button>
+            </EmptyContent>
+          </Empty>
+        ) : comments.tree.length === 0 ? (
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <MessageSquareIcon aria-hidden="true" />
+              </EmptyMedia>
+              <EmptyTitle render={<h3 />}>{t("empty.title")}</EmptyTitle>
+              <EmptyDescription>{t("empty.desc")}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        ) : (
+          <div aria-busy={comments.isRefreshing}>
+            <CommentList display={display} />
+          </div>
+        )}
+
+        {anchor.status === "missing" ? (
+          <p
+            className="text-muted-foreground text-sm leading-relaxed"
+            role="status"
+          >
+            {t("anchor_missing")}
+          </p>
+        ) : null}
+        {comments.truncated ? (
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {t("truncated")}
+          </p>
+        ) : null}
+        <ContentCommentsLiveStatus />
+        <ContentCommentsLoadMore />
+        <ContentCommentsComposer hideLabel showTitle={false} />
+      </CardThreadContext>
     </section>
   );
 };
 
 /**
- * A complete comment section for one Content Engine record: the count, the
- * thread with replies, load more, the composer or a sign-in link, and every
- * action the plugin wired into `useContentComments` and the server allows.
- * Scrolls to and rings the comment a `#comment-...` link points to, loading
- * more pages until it appears.
+ * A complete comment section for one Content Engine record, the same in every
+ * plugin: each top-level comment is a card with its replies below it in the
+ * order written, each naming whom it answers, and a reply field at the bottom.
+ * Comments carry reactions, **Quote**, **Share**, the actions menu and, with
+ * `history`, an "edited" link to the edit history. The reader sorts by
+ * Oldest, Newest or Most points (reaction points); long threads fold their
+ * middle conversations. Below: load more, live status and the composer or a
+ * sign-in link. Scrolls to and rings the comment a `#comment-...` link points
+ * to, loading more pages until it appears.
  *
  * For your own layout, use `ContentCommentsRoot` with `ContentCommentItem`,
  * `ContentCommentActions` and `ContentCommentComposer` instead.
  *
  * @example
  * ```tsx
- * <ContentComments comments={comments} />
+ * <ContentComments
+ *   anchorKey={comment => comment.slug}
+ *   authorIds={[article.author.id]}
+ *   comments={comments}
+ *   permalink={anchorId => `/blog/${article.slug}#${anchorId}`}
+ *   shareTitle={article.title}
+ * />
  * ```
  */
 export const ContentComments = <TRecord, TId extends ContentId>({

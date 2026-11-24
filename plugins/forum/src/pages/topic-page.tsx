@@ -25,7 +25,7 @@ import { HrefLink } from "@vitnode/core/tanstack/link";
 import { localeAlternateLinks } from "@vitnode/core/tanstack/metadata";
 import { ReportButton } from "@vitnode/core/tanstack/moderation";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
-import { ReactionBar } from "@vitnode/core/tanstack/reactions";
+import { ReactionBar, ReactionPoints } from "@vitnode/core/tanstack/reactions";
 import { useRecordView } from "@vitnode/core/tanstack/search";
 import { PencilIcon } from "lucide-react";
 import { Fragment, useEffect, useRef } from "react";
@@ -34,7 +34,6 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { topicContentType } from "@/content/topic";
-import { FORUM_COMMENT_DEFAULT_SORT } from "@/feed-sorts";
 import { manifest } from "@/manifest.gen";
 
 import type { ForumPerson } from "./forum-data";
@@ -53,12 +52,10 @@ import {
   forumQueryKeys,
   isSharedResponse,
   queryForum,
-  threadQueryOptions,
   TOPIC_STALE_TIME,
 } from "./forum-queries";
 import { PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
-import { ReactionPoints } from "./reaction-points";
-import { ForumThread } from "./thread";
+import { TopicComments, topicCommentsQueryOptions } from "./topic-comments";
 
 const DESCRIPTION_MAX_LENGTH = 160;
 
@@ -142,15 +139,18 @@ const topicOgImageQueryOptions = (id: number) =>
 const loadTopic = async (
   queryClient: QueryClient,
   { locale, slug }: { locale: string; slug: string },
-  { comments }: TopicSearch,
 ) => {
   const loaded = await queryClient.query(topicQueryOptions(slug));
   if ("accessRequired" in loaded) return { accessRequired: true as const };
   const topic = contentPageItem(loaded.topic);
 
-  const [forum, thread, ogImage] = await Promise.all([
+  const [forum, comments, ogImage] = await Promise.all([
     queryForum(queryClient, String(topic.forum), locale).catch(() => null),
-    queryClient.query(threadQueryOptions(topic.id, comments)),
+    // A failure leaves the section to show its own error instead of breaking
+    // the page.
+    queryClient
+      .infiniteQuery(topicCommentsQueryOptions(topic.id))
+      .catch(() => null),
     queryClient.query(topicOgImageQueryOptions(topic.id)).catch(() => null),
   ]);
 
@@ -166,17 +166,12 @@ const loadTopic = async (
     accessRequired: false as const,
     canComment: forum?.container.access.canComment ?? true,
     canonicalUrl,
+    commentCount: comments?.pages.at(-1)?.replyCount ?? 0,
     description: excerptOf(
       richTextToPlainText(topic.body).replace(/\s+/g, " "),
     ),
     locale,
     ogImage,
-    thread: thread ?? {
-      items: [],
-      pageInfo: { endCursor: null, hasNextPage: false, totalCount: 0 },
-      commentCount: 0,
-      truncated: false,
-    },
     topic,
     trail: trail.map(({ id, name, slug: forumSlug }) => ({
       id,
@@ -195,12 +190,11 @@ const ForumsCrumb = () => {
 };
 
 export const route = defineRoute<TopicPageData, TopicSearch>({
-  load: async ({ context, params, search }) =>
-    await loadTopic(
-      context.queryClient,
-      { locale: context.locale, slug: params.slug },
-      search,
-    ),
+  load: async ({ context, params }) =>
+    await loadTopic(context.queryClient, {
+      locale: context.locale,
+      slug: params.slug,
+    }),
 
   head: ({ loaderData, t }) =>
     !loaderData || loaderData.accessRequired
@@ -299,7 +293,7 @@ const TopicViewerActions = ({
 };
 
 const TopicJsonLd = ({
-  data: { canonicalUrl, description, locale, thread, topic },
+  data: { canonicalUrl, commentCount, description, locale, topic },
 }: {
   data: Extract<TopicPageData, { accessRequired: false }>;
 }) => {
@@ -318,7 +312,7 @@ const TopicJsonLd = ({
           },
         }
       : {}),
-    commentCount: thread.commentCount,
+    commentCount,
     dateModified: topic.updatedAt,
     datePublished: topic.publishedAt ?? topic.createdAt,
     headline: topic.title,
@@ -326,7 +320,7 @@ const TopicJsonLd = ({
     interactionStatistic: {
       "@type": "InteractionCounter",
       interactionType: "https://schema.org/CommentAction",
-      userInteractionCount: thread.commentCount,
+      userInteractionCount: commentCount,
     },
     mainEntityOfPage: canonicalUrl,
     text: description,
@@ -376,7 +370,7 @@ const TopicView = ({
   loaderData: Extract<TopicPageData, { accessRequired: false }>;
 }) => {
   const t = useTranslations("@vitnode/forum.topics.detail");
-  const { canComment, thread, topic, trail } = loaderData;
+  const { canComment, topic, trail } = loaderData;
   const created = search.created === true;
   const announcedRef = useRef(false);
   const forum = trail.at(-1);
@@ -446,19 +440,12 @@ const TopicView = ({
         />
       </article>
 
-      <ForumThread
-        canReply={canComment}
-        initial={thread}
-        key={search.comments ?? FORUM_COMMENT_DEFAULT_SORT}
-        onSortChange={async sort => {
-          await navigate({
-            resetScroll: false,
-            search: sort === "old" ? {} : { comments: sort },
-          });
-        }}
-        sort={search.comments ?? FORUM_COMMENT_DEFAULT_SORT}
+      <TopicComments
+        canComment={canComment}
+        starterId={topic.author?.id ?? null}
         topicId={topic.id}
         topicSlug={topic.slug}
+        topicTitle={topic.title}
       />
     </div>
   );

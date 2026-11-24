@@ -1,14 +1,23 @@
+import type { ContentId } from "@vitnode/api/content/ids";
+
 import { useQuery } from "@tanstack/react-query";
-import { Avatar } from "@vitnode/core/components/avatar";
-import { DateFormat } from "@vitnode/core/components/date-format";
-import { Button } from "@vitnode/core/components/ui/button";
+import { zodContentPublicPerson } from "@vitnode/api/content/public-person";
+import { cn } from "cn";
+import { ChevronDownIcon, HistoryIcon, RotateCwIcon } from "lucide-react";
+import React from "react";
+import { useTranslations } from "use-intl";
+import { z } from "zod";
+
+import { Avatar } from "@/components/avatar";
+import { DateFormat } from "@/components/date-format";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@vitnode/core/components/ui/dialog";
+} from "@/components/ui/dialog";
 import {
   Empty,
   EmptyContent,
@@ -16,22 +25,41 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@vitnode/core/components/ui/empty";
+} from "@/components/ui/empty";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@vitnode/core/components/ui/popover";
-import { Skeleton } from "@vitnode/core/components/ui/skeleton";
-import { UserFormat } from "@vitnode/core/components/user-format";
-import { contentCommentAuthorName } from "@vitnode/core/tanstack/comments";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
-import { cn } from "cn";
-import { ChevronDownIcon, HistoryIcon, RotateCwIcon } from "lucide-react";
-import React from "react";
-import { useTranslations } from "use-intl";
+} from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
+import { UserFormat } from "@/components/user-format";
 
-import { manifest } from "@/manifest.gen";
+import { contentCommentAuthorName } from "./author";
+import { useContentCommentsContext } from "./root";
+
+const HISTORY_OPERATIONS = ["create", "update"] as const;
+
+const zodHistory = z.object({
+  complete: z.boolean(),
+  edits: z.array(
+    z.object({
+      actor: zodContentPublicPerson.nullable().catch(null),
+      createdAt: z.string(),
+      id: z.number(),
+      operation: z.enum(HISTORY_OPERATIONS).catch("update"),
+    }),
+  ),
+});
+
+const zodHistoryEntry = z.object({
+  changes: z.array(
+    z.object({
+      after: z.string().nullable(),
+      before: z.string().nullable(),
+      field: z.string(),
+    }),
+  ),
+});
 
 interface DiffLine {
   id: string;
@@ -85,30 +113,26 @@ const diffLines = (beforeText: null | string, afterText: null | string) => {
   return lines;
 };
 
-const historyQueryKey = (commentId: number, editCount: number) =>
-  ["@vitnode/blog", "comments", "history", commentId, editCount] as const;
-
 const useCommentHistory = (
-  commentId: number,
+  commentId: ContentId,
   editCount: number,
   enabled: boolean,
-) =>
-  useQuery({
-    enabled,
-    queryFn: async () => {
-      const res = await fetcher({
-        plugin: manifest.id,
-        method: "get",
-        module: "content/comments",
-        path: "/{id}/history",
-        args: { params: { id: commentId } },
-      });
-      if (!res.ok) throw new Error(`History request failed: ${res.status}`);
+) => {
+  const { comments } = useContentCommentsContext();
 
-      return await res.json();
+  return useQuery({
+    enabled: enabled && comments.history !== null,
+    queryFn: async () => {
+      const res = await comments.history?.list(commentId);
+      if (!res?.ok) {
+        throw new Error(`History request failed: ${res?.status ?? 0}`);
+      }
+
+      return zodHistory.parse(await res.json());
     },
-    queryKey: historyQueryKey(commentId, editCount),
+    queryKey: [...comments.queryKey, "history", commentId, editCount],
   });
+};
 
 type HistoryEdit = NonNullable<
   ReturnType<typeof useCommentHistory>["data"]
@@ -123,7 +147,7 @@ const HistoryLoadError = ({
   isRetrying: boolean;
   onRetry: () => void;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments.edits");
+  const t = useTranslations("core.comments.edits");
 
   return (
     <Empty className="p-6" role="alert">
@@ -148,33 +172,21 @@ const EditDiff = ({
   commentId,
   edit,
 }: {
-  commentId: number;
+  commentId: ContentId;
   edit: HistoryEdit;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments.edits");
+  const t = useTranslations("core.comments.edits");
+  const { comments } = useContentCommentsContext();
   const entry = useQuery({
     queryFn: async () => {
-      const res = await fetcher({
-        plugin: manifest.id,
-        method: "get",
-        module: "content/comments",
-        path: "/{id}/history/{revisionId}",
-        args: {
-          params: { id: commentId, revisionId: edit.id },
-        },
-      });
-      if (!res.ok) throw new Error(`Edit request failed: ${res.status}`);
+      const res = await comments.history?.entry(commentId, edit.id);
+      if (!res?.ok) {
+        throw new Error(`Edit request failed: ${res?.status ?? 0}`);
+      }
 
-      return await res.json();
+      return zodHistoryEntry.parse(await res.json());
     },
-    queryKey: [
-      "@vitnode/blog",
-      "comments",
-      "history",
-      commentId,
-      "entry",
-      edit.id,
-    ],
+    queryKey: [...comments.queryKey, "history", commentId, "entry", edit.id],
   });
 
   if (entry.isPending) {
@@ -247,11 +259,11 @@ const EditDialog = ({
   edit,
   onOpenChange,
 }: {
-  commentId: number;
+  commentId: ContentId;
   edit: HistoryEdit | null;
   onOpenChange: (open: boolean) => void;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments.edits");
+  const t = useTranslations("core.comments.edits");
   const tc = useTranslations("core.comments");
   const name =
     (edit?.actor ? contentCommentAuthorName(edit.actor) : null) ??
@@ -296,7 +308,7 @@ const HistoryRow = ({
   isLatest: boolean;
   onOpen: () => void;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments.edits");
+  const t = useTranslations("core.comments.edits");
   const tc = useTranslations("core.comments");
 
   return (
@@ -346,14 +358,19 @@ const HistoryRow = ({
   );
 };
 
-export const CommentEdits = ({
+/**
+ * The "edited" link next to a comment's date: a popover with who created and
+ * who edited the comment, and a dialog with the text before and after each
+ * edit. Reads through the thread's `history`; signed-in members only.
+ */
+export const ContentCommentEditHistory = ({
   commentId,
   editCount,
 }: {
-  commentId: number;
+  commentId: ContentId;
   editCount: number;
 }) => {
-  const t = useTranslations("@vitnode/blog.comments.edits");
+  const t = useTranslations("core.comments.edits");
   const [open, setOpen] = React.useState(false);
   const [selected, setSelected] = React.useState<HistoryEdit | null>(null);
   const history = useCommentHistory(commentId, editCount, open);

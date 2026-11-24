@@ -16,7 +16,7 @@ import {
   isSharedResponse,
   TOPIC_STALE_TIME,
 } from "./forum-queries";
-import { zodRelationId } from "./thread-data";
+import { zodRelationId } from "./topic-comments";
 
 const zodCommentLink = z.object({ slug: z.string(), topic: zodRelationId });
 

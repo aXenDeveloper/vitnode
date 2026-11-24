@@ -44,22 +44,3 @@ export const isForumFeedTopWindow = (
 ): value is ForumFeedTopWindow =>
   typeof value === "string" &&
   (FORUM_FEED_TOP_WINDOWS as readonly string[]).includes(value);
-
-/**
- * How a topic's comments are ordered. Only top-level comments move; replies
- * stay in posting order under their parent, so a conversation reads top to
- * bottom.
- *
- * - `old`: posting order, like a classic forum - the default.
- * - `new`: newest first.
- * - `points`: most points from reactions first.
- */
-export const FORUM_COMMENT_SORTS = ["old", "new", "points"] as const;
-
-export type ForumCommentSort = (typeof FORUM_COMMENT_SORTS)[number];
-
-export const FORUM_COMMENT_DEFAULT_SORT: ForumCommentSort = "old";
-
-export const isForumCommentSort = (value: unknown): value is ForumCommentSort =>
-  typeof value === "string" &&
-  (FORUM_COMMENT_SORTS as readonly string[]).includes(value);

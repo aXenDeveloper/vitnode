@@ -43,7 +43,7 @@ export const routes = definePluginRoutes([
     // unpublishing and hiding invalidate it through the Content Engine.
     cache: { maxAge: 300, staleWhileRevalidate: 60 },
     component: lazy(() => import("./pages/post-page")),
-    messages: ["@vitnode/blog.post", "@vitnode/blog.comments", "core.comments"],
+    messages: ["@vitnode/blog.post", "core.comments"],
   }),
 
   page("/blog/preview/:token", {

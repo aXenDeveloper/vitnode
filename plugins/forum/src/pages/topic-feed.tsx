@@ -9,7 +9,7 @@ import {
 } from "@vitnode/core/components/ui/empty";
 import { contentTarget } from "@vitnode/core/content";
 import { HrefLink } from "@vitnode/core/tanstack/link";
-import { ReactionBar } from "@vitnode/core/tanstack/reactions";
+import { ReactionBar, ReactionPoints } from "@vitnode/core/tanstack/reactions";
 import {
   ActivityIcon,
   ChevronLeftIcon,
@@ -39,7 +39,6 @@ import type { ForumSearch } from "./forum-links";
 
 import { forumHref, topicHref, topicNewHref } from "./forum-links";
 import { ForumIcon, PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
-import { ReactionPoints } from "./reaction-points";
 
 const SORT_ICONS: Record<ForumFeedSort, typeof FlameIcon> = {
   active: ActivityIcon,

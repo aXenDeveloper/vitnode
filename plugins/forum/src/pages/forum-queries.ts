@@ -9,10 +9,7 @@ import {
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
-import type { ForumCommentSort } from "@/feed-sorts";
-
 import {
-  FORUM_COMMENT_DEFAULT_SORT,
   FORUM_FEED_DEFAULT_SORT,
   FORUM_FEED_DEFAULT_TOP_WINDOW,
 } from "@/feed-sorts";
@@ -21,7 +18,6 @@ import { manifest } from "@/manifest.gen";
 import type { ForumSearch } from "./forum-links";
 
 import { fetchForums, fetchForumStats, zodFeedTopic } from "./forum-data";
-import { fetchSortedThreadPage } from "./thread-data";
 
 const FORUM_TREE_STALE_TIME = RECORD_STALE_TIME;
 
@@ -48,10 +44,7 @@ export const forumQueryKeys = {
   pending: (userId: number, page: number) =>
     [...submissions, userId, { page }] as const,
   submissions: () => submissions,
-  thread: (topicId: number, sort?: ForumCommentSort) =>
-    sort === undefined
-      ? ([...all, "thread", topicId] as const)
-      : ([...all, "thread", topicId, sort] as const),
+  thread: (topicId: number) => [...all, "thread", topicId] as const,
   topic: (slug: string) => [...topicDetails, slug] as const,
   topicDetails: () => topicDetails,
   topicList: (request: FeedRequest) => [...topicLists, request] as const,
@@ -170,26 +163,24 @@ export const queryForum = async (
   return data;
 };
 
-export const threadQueryOptions = (
-  topicId: number,
-  sort: ForumCommentSort = FORUM_COMMENT_DEFAULT_SORT,
-) =>
-  queryOptions({
-    meta: LOADER_DATA_QUERY_META,
-    queryFn: async () => await fetchSortedThreadPage({ sort, topicId }),
-    queryKey: forumQueryKeys.thread(topicId, sort),
-    staleTime: FORUM_ACTIVITY_STALE_TIME,
-  });
+/** Expires what a comment write changes outside its thread: counts, lists, pending posts. */
+export const invalidateForumCounts = async (
+  queryClient: QueryClient,
+): Promise<void> => {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: forumQueryKeys.submissions() }),
+    queryClient.invalidateQueries({ queryKey: forumQueryKeys.topicLists() }),
+    queryClient.invalidateQueries({ queryKey: forumQueryKeys.forumStats() }),
+  ]);
+};
 
 export const invalidateForumComments = async (
   queryClient: QueryClient,
   topicId: number,
 ): Promise<void> => {
   await Promise.all([
-    queryClient.invalidateQueries({ queryKey: forumQueryKeys.submissions() }),
+    invalidateForumCounts(queryClient),
     queryClient.invalidateQueries({ queryKey: forumQueryKeys.thread(topicId) }),
-    queryClient.invalidateQueries({ queryKey: forumQueryKeys.topicLists() }),
-    queryClient.invalidateQueries({ queryKey: forumQueryKeys.forumStats() }),
   ]);
 };
 

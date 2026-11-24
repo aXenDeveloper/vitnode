@@ -67,7 +67,7 @@ export const routes = definePluginRoutes([
     messages: [
       "@vitnode/forum.forums",
       "@vitnode/forum.topics",
-      "@vitnode/forum.comments",
+      "core.comments",
     ],
     pendingComponent: RoutePendingSkeleton,
     search: topicSearch,

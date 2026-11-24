@@ -22,10 +22,7 @@ implementation:
 
 import { Tab, Tabs } from "fumadocs-ui/components/tabs";
 
-import { ImgDocs } from "@/components/fumadocs/img";
-import tree from "./threads-frontend-tree.webp";
-
-Replies let a comment answer another comment, so a conversation can branch. The thread route already returns each top-level comment followed by every answer below it, and the shared section draws them as a tree. This page raises the depth limit and tells the section about it, which turns on **Reply**.
+Replies let a comment answer another comment, so a conversation can branch. The thread route already returns each top-level comment followed by every answer below it, and the shared section draws each conversation as a card. This page raises the depth limit and tells the section about it, which turns on **Reply**.
 
 This continues the comment section from [Comments](/docs/content-engine/threads). Replies work with or without [Comment actions](/docs/content-engine/threads-editing).
 
@@ -82,7 +79,7 @@ import { COMMENT_MAX_DEPTH } from "@/content/comment"; // [!code ++]
     maxDepth: COMMENT_MAX_DEPTH, // [!code ++]
 ```
 
-That is the whole change. `create` already sends `parent: parentId`, which is now the comment being answered instead of `null`. The section shows **Reply** under every comment above the limit, opens a composer under it, and draws replies indented below their parent. Below three levels it stops indenting, so deep branches stay readable on a phone.
+That is the whole change. `create` already sends `parent: parentId`, which is now the comment being answered instead of `null`. The section shows **Reply** under every comment above the limit and a **Write a reply** field at the bottom of each conversation. Replies sit inside their conversation's card in the order they were written, and a reply to a reply names whom it answers - no indenting, so deep conversations stay readable on a phone.
 
 </Step>
 
@@ -92,16 +89,11 @@ That is the whole change. `create` already sends `parent: parentId`, which is no
 
 Open an article with a comment and sign in as a member:
 
-1. Click **Reply** under the comment, write an answer and click **Post comment**. **Comment posted** appears and the answer shows indented below the comment.
-2. Reply to the reply, and again, until a reply sits at depth 4. That reply has no **Reply** button.
+1. Click **Write a reply** under the comment, write an answer and click **Post comment**. **Comment posted** appears and the answer shows inside the comment's card.
+2. Reply to the reply with its **Reply** button, and again, until a reply sits at depth 4. That reply has no **Reply** button, and each answer says "In reply to" whom.
 3. Reload. The tree comes back the same way.
 
-<ImgDocs
-  withoutBackground
-  className="*:max-w-full"
-  src={tree}
-  alt="A comment by Ada Lovelace with an indented reply by Grace Hopper, a reply to that reply, and a fourth-level reply without a Reply button"
-/>
+{/* Image prompt: A VitNode article's comment section in light theme: a card for Ada Lovelace's comment with a tinted header, her text, a reaction pill and Quote/Share icons, then inside the same card a reply by Grace Hopper and a reply to that reply marked "In reply to Grace Hopper", joined by a thin vertical line, and a "Write a reply" field at the bottom of the card. Oldest / Newest / Most points toggle above. 1440x900. */}
 
 ## Long conversations
 
@@ -112,8 +104,8 @@ Open an article with a comment and sign in as a member:
 
 ## Removed and hidden comments in a tree
 
-- **Deleted with replies.** A comment deleted while it has replies stays as a **[deleted]** placeholder with no text and no author. It reads "Comment deleted by user" or "Comment removed by a moderator". Its replies keep their place, and you can still answer them.
-- **Hidden with replies.** Readers who can't see a hidden comment get the same placeholder, so the branch below it stays readable. Its author and moderators see the real comment, marked **Hidden**. The section offers no **Reply** on a hidden comment.
+- **Deleted with replies.** A top-level comment deleted while it has replies keeps its card, with a note instead of its text and author: "Comment deleted by user" or "Comment removed by a moderator". Its replies keep their place, and you can still answer them.
+- **Hidden with replies.** Readers who can't see a hidden comment get the same note, so the conversation below it stays readable. Its author and moderators see the real comment folded behind "This comment was hidden." with **Show comment**. The section offers no **Reply** on a hidden comment.
 - **Removed without replies.** The comment disappears. There's no branch below it to hold up.
 
 The server keeps the tree valid on every write, in the AdminCP too: the parent must exist, be public and belong to the same article, a comment never answers itself or one of its own answers, and nothing nests deeper than `maxDepth`. A reply that breaks a rule answers `400`, and the composer keeps its text.
@@ -121,5 +113,5 @@ The server keeps the tree valid on every write, in the AdminCP too: the parent m
 ## Related
 
 - [Notifications](/docs/content-engine/notifications): optional. Tell members about replies to their comments, sent by the server with no change to the section.
-- [Comments API](/docs/content-engine/comments-api): build your own tree layout with `ContentCommentsRoot`, as the Blog plugin does with its connectors and collapsible branches.
+- [Comments API](/docs/content-engine/comments-api): every `ContentComments` option, and the building blocks for a layout of your own.
 - [thread reference](/docs/content-engine/reference#thread): every `thread` option.

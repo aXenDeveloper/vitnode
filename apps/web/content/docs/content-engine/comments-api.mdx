@@ -35,6 +35,7 @@ const comments = useContentComments({ queryKey, thread, ...actions })
 | `onChanged`   | `(queryClient) => void \| Promise<void>`            | No       | Refreshes your other queries after a successful write, such as a comment count elsewhere on the page                                                                                                                                                               |
 | `branches`    | `(ids) => Promise<Response>`                        | No       | [`GET /thread/branches`](#get-threadbranches) with `root`, plus `ids` joined by commas only when there are any. Writes then re-read only the branch they touched instead of every loaded page. `live` needs it |
 | `live`        | `{ contentTypeId, rootId }`                         | No       | The comment content type's `id` and the root record's id. Keeps the thread current over the WebSocket while it is mounted; ignored without `branches`. See [Live comments](/docs/content-engine/threads-live) |
+| `history`     | `{ list(id), entry(id, revisionId) }`               | No       | `GET /{id}/history` and `GET /{id}/history/{revisionId}`, which every type with `editorial` revisions has. An **edited** link next to the date then opens who edited the comment and what changed. Signed-in members only |
 
 ### Callback contract
 
@@ -95,10 +96,24 @@ Its `queryFn` throws when the thread route answers anything but `2xx`.
 
 ## `ContentComments`
 
-The complete section: the count, the thread, **Load more comments**, the composer (hidden from guests), the actions menu, the delete confirmation and the report dialog. It scrolls to and rings the comment a `#comment-...` link points to, loading more pages until it appears.
+The complete section, and the look every comment section in VitNode shares - Blog, Newsroom and Forum use it as is:
+
+- Each top-level comment is a **card**: avatar, author, date and actions menu on a tinted header, then the text, its reactions, **Quote** and **Share**.
+- Its replies sit inside the card in the order they were written, joined by a thin line. A reply to a reply says whom it answers ("In reply to Ada"), so deep conversations stay readable without indenting.
+- A **Write a reply** field closes each card for members who can answer.
+- Readers sort conversations by **Oldest**, **Newest** or **Most points** (each conversation's reaction points). A thread with more than ten conversations folds the middle ones behind a **Load more…** gap.
+- Hidden comments fold behind a notice their author and moderators can open.
+
+Below the conversations come **Load more comments**, the live status and the composer (hidden from guests). It scrolls to and rings the comment a `#comment-...` link points to, loading more pages until it appears.
 
 ```tsx
-<ContentComments comments={comments} />
+<ContentComments
+  anchorKey={comment => comment.slug}
+  authorIds={[article.author.id]}
+  comments={comments}
+  permalink={anchorId => `/blog/article/${article.slug}#${anchorId}`}
+  shareTitle={article.title}
+/>
 ```
 
 | Prop                     | Description                                                                                                        |
@@ -107,11 +122,14 @@ The complete section: the count, the thread, **Load more comments**, the compose
 | `className`              | Classes for the `<section>`                                                                                        |
 | `title`                  | Replaces the "N comments" heading                                                                                  |
 | `anchorKey(record)`      | What follows `comment-` in each comment's element id. Defaults to the id; return the slug to match slug permalinks |
-| `permalink(anchorId)`    | The link on each comment's date. Defaults to `#comment-...` on the same page                                       |
+| `permalink(anchorId)`    | The link on each comment's date, and what **Share** shares. Defaults to `#comment-...` on the same page            |
+| `shareTitle`             | The title **Share** sends along, usually the commented record's                                                    |
+| `authorIds`              | Users whose comments get an **Author** badge, such as the article's authors or the topic's starter                 |
+| `points`                 | Shows each comment's points from reactions next to its reaction bar. Off by default                                |
 | `render.author(record)`  | Replaces the author's name                                                                                         |
 | `render.body(record)`    | Replaces the text                                                                                                  |
 | `render.meta(record)`    | Adds details after the date, such as a badge                                                                       |
-| `render.actions(record)` | Adds buttons next to **Reply**                                                                                     |
+| `render.actions(record)` | Adds buttons next to **Quote** and **Share**                                                                       |
 
 The section's element id is `comments`, so `#comments` links scroll to it. Its messages live in the `core.comments` namespace; add it to the page's route `messages` to load them with the page.
 
@@ -176,7 +194,7 @@ const MyComment = ({ node }) => {
 | `contentCommentAuthor(record)`, `contentCommentAuthorName(person)` | Read the `author` person and the name to show                                                                                                                                         |
 | `useContentCommentErrorToast()`                                    | Shows the section's message for a failed action's status                                                                                                                              |
 
-The Blog plugin's `plugins/blog/src/pages/post-comments.tsx` is a complete custom layout: rail connectors, collapsible branches, share buttons and slug permalinks, with every action from these components.
+Reach for these only when the shared look really doesn't fit: a comment section that looks different from every other one in the app is one more thing for readers to learn.
 
 ## Outcomes and errors
 
