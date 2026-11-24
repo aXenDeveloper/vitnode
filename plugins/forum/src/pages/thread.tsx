@@ -22,9 +22,12 @@ import { cn } from "cn";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
+  ClockIcon,
   MessageSquareIcon,
   PencilIcon,
   ReplyIcon,
+  SmilePlusIcon,
+  SparklesIcon,
 } from "lucide-react";
 import {
   Activity,
@@ -39,7 +42,10 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
+import type { ForumCommentSort } from "@/feed-sorts";
+
 import { commentContentType, FORUM_COMMENT_MAX_DEPTH } from "@/content/comment";
+import { FORUM_COMMENT_DEFAULT_SORT, FORUM_COMMENT_SORTS } from "@/feed-sorts";
 import { manifest } from "@/manifest.gen";
 
 import type { CommentComposerProps } from "./comment-composer";
@@ -50,10 +56,11 @@ import { commentAnchorId, loginHref, topicHref } from "./forum-links";
 import { useCommentPermissions } from "./forum-permissions";
 import { invalidateForumComments } from "./forum-queries";
 import { PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
+import { ReactionPoints } from "./reaction-points";
 import {
   buildThreadTree,
   countDescendants,
-  fetchThreadPage,
+  fetchSortedThreadPage,
   THREAD_MAX_PAGE_SIZE,
   THREAD_PAGE_SIZE,
 } from "./thread-data";
@@ -206,6 +213,10 @@ const CommentBody = ({
 
       {editing ? null : (
         <div className="flex flex-wrap items-center gap-1">
+          <ReactionPoints
+            className="me-1"
+            target={contentTarget(manifest.id, commentContentType, comment.id)}
+          />
           <ReactionBar
             className="me-1"
             target={contentTarget(manifest.id, commentContentType, comment.id)}
@@ -368,9 +379,58 @@ const ThreadNodeView = memo(
   },
 );
 
+const SORT_ICONS: Record<ForumCommentSort, typeof ClockIcon> = {
+  new: SparklesIcon,
+  old: ClockIcon,
+  points: SmilePlusIcon,
+};
+
+const CommentSortControl = ({
+  onChange,
+  pending,
+  sort,
+}: {
+  onChange: (sort: ForumCommentSort) => void;
+  pending: ForumCommentSort | null;
+  sort: ForumCommentSort;
+}) => {
+  const t = useTranslations("@vitnode/forum.comments.sort");
+
+  return (
+    <div
+      aria-label={t("label")}
+      className="flex flex-wrap items-center gap-1"
+      role="group"
+    >
+      {FORUM_COMMENT_SORTS.map(item => {
+        const Icon = SORT_ICONS[item];
+
+        return (
+          <Button
+            aria-pressed={item === sort}
+            disabled={pending !== null && pending !== item}
+            isLoading={pending === item}
+            key={item}
+            onClick={() => {
+              if (item !== sort && !pending) onChange(item);
+            }}
+            size="sm"
+            variant={item === sort ? "secondary" : "ghost"}
+          >
+            <Icon aria-hidden="true" />
+            {t(item)}
+          </Button>
+        );
+      })}
+    </div>
+  );
+};
+
 export const ForumThread = ({
   canReply = true,
   initial,
+  onSortChange,
+  sort = FORUM_COMMENT_DEFAULT_SORT,
   topicId,
   topicSlug,
 }: {
@@ -380,6 +440,10 @@ export const ForumThread = ({
    */
   canReply?: boolean;
   initial: ThreadPage;
+  /** Shows the sort control; called with the order the reader picked. */
+  onSortChange?: (sort: ForumCommentSort) => Promise<void>;
+  /** The order `initial` was read in. */
+  sort?: ForumCommentSort;
   topicId: number;
   topicSlug: string;
 }) => {
@@ -389,6 +453,8 @@ export const ForumThread = ({
   const currentUserId = session?.user?.id ?? null;
   const [pages, setPages] = useState<ThreadPage[]>([initial]);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  // The current order stays on screen, dimmed, until the new one arrives.
+  const [pendingSort, setPendingSort] = useState<ForumCommentSort | null>(null);
   const [composerKey, setComposerKey] = useState(0);
   const [composer, setComposer] = useState<"closed" | "open" | "opening">(
     "closed",
@@ -407,8 +473,9 @@ export const ForumThread = ({
     if (!last.pageInfo.endCursor) return;
     setIsLoadingMore(true);
     try {
-      const next = await fetchThreadPage({
+      const next = await fetchSortedThreadPage({
         after: last.pageInfo.endCursor,
+        sort,
         topicId,
       });
       if (next) setPages([...pages, next]);
@@ -424,7 +491,8 @@ export const ForumThread = ({
   const refresh = useCallback(async () => {
     const loaded = items.filter(item => item.depth === 1).length;
     try {
-      const fresh = await fetchThreadPage({
+      const fresh = await fetchSortedThreadPage({
+        sort,
         // One more than is on screen, so a new top-level comment at the end of
         // the conversation shows up without another click.
         first: Math.min(
@@ -439,7 +507,7 @@ export const ForumThread = ({
         description: t("load_failed.desc"),
       });
     }
-  }, [items, t, topicId]);
+  }, [items, sort, t, topicId]);
 
   const onChanged = useCallback(
     ({ pending }: { pending: boolean }) => {
@@ -482,13 +550,27 @@ export const ForumThread = ({
 
   return (
     <section aria-labelledby="forum-comments" className="flex flex-col gap-6">
-      <h2
-        className="text-foreground flex items-center gap-2 text-xl font-semibold text-balance"
-        id="forum-comments"
-      >
-        <MessageSquareIcon aria-hidden="true" className="size-5" />
-        {t("title", { count: commentCount })}
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2
+          className="text-foreground flex items-center gap-2 text-xl font-semibold text-balance"
+          id="forum-comments"
+        >
+          <MessageSquareIcon aria-hidden="true" className="size-5" />
+          {t("title", { count: commentCount })}
+        </h2>
+        {onSortChange && last.pageInfo.totalCount > 1 ? (
+          <CommentSortControl
+            onChange={next => {
+              setPendingSort(next);
+              void onSortChange(next).finally(() => {
+                setPendingSort(null);
+              });
+            }}
+            pending={pendingSort}
+            sort={sort}
+          />
+        ) : null}
+      </div>
 
       {tree.length === 0 ? (
         <Empty className="border">
@@ -501,7 +583,13 @@ export const ForumThread = ({
           </EmptyHeader>
         </Empty>
       ) : (
-        <ol className="flex flex-col gap-6">
+        <ol
+          aria-busy={pendingSort !== null}
+          className={cn(
+            "flex flex-col gap-6 motion-safe:transition-opacity",
+            pendingSort !== null && "opacity-60",
+          )}
+        >
           {tree.map(node => (
             <ThreadNodeView
               actions={actions}

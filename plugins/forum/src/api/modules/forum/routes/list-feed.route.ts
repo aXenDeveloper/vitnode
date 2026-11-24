@@ -42,7 +42,7 @@ const excerptOf = (body: unknown): string => {
 /**
  * One page of a topic feed - every forum the viewer may read, or one forum -
  * ranked `hot`, `new`, `active` or `top`. Each topic comes with a plain-text
- * excerpt of its body, its reaction score and its public comment stats.
+ * excerpt of its body, its points from reactions and its public comment stats.
  */
 export const forumFeedRoute = buildRoute({
   route: {
@@ -82,8 +82,8 @@ export const forumFeedRoute = buildRoute({
                   forum: z.number(),
                   id: z.number(),
                   lastActivityAt: z.string().nullable(),
+                  points: z.number(),
                   publishedAt: z.string().nullable(),
-                  score: z.number(),
                   slug: z.string(),
                   title: z.string(),
                 }),
@@ -170,8 +170,8 @@ export const forumFeedRoute = buildRoute({
               forum: row.forum,
               id: row.id,
               lastActivityAt: item.lastActivityAt,
+              points: item.points,
               publishedAt: iso(row.publishedAt),
-              score: item.score,
               slug: row.slug,
               title: row.title,
             },

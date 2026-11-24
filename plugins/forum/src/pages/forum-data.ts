@@ -60,8 +60,8 @@ export const zodFeedTopic = z.object({
   forum: z.number(),
   id: z.number(),
   lastActivityAt: z.string().nullable(),
+  points: z.number(),
   publishedAt: z.string().nullable(),
-  score: z.number(),
   slug: z.string(),
   title: z.string(),
 });

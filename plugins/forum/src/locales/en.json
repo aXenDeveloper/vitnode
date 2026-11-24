@@ -113,7 +113,6 @@
           "year": "This year",
           "all": "All time"
         },
-        "score": "{count, plural, one {# point} other {# points}}",
         "empty_top": {
           "title": "Nothing at the top yet",
           "desc": "No topics were posted in this time range. Pick a longer one, or post something worth climbing the charts."
@@ -121,6 +120,10 @@
         "previous": "Previous",
         "next": "Next",
         "page": "Page {page}"
+      },
+      "points": {
+        "unit": "{count, plural, one {point} other {points}}",
+        "hint": "Points from reactions to this post"
       }
     },
     "topics": {
@@ -269,7 +272,13 @@
       "someone": "this comment",
       "removed": "This comment was removed.",
       "show_answers": "{count, plural, one {Show # reply} other {Show # replies}}",
-      "hide_answers": "{count, plural, one {Hide # reply} other {Hide # replies}}"
+      "hide_answers": "{count, plural, one {Hide # reply} other {Hide # replies}}",
+      "sort": {
+        "label": "Sort comments",
+        "old": "Oldest",
+        "new": "Newest",
+        "points": "Most points"
+      }
     },
     "pending": {
       "title": "My posts awaiting approval",

@@ -111,7 +111,8 @@ deep, and you can drag them to reorder. A forum's **Icon** accepts the same
 `/forum` works like a Reddit front page: one feed of topics from every forum
 the visitor may read, with the forum tree beside it (a row of forum chips on
 phones). Each forum page shows its own topics the same way. Every topic card
-has its forum, author, age, title, a short excerpt, its points and comments.
+has its forum, author, age, title, a short excerpt, its points, its reactions -
+members react right from the feed - and its comments.
 
 | Sort   | URL                | Shows first                                                  |
 | ------ | ------------------ | ------------------------------------------------------------ |
@@ -120,16 +121,10 @@ has its forum, author, age, title, a short excerpt, its points and comments.
 | Active | `?sort=active`     | Topics with the latest comment, like a classic forum         |
 | Top    | `?sort=top&t=week` | The most points today, this week, month or year, or all time |
 
-**Points** are a topic's reactions: every reaction adds one, and a reaction
-worth negative points in **AdminCP → Reactions** (like "Disagree") takes one
-away. **Hot** adds comments to the points and weighs them on a log scale
-against age, so ten times the engagement buys a topic about 12.5 hours of
-freshness. A brilliant topic from last month politely makes room for today's.
-
 Pages go `?page=2` and on, up to page 40. The ranking is shared by everyone and
 cached for a minute; a new topic or comment refreshes it at once, a new
-reaction within a minute. Topics in forums the visitor cannot read never make
-it into their feed.
+reaction - or a new value for a reaction in AdminCP - within a minute. Topics
+in forums the visitor cannot read never make it into their feed.
 
 Need the feed in your own component? Call the same route:
 
@@ -147,7 +142,26 @@ const res = await fetcher({
 
 Add `forumId` to the query for one forum's topics only.
 
+## Points come from reactions
+
+There is no up/down voting. A topic's or comment's **points** are its
+reactions, each worth what you set in **AdminCP → Reactions**. Say `like` is
+worth 1, `thanks` 2, `sad` 0 and `disagree` -1: a topic with three likes and
+one thanks has 5 points. In other words, points are exactly what the
+reaction pills under a post add up to, and they update live as people react.
+Disabled reactions don't count.
+
+**Hot** adds the comment count to the points and weighs the sum on a log scale
+against age, so ten times the engagement buys a topic about 12.5 hours of
+freshness. A brilliant topic from last month politely makes room for today's.
+
 ## Comments
+
+Comments come in posting order, like a classic forum. Above them, readers can
+switch to **Newest** (`?comments=new`) or **Most points**
+(`?comments=points`). Only top-level comments move; replies stay under their
+parent in the order they were written, so a conversation still reads top to
+bottom. Every comment shows its points next to its reactions.
 
 Comments nest up to six levels - hit **Reply** under any comment to answer it.
 On small screens deep comments stop indenting, so the text keeps its width, and

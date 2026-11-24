@@ -7,10 +7,11 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
+import { contentTarget } from "@vitnode/core/content";
 import { HrefLink } from "@vitnode/core/tanstack/link";
+import { ReactionBar } from "@vitnode/core/tanstack/reactions";
 import {
   ActivityIcon,
-  ArrowBigUpIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FlameIcon,
@@ -24,18 +25,21 @@ import { useTranslations } from "use-intl";
 
 import type { ForumFeedSort } from "@/feed-sorts";
 
+import { topicContentType } from "@/content/topic";
 import {
   FORUM_FEED_DEFAULT_SORT,
   FORUM_FEED_DEFAULT_TOP_WINDOW,
   FORUM_FEED_SORTS,
   FORUM_FEED_TOP_WINDOWS,
 } from "@/feed-sorts";
+import { manifest } from "@/manifest.gen";
 
 import type { FeedTopic, Forum } from "./forum-data";
 import type { ForumSearch } from "./forum-links";
 
 import { forumHref, topicHref, topicNewHref } from "./forum-links";
 import { ForumIcon, PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
+import { ReactionPoints } from "./reaction-points";
 
 const SORT_ICONS: Record<ForumFeedSort, typeof FlameIcon> = {
   active: ActivityIcon,
@@ -122,6 +126,7 @@ const FeedCard = ({
 }) => {
   const t = useTranslations("@vitnode/forum.forums");
   const titleId = `feed-topic-${topic.id}`;
+  const target = contentTarget(manifest.id, topicContentType, topic.id);
 
   return (
     <li className="hover:bg-muted/40 motion-safe:transition-colors">
@@ -172,28 +177,28 @@ const FeedCard = ({
           </p>
         ) : null}
 
-        <ul className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm leading-relaxed">
-          <li className="flex items-center gap-1.5">
-            <ArrowBigUpIcon aria-hidden="true" className="size-4" />
-            <span className="tabular-nums">
-              {t("feed.score", { count: topic.score })}
-            </span>
-          </li>
-          <li className="flex items-center gap-1.5">
-            <MessageSquareIcon aria-hidden="true" className="size-4" />
-            <span className="tabular-nums">
-              {t("comment_count", { count: topic.commentCount })}
-            </span>
-          </li>
-          {topic.commentCount > 0 && topic.lastActivityAt ? (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <ReactionPoints initial={topic.points} target={target} />
+            <ReactionBar target={target} />
+          </div>
+          <ul className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-sm leading-relaxed">
             <li className="flex items-center gap-1.5">
-              <ActivityIcon aria-hidden="true" className="size-4" />
-              <span>
-                {t("last_comment")} <TimeAgo date={topic.lastActivityAt} />
+              <MessageSquareIcon aria-hidden="true" className="size-4" />
+              <span className="tabular-nums">
+                {t("comment_count", { count: topic.commentCount })}
               </span>
             </li>
-          ) : null}
-        </ul>
+            {topic.commentCount > 0 && topic.lastActivityAt ? (
+              <li className="flex items-center gap-1.5">
+                <ActivityIcon aria-hidden="true" className="size-4" />
+                <span>
+                  {t("last_comment")} <TimeAgo date={topic.lastActivityAt} />
+                </span>
+              </li>
+            ) : null}
+          </ul>
+        </div>
       </article>
     </li>
   );
@@ -201,7 +206,8 @@ const FeedCard = ({
 
 /**
  * A ranked page of topics, Reddit-style: forum, author and age on top, the
- * title, a short excerpt, then the score and the conversation around it.
+ * title, a short excerpt, then its points and reactions - react right from the
+ * feed - and the conversation around it.
  */
 export const TopicFeed = ({
   forumId,

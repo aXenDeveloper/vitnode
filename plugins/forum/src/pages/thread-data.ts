@@ -2,6 +2,9 @@ import { zodRichTextDocument } from "@vitnode/core/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
+import type { ForumCommentSort } from "@/feed-sorts";
+
+import { FORUM_COMMENT_DEFAULT_SORT } from "@/feed-sorts";
 import { manifest } from "@/manifest.gen";
 
 import { zodPerson } from "./forum-data";
@@ -30,17 +33,17 @@ const zodComment = z.object({
 
 export type ThreadComment = z.infer<typeof zodComment>;
 
+const zodThreadNode = z.object({
+  depth: z.number(),
+  id: z.number(),
+  parentId: z.number().nullable(),
+  record: zodComment.nullable(),
+  removed: z.boolean(),
+});
+
 const zodThreadPage = z
   .object({
-    items: z.array(
-      z.object({
-        depth: z.number(),
-        id: z.number(),
-        parentId: z.number().nullable(),
-        record: zodComment.nullable(),
-        removed: z.boolean(),
-      }),
-    ),
+    items: z.array(zodThreadNode),
     pageInfo: z.object({
       endCursor: z.string().nullable(),
       hasNextPage: z.boolean(),
@@ -86,6 +89,118 @@ export const fetchThreadPage = async ({
 
   return zodThreadPage.parse(await res.json());
 };
+
+/** `CONTENT_THREAD_BRANCHES_MAX` - the most branches one `/thread/branches` read takes. */
+const THREAD_BRANCHES_PER_READ = 10;
+
+const zodBranches = z.object({
+  branches: z.array(
+    z.discriminatedUnion("status", [
+      z.object({
+        id: z.number(),
+        items: z.array(zodThreadNode),
+        status: z.literal("ok"),
+      }),
+      z.object({ id: z.number(), status: z.literal("gone") }),
+    ]),
+  ),
+  replyCount: z.number(),
+  truncated: z.boolean(),
+});
+
+const fetchBranches = async (topicId: number, ids: readonly number[]) => {
+  const res = await fetcher({
+    plugin: manifest.id,
+    method: "get",
+    module: "content/comments",
+    path: "/thread/branches",
+    args: {
+      query: {
+        root: String(topicId),
+        ...(ids.length > 0 ? { ids: ids.join(",") } : {}),
+      },
+    },
+  });
+
+  if (res.status === 404) return null;
+  if (res.status !== 200) throw new Error("Loading the comments failed.");
+
+  return zodBranches.parse(await res.json());
+};
+
+/**
+ * One page of a thread with its top-level comments in `sort` order: the forum
+ * ranks the ids, then the Content Engine reads those branches with every
+ * visibility rule, ten at a time. Same shape as {@link fetchThreadPage}; the
+ * cursor is an offset.
+ */
+const fetchOrderedThreadPage = async ({
+  after,
+  first = THREAD_PAGE_SIZE,
+  sort,
+  topicId,
+}: {
+  after?: string;
+  first?: number;
+  sort: Exclude<ForumCommentSort, "old">;
+  topicId: number;
+}): Promise<null | ThreadPage> => {
+  const res = await fetcher({
+    plugin: manifest.id,
+    method: "get",
+    module: "forum",
+    path: "/topics/{id}/comments/order",
+    args: {
+      params: { id: topicId },
+      query: {
+        after: after ? Number(after) : 0,
+        first: Math.min(Math.max(first, 1), THREAD_MAX_PAGE_SIZE),
+        sort,
+      },
+    },
+  });
+
+  if (res.status === 404) return null;
+  if (res.status !== 200) throw new Error("Loading the comments failed.");
+
+  const { ids, pageInfo } = await res.json();
+  const chunks: number[][] = [];
+  for (let index = 0; index < ids.length; index += THREAD_BRANCHES_PER_READ) {
+    chunks.push(ids.slice(index, index + THREAD_BRANCHES_PER_READ));
+  }
+  const reads = await Promise.all(
+    (chunks.length > 0 ? chunks : [[]]).map(
+      async chunk => await fetchBranches(topicId, chunk),
+    ),
+  );
+  if (reads.some(read => read === null)) return null;
+  const answered = reads.filter(read => read !== null);
+
+  return {
+    commentCount: answered[0]?.replyCount ?? 0,
+    items: answered.flatMap(read =>
+      read.branches.flatMap(branch =>
+        branch.status === "ok" ? branch.items : [],
+      ),
+    ),
+    pageInfo,
+    truncated: answered.some(read => read.truncated),
+  };
+};
+
+/** One page of a topic's thread in `sort` order (`old` is posting order). */
+export const fetchSortedThreadPage = async ({
+  sort = FORUM_COMMENT_DEFAULT_SORT,
+  ...request
+}: {
+  after?: string;
+  first?: number;
+  sort?: ForumCommentSort;
+  topicId: number;
+}): Promise<null | ThreadPage> =>
+  sort === "old"
+    ? await fetchThreadPage(request)
+    : await fetchOrderedThreadPage({ ...request, sort });
 
 export interface ThreadTreeNode extends ThreadNode {
   children: ThreadTreeNode[];

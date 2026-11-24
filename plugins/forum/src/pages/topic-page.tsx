@@ -34,6 +34,7 @@ import { useTranslations } from "use-intl";
 import { z } from "zod";
 
 import { topicContentType } from "@/content/topic";
+import { FORUM_COMMENT_DEFAULT_SORT } from "@/feed-sorts";
 import { manifest } from "@/manifest.gen";
 
 import type { ForumPerson } from "./forum-data";
@@ -56,6 +57,7 @@ import {
   TOPIC_STALE_TIME,
 } from "./forum-queries";
 import { PersonAvatar, PersonName, TimeAgo } from "./forum-ui";
+import { ReactionPoints } from "./reaction-points";
 import { ForumThread } from "./thread";
 
 const DESCRIPTION_MAX_LENGTH = 160;
@@ -140,6 +142,7 @@ const topicOgImageQueryOptions = (id: number) =>
 const loadTopic = async (
   queryClient: QueryClient,
   { locale, slug }: { locale: string; slug: string },
+  { comments }: TopicSearch,
 ) => {
   const loaded = await queryClient.query(topicQueryOptions(slug));
   if ("accessRequired" in loaded) return { accessRequired: true as const };
@@ -147,7 +150,7 @@ const loadTopic = async (
 
   const [forum, thread, ogImage] = await Promise.all([
     queryForum(queryClient, String(topic.forum), locale).catch(() => null),
-    queryClient.query(threadQueryOptions(topic.id)),
+    queryClient.query(threadQueryOptions(topic.id, comments)),
     queryClient.query(topicOgImageQueryOptions(topic.id)).catch(() => null),
   ]);
 
@@ -192,11 +195,12 @@ const ForumsCrumb = () => {
 };
 
 export const route = defineRoute<TopicPageData, TopicSearch>({
-  load: async ({ context, params }) =>
-    await loadTopic(context.queryClient, {
-      locale: context.locale,
-      slug: params.slug,
-    }),
+  load: async ({ context, params, search }) =>
+    await loadTopic(
+      context.queryClient,
+      { locale: context.locale, slug: params.slug },
+      search,
+    ),
 
   head: ({ loaderData, t }) =>
     !loaderData || loaderData.accessRequired
@@ -284,6 +288,9 @@ const TopicViewerActions = ({
           typeLabel={t("report_type")}
         />
       ) : null}
+      <ReactionPoints
+        target={contentTarget(manifest.id, topicContentType, topicId)}
+      />
       <ReactionBar
         target={contentTarget(manifest.id, topicContentType, topicId)}
       />
@@ -442,6 +449,14 @@ const TopicView = ({
       <ForumThread
         canReply={canComment}
         initial={thread}
+        key={search.comments ?? FORUM_COMMENT_DEFAULT_SORT}
+        onSortChange={async sort => {
+          await navigate({
+            resetScroll: false,
+            search: sort === "old" ? {} : { comments: sort },
+          });
+        }}
+        sort={search.comments ?? FORUM_COMMENT_DEFAULT_SORT}
         topicId={topic.id}
         topicSlug={topic.slug}
       />

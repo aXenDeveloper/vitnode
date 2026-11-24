@@ -1,10 +1,6 @@
 import type { SQL } from "drizzle-orm";
 import type { Context } from "hono";
 
-import {
-  core_reactions,
-  core_reactions_counts,
-} from "@vitnode/api/database/reactions";
 import { and, count, desc, eq, gte, max, sql } from "drizzle-orm";
 import { z } from "zod";
 
@@ -16,9 +12,9 @@ import { topicContentType } from "@/content/topic";
 import { commentContent } from "@/database/comments";
 import { topicContent } from "@/database/topics";
 import { FORUM_FEED_MAX_PAGES, FORUM_FEED_PAGE_SIZE } from "@/feed-sorts";
-import { manifest } from "@/manifest.gen";
 
 import { publicComment, publicTopic } from "./public-condition";
+import { reactionPointsSubquery } from "./reaction-points";
 import { iso } from "./stats";
 
 export const FORUM_FEED_MAX_RANKED =
@@ -49,7 +45,7 @@ const zodRankedTopic = z.object({
   forum: z.number().int(),
   id: z.number().int(),
   lastActivityAt: z.iso.datetime().nullable(),
-  score: z.number().int(),
+  points: z.number().int(),
 });
 
 export type RankedTopic = z.infer<typeof zodRankedTopic>;
@@ -61,7 +57,7 @@ export type RankedTopic = z.infer<typeof zodRankedTopic>;
  */
 const feedRankingCache = defineCacheEntry({
   name: "feed.ranking",
-  version: 1,
+  version: 2,
   key: (
     generation: string,
     bucket: number,
@@ -100,45 +96,27 @@ const rankTopics = async (
     .groupBy(comments.topic)
     .as("forum_feed_comment_stats");
 
-  // A reaction worth negative points (a dislike) pulls the score down; every
-  // other reaction counts as one point up.
-  const reactionStats = db
-    .select({
-      score:
-        sql<number>`coalesce(sum(case when ${core_reactions.points} < 0 then -${core_reactions_counts.count} else ${core_reactions_counts.count} end), 0)::int`.as(
-          "score",
-        ),
-      targetId: core_reactions_counts.targetId,
-    })
-    .from(core_reactions_counts)
-    .innerJoin(
-      core_reactions,
-      eq(core_reactions_counts.reactionId, core_reactions.id),
-    )
-    .where(
-      and(
-        eq(core_reactions_counts.pluginId, manifest.id),
-        eq(core_reactions_counts.targetType, topicContentType.id),
-      ),
-    )
-    .groupBy(core_reactions_counts.targetId)
-    .as("forum_feed_reaction_stats");
+  const reactionPoints = reactionPointsSubquery(
+    c,
+    topicContentType.id,
+    "forum_feed_reaction_points",
+  );
 
   const commentCount = sql<number>`coalesce(${commentStats.commentCount}, 0)::int`;
-  const score = sql<number>`coalesce(${reactionStats.score}, 0)::int`;
+  const points = sql<number>`coalesce(${reactionPoints.points}, 0)::int`;
   // `greatest` skips nulls: a topic without comments was last active when it
   // was published.
   const lastActivityAt = sql<
     Date | null | string
   >`greatest(${topics.publishedAt}, ${commentStats.lastCommentAt})`;
-  const engagement = sql`(${score} + ${commentCount})`;
+  const engagement = sql`(${points} + ${commentCount})`;
   const hot = sql`sign(${engagement}) * log(greatest(abs(${engagement}), 1)) + extract(epoch from ${topics.publishedAt}) / ${HOT_DECAY_SECONDS}`;
 
   const order: SQL[] = {
     active: [desc(lastActivityAt)],
     hot: [desc(hot)],
     new: [desc(topics.publishedAt)],
-    top: [desc(score), desc(commentCount), desc(topics.publishedAt)],
+    top: [desc(points), desc(commentCount), desc(topics.publishedAt)],
   }[sort];
 
   const rows = await db
@@ -147,13 +125,13 @@ const rankTopics = async (
       forum: topics.forum,
       id: topics.id,
       lastActivityAt,
-      score,
+      points,
     })
     .from(topics)
     .leftJoin(commentStats, eq(commentStats.topicId, topics.id))
     .leftJoin(
-      reactionStats,
-      eq(reactionStats.targetId, sql`cast(${topics.id} as varchar)`),
+      reactionPoints,
+      eq(reactionPoints.targetId, sql`cast(${topics.id} as varchar)`),
     )
     .where(
       and(
@@ -175,7 +153,7 @@ const rankTopics = async (
     forum: row.forum,
     id: row.id,
     lastActivityAt: iso(row.lastActivityAt),
-    score: row.score,
+    points: row.points,
   }));
 };
 

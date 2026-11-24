@@ -1,6 +1,26 @@
 # Forum: points from reactions
 
-Status: planned, not started. Owner: `@vitnode/forum` (no core changes).
+Status: implemented (phases 1-5); tests still to write in a separate session.
+Owner: `@vitnode/forum` (no core changes).
+
+## Implemented differently from this plan
+
+- **Points are what the pills add up to**, read from `core_reactions_counts`
+  (`count × points`, enabled reactions only) - not from the entries with a
+  `targetAuthorId`. The reputation rule (no self reactions) can't be followed
+  in the browser, so the live badge and the ranking disagreed whenever an
+  author reacted to their own post (only possible when a role allows it).
+  Counting what readers see keeps both the same.
+- **No topic or comment points route.** The badge (`ReactionPoints`) reads the
+  reaction summary and catalog `ReactionBar` already loads, read-only
+  (`enabled: false`): fetching them itself made the bar hydrate with data the
+  server never rendered. Feed cards pass the ranking's number as `initial`.
+- **Comment order**: `GET /forum/topics/{id}/comments/order?sort=new|points`
+  returns root ids with an offset cursor; the browser reads them through
+  `/content/comments/thread/branches`, ten per request. Hidden roots are left
+  out of the sorted views, also for moderators.
+- Decisions taken: Hot keeps comments in its engagement; comments default to
+  oldest first.
 
 No up/down voting and no Reddit-style rating. Members keep reacting the way
 they do today, and each reaction is worth the **points** an admin gave it in

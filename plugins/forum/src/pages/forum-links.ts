@@ -1,9 +1,14 @@
-import type { ForumFeedSort, ForumFeedTopWindow } from "@/feed-sorts";
+import type {
+  ForumCommentSort,
+  ForumFeedSort,
+  ForumFeedTopWindow,
+} from "@/feed-sorts";
 
 import {
   FORUM_FEED_DEFAULT_SORT,
   FORUM_FEED_DEFAULT_TOP_WINDOW,
   FORUM_FEED_MAX_PAGES,
+  isForumCommentSort,
   isForumFeedSort,
   isForumFeedTopWindow,
 } from "@/feed-sorts";
@@ -75,17 +80,32 @@ export const forumHref = (slug: string, search: ForumSearch = {}): string =>
   `${FORUM_HREF}/${encodeURIComponent(slug)}${feedQueryString(search)}`;
 
 export interface TopicSearch {
+  /** How the top-level comments are ordered; posting order without it. */
+  comments?: Exclude<ForumCommentSort, "old">;
   created?: true;
 }
 
-export const topicSearch = (input: Record<string, unknown>): TopicSearch =>
-  isTrue(input.created) ? { created: true } : {};
+export const topicSearch = (input: Record<string, unknown>): TopicSearch => {
+  const search: TopicSearch = {};
+  if (isTrue(input.created)) search.created = true;
+  if (isForumCommentSort(input.comments) && input.comments !== "old") {
+    search.comments = input.comments;
+  }
+
+  return search;
+};
 
 export const topicHref = (
   slug: string,
-  { created }: TopicSearch = {},
-): string =>
-  `${FORUM_HREF}/topics/${encodeURIComponent(slug)}${created ? "?created=true" : ""}`;
+  { comments, created }: TopicSearch = {},
+): string => {
+  const params = new URLSearchParams();
+  if (comments) params.set("comments", comments);
+  if (created) params.set("created", "true");
+  const query = params.toString();
+
+  return `${FORUM_HREF}/topics/${encodeURIComponent(slug)}${query ? `?${query}` : ""}`;
+};
 
 export const commentAnchorId = (commentSlug: string): string =>
   `comment-${commentSlug}`;

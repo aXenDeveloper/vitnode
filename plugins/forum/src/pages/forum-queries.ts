@@ -9,7 +9,10 @@ import {
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { z } from "zod";
 
+import type { ForumCommentSort } from "@/feed-sorts";
+
 import {
+  FORUM_COMMENT_DEFAULT_SORT,
   FORUM_FEED_DEFAULT_SORT,
   FORUM_FEED_DEFAULT_TOP_WINDOW,
 } from "@/feed-sorts";
@@ -18,7 +21,7 @@ import { manifest } from "@/manifest.gen";
 import type { ForumSearch } from "./forum-links";
 
 import { fetchForums, fetchForumStats, zodFeedTopic } from "./forum-data";
-import { fetchThreadPage } from "./thread-data";
+import { fetchSortedThreadPage } from "./thread-data";
 
 const FORUM_TREE_STALE_TIME = RECORD_STALE_TIME;
 
@@ -45,7 +48,10 @@ export const forumQueryKeys = {
   pending: (userId: number, page: number) =>
     [...submissions, userId, { page }] as const,
   submissions: () => submissions,
-  thread: (topicId: number) => [...all, "thread", topicId] as const,
+  thread: (topicId: number, sort?: ForumCommentSort) =>
+    sort === undefined
+      ? ([...all, "thread", topicId] as const)
+      : ([...all, "thread", topicId, sort] as const),
   topic: (slug: string) => [...topicDetails, slug] as const,
   topicDetails: () => topicDetails,
   topicList: (request: FeedRequest) => [...topicLists, request] as const,
@@ -164,11 +170,14 @@ export const queryForum = async (
   return data;
 };
 
-export const threadQueryOptions = (topicId: number) =>
+export const threadQueryOptions = (
+  topicId: number,
+  sort: ForumCommentSort = FORUM_COMMENT_DEFAULT_SORT,
+) =>
   queryOptions({
     meta: LOADER_DATA_QUERY_META,
-    queryFn: async () => await fetchThreadPage({ topicId }),
-    queryKey: forumQueryKeys.thread(topicId),
+    queryFn: async () => await fetchSortedThreadPage({ sort, topicId }),
+    queryKey: forumQueryKeys.thread(topicId, sort),
     staleTime: FORUM_ACTIVITY_STALE_TIME,
   });
 
