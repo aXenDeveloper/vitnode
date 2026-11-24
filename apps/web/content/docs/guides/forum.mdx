@@ -4,7 +4,7 @@ description: Enable the @vitnode/forum plugin, create forums in AdminCP, choose 
 icon: MessagesSquare
 ---
 
-import { Tab, Tabs } from "fumadocs-ui/components/tabs";
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 
 `@vitnode/forum` adds a community forum to a VitNode app: a tree of forums,
 topics inside them and threaded comments. It is built only from
@@ -13,8 +13,8 @@ forums, two content types and a [thread](/docs/content-engine/threads) - so
 everything you learn here works the same way in your own plugins.
 
 <Callout type="info" title="Lives in the monorepo">
-  The plugin is `private: true` and ships with the VitNode repository, like
-  the `newsroom` plugin. It is not published to npm yet.
+  The plugin is `private: true` and ships with the VitNode repository, like the
+  `newsroom` plugin. It is not published to npm yet.
 </Callout>
 
 <Steps>
@@ -26,13 +26,13 @@ Add the API factory to `vitnode.api.config.ts` - in `apps/web` for a single
 app, and in `apps/api` too for a split deployment.
 
 ```ts title="apps/web/src/vitnode.api.config.ts"
-import { forumApiPlugin } from "@vitnode/forum/config.api"; // [!code ++]
+import { forumApiPlugin } from '@vitnode/forum/config.api' // [!code ++]
 
 export const vitNodeApiConfig = buildApiConfig({
   plugins: [
     forumApiPlugin(), // [!code ++]
   ],
-});
+})
 ```
 
   </Step>
@@ -44,13 +44,13 @@ The web factory brings the pages, the AdminCP **Forums** screen and the
 translations.
 
 ```ts title="apps/web/src/vitnode.config.ts"
-import { forumPlugin } from "@vitnode/forum/config"; // [!code ++]
+import { forumPlugin } from '@vitnode/forum/config' // [!code ++]
 
 export const vitNodeConfig = buildConfig({
   plugins: [
     forumPlugin(), // [!code ++]
   ],
-});
+})
 ```
 
   </Step>
@@ -96,23 +96,27 @@ deep, and you can drag them to reorder. A forum's **Icon** accepts the same
 
 ## Pages members get
 
-| Page                     | What it does                                                           |
-| ------------------------ | ---------------------------------------------------------------------- |
-| `/forum`                 | A feed of topics from every forum you can read, with the forum list    |
-| `/forum/:slug`           | Subforums and the topics of one forum, in the same sortable feed       |
-| `/forum/create/topic`    | Start a topic (signed-in members)                                      |
-| `/forum/topics/:slug`    | The topic, its comments, and a comment box                             |
-| `/forum/topics/:id/edit` | Edit your own topic                                                    |
-| `/forum/comments/:slug`  | Permalink of one comment - redirects to its place in the topic         |
-| `/forum/me/pending`      | Your posts a moderator approved, declined, or has not looked at yet    |
+| Page                     | What it does                                                        |
+| ------------------------ | ------------------------------------------------------------------- |
+| `/forum`                 | A feed of topics from every forum you can read, with the forum list |
+| `/forum/:slug`           | Subforums and the topics of one forum, in the same sortable feed    |
+| `/forum/create/topic`    | Start a topic (signed-in members)                                   |
+| `/forum/topics/:slug`    | The topic, its comments, and a comment box                          |
+| `/forum/topics/:id/edit` | Edit your own topic                                                 |
+| `/forum/comments/:slug`  | Permalink of one comment - redirects to its place in the topic      |
+| `/forum/me/pending`      | Your posts a moderator approved, declined, or has not looked at yet |
 
 ## Sort the feed
 
 `/forum` works like a Reddit front page: one feed of topics from every forum
-the visitor may read, with the forum tree beside it (a row of forum chips on
-phones). Each forum page shows its own topics the same way. Every topic card
-has its forum, author, age, title, a short excerpt, its points, its reactions -
-members react right from the feed - and its comments.
+the visitor may read. Beside it sits a sidebar that follows you down the page:
+the forum's description, how many topics and comments it holds, a **New topic**
+button and the forum tree (on phones, a row of forum chips instead). Each forum
+page shows its own topics the same way.
+
+Every topic is a card: the forum's icon, then its forum, author and age, the
+title and a short excerpt. The card's footer holds its points and reactions -
+members react right from the feed - and a link straight to its comments.
 
 | Sort   | URL                | Shows first                                                  |
 | ------ | ------------------ | ------------------------------------------------------------ |
@@ -129,15 +133,15 @@ in forums the visitor cannot read never make it into their feed.
 Need the feed in your own component? Call the same route:
 
 ```ts
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
 
 const res = await fetcher({
-  plugin: "@vitnode/forum",
-  method: "get",
-  module: "forum",
-  path: "/feed",
-  args: { query: { page: 1, sort: "top", t: "month" } },
-});
+  plugin: '@vitnode/forum',
+  method: 'get',
+  module: 'forum',
+  path: '/feed',
+  args: { query: { page: 1, sort: 'top', t: 'month' } },
+})
 ```
 
 Add `forumId` to the query for one forum's topics only.

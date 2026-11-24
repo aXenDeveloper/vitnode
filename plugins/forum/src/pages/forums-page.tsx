@@ -129,7 +129,15 @@ const ForumsPage = ({
   loaderData,
 }: PluginRoutePageProps<ForumsPageData, ForumSearch>) => {
   const t = useTranslations("@vitnode/forum.forums");
+  const format = useFormatter();
   const { feed, forums, search, tree } = loaderData;
+  const totals = loaderData.stats.reduce(
+    (sum, item) => ({
+      comments: sum.comments + item.commentCount,
+      topics: sum.topics + item.topicCount,
+    }),
+    { comments: 0, topics: 0 },
+  );
   const stats = indexBy(loaderData.stats, item => item.forumId);
   const forumsById = indexBy(forums, item => item.id);
 
@@ -160,17 +168,22 @@ const ForumsPage = ({
   return (
     <ForumShell
       actions={
-        <HrefLink className={buttonVariants()} href={topicNewHref()}>
+        <HrefLink
+          className={buttonVariants({ className: "lg:hidden" })}
+          href={topicNewHref()}
+        >
           <PenSquareIcon aria-hidden="true" />
           {t("new_topic")}
         </HrefLink>
       }
-      description={t("desc")}
       title={t("title")}
       wide
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
-        <section aria-labelledby="forum-feed" className="flex flex-col gap-4">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
+        <section
+          aria-labelledby="forum-feed"
+          className="flex min-w-0 flex-col gap-4"
+        >
           <h2 className="sr-only" id="forum-feed">
             {t("feed.title")}
           </h2>
@@ -204,11 +217,45 @@ const ForumsPage = ({
           />
         </section>
 
-        <aside
-          aria-labelledby="forum-tree"
-          className="bg-card hidden rounded-xl border p-2 lg:block"
-        >
-          <div className="flex flex-col gap-2">
+        <aside className="hidden flex-col gap-4 lg:sticky lg:top-20 lg:flex">
+          <section
+            aria-label={t("title")}
+            className="bg-card flex flex-col gap-4 rounded-xl border p-4 shadow-xs"
+          >
+            <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
+              {t("desc")}
+            </p>
+            <dl className="flex gap-6">
+              <div className="flex flex-col">
+                <dt className="text-muted-foreground text-xs">
+                  {t("stats.topics")}
+                </dt>
+                <dd className="text-foreground text-lg font-semibold tabular-nums">
+                  {format.number(totals.topics)}
+                </dd>
+              </div>
+              <div className="flex flex-col">
+                <dt className="text-muted-foreground text-xs">
+                  {t("stats.comments")}
+                </dt>
+                <dd className="text-foreground text-lg font-semibold tabular-nums">
+                  {format.number(totals.comments)}
+                </dd>
+              </div>
+            </dl>
+            <HrefLink
+              className={buttonVariants({ className: "w-full" })}
+              href={topicNewHref()}
+            >
+              <PenSquareIcon aria-hidden="true" />
+              {t("new_topic")}
+            </HrefLink>
+          </section>
+
+          <section
+            aria-labelledby="forum-tree"
+            className="bg-card flex flex-col gap-2 rounded-xl border p-2 shadow-xs"
+          >
             <h2
               className="text-foreground px-2 pt-2 text-sm font-semibold"
               id="forum-tree"
@@ -218,7 +265,7 @@ const ForumsPage = ({
             <nav aria-labelledby="forum-tree">
               <SidebarForums nodes={tree} stats={stats} />
             </nav>
-          </div>
+          </section>
         </aside>
       </div>
     </ForumShell>

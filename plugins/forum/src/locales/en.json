@@ -75,7 +75,6 @@
       },
       "pagination": "Topic pages",
       "comment_count": "{count, plural, =0 {No comments} one {# comment} other {# comments}}",
-      "last_comment": "Last comment",
       "errors": {
         "title": "That did not go through",
         "unknown": "Something went wrong. Please try again in a moment.",
