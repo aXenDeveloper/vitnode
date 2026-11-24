@@ -1,21 +1,33 @@
+import type { ForumSearch } from '@vitnode/forum/pages/forum-links'
+
 // Prototype harness - deleted after the decision. Picker per PICKER.md.
 import { RouteMessages } from '@vitnode/core/tanstack/i18n'
 import { FeedPendingSkeleton } from '@vitnode/core/tanstack/pending'
 import React from 'react'
 
 import { Baseline } from './baseline'
-import { Board } from './board'
-import { Channels } from './channels'
-import { Compact } from './compact'
-import { Editorial } from './editorial'
+import { Cards } from './cards'
+import { Density } from './density'
+import { Focus } from './focus'
+import { Rail } from './rail'
 
 const VARIANTS = [
   { component: Baseline, name: 'Baseline' },
-  { component: Board, name: 'Board' },
-  { component: Compact, name: 'Compact' },
-  { component: Editorial, name: 'Editorial' },
-  { component: Channels, name: 'Channels' },
+  { component: Rail, name: 'Rail' },
+  { component: Cards, name: 'Cards' },
+  { component: Density, name: 'Density' },
+  { component: Focus, name: 'Focus' },
 ] as const
+
+/** The feed URL inside the prototype, keeping the picked variant. */
+const protoHref = (variant: number, search: ForumSearch) => {
+  const params = new URLSearchParams({ v: String(variant + 1) })
+  if (search.sort && search.sort !== 'hot') params.set('sort', search.sort)
+  if (search.sort === 'top' && search.t) params.set('t', search.t)
+  if (search.page && search.page > 1) params.set('page', String(search.page))
+
+  return `/proto/forum-home?${params.toString()}`
+}
 
 const PICKER_CSS = `
 .proto-picker {
@@ -160,7 +172,13 @@ const Picker = ({
   )
 }
 
-export const ForumHomeProto = ({ initial }: { initial: number }) => {
+export const ForumHomeProto = ({
+  initial,
+  search,
+}: {
+  initial: number
+  search: ForumSearch
+}) => {
   const [current, setCurrent] = React.useState(
     initial >= 0 && initial < VARIANTS.length ? initial : 0,
   )
@@ -207,7 +225,11 @@ export const ForumHomeProto = ({ initial }: { initial: number }) => {
         namespaces={['core.global', '@vitnode/forum.forums', 'core.reactions']}
       >
         <React.Suspense fallback={<FeedPendingSkeleton />}>
-          <Variant key={current} />
+          <Variant
+            hrefFor={(next) => protoHref(current, next)}
+            key={current}
+            search={search}
+          />
         </React.Suspense>
       </RouteMessages>
       <Picker current={current} onSelect={select} />

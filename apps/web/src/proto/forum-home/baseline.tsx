@@ -9,24 +9,27 @@ import {
 } from '@vitnode/forum/pages/forum-queries'
 import ForumsPage from '@vitnode/forum/pages/forums-page'
 
-export const Baseline = () => {
+import type { VariantProps } from './data'
+
+// Its sort and page links go to the real /forum page.
+export const Baseline = ({ search }: VariantProps) => {
   const locale = useLocale()
   const forums = useSuspenseQuery(forumsQueryOptions(locale)).data
   const stats = useSuspenseQuery(forumStatsQueryOptions()).data
-  const feed = useSuspenseQuery(feedQueryOptions({})).data
+  const feed = useSuspenseQuery(feedQueryOptions(search)).data
 
   return (
     <ForumsPage
       loaderData={{
         feed,
         forums,
-        search: {},
+        search,
         stats,
         tree: contentContainerTree(forums),
       }}
       navigate={async () => {}}
       params={{}}
-      search={{}}
+      search={search}
     />
   )
 }

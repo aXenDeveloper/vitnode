@@ -1,5 +1,5 @@
 // Prototype - deleted after the decision. Not imported by production code.
-import type { FeedRequest } from '@vitnode/forum/pages/forum-queries'
+import type { ForumSearch } from '@vitnode/forum/pages/forum-links'
 
 import {
   keepPreviousData,
@@ -18,7 +18,6 @@ export const useHomeData = () => {
   const locale = useLocale()
   const forums = useSuspenseQuery(forumsQueryOptions(locale)).data
   const stats = useSuspenseQuery(forumStatsQueryOptions()).data
-  const tree = contentContainerTree(forums)
 
   return {
     forums,
@@ -31,13 +30,16 @@ export const useHomeData = () => {
       }),
       { comments: 0, topics: 0 },
     ),
-    tree,
+    tree: contentContainerTree(forums),
   }
 }
 
 /** A feed that keeps the previous page on screen while the next one loads. */
-export const useFeed = (request: FeedRequest) =>
-  useQuery({ ...feedQueryOptions(request), placeholderData: keepPreviousData })
+export const useFeed = (search: ForumSearch) =>
+  useQuery({ ...feedQueryOptions(search), placeholderData: keepPreviousData })
 
-export const SORTS = ['hot', 'new', 'active', 'top'] as const
-export type Sort = (typeof SORTS)[number]
+/** Props every variant gets: the URL's feed search and links that keep `?v`. */
+export interface VariantProps {
+  hrefFor: (search: ForumSearch) => string
+  search: ForumSearch
+}
