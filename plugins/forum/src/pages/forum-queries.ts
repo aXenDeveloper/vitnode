@@ -7,12 +7,17 @@ import {
   RECORD_STALE_TIME,
 } from "@vitnode/core/lib/query-freshness";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { z } from "zod";
 
+import {
+  FORUM_FEED_DEFAULT_SORT,
+  FORUM_FEED_DEFAULT_TOP_WINDOW,
+} from "@/feed-sorts";
 import { manifest } from "@/manifest.gen";
 
 import type { ForumSearch } from "./forum-links";
 
-import { fetchForums, fetchForumStats } from "./forum-data";
+import { fetchForums, fetchForumStats, zodFeedTopic } from "./forum-data";
 import { fetchThreadPage } from "./thread-data";
 
 const FORUM_TREE_STALE_TIME = RECORD_STALE_TIME;
@@ -43,13 +48,46 @@ export const forumQueryKeys = {
   thread: (topicId: number) => [...all, "thread", topicId] as const,
   topic: (slug: string) => [...topicDetails, slug] as const,
   topicDetails: () => topicDetails,
-  topicList: (request: ForumSearch & { forumId: number }) =>
-    [...topicLists, request] as const,
+  topicList: (request: FeedRequest) => [...topicLists, request] as const,
   topicLists: () => topicLists,
 };
 
 export const isSharedResponse = (res: Response): boolean =>
   !/\b(?:no-store|private)\b/i.test(res.headers.get("cache-control") ?? "");
+
+/** One page of a feed: every readable forum, or `forumId` alone. */
+export type FeedRequest = ForumSearch & { forumId?: number };
+
+export const feedQueryOptions = (request: FeedRequest) =>
+  queryOptions({
+    meta: LOADER_DATA_QUERY_META,
+    queryFn: async () => {
+      const res = await fetcher({
+        plugin: manifest.id,
+        method: "get",
+        module: "forum",
+        path: "/feed",
+        args: {
+          query: {
+            ...(request.forumId === undefined
+              ? {}
+              : { forumId: request.forumId }),
+            page: request.page ?? 1,
+            sort: request.sort ?? FORUM_FEED_DEFAULT_SORT,
+            t: request.t ?? FORUM_FEED_DEFAULT_TOP_WINDOW,
+          },
+        },
+      });
+
+      if (res.status !== 200) throw new Error("Loading the topics failed.");
+
+      const { items, pageInfo } = await res.json();
+
+      return { pageInfo, topics: z.array(zodFeedTopic).parse(items) };
+    },
+    queryKey: forumQueryKeys.topicList(request),
+    staleTime: FORUM_ACTIVITY_STALE_TIME,
+  });
 
 export const forumsQueryOptions = (locale: string) =>
   queryOptions({

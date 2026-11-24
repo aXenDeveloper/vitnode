@@ -74,8 +74,6 @@
         "desc": "Nobody has started a topic in this forum yet. Break the ice!"
       },
       "pagination": "Topic pages",
-      "newest": "Newest topics",
-      "older": "Older topics",
       "comment_count": "{count, plural, =0 {No comments} one {# comment} other {# comments}}",
       "last_comment": "Last comment",
       "errors": {
@@ -97,7 +95,33 @@
         }
       },
       "access_required": "Members only",
-      "members_only": "Restricted"
+      "members_only": "Restricted",
+      "feed": {
+        "title": "Topic feed",
+        "sort": {
+          "label": "Sort topics",
+          "hot": "Hot",
+          "new": "New",
+          "active": "Active",
+          "top": "Top"
+        },
+        "window": {
+          "label": "Top topics from",
+          "day": "Today",
+          "week": "This week",
+          "month": "This month",
+          "year": "This year",
+          "all": "All time"
+        },
+        "score": "{count, plural, one {# point} other {# points}}",
+        "empty_top": {
+          "title": "Nothing at the top yet",
+          "desc": "No topics were posted in this time range. Pick a longer one, or post something worth climbing the charts."
+        },
+        "previous": "Previous",
+        "next": "Next",
+        "page": "Page {page}"
+      }
     },
     "topics": {
       "form": {
