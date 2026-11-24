@@ -5,18 +5,18 @@ import { RouteMessages } from '@vitnode/core/tanstack/i18n'
 import { FeedPendingSkeleton } from '@vitnode/core/tanstack/pending'
 import React from 'react'
 
-import { Baseline } from './baseline'
 import { Cards } from './cards'
-import { Density } from './density'
-import { Focus } from './focus'
-import { Rail } from './rail'
+import { Grid } from './grid'
+import { People } from './people'
+import { Score } from './score'
+import { Soft } from './soft'
 
 const VARIANTS = [
-  { component: Baseline, name: 'Baseline' },
-  { component: Rail, name: 'Rail' },
   { component: Cards, name: 'Cards' },
-  { component: Density, name: 'Density' },
-  { component: Focus, name: 'Focus' },
+  { component: Score, name: 'Score' },
+  { component: People, name: 'People' },
+  { component: Grid, name: 'Grid' },
+  { component: Soft, name: 'Soft' },
 ] as const
 
 /** The feed URL inside the prototype, keeping the picked variant. */

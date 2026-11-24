@@ -1,23 +1,23 @@
 // Prototype - shared pieces of the riff variants. Deleted after the decision.
 import type { ContentContainerTreeNode } from '@vitnode/core/content'
 import type { Forum, ForumStats } from '@vitnode/forum/pages/forum-data'
-import type { ForumSearch } from '@vitnode/forum/pages/forum-links'
 
+import { useQuery } from '@tanstack/react-query'
 import { buttonVariants } from '@vitnode/core/components/ui/button'
+import { contentTarget } from '@vitnode/core/content'
+import { useSessionQuery } from '@vitnode/core/tanstack/auth'
 import { HrefLink } from '@vitnode/core/tanstack/link'
-import { FeedPendingSkeleton } from '@vitnode/core/tanstack/pending'
+import {
+  reactionPoints,
+  reactionsCatalogQueryOptions,
+  reactionSummaryQueryOptions,
+} from '@vitnode/core/tanstack/reactions'
+import { topicContentType } from '@vitnode/forum/content/topic'
 import { forumHref } from '@vitnode/forum/pages/forum-links'
 import { ForumIcon } from '@vitnode/forum/pages/forum-ui'
-import {
-  FeedPagination,
-  FeedSortNav,
-  TopicFeed,
-} from '@vitnode/forum/pages/topic-feed'
 import { cn } from 'cn'
 import { LockIcon } from 'lucide-react'
 import { useFormatter, useTranslations } from 'use-intl'
-
-import { useFeed, useHomeData } from './data'
 
 export const ForumTree = ({
   depth = 0,
@@ -107,42 +107,22 @@ export const ForumChips = ({
   )
 }
 
-/** Sort, the baseline feed cards and pages - the URL drives all three. */
-export const BaselineFeed = ({
-  hrefFor,
-  search,
-}: {
-  hrefFor: (search: ForumSearch) => string
-  search: ForumSearch
-}) => {
-  const { forumsById } = useHomeData()
-  const feed = useFeed(search)
+/** The topic's live points: what the card's `ReactionBar` loaded, or the
+ * server's ranking number until then. Read-only, like `ReactionPoints`. */
+export const useLivePoints = (topicId: number, initial: number) => {
+  const session = useSessionQuery()
+  const viewerId = session.data?.user?.id ?? null
+  const target = contentTarget('@vitnode/forum', topicContentType, topicId)
+  const summary = useQuery({
+    ...reactionSummaryQueryOptions(target, viewerId),
+    enabled: false,
+  })
+  const catalog = useQuery({
+    ...reactionsCatalogQueryOptions(viewerId),
+    enabled: false,
+  })
 
-  return (
-    <>
-      <FeedSortNav hrefFor={hrefFor} search={search} />
-      {feed.data ? (
-        <div
-          aria-busy={feed.isFetching}
-          className={cn(
-            'flex flex-col gap-4 motion-safe:transition-opacity',
-            feed.isPlaceholderData && 'opacity-60',
-          )}
-        >
-          <TopicFeed
-            forums={forumsById}
-            search={search}
-            topics={feed.data.topics}
-          />
-          <FeedPagination
-            hasNextPage={feed.data.pageInfo.hasNextPage}
-            hrefFor={hrefFor}
-            search={search}
-          />
-        </div>
-      ) : (
-        <FeedPendingSkeleton />
-      )}
-    </>
-  )
+  return summary.data && catalog.data
+    ? reactionPoints(summary.data, catalog.data)
+    : initial
 }

@@ -1,35 +1,26 @@
-// Prototype - riff 3 "Cards": the baseline's layout, but every topic is its
-// own card. The forum's icon anchors each card on the left, the title gets
-// more weight, and points, reactions and comments sit in a footer bar. The
-// sidebar sticks and opens with an "about" card holding the call to action.
+// Prototype - riff anchor "Cards" (picked last round): every topic is its own
+// card, the forum's icon anchors it on the left, and points, reactions and
+// comments sit in a footer bar.
 import type { FeedTopic, Forum } from '@vitnode/forum/pages/forum-data'
 
 import { buttonVariants } from '@vitnode/core/components/ui/button'
 import { contentTarget } from '@vitnode/core/content'
 import { HrefLink } from '@vitnode/core/tanstack/link'
-import { FeedPendingSkeleton } from '@vitnode/core/tanstack/pending'
 import { ReactionBar, ReactionPoints } from '@vitnode/core/tanstack/reactions'
 import { topicContentType } from '@vitnode/forum/content/topic'
-import {
-  forumHref,
-  topicHref,
-  topicNewHref,
-} from '@vitnode/forum/pages/forum-links'
+import { forumHref, topicHref } from '@vitnode/forum/pages/forum-links'
 import {
   ForumIcon,
   PersonAvatar,
   PersonName,
   TimeAgo,
 } from '@vitnode/forum/pages/forum-ui'
-import { FeedPagination, FeedSortNav } from '@vitnode/forum/pages/topic-feed'
-import { cn } from 'cn'
-import { MessageSquareIcon, PenSquareIcon } from 'lucide-react'
-import { useFormatter, useTranslations } from 'use-intl'
+import { MessageSquareIcon } from 'lucide-react'
+import { useTranslations } from 'use-intl'
 
 import type { VariantProps } from './data'
 
-import { useFeed, useHomeData } from './data'
-import { ForumChips, ForumTree } from './parts'
+import { CardsLayout, MetaItem } from './layout'
 
 const TopicCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
   const t = useTranslations('@vitnode/forum.forums')
@@ -56,25 +47,25 @@ const TopicCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-relaxed">
               {forum ? (
-                <>
+                <MetaItem first>
                   <HrefLink
                     className="text-foreground font-semibold underline-offset-4 hover:underline"
                     href={forumHref(forum.slug)}
                   >
                     {forum.name}
                   </HrefLink>
-                  <span aria-hidden="true">·</span>
-                </>
+                </MetaItem>
               ) : null}
-              <span className="flex items-center gap-2">
+              <MetaItem first={!forum}>
                 <PersonAvatar person={topic.author} size={24} />
-                <PersonName person={topic.author} />
-              </span>
+                <span className="min-w-0 truncate">
+                  <PersonName person={topic.author} />
+                </span>
+              </MetaItem>
               {topic.publishedAt ? (
-                <>
-                  <span aria-hidden="true">·</span>
+                <MetaItem>
                   <TimeAgo date={topic.publishedAt} />
-                </>
+                </MetaItem>
               ) : null}
             </p>
             <h3
@@ -113,122 +104,19 @@ const TopicCard = ({ forum, topic }: { forum?: Forum; topic: FeedTopic }) => {
   )
 }
 
-const About = () => {
-  const t = useTranslations('@vitnode/forum.forums')
-  const format = useFormatter()
-  const { totals } = useHomeData()
-
-  return (
-    <section
-      aria-label={t('title')}
-      className="bg-card flex flex-col gap-4 rounded-xl border p-4 shadow-xs"
-    >
-      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-        {t('desc')}
-      </p>
-      <dl className="flex gap-6">
-        <div className="flex flex-col">
-          <dt className="text-muted-foreground text-xs">{t('stats.topics')}</dt>
-          <dd className="text-foreground text-lg font-semibold tabular-nums">
-            {format.number(totals.topics)}
-          </dd>
-        </div>
-        <div className="flex flex-col">
-          <dt className="text-muted-foreground text-xs">
-            {t('stats.comments')}
-          </dt>
-          <dd className="text-foreground text-lg font-semibold tabular-nums">
-            {format.number(totals.comments)}
-          </dd>
-        </div>
-      </dl>
-      <HrefLink
-        className={buttonVariants({ className: 'w-full' })}
-        href={topicNewHref()}
-      >
-        <PenSquareIcon aria-hidden="true" />
-        {t('new_topic')}
-      </HrefLink>
-    </section>
-  )
-}
-
-export const Cards = ({ hrefFor, search }: VariantProps) => {
-  const t = useTranslations('@vitnode/forum.forums')
-  const { forumsById, stats, tree } = useHomeData()
-  const feed = useFeed(search)
-
-  return (
-    <div className="container mx-auto flex max-w-6xl flex-col gap-6 px-4 py-8 md:py-12">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-foreground text-3xl font-semibold tracking-tight text-balance">
-          {t('title')}
-        </h1>
-        <HrefLink
-          className={buttonVariants({ className: 'lg:hidden' })}
-          href={topicNewHref()}
-        >
-          <PenSquareIcon aria-hidden="true" />
-          {t('new_topic')}
-        </HrefLink>
-      </header>
-
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-        <section
-          aria-labelledby="cards-feed"
-          className="flex min-w-0 flex-col gap-4"
-        >
-          <h2 className="sr-only" id="cards-feed">
-            {t('feed.title')}
-          </h2>
-          <ForumChips className="lg:hidden" nodes={tree} />
-          <FeedSortNav hrefFor={hrefFor} search={search} />
-          {feed.data ? (
-            <div
-              aria-busy={feed.isFetching}
-              className={cn(
-                'flex flex-col gap-4 motion-safe:transition-opacity',
-                feed.isPlaceholderData && 'opacity-60',
-              )}
-            >
-              <ul className="flex flex-col gap-3">
-                {feed.data.topics.map((topic) => (
-                  <TopicCard
-                    forum={forumsById.get(topic.forum)}
-                    key={topic.id}
-                    topic={topic}
-                  />
-                ))}
-              </ul>
-              <FeedPagination
-                hasNextPage={feed.data.pageInfo.hasNextPage}
-                hrefFor={hrefFor}
-                search={search}
-              />
-            </div>
-          ) : (
-            <FeedPendingSkeleton />
-          )}
-        </section>
-
-        <aside className="hidden flex-col gap-4 lg:sticky lg:top-20 lg:flex">
-          <About />
-          <section
-            aria-labelledby="cards-tree"
-            className="bg-card flex flex-col gap-2 rounded-xl border p-2 shadow-xs"
-          >
-            <h2
-              className="text-foreground px-2 pt-2 text-sm font-semibold"
-              id="cards-tree"
-            >
-              {t('tree')}
-            </h2>
-            <nav aria-labelledby="cards-tree">
-              <ForumTree nodes={tree} stats={stats} />
-            </nav>
-          </section>
-        </aside>
-      </div>
-    </div>
-  )
-}
+export const Cards = (props: VariantProps) => (
+  <CardsLayout
+    {...props}
+    list={(topics, forums) => (
+      <ul className="flex flex-col gap-3">
+        {topics.map((topic) => (
+          <TopicCard
+            forum={forums.get(topic.forum)}
+            key={topic.id}
+            topic={topic}
+          />
+        ))}
+      </ul>
+    )}
+  />
+)
