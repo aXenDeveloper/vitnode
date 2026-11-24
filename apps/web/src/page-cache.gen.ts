@@ -89,6 +89,7 @@ export const pageCacheRoutes: PageCacheRouteTable = [
   { path: '/settings/standing' },
   { path: '/admin/core' },
   { path: '/docs/search' },
+  { path: '/proto/forum-home' },
   { path: '/letters/:id/edit' },
   { path: '/news/:id/edit' },
   { path: '/blog/:slug' },
