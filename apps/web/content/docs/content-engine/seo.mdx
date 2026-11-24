@@ -176,7 +176,36 @@ delivery: {
 
 ## Sitemap
 
-`delivery.sitemap` adds a public route that lists every published URL of the content type, oldest record first. Pass `true` or `{ changeFrequency, priority }`. It needs `publication: true`, since a sitemap lists only what readers can reach.
+`delivery.sitemap` puts every published record of the content type in the site's `/sitemap.xml`. Pass `true` or `{ changeFrequency, priority }`. It needs `publication: true`, since a sitemap lists only what readers can reach.
+
+```ts title="plugins/newsroom/src/content/story.ts"
+delivery: {
+  sitemap: { changeFrequency: 'weekly', priority: 0.7 }, // [!code ++]
+},
+```
+
+That is all a plugin author writes. When an app turns on [site SEO](/docs/dev/seo), its build finds every content type with `delivery.sitemap` in the configured plugins and writes them to `src/sitemap-sources.gen.ts`. `withSeo` then reads each one's route as a guest and publishes one child file per language, such as `/sitemap-stories-1.xml` or `/sitemap-blog-pl-1.xml`. A content type whose public API path is shared with another plugin's gets the plugin id in its file name, and two names that would still collide fail the build.
+
+### Check that a record is listed
+
+With the newsroom plugin and `seo: { indexing: true }`:
+
+1. Publish a story, then open the index and the story file:
+
+   ```bash
+   curl -s http://localhost:3000/sitemap.xml
+   curl -s http://localhost:3000/sitemap-stories-1.xml | grep hello-content-engine
+   ```
+
+   The story's `<loc>` is there, with `<lastmod>`, `<changefreq>` and `<priority>`.
+
+2. Set the story's `noIndexField` to `true` (`newsroom.story` calls it `noIndex`), or [hide](/docs/content-engine/content-visibility) the story, and run the second command again. It prints nothing: the change expired the file, and the new copy leaves the record out.
+
+A translation appears in its own language's file only once it is published, and the XML is the same when a signed-in admin requests it.
+
+### Read the sitemap route yourself
+
+The generated sitemap reads a public route that every content type with `delivery.sitemap` gets. Use it directly when you assemble XML in an app that does not use `withSeo`.
 
 ```bash
 curl "http://localhost:3000/api/newsroom/content/stories/delivery/sitemap?cursor=1&limit=1"
@@ -224,7 +253,7 @@ curl "http://localhost:3000/api/@vitnode/blog/content/blog/delivery/sitemap?loca
 }
 ```
 
-The app's `/sitemap.xml` does not read these routes for you, so add the entries where you build it. `contentSitemapXml` from `@vitnode/core/content` writes the XML:
+To build the XML yourself, `contentSitemapXml` from `@vitnode/core/content` writes it:
 
 ```ts
 import {

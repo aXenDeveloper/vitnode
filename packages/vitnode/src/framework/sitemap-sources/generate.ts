@@ -1,0 +1,182 @@
+import type { SeoContentSitemapSource } from "../../tanstack/seo/manifest.js";
+import type { ContentUrlSource } from "../plugin-routes/content-urls.js";
+
+import {
+  SEO_SITEMAP_FILE_PATTERN,
+  seoSitemapSlug,
+} from "../../tanstack/seo/manifest.js";
+import { toSingleQuotedLiteral } from "../plugin-routes/resolve.js";
+
+const ERROR_PREFIX = "[VitNode sitemap sources]";
+
+/** Child sitemap stems VitNode keeps for itself. */
+const RESERVED_FILES: ReadonlySet<string> = new Set(["index", "pages"]);
+
+export class SitemapSourcesError extends Error {
+  constructor(message: string) {
+    super(`${ERROR_PREFIX} ${message}`);
+    this.name = "SitemapSourcesError";
+  }
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const flag = (value: unknown, key: string): boolean =>
+  isRecord(value) && value[key] === true;
+
+interface Candidate {
+  contentTypeId: string;
+  localized: boolean;
+  pluginId: string;
+  publicPath: string;
+}
+
+/**
+ * The content types a sitemap lists, read off the definitions the plugin
+ * route check already loaded and validated - so a type whose delivery URL
+ * has no page has already failed the build. A type is listed only with a
+ * public API, `delivery` and `delivery.sitemap`.
+ */
+const candidatesFrom = (sources: readonly ContentUrlSource[]): Candidate[] =>
+  sources.flatMap(source =>
+    source.contentTypes.flatMap((definition): Candidate[] => {
+      const raw: unknown = definition;
+      if (!isRecord(raw)) return [];
+      const { delivery, localization, publicApi } = raw;
+      if (
+        !flag(delivery, "enabled") ||
+        !flag(publicApi, "enabled") ||
+        !isRecord(delivery) ||
+        !flag(delivery.sitemap, "enabled") ||
+        !isRecord(publicApi) ||
+        typeof publicApi.path !== "string" ||
+        publicApi.path === ""
+      ) {
+        return [];
+      }
+
+      return [
+        {
+          contentTypeId: definition.id,
+          localized: flag(localization, "enabled"),
+          publicPath: publicApi.path,
+          pluginId: source.pluginId,
+        },
+      ];
+    }),
+  );
+
+/**
+ * The generated sitemap sources: one per listed content type, with a child
+ * file stem that is unique in the app. The stem is the type's public API
+ * path (`blog`), or the plugin id and the path together when two plugins
+ * share a path. Sorted by plugin and content type, so the same plugins give
+ * the same bytes.
+ *
+ * @throws {SitemapSourcesError} When two content types, or a type and one of
+ * its locales, would share a child sitemap file name.
+ */
+export const contentSitemapSourcesFrom = ({
+  contentUrls,
+  locales,
+}: {
+  contentUrls: readonly ContentUrlSource[];
+  /** Every locale code the app configures, for the per-locale file names. */
+  locales: readonly string[];
+}): SeoContentSitemapSource[] => {
+  const candidates = candidatesFrom(contentUrls).sort((a, b) =>
+    a.pluginId === b.pluginId
+      ? a.contentTypeId.localeCompare(b.contentTypeId)
+      : a.pluginId.localeCompare(b.pluginId),
+  );
+  const counts = new Map<string, number>();
+  for (const candidate of candidates) {
+    const stem = seoSitemapSlug(candidate.publicPath);
+    counts.set(stem, (counts.get(stem) ?? 0) + 1);
+  }
+
+  const sources = candidates.map((candidate): SeoContentSitemapSource => {
+    const stem = seoSitemapSlug(candidate.publicPath);
+    const file =
+      (counts.get(stem) ?? 0) > 1 || RESERVED_FILES.has(stem)
+        ? seoSitemapSlug(`${candidate.pluginId}-${candidate.publicPath}`)
+        : stem;
+
+    return {
+      contentTypeId: candidate.contentTypeId,
+      file,
+      localized: candidate.localized,
+      module: `content/${candidate.publicPath}`,
+      path: "/delivery/sitemap",
+      pluginId: candidate.pluginId,
+    };
+  });
+
+  const owners = new Map<string, string>();
+  const claim = (name: string, owner: string): void => {
+    if (!SEO_SITEMAP_FILE_PATTERN.test(name)) {
+      throw new SitemapSourcesError(
+        `Content type "${owner}" would publish the sitemap file "sitemap-${name}-1.xml", which is not a valid file name. Give its public API a path of letters, digits and dashes.`,
+      );
+    }
+    const existing = owners.get(name);
+    if (existing !== undefined) {
+      throw new SitemapSourcesError(
+        `Content types "${existing}" and "${owner}" would both publish "/sitemap-${name}-1.xml". Rename one public API path (\`publicApi.path\`) so their sitemap files differ.`,
+      );
+    }
+    owners.set(name, owner);
+  };
+
+  for (const source of sources) {
+    if (source.localized) {
+      for (const locale of locales) {
+        claim(
+          `${source.file}-${seoSitemapSlug(locale)}`,
+          `${source.contentTypeId} (${locale})`,
+        );
+      }
+    } else {
+      claim(source.file, source.contentTypeId);
+    }
+  }
+
+  return sources;
+};
+
+const HEADER = `/* oxlint-disable */
+
+// This file is generated by VitNode. Do not edit it, and do not format it.
+//
+// It is rewritten by the \`vitnode:plugin-routes\` Vite plugin on every
+// \`vite dev\` and \`vite build\`: every content type of a configured plugin that
+// lists its records in the sitemap (\`delivery.sitemap\`), with the public
+// route the site's \`/sitemap.xml\` reads them from. \`src/server.ts\` hands it
+// to \`withSeo\`.
+//
+// \`sitemapManifest.revision\` is replaced at build time with an id unique to
+// that build, so two deployments sharing one cache never serve each other's
+// sitemaps.
+
+import type { SeoSitemapManifest } from '@vitnode/core/tanstack/seo/server'
+
+`;
+
+export const generateSitemapSourcesSource = (
+  sources: readonly SeoContentSitemapSource[],
+): string => {
+  const entries = sources
+    .map(
+      source =>
+        `    { contentTypeId: ${toSingleQuotedLiteral(source.contentTypeId)}, file: ${toSingleQuotedLiteral(source.file)}, localized: ${String(source.localized)}, module: ${toSingleQuotedLiteral(source.module)}, path: '/delivery/sitemap', pluginId: ${toSingleQuotedLiteral(source.pluginId)} },\n`,
+    )
+    .join("");
+
+  return `${HEADER}export const sitemapManifest: SeoSitemapManifest = {
+  revision: import.meta.env.VITNODE_BUILD_ID,
+  sources: [
+${entries}  ],
+}
+`;
+};

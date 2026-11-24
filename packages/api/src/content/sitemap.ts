@@ -20,6 +20,23 @@ export interface ContentSitemapEntry {
   priority: null | number;
 }
 
+/**
+ * One `<url>` element for {@link contentSitemapXml}. A {@link ContentSitemapEntry}
+ * is one; a URL that is not a content record - an app's own page - leaves out
+ * what it has no reliable value for, `lastModified` included.
+ */
+export interface ContentSitemapXmlEntry {
+  changeFrequency?: ContentSitemapChangeFrequency | null;
+  /** Keys `alternates`; any value unique within one document. */
+  itemId: ContentId;
+  /** Omit it, or pass `null`, when there is no reliable modification date. */
+  lastModified?: Date | null;
+  locale?: null | string;
+  origin?: string;
+  path: string;
+  priority?: null | number;
+}
+
 export const escapeXml = (value: string): string =>
   value
     .replace(/&/g, "&amp;")
@@ -36,13 +53,17 @@ const absolute = (origin: string, path: string): null | string => {
   }
 };
 
+const isValidDate = (value: Date | null | undefined): value is Date =>
+  value instanceof Date && !Number.isNaN(value.getTime());
+
 /** `priority` at the one precision the protocol illustrates, without a float tail. */
 const formatPriority = (priority: number): string => priority.toFixed(1);
 
 /**
  * A `<urlset>` sitemap document from sitemap entries. Paths resolve against
  * the entry's own `origin` or `origin`; an entry whose URL cannot be built is
- * skipped. `changefreq` and `priority` are left out when `null`.
+ * skipped. `lastmod`, `changefreq` and `priority` are left out when absent or
+ * `null`.
  */
 export const contentSitemapXml = ({
   alternates,
@@ -57,7 +78,7 @@ export const contentSitemapXml = ({
     ContentId,
     readonly { locale: string; origin?: string; path: string }[]
   >;
-  entries: readonly ContentSitemapEntry[];
+  entries: readonly ContentSitemapXmlEntry[];
   origin: string;
 }): string => {
   const withAlternates = alternates !== undefined && alternates.size > 0;
@@ -74,13 +95,15 @@ export const contentSitemapXml = ({
 
     lines.push("  <url>");
     lines.push(`    <loc>${escapeXml(loc)}</loc>`);
-    lines.push(
-      `    <lastmod>${escapeXml(entry.lastModified.toISOString())}</lastmod>`,
-    );
-    if (entry.changeFrequency !== null) {
+    if (isValidDate(entry.lastModified)) {
+      lines.push(
+        `    <lastmod>${escapeXml(entry.lastModified.toISOString())}</lastmod>`,
+      );
+    }
+    if (entry.changeFrequency !== null && entry.changeFrequency !== undefined) {
       lines.push(`    <changefreq>${entry.changeFrequency}</changefreq>`);
     }
-    if (entry.priority !== null) {
+    if (entry.priority !== null && entry.priority !== undefined) {
       lines.push(`    <priority>${formatPriority(entry.priority)}</priority>`);
     }
 
@@ -135,7 +158,7 @@ export const contentSitemapIndexXml = ({
 
     lines.push("  <sitemap>");
     lines.push(`    <loc>${escapeXml(loc)}</loc>`);
-    if (entry.lastModified !== undefined) {
+    if (isValidDate(entry.lastModified)) {
       lines.push(
         `    <lastmod>${escapeXml(entry.lastModified.toISOString())}</lastmod>`,
       );

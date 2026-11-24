@@ -607,6 +607,7 @@ export {
 export type {
   ContentSitemapEntry,
   ContentSitemapIndexEntry,
+  ContentSitemapXmlEntry,
 } from "@vitnode/api/content/sitemap";
 export { slugify } from "@vitnode/api/content/slug";
 export { contentTarget } from "@vitnode/api/content/target";

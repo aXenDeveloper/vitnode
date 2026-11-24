@@ -331,6 +331,7 @@ ${build("app")}
         ? `
       # The web app reaches the database only through the API.
       VITNODE_WEB_URL: \${VITNODE_WEB_URL:?Set VITNODE_WEB_URL to the site's public origin}
+      VITNODE_SEO_INDEXING: \${VITNODE_SEO_INDEXING:-false}
       VITNODE_API_URL: \${VITNODE_API_URL:?Set VITNODE_API_URL to the API's public origin}`
         : " *server-env"
     }
@@ -361,6 +362,8 @@ x-server-env: &server-env
   REDIS_URL: redis://cache:6379
   REDIS_PASSWORD: \${REDIS_PASSWORD:?Set REDIS_PASSWORD}
   VITNODE_WEB_URL: \${VITNODE_WEB_URL:?Set VITNODE_WEB_URL to the site's public origin}
+  # "true" lets search engines index the site; anything else answers noindex.
+  VITNODE_SEO_INDEXING: \${VITNODE_SEO_INDEXING:-false}
   CRON_SECRET: \${CRON_SECRET:?Set CRON_SECRET to a long random string}
   # 0 when visitors reach the container directly, 1 behind one reverse proxy.
   VITNODE_TRUSTED_PROXY_HOPS: \${VITNODE_TRUSTED_PROXY_HOPS:-0}

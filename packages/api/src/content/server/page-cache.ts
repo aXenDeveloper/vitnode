@@ -7,7 +7,11 @@ import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition } from "../types";
 
 import { invalidatePageCacheTags } from "../../page-cache/store.server";
-import { contentPublicItemTag, contentPublicListTag } from "../cache";
+import {
+  contentDeliverySitemapTag,
+  contentPublicItemTag,
+  contentPublicListTag,
+} from "../cache";
 import { contentDependentDefinitions } from "./parent-visibility";
 import { bumpContentPublicGeneration } from "./public-cache";
 import { isContentBaseRowPublic } from "./visibility";
@@ -78,6 +82,17 @@ export const contentListPageCacheTags = (
   definition: AnyContentTypeDefinition,
 ): string[] => [contentPublicListTag(definition.id)];
 
+/**
+ * What a content type's sitemap files depend on: every record of it, in every
+ * locale. Empty for a type that lists nothing in a sitemap.
+ */
+export const contentSitemapPageCacheTags = (
+  definition: AnyContentTypeDefinition,
+): string[] =>
+  definition.delivery.enabled && definition.delivery.sitemap.enabled
+    ? [contentDeliverySitemapTag(definition.id)]
+    : [];
+
 /** Changes after which a page must not be served again, even once. */
 const HARD_ACTIONS: ReadonlySet<ContentEventAction> = new Set([
   "deleted",
@@ -118,6 +133,51 @@ const slugChanged = (
           field.endsWith(`.${definition.publicApi.slugField}`)),
     )
   );
+};
+
+const noIndexChanged = (
+  definition: AnyContentTypeDefinition,
+  payload: ContentPagePayload,
+): boolean => {
+  const field = definition.delivery.enabled
+    ? definition.delivery.seo.noIndexField
+    : null;
+  if (field === null) return false;
+
+  const { changedFields } = payload;
+
+  return (
+    Array.isArray(changedFields) &&
+    changedFields.some(
+      changed =>
+        typeof changed === "string" &&
+        (changed === field ||
+          field.startsWith(`${changed}.`) ||
+          changed.endsWith(`.${field}`)),
+    )
+  );
+};
+
+/**
+ * How the sitemap files of a content type expire after one change: as the
+ * pages do, except that toggling the record's `noIndexField` is a hard
+ * invalidation - a record that left the sitemap must not be listed again.
+ */
+export const contentSitemapInvalidationMode = (
+  definition: AnyContentTypeDefinition,
+  action: ContentEventAction,
+  payload: ContentPagePayload,
+  publicState?: ContentPublicState,
+): null | PageCacheInvalidationMode => {
+  const mode = contentPageInvalidationMode(
+    definition,
+    action,
+    payload,
+    publicState,
+  );
+  if (mode === null) return null;
+
+  return noIndexChanged(definition, payload) ? "hard" : mode;
 };
 
 export const contentPageInvalidationMode = (
@@ -177,14 +237,32 @@ export const invalidateContentPages = async (
   // runs from `emitContentEvent`, after the write committed - a bump before the
   // commit would let a reader store the old row under the new generation.
   const dependents = contentDependentDefinitions(c, definition);
+  // The site's sitemap files are cached with the HTML and expire on the same
+  // write, so a record that left the public site leaves its sitemap too.
+  const sitemapMode =
+    contentSitemapInvalidationMode(definition, action, payload, publicState) ??
+    mode;
+  const sitemapTags = [definition, ...dependents].flatMap(target =>
+    contentSitemapPageCacheTags(target),
+  );
   const [result, generation] = await Promise.all([
-    invalidatePageCacheTags(
-      [
-        ...contentRecordPageCacheTags(definition, recordIdOf(payload)),
-        ...contentListPageCacheTags(definition),
-        ...dependents.flatMap(dependent => contentListPageCacheTags(dependent)),
-      ],
-      { mode },
+    Promise.all([
+      invalidatePageCacheTags(
+        [
+          ...contentRecordPageCacheTags(definition, recordIdOf(payload)),
+          ...contentListPageCacheTags(definition),
+          ...dependents.flatMap(dependent =>
+            contentListPageCacheTags(dependent),
+          ),
+          ...(sitemapMode === mode ? sitemapTags : []),
+        ],
+        { mode },
+      ),
+      sitemapMode === mode || sitemapTags.length === 0
+        ? Promise.resolve({ status: "done" as const })
+        : invalidatePageCacheTags(sitemapTags, { mode: sitemapMode }),
+    ]).then(([pages, sitemaps]) =>
+      sitemaps.status === "failed" ? sitemaps : pages,
     ),
     Promise.all(
       [definition, ...dependents].map(
