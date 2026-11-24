@@ -13,4 +13,5 @@ export {
   REACTIONS_NAMESPACES,
 } from "./reaction-bar";
 export { ReactionIcon, type ReactionLook } from "./reaction-icon";
+export { reactionPoints, ReactionPoints } from "./reaction-points";
 export { Reputation } from "./reputation";

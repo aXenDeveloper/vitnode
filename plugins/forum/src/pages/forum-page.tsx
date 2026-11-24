@@ -1,7 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { PluginRoutePageProps } from "@vitnode/core/routing";
 
-import { queryOptions } from "@tanstack/react-query";
 import {
   BreadcrumbItem,
   BreadcrumbLink,
@@ -17,83 +16,34 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@vitnode/core/components/ui/empty";
-import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import {
   ContentAccessRequired,
   contentPageItem,
 } from "@vitnode/core/tanstack/content";
-import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
 import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
-import {
-  MessageSquareIcon,
-  MessagesSquareIcon,
-  PenSquareIcon,
-  SearchXIcon,
-} from "lucide-react";
+import { PenSquareIcon, SearchXIcon } from "lucide-react";
 import { Fragment } from "react";
 import { useTranslations } from "use-intl";
-import { z } from "zod";
 
-import { manifest } from "@/manifest.gen";
-
-import type { TopicListRowData } from "./forum-data";
 import type { ForumSearch } from "./forum-links";
+import type { FeedHref } from "./topic-feed";
 
-import { indexBy, zodTopicListRow } from "./forum-data";
-import { FORUM_HREF, forumHref, topicHref, topicNewHref } from "./forum-links";
+import { indexBy } from "./forum-data";
+import { FORUM_HREF, forumHref, topicNewHref } from "./forum-links";
 import { ForumList } from "./forum-list";
 import {
-  FORUM_ACTIVITY_STALE_TIME,
-  forumQueryKeys,
+  feedQueryOptions,
   forumStatsQueryOptions,
   queryForum,
 } from "./forum-queries";
-import {
-  ForumIcon,
-  ForumShell,
-  PersonAvatar,
-  PersonName,
-  TimeAgo,
-} from "./forum-ui";
-
-const PAGE_SIZE = 25;
-
-const forumTopicsQueryOptions = (request: ForumSearch & { forumId: number }) =>
-  queryOptions({
-    meta: LOADER_DATA_QUERY_META,
-    queryFn: async () => {
-      const list = await fetcher({
-        plugin: manifest.id,
-        method: "get",
-        module: "forum",
-        path: "/topics",
-        args: {
-          query: {
-            first: String(PAGE_SIZE),
-            forumId: request.forumId,
-            ...(request.cursor ? { cursor: request.cursor } : {}),
-          },
-        },
-      });
-
-      if (list.status !== 200) throw new Error("Loading the topics failed.");
-
-      const { edges, pageInfo } = await list.json();
-
-      return {
-        nextCursor: pageInfo.hasNextPage ? pageInfo.endCursor : null,
-        topics: z.array(zodTopicListRow).parse(edges),
-      };
-    },
-    queryKey: forumQueryKeys.topicList(request),
-    staleTime: FORUM_ACTIVITY_STALE_TIME,
-  });
+import { ForumIcon, ForumShell } from "./forum-ui";
+import { FeedPagination, FeedSortNav, TopicFeed } from "./topic-feed";
 
 const loadForum = async (
   queryClient: QueryClient,
   { locale, slug }: { locale: string; slug: string },
-  { cursor }: ForumSearch,
+  search: ForumSearch,
 ) => {
   const { ancestors, children, container } = contentPageItem(
     await queryForum(queryClient, slug, locale),
@@ -102,15 +52,12 @@ const loadForum = async (
   // A forum the viewer may see but not read lists nothing - not even how
   // many topics it holds.
   const canRead = container.access.canRead;
-  const [{ nextCursor, topics }, forumStats] = await Promise.all([
+  const [feed, forumStats] = await Promise.all([
     canRead
       ? queryClient.query(
-          forumTopicsQueryOptions({
-            forumId: container.id,
-            ...(cursor ? { cursor } : {}),
-          }),
+          feedQueryOptions({ ...search, forumId: container.id }),
         )
-      : Promise.resolve({ nextCursor: null, topics: [] }),
+      : Promise.resolve(null),
     children.length > 0
       ? queryClient.query(forumStatsQueryOptions())
       : Promise.resolve([]),
@@ -121,10 +68,9 @@ const loadForum = async (
     canRead,
     children,
     container,
+    feed,
     forumStats,
-    isFirstPage: cursor === undefined,
-    nextCursor,
-    topics,
+    search,
   };
 };
 
@@ -210,62 +156,12 @@ export const route = defineRoute<ForumPageData, ForumSearch>({
   notFound: ForumNotFound,
 });
 
-const TopicListRow = ({ topic }: { topic: TopicListRowData }) => {
-  const t = useTranslations("@vitnode/forum.forums");
-
-  return (
-    <li className="flex items-start gap-3 p-4">
-      <PersonAvatar person={topic.author} size={40} />
-      <div className="flex min-w-0 flex-1 flex-col gap-1 md:flex-row md:items-center md:gap-6">
-        <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <HrefLink
-            className="text-foreground font-medium text-balance hover:underline"
-            href={topicHref(topic.slug)}
-          >
-            {topic.title}
-          </HrefLink>
-          <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-relaxed">
-            <PersonName person={topic.author} />
-            {topic.publishedAt ? (
-              <>
-                <span aria-hidden="true">·</span>
-                <TimeAgo date={topic.publishedAt} />
-              </>
-            ) : null}
-          </p>
-        </div>
-
-        <p className="text-muted-foreground flex items-center gap-4 text-sm leading-relaxed md:w-48 md:justify-end">
-          <span className="flex items-center gap-1.5">
-            <MessageSquareIcon aria-hidden="true" className="size-4" />
-            <span className="tabular-nums">
-              {t("comment_count", { count: topic.commentCount })}
-            </span>
-          </span>
-          {topic.lastCommentAt ? (
-            <span className="sr-only md:not-sr-only">
-              {t("last_comment")} <TimeAgo date={topic.lastCommentAt} />
-            </span>
-          ) : null}
-        </p>
-      </div>
-    </li>
-  );
-};
-
 const ForumPage = ({
   loaderData,
 }: PluginRoutePageProps<ForumPageData, ForumSearch>) => {
   const t = useTranslations("@vitnode/forum.forums");
-  const {
-    canRead,
-    children,
-    container,
-    forumStats,
-    isFirstPage,
-    nextCursor,
-    topics,
-  } = loaderData;
+  const { canRead, children, container, feed, forumStats, search } = loaderData;
+  const hrefFor: FeedHref = next => forumHref(container.slug, next);
 
   return (
     <ForumShell
@@ -315,56 +211,22 @@ const ForumPage = ({
           {t("topics")}
         </h2>
 
-        {!canRead ? (
+        {!canRead || !feed ? (
           <ContentAccessRequired headingLevel="h3" />
-        ) : topics.length === 0 ? (
-          <Empty className="border">
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <MessagesSquareIcon aria-hidden="true" />
-              </EmptyMedia>
-              <EmptyTitle render={<h3 />}>{t("empty_forum.title")}</EmptyTitle>
-              <EmptyDescription>{t("empty_forum.desc")}</EmptyDescription>
-            </EmptyHeader>
-            <EmptyContent>
-              <HrefLink
-                className={buttonVariants({ variant: "outline" })}
-                href={topicNewHref(container.id)}
-              >
-                {t("new_topic")}
-              </HrefLink>
-            </EmptyContent>
-          </Empty>
         ) : (
-          <ul className="bg-card flex flex-col divide-y rounded-xl border">
-            {topics.map(topic => (
-              <TopicListRow key={topic.id} topic={topic} />
-            ))}
-          </ul>
-        )}
-
-        {isFirstPage && nextCursor === null ? null : (
-          <nav
-            aria-label={t("pagination")}
-            className="flex flex-wrap items-center gap-2"
-          >
-            {isFirstPage ? null : (
-              <HrefLink
-                className={buttonVariants({ variant: "outline" })}
-                href={forumHref(container.slug)}
-              >
-                {t("newest")}
-              </HrefLink>
-            )}
-            {nextCursor === null ? null : (
-              <HrefLink
-                className={buttonVariants({ variant: "outline" })}
-                href={forumHref(container.slug, { cursor: nextCursor })}
-              >
-                {t("older")}
-              </HrefLink>
-            )}
-          </nav>
+          <>
+            <FeedSortNav hrefFor={hrefFor} search={search} />
+            <TopicFeed
+              forumId={container.id}
+              search={search}
+              topics={feed.topics}
+            />
+            <FeedPagination
+              hasNextPage={feed.pageInfo.hasNextPage}
+              hrefFor={hrefFor}
+              search={search}
+            />
+          </>
         )}
       </section>
     </ForumShell>

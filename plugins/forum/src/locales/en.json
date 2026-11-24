@@ -74,10 +74,7 @@
         "desc": "Nobody has started a topic in this forum yet. Break the ice!"
       },
       "pagination": "Topic pages",
-      "newest": "Newest topics",
-      "older": "Older topics",
       "comment_count": "{count, plural, =0 {No comments} one {# comment} other {# comments}}",
-      "last_comment": "Last comment",
       "errors": {
         "title": "That did not go through",
         "unknown": "Something went wrong. Please try again in a moment.",
@@ -97,7 +94,32 @@
         }
       },
       "access_required": "Members only",
-      "members_only": "Restricted"
+      "members_only": "Restricted",
+      "feed": {
+        "title": "Topic feed",
+        "sort": {
+          "label": "Sort topics",
+          "hot": "Hot",
+          "new": "New",
+          "active": "Active",
+          "top": "Top"
+        },
+        "window": {
+          "label": "Top topics from",
+          "day": "Today",
+          "week": "This week",
+          "month": "This month",
+          "year": "This year",
+          "all": "All time"
+        },
+        "empty_top": {
+          "title": "Nothing at the top yet",
+          "desc": "No topics were posted in this time range. Pick a longer one, or post something worth climbing the charts."
+        },
+        "previous": "Previous",
+        "next": "Next",
+        "page": "Page {page}"
+      }
     },
     "topics": {
       "form": {
@@ -192,60 +214,7 @@
       }
     },
     "comments": {
-      "title": "{count, plural, =0 {Comments} one {# comment} other {# comments}}",
-      "empty": {
-        "title": "No comments yet",
-        "desc": "Be the first to comment. No pressure."
-      },
-      "truncated": "This thread is very long, so some deeper comments are not shown here.",
-      "anchor_missing": "The comment this link points to is no longer available.",
-      "load_more": "Load more comments",
-      "load_failed": {
-        "title": "Could not load comments",
-        "desc": "Please check your connection and try again."
-      },
-      "compose": {
-        "title": "Join the conversation",
-        "guest": "You need an account to comment.",
-        "sign_in": "Sign in to comment",
-        "open": "Write a comment…"
-      },
-      "form": {
-        "body_label": "Your comment",
-        "edit_label": "Edit your comment",
-        "answer_label": "Reply to {name}",
-        "submit": "Post comment",
-        "save": "Save",
-        "cancel": "Cancel",
-        "body": {
-          "required": "Write a comment first."
-        }
-      },
-      "pending": {
-        "title": "Your comment is waiting for a moderator",
-        "desc": "It will appear in the thread once it is approved."
-      },
-      "created": {
-        "title": "Comment posted",
-        "desc": "Your comment is in the thread."
-      },
-      "edited": {
-        "title": "Comment saved",
-        "desc": "Your changes are live."
-      },
-      "conflict": {
-        "title": "This comment changed",
-        "desc": "A newer version was saved while you were editing. Reload the page and try again."
-      },
-      "permalink": "Link to this comment",
-      "edited_label": "edited",
-      "reply": "Reply",
-      "edit": "Edit",
-      "report_type": "comment",
-      "someone": "this comment",
-      "removed": "This comment was removed.",
-      "show_answers": "{count, plural, one {Show # reply} other {Show # replies}}",
-      "hide_answers": "{count, plural, one {Hide # reply} other {Hide # replies}}"
+      "permalink": "Link to this comment"
     },
     "pending": {
       "title": "My posts awaiting approval",

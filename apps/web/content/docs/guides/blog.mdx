@@ -216,12 +216,15 @@ An edited comment shows **edited ▾** next to its date. It lists who wrote the 
 
 Above the conversation, **Oldest** (the default) reads them in the order they
 started, **Newest** puts the conversations with the latest activity first, and
-**Top** puts the most-reacted comments first, then the ones with the most
-replies. The order holds while you read: a new reply shows up live but doesn't
+**Most points** puts the comments whose reactions are worth the most points
+(set in **AdminCP → Reactions**) first, then the ones with the most replies. The order holds while you read: a new reply shows up live but doesn't
 move its conversation, and a new conversation joins at the top (Newest) or the
 bottom. Pick a sort again to re-sort.
 
 A busy article doesn't turn into a wall: past 10 conversations, the middle folds into a **12 hidden conversations** box between the first five and the last two. **Load more…** brings back ten at a time, and a link to one comment always shows them all.
+
+This is the Content Engine's shared [comment section](/docs/content-engine/comments-api#contentcomments),
+so forum topics and news articles look and behave the same way.
 
 Comments are a Content Engine [thread](/docs/content-engine/threads): the
 `blog.comment` content type, stored in `blog_comments`, with the article as the

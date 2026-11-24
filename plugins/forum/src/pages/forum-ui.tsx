@@ -23,13 +23,21 @@ export const ForumShell = ({
   children,
   description,
   title,
+  wide,
 }: {
   actions?: React.ReactNode;
   children: React.ReactNode;
   description?: null | string;
   title: React.ReactNode;
+  /** Room for a sidebar next to the content on large screens. */
+  wide?: boolean;
 }) => (
-  <div className="container mx-auto flex max-w-4xl flex-col gap-6 px-4 py-8 md:gap-8 md:py-12">
+  <div
+    className={cn(
+      "container mx-auto flex flex-col gap-6 px-4 py-8 md:gap-8 md:py-12",
+      wide ? "max-w-6xl" : "max-w-4xl",
+    )}
+  >
     <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
       <div className="flex min-w-0 flex-col gap-2">
         <h1 className="text-foreground flex items-center gap-3 text-3xl font-semibold tracking-tight text-balance">

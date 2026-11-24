@@ -27,7 +27,8 @@ export const routes = definePluginRoutes([
     cache: PUBLIC_CACHE,
     component: lazy(() => import("./pages/forums-page")),
     messages: ["@vitnode/forum.forums"],
-    pendingComponent: RoutePendingSkeleton,
+    pendingComponent: FeedPendingSkeleton,
+    search: forumSearch,
   }),
 
   page("/forum/me/pending", {
@@ -66,7 +67,7 @@ export const routes = definePluginRoutes([
     messages: [
       "@vitnode/forum.forums",
       "@vitnode/forum.topics",
-      "@vitnode/forum.comments",
+      "core.comments",
     ],
     pendingComponent: RoutePendingSkeleton,
     search: topicSearch,

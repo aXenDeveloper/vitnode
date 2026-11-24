@@ -53,17 +53,20 @@ export const zodPerson = zodContentPublicPerson.nullable().catch(null);
 
 export type ForumPerson = z.infer<typeof zodPerson>;
 
-export const zodTopicListRow = z.object({
+export const zodFeedTopic = z.object({
   author: zodPerson,
   commentCount: z.number(),
+  excerpt: z.string(),
+  forum: z.number(),
   id: z.number(),
-  lastCommentAt: z.string().nullable(),
+  lastActivityAt: z.string().nullable(),
+  points: z.number(),
   publishedAt: z.string().nullable(),
   slug: z.string(),
   title: z.string(),
 });
 
-export type TopicListRowData = z.infer<typeof zodTopicListRow>;
+export type FeedTopic = z.infer<typeof zodFeedTopic>;
 
 export const indexBy = <TItem, TKey>(
   items: readonly TItem[],

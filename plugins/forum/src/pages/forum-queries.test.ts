@@ -2,11 +2,17 @@ import { createVitNodeQueryClient } from "@vitnode/core/lib/query-client";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  forumQueryKeys,
   forumStatsQueryOptions,
   invalidateForumComments,
   isSharedResponse,
-  threadQueryOptions,
 } from "./forum-queries";
+
+// The key `ContentComments` caches a topic's thread under.
+const threadKey = (topicId: number) => [
+  ...forumQueryKeys.thread(topicId),
+  "thread",
+];
 
 describe("isSharedResponse", () => {
   it.each<[null | string, boolean]>([
@@ -30,10 +36,15 @@ describe("invalidateForumComments", () => {
     const otherThread = vi.fn(async () => await Promise.resolve(null));
     const stats = vi.fn(async () => await Promise.resolve([]));
     const load = async () => {
-      await queryClient.query({ ...threadQueryOptions(7), queryFn: thread });
       await queryClient.query({
-        ...threadQueryOptions(8),
+        queryFn: thread,
+        queryKey: threadKey(7),
+        staleTime: Number.POSITIVE_INFINITY,
+      });
+      await queryClient.query({
         queryFn: otherThread,
+        queryKey: threadKey(8),
+        staleTime: Number.POSITIVE_INFINITY,
       });
       await queryClient.query({ ...forumStatsQueryOptions(), queryFn: stats });
     };

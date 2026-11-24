@@ -143,6 +143,19 @@ export interface ContentCommentsConfig<
    */
   field?: string;
   /**
+   * Who wrote and edited a comment - `GET /{id}/history` - and the text
+   * before and after one edit - `GET /{id}/history/{revisionId}`. Content
+   * types with editorial revisions have both routes. With it, an "edited"
+   * link next to the date opens the history; signed-in members only.
+   */
+  history?: {
+    entry: (
+      id: ContentCommentIdOf<R>,
+      revisionId: number,
+    ) => Promise<ContentCommentsApiResponse>;
+    list: (id: ContentCommentIdOf<R>) => Promise<ContentCommentsApiResponse>;
+  };
+  /**
    * Keeps the thread current while it is on screen, over the shared
    * WebSocket: changed branches are re-read with `branches` (required) and
    * merged in place, new comments at the end wait behind **Show new
@@ -362,6 +375,8 @@ export interface ContentCommentsController<
     delete: boolean;
     edit: boolean;
     hide: boolean;
+    /** The "edited" link opens the edit history, from `history`. */
+    history: boolean;
     /** A reaction bar under each comment, from `reactions`. */
     reactions: boolean;
     replies: boolean;
@@ -375,6 +390,11 @@ export interface ContentCommentsController<
   hasMore: boolean;
   /** Hides one comment, with an optional reason of at most 500 characters. */
   hide: (id: TId, reason: null | string) => Promise<ContentCommentActionResult>;
+  /** The edit history reads from `history`, or `null` without it. */
+  history: null | {
+    entry: (id: TId, revisionId: number) => Promise<ContentCommentsApiResponse>;
+    list: (id: TId) => Promise<ContentCommentsApiResponse>;
+  };
   /** `true` while the next page loads. */
   isLoadingMore: boolean;
   /** `true` while comments already on screen are read again - not while loading more. */
@@ -401,6 +421,8 @@ export interface ContentCommentsController<
   newCommentIds: readonly TId[];
   /** The visitor's permissions for one comment, all `false` until known or after a failure. */
   permissionsOf: (id: TId) => ContentPermissions;
+  /** The thread's query key prefix, as given to `useContentComments`. */
+  queryKey: QueryKey;
   /** The reacted-to target of one comment, or `null` without `reactions`. */
   reactionTarget: (id: TId) => ContentTarget | null;
   /** Re-reads every loaded page, its permissions and `onChanged`'s queries. */
@@ -642,6 +664,7 @@ export const useContentComments = <
     create,
     delete: remove,
     edit,
+    history,
     live: liveConfig,
     maxDepth,
     onChanged,
@@ -836,6 +859,7 @@ export const useContentComments = <
       delete: Boolean(remove),
       edit: Boolean(edit),
       hide: Boolean(visibility),
+      history: Boolean(history),
       reactions: Boolean(reactions),
       replies: maxDepth !== undefined,
       report: Boolean(report),
@@ -852,6 +876,7 @@ export const useContentComments = <
             async () => await visibility.hide(id, { reason }),
           )
         : missing,
+    history: history ?? null,
     isLoadingMore: comments.isFetchingNextPage,
     isRefreshing:
       comments.isFetching &&
@@ -879,6 +904,7 @@ export const useContentComments = <
     refreshError: comments.isRefetchError || liveSnapshot.refreshError,
     remove: async id =>
       remove ? await run(id, "delete", async () => await remove(id)) : missing,
+    queryKey,
     replyCount: pages?.at(-1)?.replyCount ?? 0,
     reactionTarget: id => reactions?.(id) ?? null,
     reportTarget: id => report?.(id) ?? null,
