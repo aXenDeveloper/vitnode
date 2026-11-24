@@ -172,6 +172,16 @@ const SOURCE_MAP_COMMENT = /\n?\/\/# sourceMappingURL=\S+\s*$/;
  * - Production builds ship declaration maps, but not JavaScript source maps:
  *   tsdown emits both together, and the JavaScript ones are dropped here.
  */
+const RUNTIME_PROVIDED_IMPORT = /^cloudflare:/;
+
+const runtimeImportsPlugin: Rolldown.Plugin = {
+  name: "vitnode:runtime-imports",
+  resolveId: {
+    filter: { id: RUNTIME_PROVIDED_IMPORT },
+    handler: id => ({ external: true, id }),
+  },
+};
+
 export const packageOutputPlugin = ({
   output = "all",
   root,
@@ -290,7 +300,8 @@ export const createPackageLogger = (
  *   the `dist/src/` prefix the package's exports point at.
  * - Every package import stays external, exactly as written - React, Hono,
  *   Drizzle, `@vitnode/core`, workspace packages and dev dependencies alike. A
- *   package's dependencies belong to the app that installs it.
+ *   package's dependencies belong to the app that installs it. Modules the
+ *   runtime provides (`cloudflare:workers`) stay external without a lookup.
  * - `@/` aliases are resolved through `tsconfig.build.json`, in the JavaScript
  *   and in the declarations, so no alias-rewriting pass runs afterwards.
  * - Declarations come from the TypeScript compiler (no `isolatedDeclarations`),
@@ -346,6 +357,7 @@ export const packageTsdownConfig = ({
     }),
     platform: "neutral",
     plugins: [
+      runtimeImportsPlugin,
       packageOutputPlugin({ output, root, sourcemaps: mode === "watch" }),
     ],
     report: false,

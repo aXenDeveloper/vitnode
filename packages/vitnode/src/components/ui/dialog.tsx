@@ -171,7 +171,7 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Popup
         className={cn(
-          "bg-popover text-popover-foreground fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 grid-cols-[minmax(0,1fr)] gap-4 rounded-xl border p-6 shadow-xl sm:max-w-lg",
+          "bg-popover text-popover-foreground fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 grid-cols-[minmax(0,1fr)] gap-4 rounded-xl border p-6 shadow-xl sm:max-w-lg",
           dialogPopupMotionClassName,
           "max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-5rem)]",
           className,
@@ -251,7 +251,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       className={cn(
-        "font-heading text-lg leading-tight font-semibold text-balance",
+        "font-heading text-lg leading-tight font-semibold text-balance wrap-break-word",
         className,
       )}
       data-slot="dialog-title"

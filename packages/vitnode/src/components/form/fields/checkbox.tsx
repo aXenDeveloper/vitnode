@@ -28,7 +28,7 @@ export const AutoFormCheckbox = ({
   return (
     <div
       className={cn(
-        "flex flex-row items-start space-y-0 space-x-3 rounded-md border p-4",
+        "flex flex-row items-start gap-3 rounded-md border p-4",
         className,
       )}
     >
@@ -45,7 +45,7 @@ export const AutoFormCheckbox = ({
       </FormControl>
 
       {!!(label ?? description) && (
-        <div className="space-y-1 leading-none">
+        <div className="flex min-w-0 flex-col gap-1 leading-none wrap-anywhere">
           {!!label && (
             <AutoFormLabel
               isOptional={isOptional}

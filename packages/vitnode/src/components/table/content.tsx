@@ -349,7 +349,9 @@ export function ContentDataTable<T extends DataTableTMin>({
           the table's own `overflow-x-auto` then works against. It lives here
           because every caller sits in that same `<main>`. */}
       <div className="grid grid-cols-[minmax(0,1fr)]">
-        <div className={expandable ? "@container" : undefined}>
+        <div
+          className={expandable || rows.length === 0 ? "@container" : undefined}
+        >
           <Table
             {...props}
             className={cn(

@@ -31,13 +31,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import {
   type AiActionTranslate,
   withTranslatedAiActionText,
 } from "@/lib/ai/action-text";
+import { FormFieldsPendingSkeleton } from "@/tanstack/pending/shapes";
 
 import type { AdminAiAction, AdminAiModel } from "../ai-query";
 import type { AiActionFormProps } from "./action-form-content";
@@ -93,11 +93,7 @@ const EditAiActionAction = ({
           </p>
         </SheetHeader>
         <React.Suspense
-          fallback={
-            <div className="flex flex-1 items-center justify-center">
-              <Spinner size="xl" />
-            </div>
-          }
+          fallback={<FormFieldsPendingSkeleton footer="sheet" rows={5} />}
         >
           <AiActionFormContent
             action={action}

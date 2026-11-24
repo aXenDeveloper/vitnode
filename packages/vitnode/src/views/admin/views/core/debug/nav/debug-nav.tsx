@@ -168,7 +168,7 @@ export const DebugNav = ({
 
   return (
     <>
-      <div className="md:hidden">
+      <div className="@2xl/debug:hidden">
         <Drawer direction="left" onOpenChange={setIsOpen} open={isOpen}>
           <DrawerTrigger asChild>
             <Button className="w-full justify-start" variant="outline">
@@ -211,7 +211,7 @@ export const DebugNav = ({
 
       <SideNav
         aria-label={t("nav.label")}
-        className="self-start max-md:hidden md:sticky md:top-4"
+        className="self-start @max-2xl/debug:hidden @2xl/debug:sticky @2xl/debug:top-4"
       >
         <NavGroups active={active} health={health} tabs={tabs} />
       </SideNav>

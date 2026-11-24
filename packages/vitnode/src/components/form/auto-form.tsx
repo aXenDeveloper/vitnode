@@ -657,22 +657,24 @@ export function AutoForm<T extends z.ZodObject<z.ZodRawShape>>({
           }}
           value={activeTab ?? tabs[0].value}
         >
-          <TabsList>
-            {tabs.map(tab => (
-              <TabsTrigger key={tab.value} value={tab.value}>
-                {tab.label}
-                {invalidTabValues.has(tab.value) && (
-                  <>
-                    <span
-                      aria-hidden="true"
-                      className="bg-destructive size-1.5 shrink-0 rounded-full"
-                    />
-                    <span className="sr-only">{t("tab_has_errors")}</span>
-                  </>
-                )}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="max-w-full overflow-x-auto overscroll-x-contain">
+            <TabsList className="min-w-max">
+              {tabs.map(tab => (
+                <TabsTrigger key={tab.value} value={tab.value}>
+                  {tab.label}
+                  {invalidTabValues.has(tab.value) && (
+                    <>
+                      <span
+                        aria-hidden="true"
+                        className="bg-destructive size-1.5 shrink-0 rounded-full"
+                      />
+                      <span className="sr-only">{t("tab_has_errors")}</span>
+                    </>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
           <TabsPanels>
             {tabs.map(tab => (

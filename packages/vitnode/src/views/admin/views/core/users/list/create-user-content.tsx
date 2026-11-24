@@ -17,7 +17,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
+import { FormFieldsPendingSkeleton } from "@/tanstack/pending/shapes";
 
 export type CreateAdminUser = (
   input: AdminUserCreateInput,
@@ -52,13 +52,7 @@ export const CreateUserAdminContent = ({
           <DialogDescription>{t("desc")}</DialogDescription>
         </DialogHeader>
 
-        <React.Suspense
-          fallback={
-            <div className="flex items-center justify-center">
-              <Spinner size="xl" />
-            </div>
-          }
-        >
+        <React.Suspense fallback={<FormFieldsPendingSkeleton />}>
           <CreateUserForm onCreate={onCreate} />
         </React.Suspense>
       </DialogContent>

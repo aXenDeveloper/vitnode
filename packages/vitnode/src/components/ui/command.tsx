@@ -76,7 +76,7 @@ function CommandInput({
       <InputGroup className="border-input/30 bg-input/30 h-8 rounded-lg shadow-none">
         <CommandPrimitive.Input
           className={cn(
-            "w-full text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50",
+            "w-full text-base outline-hidden disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
             className,
           )}
           data-slot="command-input"

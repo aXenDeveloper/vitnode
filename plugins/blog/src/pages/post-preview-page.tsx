@@ -10,7 +10,7 @@ import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { manifest } from "@/manifest.gen";
 
 import type { BlogCategories } from "./blog-queries";
-import type { BlogPostPreviewSearch } from "./post-preview";
+import type { BlogPostPreviewSearch } from "./post-preview-search";
 
 import { blogCategoriesQueryOptions } from "./blog-queries";
 import { BlogArticle } from "./post-article";

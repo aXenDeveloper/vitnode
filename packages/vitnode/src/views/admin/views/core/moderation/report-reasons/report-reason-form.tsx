@@ -32,6 +32,7 @@ export const ReportReasonForm = ({
   reason,
 }: ReportReasonFormProps) => {
   const t = useTranslations("admin.moderation.report_reasons.form");
+  const tErrors = useTranslations("core.global.errors");
   const locale = useLocale();
 
   const formSchema = z.object({
@@ -39,7 +40,7 @@ export const ReportReasonForm = ({
       maxLength: MODERATION_LIMITS.reasonTitleMaxLength,
       minLength: 1,
     })
-      .min(1)
+      .min(1, { message: tErrors("field_required") })
       .default(reason?.title ?? []),
     description: multiLangValueSchema({
       maxLength: MODERATION_LIMITS.reasonDescriptionMaxLength,

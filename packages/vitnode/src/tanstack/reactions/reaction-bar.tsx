@@ -2,7 +2,7 @@ import type { ContentTarget } from "@vitnode/api/content/target";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cn } from "cn";
-import { RotateCwIcon, SmilePlusIcon } from "lucide-react";
+import { RotateCwIcon, SmilePlusIcon, UsersIcon } from "lucide-react";
 import { AnimatePresence, useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import React from "react";
@@ -21,6 +21,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { SlidingNumber } from "@/components/ui/sliding-number";
 import { TooltipGroup, TooltipWithContent } from "@/components/ui/tooltip";
+import { useCoarsePointer } from "@/hooks/use-coarse-pointer";
 
 import type {
   ReactionCatalogItem,
@@ -491,6 +492,7 @@ const ReactionBarItems = ({
 }) => {
   const t = useTranslations("core.reactions");
   const shouldReduceMotion = useReducedMotion();
+  const isCoarsePointer = useCoarsePointer();
   const listRef = React.useRef<HTMLUListElement>(null);
   const [flight, setFlight] = React.useState<null | ReactionFlightPlan>(null);
   const codes = pills.map(({ item }) => item.code);
@@ -581,6 +583,21 @@ const ReactionBarItems = ({
           onPick={onPick}
           summary={summary}
         />
+      ) : null}
+      {/* On touch, tapping a pill reacts and the who-reacted hover card can't open. */}
+      {isCoarsePointer && canAct && summary.total > 0 ? (
+        <Button
+          aria-haspopup="dialog"
+          aria-label={t("peek.see_everyone")}
+          className="text-muted-foreground size-7 rounded-full"
+          onClick={() => {
+            onWhoChange({ filter: null });
+          }}
+          size="icon-xs"
+          variant="ghost"
+        >
+          <UsersIcon aria-hidden="true" className="size-4" />
+        </Button>
       ) : null}
       {who ? (
         <React.Suspense fallback={null}>
