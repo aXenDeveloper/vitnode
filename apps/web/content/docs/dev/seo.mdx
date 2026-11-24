@@ -4,6 +4,8 @@ description: Control search indexing, robots.txt, AI crawler rules and a generat
 icon: SearchCheck
 ---
 
+import { TypeTable } from 'fumadocs-ui/components/type-table'
+
 VitNode can serve your site's `/robots.txt`, a `/sitemap.xml` index and the `noindex` signals for a whole deployment from one `seo` block in `vitnode.server.config.ts`. Use it to keep a preview deployment out of search results, to publish every public page and Content Engine record in a sitemap, and to decide which AI crawlers may read the site.
 
 The `seo` block is optional. Leave it out and nothing changes: a site that serves its own `public/robots.txt` or sitemap route keeps them.
@@ -80,16 +82,50 @@ Every URL VitNode writes uses `VITNODE_WEB_URL`, or a language's own origin from
 
 ## Options and defaults
 
-| Name                         | Type                     | Required | Default        | Description                                                                 |
-| ---------------------------- | ------------------------ | -------- | -------------- | --------------------------------------------------------------------------- |
-| `indexing`                   | `boolean`                | Yes      | -              | `false` adds `noindex` to every HTML page and hides the sitemap.            |
-| `sitemap.enabled`            | `boolean`                | No       | `indexing`     | `false` hides the sitemap and its `Sitemap:` line, keeping `indexing`.      |
-| `sitemap.paths`              | `string[]`               | No       | `[]`           | The app's own canonical pages, unlocalized, such as `"/"` and `"/about"`.   |
-| `crawlers.openai.search`     | `boolean`                | No       | follows `*`    | `OAI-SearchBot`, used for ChatGPT search results.                           |
-| `crawlers.openai.training`   | `boolean`                | No       | follows `*`    | `GPTBot`, used to collect training data.                                    |
-| `crawlers.anthropic.search`  | `boolean`                | No       | follows `*`    | `Claude-SearchBot`, used for Claude's search results.                       |
-| `crawlers.anthropic.training`| `boolean`                | No       | follows `*`    | `ClaudeBot`, used to collect training data.                                 |
-| `crawlers.googleExtended`    | `boolean`                | No       | follows `*`    | The `Google-Extended` token: Gemini training and grounding, as Google describes it. |
+<TypeTable
+  type={{
+    'indexing': {
+      description: 'false adds noindex to every HTML page and hides the sitemap. No default.',
+      type: 'boolean',
+      required: true,
+    },
+    'sitemap.enabled': {
+      description: 'false hides the sitemap and its Sitemap: line but keeps the indexing decision.',
+      type: 'boolean',
+      default: 'indexing',
+    },
+    'sitemap.paths': {
+      description: 'Canonical pages of the app, unlocalized, such as "/" and "/about".',
+      type: 'string[]',
+      default: '[]',
+    },
+    'crawlers.openai.search': {
+      description: 'OAI-SearchBot, used for ChatGPT search results.',
+      type: 'boolean',
+      default: 'follows *',
+    },
+    'crawlers.openai.training': {
+      description: 'GPTBot, used to collect training data.',
+      type: 'boolean',
+      default: 'follows *',
+    },
+    'crawlers.anthropic.search': {
+      description: 'Claude-SearchBot, used for Claude search results.',
+      type: 'boolean',
+      default: 'follows *',
+    },
+    'crawlers.anthropic.training': {
+      description: 'ClaudeBot, used to collect training data.',
+      type: 'boolean',
+      default: 'follows *',
+    },
+    'crawlers.googleExtended': {
+      description: 'The Google-Extended token: Gemini training and grounding, as Google describes it.',
+      type: 'boolean',
+      default: 'follows *',
+    },
+  }}
+/>
 
 With `indexing: false` the sitemap is always off, whatever `sitemap.enabled` says. A sitemap invites crawlers to index what it lists, so the two cannot disagree.
 
