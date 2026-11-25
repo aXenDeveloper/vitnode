@@ -73,11 +73,11 @@ import { MODCP_NAMESPACES } from "./tanstack/moderation/namespaces";
 import { normalizeModcpReportsSearch } from "./tanstack/moderation/route-search";
 import { normalizeModcpWarningsSearch } from "./tanstack/moderation/warnings-route";
 import { NOTIFICATIONS_NAMESPACES } from "./tanstack/notifications/namespaces";
+import { normalizeNotificationsRouteSearch } from "./tanstack/notifications/route-search";
 import {
   normalizeOAuthAuthorizeSearch,
   OAUTH_AUTHORIZE_NAMESPACES,
 } from "./tanstack/oauth/route";
-import { normalizeNotificationsRouteSearch } from "./tanstack/notifications/route-search";
 import {
   AuthPendingSkeleton,
   CardsPendingSkeleton,

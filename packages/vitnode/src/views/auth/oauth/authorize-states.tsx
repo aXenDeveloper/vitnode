@@ -1,4 +1,9 @@
-import { LinkIcon, RotateCwIcon, UnplugIcon, WifiOffIcon } from "lucide-react";
+import {
+  Link2OffIcon,
+  RotateCwIcon,
+  UnplugIcon,
+  WifiOffIcon,
+} from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
@@ -15,7 +20,7 @@ import { OAuthAuthorizeCard } from "./authorize-card";
 
 const STATES = {
   disabled: { Icon: UnplugIcon, key: "disabled" },
-  invalid: { Icon: LinkIcon, key: "invalid" },
+  invalid: { Icon: Link2OffIcon, key: "invalid" },
   load_error: { Icon: WifiOffIcon, key: "load_error" },
 } as const;
 

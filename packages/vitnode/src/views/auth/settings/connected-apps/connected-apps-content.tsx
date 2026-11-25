@@ -22,7 +22,7 @@ import { ConnectedAppsSkeleton } from "./connected-apps-skeleton";
 import { ConnectionItem } from "./connection-item";
 
 const endpointCode = (chunks: React.ReactNode) => (
-  <code className="bg-muted text-foreground rounded px-1 py-0.5 font-mono text-sm break-all">
+  <code className="bg-muted text-foreground rounded px-1 py-0.5 font-mono text-sm break-all sm:break-normal sm:whitespace-nowrap">
     {chunks}
   </code>
 );
