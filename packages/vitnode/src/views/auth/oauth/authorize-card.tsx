@@ -4,7 +4,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AuthFrame } from "../auth-card";
 
 /** The consent page's centered card, shared by every state it can be in. */
-export const OAuthAuthorizeCard = ({ children }: { children: React.ReactNode }) => (
+export const OAuthAuthorizeCard = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => (
   <AuthFrame>
     <Card className="gap-0 overflow-hidden p-0">{children}</Card>
   </AuthFrame>

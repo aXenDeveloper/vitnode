@@ -88,7 +88,10 @@ export const ConnectionItem = ({
   const website = websiteOf(connection.client.uri);
 
   const facts = [
-    { label: t("connected"), value: <DateFormat date={connection.createdAt} /> },
+    {
+      label: t("connected"),
+      value: <DateFormat date={connection.createdAt} />,
+    },
     {
       label: t("last_used"),
       value: <DateFormat date={connection.lastUsedAt} />,

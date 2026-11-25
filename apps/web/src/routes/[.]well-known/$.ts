@@ -12,7 +12,9 @@ export const Route = createFileRoute('/.well-known/$')({
     handlers: ({ createHandlers }) =>
       createHandlers({
         ANY: async ({ request }) => {
-          const forwarded = mcpWellKnownRequest(request, { apiBasePath: '/api' })
+          const forwarded = mcpWellKnownRequest(request, {
+            apiBasePath: '/api',
+          })
           if (!forwarded) return new Response('Not Found', { status: 404 })
 
           return apiBridge(

@@ -153,9 +153,7 @@ export const OAuthAuthorizeContent = ({
   const name = request.client.name;
   const requested = MCP_SCOPES.filter(scope => request.scopes.includes(scope));
   const [selected, setSelected] = React.useState<McpScope[]>(requested);
-  const [pending, setPending] = React.useState<"approve" | "deny" | null>(
-    null,
-  );
+  const [pending, setPending] = React.useState<"approve" | "deny" | null>(null);
   const [done, setDone] = React.useState<"approved" | "denied" | null>(null);
   const legendId = React.useId();
 
@@ -210,7 +208,9 @@ export const OAuthAuthorizeContent = ({
         </Alert>
 
         <fieldset
-          aria-describedby={requested.length > 1 ? `${legendId}-hint` : undefined}
+          aria-describedby={
+            requested.length > 1 ? `${legendId}-hint` : undefined
+          }
           className="flex flex-col gap-3"
         >
           <legend className="text-foreground mb-3 text-sm font-semibold">
@@ -220,9 +220,7 @@ export const OAuthAuthorizeContent = ({
             {requested.map(scope => (
               <ScopeOption
                 checked={selected.includes(scope)}
-                disabled={
-                  pending !== null || !canToggleScope(scope, selected)
-                }
+                disabled={pending !== null || !canToggleScope(scope, selected)}
                 key={scope}
                 onCheckedChange={checked => {
                   setSelected(current =>

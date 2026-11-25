@@ -27,11 +27,7 @@ const endpointCode = (chunks: React.ReactNode) => (
   </code>
 );
 
-const RetryButton = ({
-  query,
-}: {
-  query: UseQueryResult<McpConnection[]>;
-}) => {
+const RetryButton = ({ query }: { query: UseQueryResult<McpConnection[]> }) => {
   const t = useTranslations("core.auth.settings.connected_apps");
 
   return (
