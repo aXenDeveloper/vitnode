@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 
+import geistLatin from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url'
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
 import { ThemeScript } from '@vitnode/core/components/theme-script'
 import {
@@ -20,8 +21,6 @@ import type { Locale } from '@/vitnode.config'
 import { isDocsRouteId, STYLESHEET_ORDER_ANCHOR } from '@/docs/stylesheet'
 import { withoutHmrTimestamp } from '@/lib/without-hmr-timestamp'
 import { vitNodeConfig } from '@/vitnode.config'
-
-import geistLatin from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url'
 
 import appCss from '../styles.css?url'
 

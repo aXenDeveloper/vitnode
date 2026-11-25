@@ -15,12 +15,16 @@ import {
 export const FileAltContent = ({
   canEdit,
   fileId,
+  fileName,
+  onSaved,
 }: {
   canEdit: boolean;
   fileId: number;
+  fileName: string;
+  onSaved: () => void;
 }) => {
   const queryClient = useQueryClient();
-  const { data } = useSuspenseQuery(fileAltQueryOptions(fileId));
+  const { data, dataUpdatedAt } = useSuspenseQuery(fileAltQueryOptions(fileId));
 
   const handlers = React.useMemo(() => {
     const settled = async (
@@ -46,5 +50,14 @@ export const FileAltContent = ({
     };
   }, [fileId, queryClient]);
 
-  return <FileAltEditor canEdit={canEdit} data={data} {...handlers} />;
+  return (
+    <FileAltEditor
+      canEdit={canEdit}
+      data={data}
+      fileName={fileName}
+      key={dataUpdatedAt}
+      onSaved={onSaved}
+      {...handlers}
+    />
+  );
 };

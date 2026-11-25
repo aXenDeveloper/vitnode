@@ -206,6 +206,16 @@ curl -X POST https://example.com/api/@vitnode/core/cron \
 
 Set a real `CRON_SECRET`. Each call runs every job whose schedule came due since its last run. A slower tick still runs the hourly sweep; it just works the queue less often (2 images per tick). Check the last run in the **Time** column of **Debug Panel → Cron & queue** (`/admin/core/debug/cron`). See [Cron over REST](/docs/dev/cron/rest-api) and [Node CRON adapter](/docs/dev/cron/node-cron).
 
+## Edit ALT text in the AdminCP
+
+Open **System → Files** (`/admin/core/system/files`) and choose **Edit ALT text** (the captions icon) on an image row. A sheet opens on the right with one **Description** field. Switch the language in the field's corner to edit another one; the list marks languages that are **Missing** or **Outdated**. One **Save** writes every language you changed, plus the image's policy.
+
+- **Decorative image.** Save the field empty. The image then has no description on purpose, and automatic ALT leaves it alone.
+- **Hand it back to AI.** When a language has saved text, **Let AI rewrite** under the field removes it, so the next sweep writes it again.
+- **Policy.** **Automatic ALT for this image** picks **Automatic**, **Manual only** or **Disabled** (never sent to an AI provider, handy for private images).
+
+Editing needs the **Edit image ALT text** staff permission (`files:can_edit_alt`). Without it, the sheet is read-only. Text a person writes always wins over the AI's.
+
 ## Edit ALT text through the API
 
 The file ALT routes live in the `admin/files` module and use the `files` staff permissions:

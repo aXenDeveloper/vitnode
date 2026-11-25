@@ -1,5 +1,5 @@
-import { buttonVariants } from '@vitnode/core/components/ui/button'
 import { LogoVitNode } from '@vitnode/core/components/logo-vitnode'
+import { buttonVariants } from '@vitnode/core/components/ui/button'
 import { cn } from 'cn'
 import {
   ArrowLeft,

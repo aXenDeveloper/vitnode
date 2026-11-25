@@ -1085,15 +1085,11 @@
         "alt": {
           "open": "Edytuj tekst ALT",
           "title": "Tekst ALT",
-          "languages": "Opis w każdym języku",
-          "empty_hint": "Czytniki ekranu odczytują go na głos. Zapisz pusty tekst, aby oznaczyć obraz jako dekoracyjny - celowo nie będzie miał opisu, a automatyczny ALT go nie ruszy.",
-          "intentionally_empty": "Celowo bez opisu (obraz dekoracyjny).",
-          "text_label": "Tekst ALT: {language}",
+          "empty_hint": "Zapisz puste pole, aby oznaczyć obraz jako dekoracyjny.",
           "save": "Zapisz",
           "saved": {
             "title": "Zapisano tekst ALT",
-            "desc": "Opis w języku {language} jest teraz Twój; automatyczny ALT go nie nadpisze.",
-            "desc_empty": "Obraz oznaczono jako dekoracyjny w języku {language}."
+            "desc": "{count, plural, one {Zapisano # zmianę} few {Zapisano # zmiany} many {Zapisano # zmian} other {Zapisano # zmian}} dla {name}."
           },
           "origin": {
             "ai": "AI",
@@ -1102,17 +1098,16 @@
             "stale": "Nieaktualny"
           },
           "remove": {
-            "button": "Usuń",
+            "button": "Pozwól AI przepisać ({language})",
             "hint": "Po usunięciu automatyczny ALT może napisać go ponownie.",
             "success": "Usunięto tekst ALT",
             "success_desc": "Automatyczny ALT może ponownie opisać obraz w języku {language}."
           },
           "policy": {
             "label": "Automatyczny ALT dla tego obrazu",
-            "saved": "Zapisano ustawienie ALT",
             "automatic": {
               "label": "Automatyczny",
-              "desc": "AI pisze opis w każdym języku, w którym go brakuje. Tekst napisany przez człowieka nigdy nie jest nadpisywany."
+              "desc": "AI uzupełnia brakujące języki. Nigdy nie zastępuje Twojego tekstu."
             },
             "manual": {
               "label": "Tylko ręcznie",
@@ -1122,7 +1117,9 @@
               "label": "Wyłączony",
               "desc": "Obraz nigdy nie jest wysyłany do zewnętrznej AI. Używaj dla prywatnych lub wrażliwych obrazów."
             }
-          }
+          },
+          "description": "Opis",
+          "placeholder": "Co przedstawia obraz i po co tu jest?"
         }
       },
       "integrations": {

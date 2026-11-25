@@ -5440,15 +5440,11 @@
         "alt": {
           "open": "Edit ALT text",
           "title": "ALT text",
-          "languages": "Description per language",
-          "empty_hint": "Screen readers read this aloud. Save an empty text to mark the image as decorative - it then intentionally has no description, and automatic ALT leaves it alone.",
-          "intentionally_empty": "Intentionally left without a description (decorative image).",
-          "text_label": "ALT text in {language}",
+          "empty_hint": "Save it empty to mark the image as decorative.",
           "save": "Save",
           "saved": {
             "title": "ALT text saved",
-            "desc": "The {language} description is now yours; automatic ALT won't overwrite it.",
-            "desc_empty": "The image is marked as decorative in {language}."
+            "desc": "{count, plural, one {# change} other {# changes}} saved for {name}."
           },
           "origin": {
             "ai": "AI",
@@ -5457,17 +5453,16 @@
             "stale": "Outdated"
           },
           "remove": {
-            "button": "Remove",
+            "button": "Let AI rewrite {language}",
             "hint": "Removing lets automatic ALT write it again.",
             "success": "ALT text removed",
             "success_desc": "Automatic ALT may describe the image in {language} again."
           },
           "policy": {
             "label": "Automatic ALT for this image",
-            "saved": "ALT setting saved",
             "automatic": {
               "label": "Automatic",
-              "desc": "AI writes a description in every language that is missing one. Text written by a person is never overwritten."
+              "desc": "AI fills in missing languages. It never replaces text you wrote."
             },
             "manual": {
               "label": "Manual only",
@@ -5477,7 +5472,9 @@
               "label": "Disabled",
               "desc": "The image is never sent to an external AI. Use it for private or sensitive images."
             }
-          }
+          },
+          "description": "Description",
+          "placeholder": "What does the image show, and why is it here?"
         }
       },
       "plugins": {

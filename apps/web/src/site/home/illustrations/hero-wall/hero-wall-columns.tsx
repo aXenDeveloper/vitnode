@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 
+import { whenIdle } from '@/site/marketing/when-idle'
+
 import {
   ArticlePage,
   BlogIndexPage,
@@ -16,7 +18,6 @@ import {
 import { ArticleScreen, DashboardScreen } from './content-screens'
 import { RolesScreen, UsersScreen } from './people-screens'
 import { AiScreen } from './system-screens'
-import { whenIdle } from '@/site/marketing/when-idle'
 
 const COLUMNS = [
   {

@@ -5,8 +5,8 @@ import { ArrowRight } from 'lucide-react'
 import { useTranslations } from 'use-intl'
 
 import { InstallCommand } from '@/site/marketing/install-command'
-import { ParallaxDust } from '@/site/marketing/parallax-dust'
 import { REPOSITORY_URL } from '@/site/marketing/links'
+import { ParallaxDust } from '@/site/marketing/parallax-dust'
 import { BUTTON, GitHubIcon } from '@/site/marketing/shared'
 
 export const FinalCtaSection = () => {
