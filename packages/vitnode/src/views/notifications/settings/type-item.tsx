@@ -130,19 +130,16 @@ const NotificationTypeSummary = ({
   type: NotificationPreferenceTypeView;
 }) => {
   const t = useTranslations("core.auth.settings.notifications");
+  const lockedLabel = type.mandatory ? t("types.mandatory") : t("types.locked");
 
   return (
     <div className="has-focus-visible:ring-ring/50 [@media(hover:hover)]:hover:bg-muted/40 relative flex items-center gap-3 px-4 py-3 has-focus-visible:ring-3 has-focus-visible:ring-inset">
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <h4 className="flex items-center gap-1.5 text-sm font-medium text-pretty">
           {type.locked ? (
-            <TooltipWithContent
-              text={type.mandatory ? t("types.mandatory") : t("types.locked")}
-            >
+            <TooltipWithContent text={lockedLabel}>
               <span
-                aria-label={
-                  type.mandatory ? t("types.mandatory") : t("types.locked")
-                }
+                aria-label={lockedLabel}
                 className="focus-visible:ring-ring/50 relative z-10 -m-1 inline-flex cursor-help rounded-sm p-1 outline-none focus-visible:ring-3"
                 role="img"
                 tabIndex={0}

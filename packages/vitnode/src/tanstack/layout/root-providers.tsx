@@ -17,8 +17,8 @@ import { RealtimeListeners } from "../realtime/realtime-listeners";
  * Everything VitNode's UI needs above the app: `core.global` messages, theme,
  * toaster, tooltips, languages, editor config and logo from `config`, the
  * WebSocket connection with its realtime listeners, the top navigation
- * progress bar, the shared user preview card, and SSR icon collection. Render it once in the root route's
- * component, around the `<Outlet />`.
+ * progress bar, the shared user preview card, and SSR icon collection. Render
+ * it once in the root route's component, around the `<Outlet />`.
  */
 export const VitNodeRootProviders = ({
   children,

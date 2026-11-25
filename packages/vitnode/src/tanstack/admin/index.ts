@@ -68,8 +68,8 @@ export { adminUserSearchInputSchema, readAdminUserSearch } from "./user-search";
 // own subpath - `@vitnode/core/tanstack/admin/cron`, `.../queue`, `.../files`,
 // `.../search-index`, `.../debug`, `.../dashboard`, `.../users`, `.../roles`,
 // `.../staff` - so a route bundles the screen it renders and not the other
-// eight. This barrel is what the *shell* imports, and
-// it is loaded on every admin page.
+// eight. This barrel is what the *shell* imports, and it is loaded on every
+// admin page.
 // -----------------------------------------------------------------------------
 
 export {

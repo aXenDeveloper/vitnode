@@ -1,5 +1,5 @@
 import { cn } from "cn";
-import { animate, type AnimationPlaybackControls } from "motion";
+import { animate } from "motion";
 import { useReducedMotion } from "motion/react";
 import * as m from "motion/react-m";
 import React from "react";
@@ -9,6 +9,7 @@ import { MotionFeatures } from "@/components/motion-features";
 
 import type { AdminSignUps, SignUpRange } from "./sign-ups-query";
 
+// Each day of a 7-, 14- or 30-day range lands exactly on a sample.
 const SAMPLES = 6 * 13 * 29 + 1;
 const HEADROOM = 1.1;
 const EASE_OUT_QUINT = [0.23, 1, 0.32, 1] as const;
@@ -94,7 +95,7 @@ const useMorphingPaths = (current: number[], previous: number[]) => {
       previous: new Float64Array(SAMPLES),
     };
     paint(from);
-    const playback: AnimationPlaybackControls = animate(0, 1, {
+    const playback = animate(0, 1, {
       duration: MORPH_S,
       ease: EASE_IN_OUT_CUBIC,
       onUpdate: progress => {

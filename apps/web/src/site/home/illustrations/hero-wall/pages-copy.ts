@@ -118,6 +118,8 @@ const toLists = (value: Raw): Listed => {
   return listed
 }
 
+// PagesCopy mirrors `site.home.hero.pages` in the locale JSON, whose arrays
+// reach use-intl as index-keyed objects; toLists turns them back into arrays.
 export const usePages = () => {
   const messages = useMessages() as unknown as {
     site: { home: { hero: { pages: Raw } } }

@@ -54,15 +54,15 @@ export const heartbeatSlotStates = ({
   return Array.from({ length: HEARTBEAT_SLOTS }, (_, index) => {
     const start = current - (HEARTBEAT_SLOTS - 1 - index) * HEARTBEAT_SLOT_MS;
     const slot = new Date(start);
-    if (ticked.has(start)) return { slot, state: "ran" as const };
+    if (ticked.has(start)) return { slot, state: "ran" };
     if (firstSlot === null || start < firstSlot.getTime()) {
-      return { slot, state: "none" as const };
+      return { slot, state: "none" };
     }
     if (start === current && now.getTime() - start < CURRENT_SLOT_GRACE_MS) {
-      return { slot, state: "none" as const };
+      return { slot, state: "none" };
     }
 
-    return { slot, state: "missed" as const };
+    return { slot, state: "missed" };
   });
 };
 

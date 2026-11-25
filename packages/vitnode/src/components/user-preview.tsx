@@ -236,8 +236,8 @@ export const UserPreview = (props: UserPreviewProps) =>
  * becomes a detached trigger that hands the card its `nameCode`, so a feed
  * with hundreds of names mounts a single card, and moving the pointer from one
  * name to the next glides the card over and cross-fades to the new member
- * instead of closing and reopening it. Without a
- * provider each `UserPreview` falls back to a card of its own.
+ * instead of closing and reopening it. Without a provider each `UserPreview`
+ * falls back to a card of its own.
  * `VitNodeRootProviders` already renders one around the app; render another
  * inside a modal dialog or sheet so the card belongs to it and pressing the
  * card doesn't dismiss the dialog. Universal.

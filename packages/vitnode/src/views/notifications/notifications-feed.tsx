@@ -294,28 +294,27 @@ export const NotificationsFeed = ({
           className="relative w-full"
           style={{ height: virtualizer.getTotalSize() }}
         >
-          {shouldReduceMotion
-            ? virtualItems.map(virtualItem => {
-                const item = items.at(virtualItem.index);
+          {shouldReduceMotion ? (
+            virtualItems.map(virtualItem => {
+              const item = items.at(virtualItem.index);
 
-                return (
-                  <li
-                    className="absolute left-0 w-full"
-                    data-index={virtualItem.index}
-                    key={virtualItem.key}
-                    ref={virtualizer.measureElement}
-                    style={{ top: virtualItem.start }}
-                  >
-                    {item ? (
-                      <NotificationItem item={item} {...itemActions} />
-                    ) : (
-                      <LoadMoreRow feed={feed} />
-                    )}
-                  </li>
-                );
-              })
-            : null}
-          {shouldReduceMotion ? null : (
+              return (
+                <li
+                  className="absolute left-0 w-full"
+                  data-index={virtualItem.index}
+                  key={virtualItem.key}
+                  ref={virtualizer.measureElement}
+                  style={{ top: virtualItem.start }}
+                >
+                  {item ? (
+                    <NotificationItem item={item} {...itemActions} />
+                  ) : (
+                    <LoadMoreRow feed={feed} />
+                  )}
+                </li>
+              );
+            })
+          ) : (
             <AnimatePresence custom={rowMotion.removed} initial={false}>
               {virtualItems.map(virtualItem => {
                 const item = items.at(virtualItem.index);

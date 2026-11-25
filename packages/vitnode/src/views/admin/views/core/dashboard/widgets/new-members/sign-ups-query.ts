@@ -25,7 +25,7 @@ export const fetchSignUps = async (
 ): Promise<AdminSignUps> => {
   const response = await fetcher({
     plugin: manifest.id,
-    args: { query: { days: String(days) as "7" | "14" | "30" } },
+    args: { query: { days: `${days}` } },
     method: "get",
     module: "admin/users",
     path: "/sign-ups",

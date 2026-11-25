@@ -2,7 +2,7 @@ import { cn } from 'cn'
 import { Check, Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 
-export const INSTALL_COMMAND = 'npx create-vitnode-app@canary'
+const INSTALL_COMMAND = 'npx create-vitnode-app@canary'
 
 const COPIED_MS = 1500
 
