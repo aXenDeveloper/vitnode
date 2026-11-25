@@ -1,0 +1,131 @@
+---
+title: Profile content
+description: List a VitNode Content Engine type on its authors' profiles with profileContent, so members get a Content tab, type filters and a content count.
+icon: NotebookText
+---
+
+import { ImgDocs } from '@/components/fumadocs/img'
+import contentTab from './profile-content-tab.webp'
+
+`profileContent` puts a content type on its authors' profiles. Every member gets a **Content** tab with what they wrote, newest first, a filter per content type, and a count in the profile header and the user preview card. The mixed **Activity** feed with reactions stays where it is.
+
+VitNode ships it on for blog articles (`blog.post`), forum topics (`forum.topic`) and forum comments (`forum.comment`).
+
+## Before you begin
+
+You need a content type with [publication](/docs/content-engine/publication), a [public API](/docs/content-engine/public-api), [search](/docs/content-engine/search) settings and a `field.user()` author. A search provider is not needed: the Content tab reads the content tables, and `search` only lends the card its title, snippet and URL.
+
+<Steps>
+
+<Step>
+
+### Turn on profileContent
+
+Edit the newsroom article and add `search` and `profileContent`. This is an excerpt:
+
+```ts title="plugins/newsroom/src/content/article.ts"
+  publicWrite: {
+    ownership: { field: "author" },
+    create: { fields: ["title", "body"], status: "published" },
+    update: { fields: ["title", "body"] },
+  },
+
+  search: { // [!code ++]
+    titleField: "title", // [!code ++]
+    contentFields: ["body"], // [!code ++]
+    pathTemplate: "/news/{slug}", // [!code ++]
+  }, // [!code ++]
+
+  profileContent: true, // [!code ++]
+```
+
+The author is `search.authorField`, or else the `publicWrite.ownership` field, so this article credits `author`. A multi-author `field.user({ multiple: true })` credits every co-author.
+
+Nothing to migrate, reindex or backfill: existing published articles show up on the next profile load.
+
+</Step>
+
+<Step>
+
+### Name the filter
+
+The filter chip uses the type's noun, `{pluginId}.content.{entity}.label`, called with `count: 2`. To say something more specific next to other plugins' types, point `label` at another key in your plugin's messages:
+
+```ts title="plugins/forum/src/content/topic.ts"
+profileContent: { label: "content.topic.profile_label" },
+```
+
+```json title="plugins/forum/src/locales/en.json"
+"topic": {
+  "label": "{count, plural, one {Topic} other {Topics}}",
+  "profile_label": "{count, plural, one {Forum topic} other {Forum topics}}"
+}
+```
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Publish an article as a member, then open their profile and select **Content**, or go straight to a filter:
+
+```txt
+/users/maciej?tab=content&type=newsroom.article
+```
+
+<ImgDocs alt="A member profile on the Content tab, with All, Articles, Forum comments and Forum topics filters above a timeline of their articles, topics and comments" src={contentTab} />
+
+The tab and the filter live in the query string, so links, back and forward work. A filter for a type the installation no longer lists falls back to **All**.
+
+## What counts
+
+Counts and the list use one rule, and it is always what a signed-out visitor sees, even when the member, a moderator or staff is looking:
+
+- **Counted:** published records with a past `publishedAt`, readable by guests through their own and their parents' [access rules](/docs/content-engine/access), once per credited author.
+- **Not counted:** drafts, scheduled records, [hidden](/docs/content-engine/content-visibility) or deleted ones, records behind sign-in or a role, and comments under a hidden, unpublished or restricted topic or article.
+- **Translations:** a [localized](/docs/content-engine/localization) record counts once if any enabled language is published. The card shows the reader's language, then the default one, then any other published language, so switching languages never changes a total or duplicates an entry.
+- **Never counted:** reactions, follows, categories and types without `profileContent`.
+
+Entries are ordered by `publishedAt`, which a republish keeps, so editing or translating a record never moves it.
+
+## The API
+
+The profile route returns the counts with every profile, so the Content tab and the preview card need no extra request:
+
+```json title="GET /api/@vitnode/core/users/profile/maciej"
+"contentStats": {
+  "total": 7,
+  "byType": { "blog.post": 2, "forum.comment": 3, "forum.topic": 2 },
+  "types": [
+    { "id": "blog.post", "label": "@vitnode/blog.content.post.label" },
+    { "id": "forum.comment", "label": "@vitnode/forum.content.comment.profile_label" },
+    { "id": "forum.topic", "label": "@vitnode/forum.content.topic.profile_label" }
+  ]
+}
+```
+
+Every listed type is in `byType`, with `0` when the member has none. The list comes from the timeline route with `kind=content`:
+
+```ts title="Content tab query"
+import { fetcher } from '@vitnode/core/tanstack/fetcher'
+
+const response = await fetcher({
+  plugin: '@vitnode/core',
+  method: 'get',
+  module: 'users',
+  path: '/{userId}/timeline',
+  args: {
+    params: { userId: '2' },
+    query: { kind: 'content', type: 'forum.comment', lang: 'en' },
+  },
+})
+```
+
+Each edge is `kind: "authored"` with the card's title, snippet, URL, authors and image. A `type` that is not listed, `type` without `kind=content`, or a cursor from another member or filter answers `400` with the usual validation error. Without `kind`, the route returns the Activity feed exactly as before.
+
+## Related
+
+- [Search](/docs/content-engine/search) - the title, snippet and URL a card is built from
+- [Member timelines](/docs/dev/search#member-timelines) - the Activity feed
+- [Content Engine reference](/docs/content-engine/reference#profilecontent)

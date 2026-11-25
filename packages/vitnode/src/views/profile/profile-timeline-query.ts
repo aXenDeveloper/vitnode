@@ -57,9 +57,11 @@ export const profileTimelineQueryOptions = ({
       const page = await response.json();
 
       return {
-        edges: page.edges.map((edge): SearchTimelineEntry =>
-          edge.kind === "content" ? edge.item : edge,
-        ),
+        edges: page.edges.flatMap((edge): SearchTimelineEntry[] => {
+          if (edge.kind === "content") return [edge.item];
+
+          return edge.kind === "reaction" ? [edge] : [];
+        }),
         pageInfo: page.pageInfo,
       };
     },

@@ -1,7 +1,8 @@
+import type { SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, inArray } from "drizzle-orm";
+import { and, eq, exists, inArray, isNull, or, sql } from "drizzle-orm";
 
 import type { AnyContentTypeDefinition } from "../types";
 
@@ -119,6 +120,52 @@ export const createContentParentVisibility = (
         });
     },
   };
+};
+
+/**
+ * {@link createContentParentVisibility} as one `WHERE` condition, for a count
+ * or a page that has to filter before it aggregates or paginates: a record
+ * whose parent (a thread's root, a comment's article) is not published and
+ * visible is left out, and one with no parent is kept. `undefined` when the
+ * content type has no parent with publication. Server-only.
+ */
+export const contentParentVisibleCondition = (
+  c: Context,
+  definition: AnyContentTypeDefinition,
+  columns: Record<string, PgColumn>,
+): SQL | undefined => {
+  const parent = contentParentRelation(definition);
+  if (!parent?.target.publication.enabled) return undefined;
+
+  const parentModel = findContentModel(
+    c.get("core")?.contentModels ?? [],
+    parent.target.id,
+  )?.model;
+  const column = columns[parent.field];
+  if (!parentModel || !column) return sql`false`;
+
+  const parentColumns = parentModel.columns as Record<string, PgColumn>;
+  // A correlated `EXISTS` rather than `IN (...)`, so Postgres can semi-join
+  // through the parent's primary key instead of hashing every published
+  // parent. The `IS NULL` arm only for a relation that can be empty: an `OR`
+  // keeps the planner from turning the subquery into a join.
+  const visible = exists(
+    c
+      .get("db")
+      .select({ one: sql`1` })
+      .from(parentModel.table)
+      .where(
+        and(
+          eq(parentColumns.id, column),
+          publishedCondition(publicationColumns(parent.target, parentColumns)),
+        ),
+      ),
+  );
+  const descriptor = definition.fields[parent.field] as
+    | undefined
+    | { required?: boolean };
+
+  return descriptor?.required === true ? visible : or(isNull(column), visible);
 };
 
 export const contentDependentDefinitions = (

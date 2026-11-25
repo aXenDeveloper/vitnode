@@ -21,6 +21,7 @@ import { FEEDBACK_TONE_TEXT } from "@/components/ui/feedback-tone";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { UserFormat, userProfileHref } from "@/components/user-format";
+import { getIntlRuntime } from "@/tanstack/i18n/runtime";
 import { reactionTitle } from "@/tanstack/reactions/query";
 import { ReactionIcon } from "@/tanstack/reactions/reaction-icon";
 
@@ -137,12 +138,28 @@ export const classifySearchFeedHref = (href: string): SearchFeedHrefKind => {
   return SAFE_EXTERNAL_SCHEMES.has(scheme) ? "external" : "unsafe";
 };
 
+/**
+ * Whether an internal href is a URL of another language than the page's, such
+ * as a Polish-only article on an English profile. The router would rewrite it
+ * into the current language, so it is followed as a plain link instead.
+ */
+const isOtherLocaleHref = (href: string, locale: string): boolean => {
+  try {
+    const { pathname } = new URL(href, "https://vitnode.invalid");
+
+    return getIntlRuntime().localeRouting.resolveLocale(pathname) !== locale;
+  } catch {
+    return false;
+  }
+};
+
 const ResultLink = ({ children, className, href }: SearchFeedLinkProps) => {
   const kind = classifySearchFeedHref(href);
+  const locale = useLocale();
 
   if (kind === "unsafe") return <span className={className}>{children}</span>;
 
-  if (kind === "external") {
+  if (kind === "external" || isOtherLocaleHref(href, locale)) {
     return (
       <a className={className} href={href}>
         {children}

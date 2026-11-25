@@ -4,6 +4,7 @@ import { cn } from "cn";
 import {
   BriefcaseBusinessIcon,
   CalendarDaysIcon,
+  NotebookTextIcon,
   SparklesIcon,
 } from "lucide-react";
 import { useFormatter, useTranslations } from "use-intl";
@@ -12,6 +13,8 @@ import { Avatar } from "@/components/avatar";
 import { RoleFormat } from "@/components/role-format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { UserCoverImage } from "@/components/user-cover-image";
+import { userProfileContentHref } from "@/components/user-profile-href";
+import { HrefLink } from "@/tanstack/link/href-link";
 import { Reputation } from "@/tanstack/reactions/reputation";
 
 import type { UserImageEditor } from "./images/types";
@@ -169,6 +172,18 @@ export const ProfileContent = ({
               <MetaItem Icon={CalendarDaysIcon} label={t("memberSince")}>
                 <time dateTime={joinedIso}>{joinedLabel}</time>
               </MetaItem>
+
+              {user.contentStats ? (
+                <MetaItem Icon={NotebookTextIcon} label={t("content_label")}>
+                  <HrefLink
+                    className="text-foreground underline-offset-4 hover:underline"
+                    href={userProfileContentHref(user.nameCode)}
+                    resetScroll={false}
+                  >
+                    {t("content_count", { count: user.contentStats.total })}
+                  </HrefLink>
+                </MetaItem>
+              ) : null}
 
               {typeof user.reputation === "number" ? (
                 <li className="flex min-w-0 items-center">

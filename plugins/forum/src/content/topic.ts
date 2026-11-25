@@ -18,6 +18,7 @@ export const topicContentType = defineContentType({
   visibility: true,
   reports: true,
   reactions: true,
+  profileContent: { label: "content.topic.profile_label" },
   editorial: { revisions: { retention: 20 } },
 
   indexes: [{ on: ["forum", "publishedAt"] }],

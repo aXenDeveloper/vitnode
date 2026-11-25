@@ -15,6 +15,7 @@
     "content": {
       "topic": {
         "label": "{count, plural, one {Topic} other {Topics}}",
+        "profile_label": "{count, plural, one {Forum topic} other {Forum topics}}",
         "title": "Topics",
         "desc": "Conversations started by members. Each one lives in a forum and collects comments.",
         "fields": {
@@ -30,6 +31,7 @@
       },
       "comment": {
         "label": "{count, plural, one {Comment} other {Comments}}",
+        "profile_label": "{count, plural, one {Forum comment} other {Forum comments}}",
         "title": "Comments",
         "desc": "Comments on topics and replies to them, nested up to six levels deep.",
         "fields": {

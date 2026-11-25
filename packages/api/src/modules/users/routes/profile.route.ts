@@ -2,6 +2,10 @@ import { z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 
 import { buildRoute } from "@/builders";
+import {
+  countContentProfile,
+  listContentProfileTypes,
+} from "@/content/server/profile-content";
 import { core_users } from "@/database/users";
 import { findOpenAccountDeletion } from "@/lib/account-deletion/requests";
 import { resolveUserRoles, userRoleSchema } from "@/lib/resolve-user-roles";
@@ -34,6 +38,16 @@ export const profileRoute = buildRoute({
               createdAt: z.date(),
               /** Points from reactions to the member's content; can be negative. */
               reputation: z.number().int(),
+              /**
+               * What the member authored, as a guest sees it: a total and one
+               * count per content type listed on profiles (`profileContent`),
+               * zeros included, plus each type's filter label (an i18n key).
+               */
+              contentStats: z.object({
+                byType: z.record(z.string(), z.number().int().min(0)),
+                total: z.number().int().min(0),
+                types: z.array(z.object({ id: z.string(), label: z.string() })),
+              }),
               /** The profile's social card, or `null` when cards are off. */
               ogImage: z
                 .object({
@@ -78,13 +92,16 @@ export const profileRoute = buildRoute({
       return c.json({ error: "User not found" }, 404);
     }
 
-    const roles = await resolveUserRoles(c, user);
-    const [standing] = await c
-      .get("db")
-      .select({ reputation: core_users.reputation })
-      .from(core_users)
-      .where(eq(core_users.id, user.id))
-      .limit(1);
+    const [roles, [standing], contentStats] = await Promise.all([
+      resolveUserRoles(c, user),
+      c
+        .get("db")
+        .select({ reputation: core_users.reputation })
+        .from(core_users)
+        .where(eq(core_users.id, user.id))
+        .limit(1),
+      countContentProfile(c, { userId: user.id }),
+    ]);
 
     return c.json(
       {
@@ -101,6 +118,13 @@ export const profileRoute = buildRoute({
         coverUrl: user.coverUrl,
         createdAt: user.createdAt,
         reputation: standing?.reputation ?? 0,
+        contentStats: {
+          ...contentStats,
+          types: listContentProfileTypes(c).map(({ id, label }) => ({
+            id,
+            label,
+          })),
+        },
         ogImage: profileOgImage(c, user),
         ...roles,
       },

@@ -30,6 +30,7 @@ export const commentContentType = defineContentType({
   // A comment has no title of its own, so moderators read its body.
   reports: { snapshotFields: ["body"] },
   reactions: true,
+  profileContent: { label: "content.comment.profile_label" },
   editorial: { revisions: { retention: 20 } },
 
   indexes: [{ on: ["topic", "parent", "createdAt"] }],

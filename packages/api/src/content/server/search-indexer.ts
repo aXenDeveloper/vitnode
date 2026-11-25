@@ -6,7 +6,7 @@ import type {
 } from "drizzle-orm/pg-core";
 import type { Context } from "hono";
 
-import { and, asc, count, eq, gt, or } from "drizzle-orm";
+import { and, asc, count, eq, gt, inArray, or } from "drizzle-orm";
 
 import type {
   SearchDocument,
@@ -16,11 +16,12 @@ import type {
 import type { ContentId } from "../ids";
 import type { AnyContentTypeDefinition, ContentFieldMap } from "../types";
 import type { ContentAdvancedStore } from "./advanced-store";
-import type { ContentModel } from "./model";
+import type { AnyContentModel, ContentModel } from "./model";
 import type { ContentSearchContext } from "./search-document";
 
 import { ContentEngineError } from "../errors";
 import { contentIdKey, parseContentId } from "../ids";
+import { normalizeContentLocale } from "../locale";
 import { partitionContentFields } from "../localization";
 import {
   contentColumnsToValues,
@@ -30,6 +31,11 @@ import {
 import { contentSearchIndexedFieldNames } from "../search";
 import { listContentLanguages } from "./language-resolver";
 import { contentLocaleRouting } from "./locale-routing";
+import { contentDefinitionOf } from "./model";
+import {
+  contentTranslationPublicationColumns,
+  publishedCondition,
+} from "./publication";
 import {
   contentSearchDocument,
   contentTranslationSearchDocument,
@@ -523,4 +529,184 @@ export const createContentLocalizedSearchIndexer = <
       return { documents, itemsRead: page.length };
     },
   };
+};
+
+/**
+ * The feed documents of a handful of records, built exactly as the search
+ * index builds them - title, plain-text body, URL, context and image - but read
+ * from the content tables, so a record missing from the index still has one.
+ *
+ * A localized record gets one document, in the first published translation of:
+ * `locale`, the content type's default locale, then any other enabled
+ * language (routed ones first). `ids` are trusted: the caller already decided
+ * the reader may see them. Records it cannot build a document for are absent.
+ * Server-only.
+ */
+export const loadContentSearchDocumentsByIds = async (
+  c: Context,
+  {
+    ids,
+    locale,
+    model,
+    pluginId,
+  }: {
+    ids: readonly ContentId[];
+    locale?: string;
+    model: AnyContentModel;
+    pluginId: string;
+  },
+): Promise<Map<string, SearchDocument>> => {
+  const definition = contentDefinitionOf(model);
+  const documents = new Map<string, SearchDocument>();
+  if (ids.length === 0 || !definition.search.enabled) return documents;
+
+  const table: PgTable = model.table;
+  const columns = model.columns as Record<string, PgColumn>;
+  assertPublicationColumns(definition, columns);
+  const sources = resolveSearchSources(definition);
+  const sharedSelection = Object.fromEntries(
+    [
+      ...new Set([...requiredColumns(definition), ...sources.sharedColumns]),
+    ].map(name => [name, columns[name]]),
+  );
+  const routing = contentLocaleRouting(c);
+
+  const [rows, collections] = await Promise.all([
+    c
+      .get("db")
+      .select(sharedSelection)
+      .from(table)
+      .where(inArray(columns.id, [...ids])),
+    loadSearchCollections({
+      advanced: model.advanced,
+      c,
+      definition,
+      itemIds: ids,
+      wanted: sources.collections,
+    }),
+  ]);
+  const baseOf = (values: Record<string, unknown>) => ({
+    ...values,
+    ...contentColumnsToValues(sources.sharedGroups, values),
+    ...collections.get(rowKey(values)),
+  });
+
+  const translationTable: null | PgTable = model.translationTable;
+  const translationColumns: null | Record<string, PgColumn> =
+    model.translationColumns;
+
+  if (
+    !definition.localization.enabled ||
+    !translationTable ||
+    !translationColumns
+  ) {
+    const contexts = await loadContentSearchContexts(c, definition, rows);
+    for (const values of rows) {
+      const contextKey = contentSearchContextKey(definition, values);
+      const document = contentSearchDocument(definition, baseOf(values), {
+        context: contextKey === null ? null : contexts.get(contextKey),
+        pluginId,
+        routing,
+      });
+      if (document) documents.set(rowKey(values), document);
+    }
+
+    return documents;
+  }
+
+  const languages = await listContentLanguages(c);
+  const enabled = languages.filter(language => language.isEnabled);
+  if (enabled.length === 0) return documents;
+
+  const localizedSelection = [...new Set(sources.localizedColumns)];
+  const translations = await c
+    .get("db")
+    .select({
+      _itemId: translationColumns.itemId,
+      _languageId: translationColumns.languageId,
+      _publishedAt: translationColumns.publishedAt,
+      _status: translationColumns.status,
+      _updatedAt: translationColumns.updatedAt,
+      ...Object.fromEntries(
+        localizedSelection.map(name => [name, translationColumns[name]]),
+      ),
+    })
+    .from(translationTable)
+    .where(
+      and(
+        inArray(translationColumns.itemId, [...ids]),
+        inArray(
+          translationColumns.languageId,
+          enabled.map(language => language.id),
+        ),
+        publishedCondition(
+          contentTranslationPublicationColumns(definition, translationColumns),
+        ),
+      ),
+    );
+
+  const wanted = normalizeContentLocale(locale ?? "");
+  const fallback = normalizeContentLocale(
+    definition.localization.defaultLocale,
+  );
+  const routed = new Set(routing.locales.map(normalizeContentLocale));
+  const rank = (code: string): number => {
+    const normalized = normalizeContentLocale(code);
+    if (normalized === wanted) return 0;
+    if (normalized === fallback) return 1;
+
+    return routed.has(normalized) ? 2 : 3;
+  };
+  const localeOf = new Map(
+    enabled.map(language => [language.id, language.locale]),
+  );
+  const byItem = new Map<
+    string,
+    { locale: string; values: Record<string, unknown> }[]
+  >();
+  for (const row of translations as Record<string, unknown>[]) {
+    const code = localeOf.get(row._languageId as number);
+    if (code === undefined) continue;
+    const key = contentIdKey(row._itemId as ContentId);
+    byItem.set(key, [
+      ...(byItem.get(key) ?? []),
+      { locale: code, values: row },
+    ]);
+  }
+
+  for (const values of rows) {
+    const key = rowKey(values);
+    const candidates = (byItem.get(key) ?? []).sort(
+      (a, b) =>
+        rank(a.locale) - rank(b.locale) ||
+        (a.values._languageId as number) - (b.values._languageId as number),
+    );
+
+    for (const { locale: code, values: translation } of candidates) {
+      const localized = Object.fromEntries(
+        localizedSelection.map(name => [name, translation[name]]),
+      );
+      const document = contentTranslationSearchDocument(
+        definition,
+        {
+          base: baseOf(values),
+          locale: code,
+          translation: {
+            publishedAt: translation._publishedAt,
+            status: translation._status,
+            updatedAt: translation._updatedAt,
+            ...localized,
+            ...contentColumnsToValues(sources.localizedGroups, localized),
+          },
+        },
+        { pluginId, routing },
+      );
+      if (document) {
+        documents.set(key, document);
+        break;
+      }
+    }
+  }
+
+  return documents;
 };

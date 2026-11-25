@@ -37,6 +37,11 @@ export interface HrefLinkProps extends Omit<React.ComponentProps<"a">, "href"> {
   preload?: LinkProps["preload"];
   /** Milliseconds before an intent preload starts, for internal links. */
   preloadDelay?: number;
+  /**
+   * `false` keeps the scroll position on an internal navigation, e.g. for a
+   * filter that only changes the query string. Defaults to `true`.
+   */
+  resetScroll?: boolean;
 }
 
 const EXACT_URL: ActiveOptions = { exact: true, includeHash: true };
@@ -77,6 +82,7 @@ export const HrefLink = ({
   activeOptions,
   preload,
   preloadDelay,
+  resetScroll,
   ...props
 }: HrefLinkProps) =>
   isExternalHref(props.href) ? (
@@ -87,6 +93,7 @@ export const HrefLink = ({
       activeOptions={activeOptions}
       preload={preload}
       preloadDelay={preloadDelay}
+      resetScroll={resetScroll}
     />
   );
 

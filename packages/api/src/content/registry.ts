@@ -8,6 +8,7 @@ import type { ContentId } from "./ids";
 import type { AnyContentTypeDefinition } from "./types";
 
 import { declaredStaffPermission } from "../lib/staff-permissions";
+import { contentEntityKey } from "./admin/labels";
 import {
   CONTENT_ADMIN_CREATE_SEGMENT,
   CONTENT_ADMIN_EDIT_SEGMENT,
@@ -625,3 +626,41 @@ export const contentFilterableFields = (
 export const publicOrderableColumns = (
   definition: AnyContentTypeDefinition,
 ): string[] => definition.publicApi.orderableFields;
+
+/** A content type listed on its authors' profiles, with its filter label. */
+export interface ContentProfileType {
+  id: string;
+  /** Full i18n key of the filter label, an ICU plural called with `count`. */
+  label: string;
+  pluginId: string;
+}
+
+/**
+ * The content types members' profiles list (`profileContent`), sorted by id
+ * and deduplicated. Only what the running app registered is here, so a type of
+ * a plugin that is not installed - or one that never opted in - cannot be
+ * counted or picked as a filter.
+ */
+export const contentProfileTypes = (
+  entries: readonly {
+    definition: Pick<AnyContentTypeDefinition, "id" | "profileContent">;
+    pluginId: string;
+  }[],
+): ContentProfileType[] => {
+  const byId = new Map<string, ContentProfileType>();
+
+  for (const { definition, pluginId } of entries) {
+    const { profileContent } = definition;
+    if (!profileContent.enabled || byId.has(definition.id)) continue;
+
+    byId.set(definition.id, {
+      id: definition.id,
+      label: profileContent.label
+        ? `${pluginId}.${profileContent.label}`
+        : `${pluginId}.content.${contentEntityKey(definition.id)}.label`,
+      pluginId,
+    });
+  }
+
+  return [...byId.values()].sort((a, b) => a.id.localeCompare(b.id));
+};

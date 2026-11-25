@@ -490,104 +490,6 @@ export class SearchModel {
 
   protected readonly c: Context;
 
-  private async hydrateAuthors(edges: SearchHit[]): Promise<SearchHit[]> {
-    const idsOf = (edge: SearchHit): number[] =>
-      edge.authorIds.length > 0
-        ? edge.authorIds
-        : edge.authorId
-          ? [edge.authorId]
-          : [];
-    const wanted = [...new Set(edges.flatMap(idsOf))];
-    if (wanted.length === 0) {
-      return edges.map(edge => ({ ...edge, authorIds: [], authors: [] }));
-    }
-
-    const rows = await this.c
-      .get("db")
-      .select({
-        id: core_users.id,
-        name: core_users.name,
-        nameCode: core_users.nameCode,
-        avatarColor: core_users.avatarColor,
-        avatarKey: authorAvatarFile.key,
-      })
-      .from(core_users)
-      .leftJoin(authorAvatarFile, eq(authorAvatarFile.id, core_users.avatarId))
-      .where(inArray(core_users.id, wanted));
-
-    const byId = new Map(
-      rows.map(({ avatarKey, ...row }) => [
-        row.id,
-        { ...row, avatarUrl: storageUrlOf(this.c, avatarKey) },
-      ]),
-    );
-
-    return edges.map(edge => {
-      const authorIds = idsOf(edge);
-      const authors = authorIds.flatMap(id => {
-        const author = byId.get(id);
-
-        return author ? [author] : [];
-      });
-
-      return {
-        ...edge,
-        author: edge.author ?? authors[0] ?? null,
-        authorIds,
-        authors,
-      };
-    });
-  }
-
-  private async hydrateImages<
-    T extends { imageId: null | number; itemId?: ContentId; itemType?: string },
-  >(edges: T[]): Promise<(T & { image: null | SearchHitImage })[]> {
-    const wanted = [
-      ...new Set(
-        edges.flatMap(edge => (edge.imageId === null ? [] : [edge.imageId])),
-      ),
-    ];
-    if (wanted.length === 0) {
-      return edges.map(edge => ({ ...edge, image: null }));
-    }
-
-    const rows = await this.c
-      .get("db")
-      .select({
-        id: core_files.id,
-        key: core_files.key,
-        metadata: core_files.metadata,
-        mimeType: core_files.mimeType,
-        visibility: core_files.visibility,
-      })
-      .from(core_files)
-      .where(inArray(core_files.id, wanted));
-
-    const byId = new Map(rows.map(row => [row.id, row]));
-    // A private image is shown through its record's authorized route - the
-    // hit was already checked against the reader's access, and the route
-    // checks again for every request.
-    const imageOf = (edge: T): null | SearchHitImage => {
-      const row = edge.imageId === null ? undefined : byId.get(edge.imageId);
-      if (!row?.mimeType?.startsWith("image/")) return null;
-      const url =
-        row.visibility === "private"
-          ? searchPrivateImageUrl(this.c, edge, row.id)
-          : storageUrlOf(this.c, row.key);
-      if (!url) return null;
-      const dimensions = parseImageDimensions(row.metadata);
-
-      return {
-        url,
-        ...(dimensions
-          ? { height: dimensions.height, width: dimensions.width }
-          : {}),
-      };
-    };
-
-    return edges.map(edge => ({ ...edge, image: imageOf(edge) }));
-  }
-
   private async newCommentParent(
     doc: SearchDocument,
   ): Promise<null | { itemId: string; itemType: string }> {
@@ -983,6 +885,116 @@ export class SearchModel {
           inArray(core_search_popularity.itemId, itemKeys),
         ),
       );
+  }
+
+  /**
+   * Adds the public author summaries (name, URL name, avatar) of every credited
+   * user to a batch of hits, in one query. Server-only.
+   */
+  async hydrateAuthors<
+    T extends Pick<SearchHit, "author" | "authorId" | "authorIds">,
+  >(
+    edges: T[],
+  ): Promise<(Pick<SearchHit, "author" | "authorIds" | "authors"> & T)[]> {
+    const idsOf = (edge: T): number[] =>
+      edge.authorIds.length > 0
+        ? edge.authorIds
+        : edge.authorId
+          ? [edge.authorId]
+          : [];
+    const wanted = [...new Set(edges.flatMap(idsOf))];
+    if (wanted.length === 0) {
+      return edges.map(edge => ({ ...edge, authorIds: [], authors: [] }));
+    }
+
+    const rows = await this.c
+      .get("db")
+      .select({
+        id: core_users.id,
+        name: core_users.name,
+        nameCode: core_users.nameCode,
+        avatarColor: core_users.avatarColor,
+        avatarKey: authorAvatarFile.key,
+      })
+      .from(core_users)
+      .leftJoin(authorAvatarFile, eq(authorAvatarFile.id, core_users.avatarId))
+      .where(inArray(core_users.id, wanted));
+
+    const byId = new Map(
+      rows.map(({ avatarKey, ...row }) => [
+        row.id,
+        { ...row, avatarUrl: storageUrlOf(this.c, avatarKey) },
+      ]),
+    );
+
+    return edges.map(edge => {
+      const authorIds = idsOf(edge);
+      const authors = authorIds.flatMap(id => {
+        const author = byId.get(id);
+
+        return author ? [author] : [];
+      });
+
+      return {
+        ...edge,
+        author: edge.author ?? authors[0] ?? null,
+        authorIds,
+        authors,
+      };
+    });
+  }
+
+  /**
+   * Resolves the image of every hit in one query: a public file's storage URL,
+   * or a private one's authorized route. Server-only.
+   */
+  async hydrateImages<
+    T extends { imageId: null | number; itemId?: ContentId; itemType?: string },
+  >(edges: T[]): Promise<(T & { image: null | SearchHitImage })[]> {
+    const wanted = [
+      ...new Set(
+        edges.flatMap(edge => (edge.imageId === null ? [] : [edge.imageId])),
+      ),
+    ];
+    if (wanted.length === 0) {
+      return edges.map(edge => ({ ...edge, image: null }));
+    }
+
+    const rows = await this.c
+      .get("db")
+      .select({
+        id: core_files.id,
+        key: core_files.key,
+        metadata: core_files.metadata,
+        mimeType: core_files.mimeType,
+        visibility: core_files.visibility,
+      })
+      .from(core_files)
+      .where(inArray(core_files.id, wanted));
+
+    const byId = new Map(rows.map(row => [row.id, row]));
+    // A private image is shown through its record's authorized route - the
+    // hit was already checked against the reader's access, and the route
+    // checks again for every request.
+    const imageOf = (edge: T): null | SearchHitImage => {
+      const row = edge.imageId === null ? undefined : byId.get(edge.imageId);
+      if (!row?.mimeType?.startsWith("image/")) return null;
+      const url =
+        row.visibility === "private"
+          ? searchPrivateImageUrl(this.c, edge, row.id)
+          : storageUrlOf(this.c, row.key);
+      if (!url) return null;
+      const dimensions = parseImageDimensions(row.metadata);
+
+      return {
+        url,
+        ...(dimensions
+          ? { height: dimensions.height, width: dimensions.width }
+          : {}),
+      };
+    };
+
+    return edges.map(edge => ({ ...edge, image: imageOf(edge) }));
   }
 
   /**

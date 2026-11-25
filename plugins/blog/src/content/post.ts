@@ -42,6 +42,9 @@ export const blogPostContentType = defineContentType({
 
   reports: true,
   reactions: true,
+  // Listed on every credited author's profile, once per article whatever
+  // the number of languages it is published in.
+  profileContent: true,
 
   editorial: {
     revisions: { retention: 20 },

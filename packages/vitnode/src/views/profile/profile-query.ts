@@ -25,9 +25,32 @@ export interface ProfileRole {
   prefix: null | string;
 }
 
+/** One content type a profile lists, as the profile API names it. */
+export interface ProfileContentType {
+  /** Stable content type id, e.g. `forum.comment`. */
+  id: string;
+  /** Full i18n key of the type's filter label, an ICU plural called with `count`. */
+  label: string;
+}
+
+/** What a member authored, as a guest sees it. */
+export interface ProfileContentStats {
+  /** One count per listed content type, zeros included. */
+  byType: Record<string, number>;
+  /** The sum of `byType`. */
+  total: number;
+  /** Every content type the app lists on profiles, sorted by id. */
+  types: ProfileContentType[];
+}
+
 export interface UserProfile {
   avatarColor: string;
   avatarUrl: null | string;
+  /**
+   * What the member authored, by content type. Absent from older APIs - an
+   * unknown count, which is not the same as zero.
+   */
+  contentStats?: ProfileContentStats;
   coverUrl: null | string;
   createdAt: Date | string;
   headline: null | string;

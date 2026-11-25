@@ -69,6 +69,7 @@ Many of these rules are type errors too, so your editor often complains before t
 | `duplication`  | `true` \| [`duplication`](#duplication) | No       | off        | A [Duplicate](#duplication) action that copies a record into a new draft          |
 | `reports`      | `true` \| [`reports`](#reports)         | No       | off        | Readers can [report](#reports) published records to moderators. Needs `publicApi` |
 | `thread`       | [`thread`](#thread)                     | No       | off        | Replies that answer each other under one root record. Needs `publicApi`           |
+| `profileContent` | `true` \| [`profileContent`](#profilecontent) | No | off | List records on their authors' profiles. Needs `publicApi`, `search` and an author |
 | `indexes`      | [`indexes`](#indexes)                   | No       | `[]`       | Extra database indexes                                                            |
 
 A feature block is on when it is present. `publicApi`, `publicWrite`, `localization` and `search` take an options object. `publication`, `liveEditing` and `visibility` are `true`, and `editorial`, `delivery` and `duplication` take `true` or an options object. Leave a block out, or set it to `false`, to keep it off. Write `true` or the object directly rather than a `boolean` variable, because the generated types read the literal to decide which columns and routes exist.
@@ -310,6 +311,14 @@ publicApi: { path: "blog", fields: ["id", "title", "friendlyUrl", "content"] },
 reports: true,
 ```
 
+## `profileContent`
+
+`profileContent: true` lists published records on their authors' profiles: the **Content** tab, its type filter and the content count. The author is `search.authorField`, or else `publicWrite.ownership.field`, and must be a shared `field.user()`. `{ label }` names the filter with an i18n key relative to the plugin's namespace, an ICU plural; it defaults to `content.{entity}.label`. Counts read the content tables as a guest would, so no index, counter or migration is involved. Guide: [Profile content](/docs/content-engine/profile-content).
+
+```ts title="plugins/forum/src/content/topic.ts"
+profileContent: { label: "content.topic.profile_label" },
+```
+
 ## `thread`
 
 Makes records of one content type answer each other under a root record, like forum comments under a topic. It adds the public `GET /{path}/thread` route and checks every placement on the server. Guide: [Comments](/docs/content-engine/threads).
@@ -434,6 +443,9 @@ Each row is a rule `defineContentType` enforces, with the start of the message i
 | `publicApi.searchableFields`, `filterableFields`, `orderableFields` | The field in `publicApi.fields`                          | `publicApi.searchableFields includes "x", which is not in publicApi.fields.`                               |
 | `publicApi.people`                                                  | A shared `field.user()`                                  | `publicApi.people includes "x", which is a "text" field.`                                                  |
 | `thread`                                                            | `publicApi`, with `parent` and `root` in its fields      | ``thread needs `publicApi`: the thread route``                                                             |
+| `profileContent`                                                    | `publication` and `publicApi`                            | ``profileContent needs `publication` and `publicApi`.``                                                    |
+| `profileContent`                                                    | `search` with a `pathTemplate`                           | ``profileContent needs `search` with a `pathTemplate`.``                                                   |
+| `profileContent`                                                    | A shared `field.user()` author                           | ``profileContent needs an author``                                                                         |
 
 ### Unique across content types
 

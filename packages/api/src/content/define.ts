@@ -20,6 +20,7 @@ import type {
   ContentLocalizationConfig,
   ContentLocalizationEnabled,
   ContentPreviewEnabled,
+  ContentProfileContentInput,
   ContentPublicApiConfig,
   ContentPublicExposableField,
   ContentPublicListFieldsResolved,
@@ -77,6 +78,7 @@ import {
   resolveIdStrategy,
   resolveVisibility,
 } from "./define-lifecycle";
+import { resolveProfileContent } from "./define-profile-content";
 import { resolvePublicApi } from "./define-public-api";
 import { resolvePublicWrite } from "./define-public-write";
 import { resolveReactions } from "./define-reactions";
@@ -317,6 +319,7 @@ export const defineContentType = <
   indexes = [],
   liveEditing,
   localization,
+  profileContent,
   publicApi,
   publicWrite,
   publication,
@@ -416,6 +419,15 @@ export const defineContentType = <
    * (default `"none"`: no fallback).
    */
   localization?: TLocalization;
+  /**
+   * Lists the type's published records on their authors' profiles: the
+   * Content tab, its type filter and the content count. Needs `publication`,
+   * `publicApi`, `search` (for the card's title, snippet and URL) and a
+   * `field.user()` author. `{ label }` names the filter with a plugin i18n key
+   * (an ICU plural). Counted from the content tables, so no search provider
+   * or reindex is needed.
+   */
+  profileContent?: ContentProfileContentInput;
   /**
    * Opts into a generated read-only public API. Needs `publication` and exactly
    * one exposed slug field. Omit it and nothing public is generated.
@@ -542,6 +554,7 @@ export const defineContentType = <
 
   assertContentOptionShapes(id, {
     admin,
+    profileContent,
     delivery,
     duplication,
     editorial,
@@ -762,6 +775,14 @@ export const defineContentType = <
     publicApi: resolvedPublicApi,
   });
 
+  const resolvedProfileContent = resolveProfileContent(id, profileContent, {
+    fields: fieldMap,
+    publicApi: resolvedPublicApi,
+    publicWrite: resolvedPublicWrite,
+    publication: publicationEnabled,
+    search: resolvedSearch,
+  });
+
   const resolvedDuplication = resolveDuplication(
     id,
     duplication,
@@ -817,6 +838,7 @@ export const defineContentType = <
     publication: {
       enabled: publicationEnabled as TPublication,
     },
+    profileContent: resolvedProfileContent,
     reactions: resolvedReactions,
     reports: resolvedReports,
     thread: resolvedThread,

@@ -4102,6 +4102,30 @@
       "role": "Rola",
       "secondaryRoles": "Role dodatkowe",
       "timeline": "Oś czasu",
+      "content_label": "Treści",
+      "content_count": "{count, plural, =0 {Brak wpisów} one {# wpis} few {# wpisy} many {# wpisów} other {# wpisu}}",
+      "tabs": {
+        "label": "Sekcje profilu",
+        "activity": "Aktywność",
+        "content": "Treści"
+      },
+      "content": {
+        "filters": "Filtruj treści według typu",
+        "all": "Wszystko",
+        "empty": {
+          "title": "Nic jeszcze nie opublikowano",
+          "desc": "Gdy @{nameCode} opublikuje artykuł, temat lub komentarz, pojawi się tutaj. Scena jest gotowa."
+        },
+        "empty_filter": {
+          "title": "Na razie pusto",
+          "desc": "@{nameCode} nie ma jeszcze nic w kategorii {type}.",
+          "show_all": "Pokaż wszystkie treści"
+        },
+        "load_error": {
+          "title": "Nie udało się wczytać treści",
+          "desc": "Coś poszło nie tak po naszej stronie. Spróbuj ponownie za chwilę."
+        }
+      },
       "title": "{name} (@{nameCode})",
       "presence": "Status online",
       "warn": "Ostrzeż",

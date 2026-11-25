@@ -202,6 +202,8 @@ The timelines come from two routes:
 - `GET /api/@vitnode/core/search/timeline/{userId}` is public. It includes drafts only when the signed-in viewer is that member.
 - `GET /api/@vitnode/core/admin/users/{id}/timeline` needs the `users` → `can_view` staff permission and returns every state.
 
+The profile shows this feed on its **Activity** tab. Next to it, the **Content** tab lists only what the member authored, as a guest sees it, filterable by type, for example `/users/maciej?tab=content&type=forum.comment`. It reads the content tables rather than the index. See [Profile content](/docs/content-engine/profile-content).
+
 ---
 
 ## Result URLs for Content Engine types

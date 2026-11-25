@@ -85,6 +85,7 @@ import {
   TablePendingSkeleton,
 } from "./tanstack/pending";
 import { PROFILE_NAMESPACES } from "./tanstack/profile/route";
+import { normalizeProfileSearch } from "./tanstack/profile/route-search";
 import {
   DISCOVER_NAMESPACES,
   SEARCH_NAMESPACES,
@@ -133,6 +134,7 @@ export const routes = defineRoutes([
     component: lazy(() => import("./pages/users/profile")),
     messages: PROFILE_NAMESPACES,
     pendingComponent: ProfilePendingSkeleton,
+    search: normalizeProfileSearch,
   }),
 
   page("/login", {

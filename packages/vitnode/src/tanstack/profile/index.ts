@@ -1,7 +1,13 @@
 export { ProfileNotFound } from "./not-found";
 export { userProfileQuery } from "./query";
 export type { ProfileLoaderContext, ProfileRouteData } from "./route";
-export { loadProfileRoute, PROFILE_NAMESPACES } from "./route";
+export {
+  loadProfileRoute,
+  PROFILE_NAMESPACES,
+  profileContentFilter,
+} from "./route";
+export type { ProfileRouteSearch } from "./route-search";
+export { normalizeProfileSearch } from "./route-search";
 export type { ProfileRouteProps } from "./screen";
 export { ProfileRouteContent } from "./screen";
 

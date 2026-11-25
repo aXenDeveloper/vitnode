@@ -94,6 +94,7 @@ const CONTENT_OPTION_PATHS: readonly (readonly string[])[] = [
   ["editorial", "preview"],
   ["editorial", "scheduling"],
   ["localization"],
+  ["profileContent"],
   ["publicApi"],
   ["publicWrite"],
   ["publicWrite", "create"],

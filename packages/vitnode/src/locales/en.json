@@ -869,6 +869,30 @@
       "secondaryRoles": "Secondary roles",
       "editProfile": "Edit profile",
       "timeline": "Timeline",
+      "content_label": "Content",
+      "content_count": "{count, plural, =0 {No posts yet} one {# post} other {# posts}}",
+      "tabs": {
+        "label": "Profile sections",
+        "activity": "Activity",
+        "content": "Content"
+      },
+      "content": {
+        "filters": "Filter content by type",
+        "all": "All",
+        "empty": {
+          "title": "Nothing published yet",
+          "desc": "When @{nameCode} publishes an article, a topic or a comment, it shows up here. The stage is set."
+        },
+        "empty_filter": {
+          "title": "Nothing here yet",
+          "desc": "@{nameCode} has nothing in {type} yet.",
+          "show_all": "Show all content"
+        },
+        "load_error": {
+          "title": "Content didn't load",
+          "desc": "Something went wrong on our side. Try again in a moment."
+        }
+      },
       "timeline_load_error": {
         "title": "Timeline didn't load",
         "desc": "Something went wrong on our side. Try again in a moment."
@@ -876,6 +900,7 @@
       "preview": {
         "sheet_title": "Profile of @{nameCode}",
         "reputation": "Reputation",
+        "content": "Posts",
         "joined": "Joined",
         "last_visited": "Last visited",
         "online_now": "Online now",

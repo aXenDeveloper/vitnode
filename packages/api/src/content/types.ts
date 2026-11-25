@@ -1075,6 +1075,34 @@ export interface ResolvedContentReactionsConfig {
   reputation: boolean;
 }
 
+/** Options for `profileContent`. */
+export interface ContentProfileContentConfig {
+  /**
+   * The i18n key naming the type in the profile's Content filter, relative to
+   * the plugin's namespace - an ICU plural called with `count`, e.g.
+   * `content.topic.profile_label` for "Forum topics". Defaults to the type's
+   * own noun, `content.<entity>.label`.
+   */
+  label?: string;
+}
+
+/**
+ * `true` (or an options object) lists the type's published records on their
+ * authors' profiles - the Content tab and the content count. Omit it or pass
+ * `false` to keep the type off profiles.
+ */
+export type ContentProfileContentInput = boolean | ContentProfileContentConfig;
+
+export type ResolvedContentProfileContentConfig =
+  | {
+      /** The `field.user()` that credits a record's authors. */
+      authorField: string;
+      enabled: true;
+      /** Plugin-relative i18n key, or `null` for `content.<entity>.label`. */
+      label: null | string;
+    }
+  | { authorField: null; enabled: false; label: null };
+
 export interface ContentThreadInput<TField extends string = string> {
   /** Deepest nesting level a reply may sit at. 1 is a flat list. Defaults to 8. */
   maxDepth?: number;
@@ -2167,6 +2195,8 @@ export interface ContentTypeDefinition<
   localization: ResolvedContentLocalizationConfig<TLocalizationEnabled>;
   /** Derived from `admin.permissionModule`, or the id without its plugin segment. */
   permissionModule: string;
+  /** Listing on authors' profiles, or the disabled default. */
+  profileContent: ResolvedContentProfileContentConfig;
   publicApi: ResolvedContentPublicApiConfig<
     TPublicField,
     TPublicEnabled,

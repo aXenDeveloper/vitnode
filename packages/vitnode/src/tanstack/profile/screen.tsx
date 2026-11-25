@@ -7,10 +7,16 @@ import {
 } from "@tanstack/react-query";
 import { CatchBoundary, Link } from "@tanstack/react-router";
 import { cn } from "cn";
-import { HistoryIcon, RotateCwIcon, UserRoundPenIcon } from "lucide-react";
+import {
+  HistoryIcon,
+  NotebookTextIcon,
+  RotateCwIcon,
+  UserRoundPenIcon,
+} from "lucide-react";
 import React from "react";
-import { useTranslations } from "use-intl";
+import { useFormatter, useTranslations } from "use-intl";
 
+import type { UserProfile } from "@/views/profile/profile-query";
 import type { SearchTimelineOwner } from "@/views/search/types";
 
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -23,6 +29,10 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { UserPresenceStatus } from "@/components/user-presence-status";
+import {
+  userProfileContentHref,
+  userProfileHref,
+} from "@/components/user-profile-href";
 import { USER_HEADER_HREF } from "@/views/layouts/theme/header/user/user-header-model";
 import { userPresenceQueryOptions } from "@/views/presence/presence-query";
 import { ProfileContent } from "@/views/profile/profile-content";
@@ -35,17 +45,23 @@ import {
 import { SearchFeedList } from "@/views/search/search-feed-content";
 import { SearchTimelineSkeleton } from "@/views/search/search-timeline-skeleton";
 
+import type { ProfileRouteSearch } from "./route-search";
+
 import { useSessionQuery } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { RouteMessages } from "../i18n/route-messages";
+import { HrefLink } from "../link/href-link";
 import { REPORT_NAMESPACES } from "../moderation/report-button";
+import { ProfileContentTab, ProfileContentTabSkeleton } from "./content-tab";
 import { useOwnUserImageEditor } from "./own-image-editor";
 import { userProfileQuery } from "./query";
-import { PROFILE_NAMESPACES } from "./route";
+import { PROFILE_NAMESPACES, profileContentFilter } from "./route";
 
 export interface ProfileRouteProps {
   children?: React.ReactNode;
   nameCode: string;
+  /** The page's parsed query string: the tab and the Content filter. */
+  search?: ProfileRouteSearch;
 }
 
 const EditProfileAction = () => {
@@ -156,31 +172,121 @@ const ProfileTimeline = ({
 }: {
   owner: SearchTimelineOwner;
   viewerId: null | number;
+}) => (
+  <CatchBoundary
+    errorComponent={ProfileTimelineError}
+    getResetKey={() => `${owner.id}:${viewerId}`}
+  >
+    <React.Suspense fallback={<SearchTimelineSkeleton />}>
+      <ProfileTimelineList owner={owner} viewerId={viewerId} />
+    </React.Suspense>
+  </CatchBoundary>
+);
+
+const TabLink = ({
+  active,
+  children,
+  href,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  href: string;
+}) => (
+  <li>
+    <HrefLink
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "focus-visible:ring-ring/50 inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm font-medium outline-none focus-visible:ring-3 motion-safe:transition-colors",
+        active
+          ? "bg-card text-foreground shadow-xs"
+          : "text-muted-foreground hover:text-foreground",
+      )}
+      href={href}
+      resetScroll={false}
+    >
+      {children}
+    </HrefLink>
+  </li>
+);
+
+/**
+ * The profile's feed: Activity (what they wrote and reacted to) and, with an
+ * API that counts it, Content (only what they authored, filterable by type).
+ * The tab and the filter live in the query string, so links, back and forward
+ * work.
+ */
+const ProfileSections = ({
+  owner,
+  search,
+  viewerId,
+}: {
+  owner: UserProfile;
+  search: ProfileRouteSearch;
+  viewerId: null | number;
 }) => {
   const t = useTranslations("core.profile");
+  const format = useFormatter();
   const titleId = React.useId();
+  const stats = owner.contentStats;
+  const onContent = search.tab === "content" && stats !== undefined;
+
+  if (!stats) {
+    return (
+      <section aria-labelledby={titleId} className="flex flex-col gap-4">
+        <h2
+          className="text-foreground text-lg font-semibold text-balance"
+          id={titleId}
+        >
+          {t("timeline")}
+        </h2>
+        <ProfileTimeline owner={owner} viewerId={viewerId} />
+      </section>
+    );
+  }
 
   return (
     <section aria-labelledby={titleId} className="flex flex-col gap-4">
-      <h2
-        className="text-foreground text-lg font-semibold text-balance"
-        id={titleId}
-      >
-        {t("timeline")}
+      <h2 className="sr-only" id={titleId}>
+        {onContent ? t("tabs.content") : t("tabs.activity")}
       </h2>
-      <CatchBoundary
-        errorComponent={ProfileTimelineError}
-        getResetKey={() => `${owner.id}:${viewerId}`}
-      >
-        <React.Suspense fallback={<SearchTimelineSkeleton />}>
-          <ProfileTimelineList owner={owner} viewerId={viewerId} />
+      <nav aria-label={t("tabs.label")}>
+        <ul className="bg-muted inline-flex items-center gap-1 rounded-lg p-1">
+          <TabLink active={!onContent} href={userProfileHref(owner.nameCode)}>
+            <HistoryIcon aria-hidden="true" className="size-4" />
+            {t("tabs.activity")}
+          </TabLink>
+          <TabLink
+            active={onContent}
+            href={userProfileContentHref(owner.nameCode)}
+          >
+            <NotebookTextIcon aria-hidden="true" className="size-4" />
+            {t("tabs.content")}
+            <span className="text-muted-foreground tabular-nums">
+              {format.number(stats.total)}
+            </span>
+          </TabLink>
+        </ul>
+      </nav>
+      {onContent ? (
+        <React.Suspense fallback={<ProfileContentTabSkeleton />}>
+          <ProfileContentTab
+            owner={owner}
+            stats={stats}
+            type={profileContentFilter(owner, search.type)}
+          />
         </React.Suspense>
-      </CatchBoundary>
+      ) : (
+        <ProfileTimeline owner={owner} viewerId={viewerId} />
+      )}
     </section>
   );
 };
 
-const ProfileScreen = ({ children, nameCode }: ProfileRouteProps) => {
+const ProfileScreen = ({
+  children,
+  nameCode,
+  search = {},
+}: ProfileRouteProps) => {
   const { data: user } = useSuspenseQuery(userProfileQuery(nameCode));
   const { data: session, isPending: isSessionPending } = useSessionQuery();
   const queryClient = useQueryClient();
@@ -213,7 +319,7 @@ const ProfileScreen = ({ children, nameCode }: ProfileRouteProps) => {
       }
       user={user}
     >
-      <ProfileTimeline owner={user} viewerId={viewerId} />
+      <ProfileSections owner={user} search={search} viewerId={viewerId} />
       {children}
     </ProfileContent>
   );
@@ -222,8 +328,11 @@ const ProfileScreen = ({ children, nameCode }: ProfileRouteProps) => {
 export const ProfileRouteContent = ({
   children,
   nameCode,
+  search,
 }: ProfileRouteProps) => (
   <RouteMessages namespaces={PROFILE_NAMESPACES}>
-    <ProfileScreen nameCode={nameCode}>{children}</ProfileScreen>
+    <ProfileScreen nameCode={nameCode} search={search}>
+      {children}
+    </ProfileScreen>
   </RouteMessages>
 );

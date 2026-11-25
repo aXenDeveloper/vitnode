@@ -17,6 +17,7 @@ import { useFormatter, useLocale, useNow, useTranslations } from "use-intl";
 
 import { useSessionQuery } from "@/tanstack/auth/session-query";
 import { RouteMessages } from "@/tanstack/i18n/route-messages";
+import { HrefLink } from "@/tanstack/link/href-link";
 import { ModcpRequestError } from "@/views/moderation/modcp/modcp-query";
 import { memberStandingQueryOptions } from "@/views/moderation/warnings/warnings-api";
 import { userPresenceQueryOptions } from "@/views/presence/presence-query";
@@ -44,7 +45,7 @@ import { ShortNumber } from "./ui/short-number";
 import { Skeleton } from "./ui/skeleton";
 import { UserCoverImage } from "./user-cover-image";
 import { UserPreviewSkeleton } from "./user-preview-skeleton";
-import { userProfileHref } from "./user-profile-href";
+import { userProfileContentHref, userProfileHref } from "./user-profile-href";
 
 const USER_PREVIEW_NAMESPACES = ["core.global", "core.profile"] as const;
 const AVATAR_SIZE = 56;
@@ -314,7 +315,12 @@ const PreviewProfile = ({
         </div>
       </div>
 
-      <dl className="grid grid-cols-3 divide-x border-t">
+      <dl
+        className={cn(
+          "grid divide-x border-t",
+          user.contentStats ? "grid-cols-4" : "grid-cols-3",
+        )}
+      >
         <Stat label={t("reputation")}>
           <ShortNumber
             className={cn(
@@ -325,6 +331,16 @@ const PreviewProfile = ({
             value={reputation}
           />
         </Stat>
+        {user.contentStats ? (
+          <Stat label={t("content")}>
+            <HrefLink
+              className="focus-visible:ring-ring/50 rounded-sm underline-offset-4 outline-none hover:underline focus-visible:ring-3"
+              href={userProfileContentHref(user.nameCode)}
+            >
+              <ShortNumber tooltip={false} value={user.contentStats.total} />
+            </HrefLink>
+          </Stat>
+        ) : null}
         <Stat label={t("joined")}>
           <time dateTime={new Date(user.createdAt).toISOString()}>
             {formatElapsed(user.createdAt, now, locale)}
