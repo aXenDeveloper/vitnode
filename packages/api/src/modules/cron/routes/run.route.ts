@@ -20,6 +20,7 @@ const sameMillisecond = (lastRun: Date) =>
   );
 
 export const runCronRoute = buildRoute({
+  termsAcceptance: "exempt",
   allowWhenOffline: true,
   route: {
     method: "post",

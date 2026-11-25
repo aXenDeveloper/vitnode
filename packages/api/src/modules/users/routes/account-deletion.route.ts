@@ -45,6 +45,7 @@ const requireUser = (user: null | { id: number; roleId: number }) => {
 };
 
 export const accountDeletionStatusRoute = buildRoute({
+  termsAcceptance: "exempt",
   route: {
     method: "get",
     description:
@@ -104,6 +105,7 @@ export const accountDeletionStatusRoute = buildRoute({
 });
 
 export const requestAccountDeletionRoute = buildRoute({
+  termsAcceptance: "exempt",
   route: {
     method: "post",
     description:
@@ -193,6 +195,7 @@ export const requestAccountDeletionRoute = buildRoute({
 });
 
 export const cancelAccountDeletionRoute = buildRoute({
+  termsAcceptance: "exempt",
   route: {
     method: "delete",
     description:

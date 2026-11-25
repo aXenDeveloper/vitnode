@@ -17,6 +17,7 @@ const userFixture = (overrides: Partial<AuthUser> = {}): AuthUser => ({
   avatarColor: "#101010",
   avatarUrl: null,
   canMention: true,
+  legal: { nextChangeAt: null, notices: [], pendingTerms: null },
   headline: null,
   phone: null,
   birthday: null,

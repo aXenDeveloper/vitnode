@@ -98,6 +98,9 @@ export const signUpFormResult = (
 
   if (result.reason === "email_exists") return { message: "email_exists" };
   if (result.reason === "name_exists") return { message: "name_exists" };
+  if (result.reason === "terms_changed" || result.reason === "terms_missing") {
+    return { message: "terms_changed" };
+  }
 
   return { message: "Internal Server Error" };
 };

@@ -17,6 +17,7 @@ const outcomeSchema = z.object({
 });
 
 export const paymentWebhookRoute = buildRoute({
+  termsAcceptance: "exempt",
   allowWhenOffline: true,
   route: {
     method: "post",

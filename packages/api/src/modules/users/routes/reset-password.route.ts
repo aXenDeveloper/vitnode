@@ -14,6 +14,7 @@ import { ForgotPasswordTokenModel } from "@/models/password";
 import { USER_EMAIL_MAX_LENGTH } from "../lib/credential-limits";
 
 export const resetPasswordRoute = buildRoute({
+  termsAcceptance: "exempt",
   allowWhenOffline: true,
   route: {
     method: "post",

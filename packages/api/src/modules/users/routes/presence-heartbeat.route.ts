@@ -4,6 +4,9 @@ import { buildRoute } from "@/builders";
 import { UserPresenceModel } from "@/models/user-presence";
 
 export const presenceHeartbeatRoute = buildRoute({
+  // Polled by every open tab, the acceptance page included. It only marks the
+  // member as online, so it stays open while Terms acceptance is pending.
+  termsAcceptance: "exempt",
   route: {
     method: "post",
     description:

@@ -68,6 +68,7 @@ const revokeIfPasswordChanged = async (
 };
 
 export const signInRoute = buildRoute({
+  termsAcceptance: "exempt",
   allowWhenOffline: true,
   route: {
     method: "post",

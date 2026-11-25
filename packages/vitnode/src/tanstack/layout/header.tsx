@@ -26,6 +26,7 @@ import {
 import { loadSession } from "../auth/session-query";
 import { useLocale } from "../i18n/locale";
 import { GLOBAL_NAMESPACE, intlQueryOptions } from "../i18n/query";
+import { redirectPendingTerms } from "../legal/gate";
 import { redirectSuspendedSession } from "../moderation/suspension-gate";
 import { NotificationsBell } from "../notifications/bell";
 import { isPrerenderRequest, isSharedRenderRequest } from "../prerender";
@@ -177,7 +178,8 @@ export const loadMainShell = async (
     isPrerendering?: () => boolean;
     /**
      * The route's location. With it, a suspended session is redirected to the
-     * home page from anywhere else.
+     * home page from anywhere else, and a member who owes Terms of Service
+     * acceptance to the acceptance page (see `TERMS_GATE_OPEN_PATHS`).
      */
     location?: { pathname: string };
   } = {},
@@ -207,6 +209,7 @@ export const loadMainShell = async (
   ]);
   if (location) {
     redirectSuspendedSession(context.queryClient, location.pathname);
+    redirectPendingTerms(context.queryClient, location.pathname);
     await loadSiteStatusGate(context, location.pathname);
   }
 };

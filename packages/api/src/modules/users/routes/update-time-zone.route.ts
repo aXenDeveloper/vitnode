@@ -9,6 +9,7 @@ import { canonicalTimeZone } from "@/lib/notifications/digest-period";
 import { invalidateSessionCacheForUser } from "@/models/session-revoke";
 
 export const updateMyTimeZoneRoute = buildRoute({
+  termsAcceptance: "exempt",
   route: {
     method: "put",
     description:

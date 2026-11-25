@@ -1,0 +1,102 @@
+---
+title: Developer reference
+description: The termsAcceptance route policy, typed legal errors, locale fallback, data model and migration, events, and how legal documents interact with auth, the queue and personal data.
+icon: Code
+---
+
+This page is for plugin and app authors. It covers how the Terms of Service gate reaches your API routes, the errors the web reacts to, and the data VitNode stores. For the AdminCP workflow see [Publish a version](/docs/dev/legal/publish).
+
+## Protect plugin routes with `termsAcceptance`
+
+`buildRoute` adds the Terms acceptance guard to every route, core's and every plugin's, unless the route opts out. It only acts on a signed-in member who owes acceptance, and only after a Terms version is in effect.
+
+| Value | Blocks | Use it for |
+| --- | --- | --- |
+| `"writes"` (default) | `POST`, `PUT`, `PATCH`, `DELETE` | Ordinary routes: public reads keep working |
+| `"required"` | Every method | Personalised community reads, such as a member's inbox or private feed |
+| `"exempt"` | Nothing | Recovery routes only |
+
+Guests, routes under `/admin/` and routes with `adminStaffPermission` are never blocked. A failed lookup (for example the legal tables are not migrated yet) is logged and lets the request through, like the offline-site guard.
+
+```ts title="plugins/shop/src/api/modules/orders/routes/inbox.route.ts"
+import { buildRoute } from "@/api/builders";
+
+export const ordersInboxRoute = buildRoute({
+  termsAcceptance: "required", // [!code ++]
+  route: {
+    method: "get",
+    path: "/inbox",
+    responses: { 200: { description: "The member's order messages" } },
+  },
+  handler: c => c.json({ items: [] }, 200),
+});
+```
+
+Core exempts: sign-in, sign-up and sign-out, the session, SSO and passkey sign-in steps, password reset and change, e-mail verification, device revocation, time zone and presence updates, personal-data export, account deletion, the cancel-deletion sign-in, cron, payment webhooks and the legal routes themselves. Keep `"exempt"` to that kind of route. Members send no writes over the WebSocket; the only socket that writes, Content Engine live editing, needs an AdminCP session.
+
+## Typed errors
+
+Legal errors answer `{ error, code, ...details }`. Import the codes from `@vitnode/api/lib/legal/contract` (`LEGAL_ERROR_CODES`).
+
+| Code | Status | When |
+| --- | --- | --- |
+| `TERMS_ACCEPTANCE_REQUIRED` | `403` | A guarded route was called by a member who owes acceptance. Also carries `version` and `versionId` |
+| `TERMS_VERSION_CHANGED` | `409` | Sign-up or `POST /legal/accept` sent a version that is no longer in effect. Carries `current` |
+| `TERMS_ACCEPTANCE_MISSING` | `400` | Password sign-up without `terms` while a Terms version is in effect |
+| `LEGAL_UPCOMING_VERSION_EXISTS` | `409` | Publishing while another version of the type is scheduled |
+| `LEGAL_EMAIL_ADAPTER_MISSING` | `409` | Publishing or retrying without an email adapter |
+| `LEGAL_DRAFT_CONFLICT` | `409` | Saving or publishing a draft revision someone else replaced |
+
+The browser `fetcher` handles `TERMS_ACCEPTANCE_REQUIRED` for you: it dispatches the `vitnode:terms-acceptance-required` window event, the session is refetched and the member is sent to `/legal/accept`. Your component only needs to treat the `403` as a failed request.
+
+## Read the legal state
+
+The session (`GET /api/@vitnode/core/users/session`) includes `user.legal`:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `pendingTerms` | `{ versionId, version, lastAcceptedVersion } \| null` | The Terms version the member must accept |
+| `notices` | `array` | Informational notices not dismissed yet |
+| `nextChangeAt` | `string \| null` | When the next scheduled version takes effect; open tabs refetch then |
+
+On the server, `pendingTermsForRequest(c)` from `@vitnode/api/lib/legal/state.server` returns the owed version (or `null`) once per request. Public reads use `fetcher` with `module: "legal"`, for example `path: "/links"` for the effective titles, which `LegalFooterLinks` from `@vitnode/core/tanstack/legal` renders in a footer.
+
+## Locale fallback
+
+Each version stores `defaultLanguageCode`, the site's default language when it was published. A version is shown in the requested language when it has a title and text in it, else in its default language, else in the first available language by code. The summary and acceptance wording follow the same language and fall back to the default language on their own. Comparisons use one language both versions share when there is one.
+
+## Data model and migration
+
+The migration `add_legal_documents` creates six tables and two triggers:
+
+| Table | Holds |
+| --- | --- |
+| `core_legal_versions` | Announced versions. A trigger rejects any update except the publisher being cleared, and any delete |
+| `core_legal_drafts` | One working draft per document type, with a revision counter |
+| `core_legal_acceptances` | One row per member and exact Terms version: time, locale, wording, source. Append-only (trigger) |
+| `core_legal_notice_dismissals` | One row per member and dismissed version |
+| `core_legal_deliveries` | One announcement email per member and version, with status and attempts |
+| `core_legal_fanouts` | Fan-out progress and the provider-incident marker per version |
+
+Apply it with `vitnode db migrate` (or your usual `db:prepare`). Acceptance and publication take a PostgreSQL advisory lock per document type, so a version check and its write never interleave with a publication.
+
+## Personal data and retention
+
+Acceptances, notice dismissals and deliveries reference the member with `ON DELETE CASCADE`: account deletion erases them, and the data download includes them under `legalAcceptances`, `legalNoticeDismissals` and `legalAnnouncementEmails`. Versions and their content hash stay, without personal data.
+
+## Events
+
+| Event | When |
+| --- | --- |
+| `legal.draft.updated` | A draft was created, saved or discarded |
+| `legal.version.announced` | A version was published |
+| `legal.version.effective` | A version took effect |
+| `legal.terms.accepted` | A member accepted a Terms version (not for a repeat) |
+
+Payloads are listed in [built-in events](/docs/dev/events/built-in-events#legal-events).
+
+## Related
+
+- [API routes](/docs/dev/plugins/api/routes)
+- [Personal data](/docs/dev/working-with-users/personal-data)
+- [Queue](/docs/dev/advanced/queue)

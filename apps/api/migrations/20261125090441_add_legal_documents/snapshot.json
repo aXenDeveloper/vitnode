@@ -1,0 +1,1984 @@
+{
+  "type": "diff",
+  "version": "10",
+  "dialect": "postgres",
+  "id": "b9266b78-be55-472d-86bc-807a1499bcf8",
+  "prevIds": [
+    "2658a40c-37e9-4292-a232-0f25bf323363"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_acceptances"
+      ],
+      "writes": [
+        "s|tbl|public.core_legal_acceptances",
+        "n|tbl|public.core_legal_acceptances",
+        "e|tbl|public.core_legal_acceptances",
+        "n|rel|public.core_legal_acceptances",
+        "n|type|public.core_legal_acceptances",
+        "n|rel|public.core_legal_acceptances_pkey",
+        "n|rel|public.core_legal_acceptances_user_version_unique"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_deliveries"
+      ],
+      "writes": [
+        "s|tbl|public.core_legal_deliveries",
+        "n|tbl|public.core_legal_deliveries",
+        "e|tbl|public.core_legal_deliveries",
+        "n|rel|public.core_legal_deliveries",
+        "n|type|public.core_legal_deliveries",
+        "n|rel|public.core_legal_deliveries_pkey",
+        "n|rel|public.core_legal_deliveries_version_user_unique"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_drafts"
+      ],
+      "writes": [
+        "s|tbl|public.core_legal_drafts",
+        "n|tbl|public.core_legal_drafts",
+        "e|tbl|public.core_legal_drafts",
+        "n|rel|public.core_legal_drafts",
+        "n|type|public.core_legal_drafts",
+        "n|rel|public.core_legal_drafts_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_fanouts"
+      ],
+      "writes": [
+        "s|tbl|public.core_legal_fanouts",
+        "n|tbl|public.core_legal_fanouts",
+        "e|tbl|public.core_legal_fanouts",
+        "n|rel|public.core_legal_fanouts",
+        "n|type|public.core_legal_fanouts",
+        "n|rel|public.core_legal_fanouts_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_notice_dismissals"
+      ],
+      "writes": [
+        "s|tbl|public.core_legal_notice_dismissals",
+        "n|tbl|public.core_legal_notice_dismissals",
+        "e|tbl|public.core_legal_notice_dismissals",
+        "n|rel|public.core_legal_notice_dismissals",
+        "n|type|public.core_legal_notice_dismissals",
+        "n|rel|public.core_legal_notice_dismissals_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_versions"
+      ],
+      "writes": [
+        "s|tbl|public.core_legal_versions",
+        "n|tbl|public.core_legal_versions",
+        "e|tbl|public.core_legal_versions",
+        "n|rel|public.core_legal_versions",
+        "n|type|public.core_legal_versions",
+        "n|rel|public.core_legal_versions_pkey",
+        "n|rel|public.core_legal_versions_type_version_unique"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_legal_acceptances",
+        "core_legal_acceptances_version_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_legal_acceptances_version_idx",
+        "n|idx|public.core_legal_acceptances_version_idx",
+        "e|idx|public.core_legal_acceptances_version_idx",
+        "n|rel|public.core_legal_acceptances_version_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_acceptances",
+        "n|sch|public",
+        "n|col|public.core_legal_acceptances.versionId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_legal_deliveries",
+        "core_legal_deliveries_version_status_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_legal_deliveries_version_status_idx",
+        "n|idx|public.core_legal_deliveries_version_status_idx",
+        "e|idx|public.core_legal_deliveries_version_status_idx",
+        "n|rel|public.core_legal_deliveries_version_status_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_deliveries",
+        "n|sch|public",
+        "n|col|public.core_legal_deliveries.versionId",
+        "n|col|public.core_legal_deliveries.status",
+        "n|col|public.core_legal_deliveries.nextAttemptAt"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_legal_deliveries",
+        "core_legal_deliveries_user_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_legal_deliveries_user_idx",
+        "n|idx|public.core_legal_deliveries_user_idx",
+        "e|idx|public.core_legal_deliveries_user_idx",
+        "n|rel|public.core_legal_deliveries_user_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_deliveries",
+        "n|sch|public",
+        "n|col|public.core_legal_deliveries.userId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_legal_versions",
+        "core_legal_versions_type_effective_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_legal_versions_type_effective_idx",
+        "n|idx|public.core_legal_versions_type_effective_idx",
+        "e|idx|public.core_legal_versions_type_effective_idx",
+        "n|rel|public.core_legal_versions_type_effective_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_versions",
+        "n|sch|public",
+        "n|col|public.core_legal_versions.documentType",
+        "n|col|public.core_legal_versions.effectiveAt"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_acceptances"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_acceptances.core_legal_acceptances_userId_core_users_id_fkey",
+        "n|fk|public.core_legal_acceptances.core_legal_acceptances_userId_core_users_id_fkey",
+        "e|fk|public.core_legal_acceptances.core_legal_acceptances_userId_core_users_id_fkey",
+        "n|con|public.core_legal_acceptances.core_legal_acceptances_userId_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_acceptances",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_legal_acceptances.userId",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_acceptances"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_acceptances.core_legal_acceptances_versionId_core_legal_versions_id_fkey",
+        "n|fk|public.core_legal_acceptances.core_legal_acceptances_versionId_core_legal_versions_id_fkey",
+        "e|fk|public.core_legal_acceptances.core_legal_acceptances_versionId_core_legal_versions_id_fkey",
+        "n|con|public.core_legal_acceptances.core_legal_acceptances_versionId_core_legal_versions_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_acceptances",
+        "n|sch|public",
+        "n|tbl|public.core_legal_versions",
+        "n|sch|public",
+        "n|col|public.core_legal_acceptances.versionId",
+        "n|col|public.core_legal_versions.id",
+        "e|uniqueness|public.core_legal_versions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_deliveries"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_deliveries.core_legal_deliveries_versionId_core_legal_versions_id_fkey",
+        "n|fk|public.core_legal_deliveries.core_legal_deliveries_versionId_core_legal_versions_id_fkey",
+        "e|fk|public.core_legal_deliveries.core_legal_deliveries_versionId_core_legal_versions_id_fkey",
+        "n|con|public.core_legal_deliveries.core_legal_deliveries_versionId_core_legal_versions_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_deliveries",
+        "n|sch|public",
+        "n|tbl|public.core_legal_versions",
+        "n|sch|public",
+        "n|col|public.core_legal_deliveries.versionId",
+        "n|col|public.core_legal_versions.id",
+        "e|uniqueness|public.core_legal_versions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_deliveries"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_deliveries.core_legal_deliveries_userId_core_users_id_fkey",
+        "n|fk|public.core_legal_deliveries.core_legal_deliveries_userId_core_users_id_fkey",
+        "e|fk|public.core_legal_deliveries.core_legal_deliveries_userId_core_users_id_fkey",
+        "n|con|public.core_legal_deliveries.core_legal_deliveries_userId_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_deliveries",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_legal_deliveries.userId",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_drafts"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_drafts.core_legal_drafts_basedOnVersionId_core_legal_versions_id_fkey",
+        "n|fk|public.core_legal_drafts.core_legal_drafts_basedOnVersionId_core_legal_versions_id_fkey",
+        "e|fk|public.core_legal_drafts.core_legal_drafts_basedOnVersionId_core_legal_versions_id_fkey",
+        "n|con|public.core_legal_drafts.core_legal_drafts_basedOnVersionId_core_legal_versions_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_drafts",
+        "n|sch|public",
+        "n|tbl|public.core_legal_versions",
+        "n|sch|public",
+        "n|col|public.core_legal_drafts.basedOnVersionId",
+        "n|col|public.core_legal_versions.id",
+        "e|uniqueness|public.core_legal_versions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_drafts"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_drafts.core_legal_drafts_createdById_core_users_id_fkey",
+        "n|fk|public.core_legal_drafts.core_legal_drafts_createdById_core_users_id_fkey",
+        "e|fk|public.core_legal_drafts.core_legal_drafts_createdById_core_users_id_fkey",
+        "n|con|public.core_legal_drafts.core_legal_drafts_createdById_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_drafts",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_legal_drafts.createdById",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_drafts"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_drafts.core_legal_drafts_updatedById_core_users_id_fkey",
+        "n|fk|public.core_legal_drafts.core_legal_drafts_updatedById_core_users_id_fkey",
+        "e|fk|public.core_legal_drafts.core_legal_drafts_updatedById_core_users_id_fkey",
+        "n|con|public.core_legal_drafts.core_legal_drafts_updatedById_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_drafts",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_legal_drafts.updatedById",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_fanouts"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_fanouts.core_legal_fanouts_versionId_core_legal_versions_id_fkey",
+        "n|fk|public.core_legal_fanouts.core_legal_fanouts_versionId_core_legal_versions_id_fkey",
+        "e|fk|public.core_legal_fanouts.core_legal_fanouts_versionId_core_legal_versions_id_fkey",
+        "n|con|public.core_legal_fanouts.core_legal_fanouts_versionId_core_legal_versions_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_fanouts",
+        "n|sch|public",
+        "n|tbl|public.core_legal_versions",
+        "n|sch|public",
+        "n|col|public.core_legal_fanouts.versionId",
+        "n|col|public.core_legal_versions.id",
+        "e|uniqueness|public.core_legal_versions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_notice_dismissals"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_notice_dismissals.core_legal_notice_dismissals_userId_core_users_id_fkey",
+        "n|fk|public.core_legal_notice_dismissals.core_legal_notice_dismissals_userId_core_users_id_fkey",
+        "e|fk|public.core_legal_notice_dismissals.core_legal_notice_dismissals_userId_core_users_id_fkey",
+        "n|con|public.core_legal_notice_dismissals.core_legal_notice_dismissals_userId_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_notice_dismissals",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_legal_notice_dismissals.userId",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_notice_dismissals"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_notice_dismissals.core_legal_notice_dismissals_SLBwHX93n6Wl_fkey",
+        "n|fk|public.core_legal_notice_dismissals.core_legal_notice_dismissals_SLBwHX93n6Wl_fkey",
+        "e|fk|public.core_legal_notice_dismissals.core_legal_notice_dismissals_SLBwHX93n6Wl_fkey",
+        "n|con|public.core_legal_notice_dismissals.core_legal_notice_dismissals_SLBwHX93n6Wl_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_notice_dismissals",
+        "n|sch|public",
+        "n|tbl|public.core_legal_versions",
+        "n|sch|public",
+        "n|col|public.core_legal_notice_dismissals.versionId",
+        "n|col|public.core_legal_versions.id",
+        "e|uniqueness|public.core_legal_versions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_versions"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_versions.core_legal_versions_RLkOd5G2g0zv_fkey",
+        "n|fk|public.core_legal_versions.core_legal_versions_RLkOd5G2g0zv_fkey",
+        "e|fk|public.core_legal_versions.core_legal_versions_RLkOd5G2g0zv_fkey",
+        "n|con|public.core_legal_versions.core_legal_versions_RLkOd5G2g0zv_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_versions",
+        "n|sch|public",
+        "n|tbl|public.core_legal_versions",
+        "n|sch|public",
+        "n|col|public.core_legal_versions.basedOnVersionId",
+        "n|col|public.core_legal_versions.id",
+        "e|uniqueness|public.core_legal_versions.id"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_legal_versions"
+      ],
+      "writes": [
+        "s|fk|public.core_legal_versions.core_legal_versions_publishedById_core_users_id_fkey",
+        "n|fk|public.core_legal_versions.core_legal_versions_publishedById_core_users_id_fkey",
+        "e|fk|public.core_legal_versions.core_legal_versions_publishedById_core_users_id_fkey",
+        "n|con|public.core_legal_versions.core_legal_versions_publishedById_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_legal_versions",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_legal_versions.publishedById",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_legal_acceptances",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_legal_deliveries",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_legal_drafts",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_legal_fanouts",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_legal_notice_dismissals",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_legal_versions",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "userId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "versionId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "acceptedAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "locale",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "wording",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "source",
+        "type": "varchar(16)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "versionId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "userId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "status",
+        "type": "varchar(16)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'pending'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "skipReason",
+        "type": "varchar(16)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "attempts",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "lastError",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "providerMessageId",
+        "type": "varchar(255)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "nextAttemptAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "lastAttemptAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "sentAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "createdAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "updatedAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "documentType",
+        "type": "varchar(20)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "basedOnVersionId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "title",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "body",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "summary",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "acceptanceLabel",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "requiresAcceptance",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "effectiveAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "revision",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "createdAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "createdById",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "updatedAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "updatedById",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "versionId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "status",
+        "type": "varchar(16)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'pending'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "cursorUserId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "recipientsCreatedBefore",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "incidentAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "lastError",
+        "type": "text",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "createdAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "completedAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "updatedAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_notice_dismissals",
+        "name": "userId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_notice_dismissals",
+        "name": "versionId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_notice_dismissals",
+        "name": "dismissedAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "documentType",
+        "type": "varchar(20)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "version",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "title",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "body",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "summary",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "acceptanceLabel",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "defaultLanguageCode",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "requiresAcceptance",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "announcedAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "effectiveAt",
+        "type": "timestamp with time zone",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "contentHash",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "basedOnVersionId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "publishedById",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "core_legal_acceptances_version_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "versionId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "core_legal_deliveries_version_status_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "versionId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "status",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "nextAttemptAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "core_legal_deliveries_user_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "userId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "core_legal_versions_type_effective_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "documentType",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "effectiveAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "core_legal_acceptances_userId_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "userId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "core_legal_acceptances_versionId_core_legal_versions_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "versionId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_legal_versions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "core_legal_deliveries_versionId_core_legal_versions_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "versionId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_legal_versions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "core_legal_deliveries_userId_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "userId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "core_legal_drafts_basedOnVersionId_core_legal_versions_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "basedOnVersionId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_legal_versions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "core_legal_drafts_createdById_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "createdById"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "core_legal_drafts_updatedById_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "updatedById"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "core_legal_fanouts_versionId_core_legal_versions_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "versionId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_legal_versions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_notice_dismissals",
+        "name": "core_legal_notice_dismissals_userId_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "userId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "CASCADE",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_notice_dismissals",
+        "name": "core_legal_notice_dismissals_SLBwHX93n6Wl_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "versionId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_legal_versions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "core_legal_versions_RLkOd5G2g0zv_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "basedOnVersionId"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_legal_versions",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "NO ACTION",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "core_legal_versions_publishedById_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "publishedById"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_notice_dismissals",
+        "name": "core_legal_notice_dismissals_pkey",
+        "columns": [
+          "userId",
+          "versionId"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "core_legal_acceptances_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "core_legal_deliveries_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_drafts",
+        "name": "core_legal_drafts_pkey",
+        "columns": [
+          "documentType"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_fanouts",
+        "name": "core_legal_fanouts_pkey",
+        "columns": [
+          "versionId"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "core_legal_versions_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_acceptances",
+        "name": "core_legal_acceptances_user_version_unique",
+        "nameExplicit": true,
+        "columns": [
+          "userId",
+          "versionId"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_deliveries",
+        "name": "core_legal_deliveries_version_user_unique",
+        "nameExplicit": true,
+        "columns": [
+          "versionId",
+          "userId"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "core_legal_versions_type_version_unique",
+        "nameExplicit": true,
+        "columns": [
+          "documentType",
+          "version"
+        ],
+        "nullsNotDistinct": false,
+        "entityType": "uniques"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "core_legal_versions_acceptance_terms_only",
+        "value": "\"requiresAcceptance\" = false OR \"documentType\" = 'terms'",
+        "entityType": "checks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_legal_versions",
+        "name": "core_legal_versions_version_positive",
+        "value": "\"version\" > 0",
+        "entityType": "checks"
+      }
+    }
+  ]
+}

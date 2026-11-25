@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { core_content_containers } from "@/database/content-containers";
 import { siteOfflineGuard } from "@/middlewares/site-offline.middleware";
+import { termsAcceptanceWritesGuard } from "@/middlewares/terms-acceptance.middleware";
 import {
   testCategoryContentType,
   testPostContentType,
@@ -450,7 +451,11 @@ describe("generated surface", () => {
       const { middleware } = route as unknown as { middleware: unknown[] };
 
       expect(
-        middleware.filter(handler => handler !== siteOfflineGuard),
+        middleware.filter(
+          handler =>
+            handler !== siteOfflineGuard &&
+            handler !== termsAcceptanceWritesGuard,
+        ),
       ).toHaveLength(1);
     }
   });

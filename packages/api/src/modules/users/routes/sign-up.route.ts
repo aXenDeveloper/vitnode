@@ -32,9 +32,23 @@ export const zodSignUpSchema = z.object({
     example: "Test123!",
   }),
   newsletter: z.boolean().default(false).optional(),
+  /**
+   * The Terms of Service version shown on the form, accepted with an
+   * explicit checkbox. Required while a Terms version is effective; it must
+   * be that exact version, or the sign-up answers `409 TERMS_VERSION_CHANGED`.
+   */
+  terms: z
+    .object({
+      accepted: z.literal(true),
+      locale: z.string().min(1).max(32),
+      versionId: z.number().int().positive(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export const signUpRoute = buildRoute({
+  termsAcceptance: "exempt",
   route: {
     method: "post",
     description: "Create a new user",
@@ -65,10 +79,12 @@ export const signUpRoute = buildRoute({
           "User created. With `emailVerified: false` no session was started and a confirmation link was emailed instead.",
       },
       400: {
-        description: "Bad Request",
+        description:
+          "Bad Request, or `TERMS_ACCEPTANCE_MISSING` when the effective Terms of Service were not accepted",
       },
       409: {
-        description: "Email or name already exists",
+        description:
+          "Email or name already exists, or `TERMS_VERSION_CHANGED` when the Terms shown are no longer the effective version",
       },
     },
   },
@@ -78,7 +94,11 @@ export const signUpRoute = buildRoute({
       c.req.valid("json").password,
     );
     const data = await new UserModel().signUp(
-      { ...c.req.valid("json"), hashedPassword },
+      {
+        ...c.req.valid("json"),
+        hashedPassword,
+        terms: c.req.valid("json").terms ?? null,
+      },
       c,
     );
 

@@ -15,24 +15,56 @@ import { AutoFormInput } from "@/components/form/fields/input";
 import { InputGroupAddon } from "@/components/ui/input-group";
 
 import { PasswordInput } from "../components/password-input";
-import { type SignUpSubmit, useSignUpForm } from "./use-sign-up-form";
+import {
+  type SignUpSubmit,
+  type SignUpTerms,
+  useSignUpForm,
+} from "./use-sign-up-form";
 
-export type { SignUpSubmit };
+export type { SignUpSubmit, SignUpTerms };
 
 export const SignUpFormContent = ({
   captcha,
   isEmail,
   onSignUp,
+  onTermsChanged,
+  privacy,
+  terms,
   termsHref = "/terms",
 }: {
   captcha: z.infer<typeof routeMiddlewareSchema>["captcha"];
 
   isEmail: boolean;
   onSignUp: SignUpSubmit;
+  /** Reloads the effective Terms after the API said they changed. */
+  onTermsChanged?: () => Promise<void> | void;
+  /** The published Privacy Policy, linked prominently under the form. */
+  privacy?: null | { title: string };
+  /**
+   * The effective Terms of Service version. While set, the form links its
+   * full text, requires an unticked box to be ticked and sends this exact
+   * version with the sign-up.
+   */
+  terms?: null | SignUpTerms;
   termsHref?: string;
 }) => {
   const t = useTranslations("core.auth.sign_up");
-  const { formSchema, onSubmit } = useSignUpForm({ onSignUp });
+  const tLegal = useTranslations("core.legal.sign_up");
+  const { formSchema, onSubmit } = useSignUpForm({
+    onSignUp,
+    onTermsChanged,
+    terms,
+  });
+  const legalLink = (href: string) => (text: React.ReactNode) => (
+    <Link
+      className="text-primary underline-offset-4 hover:underline"
+      rel="noopener"
+      target="_blank"
+      to={href}
+    >
+      {text}
+    </Link>
+  );
 
   return (
     <AutoForm
@@ -94,19 +126,49 @@ export const SignUpFormContent = ({
         },
         {
           id: "terms",
-          component: props => (
-            <AutoFormCheckbox
-              {...props}
-              description={t.rich("terms.desc", {
-                link: text => (
-                  <Link className="text-primary" to={termsHref}>
-                    {text}
-                  </Link>
-                ),
-              })}
-              label={t("terms.label")}
-            />
-          ),
+          component: props =>
+            terms ? (
+              <div className="flex flex-col gap-3">
+                <AutoFormCheckbox
+                  {...props}
+                  label={tLegal.rich("terms", {
+                    link: legalLink(`/terms/versions/${terms.version}`),
+                    title: terms.title,
+                    version: terms.version,
+                  })}
+                />
+                {privacy ? (
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {tLegal.rich("privacy", {
+                      link: legalLink("/privacy"),
+                      title: privacy.title,
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                <AutoFormCheckbox
+                  {...props}
+                  description={t.rich("terms.desc", {
+                    link: text => (
+                      <Link className="text-primary" to={termsHref}>
+                        {text}
+                      </Link>
+                    ),
+                  })}
+                  label={t("terms.label")}
+                />
+                {privacy ? (
+                  <p className="text-muted-foreground text-sm leading-relaxed">
+                    {tLegal.rich("privacy", {
+                      link: legalLink("/privacy"),
+                      title: privacy.title,
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            ),
         },
         ...(isEmail
           ? [

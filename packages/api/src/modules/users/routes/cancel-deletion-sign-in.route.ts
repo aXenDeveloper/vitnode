@@ -9,6 +9,7 @@ export const zodCancelDeletionSignInSchema = z.object({
 });
 
 export const cancelDeletionSignInRoute = buildRoute({
+  termsAcceptance: "exempt",
   route: {
     method: "post",
     description:

@@ -1,0 +1,74 @@
+---
+title: Terms acceptance
+description: How members accept the Terms of Service on sign-up, after SSO and after a new version, what stays available meanwhile, and how notices and comparisons work.
+icon: SquareCheckBig
+---
+
+import { ImgDocs } from "@/components/fumadocs/img"
+import acceptPage from "./legal-accept-page.webp"
+import changesPage from "./legal-changes-page.webp"
+import notice from "./legal-notice.webp"
+import settingsHistory from "./legal-settings-history.webp"
+
+Once a Terms of Service version is in effect, every member must have accepted a version at least as new as the latest one that **requires acceptance**. A member who has not is still signed in, but community features wait on a dedicated acceptance page until they accept or sign out.
+
+## When a member must accept
+
+| Situation | What happens |
+| --- | --- |
+| Password sign-up | The form links the full text of the version in effect and shows an unticked box. The account and its acceptance are created together, or neither |
+| First-time SSO | The account is created (the sign-up page links the Privacy Policy first), then the member lands on the acceptance page |
+| Sign-in (password, passkey, returning SSO) and existing sessions | Sign-in completes, then the acceptance page opens if the member owes acceptance |
+| You publish an informational Terms version | Nobody owes anything new. Members get a notice they can dismiss |
+| You publish a version that requires acceptance | Once it takes effect, every member who has not accepted it owes acceptance, including tabs that are already open |
+
+Members always accept the **latest version in effect**. Someone who skipped two versions accepts the newest text, which includes every informational edit since.
+
+## The acceptance page
+
+<ImgDocs
+  src={acceptPage}
+  alt="Acceptance page titled Review our Terms of Service, the full text of version 3, links to the full text, the changes, the Privacy Policy and data controls, the acceptance sentence and Accept Terms of Service v3 and Sign out buttons"
+/>
+
+The page at `/legal/accept` shows what changed since the version the member accepted last, or the full text when they never accepted one. It links the full text, the comparison, the Privacy Policy and **Settings → Privacy & data**. It has exactly two actions: **Accept Terms of Service vN** and **Sign out**. There is no "later".
+
+While acceptance is pending, these stay open: the legal pages, sign-in and sign-out, **Settings → Privacy & data** (data download and account deletion), **Settings → Security** and **Settings → Devices**. Public pages stay readable for guests. Any other page sends the member back to the acceptance page, and the API refuses their writes with `TERMS_ACCEPTANCE_REQUIRED` (see the [developer reference](/docs/dev/legal/developers)).
+
+If a newer version takes effect while the member reads, **Accept** answers that the Terms changed and reloads the page for a fresh decision. Accepting the same version twice keeps the first record.
+
+## Compare versions
+
+Every version after the first has a comparison at `/terms/versions/N/changes` (or `/privacy/...`). It shows your summary and a block-by-block diff: each paragraph, list item or table is labelled **Added**, **Removed** or **Changed**, with before and after side by side, so the colours are only a hint. Unchanged blocks fold away. **Compare with** picks any earlier version.
+
+<ImgDocs
+  src={changesPage}
+  alt="Changes in Terms of Service version 3 compared with version 1: the summary, counts of additions, edits and removals, and a Changed block with the old text struck through next to the new text"
+/>
+
+Both sides are shown in one language they share: the reader's when both have it, else the newer version's default language. A missing translation never mixes languages silently; the page says which language it uses.
+
+## Notices
+
+A new Privacy Policy version, or an informational Terms version, shows a notice to members who joined before it was announced. **See what changed** opens the comparison. Dismissing it records only that the member dismissed this version's notice, never an acceptance.
+
+<ImgDocs
+  src={notice}
+  alt="Blue notice under the header reading We updated our Privacy Policy (version 2) with a See what changed link and a close button"
+/>
+
+## Members' own records
+
+**Settings → Privacy & data** lists the Terms versions the member accepted, when, how (sign-up or acceptance page) and in which language.
+
+<ImgDocs
+  src={settingsHistory}
+  alt="Legal agreements card listing Terms of Service version 3, accepted with the date, After an update, Language en"
+/>
+
+Each acceptance stores the server time, the language of the text shown and the exact sentence accepted. Acceptances, notice dismissals and announcement email records are part of the member's [data download](/docs/dev/working-with-users/personal-data) and are erased with the account. The versions themselves are never deleted. If your site must keep proof of acceptance after an account is deleted, export it before the deletion completes.
+
+## Related
+
+- [Publish a version](/docs/dev/legal/publish)
+- [Account deletion and data export](/docs/dev/working-with-users/account-deletion)

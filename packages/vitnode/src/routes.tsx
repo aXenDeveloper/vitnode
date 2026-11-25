@@ -28,6 +28,7 @@ import {
 import { ADMIN_FILES_NAMESPACES } from "./tanstack/admin/files/route";
 import { normalizeAdminFilesRouteSearch } from "./tanstack/admin/files/route-search";
 import { ADMIN_INTEGRATIONS_NAMESPACES } from "./tanstack/admin/integrations/route";
+import { ADMIN_LEGAL_NAMESPACES } from "./tanstack/admin/legal/route";
 import { ADMIN_NOTIFICATIONS_NAMESPACES } from "./tanstack/admin/notifications/route";
 import { ADMIN_PLUGINS_NAMESPACES } from "./tanstack/admin/plugins/route";
 import { normalizeQueueRouteSearch } from "./tanstack/admin/queue/route-search";
@@ -68,6 +69,11 @@ import {
 } from "./tanstack/auth/verify-email";
 import { MY_FILES_NAMESPACES } from "./tanstack/files/route";
 import { normalizeMyFilesRouteSearch } from "./tanstack/files/route-search";
+import { normalizeLegalAcceptSearch } from "./tanstack/legal/accept-route";
+import {
+  LEGAL_NAMESPACES,
+  normalizeLegalChangesSearch,
+} from "./tanstack/legal/route";
 import { normalizeModcpApprovalsSearch } from "./tanstack/moderation/approvals-route-search";
 import { MODCP_NAMESPACES } from "./tanstack/moderation/namespaces";
 import { normalizeModcpReportsSearch } from "./tanstack/moderation/route-search";
@@ -115,6 +121,12 @@ import { normalizeActivitySearch } from "./views/activity-logs/activity-search";
  * puts this tree in the registry; VitNode prepends it. See `CORE_PLUGIN_ID` in
  * `framework/plugin-routes`.
  */
+/**
+ * Public legal pages are shared by every visitor. Publishing a version, and a
+ * scheduled one taking effect, hard-invalidates their page-cache tag.
+ */
+const LEGAL_PAGE_CACHE = { maxAge: 300, staleWhileRevalidate: 60 } as const;
+
 export const routes = defineRoutes([
   page("/discover", {
     component: lazy(() => import("./pages/discover")),
@@ -133,6 +145,58 @@ export const routes = defineRoutes([
     component: lazy(() => import("./pages/users/profile")),
     messages: PROFILE_NAMESPACES,
     pendingComponent: ProfilePendingSkeleton,
+  }),
+
+  page("/terms", {
+    component: lazy(() => import("./pages/legal/terms")),
+    cache: LEGAL_PAGE_CACHE,
+    messages: LEGAL_NAMESPACES,
+    pendingComponent: FormPendingSkeleton,
+  }),
+
+  page("/terms/versions/:version", {
+    component: lazy(() => import("./pages/legal/terms-version")),
+    cache: LEGAL_PAGE_CACHE,
+    messages: LEGAL_NAMESPACES,
+    pendingComponent: FormPendingSkeleton,
+  }),
+
+  page("/terms/versions/:version/changes", {
+    component: lazy(() => import("./pages/legal/terms-changes")),
+    cache: LEGAL_PAGE_CACHE,
+    messages: LEGAL_NAMESPACES,
+    pendingComponent: FormPendingSkeleton,
+    search: normalizeLegalChangesSearch,
+  }),
+
+  page("/privacy", {
+    component: lazy(() => import("./pages/legal/privacy")),
+    cache: LEGAL_PAGE_CACHE,
+    messages: LEGAL_NAMESPACES,
+    pendingComponent: FormPendingSkeleton,
+  }),
+
+  page("/privacy/versions/:version", {
+    component: lazy(() => import("./pages/legal/privacy-version")),
+    cache: LEGAL_PAGE_CACHE,
+    messages: LEGAL_NAMESPACES,
+    pendingComponent: FormPendingSkeleton,
+  }),
+
+  page("/privacy/versions/:version/changes", {
+    component: lazy(() => import("./pages/legal/privacy-changes")),
+    cache: LEGAL_PAGE_CACHE,
+    messages: LEGAL_NAMESPACES,
+    pendingComponent: FormPendingSkeleton,
+    search: normalizeLegalChangesSearch,
+  }),
+
+  page("/legal/accept", {
+    component: lazy(() => import("./pages/legal/accept")),
+    messages: LEGAL_NAMESPACES,
+    pendingComponent: FormPendingSkeleton,
+    requires: "authenticated",
+    search: normalizeLegalAcceptSearch,
   }),
 
   page("/login", {
@@ -397,6 +461,27 @@ export const routes = defineRoutes([
     area: "admin",
     component: lazy(() => import("./pages/admin/system/notifications")),
     messages: ADMIN_NOTIFICATIONS_NAMESPACES,
+    pendingComponent: CardsPendingSkeleton,
+  }),
+
+  page("/admin/core/system/legal", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/system/legal/index")),
+    messages: ADMIN_LEGAL_NAMESPACES,
+    pendingComponent: CardsPendingSkeleton,
+  }),
+
+  page("/admin/core/system/legal/:documentType", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/system/legal/document")),
+    messages: ADMIN_LEGAL_NAMESPACES,
+    pendingComponent: FormPendingSkeleton,
+  }),
+
+  page("/admin/core/system/legal/:documentType/versions/:id", {
+    area: "admin",
+    component: lazy(() => import("./pages/admin/system/legal/version")),
+    messages: ADMIN_LEGAL_NAMESPACES,
     pendingComponent: CardsPendingSkeleton,
   }),
 

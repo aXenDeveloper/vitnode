@@ -15,10 +15,12 @@ import {
 } from "@/views/auth/settings/privacy/privacy-query";
 import { PrivacySettings } from "@/views/auth/settings/privacy/privacy-settings";
 import { updatePrivacyInBrowser } from "@/views/auth/settings/privacy/privacy-update";
+import { LegalAcceptancesGroup } from "@/views/legal/legal-acceptances-group";
 import { PRESENCE_QUERY_ROOT } from "@/views/presence/presence-query";
 
 import { useSignOutAction } from "../auth/actions";
 import { invalidateSession, sessionQueryOptions } from "../auth/session-query";
+import { RouteMessages } from "../i18n/route-messages";
 import { personalInfoPolicyQuery } from "./personal-policy";
 
 export const PrivacyPanelContent = ({
@@ -57,6 +59,13 @@ export const PrivacyPanelContent = ({
 
   return (
     <PrivacySettingsContent
+      legal={
+        <React.Suspense fallback={null}>
+          <RouteMessages namespaces={["core.legal"]}>
+            <LegalAcceptancesGroup userId={userId} />
+          </RouteMessages>
+        </React.Suspense>
+      }
       onCancelDeletion={async () => {
         const ok = await cancelAccountDeletion();
         if (ok) {

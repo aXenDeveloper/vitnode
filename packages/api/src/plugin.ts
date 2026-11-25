@@ -10,6 +10,7 @@ import { contentAccessEventDefinitions } from "./events/content-access";
 import { contentApprovalEventDefinitions } from "./events/content-approvals";
 import { contentContainerEventDefinitions } from "./events/content-containers";
 import { fileEventDefinitions } from "./events/files";
+import { legalEventDefinitions } from "./events/legal";
 import { mentionEventDefinitions } from "./events/mentions";
 import { moderationEventDefinitions } from "./events/moderation";
 import { notificationEventDefinitions } from "./events/notifications";
@@ -33,6 +34,7 @@ import { adminModule } from "./modules/admin/admin.module";
 import { aiModule } from "./modules/ai/ai.module";
 import { contentModule } from "./modules/content/content.module";
 import { cronModule } from "./modules/cron/cron.module";
+import { legalModule } from "./modules/legal/legal.module";
 import { middlewareModule } from "./modules/middleware/middleware.module";
 import { moderationModule } from "./modules/moderation/moderation.module";
 import { notificationsModule } from "./modules/notifications/notifications.module";
@@ -61,6 +63,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     ...contentApprovalEventDefinitions,
     ...contentContainerEventDefinitions,
     ...fileEventDefinitions,
+    ...legalEventDefinitions,
     ...mentionEventDefinitions,
     ...moderationEventDefinitions,
     ...notificationEventDefinitions,
@@ -81,6 +84,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     aiModule,
     contentModule,
     cronModule,
+    legalModule,
     pagesModule,
     paymentsModule,
     queueModule,

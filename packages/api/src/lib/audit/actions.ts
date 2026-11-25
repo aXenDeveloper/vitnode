@@ -165,4 +165,9 @@ export const CORE_AUDIT_ACTIONS = defineAuditActions([
   { action: "payment.expired", targetType: "payment" },
   { action: "audit_logs.pruned", targetType: "settings" },
   { action: "audit_logs.exported", targetType: "settings" },
+  { action: "legal.draft_created", targetType: "legal_document" },
+  { action: "legal.draft_saved", targetType: "legal_document" },
+  { action: "legal.draft_discarded", targetType: "legal_document" },
+  { action: "legal.version_announced", targetType: "legal_document" },
+  { action: "legal.deliveries_retried", targetType: "legal_document" },
 ] as const);

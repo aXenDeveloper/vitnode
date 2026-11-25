@@ -40,6 +40,8 @@ const DeleteAccountForm = React.lazy(async () =>
 );
 
 export interface PrivacySettingsContentProps {
+  /** The member's legal agreements (Terms acceptances). Rendered after the data export. */
+  legal?: React.ReactNode;
   onCancelDeletion: () => Promise<boolean>;
   onDeletionScheduled: () => Promise<void>;
   onDownload: () => Promise<boolean>;
@@ -354,6 +356,7 @@ const DeleteAccountGroup = ({
 };
 
 export const PrivacySettingsContent = ({
+  legal,
   onCancelDeletion,
   onDeletionScheduled,
   onDownload,
@@ -366,6 +369,7 @@ export const PrivacySettingsContent = ({
     <PrivacySettingsHeading />
     {visibility}
     <DownloadDataGroup onDownload={onDownload} />
+    {legal}
     <DeleteAccountGroup
       onCancelDeletion={onCancelDeletion}
       onDeletionScheduled={onDeletionScheduled}

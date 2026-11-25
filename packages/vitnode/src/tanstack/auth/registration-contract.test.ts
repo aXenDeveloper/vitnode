@@ -154,12 +154,18 @@ describe("the sign-up input schema", () => {
     expect(signUpInputSchema.safeParse({ ...valid, name }).success).toBe(true);
   });
 
-  it("does not accept a terms field it would forward", () => {
-    // The tick is a local precondition; the API has no field for it, so it is
-    // stripped rather than sent.
-    const parsed = signUpInputSchema.parse({ ...valid, terms: true });
-
-    expect(parsed).not.toHaveProperty("terms");
+  it("forwards only the exact Terms version, never the bare tick", () => {
+    // The tick is a local precondition. While Terms are effective the API
+    // takes the version that was shown instead.
+    expect(signUpInputSchema.safeParse({ ...valid, terms: true }).success).toBe(
+      false,
+    );
+    expect(
+      signUpInputSchema.parse({
+        ...valid,
+        terms: { accepted: true, locale: "en", versionId: 3 },
+      }).terms,
+    ).toEqual({ accepted: true, locale: "en", versionId: 3 });
   });
 });
 

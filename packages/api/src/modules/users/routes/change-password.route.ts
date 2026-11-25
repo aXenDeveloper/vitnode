@@ -23,6 +23,7 @@ export const zodChangePasswordSchema = z.object({
 });
 
 export const changePasswordRoute = buildRoute({
+  termsAcceptance: "exempt",
   route: {
     method: "post",
     description: "Change user password",

@@ -22,6 +22,7 @@ import {
 } from "../passkeys.schema";
 
 export const passkeyAuthenticationVerifyRoute = buildRoute({
+  termsAcceptance: "exempt",
   allowWhenOffline: true,
   route: {
     method: "post",

@@ -21,6 +21,7 @@ export const zodSsoLinkSchema = z.object({
 });
 
 export const linkRoute = buildRoute({
+  termsAcceptance: "exempt",
   route: {
     method: "post",
     description:

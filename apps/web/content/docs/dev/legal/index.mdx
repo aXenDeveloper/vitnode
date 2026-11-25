@@ -1,0 +1,44 @@
+---
+title: Legal documents
+description: Publish versioned Terms of Service and a Privacy Policy, keep every version public, ask members to accept the Terms and email everyone about each change.
+icon: ScrollText
+---
+
+import { ImgDocs } from "@/components/fumadocs/img"
+import termsPage from "./legal-terms-page.webp"
+
+VitNode keeps your **Terms of Service** and **Privacy Policy** as numbered, frozen versions. Every published version stays readable at a stable address, members get a comparison of what changed, Terms acceptance is recorded per member and version, and every new version is announced by email to every member.
+
+<ImgDocs
+  src={termsPage}
+  alt="The public Terms of Service page: version badge, In effect badge, dates, Print, Download and See what changed buttons, the summary of changes and the text"
+/>
+
+## How the two documents differ
+
+| | Terms of Service | Privacy Policy |
+| --- | --- | --- |
+| Public page | `/terms` | `/privacy` |
+| On sign-up | Linked, with an unticked box members must tick | Linked under the form |
+| First-time SSO members | Accept on the acceptance page after signing in | Linked before the account is created |
+| A new version | Email to everyone. You choose: informational, or fresh acceptance once it takes effect | Email to everyone and an informational notice |
+| Member record | Acceptance of the exact version | Only that the notice was dismissed |
+
+The first Terms version always requires acceptance. Nothing changes for an install that has never published a legal document: sign-up, sign-in and every route behave as before until a Terms version takes effect.
+
+Cookie choices and marketing consent stay in their own flows. Accepting the Terms, dismissing a notice and opting into a newsletter are separate records.
+
+## Guides
+
+| I want to | Read |
+| --- | --- |
+| Write and publish a new version | [Publish a version](/docs/dev/legal/publish) |
+| Know what members see and when they must accept | [Terms acceptance](/docs/dev/legal/acceptance) |
+| Check the announcement emails and retry failures | [Announcement emails](/docs/dev/legal/emails) |
+| Exempt a plugin route, handle the typed errors or read the data model | [Developer reference](/docs/dev/legal/developers) |
+
+## Related
+
+- [Account deletion and data export](/docs/dev/working-with-users/account-deletion)
+- [Email](/docs/dev/email)
+- [Staff permissions](/docs/dev/working-with-users/staff-permissions)

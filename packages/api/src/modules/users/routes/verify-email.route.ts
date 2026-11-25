@@ -13,6 +13,7 @@ export const zodVerifyEmailSchema = z.object({
 });
 
 export const verifyEmailRoute = buildRoute({
+  termsAcceptance: "exempt",
   allowWhenOffline: true,
   route: {
     method: "post",

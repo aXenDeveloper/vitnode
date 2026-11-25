@@ -2,12 +2,15 @@ import { z } from "zod";
 
 import { buildRoute } from "@/builders";
 import { getStaffFlags } from "@/lib/check-staff-permission";
+import { zodLegalMemberState } from "@/lib/legal/contract";
+import { loadMemberLegalState } from "@/lib/legal/state.server";
 import { resolveMentionPolicy } from "@/lib/mentions/policy";
 import { getNotificationState } from "@/models/notifications/inbox";
 import { zodNotificationState } from "@/modules/notifications/notifications.schema";
 
 export const sessionRoute = buildRoute({
   allowWhenOffline: true,
+  termsAcceptance: "exempt",
   route: {
     method: "get",
     description: "Verify session",
@@ -44,6 +47,9 @@ export const sessionRoute = buildRoute({
                     .boolean()
                     .describe("One of the user's roles may `@mention` members"),
                   notifications: zodNotificationState,
+                  legal: zodLegalMemberState.describe(
+                    "Terms of Service the member must accept, and legal notices they have not dismissed",
+                  ),
                 })
                 .nullable(),
               suspension: z
@@ -71,11 +77,12 @@ export const sessionRoute = buildRoute({
       });
     }
 
-    const [{ isAdmin, isModerator }, notifications, mentions] =
+    const [{ isAdmin, isModerator }, notifications, mentions, legal] =
       await Promise.all([
         getStaffFlags(c, user),
         getNotificationState(c.get("db"), user.id),
         resolveMentionPolicy(c),
+        loadMemberLegalState(c, user),
       ]);
 
     return c.json({
@@ -84,6 +91,7 @@ export const sessionRoute = buildRoute({
         canMention: mentions.canMention,
         isAdmin,
         isModerator,
+        legal,
         notifications,
       },
     });

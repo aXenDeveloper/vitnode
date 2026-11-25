@@ -7,6 +7,7 @@ import { revokeSessions } from "@/models/session-revoke";
 import { findUserDeviceId } from "@/models/user-devices";
 
 export const revokeDeviceRoute = buildRoute({
+  termsAcceptance: "exempt",
   route: {
     method: "delete",
     description: "Sign out one of the current user's devices.",

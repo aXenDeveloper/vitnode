@@ -21,8 +21,26 @@ export type SignUpSubmit = (
   values: SignUpSubmitValues,
 ) => Promise<SignUpMutationResult>;
 
-export const useSignUpForm = ({ onSignUp }: { onSignUp: SignUpSubmit }) => {
+/** The effective Terms of Service version the form shows, if any. */
+export interface SignUpTerms {
+  locale: string;
+  title: string;
+  version: number;
+  versionId: number;
+}
+
+export const useSignUpForm = ({
+  onSignUp,
+  onTermsChanged,
+  terms,
+}: {
+  onSignUp: SignUpSubmit;
+  /** Reloads the effective version after the API said it changed. */
+  onTermsChanged?: () => Promise<void> | void;
+  terms?: null | SignUpTerms;
+}) => {
   const t = useTranslations("core.auth.sign_up");
+  const tLegal = useTranslations("core.legal.sign_up");
   const tErrors = useTranslations("core.global.errors");
   const { setSendingEmail } = useWrapperSignUp();
 
@@ -32,7 +50,7 @@ export const useSignUpForm = ({ onSignUp }: { onSignUp: SignUpSubmit }) => {
     invalidPassword: t("password.invalid"),
     nameMaxLength: t("username.max_length"),
     nameMinLength: t("username.min_length"),
-    termsRequired: t("terms.required"),
+    termsRequired: terms ? tLegal("terms_required") : t("terms.required"),
   });
 
   const onSubmit: AutoFormOnSubmit<SignUpFormSchema> = async (
@@ -41,13 +59,33 @@ export const useSignUpForm = ({ onSignUp }: { onSignUp: SignUpSubmit }) => {
     { captchaToken },
   ) => {
     const outcome = signUpFormOutcome(
-      await onSignUp({ ...values, captchaToken }),
+      await onSignUp({
+        ...values,
+        captchaToken,
+        ...(terms
+          ? {
+              terms: {
+                accepted: true as const,
+                locale: terms.locale,
+                versionId: terms.versionId,
+              },
+            }
+          : {}),
+      }),
     );
 
     if (!outcome) return;
 
     if (outcome.kind === "confirmation") {
       setSendingEmail(outcome.email);
+
+      return;
+    }
+
+    if (outcome.kind === "terms_changed") {
+      form.setFieldValue("terms", false);
+      await onTermsChanged?.();
+      setFormFieldError(form, "terms", tLegal("changed"));
 
       return;
     }

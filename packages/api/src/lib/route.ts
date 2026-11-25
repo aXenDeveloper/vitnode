@@ -15,6 +15,10 @@ import type {
 import { captchaMiddleware } from "../middlewares/captcha.middleware";
 import { pluginMiddleware } from "../middlewares/plugin.middleware";
 import { siteOfflineGuard } from "../middlewares/site-offline.middleware";
+import {
+  termsAcceptanceGuard,
+  type TermsAcceptancePolicy,
+} from "../middlewares/terms-acceptance.middleware";
 import { assertStaffPermission } from "./check-staff-permission";
 import { pluginTag } from "./openapi-tags";
 import { isAdminApiPath, setRouteStaffPermissions } from "./route-metadata";
@@ -137,6 +141,21 @@ export interface BuildRouteOptions<
    */
   moderatorStaffPermission?: ModeratorStaffPermissionRef;
   route: R;
+  /**
+   * How the route treats a signed-in member who still owes acceptance of the
+   * effective Terms of Service. Blocked calls get `403 { code:
+   * "TERMS_ACCEPTANCE_REQUIRED" }` and the web opens the acceptance page.
+   *
+   * - `"writes"` (default): blocks `POST`, `PUT`, `PATCH` and `DELETE`.
+   * - `"required"`: blocks every method; use it for personalised reads.
+   * - `"exempt"`: never blocks. Keep it to recovery routes - sign-in and
+   *   sign-out, the session, personal-data export, account deletion and the
+   *   authentication steps they need.
+   *
+   * Guests, AdminCP routes and routes with `adminStaffPermission` are never
+   * blocked, and nothing is blocked until a Terms version is effective.
+   */
+  termsAcceptance?: TermsAcceptancePolicy;
 }
 
 /**
@@ -145,7 +164,8 @@ export interface BuildRouteOptions<
  *
  * The route is tagged with its plugin for OpenAPI and runs behind middleware
  * that sets `c.get("plugin")`, then the offline-site guard (see
- * `allowWhenOffline`), then the admin and moderator staff-permission
+ * `allowWhenOffline`), then the Terms acceptance guard (see
+ * `termsAcceptance`), then the admin and moderator staff-permission
  * guards and the captcha check when requested, then the route's own
  * `middleware`.
  *
@@ -185,6 +205,7 @@ export const buildRoute = <
   adminStaffPermission,
   allowWhenOffline = false,
   moderatorStaffPermission,
+  termsAcceptance = "writes",
 }: BuildRouteOptions<P, R> & {
   pluginId: Plugin;
 }): Route<Plugin, R & { path: P }> => {
@@ -194,6 +215,10 @@ export const buildRoute = <
 
   if (!allowWhenOffline && !adminStaffPermission) {
     middleware.push(siteOfflineGuard);
+  }
+
+  if (termsAcceptance !== "exempt" && !adminStaffPermission) {
+    middleware.push(termsAcceptanceGuard(termsAcceptance));
   }
 
   if (adminStaffPermission) {

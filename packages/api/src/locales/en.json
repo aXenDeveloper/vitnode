@@ -130,6 +130,24 @@
       "duplicate": {
         "title_suffix": "(Copy)"
       }
+    },
+    "legal": {
+      "acceptance": {
+        "default_wording": "I have read and agree to the {title} (version {version})."
+      },
+      "email": {
+        "subject": "{title} update (version {version})",
+        "heading": "We're updating our {title}",
+        "intro": "Version {version} of our {title} takes effect on {date}.",
+        "summary_title": "What's changing",
+        "no_summary": "See the full text for the details.",
+        "action_terms_required": "From {date} you'll be asked to accept the new Terms of Service the next time you sign in or use the community.",
+        "action_informational": "You don't need to do anything. Continuing to use the community after {date} means the new version applies to you.",
+        "full_text": "Read the full text",
+        "compare": "See what changed",
+        "retain": "Keep this email for your records. Every version stays available at {url}.",
+        "mandatory": "You're receiving this service email because you have an account. It's sent whatever your newsletter or notification settings are."
+      }
     }
   }
 }

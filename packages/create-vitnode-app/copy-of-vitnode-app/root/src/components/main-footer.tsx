@@ -4,6 +4,7 @@ import {
   VITNODE_WEBSITE_URL,
 } from "@vitnode/core/lib/docs-links";
 import { GLOBAL_NAMESPACE, RouteMessages } from "@vitnode/core/tanstack/i18n";
+import { LegalFooterLinks } from "@vitnode/core/tanstack/legal";
 import { Heart } from "lucide-react";
 import { useTranslations } from "use-intl";
 
@@ -35,6 +36,8 @@ const MainFooterContent = () => {
             ),
           })}
         </p>
+
+        <LegalFooterLinks />
 
         <nav aria-label="VitNode" className="flex items-center gap-5">
           <a

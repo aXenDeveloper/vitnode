@@ -799,6 +799,59 @@ message fires it too, with `switched: false`. See
 </Accordion>
 </Accordions>
 
+## Legal events
+
+Exported from `@vitnode/api/events/legal`. Each fires **after** its write has
+committed. See [Legal documents](/docs/dev/legal).
+
+| Event                     | Payload                                                                                  | Fires when                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `legal.draft.updated`     | `{ documentType, action, actorId }`                                                      | A draft is created, saved or discarded in **AdminCP → System → Legal documents** |
+| `legal.version.announced` | `{ documentType, versionId, version, effectiveAt, requiresAcceptance, publishedById }`   | A version is published and its announcement emails are queued                |
+| `legal.version.effective` | `{ documentType, versionId, version, requiresAcceptance }`                               | A version takes effect: at publication, or when its scheduled time arrives   |
+| `legal.terms.accepted`    | `{ userId, versionId, version, source }`                                                 | A member accepts a Terms version on sign-up or on the acceptance page        |
+
+<Accordions>
+<Accordion title="legal.version.effective">
+
+Emitted by the publish route for a version that takes effect right away, and
+by the `legal-effective` queue task at the scheduled time otherwise. With
+`requiresAcceptance: true` on a Terms version, members who have not accepted
+it are gated from this moment.
+
+<TypeTable
+  type={{
+    documentType: {
+      description: 'Which document changed.',
+      type: '"terms" | "privacy"',
+    },
+    versionId: {
+      description: 'Id of the version row.',
+      type: 'number',
+    },
+    version: {
+      description: 'The version number, counting from 1 per document type.',
+      type: 'number',
+    },
+    requiresAcceptance: {
+      description: 'Whether members must accept it. Always `false` for the Privacy Policy.',
+      type: 'boolean',
+    },
+  }}
+/>
+
+**A listener would** post the new version to a staff channel.
+
+</Accordion>
+<Accordion title="legal.terms.accepted">
+
+Not emitted when a member repeats an acceptance they already gave.
+`source` is `"signup"` for password sign-up and `"gate"` for the acceptance
+page.
+
+</Accordion>
+</Accordions>
+
 ## Page layout events
 
 One name, exported from `@vitnode/api/events/pages` as

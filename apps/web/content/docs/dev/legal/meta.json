@@ -1,0 +1,6 @@
+{
+  "title": "Legal documents",
+  "description": "Versioned Terms of Service and Privacy Policy with public history, comparisons, Terms acceptance and mandatory announcement email.",
+  "icon": "ScrollText",
+  "pages": ["index", "publish", "acceptance", "emails", "developers"]
+}

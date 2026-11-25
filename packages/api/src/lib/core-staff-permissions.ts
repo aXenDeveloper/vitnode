@@ -81,6 +81,12 @@ export const coreStaffPermissions = defineStaffPermissions(manifest, {
       { permission: "can_manage", dependsOn: ["can_view"] },
     ],
     cron: ["can_view", { permission: "can_run", dependsOn: ["can_view"] }],
+    legal: [
+      "can_view",
+      { permission: "can_edit", dependsOn: ["can_view"] },
+      { permission: "can_publish", dependsOn: ["can_edit"] },
+      { permission: "can_view_records", dependsOn: ["can_view"] },
+    ],
     activity_logs: [
       "can_view",
       { permission: "can_view_sensitive", dependsOn: ["can_view"] },

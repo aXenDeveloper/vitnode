@@ -1,5 +1,6 @@
 import { Link, type RegisteredRouter } from '@tanstack/react-router'
 import { LogoVitNodeBrand } from '@vitnode/core/components/logo-vitnode'
+import { LegalFooterLinks } from '@vitnode/core/tanstack/legal'
 
 import { AUTHOR_NAME, AUTHOR_URL, LICENSE_URL, REPOSITORY_URL } from './links'
 import { CanaryPill, GitHubIcon } from './shared'
@@ -118,6 +119,7 @@ export const SiteFooter = () => (
         >
           Open source · MIT licence
         </a>
+        <LegalFooterLinks linkClassName="hover:text-foreground font-medium underline-offset-4 hover:underline" />
         <p>All the ambition. None of the licence fees.</p>
       </div>
     </div>

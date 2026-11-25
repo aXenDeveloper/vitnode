@@ -1,0 +1,73 @@
+---
+title: Announcement emails
+description: Follow the mandatory email that announces each legal document version, understand sent and skipped recipients, and recover from email provider outages.
+icon: MailCheck
+---
+
+import { ImgDocs } from "@/components/fumadocs/img"
+import adminVersion from "./legal-admin-version.webp"
+
+Every published Terms of Service or Privacy Policy version is emailed to every member who had an account when it was announced. The email is a service message: newsletter and notification preferences never suppress it. It carries the document name, version, effective date, your summary of changes, the full-text link, the comparison link and the action needed, if any.
+
+## Follow the delivery
+
+Go to **AdminCP → System → Legal documents → Manage → History** and select **View** on a version.
+
+<ImgDocs
+  src={adminVersion}
+  alt="Version detail page: status badges, effective and announced dates, content fingerprint, the Announcement emails card with Recipients, Sent to provider, Waiting, Failed and Skipped counts, a recipients table and the content preview"
+  withoutBackground
+/>
+
+| Count | Meaning |
+| --- | --- |
+| Recipients | Members on the list, one row per member and version |
+| Sent to provider | Your email provider accepted the message. It does not prove it reached the inbox |
+| Waiting | Not sent yet, or scheduled for another attempt |
+| Failed | Every attempt failed (five per member) |
+| Skipped | Not sent: no usable address, an unverified address, or an account being deleted. Listed apart from failures |
+
+The recipients table (with the **View member delivery and acceptance records** permission) shows each member's status, attempts, last error and the provider's message id. Opening the email or following a link never counts as accepting the Terms.
+
+## How sending works
+
+1. Publishing commits the version and a fan-out job together.
+2. The fan-out adds members in batches of 500 and resumes from where it stopped. Running it again never adds a member twice.
+3. Emails go out in batches of 25 with a per-member idempotency key, so a provider that supports it (for example Resend) drops a duplicate. Each address is checked again right before sending.
+4. A failed send is retried with backoff. A `legal-delivery` cron job every ten minutes restarts any announcement whose queue tasks stopped.
+
+The queue and cron must run, as for all [cron jobs](/docs/dev/cron).
+
+## Recover from an outage
+
+When every send in a batch fails, the card shows **The email provider keeps failing** with the time and the last error. Sending pauses for five minutes, then tries again on its own; a successful send clears the warning.
+
+<Steps>
+
+<Step>
+
+### Fix the provider
+
+Check the email adapter's credentials and the provider's status, then send a test from **AdminCP → System → Integrations → Email → Test email**.
+
+</Step>
+
+<Step>
+
+### Retry the failed emails
+
+Select **Retry failed emails** on the version, or **Retry** on one row. Failed deliveries get a fresh set of attempts and keep their idempotency key, then send right away.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+The **Failed** count drops to zero, **Sent to provider** grows and the outage warning is gone. **AdminCP → Staff → Administrators → Logs** records each retry.
+
+## Related
+
+- [Publish a version](/docs/dev/legal/publish)
+- [Email](/docs/dev/email)
+- [Queue](/docs/dev/advanced/queue)

@@ -11,6 +11,7 @@ import type {
 import { coreFetcher } from "./fetcher/core";
 import { isRateLimited, notifyRateLimited } from "./fetcher/rate-limit";
 import { rawApiFetch } from "./fetcher/raw";
+import { notifyTermsAcceptanceRequired } from "./fetcher/terms-acceptance";
 
 export type {
   AllEndpoints,
@@ -42,8 +43,10 @@ export type FetcherClientOptions = Omit<
  * Use it only in code that never renders on a server; anything rendered by
  * TanStack Start uses `fetcher` from `@vitnode/core/tanstack/fetcher`.
  *
- * Sends `credentials: "include"` (the API may live on another origin) and
- * dispatches a `vitnode:rate-limit` window event on a `429`.
+ * Sends `credentials: "include"` (the API may live on another origin),
+ * dispatches a `vitnode:rate-limit` window event on a `429` and a
+ * `vitnode:terms-acceptance-required` event on a `403
+ * TERMS_ACCEPTANCE_REQUIRED`.
  *
  * Resolves with the `Response` for every status except `500` - check `res.ok`
  * or `res.status` before reading the body; any other `4xx` or `5xx` is also
@@ -89,6 +92,7 @@ export async function fetcherClient<
   if (isRateLimited(response)) {
     notifyRateLimited(response);
   }
+  notifyTermsAcceptanceRequired(response);
 
   return response;
 }

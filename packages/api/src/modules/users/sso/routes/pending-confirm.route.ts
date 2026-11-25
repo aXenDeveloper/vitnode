@@ -19,6 +19,7 @@ export const zodSsoPendingConfirmSchema = z.object({
 });
 
 export const ssoPendingConfirmRoute = buildRoute({
+  termsAcceptance: "exempt",
   allowWhenOffline: true,
   route: {
     method: "post",

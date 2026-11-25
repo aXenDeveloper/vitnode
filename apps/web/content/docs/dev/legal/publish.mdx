@@ -1,0 +1,118 @@
+---
+title: Publish a version
+description: Draft a Terms of Service or Privacy Policy version in the AdminCP, preview the public page and the email, and publish it now or on a later date.
+icon: Megaphone
+---
+
+import { ImgDocs } from "@/components/fumadocs/img"
+import adminOverview from "./legal-admin-overview.webp"
+import adminDraft from "./legal-admin-draft.webp"
+import adminEmail from "./legal-admin-email.webp"
+
+Publishing turns a draft into the next numbered version: frozen for good, public at its own address and announced to every member by email. Use it for the first version and for every change, including typo fixes. A published version is never edited; a correction is a new version.
+
+## Before you begin
+
+- A **transactional email adapter** must be configured (see [Email](/docs/dev/email)). Without one the AdminCP shows **Email isn't configured** and publishing stays off, because every announcement must reach members.
+- Your role needs the staff permissions under **Legal documents**:
+
+| Permission | Allows |
+| --- | --- |
+| View legal documents and their history | Open the pages below |
+| Edit legal document drafts | Start, save and discard drafts |
+| Publish versions and retry announcement emails | Publish, and retry failed emails |
+| View member delivery and acceptance records | See who got the email and who accepted, with their addresses |
+
+## Publish the next version
+
+<Steps>
+
+<Step>
+
+### Open the document
+
+Go to **AdminCP → System → Legal documents**. Each card shows the version in effect, an upcoming one, the draft and how many versions exist. Select **Manage** on **Terms of Service** or **Privacy Policy**.
+
+<ImgDocs
+  src={adminOverview}
+  alt="Legal documents overview with a Terms of Service card and a Privacy Policy card, each listing In effect, Upcoming and Draft, and a Manage button"
+  withoutBackground
+/>
+
+</Step>
+
+<Step>
+
+### Start a draft
+
+On the **Draft** tab, select **Copy version N** to start from the current text, or **Start empty**. A document type has one draft at a time.
+
+</Step>
+
+<Step>
+
+### Write every language
+
+Fill in **Title**, **Summary of changes** and **Full text**. Each field has a language switcher; the site's default language is required, and a reader whose language is missing gets the default one.
+
+Write the summary in plain words, one change per line. It appears in the version history, in member notices and in the email body, so members keep it.
+
+For the Terms you also set:
+
+- **Acceptance wording**: the exact sentence members accept. Leave it empty to use "I have read and agree to the Terms of Service (version N)."
+- **Require fresh acceptance**: on, members must accept this version once it takes effect; off, the version is informational and members are only notified.
+
+Select **Save draft**. Two editors cannot overwrite each other: the second save is refused until the page is reloaded.
+
+<ImgDocs
+  src={adminDraft}
+  alt="Privacy Policy draft editor with Edit, Preview and Email preview tabs, the title, summary and full text fields, Takes effect, and Save draft, Publish and Discard draft buttons"
+  withoutBackground
+/>
+
+</Step>
+
+<Step>
+
+### Preview the page and the email
+
+**Preview** renders your unsaved text exactly as the public page will, in any language. **Email preview** shows the announcement the API will send from the saved draft, with its subject.
+
+<ImgDocs
+  src={adminEmail}
+  alt="Email preview tab showing the subject Privacy Policy update (version 2) and the rendered email with the effective date, What's changing, Read the full text and See what changed"
+  withoutBackground
+/>
+
+</Step>
+
+<Step>
+
+### Publish
+
+Select **Publish…**. The dialog lists anything still missing (a title, text or, after the first version, a summary in the default language). Choose **Right away** or **Later** with a date, review the checklist and confirm it, then select **Publish version N**.
+
+</Step>
+
+</Steps>
+
+Publishing stores the version, its content fingerprint (SHA-256) and the email job in one database transaction. If any of it fails, nothing is published.
+
+## Give advance notice
+
+Pick **Later** to announce a version before it takes effect. Members get the email now, the public page shows **An update is on the way**, and the version page is readable at once. When the date arrives, VitNode switches the version in effect, refreshes cached pages and tells open browser tabs.
+
+Only one version per document can be scheduled at a time; publish the next one after it takes effect.
+
+VitNode does not encode a notice period. The checklist in the publish dialog asks you to confirm the effective date and wording meet what your site must give members. The email, the summary and the stable version links are designed to be the copy members can keep.
+
+## Check the result
+
+- Open `/terms` or `/privacy`: the new version is in effect (or listed as upcoming), with its summary and **See what changed**.
+- The **History** tab lists the version. Select **View** to follow its announcement emails (see [Announcement emails](/docs/dev/legal/emails)).
+- **AdminCP → Staff → Administrators → Logs** records the draft and the publication.
+
+## Related
+
+- [Terms acceptance](/docs/dev/legal/acceptance)
+- [Announcement emails](/docs/dev/legal/emails)

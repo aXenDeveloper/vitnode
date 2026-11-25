@@ -4,6 +4,7 @@ import type {
   zodPasskeyAuthenticationResponseSchema,
 } from "@vitnode/api/modules/users/passkeys/passkeys.schema";
 
+import { LEGAL_ERROR_CODES } from "@vitnode/api/lib/legal/contract";
 import { z } from "zod";
 
 import type { AccountDeletionHold } from "@/views/auth/sign-in/deletion-hold/schema";
@@ -406,6 +407,17 @@ export const signUpInputSchema = z.object({
     .regex(/^(?!.* {2})[\p{L}\p{N}._@ -]*$/u),
   newsletter: z.boolean().optional(),
   password: z.string().min(8).max(1024),
+  /**
+   * The Terms of Service version shown and accepted, while one is effective.
+   * The API creates the account and the acceptance together, or neither.
+   */
+  terms: z
+    .object({
+      accepted: z.literal(true),
+      locale: z.string().min(1).max(32),
+      versionId: z.number().int().positive(),
+    })
+    .optional(),
 });
 
 export type SignUpInput = z.infer<typeof signUpInputSchema>;
@@ -449,7 +461,9 @@ export type SignUpResult =
         | "invalid"
         | "name_exists"
         | "rate_limited"
-        | "server_error";
+        | "server_error"
+        | "terms_changed"
+        | "terms_missing";
     };
 
 export type PasswordResetRequestResult =
@@ -459,6 +473,20 @@ export type PasswordResetRequestResult =
 export type ChangePasswordResult =
   | { ok: false; reason: "invalid_token" | "rate_limited" | "server_error" }
   | { ok: true };
+
+/** The `code` of a typed legal error body, if `text` is one. */
+const legalErrorCodeOf = (text: string | undefined): unknown => {
+  if (!text) return undefined;
+  try {
+    const body: unknown = JSON.parse(text);
+
+    return typeof body === "object" && body !== null && "code" in body
+      ? body.code
+      : undefined;
+  } catch {
+    return undefined;
+  }
+};
 
 export const signUpResultFromStatus = (
   status: number,
@@ -476,8 +504,20 @@ export const signUpResultFromStatus = (
     };
   }
 
-  if (status === 400) return { ok: false, reason: "invalid" };
+  const legalCode = legalErrorCodeOf(conflict);
+  if (status === 400) {
+    return {
+      ok: false,
+      reason:
+        legalCode === LEGAL_ERROR_CODES.acceptanceMissing
+          ? "terms_missing"
+          : "invalid",
+    };
+  }
   if (status === 409) {
+    if (legalCode === LEGAL_ERROR_CODES.versionChanged) {
+      return { ok: false, reason: "terms_changed" };
+    }
     const reason = signUpConflictReason(conflict ?? "");
 
     return {

@@ -297,8 +297,8 @@ export const createAuthOperations = <TSession>(
       return signUpResultFromStatus(201, { body: await readJson(response) });
     }
 
-    if (response.status === 409) {
-      return signUpResultFromStatus(409, {
+    if (response.status === 400 || response.status === 409) {
+      return signUpResultFromStatus(response.status, {
         conflict: await readText(response),
       });
     }

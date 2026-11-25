@@ -528,7 +528,8 @@
           "integrations": "Integracje",
           "plugins": "Wtyczki",
           "title": "System",
-          "notifications": "Powiadomienia"
+          "notifications": "Powiadomienia",
+          "legal": "Dokumenty prawne"
         },
         "user_bar": {
           "debug": "Panel debugowania",
@@ -1624,6 +1625,245 @@
             "desc": "Pokazuj odliczanie na żywo. Po wyłączeniu odwiedzający widzą tylko datę."
           }
         }
+      },
+      "legal": {
+        "title": "Dokumenty prawne",
+        "desc": "Publikuj Regulamin i Politykę prywatności, zachowuj każdą wersję i informuj członków o zmianach.",
+        "email_missing": {
+          "title": "E-mail nie jest skonfigurowany",
+          "desc": "Ogłoszenie nowej wersji wysyła e-mail do każdego członka, więc publikacja jest wyłączona, dopóki nie skonfigurujesz adaptera e-maili transakcyjnych."
+        },
+        "load_error": {
+          "title": "Nie udało się wczytać dokumentów prawnych",
+          "desc": "Sprawdź połączenie i spróbuj ponownie."
+        },
+        "retry": "Spróbuj ponownie",
+        "types": {
+          "terms": "Regulamin",
+          "privacy": "Polityka prywatności"
+        },
+        "type_desc": {
+          "terms": "Członkowie akceptują go przy rejestracji i gdy opublikujesz wersję wymagającą akceptacji.",
+          "privacy": "Członkowie dostają e-mail i powiadomienie o każdej nowej wersji. Akceptacja nie jest potrzebna."
+        },
+        "current": "Obowiązuje",
+        "upcoming": "Nadchodząca",
+        "draft": "Wersja robocza",
+        "none": "Brak",
+        "not_published": "Jeszcze nie opublikowano",
+        "versions_count": "{count, plural, =0 {Brak wersji} one {# wersja} few {# wersje} many {# wersji} other {# wersji}}",
+        "draft_updated": "Edytowano {date}",
+        "open": "Zarządzaj",
+        "status": {
+          "current": "Obowiązuje",
+          "past": "Zastąpiona",
+          "upcoming": "Nadchodząca"
+        },
+        "version": "Wersja {version}",
+        "requires_acceptance": "Wymaga akceptacji",
+        "informational": "Informacyjna",
+        "tabs": {
+          "draft": "Wersja robocza",
+          "history": "Historia"
+        },
+        "draft_empty": {
+          "title": "Brak wersji roboczej",
+          "desc": "Rozpocznij wersję roboczą, aby przygotować kolejną wersję. Skopiuj obecną treść lub zacznij od zera.",
+          "create": "Rozpocznij wersję roboczą",
+          "from_version": "Skopiuj wersję {version}",
+          "blank": "Zacznij od zera"
+        },
+        "editor": {
+          "title": {
+            "label": "Tytuł",
+            "desc": "Wyświetlany jako nagłówek strony i w e-mailach."
+          },
+          "body": {
+            "label": "Pełna treść"
+          },
+          "summary": {
+            "label": "Podsumowanie zmian",
+            "desc": "Prostym językiem, jedna zmiana w wierszu. Pojawia się w historii, powiadomieniach i e-mailu z ogłoszeniem."
+          },
+          "acceptance_label": {
+            "label": "Treść akceptacji",
+            "desc": "Dokładne zdanie, które akceptują członkowie. Pozostaw puste, aby użyć domyślnego."
+          },
+          "requires_acceptance": {
+            "label": "Wymagaj ponownej akceptacji",
+            "desc": "Członkowie muszą zaakceptować tę wersję, gdy wejdzie w życie. Wyłączone oznacza wersję informacyjną: członkowie są powiadamiani, ale nie są pytani ponownie.",
+            "forced": "Pierwsza wersja Regulaminu zawsze wymaga akceptacji."
+          },
+          "effective_at": {
+            "label": "Wchodzi w życie",
+            "desc": "Pozostaw puste, aby wybrać przy publikacji."
+          },
+          "based_on": "Na podstawie wersji {version}",
+          "revision": "Rewizja {revision}",
+          "save": "Zapisz wersję roboczą",
+          "discard": "Odrzuć wersję roboczą",
+          "preview": "Podgląd",
+          "edit": "Edycja",
+          "email_preview": "Podgląd e-maila",
+          "email_saved_only": "Pokazuje ostatnio zapisaną wersję roboczą. Zapisz, aby zobaczyć najnowsze zmiany.",
+          "preview_locale": "Język",
+          "toast": {
+            "saved": {
+              "title": "Zapisano wersję roboczą",
+              "desc": "Zmiany są zapisane. Nic nie jest publiczne, dopóki nie opublikujesz."
+            },
+            "created": {
+              "title": "Rozpoczęto wersję roboczą",
+              "desc": "Edytuj ją i opublikuj, gdy będzie gotowa."
+            },
+            "discarded": {
+              "title": "Odrzucono wersję roboczą",
+              "desc": "Wersja robocza została usunięta. Opublikowane wersje się nie zmieniły."
+            },
+            "conflict": {
+              "title": "Ktoś inny zapisał tę wersję roboczą",
+              "desc": "Odśwież, aby zobaczyć jego zmiany, zanim zapiszesz ponownie."
+            }
+          },
+          "discard_confirm": {
+            "title": "Odrzucić tę wersję roboczą?",
+            "desc": "Niezapisana treść zostanie usunięta. Opublikowane wersje pozostaną bez zmian.",
+            "confirm": "Odrzuć wersję roboczą"
+          }
+        },
+        "publish": {
+          "button": "Opublikuj…",
+          "title": "Publikacja wersji {version}",
+          "desc": "Publikacja zamraża tę treść na stałe i wysyła e-mail do każdego członka. Późniejsze poprawki wymagają nowej wersji.",
+          "effective_at": {
+            "label": "Wchodzi w życie",
+            "desc": "Teraz albo w późniejszym terminie, aby uprzedzić członków z wyprzedzeniem."
+          },
+          "now": "Od razu",
+          "later": "Później",
+          "checklist": {
+            "title": "Zanim opublikujesz",
+            "notice_period": "Data wejścia w życie zapewnia członkom okres powiadomienia wymagany w mojej witrynie.",
+            "wording": "Podsumowanie i treść zawierają to, o czym członkowie muszą zostać poinformowani, w każdym obsługiwanym języku.",
+            "email": "Każdy członek dostanie obowiązkowy e-mail, niezależnie od ustawień newslettera i powiadomień.",
+            "confirm": "Sprawdziłem(-am) listę kontrolną publikacji"
+          },
+          "acceptance_note": "Członkowie muszą zaakceptować tę wersję, gdy wejdzie w życie.",
+          "informational_note": "Ta wersja jest informacyjna: członkowie są powiadamiani, ale nie są proszeni o akceptację.",
+          "submit": "Opublikuj wersję {version}",
+          "problems": {
+            "title": "Najpierw dokończ wersję roboczą",
+            "title_missing": "Dodaj tytuł w języku domyślnym.",
+            "body_missing": "Dodaj pełną treść w języku domyślnym.",
+            "summary_missing": "Dodaj podsumowanie zmian w języku domyślnym."
+          },
+          "upcoming_exists": "Wersja {version} jest zaplanowana na {date}. Opublikuj tę po jej wejściu w życie.",
+          "toast": {
+            "published": {
+              "title": "Opublikowano wersję {version}",
+              "desc": "Jest już publiczna, a e-maile z ogłoszeniem są w drodze."
+            },
+            "error": {
+              "title": "Nie udało się opublikować",
+              "desc": "Nic nie zostało opublikowane. Sprawdź wersję roboczą i spróbuj ponownie."
+            },
+            "email_missing": {
+              "title": "E-mail nie jest skonfigurowany",
+              "desc": "Skonfiguruj adapter e-maili transakcyjnych i opublikuj ponownie."
+            },
+            "upcoming": {
+              "title": "Zaplanowano już inną wersję",
+              "desc": "Poczekaj, aż wejdzie w życie, i wtedy opublikuj tę."
+            }
+          }
+        },
+        "history": {
+          "empty": "Nie opublikowano jeszcze żadnej wersji.",
+          "version": "Wersja",
+          "effective": "Obowiązuje od",
+          "delivery": "E-maile",
+          "acceptances": "Akceptacje",
+          "actions": "Akcje",
+          "view": "Pokaż"
+        },
+        "detail": {
+          "title": "{title}, wersja {version}",
+          "published_by": "Opublikował(a) {name}",
+          "announced": "Ogłoszono {date}",
+          "announced_label": "Ogłoszono",
+          "effective": "Obowiązuje od {date}",
+          "hash": "Odcisk treści (SHA-256)",
+          "public_page": "Strona publiczna",
+          "changes": "Publiczne zmiany",
+          "content": "Treść",
+          "language": "Język",
+          "acceptances": {
+            "title": "Akceptacje",
+            "desc": "Członkowie, którzy zaakceptowali dokładnie tę wersję.",
+            "empty": "Nikt jeszcze nie zaakceptował tej wersji.",
+            "member": "Członek",
+            "accepted_at": "Zaakceptowano",
+            "locale": "Język",
+            "source": "Gdzie",
+            "source_signup": "Rejestracja",
+            "source_gate": "Strona akceptacji",
+            "load_more": "Wczytaj więcej",
+            "restricted": "Potrzebujesz uprawnienia do wglądu w dane członków."
+          }
+        },
+        "delivery": {
+          "title": "E-maile z ogłoszeniem",
+          "desc": "„Wysłano” oznacza, że dostawca poczty przyjął wiadomość - nie że trafiła do skrzynki.",
+          "total": "Odbiorcy",
+          "sent": "Przekazano dostawcy",
+          "pending": "Oczekuje",
+          "failed": "Nieudane",
+          "skipped": "Pominięte",
+          "skipped_reasons": {
+            "no_address": "Brak użytecznego adresu",
+            "unverified": "Niezweryfikowany adres",
+            "deleted": "Konto w trakcie usuwania"
+          },
+          "fanout": {
+            "pending": "Budowanie listy odbiorców…",
+            "running": "Budowanie listy odbiorców…",
+            "completed": "Lista odbiorców gotowa"
+          },
+          "incident": {
+            "title": "Dostawca poczty wciąż zwraca błędy",
+            "desc": "Od {date}: {error}. Wysyłka wstrzymuje się i wznawia sama; ponów nieudane e-maile po naprawie."
+          },
+          "retry": "Ponów nieudane e-maile",
+          "retry_one": "Ponów",
+          "retried": {
+            "title": "Ponawianie: {count, plural, one {# e-mail} few {# e-maile} many {# e-maili} other {# e-maili}}",
+            "desc": "Wróciły do kolejki z nową pulą prób."
+          },
+          "retry_error": {
+            "title": "Nie udało się ponowić",
+            "desc": "Sprawdź, czy e-mail jest skonfigurowany, i spróbuj ponownie."
+          },
+          "filter": {
+            "all": "Wszystkie",
+            "pending": "Oczekuje",
+            "sending": "Wysyłanie",
+            "sent": "Wysłano",
+            "failed": "Nieudane",
+            "skipped": "Pominięte"
+          },
+          "table": {
+            "member": "Członek",
+            "status": "Status",
+            "attempts": "Próby",
+            "last": "Ostatnia próba",
+            "error": "Ostatni błąd",
+            "message_id": "Identyfikator wiadomości dostawcy"
+          },
+          "empty": "Brak pasujących doręczeń.",
+          "load_more": "Wczytaj więcej",
+          "restricted": "Potrzebujesz uprawnienia do wglądu w dane członków, aby zobaczyć poszczególne doręczenia."
+        },
+        "load_more": "Wczytaj więcej"
       }
     },
     "user": {
@@ -5929,6 +6169,13 @@
           "created": "Utworzono akcję ostrzeżeń",
           "updated": "Zaktualizowano akcję ostrzeżeń",
           "deleted": "Usunięto akcję ostrzeżeń"
+        },
+        "legal": {
+          "draft_created": "Rozpoczęto wersję roboczą dokumentu prawnego",
+          "draft_saved": "Zapisano wersję roboczą dokumentu prawnego",
+          "draft_discarded": "Odrzucono wersję roboczą dokumentu prawnego",
+          "version_announced": "Opublikowano wersję dokumentu prawnego",
+          "deliveries_retried": "Ponowiono e-maile z ogłoszeniem dokumentu prawnego"
         }
       },
       "fields": {
@@ -6141,6 +6388,170 @@
         "manage": "Zarządzaj statusem strony",
         "document_title": "(Offline) {title}"
       }
+    },
+    "legal": {
+      "acceptance": {
+        "default_wording": "Przeczytałem(-am) i akceptuję {title} (wersja {version})."
+      },
+      "email": {
+        "subject": "Aktualizacja: {title} (wersja {version})",
+        "heading": "Aktualizujemy {title}",
+        "intro": "Wersja {version} dokumentu {title} obowiązuje od {date}.",
+        "summary_title": "Co się zmienia",
+        "no_summary": "Szczegóły znajdziesz w pełnej treści.",
+        "action_terms_required": "Od {date} przy następnym logowaniu lub korzystaniu ze społeczności poprosimy Cię o akceptację nowego Regulaminu.",
+        "action_informational": "Nie musisz nic robić. Korzystanie ze społeczności po {date} oznacza, że obowiązuje Cię nowa wersja.",
+        "full_text": "Przeczytaj pełną treść",
+        "compare": "Zobacz, co się zmieniło",
+        "retain": "Zachowaj tę wiadomość. Każda wersja pozostaje dostępna pod adresem {url}.",
+        "mandatory": "Otrzymujesz tę wiadomość serwisową, ponieważ masz konto. Wysyłamy ją niezależnie od ustawień newslettera i powiadomień."
+      },
+      "types": {
+        "terms": "Regulamin",
+        "privacy": "Polityka prywatności"
+      },
+      "version": "Wersja {version}",
+      "version_short": "v{version}",
+      "status": {
+        "current": "Obowiązuje",
+        "past": "Zastąpiona",
+        "upcoming": "Nadchodząca"
+      },
+      "meta": {
+        "announced": "Ogłoszono {date}",
+        "effective": "Obowiązuje od {date}",
+        "effective_since": "Obowiązuje od {date}",
+        "effective_from": "Wchodzi w życie {date}"
+      },
+      "requires_acceptance": "Wymaga akceptacji",
+      "informational": "Informacyjna",
+      "actions": {
+        "print": "Drukuj",
+        "download": "Pobierz",
+        "history": "Historia wersji",
+        "changes": "Zobacz, co się zmieniło",
+        "read": "Czytaj",
+        "compare": "Porównaj",
+        "current": "Przeczytaj obowiązującą wersję"
+      },
+      "empty": {
+        "title": "Nic jeszcze nie opublikowano",
+        "desc": "Ten dokument nie został jeszcze opublikowany. Zajrzyj tu wkrótce."
+      },
+      "not_found": {
+        "title": "Nie znaleziono wersji",
+        "desc": "Taka wersja nie istnieje. Sprawdź jej numer."
+      },
+      "load_error": {
+        "title": "Nie udało się wczytać dokumentu",
+        "desc": "Sprawdź połączenie i spróbuj ponownie."
+      },
+      "retry": "Spróbuj ponownie",
+      "upcoming": {
+        "title": "Nadchodzi aktualizacja",
+        "desc": "Wersja {version} wchodzi w życie {date}."
+      },
+      "archived": {
+        "title": "Czytasz starszą wersję",
+        "desc": "Obecnie obowiązuje wersja {version}."
+      },
+      "summary_title": "Co się zmieniło",
+      "history": {
+        "title": "Historia wersji",
+        "desc": "Każda opublikowana wersja pozostaje tutaj dostępna.",
+        "version": "Wersja",
+        "announced": "Ogłoszono",
+        "effective": "Obowiązuje od",
+        "status": "Status",
+        "links": "Linki"
+      },
+      "compare": {
+        "title": "Zmiany w dokumencie {title}, wersja {version}",
+        "desc": "W porównaniu z wersją {from}.",
+        "desc_first": "To pierwsza wersja, więc wszystko jest nowe.",
+        "with": "Porównaj z",
+        "no_changes": "Treść jest taka sama; zmieniły się tylko szczegóły, np. daty.",
+        "language_note": "Wyświetlono w języku {locale}, bo obie wersje są w nim dostępne.",
+        "language_mismatch": "Te wersje nie mają wspólnego języka, więc każda strona jest pokazana we własnym.",
+        "kinds": {
+          "added": "Dodano",
+          "removed": "Usunięto",
+          "changed": "Zmieniono",
+          "unchanged": "Bez zmian"
+        },
+        "before": "Przed",
+        "after": "Po",
+        "show_unchanged": "Pokaż niezmienione fragmenty ({count})",
+        "hide_unchanged": "Ukryj niezmienione fragmenty"
+      },
+      "gate": {
+        "title": "Zapoznaj się ze zaktualizowanym Regulaminem",
+        "title_first": "Zapoznaj się z Regulaminem",
+        "desc": "Zaakceptuj wersję {version}, aby dalej korzystać ze społeczności. Nadal możesz się wylogować, pobrać swoje dane lub usunąć konto.",
+        "desc_first": "Zaakceptuj Regulamin, aby zacząć korzystać ze społeczności. Nadal możesz się wylogować, pobrać swoje dane lub usunąć konto.",
+        "since": "Zmiany od wersji {version}, którą zaakceptowałeś(-aś) ostatnio",
+        "full_text": "Pełna treść",
+        "accept": "Akceptuję Regulamin {version}",
+        "sign_out": "Wyloguj się",
+        "links": {
+          "full": "Otwórz pełną treść",
+          "changes": "Zobacz wszystkie zmiany",
+          "privacy": "Przeczytaj Politykę prywatności",
+          "data": "Pobierz lub usuń swoje dane"
+        },
+        "toast": {
+          "accepted": {
+            "title": "Dziękujemy za akceptację",
+            "desc": "Regulamin w wersji {version} został zapisany na Twoim koncie."
+          },
+          "changed": {
+            "title": "Regulamin właśnie się zmienił",
+            "desc": "Podczas czytania weszła w życie nowsza wersja. Zapoznaj się z nią."
+          },
+          "error": {
+            "title": "Nie udało się zapisać akceptacji",
+            "desc": "Nic nie zostało zapisane. Sprawdź połączenie i spróbuj ponownie."
+          }
+        }
+      },
+      "notice": {
+        "terms": "Zaktualizowaliśmy Regulamin (wersja {version}).",
+        "privacy": "Zaktualizowaliśmy Politykę prywatności (wersja {version}).",
+        "terms_upcoming": "Regulamin zmienia się {date} (wersja {version}).",
+        "privacy_upcoming": "Polityka prywatności zmienia się {date} (wersja {version}).",
+        "acceptance_upcoming": "Gdy zmiany wejdą w życie, poprosimy Cię o ich akceptację.",
+        "changes": "Zobacz, co się zmieniło",
+        "dismiss": "Zamknij",
+        "dismiss_error": "Nie udało się zamknąć powiadomienia. Spróbuj ponownie.",
+        "region": "Aktualizacje dokumentów prawnych"
+      },
+      "sign_up": {
+        "terms": "Akceptuję <link>{title}</link> (wersja {version}).",
+        "terms_required": "Zaakceptuj Regulamin, aby założyć konto.",
+        "privacy": "Dowiedz się, jak przetwarzamy Twoje dane, w dokumencie <link>{title}</link>.",
+        "changed": "Regulamin właśnie został zaktualizowany. Zapoznaj się z nową wersją i zaznacz pole ponownie."
+      },
+      "sso": {
+        "privacy": "Kontynuując, zakładasz konto zgodnie z naszą <privacy>Polityką prywatności</privacy>. W następnym kroku zapoznasz się z <terms>Regulaminem</terms>."
+      },
+      "footer": {
+        "label": "Dokumenty prawne"
+      },
+      "settings": {
+        "title": "Zgody prawne",
+        "desc": "Zaakceptowane przez Ciebie wersje Regulaminu. Są częścią pobieranych danych.",
+        "empty": "Nie zaakceptowałeś(-aś) jeszcze żadnego Regulaminu.",
+        "accepted_at": "Zaakceptowano {date}",
+        "via": {
+          "signup": "Podczas rejestracji",
+          "gate": "Po aktualizacji"
+        },
+        "language": "Język: {locale}",
+        "load_error": {
+          "title": "Nie udało się wczytać zgód",
+          "desc": "Sprawdź połączenie i spróbuj ponownie."
+        }
+      }
     }
   },
   "@vitnode/core:files:can_edit_alt": "Edycja tekstu alternatywnego obrazów",
@@ -6171,6 +6582,11 @@
   "@vitnode/core:activity_logs:can_view": "Wyświetlanie dziennika aktywności",
   "@vitnode/core:activity_logs:can_view_sensitive": "Wyświetlanie adresów IP i szczegółów technicznych",
   "@vitnode/core:activity_logs:can_export": "Eksportowanie dziennika aktywności",
+  "@vitnode/core:legal": "Dokumenty prawne",
+  "@vitnode/core:legal:can_view": "Przeglądanie dokumentów prawnych i ich historii",
+  "@vitnode/core:legal:can_edit": "Edycja wersji roboczych dokumentów prawnych",
+  "@vitnode/core:legal:can_publish": "Publikowanie wersji i ponawianie e-maili z ogłoszeniem",
+  "@vitnode/core:legal:can_view_records": "Wgląd w dane doręczeń i akceptacji członków",
   "@vitnode/core:moderation:can_view_reports": "Wyświetlanie zgłoszeń",
   "@vitnode/core:moderation:can_manage_reports": "Przejmowanie, przydzielanie, opisywanie i rozwiązywanie zgłoszeń",
   "@vitnode/core:moderation:can_edit_notes": "Edytowanie notatek dowolnego moderatora",

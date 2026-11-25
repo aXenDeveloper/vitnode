@@ -48,9 +48,9 @@ export const createSignUpFormSchema = ({
       .default(""),
     newsletter: z.boolean().default(false).optional(),
     password: createPasswordZodSchema({ fieldRequired, invalidPassword }),
-    // Never sent to the API - it has no `terms` field. The tick is a local
-    // precondition, which is why it lives in the form schema and is dropped by
-    // the submit callback.
+    // The tick itself is never sent. While a Terms of Service version is
+    // effective, the submit callback sends that exact version as `terms`
+    // instead; otherwise it stays a local precondition.
     terms: z
       .boolean()
       .refine(value => value, termsRequired)
@@ -66,6 +66,8 @@ export interface SignUpSubmitValues {
   name: string;
   newsletter?: boolean;
   password: string;
+  /** The effective Terms version the member ticked, in the language shown. */
+  terms?: { accepted: true; locale: string; versionId: number };
 }
 
 export type SignUpMutationResult =
@@ -73,7 +75,11 @@ export type SignUpMutationResult =
   | { emailConfirmation: string; message?: never }
   | {
       emailConfirmation?: never;
-      message: "email_exists" | "Internal Server Error" | "name_exists";
+      message:
+        | "email_exists"
+        | "Internal Server Error"
+        | "name_exists"
+        | "terms_changed";
     };
 
 /** Which field a conflict belongs to. */
@@ -85,6 +91,7 @@ export const signUpFormOutcome = (
   | null
   | { email: string; kind: "confirmation" }
   | { field: SignUpConflictField; kind: "field" }
+  | { kind: "terms_changed" }
   | { kind: "toast" } => {
   if (!result) return null;
 
@@ -96,6 +103,7 @@ export const signUpFormOutcome = (
     return { field: "email", kind: "field" };
   }
   if (result.message === "name_exists") return { field: "name", kind: "field" };
+  if (result.message === "terms_changed") return { kind: "terms_changed" };
 
   return { kind: "toast" };
 };

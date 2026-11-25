@@ -6,6 +6,7 @@ import { aiAdminModule } from "./ai/ai.module";
 import { dashboardAdminModule } from "./dashboard/dashboard.module";
 import { debugAdminModule } from "./debug/debug.module";
 import { filesAdminModule } from "./files/files.module";
+import { legalAdminModule } from "./legal/legal.module";
 import { notificationsAdminModule } from "./notifications/notifications.module";
 import { pluginsAdminModule } from "./plugins/plugins.module";
 import { reactionsAdminModule } from "./reactions/reactions.module";
@@ -37,6 +38,7 @@ export const adminModule = buildModule({
     reportReasonsAdminModule,
     warningsAdminModule,
     siteAdminModule,
+    legalAdminModule,
   ],
   cronJobs: [],
 });

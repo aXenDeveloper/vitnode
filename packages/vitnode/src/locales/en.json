@@ -40,6 +40,11 @@
   "@vitnode/core:site_status:can_view": "View whether the site is online and its offline message",
   "@vitnode/core:site_status:can_manage": "Switch the site off and on, and edit its offline message",
   "@vitnode/core:site_status:can_access_offline": "Access the site while it's offline",
+  "@vitnode/core:legal": "Legal documents",
+  "@vitnode/core:legal:can_view": "View legal documents and their history",
+  "@vitnode/core:legal:can_edit": "Edit legal document drafts",
+  "@vitnode/core:legal:can_publish": "Publish versions and retry announcement emails",
+  "@vitnode/core:legal:can_view_records": "View member delivery and acceptance records",
   "@vitnode/core:queue": "Queue Tasks",
   "@vitnode/core:queue:can_view": "View queue tasks",
   "@vitnode/core:plugins": "Plugins",
@@ -3584,6 +3589,13 @@
           "created": "Created warning action",
           "updated": "Updated warning action",
           "deleted": "Deleted warning action"
+        },
+        "legal": {
+          "draft_created": "Started a legal document draft",
+          "draft_saved": "Saved a legal document draft",
+          "draft_discarded": "Discarded a legal document draft",
+          "version_announced": "Published a legal document version",
+          "deliveries_retried": "Retried legal announcement emails"
         }
       },
       "fields": {
@@ -3855,6 +3867,157 @@
         "manage": "Manage site status",
         "document_title": "(Offline) {title}"
       }
+    },
+    "legal": {
+      "acceptance": {
+        "default_wording": "I have read and agree to the {title} (version {version})."
+      },
+      "types": {
+        "terms": "Terms of Service",
+        "privacy": "Privacy Policy"
+      },
+      "version": "Version {version}",
+      "version_short": "v{version}",
+      "status": {
+        "current": "In effect",
+        "past": "Replaced",
+        "upcoming": "Upcoming"
+      },
+      "meta": {
+        "announced": "Announced {date}",
+        "effective": "Effective {date}",
+        "effective_since": "In effect since {date}",
+        "effective_from": "Takes effect {date}"
+      },
+      "requires_acceptance": "Requires acceptance",
+      "informational": "Informational",
+      "actions": {
+        "print": "Print",
+        "download": "Download",
+        "history": "Version history",
+        "changes": "See what changed",
+        "read": "Read",
+        "compare": "Compare",
+        "current": "Read the current version"
+      },
+      "empty": {
+        "title": "Nothing published yet",
+        "desc": "This document hasn't been published yet. Check back soon."
+      },
+      "not_found": {
+        "title": "Version not found",
+        "desc": "This version doesn't exist. It may have a typo in its number."
+      },
+      "load_error": {
+        "title": "The document didn't load",
+        "desc": "Check your connection and try again."
+      },
+      "retry": "Try again",
+      "upcoming": {
+        "title": "An update is on the way",
+        "desc": "Version {version} takes effect on {date}."
+      },
+      "archived": {
+        "title": "You're reading an older version",
+        "desc": "Version {version} is the one in effect now."
+      },
+      "summary_title": "What changed",
+      "history": {
+        "title": "Version history",
+        "desc": "Every published version stays available here.",
+        "version": "Version",
+        "announced": "Announced",
+        "effective": "Effective",
+        "status": "Status",
+        "links": "Links"
+      },
+      "compare": {
+        "title": "Changes in {title} version {version}",
+        "desc": "Compared with version {from}.",
+        "desc_first": "This is the first version, so everything is new.",
+        "with": "Compare with",
+        "no_changes": "The text is the same; only details like dates changed.",
+        "language_note": "Shown in {locale} because both versions are available in it.",
+        "language_mismatch": "These versions share no language, so each side is shown in its own.",
+        "kinds": {
+          "added": "Added",
+          "removed": "Removed",
+          "changed": "Changed",
+          "unchanged": "Unchanged"
+        },
+        "before": "Before",
+        "after": "After",
+        "show_unchanged": "Show unchanged sections ({count})",
+        "hide_unchanged": "Hide unchanged sections"
+      },
+      "gate": {
+        "title": "Review our updated Terms of Service",
+        "title_first": "Review our Terms of Service",
+        "desc": "Please accept version {version} to keep using the community. You can still sign out, download your data or delete your account.",
+        "desc_first": "Please accept the Terms of Service to start using the community. You can still sign out, download your data or delete your account.",
+        "since": "Changes since version {version}, the one you accepted last",
+        "full_text": "Full text",
+        "accept": "Accept Terms of Service {version}",
+        "sign_out": "Sign out",
+        "links": {
+          "full": "Open the full text",
+          "changes": "See all changes",
+          "privacy": "Read the Privacy Policy",
+          "data": "Download or delete your data"
+        },
+        "toast": {
+          "accepted": {
+            "title": "Thanks for accepting",
+            "desc": "Terms of Service version {version} is saved to your account."
+          },
+          "changed": {
+            "title": "The Terms just changed",
+            "desc": "A newer version took effect while you were reading. Please review it."
+          },
+          "error": {
+            "title": "Couldn't save your acceptance",
+            "desc": "Nothing was recorded. Check your connection and try again."
+          }
+        }
+      },
+      "notice": {
+        "terms": "We updated our Terms of Service (version {version}).",
+        "privacy": "We updated our Privacy Policy (version {version}).",
+        "terms_upcoming": "Our Terms of Service change on {date} (version {version}).",
+        "privacy_upcoming": "Our Privacy Policy changes on {date} (version {version}).",
+        "acceptance_upcoming": "You'll be asked to accept them once they take effect.",
+        "changes": "See what changed",
+        "dismiss": "Dismiss",
+        "dismiss_error": "Couldn't dismiss the notice. Try again.",
+        "region": "Legal updates"
+      },
+      "sign_up": {
+        "terms": "I agree to the <link>{title}</link> (version {version}).",
+        "terms_required": "Accept the Terms of Service to create an account.",
+        "privacy": "Read how we handle your data in our <link>{title}</link>.",
+        "changed": "The Terms of Service were just updated. Review the new version, then tick the box again."
+      },
+      "sso": {
+        "privacy": "By continuing, your account is created under our <privacy>Privacy Policy</privacy>. You'll review the <terms>Terms of Service</terms> next."
+      },
+      "footer": {
+        "label": "Legal"
+      },
+      "settings": {
+        "title": "Legal agreements",
+        "desc": "The Terms of Service versions you accepted. They're part of your data download.",
+        "empty": "You haven't accepted any Terms of Service yet.",
+        "accepted_at": "Accepted {date}",
+        "via": {
+          "signup": "When signing up",
+          "gate": "After an update"
+        },
+        "language": "Language: {locale}",
+        "load_error": {
+          "title": "Your agreements didn't load",
+          "desc": "Check your connection and try again."
+        }
+      }
     }
   },
   "admin": {
@@ -4047,7 +4210,8 @@
           "integrations": "Integrations",
           "files": "Files",
           "notifications": "Notifications",
-          "plugins": "Plugins"
+          "plugins": "Plugins",
+          "legal": "Legal documents"
         },
         "ai": {
           "title": "Artificial Intelligence (AI)",
@@ -5665,6 +5829,245 @@
             "desc": "Show a live countdown. When off, visitors see only the date."
           }
         }
+      },
+      "legal": {
+        "title": "Legal documents",
+        "desc": "Publish your Terms of Service and Privacy Policy, keep every version and tell members about changes.",
+        "email_missing": {
+          "title": "Email isn't configured",
+          "desc": "Announcing a new version emails every member, so publishing stays off until a transactional email adapter is set up."
+        },
+        "load_error": {
+          "title": "Legal documents didn't load",
+          "desc": "Check your connection and try again."
+        },
+        "retry": "Try again",
+        "types": {
+          "terms": "Terms of Service",
+          "privacy": "Privacy Policy"
+        },
+        "type_desc": {
+          "terms": "Members accept it on sign-up and when you publish a version that requires acceptance.",
+          "privacy": "Members get an email and a notice for every new version. No acceptance needed."
+        },
+        "current": "In effect",
+        "upcoming": "Upcoming",
+        "draft": "Draft",
+        "none": "None",
+        "not_published": "Not published yet",
+        "versions_count": "{count, plural, =0 {No versions} one {# version} other {# versions}}",
+        "draft_updated": "Edited {date}",
+        "open": "Manage",
+        "status": {
+          "current": "In effect",
+          "past": "Replaced",
+          "upcoming": "Upcoming"
+        },
+        "version": "Version {version}",
+        "requires_acceptance": "Requires acceptance",
+        "informational": "Informational",
+        "tabs": {
+          "draft": "Draft",
+          "history": "History"
+        },
+        "draft_empty": {
+          "title": "No draft",
+          "desc": "Start a draft to prepare the next version. Copy the current text or start from scratch.",
+          "create": "Start draft",
+          "from_version": "Copy version {version}",
+          "blank": "Start empty"
+        },
+        "editor": {
+          "title": {
+            "label": "Title",
+            "desc": "Shown as the page heading and in emails."
+          },
+          "body": {
+            "label": "Full text"
+          },
+          "summary": {
+            "label": "Summary of changes",
+            "desc": "Plain words, one change per line. It's shown in history, notices and the announcement email."
+          },
+          "acceptance_label": {
+            "label": "Acceptance wording",
+            "desc": "The exact sentence members accept. Leave empty to use the default wording."
+          },
+          "requires_acceptance": {
+            "label": "Require fresh acceptance",
+            "desc": "Members must accept this version once it takes effect. Off makes it informational: members are notified but not asked again.",
+            "forced": "The first Terms of Service version always requires acceptance."
+          },
+          "effective_at": {
+            "label": "Takes effect",
+            "desc": "Leave empty to choose when publishing."
+          },
+          "based_on": "Based on version {version}",
+          "revision": "Revision {revision}",
+          "save": "Save draft",
+          "discard": "Discard draft",
+          "preview": "Preview",
+          "edit": "Edit",
+          "email_preview": "Email preview",
+          "preview_locale": "Language",
+          "toast": {
+            "saved": {
+              "title": "Draft saved",
+              "desc": "Your changes are saved. Nothing is public until you publish."
+            },
+            "created": {
+              "title": "Draft started",
+              "desc": "Edit it and publish when you're ready."
+            },
+            "discarded": {
+              "title": "Draft discarded",
+              "desc": "The draft is gone. Published versions are unchanged."
+            },
+            "conflict": {
+              "title": "Someone else saved this draft",
+              "desc": "Reload to see their changes before saving again."
+            }
+          },
+          "discard_confirm": {
+            "title": "Discard this draft?",
+            "desc": "The unsaved text is deleted. Published versions stay as they are.",
+            "confirm": "Discard draft"
+          },
+          "email_saved_only": "Shows the last saved draft. Save to preview your latest changes."
+        },
+        "publish": {
+          "button": "Publish…",
+          "title": "Publish version {version}",
+          "desc": "Publishing freezes this text for good and emails every member. Fixes later need a new version.",
+          "effective_at": {
+            "label": "Takes effect",
+            "desc": "Now, or a later date to give members advance notice."
+          },
+          "now": "Right away",
+          "later": "Later",
+          "checklist": {
+            "title": "Before you publish",
+            "notice_period": "The effective date gives members the notice my site needs to give.",
+            "wording": "The summary and wording are what members must be told, in every language you serve.",
+            "email": "Every member gets a mandatory email, whatever their newsletter or notification settings.",
+            "confirm": "I've checked the publication checklist"
+          },
+          "acceptance_note": "Members must accept this version once it takes effect.",
+          "informational_note": "This version is informational: members are notified, not asked to accept.",
+          "submit": "Publish version {version}",
+          "problems": {
+            "title": "Finish the draft first",
+            "title_missing": "Add a title in the default language.",
+            "body_missing": "Add the full text in the default language.",
+            "summary_missing": "Add a summary of changes in the default language."
+          },
+          "upcoming_exists": "Version {version} is scheduled for {date}. Publish this one after it takes effect.",
+          "toast": {
+            "published": {
+              "title": "Version {version} published",
+              "desc": "It's public now and announcement emails are on their way."
+            },
+            "error": {
+              "title": "Couldn't publish",
+              "desc": "Nothing was published. Check the draft and try again."
+            },
+            "email_missing": {
+              "title": "Email isn't configured",
+              "desc": "Set up a transactional email adapter, then publish again."
+            },
+            "upcoming": {
+              "title": "Another version is scheduled",
+              "desc": "Wait until it takes effect, then publish this one."
+            }
+          }
+        },
+        "history": {
+          "empty": "No versions published yet.",
+          "version": "Version",
+          "effective": "Effective",
+          "delivery": "Emails",
+          "acceptances": "Acceptances",
+          "actions": "Actions",
+          "view": "View"
+        },
+        "detail": {
+          "title": "{title} version {version}",
+          "published_by": "Published by {name}",
+          "announced": "Announced {date}",
+          "effective": "Effective {date}",
+          "hash": "Content fingerprint (SHA-256)",
+          "public_page": "Public page",
+          "changes": "Public changes",
+          "content": "Content",
+          "language": "Language",
+          "acceptances": {
+            "title": "Acceptances",
+            "desc": "Members who accepted exactly this version.",
+            "empty": "Nobody has accepted this version yet.",
+            "member": "Member",
+            "accepted_at": "Accepted",
+            "locale": "Language",
+            "source": "Where",
+            "source_signup": "Sign-up",
+            "source_gate": "Acceptance page",
+            "load_more": "Load more",
+            "restricted": "You need the permission to view member records."
+          },
+          "announced_label": "Announced"
+        },
+        "delivery": {
+          "title": "Announcement emails",
+          "desc": "\"Sent\" means the email provider accepted the message - not that it reached the inbox.",
+          "total": "Recipients",
+          "sent": "Sent to provider",
+          "pending": "Waiting",
+          "failed": "Failed",
+          "skipped": "Skipped",
+          "skipped_reasons": {
+            "no_address": "No usable address",
+            "unverified": "Address not verified",
+            "deleted": "Account being deleted"
+          },
+          "fanout": {
+            "pending": "Building the recipient list…",
+            "running": "Building the recipient list…",
+            "completed": "Recipient list complete"
+          },
+          "incident": {
+            "title": "The email provider keeps failing",
+            "desc": "Since {date}: {error}. Sending pauses and resumes on its own; retry failed emails once it's fixed."
+          },
+          "retry": "Retry failed emails",
+          "retry_one": "Retry",
+          "retried": {
+            "title": "Retrying {count, plural, one {# email} other {# emails}}",
+            "desc": "They're queued again with a fresh set of attempts."
+          },
+          "retry_error": {
+            "title": "Couldn't retry",
+            "desc": "Check that email is configured and try again."
+          },
+          "filter": {
+            "all": "All",
+            "pending": "Waiting",
+            "sending": "Sending",
+            "sent": "Sent",
+            "failed": "Failed",
+            "skipped": "Skipped"
+          },
+          "table": {
+            "member": "Member",
+            "status": "Status",
+            "attempts": "Attempts",
+            "last": "Last attempt",
+            "error": "Last error",
+            "message_id": "Provider message id"
+          },
+          "empty": "No deliveries match.",
+          "load_more": "Load more",
+          "restricted": "You need the permission to view member records to see individual deliveries."
+        },
+        "load_more": "Load more"
       }
     },
     "debug": {

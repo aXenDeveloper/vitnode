@@ -16,6 +16,7 @@ export const zodSsoPendingEmailSchema = z.object({
 });
 
 export const ssoPendingEmailRoute = buildRoute({
+  termsAcceptance: "exempt",
   allowWhenOffline: true,
   route: {
     method: "post",

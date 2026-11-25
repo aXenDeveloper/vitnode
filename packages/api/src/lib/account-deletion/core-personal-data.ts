@@ -3,6 +3,12 @@ import { and, eq } from "drizzle-orm";
 import { core_users_deletions } from "@/database/account-deletions";
 import { core_audit_logs } from "@/database/audit";
 import { core_files } from "@/database/files";
+import {
+  core_legal_acceptances,
+  core_legal_deliveries,
+  core_legal_notice_dismissals,
+  core_legal_versions,
+} from "@/database/legal";
 import { core_logs } from "@/database/logs";
 import { core_moderation_reports } from "@/database/moderation";
 import { core_users_passkeys } from "@/database/passkeys";
@@ -46,6 +52,9 @@ export const corePersonalData = definePersonalData({
       sanctions,
       reports,
       deletions,
+      legalAcceptances,
+      legalDismissals,
+      legalDeliveries,
     ] = await Promise.all([
       db
         .select({
@@ -170,6 +179,48 @@ export const corePersonalData = definePersonalData({
         })
         .from(core_users_deletions)
         .where(eq(core_users_deletions.userId, userId)),
+      db
+        .select({
+          documentType: core_legal_versions.documentType,
+          version: core_legal_versions.version,
+          contentHash: core_legal_versions.contentHash,
+          acceptedAt: core_legal_acceptances.acceptedAt,
+          locale: core_legal_acceptances.locale,
+          wording: core_legal_acceptances.wording,
+          source: core_legal_acceptances.source,
+        })
+        .from(core_legal_acceptances)
+        .innerJoin(
+          core_legal_versions,
+          eq(core_legal_versions.id, core_legal_acceptances.versionId),
+        )
+        .where(eq(core_legal_acceptances.userId, userId)),
+      db
+        .select({
+          documentType: core_legal_versions.documentType,
+          version: core_legal_versions.version,
+          dismissedAt: core_legal_notice_dismissals.dismissedAt,
+        })
+        .from(core_legal_notice_dismissals)
+        .innerJoin(
+          core_legal_versions,
+          eq(core_legal_versions.id, core_legal_notice_dismissals.versionId),
+        )
+        .where(eq(core_legal_notice_dismissals.userId, userId)),
+      db
+        .select({
+          documentType: core_legal_versions.documentType,
+          version: core_legal_versions.version,
+          status: core_legal_deliveries.status,
+          skipReason: core_legal_deliveries.skipReason,
+          sentAt: core_legal_deliveries.sentAt,
+        })
+        .from(core_legal_deliveries)
+        .innerJoin(
+          core_legal_versions,
+          eq(core_legal_versions.id, core_legal_deliveries.versionId),
+        )
+        .where(eq(core_legal_deliveries.userId, userId)),
     ]);
 
     return {
@@ -222,6 +273,18 @@ export const corePersonalData = definePersonalData({
         scheduledAt: iso(row.scheduledAt),
         createdAt: iso(row.createdAt),
         cancelledAt: iso(row.cancelledAt),
+      })),
+      legalAcceptances: legalAcceptances.map(row => ({
+        ...row,
+        acceptedAt: iso(row.acceptedAt),
+      })),
+      legalNoticeDismissals: legalDismissals.map(row => ({
+        ...row,
+        dismissedAt: iso(row.dismissedAt),
+      })),
+      legalAnnouncementEmails: legalDeliveries.map(row => ({
+        ...row,
+        sentAt: iso(row.sentAt),
       })),
     };
   },

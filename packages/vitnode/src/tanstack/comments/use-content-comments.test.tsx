@@ -72,6 +72,7 @@ const user: AuthUser = {
   avatarUrl: null,
   birthday: null,
   canMention: true,
+  legal: { nextChangeAt: null, notices: [], pendingTerms: null },
   coverUrl: null,
   createdAt: "2026-01-01T00:00:00.000Z",
   email: "test@test.com",

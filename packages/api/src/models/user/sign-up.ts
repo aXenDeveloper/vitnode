@@ -5,8 +5,10 @@ import { HTTPException } from "hono/http-exception";
 
 import { core_roles } from "@/database/roles";
 import { core_users } from "@/database/users";
+import { legalTermsAcceptedEvent } from "@/events/legal";
 import { userCreatedEvent } from "@/events/users";
 import { canonicalizeEmail } from "@/lib/email-canonical";
+import { recordSignUpTermsAcceptance } from "@/lib/legal/acceptance.server";
 import { removeSpecialCharacters } from "@/lib/special-characters";
 import { emailAliases, matchesEmail } from "@/lib/user-email-lookup";
 import { generateAvatarColor } from "@/modules/users/lib/avatar-color";
@@ -73,12 +75,20 @@ export const signUp = async (
     name,
     newsletter,
     hashedPassword,
+    terms,
   }: {
     email: string;
     emailVerified?: boolean;
     hashedPassword: string | undefined;
     name: string;
     newsletter?: boolean;
+    /**
+     * The Terms version a password sign-up accepted. When a Terms version is
+     * effective it must be that exact version, or the account is not created
+     * (see `recordSignUpTermsAcceptance`). Leave it out for SSO accounts: they
+     * accept on the acceptance page after signing in.
+     */
+    terms?: null | { accepted: true; locale: string; versionId: number };
   },
   c: Context,
 ) => {
@@ -136,17 +146,30 @@ export const signUp = async (
       })
       .returning();
 
-    return inserted;
+    const termsAcceptance =
+      inserted && terms !== undefined
+        ? await recordSignUpTermsAcceptance(c, tx, inserted.id, terms)
+        : null;
+
+    return { inserted, termsAcceptance };
   });
 
-  const { password: _, ...user } = data;
+  const { password: _, ...user } = data.inserted;
 
   await c.get("events").emit(userCreatedEvent, {
-    userId: data.id,
-    email: data.email,
-    name: data.name,
-    emailVerified: data.emailVerified,
+    userId: user.id,
+    email: user.email,
+    name: user.name,
+    emailVerified: user.emailVerified,
   });
+  if (data.termsAcceptance?.created) {
+    await c.get("events").emit(legalTermsAcceptedEvent, {
+      source: "signup",
+      userId: user.id,
+      version: data.termsAcceptance.version,
+      versionId: data.termsAcceptance.versionId,
+    });
+  }
 
   return user;
 };
