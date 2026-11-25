@@ -104,3 +104,5 @@ curl -i http://localhost:3000/api/site-notes/notes/abc
 | `/notes/abc` | `400` | `{ "success": false, "error": { "name": "ZodError", ... } }` |
 
 The `400` comes from validation, so your handler never ran.
+
+Want AI clients such as Claude Code to call this route too? One `mcp` option on `buildRoute` offers it as a tool; see [Route tools](/docs/dev/mcp/route-tools).

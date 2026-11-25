@@ -19,6 +19,7 @@ Every request spends points from the budgets that apply to it, in this order, an
 | Write          | `POST`, `PUT`, `PATCH`, `DELETE` and any other method                    | 60 / 60 s      | `rateLimiter.write`        |
 | Sign-in        | `POST` to the sign-in, sign-up, password, email verification, passkey and SSO link or pending-email routes, plus write | 10 / 60 s | `rateLimiter.auth` |
 | Content writes | `POST` and `PATCH` under a plugin's `/content/`, outside `/admin/`, plus write | 20 / 60 s | `rateLimiter.contentWrite` |
+| MCP            | `POST` to the [MCP endpoint](/docs/dev/mcp) `/api/mcp`, instead of write | 60 / 60 s | `rateLimiter.mcp`          |
 
 So a sign-in spends the safety cap, the write budget and the sign-in budget. A `GET` spends only the safety cap and the read budget. Each budget is spent at most once per request.
 
@@ -30,6 +31,7 @@ The sign-in budget covers:
 - `POST /users/reset-password` and `POST /users/change-password`
 - `POST /users/verify-email` and `POST /users/verify-email/resend`
 - `POST /users/passkeys/sign-in` and `POST /users/passkeys/admin-sign-in`
+- `POST` to the MCP server's OAuth routes under `/api/mcp/oauth/`, when [MCP](/docs/dev/mcp) is enabled
 
 ## Who a budget belongs to
 
@@ -37,6 +39,8 @@ The sign-in budget covers:
 | ----------------------------- | --------------- | ---------------- |
 | Safety cap, sign-in           | IP address      | IP address       |
 | Read, write, content writes   | IP address      | The member       |
+
+The MCP budget is counted per access token, or per IP for a request without one, so AI clients sharing one address each get their own. The routes an MCP tool runs spend nothing more.
 
 A member's read and write budgets follow them, not their network. Fifty colleagues behind one office IP each get their own 300 reads once signed in, and a member who switches from Wi-Fi to mobile data keeps the budget they had. The safety cap stays per IP, so many accounts on one address still share its 1000 requests. The sign-in budget stays per IP because a sign-in request has no member yet.
 
@@ -110,7 +114,7 @@ Content-Type: application/json
 }
 ```
 
-`X-RateLimit-Category` names the budget that refused the request: `safety`, `read`, `write`, `auth` or `content-write`. Both headers are listed in the CORS `exposeHeaders`, so a web app on another origin can read them; VitNode adds them to your own `cors` options if you pass any. In the browser, VitNode shows one toast that uses `Retry-After` for its countdown, even when several requests fail at once.
+`X-RateLimit-Category` names the budget that refused the request: `safety`, `read`, `write`, `auth`, `content-write` or `mcp`. Both headers are listed in the CORS `exposeHeaders`, so a web app on another origin can read them; VitNode adds them to your own `cors` options if you pass any. In the browser, VitNode shows one toast that uses `Retry-After` for its countdown, even when several requests fail at once.
 
 [Debug unexpected 429 errors](/docs/dev/advanced/rate-limiter-debugging) explains how to find which budget a real visitor ran out of.
 
@@ -185,6 +189,11 @@ Every budget takes the same options: `points` (requests per window), `duration` 
     contentWrite: {
       default: "{ points: 20, duration: 60 }",
       description: "Public Content Engine creates and edits (POST and PATCH under /content/). Spent on top of write.",
+      type: "RateLimiterCategoryOptions",
+    },
+    mcp: {
+      default: "{ points: 60, duration: 60 }",
+      description: "Messages to the MCP endpoint (/api/mcp, when mcp.enabled). Counted per access token, or per IP without one. Replaces write for those requests.",
       type: "RateLimiterCategoryOptions",
     },
     perUser: {

@@ -1,0 +1,173 @@
+---
+title: Custom tools
+description: Write a custom MCP tool for a VitNode plugin with defineMcpTool, register it in buildApiPlugin, and return typed results to Claude and other AI clients.
+icon: Hammer
+implementation:
+  objective: Add a custom MCP tool to a plugin for AI clients.
+  decisions:
+    - Which plugin? Offer plugins in the project with an API part (`config.api.ts`).
+    - What should the tool do, and does it only read or also change data? Prefer an existing route with the `mcp` option when one already does it.
+    - Which arguments does the model pass, and what should come back?
+  constraints:
+    - Define the tool with `defineMcpTool` from your plugin's `@/api/builders` and register it in `buildApiPlugin({ mcpTools })`.
+    - Check the member's permissions inside the handler; no route guard runs for a custom tool.
+    - Write the description and argument descriptions in plain English for the AI model, not as i18n keys.
+  related:
+    - title: Route tools
+      href: /docs/dev/mcp/route-tools
+    - title: MCP security
+      href: /docs/dev/mcp/security
+---
+
+A custom MCP tool is a function your plugin offers to AI clients when no single route fits: a search across your own data, a summary built from several queries, an answer shaped for a model rather than a page. In this guide you add a `notes.search` tool to the `site-notes` plugin that finds notes containing a word.
+
+Already have a route that does the job? Mark it with `mcp` instead; see [Route tools](/docs/dev/mcp/route-tools).
+
+| Pick                   | When                                                                 |
+| :--------------------- | :------------------------------------------------------------------- |
+| A route tool           | A member-facing route already returns what the model needs           |
+| A custom tool          | The answer needs logic no route has, or a shape built for the model  |
+
+## Before you begin
+
+- The `notes` module from [API modules](/docs/dev/plugins/api/modules), with `zodNote` and `sampleNotes`.
+- An app with the [MCP server](/docs/dev/mcp) enabled and a client, such as Claude Code, connected to it.
+
+<Steps>
+
+<Step>
+
+### Define the tool
+
+Create `src/api/mcp/search-notes.tool.ts`:
+
+```ts title="plugins/site-notes/src/api/mcp/search-notes.tool.ts"
+import { z } from "@hono/zod-openapi";
+
+import { defineMcpTool } from "@/api/builders";
+import { sampleNotes } from "@/api/modules/notes/lib/sample-notes";
+import { zodNote } from "@/api/modules/notes/notes.schema";
+
+export const searchNotesTool = defineMcpTool({
+  id: "notes.search",
+  title: "Search site notes",
+  description:
+    "Finds site notes whose title or body contains a word or phrase, ignoring case. Returns each match with its id, title and body.",
+  scope: "read",
+  inputSchema: z.object({
+    query: z.string().trim().min(2).max(100).describe("The word or phrase to look for"),
+  }),
+  outputSchema: z.object({ notes: z.array(zodNote) }),
+  handler: ({ input }) => {
+    const needle = input.query.toLowerCase();
+
+    return {
+      notes: sampleNotes.filter(note =>
+        `${note.title} ${note.body}`.toLowerCase().includes(needle),
+      ),
+    };
+  },
+});
+```
+
+- **`id`** is the tool's name inside the plugin. Clients see it as `site_notes_notes_search`, and the app's `mcp.disabledTools` names it `'site-notes:notes.search'`. The naming rules are the same as for [route tools](/docs/dev/mcp/route-tools#tool-names).
+- **`inputSchema`** must be a Zod object. Arguments that don't match are refused before the handler runs, and `.describe()` texts reach the model as argument descriptions.
+- **`outputSchema`** is optional. With it, the handler's return value is checked and also sent as `structuredContent`, which clients can read as data.
+
+</Step>
+
+<Step>
+
+### Register it in the plugin
+
+Open `src/config.api.ts` and pass the tool to `buildApiPlugin`. This is an excerpt; keep the rest of the file:
+
+```ts title="plugins/site-notes/src/config.api.ts"
+import { searchNotesTool } from "./api/mcp/search-notes.tool"; // [!code ++]
+
+export const siteNotesApiPlugin = () =>
+  buildApiPlugin({
+    manifest,
+    modules: [helloModule, notesModule],
+    mcpTools: [searchNotesTool], // [!code ++]
+  });
+```
+
+A tool id must be unique within the plugin, route tools included. `buildApiPlugin` refuses to start on a duplicate.
+
+</Step>
+
+<Step>
+
+### Reconnect the client
+
+`pnpm dev` rebuilds the plugin. Clients keep the tool list they got when they connected, so reconnect yours; in Claude Code, run `/mcp`, pick your server and reconnect.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+In Claude Code, `/mcp` now lists `site_notes_notes_search`. Ask "Is there a site note about Friday?". The client calls the tool with `{ "query": "Friday" }` and gets back `{ "notes": [{ "id": 2, "title": "Office closed on Friday", ... }] }`.
+
+## `defineMcpTool` options
+
+| Name           | Type                    | Required | Default | Description |
+| :------------- | :---------------------- | :------- | :------ | :---------- |
+| `id`           | `string`                | Yes      | -       | Name inside the plugin: lowercase letters and digits in groups joined by `.`, `_` or `-`. |
+| `description`  | `string`                | Yes      | -       | What the tool does, in plain English, for the model. |
+| `scope`        | `'read' \| 'write'`     | Yes      | -       | The [scope](/docs/dev/mcp/security#scopes) a token needs. Use `read` only when the tool changes nothing; guests may call read tools when `mcp.guestAccess` is on. |
+| `inputSchema`  | Zod object              | Yes      | -       | The arguments. |
+| `handler`      | `({ c, input, principal }) => value` | Yes | - | Runs the tool. May be async. |
+| `outputSchema` | Zod object              | No       | -       | The result's shape. Must be plain JSON: return dates as strings, not `Date` objects. |
+| `title`        | `string`                | No       | -       | A short name for client UIs. |
+| `destructive`  | `boolean`               | No       | `false` | Hint that a write tool may delete or overwrite data. |
+| `idempotent`   | `boolean`               | No       | `false` | Hint that repeating a write tool with the same arguments changes nothing more. |
+| `openWorld`    | `boolean`               | No       | `false` | Hint that the tool reaches outside your site, such as another service. |
+
+The three hints help clients decide when to ask the member before running a tool. They are hints, not guarantees, so keep them accurate.
+
+## What the handler receives
+
+- **`input`** is the parsed arguments, typed from `inputSchema`.
+- **`principal`** is the connection: `{ userId, clientId, grantId, scopes }`, or `null` for a guest.
+- **`c`** is the context of the `/api/mcp` request. `c.get("user")` is the connected member (never the session cookie's), `c.get("mcp")` is set, and `c.get("db")`, `c.get("cache")`, `c.get("events")` and the rest work as they do in a route.
+
+A custom tool skips the route pipeline, so no route guard runs. Check the member's permissions in the handler exactly as a route handler would, and remember a write tool always has a member, while a read tool may have a guest. Site offline mode still applies: while the site is offline, only members who may bypass it can call tools.
+
+## Return values and errors
+
+- **With `outputSchema`**, return an object that matches it. It is sent as JSON text and as `structuredContent`. A value that doesn't match is logged and reported to the client as a failed call.
+- **Without `outputSchema`**, return any JSON value. A string is sent as is, anything else as JSON text.
+- **To fail on purpose**, throw an `HTTPException` from `hono/http-exception`. The client gets a tool error with its status and message, so write a message the model can act on:
+
+  ```ts
+  import { HTTPException } from "hono/http-exception";
+
+  throw new HTTPException(404, { message: "No note matches that id. Search the notes first." });
+  ```
+
+- **Any other error** is logged. The client sees its message in development and only "The tool failed with an unexpected error." in production.
+
+Like route tool descriptions, everything in a tool (`title`, `description`, argument descriptions, error messages) is plain English for the model, not an i18n key. [Write descriptions models can use](/docs/dev/mcp/route-tools#write-descriptions-models-can-use) has tips that apply here too.
+
+## Related
+
+<Cards>
+  <Card
+    title="Route tools"
+    description="Offer an existing route with one option"
+    href="/docs/dev/mcp/route-tools"
+  />
+  <Card
+    title="MCP configuration"
+    description="Turn tools off per site with typed disabledTools"
+    href="/docs/dev/mcp/configuration#pick-the-tools"
+  />
+  <Card
+    title="MCP security"
+    description="Scopes, guests and what a client can never do"
+    href="/docs/dev/mcp/security"
+  />
+</Cards>

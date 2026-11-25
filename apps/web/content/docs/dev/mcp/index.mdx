@@ -1,0 +1,215 @@
+---
+title: MCP server
+description: Turn on VitNode's Model Context Protocol (MCP) server so members can connect Claude Code, Cursor, claude.ai and other AI clients to your community with OAuth.
+icon: Bot
+---
+
+import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
+
+The [Model Context Protocol](https://modelcontextprotocol.io) (MCP) is how AI clients such as Claude Code, Cursor and claude.ai call tools on other services. Turn it on and your VitNode site serves an MCP endpoint at `/api/mcp`. A member connects their AI client, approves it once on your site, and the AI can then search the community, list forums and topics, and run any other tool your plugins offer. It acts as that member, with that member's permissions, and nothing more.
+
+The MCP server is off until you enable it in `vitnode.api.config.ts`.
+
+## What an AI client can do
+
+Every tool comes from a plugin. The ones that ship with VitNode only read:
+
+| Plugin           | Tool (as clients see it)        | What it does                                                        |
+| :--------------- | :------------------------------ | :------------------------------------------------------------------ |
+| `@vitnode/core`  | `core_search_get`               | Searches public content by keywords, type, author, date and language |
+| `@vitnode/core`  | `core_search_popular_get`       | Lists the content people are looking at right now                    |
+| `@vitnode/forum` | `forum_forum_stats_forums_get`  | Lists readable forums with topic and comment counts                  |
+| `@vitnode/forum` | `forum_forum_topics_get`        | Lists one forum's public topics, newest first                        |
+| `@vitnode/forum` | `forum_forum_stats_topics_get`  | Comment counts and last comment times for a set of topics            |
+| `@vitnode/blog`  | `blog_categories_get`           | Lists blog categories with their article counts                      |
+
+Plugin authors add more by marking a route with `mcp` ([Route tools](/docs/dev/mcp/route-tools)) or by writing a tool from scratch ([Custom tools](/docs/dev/mcp/custom-tools)). A tool is either a **read** tool or a **write** tool, and the member decides on the consent page which of the two the client gets.
+
+An MCP client never acts as an admin or a moderator. Routes guarded by a staff permission, AdminCP routes and captcha-protected routes can't become tools at all. [MCP security](/docs/dev/mcp/security) has the full list.
+
+## Before you begin
+
+- A VitNode app with a database you can migrate.
+- For claude.ai and other hosted clients, a public HTTPS URL. Desktop clients such as Claude Code and Cursor also work against `http://localhost:3000`.
+
+## Set up the MCP server
+
+<Steps>
+
+<Step>
+
+### Create the MCP tables
+
+The MCP server stores client registrations, connections and hashed tokens in four core tables: `core_mcp_clients`, `core_mcp_grants`, `core_mcp_access_tokens` and `core_mcp_authorization_codes`. Run the migration in the app that owns the database:
+
+<Tabs groupId='package-manager' persist items={['bun', 'pnpm', 'npm']} label='Run migrations'>
+
+```bash tab="bun"
+bun run db:migrate
+```
+
+```bash tab="pnpm"
+pnpm db:migrate
+```
+
+```bash tab="npm"
+npm run db:migrate
+```
+
+</Tabs>
+
+In development `pnpm dev` applies it for you.
+
+</Step>
+
+<Step>
+
+### Turn on `mcp`
+
+Open `src/vitnode.api.config.ts` and add an `mcp` block:
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // [!code ++:5]
+  mcp: {
+    enabled: true,
+    instructions:
+      'A community about bikes. Search before answering questions about its content.',
+  },
+})
+```
+
+`instructions` is optional. Clients pass it to the model when they connect, so a sentence about what your site is helps the AI pick the right tool. Every other option is on [MCP configuration](/docs/dev/mcp/configuration).
+
+</Step>
+
+<Step>
+
+### Forward discovery requests
+
+MCP clients look up your OAuth settings at the root of your domain, for example `/.well-known/oauth-authorization-server/api/mcp`. That path is outside `/api`, so the host app has to hand it to the API. In a single app, create a catch-all route for `/.well-known/` (new apps from `create-vitnode-app` already have it):
+
+```ts title="src/routes/[.]well-known/$.ts"
+import { createFileRoute } from '@tanstack/react-router'
+import { getRequestIP } from '@tanstack/react-start/server'
+import { executionContextOf } from '@vitnode/api/lib/after-response'
+import { mcpWellKnownRequest } from '@vitnode/api/lib/mcp/well-known'
+
+import { apiBridge } from '@/server/vitnode-api.server'
+
+export const Route = createFileRoute('/.well-known/$')({
+  server: {
+    handlers: ({ createHandlers }) =>
+      createHandlers({
+        ANY: async ({ request }) => {
+          const forwarded = mcpWellKnownRequest(request, { apiBasePath: '/api' })
+          if (!forwarded) return new Response('Not Found', { status: 404 })
+
+          return apiBridge(
+            forwarded,
+            { clientAddress: getRequestIP() },
+            executionContextOf(request),
+          )
+        },
+      }),
+  },
+})
+```
+
+`mcpWellKnownRequest()` rewrites the two OAuth discovery paths to the copies the API serves under `/api/mcp/.well-known/` and returns `null` for anything else. Running the API as a separate server? See [Discovery at the site root](/docs/dev/mcp/configuration#discovery-at-the-site-root).
+
+</Step>
+
+<Step>
+
+### Connect Claude Code
+
+Add the server in a terminal. The name (`my-community` here) is only a label for you:
+
+```bash
+claude mcp add --transport http my-community http://localhost:3000/api/mcp
+```
+
+Then start Claude Code, run `/mcp`, pick `my-community` and choose to authenticate. Your browser opens the site's consent page at `/oauth/authorize`. Sign in if you aren't already, check what Claude Code may do and select **Approve**.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+Ask the endpoint for the tool list without a token:
+
+```bash
+curl -i -X POST http://localhost:3000/api/mcp \
+  -H 'content-type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
+```
+
+You get `401` with a `WWW-Authenticate: Bearer resource_metadata="..."` header. That is the endpoint telling clients where to sign in, so it is working. A `404` means `mcp.enabled` is not `true`.
+
+Back in Claude Code, `/mcp` now lists `my-community` as connected, with its tools. Ask something like "What is popular on my community right now?" and watch it call `core_search_popular_get`.
+
+## Connect other clients
+
+Any client that speaks MCP over HTTP ("Streamable HTTP") and OAuth can connect with the endpoint URL, `https://your-site.example/api/mcp`.
+
+- **Cursor and other desktop clients** sign in through a local callback such as `http://127.0.0.1:33418/callback`. Those loopback addresses are accepted by default, so the URL is all they need. In Cursor, add the server to `.cursor/mcp.json`:
+
+  ```json title=".cursor/mcp.json"
+  {
+    "mcpServers": {
+      "my-community": { "url": "https://your-site.example/api/mcp" }
+    }
+  }
+  ```
+
+- **claude.ai** connects from Anthropic's servers, so your site must be reachable over public HTTPS, and it returns to a fixed callback URL that you have to allow first:
+
+  ```ts title="src/vitnode.api.config.ts"
+  mcp: {
+    enabled: true,
+    auth: {
+      allowedRedirectUris: ['https://claude.ai/api/mcp/auth_callback'], // [!code ++]
+    },
+  },
+  ```
+
+  Then add the endpoint URL as a custom connector in claude.ai. Other hosted clients work the same way with their own callback URL.
+
+- **Browser-based clients**, such as the MCP Inspector, call the endpoint from a web page. Add that page's origin to `mcp.allowedOrigins`, for example `'http://localhost:6274'`.
+
+Without the right `allowedRedirectUris`, registration fails with "This site does not accept that redirect URI". That's on purpose: it stops a stranger from showing your consent page with their own callback.
+
+## What members see
+
+Members do two things with MCP, both in the web app:
+
+- **Approve a client.** The consent page at `/oauth/authorize` asks "Connect _client name_ to your account?", shows the account they are signed in as and the address they will be sent back to, and lists the scopes the client asked for: **Read** (`read`) and **Act as you** (`write`). The member can switch one of them off, then selects **Approve** or **Deny**. Approving the same client again replaces the earlier connection.
+- **Disconnect a client.** **Settings → Connected apps** (`/settings/connected-apps`) lists each connected client with its access, when it was connected and when it was last used. **Disconnect** stops its tokens at once.
+
+The consent page warns members to approve only a connection they started themselves. It's worth repeating that advice wherever you announce the feature: a consent page nobody asked for is a phishing attempt, not a feature.
+
+Connections also end on their own when a member's password changes, when an admin signs them out everywhere, and when they ask to delete their account. [When connections end](/docs/dev/mcp/security#when-connections-end) lists every case.
+
+## Related
+
+<Cards>
+  <Card
+    title="MCP configuration"
+    description="Every mcp option, the discovery wiring and troubleshooting"
+    href="/docs/dev/mcp/configuration"
+  />
+  <Card
+    title="MCP security"
+    description="OAuth 2.1, scopes, token lifetimes and what a client can never do"
+    href="/docs/dev/mcp/security"
+  />
+  <Card
+    title="Route tools"
+    description="Offer your plugin's routes to AI clients with one option"
+    href="/docs/dev/mcp/route-tools"
+  />
+</Cards>

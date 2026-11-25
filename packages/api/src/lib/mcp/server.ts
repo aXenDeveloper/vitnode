@@ -198,8 +198,9 @@ const runRouteTool = async ({
   }
 
   if (!response.ok) {
-    const detail =
-      json === undefined ? text.slice(0, MAX_ERROR_BODY) : asJsonText(json);
+    let detail = "";
+    if (json === undefined) detail = text.slice(0, MAX_ERROR_BODY);
+    else if (json !== null) detail = asJsonText(json);
 
     return toolError(
       `The request failed with HTTP ${describeHttpStatus(response.status)}${detail ? `: ${detail}` : "."}`,

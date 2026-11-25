@@ -57,6 +57,21 @@ export const getUserRoleIds = async (
   return [...new Set([user.roleId, ...secondary.map(row => row.roleId)])];
 };
 
+const noStaffPermissions = (): ResolvedStaffPermissionSet => ({
+  root: false,
+  permissions: [],
+  staff: false,
+});
+
+/**
+ * Whether `userId` is the member an MCP call acts for. A token never carries
+ * staff powers, so every staff check of that member - guards, and the ones a
+ * handler makes itself (hidden content, editor access) - answers "not staff".
+ * Other users' staff status still resolves normally.
+ */
+const isMcpCaller = (c: Context, userId: number): boolean =>
+  c.get("mcp")?.principal?.userId === userId;
+
 const rootStaffPermissions = (): ResolvedStaffPermissionSet => ({
   root: true,
   permissions: [],
@@ -162,6 +177,8 @@ export const resolveStaffPermissions = async (
   c: Context,
   { type, user }: { type: PermissionStaffType; user: StaffUser },
 ): Promise<ResolvedStaffPermissionSet> => {
+  if (isMcpCaller(c, user.id)) return noStaffPermissions();
+
   const args = { type, userId: user.id };
   const remembered = readRequestStaffPermissions(c, args);
   if (remembered) return remembered;
@@ -217,6 +234,8 @@ export const isStaff = async (
     userId,
   }: { live?: boolean; type: PermissionStaffType; userId: number },
 ): Promise<boolean> => {
+  if (isMcpCaller(c, userId)) return false;
+
   const args = { type, userId };
   const remembered = readRequestStaffPermissions(c, args, { live });
   if (remembered) return remembered.staff;
@@ -441,6 +460,8 @@ export const getStaffFlags = async (
   c: Context,
   user: StaffUser,
 ): Promise<StaffFlags> => {
+  if (isMcpCaller(c, user.id)) return { isAdmin: false, isModerator: false };
+
   const cached = await readStaffPermissionsOfUser(c, user.id);
   const sets = { ...cached.sets };
   const missing = STAFF_TYPES.filter(type => !sets[type]);

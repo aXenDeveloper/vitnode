@@ -11,7 +11,8 @@ export const buildModule = apiBuilders.buildModule,
   buildQueueTask = apiBuilders.buildQueueTask,
   buildRoute = apiBuilders.buildRoute,
   defineCacheEntry = apiBuilders.defineCacheEntry,
-  defineEvent = apiBuilders.defineEvent;
+  defineEvent = apiBuilders.defineEvent,
+  defineMcpTool = apiBuilders.defineMcpTool;
 
 /**
  * The blog's generated Content Engine modules: `buildContentAdminModule` for

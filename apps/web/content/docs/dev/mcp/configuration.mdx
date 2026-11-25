@@ -1,0 +1,200 @@
+---
+title: MCP configuration
+description: Reference for the mcp option in vitnode.api.config.ts - tools, guest access, redirect URIs, token lifetimes, origins, discovery URLs and MCP troubleshooting.
+icon: Settings2
+---
+
+The `mcp` block in `vitnode.api.config.ts` controls VitNode's [MCP server](/docs/dev/mcp): whether it runs, which tools it offers, who may call them and how clients sign in. This page lists every option, the URLs the server publishes, and fixes for the errors you are most likely to meet.
+
+## Example
+
+```ts title="src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  mcp: {
+    enabled: true,
+    guestAccess: true,
+    plugins: ['@vitnode/core', '@vitnode/forum'],
+    disabledTools: ['@vitnode/core:search.popular.get'],
+    instructions:
+      'A community about bikes. Search before answering questions about its content.',
+    allowedOrigins: ['http://localhost:6274'],
+    auth: {
+      allowedRedirectUris: ['https://claude.ai/api/mcp/auth_callback'],
+      accessTokenTtl: 10 * 60_000, // 10 minutes
+      refreshTokenTtl: 14 * 24 * 60 * 60_000, // 14 days
+    },
+  },
+})
+```
+
+## Options
+
+| Name             | Type       | Required | Default                    | Description |
+| :--------------- | :--------- | :------- | :------------------------- | :---------- |
+| `enabled`        | `boolean`  | No       | `false`                    | Serves `/api/mcp` and its OAuth endpoints. While it is `false` they answer `404`, and so do the member routes behind the consent page. |
+| `guestAccess`    | `boolean`  | No       | `false`                    | Lets clients call **read** tools without a token, seeing the site as a guest does. Write tools always need a member. |
+| `plugins`        | `McpPluginId[]` | No  | every installed plugin     | The plugins whose tools are offered. Core is `'@vitnode/core'`. |
+| `disabledTools`  | `McpToolKey[]` | No   | `[]`                       | Tools never offered, as `'<pluginId>:<tool name>'`. See [Pick the tools](#pick-the-tools). |
+| `instructions`   | `string`   | No       | none                       | Plain-English text sent to clients when they connect, telling the model what the site is and how to use its tools. |
+| `allowedOrigins` | `string[]` | No       | `[]`                       | Extra origins a browser-based client may call `/api/mcp` from. See [Allowed origins](#allowed-origins). |
+| `auth.allowedRedirectUris` | `string[]` | No | `[]`                     | Exact callback URLs hosted clients may register, such as `'https://claude.ai/api/mcp/auth_callback'`. |
+| `auth.allowLoopbackRedirects` | `boolean` | No | `true`                 | Accepts `http://127.0.0.1:<port>/...` and `http://localhost:<port>/...` callbacks, which desktop clients such as Claude Code and Cursor use. |
+| `auth.accessTokenTtl` | `number` (ms) | No | `900000` (15 minutes)     | Access token lifetime. Kept between 1 minute and 1 hour. |
+| `auth.refreshTokenTtl` | `number` (ms) | No | `2592000000` (30 days)   | Refresh token lifetime. Each refresh issues a new one with a fresh lifetime. Kept between 1 hour and 90 days. |
+
+A lifetime outside its range is moved to the nearest limit rather than refused, so `accessTokenTtl: 2 * 60 * 60_000` gives you one hour.
+
+## Pick the tools
+
+By default every installed plugin's tools are offered. Narrow that with `plugins`, then switch off single tools with `disabledTools`. A tool key is the plugin id, a colon and the tool's name inside the plugin:
+
+```ts title="src/vitnode.api.config.ts"
+mcp: {
+  enabled: true,
+  plugins: ['@vitnode/core', '@vitnode/forum'],
+  disabledTools: ['@vitnode/forum:forum.stats.topics.get'],
+},
+```
+
+Both lists are typed from the plugins your app registered, so a typo such as `'@vitnode/forum:forum.topic.get'` is a compile error. The types come from the generated `src/api-registry.gen.ts`, which `vitnode dev` and `vitnode build` refresh when a plugin changes. [Tool names](/docs/dev/mcp/route-tools#tool-names) explains how a route's name is derived.
+
+A member's client lists only the tools its token may call: a token with only the `read` scope never sees write tools.
+
+## Allow redirect URIs
+
+A client registers its callback URL before a member signs in. VitNode accepts:
+
+- **Loopback URLs** on any port, such as `http://127.0.0.1:33418/callback` or `http://localhost:8080/oauth`, while `auth.allowLoopbackRedirects` is `true`. Desktop apps pick a free port each time, so only the port may differ from what they registered.
+- **URLs you list** in `auth.allowedRedirectUris`, compared character for character. Use `https://` or a native app's private scheme such as `cursor://...`.
+
+Everything else is refused, including any other plain `http://` URL, URLs with a `#fragment` or a `*` wildcard, and `javascript:` or `data:` URLs. A client may register up to five URLs.
+
+The check runs again on every sign-in, so removing a URL from the list locks out clients that registered it.
+
+## Allowed origins
+
+Browsers send an `Origin` header, and `/api/mcp` refuses any origin it doesn't know with `403 Origin not allowed.` That stops a random web page from driving the endpoint through a member's browser. The API's own origin, `VITNODE_WEB_URL` and `VITNODE_API_URL` are always allowed. Add the origin of any browser-based MCP client you use:
+
+```ts title="src/vitnode.api.config.ts"
+mcp: {
+  enabled: true,
+  allowedOrigins: ['http://localhost:6274'], // the MCP Inspector
+},
+```
+
+Desktop and server-side clients send no `Origin`, so this list doesn't affect them.
+
+## Rate limits
+
+Each JSON-RPC message sent to `/api/mcp` spends one point of the `mcp` budget: 60 per 60 seconds, counted per access token, or per IP for guest calls. The routes a tool runs are not counted again. The OAuth endpoints under `/api/mcp/oauth/` spend the sign-in budget. Change the MCP budget with `rateLimiter.mcp`:
+
+```ts title="src/vitnode.api.config.ts"
+rateLimiter: {
+  mcp: { points: 120, duration: 60 },
+},
+```
+
+See [Rate limiter](/docs/dev/advanced/rate-limiter) for how budgets work.
+
+## Discovery at the site root
+
+A client that gets `401` from `/api/mcp` learns where to sign in from two discovery documents. The API serves both under `/api/mcp/.well-known/`, but standard clients look for them at the root of your domain:
+
+```txt
+/.well-known/oauth-authorization-server/api/mcp
+/.well-known/oauth-protected-resource/api/mcp
+```
+
+Those paths are outside the API's base path, so the code that hands requests to the API must forward them. `mcpWellKnownRequest()` from `@vitnode/api/lib/mcp/well-known` does the rewrite: it returns a request for the API's own copy, or `null` for every other path and for methods other than `GET` and `HEAD`.
+
+- **Single app:** add the `src/routes/[.]well-known/$.ts` route from [Forward discovery requests](/docs/dev/mcp#forward-discovery-requests).
+- **Separate API server:** call it in the server entry before the Hono app (`app`, with `VitNodeAPI` mounted) sees the request:
+
+  ```ts title="apps/api/src/index.ts"
+  import { serve } from '@hono/node-server'
+  import { mcpWellKnownRequest } from '@vitnode/api/lib/mcp/well-known'
+
+  const server = serve({
+    fetch: async (request, env) =>
+      await app.fetch(
+        mcpWellKnownRequest(request, { apiBasePath: '/api' }) ?? request,
+        env,
+      ),
+  })
+  ```
+
+`apiBasePath` defaults to `'/api'`. Set it when your API is mounted somewhere else.
+
+## Endpoint URLs
+
+All URLs are built from `VITNODE_API_URL` when the API runs on its own origin, else from `VITNODE_WEB_URL`. They never come from the request's `Host` header.
+
+| URL                                          | What it is                                                                 |
+| :------------------------------------------- | :------------------------------------------------------------------------- |
+| `/api/mcp`                                   | The MCP endpoint, and the resource every token is bound to                 |
+| `/api/mcp/.well-known/oauth-protected-resource` | Protected resource metadata (RFC 9728)                                 |
+| `/.well-known/oauth-authorization-server/api/mcp` | Authorization server metadata (RFC 8414), through the root forwarding |
+| `/api/mcp/oauth/register`                    | Dynamic Client Registration (RFC 7591)                                     |
+| `/api/mcp/oauth/token`                       | Token endpoint: authorization code and refresh token grants               |
+| `/api/mcp/oauth/revoke`                      | Token revocation (RFC 7009)                                                |
+| `/oauth/authorize` on `VITNODE_WEB_URL`      | The consent page members see                                              |
+
+The endpoint speaks MCP's Streamable HTTP transport without sessions: each `POST` carries one JSON-RPC message and gets a JSON response. There is no event stream, so `GET` and `DELETE` answer `405`, and batches are refused. It accepts the protocol versions `2025-11-25`, `2025-06-18` and `2025-03-26`, and offers tools only.
+
+## Troubleshooting
+
+### The client keeps asking to sign in
+
+The client gets `401` with `error="invalid_token"` after approving. Usual causes:
+
+- **The site moved.** Every token is bound to the exact endpoint URL. After changing `VITNODE_WEB_URL` or `VITNODE_API_URL`, old tokens stop working; reconnect the client.
+- **The connection was ended.** A password change, an admin's "sign out everywhere", an account deletion request or the member disconnecting the client all end it. See [When connections end](/docs/dev/mcp/security#when-connections-end).
+- **The member is suspended.** Tokens of a suspended member are refused until the suspension ends.
+
+If the client never reaches the consent page at all, discovery is failing; see below.
+
+### "This site does not accept that redirect URI"
+
+Registration answered `invalid_redirect_uri`. The client's callback is neither a loopback URL nor listed in `auth.allowedRedirectUris`. Add the exact URL the client uses, for example `'https://claude.ai/api/mcp/auth_callback'` for claude.ai. If a desktop client fails too, check that `auth.allowLoopbackRedirects` isn't `false`.
+
+### Discovery returns 404
+
+`/.well-known/oauth-authorization-server/api/mcp` must return JSON with an `issuer` ending in `/api/mcp`:
+
+```bash
+curl https://your-site.example/.well-known/oauth-authorization-server/api/mcp
+```
+
+- A `404` from the web app means the root path isn't forwarded. Add the [discovery forwarding](#discovery-at-the-site-root).
+- A `404` from the API means `mcp.enabled` isn't `true`, or `apiBasePath` doesn't match where the API is mounted.
+
+### Other errors
+
+| Response                                           | Fix                                                                 |
+| :------------------------------------------------- | :------------------------------------------------------------------ |
+| `403` "Origin not allowed."                        | Add the client page's origin to `mcp.allowedOrigins`.               |
+| `403` with `error="insufficient_scope"`            | The token lacks the scope the tool needs. Reconnect and approve both `read` and `write`. |
+| `400` "Unsupported MCP-Protocol-Version"           | Update the client; it sends a protocol version the server doesn't speak. |
+| `429 Too Many Requests`                            | The `mcp` budget ran out. Raise `rateLimiter.mcp` if the use is legitimate. |
+
+## Related
+
+<Cards>
+  <Card
+    title="MCP server"
+    description="Turn the server on and connect your first client"
+    href="/docs/dev/mcp"
+  />
+  <Card
+    title="MCP security"
+    description="How clients sign in and what a token can never do"
+    href="/docs/dev/mcp/security"
+  />
+  <Card
+    title="Rate limiter"
+    description="Budgets, keys and 429 responses"
+    href="/docs/dev/advanced/rate-limiter"
+  />
+</Cards>

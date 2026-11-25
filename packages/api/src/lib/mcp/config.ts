@@ -51,7 +51,7 @@ export interface McpConfigBase<
   };
   /**
    * Tools that are never offered, as `"<pluginId>:<tool>"` - e.g.
-   * `"@vitnode/forum:topics.search"`.
+   * `"@vitnode/forum:forum.topics.get"`.
    */
   disabledTools?: readonly ToolKey[];
   /** Serves `/api/mcp` and its OAuth endpoints. Defaults to `false`. */

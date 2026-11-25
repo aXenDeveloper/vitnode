@@ -4,7 +4,7 @@
  */
 export const MCP_LOCAL_TOOL_NAME = /^[a-z0-9]+(?:[._-][a-z0-9]+)*$/;
 
-/** A tool's name on the wire, as MCP clients see it (`forum_stats_forums_get`). */
+/** A tool's name on the wire, as MCP clients see it (`forum_forum_stats_forums_get`). */
 export const MCP_WIRE_TOOL_NAME = /^[a-zA-Z0-9_-]{1,64}$/;
 
 type Segments<S extends string> = S extends `${infer Head}/${infer Rest}`

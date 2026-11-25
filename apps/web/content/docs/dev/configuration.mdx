@@ -263,7 +263,8 @@ where you reword a string a package translates differently to how you want it.
 
 <Callout type="info" title="The API has its own config">
   `src/vitnode.api.config.ts` configures the Hono app at `/api/*` - the
-  database, storage, email, Redis. In a single app it reads `vitNodeConfig.i18n`
+  database, storage, email, Redis, and optional services such as the [MCP
+  server](/docs/dev/mcp/configuration) for AI clients. In a single app it reads `vitNodeConfig.i18n`
   so the site and its emails agree on which languages exist. In a split
   deployment the API is a separate package and declares its own list - and its
   own `localePrefix`, `domains` and `routePaths`, which must mirror the web

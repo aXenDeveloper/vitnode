@@ -1,6 +1,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocketOriginMiddleware } from "@vitnode/api/middlewares/websocket-origin.middleware";
 import { VitNodeAPI } from "@vitnode/api/config";
+import { mcpWellKnownRequest } from "@vitnode/api/lib/mcp/well-known";
 import { handleVitNodeWebSocket } from "@vitnode/api/ws/handle";
 import { upgradeWebSocket, websocket } from "hono/bun";
 
@@ -27,7 +28,13 @@ app.get(
 // dev`), `bun src/index.ts` in production (`vitnode start`). Bun pings idle
 // sockets and drops dead ones itself.
 export default {
-  fetch: app.fetch,
+  // MCP clients discover OAuth at the origin root (`/.well-known/...`),
+  // outside the API's `/api` base path.
+  fetch: async (request: Request, server: Parameters<typeof app.fetch>[1]) =>
+    await app.fetch(
+      mcpWellKnownRequest(request, { apiBasePath: "/api" }) ?? request,
+      server,
+    ),
   hostname: process.env.HOST,
   port: Number(process.env.PORT ?? 8000),
   websocket,

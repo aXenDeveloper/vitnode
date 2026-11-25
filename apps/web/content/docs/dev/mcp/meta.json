@@ -1,0 +1,13 @@
+{
+  "title": "MCP",
+  "description": "Let Claude, Cursor and other AI clients use your community over the Model Context Protocol, signed in as a member",
+  "icon": "Bot",
+  "pages": [
+    "index",
+    "configuration",
+    "security",
+    "---Plugin tools---",
+    "route-tools",
+    "custom-tools"
+  ]
+}

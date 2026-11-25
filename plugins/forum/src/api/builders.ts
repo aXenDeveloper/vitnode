@@ -12,6 +12,7 @@ export const buildRoute = apiBuilders.buildRoute;
 export const buildQueueTask = apiBuilders.buildQueueTask;
 export const defineCacheEntry = apiBuilders.defineCacheEntry;
 export const defineEvent = apiBuilders.defineEvent;
+export const defineMcpTool = apiBuilders.defineMcpTool;
 
 /** The Content Engine's admin and public modules, bound to this plugin's id. */
 export const buildContentAdminModule = contentBuilders.buildContentAdminModule;

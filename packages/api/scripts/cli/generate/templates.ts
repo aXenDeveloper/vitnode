@@ -51,6 +51,7 @@ export const buildRoute = apiBuilders.buildRoute;
 export const buildQueueTask = apiBuilders.buildQueueTask;
 export const defineCacheEntry = apiBuilders.defineCacheEntry;
 export const defineEvent = apiBuilders.defineEvent;
+export const defineMcpTool = apiBuilders.defineMcpTool;
 `;
 
 export type ParamType = "number" | "string";

@@ -1,0 +1,106 @@
+---
+title: MCP security
+description: How AI clients sign in to a VitNode MCP server with OAuth 2.1 and PKCE, what read and write scopes allow, how long tokens live and when connections end.
+icon: ShieldCheck
+---
+
+An AI client connected to your [MCP server](/docs/dev/mcp) acts for one member, with short-lived tokens that only work on your MCP endpoint and that the member can cut off at any time. This page explains how a client gets those tokens, what it can and can't do with them, and what ends a connection.
+
+## How a client connects
+
+VitNode runs its own OAuth 2.1 authorization server for MCP. A client goes through four steps, and the member only sees the third:
+
+1. **Register.** The client registers itself through Dynamic Client Registration with its name and callback URLs. Only public clients exist: nobody gets a client secret, because PKCE protects every sign-in instead. A callback URL must be a loopback address or one you [allowed](/docs/dev/mcp/configuration#allow-redirect-uris).
+2. **Ask.** The client sends the member's browser to `/oauth/authorize` with a PKCE challenge (`S256` only), the scopes it wants and, usually, the `resource` it wants a token for. A `resource` other than your MCP endpoint is refused.
+3. **Approve.** The member signs in if needed and sees the client's name, where it will return them and the scopes requested. They approve, possibly with fewer scopes, or deny.
+4. **Exchange.** The client trades the one-time code and its PKCE verifier for an access token and a refresh token.
+
+Client names are cleaned before the consent page shows them: control and invisible characters (including right-to-left overrides) are removed and the name is cut to 100 characters, so a client can't dress itself up as something else.
+
+## Scopes
+
+A token carries `read`, `write` or both. Neither includes the other.
+
+| Scope   | Runs                                                                  |
+| :------ | :-------------------------------------------------------------------- |
+| `read`  | Route tools for `GET` and `HEAD` routes, and custom tools with `scope: 'read'` |
+| `write` | Every other route tool, and custom tools with `scope: 'write'`        |
+
+A client lists only the tools its token can call. Calling one outside its scopes gets `403` with `error="insufficient_scope"`, which tells the client to ask the member again. A refresh may narrow the scopes, never widen them.
+
+With `mcp.guestAccess`, a client without a token can call read tools as a guest. Write tools always need a member.
+
+## Tokens
+
+| Secret             | Lifetime                                  | Notes |
+| :----------------- | :---------------------------------------- | :---- |
+| Authorization code | 60 seconds                                | Works once. Presenting it again revokes the connection it created. |
+| Access token       | 15 minutes by default, 1 minute to 1 hour | Sent as `Authorization: Bearer ...` on every MCP request. |
+| Refresh token      | 30 days by default, 1 hour to 90 days     | Replaced on every refresh, with a fresh lifetime. Presenting a replaced one revokes the connection. |
+
+A few more properties hold for all of them:
+
+- **Stored as hashes.** The database never holds a usable token, so a database leak doesn't hand out connections.
+- **Easy to spot.** Access tokens start with `vnmcp_at_` and refresh tokens with `vnmcp_rt_`, so secret scanners can flag one pasted into a repository.
+- **Bound to your endpoint.** A token works only on the exact MCP endpoint URL it was issued for. A token from another VitNode site, or from this one before its URL changed, is refused.
+- **Never a cookie.** The MCP endpoint and its OAuth routes neither read nor set cookies. A member's browser session gives a client nothing, and a client's token gives nothing to the rest of the site.
+
+Lifetimes are set with `auth.accessTokenTtl` and `auth.refreshTokenTtl`; see [Options](/docs/dev/mcp/configuration#options).
+
+## What a client can never do
+
+A client acts as the member who connected it, so every check a route makes for that member still applies: permissions, content access, ownership, site offline mode. On top of that, a few things are off limits for every token:
+
+- **No staff powers.** A plugin can't offer a route under an `admin` path, or one guarded by `adminStaffPermission` or `moderatorStaffPermission`, as a tool. VitNode refuses to start if one tries. Checks a handler makes itself are covered too: during an MCP call every staff permission check of the connected member answers "not staff", so an admin's client sees what any other member sees.
+- **No captcha routes.** A route with `withCaptcha` can't be a tool, since an AI can't solve a captcha and shouldn't pretend to.
+- **No suspended members.** A suspended member's tokens are refused until the suspension ends.
+
+If you write tools, read [Route tools](/docs/dev/mcp/route-tools#what-a-tool-can-reach) for how a route can tell an MCP call apart from a browser.
+
+## When connections end
+
+A connection is one member's approval of one client. Ending it stops its tokens straight away.
+
+| What happens                                             | Reason in the event |
+| :------------------------------------------------------- | :------------------ |
+| The member disconnects the client in **Settings → Connected apps** | `user`              |
+| The member resets their password, or an admin sets a new one | `password_changed` |
+| An admin signs the member out everywhere, or the member asks to delete their account | `sessions_revoked` |
+| The member approves the same client again                | `replaced`          |
+| A replaced refresh token is presented again              | `refresh_reuse`     |
+| An authorization code is presented a second time         | `code_reuse`        |
+| The client revokes its own refresh token                 | `token_revoked`     |
+
+Each one emits `mcp.connection.revoked` with that reason, so a listener can, for example, warn the member when a reused token suggests a leak. See [MCP connection events](/docs/dev/events/built-in-events#mcp-connection-events). A connection whose refresh token expires simply stops, and an erased account takes its connections with it.
+
+The hourly `clean` cron job deletes expired tokens and codes, expired connections, and client registrations nobody has used for 30 days. A client with a deleted registration registers again on its next sign-in.
+
+## Browser protections
+
+- **Origin check.** A request with an `Origin` header the server doesn't know gets `403`, so a web page can't drive `/api/mcp` through a member's browser. See [Allowed origins](/docs/dev/mcp/configuration#allowed-origins).
+- **CORS without credentials.** Cross-origin responses never include cookies, and only the headers MCP needs are allowed.
+- **No CSRF surface.** Because nothing on the MCP endpoint reads a cookie, a forged request has no session to ride on.
+
+## Rate limits
+
+Every message to `/api/mcp` spends the `mcp` budget, counted per access token so clients sharing an address (a hosted AI service, say) don't share a budget. The OAuth routes spend the stricter sign-in budget per IP. See [Rate limits](/docs/dev/mcp/configuration#rate-limits).
+
+## Related
+
+<Cards>
+  <Card
+    title="MCP configuration"
+    description="Redirect URIs, token lifetimes and allowed origins"
+    href="/docs/dev/mcp/configuration"
+  />
+  <Card
+    title="MCP connection events"
+    description="React when a member connects or a connection ends"
+    href="/docs/dev/events/built-in-events#mcp-connection-events"
+  />
+  <Card
+    title="Route tools"
+    description="What runs when an AI client calls a plugin's route"
+    href="/docs/dev/mcp/route-tools"
+  />
+</Cards>

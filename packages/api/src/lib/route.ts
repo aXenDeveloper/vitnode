@@ -154,7 +154,7 @@ export interface BuildRouteOptions<
    * The tool's name is the module path, the route path (`{id}` read as `id`)
    * and the lowercase method joined by `.` - `GET /stats/forums` in the
    * `forum` module is `forum.stats.forums.get`, listed to clients as
-   * `forum_stats_forums_get` (the plugin id without `@vitnode/`, then the
+   * `forum_forum_stats_forums_get` (the plugin id without `@vitnode/`, then the
    * name). Its arguments are the route's path params, query and JSON body
    * merged into one object. A `GET` tool needs the `read` scope; every other
    * method needs `write`.

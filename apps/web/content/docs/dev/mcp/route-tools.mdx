@@ -1,0 +1,188 @@
+---
+title: Route tools
+description: Offer a VitNode plugin's API routes to Claude and other AI clients as MCP tools with buildRoute's mcp option, and learn how tool names, scopes and limits work.
+icon: Route
+implementation:
+  objective: Offer existing plugin API routes to AI clients as MCP tools.
+  decisions:
+    - Which plugin? Offer plugins in the project with an API part (`config.api.ts`).
+    - Which routes should AI clients call? Offer member-facing routes of the chosen plugin outside `admin` paths, without staff permission guards or `withCaptcha`.
+    - Keep each derived tool name, or set a shorter one with `mcp.name`? Show the derived names first.
+  constraints:
+    - Mark routes with the `mcp` option of `buildRoute`; never wrap them in a custom tool.
+    - Write every tool description in plain English for the AI model, not as an i18n key.
+    - Keep each route's `responses` schema accurate; a mismatched success response fails the tool call.
+  related:
+    - title: Custom tools
+      href: /docs/dev/mcp/custom-tools
+    - title: MCP configuration
+      href: /docs/dev/mcp/configuration
+---
+
+Any member-facing route in your plugin can become a tool for AI clients with one option: `mcp` on `buildRoute`. The tool runs your route, as the member who connected the client, so its validation, permission checks and response stay exactly as they are. In this guide you offer the two `site-notes` routes to AI clients.
+
+## Before you begin
+
+- The `notes` module with `listNotesRoute` and `showNoteRoute` from [API routes](/docs/dev/plugins/api/routes).
+- An app with the [MCP server](/docs/dev/mcp) enabled and a client, such as Claude Code, connected to it.
+
+<Steps>
+
+<Step>
+
+### Describe the list route for the AI
+
+Open `src/api/modules/notes/routes/list.route.ts` and add `mcp` with a description:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/list.route.ts"
+export const listNotesRoute = buildRoute({
+  // [!code ++:4]
+  mcp: {
+    description:
+      "Lists every site note with its id, title and body, newest first. Use it to see what the site has announced.",
+  },
+  route: {
+    method: "get",
+    path: "/",
+    // ...
+  },
+  handler: c => c.json(sampleNotes, 200),
+});
+```
+
+A tool needs a description, because it is the only thing the model reads to decide when to call the tool. `mcp.description` wins; without it the route's own `description` is used. Write it in plain English, not as an i18n key: it goes to the AI, not to the UI.
+
+</Step>
+
+<Step>
+
+### Turn on the show route
+
+When the route already has a good `description`, `mcp: true` is enough. Open `src/api/modules/notes/routes/show.route.ts`:
+
+```ts title="plugins/site-notes/src/api/modules/notes/routes/show.route.ts"
+export const showNoteRoute = buildRoute({
+  mcp: true, // [!code ++]
+  route: {
+    method: "get",
+    path: "/{id}",
+    description: "Returns one site note by its numeric id, from the notes list.", // [!code ++]
+    // ...
+  },
+  // ...
+});
+```
+
+The path parameter `id` becomes the tool's `id` argument. Saying where the id comes from ("from the notes list") helps the model chain the two tools.
+
+</Step>
+
+<Step>
+
+### Reconnect the client
+
+`pnpm dev` rebuilds the plugin, and the API builds its tool list again. Clients cache the list they got when they connected, so reconnect: in Claude Code, run `/mcp`, pick your server and reconnect.
+
+</Step>
+
+</Steps>
+
+## Check the result
+
+In Claude Code, `/mcp` lists two new tools for your server: `site_notes_notes_get` and `site_notes_notes_id_get`. Ask "What does site note 2 say?". The client calls `site_notes_notes_id_get` with `{ "id": 2 }` and gets the note back. Ask for note 9 and the tool returns an error saying the request failed with HTTP 404, which the model reads like any other answer.
+
+If the API fails to start instead, the error names the route and the rule it broke; see [Routes that can't be tools](#routes-that-cant-be-tools).
+
+## How a route tool runs
+
+When a client calls a route tool, VitNode builds a request for the route and sends it through the API in the same process:
+
+- **Arguments.** The tool's arguments are the route's path params, query and JSON body merged into one object. `{ "id": 2 }` becomes `GET /api/site-notes/notes/2`.
+- **The whole route pipeline.** Middleware, validation, `allowWhenOffline`, permission checks and your handler all run, with `c.get("user")` set to the connected member (or `null` for a [guest](/docs/dev/mcp/configuration#options)). The member's IP address, `Accept-Language` and `User-Agent` are passed along. The rate limiter doesn't count the request again.
+- **The result.** A successful JSON response goes back to the model as text. When the route's success schema is a Zod object, the response is checked against it and also sent as `structuredContent`, which clients can read as data. `showNoteRoute` gets both; `listNotesRoute` returns an array, so it sends text only.
+- **Errors.** Any other status is a tool error (`isError: true`) that quotes the status and the response body, so return a useful error body. A success response that doesn't match its declared schema is an error too, so keep `responses` honest.
+
+## Tool names
+
+Each tool has three forms of one name:
+
+| Form            | Rule                                                                      | `showNoteRoute`           |
+| :-------------- | :------------------------------------------------------------------------ | :------------------------ |
+| Local name      | Module path, route path (`{id}` read as `id`) and lowercase method, joined by `.` | `notes.id.get`    |
+| Name on the wire | Plugin id without `@vitnode/`, other symbols turned into `_`, then the local name with `.` and `-` turned into `_` | `site_notes_notes_id_get` |
+| Config key      | Plugin id, `:`, local name                                                | `site-notes:notes.id.get` |
+
+Clients call the wire name. The app's [`mcp.disabledTools`](/docs/dev/mcp/configuration#pick-the-tools) takes the config key, and it is typed: once `vitnode dev` regenerates the app's API registry, `'site-notes:notes.id.get'` autocompletes and a typo fails to compile.
+
+Nested modules add every level, so `GET /stats/forums` in the forum plugin's `forum` module is `forum.stats.forums.get`, `forum_forum_stats_forums_get` on the wire. Replace a derived name with `mcp: { name }`:
+
+```ts
+mcp: { name: "notes.read" }, // site_notes_notes_read on the wire
+```
+
+A local name is lowercase letters and digits in groups joined by `.`, `_` or `-`. The wire name may be at most 64 characters, so long module paths are a good reason to pick a shorter name. Two tools of one plugin can't share a name, and two plugins can't produce the same wire name; both stop the API at startup with a message that names the clash.
+
+## Scopes and hints
+
+The HTTP method decides the [scope](/docs/dev/mcp/security#scopes) a token needs and the hints clients show:
+
+| Method               | Scope   | Hints sent to clients                    |
+| :------------------- | :------ | :--------------------------------------- |
+| `GET`, `HEAD`        | `read`  | read-only                                |
+| `POST`, `PATCH`      | `write` | may change data                          |
+| `PUT`                | `write` | may change data, safe to repeat          |
+| `DELETE`             | `write` | destructive, safe to repeat              |
+
+The route's `summary`, when it has one, becomes the tool's title in client UIs.
+
+## Routes that can't be tools
+
+`buildApiPlugin` checks every route with `mcp` when the API starts and refuses to start on any of these:
+
+| The route...                                                     | Why                                                    |
+| :--------------------------------------------------------------- | :----------------------------------------------------- |
+| sits under an `admin` path segment                               | An MCP token never acts as an admin. Expose a member-facing route instead. |
+| sets `adminStaffPermission` or `moderatorStaffPermission`        | The same, for staff-only routes outside `admin`.       |
+| sets `withCaptcha`                                               | An AI client can't solve a captcha.                    |
+| takes a body that isn't `application/json` with a Zod object     | Tool arguments are one JSON object. File uploads stay in the UI. |
+| uses one key in two of params, query and body                    | The merged arguments would be ambiguous.               |
+| has neither `description` nor `mcp.description`                  | The model would have nothing to go on.                 |
+| has an invalid or duplicate tool name                            | See [Tool names](#tool-names).                         |
+
+## What a tool can reach
+
+Inside the route, `c.get("user")` is the member who connected the client, and `c.get("mcp")` is set (it is `null` for every browser request). Staff powers stay behind: every staff permission check of that member answers "not staff" during an MCP call, so a handler that shows hidden content to editors or extra tools to moderators treats an admin's AI client like any other member. To branch on MCP for anything else, read the marker:
+
+```ts
+const viaMcp = c.get("mcp") !== null;
+```
+
+## Write descriptions models can use
+
+The model chooses tools from their descriptions alone, so write them for a capable reader who has never seen your site:
+
+- **Say what comes back.** "Lists every forum with its topic and comment counts" beats "Forum stats".
+- **Name the arguments that matter** and their format: "`from` and `to` are ISO dates", "`types` is comma-separated".
+- **Explain paging.** "Page with `first` and the returned `pageInfo.endCursor` as `cursor`" saves the model a few confused calls.
+- **Point to where ids come from.** "`forumId` comes from the forum stats tool" lets the model chain calls instead of guessing.
+- **Keep it to one to three sentences.** Clients usually put every tool description in front of the model on every turn, so long ones crowd out the conversation.
+
+## Related
+
+<Cards>
+  <Card
+    title="Custom tools"
+    description="Write a tool from scratch when no route fits"
+    href="/docs/dev/mcp/custom-tools"
+  />
+  <Card
+    title="MCP configuration"
+    description="Pick which plugins and tools a site offers"
+    href="/docs/dev/mcp/configuration"
+  />
+  <Card
+    title="MCP security"
+    description="Scopes, tokens and what a client can never do"
+    href="/docs/dev/mcp/security"
+  />
+</Cards>
