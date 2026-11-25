@@ -1,3 +1,5 @@
+import type { McpRouteToolName } from "../mcp/naming";
+
 /**
  * One endpoint an API plugin serves, with every field that identifies it
  * correlated: the plugin, the full module path, the route path, the method, and
@@ -13,6 +15,8 @@ export interface ApiEndpoint {
 
 /** One route, as much of one as resolving a call reads. */
 export interface ApiRouteNode {
+  /** `buildRoute`'s `mcp` option; only the MCP tool names read it. */
+  readonly mcp?: unknown;
   readonly route: { readonly method: string; readonly path: string };
 }
 
@@ -50,6 +54,7 @@ export interface ApiModuleContract {
  */
 export interface ApiPluginShape {
   readonly endpoints: unknown;
+  readonly mcpTools: string;
   readonly modulePaths: string;
   readonly modules: readonly unknown[];
   readonly pluginId: string;
@@ -126,6 +131,58 @@ type EndpointsOfModules<
 > = EndpointsOfModule<Plugin, Prefix, Modules[number]>;
 
 /**
+ * A route's MCP tool name: its explicit `mcp: { name }`, else the derived one,
+ * else nothing for a route without `mcp`. Distributes over the option, so the
+ * `undefined` of an optional `mcp` contributes nothing.
+ */
+type McpToolNameOfOption<
+  Option,
+  Module extends string,
+  Route extends { method: string; path: string },
+> = Option extends { name: infer Name extends string }
+  ? Name
+  : Option extends object | true
+    ? McpRouteToolName<Module, Route["path"], Route["method"]>
+    : never;
+
+type McpToolsOfRoutes<
+  Module extends string,
+  Routes extends readonly ApiRouteNode[],
+> = Routes[number] extends infer R
+  ? R extends {
+      mcp?: infer Option;
+      route: infer Route extends { method: string; path: string };
+    }
+    ? McpToolNameOfOption<Option, Module, Route>
+    : never
+  : never;
+
+/** Every MCP tool name below one module, walked like {@link EndpointsOfModule}. */
+type McpToolsOfModule<
+  Prefix extends string,
+  M extends ApiModuleContract,
+> = M extends ApiModuleContract
+  ? IsTypedModule<M> extends true
+    ? | McpToolsOfModules<`${Prefix}${M["name"]}/`, ChildrenOf<M>>
+      | McpToolsOfRoutes<`${Prefix}${M["name"]}`, M["routes"]>
+    : never
+  : never;
+
+type McpToolsOfModules<
+  Prefix extends string,
+  Modules extends readonly ApiModuleContract[],
+> = McpToolsOfModule<Prefix, Modules[number]>;
+
+/** The ids of the custom tools passed to `buildApiPlugin({ mcpTools })`. */
+type McpCustomToolIds<T> = T extends {
+  mcpTools?: readonly (infer Tool)[];
+}
+  ? Tool extends { id: infer Id extends string }
+    ? Id
+    : never
+  : never;
+
+/**
  * The whole type-level surface the fetcher needs from one API plugin.
  *
  * Every member is computed once, in the plugin's own `config.api.ts`, and the
@@ -142,6 +199,9 @@ type EndpointsOfModules<
  * - `endpoints` is every endpoint flattened, for {@link ApiRequest} and for
  *   anything enumerating an installation's API. Nothing on the path of an
  *   ordinary call reads it, so it stays unmaterialized until asked for.
+ * - `mcpTools` is the local name of every MCP tool the plugin offers - routes
+ *   built with `mcp` and custom `mcpTools` - for the app's typed
+ *   `mcp.disabledTools`. Like `endpoints`, only that config reads it.
  *
  * None of it reaches a plugin's Hono application, content models, event
  * listeners, queue tasks, WebSockets, search indexers or messages. Those are
@@ -153,6 +213,7 @@ export type ApiPluginContract<T> = T extends {
 }
   ? {
       endpoints: EndpointsOfModules<Id, "", Modules>;
+      mcpTools: McpCustomToolIds<T> | McpToolsOfModules<"", Modules>;
       modulePaths: ModulePathsOfModules<Modules>;
       modules: Modules;
       pluginId: Id;

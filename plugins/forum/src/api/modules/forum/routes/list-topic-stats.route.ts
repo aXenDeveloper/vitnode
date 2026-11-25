@@ -40,6 +40,7 @@ const TOPIC_IDS = new RegExp(
 );
 
 export const topicStatsRoute = buildRoute({
+  mcp: true,
   route: {
     method: "get",
     path: "/stats/topics",

@@ -99,10 +99,30 @@ export type BuildRouteConfig<P extends string> = Omit<RouteConfig, "path"> & {
   withCaptcha?: boolean;
 };
 
+/**
+ * Exposes a route as a Model Context Protocol tool: `true`, or the tool's own
+ * `name` and `description`. See `BuildRouteOptions.mcp`.
+ */
+export type RouteMcpOption =
+  | true
+  | {
+      /**
+       * What the tool does, for the AI model, in plain English. Defaults to
+       * the route's `description`; one of the two is required.
+       */
+      description?: string;
+      /**
+       * The tool's name inside the plugin, replacing the derived one:
+       * lowercase letters and digits in groups joined by `.`, `_` or `-`.
+       */
+      name?: string;
+    };
+
 /** What `buildRoute` accepts. */
 export interface BuildRouteOptions<
   P extends string,
   R extends BuildRouteConfig<P>,
+  Mcp extends RouteMcpOption | undefined = undefined,
 > {
   /**
    * Requires an admin with this staff permission; anyone else gets `403`.
@@ -125,6 +145,36 @@ export interface BuildRouteOptions<
   /** The Hono handler, typed from `route`: `c.req.valid(...)` and `c.json(...)` follow its schemas. */
   handler: RouteHandler<R & { path: P }, EnvVitNode>;
   hook?: RouteValidationHook;
+  /**
+   * Offers the route to AI clients as a tool on the MCP endpoint (`/api/mcp`),
+   * when the app turns it on with `mcp.enabled`. The tool runs the route itself,
+   * in process, as the member who connected the client (or a guest): every
+   * check the route makes still applies.
+   *
+   * The tool's name is the module path, the route path (`{id}` read as `id`)
+   * and the lowercase method joined by `.` - `GET /stats/forums` in the
+   * `forum` module is `forum.stats.forums.get`, listed to clients as
+   * `forum_stats_forums_get` (the plugin id without `@vitnode/`, then the
+   * name). Its arguments are the route's path params, query and JSON body
+   * merged into one object. A `GET` tool needs the `read` scope; every other
+   * method needs `write`.
+   *
+   * `buildApiPlugin` refuses, at startup, a tool under an `admin` path segment,
+   * one with `adminStaffPermission`, `moderatorStaffPermission` or
+   * `withCaptcha`, a body that is not `application/json` with an object
+   * schema, a key shared by params, query and body, a name that is invalid or
+   * taken, and a tool with no description.
+   *
+   * @example
+   * ```ts
+   * buildRoute({
+   *   mcp: { description: "Lists the newest topics of one forum." },
+   *   route: { method: "get", path: "/topics", ... },
+   *   handler: ...,
+   * });
+   * ```
+   */
+  mcp?: Mcp;
   /**
    * Requires a signed-in member who is a moderator with this staff permission;
    * anyone else gets `403`. Checked against the member's site session, so use
@@ -177,6 +227,7 @@ export const buildRoute = <
   Plugin extends string,
   P extends string,
   R extends BuildRouteConfig<P>,
+  const Mcp extends RouteMcpOption | undefined = undefined,
 >({
   route,
   handler,
@@ -184,10 +235,11 @@ export const buildRoute = <
   pluginId,
   adminStaffPermission,
   allowWhenOffline = false,
+  mcp,
   moderatorStaffPermission,
-}: BuildRouteOptions<P, R> & {
+}: BuildRouteOptions<P, R, Mcp> & {
   pluginId: Plugin;
-}): Route<Plugin, R & { path: P }> => {
+}): Route<Plugin, R & { path: P }, Mcp> => {
   const tags = [pluginTag(pluginId), ...(route.tags ?? [])];
 
   const middleware: MiddlewareHandler[] = [pluginMiddleware(pluginId)];
@@ -218,7 +270,7 @@ export const buildRoute = <
     middleware.push(route.middleware);
   }
 
-  const built: Route<Plugin, R & { path: P }> = {
+  const built: Route<Plugin, R & { path: P }, Mcp> = {
     route: createRouteHono({
       // `route` is spread first on purpose: `tags` and `middleware` already
       // merge the route's own values, so letting the spread win would drop
@@ -227,8 +279,9 @@ export const buildRoute = <
       tags,
       middleware,
     }),
-    handler: handler as Route<Plugin, R & { path: P }>["handler"],
+    handler: handler as Route<Plugin, R & { path: P }, Mcp>["handler"],
     ...(hook ? { hook } : {}),
+    ...(mcp ? { mcp } : {}),
     pluginId,
   };
 
@@ -248,9 +301,15 @@ export const buildRoute = <
 export interface Route<
   Plugin extends string = string,
   R extends RouteConfig = RouteConfig,
+  Mcp extends RouteMcpOption | undefined = RouteMcpOption | undefined,
 > {
   handler: (...args: unknown[]) => Promise<Response> | Response;
   hook?: RouteValidationHook;
+  /**
+   * The route's MCP tool option, as passed to `buildRoute`. Its type keeps the
+   * literal, so the plugin's contract can name the tool (`McpToolKey`).
+   */
+  mcp?: Mcp;
   pluginId: Plugin;
   route: R;
 }

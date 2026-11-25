@@ -191,6 +191,10 @@ const categoryFlags = async (
  * generation, and the response carries both list tags.
  */
 export const publicCategoriesRoute = buildRoute({
+  mcp: {
+    description:
+      "Lists the blog's categories with their name (in `locale` when given), slug, colour and how many articles the viewer can read in each, plus the total article count.",
+  },
   route: {
     method: "get",
     path: "/",

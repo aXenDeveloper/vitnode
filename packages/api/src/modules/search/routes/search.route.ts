@@ -12,6 +12,10 @@ import {
 import { zodSearchResultSchema } from "../search.schema";
 
 export const searchRoute = buildRoute({
+  mcp: {
+    description:
+      "Searches the community's public content (articles, topics, comments and anything else plugins index) by keywords, newest or most relevant first. Narrow it with `types` (comma-separated item types), `authorIds` (comma-separated member ids), `from` and `to` (ISO dates) and `lang`; page with `first` and the returned `pageInfo.endCursor` as `cursor`. Each hit has a title, an excerpt and its URL.",
+  },
   route: {
     method: "get",
     description: "Search and browse indexed community content.",

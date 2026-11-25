@@ -9,6 +9,8 @@ import type { PrivacySettings } from "@/lib/account-deletion/settings";
 import type { CacheClient, DomainCache } from "@/lib/cache";
 import type { LocaleRouting } from "@/lib/i18n/locale-routing";
 import type { LocaleConfig, MessagesSource } from "@/lib/i18n/types";
+import type { ResolvedMcpConfig } from "@/lib/mcp/config";
+import type { McpPrincipal } from "@/lib/mcp/principal";
 import type { RegisteredPersonalData } from "@/lib/personal-data";
 import type { UpdateChannel } from "@/lib/updates/manifest";
 import type { PersonalInformationFields } from "@/lib/user-personal-information";
@@ -37,6 +39,10 @@ import { collectEventDefinitions } from "@/lib/event-definition";
 import { collectLocaleCodes } from "@/lib/i18n/load-messages";
 import { localeRoutingFromConfig } from "@/lib/i18n/locale-routing";
 import { buildApiMessagesSources } from "@/lib/i18n/sources";
+import { resolveMcpConfig } from "@/lib/mcp/config";
+import { isMcpPath } from "@/lib/mcp/http";
+import { mcpInternalCallOf } from "@/lib/mcp/principal";
+import { loadMcpUser } from "@/lib/mcp/user";
 import { findActiveSuspension } from "@/lib/moderation/warnings/suspension";
 import { collectPersonalData } from "@/lib/personal-data";
 import { resolvePersonalInformationFields } from "@/lib/user-personal-information";
@@ -258,6 +264,11 @@ export interface EnvVariablesVitNode {
       sources: MessagesSource[];
     };
     installedPlugins: InstalledPluginRegistry;
+    /**
+     * The API config's `mcp` with defaults applied, plus the base path the API
+     * is mounted at. Always set: `enabled` is `false` when the endpoint is off.
+     */
+    mcp: ResolvedMcpConfig;
     /** Every mention target: custom ones and one per content type with mention fields. */
     mentions: MentionsRegistry;
     metadata: VitNodeMetadata;
@@ -313,6 +324,21 @@ export interface EnvVariablesVitNode {
    * the request's plugin, path, IP and user, and echoes it to the console.
    */
   log: LoggerMiddlewareType;
+  /**
+   * Set when the request serves an MCP client: the `/mcp` endpoint itself
+   * (custom tools run on its context) and the in-process request a route tool
+   * makes. `principal` is the member's connection, `null` for a guest. `user`
+   * is then the token's member - the session cookie is never read - and is
+   * never an admin. `null` for every other request.
+   *
+   * @example
+   * ```ts
+   * if (c.get("mcp")) {
+   *   // Called by an AI client: skip what only a browser needs.
+   * }
+   * ```
+   */
+  mcp: null | { principal: McpPrincipal | null };
   /** Creates and delivers user notifications. */
   notifications: NotificationsModel;
   /** Hosted-checkout payments through the configured providers: see {@link PaymentsModel}. */
@@ -400,6 +426,7 @@ export const globalMiddleware = ({
   updates,
   users,
   cacheClient,
+  mcp = resolveMcpConfig(undefined, ""),
 }: Pick<VitNodeApiConfig, "metadata"> &
   Pick<
     VitNodeApiConfig,
@@ -424,6 +451,8 @@ export const globalMiddleware = ({
     | "users"
   > & {
     cacheClient: CacheClient | null;
+    /** The resolved `mcp` config; off when left out. */
+    mcp?: ResolvedMcpConfig;
   }) => {
   const notificationWorkers = resolveNotificationWorkerSettings(notifications);
   const auditRetentionDays = resolveAuditRetentionDays(activityLogs);
@@ -748,6 +777,7 @@ export const globalMiddleware = ({
       permissionStaff: permissionStaffMetadata,
       moderation: moderationMetadata,
       notifications: notificationsMetadata,
+      mcp,
       mentions: mentionsMetadata,
       reactions: reactionsMetadata,
       notificationWorkers,
@@ -829,17 +859,36 @@ export const globalMiddleware = ({
       await ensureContentLocalizationLanguages(c, contentTypesMetadata);
     }
 
-    const sessionUser = await new SessionModel(c).getUser();
-    const suspension = sessionUser
-      ? await findActiveSuspension(c, sessionUser.id)
-      : null;
-    c.set("user", suspension ? null : sessionUser);
-    c.set(
-      "suspension",
-      sessionUser && suspension
-        ? { endsAt: suspension.endsAt, userId: sessionUser.id }
-        : null,
-    );
+    const mcpCall = mcpInternalCallOf(c.req.raw);
+    if (mcpCall) {
+      // A route tool's request: the member is the token's, loaded and checked
+      // for a suspension like a session's member, never a cookie's.
+      const { principal } = mcpCall;
+      const user = principal ? await loadMcpUser(c, principal.userId) : null;
+      if (principal && !user) throw new HTTPException(401);
+      c.set("user", user);
+      c.set("suspension", null);
+      c.set("mcp", { principal });
+    } else if (isMcpPath(c.req.path, mcp.apiBasePath)) {
+      // The MCP endpoint and its OAuth routes are cookie-less: the endpoint
+      // sets the token's member itself once the token checks out.
+      c.set("user", null);
+      c.set("suspension", null);
+      c.set("mcp", null);
+    } else {
+      const sessionUser = await new SessionModel(c).getUser();
+      const suspension = sessionUser
+        ? await findActiveSuspension(c, sessionUser.id)
+        : null;
+      c.set("user", suspension ? null : sessionUser);
+      c.set(
+        "suspension",
+        sessionUser && suspension
+          ? { endsAt: suspension.endsAt, userId: sessionUser.id }
+          : null,
+      );
+      c.set("mcp", null);
+    }
     c.set("admin", null);
     c.set("adminSessionExpiresAt", null);
     c.set("log", loggerMiddleware(c));

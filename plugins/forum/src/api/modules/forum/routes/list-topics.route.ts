@@ -27,6 +27,10 @@ import { forumStatsHeaders, iso, loadTopicStats } from "../lib/stats";
  * the ids.
  */
 export const forumTopicsRoute = buildRoute({
+  mcp: {
+    description:
+      "Lists one forum's public topics, newest first, without their bodies: title, slug, author, publish date, comment count and last comment time. `forumId` comes from the forum stats tool; page with `first` and the returned `pageInfo.endCursor` as `cursor`.",
+  },
   route: {
     method: "get",
     path: "/topics",

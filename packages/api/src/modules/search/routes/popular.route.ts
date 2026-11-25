@@ -6,6 +6,7 @@ import { searchSuggestionsLimit } from "../lib/query-params";
 import { zodSearchSuggestion } from "../search.schema";
 
 export const popularRoute = buildRoute({
+  mcp: true,
   route: {
     method: "get",
     description:

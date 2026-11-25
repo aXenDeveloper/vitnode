@@ -3,6 +3,7 @@ import { z } from "@hono/zod-openapi";
 import { buildRoute } from "@/builders";
 import { writeAuditLogBestEffort } from "@/lib/audit/write";
 import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+import { revokeMcpGrantsForUser } from "@/lib/mcp/oauth/grants";
 import { revokeSessions } from "@/models/session-revoke";
 
 import { assertCanEditAdminTarget } from "../lib/assert-edit-user-permission";
@@ -46,6 +47,7 @@ export const revokeUserDevicesAdminRoute = buildRoute({
     await assertCanEditAdminTarget(c, userId);
 
     await revokeSessions(c, { userId });
+    await revokeMcpGrantsForUser(c, userId, "sessions_revoked");
     await writeAuditLogBestEffort(c, {
       action: "user.devices_revoked",
       target: { id: userId, type: "user" },

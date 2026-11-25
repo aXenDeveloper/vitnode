@@ -20,6 +20,18 @@ import { CONFIG } from "@/lib/config";
 import { collectCronJobs } from "@/lib/cron";
 import { describeError } from "@/lib/error-details";
 import { createReadinessCheck, mountHealthRoutes } from "@/lib/health";
+import { resolveMcpConfig } from "@/lib/mcp/config";
+import {
+  isMcpPath,
+  MCP_CORS_ALLOW_HEADERS,
+  MCP_CORS_EXPOSE_HEADERS,
+  mcpAllowedOrigins,
+  mcpEndpointPath,
+} from "@/lib/mcp/http";
+import { mcpInternalCallOf } from "@/lib/mcp/principal";
+import { buildMcpToolRegistry } from "@/lib/mcp/registry";
+import { buildMcpApp } from "@/lib/mcp/server";
+import { MCP_MOUNT_PATH } from "@/lib/mcp/urls";
 import { processSingleton } from "@/lib/process-singleton";
 import { manifest } from "@/manifest";
 import {
@@ -71,9 +83,9 @@ interface CSRFOptions {
 /**
  * Mounts VitNode on a Hono app: security headers, CORS, CSRF, the body limit,
  * rate limiting, the per-request context (`c.get("db")`, `c.get("cache")` and
- * friends), core and every plugin at `/{pluginId}`, cron registration, and an
- * error handler that hides details outside development. It returns the same
- * `app`.
+ * friends), core and every plugin at `/{pluginId}`, the MCP endpoint at `/mcp`
+ * when `mcp.enabled`, cron registration, and an error handler that hides
+ * details outside development. It returns the same `app`.
  *
  * Call it at startup. Calling it again in the same process, as a dev server
  * does after a plugin's API code changes, builds a fresh set of routes while
@@ -195,13 +207,41 @@ export function VitNodeAPI({
     });
   }
 
+  // Hono keeps the base path `basePath("/api")` gave the app on a private
+  // field; the MCP endpoint needs it for its own URLs and path checks.
+  const apiBasePath =
+    (app as unknown as { _basePath?: string })._basePath ?? "/";
+  const mcp = resolveMcpConfig(vitNodeApiConfig.mcp, apiBasePath);
+  const isMcpRequest = (c: Context): boolean =>
+    mcp.enabled && isMcpPath(c.req.path, mcp.apiBasePath);
+
   const webOrigin = CONFIG.web.origin;
   const rateLimiter = rateLimiterMiddleware(vitNodeApiConfig.rateLimiter, {
+    mcpPath: mcp.enabled ? mcpEndpointPath(mcp.apiBasePath) : undefined,
     sessionCookieName:
       vitNodeApiConfig.authorization?.cookieName ?? DEFAULT_SESSION_COOKIE_NAME,
     storeClient: redisClient,
   });
   const corsConfig = corsOptions ?? { credentials: true, origin: webOrigin };
+  const defaultCors = cors({
+    ...corsConfig,
+    exposeHeaders: exposeRateLimitHeaders(corsConfig.exposeHeaders),
+  });
+  // MCP clients authenticate with a bearer token, never a cookie, so their
+  // policy sends no credentials and admits the origins `mcp` allows.
+  const mcpCors = cors({
+    allowHeaders: [...MCP_CORS_ALLOW_HEADERS],
+    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
+    credentials: false,
+    exposeHeaders: exposeRateLimitHeaders([...MCP_CORS_EXPOSE_HEADERS]),
+    origin: [...mcpAllowedOrigins(mcp)],
+  });
+  const csrfCheck = csrf(
+    csrfOptions ?? {
+      origin: (origin, c) =>
+        origin === webOrigin || origin === new URL(c.req.url).origin,
+    },
+  );
 
   app.use(
     secureHeaders({
@@ -221,19 +261,17 @@ export function VitNodeAPI({
   );
   app.use("*", clientIpMiddleware);
   app.use("*", rateLimiter.preflight);
-  app.use(
-    cors({
-      ...corsConfig,
-      exposeHeaders: exposeRateLimitHeaders(corsConfig.exposeHeaders),
-    }),
+  app.use(async (c, next) =>
+    isMcpRequest(c) ? await mcpCors(c, next) : await defaultCors(c, next),
   );
-  app.use(
-    csrf(
-      csrfOptions ?? {
-        origin: (origin, c) =>
-          origin === webOrigin || origin === new URL(c.req.url).origin,
-      },
-    ),
+  // Skipped for the MCP endpoint, which never reads a cookie (its token
+  // endpoint takes form posts from non-browser clients and checks `Origin`
+  // itself), and for a route tool's in-process request, whose `/mcp` request
+  // was checked already.
+  app.use(async (c, next) =>
+    isMcpRequest(c) || mcpInternalCallOf(c.req.raw)
+      ? await next()
+      : await csrfCheck(c, next),
   );
   // Nothing bounded a request body before this. `POST /sign_in` reads its JSON
   // and then runs scrypt unconditionally, so a body the server is willing to
@@ -276,6 +314,7 @@ export function VitNodeAPI({
       users: vitNodeApiConfig.users,
       plugins,
       cacheClient: redisClient,
+      mcp,
     }),
   );
   app.use("*", rateLimiter.identified);
@@ -322,6 +361,24 @@ export function VitNodeAPI({
     });
   } else {
     void registerCron();
+  }
+
+  if (mcp.enabled) {
+    app.route(
+      MCP_MOUNT_PATH,
+      buildMcpApp({
+        config: mcp,
+        registry: buildMcpToolRegistry({ config: mcp, plugins }),
+        rootApp: app,
+        serverInfo: {
+          name:
+            vitNodeApiConfig.metadata.shortTitle ??
+            vitNodeApiConfig.metadata.title,
+          title: vitNodeApiConfig.metadata.title,
+          version: manifest.version,
+        },
+      }),
+    );
   }
 
   plugins.map(root => {

@@ -8,6 +8,7 @@ import {
   userEmailVerifiedEvent,
   userPasswordUpdatedEvent,
 } from "@/events/users";
+import { revokeMcpGrantsForUser } from "@/lib/mcp/oauth/grants";
 import { assertPasswordSignInEnabled } from "@/lib/password-sign-in";
 import { ForgotPasswordTokenModel, PasswordModel } from "@/models/password";
 import { revokeSessions } from "@/models/session-revoke";
@@ -112,6 +113,8 @@ export const changePasswordRoute = buildRoute({
     // session opened with it is exactly as untrusted - including the attacker's,
     // which would otherwise outlive the reset by up to ninety days.
     await revokeSessions(c, { userId });
+    // AI clients connected over MCP hold tokens of their own; they go too.
+    await revokeMcpGrantsForUser(c, userId, "password_changed");
 
     return c.text("Password changed", 201);
   },

@@ -4,6 +4,7 @@ import { serve, upgradeWebSocket } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { VitNodeAPI } from "@vitnode/api/config";
+import { mcpWellKnownRequest } from "@vitnode/api/lib/mcp/well-known";
 import { storageStaticHeadersMiddleware } from "@vitnode/api/middlewares/storage-static.middleware";
 import { websocketOriginMiddleware } from "@vitnode/api/middlewares/websocket-origin.middleware";
 import { handleVitNodeWebSocket } from "@vitnode/api/ws/handle";
@@ -116,7 +117,13 @@ app.get(
 );
 
 const server = serve({
-  fetch: app.fetch,
+  // MCP clients discover OAuth at the origin root
+  // (`/.well-known/oauth-authorization-server/api/mcp`), outside `/api`.
+  fetch: async (request, env) =>
+    await app.fetch(
+      mcpWellKnownRequest(request, { apiBasePath: "/api" }) ?? request,
+      env,
+    ),
   hostname: process.env.HOST,
   port: Number(process.env.PORT ?? 8000),
   websocket: {

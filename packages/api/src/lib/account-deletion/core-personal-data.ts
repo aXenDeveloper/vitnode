@@ -4,6 +4,7 @@ import { core_users_deletions } from "@/database/account-deletions";
 import { core_audit_logs } from "@/database/audit";
 import { core_files } from "@/database/files";
 import { core_logs } from "@/database/logs";
+import { core_mcp_clients, core_mcp_grants } from "@/database/mcp";
 import { core_moderation_reports } from "@/database/moderation";
 import { core_users_passkeys } from "@/database/passkeys";
 import { core_payments } from "@/database/payments";
@@ -46,6 +47,7 @@ export const corePersonalData = definePersonalData({
       sanctions,
       reports,
       deletions,
+      mcpConnections,
     ] = await Promise.all([
       db
         .select({
@@ -170,6 +172,20 @@ export const corePersonalData = definePersonalData({
         })
         .from(core_users_deletions)
         .where(eq(core_users_deletions.userId, userId)),
+      db
+        .select({
+          client: core_mcp_clients.name,
+          clientUri: core_mcp_clients.uri,
+          scopes: core_mcp_grants.scopes,
+          createdAt: core_mcp_grants.createdAt,
+          lastUsedAt: core_mcp_grants.lastUsedAt,
+        })
+        .from(core_mcp_grants)
+        .innerJoin(
+          core_mcp_clients,
+          eq(core_mcp_clients.id, core_mcp_grants.clientId),
+        )
+        .where(eq(core_mcp_grants.userId, userId)),
     ]);
 
     return {
@@ -222,6 +238,11 @@ export const corePersonalData = definePersonalData({
         scheduledAt: iso(row.scheduledAt),
         createdAt: iso(row.createdAt),
         cancelledAt: iso(row.cancelledAt),
+      })),
+      mcpConnections: mcpConnections.map(row => ({
+        ...row,
+        createdAt: iso(row.createdAt),
+        lastUsedAt: iso(row.lastUsedAt),
       })),
     };
   },

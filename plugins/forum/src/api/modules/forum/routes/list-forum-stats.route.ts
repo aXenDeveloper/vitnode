@@ -41,6 +41,10 @@ const zodLatestTopic = z.object({
 });
 
 export const forumStatsRoute = buildRoute({
+  mcp: {
+    description:
+      "Lists every forum the viewer may read that has public topics, by `forumId`, with its topic and comment counts and its newest topic (id, slug, title, publish date). Use it to see what the forums are about and which ones are active.",
+  },
   route: {
     method: "get",
     path: "/stats/forums",

@@ -4,6 +4,7 @@ import type { DefaultTemplateEmailProps } from "./emails/default-template";
 import type { CacheConfig } from "./lib/cache";
 import type { CronAdapter } from "./lib/cron";
 import type { VitNodeApiI18nConfig } from "./lib/i18n/types";
+import type { McpConfig } from "./lib/mcp/types";
 import type { VitNodeMetadata } from "./lib/metadata";
 import type { NotificationWorkerSettings } from "./lib/notifications/preferences";
 import type { OgImageConfig } from "./lib/og-image/types";
@@ -160,6 +161,24 @@ export interface VitNodeApiConfig {
    * unauthenticated caller was choosing.
    */
   maxBodySize?: number;
+  /**
+   * The Model Context Protocol endpoint, `POST /api/mcp`: AI clients (Claude,
+   * ChatGPT, Cursor...) call the routes plugins built with `mcp` and their
+   * custom tools, as the member who connected them with OAuth. Off unless
+   * `enabled` is `true`. `plugins` and `disabledTools` are typed from the
+   * installed plugins, so a typo is a compile error.
+   *
+   * @example
+   * ```ts
+   * mcp: {
+   *   enabled: true,
+   *   guestAccess: true,
+   *   disabledTools: ["@vitnode/core:search.get"],
+   *   instructions: "A community about bikes. Search before answering.",
+   * },
+   * ```
+   */
+  mcp?: McpConfig;
   /** The site title, used in emails and as the passkey RP name. */
   metadata: VitNodeMetadata;
   /**

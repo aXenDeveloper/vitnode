@@ -17,6 +17,7 @@ import {
 import { PG_ERROR_CODES, pgErrorCode } from "@/lib/api/pg-error";
 import { getUserRoleIds } from "@/lib/check-staff-permission";
 import { CONFIG } from "@/lib/config";
+import { revokeMcpGrantsForUser } from "@/lib/mcp/oauth/grants";
 import { revokeSessions } from "@/models/session-revoke";
 
 const DAY_MS = 86_400_000;
@@ -145,6 +146,7 @@ export const scheduleAccountDeletion = async (
   if (!created) return deletion;
 
   await revokeSessions(c, { userId: args.userId });
+  await revokeMcpGrantsForUser(c, args.userId, "sessions_revoked");
 
   const [user] = await c
     .get("db")

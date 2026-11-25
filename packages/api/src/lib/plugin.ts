@@ -46,6 +46,8 @@ import type { CronJobConfig } from "./cron";
 import type { RegisteredEditablePage } from "./editable-pages";
 import type { EventDefinition } from "./event-definition";
 import type { EventListenerConfig } from "./events";
+import type { McpRouteTool } from "./mcp/route-tools";
+import type { AnyMcpToolDefinition } from "./mcp/tool";
 import type {
   MentionsPluginConfig,
   MentionTargetDefinition,
@@ -69,6 +71,7 @@ import { collectAiActions } from "./ai/registry";
 import { checkPluginId } from "./check-plugin-id";
 import { registerEditablePage, validateEditablePages } from "./editable-pages";
 import { collectEventDefinitions } from "./event-definition";
+import { collectMcpPluginTools } from "./mcp/route-tools";
 import { withModerationPermissions } from "./moderation/registry";
 import {
   describeNestedRegistration,
@@ -94,6 +97,8 @@ export interface BuildPluginApiReturn<
   P extends string = string,
   Modules extends readonly BaseBuildModuleReturn<P>[] =
     readonly BaseBuildModuleReturn<P>[],
+  McpTools extends readonly AnyMcpToolDefinition[] =
+    readonly AnyMcpToolDefinition[],
 > {
   aiActions?: AnyAiActionDefinition[];
   /** The audit actions the plugin records, for the Activity Logs filters. */
@@ -112,6 +117,16 @@ export interface BuildPluginApiReturn<
   /** Every module's routes, each module mounted at `/{module.name}`. */
   hono: OpenAPIHono;
   manifest?: PluginManifest<P>;
+  /**
+   * Every route built with `mcp`, named and validated. The MCP endpoint offers
+   * them when the app turns it on.
+   */
+  mcpRouteTools?: McpRouteTool[];
+  /**
+   * The custom MCP tools as passed in; their literal ids type the app's
+   * `mcp.disabledTools`.
+   */
+  mcpTools?: McpTools;
   /** Declared mention targets plus one per content model with mention fields. */
   mentions?: Required<MentionsPluginConfig>;
   messages?: LocaleMessagesMap;
@@ -165,7 +180,8 @@ export type AnyBuildPluginApiReturn = BuildPluginApiReturn<
  *
  * @throws When `manifest` is malformed; when `blocks` or `permissionStaff`
  * belongs to another plugin; when content types, containers, editable pages,
- * AI actions, search indexers or notification types are invalid or collide.
+ * AI actions, search indexers, notification types or MCP tools are invalid or
+ * collide.
  * In development, also
  * when no installed package's `package.json` has the plugin id as its name, and
  * when a nested module declares cron jobs, events, queue tasks or WebSockets,
@@ -191,6 +207,7 @@ export type AnyBuildPluginApiReturn = BuildPluginApiReturn<
 export function buildApiPlugin<
   const P extends string,
   const Modules extends readonly BuildModuleReturn<P, string>[] = readonly [],
+  const McpTools extends readonly AnyMcpToolDefinition[] = readonly [],
 >({
   aiActions,
   auditActions,
@@ -199,6 +216,7 @@ export function buildApiPlugin<
   editablePages,
   eventDefinitions,
   manifest,
+  mcpTools,
   mentions,
   messages,
   moderation,
@@ -244,6 +262,12 @@ export function buildApiPlugin<
   /** The plugin's generated manifest (`src/manifest.gen.ts`). */
   manifest: PluginManifest<P>;
   /**
+   * Custom MCP tools, from `defineMcpTool`, offered on the MCP endpoint next to
+   * the routes built with `mcp`. Ids must be unique within the plugin, routes
+   * included.
+   */
+  mcpTools?: McpTools;
+  /**
    * `@mention` targets beyond those content models add (every rich-text
    * field keeps mentions on unless it sets `mentions: false`).
    */
@@ -283,7 +307,7 @@ export function buildApiPlugin<
   reactions?: ReactionsPluginConfig;
   /** Search indexers in addition to those modules declare. */
   searchIndexers?: SearchIndexer[];
-}): BuildPluginApiReturn<P, Modules> {
+}): BuildPluginApiReturn<P, Modules, McpTools> {
   const pluginId = manifest.id;
   // Run for checking if the plugin is valid
   checkPluginId(pluginId);
@@ -355,6 +379,12 @@ export function buildApiPlugin<
     handler.webSockets?.forEach(webSocket => {
       webSockets.push({ ...webSocket, module: handler.name });
     });
+  });
+
+  const mcpRouteTools = collectMcpPluginTools({
+    customTools: mcpTools ?? [],
+    modules,
+    pluginId,
   });
 
   if (CONFIG.node_development) {
@@ -458,6 +488,8 @@ export function buildApiPlugin<
     editablePages: registeredPages.map(entry => entry.page),
     eventDefinitions: ownEventDefinitions,
     manifest,
+    mcpRouteTools,
+    mcpTools,
     messages,
     modules,
     hono,

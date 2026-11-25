@@ -23,6 +23,7 @@ import. You never register another plugin's definition yourself.
 | [AI](#ai-events)                                     | `ai.run.*`, `files.alt.updated`             | `@vitnode/api/events/ai`, `files`        |
 | [Payments](#payment-events)                          | `payment.*`                                 | `@vitnode/api/events/payments`           |
 | [Page layouts](#page-layout-events)                  | `core.page-layout.updated`                  | `@vitnode/api/events/pages`              |
+| [MCP connections](#mcp-connection-events)            | `mcp.connection.*`                          | `@vitnode/api/events/mcp`                |
 | [Content Engine](#content-engine-events)             | `content.<content type id>.<action>`        | `contentEvent()` from `@vitnode/core/content` |
 | [Content containers](#content-container-events)      | `content.container.*`                       | `@vitnode/api/events/content-containers` |
 | [Content access](#content-access-events)             | `content.access.updated`                    | `@vitnode/api/events/content-access`     |
@@ -754,6 +755,40 @@ these events for side effects such as a thank-you notification.
 
 **A listener would** send a receipt notification, post to a sales channel, or
 clear a cached page that shows the buyer's purchases.
+
+## MCP connection events
+
+Two names, exported from `@vitnode/api/events/mcp`:
+`mcpConnectionCreatedEvent` and `mcpConnectionRevokedEvent`. A "connection" is
+a member's approval of one AI client (Claude, ChatGPT, Cursor...) that talks to
+the site over the Model Context Protocol. Core emits them with
+`pluginId: "@vitnode/core"`, after the write commits.
+
+| Event                    | Payload                                     | Fires when                                                                          |
+| ------------------------ | ------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `mcp.connection.created` | `{ userId, clientId, clientName, scopes }`  | A member approved a client on the consent page and the client exchanged its code    |
+| `mcp.connection.revoked` | `{ userId, clientId, reason }`              | A connection ended, so its tokens stopped working                                   |
+
+`clientId` is the OAuth `client_id` the client registered with, and `scopes`
+is what the member approved (`read`, `write` or both). `reason` says why a
+connection ended:
+
+| `reason`           | Meaning                                                                                              |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `user`             | The member disconnected the client                                                                   |
+| `password_changed` | The password changed: the member reset it, or an admin set a new one                                 |
+| `sessions_revoked` | Every session ended: an admin signed the member out everywhere, or the member asked to delete the account |
+| `replaced`         | The member approved the same client again, and the new connection replaced this one                  |
+| `refresh_reuse`    | An old refresh token was used again, so a copy probably leaked                                       |
+| `code_reuse`       | An authorization code was used twice, so a copy probably leaked                                      |
+| `token_revoked`    | The client revoked its own refresh token (RFC 7009)                                                  |
+
+An erased account emits nothing here: its connections cascade with the user
+row, and `user.deleted` already covers it.
+
+**A listener would** notify the member "Claude Code can now read your
+account", and send a security alert when `reason` is `refresh_reuse` or
+`code_reuse`.
 
 ## Site status events
 

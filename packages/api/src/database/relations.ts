@@ -12,6 +12,7 @@ import * as dashboard from "./dashboard";
 import * as files from "./files";
 import * as languages from "./languages";
 import * as logs from "./logs";
+import * as mcp from "./mcp";
 import * as moderation from "./moderation";
 import * as moderators from "./moderators";
 import * as notifications from "./notifications";
@@ -38,6 +39,7 @@ export const coreSchema = {
   ...files,
   ...languages,
   ...logs,
+  ...mcp,
   ...moderation,
   ...moderators,
   ...notifications,

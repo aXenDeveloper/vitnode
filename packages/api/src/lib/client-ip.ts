@@ -12,6 +12,7 @@ import {
   FORWARDED_IP_FALLBACK,
   resolveVisitorIp,
 } from "@/lib/fetcher/request-context";
+import { mcpInternalCallOf } from "@/lib/mcp/principal";
 
 const UNKNOWN_CLIENT_IP = "127.0.0.1";
 
@@ -96,8 +97,15 @@ const signedForwardedAddress = (c: Context): string | undefined => {
     : undefined;
 };
 
+/**
+ * The client's IP. A request an MCP route tool runs in process carries the
+ * outer `/mcp` request's address instead of reading the socket again.
+ */
 export const resolveClientIp = (c: Context): string =>
-  signedForwardedAddress(c) ?? proxiedAddress(c) ?? UNKNOWN_CLIENT_IP;
+  mcpInternalCallOf(c.req.raw)?.ipAddress ??
+  signedForwardedAddress(c) ??
+  proxiedAddress(c) ??
+  UNKNOWN_CLIENT_IP;
 
 export const clientIpMiddleware = async (
   c: Context,

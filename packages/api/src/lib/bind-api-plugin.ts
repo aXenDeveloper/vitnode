@@ -13,10 +13,16 @@ import type {
   BuildModuleReturn,
 } from "./module";
 import type { QueueTaskDefinition, QueueTaskOptions } from "./queue";
-import type { BuildRouteConfig, BuildRouteOptions, Route } from "./route";
+import type {
+  BuildRouteConfig,
+  BuildRouteOptions,
+  Route,
+  RouteMcpOption,
+} from "./route";
 
 import { defineCacheEntry } from "./cache-entry";
 import { defineEvent } from "./event-definition";
+import { defineMcpTool } from "./mcp/tool";
 import { buildModule } from "./module";
 import { buildQueueTask } from "./queue";
 import { buildRoute } from "./route";
@@ -45,6 +51,7 @@ import { buildRoute } from "./route";
  * export const buildQueueTask = apiBuilders.buildQueueTask;
  * export const defineCacheEntry = apiBuilders.defineCacheEntry;
  * export const defineEvent = apiBuilders.defineEvent;
+ * export const defineMcpTool = apiBuilders.defineMcpTool;
  * ```
  */
 export const bindApiPlugin = <const Plugin extends string>(
@@ -68,10 +75,14 @@ export const bindApiPlugin = <const Plugin extends string>(
   ): QueueTaskDefinition<Plugin, Name, Schema> =>
     buildQueueTask<Plugin, Name, Schema>({ ...options, pluginId: manifest.id }),
   /** {@link buildRoute}, with this plugin's id filled in. */
-  buildRoute: <P extends string, R extends BuildRouteConfig<P>>(
-    options: BuildRouteOptions<P, R>,
-  ): Route<Plugin, R & { path: P }> =>
-    buildRoute<Plugin, P, R>({ ...options, pluginId: manifest.id }),
+  buildRoute: <
+    P extends string,
+    R extends BuildRouteConfig<P>,
+    const Mcp extends RouteMcpOption | undefined = undefined,
+  >(
+    options: BuildRouteOptions<P, R, Mcp>,
+  ): Route<Plugin, R & { path: P }, Mcp> =>
+    buildRoute<Plugin, P, R, Mcp>({ ...options, pluginId: manifest.id }),
   /** {@link defineCacheEntry}, with this plugin's id filled in. */
   defineCacheEntry: <
     const Name extends string,
@@ -84,6 +95,12 @@ export const bindApiPlugin = <const Plugin extends string>(
       ...options,
       pluginId: manifest.id,
     }),
+  /**
+   * {@link defineMcpTool}, re-exported so a plugin's builders module offers
+   * it next to the others. A tool needs no plugin id: `buildApiPlugin`'s
+   * `mcpTools` assigns it.
+   */
+  defineMcpTool,
   /** {@link defineEvent}, with this plugin's id filled in. */
   defineEvent: <const Name extends string, Schema extends z.ZodType>(
     options: Omit<EventDefinitionOptions<Plugin, Name, Schema>, "pluginId">,

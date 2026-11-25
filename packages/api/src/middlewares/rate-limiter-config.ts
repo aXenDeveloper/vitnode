@@ -25,7 +25,8 @@ export type RateLimiterCategoryOptions = Partial<
 export interface RateLimiterConfig {
   /**
    * POSTs to core's sign-in, sign-up, password, email verification and passkey
-   * sign-in routes. Always counted per IP. Defaults to 10 per 60 s.
+   * sign-in routes, and to the MCP endpoint's OAuth routes
+   * (`/api/mcp/oauth/*`). Always counted per IP. Defaults to 10 per 60 s.
    */
   auth?: RateLimiterCategoryOptions;
   /** @deprecated Moved to `rateLimiter.safety.blockDuration`. */
@@ -41,6 +42,13 @@ export interface RateLimiterConfig {
   execEvenly?: boolean;
   /** @deprecated Moved to `rateLimiter.safety.execEvenlyMinDelayMs`. */
   execEvenlyMinDelayMs?: number;
+  /**
+   * POSTs to the MCP endpoint (`/api/mcp`, when `mcp.enabled`), instead of
+   * `write`: one per JSON-RPC message an AI client sends. Counted per access
+   * token (by its hash) when the request has one, else per IP. The tools it
+   * runs are not counted again. Defaults to 60 per 60 s.
+   */
+  mcp?: RateLimiterCategoryOptions;
   /**
    * Counts `read`, `write` and `contentWrite` per signed-in user instead of per
    * IP for requests that carry a session cookie. `safety` and `auth` stay per
@@ -66,6 +74,7 @@ export interface RateLimiterConfig {
 export type RateLimiterCategory =
   | "auth"
   | "contentWrite"
+  | "mcp"
   | "read"
   | "safety"
   | "write";
@@ -85,6 +94,7 @@ export const RATE_LIMITER_DEFAULTS: Record<
   write: { points: 60, duration: 60 },
   auth: { points: 10, duration: 60 },
   contentWrite: { points: 20, duration: 60 },
+  mcp: { points: 60, duration: 60 },
 };
 
 export const RATE_LIMITER_KEY_PREFIXES: Record<RateLimiterCategory, string> = {
@@ -93,6 +103,7 @@ export const RATE_LIMITER_KEY_PREFIXES: Record<RateLimiterCategory, string> = {
   write: "vitnode-api-write-rate-limiter",
   auth: "vitnode-api-auth-rate-limiter",
   contentWrite: "vitnode-api-content-write-rate-limiter",
+  mcp: "vitnode-api-mcp-rate-limiter",
 };
 
 const LEGACY_OPTION_KEYS = [
@@ -161,5 +172,6 @@ export const resolveRateLimiterConfig = (
       config?.contentWrite,
       RATE_LIMITER_DEFAULTS.contentWrite,
     ),
+    mcp: resolveCategory(config?.mcp, RATE_LIMITER_DEFAULTS.mcp),
   };
 };

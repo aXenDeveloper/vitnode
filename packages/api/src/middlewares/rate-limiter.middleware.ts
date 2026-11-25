@@ -12,6 +12,8 @@ import {
 
 import type { CacheClient } from "@/lib/cache";
 
+import { mcpInternalCallOf } from "@/lib/mcp/principal";
+
 import { CONFIG } from "../lib/config";
 import {
   RATE_LIMITER_KEY_PREFIXES,
@@ -99,16 +101,26 @@ const PAYMENT_WEBHOOK_PATH = /\/@vitnode\/core\/payments\/webhooks\/[^/]+$/;
 export const rateLimiterCategoriesFor = (
   method: string,
   path: string,
+  {
+    mcpPath,
+  }: {
+    /** The MCP endpoint's full path (`/api/mcp`) when it is enabled. */
+    mcpPath?: string;
+  } = {},
 ): RateLimiterCategory[] => {
   if (method === "OPTIONS") return ["safety"];
   if (READ_METHODS.has(method)) return ["safety", "read"];
   if (method === "POST" && PAYMENT_WEBHOOK_PATH.test(path)) return ["safety"];
+  if (method === "POST" && mcpPath && path === mcpPath) {
+    return ["safety", "mcp"];
+  }
 
   const categories: RateLimiterCategory[] = ["safety", "write"];
   if (
     method === "POST" &&
     (AUTH_RATE_LIMITED_PATHS.some(authPath => path.endsWith(authPath)) ||
-      AUTH_RATE_LIMITED_PATTERNS.some(pattern => pattern.test(path)))
+      AUTH_RATE_LIMITED_PATTERNS.some(pattern => pattern.test(path)) ||
+      (mcpPath !== undefined && path.startsWith(`${mcpPath}/oauth/`)))
   ) {
     categories.push("auth");
   }
@@ -147,7 +159,7 @@ const PER_USER_CATEGORIES = new Set<RateLimiterCategory>([
   "write",
 ]);
 
-type RateLimitSubject = "ip" | "user";
+type RateLimitSubject = "ip" | "token" | "user";
 
 interface RateLimitIdentity {
   key: string;
@@ -161,6 +173,28 @@ const ipIdentity = (c: Context): RateLimitIdentity => ({
 
 const userRateLimitKey = (userId: number): string => `user:${userId}`;
 
+const BEARER_TOKEN = /^Bearer\s+(\S+)$/i;
+
+/**
+ * An MCP request counts against its access token, by hash, so clients behind
+ * one address (a hosted AI service) do not share a budget. Without a token it
+ * counts against the IP, like any guest.
+ */
+const mcpIdentity = async (c: Context): Promise<RateLimitIdentity> => {
+  const token = BEARER_TOKEN.exec(c.req.header("authorization") ?? "")?.[1];
+  if (!token) return ipIdentity(c);
+
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(token),
+  );
+  const hex = [...new Uint8Array(digest).slice(0, 16)]
+    .map(byte => byte.toString(16).padStart(2, "0"))
+    .join("");
+
+  return { key: `mcp:${hex}`, subject: "token" };
+};
+
 const rateLimiterResOf = (rejection: unknown): RateLimiterRes | undefined =>
   rejection instanceof RateLimiterRes ? rejection : undefined;
 
@@ -170,6 +204,7 @@ const CATEGORY_HEADER_VALUES: Record<RateLimiterCategory, string> = {
   write: "write",
   auth: "auth",
   contentWrite: "content-write",
+  mcp: "mcp",
 };
 
 const DYNAMIC_SEGMENT =
@@ -215,13 +250,15 @@ interface CategoryLimiter {
 }
 
 interface RateLimiterMiddlewareOptions {
+  /** The MCP endpoint's full path (`/api/mcp`), when `mcp.enabled`. */
+  mcpPath?: string;
   sessionCookieName: string;
   storeClient?: CacheClient | null;
 }
 
 export const rateLimiterMiddleware = (
   config: RateLimiterConfig | undefined,
-  { sessionCookieName, storeClient }: RateLimiterMiddlewareOptions,
+  { mcpPath, sessionCookieName, storeClient }: RateLimiterMiddlewareOptions,
 ): {
   identified: MiddlewareHandler;
   preflight: MiddlewareHandler;
@@ -263,6 +300,7 @@ export const rateLimiterMiddleware = (
     write: build("write"),
     auth: build("auth"),
     contentWrite: build("contentWrite"),
+    mcp: build("mcp"),
   };
 
   const retryAfterOf = (
@@ -325,9 +363,12 @@ export const rateLimiterMiddleware = (
     const ip = ipIdentity(c);
 
     for (const category of categories) {
-      const { key, subject } = PER_USER_CATEGORIES.has(category)
-        ? identity
-        : ip;
+      const { key, subject } =
+        category === "mcp"
+          ? await mcpIdentity(c)
+          : PER_USER_CATEGORIES.has(category)
+            ? identity
+            : ip;
 
       try {
         await limiters[category].limiter.consume(key);
@@ -341,6 +382,13 @@ export const rateLimiterMiddleware = (
 
   const carriesSession = (c: Context): boolean =>
     perUser && !!getCookie(c, sessionCookieName);
+
+  const categoriesFor = (c: Context): RateLimiterCategory[] =>
+    rateLimiterCategoriesFor(c.req.method, c.req.path, { mcpPath });
+
+  // An MCP route tool's in-process request: the `/mcp` request that made it
+  // was counted already.
+  const isMcpInternal = (c: Context): boolean => !!mcpInternalCallOf(c.req.raw);
 
   return {
     preflight: async (c, next) => {
@@ -357,8 +405,8 @@ export const rateLimiterMiddleware = (
       await next();
     },
     requests: async (c, next) => {
-      if (c.req.method !== "OPTIONS") {
-        const categories = rateLimiterCategoriesFor(c.req.method, c.req.path);
+      if (c.req.method !== "OPTIONS" && !isMcpInternal(c)) {
+        const categories = categoriesFor(c);
         const rejected = await consume(
           c,
           carriesSession(c)
@@ -372,11 +420,15 @@ export const rateLimiterMiddleware = (
       await next();
     },
     identified: async (c, next) => {
-      if (c.req.method !== "OPTIONS" && carriesSession(c)) {
+      if (
+        c.req.method !== "OPTIONS" &&
+        carriesSession(c) &&
+        !isMcpInternal(c)
+      ) {
         const userId = c.get("user")?.id;
         const rejected = await consume(
           c,
-          rateLimiterCategoriesFor(c.req.method, c.req.path).filter(category =>
+          categoriesFor(c).filter(category =>
             PER_USER_CATEGORIES.has(category),
           ),
           userId === undefined

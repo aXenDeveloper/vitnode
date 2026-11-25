@@ -1,5 +1,10 @@
 import type { Context, Next } from "hono";
 
+import {
+  markMcpInternalRequest,
+  mcpInternalCallOf,
+} from "../lib/mcp/principal";
+
 /**
  * Hono's `bodyLimit`, re-attaching a buffered body with
  * `new Request(url, init)` instead of `new Request(request, init)`.
@@ -40,12 +45,15 @@ export const bodyLimitMiddleware = ({
       chunks.push(value);
     }
 
-    c.req.raw = new Request(raw.url, {
+    const buffered = new Request(raw.url, {
       method: raw.method,
       headers: raw.headers,
       signal: raw.signal,
       body: size > 0 ? new Blob(chunks) : undefined,
     });
+    // An MCP route tool's request is recognized by its object: keep the mark.
+    const mcpCall = mcpInternalCallOf(raw);
+    c.req.raw = mcpCall ? markMcpInternalRequest(buffered, mcpCall) : buffered;
 
     return next();
   };

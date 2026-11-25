@@ -112,6 +112,14 @@ export const vitNodeApiConfig = buildApiConfig({
   redis: process.env.REDIS_URL
     ? { url: process.env.REDIS_URL, password: process.env.REDIS_PASSWORD }
     : undefined,
+  // AI clients (Claude, Cursor, the MCP Inspector) at `/api/mcp`, in
+  // development only until the OAuth flow has been reviewed for production.
+  mcp: {
+    enabled: process.env.NODE_ENV === 'development',
+    guestAccess: false,
+    instructions:
+      'VitNode demo community: a blog and forums. Search before answering questions about its content.',
+  },
   metadata: {
     title: 'VitNode',
     shortTitle: 'VitNode',

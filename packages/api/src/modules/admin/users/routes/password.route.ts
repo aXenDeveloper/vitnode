@@ -6,6 +6,7 @@ import { core_users } from "@/database/users";
 import { userPasswordUpdatedEvent } from "@/events/users";
 import { writeAuditLog } from "@/lib/audit/write";
 import { coreStaffPermissions } from "@/lib/core-staff-permissions";
+import { revokeMcpGrantsForUser } from "@/lib/mcp/oauth/grants";
 import { assertPasswordSignInEnabled } from "@/lib/password-sign-in";
 import { revokeAccountRecoveryTokens } from "@/lib/recovery-tokens";
 import { PasswordModel } from "@/models/password";
@@ -112,6 +113,7 @@ export const setPasswordUserAdminRoute = buildRoute({
 
     await revokeAccountRecoveryTokens(c, user.id);
     await revokeSessions(c, { userId: user.id });
+    await revokeMcpGrantsForUser(c, user.id, "password_changed");
 
     return c.json({ ok: true as const }, 200);
   },

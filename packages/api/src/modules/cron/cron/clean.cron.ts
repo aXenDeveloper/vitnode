@@ -14,6 +14,7 @@ import {
   core_users_forgot_password,
 } from "@/database/users";
 import { buildCron } from "@/lib/cron";
+import { deleteExpiredMcpOAuthRows } from "@/lib/mcp/oauth/cleanup";
 import { deleteExpiredQueueTasks } from "@/modules/queue/lib/process-queue-tasks";
 
 export const isOrphanedDevice = (
@@ -37,7 +38,8 @@ export const isOrphanedDevice = (
 
 export const cleanCron = buildCron({
   name: "clean",
-  description: "Clean up expired sessions, tokens and finished queue tasks",
+  description:
+    "Clean up expired sessions, tokens, MCP connections and finished queue tasks",
   // Run every 1 hour
   schedule: "0 * * * *",
   handler: async c => {
@@ -65,5 +67,6 @@ export const cleanCron = buildCron({
 
     // Outside the transaction: each batch commits on its own.
     await deleteExpiredQueueTasks(c);
+    await deleteExpiredMcpOAuthRows(c.get("db"));
   },
 });
