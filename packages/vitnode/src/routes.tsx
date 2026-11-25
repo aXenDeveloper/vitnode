@@ -73,6 +73,10 @@ import { MODCP_NAMESPACES } from "./tanstack/moderation/namespaces";
 import { normalizeModcpReportsSearch } from "./tanstack/moderation/route-search";
 import { normalizeModcpWarningsSearch } from "./tanstack/moderation/warnings-route";
 import { NOTIFICATIONS_NAMESPACES } from "./tanstack/notifications/namespaces";
+import {
+  normalizeOAuthAuthorizeSearch,
+  OAUTH_AUTHORIZE_NAMESPACES,
+} from "./tanstack/oauth/route";
 import { normalizeNotificationsRouteSearch } from "./tanstack/notifications/route-search";
 import {
   AuthPendingSkeleton,
@@ -97,6 +101,7 @@ import {
 import { SETTINGS_NAMESPACES } from "./tanstack/settings/route";
 import { normalizeSsoSettingsSearch } from "./tanstack/sso-connections/route-search";
 import { normalizeActivitySearch } from "./views/activity-logs/activity-search";
+import { OAuthAuthorizeSkeleton } from "./views/auth/oauth/authorize-card";
 
 /**
  * Every URL `@vitnode/core` owns, as the same kind of declaration a plugin
@@ -171,6 +176,15 @@ export const routes = defineRoutes([
     search: normalizeSsoCallbackSearch,
   }),
 
+  page("/oauth/authorize", {
+    component: lazy(() => import("./pages/oauth/authorize")),
+    messages: OAUTH_AUTHORIZE_NAMESPACES,
+    pendingComponent: OAuthAuthorizeSkeleton,
+    preload: false,
+    requires: "authenticated",
+    search: normalizeOAuthAuthorizeSearch,
+  }),
+
   layout("/settings", {
     component: lazy(() => import("./pages/settings/layout")),
     // Declared rather than loaded inside `load`, because this frame's crumb
@@ -200,6 +214,11 @@ export const routes = defineRoutes([
       page("devices", {
         component: lazy(() => import("./pages/settings/devices")),
         pendingComponent: () => <FeedPendingSkeleton rows={4} />,
+      }),
+
+      page("connected-apps", {
+        component: lazy(() => import("./pages/settings/connected-apps")),
+        pendingComponent: () => <FeedPendingSkeleton rows={2} />,
       }),
 
       page("sso", {

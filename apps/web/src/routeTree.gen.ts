@@ -14,6 +14,7 @@ import { Route as DocsRouteImport } from './routes/_docs'
 import { Route as MainRouteImport } from './routes/_main'
 import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
+import { Route as DotwellKnownSplatRouteImport } from './routes/[.]well-known/$'
 import { Route as MainIndexRouteImport } from './routes/_main/index'
 import { Route as MainPluginsRouteImport } from './routes/_main/plugins'
 import { Route as ApiSplatRouteImport } from './routes/api/$'
@@ -45,6 +46,11 @@ const LlmsFullDottxtRoute = LlmsFullDottxtRouteImport.update({
 const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
   id: '/llms.txt',
   path: '/llms.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DotwellKnownSplatRoute = DotwellKnownSplatRouteImport.update({
+  id: '/.well-known/$',
+  path: '/.well-known/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MainIndexRoute = MainIndexRouteImport.update({
@@ -102,6 +108,7 @@ export interface FileRoutesByFullPath {
   '/': typeof MainIndexRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
+  '/.well-known/$': typeof DotwellKnownSplatRoute
   '/plugins': typeof MainPluginsRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/': typeof MainIndexRoute
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
+  '/.well-known/$': typeof DotwellKnownSplatRoute
   '/plugins': typeof MainPluginsRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
@@ -133,6 +141,7 @@ export interface FileRoutesById {
   '/_main': typeof MainRouteWithChildren
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
+  '/.well-known/$': typeof DotwellKnownSplatRoute
   '/_main/plugins': typeof MainPluginsRoute
   '/api/$': typeof ApiSplatRoute
   '/docs/search': typeof DocsSearchRoute
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/'
     | '/llms-full.txt'
     | '/llms.txt'
+    | '/.well-known/$'
     | '/plugins'
     | '/api/$'
     | '/docs/search'
@@ -164,6 +174,7 @@ export interface FileRouteTypes {
     | '/'
     | '/llms-full.txt'
     | '/llms.txt'
+    | '/.well-known/$'
     | '/plugins'
     | '/api/$'
     | '/docs/search'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/_main'
     | '/llms-full.txt'
     | '/llms.txt'
+    | '/.well-known/$'
     | '/_main/plugins'
     | '/api/$'
     | '/docs/search'
@@ -198,6 +210,7 @@ export interface RootRouteChildren {
   MainRoute: typeof MainRouteWithChildren
   LlmsFullDottxtRoute: typeof LlmsFullDottxtRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
+  DotwellKnownSplatRoute: typeof DotwellKnownSplatRoute
   ApiSplatRoute: typeof ApiSplatRoute
   DocsSearchRoute: typeof DocsSearchRoute
   DocsChar123Char125DotmdRoute: typeof DocsChar123Char125DotmdRoute
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       path: '/llms.txt'
       fullPath: '/llms.txt'
       preLoaderRoute: typeof LlmsDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.well-known/$': {
+      id: '/.well-known/$'
+      path: '/.well-known/$'
+      fullPath: '/.well-known/$'
+      preLoaderRoute: typeof DotwellKnownSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_main/': {
@@ -357,6 +377,7 @@ const rootRouteChildren: RootRouteChildren = {
   MainRoute: MainRouteWithChildren,
   LlmsFullDottxtRoute: LlmsFullDottxtRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
+  DotwellKnownSplatRoute: DotwellKnownSplatRoute,
   ApiSplatRoute: ApiSplatRoute,
   DocsSearchRoute: DocsSearchRoute,
   DocsChar123Char125DotmdRoute: DocsChar123Char125DotmdRoute,

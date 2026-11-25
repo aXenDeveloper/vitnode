@@ -5,6 +5,7 @@ import {
   LinkIcon,
   MenuIcon,
   MonitorSmartphoneIcon,
+  PlugIcon,
   ShieldCheckIcon,
   SparklesIcon,
   UserRoundIcon,
@@ -41,6 +42,7 @@ const ICONS: Record<
   React.ComponentType<{ className?: string }>
 > = {
   ai: SparklesIcon,
+  connected_apps: PlugIcon,
   devices: MonitorSmartphoneIcon,
   notifications: BellIcon,
   overview: UserRoundIcon,

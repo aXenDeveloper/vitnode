@@ -9,6 +9,44 @@ export const DOCUMENT_SECURITY_HEADERS: Readonly<Record<string, string>> = {
   "x-frame-options": "SAMEORIGIN",
 };
 
+/**
+ * Pages that must never render inside a frame, even one on this site: a
+ * consent screen a framing page could trick a member into clicking through.
+ * Internal paths, without a locale prefix.
+ */
+export const FRAME_DENIED_PATHS: readonly string[] = ["/oauth/authorize"];
+
+export const isFrameDeniedPath = (pathname: string): boolean => {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+
+  return FRAME_DENIED_PATHS.includes(path);
+};
+
+const FRAME_ANCESTORS_NONE = "frame-ancestors 'none'";
+
+/**
+ * `headers` with framing forbidden outright: `x-frame-options: DENY`, and the
+ * content security policy's `frame-ancestors` replaced with `'none'` - the
+ * rest of an app's own policy is kept.
+ */
+export const withFramingDenied = (
+  headers: Record<string, string>,
+): Record<string, string> => {
+  const directives = (headers["content-security-policy"] ?? "")
+    .split(";")
+    .map(directive => directive.trim())
+    .filter(
+      directive =>
+        directive !== "" && !/^frame-ancestors(\s|$)/i.test(directive),
+    );
+
+  return {
+    ...headers,
+    "content-security-policy": [...directives, FRAME_ANCESTORS_NONE].join("; "),
+    "x-frame-options": "DENY",
+  };
+};
+
 export const resolveDocumentSecurityHeaders = (
   overrides: DocumentSecurityHeaders = {},
 ): Record<string, string> => {

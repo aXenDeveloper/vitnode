@@ -5,6 +5,7 @@ export const SETTINGS_ROOT_HREF = "/settings";
 
 export type SettingsNavKey =
   | "ai"
+  | "connected_apps"
   | "devices"
   | "notifications"
   | "overview"
@@ -38,6 +39,11 @@ export const SETTINGS_NAV_ITEMS: readonly SettingsNavItem[] = [
     key: "notifications",
   },
   { group: "account", href: "/settings/devices", key: "devices" },
+  {
+    group: "account",
+    href: "/settings/connected-apps",
+    key: "connected_apps",
+  },
   { group: "account", href: "/settings/security", key: "security" },
   { group: "account", href: "/settings/sso", key: "sso" },
   { group: "preferences", href: "/settings/ai", key: "ai" },
@@ -57,17 +63,21 @@ export const groupSettingsNavItems = (
 export const visibleSettingsNavItems = ({
   ai,
   aiFeatures = true,
+  mcp,
   passkeys,
   sso = [],
 }: {
   ai?: { models: readonly unknown[] };
   aiFeatures?: boolean;
+  /** Connected apps are listed only while AI clients can connect over MCP. */
+  mcp?: { enabled: boolean };
   passkeys: boolean;
   sso?: readonly unknown[];
 }): readonly SettingsNavItem[] =>
   SETTINGS_NAV_ITEMS.filter(
     item =>
       (item.key !== "security" || passkeys) &&
+      (item.key !== "connected_apps" || mcp?.enabled === true) &&
       (item.key !== "sso" || sso.length > 0) &&
       (item.key !== "ai" || ((ai?.models.length ?? 0) > 0 && aiFeatures)),
   );

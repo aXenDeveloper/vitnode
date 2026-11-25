@@ -27,7 +27,9 @@ export interface VitNodeStartOptions<
   /**
    * Overrides of the security headers set on HTML documents, by header name.
    * `false` removes a default. Defaults include `x-frame-options: SAMEORIGIN`
-   * and `referrer-policy: strict-origin-when-cross-origin`.
+   * and `referrer-policy: strict-origin-when-cross-origin`. The MCP consent
+   * page (`/oauth/authorize`) always gets `x-frame-options: DENY` and
+   * `frame-ancestors 'none'`, whatever is set here.
    */
   securityHeaders?: DocumentSecurityHeaders;
 }

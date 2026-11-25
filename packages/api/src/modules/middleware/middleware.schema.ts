@@ -23,6 +23,13 @@ export const routeMiddlewareSchema = z.object({
     }),
   ),
   isEmail: z.boolean(),
+  /**
+   * Whether AI clients can connect over MCP (which shows the connected apps
+   * settings), and the endpoint they connect to when they can.
+   */
+  mcp: z
+    .object({ enabled: z.boolean(), endpoint: z.string().optional() })
+    .optional(),
   passkeys: z.boolean(),
   password: z.boolean(),
   captcha: z

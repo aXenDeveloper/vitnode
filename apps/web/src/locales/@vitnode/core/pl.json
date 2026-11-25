@@ -2434,8 +2434,46 @@
           "session_expires": "Sesja wygasa",
           "title": "Urządzenia"
         },
+        "connected_apps": {
+          "title": "Połączone aplikacje",
+          "desc": "Aplikacje AI, którym pozwalasz działać w Twoim imieniu przez MCP. Odłączona aplikacja od razu traci dostęp.",
+          "how_to": "Aby połączyć aplikację, np. Claude lub Cursor, dodaj w niej <code>{url}</code> jako serwer MCP, a potem zatwierdź prośbę, która się tu otworzy.",
+          "connected": "Połączono",
+          "last_used": "Ostatnio użyto",
+          "access": "Dostęp",
+          "website": "Strona",
+          "scopes": {
+            "read": "Odczyt",
+            "write": "Zapis"
+          },
+          "empty": {
+            "title": "Brak połączonych aplikacji",
+            "desc": "Dodaj <code>{url}</code> jako serwer MCP w aplikacji AI, np. Claude lub Cursor, a potem zatwierdź ją, gdy o to poprosi."
+          },
+          "load_error": {
+            "title": "Nie udało się wczytać połączonych aplikacji",
+            "desc": "Coś poszło nie tak po naszej stronie. Spróbuj ponownie za chwilę."
+          },
+          "refetch_error": {
+            "title": "Nie udało się odświeżyć listy aplikacji",
+            "desc": "Poniższa lista może być nieaktualna."
+          },
+          "retry": "Spróbuj ponownie",
+          "disconnect": {
+            "action": "Odłącz",
+            "aria": "Odłącz {name}",
+            "title": "Odłączyć {name}?",
+            "desc": "{name} od razu traci dostęp do Twojego konta. Aby znów z niej korzystać, trzeba będzie połączyć ją ponownie.",
+            "confirm": "Odłącz",
+            "success": "Aplikacja odłączona",
+            "success_desc": "{name} nie może już działać w Twoim imieniu.",
+            "error": "Nie udało się odłączyć aplikacji",
+            "error_desc": "Coś poszło nie tak. Spróbuj ponownie za chwilę."
+          }
+        },
         "nav": {
           "devices": "Urządzenia",
+          "connected_apps": "Połączone aplikacje",
           "overview": "Przegląd",
           "security": "Bezpieczeństwo",
           "sso": "Połączone konta",
@@ -3195,6 +3233,54 @@
             "outro": "Dziękujemy, że byłeś częścią społeczności. Zawsze możesz wrócić z nowym kontem."
           }
         }
+      },
+      "oauth": {
+        "title": "Połącz aplikację",
+        "heading": "Połączyć {name} z Twoim kontem?",
+        "desc": "{name} chce korzystać z tej strony jako Ty.",
+        "signed_in_as": "Zalogowano jako",
+        "redirect_label": "Po odpowiedzi przejdziesz do",
+        "warning": {
+          "title": "Zatwierdzaj tylko połączenia rozpoczęte przez Ciebie",
+          "desc": "Zatwierdź tylko wtedy, gdy przed chwilą poprosiłeś {name} o połączenie z aplikacji pod adresem powyżej. Jeśli ta strona otworzyła się nie wiadomo skąd, odmów."
+        },
+        "scopes_legend": "Co {name} może robić",
+        "scopes_hint": "Zostaw włączone co najmniej jedno uprawnienie.",
+        "scopes": {
+          "read": {
+            "title": "Odczyt",
+            "desc": "Widzi to, co Ty widzisz na tej stronie."
+          },
+          "write": {
+            "title": "Działanie jako Ty",
+            "desc": "Publikuje, odpowiada, edytuje, reaguje i robi wszystko inne, co możesz robić jako członek."
+          }
+        },
+        "limits": "Nigdy nie dostaje uprawnień administratora ani moderatora, a odłączyć ją możesz w każdej chwili w <link>Połączonych aplikacjach</link>.",
+        "approve": "Zatwierdź",
+        "deny": "Odmów",
+        "error": {
+          "title": "Nie udało się wysłać odpowiedzi",
+          "desc": "Coś poszło nie tak. Spróbuj ponownie za chwilę."
+        },
+        "done": {
+          "approved": "Połączono z {name}",
+          "denied": "Prośba odrzucona",
+          "desc": "Możesz zamknąć tę kartę i wrócić do {name}."
+        },
+        "invalid": {
+          "title": "Ten link do połączenia nie działa",
+          "desc": "Aplikacja wysłała nieprawidłową lub niedozwoloną prośbę. Wróć do aplikacji i zacznij łączenie od nowa."
+        },
+        "disabled": {
+          "title": "Aplikacje AI nie mogą się tu łączyć",
+          "desc": "Ta strona nie pozwala aplikacjom AI łączyć się z kontami członków."
+        },
+        "load_error": {
+          "title": "Nie udało się sprawdzić tego połączenia",
+          "desc": "Coś poszło nie tak po naszej stronie. Spróbuj ponownie za chwilę."
+        },
+        "retry": "Spróbuj ponownie"
       }
     },
     "editor": {

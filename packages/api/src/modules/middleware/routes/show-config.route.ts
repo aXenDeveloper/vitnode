@@ -1,4 +1,5 @@
 import { buildRoute } from "@/builders";
+import { mcpUrls } from "@/lib/mcp/urls";
 
 import { routeMiddlewareSchema } from "../middleware.schema";
 
@@ -26,6 +27,9 @@ export const routeMiddleware = buildRoute({
       {
         ai: { models: c.get("ai").models() },
         isEmail: !!c.get("core").email?.adapter,
+        mcp: c.get("core").mcp.enabled
+          ? { enabled: true, endpoint: mcpUrls(c.get("core").mcp).resource }
+          : { enabled: false },
         passkeys: c.get("core").authorization.passkeys.enabled,
         password: c.get("core").authorization.password.enabled,
         sso: sso.map(s => ({

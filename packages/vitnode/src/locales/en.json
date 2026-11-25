@@ -1234,6 +1234,7 @@
         "nav": {
           "overview": "Overview",
           "devices": "Devices",
+          "connected_apps": "Connected apps",
           "security": "Security",
           "sso": "Connected accounts",
           "notifications": "Notifications",
@@ -1312,6 +1313,43 @@
             "desc": "You will be signed out of {os}. That device will need to sign in again.",
             "confirm": "Sign out",
             "success": "Device signed out successfully."
+          }
+        },
+        "connected_apps": {
+          "title": "Connected apps",
+          "desc": "AI apps you let act for you over MCP. Disconnect one and it stops working right away.",
+          "how_to": "To connect an app such as Claude or Cursor, add <code>{url}</code> as an MCP server in it, then approve the request it opens here.",
+          "connected": "Connected",
+          "last_used": "Last used",
+          "access": "Access",
+          "website": "Website",
+          "scopes": {
+            "read": "Read",
+            "write": "Write"
+          },
+          "empty": {
+            "title": "No connected apps yet",
+            "desc": "Add <code>{url}</code> as an MCP server in an AI app such as Claude or Cursor, then approve it when it asks."
+          },
+          "load_error": {
+            "title": "Connected apps didn't load",
+            "desc": "Something went wrong on our side. Try again in a moment."
+          },
+          "refetch_error": {
+            "title": "Couldn't refresh your connected apps",
+            "desc": "The list below may be out of date."
+          },
+          "retry": "Try again",
+          "disconnect": {
+            "action": "Disconnect",
+            "aria": "Disconnect {name}",
+            "title": "Disconnect {name}?",
+            "desc": "{name} loses access to your account right away. To use it again, you'll have to connect it again.",
+            "confirm": "Disconnect",
+            "success": "App disconnected",
+            "success_desc": "{name} can no longer act for you.",
+            "error": "Couldn't disconnect the app",
+            "error_desc": "Something went wrong. Try again in a moment."
           }
         },
         "passkeys": {
@@ -1761,6 +1799,54 @@
             "check_spam": "If you don't see the email in your inbox, please check your spam folder."
           }
         }
+      },
+      "oauth": {
+        "title": "Connect an app",
+        "heading": "Connect {name} to your account?",
+        "desc": "{name} wants to use this site as you.",
+        "signed_in_as": "Signed in as",
+        "redirect_label": "After you answer, you'll go to",
+        "warning": {
+          "title": "Only approve a connection you started",
+          "desc": "Approve only if you just asked {name} to connect from the app at the address above. If this page opened out of nowhere, deny it."
+        },
+        "scopes_legend": "What {name} can do",
+        "scopes_hint": "Keep at least one of these on.",
+        "scopes": {
+          "read": {
+            "title": "Read",
+            "desc": "See what you can see on this site."
+          },
+          "write": {
+            "title": "Act as you",
+            "desc": "Post, reply, edit, react and do anything else you can do as a member."
+          }
+        },
+        "limits": "It never gets admin or moderator access, and you can disconnect it any time in <link>Connected apps</link>.",
+        "approve": "Approve",
+        "deny": "Deny",
+        "error": {
+          "title": "Couldn't send your answer",
+          "desc": "Something went wrong. Try again in a moment."
+        },
+        "done": {
+          "approved": "Connected to {name}",
+          "denied": "Request denied",
+          "desc": "You can close this tab and go back to {name}."
+        },
+        "invalid": {
+          "title": "This connection link doesn't work",
+          "desc": "The app sent a request that is invalid or no longer allowed. Go back to the app and start connecting again."
+        },
+        "disabled": {
+          "title": "AI apps can't connect here",
+          "desc": "This site doesn't let AI apps connect to member accounts."
+        },
+        "load_error": {
+          "title": "Couldn't check this connection",
+          "desc": "Something went wrong on our side. Try again in a moment."
+        },
+        "retry": "Try again"
       }
     },
     "comments": {
