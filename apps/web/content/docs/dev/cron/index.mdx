@@ -139,7 +139,13 @@ The scheduler card at the top of the section sums it up:
 
 Next to it you get the last run, the next run and how many jobs are registered. The table below lists every job with an **Overdue**, **On schedule** or **Waiting for first run** status.
 
-The same check powers the Debug Panel **Overview** and the **Cron Jobs** and **Queue Tasks** cards at **Core → System → Integrations**.
+The same check powers the Debug Panel **Overview**.
+
+### Dashboard heartbeat
+
+The **Background jobs** widget on the AdminCP dashboard shows the last 24 hours at a glance: a strip of 48 half-hour slots, green when the scheduler ticked in that slot and amber when it didn't. Next to it are the queue's waiting, running and failed jobs, the jobs done in the last 24 hours, and the latest failures with their errors.
+
+Every tick of the scheduler bumps a counter for its half-hour in the `core_cron_heartbeats` table, and the hourly `clean` job drops slots older than seven days. Slots from before the first recorded tick show as grey "no data", so a fresh install doesn't look broken. The widget needs `cron → can_view`; the queue numbers also need `queue → can_view`, and stay hidden without it.
 
 ## Jobs must be idempotent
 

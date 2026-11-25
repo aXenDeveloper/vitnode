@@ -34,8 +34,11 @@ import {
 
 <Preview name="toggle-group-single" />
 
-Leave out `multiple` and only one item can be pressed. The pressed background
-glides between items, and jumps when the visitor prefers reduced motion.
+Leave out `multiple` and only one item can be pressed. With the default
+`spacing` of `0`, the group turns into a segmented control that matches
+[Tabs](/docs/ui/tabs): a muted track with a raised pill on the picked item, so
+the choice stands out in light and dark mode alike. The pill glides between
+items, and jumps when the visitor prefers reduced motion.
 
 ```tsx
 <ToggleGroup defaultValue={['week']} variant="outline">
@@ -63,7 +66,8 @@ picked:
 <Preview name="toggle-group-layout" />
 
 `spacing` pulls the items apart on the spacing scale. At `0` (the default) they
-share borders. `orientation="vertical"` stacks them.
+share borders, or sit on one track when the group is single-select.
+`orientation="vertical"` stacks them.
 
 ```tsx
 <ToggleGroup spacing={2} variant="outline">...</ToggleGroup>

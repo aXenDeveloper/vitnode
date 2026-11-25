@@ -180,7 +180,7 @@ export const ResizeHandle = ({
         ? createPortal(
             <div
               aria-hidden="true"
-              className="border-primary/50 pointer-events-none fixed top-0 left-0 z-50 rounded-xl border-2 border-dashed"
+              className="border-primary/50 pointer-events-none fixed top-0 left-0 z-50 rounded-lg border-2 border-dashed"
               ref={outlineRef}
             />,
             document.body,

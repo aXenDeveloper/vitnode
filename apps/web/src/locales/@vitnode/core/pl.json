@@ -374,7 +374,14 @@
         "services": {
           "active": "Aktywna",
           "not_configured": "Nieskonfigurowana",
-          "set_up": "Skonfiguruj"
+          "set_up": "Skonfiguruj",
+          "desc": {
+            "ai": "Generowanie tekstu, uporządkowane dane wyjściowe i osadzenia dzięki Vercel AI SDK.",
+            "captcha": "Ochrona przed botami w publicznych formularzach, takich jak rejestracja i resetowanie hasła.",
+            "email": "Wiadomości transakcyjne, takie jak potwierdzenia rejestracji i resetowanie hasła.",
+            "storage": "Przesyłanie plików, takich jak awatary i załączniki, przechowywanych za pomocą adaptera magazynu.",
+            "websocket": "Aktualizacje na żywo i powiadomienia wysyłane do połączonych klientów w czasie rzeczywistym."
+          }
         }
       },
       "health": {
@@ -525,7 +532,6 @@
         },
         "system": {
           "files": "Pliki",
-          "integrations": "Integracje",
           "plugins": "Wtyczki",
           "title": "System",
           "notifications": "Powiadomienia"
@@ -1121,8 +1127,6 @@
       },
       "integrations": {
         "ai": {
-          "desc": "Generowanie tekstu, uporządkowane dane wyjściowe i osadzenia dzięki Vercel AI SDK.",
-          "models": "{count, plural, =0 {Brak modeli} one {# model} few {# modele} many {# modeli} other {# modeli}}",
           "test": {
             "ask_again": "Zapytaj ponownie",
             "cancel": "Anuluj",
@@ -1134,30 +1138,9 @@
             "submit": "Wyślij zapytanie",
             "title": "Testuj AI",
             "try_again": "Spróbuj ponownie"
-          },
-          "title": "AI"
-        },
-        "captcha": {
-          "desc": "Ochrona przed botami w publicznych formularzach, takich jak rejestracja i resetowanie hasła.",
-          "title": "Captcha",
-          "type": {
-            "cloudflare_turnstile": "Cloudflare Turnstile",
-            "recaptcha_v3": "reCAPTCHA v3"
           }
         },
-        "cron": {
-          "desc": "Zaplanowane zadania w tle, takie jak czyszczenie wygasłych sesji i tokenów.",
-          "insecure": "Używany jest domyślny CRON_SECRET - ustaw bezpieczny w środowisku produkcyjnym.",
-          "jobs": "{count, plural, =0 {Brak zaplanowanych zadań} one {# zaplanowane zadanie} few {# zaplanowane zadania} many {# zaplanowanych zadań} other {# zaplanowanych zadań}}",
-          "not_configured": "Nie skonfigurowano adaptera cron - zadania nie będą uruchamiać się automatycznie.",
-          "overdue": "{count, plural, one {# zadanie jest zaległe} few {# zadania są zaległe} many {# zadań jest zaległych} other {# zadań jest zaległych}} - sprawdź logi serwera.",
-          "stale": "Zatrzymany - żadne zadanie nie zostało uruchomione od <date></date>. Sprawdź konfigurację cron.",
-          "stale_never": "Zatrzymany - żadne zadanie nie zostało jeszcze uruchomione. Sprawdź konfigurację cron.",
-          "title": "Zadania cron"
-        },
-        "desc": "Status podstawowych usług obsługujących tę instancję.",
         "email": {
-          "desc": "Wiadomości transakcyjne, takie jak potwierdzenia rejestracji i resetowanie hasła.",
           "test": {
             "content": {
               "default": "To jest testowa wiadomość e-mail wysłana z panelu administracyjnego VitNode.",
@@ -1180,29 +1163,9 @@
               "invalid": "Wprowadź prawidłowy adres e-mail.",
               "label": "Odbiorca"
             }
-          },
-          "title": "E-mail"
-        },
-        "queue": {
-          "cron_stale": "Offline - proces cron przetwarzający kolejkę nie działa. Napraw zadania cron, aby wznowić przetwarzanie.",
-          "desc": "Zadania w tle umieszczone w kolejce w bazie danych i przetwarzane przez proces cron.",
-          "queued": "{pending} oczekujących · {processing} uruchomionych",
-          "tasks": "{count, plural, =0 {Brak zarejestrowanych zadań} one {# zarejestrowane zadanie} few {# zarejestrowane zadania} many {# zarejestrowanych zadań} other {# zarejestrowanych zadań}}",
-          "title": "Zadania w kolejce"
-        },
-        "read_more": "Czytaj więcej",
-        "redis": {
-          "desc": "Współdzielona pamięć podręczna i magazyn ogranicznika żądań. Przy wyłączeniu przechodzi na pamięć wewnętrzną.",
-          "down": "Skonfigurowany, ale nieosiągalny - sprawdź połączenie z Redis.",
-          "title": "Redis"
-        },
-        "status": {
-          "active": "Aktywna",
-          "inactive": "Nieaktywna",
-          "warning": "Wymaga uwagi"
+          }
         },
         "storage": {
-          "desc": "Przesyłanie plików, takich jak awatary i załączniki, przechowywanych za pomocą adaptera magazynu.",
           "test": {
             "desc": "Prześlij plik i wykonaj test pełnego obiegu, aby potwierdzić, że adapter magazynu działa.",
             "info": {
@@ -1219,19 +1182,7 @@
               "pending": "Przesyłanie…",
               "success": "Obraz został przesłany - jest przechowywany w Twoim adapterze."
             }
-          },
-          "title": "Magazyn"
-        },
-        "title": "Integracje",
-        "websocket": {
-          "desc": "Aktualizacje na żywo i powiadomienia wysyłane do połączonych klientów w czasie rzeczywistym.",
-          "title": "WebSocket"
-        },
-        "content_preview": {
-          "title": "Podgląd treści",
-          "desc": "Podpisane, wygasające linki, dzięki którym recenzent może przeczytać nieopublikowany wpis bez konta.",
-          "not_configured": "Żaden typ treści nie ma włączonego podglądu.",
-          "content_types": "{count, plural, =0 {Brak typów treści} one {# typ treści} few {# typy treści} many {# typów treści} other {# typu treści}}"
+          }
         }
       },
       "plugins": {

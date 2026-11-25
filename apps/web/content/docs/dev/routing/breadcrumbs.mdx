@@ -109,7 +109,7 @@ export const route = definePluginRoute({
 })
 ```
 
-Each segment gets the title of the navigation entry whose link matches it, and a segment with no entry gets a readable version of its name. Pass `overrideLastLabel` when the page knows a better name for the last crumb, such as a record's title. The AdminCP does not look labels up on its own, so a route without `breadcrumb` adds no crumb there either.
+Each segment gets the title of the navigation entry whose link matches it, and a segment with no entry gets a readable version of its name. Pass `overrideLastLabel` when the page knows a better name for the last crumb, such as a record's title. Pass `pageCrumb: true` when a page shares its section's URL, like the dashboard at `/admin/core`: the trail gains a last crumb named after the sidebar item for that URL (**Core › Dashboard**), and the section crumb before it stops being a link to the page you are already on. The AdminCP does not look labels up on its own, so a route without `breadcrumb` adds no crumb there either.
 
 ## Crumbs on the app's own routes
 

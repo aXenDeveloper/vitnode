@@ -15,3 +15,11 @@ export const core_cron = camelCase.table.withRLS(
   }),
   t => [index("core_cron_last_run_id_idx").on(t.lastRun, t.id)],
 );
+
+export const core_cron_heartbeats = camelCase.table.withRLS(
+  "core_cron_heartbeats",
+  t => ({
+    slot: t.timestamp().primaryKey(),
+    ticks: t.integer().notNull().default(0),
+  }),
+);

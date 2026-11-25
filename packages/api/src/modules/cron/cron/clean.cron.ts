@@ -14,6 +14,7 @@ import {
   core_users_forgot_password,
 } from "@/database/users";
 import { buildCron } from "@/lib/cron";
+import { pruneCronHeartbeats } from "@/modules/cron/lib/heartbeat";
 import { deleteExpiredQueueTasks } from "@/modules/queue/lib/process-queue-tasks";
 
 export const isOrphanedDevice = (
@@ -37,7 +38,8 @@ export const isOrphanedDevice = (
 
 export const cleanCron = buildCron({
   name: "clean",
-  description: "Clean up expired sessions, tokens and finished queue tasks",
+  description:
+    "Clean up expired sessions, tokens, finished queue tasks and old scheduler heartbeats",
   // Run every 1 hour
   schedule: "0 * * * *",
   handler: async c => {
@@ -65,5 +67,6 @@ export const cleanCron = buildCron({
 
     // Outside the transaction: each batch commits on its own.
     await deleteExpiredQueueTasks(c);
+    await pruneCronHeartbeats(c.get("db"), new Date());
   },
 });

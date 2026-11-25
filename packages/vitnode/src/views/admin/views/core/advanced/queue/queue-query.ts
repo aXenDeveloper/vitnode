@@ -24,10 +24,17 @@ export const QUEUE_STATUSES = [
 ] as const;
 export type QueueStatus = (typeof QUEUE_STATUSES)[number];
 
+export const QUEUE_DEFAULT_STATUSES: readonly QueueStatus[] = [
+  "failed",
+  "pending",
+  "processing",
+];
+
 export const QUEUE_ORDER_BY = ["createdAt", "availableAt", "status"] as const;
 export type QueueOrderBy = (typeof QUEUE_ORDER_BY)[number];
 
 export const QUEUE_TABLE_CONTRACT: AdminTableContract<QueueOrderBy> = {
+  defaultStatus: QUEUE_DEFAULT_STATUSES,
   orderBy: QUEUE_ORDER_BY,
   status: QUEUE_STATUSES,
 };

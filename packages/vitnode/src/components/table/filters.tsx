@@ -38,6 +38,8 @@ export interface FilterOption {
  * the table to the first page.
  */
 export interface FilterDataTable {
+  /** Selected while the URL has no `{id}` parameter, matching the page's default query. */
+  defaultValues?: readonly string[];
   /** The URL parameter the selected values are written to, comma-separated. */
   id: string;
   /** The button's text and the search box's placeholder. */
@@ -77,7 +79,9 @@ function FilterItem({ filter }: { filter: FilterDataTable }) {
   const [asyncOptions, setAsyncOptions] = React.useState<FilterOption[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
 
-  const selected = readTableFilter(searchParams, filter.id);
+  const selected = searchParams.has(filter.id)
+    ? readTableFilter(searchParams, filter.id)
+    : [...(filter.defaultValues ?? [])];
   const selectedSet = new Set(selected);
   const options = isAsync ? asyncOptions : (filter.options ?? []);
 

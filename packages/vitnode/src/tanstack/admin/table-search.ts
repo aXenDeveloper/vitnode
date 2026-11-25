@@ -7,7 +7,10 @@ import type {
 
 import { DEFAULT_TABLE_PAGE_SIZE } from "@/components/table/url-state";
 import { asSearchValue } from "@/lib/table-params";
-import { normalizeAdminTableParams } from "@/views/admin/table/params";
+import {
+  defaultStatusOf,
+  normalizeAdminTableParams,
+} from "@/views/admin/table/params";
 
 const defaultPageSizeOf = (contract: { defaultPageSize?: number }): string =>
   String(contract.defaultPageSize ?? DEFAULT_TABLE_PAGE_SIZE);
@@ -67,7 +70,9 @@ export const normalizeAdminTableSearch = <TOrderBy extends string>(
     ...(order === undefined ? {} : { order }),
     ...(orderBy === undefined ? {} : { orderBy }),
     ...(search === undefined ? {} : { search }),
-    ...(status === undefined ? {} : { status }),
+    ...(status === undefined || status === defaultStatusOf(contract)
+      ? {}
+      : { status }),
   };
 };
 

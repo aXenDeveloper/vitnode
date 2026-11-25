@@ -4002,6 +4002,81 @@
           "unknown": "Unknown",
           "load_error": "Could not load the update summary. The Plugins page still shows every result.",
           "view_plugins": "View plugins"
+        },
+        "new-members": {
+          "title": "New members",
+          "desc": "Who joined lately, against the period before.",
+          "range": "Time range",
+          "range_option": "Last {days} days",
+          "range_short": "{days}d",
+          "total": "new members in {days} days",
+          "change": "vs previous {days} days ({count})",
+          "chart": "Daily sign-ups for the last {days} days, against the previous {days} days",
+          "current": "Last {days} days",
+          "previous": "Previous {days} days",
+          "members_total": "{count, plural, one {# member in total} other {# members in total}}",
+          "today": "Today",
+          "point": "{date}: {count, plural, one {# sign-up} other {# sign-ups}}. {previousDate}: {previous}",
+          "more": "+{count} vs the same day before",
+          "fewer": "−{count} vs the same day before",
+          "empty_title": "No new members yet",
+          "empty_desc": "Sign-ups show up here day by day. Share your community to get the first ones.",
+          "load_error": {
+            "title": "Sign-ups didn't load",
+            "desc": "Something went wrong while loading sign-ups. Try again in a moment."
+          },
+          "retry": "Try again"
+        },
+        "ai-usage": {
+          "title": "AI usage",
+          "desc": "AI spend this month against your limit.",
+          "of_limit": "of {limit} limit",
+          "this_month": "spent this month",
+          "used": "{percent}% used",
+          "no_limit": "No monthly limit",
+          "limit_bar": "Monthly AI limit used",
+          "forecast": "Forecast <value>{amount}</value>",
+          "over_limit": "over the limit",
+          "days_left": "{count, plural, one {# day left} other {# days left}}",
+          "vs_last_month": "vs last month",
+          "new": "New",
+          "other": "Other",
+          "footer": "Change vs the same point last month",
+          "overview": "AI overview",
+          "empty_title": "No AI spend this month",
+          "empty_desc": "Costs show up here once members or staff use AI features.",
+          "load_error": {
+            "title": "AI usage didn't load",
+            "desc": "Something went wrong while loading AI usage. Try again in a moment."
+          },
+          "retry": "Try again"
+        },
+        "background-jobs": {
+          "title": "Background jobs",
+          "desc": "The scheduler and the job queue.",
+          "strip": "Scheduler, last 24 hours",
+          "strip_label": "Scheduler runs over the last 24 hours, in half-hour slots",
+          "missed": "{count} missed",
+          "no_gaps": "No gaps",
+          "no_history": "No history yet",
+          "slot": {
+            "ran": "{time}: ran",
+            "missed": "{time}: missed",
+            "none": "{time}: no data"
+          },
+          "waiting": "Waiting",
+          "running": "Running",
+          "failed": "Failed",
+          "done": "Done, 24h",
+          "inactive": "No scheduler is set up, so background jobs never run.",
+          "secret_rejected": "The scheduler is calling with the wrong secret, so nothing runs.",
+          "unfinished_jobs": "Unfinished jobs",
+          "cron": "Cron tasks",
+          "load_error": {
+            "title": "Background jobs didn't load",
+            "desc": "Something went wrong while loading the scheduler. Try again in a moment."
+          },
+          "retry": "Try again"
         }
       }
     },
@@ -4035,7 +4110,6 @@
         },
         "system": {
           "title": "System",
-          "integrations": "Integrations",
           "files": "Files",
           "notifications": "Notifications",
           "plugins": "Plugins"
@@ -5249,18 +5323,7 @@
         }
       },
       "integrations": {
-        "title": "Integrations",
-        "desc": "Status of the core services that power this instance.",
-        "read_more": "Read more",
-        "status": {
-          "active": "Active",
-          "inactive": "Inactive",
-          "warning": "Needs attention"
-        },
         "ai": {
-          "title": "AI",
-          "desc": "Text generation, structured output, and embeddings via the Vercel AI SDK.",
-          "models": "{count, plural, =0 {No models} one {# model} other {# models}}",
           "test": {
             "label": "Test AI",
             "title": "Test AI",
@@ -5274,18 +5337,7 @@
             "try_again": "Try again"
           }
         },
-        "websocket": {
-          "title": "WebSocket",
-          "desc": "Live updates and notifications pushed to connected clients in real time."
-        },
-        "redis": {
-          "title": "Redis",
-          "desc": "Shared cache and rate-limiter storage. Falls back to in-memory when off.",
-          "down": "Configured but unreachable - check your Redis connection."
-        },
         "email": {
-          "title": "Email",
-          "desc": "Transactional emails such as sign-up confirmations and password resets.",
           "test": {
             "label": "Test email",
             "title": "Send a test email",
@@ -5311,8 +5363,6 @@
           }
         },
         "storage": {
-          "title": "Storage",
-          "desc": "File uploads such as avatars and attachments, stored via your storage adapter.",
           "test": {
             "label": "Test storage",
             "title": "Test file storage",
@@ -5330,37 +5380,6 @@
               "success": "Image uploaded - it's stored in your adapter."
             }
           }
-        },
-        "captcha": {
-          "title": "Captcha",
-          "desc": "Bot protection on public forms like sign-up and password reset.",
-          "type": {
-            "cloudflare_turnstile": "Cloudflare Turnstile",
-            "recaptcha_v3": "reCAPTCHA v3"
-          }
-        },
-        "cron": {
-          "title": "Cron Jobs",
-          "desc": "Scheduled background tasks such as clearing expired sessions and tokens.",
-          "insecure": "Using the default CRON_SECRET - set a secure one in production.",
-          "not_configured": "No cron adapter configured - jobs won't run automatically.",
-          "stale": "Stopped - no job has run since <date></date>. Check your cron setup.",
-          "jobs": "{count, plural, =0 {No jobs scheduled} one {# job scheduled} other {# jobs scheduled}}",
-          "stale_never": "Stopped - no job has run yet. Check your cron setup.",
-          "overdue": "{count, plural, one {# job is} other {# jobs are}} overdue - check the server logs."
-        },
-        "content_preview": {
-          "title": "Content Preview",
-          "desc": "Signed, expiring links that let a reviewer read an unpublished record without an account.",
-          "not_configured": "No content type has preview enabled.",
-          "content_types": "{count, plural, =0 {No content types} one {# content type} other {# content types}}"
-        },
-        "queue": {
-          "title": "Queue Tasks",
-          "desc": "Background jobs enqueued in the database and drained by the cron worker.",
-          "tasks": "{count, plural, =0 {No tasks registered} one {# task registered} other {# tasks registered}}",
-          "queued": "{pending} pending · {processing} running",
-          "cron_stale": "Offline - the cron worker that drains the queue isn't running. Fix cron jobs to resume processing."
         }
       },
       "files": {
@@ -5736,7 +5755,14 @@
         "services": {
           "active": "Active",
           "not_configured": "Not configured",
-          "set_up": "Set up"
+          "set_up": "Set up",
+          "desc": {
+            "ai": "Text generation, structured output, and embeddings via the Vercel AI SDK.",
+            "captcha": "Bot protection on public forms like sign-up and password reset.",
+            "email": "Transactional emails such as sign-up confirmations and password resets.",
+            "storage": "File uploads such as avatars and attachments, stored via your storage adapter.",
+            "websocket": "Live updates and notifications pushed to connected clients in real time."
+          }
         }
       },
       "health": {

@@ -167,15 +167,6 @@ Integrations screen below.
   handlers](/docs/dev/cron#jobs-must-be-idempotent) either way.
 </Callout>
 
-<Callout type="warn" title="The Integrations screen still calls cron inactive">
-  `/admin/core/system/integrations` reports cron as active when the API config
-  registers a `cron` adapter - it is reading the config, not counting ticks.
-  Tick from outside and that card stays grey however healthy the schedule is,
-  and the queue card with it, because the queue's status is derived from cron's.
-  The honest signal for an external scheduler is the last run in the **Time**
-  column of **Debug Panel → Cron & queue** (`/admin/core/debug/cron`).
-</Callout>
-
 <Callout
   type="info"
   title="The endpoint is public in the sense that it answers"

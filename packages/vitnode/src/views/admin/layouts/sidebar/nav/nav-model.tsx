@@ -177,11 +177,6 @@ const coreNavGroup = (): AdminNavGroupDeclaration => ({
           permission: staffPermissionArgs(admin.plugins.canView),
         },
         {
-          title: key("admin.global.nav.system.integrations"),
-          href: "/admin/core/system/integrations",
-          permission: staffPermissionArgs(admin.system.canView),
-        },
-        {
           title: key("admin.global.nav.system.files"),
           href: "/admin/core/system/files",
           permission: staffPermissionArgs(admin.files.canView),

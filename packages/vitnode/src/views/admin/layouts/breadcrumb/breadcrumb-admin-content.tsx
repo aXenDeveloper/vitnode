@@ -2,7 +2,7 @@ import { BreadcrumbCrumbItems } from "@/views/breadcrumb/breadcrumb-render-conte
 
 import type { NavAdminParent } from "../sidebar/nav/nav-model";
 
-import { resolveBreadcrumb } from "./resolve-breadcrumb";
+import { appendPageCrumb, resolveBreadcrumb } from "./resolve-breadcrumb";
 
 export interface BreadcrumbAdminContentProps {
   /** Explicit labels by href, for a crumb the navigation cannot name. */
@@ -10,6 +10,7 @@ export interface BreadcrumbAdminContentProps {
   nav: NavAdminParent[];
   /** The last crumb's label, when the page knows it and the navigation cannot. */
   overrideLastLabel?: string;
+  pageCrumb?: boolean;
   /** The path below `/admin`, e.g. `["core", "users"]`. */
   segments: string[];
 }
@@ -18,9 +19,11 @@ export const BreadcrumbAdminContent = ({
   labels,
   nav,
   overrideLastLabel,
+  pageCrumb,
   segments,
 }: BreadcrumbAdminContentProps) => {
-  const crumbs = resolveBreadcrumb(nav, segments);
+  const resolved = resolveBreadcrumb(nav, segments);
+  const crumbs = pageCrumb ? appendPageCrumb(nav, resolved) : resolved;
 
   if (crumbs.length === 0) return null;
 

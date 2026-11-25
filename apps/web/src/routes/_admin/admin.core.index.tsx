@@ -12,7 +12,7 @@ export const Route = createFileRoute('/_admin/admin/core/')({
   pendingComponent: CardsPendingSkeleton,
 
   staticData: {
-    breadcrumb: adminBreadcrumb({ segments: ['core'] }),
+    breadcrumb: adminBreadcrumb({ pageCrumb: true, segments: ['core'] }),
   },
 })
 

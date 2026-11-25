@@ -7,6 +7,7 @@ import { getNextCronRunDate } from "@/lib/api/get-next-cron-run-date";
 import { AUDIT_SYSTEM_ACTOR, withAuditContext } from "@/lib/audit/context";
 import { cronAuthMiddleware } from "@/middlewares/cron-auth.middleware";
 
+import { recordCronHeartbeat } from "../lib/heartbeat";
 import {
   cleanupOutdatedCronJobs,
   processCronJobs,
@@ -46,6 +47,11 @@ export const runCronRoute = buildRoute({
 
     try {
       const cronFromDb = await db.select().from(core_cron);
+      await recordCronHeartbeat(db, new Date()).catch(async (error: unknown) => {
+        await c
+          .get("log")
+          .error(`Error recording the cron heartbeat: ${String(error)}`);
+      });
       await cleanupOutdatedCronJobs(db, cronFromDb, cronJobs);
 
       const now = new Date();
