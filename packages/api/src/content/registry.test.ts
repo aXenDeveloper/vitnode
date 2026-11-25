@@ -24,6 +24,7 @@ import {
   contentEditHref,
   contentEditHrefTemplate,
   contentModeratorPermissionEntries,
+  contentProfileTypes,
   contentTypeToPath,
   findContentTypeById,
   orderableColumns,
@@ -1013,5 +1014,50 @@ describe("contentAdminStaffPermission", () => {
         "can_publish",
       ),
     ).toThrow(/"can_publish" is not generated for the "widget" module/);
+  });
+});
+
+describe("contentProfileTypes", () => {
+  const listed = (
+    id: string,
+    profileContent: AnyContentTypeDefinition["profileContent"],
+    pluginId = "@vitnode/forum",
+  ) => ({ definition: { id, profileContent }, pluginId });
+  const on = (label: null | string = null) =>
+    ({ authorField: "author", enabled: true, label }) as const;
+  const off = { authorField: null, enabled: false, label: null } as const;
+
+  it("lists opted-in types once, sorted by id, with their filter labels", () => {
+    expect(
+      contentProfileTypes([
+        listed("forum.topic", on("content.topic.profile_label")),
+        listed("forum.poll", off),
+        listed("blog.post", on(), "@vitnode/blog"),
+        listed("forum.comment", on()),
+        listed("forum.topic", on("content.duplicate"), "@vitnode/other"),
+        listed("shop.gift-card", on(), "@vitnode/shop"),
+      ]),
+    ).toEqual([
+      {
+        id: "blog.post",
+        label: "@vitnode/blog.content.post.label",
+        pluginId: "@vitnode/blog",
+      },
+      {
+        id: "forum.comment",
+        label: "@vitnode/forum.content.comment.label",
+        pluginId: "@vitnode/forum",
+      },
+      {
+        id: "forum.topic",
+        label: "@vitnode/forum.content.topic.profile_label",
+        pluginId: "@vitnode/forum",
+      },
+      {
+        id: "shop.gift-card",
+        label: "@vitnode/shop.content.gift-card.label",
+        pluginId: "@vitnode/shop",
+      },
+    ]);
   });
 });

@@ -8,7 +8,7 @@ import type { UserProfile } from "@/views/profile/profile-query";
 
 import { ProfileRequestError } from "@/views/profile/profile-query";
 
-import { loadProfileRoute } from "./route";
+import { loadProfileRoute, profileContentFilter } from "./route";
 
 const profile: UserProfile = {
   avatarColor: "3b82f6",
@@ -152,5 +152,31 @@ describe("a profile that exists", () => {
       openGraph: { title: "Maciej", type: "profile" },
       title: "Maciej's profile",
     });
+  });
+});
+
+describe("profileContentFilter", () => {
+  const listing = {
+    contentStats: {
+      byType: { "blog.post": 0, "forum.comment": 2 },
+      total: 2,
+      types: [
+        { id: "blog.post", label: "@vitnode/blog.content.post.label" },
+        {
+          id: "forum.comment",
+          label: "@vitnode/forum.content.comment.profile_label",
+        },
+      ],
+    },
+  };
+
+  it.each([
+    ["a listed type", listing, "forum.comment", "forum.comment"],
+    ["a listed type with no records", listing, "blog.post", "blog.post"],
+    ["a type the app no longer lists", listing, "forum.topic", null],
+    ["no type", listing, undefined, null],
+    ["a profile without stats", {}, "forum.comment", null],
+  ])("resolves %s", (_name, user, type, expected) => {
+    expect(profileContentFilter(user, type)).toBe(expected);
   });
 });

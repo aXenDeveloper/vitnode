@@ -1147,4 +1147,105 @@ describe("defineContentType", () => {
       );
     });
   });
+
+  describe("profileContent", () => {
+    const search = {
+      titleField: "title",
+      contentFields: ["title"],
+      pathTemplate: "/widgets/{slug}",
+    };
+
+    const listed = (overrides: Record<string, unknown>) =>
+      define({
+        fields: {
+          title: field.text({ required: true }),
+          slug: field.slug({ source: "title" }),
+          author: field.user(),
+        },
+        publication: true,
+        publicApi: { path: "widgets", fields: ["title", "slug"] },
+        search: { ...search, authorField: "author" },
+        ...overrides,
+      } as never).profileContent;
+
+    it.each([
+      [
+        "off by default",
+        {},
+        { authorField: null, enabled: false, label: null },
+      ],
+      [
+        "off with `false`",
+        { profileContent: false },
+        { authorField: null, enabled: false, label: null },
+      ],
+      [
+        "on with `true`",
+        { profileContent: true },
+        { authorField: "author", enabled: true, label: null },
+      ],
+      [
+        "on with a label",
+        { profileContent: { label: "content.widget.profile_label" } },
+        {
+          authorField: "author",
+          enabled: true,
+          label: "content.widget.profile_label",
+        },
+      ],
+      [
+        "credited to the ownership field without a search author",
+        {
+          profileContent: true,
+          publicWrite: {
+            ownership: { field: "author" },
+            create: { fields: ["title"] },
+          },
+          search,
+        },
+        { authorField: "author", enabled: true, label: null },
+      ],
+    ])("resolves %s", (_name, overrides, expected) => {
+      expect(listed(overrides)).toEqual(expected);
+    });
+
+    it.each([
+      [
+        "without publication",
+        { publication: false, publicApi: undefined, search: undefined },
+        /needs `publication` and `publicApi`/,
+      ],
+      [
+        "without a public API",
+        { publicApi: undefined, search: undefined },
+        /needs `publication` and `publicApi`/,
+      ],
+      ["without search", { search: false }, /needs `search`/],
+      ["without an author", { search }, /needs an author/],
+      [
+        "with a label that is not a key",
+        { profileContent: { label: "Widgets!" } },
+        /profileContent\.label is an i18n key/,
+      ],
+      [
+        "with a label that is not a string",
+        { profileContent: { label: 3 } },
+        /profileContent\.label is an i18n key/,
+      ],
+      [
+        "with an unknown option",
+        { profileContent: { labels: "content.widget.label" } },
+        /profileContent\.labels is not an option/,
+      ],
+      [
+        "as a string",
+        { profileContent: "yes" },
+        /profileContent is `true` or an options object/,
+      ],
+    ])("rejects profileContent %s", (_name, overrides, message) => {
+      expect(() => listed({ profileContent: true, ...overrides })).toThrow(
+        message,
+      );
+    });
+  });
 });

@@ -42,6 +42,7 @@ const INTEGRATION = [
   "src/modules/moderation/warnings.postgres.test.ts",
   "src/content/approvals/server/approval-notifications.postgres.test.ts",
   "src/content/server/notifications/content-notifications.postgres.test.ts",
+  "src/content/server/profile-content.postgres.test.ts",
 ];
 
 export default defineConfig({
