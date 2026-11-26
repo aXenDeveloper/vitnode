@@ -50,12 +50,12 @@ export const storyContentType = defineContentType({
   },
 
   publication: true,
-
   reports: true,
 
   publicApi: {
     path: "stories",
     fields: [
+      "id",
       "title",
       "slug",
       "excerpt",

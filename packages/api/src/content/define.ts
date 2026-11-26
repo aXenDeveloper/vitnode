@@ -4,6 +4,7 @@ import type {
   AnyContentTypeDefinition,
   ContentAdminConfig,
   ContentAuditInput,
+  ContentAutoTranslateInput,
   ContentDeliveryConfig,
   ContentDeliveryDescriptionField,
   ContentDeliveryEnabled,
@@ -15,6 +16,7 @@ import type {
   ContentEditorialEnabled,
   ContentEditorialInput,
   ContentFieldMap,
+  ContentFieldNamesOfKind,
   ContentFieldsConstraint,
   ContentIndexInput,
   ContentLocalizationConfig,
@@ -62,6 +64,7 @@ import {
 } from "./const";
 import { resolveContentTypeAccess } from "./define-access";
 import { resolveAdmin } from "./define-admin";
+import { resolveAutoTranslate } from "./define-auto-translate";
 import { resolveEditorial } from "./define-editorial";
 import {
   assertField,
@@ -308,6 +311,7 @@ export const defineContentType = <
   access,
   admin = {},
   audit,
+  autoTranslate,
   delivery,
   duplication,
   editorial,
@@ -354,6 +358,17 @@ export const defineContentType = <
    * `excludeFields` keeps noisy fields out of the recorded changes.
    */
   audit?: ContentAuditInput<Extract<keyof TFields, string>> | false;
+
+  /**
+   * Lets readers get public records machine-translated into their language,
+   * once the site turns automatic translation on in the AdminCP. Lists the
+   * shared text fields to translate; translations are stored per field and
+   * source version and shared by every reader. Needs `publicApi` and
+   * `publication`.
+   */
+  autoTranslate?: ContentAutoTranslateInput<
+    ContentFieldNamesOfKind<TFields, "richText">
+  >;
 
   /**
    * Public delivery: canonical URLs (`/{publicApi.path}/:slug` by default), SEO
@@ -791,6 +806,14 @@ export const defineContentType = <
   > = {
     access: resolveContentTypeAccess(id, fieldMap, access),
     admin: resolvedAdmin,
+    autoTranslate: resolveAutoTranslate(id, autoTranslate, {
+      fields: fieldMap,
+      localizationFallback: resolvedLocalization.enabled
+        ? resolvedLocalization.fallback
+        : null,
+      publicApi: resolvedPublicApi,
+      publication: publicationEnabled,
+    }),
     advanced: resolvedAdvanced,
     audit: resolveContentAudit(id, audit, fieldNames),
     delivery: resolvedDelivery as ResolvedContentDeliveryConfig<

@@ -31,11 +31,17 @@ import {
 import { OverviewSettingsContent } from "@/views/auth/settings/overview/overview";
 import { updatePersonalInformationInBrowser } from "@/views/auth/settings/overview/personal-update";
 import { updateTimeZoneInBrowser } from "@/views/auth/settings/overview/time-zone-update";
+import { TranslationSettings } from "@/views/auth/settings/overview/translation-settings";
 import { SSO_CONNECTIONS_IDENTITY_ROOT } from "@/views/auth/settings/sso/sso-connections-query";
 import { userProfileQueryKey } from "@/views/profile/profile-query";
 
 import { useMiddlewareConfigQuery } from "../auth/middleware-config";
 import { invalidateSession, sessionQueryOptions } from "../auth/session-query";
+import {
+  AUTO_TRANSLATE_QUERY_ROOT,
+  autoTranslateSettingsQueryOptions,
+  saveAutoTranslatePreference,
+} from "../auto-translate/query";
 import { useOwnUserImageEditor } from "../profile/own-image-editor";
 import { userProfileQuery } from "../profile/query";
 import { personalInfoPolicyQuery } from "./personal-policy";
@@ -83,6 +89,33 @@ const OverviewAiPoints = ({ userId }: { userId: number }) => {
         )}
       </FramePanel>
     </Frame>
+  );
+};
+
+const OverviewTranslation = ({ userId }: { userId: number }) => {
+  const queryClient = useQueryClient();
+  const options = autoTranslateSettingsQueryOptions(userId);
+  const { data } = useQuery(options);
+
+  if (!data?.enabled) return null;
+
+  return (
+    <TranslationSettings
+      auto={data.auto}
+      onUpdate={async auto => {
+        const saved = await saveAutoTranslatePreference(auto).catch(
+          () => false,
+        );
+        if (saved) {
+          queryClient.setQueryData(options.queryKey, { ...data, auto });
+          await queryClient.invalidateQueries({
+            queryKey: AUTO_TRANSLATE_QUERY_ROOT,
+          });
+        }
+
+        return saved;
+      }}
+    />
   );
 };
 
@@ -139,6 +172,7 @@ export const OverviewSettings = ({ nameCode }: { nameCode: string }) => {
       onTimeZoneUpdate={onTimeZoneUpdate}
       onUpdate={onUpdate}
       personalFields={policy.fields}
+      preferences={<OverviewTranslation userId={session.user.id} />}
       user={{
         ...profile,
         headline: session.user.headline,

@@ -289,6 +289,7 @@ Admins can also switch an action off, assign it a model and a fallback model, an
 | `run()`, `runAsSystem()` | `Promise<{ output, runId, usage }>`             |
 | `stream()`              | `Promise<{ textStream, result, runId }>`. See [Streaming](/docs/dev/ai/streaming). |
 | `estimate()`            | `Promise<{ maxPoints, maxUsd }>`, the most the run could cost as decimal strings, or `null` without pricing |
+| `estimateAsSystem()`    | The same for a system run, with `maxPoints: null`. For trusted server code about to call `runAsSystem()` |
 
 ```ts
 {

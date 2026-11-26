@@ -726,6 +726,25 @@ Removing a language's ALT text emits nothing.
 AI usage per plugin in your own analytics, or purge cached pages that render an
 image whose ALT text just changed.
 
+## Content translation events
+
+Exported from `@vitnode/api/events/content-translations` and emitted by
+[automatic translation](/docs/dev/ai/automatic-translation). Payloads carry ids
+and counts only, never the text.
+
+| Event                           | Payload                                                                           | Fires when                                                                 |
+| ------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `content.translation.completed` | `{ contentTypeId, recordId, field, targetLocale, latencyMs, runId }`              | A new translation was stored. `latencyMs` runs from the first request     |
+| `content.translation.failed`    | `{ contentTypeId, recordId, field, targetLocale, reason, retrying }`              | A queued job ended without a result: skipped, stale, gone or a model error |
+| `content.translation.served`    | `{ locale, mode, ready, pending, queued, skipped }`                               | A lookup or request was answered                                           |
+
+`runId` is `null` when another worker had already stored the result. `mode` is
+`lookup`, `automatic` or `manual`. Budget and AI-slot waits emit nothing; the
+job simply runs later.
+
+**A listener would** count saved-translation reuse against new generations in
+your analytics, or alert when failures pile up.
+
 ## Payment events
 
 Exported from `@vitnode/api/events/payments` as `paymentProcessingEvent`,

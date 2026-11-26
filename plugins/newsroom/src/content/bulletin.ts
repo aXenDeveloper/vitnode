@@ -19,10 +19,9 @@ export const bulletinContentType = defineContentType({
   // The global lifecycle every translation's own status is subordinate to:
   // publishing the English copy of a draft bulletin puts nothing on the internet.
   publication: true,
-
   publicApi: {
     path: "bulletins",
-    fields: ["title", "slug", "body", "featured", "publishedAt"],
+    fields: ["id", "title", "slug", "body", "featured", "publishedAt"],
     searchableFields: ["title", "body"],
     orderableFields: ["publishedAt"],
     filterableFields: ["featured", "slug"],

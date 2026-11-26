@@ -46,6 +46,7 @@ export const blogCommentContentType = defineContentType({
   },
 
   publication: true,
+  autoTranslate: { fields: ["body"] },
   visibility: true,
   reports: { titleField: "body", snapshotFields: ["body"], selfReport: true },
   reactions: true,

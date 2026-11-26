@@ -1307,7 +1307,14 @@
           "browseAnonymouslyOff": "Your activity is visible again",
           "browseAnonymouslyOffDesc": "Other members can see when you're online and when you were last active.",
           "browseAnonymouslyForced": "Your group always browses anonymously, so this can't be turned off.",
-          "browseAnonymouslyDisallowed": "Your group doesn't allow browsing anonymously."
+          "browseAnonymouslyDisallowed": "Your group doesn't allow browsing anonymously.",
+          "translationTitle": "Translation",
+          "autoTranslate": "Automatically translate content",
+          "autoTranslateDesc": "Show posts written in other languages in yours. Every translated post has a Show original link, and you can still translate a post by hand when this is off.",
+          "autoTranslateOn": "Content is translated automatically",
+          "autoTranslateOnDesc": "Posts in other languages now appear in yours.",
+          "autoTranslateOff": "Automatic translation is off",
+          "autoTranslateOffDesc": "Posts now appear as written. Use Translate under a post to read it in your language."
         },
         "devices": {
           "title": "Devices",
@@ -3850,6 +3857,34 @@
         "manage": "Manage site status",
         "document_title": "(Offline) {title}"
       }
+    },
+    "auto_translate": {
+      "translate": "Translate",
+      "translating": "Translating…",
+      "automatic": "Automatically translated",
+      "automatic_from": "Automatically translated from {language}",
+      "translated": "Translated",
+      "translated_from": "Translated from {language}",
+      "show_original": "Show original",
+      "show_translation": "Show translation",
+      "errors": {
+        "original": {
+          "title": "Already in your language",
+          "desc": "This text is already written in the language you are reading in."
+        },
+        "sign_in": {
+          "title": "Sign in to translate",
+          "desc": "Guests can read saved translations. Sign in to translate this text for the first time."
+        },
+        "unavailable": {
+          "title": "Translation is unavailable right now",
+          "desc": "The site reached its translation limit for now. Try again later."
+        },
+        "skipped": {
+          "title": "This text can't be translated",
+          "desc": "There is nothing to translate here, or its language isn't supported on this site."
+        }
+      }
     }
   },
   "admin": {
@@ -6262,6 +6297,51 @@
             "change": "{from} → {to}"
           }
         }
+      },
+      "content_translation": {
+        "open": "Automatic translation",
+        "title": "Automatic translation",
+        "desc": "Translate public posts into each reader's language with AI. Translations are stored once and shared by every reader.",
+        "enabled": {
+          "label": "Translate content automatically",
+          "desc": "On by default. Readers see posts in their language, and each reader can turn it off.",
+          "no_model": "On, but waiting for a model: add an AI model with structured output and pricing to your API config and translations start by themselves."
+        },
+        "locales": {
+          "label": "Languages",
+          "desc": "Posts are translated only from and into these languages."
+        },
+        "budget": {
+          "label": "Monthly translation budget",
+          "desc": "New translations stop for the month at this amount. Saved translations stay readable. It counts inside the site budget.",
+          "no_limit": "No separate limit"
+        },
+        "user_limit": {
+          "label": "New translations per reader per hour",
+          "desc": "How many fields one signed-in reader may send for translation in an hour."
+        },
+        "retention": {
+          "label": "Keep outdated translations",
+          "desc": "Days to keep a translation after its post was edited, in case the edit is undone.",
+          "unit": "days"
+        },
+        "usage": {
+          "title": "This month",
+          "spent": "Spent",
+          "generated": "New translations",
+          "stored": "Saved translations",
+          "latency": "Average time to translate",
+          "seconds": "{seconds, number} s",
+          "skipped": "Skipped",
+          "failed": "Failed",
+          "pending": "In progress",
+          "waiting_budget": "Waiting for budget"
+        },
+        "submit": "Save",
+        "saved": {
+          "title": "Automatic translation saved",
+          "desc": "Readers get the new settings on their next page."
+        }
       }
     },
     "reactions": {
@@ -6394,6 +6474,10 @@
       "editor_rewrite": {
         "title": "Rewrite selected text",
         "description": "Rewrites the selected text: shorter, corrected, simpler or in another tone."
+      },
+      "content_translate": {
+        "title": "Translate content",
+        "description": "Translates public posts into a reader's language for automatic translation."
       }
     }
   },

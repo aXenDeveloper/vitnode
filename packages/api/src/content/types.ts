@@ -1075,6 +1075,45 @@ export interface ResolvedContentReactionsConfig {
   reputation: boolean;
 }
 
+/** Options for `autoTranslate`. */
+export interface ContentAutoTranslateConfig<TField extends string = string> {
+  /**
+   * `richText` fields in `publicApi.fields` that readers may get
+   * machine-translated into their language. Titles and other plain text are
+   * never translated. Each field is translated, stored and versioned on its
+   * own.
+   *
+   * A localized field (`localized: true`) needs `localization.fallback:
+   * "default"`: an editor's translation in the reader's language always wins,
+   * and only the default-language text served in its place is translated.
+   */
+  fields: readonly TField[];
+  /**
+   * A field whose confidently detected language also stands for another,
+   * usually a short one that borrows a longer one's: `{ summary: "body" }`.
+   * Both must be in `fields`.
+   */
+  languageFrom?: Partial<Record<TField, TField>>;
+}
+
+/** An options object, or `false`/omitted to keep the content type out of automatic translation. */
+export type ContentAutoTranslateInput<TField extends string = string> =
+  | ContentAutoTranslateConfig<TField>
+  | false;
+
+export interface ResolvedContentAutoTranslateField {
+  /** The field whose detected language is used when this one is too short to tell. */
+  languageFrom: null | string;
+  /** Lives in the translation table: its source language is the served one. */
+  localized: boolean;
+  name: string;
+}
+
+export interface ResolvedContentAutoTranslateConfig {
+  enabled: boolean;
+  fields: ResolvedContentAutoTranslateField[];
+}
+
 export interface ContentThreadInput<TField extends string = string> {
   /** Deepest nesting level a reply may sit at. 1 is a flat list. Defaults to 8. */
   maxDepth?: number;
@@ -1368,7 +1407,7 @@ export type ContentPublicWriteResolved<TWrite> = [TWrite] extends [
 // ---------------------------------------------------------------------------
 
 /** Field names of one or more kinds, as a union. */
-type ContentFieldNamesOfKind<TFields, TKind extends string> = string &
+export type ContentFieldNamesOfKind<TFields, TKind extends string> = string &
   {
     [K in keyof TFields]: TFields[K] extends { kind: TKind } ? K : never;
   }[keyof TFields];
@@ -2145,6 +2184,8 @@ export interface ContentTypeDefinition<
   advanced: ResolvedContentAdvancedConfig;
   /** Automatic audit logging of the content type's writes. */
   audit: ResolvedContentAuditConfig;
+  /** Fields readers may get machine-translated, or the disabled default. */
+  autoTranslate: ResolvedContentAutoTranslateConfig;
 
   delivery: ResolvedContentDeliveryConfig<TDeliveryEnabled>;
   duplication: ResolvedContentDuplicationConfig<TDuplicationEnabled>;

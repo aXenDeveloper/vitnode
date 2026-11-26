@@ -31,6 +31,7 @@ import { followContentSubmissionContainer } from "../approvals/server/follow-con
 import { contentContainerFieldOf } from "../containers/association";
 import { contentEventDefinitionOf } from "../event-definitions";
 import { contentIdKey } from "../ids";
+import { queueContentAutoTranslations } from "./auto-translate-on-write";
 import { queueContentMentions } from "./mentions";
 import { invalidateContentPages } from "./page-cache";
 import { publishContentRefresh } from "./refresh/publish";
@@ -182,6 +183,14 @@ export const emitContentEvent = async (
     definition,
     payload,
     pluginId: options?.pluginId ?? event.pluginId,
+  });
+
+  queueContentAutoTranslations(c, {
+    action,
+    contentId: payload.contentId,
+    definition,
+    payload,
+    publicState: options?.publicState,
   });
 
   // After the caches above, so whoever reads again on this signal misses them.

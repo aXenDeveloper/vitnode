@@ -1,0 +1,1400 @@
+{
+  "type": "diff",
+  "version": "10",
+  "dialect": "postgres",
+  "id": "df1b77c9-1b55-4766-ac57-68b35a8f3890",
+  "prevIds": [
+    "2658a40c-37e9-4292-a232-0f25bf323363"
+  ],
+  "footprints": [
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_content_ai_translation_jobs"
+      ],
+      "writes": [
+        "s|tbl|public.core_content_ai_translation_jobs",
+        "n|tbl|public.core_content_ai_translation_jobs",
+        "e|tbl|public.core_content_ai_translation_jobs",
+        "n|rel|public.core_content_ai_translation_jobs",
+        "n|type|public.core_content_ai_translation_jobs",
+        "n|rel|public.core_content_ai_translation_jobs_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_content_ai_translations"
+      ],
+      "writes": [
+        "s|tbl|public.core_content_ai_translations",
+        "n|tbl|public.core_content_ai_translations",
+        "e|tbl|public.core_content_ai_translations",
+        "n|rel|public.core_content_ai_translations",
+        "n|type|public.core_content_ai_translations",
+        "n|rel|public.core_content_ai_translations_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_content_language_detections"
+      ],
+      "writes": [
+        "s|tbl|public.core_content_language_detections",
+        "n|tbl|public.core_content_language_detections",
+        "e|tbl|public.core_content_language_detections",
+        "n|rel|public.core_content_language_detections",
+        "n|type|public.core_content_language_detections",
+        "n|rel|public.core_content_language_detections_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_content_translation_settings"
+      ],
+      "writes": [
+        "s|tbl|public.core_content_translation_settings",
+        "n|tbl|public.core_content_translation_settings",
+        "e|tbl|public.core_content_translation_settings",
+        "n|rel|public.core_content_translation_settings",
+        "n|type|public.core_content_translation_settings",
+        "n|rel|public.core_content_translation_settings_pkey"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "add_column",
+      "statementTarget": [
+        "column",
+        "public",
+        "core_users",
+        "autoTranslateContent"
+      ],
+      "writes": [
+        "s|col|public.core_users.autoTranslateContent",
+        "n|col|public.core_users.autoTranslateContent",
+        "e|col|public.core_users.autoTranslateContent"
+      ],
+      "reads": [
+        "n|tbl|public.core_users",
+        "n|sch|public"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_content_ai_translation_jobs",
+        "core_content_ai_translation_jobs_key_unique"
+      ],
+      "writes": [
+        "s|idx|public.core_content_ai_translation_jobs_key_unique",
+        "n|idx|public.core_content_ai_translation_jobs_key_unique",
+        "e|idx|public.core_content_ai_translation_jobs_key_unique",
+        "n|rel|public.core_content_ai_translation_jobs_key_unique"
+      ],
+      "reads": [
+        "n|tbl|public.core_content_ai_translation_jobs",
+        "n|sch|public",
+        "n|col|public.core_content_ai_translation_jobs.targetKind",
+        "n|col|public.core_content_ai_translation_jobs.contentTypeId",
+        "n|col|public.core_content_ai_translation_jobs.recordId",
+        "n|col|public.core_content_ai_translation_jobs.field",
+        "n|col|public.core_content_ai_translation_jobs.sourceFingerprint",
+        "n|col|public.core_content_ai_translation_jobs.targetLocale"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_content_ai_translation_jobs",
+        "core_content_ai_translation_jobs_status_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_content_ai_translation_jobs_status_idx",
+        "n|idx|public.core_content_ai_translation_jobs_status_idx",
+        "e|idx|public.core_content_ai_translation_jobs_status_idx",
+        "n|rel|public.core_content_ai_translation_jobs_status_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_content_ai_translation_jobs",
+        "n|sch|public",
+        "n|col|public.core_content_ai_translation_jobs.status",
+        "n|col|public.core_content_ai_translation_jobs.availableAt"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_content_ai_translation_jobs",
+        "core_content_ai_translation_jobs_requester_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_content_ai_translation_jobs_requester_idx",
+        "n|idx|public.core_content_ai_translation_jobs_requester_idx",
+        "e|idx|public.core_content_ai_translation_jobs_requester_idx",
+        "n|rel|public.core_content_ai_translation_jobs_requester_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_content_ai_translation_jobs",
+        "n|sch|public",
+        "n|col|public.core_content_ai_translation_jobs.requestedBy",
+        "n|col|public.core_content_ai_translation_jobs.requestedAt"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_content_ai_translations",
+        "core_content_ai_translations_key_unique"
+      ],
+      "writes": [
+        "s|idx|public.core_content_ai_translations_key_unique",
+        "n|idx|public.core_content_ai_translations_key_unique",
+        "e|idx|public.core_content_ai_translations_key_unique",
+        "n|rel|public.core_content_ai_translations_key_unique"
+      ],
+      "reads": [
+        "n|tbl|public.core_content_ai_translations",
+        "n|sch|public",
+        "n|col|public.core_content_ai_translations.targetKind",
+        "n|col|public.core_content_ai_translations.contentTypeId",
+        "n|col|public.core_content_ai_translations.recordId",
+        "n|col|public.core_content_ai_translations.field",
+        "n|col|public.core_content_ai_translations.sourceFingerprint",
+        "n|col|public.core_content_ai_translations.targetLocale"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_content_ai_translations",
+        "core_content_ai_translations_record_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_content_ai_translations_record_idx",
+        "n|idx|public.core_content_ai_translations_record_idx",
+        "e|idx|public.core_content_ai_translations_record_idx",
+        "n|rel|public.core_content_ai_translations_record_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_content_ai_translations",
+        "n|sch|public",
+        "n|col|public.core_content_ai_translations.contentTypeId",
+        "n|col|public.core_content_ai_translations.recordId"
+      ]
+    },
+    {
+      "statementType": "create_index",
+      "statementTarget": [
+        "index",
+        "public",
+        "core_content_ai_translations",
+        "core_content_ai_translations_superseded_idx"
+      ],
+      "writes": [
+        "s|idx|public.core_content_ai_translations_superseded_idx",
+        "n|idx|public.core_content_ai_translations_superseded_idx",
+        "e|idx|public.core_content_ai_translations_superseded_idx",
+        "n|rel|public.core_content_ai_translations_superseded_idx"
+      ],
+      "reads": [
+        "n|tbl|public.core_content_ai_translations",
+        "n|sch|public",
+        "n|col|public.core_content_ai_translations.supersededAt"
+      ]
+    },
+    {
+      "statementType": "create_fk",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_content_ai_translation_jobs"
+      ],
+      "writes": [
+        "s|fk|public.core_content_ai_translation_jobs.core_content_ai_translation_jobs_requestedBy_core_users_id_fkey",
+        "n|fk|public.core_content_ai_translation_jobs.core_content_ai_translation_jobs_requestedBy_core_users_id_fkey",
+        "e|fk|public.core_content_ai_translation_jobs.core_content_ai_translation_jobs_requestedBy_core_users_id_fkey",
+        "n|con|public.core_content_ai_translation_jobs.core_content_ai_translation_jobs_requestedBy_core_users_id_fkey"
+      ],
+      "reads": [
+        "n|tbl|public.core_content_ai_translation_jobs",
+        "n|sch|public",
+        "n|tbl|public.core_users",
+        "n|sch|public",
+        "n|col|public.core_content_ai_translation_jobs.requestedBy",
+        "n|col|public.core_users.id",
+        "e|uniqueness|public.core_users.id"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_content_ai_translation_jobs",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_content_ai_translations",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_content_language_detections",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "name": "core_content_translation_settings",
+        "isRlsEnabled": true,
+        "entityType": "tables"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "targetKind",
+        "type": "varchar(20)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'content'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "contentTypeId",
+        "type": "varchar(150)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "recordId",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "field",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "sourceFingerprint",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "targetLocale",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "mode",
+        "type": "varchar(10)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'automatic'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "sourceLocaleHint",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "status",
+        "type": "varchar(20)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'pending'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "reason",
+        "type": "varchar(40)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "attempts",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "maxAttempts",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "3",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "availableAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "leaseOwner",
+        "type": "varchar(36)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "leaseExpiresAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "requestedBy",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "requestedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "completedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "runId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "createdAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "updatedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "id",
+        "type": "serial",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "targetKind",
+        "type": "varchar(20)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'content'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "contentTypeId",
+        "type": "varchar(150)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "recordId",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "field",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "sourceFingerprint",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "targetLocale",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "sourceLocale",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "value",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "runId",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "modelId",
+        "type": "varchar(100)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "promptVersion",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "createdAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "supersededAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_language_detections",
+        "name": "textFingerprint",
+        "type": "varchar(64)",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_language_detections",
+        "name": "locale",
+        "type": "varchar(32)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_language_detections",
+        "name": "confident",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_language_detections",
+        "name": "detectorVersion",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_language_detections",
+        "name": "createdAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_translation_settings",
+        "name": "id",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "1",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_translation_settings",
+        "name": "enabled",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "false",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_translation_settings",
+        "name": "locales",
+        "type": "jsonb",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "'[\"en\",\"pl\"]'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_translation_settings",
+        "name": "monthlyBudgetUsd",
+        "type": "numeric(24,12)",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": "'5'",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_translation_settings",
+        "name": "userHourlyLimit",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "100",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_translation_settings",
+        "name": "retentionDays",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "30",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_translation_settings",
+        "name": "cleanupCursor",
+        "type": "integer",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "0",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_translation_settings",
+        "name": "updatedAt",
+        "type": "timestamp",
+        "typeSchema": null,
+        "notNull": true,
+        "dimensions": 0,
+        "default": "now()",
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_users",
+        "name": "autoTranslateContent",
+        "type": "boolean",
+        "typeSchema": null,
+        "notNull": false,
+        "dimensions": 0,
+        "default": null,
+        "generated": null,
+        "identity": null,
+        "entityType": "columns"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "core_content_ai_translation_jobs_key_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "targetKind",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "contentTypeId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "recordId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "field",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "sourceFingerprint",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "targetLocale",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "core_content_ai_translation_jobs_status_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "status",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "availableAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "core_content_ai_translation_jobs_requester_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "requestedBy",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "requestedAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "core_content_ai_translations_key_unique",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "targetKind",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "contentTypeId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "recordId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "field",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "sourceFingerprint",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "targetLocale",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": true,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "core_content_ai_translations_record_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "contentTypeId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          },
+          {
+            "value": "recordId",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": null,
+        "with": "",
+        "method": "btree",
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "core_content_ai_translations_superseded_idx",
+        "nameExplicit": true,
+        "columns": [
+          {
+            "value": "supersededAt",
+            "isExpression": false,
+            "asc": true,
+            "nullsFirst": false,
+            "opclass": null
+          }
+        ],
+        "isUnique": false,
+        "where": "\"supersededAt\" IS NOT NULL",
+        "with": "",
+        "method": "btree",
+        "entityType": "indexes"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "core_content_ai_translation_jobs_requestedBy_core_users_id_fkey",
+        "nameExplicit": false,
+        "columns": [
+          "requestedBy"
+        ],
+        "schemaTo": "public",
+        "tableTo": "core_users",
+        "columnsTo": [
+          "id"
+        ],
+        "onUpdate": "NO ACTION",
+        "onDelete": "SET NULL",
+        "entityType": "fks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translation_jobs",
+        "name": "core_content_ai_translation_jobs_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_ai_translations",
+        "name": "core_content_ai_translations_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_language_detections",
+        "name": "core_content_language_detections_pkey",
+        "columns": [
+          "textFingerprint"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    },
+    {
+      "op": "create",
+      "row": {
+        "schema": "public",
+        "table": "core_content_translation_settings",
+        "name": "core_content_translation_settings_pkey",
+        "columns": [
+          "id"
+        ],
+        "nameExplicit": false,
+        "entityType": "pks"
+      }
+    }
+  ]
+}

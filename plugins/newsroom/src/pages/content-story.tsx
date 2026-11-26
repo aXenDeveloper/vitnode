@@ -3,12 +3,15 @@ import { useTranslations } from "use-intl";
 
 export const ContentStory = ({
   children,
+  elementRef,
   lang,
   lead,
   publishedAt,
   title,
 }: {
   children?: React.ReactNode;
+  /** From `useAutoTranslation`, so the story is translated once on screen. */
+  elementRef?: (element: Element | null) => void;
   lang?: string;
   lead?: null | string;
   publishedAt: null | string;
@@ -20,6 +23,7 @@ export const ContentStory = ({
     <article
       className="container mx-auto flex max-w-3xl flex-col gap-6 px-4 py-8 md:gap-8 md:py-12"
       lang={lang}
+      ref={elementRef}
     >
       <header className="flex flex-col gap-3">
         {publishedAt ? (

@@ -3,8 +3,10 @@ import {
   zodContentPublicPerson,
   zodRichTextDocument,
 } from "@vitnode/core/content";
+import { autoTranslateItem } from "@vitnode/core/tanstack/auto-translate";
 import {
   CONTENT_COMMENT_ANCHOR_PREFIX,
+  contentCommentsQueryOptions,
   useContentComments,
 } from "@vitnode/core/tanstack/comments";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
@@ -37,6 +39,33 @@ const zodPostComment = z.object({
 /** One comment's public record, as the thread serves it. */
 export type PostComment = z.infer<typeof zodPostComment>;
 
+const postCommentsThread = (articleId: number) => ({
+  queryKey: blogQueryKeys.comments(articleId),
+  record: zodPostComment,
+  thread: async ({ after, first }: { after: null | string; first: number }) =>
+    await fetcher({
+      plugin: manifest.id,
+      method: "get",
+      module: "content/comments",
+      path: "/thread",
+      args: {
+        query: {
+          root: String(articleId),
+          first,
+          ...(after ? { after } : {}),
+        },
+      },
+    }),
+});
+
+export const postCommentAutoTranslateItem = (comment: PostComment) =>
+  autoTranslateItem(blogCommentContentType.id, comment.id, {
+    body: comment.body,
+  });
+
+export const postCommentsQueryOptions = (articleId: number) =>
+  contentCommentsQueryOptions(postCommentsThread(articleId));
+
 /**
  * The comment thread under one article, wired to the blog's typed comment
  * routes: replies, editing with revisions, deleting, hiding and reports - and
@@ -46,24 +75,10 @@ export const usePostComments = (articleId: number, canComment = true) =>
   useContentComments({
     // Every category of the article has to allow comments; the server checks
     // again when one is posted.
+    ...postCommentsThread(articleId),
     allowed: canComment,
-    queryKey: blogQueryKeys.comments(articleId),
+    autoTranslate: postCommentAutoTranslateItem,
     maxDepth: BLOG_COMMENT_MAX_DEPTH,
-    record: zodPostComment,
-    thread: async ({ after, first }) =>
-      await fetcher({
-        plugin: manifest.id,
-        method: "get",
-        module: "content/comments",
-        path: "/thread",
-        args: {
-          query: {
-            root: String(articleId),
-            first,
-            ...(after ? { after } : {}),
-          },
-        },
-      }),
     branches: async ids =>
       await fetcher({
         plugin: manifest.id,

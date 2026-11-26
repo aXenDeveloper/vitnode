@@ -1,4 +1,5 @@
 import type { PluginRoutePageProps } from "@vitnode/core/routing";
+import type { ContentPermissions } from "@vitnode/core/tanstack/content";
 
 import { DateFormat } from "@vitnode/core/components/date-format";
 import { buttonVariants } from "@vitnode/core/components/ui/button";
@@ -104,6 +105,64 @@ const ListState = ({
     {action ? <EmptyContent>{action}</EmptyContent> : null}
   </Empty>
 );
+
+type LetterRowData = NonNullable<LettersPageData["letters"]>["edges"][number];
+
+const LetterRow = ({
+  can,
+  letter,
+}: {
+  can: ContentPermissions;
+  letter: LetterRowData;
+}) => {
+  const t = useTranslations("newsroom.letters.list");
+  const titleId = `letter-${letter.id}-title`;
+
+  return (
+    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+      <div className="flex min-w-0 flex-col gap-1">
+        {letter.slug === null ? (
+          <span
+            className="text-foreground font-medium text-balance"
+            id={titleId}
+          >
+            {letter.title}
+          </span>
+        ) : (
+          <HrefLink
+            className="text-foreground font-medium text-balance hover:underline"
+            href={letterHref(letter.slug)}
+            id={titleId}
+          >
+            {letter.title}
+          </HrefLink>
+        )}
+        <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-sm leading-relaxed">
+          {letter.author ? (
+            <UserFormat format user={letter.author} />
+          ) : (
+            <span>{t("deleted_user")}</span>
+          )}
+          {letter.publishedAt ? (
+            <>
+              <span aria-hidden="true">·</span>
+              <time dateTime={new Date(letter.publishedAt).toISOString()}>
+                <DateFormat date={letter.publishedAt} />
+              </time>
+            </>
+          ) : null}
+        </p>
+      </div>
+      <LetterActions
+        can={can}
+        describedBy={titleId}
+        id={letter.id}
+        size="sm"
+        title={letter.title}
+      />
+    </div>
+  );
+};
 
 const LettersPage = ({
   loaderData: { desks, letters },
@@ -228,7 +287,7 @@ const LettersPage = ({
         isError={letters === null}
         isFetching={isPending}
         isFiltered={letterList.isFiltered(search)}
-        itemClassName="flex flex-col gap-2 p-4 md:flex-row md:items-center md:justify-between"
+        itemClassName="p-4"
         items={letters?.edges}
         label={t("title")}
         loading={null}
@@ -247,56 +306,9 @@ const LettersPage = ({
             title={t("no_results.title")}
           />
         }
-        renderItem={letter => {
-          const titleId = `letter-${letter.id}-title`;
-
-          return (
-            <>
-              <div className="flex min-w-0 flex-col gap-1">
-                {letter.slug === null ? (
-                  <span
-                    className="text-foreground font-medium text-balance"
-                    id={titleId}
-                  >
-                    {letter.title}
-                  </span>
-                ) : (
-                  <HrefLink
-                    className="text-foreground font-medium text-balance hover:underline"
-                    href={letterHref(letter.slug)}
-                    id={titleId}
-                  >
-                    {letter.title}
-                  </HrefLink>
-                )}
-                <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 text-sm leading-relaxed">
-                  {letter.author ? (
-                    <UserFormat format user={letter.author} />
-                  ) : (
-                    <span>{t("deleted_user")}</span>
-                  )}
-                  {letter.publishedAt ? (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <time
-                        dateTime={new Date(letter.publishedAt).toISOString()}
-                      >
-                        <DateFormat date={letter.publishedAt} />
-                      </time>
-                    </>
-                  ) : null}
-                </p>
-              </div>
-              <LetterActions
-                can={permissions.of(letter.id)}
-                describedBy={titleId}
-                id={letter.id}
-                size="sm"
-                title={letter.title}
-              />
-            </>
-          );
-        }}
+        renderItem={letter => (
+          <LetterRow can={permissions.of(letter.id)} letter={letter} />
+        )}
       />
 
       {letters ? (

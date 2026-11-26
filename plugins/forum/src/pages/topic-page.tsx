@@ -17,6 +17,13 @@ import {
 } from "@vitnode/core/content";
 import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import {
+  autoTranslateItem,
+  AutoTranslateNote,
+  AutoTranslateScope,
+  loadAutoTranslateSnapshot,
+  useAutoTranslation,
+} from "@vitnode/core/tanstack/auto-translate";
+import {
   ContentAccessRequired,
   contentPageItem,
 } from "@vitnode/core/tanstack/content";
@@ -33,6 +40,7 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
+import { commentContentType } from "@/content/comment";
 import { topicContentType } from "@/content/topic";
 import { manifest } from "@/manifest.gen";
 
@@ -152,6 +160,23 @@ const loadTopic = async (
   ]);
 
   const trail = forum ? [...forum.ancestors, forum.container] : [];
+  const translations = await loadAutoTranslateSnapshot(queryClient, {
+    items: [
+      autoTranslateItem(topicContentType.id, topic.id, {
+        body: topic.body,
+      }),
+      ...(thread?.items ?? []).flatMap(node =>
+        node.record
+          ? [
+              autoTranslateItem(commentContentType.id, node.record.id, {
+                body: node.record.body,
+              }),
+            ]
+          : [],
+      ),
+    ],
+    locale,
+  });
 
   const path = topicHref(topic.slug);
   const canonicalUrl =
@@ -163,6 +188,7 @@ const loadTopic = async (
     accessRequired: false as const,
     canComment: forum?.container.access.canComment ?? true,
     canonicalUrl,
+    translations,
     description: excerptOf(
       richTextToPlainText(topic.body).replace(/\s+/g, " "),
     ),
@@ -361,19 +387,31 @@ const TopicPage = (props: PluginRoutePageProps<TopicPageData, TopicSearch>) =>
     <TopicView {...props} loaderData={props.loaderData} />
   );
 
-const TopicView = ({
-  loaderData,
-  navigate,
-  search,
-}: Omit<PluginRoutePageProps<TopicPageData, TopicSearch>, "loaderData"> & {
+type TopicViewProps = Omit<
+  PluginRoutePageProps<TopicPageData, TopicSearch>,
+  "loaderData"
+> & {
   loaderData: Extract<TopicPageData, { accessRequired: false }>;
-}) => {
+};
+
+const TopicView = (props: TopicViewProps) => (
+  <AutoTranslateScope initial={props.loaderData.translations}>
+    <TopicViewInner {...props} />
+  </AutoTranslateScope>
+);
+
+const TopicViewInner = ({ loaderData, navigate, search }: TopicViewProps) => {
   const t = useTranslations("@vitnode/forum.topics.detail");
   const { canComment, thread, topic, trail } = loaderData;
   const created = search.created === true;
   const announcedRef = useRef(false);
   const forum = trail.at(-1);
   useRecordView({ itemId: topic.id, itemType: topicContentType.id });
+  const { elementRef, ...translation } = useAutoTranslation({
+    contentTypeId: topicContentType.id,
+    fields: { body: topic.body },
+    id: topic.id,
+  });
 
   useEffect(() => {
     // oxlint-disable-next-line react-you-might-not-need-an-effect/no-event-handler -- the event happened on the previous page; landing here is all that is left of it
@@ -388,7 +426,7 @@ const TopicView = ({
     <div className="container mx-auto flex max-w-3xl flex-col gap-8 px-4 py-8 md:py-12">
       <TopicJsonLd data={loaderData} />
 
-      <article className="flex flex-col gap-6">
+      <article className="flex flex-col gap-6" ref={elementRef}>
         <header className="flex flex-col gap-4">
           {forum ? (
             <HrefLink
@@ -415,7 +453,10 @@ const TopicView = ({
               </div>
             </div>
 
-            <nav aria-label={t("actions")} className="flex flex-wrap gap-2">
+            <nav
+              aria-label={t("actions")}
+              className="flex flex-wrap items-center gap-2"
+            >
               <TopicViewerActions
                 author={topic.author}
                 title={topic.title}
@@ -435,8 +476,9 @@ const TopicView = ({
 
         <RichTextContent
           className="text-foreground leading-relaxed text-pretty"
-          content={topic.body}
+          content={translation.values.body}
         />
+        <AutoTranslateNote translation={translation} />
       </article>
 
       <ForumThread

@@ -1,12 +1,10 @@
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
+import { type PluginRoutePageProps } from "@vitnode/core/routing";
 import {
   contentDeliveryPage,
   contentDeliveryPageHead,
 } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
@@ -19,6 +17,7 @@ const zodExplainer = z.object({
     .array(z.object({ answer: z.string(), question: z.string() }))
     .nullable()
     .optional(),
+  id: z.number(),
   publishedAt: z.string().nullable(),
   seo: z
     .object({ description: z.string().nullable().optional() })
@@ -27,13 +26,7 @@ const zodExplainer = z.object({
   title: z.string(),
 });
 
-const loadExplainer = async ({
-  locale,
-  slug,
-}: {
-  locale: string;
-  slug: string;
-}) => {
+const loadExplainer = async (locale: string, slug: string) => {
   const [resolution, detail] = await Promise.all([
     fetcher({
       plugin: manifest.id,
@@ -72,9 +65,9 @@ const loadExplainer = async ({
 
 type ExplainerPageData = Awaited<ReturnType<typeof loadExplainer>>;
 
-export const route = definePluginRoute({
+export const route = defineRoute<ExplainerPageData>({
   load: async ({ context, params }) =>
-    await loadExplainer({ locale: context.locale, slug: params.slug }),
+    await loadExplainer(context.locale, params.slug),
 
   head: ({ loaderData }) =>
     contentDeliveryPageHead(loaderData?.metadata, {

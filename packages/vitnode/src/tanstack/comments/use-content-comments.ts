@@ -15,6 +15,7 @@ import { z } from "zod";
 
 import type { ContentLiveRefreshStatus } from "@/tanstack/content/live-refresh";
 
+import type { AutoTranslateItemRequest } from "../auto-translate/query";
 import type {
   ContentPermissions,
   ContentPermissionsResponse,
@@ -29,6 +30,7 @@ import type {
 } from "./thread";
 
 import { useSessionQuery } from "../auth/session-query";
+import { useAutoTranslateContext } from "../auto-translate/scope";
 import { useContentLiveRefresh } from "../content/live-refresh";
 import { useContentPermissions } from "../content/permissions";
 import { contentCommentAuthor } from "./author";
@@ -103,6 +105,14 @@ export interface ContentCommentsConfig<
    * **Reply**; the server checks again on every write. Defaults to `true`.
    */
   allowed?: boolean;
+  /**
+   * Names the translatable fields of one comment as the page renders them,
+   * usually `autoTranslateItem(type, record.id, { body: record.body })`, or
+   * `null` to skip it. Inside an `AutoTranslateScope`, every page and live
+   * branch then arrives with its saved translations, so a reader with
+   * automatic translation on never sees the original first.
+   */
+  autoTranslate?: (record: TRecord) => AutoTranslateItemRequest | null;
   /**
    * Re-reads a few top-level branches - `GET /thread/branches` with `root`
    * and `ids` joined by commas (left out when there are none). With it, a
@@ -246,13 +256,16 @@ export const contentCommentsQueryOptions = <
   TRecord = ContentCommentRecordOf<R>,
 >({
   pageSize = DEFAULT_PAGE_SIZE,
+  prepare,
   queryKey,
   record,
   thread,
 }: Pick<
   ContentCommentsConfig<R, TRecord>,
   "pageSize" | "queryKey" | "record" | "thread"
->) =>
+> & {
+  prepare?: PrepareRecords<TRecord>;
+}) =>
   infiniteQueryOptions({
     getNextPageParam: (
       last: ContentCommentsThreadPage<TRecord, ContentCommentIdOf<R>>,
@@ -262,11 +275,18 @@ export const contentCommentsQueryOptions = <
       await readContentCommentsPage({
         after: pageParam,
         first: pageSize,
+        prepare,
         record,
         thread,
       }),
     queryKey: [...queryKey, "thread"],
   });
+
+type PrepareRecords<TRecord> = (records: TRecord[]) => Promise<void>;
+
+const recordsOf = <TRecord, TId extends ContentId>(
+  items: ContentCommentNode<TRecord, TId>[],
+): TRecord[] => items.flatMap(item => (item.record ? [item.record] : []));
 
 /** Validates each record of thread nodes with `record`, when given. */
 const parseNodes = <TRecord, TId extends ContentId>(
@@ -286,11 +306,13 @@ const readContentCommentsPage = async <
 >({
   after,
   first,
+  prepare,
   record,
   thread,
 }: Pick<ContentCommentsConfig<R, TRecord>, "record" | "thread"> & {
   after: null | string;
   first: number;
+  prepare?: PrepareRecords<TRecord>;
 }): Promise<ContentCommentsThreadPage<TRecord, ContentCommentIdOf<R>>> => {
   const res = await thread({ after, first });
   if (!res.ok) {
@@ -307,7 +329,10 @@ const readContentCommentsPage = async <
     ContentCommentIdOf<R>
   >;
 
-  return { ...page, items: parseNodes(page.items, record) };
+  const items = parseNodes(page.items, record);
+  await prepare?.(recordsOf(items));
+
+  return { ...page, items };
 };
 
 const readEditable = (
@@ -504,6 +529,7 @@ const useLiveThread = <R extends ContentCommentsApiResponse, TRecord>({
   beforeChange,
   branches,
   pageSize,
+  prepare,
   queryClient,
   queryKey,
   record,
@@ -511,6 +537,7 @@ const useLiveThread = <R extends ContentCommentsApiResponse, TRecord>({
 }: Pick<ContentCommentsConfig<R, TRecord>, "branches" | "record" | "thread"> & {
   beforeChange: () => void;
   pageSize: number;
+  prepare?: PrepareRecords<TRecord>;
   queryClient: QueryClient;
   queryKey: QueryKey;
 }): ContentCommentsLive<TRecord, ContentCommentIdOf<R>> | null => {
@@ -557,19 +584,24 @@ const useLiveThread = <R extends ContentCommentsApiResponse, TRecord>({
           TId
         >;
 
-        return {
-          ...body,
-          branches: body.branches.map(branch =>
-            branch.status === "ok"
-              ? { ...branch, items: parseNodes(branch.items, record) }
-              : branch,
+        const parsed = body.branches.map(branch =>
+          branch.status === "ok"
+            ? { ...branch, items: parseNodes(branch.items, record) }
+            : branch,
+        );
+        await prepare?.(
+          parsed.flatMap(branch =>
+            branch.status === "ok" ? recordsOf(branch.items) : [],
           ),
-        };
+        );
+
+        return { ...body, branches: parsed };
       },
       readPage: async after =>
         await readContentCommentsPage({
           after,
           first: pageSize,
+          prepare,
           record,
           thread,
         }),
@@ -638,6 +670,7 @@ export const useContentComments = <
   const session = useSessionQuery();
   const {
     allowed = true,
+    autoTranslate,
     branches: requestBranches,
     create,
     delete: remove,
@@ -655,9 +688,24 @@ export const useContentComments = <
   } = config;
   const field = config.field ?? "body";
   const signedIn = Boolean(session.data?.user);
+  const translations = useAutoTranslateContext();
+  const prepare: PrepareRecords<TRecord> | undefined =
+    autoTranslate && translations
+      ? async records => {
+          await translations.prime(
+            records.flatMap(entry => autoTranslate(entry) ?? []),
+          );
+        }
+      : undefined;
 
   const comments = useInfiniteQuery(
-    contentCommentsQueryOptions({ pageSize, queryKey, record, thread }),
+    contentCommentsQueryOptions({
+      pageSize,
+      prepare,
+      queryKey,
+      record,
+      thread,
+    }),
   );
   const pages = comments.data?.pages;
   const items = React.useMemo<ContentCommentNode<TRecord, TId>[]>(
@@ -685,6 +733,7 @@ export const useContentComments = <
     beforeChange: captureScrollAnchor,
     branches: requestBranches,
     pageSize: pageSize ?? DEFAULT_PAGE_SIZE,
+    prepare,
     queryClient,
     queryKey,
     record,

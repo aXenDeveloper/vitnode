@@ -5,6 +5,13 @@ import { RichTextContent } from "@vitnode/core/components/rich-text";
 import { buttonVariants } from "@vitnode/core/components/ui/button";
 import { contentTarget, zodRichTextDocument } from "@vitnode/core/content";
 import {
+  autoTranslateItem,
+  AutoTranslateNote,
+  AutoTranslateScope,
+  loadAutoTranslateSnapshot,
+  useAutoTranslation,
+} from "@vitnode/core/tanstack/auto-translate";
+import {
   contentDeliveryPage,
   contentDeliveryPageHead,
 } from "@vitnode/core/tanstack/content";
@@ -20,6 +27,7 @@ import { articleContentType } from "@/content/article";
 import { manifest } from "@/manifest.gen";
 
 import {
+  articleCommentAutoTranslateItems,
   ArticleComments,
   articleCommentsQueryOptions,
 } from "./article-comments";
@@ -65,12 +73,14 @@ const loadArticle = async (slug: string) => {
   });
 };
 
-type ArticlePageData = Awaited<ReturnType<typeof loadArticle>>;
+type ArticlePageData = Awaited<ReturnType<typeof loadArticle>> & {
+  translations: Awaited<ReturnType<typeof loadAutoTranslateSnapshot>>;
+};
 
 export const route = defineRoute({
   load: async ({ context, params }) => {
     const page = await loadArticle(params.slug);
-    await Promise.all([
+    const [comments] = await Promise.all([
       // The first page of comments arrives with the article's HTML. A failure
       // leaves the section to show its own error instead of breaking the page.
       context.queryClient
@@ -82,8 +92,17 @@ export const route = defineRoute({
         .query(articlesQueryOptions({ locale: context.locale, search: {} }))
         .catch(() => null),
     ]);
+    const translations = await loadAutoTranslateSnapshot(context.queryClient, {
+      items: [
+        autoTranslateItem(articleContentType.id, page.item.id, {
+          body: page.item.body,
+        }),
+        ...articleCommentAutoTranslateItems(comments),
+      ],
+      locale: context.locale,
+    });
 
-    return page;
+    return { ...page, translations };
   },
 
   head: ({ loaderData }) =>
@@ -118,37 +137,56 @@ const ArticleActions = ({ id, title }: { id: number; title: string }) => {
   );
 };
 
-const ArticlePage = ({
-  loaderData: { item },
-}: PluginRoutePageProps<ArticlePageData>) => (
-  <div className="container mx-auto flex max-w-3xl flex-col gap-10 px-4 py-8">
-    <article className="flex flex-col gap-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-balance">
-          {item.title}
-        </h1>
-        {item.publishedAt ? (
-          <span className="text-muted-foreground text-sm">
-            <DateFormat date={item.publishedAt} />
-          </span>
-        ) : null}
-        <ArticleActions id={item.id} title={item.title} />
-      </header>
-
-      <RichTextContent
-        className="leading-relaxed text-pretty"
-        content={item.body}
-      />
-
-      <ReactionBar
-        target={contentTarget(manifest.id, articleContentType, item.id)}
-      />
-
-      <ArticleComments articleId={item.id} />
-    </article>
-
-    <LatestArticles currentId={item.id} />
-  </div>
+const ArticlePage = (props: PluginRoutePageProps<ArticlePageData>) => (
+  <AutoTranslateScope
+    initial={props.loaderData.translations}
+    // A new store per record: moving to another one starts from its snapshot.
+    key={props.loaderData.item.id}
+  >
+    <ArticleView {...props} />
+  </AutoTranslateScope>
 );
+
+const ArticleView = ({
+  loaderData: { item },
+}: PluginRoutePageProps<ArticlePageData>) => {
+  const { elementRef, ...translation } = useAutoTranslation({
+    contentTypeId: articleContentType.id,
+    fields: { body: item.body },
+    id: item.id,
+  });
+
+  return (
+    <div className="container mx-auto flex max-w-3xl flex-col gap-10 px-4 py-8">
+      <article className="flex flex-col gap-6" ref={elementRef}>
+        <header className="flex flex-col gap-2">
+          <h1 className="text-3xl font-semibold tracking-tight text-balance">
+            {item.title}
+          </h1>
+          {item.publishedAt ? (
+            <span className="text-muted-foreground text-sm">
+              <DateFormat date={item.publishedAt} />
+            </span>
+          ) : null}
+          <ArticleActions id={item.id} title={item.title} />
+        </header>
+
+        <RichTextContent
+          className="leading-relaxed text-pretty"
+          content={translation.values.body}
+        />
+        <AutoTranslateNote translation={translation} />
+
+        <ReactionBar
+          target={contentTarget(manifest.id, articleContentType, item.id)}
+        />
+
+        <ArticleComments articleId={item.id} />
+      </article>
+
+      <LatestArticles currentId={item.id} />
+    </div>
+  );
+};
 
 export default ArticlePage;

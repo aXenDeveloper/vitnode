@@ -19,6 +19,7 @@ export const articleContentType = defineContentType({
   },
 
   publication: true,
+  autoTranslate: { fields: ["body"] },
 
   publicApi: {
     path: "news",

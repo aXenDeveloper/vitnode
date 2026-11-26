@@ -9,6 +9,7 @@ import { aiEventDefinitions } from "./events/ai";
 import { contentAccessEventDefinitions } from "./events/content-access";
 import { contentApprovalEventDefinitions } from "./events/content-approvals";
 import { contentContainerEventDefinitions } from "./events/content-containers";
+import { contentTranslationEventDefinitions } from "./events/content-translations";
 import { fileEventDefinitions } from "./events/files";
 import { mentionEventDefinitions } from "./events/mentions";
 import { moderationEventDefinitions } from "./events/moderation";
@@ -29,6 +30,7 @@ import {
   editorQuickAskAiAction,
   editorRewriteAiAction,
 } from "./lib/ai/editor-actions";
+import { contentTranslateAiAction } from "./lib/content-translation/action";
 import { buildApiPlugin } from "./lib/plugin";
 import { adminModule } from "./modules/admin/admin.module";
 import { aiModule } from "./modules/ai/ai.module";
@@ -51,6 +53,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
   aiActions: [
     altGenerateAiAction,
     altTranslateAiAction,
+    contentTranslateAiAction,
     editorRewriteAiAction,
     editorQuickAskAiAction,
   ],
@@ -61,6 +64,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     ...contentAccessEventDefinitions,
     ...contentApprovalEventDefinitions,
     ...contentContainerEventDefinitions,
+    ...contentTranslationEventDefinitions,
     ...fileEventDefinitions,
     ...mentionEventDefinitions,
     ...moderationEventDefinitions,

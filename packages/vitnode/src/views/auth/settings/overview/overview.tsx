@@ -36,6 +36,7 @@ export interface SettingsOverviewUser extends ProfileSummaryUser {
 
 export const OverviewSettingsContent = ({
   aiPoints,
+  preferences,
   canEditPersonalInfo,
   editor,
   personalFields,
@@ -49,6 +50,8 @@ export const OverviewSettingsContent = ({
   onTimeZoneUpdate: UpdateTimeZone;
   onUpdate: UpdatePersonalInformation;
   personalFields: PersonalInformationFields;
+  /** Reading preferences, such as automatic translation. */
+  preferences?: React.ReactNode;
   user: SettingsOverviewUser;
 }) => {
   const t = useTranslations("core.auth.settings.overview");
@@ -164,6 +167,8 @@ export const OverviewSettingsContent = ({
           </Frame>
         </div>
       </div>
+
+      {preferences}
 
       {aiPoints}
     </>

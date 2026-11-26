@@ -15,6 +15,7 @@ export const letterContentType = defineContentType({
   },
 
   publication: true,
+  autoTranslate: { fields: ["body"] },
   visibility: true,
   editorial: { revisions: { retention: 20 } },
   reports: true,

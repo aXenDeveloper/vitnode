@@ -12,6 +12,7 @@ export const eventContentType = defineContentType({
 
   localization: { defaultLocale: "en", fallback: "default" },
   publication: true,
+  autoTranslate: { fields: ["body"] },
   visibility: true,
   duplication: true,
   editorial: {

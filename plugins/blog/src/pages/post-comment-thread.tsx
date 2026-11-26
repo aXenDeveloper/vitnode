@@ -18,6 +18,10 @@ import {
 import { UserFormat } from "@vitnode/core/components/user-format";
 import { UserPreview } from "@vitnode/core/components/user-preview";
 import {
+  AutoTranslateNote,
+  useAutoTranslation,
+} from "@vitnode/core/tanstack/auto-translate";
+import {
   ContentCommentActions,
   contentCommentAuthorName,
   ContentCommentComposer,
@@ -37,6 +41,8 @@ import {
 } from "lucide-react";
 import React from "react";
 import { useTranslations } from "use-intl";
+
+import { blogCommentContentType } from "@/content/comment";
 
 import type { PostComment } from "./post-comments-data";
 
@@ -316,21 +322,37 @@ const CommentHeader = ({ entry }: { entry: Entry }) => {
   );
 };
 
-const CommentBody = ({ entry }: { entry: Entry }) => {
+const CommentBody = ({ entry }: { entry: Entry }) =>
+  entry.comment ? (
+    <CommentBodyContent comment={entry.comment} entry={entry} />
+  ) : null;
+
+const CommentBodyContent = ({
+  comment,
+  entry,
+}: {
+  comment: PostComment;
+  entry: Entry;
+}) => {
   const tc = useTranslations("core.comments");
-  if (!entry.comment) return null;
+  const { elementRef, ...translation } = useAutoTranslation({
+    contentTypeId: blogCommentContentType.id,
+    fields: { body: comment.body },
+    id: comment.id,
+  });
 
   return (
     <>
-      <div data-comment-body={entry.anchorId ?? undefined}>
+      <div data-comment-body={entry.anchorId ?? undefined} ref={elementRef}>
         <RichTextContent
           className={cn(
             "text-base leading-relaxed text-pretty",
             entry.node.hidden ? "text-muted-foreground" : "text-foreground",
           )}
-          content={entry.comment.body}
+          content={translation.values.body}
         />
       </div>
+      <AutoTranslateNote className="text-xs" translation={translation} />
       {entry.node.hidden && entry.node.hiddenReason ? (
         <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
           {tc("visibility.hidden_reason", {

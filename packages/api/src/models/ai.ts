@@ -201,6 +201,17 @@ export class AIModel {
   }
 
   /**
+   * {@link estimate} for the system actor: the most a background run could
+   * cost in USD, or `null` when its model has no pricing. Server-only; for
+   * trusted code that is about to call {@link runAsSystem}.
+   */
+  async estimateAsSystem(
+    request: AiRunRequest,
+  ): Promise<{ maxPoints: null | string; maxUsd: null | string }> {
+    return await this.runner().estimateAsSystem(request);
+  }
+
+  /**
    * Resolve an image model to pass into `generateImage`. Omit `id` for the
    * first configured image model.
    */

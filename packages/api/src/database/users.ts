@@ -71,6 +71,7 @@ export const core_users = camelCase.table.withRLS(
     }),
     lastSeenAt: t.timestamp(),
     hideOnlineStatus: t.boolean().notNull().default(false),
+    autoTranslateContent: t.boolean(),
     // Sum of the points of reactions this user's content received.
     reputation: t.integer().notNull().default(0),
   }),

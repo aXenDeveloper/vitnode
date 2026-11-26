@@ -16,6 +16,7 @@ export const topicContentType = defineContentType({
 
   publication: true,
   visibility: true,
+  autoTranslate: { fields: ["body"] },
   reports: true,
   reactions: true,
   editorial: { revisions: { retention: 20 } },

@@ -276,6 +276,9 @@ export class AiRunner {
       };
     } catch (error) {
       const outcome = this.describeFailure(model, plan, error, signal);
+      if (outcome.errorCode === "AI_PROVIDER_FAILED") {
+        await this.logProviderFailure(model, error);
+      }
       await this.ledger.finishCall(callId, {
         ...outcome,
         finishedAt: new Date(),
@@ -479,6 +482,21 @@ export class AiRunner {
     const attempts = 1 + plan.maxRetries + (plan.fallback ? 1 : 0);
 
     return plan.timeoutMs * attempts + LEASE_SLACK_MS;
+  }
+
+  private async logProviderFailure(
+    model: ResolvedModel,
+    error: unknown,
+  ): Promise<void> {
+    try {
+      await this.c
+        .get("log")
+        .warn(
+          `[AI] ${model.definition.id} (${model.providerModelId}) failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+    } catch {
+      return;
+    }
   }
 
   private async prepare(
@@ -975,6 +993,18 @@ export class AiRunner {
 
     return {
       maxPoints: usd === null ? null : formatDecimal(usdToPoints(usd)),
+      maxUsd: usd === null ? null : formatDecimal(usd),
+    };
+  }
+
+  async estimateAsSystem(
+    request: AiRunRequest,
+  ): Promise<{ maxPoints: null | string; maxUsd: null | string }> {
+    const plan = await this.prepare(request, { type: "system", userId: null });
+    const usd = this.reservationUsd(plan);
+
+    return {
+      maxPoints: null,
       maxUsd: usd === null ? null : formatDecimal(usd),
     };
   }

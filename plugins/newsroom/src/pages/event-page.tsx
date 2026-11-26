@@ -1,14 +1,23 @@
 import { RichTextContent } from "@vitnode/core/components/rich-text";
 import { zodRichTextDocument } from "@vitnode/core/content";
+import { type PluginRoutePageProps } from "@vitnode/core/routing";
 import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
+  autoTranslateItem,
+  AutoTranslateNote,
+  AutoTranslateScope,
+  loadAutoTranslateSnapshot,
+  useAutoTranslation,
+} from "@vitnode/core/tanstack/auto-translate";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import {
+  defineRoute,
+  type RouteLoadContext,
+} from "@vitnode/core/tanstack/plugin-routes";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
+import { eventContentType } from "@/content/event";
 import { manifest } from "@/manifest.gen";
 
 import { ContentStory } from "./content-story";
@@ -16,6 +25,7 @@ import { ContentStory } from "./content-story";
 const zodEvent = z.object({
   body: zodRichTextDocument.nullable(),
   id: z.string(),
+  locale: z.string(),
   publishedAt: z.string().nullable(),
   sessions: z.array(
     z.object({ startsAt: z.string().nullable(), title: z.string() }),
@@ -23,13 +33,10 @@ const zodEvent = z.object({
   title: z.string(),
 });
 
-const loadEvent = async ({
-  locale,
-  slug,
-}: {
-  locale: string;
-  slug: string;
-}) => {
+const loadEvent = async (
+  { locale, queryClient }: RouteLoadContext,
+  slug: string,
+) => {
   const detail = await fetcher({
     plugin: manifest.id,
     method: "get",
@@ -41,40 +48,69 @@ const loadEvent = async ({
     },
   });
 
-  return {
-    item: contentPageItem(
-      detail.status === 200 ? zodEvent.parse(await detail.json()) : null,
-    ),
+  const item = contentPageItem(
+    detail.status === 200 ? zodEvent.parse(await detail.json()) : null,
+  );
+  const translations = await loadAutoTranslateSnapshot(queryClient, {
+    items: [
+      autoTranslateItem(
+        eventContentType.id,
+        item.id,
+        { body: item.body },
+        { recordLocale: item.locale },
+      ),
+    ],
     locale,
-  };
+  });
+
+  return { item, locale, translations };
 };
 
 type EventPageData = Awaited<ReturnType<typeof loadEvent>>;
 
-export const route = definePluginRoute({
-  load: async ({ context, params }) =>
-    await loadEvent({ locale: context.locale, slug: params.slug }),
+export const route = defineRoute<EventPageData>({
+  load: async ({ context, params }) => await loadEvent(context, params.slug),
 
   head: ({ loaderData }) => ({ title: loaderData?.item.title }),
 });
 
-const EventPage = ({
+const EventPage = (props: PluginRoutePageProps<EventPageData>) => (
+  <AutoTranslateScope
+    initial={props.loaderData.translations}
+    // A new store per record: moving to another one starts from its snapshot.
+    key={props.loaderData.item.id}
+  >
+    <EventView {...props} />
+  </AutoTranslateScope>
+);
+
+const EventView = ({
   loaderData: { item, locale },
 }: PluginRoutePageProps<EventPageData>) => {
   const t = useTranslations("newsroom.events");
+  const { elementRef, ...translation } = useAutoTranslation({
+    contentTypeId: eventContentType.id,
+    fields: { body: item.body },
+    id: item.id,
+    recordLocale: item.locale,
+  });
 
   return (
     <ContentStory
-      lang={locale}
+      elementRef={elementRef}
+      lang={item.locale}
       publishedAt={item.publishedAt}
       title={item.title}
     >
-      {item.body ? (
-        <RichTextContent
-          className="text-foreground leading-relaxed text-pretty"
-          content={item.body}
-        />
+      {translation.values.body ? (
+        <div lang={translation.isTranslated ? locale : undefined}>
+          <RichTextContent
+            className="text-foreground leading-relaxed text-pretty"
+            content={translation.values.body}
+          />
+        </div>
       ) : null}
+      <AutoTranslateNote translation={translation} />
 
       {item.sessions.length > 0 ? (
         <section
