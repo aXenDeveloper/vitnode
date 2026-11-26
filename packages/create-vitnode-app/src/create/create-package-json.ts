@@ -265,6 +265,8 @@ const apiDevDeps = (oxlint: boolean, runtime: Runtime) => ({
 });
 
 const tanstackWebDeps = {
+  "@fontsource-variable/geist": versionsPackageJson.fontsourceGeist,
+  "@fontsource-variable/geist-mono": versionsPackageJson.fontsourceGeistMono,
   "@tailwindcss/vite": versionsPackageJson.tailwindVite,
   "@tanstack/react-form": versionsPackageJson.tanstackReactForm,
   "@tanstack/react-query": versionsPackageJson.tanstackReactQuery,

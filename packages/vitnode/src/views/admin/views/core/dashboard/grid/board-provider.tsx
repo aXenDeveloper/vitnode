@@ -24,7 +24,7 @@ import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
-import { Card } from "@/components/ui/card";
+import { Frame } from "@/components/ui/frame";
 import { DragLift } from "@/lib/dnd/drag-lift";
 import {
   DRAG_OVERLAY_LIFT_CLASS,
@@ -55,7 +55,7 @@ import {
   withSavedSettings,
 } from "./layout-reducer";
 import { panelWidgetId } from "./panel-drag-id";
-import { WidgetCardContent } from "./widget-card";
+import { WidgetFrameContent } from "./widget-card";
 import { WIDGET_OPTION_CARD_CLASS, WidgetOptionCardBody } from "./widget-panel";
 
 const RefreshedWidgetContent = ({
@@ -448,14 +448,14 @@ export const DashboardBoardProvider = ({
         >
           {activeView ? (
             <DragLift>
-              <Card
+              <Frame
                 className={cn(
-                  "ring-primary/40 flex size-full flex-col",
+                  "ring-primary/40 size-full",
                   DRAG_OVERLAY_LIFT_CLASS,
                 )}
               >
-                <WidgetCardContent isEditing widget={activeView} />
-              </Card>
+                <WidgetFrameContent isEditing widget={activeView} />
+              </Frame>
             </DragLift>
           ) : activePanelWidget ? (
             <DragLift>

@@ -1,11 +1,364 @@
 {
   "site": {
     "home": {
+      "bento": {
+        "eyebrow": "Built in",
+        "title": "Everything a community needs.",
+        "content": {
+          "title": "One file, a whole feature",
+          "desc": "Tables, typed API and AdminCP screens from one definition.",
+          "features": {
+            "admin": "AdminCP screens",
+            "api": "Typed API",
+            "database": "Database table",
+            "publishing": "Drafts and publishing",
+            "revisions": "Revisions",
+            "scheduling": "Scheduling",
+            "translations": "Translations",
+            "search": "Site search",
+            "live": "Live editing",
+            "comments": "Comments",
+            "reactions": "Reactions",
+            "followers": "Followers"
+          }
+        },
+        "notifications": {
+          "title": "News that finds its people",
+          "desc": "An inbox, a live count and email digests.",
+          "mark_all": "Mark all as read",
+          "items": {
+            "reply": {
+              "title": "Kuba replied to your topic",
+              "sub": "on “Summer meetup photos”"
+            },
+            "live": {
+              "title": "Your article is live",
+              "sub": "Our summer meetup recap"
+            },
+            "comment": {
+              "title": "Ola commented",
+              "sub": "“Count me in for next year!”"
+            },
+            "report": {
+              "title": "A moderator closed your report",
+              "sub": "Report #128 · content hidden"
+            }
+          }
+        },
+        "live": {
+          "title": "Write together in real time",
+          "desc": "Rich text takes several cursors at once, and every change saves itself.",
+          "saving": "Saving…",
+          "saved": "Saved",
+          "first": "Forty-two members met on the",
+          "selected": "rooftop",
+          "first_end": ".",
+          "ola": " The pizza ran out by eight.",
+          "second": "Next year we are booking",
+          "kuba": " a bigger venue and two more ovens."
+        },
+        "ai": {
+          "title": "AI that does the chores",
+          "desc": "ALT text and translations, any provider, on a budget.",
+          "provider": "Any provider",
+          "alt": "ALT text",
+          "budget": "{percent}% of budget"
+        },
+        "search": {
+          "title": "Found before you finish typing",
+          "desc": "Suggestions update on every key, ranked by what people read.",
+          "tab": "Tab",
+          "queries": "m|me|mem|me|mee|meet",
+          "suggestions": {
+            "recap": "Meetup recap 2026",
+            "photos": "Meetup photos",
+            "moderators": "Meet the moderators",
+            "rules": "Membership rules",
+            "events": "Mentoring evenings",
+            "library": "Media library tips"
+          }
+        }
+      },
+      "cta": {
+        "description": "One command gives you accounts, roles, moderation and an admin panel. Free, open source and yours to host.",
+        "star": "Star on GitHub",
+        "title": "Start building your community today."
+      },
+      "faq": {
+        "eyebrow": "FAQ",
+        "title": "What people ask before installing",
+        "items": {
+          "what": {
+            "question": "What is VitNode?",
+            "answer": "An open-source platform for community websites. Members and roles, publishing with the Content Engine, search, moderation and an admin panel (AdminCP) come out of the box, built on TanStack Start, Hono, Drizzle and PostgreSQL."
+          },
+          "free": {
+            "question": "Is VitNode free to use?",
+            "answer": "Yes. VitNode is <license>MIT-licensed</license>: no paid tiers, no per-member pricing, no lock-in. You run it on your own server and own your data. The only bills are your hosting and, if you switch them on, your AI providers."
+          },
+          "ready": {
+            "question": "Can I run my community on VitNode today?",
+            "answer": "Not in production yet. VitNode 2.0 is a canary build, so expect bugs and breaking changes between releases. For now it is for exploring, prototyping and building plugins ahead of the stable release."
+          },
+          "non_dev": {
+            "question": "I’m not a developer. Can I still build with VitNode?",
+            "answer": "Day-to-day running happens in the AdminCP, no code needed. Installing and extending still need a terminal, and that is where an AI coding agent like Claude Code earns its keep: the docs ship as <code>llms-full.txt</code>, so your agent can read them and do the setup with you."
+          },
+          "hosting": {
+            "question": "Where can I host it, and what does it need to run?",
+            "answer": "Anywhere Node.js 22+ or Bun runs: your own server, Docker or Cloudflare Workers. It needs PostgreSQL; Redis is optional and speeds up caching. The generator can add a Docker Compose file with both. Start with the <setup>setup guide</setup>."
+          },
+          "plugins": {
+            "question": "How do I add features VitNode does not ship with, like a forum, a blog or paid content for members?",
+            "answer": "With plugins. Official ones add a blog, a forum and one-time payments through Stripe. When you need something of your own, the <code>vitnode</code> CLI generates a plugin with pages, an API, database tables and AdminCP screens in a few minutes. See <create>Create a plugin</create>."
+          },
+          "languages": {
+            "question": "Can my community speak more than one language?",
+            "answer": "Yes. The interface is translated, and content is translated field by field with a fallback language, so a missing translation never leaves a blank page. Sitemaps include hreflang links, so search engines send each reader to their own language."
+          },
+          "ai": {
+            "question": "Which AI models does it work with, and who pays for them?",
+            "answer": "Any model the Vercel AI SDK supports: OpenAI, Anthropic, Google and more. You bring your own keys, set a monthly budget in the AdminCP and choose which roles get AI. Members spend AI points, so nobody burns through the budget in an afternoon."
+          }
+        }
+      },
       "hero": {
-        "description": "Publish content, bring members together and build the features your community needs on an open-source platform you control.",
+        "copied": "Copied",
+        "copy_command": "Copy install command",
+        "description": "Accounts, roles, moderation, search and an admin panel are built in. Every feature is a plugin, so you write only what makes your community different.",
         "explore": "Explore what you can build",
-        "see_product": "See the product",
-        "title": "A home for <highlight>your people</highlight>, built around your idea.",
+        "pages": {
+          "article": {
+            "back": "Back to articles",
+            "body": "Forty-two members, one rooftop and far too much pizza. Here is everything we shipped together, and what we are planning for next year.",
+            "read": "4 min read"
+          },
+          "blog": {
+            "all": "All articles",
+            "articles": {
+              "0": {
+                "date": "Nov 18, 2026",
+                "title": "Our summer meetup recap, with far too much pizza"
+              },
+              "1": {
+                "date": "Nov 9, 2026",
+                "title": "Self-hosting on a Raspberry Pi"
+              }
+            },
+            "categories": "Categories",
+            "categoryNames": {
+              "0": "Events",
+              "1": "Guides",
+              "2": "Releases"
+            },
+            "desc": "Articles, guides and news from the team, newest first.",
+            "title": "Blog"
+          },
+          "discover": {
+            "commented": "commented on",
+            "desc": "See the latest activity across the community.",
+            "kind": "Comment",
+            "title": "Discover"
+          },
+          "forum": {
+            "comments": "Comments",
+            "desc": "Pull up a chair. Ask questions, share what you built and help each other out.",
+            "forums": {
+              "0": {
+                "latest": "Version 2.0 is here",
+                "name": "Announcements"
+              },
+              "1": {
+                "latest": "Canary 13 notes",
+                "name": "Releases"
+              },
+              "2": {
+                "desc": "Talk about anything and everything.",
+                "latest": "Summer meetup photos",
+                "name": "General discussion"
+              },
+              "3": {
+                "desc": "Stuck? Someone here has been there.",
+                "latest": "Docker setup on a NAS",
+                "name": "Help and support"
+              }
+            },
+            "latest": "Latest topic",
+            "newTopic": "New topic",
+            "title": "Forum",
+            "topics": "Topics",
+            "topicsList": {
+              "0": {
+                "date": "Nov 23, 5:02 PM",
+                "title": "Summer meetup photos, add yours to the thread"
+              },
+              "1": {
+                "date": "Nov 22, 9:14 AM",
+                "title": "Which keyboard are you typing on?"
+              },
+              "2": {
+                "date": "Nov 20, 7:40 PM",
+                "title": "Introduce yourself"
+              },
+              "3": {
+                "date": "Nov 18, 1:25 PM",
+                "title": "Plugin ideas for the next release"
+              }
+            }
+          },
+          "modcp": {
+            "assigned": "Assigned",
+            "cards": {
+              "0": {
+                "kind": "#8 · Comment",
+                "reason": "Spam",
+                "text": "Great news, the rail yard has been empty for years."
+              },
+              "1": {
+                "kind": "#7 · Comment",
+                "reason": "Abusive content",
+                "text": "This thread went off the rails after page two."
+              },
+              "2": {
+                "kind": "#1 · Article",
+                "reason": "Spam",
+                "text": "Self-hosting on a Raspberry Pi"
+              }
+            },
+            "columns": {
+              "0": "New",
+              "1": "In progress",
+              "2": "Done"
+            },
+            "crumb": "Moderator CP",
+            "desc": "Reports you can act on. Drag a card to another column to take it, close it or send it back.",
+            "empty": "Nothing here.",
+            "nav": {
+              "0": "Reports",
+              "1": "Approvals",
+              "2": "Warnings"
+            },
+            "search": "Search by title or #id",
+            "title": "Reports"
+          },
+          "nav": {
+            "blog": "Blog",
+            "community": "Community",
+            "docs": "Docs",
+            "login": "Login",
+            "plugins": "Plugins",
+            "register": "Register",
+            "search": "Search…"
+          },
+          "notifications": {
+            "items": {
+              "0": {
+                "text": "commented on Summer meetup photos",
+                "time": "2 minutes ago"
+              },
+              "1": {
+                "text": "reacted to your article",
+                "time": "1 hour ago"
+              },
+              "2": {
+                "text": "mentioned you in Introduce yourself",
+                "time": "4 days ago"
+              }
+            },
+            "markAll": "Mark all as read",
+            "tabs": {
+              "0": "Unread",
+              "1": "Mentions",
+              "2": "All"
+            },
+            "title": "Notifications"
+          },
+          "payments": {
+            "desc": "Buy one fixed-price item with a hosted checkout. The purchase counts only once the provider confirms the payment.",
+            "item": "Sticker pack",
+            "itemDesc": "Twelve vinyl stickers for laptops, water bottles and tired monitors.",
+            "owned": "You own this item",
+            "price": "$5.00",
+            "title": "Payments demo",
+            "view": "View purchase"
+          },
+          "people": {
+            "0": {
+              "name": "Ola Nowak",
+              "nick": "@ola"
+            },
+            "1": {
+              "name": "Kuba Wiśniewski",
+              "nick": "@kuba"
+            },
+            "2": {
+              "name": "Maya Lindqvist",
+              "nick": "@maya"
+            },
+            "3": {
+              "name": "Jun Sato",
+              "nick": "@jun"
+            }
+          },
+          "profile": {
+            "joined": "November 15, 2025",
+            "month": "November 2026",
+            "online": "Online now",
+            "reacted": "reacted to",
+            "reputation": "+128 reputation",
+            "role": "Administrator",
+            "timeline": "Timeline",
+            "today": "Today · 2 items",
+            "weekday": "TUE",
+            "weekdayBefore": "MON",
+            "yesterday": "Yesterday · 14 items"
+          },
+          "search": {
+            "any": "Any time",
+            "content": "Content",
+            "date": "Date created",
+            "desc": "Search across everything in the community.",
+            "filters": "Filters",
+            "kinds": {
+              "0": "Article",
+              "1": "Comment",
+              "2": "Topic"
+            },
+            "newest": "Newest",
+            "placeholder": "meetup",
+            "ranges": {
+              "0": "Any time",
+              "1": "Past 24 hours",
+              "2": "Past week"
+            },
+            "results": "45 results",
+            "title": "Search"
+          },
+          "topic": {
+            "body": "Drop your photos from the rooftop here. Bonus points for anything with the pizza tower in frame.",
+            "commentCount": "6 comments",
+            "comments": {
+              "0": "Here are mine from the rooftop. What a view!",
+              "1": "The pizza ran out by eight. Next year we order double."
+            },
+            "hide": "Hide 2 replies",
+            "posted": "Posted Nov 23, 5:02 PM",
+            "report": "Report"
+          }
+        },
+        "rotator": {
+          "lead": "Build your",
+          "spoken": "Build your forum, blog, shop, team space or own idea without starting from zero.",
+          "tail": "without starting from zero.",
+          "words": {
+            "blog": "blog",
+            "forum": "forum",
+            "own": "own idea",
+            "shop": "shop",
+            "team": "team space"
+          }
+        },
+        "start": "Get started",
         "trust": {
           "agents": "Made for AI coding agents",
           "license": "MIT licence",
@@ -224,122 +577,6 @@
             "joined": "Joined",
             "search": "Search by name or email…",
             "user": "User"
-          }
-        }
-      },
-      "bento": {
-        "eyebrow": "Built in",
-        "title": "Everything a community needs.",
-        "content": {
-          "title": "One file, a whole feature",
-          "desc": "Tables, typed API and AdminCP screens from one definition.",
-          "features": {
-            "admin": "AdminCP screens",
-            "api": "Typed API",
-            "database": "Database table",
-            "publishing": "Drafts and publishing",
-            "revisions": "Revisions",
-            "scheduling": "Scheduling",
-            "translations": "Translations",
-            "search": "Site search",
-            "live": "Live editing",
-            "comments": "Comments",
-            "reactions": "Reactions",
-            "followers": "Followers"
-          }
-        },
-        "notifications": {
-          "title": "News that finds its people",
-          "desc": "An inbox, a live count and email digests.",
-          "mark_all": "Mark all as read",
-          "items": {
-            "reply": {
-              "title": "Kuba replied to your topic",
-              "sub": "on “Summer meetup photos”"
-            },
-            "live": {
-              "title": "Your article is live",
-              "sub": "Our summer meetup recap"
-            },
-            "comment": {
-              "title": "Ola commented",
-              "sub": "“Count me in for next year!”"
-            },
-            "report": {
-              "title": "A moderator closed your report",
-              "sub": "Report #128 · content hidden"
-            }
-          }
-        },
-        "live": {
-          "title": "Write together in real time",
-          "desc": "Rich text takes several cursors at once, and every change saves itself.",
-          "saving": "Saving…",
-          "saved": "Saved",
-          "first": "Forty-two members met on the",
-          "selected": "rooftop",
-          "first_end": ".",
-          "ola": " The pizza ran out by eight.",
-          "second": "Next year we are booking",
-          "kuba": " a bigger venue and two more ovens."
-        },
-        "ai": {
-          "title": "AI that does the chores",
-          "desc": "ALT text and translations, any provider, on a budget.",
-          "provider": "Any provider",
-          "alt": "ALT text",
-          "budget": "{percent}% of budget"
-        },
-        "search": {
-          "title": "Found before you finish typing",
-          "desc": "Suggestions update on every key, ranked by what people read.",
-          "tab": "Tab",
-          "queries": "m|me|mem|me|mee|meet",
-          "suggestions": {
-            "recap": "Meetup recap 2026",
-            "photos": "Meetup photos",
-            "moderators": "Meet the moderators",
-            "rules": "Membership rules",
-            "events": "Mentoring evenings",
-            "library": "Media library tips"
-          }
-        }
-      },
-      "faq": {
-        "eyebrow": "FAQ",
-        "title": "What people ask before installing",
-        "items": {
-          "what": {
-            "question": "What is VitNode?",
-            "answer": "An open-source platform for community websites. Members and roles, publishing with the Content Engine, search, moderation and an admin panel (AdminCP) come out of the box, built on TanStack Start, Hono, Drizzle and PostgreSQL."
-          },
-          "free": {
-            "question": "Is VitNode free to use?",
-            "answer": "Yes. VitNode is <license>MIT-licensed</license>: no paid tiers, no per-member pricing, no lock-in. You run it on your own server and own your data. The only bills are your hosting and, if you switch them on, your AI providers."
-          },
-          "ready": {
-            "question": "Can I run my community on VitNode today?",
-            "answer": "Not in production yet. VitNode 2.0 is a canary build, so expect bugs and breaking changes between releases. For now it is for exploring, prototyping and building plugins ahead of the stable release."
-          },
-          "non_dev": {
-            "question": "I’m not a developer. Can I still build with VitNode?",
-            "answer": "Day-to-day running happens in the AdminCP, no code needed. Installing and extending still need a terminal, and that is where an AI coding agent like Claude Code earns its keep: the docs ship as <code>llms-full.txt</code>, so your agent can read them and do the setup with you."
-          },
-          "hosting": {
-            "question": "Where can I host it, and what does it need to run?",
-            "answer": "Anywhere Node.js 22+ or Bun runs: your own server, Docker or Cloudflare Workers. It needs PostgreSQL; Redis is optional and speeds up caching. The generator can add a Docker Compose file with both. Start with the <setup>setup guide</setup>."
-          },
-          "plugins": {
-            "question": "How do I add features VitNode does not ship with, like a forum, a blog or paid content for members?",
-            "answer": "With plugins. Official ones add a blog, a forum and one-time payments through Stripe. When you need something of your own, the <code>vitnode</code> CLI generates a plugin with pages, an API, database tables and AdminCP screens in a few minutes. See <create>Create a plugin</create>."
-          },
-          "languages": {
-            "question": "Can my community speak more than one language?",
-            "answer": "Yes. The interface is translated, and content is translated field by field with a fallback language, so a missing translation never leaves a blank page. Sitemaps include hreflang links, so search engines send each reader to their own language."
-          },
-          "ai": {
-            "question": "Which AI models does it work with, and who pays for them?",
-            "answer": "Any model the Vercel AI SDK supports: OpenAI, Anthropic, Google and more. You bring your own keys, set a monthly budget in the AdminCP and choose which roles get AI. Members spend AI points, so nobody burns through the budget in an afternoon."
           }
         }
       }

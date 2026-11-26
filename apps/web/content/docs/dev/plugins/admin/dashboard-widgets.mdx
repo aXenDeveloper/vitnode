@@ -259,9 +259,25 @@ AdminCP dashboard at `/admin/core`.
 | `minSpan`           | `1 \| 2 \| 3`                                       | No       | `1`            | The narrowest an administrator can resize it to                                                                                      |
 | `defaultEnabled`    | `boolean`                                           | No       | `false`        | Placed automatically for administrators who have never seen it                                                                       |
 | `allowMultiple`     | `boolean`                                           | No       | `false`        | Lets an administrator place more than one copy, each with its own settings                                                           |
+| `flush`             | `boolean`                                           | No       | `false`        | Renders the body edge to edge inside the widget's panel, without its padding. Use it for lists whose rows draw their own dividers      |
 | `category`          | `string`                                            | No       | the plugin     | Groups the widget in the panel, titled by `admin.dashboard.widgets.categories.{category}` (the raw value when that key is missing)   |
 | `permission`        | `{ module, permission }`                            | No       | -              | Hides the widget from administrators without this staff permission of the declaring plugin                                           |
 | `settingsComponent` | `ComponentType<AdminDashboardWidgetProps>`          | No       | -              | A form for this copy's `settings`, shown while an administrator edits the dashboard. Saves with `useWidgetSettingsDialog().save`     |
+
+## Built-in widgets
+
+Core ships these widgets, so your plugin doesn't need to rebuild them. Each one only appears for administrators with the permission it lists.
+
+| Widget                | What it shows                                                                                                      | Permission                   |
+| :-------------------- | :----------------------------------------------------------------------------------------------------------------- | :--------------------------- |
+| **System updates**    | Newer releases and security fixes for VitNode and your plugins                                                     | `plugins → can_view`         |
+| **New members**       | Daily sign-ups for the last 7, 14 or 30 days as a line, against the period before as a dashed line                 | `users → can_view`           |
+| **AI usage**          | This month's AI spend against the limit, the month-end forecast, and the features that cost the most               | `ai → can_view`              |
+| **Background jobs**   | A one-line verdict on the scheduler and the queue, the jobs running now and the latest failed jobs                 | `cron → can_view`            |
+| **Notes**             | A private scratchpad only its owner can see                                                                        | -                            |
+| **Send a notification** | A quick form that sends a member a real-time notification                                                        | `notifications → can_manage` |
+
+New members reads `GET /admin/users/sign-ups` (`days` is `7`, `14` or `30`; the answer covers that many UTC days plus the period before them), and Background jobs reads `GET /admin/advanced/cron/summary`. Both are staff-only.
 
 ## How admins arrange them
 

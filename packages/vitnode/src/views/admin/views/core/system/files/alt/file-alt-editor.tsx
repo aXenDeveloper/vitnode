@@ -1,13 +1,24 @@
-import { Undo2Icon } from "lucide-react";
+import { SparklesIcon } from "lucide-react";
 import React from "react";
 import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
-import type { AutoFormOnSubmit } from "@/components/form/auto-form";
+import type {
+  AutoFormOnSubmit,
+  ItemAutoFormComponentProps,
+} from "@/components/form/auto-form";
+import type { MultiLangPresence } from "@/components/form/fields/multi-lang-presence";
 import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
-import { AutoForm, AutoFormSubmitButton } from "@/components/form/auto-form";
+import { AutoForm } from "@/components/form/auto-form";
+import { AutoFormSheetFooter } from "@/components/form/auto-form-sheet-footer";
+import { multiLangValueSchema } from "@/components/form/fields/multi-lang";
+import { useMultiLangSelected } from "@/components/form/fields/multi-lang-language";
+import {
+  MultiLangPresenceContext,
+  MultiLangShownLanguageContext,
+} from "@/components/form/fields/multi-lang-presence";
 import { AutoFormTextarea } from "@/components/form/fields/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,18 +37,20 @@ type Write = Promise<AdminMutationResult<true>>;
 export interface FileAltEditorProps {
   canEdit: boolean;
   data: FileAlt;
+  fileName: string;
   onPolicyChange: (policy: FileAltPolicy) => Write;
   onRemove: (languageCode: string) => Write;
   onSave: (body: { languageCode: string; text: string }) => Write;
+  onSaved: () => void;
 }
 
-const isPolicy = (value: string): value is FileAltPolicy =>
+const isPolicy = (value: unknown): value is FileAltPolicy =>
   FILE_ALT_POLICIES.some(policy => policy === value);
 
-const storedVersionKey = (language: FileAltLanguage) =>
-  `${language.code}:${String(language.updatedAt)}:${language.origin}`;
+const needsAttention = (language: FileAltLanguage) =>
+  language.text === null || language.stale;
 
-const OriginBadges = ({ language }: { language: FileAltLanguage }) => {
+const OriginBadge = ({ language }: { language: FileAltLanguage }) => {
   const t = useTranslations("admin.system.files.alt.origin");
 
   return (
@@ -54,74 +67,57 @@ const OriginBadges = ({ language }: { language: FileAltLanguage }) => {
   );
 };
 
-const AltTextForm = ({
-  language,
-  onSave,
+const ShownLanguageBadge = ({
+  languages,
 }: {
-  language: FileAltLanguage;
-  onSave: FileAltEditorProps["onSave"];
+  languages: FileAltLanguage[];
 }) => {
-  const t = useTranslations("admin.system.files.alt");
-  const tError = useTranslations("core.global.errors");
+  const selected = useMultiLangSelected();
+  const language = languages.find(entry => entry.code === selected);
 
-  const formSchema = z.object({
-    text: z
-      .string()
-      .max(1_000)
-      .default(language.text ?? ""),
-  });
+  return language ? <OriginBadge language={language} /> : null;
+};
 
-  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
-    const result = await onSave({
-      languageCode: language.code,
-      text: values.text,
-    });
-
-    if ("error" in result) {
-      toast.error(tError("title"), {
-        description: tError("internal_server_error"),
-      });
-
-      return;
-    }
-
-    toast.success(t("saved.title"), {
-      description:
-        values.text.trim() === ""
-          ? t("saved.desc_empty", { language: language.name })
-          : t("saved.desc", { language: language.name }),
-    });
-  };
+const PolicySelect = ({
+  disabled,
+  field,
+}: ItemAutoFormComponentProps & { disabled: boolean }) => {
+  const t = useTranslations("admin.system.files.alt.policy");
+  const id = React.useId();
+  const value: unknown = field.value;
+  const policy = isPolicy(value) ? value : "automatic";
 
   return (
-    <AutoForm
-      className="flex flex-col gap-2"
-      fields={[
-        {
-          component: props => (
-            <AutoFormTextarea
-              {...props}
-              aria-label={t("text_label", { language: language.name })}
-              rows={2}
-            />
-          ),
-          id: "text",
-        },
-      ]}
-      formSchema={formSchema}
-      layout={fields => <>{fields.text}</>}
-      onSubmit={onSubmit}
-    >
-      <div className="flex justify-end">
-        <AutoFormSubmitButton variant="outline">
-          {t("save")}
-        </AutoFormSubmitButton>
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center justify-between gap-3">
+        <Label htmlFor={id}>{t("label")}</Label>
+        <NativeSelect
+          className="w-36"
+          disabled={disabled}
+          id={id}
+          onChange={event => {
+            if (isPolicy(event.target.value)) {
+              field.onChange(event.target.value);
+            }
+          }}
+          size="sm"
+          value={policy}
+        >
+          {FILE_ALT_POLICIES.map(option => (
+            <NativeSelectOption key={option} value={option}>
+              {t(`${option}.label`)}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
       </div>
-    </AutoForm>
+      <p className="text-muted-foreground text-xs leading-relaxed text-pretty">
+        {t(`${policy}.desc`)}
+      </p>
+    </div>
   );
 };
 
-const RemoveAltButton = ({
+const RewriteAction = ({
   language,
   onRemove,
 }: {
@@ -133,106 +129,15 @@ const RemoveAltButton = ({
   const [isPending, startTransition] = React.useTransition();
 
   return (
-    <Button
-      isLoading={isPending}
-      onClick={() => {
-        startTransition(async () => {
-          const result = await onRemove(language.code);
-          if ("error" in result) {
-            toast.error(tError("title"), {
-              description: tError("internal_server_error"),
-            });
-
-            return;
-          }
-
-          toast.success(t("success"), {
-            description: t("success_desc", { language: language.name }),
-          });
-        });
-      }}
-      size="sm"
-      variant="ghost"
-    >
-      <Undo2Icon />
-      {t("button")}
-    </Button>
-  );
-};
-
-const AltLanguageItem = ({
-  canEdit,
-  language,
-  onRemove,
-  onSave,
-}: Pick<FileAltEditorProps, "canEdit" | "onRemove" | "onSave"> & {
-  language: FileAltLanguage;
-}) => {
-  const t = useTranslations("admin.system.files.alt");
-
-  return (
-    <li className="flex flex-col gap-2 py-4 first:pt-0 last:pb-0">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="flex flex-wrap items-baseline gap-2">
-          <span className="font-medium">{language.name}</span>
-          <span className="text-muted-foreground font-mono text-xs">
-            {language.code}
-          </span>
-        </span>
-        <OriginBadges language={language} />
-      </div>
-
-      {language.text === "" ? (
-        <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-          {t("intentionally_empty")}
-        </p>
-      ) : null}
-
-      {canEdit ? (
-        <>
-          <AltTextForm language={language} onSave={onSave} />
-          {language.text === null ? null : (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-muted-foreground text-xs leading-relaxed text-pretty">
-                {t("remove.hint")}
-              </span>
-              <RemoveAltButton language={language} onRemove={onRemove} />
-            </div>
-          )}
-        </>
-      ) : language.text ? (
-        <p className="text-sm leading-relaxed text-pretty">{language.text}</p>
-      ) : null}
-    </li>
-  );
-};
-
-const AltPolicySelect = ({
-  canEdit,
-  onPolicyChange,
-  policy,
-}: {
-  canEdit: boolean;
-  onPolicyChange: FileAltEditorProps["onPolicyChange"];
-  policy: FileAltPolicy;
-}) => {
-  const t = useTranslations("admin.system.files.alt.policy");
-  const tError = useTranslations("core.global.errors");
-  const [isPending, startTransition] = React.useTransition();
-
-  return (
-    <div className="flex flex-col gap-2">
-      <Label htmlFor="file-alt-policy">{t("label")}</Label>
-      <NativeSelect
-        className="w-full sm:w-64"
-        disabled={!canEdit || isPending}
-        id="file-alt-policy"
-        onChange={event => {
-          const next = event.target.value;
-          if (!isPolicy(next)) return;
-
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <span className="text-muted-foreground text-xs leading-relaxed text-pretty">
+        {t("hint")}
+      </span>
+      <Button
+        isLoading={isPending}
+        onClick={() => {
           startTransition(async () => {
-            const result = await onPolicyChange(next);
+            const result = await onRemove(language.code);
             if ("error" in result) {
               toast.error(tError("title"), {
                 description: tError("internal_server_error"),
@@ -241,65 +146,153 @@ const AltPolicySelect = ({
               return;
             }
 
-            toast.success(t("saved"), { description: t(`${next}.desc`) });
+            toast.success(t("success"), {
+              description: t("success_desc", { language: language.name }),
+            });
           });
         }}
-        value={policy}
+        size="sm"
+        type="button"
+        variant="ghost"
       >
-        {FILE_ALT_POLICIES.map(value => (
-          <NativeSelectOption key={value} value={value}>
-            {t(`${value}.label`)}
-          </NativeSelectOption>
-        ))}
-      </NativeSelect>
-      <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-        {t(`${policy}.desc`)}
-      </p>
+        <SparklesIcon aria-hidden="true" />
+        {t("button", { language: language.name })}
+      </Button>
     </div>
   );
+};
+
+const submitOnModEnter = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    event.preventDefault();
+    event.currentTarget.form?.requestSubmit();
+  }
 };
 
 export const FileAltEditor = ({
   canEdit,
   data,
+  fileName,
   onPolicyChange,
   onRemove,
   onSave,
+  onSaved,
 }: FileAltEditorProps) => {
   const t = useTranslations("admin.system.files.alt");
+  const tOrigin = useTranslations("admin.system.files.alt.origin");
+  const tError = useTranslations("core.global.errors");
+  const [shown, setShown] = React.useState<null | string>(null);
+  const shownLanguage = data.languages.find(entry => entry.code === shown);
+
+  const presence = React.useMemo<MultiLangPresence>(
+    () => ({
+      busy: () => false,
+      marker: code => {
+        const language = data.languages.find(entry => entry.code === code);
+        if (!language || !needsAttention(language)) return null;
+
+        return (
+          <span className="text-muted-foreground ms-2 text-xs">
+            {language.stale ? tOrigin("stale") : tOrigin("missing")}
+          </span>
+        );
+      },
+    }),
+    [data.languages, tOrigin],
+  );
+
+  const storedText = (code: string) =>
+    data.languages.find(language => language.code === code)?.text ?? "";
+
+  const formSchema = z.object({
+    altText: multiLangValueSchema({ maxLength: 1_000 }).default(
+      data.languages.map(language => ({
+        languageCode: language.code,
+        value: language.text ?? "",
+      })),
+    ),
+    altPolicy: z.enum(FILE_ALT_POLICIES).default(data.altPolicy),
+  });
+
+  const onSubmit: AutoFormOnSubmit<typeof formSchema> = async values => {
+    const writes: Write[] = values.altText
+      .filter(entry => entry.value !== storedText(entry.languageCode))
+      .map(
+        async entry =>
+          await onSave({ languageCode: entry.languageCode, text: entry.value }),
+      );
+    if (values.altPolicy !== data.altPolicy) {
+      writes.push(onPolicyChange(values.altPolicy));
+    }
+
+    const results = await Promise.all(writes);
+    if (results.some(result => "error" in result)) {
+      toast.error(tError("title"), {
+        description: tError("internal_server_error"),
+      });
+
+      return;
+    }
+
+    toast.success(t("saved.title"), {
+      description: t("saved.desc", { count: writes.length, name: fileName }),
+    });
+    onSaved();
+  };
 
   return (
-    <div className="flex flex-col gap-6">
-      <AltPolicySelect
-        canEdit={canEdit}
-        onPolicyChange={onPolicyChange}
-        policy={data.altPolicy}
-      />
-
-      <section
-        aria-labelledby="file-alt-languages"
-        className="flex flex-col gap-2"
-      >
-        <h3 className="font-medium" id="file-alt-languages">
-          {t("languages")}
-        </h3>
-        {canEdit ? (
-          <p className="text-muted-foreground text-sm leading-relaxed text-pretty">
-            {t("empty_hint")}
-          </p>
-        ) : null}
-        <ul className="divide-y">
-          {data.languages.map(language => (
-            <AltLanguageItem
-              canEdit={canEdit}
-              key={storedVersionKey(language)}
-              language={language}
-              onRemove={onRemove}
-              onSave={onSave}
-            />
-          ))}
-        </ul>
-      </section>
-    </div>
+    <MultiLangPresenceContext value={presence}>
+      <MultiLangShownLanguageContext value={setShown}>
+        <AutoForm
+          className="flex min-h-0 flex-1 flex-col gap-0"
+          fields={[
+            {
+              component: props => (
+                <AutoFormTextarea
+                  {...props}
+                  disabled={!canEdit}
+                  label={t("description")}
+                  labelRight={<ShownLanguageBadge languages={data.languages} />}
+                  multiLang
+                  onKeyDown={submitOnModEnter}
+                  placeholder={t("placeholder")}
+                  rows={4}
+                />
+              ),
+              id: "altText",
+            },
+            {
+              component: props => (
+                <PolicySelect {...props} disabled={!canEdit} />
+              ),
+              id: "altPolicy",
+            },
+          ]}
+          formSchema={formSchema}
+          layout={rendered => (
+            <>
+              <div className="flex flex-1 flex-col gap-5 overflow-y-auto p-4">
+                <div className="flex flex-col gap-2">{rendered.altText}</div>
+                <div className="flex flex-col gap-2">
+                  <p className="text-muted-foreground text-xs leading-relaxed text-pretty">
+                    {t("empty_hint")}
+                  </p>
+                  {canEdit && shownLanguage && shownLanguage.text !== null ? (
+                    <RewriteAction
+                      key={shownLanguage.code}
+                      language={shownLanguage}
+                      onRemove={onRemove}
+                    />
+                  ) : null}
+                </div>
+                <div className="border-t pt-4">{rendered.altPolicy}</div>
+              </div>
+              {canEdit ? <AutoFormSheetFooter submitLabel={t("save")} /> : null}
+            </>
+          )}
+          onSubmit={onSubmit}
+        />
+      </MultiLangShownLanguageContext>
+    </MultiLangPresenceContext>
   );
 };

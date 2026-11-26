@@ -15,7 +15,7 @@ import { rowsClasses, spanClasses } from "./span-classes";
 export const DROP_END_ID = "vitnode-dashboard-drop-end";
 
 const DROP_AREA_CLASS =
-  "flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-6 text-center transition-[background-color,border-color,color] duration-150 ease-out motion-reduce:transition-none";
+  "flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 text-center transition-[background-color,border-color,color] duration-150 ease-out motion-reduce:transition-none";
 
 export const DropPlaceholder = ({ isEmpty }: { isEmpty: boolean }) => {
   const t = useTranslations("admin.dashboard.widgets");

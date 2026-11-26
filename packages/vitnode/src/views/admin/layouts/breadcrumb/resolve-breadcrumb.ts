@@ -50,3 +50,41 @@ export const resolveBreadcrumb = (
     };
   });
 };
+
+const navItemLabel = (
+  nav: NavAdminParent[],
+  href: string,
+): string | undefined => {
+  const key = normalizeUrl(href);
+  for (const parent of nav) {
+    for (const item of parent.items) {
+      if (item.href != null && normalizeUrl(item.href) === key) {
+        return item.title;
+      }
+      for (const subItem of item.items ?? []) {
+        if (subItem.href != null && normalizeUrl(subItem.href) === key) {
+          return subItem.title;
+        }
+      }
+    }
+  }
+
+  return undefined;
+};
+
+export const appendPageCrumb = (
+  nav: NavAdminParent[],
+  crumbs: BreadcrumbCrumb[],
+): BreadcrumbCrumb[] => {
+  const last = crumbs.at(-1);
+  if (!last) return crumbs;
+
+  const label = navItemLabel(nav, last.href);
+  if (label === undefined || label === last.label) return crumbs;
+
+  return [
+    ...crumbs.slice(0, -1),
+    { ...last, isCurrent: false, isLink: false },
+    { href: last.href, isCurrent: true, isKnown: true, isLink: false, label },
+  ];
+};

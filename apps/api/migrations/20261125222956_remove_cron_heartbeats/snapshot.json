@@ -1,0 +1,47 @@
+{
+  "type": "diff",
+  "version": "10",
+  "dialect": "postgres",
+  "id": "e7302cf7-2eaa-430b-9cfb-1e2ac1dd4be9",
+  "prevIds": [
+    "9638c9ed-80be-4704-9eca-5e1708c23bdb"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "core_cron_heartbeats"
+      ],
+      "writes": [
+        "s|tbl|public.core_cron_heartbeats",
+        "n|tbl|public.core_cron_heartbeats",
+        "e|tbl|public.core_cron_heartbeats",
+        "n|rel|public.core_cron_heartbeats",
+        "n|type|public.core_cron_heartbeats"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"core_cron_heartbeats\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"core_cron_heartbeats\",\"slot\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"core_cron_heartbeats\",\"ticks\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"core_cron_heartbeats\",\"core_cron_heartbeats_pkey\"]"
+    }
+  ]
+}

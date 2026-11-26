@@ -52,7 +52,7 @@ const tabsListVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-muted",
+        default: "bg-muted ring-foreground/5 ring-1",
         line: "gap-1 bg-transparent",
       },
     },
@@ -92,7 +92,7 @@ function TabsIndicator({
         "pointer-events-none absolute top-0 left-0 h-(--active-tab-height) w-(--active-tab-width) translate-x-(--active-tab-left) translate-y-(--active-tab-top) rounded-md",
         "ease-fluid duration-300 motion-reduce:transition-none",
         isSwitching ? "transition-[translate,width,height]" : "transition-none",
-        "group-data-[variant=default]/tabs-list:bg-card dark:group-data-[variant=default]/tabs-list:bg-background group-data-[variant=default]/tabs-list:shadow-xs",
+        "group-data-[variant=default]/tabs-list:bg-card dark:group-data-[variant=default]/tabs-list:bg-input group-data-[variant=default]/tabs-list:ring-foreground/10 dark:group-data-[variant=default]/tabs-list:ring-foreground/15 group-data-[variant=default]/tabs-list:shadow-sm group-data-[variant=default]/tabs-list:ring-1",
         "after:bg-foreground after:absolute after:opacity-0 group-data-[orientation=horizontal]/tabs:after:inset-x-0 group-data-[orientation=horizontal]/tabs:after:-bottom-1.25 group-data-[orientation=horizontal]/tabs:after:h-0.5 group-data-[orientation=vertical]/tabs:after:inset-y-0 group-data-[orientation=vertical]/tabs:after:-end-1 group-data-[orientation=vertical]/tabs:after:w-0.5 group-data-[variant=line]/tabs-list:after:opacity-100",
         className,
       )}

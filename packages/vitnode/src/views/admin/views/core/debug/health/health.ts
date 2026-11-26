@@ -77,6 +77,7 @@ export type DebugMessageKey =
   | "services.subtitle"
   | "site.offline"
   | "site.offline_until"
+  | "site.web_url_missing"
   | "vitnode.not_checked"
   | "vitnode.security_update"
   | "vitnode.source_unreachable"
@@ -515,6 +516,18 @@ const siteStatusChecks = (siteStatus: AdminSiteStatus): DebugCheck[] =>
       ]
     : [];
 
+const webUrlChecks = (integrations: AdminIntegrations): DebugCheck[] =>
+  integrations.webUrl.configured
+    ? []
+    : [
+        {
+          id: "site.web_url_missing",
+          message: { key: "site.web_url_missing" },
+          tab: "overview",
+          tone: "critical",
+        },
+      ];
+
 export const debugHealth = ({
   cronHealth,
   deletions,
@@ -621,6 +634,7 @@ export const debugHealth = ({
   }
 
   const issues = [
+    ...(integrations ? webUrlChecks(integrations) : []),
     ...(siteStatus ? siteStatusChecks(siteStatus) : []),
     ...areas.flatMap(entry => entry.checks),
   ]

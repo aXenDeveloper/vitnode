@@ -15,8 +15,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Frame,
-  FrameFooter,
   FrameHeader,
+  FramePanel,
   FrameTitle,
 } from "@/components/ui/frame";
 import { ItemMedia } from "@/components/ui/item";
@@ -69,37 +69,43 @@ const requestPushPermission = async (): Promise<PushPermission> => {
   return next;
 };
 
-const ChannelCard = ({
+const ChannelRow = ({
   children,
   control,
   Icon,
-  status,
+  labelFor,
   title,
 }: {
   children: React.ReactNode;
-  control?: React.ReactNode;
+  control: React.ReactNode;
   Icon: LucideIcon;
-  status: React.ReactNode;
+  labelFor?: string;
   title: string;
 }) => (
-  <li className="bg-card ring-foreground/10 flex flex-col gap-3 rounded-md p-4 shadow-xs ring-1">
-    <div className="flex items-start justify-between gap-3">
-      <ItemMedia aria-hidden variant="tile">
-        <Icon />
-      </ItemMedia>
-      {status}
-    </div>
-    <div className="flex flex-1 flex-col gap-1">
-      <h3 className="text-foreground text-sm font-medium">{title}</h3>
+  <li className="flex items-center gap-4 px-4 py-3.5">
+    <ItemMedia aria-hidden variant="tile">
+      <Icon />
+    </ItemMedia>
+    <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+      {labelFor ? (
+        <label
+          className="text-foreground w-fit cursor-pointer text-sm font-medium"
+          htmlFor={labelFor}
+        >
+          {title}
+        </label>
+      ) : (
+        <h3 className="text-foreground text-sm font-medium">{title}</h3>
+      )}
       <div className="text-muted-foreground text-sm leading-relaxed text-pretty">
         {children}
       </div>
     </div>
-    {control ? <div className="flex items-center gap-2">{control}</div> : null}
+    <div className="flex shrink-0 items-center">{control}</div>
   </li>
 );
 
-const PushCard = () => {
+const PushRow = () => {
   const t = useTranslations("core.auth.settings.notifications.channels");
   const permission = React.useSyncExternalStore<null | PushPermission>(
     subscribeToPermission,
@@ -110,7 +116,7 @@ const PushCard = () => {
   const status = permission ? PUSH_STATUS[permission] : null;
 
   return (
-    <ChannelCard
+    <ChannelRow
       control={
         permission === "default" ? (
           <Button
@@ -133,20 +139,17 @@ const PushCard = () => {
             <BellIcon aria-hidden />
             {t("push.enable_short")}
           </Button>
-        ) : null
-      }
-      Icon={SmartphoneIcon}
-      status={
-        status ? (
+        ) : status ? (
           <Badge variant={status.variant}>{t(`status.${status.key}`)}</Badge>
         ) : null
       }
+      Icon={SmartphoneIcon}
       title={t("push.title")}
     >
       {permission === "denied" || permission === "unsupported"
         ? t(`push.${permission}`)
         : t("push.desc")}
-    </ChannelCard>
+    </ChannelRow>
   );
 };
 
@@ -173,45 +176,39 @@ export const NotificationChannelsGroup = ({
           {t("channels.title")}
         </FrameTitle>
       </FrameHeader>
-      <ul className="grid gap-1 lg:grid-cols-3">
-        <ChannelCard
-          Icon={InboxIcon}
-          status={
+      <FramePanel render={<ul />}>
+        <ChannelRow
+          control={
             <Badge variant="success">{t("channels.status.always_on")}</Badge>
           }
+          Icon={InboxIcon}
           title={t("channels.list.title")}
         >
           {t("channels.list.desc")}
-        </ChannelCard>
+        </ChannelRow>
 
-        <PushCard />
+        <PushRow />
 
-        <ChannelCard
+        <ChannelRow
           control={
-            emailState === "unavailable" ? null : (
-              <label
-                className="flex cursor-pointer items-center gap-2 text-sm"
-                htmlFor={emailSwitchId}
-              >
-                <Switch
-                  checked={emailState === "on"}
-                  id={emailSwitchId}
-                  onCheckedChange={on => {
-                    if (on) onEmailChange(true);
-                    else setConfirmOpen(true);
-                  }}
-                  ref={emailSwitchRef}
-                />
-                {t("channels.email.send")}
-              </label>
+            emailState === "unavailable" ? (
+              <Badge variant={emailStatus.variant}>
+                {t(`channels.status.${emailStatus.key}`)}
+              </Badge>
+            ) : (
+              <Switch
+                checked={emailState === "on"}
+                id={emailSwitchId}
+                onCheckedChange={on => {
+                  if (on) onEmailChange(true);
+                  else setConfirmOpen(true);
+                }}
+                ref={emailSwitchRef}
+              />
             )
           }
           Icon={MailIcon}
-          status={
-            <Badge variant={emailStatus.variant}>
-              {t(`channels.status.${emailStatus.key}`)}
-            </Badge>
-          }
+          labelFor={emailState === "unavailable" ? undefined : emailSwitchId}
           title={t("channels.email.title")}
         >
           {emailState === "unavailable" ? (
@@ -220,18 +217,14 @@ export const NotificationChannelsGroup = ({
             <>
               {emailState === "on"
                 ? t("channels.email.sent_to")
-                : t("channels.email.off_to")}
-              <span
-                className="text-foreground block truncate font-medium"
-                title={email}
-              >
+                : t("channels.email.off_to")}{" "}
+              <span className="text-foreground font-medium break-all">
                 {email}
               </span>
             </>
           )}
-        </ChannelCard>
-      </ul>
-      <FrameFooter>{t("channels.push.soon")}</FrameFooter>
+        </ChannelRow>
+      </FramePanel>
 
       <ConfirmActionAlertDialog
         description={t("channels.email.stop_desc")}

@@ -260,12 +260,15 @@ export const ServicesSection = ({
           return (
             <FrameRow className="flex-wrap" key={service}>
               <ToneIcon tone={active ? "ok" : "off"} />
-              <span className="flex min-w-0 flex-1 flex-col">
-                <span className="text-sm font-medium">
+              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span className="flex flex-wrap items-baseline gap-x-2 text-sm font-medium">
                   {tHealth(`services.${service}`)}
+                  <span className="text-muted-foreground text-xs font-normal">
+                    {active ? t("active") : t("not_configured")}
+                  </span>
                 </span>
-                <span className="text-muted-foreground text-xs">
-                  {active ? t("active") : t("not_configured")}
+                <span className="text-muted-foreground text-xs leading-relaxed text-pretty">
+                  {t(`desc.${service}`)}
                 </span>
               </span>
               {active ? (

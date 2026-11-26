@@ -1,5 +1,6 @@
 import type { QueryClient } from '@tanstack/react-query'
 
+import geistLatin from '@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url'
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
 import { ThemeScript } from '@vitnode/core/components/theme-script'
 import {
@@ -50,6 +51,13 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
       ...(matches.some(({ routeId }) => isDocsRouteId(routeId))
         ? []
         : [{ href: withoutHmrTimestamp(appCss), rel: 'stylesheet' }]),
+      {
+        as: 'font',
+        crossOrigin: 'anonymous',
+        href: geistLatin,
+        rel: 'preload',
+        type: 'font/woff2',
+      },
 
       {
         href: '/favicon.ico',

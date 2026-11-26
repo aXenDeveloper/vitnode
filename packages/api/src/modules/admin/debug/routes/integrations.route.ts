@@ -88,6 +88,9 @@ export const integrationsDebugAdminRoute = buildRoute({
                 // uploads are enabled.
                 active: z.boolean(),
               }),
+              webUrl: z.object({
+                configured: z.boolean(),
+              }),
               websocket: z.object({
                 active: z.boolean(),
                 crossInstance: z.boolean(),
@@ -172,6 +175,9 @@ export const integrationsDebugAdminRoute = buildRoute({
         },
         storage: {
           active: !!core.storage?.adapter,
+        },
+        webUrl: {
+          configured: !!process.env.VITNODE_WEB_URL?.trim(),
         },
         websocket: {
           active: isWebSocketEnabled(),

@@ -66,9 +66,9 @@ export { adminUserSearchInputSchema, readAdminUserSearch } from "./user-search";
 //
 // The screens themselves are *not* re-exported here, deliberately. Each is its
 // own subpath - `@vitnode/core/tanstack/admin/cron`, `.../queue`, `.../files`,
-// `.../integrations`, `.../search-index`, `.../debug`, `.../dashboard`,
-// `.../users`, `.../roles`, `.../staff` - so a route bundles the screen it
-// renders and not the other nine. This barrel is what the *shell* imports, and
+// `.../search-index`, `.../debug`, `.../dashboard`, `.../users`, `.../roles`,
+// `.../staff` - so a route bundles the screen it renders and not the other
+// eight. This barrel is what the *shell* imports, and
 // it is loaded on every admin page.
 // -----------------------------------------------------------------------------
 

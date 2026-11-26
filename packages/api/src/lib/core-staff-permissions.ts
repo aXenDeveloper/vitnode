@@ -65,7 +65,7 @@ export const coreStaffPermissions = defineStaffPermissions(manifest, {
       { permission: "can_delete", dependsOn: ["can_view"] },
       "can_upload",
     ],
-    queue: ["can_view"],
+    queue: ["can_view", { permission: "can_clean", dependsOn: ["can_view"] }],
     plugins: [
       "can_view",
       { permission: "can_check_updates", dependsOn: ["can_view"] },

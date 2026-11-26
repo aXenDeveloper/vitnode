@@ -26,6 +26,11 @@ export type RawAdminTableParams = Partial<
 /** What a screen declares about its own table. */
 export interface AdminTableContract<TOrderBy extends string = string> {
   defaultPageSize?: number;
+  /**
+   * The statuses listed when the URL names none, so finished rows stay out of
+   * the default view. Must be a subset of `status`; the URL omits it.
+   */
+  defaultStatus?: readonly string[];
   /** The columns this list may be sorted by - the route's `orderBy` enum. */
   orderBy: readonly TOrderBy[];
   /** Whether the table renders a search box the API reads. */
@@ -44,6 +49,13 @@ const readStatus = (
 
   return values.length > 0 ? values.join(",") : undefined;
 };
+
+export const defaultStatusOf = (
+  contract: Pick<AdminTableContract, "defaultStatus" | "status">,
+): string | undefined =>
+  contract.status && contract.defaultStatus
+    ? readStatus(contract.defaultStatus.join(","), contract.status)
+    : undefined;
 
 export const normalizeAdminTableParams = <TOrderBy extends string>(
   raw: RawAdminTableParams,
@@ -90,7 +102,9 @@ export const normalizeAdminTableParams = <TOrderBy extends string>(
   }
 
   if (contract.status) {
-    const status = readStatus(readFirstValue(raw.status), contract.status);
+    const status =
+      readStatus(readFirstValue(raw.status), contract.status) ??
+      defaultStatusOf(contract);
     if (status) params.status = status;
   }
 

@@ -111,9 +111,7 @@ export const FilesTableContent = ({
             <FileRowActions
               canDelete={canDelete}
               canDownload={canDownload}
-              id={row.id}
-              mimeType={row.mimeType}
-              name={row.name}
+              file={row}
               onDelete={onDeleteFile}
             />
           ),

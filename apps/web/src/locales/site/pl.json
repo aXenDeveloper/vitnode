@@ -1,11 +1,364 @@
 {
   "site": {
     "home": {
+      "bento": {
+        "eyebrow": "W zestawie",
+        "title": "Wszystko, czego potrzebuje społeczność.",
+        "content": {
+          "title": "Jeden plik, cała funkcja",
+          "desc": "Tabele, typowane API i ekrany AdminCP z jednej definicji.",
+          "features": {
+            "admin": "Ekrany AdminCP",
+            "api": "Typowane API",
+            "database": "Tabela w bazie",
+            "publishing": "Szkice i publikacja",
+            "revisions": "Rewizje",
+            "scheduling": "Harmonogram",
+            "translations": "Tłumaczenia",
+            "search": "Wyszukiwarka",
+            "live": "Wspólna edycja",
+            "comments": "Komentarze",
+            "reactions": "Reakcje",
+            "followers": "Obserwujący"
+          }
+        },
+        "notifications": {
+          "title": "Wiadomości, które same trafiają do ludzi",
+          "desc": "Skrzynka, licznik na żywo i podsumowania e-mailem.",
+          "mark_all": "Oznacz wszystkie jako przeczytane",
+          "items": {
+            "reply": {
+              "title": "Kuba odpowiedział w Twoim temacie",
+              "sub": "w „Zdjęcia z letniego spotkania”"
+            },
+            "live": {
+              "title": "Twój artykuł jest opublikowany",
+              "sub": "Podsumowanie letniego spotkania"
+            },
+            "comment": {
+              "title": "Ola dodała komentarz",
+              "sub": "„Wpisz mnie na przyszły rok!”"
+            },
+            "report": {
+              "title": "Moderator zamknął Twoje zgłoszenie",
+              "sub": "Zgłoszenie #128 · treść ukryta"
+            }
+          }
+        },
+        "live": {
+          "title": "Piszcie razem w czasie rzeczywistym",
+          "desc": "Tekst sformatowany przyjmuje kilka kursorów naraz, a każda zmiana zapisuje się sama.",
+          "saving": "Zapisywanie…",
+          "saved": "Zapisano",
+          "first": "Czterdziestu dwóch członków spotkało się na",
+          "selected": "dachu",
+          "first_end": ".",
+          "ola": " Pizza skończyła się przed ósmą.",
+          "second": "W przyszłym roku rezerwujemy",
+          "kuba": " większą salę i dwa piece więcej."
+        },
+        "ai": {
+          "title": "AI, które odwala nudną robotę",
+          "desc": "Teksty ALT i tłumaczenia, dowolny dostawca, w ramach budżetu.",
+          "provider": "Dowolny dostawca",
+          "alt": "Tekst ALT",
+          "budget": "{percent}% budżetu"
+        },
+        "search": {
+          "title": "Znalezione, zanim skończysz pisać",
+          "desc": "Podpowiedzi zmieniają się z każdym klawiszem, ułożone według tego, co ludzie czytają.",
+          "tab": "Tab",
+          "queries": "s|sp|spr|sp|spo|spot",
+          "suggestions": {
+            "recap": "Spotkanie letnie 2026",
+            "photos": "Spotkanie — zdjęcia",
+            "moderators": "Spotkaj moderatorów",
+            "rules": "Społeczność — zasady",
+            "events": "Sport i rekreacja",
+            "library": "Sprzedam rower"
+          }
+        }
+      },
+      "cta": {
+        "description": "Jedna komenda daje Ci konta, role, moderację i panel administratora. Za darmo, open source i na Twoim serwerze.",
+        "star": "Gwiazdka na GitHubie",
+        "title": "Zacznij budować swoją społeczność już dziś."
+      },
+      "faq": {
+        "eyebrow": "FAQ",
+        "title": "O co ludzie pytają przed instalacją",
+        "items": {
+          "what": {
+            "question": "Czym jest VitNode?",
+            "answer": "To platforma open source do stron społeczności. Członkowie i role, publikowanie w Content Engine, wyszukiwarka, moderacja i panel administracyjny (AdminCP) działają od razu. Całość zbudowano na TanStack Start, Hono, Drizzle i PostgreSQL."
+          },
+          "free": {
+            "question": "Czy VitNode jest darmowy?",
+            "answer": "Tak. VitNode jest na <license>licencji MIT</license>: bez płatnych planów, bez opłat za członków i bez uzależnienia od dostawcy. Uruchamiasz go na własnym serwerze, a dane należą do Ciebie. Płacisz tylko za hosting i, jeśli je włączysz, za dostawców AI."
+          },
+          "ready": {
+            "question": "Czy mogę już dziś uruchomić na nim swoją społeczność?",
+            "answer": "Jeszcze nie produkcyjnie. VitNode 2.0 to wersja canary, więc spodziewaj się błędów i zmian łamiących zgodność między wydaniami. Na razie służy do poznawania platformy, prototypowania i budowania wtyczek przed stabilnym wydaniem."
+          },
+          "non_dev": {
+            "question": "Nie jestem programistą. Czy mimo to zbuduję coś z VitNode?",
+            "answer": "Codzienną pracę wykonujesz w AdminCP, bez kodu. Instalacja i rozbudowa wymagają jednak terminala i tu przydaje się agent AI do kodowania, na przykład Claude Code: dokumentacja jest dostępna jako <code>llms-full.txt</code>, więc agent może ją przeczytać i przeprowadzić konfigurację razem z Tobą."
+          },
+          "hosting": {
+            "question": "Gdzie mogę go hostować i czego potrzebuje do działania?",
+            "answer": "Wszędzie tam, gdzie działa Node.js 22+ lub Bun: na własnym serwerze, w Dockerze albo w Cloudflare Workers. Wymaga PostgreSQL; Redis jest opcjonalny i przyspiesza cache. Generator może dodać plik Docker Compose z oboma. Zacznij od <setup>przewodnika instalacji</setup>."
+          },
+          "plugins": {
+            "question": "Jak dodać funkcje, których VitNode nie ma, na przykład forum, bloga albo płatne treści dla członków?",
+            "answer": "Za pomocą wtyczek. Oficjalne dodają bloga, forum i jednorazowe płatności przez Stripe. Gdy potrzebujesz czegoś własnego, CLI <code>vitnode</code> w kilka minut wygeneruje wtyczkę ze stronami, API, tabelami w bazie i ekranami AdminCP. Zobacz <create>Tworzenie wtyczki</create>."
+          },
+          "languages": {
+            "question": "Czy moja społeczność może mówić w kilku językach?",
+            "answer": "Tak. Interfejs jest przetłumaczony, a treści tłumaczysz pole po polu z językiem zapasowym, więc brak tłumaczenia nigdy nie zostawi pustej strony. Mapy witryny zawierają linki hreflang, dzięki czemu wyszukiwarki kierują każdego czytelnika do jego języka."
+          },
+          "ai": {
+            "question": "Z jakimi modelami AI działa i kto za nie płaci?",
+            "answer": "Z każdym modelem obsługiwanym przez Vercel AI SDK: OpenAI, Anthropic, Google i innymi. Używasz własnych kluczy, ustawiasz miesięczny budżet w AdminCP i decydujesz, które role mają dostęp do AI. Członkowie wydają punkty AI, więc nikt nie wyczerpie budżetu w jedno popołudnie."
+          }
+        }
+      },
       "hero": {
-        "description": "Publikuj treści, łącz ludzi i twórz funkcje, których potrzebuje Twoja społeczność, na platformie open source, nad którą masz pełną kontrolę.",
+        "copied": "Skopiowano",
+        "copy_command": "Skopiuj komendę instalacji",
+        "description": "Konta, role, moderacja, wyszukiwarka i panel administratora są w zestawie. Każda funkcja to plugin, więc piszesz tylko to, co wyróżnia Twoją społeczność.",
         "explore": "Odkryj, co możesz zbudować",
-        "see_product": "Zobacz produkt",
-        "title": "Dom dla <highlight>Twojej społeczności</highlight>, zbudowany wokół Twojego pomysłu.",
+        "pages": {
+          "article": {
+            "back": "Wróć do artykułów",
+            "body": "Czterdziestu dwóch członków, jeden dach i zdecydowanie za dużo pizzy. Oto wszystko, co razem zbudowaliśmy, i plany na przyszły rok.",
+            "read": "4 min czytania"
+          },
+          "blog": {
+            "all": "Wszystkie artykuły",
+            "articles": {
+              "0": {
+                "date": "18 lis 2026",
+                "title": "Podsumowanie letniego zlotu i zdecydowanie za dużo pizzy"
+              },
+              "1": {
+                "date": "9 lis 2026",
+                "title": "Własny serwer na Raspberry Pi"
+              }
+            },
+            "categories": "Kategorie",
+            "categoryNames": {
+              "0": "Wydarzenia",
+              "1": "Poradniki",
+              "2": "Wydania"
+            },
+            "desc": "Artykuły, poradniki i wiadomości od zespołu, od najnowszych.",
+            "title": "Blog"
+          },
+          "discover": {
+            "commented": "skomentował(a)",
+            "desc": "Zobacz najnowszą aktywność w całej społeczności.",
+            "kind": "Komentarz",
+            "title": "Odkrywaj"
+          },
+          "forum": {
+            "comments": "Komentarze",
+            "desc": "Rozgość się. Pytaj, pokazuj, co budujesz, i pomagaj innym.",
+            "forums": {
+              "0": {
+                "latest": "Wersja 2.0 już jest",
+                "name": "Ogłoszenia"
+              },
+              "1": {
+                "latest": "Notatki do canary 13",
+                "name": "Wydania"
+              },
+              "2": {
+                "desc": "Rozmowy o wszystkim i o niczym.",
+                "latest": "Zdjęcia z letniego zlotu",
+                "name": "Dyskusja ogólna"
+              },
+              "3": {
+                "desc": "Utknąłeś? Ktoś tu już przez to przeszedł.",
+                "latest": "Docker na serwerze NAS",
+                "name": "Pomoc i wsparcie"
+              }
+            },
+            "latest": "Ostatni temat",
+            "newTopic": "Nowy temat",
+            "title": "Forum",
+            "topics": "Tematy",
+            "topicsList": {
+              "0": {
+                "date": "23 lis, 17:02",
+                "title": "Zdjęcia z letniego zlotu, dorzućcie swoje do wątku"
+              },
+              "1": {
+                "date": "22 lis, 9:14",
+                "title": "Na jakiej klawiaturze piszecie?"
+              },
+              "2": {
+                "date": "20 lis, 19:40",
+                "title": "Przedstaw się"
+              },
+              "3": {
+                "date": "18 lis, 13:25",
+                "title": "Pomysły na pluginy do kolejnego wydania"
+              }
+            }
+          },
+          "modcp": {
+            "assigned": "Przypisane",
+            "cards": {
+              "0": {
+                "kind": "#8 · Komentarz",
+                "reason": "Spam",
+                "text": "Świetna wiadomość, bocznica stoi pusta od lat."
+              },
+              "1": {
+                "kind": "#7 · Komentarz",
+                "reason": "Obraźliwa treść",
+                "text": "Ten wątek wykoleił się po drugiej stronie."
+              },
+              "2": {
+                "kind": "#1 · Artykuł",
+                "reason": "Spam",
+                "text": "Własny serwer na Raspberry Pi"
+              }
+            },
+            "columns": {
+              "0": "Nowe",
+              "1": "W toku",
+              "2": "Gotowe"
+            },
+            "crumb": "Panel moderatora",
+            "desc": "Zgłoszenia, którymi możesz się zająć. Przeciągnij kartę do innej kolumny, aby ją przejąć, zamknąć lub odesłać.",
+            "empty": "Nic tu nie ma.",
+            "nav": {
+              "0": "Zgłoszenia",
+              "1": "Akceptacje",
+              "2": "Ostrzeżenia"
+            },
+            "search": "Szukaj po tytule lub #id",
+            "title": "Zgłoszenia"
+          },
+          "nav": {
+            "blog": "Blog",
+            "community": "Społeczność",
+            "docs": "Dokumentacja",
+            "login": "Zaloguj się",
+            "plugins": "Wtyczki",
+            "register": "Zarejestruj się",
+            "search": "Szukaj…"
+          },
+          "notifications": {
+            "items": {
+              "0": {
+                "text": "skomentował temat Zdjęcia z letniego zlotu",
+                "time": "2 minuty temu"
+              },
+              "1": {
+                "text": "zareagowała na Twój artykuł",
+                "time": "godzinę temu"
+              },
+              "2": {
+                "text": "wspomniał o Tobie w Przedstaw się",
+                "time": "4 dni temu"
+              }
+            },
+            "markAll": "Oznacz wszystkie jako przeczytane",
+            "tabs": {
+              "0": "Nieprzeczytane",
+              "1": "Wzmianki",
+              "2": "Wszystkie"
+            },
+            "title": "Powiadomienia"
+          },
+          "payments": {
+            "desc": "Kup jeden produkt w stałej cenie przez zewnętrzną płatność. Zakup liczy się dopiero po potwierdzeniu przez operatora.",
+            "item": "Zestaw naklejek",
+            "itemDesc": "Dwanaście winylowych naklejek na laptopy, bidony i zmęczone monitory.",
+            "owned": "Masz ten produkt",
+            "price": "20,00 zł",
+            "title": "Demo płatności",
+            "view": "Zobacz zakup"
+          },
+          "people": {
+            "0": {
+              "name": "Ola Nowak",
+              "nick": "@ola"
+            },
+            "1": {
+              "name": "Kuba Wiśniewski",
+              "nick": "@kuba"
+            },
+            "2": {
+              "name": "Maya Lindqvist",
+              "nick": "@maya"
+            },
+            "3": {
+              "name": "Jun Sato",
+              "nick": "@jun"
+            }
+          },
+          "profile": {
+            "joined": "15 listopada 2025",
+            "month": "Listopad 2026",
+            "online": "Teraz online",
+            "reacted": "zareagowała na",
+            "reputation": "+128 reputacji",
+            "role": "Administratorka",
+            "timeline": "Oś czasu",
+            "today": "Dzisiaj · 2 pozycje",
+            "weekday": "WT",
+            "weekdayBefore": "PON",
+            "yesterday": "Wczoraj · 14 pozycji"
+          },
+          "search": {
+            "any": "Kiedykolwiek",
+            "content": "Treść",
+            "date": "Data utworzenia",
+            "desc": "Szukaj we wszystkim, co jest w społeczności.",
+            "filters": "Filtry",
+            "kinds": {
+              "0": "Artykuł",
+              "1": "Komentarz",
+              "2": "Temat"
+            },
+            "newest": "Najnowsze",
+            "placeholder": "zlot",
+            "ranges": {
+              "0": "Kiedykolwiek",
+              "1": "Ostatnie 24 godziny",
+              "2": "Ostatni tydzień"
+            },
+            "results": "45 wyników",
+            "title": "Szukaj"
+          },
+          "topic": {
+            "body": "Wrzucajcie tu zdjęcia z dachu. Dodatkowe punkty za wszystko, na czym widać wieżę z pizzy.",
+            "commentCount": "6 komentarzy",
+            "comments": {
+              "0": "Oto moje z dachu. Co za widok!",
+              "1": "Pizza skończyła się przed ósmą. Za rok zamawiamy podwójnie."
+            },
+            "hide": "Ukryj 2 odpowiedzi",
+            "posted": "Opublikowano 23 lis, 17:02",
+            "report": "Zgłoś"
+          }
+        },
+        "rotator": {
+          "lead": "Zbuduj",
+          "spoken": "Zbuduj forum, bloga, sklep, przestrzeń zespołu albo własny pomysł bez zaczynania od zera.",
+          "tail": "bez zaczynania od zera.",
+          "words": {
+            "blog": "bloga",
+            "forum": "forum",
+            "own": "własny pomysł",
+            "shop": "sklep",
+            "team": "przestrzeń zespołu"
+          }
+        },
+        "start": "Zacznij",
         "trust": {
           "agents": "Stworzony dla agentów AI do kodowania",
           "license": "Licencja MIT",
@@ -224,122 +577,6 @@
             "joined": "Dołączył",
             "search": "Szukaj po nazwie lub adresie e-mail…",
             "user": "Użytkownik"
-          }
-        }
-      },
-      "bento": {
-        "eyebrow": "W zestawie",
-        "title": "Wszystko, czego potrzebuje społeczność.",
-        "content": {
-          "title": "Jeden plik, cała funkcja",
-          "desc": "Tabele, typowane API i ekrany AdminCP z jednej definicji.",
-          "features": {
-            "admin": "Ekrany AdminCP",
-            "api": "Typowane API",
-            "database": "Tabela w bazie",
-            "publishing": "Szkice i publikacja",
-            "revisions": "Rewizje",
-            "scheduling": "Harmonogram",
-            "translations": "Tłumaczenia",
-            "search": "Wyszukiwarka",
-            "live": "Wspólna edycja",
-            "comments": "Komentarze",
-            "reactions": "Reakcje",
-            "followers": "Obserwujący"
-          }
-        },
-        "notifications": {
-          "title": "Wiadomości, które same trafiają do ludzi",
-          "desc": "Skrzynka, licznik na żywo i podsumowania e-mailem.",
-          "mark_all": "Oznacz wszystkie jako przeczytane",
-          "items": {
-            "reply": {
-              "title": "Kuba odpowiedział w Twoim temacie",
-              "sub": "w „Zdjęcia z letniego spotkania”"
-            },
-            "live": {
-              "title": "Twój artykuł jest opublikowany",
-              "sub": "Podsumowanie letniego spotkania"
-            },
-            "comment": {
-              "title": "Ola dodała komentarz",
-              "sub": "„Wpisz mnie na przyszły rok!”"
-            },
-            "report": {
-              "title": "Moderator zamknął Twoje zgłoszenie",
-              "sub": "Zgłoszenie #128 · treść ukryta"
-            }
-          }
-        },
-        "live": {
-          "title": "Piszcie razem w czasie rzeczywistym",
-          "desc": "Tekst sformatowany przyjmuje kilka kursorów naraz, a każda zmiana zapisuje się sama.",
-          "saving": "Zapisywanie…",
-          "saved": "Zapisano",
-          "first": "Czterdziestu dwóch członków spotkało się na",
-          "selected": "dachu",
-          "first_end": ".",
-          "ola": " Pizza skończyła się przed ósmą.",
-          "second": "W przyszłym roku rezerwujemy",
-          "kuba": " większą salę i dwa piece więcej."
-        },
-        "ai": {
-          "title": "AI, które odwala nudną robotę",
-          "desc": "Teksty ALT i tłumaczenia, dowolny dostawca, w ramach budżetu.",
-          "provider": "Dowolny dostawca",
-          "alt": "Tekst ALT",
-          "budget": "{percent}% budżetu"
-        },
-        "search": {
-          "title": "Znalezione, zanim skończysz pisać",
-          "desc": "Podpowiedzi zmieniają się z każdym klawiszem, ułożone według tego, co ludzie czytają.",
-          "tab": "Tab",
-          "queries": "s|sp|spr|sp|spo|spot",
-          "suggestions": {
-            "recap": "Spotkanie letnie 2026",
-            "photos": "Spotkanie — zdjęcia",
-            "moderators": "Spotkaj moderatorów",
-            "rules": "Społeczność — zasady",
-            "events": "Sport i rekreacja",
-            "library": "Sprzedam rower"
-          }
-        }
-      },
-      "faq": {
-        "eyebrow": "FAQ",
-        "title": "O co ludzie pytają przed instalacją",
-        "items": {
-          "what": {
-            "question": "Czym jest VitNode?",
-            "answer": "To platforma open source do stron społeczności. Członkowie i role, publikowanie w Content Engine, wyszukiwarka, moderacja i panel administracyjny (AdminCP) działają od razu. Całość zbudowano na TanStack Start, Hono, Drizzle i PostgreSQL."
-          },
-          "free": {
-            "question": "Czy VitNode jest darmowy?",
-            "answer": "Tak. VitNode jest na <license>licencji MIT</license>: bez płatnych planów, bez opłat za członków i bez uzależnienia od dostawcy. Uruchamiasz go na własnym serwerze, a dane należą do Ciebie. Płacisz tylko za hosting i, jeśli je włączysz, za dostawców AI."
-          },
-          "ready": {
-            "question": "Czy mogę już dziś uruchomić na nim swoją społeczność?",
-            "answer": "Jeszcze nie produkcyjnie. VitNode 2.0 to wersja canary, więc spodziewaj się błędów i zmian łamiących zgodność między wydaniami. Na razie służy do poznawania platformy, prototypowania i budowania wtyczek przed stabilnym wydaniem."
-          },
-          "non_dev": {
-            "question": "Nie jestem programistą. Czy mimo to zbuduję coś z VitNode?",
-            "answer": "Codzienną pracę wykonujesz w AdminCP, bez kodu. Instalacja i rozbudowa wymagają jednak terminala i tu przydaje się agent AI do kodowania, na przykład Claude Code: dokumentacja jest dostępna jako <code>llms-full.txt</code>, więc agent może ją przeczytać i przeprowadzić konfigurację razem z Tobą."
-          },
-          "hosting": {
-            "question": "Gdzie mogę go hostować i czego potrzebuje do działania?",
-            "answer": "Wszędzie tam, gdzie działa Node.js 22+ lub Bun: na własnym serwerze, w Dockerze albo w Cloudflare Workers. Wymaga PostgreSQL; Redis jest opcjonalny i przyspiesza cache. Generator może dodać plik Docker Compose z oboma. Zacznij od <setup>przewodnika instalacji</setup>."
-          },
-          "plugins": {
-            "question": "Jak dodać funkcje, których VitNode nie ma, na przykład forum, bloga albo płatne treści dla członków?",
-            "answer": "Za pomocą wtyczek. Oficjalne dodają bloga, forum i jednorazowe płatności przez Stripe. Gdy potrzebujesz czegoś własnego, CLI <code>vitnode</code> w kilka minut wygeneruje wtyczkę ze stronami, API, tabelami w bazie i ekranami AdminCP. Zobacz <create>Tworzenie wtyczki</create>."
-          },
-          "languages": {
-            "question": "Czy moja społeczność może mówić w kilku językach?",
-            "answer": "Tak. Interfejs jest przetłumaczony, a treści tłumaczysz pole po polu z językiem zapasowym, więc brak tłumaczenia nigdy nie zostawi pustej strony. Mapy witryny zawierają linki hreflang, dzięki czemu wyszukiwarki kierują każdego czytelnika do jego języka."
-          },
-          "ai": {
-            "question": "Z jakimi modelami AI działa i kto za nie płaci?",
-            "answer": "Z każdym modelem obsługiwanym przez Vercel AI SDK: OpenAI, Anthropic, Google i innymi. Używasz własnych kluczy, ustawiasz miesięczny budżet w AdminCP i decydujesz, które role mają dostęp do AI. Członkowie wydają punkty AI, więc nikt nie wyczerpie budżetu w jedno popołudnie."
           }
         }
       }

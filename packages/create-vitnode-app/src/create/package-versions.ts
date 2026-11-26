@@ -13,6 +13,8 @@ export const versionsPackageJson = {
   oxfmt: "^0.79.0",
   tailwind: "^4.3",
   twAnimateCss: "^1.4.0",
+  fontsourceGeist: "^5.3.0",
+  fontsourceGeistMono: "^5.3.0",
   cn: "^0.5.2",
 
   react: "^19.3",

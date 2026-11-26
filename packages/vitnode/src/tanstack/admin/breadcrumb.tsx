@@ -32,12 +32,19 @@ export const useAdminBreadcrumb = (): React.ReactNode => {
 export const AdminBreadcrumb = ({
   labels,
   overrideLastLabel,
+  pageCrumb,
   segments,
 }: {
   /** Explicit labels by href, for a crumb the navigation cannot name. */
   labels?: Record<string, string>;
   /** The last crumb's label, when the page knows it and the navigation cannot. */
   overrideLastLabel?: string;
+  /**
+   * Adds a last crumb named by the sidebar item at the same path, for a page
+   * that shares its section's URL (the dashboard at `/admin/core` reads
+   * "Core / Dashboard"). The section crumb before it is then plain text.
+   */
+  pageCrumb?: boolean;
   /** The path below `/admin`, e.g. `["core", "users"]`. */
   segments: string[];
 }) => (
@@ -45,6 +52,7 @@ export const AdminBreadcrumb = ({
     labels={labels}
     nav={useAdminNav()}
     overrideLastLabel={overrideLastLabel}
+    pageCrumb={pageCrumb}
     segments={segments}
   />
 );

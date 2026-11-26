@@ -101,7 +101,7 @@ export const vitNodeApiConfig = buildApiConfig({
 
 ## Testing Email in AdminCP
 
-Check your configuration in the AdminCP at **System → Integrations** (`/admin/core/system/integrations`). Choose **Test email** on the **Email** card, enter an address and choose **Send test email**. The test goes through the same queue as every other email, so if it does not arrive, look for a failed `send-email` task in **Debug Panel → Queue**, which shows the provider's error. The button needs the **Send test email** staff permission.
+Check your configuration in the AdminCP at **Debug Panel → Services** (`/admin/core/debug/services`). Choose **Test email** on the **Email** row, enter an address and choose **Send test email**. The test goes through the same queue as every other email, so if it does not arrive, look for a failed `send-email` task in **Debug Panel → Queue**, which shows the provider's error. The button needs the **Send test email** staff permission.
 
 ## Learn More
 

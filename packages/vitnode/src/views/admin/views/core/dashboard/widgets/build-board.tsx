@@ -67,6 +67,7 @@ export const buildDashboardBoard = ({
       minSpan: widget.minSpan,
       defaultSpan: widget.defaultSpan,
       defaultRows: widget.defaultRows,
+      flush: widget.flush,
 
       content: needsStandIn ? (
         <Widget settings={{}} widgetId={widget.id} />

@@ -6,7 +6,7 @@ import { ContentDataTable } from "@/components/table/content";
 import type { QueuePage, QueueTaskRow } from "./queue-query";
 
 import { QueueStatusBadge } from "./badges/status-badge";
-import { QUEUE_STATUSES } from "./queue-query";
+import { QUEUE_DEFAULT_STATUSES, QUEUE_STATUSES } from "./queue-query";
 
 export const QueueTableContent = ({ data }: { data: QueuePage }) => {
   const t = useTranslations("admin.advanced.queue");
@@ -66,6 +66,7 @@ export const QueueTableContent = ({ data }: { data: QueuePage }) => {
       edges={data.edges}
       filters={[
         {
+          defaultValues: QUEUE_DEFAULT_STATUSES,
           id: "status",
           label: t("list.statusFilter"),
           options: QUEUE_STATUSES.map(status => ({

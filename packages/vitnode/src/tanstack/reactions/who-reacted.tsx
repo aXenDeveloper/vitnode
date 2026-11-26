@@ -26,7 +26,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { UserFormat } from "@/components/user-format";
-import { UserPreview } from "@/components/user-preview";
+import { UserPreview, UserPreviewProvider } from "@/components/user-preview";
 
 import type { ReactionCatalogItem } from "./query";
 
@@ -152,54 +152,56 @@ const WhoReactedSheet = ({
             </Empty>
           ) : (
             <>
-              <ul className="flex flex-col">
-                {edges.map(edge => {
-                  const item = byCode.get(edge.reaction);
+              <UserPreviewProvider>
+                <ul className="flex flex-col">
+                  {edges.map(edge => {
+                    const item = byCode.get(edge.reaction);
 
-                  return (
-                    <li
-                      className="flex items-center gap-3 rounded-lg px-2 py-1.5"
-                      key={`${edge.user.id}-${edge.reaction}`}
-                    >
-                      <span className="relative shrink-0">
-                        <UserPreview
-                          className="flex rounded-full"
-                          decorative
-                          nameCode={edge.user.nameCode}
-                        >
-                          <Avatar
-                            alt=""
-                            className="size-8"
-                            size={32}
+                    return (
+                      <li
+                        className="flex items-center gap-3 rounded-lg px-2 py-1.5"
+                        key={`${edge.user.id}-${edge.reaction}`}
+                      >
+                        <span className="relative shrink-0">
+                          <UserPreview
+                            className="flex rounded-full"
+                            decorative
+                            nameCode={edge.user.nameCode}
+                          >
+                            <Avatar
+                              alt=""
+                              className="size-8"
+                              size={32}
+                              user={edge.user}
+                            />
+                          </UserPreview>
+                          {item ? (
+                            <span className="bg-background absolute -end-1 -bottom-1 flex size-5 items-center justify-center rounded-full border">
+                              <ReactionIcon
+                                className="size-3.5 text-xs"
+                                reaction={item}
+                              />
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <UserFormat
+                            className="min-w-0 truncate text-sm"
+                            format
+                            link
                             user={edge.user}
                           />
-                        </UserPreview>
-                        {item ? (
-                          <span className="bg-background absolute -end-1 -bottom-1 flex size-5 items-center justify-center rounded-full border">
-                            <ReactionIcon
-                              className="size-3.5 text-xs"
-                              reaction={item}
-                            />
+                          <span className="text-muted-foreground text-xs">
+                            {item ? reactionTitle(item, locale) : edge.reaction}
+                            {" · "}
+                            <DateFormat date={edge.createdAt} />
                           </span>
-                        ) : null}
-                      </span>
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <UserFormat
-                          className="min-w-0 truncate text-sm"
-                          format
-                          link
-                          user={edge.user}
-                        />
-                        <span className="text-muted-foreground text-xs">
-                          {item ? reactionTitle(item, locale) : edge.reaction}
-                          {" · "}
-                          <DateFormat date={edge.createdAt} />
                         </span>
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </UserPreviewProvider>
               {query.hasNextPage ? (
                 <Button
                   className="m-2"

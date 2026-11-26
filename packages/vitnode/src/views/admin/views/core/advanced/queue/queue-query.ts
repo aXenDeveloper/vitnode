@@ -1,3 +1,5 @@
+import type { QueueCleanScope } from "@vitnode/api/modules/queue/lib/process-queue-tasks";
+
 import { queryOptions } from "@tanstack/react-query";
 import { manifest } from "@vitnode/api/manifest";
 
@@ -6,7 +8,9 @@ import type {
   AdminTablePage,
   AdminTableParams,
 } from "@/views/admin/table/params";
+import type { AdminMutationResult } from "@/views/admin/views/core/shared/admin-mutation";
 
+import { fetcherClient } from "@/lib/fetcher-client";
 import { OPERATIONAL_STALE_TIME } from "@/lib/query-freshness";
 import { fetcher } from "@/tanstack/fetcher";
 import {
@@ -14,6 +18,7 @@ import {
   describeAdminParams,
 } from "@/views/admin/admin-request";
 import { adminQueryRoot } from "@/views/admin/table/query";
+import { runAdminApiMutation } from "@/views/admin/views/core/shared/admin-mutation";
 
 /** The statuses a task can be in - `QUEUE_STATUSES` on `getQueueTasksRoute`. */
 export const QUEUE_STATUSES = [
@@ -24,10 +29,17 @@ export const QUEUE_STATUSES = [
 ] as const;
 export type QueueStatus = (typeof QUEUE_STATUSES)[number];
 
+export const QUEUE_DEFAULT_STATUSES: readonly QueueStatus[] = [
+  "failed",
+  "pending",
+  "processing",
+];
+
 export const QUEUE_ORDER_BY = ["createdAt", "availableAt", "status"] as const;
 export type QueueOrderBy = (typeof QUEUE_ORDER_BY)[number];
 
 export const QUEUE_TABLE_CONTRACT: AdminTableContract<QueueOrderBy> = {
+  defaultStatus: QUEUE_DEFAULT_STATUSES,
   orderBy: QUEUE_ORDER_BY,
   status: QUEUE_STATUSES,
 };
@@ -97,4 +109,22 @@ export const queueQueryOptions = ({
     retry: false,
     /** {@link OPERATIONAL_STALE_TIME} - Jobs drain while the screen is open; a revisit should not show a queue that has already emptied. */
     staleTime: OPERATIONAL_STALE_TIME,
+  });
+
+/** Deletes finished tasks now. Pending and processing tasks are never touched. */
+export const cleanQueueTasks = async (
+  scope: QueueCleanScope,
+): Promise<AdminMutationResult<{ deleted: number }>> =>
+  await runAdminApiMutation({
+    expected: 200,
+    parse: async response => await response.json(),
+    request: async () =>
+      await fetcherClient({
+        plugin: manifest.id,
+        args: { body: { scope } },
+        method: "post",
+        module: "admin/advanced/queue",
+        options: { credentials: "include" },
+        path: "/clean",
+      }),
   });

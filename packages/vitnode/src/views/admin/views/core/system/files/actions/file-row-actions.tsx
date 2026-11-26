@@ -13,21 +13,23 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 
 import { ConfirmActionAlertDialog } from "@/components/confirm-action/confirm-action-alert-dialog";
+import { FilePreview } from "@/components/files/file-preview";
 import { useAdminStaffPermission } from "@/components/staff-permission/provider";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { TooltipWithContent } from "@/components/ui/tooltip";
 import { fetcherClient } from "@/lib/fetcher-client";
+import { FormFieldsPendingSkeleton } from "@/tanstack/pending/shapes";
 
 import type { DeleteAdminFile } from "../files-delete";
+import type { AdminFileRow } from "../files-query";
 
 const FileAltContent = React.lazy(async () =>
   import("../alt/file-alt-content").then(module => ({
@@ -37,55 +39,83 @@ const FileAltContent = React.lazy(async () =>
 
 const FILES_EDIT_ALT = coreStaffPermissions.admin.files.canEditAlt;
 
-const EditAltAction = ({ id, name }: { id: number; name: string }) => {
+const fileFacts = (file: AdminFileRow) =>
+  [
+    file.name,
+    file.dimensions
+      ? `${file.dimensions.width}×${file.dimensions.height}`
+      : null,
+    file.mimeType?.replace("image/", "").toUpperCase(),
+    file.folder,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+const EditAltAction = ({ file }: { file: AdminFileRow }) => {
   const t = useTranslations("admin.system.files.alt");
   const canEdit = useAdminStaffPermission(FILES_EDIT_ALT);
+  const [open, setOpen] = React.useState(false);
 
   return (
-    <Dialog>
+    <Sheet onOpenChange={setOpen} open={open}>
       <TooltipWithContent text={t("open")}>
-        <DialogTrigger
+        <SheetTrigger
           render={
             <Button aria-label={t("open")} size="icon-sm" variant="ghost" />
           }
         >
           <CaptionsIcon />
-        </DialogTrigger>
+        </SheetTrigger>
       </TooltipWithContent>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{t("title")}</DialogTitle>
-          <DialogDescription className="truncate">{name}</DialogDescription>
-        </DialogHeader>
+      <SheetContent className="w-full gap-0 data-[side=right]:w-full data-[side=right]:sm:max-w-sm">
+        <SheetHeader className="flex-row items-center gap-3">
+          <FilePreview
+            mimeType={file.mimeType}
+            name={file.name}
+            url={file.url}
+          />
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <SheetTitle className="truncate">{t("title")}</SheetTitle>
+            <SheetDescription className="truncate text-xs">
+              {fileFacts(file)}
+            </SheetDescription>
+          </div>
+        </SheetHeader>
         <React.Suspense
           fallback={
-            <div className="flex items-center justify-center p-6">
-              <Spinner size="xl" />
-            </div>
+            <FormFieldsPendingSkeleton
+              className="p-4"
+              footer="sheet"
+              rows={2}
+            />
           }
         >
-          <FileAltContent canEdit={canEdit} fileId={id} />
+          <FileAltContent
+            canEdit={canEdit}
+            fileId={file.id}
+            fileName={file.name}
+            onSaved={() => {
+              setOpen(false);
+            }}
+          />
         </React.Suspense>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 };
 
 export const FileRowActions = ({
   canDelete,
   canDownload,
-  id,
-  mimeType,
-  name,
+  file,
   onDelete,
 }: {
   canDelete: boolean;
   canDownload: boolean;
-  id: number;
-  mimeType: null | string;
-  name: string;
+  file: AdminFileRow;
   onDelete: DeleteAdminFile;
 }) => {
+  const { id, mimeType, name } = file;
   const t = useTranslations("admin.system.files");
   const tGlobal = useTranslations("core.global.errors");
   const [isDownloading, setIsDownloading] = React.useState(false);
@@ -131,7 +161,7 @@ export const FileRowActions = ({
 
   return (
     <div className="flex items-center justify-end gap-1">
-      {isImage ? <EditAltAction id={id} name={name} /> : null}
+      {isImage ? <EditAltAction file={file} /> : null}
 
       {canDownload && (
         <TooltipWithContent text={t("actions.download")}>

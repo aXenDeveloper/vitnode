@@ -20,6 +20,8 @@
     "test": "node --test src/tests/*.test.ts"
   },
   "dependencies": {
+    "@fontsource-variable/geist": "^5.3.0",
+    "@fontsource-variable/geist-mono": "^5.3.0",
     "@hono/zod-openapi": "^1.6.3",
     "@tailwindcss/vite": "^4.3.5",
     "@tanstack/charts": "^1.5.0",

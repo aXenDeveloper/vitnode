@@ -6,9 +6,13 @@ import { useTranslations } from "use-intl";
 
 import { ConfirmActionAlertDialog } from "../confirm-action/confirm-action-alert-dialog";
 import { Button } from "./button";
+import { DialogStackContext, useDialogStack } from "./dialog-stack";
 import {
+  dialogFooterFrameClassName,
+  dialogFrameClassName,
   dialogPopupMotionClassName,
   dialogScrimClassName,
+  dialogStackClassName,
 } from "./modal-scrim";
 
 const DialogContext = React.createContext<{
@@ -154,32 +158,49 @@ function DialogOverlay({
 /**
  * The dialog panel, rendered in a portal over a scrim. `showCloseButton`
  * (default `true`) adds an icon close button labelled with the translated
- * "Close".
+ * "Close". `overlayClassName` is merged into the scrim's classes.
  */
 function DialogContent({
   className,
   children,
+  overlayClassName,
   showCloseButton = true,
+  style,
   ...props
 }: DialogPrimitive.Popup.Props & {
+  overlayClassName?: string;
   showCloseButton?: boolean;
 }) {
   const t = useTranslations("core.global");
+  const {
+    initialFocus,
+    observePopup,
+    reportNested,
+    style: stackStyle,
+  } = useDialogStack();
 
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay className={overlayClassName} />
       <DialogPrimitive.Popup
         className={cn(
-          "bg-popover text-popover-foreground fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 grid-cols-[minmax(0,1fr)] gap-4 rounded-xl border p-6 shadow-xl sm:max-w-lg",
+          dialogFrameClassName,
+          dialogStackClassName,
+          "fixed top-1/2 left-1/2 z-50 grid w-[calc(100%-3rem)] -translate-x-1/2 -translate-y-1/2 grid-cols-[minmax(0,1fr)] gap-4 p-6 sm:max-w-lg",
           dialogPopupMotionClassName,
-          "max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-5rem)]",
+          "max-h-[calc(100dvh-3rem)] overflow-y-auto overscroll-contain sm:max-h-[calc(100dvh-6rem)]",
           className,
         )}
         data-slot="dialog-content"
+        initialFocus={initialFocus}
+        ref={observePopup}
+        style={state => ({
+          ...stackStyle,
+          ...(typeof style === "function" ? style(state) : style),
+        })}
         {...props}
       >
-        {children}
+        <DialogStackContext value={reportNested}>{children}</DialogStackContext>
         {showCloseButton && (
           <DialogPrimitive.Close
             className="absolute end-4 top-4"
@@ -229,7 +250,8 @@ function DialogFooter({
   return (
     <div
       className={cn(
-        "bg-muted/50 -mx-6 -mb-6 flex flex-col-reverse gap-2 border-t px-6 py-4 sm:flex-row sm:justify-end",
+        dialogFooterFrameClassName,
+        "flex flex-col-reverse gap-2 sm:flex-row sm:justify-end sm:[&>:first-child:not(:last-child)]:me-auto",
         className,
       )}
       data-slot="dialog-footer"

@@ -185,9 +185,8 @@ Then open `/register`. Google's badge appears in the bottom corner of the page,
 the **Register** button is enabled as soon as the script loads, and a completed
 registration means the score cleared `0.5`.
 
-The AdminCP confirms it from the other side: **AdminCP → System →
-Integrations** (`/admin/core/system/integrations`) shows the **Captcha** card as
-_Active_, with **reCAPTCHA v3** underneath.
+The AdminCP confirms it from the other side: **Debug Panel → Services**
+(`/admin/core/debug/services`) shows the **Captcha** row as _Active_.
 
 Google's own console is the third view. Under the registration's analytics you
 should see the request appear, with the score it was given.
