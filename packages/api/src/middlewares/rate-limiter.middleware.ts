@@ -96,12 +96,22 @@ const READ_METHODS = new Set(["GET", "HEAD"]);
 
 const PAYMENT_WEBHOOK_PATH = /\/@vitnode\/core\/payments\/webhooks\/[^/]+$/;
 
+const AUTO_TRANSLATE_LOOKUP_PATH = "/@vitnode/core/content/translations/lookup";
+
+const AUTO_TRANSLATE_REQUEST_PATH =
+  "/@vitnode/core/content/translations/request";
+
 export const rateLimiterCategoriesFor = (
   method: string,
   path: string,
 ): RateLimiterCategory[] => {
   if (method === "OPTIONS") return ["safety"];
-  if (READ_METHODS.has(method)) return ["safety", "read"];
+  if (
+    READ_METHODS.has(method) ||
+    (method === "POST" && path.endsWith(AUTO_TRANSLATE_LOOKUP_PATH))
+  ) {
+    return ["safety", "read"];
+  }
   if (method === "POST" && PAYMENT_WEBHOOK_PATH.test(path)) return ["safety"];
 
   const categories: RateLimiterCategory[] = ["safety", "write"];
@@ -115,7 +125,8 @@ export const rateLimiterCategoriesFor = (
   if (
     (method === "POST" || method === "PATCH") &&
     path.includes("/content/") &&
-    !path.includes("/admin/")
+    !path.includes("/admin/") &&
+    !path.endsWith(AUTO_TRANSLATE_REQUEST_PATH)
   ) {
     categories.push("contentWrite");
   }

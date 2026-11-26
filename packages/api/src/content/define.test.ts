@@ -1147,4 +1147,80 @@ describe("defineContentType", () => {
       );
     });
   });
+
+  describe("autoTranslate", () => {
+    const LOCALIZED = {
+      localization: { defaultLocale: "en", fallback: "default" },
+    } as const;
+
+    const translatable = (
+      overrides: Partial<Parameters<typeof defineContentType>[0]> = LOCALIZED,
+    ) => {
+      const localized = overrides.localization !== undefined;
+
+      return define({
+        fields: {
+          title: field.text({ localized, required: true }),
+          slug: field.slug({ localized, source: "title" }),
+          summary: field.richText({ localized, required: true }),
+          body: field.richText({ required: true }),
+        },
+        publication: true,
+        publicApi: {
+          path: "widgets",
+          fields: ["id", "title", "slug", "summary", "body"],
+        },
+        autoTranslate: { fields: ["summary", "body"] },
+        ...overrides,
+      } as never);
+    };
+
+    it.each<
+      [string, Partial<Parameters<typeof defineContentType>[0]>, boolean]
+    >([
+      ["a localized content type with a default fallback", LOCALIZED, true],
+      ["a content type that is not localized", {}, false],
+    ])(
+      "marks which fields are localized on %s",
+      (_case, overrides, summary) => {
+        expect(
+          translatable(overrides).autoTranslate.fields.map(entry => [
+            entry.name,
+            entry.localized,
+          ]),
+        ).toEqual([
+          ["summary", summary],
+          ["body", false],
+        ]);
+      },
+    );
+
+    it.each<[string, Partial<Parameters<typeof defineContentType>[0]>, RegExp]>(
+      [
+        [
+          "a localized field without a default-language fallback",
+          { localization: { defaultLocale: "en", fallback: "none" } },
+          /is localized, which needs `localization.fallback: "default"`/,
+        ],
+        [
+          "public fields without `id`",
+          {
+            ...LOCALIZED,
+            publicApi: {
+              path: "widgets",
+              fields: ["title", "slug", "summary", "body"],
+            },
+          },
+          /needs `id` in publicApi.fields/,
+        ],
+        [
+          "a field that is not rich text",
+          { ...LOCALIZED, autoTranslate: { fields: ["title" as never] } },
+          /autoTranslate field "title" must be a richText field/,
+        ],
+      ],
+    )("refuses %s", (_case, overrides, message) => {
+      expect(() => translatable(overrides)).toThrow(message);
+    });
+  });
 });

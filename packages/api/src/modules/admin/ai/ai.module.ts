@@ -5,6 +5,10 @@ import { estimateAiAdminRoute } from "./routes/assist-estimate.route";
 import { assistStreamAiAdminRoute } from "./routes/assist-stream.route";
 import { assistAiAdminRoute } from "./routes/assist.route";
 import { availableAiActionsAdminRoute } from "./routes/available.route";
+import {
+  getContentTranslationAdminRoute,
+  updateContentTranslationAdminRoute,
+} from "./routes/content-translation.route";
 import { deleteAiUserOverrideAdminRoute } from "./routes/delete-user-override.route";
 import { aiFeedbackAdminRoute } from "./routes/feedback.route";
 import { listAiHistoryAdminRoute } from "./routes/list-history.route";
@@ -44,5 +48,7 @@ export const aiAdminModule = buildModule({
     aiFeedbackAdminRoute,
     getTranslationSourcesAdminRoute,
     saveTranslationSourcesAdminRoute,
+    getContentTranslationAdminRoute,
+    updateContentTranslationAdminRoute,
   ],
 });

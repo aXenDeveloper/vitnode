@@ -32,7 +32,8 @@ export interface RateLimiterConfig {
   blockDuration?: number;
   /**
    * POST and PATCH requests to non-admin Content Engine routes (paths with
-   * `/content/` and no `/admin/`). Defaults to 20 per 60 s.
+   * `/content/` and no `/admin/`, excluding core's translation endpoints).
+   * Defaults to 20 per 60 s.
    */
   contentWrite?: RateLimiterCategoryOptions;
   /** @deprecated Moved to `rateLimiter.safety.duration`. */
@@ -49,7 +50,7 @@ export interface RateLimiterConfig {
   perUser?: boolean;
   /** @deprecated Moved to `rateLimiter.safety.points`. */
   points?: number;
-  /** `GET` and `HEAD` requests. Defaults to 300 per 60 s. */
+  /** `GET` and `HEAD` requests, plus the read-only translation lookup `POST`. Defaults to 300 per 60 s. */
   read?: RateLimiterCategoryOptions;
   /**
    * The cap on every request, counted per IP. Defaults to 1000 per 60 s (80

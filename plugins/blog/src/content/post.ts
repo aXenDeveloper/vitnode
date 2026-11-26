@@ -31,6 +31,7 @@ export const blogPostContentType = defineContentType({
   },
 
   publication: true,
+  autoTranslate: { fields: ["content"] },
 
   // An article is readable only when every one of its categories allows it.
   // Comments under it follow the article without an option of their own.

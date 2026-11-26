@@ -189,19 +189,27 @@ const PostDates = ({ item }: { item: BlogArticleItem }) => {
 export const BlogArticle = ({
   categories,
   children,
+  contentLocale,
   footer,
   hidden,
   item,
+  elementRef,
   locale,
   meta,
+  note,
 }: {
   categories: BlogCategory[];
   children?: React.ReactNode;
+  contentLocale?: null | string;
+  /** Attached to the `<article>`, e.g. `useAutoTranslation`'s `elementRef`. */
+  elementRef?: (element: Element | null) => void;
   footer?: React.ReactNode;
   hidden: boolean;
   item: BlogArticleItem;
   locale: null | string;
   meta?: React.ReactNode;
+  /** Rendered right under the body, e.g. an `AutoTranslateNote`. */
+  note?: React.ReactNode;
 }) => {
   const t = useTranslations("@vitnode/blog.post");
   const outline = React.useMemo(
@@ -224,6 +232,7 @@ export const BlogArticle = ({
     <article
       className="mx-auto flex w-full max-w-7xl flex-col gap-10 px-4 py-8 md:gap-14 md:py-12"
       lang={locale ?? undefined}
+      ref={elementRef}
     >
       <BlogTransitionStyles />
       <header className="flex flex-col items-center gap-5 text-center">
@@ -313,11 +322,14 @@ export const BlogArticle = ({
             />
           ) : null}
 
-          <RichTextContent
-            className="text-foreground leading-relaxed text-pretty"
-            content={item.content}
-            nodes={nodes}
-          />
+          <div lang={contentLocale ?? undefined}>
+            <RichTextContent
+              className="text-foreground leading-relaxed text-pretty"
+              content={item.content}
+              nodes={nodes}
+            />
+          </div>
+          {note}
 
           {footer ? (
             <footer className="flex flex-wrap items-center justify-between gap-3 border-t pt-6">

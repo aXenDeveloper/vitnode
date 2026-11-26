@@ -27,6 +27,7 @@ export const commentContentType = defineContentType({
 
   publication: true,
   visibility: true,
+  autoTranslate: { fields: ["body"] },
   // A comment has no title of its own, so moderators read its body.
   reports: { snapshotFields: ["body"] },
   reactions: true,

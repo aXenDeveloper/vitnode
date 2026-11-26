@@ -47,7 +47,9 @@ const loadBlogCategory = async (
   }
 
   // Nothing to list in a category the viewer may see but not read.
-  if (!selected.access.canRead) return { categories, posts: null, selected };
+  if (!selected.access.canRead) {
+    return { categories, posts: null, selected };
+  }
 
   const posts = await queryClient
     .query({

@@ -11,6 +11,13 @@ import {
 import { contentTarget } from "@vitnode/core/content";
 import { LOADER_DATA_QUERY_META } from "@vitnode/core/lib/query-client";
 import {
+  autoTranslateItem,
+  AutoTranslateNote,
+  AutoTranslateScope,
+  loadAutoTranslateSnapshot,
+  useAutoTranslation,
+} from "@vitnode/core/tanstack/auto-translate";
+import {
   ContentAccessRequired,
   contentDeliveryPage,
   contentDeliveryPageHead,
@@ -22,7 +29,7 @@ import { ReactionBar } from "@vitnode/core/tanstack/reactions";
 import { useRecordView } from "@vitnode/core/tanstack/search";
 import { ArrowLeftIcon, Share2Icon } from "lucide-react";
 import React from "react";
-import { useFormatter, useTranslations } from "use-intl";
+import { useFormatter, useLocale, useTranslations } from "use-intl";
 
 import { blogPostContentType } from "@/content/post";
 import { manifest } from "@/manifest.gen";
@@ -35,6 +42,10 @@ import { blogCategoriesQueryOptions } from "./blog-queries";
 import { rememberBlogArticle } from "./blog-transitions";
 import { BlogArticle } from "./post-article";
 import { PostComments } from "./post-comments";
+import {
+  postCommentAutoTranslateItem,
+  postCommentsQueryOptions,
+} from "./post-comments-data";
 import { blogPostQueryOptions } from "./post-query";
 
 const loadBlogPost = async (
@@ -54,6 +65,29 @@ const loadBlogPost = async (
   if (answer.accessRequired) return { accessRequired: true as const };
 
   const page = contentDeliveryPage(answer);
+  const comments = page.metadata.hidden
+    ? null
+    : await queryClient
+        .infiniteQuery(postCommentsQueryOptions(page.item.id))
+        .catch(() => null);
+  const translations = page.metadata.hidden
+    ? null
+    : await loadAutoTranslateSnapshot(queryClient, {
+        items: [
+          autoTranslateItem(
+            blogPostContentType.id,
+            page.item.id,
+            { content: page.item.content },
+            { recordLocale: page.item.locale },
+          ),
+          ...(comments?.pages ?? []).flatMap(commentPage =>
+            commentPage.items.flatMap(node =>
+              node.record ? [postCommentAutoTranslateItem(node.record)] : [],
+            ),
+          ),
+        ],
+        locale: request.locale,
+      });
   // Only the article's own categories count, all of them: commenting needs
   // every one to allow it. A category missing from the list is one the reader
   // may not see, and then the article would not have loaded at all.
@@ -68,6 +102,7 @@ const loadBlogPost = async (
     accessRequired: false as const,
     canComment,
     categories: categories.items,
+    translations,
   };
 };
 
@@ -115,7 +150,9 @@ const BlogPostPage = ({ loaderData }: PluginRoutePageProps<BlogPostPageData>) =>
   loaderData.accessRequired ? (
     <BlogPostAccessRequired />
   ) : (
-    <BlogPostArticle loaderData={loaderData} />
+    <AutoTranslateScope initial={loaderData.translations}>
+      <BlogPostArticle loaderData={loaderData} />
+    </AutoTranslateScope>
   );
 
 const BlogPostArticle = ({
@@ -124,6 +161,13 @@ const BlogPostArticle = ({
   loaderData: BlogPostArticleData;
 }) => {
   const t = useTranslations("@vitnode/blog.post");
+  const readerLocale = useLocale();
+  const { elementRef, ...translation } = useAutoTranslation({
+    contentTypeId: blogPostContentType.id,
+    fields: { content: item.content },
+    id: item.id,
+    recordLocale: item.locale,
+  });
   const format = useFormatter();
   const router = useRouter();
 
@@ -150,6 +194,8 @@ const BlogPostArticle = ({
   return (
     <BlogArticle
       categories={categories}
+      contentLocale={translation.isTranslated ? readerLocale : null}
+      elementRef={elementRef}
       footer={
         !metadata.hidden && metadata.itemId !== null ? (
           <>
@@ -206,8 +252,9 @@ const BlogPostArticle = ({
         ) : null
       }
       hidden={metadata.hidden}
-      item={item}
+      item={{ ...item, content: translation.values.content }}
       locale={metadata.locale}
+      note={<AutoTranslateNote translation={translation} />}
     >
       {metadata.itemId !== null ? (
         <PostComments

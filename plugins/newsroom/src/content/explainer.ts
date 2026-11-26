@@ -13,7 +13,6 @@ export const explainerContentType = defineContentType({
   },
 
   publication: true,
-
   editorial: {
     revisions: { retention: 20 },
     preview: { expiresInMinutes: 30 },

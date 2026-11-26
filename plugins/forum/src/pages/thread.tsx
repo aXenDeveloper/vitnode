@@ -13,6 +13,10 @@ import {
 import { contentTarget, zodRichTextDocument } from "@vitnode/core/content";
 import { useRevealHashTarget } from "@vitnode/core/hooks/use-reveal-hash-target";
 import { useSessionQuery } from "@vitnode/core/tanstack/auth";
+import {
+  AutoTranslateNote,
+  useAutoTranslation,
+} from "@vitnode/core/tanstack/auto-translate";
 import { ContentAccessRequired } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
@@ -153,6 +157,11 @@ const CommentBody = ({
   const { canEdit, canReport } = actions.permissionsOf(comment.id);
   const canAnswer = actions.canComment && node.depth < FORUM_COMMENT_MAX_DEPTH;
   const authorId = `${commentAnchorId(comment.slug)}-author`;
+  const { elementRef, ...translation } = useAutoTranslation({
+    contentTypeId: commentContentType.id,
+    fields: { body: comment.body },
+    id: comment.id,
+  });
   const edited =
     comment.publishedAt !== null &&
     new Date(comment.updatedAt).getTime() -
@@ -160,7 +169,7 @@ const CommentBody = ({
       60_000;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2" ref={elementRef}>
       <header className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm leading-relaxed">
         <PersonAvatar person={comment.author} size={24} />
         <span id={authorId}>
@@ -198,10 +207,13 @@ const CommentBody = ({
           }}
         />
       ) : (
-        <RichTextContent
-          className="text-foreground leading-relaxed text-pretty"
-          content={comment.body}
-        />
+        <>
+          <RichTextContent
+            className="text-foreground leading-relaxed text-pretty"
+            content={translation.values.body}
+          />
+          <AutoTranslateNote translation={translation} />
+        </>
       )}
 
       {editing ? null : (

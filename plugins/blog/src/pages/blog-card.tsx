@@ -286,6 +286,12 @@ const PostHiddenIcon = ({
   ) : null;
 };
 
+const usePostLang = (post: BlogPostCardData) => {
+  const locale = useLocale();
+
+  return post.locale === locale ? undefined : post.locale;
+};
+
 const PostTitleLink = ({
   className,
   post,
@@ -322,7 +328,7 @@ export const BlogPostTile = ({
   isLead?: boolean;
   post: BlogPostCardData;
 }) => {
-  const locale = useLocale();
+  const lang = usePostLang(post);
 
   return (
     <article
@@ -331,7 +337,7 @@ export const BlogPostTile = ({
         cardFocus,
         className,
       )}
-      lang={post.locale === locale ? undefined : post.locale}
+      lang={lang}
     >
       <BlogPostCover
         className="absolute inset-0 -z-10"
@@ -398,7 +404,7 @@ export const BlogPostCard = ({
   categories: Categories;
   post: BlogPostCardData;
 }) => {
-  const locale = useLocale();
+  const lang = usePostLang(post);
 
   return (
     <article
@@ -406,7 +412,7 @@ export const BlogPostCard = ({
         "group bg-card text-card-foreground relative grid grid-cols-1 gap-4 rounded-2xl p-2 shadow-xs ring-1 ring-black/5 transition-shadow duration-150 ease-out hover:shadow-md hover:ring-black/10 sm:grid-cols-[16rem_1fr] sm:gap-6 md:grid-cols-[18rem_1fr] dark:ring-white/10 dark:hover:ring-white/20",
         cardFocus,
       )}
-      lang={post.locale === locale ? undefined : post.locale}
+      lang={lang}
     >
       <div
         className="relative isolate overflow-hidden rounded-lg"

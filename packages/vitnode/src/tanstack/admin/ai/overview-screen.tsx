@@ -8,6 +8,7 @@ import React from "react";
 
 import { PageTitle } from "@/components/ui/page-title";
 import { CardsPendingSkeleton } from "@/tanstack/pending";
+import { ContentTranslationSheet } from "@/views/admin/views/core/ai/content-translation/content-translation-sheet";
 import {
   AiOverviewContent,
   AiOverviewRangePicker,
@@ -89,6 +90,7 @@ export const AdminAiOverviewRouteContent = ({
               onSave={updateSettings}
               open={settingsOpen}
             />
+            <ContentTranslationSheet adminUserId={adminUserId} />
           </div>
         </PageTitle>
 

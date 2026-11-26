@@ -26,6 +26,7 @@ export const commentContentType = defineContentType({
   },
 
   publication: true,
+  autoTranslate: { fields: ["body"] },
   visibility: true,
   reports: { titleField: "body", snapshotFields: ["body"] },
   reactions: true,

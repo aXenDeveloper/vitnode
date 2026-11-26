@@ -92,6 +92,11 @@
       "import": "./dist/src/content/index.js",
       "default": "./dist/src/content/index.js"
     },
+    "./content/auto-translate": {
+      "types": "./dist/src/content/auto-translate/index.d.ts",
+      "import": "./dist/src/content/auto-translate/index.js",
+      "default": "./dist/src/content/auto-translate/index.js"
+    },
     "./content/editor": {
       "types": "./dist/src/content/editor/index.d.ts",
       "import": "./dist/src/content/editor/index.js",
@@ -541,6 +546,7 @@
     "commander": "^15.1.0",
     "cron-parser": "^5.10.6",
     "dotenv": "^18.0.10",
+    "franc-min": "6.2.0",
     "jiti": "^2.7.0",
     "jose": "^6.2.18",
     "ocache": "^0.3.2",

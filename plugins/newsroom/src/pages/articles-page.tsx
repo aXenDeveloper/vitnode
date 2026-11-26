@@ -28,14 +28,17 @@ import { articleList, articlesQueryOptions } from "./article-list";
 const loadArticles = async (
   { locale, queryClient }: RouteLoadContext,
   search: ArticleListSearch,
-) =>
+) => {
   // A failed list becomes a message on the page, not an error page.
-  await queryClient
+  const articles = await queryClient
     .query({
       ...articlesQueryOptions({ locale, search }),
       meta: LOADER_DATA_QUERY_META,
     })
     .catch(() => null);
+
+  return { articles };
+};
 
 type ArticlesPageData = Awaited<ReturnType<typeof loadArticles>>;
 
@@ -51,8 +54,28 @@ export const route = defineRoute<ArticlesPageData, ArticleListSearch>({
     }),
 });
 
+const ArticleRow = ({
+  article,
+}: {
+  article: NonNullable<ArticlesPageData["articles"]>["edges"][number];
+}) => (
+  <div className="flex flex-col gap-1">
+    <HrefLink
+      className="text-lg font-medium hover:underline"
+      href={`/news/${article.slug}`}
+    >
+      {article.title}
+    </HrefLink>
+    {article.publishedAt ? (
+      <span className="text-muted-foreground text-sm">
+        <DateFormat date={article.publishedAt} />
+      </span>
+    ) : null}
+  </div>
+);
+
 const ArticlesPage = ({
-  loaderData: articles,
+  loaderData: { articles },
   navigate,
   search,
 }: PluginRoutePageProps<ArticlesPageData, ArticleListSearch>) => {
@@ -123,26 +146,12 @@ const ArticlesPage = ({
         isError={articles === null}
         isFetching={isPending}
         isFiltered={articleList.isFiltered(search)}
-        itemClassName="flex flex-col gap-1 p-4"
+        itemClassName="p-4"
         items={articles?.edges}
         label={t("title")}
         loading={null}
         noResults={<p className="text-muted-foreground">{t("no_results")}</p>}
-        renderItem={article => (
-          <>
-            <HrefLink
-              className="text-lg font-medium hover:underline"
-              href={`/news/${article.slug}`}
-            >
-              {article.title}
-            </HrefLink>
-            {article.publishedAt ? (
-              <span className="text-muted-foreground text-sm">
-                <DateFormat date={article.publishedAt} />
-              </span>
-            ) : null}
-          </>
-        )}
+        renderItem={article => <ArticleRow article={article} />}
       />
 
       {articles ? (

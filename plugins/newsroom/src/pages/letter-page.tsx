@@ -13,6 +13,13 @@ import {
   zodContentPublicPerson,
   zodRichTextDocument,
 } from "@vitnode/core/content";
+import {
+  autoTranslateItem,
+  AutoTranslateNote,
+  AutoTranslateScope,
+  loadAutoTranslateSnapshot,
+  useAutoTranslation,
+} from "@vitnode/core/tanstack/auto-translate";
 import { contentPageItem } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
 import { HrefLink } from "@vitnode/core/tanstack/link";
@@ -26,6 +33,7 @@ import { toast } from "sonner";
 import { useTranslations } from "use-intl";
 import { z } from "zod";
 
+import { letterContentType } from "@/content/letter";
 import { manifest } from "@/manifest.gen";
 
 import type { LetterSearch } from "./letter-search";
@@ -47,7 +55,7 @@ const zodLetter = z.object({
 });
 
 const loadLetter = async (
-  queryClient: RouteLoadContext["queryClient"],
+  { locale, queryClient }: RouteLoadContext,
   slug: string,
 ) => {
   const detail = await fetcher({
@@ -64,38 +72,61 @@ const loadLetter = async (
   // Only the author and moderators get a hidden letter; readers get 404.
   const hidden = detail.headers.get(CONTENT_HIDDEN_HEADER) === "true";
 
-  // Needs `item.desk`, so it cannot start any sooner - but it is the same
-  // cached entry the desk page reads, so moving between the two is free.
-  const desk = await queryDesk(queryClient, String(item.desk)).catch(
-    () => null,
-  );
-
-  if (!desk) return { ...item, deskTrail: [], hidden };
+  const [desk, translations] = await Promise.all([
+    // Needs `item.desk`, so it cannot start any sooner - but it is the same
+    // cached entry the desk page reads, so moving between the two is free.
+    queryDesk(queryClient, String(item.desk)).catch(() => null),
+    loadAutoTranslateSnapshot(queryClient, {
+      items: [
+        autoTranslateItem(letterContentType.id, item.id, {
+          body: item.body,
+        }),
+      ],
+      locale,
+    }),
+  ]);
 
   return {
     ...item,
-    deskTrail: [...desk.ancestors, desk.container],
+    deskTrail: desk ? [...desk.ancestors, desk.container] : [],
     hidden,
+    translations,
   };
 };
 
 type LetterPageData = Awaited<ReturnType<typeof loadLetter>>;
 
 export const route = defineRoute<LetterPageData, LetterSearch>({
-  load: async ({ context, params }) =>
-    await loadLetter(context.queryClient, params.slug),
+  load: async ({ context, params }) => await loadLetter(context, params.slug),
 
   head: ({ loaderData }) => ({ title: loaderData?.title }),
 
   breadcrumb: ({ loaderData }) => <span>{loaderData.title}</span>,
 });
 
-const LetterPage = ({
+const LetterPage = (
+  props: PluginRoutePageProps<LetterPageData, LetterSearch>,
+) => (
+  <AutoTranslateScope
+    initial={props.loaderData.translations}
+    // A new store per record: moving to another one starts from its snapshot.
+    key={props.loaderData.id}
+  >
+    <LetterView {...props} />
+  </AutoTranslateScope>
+);
+
+const LetterView = ({
   loaderData: item,
   navigate,
   search,
 }: PluginRoutePageProps<LetterPageData, LetterSearch>) => {
   const t = useTranslations("newsroom.letters.detail");
+  const { elementRef, ...translation } = useAutoTranslation({
+    contentTypeId: letterContentType.id,
+    fields: { body: item.body },
+    id: item.id,
+  });
   const permissions = useLetterPermissions([item.id]);
   const created = search.created === true;
   const announcedRef = useRef(false);
@@ -110,7 +141,11 @@ const LetterPage = ({
   }, [created, navigate, t]);
 
   return (
-    <ContentStory publishedAt={item.publishedAt} title={item.title}>
+    <ContentStory
+      elementRef={elementRef}
+      publishedAt={item.publishedAt}
+      title={item.title}
+    >
       {item.deskTrail.length > 0 ? (
         <nav aria-label={t("desk")}>
           <ol className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm leading-relaxed">
@@ -166,8 +201,9 @@ const LetterPage = ({
 
       <RichTextContent
         className="text-foreground leading-relaxed text-pretty"
-        content={item.body}
+        content={translation.values.body}
       />
+      <AutoTranslateNote translation={translation} />
     </ContentStory>
   );
 };

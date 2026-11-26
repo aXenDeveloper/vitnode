@@ -1,12 +1,11 @@
-import {
-  definePluginRoute,
-  type PluginRoutePageProps,
-} from "@vitnode/core/routing";
+import type { PluginRoutePageProps } from "@vitnode/core/routing";
+
 import {
   contentDeliveryPage,
   contentDeliveryPageHead,
 } from "@vitnode/core/tanstack/content";
 import { fetcher } from "@vitnode/core/tanstack/fetcher";
+import { defineRoute } from "@vitnode/core/tanstack/plugin-routes";
 import { z } from "zod";
 
 import { manifest } from "@/manifest.gen";
@@ -15,6 +14,7 @@ import { ContentStory } from "./content-story";
 
 const zodStory = z.object({
   excerpt: z.string().nullable(),
+  id: z.number(),
   publishedAt: z.string().nullable(),
   title: z.string(),
 });
@@ -51,7 +51,7 @@ const loadStory = async (slug: string) => {
 
 type StoryPageData = Awaited<ReturnType<typeof loadStory>>;
 
-export const route = definePluginRoute({
+export const route = defineRoute<StoryPageData>({
   load: async ({ params }) => await loadStory(params.slug),
 
   head: ({ loaderData }) =>

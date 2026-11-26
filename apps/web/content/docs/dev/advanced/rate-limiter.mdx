@@ -24,6 +24,8 @@ So a sign-in spends the safety cap, the write budget and the sign-in budget. A `
 
 [Payment provider webhooks](/docs/dev/payments/custom-provider#webhooks) (`POST /api/@vitnode/core/payments/webhooks/{id}`) spend only the safety cap. They come in bursts from a few provider IPs and are authenticated by their signature, so the write budget would only refuse real deliveries.
 
+[Automatic translation](/docs/dev/ai/automatic-translation) routes under `/@vitnode/core/content/translations/` do not spend the content-write budget: `POST .../lookup` is read-only and spends the read budget, while `POST .../request` spends the write budget and has its own per-reader hourly limit.
+
 The sign-in budget covers:
 
 - `POST /users/sign_in` and `POST /users/sign_up`

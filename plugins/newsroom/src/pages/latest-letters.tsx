@@ -7,6 +7,22 @@ import { useLocale, useTranslations } from "use-intl";
 import { LETTERS_HREF, lettersQueryOptions } from "./letter-list";
 import { letterHref } from "./letter-search";
 
+const LatestLetter = ({
+  letter,
+}: {
+  letter: { slug: null | string; title: string };
+}) =>
+  letter.slug === null ? (
+    <span className="text-foreground font-medium">{letter.title}</span>
+  ) : (
+    <HrefLink
+      className="text-foreground font-medium hover:underline"
+      href={letterHref(letter.slug)}
+    >
+      {letter.title}
+    </HrefLink>
+  );
+
 /**
  * The five newest letters, for any page. Shares its cache entry with the
  * first page of `/letters`, so warming either warms both.
@@ -59,18 +75,7 @@ export const LatestLetters = () => {
           </p>
         }
         noResults={null}
-        renderItem={letter =>
-          letter.slug === null ? (
-            <span className="text-foreground font-medium">{letter.title}</span>
-          ) : (
-            <HrefLink
-              className="text-foreground font-medium hover:underline"
-              href={letterHref(letter.slug)}
-            >
-              {letter.title}
-            </HrefLink>
-          )
-        }
+        renderItem={letter => <LatestLetter letter={letter} />}
       />
     </section>
   );

@@ -108,6 +108,15 @@ const useSharedRenderViewerId = (): null | number => {
   return isSharedRender ? (session.data?.user?.id ?? null) : null;
 };
 
+interface BlogIndexProps {
+  categories: BlogCategories;
+  hrefFor: (page: number) => string;
+  page: number;
+  posts: BlogPostPage | null;
+  search: BlogListSearch;
+  selected?: BlogCategory;
+}
+
 export const BlogIndex = ({
   categories: renderedCategories,
   hrefFor,
@@ -115,14 +124,7 @@ export const BlogIndex = ({
   posts: renderedPosts,
   search,
   selected: renderedSelected,
-}: {
-  categories: BlogCategories;
-  hrefFor: (page: number) => string;
-  page: number;
-  posts: BlogPostPage | null;
-  search: BlogListSearch;
-  selected?: BlogCategory;
-}) => {
+}: BlogIndexProps) => {
   const t = useTranslations("@vitnode/blog.list");
   const locale = useLocale();
   const viewerId = useSharedRenderViewerId();

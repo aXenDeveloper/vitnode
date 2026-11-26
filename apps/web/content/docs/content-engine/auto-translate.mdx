@@ -1,0 +1,271 @@
+---
+title: Automatic translation
+description: Let readers get a VitNode Content Engine type's public posts machine-translated into their language with the autoTranslate option, AutoTranslateScope and useAutoTranslation.
+icon: Languages
+---
+
+`autoTranslate` lets readers see a content type's public rich-text content in their own language, translated by AI once and shared by everyone. Titles and other plain text always stay as the author wrote them. It works on plain and on [localized](/docs/content-engine/localization) content types. This guide opts a content type in and adds the translation controls to its pages, using the `@vitnode/forum` plugin's topics and replies, then shows what changes for a localized type such as a blog article. Site owners turn the feature on and set its budget as described in [Automatic translation](/docs/dev/ai/automatic-translation).
+
+## Before you begin
+
+- A content type with `publicApi` and `publication`, with `id` in `publicApi.fields`. Only published records that every guest may read are translated.
+- A model with `text` and `structured-output`, and pricing, in `vitnode.api.config.ts`.
+
+<Steps>
+
+<Step>
+
+### Opt the content type in
+
+List the fields to translate. They must be `richText` fields in `publicApi.fields`; anything else, a title included, is a type error and stops the app at boot.
+
+```ts title="plugins/forum/src/content/topic.ts (excerpt)"
+export const topicContentType = defineContentType({
+  id: "forum.topic",
+  // ...
+  publication: true,
+  visibility: true,
+  autoTranslate: { fields: ["body"] }, // [!code ++]
+});
+```
+
+Replies list their own body too:
+
+```ts title="plugins/forum/src/content/comment.ts (excerpt)"
+autoTranslate: { fields: ["body"] },
+```
+
+Translations live in core tables, so nothing in your plugin needs migrating.
+
+</Step>
+
+<Step>
+
+### Read saved translations in the loader
+
+`loadAutoTranslateSnapshot()` reads the reader's settings and every saved translation of what the page renders, in one batched, read-only request. `autoTranslateItem()` fingerprints each field you pass.
+
+```tsx title="plugins/forum/src/pages/topic-page.tsx (excerpt)"
+import {
+  autoTranslateItem,
+  loadAutoTranslateSnapshot,
+} from "@vitnode/core/tanstack/auto-translate";
+
+const translations = await loadAutoTranslateSnapshot(queryClient, {
+  items: [
+    autoTranslateItem(topicContentType.id, topic.id, { body: topic.body }),
+    ...replies.map(reply =>
+      autoTranslateItem(commentContentType.id, reply.id, { body: reply.body }),
+    ),
+  ],
+  locale,
+});
+
+return { ...loaderData, translations };
+```
+
+Pass exactly the values the page renders. A list that shows only titles has nothing to translate and needs none of this.
+
+</Step>
+
+<Step>
+
+### Wrap the page in a scope
+
+`AutoTranslateScope` holds the page's translations, watches which records are on screen and batches the requests.
+
+```tsx title="plugins/forum/src/pages/topic-page.tsx (excerpt)"
+import { AutoTranslateScope } from "@vitnode/core/tanstack/auto-translate";
+
+const TopicPage = (props: PluginRoutePageProps<TopicPageData>) => (
+  <AutoTranslateScope initial={props.loaderData.translations}>
+    <TopicPageInner {...props} />
+  </AutoTranslateScope>
+);
+```
+
+</Step>
+
+<Step>
+
+### Render translated fields
+
+`useAutoTranslation()` returns each field as the page should show it: the translation when there is one for this exact text, otherwise the original. Attach `elementRef` to the element that holds the record, and render `AutoTranslateNote` for "Automatically translated · Show original" and the **Translate** button.
+
+```tsx title="plugins/forum/src/pages/topic-page.tsx (excerpt)"
+import {
+  AutoTranslateNote,
+  useAutoTranslation,
+} from "@vitnode/core/tanstack/auto-translate";
+
+const TopicBody = ({ topic }: { topic: TopicData }) => {
+  const { elementRef, ...translation } = useAutoTranslation({
+    contentTypeId: topicContentType.id,
+    fields: { body: topic.body },
+    id: topic.id,
+  });
+
+  return (
+    <article ref={elementRef}>
+      <h1>{topic.title}</h1>
+      <RichTextContent content={translation.values.body} />
+      <AutoTranslateNote translation={translation} />
+    </article>
+  );
+};
+```
+
+Every control renders nothing while the site has the feature off. Members turn automatic translation on or off in **Settings → Overview**, so your pages need no switch of their own.
+
+</Step>
+
+</Steps>
+
+## Translated when written
+
+You don't queue anything yourself. Every write the Content Engine announces (a create, a publish, an unhide, or an edit of a translated field) queues the record for every allowed language right after the response. By the time someone reads it, the translation is usually saved, so it shows on the first render. A language the text is already in is skipped without calling the model.
+
+A record that has no translation yet keeps its original on screen for that visit, with a **Translate** button under it; the job keeps running in the background. The page never polls and never swaps text on its own; the next visit shows the translation automatically. A reader who clicks **Translate** gets it right away: only that click waits for the result.
+
+## Comment threads
+
+Pass `autoTranslate` to `useContentComments()` inside an `AutoTranslateScope`. Every page of comments, including **Load more** and live updates, then waits for its saved translations in one request before it renders, so comments never flip from the original to the translation:
+
+```ts title="plugins/blog/src/pages/post-comments-data.ts (excerpt)"
+import { autoTranslateItem } from "@vitnode/core/tanstack/auto-translate";
+
+useContentComments({
+  ...postCommentsThread(articleId),
+  autoTranslate: comment => // [!code ++]
+    autoTranslateItem(blogCommentContentType.id, comment.id, { body: comment.body }), // [!code ++]
+});
+```
+
+For the first page, warm the thread in the route's loader and add its comments to `loadAutoTranslateSnapshot()`, so they arrive translated with the page's HTML:
+
+```ts title="plugins/blog/src/pages/post-page.tsx (excerpt)"
+const comments = await queryClient
+  .infiniteQuery(postCommentsQueryOptions(page.item.id))
+  .catch(() => null);
+const translations = await loadAutoTranslateSnapshot(queryClient, {
+  items: [
+    autoTranslateItem(blogPostContentType.id, page.item.id, { content: page.item.content }),
+    ...(comments?.pages ?? []).flatMap(commentPage =>
+      commentPage.items.flatMap(node =>
+        node.record ? [postCommentAutoTranslateItem(node.record)] : [],
+      ),
+    ),
+  ],
+  locale,
+});
+```
+
+## Localized content types
+
+On a content type with `localization`, editors write each language themselves, and their translation always wins. Automatic translation fills the gap: a reader whose language has no editorial translation is served the default language, and that text is translated. A localized field therefore needs `fallback: "default"`:
+
+```ts title="plugins/blog/src/content/post.ts (excerpt)"
+export const blogPostContentType = defineContentType({
+  id: "blog.post",
+  localization: { defaultLocale: "en", fallback: "default" },
+  publication: true,
+  autoTranslate: { fields: ["content"] }, // [!code ++]
+  // ...
+});
+```
+
+The server knows which language it served. Pages pass that language too, the public row's `locale`, as `recordLocale`:
+
+```tsx title="plugins/blog/src/pages/post-page.tsx (excerpt)"
+const translations = await loadAutoTranslateSnapshot(queryClient, {
+  items: [
+    autoTranslateItem(
+      blogPostContentType.id,
+      item.id,
+      { content: item.content },
+      { recordLocale: item.locale }, // [!code ++]
+    ),
+  ],
+  locale,
+});
+
+const { elementRef, ...translation } = useAutoTranslation({
+  contentTypeId: blogPostContentType.id,
+  fields: { content: item.content },
+  id: item.id,
+  recordLocale: item.locale, // [!code ++]
+});
+```
+
+Without `recordLocale` every field answers `stale`. When the row is already in the reader's language, each field answers `original` and nothing is translated. Once an editor adds that language, it is served instead of the machine translation.
+
+## Check the result
+
+Turn the feature on in the AdminCP, sign in as a member with Polish as the language, and open a topic written in English. If it has no translation yet, a **Translate** button sits under the body: click it and the Polish text replaces the English one. Reload: the body now renders translated straight away, with **Automatically translated from English**. The title stays in English.
+
+## How a translation stays correct
+
+Every request names the fingerprint of the text the page renders, a SHA-256 of the field name and its value (and, on a localized content type, the language it was served in). The server computes the same fingerprint from the stored record and answers `stale` when they differ, so a translation is never shown for text that changed. An edited reply shows its original until the new version is translated, and a title-only edit leaves the body's translation alone, since titles are never translated.
+
+The server reads each record through the content type's public read service, as a guest, before answering, before calling the model and again before storing the result. A draft, a hidden record, a record awaiting approval or one in a closed container answers `unavailable` with reason `not_found`, exactly like a record that does not exist.
+
+## API
+
+All routes are in `@vitnode/core`'s `content` module and answer with `Cache-Control: private, no-store`.
+
+| Route                             | Does                                                                                                 |
+| :-------------------------------- | :--------------------------------------------------------------------------------------------------- |
+| `GET /translations/settings`      | The site switch, the reader's choice and the allowed languages                                       |
+| `PUT /translations/preference`    | Saves the reader's choice on the account (the settings page uses it); a guest's goes in the `vitnode-auto-translate` cookie |
+| `POST /translations/lookup`       | Saved translations and each field's state. Read-only: never queues work or calls a model             |
+| `POST /translations/request`      | The same, and for a signed-in reader, queues the eligible misses. `mode` is `automatic` or `manual`; a `manual` request translates before it answers (up to 20 seconds, then `pending`) |
+
+A request names at most 30 records of 4 fields each. Each field answers one state:
+
+| State         | Meaning                                                                                       |
+| :------------ | :-------------------------------------------------------------------------------------------- |
+| `ready`       | `value` holds the translation, `sourceLocale` the original's language                         |
+| `original`    | Already in the requested language                                                             |
+| `pending`     | Being translated; look it up again shortly                                                    |
+| `missing`     | Eligible and not translated yet (lookup only)                                                 |
+| `skipped`     | Not translated, with a `reason` such as `acknowledgment`, `single_word`, `uncertain_language` |
+| `stale`       | The fingerprint you sent is not the record's current one                                      |
+| `unavailable` | Not now, with a `reason`: `not_found`, `sign_in`, `budget`, `limited`, `disabled`, `failed`   |
+
+Call them with `fetcher`, for example to read one topic's body:
+
+```ts
+import { autoTranslateFingerprint } from "@vitnode/api/content/auto-translate";
+import { fetcher } from "@vitnode/core/tanstack/fetcher";
+
+const res = await fetcher({
+  plugin: "@vitnode/core",
+  method: "post",
+  module: "content",
+  path: "/translations/lookup",
+  args: {
+    body: {
+      items: [
+        {
+          contentTypeId: "forum.topic",
+          fields: [
+            {
+              fingerprint: autoTranslateFingerprint({ field: "body", value: topic.body }),
+              name: "body",
+            },
+          ],
+          id: topic.id,
+        },
+      ],
+      locale: "pl",
+    },
+  },
+});
+```
+
+Translation jobs emit `content.translation.completed`, `content.translation.failed` and `content.translation.served`; see [Built-in events](/docs/dev/events/built-in-events#content-translation-events).
+
+## Related
+
+- [Automatic translation](/docs/dev/ai/automatic-translation) covers the AdminCP settings, pricing and what edits do.
+- [Translations](/docs/content-engine/localization) covers editor-written languages, which always take precedence.
