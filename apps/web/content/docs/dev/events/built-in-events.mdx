@@ -799,6 +799,45 @@ message fires it too, with `switched: false`. See
 </Accordion>
 </Accordions>
 
+## Queue events
+
+One name, exported from `@vitnode/api/events/queue` as `queueCleanedEvent`.
+It fires **after** the tasks are deleted.
+
+| Event           | Payload                              | Fires when                                                                    |
+| --------------- | ------------------------------------ | ----------------------------------------------------------------------------- |
+| `queue.cleaned` | `{ scope, deleted, cleanedById }`    | An admin presses **Clean up** on **AdminCP → Debug Panel → Queue**            |
+
+<Accordions>
+<Accordion title="queue.cleaned">
+
+Emitted by `POST /admin/advanced/queue/clean`. The hourly retention sweep
+(`queue.retentionDays`) deletes quietly and does not emit it. See
+[Clean up old tasks](/docs/dev/advanced/queue#clean-up-old-tasks).
+
+<TypeTable
+  type={{
+    scope: {
+      description: '`failed` removed failed tasks; `finished` removed completed and failed ones.',
+      type: "'failed' | 'finished'",
+    },
+    deleted: {
+      description: 'How many tasks were deleted. Can be `0`.',
+      type: 'number',
+    },
+    cleanedById: {
+      description: 'Id of the admin who cleaned it.',
+      type: 'number | null',
+    },
+  }}
+/>
+
+**A listener would** post "Queue cleaned: 42 failed tasks gone" to the team
+chat, so nobody wonders where the errors went.
+
+</Accordion>
+</Accordions>
+
 ## Page layout events
 
 One name, exported from `@vitnode/api/events/pages` as

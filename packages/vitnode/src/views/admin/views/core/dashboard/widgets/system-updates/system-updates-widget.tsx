@@ -182,7 +182,7 @@ export const SystemUpdatesWidget = () => {
     : 0;
 
   return (
-    <div className="flex h-full flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-4">
       <Verdict status={status} summary={data} />
       <dl className="divide-border flex flex-col divide-y border-t">
         <Row label={t("rows.core")}>

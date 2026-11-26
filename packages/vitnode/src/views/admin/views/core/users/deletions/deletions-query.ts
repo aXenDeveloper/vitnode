@@ -22,10 +22,14 @@ export const ACCOUNT_DELETION_STATUSES = [
 
 export type AccountDeletionStatus = (typeof ACCOUNT_DELETION_STATUSES)[number];
 
+export const ACCOUNT_DELETION_DEFAULT_STATUSES: readonly AccountDeletionStatus[] =
+  ["completed", "failed", "pending"];
+
 export type AccountDeletionsOrderBy = "createdAt" | "scheduledAt";
 
 export const ACCOUNT_DELETIONS_TABLE_CONTRACT: AdminTableContract<AccountDeletionsOrderBy> =
   {
+    defaultStatus: ACCOUNT_DELETION_DEFAULT_STATUSES,
     orderBy: ["createdAt", "scheduledAt"],
     search: true,
     status: ACCOUNT_DELETION_STATUSES,

@@ -153,7 +153,7 @@ Do the same in any other route that adds or removes notes. The TTL is a safety n
 
 3. Create a note, from the [AdminCP page](/docs/dev/plugins/admin) or the test button in [Permissions](/docs/dev/working-with-users/staff-permissions#check-the-result), and run the command again. The key is gone until the next request, which then counts the new note.
 
-**AdminCP → System → Integrations** (`/admin/core/system/integrations`) shows whether Redis is connected: the Redis card says **Active**, or **Needs attention** when it is configured but unreachable.
+**Debug Panel → Cache** (`/admin/core/debug/cache`) shows whether Redis is connected: it says **Redis connected**, or **Redis is unreachable** when it is configured but down.
 
 ## Related
 

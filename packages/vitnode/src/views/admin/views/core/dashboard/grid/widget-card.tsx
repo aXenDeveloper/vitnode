@@ -8,12 +8,13 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Frame,
+  FrameAction,
+  FrameDescription,
+  FrameHeader,
+  FramePanel,
+  FrameTitle,
+} from "@/components/ui/frame";
 import { DRAG_SHIFT_TRANSITION } from "@/lib/dnd/drag-motion";
 
 import type { DashboardWidgetView } from "../widgets/types";
@@ -26,59 +27,102 @@ import { WidgetContentSkeleton } from "./widget-skeleton";
 const ARRIVAL_CLASS =
   "animate-in fade-in zoom-in-98 duration-250 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:animate-none";
 
-const TOOLBAR_SEPARATOR = (
-  <span aria-hidden="true" className="bg-border mx-0.5 h-4 w-px" />
-);
-
-export const WidgetCardContent = ({
+export const WidgetFrameContent = ({
+  action,
   isEditing,
   widget,
 }: {
+  action?: React.ReactNode;
   isEditing?: boolean;
   widget: DashboardWidgetView;
 }) => {
   const content = (
-    <React.Suspense fallback={<WidgetContentSkeleton rows={widget.rows} />}>
+    <React.Suspense
+      fallback={
+        <div className={cn(widget.flush && "p-4")}>
+          <WidgetContentSkeleton rows={widget.rows} />
+        </div>
+      }
+    >
       {widget.content}
     </React.Suspense>
   );
 
   return (
     <>
-      <CardHeader>
-        <CardTitle
-          className={cn(
-            "flex min-h-8 items-center gap-2 text-balance",
-            isEditing && (widget.hasSettings ? "pe-24" : "pe-12"),
-          )}
-        >
+      <FrameHeader>
+        <FrameTitle className="flex min-w-0 items-center gap-2" render={<h2 />}>
           {!!widget.icon && (
-            <span className="text-muted-foreground [&_svg]:size-4">
+            <span
+              aria-hidden="true"
+              className="text-muted-foreground flex shrink-0 [&_svg]:size-4"
+            >
               {widget.icon}
             </span>
           )}
-          {widget.title}
-        </CardTitle>
-        {!!widget.desc && (
-          <CardDescription className="text-pretty">
-            {widget.desc}
-          </CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="flex-1">
-        {isEditing ? (
-          <div
-            className="pointer-events-none opacity-60"
-            inert
-            key={widget.contentKey}
-          >
-            {content}
-          </div>
-        ) : (
-          <React.Fragment key={widget.contentKey}>{content}</React.Fragment>
-        )}
-      </CardContent>
+          <span className="min-w-0 truncate">{widget.title}</span>
+        </FrameTitle>
+        {!!widget.desc && <FrameDescription>{widget.desc}</FrameDescription>}
+        {action}
+      </FrameHeader>
+
+      <FramePanel>
+        <div className={cn("flex flex-1 flex-col", !widget.flush && "p-4")}>
+          {isEditing ? (
+            <div
+              className="pointer-events-none flex flex-1 flex-col opacity-60"
+              inert
+              key={widget.contentKey}
+            >
+              {content}
+            </div>
+          ) : (
+            <React.Fragment key={widget.contentKey}>{content}</React.Fragment>
+          )}
+        </div>
+      </FramePanel>
     </>
+  );
+};
+
+const WidgetEditTools = ({
+  onRemove,
+  onSelect,
+  widget,
+}: {
+  onRemove: () => void;
+  onSelect: () => void;
+  widget: DashboardWidgetView;
+}) => {
+  const t = useTranslations("admin.dashboard.widgets");
+
+  return (
+    <FrameAction
+      className="relative z-10 gap-0.5"
+      onKeyDown={event => event.stopPropagation()}
+      onPointerDown={event => event.stopPropagation()}
+    >
+      {!!widget.hasSettings && (
+        <Button
+          aria-label={t("settings.open", { title: widget.title })}
+          onClick={onSelect}
+          size="icon-sm"
+          variant="ghost"
+        >
+          <Settings2Icon />
+        </Button>
+      )}
+
+      <Button
+        aria-label={t("remove", { title: widget.title })}
+        className="hover:bg-destructive/10 hover:text-destructive"
+        onClick={onRemove}
+        size="icon-sm"
+        variant="ghost"
+      >
+        <Trash2Icon />
+      </Button>
+    </FrameAction>
   );
 };
 
@@ -117,9 +161,9 @@ export const WidgetCard = ({
   });
 
   return (
-    <Card
+    <Frame
       className={cn(
-        "group/widget relative flex flex-col transition-[box-shadow,background-color,outline-color] duration-150 ease-out motion-reduce:transition-none",
+        "group/widget relative transition-[box-shadow,background-color,outline-color] duration-150 ease-out motion-reduce:transition-none",
         spanClasses[widget.span],
         rowsClasses[widget.rows],
         isEditing &&
@@ -147,7 +191,7 @@ export const WidgetCard = ({
           {...attributes}
           aria-current={isSelected}
           aria-label={t("select", { title: widget.title })}
-          className="focus-visible:ring-ring absolute inset-0 cursor-grab rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-inset active:cursor-grabbing"
+          className="focus-visible:ring-ring absolute inset-0 cursor-grab rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-inset active:cursor-grabbing"
           onClick={() => {
             onSelect(widget.instanceId);
           }}
@@ -156,41 +200,19 @@ export const WidgetCard = ({
         />
       )}
 
-      {isEditing && (
-        <div
-          className="border-border bg-popover text-popover-foreground absolute inset-e-3 top-3 z-10 flex items-center gap-0.5 rounded-lg border p-0.5 shadow-md"
-          onKeyDown={event => event.stopPropagation()}
-          onPointerDown={event => event.stopPropagation()}
-        >
-          {!!widget.hasSettings && (
-            <>
-              <Button
-                aria-label={t("settings.open", { title: widget.title })}
-                onClick={() => {
-                  onSelect(widget.instanceId);
-                }}
-                size="icon-sm"
-                variant="ghost"
-              >
-                <Settings2Icon />
-              </Button>
-              {TOOLBAR_SEPARATOR}
-            </>
-          )}
-
-          <Button
-            aria-label={t("remove", { title: widget.title })}
-            className="hover:bg-destructive/10 hover:text-destructive"
-            onClick={() => onRemove(widget.instanceId)}
-            size="icon-sm"
-            variant="ghost"
-          >
-            <Trash2Icon />
-          </Button>
-        </div>
-      )}
-
-      <WidgetCardContent isEditing={isEditing} widget={widget} />
+      <WidgetFrameContent
+        action={
+          isEditing ? (
+            <WidgetEditTools
+              onRemove={() => onRemove(widget.instanceId)}
+              onSelect={() => onSelect(widget.instanceId)}
+              widget={widget}
+            />
+          ) : null
+        }
+        isEditing={isEditing}
+        widget={widget}
+      />
 
       {isEditing && (
         <ResizeHandle
@@ -199,6 +221,6 @@ export const WidgetCard = ({
           widget={widget}
         />
       )}
-    </Card>
+    </Frame>
   );
 };

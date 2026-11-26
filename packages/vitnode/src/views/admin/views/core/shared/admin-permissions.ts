@@ -15,6 +15,7 @@ export const ADMIN_USER_PERMISSIONS = {
 
 export const ADMIN_DEBUG_PERMISSIONS = {
   ai: admin.ai.canView,
+  cleanQueue: admin.queue.canClean,
   clearCache: admin.debug.canClearCache,
   cron: admin.cron.canView,
   plugins: admin.plugins.canView,

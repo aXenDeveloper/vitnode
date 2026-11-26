@@ -5,11 +5,13 @@ import {
   LayoutGridIcon,
   ListTodoIcon,
   MenuIcon,
+  OctagonAlertIcon,
   PlugIcon,
   PuzzleIcon,
   ScrollTextIcon,
   SearchIcon,
   SparklesIcon,
+  TriangleAlertIcon,
   UserXIcon,
   XIcon,
 } from "lucide-react";
@@ -24,6 +26,7 @@ import {
   SideNavLink,
   SideNavList,
 } from "@/components/side-nav";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -41,7 +44,6 @@ import {
 import type { DebugHealth } from "../health/health";
 
 import { isProblem } from "../health/health";
-import { TONE_TEXT } from "../tone";
 
 export const DEBUG_TAB_ICONS: Record<
   DebugTab,
@@ -60,6 +62,28 @@ export const DEBUG_TAB_ICONS: Record<
   vitnode: BoxIcon,
 };
 
+const IssueBadge = ({
+  count,
+  tone,
+}: {
+  count: number;
+  tone: "critical" | "warn";
+}) => {
+  const t = useTranslations("admin.debug.nav");
+  const Icon = tone === "critical" ? OctagonAlertIcon : TriangleAlertIcon;
+
+  return (
+    <Badge
+      className="h-6 min-w-6 gap-1 px-2 font-semibold ring-1 ring-current/25 ring-inset"
+      variant={tone === "critical" ? "destructive" : "warning"}
+    >
+      <Icon aria-hidden="true" />
+      <span aria-hidden="true">{count}</span>
+      <span className="sr-only">{t("issues", { count })}</span>
+    </Badge>
+  );
+};
+
 const NavItem = ({
   active,
   count,
@@ -68,8 +92,8 @@ const NavItem = ({
   tab,
 }: {
   active: boolean;
-  count?: number;
-  countTone?: "critical" | "warn";
+  count: number;
+  countTone: "critical" | "warn";
   onNavigate?: () => void;
   tab: DebugTab;
 }) => {
@@ -77,8 +101,9 @@ const NavItem = ({
 
   return (
     <SideNavLink
-      count={count}
-      countClassName={countTone && TONE_TEXT[countTone]}
+      badge={
+        count > 0 ? <IssueBadge count={count} tone={countTone} /> : undefined
+      }
       icon={DEBUG_TAB_ICONS[tab]}
       isActive={active}
       label={t(tab)}

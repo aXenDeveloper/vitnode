@@ -261,9 +261,44 @@ Without `tx`, a task dispatched before a rollback would still run, for a note th
 
 ## How the worker runs
 
-Each `process-queue` run claims tasks in batches of 25, runs up to 5 at once, highest `priority` first, and keeps draining for about 45 seconds. Tasks on the `ai` queue are drained by core's AI job instead. Completed and failed tasks stay in `core_queue` for 7 days; the hourly cleanup removes older ones.
+Each `process-queue` run claims tasks in batches of 25, runs up to 5 at once, highest `priority` first, and keeps draining for about 45 seconds. Tasks on the `ai` queue are drained by core's AI job instead.
 
-**Debug Panel → Queue** lists every task with its queue, status, attempts, next run, creation time and last error, filterable by status. It is read-only and needs the `queue → can_view` staff permission.
+**Debug Panel → Queue** lists every task with its queue, status, attempts, next run, creation time and last error, filterable by status. It needs the `queue → can_view` staff permission.
+
+## Clean up old tasks
+
+Finished tasks don't vanish the moment they finish, so you can still read a failed task's error the next morning. They don't pile up forever either.
+
+### Keep them for a set time
+
+Completed and failed tasks stay in `core_queue` for 30 days. The hourly `clean` cron job deletes older ones, in batches. Pick your own period with a `queue` block in `buildApiConfig`:
+
+```ts title="apps/api/src/vitnode.api.config.ts"
+import { buildApiConfig } from '@vitnode/api/vitnode.config'
+
+export const vitNodeApiConfig = buildApiConfig({
+  // other options unchanged
+  // [!code ++:3]
+  queue: {
+    retentionDays: 7,
+  },
+})
+```
+
+| Name            | Type     | Required | Default | Description                                                                    |
+| --------------- | -------- | -------- | ------- | ------------------------------------------------------------------------------ |
+| `retentionDays` | `number` | No       | `30`    | Days a finished task is kept. `0` keeps everything. A whole number from `0` |
+
+A value that is not a whole number from `0` falls back to `30`. Restart the API after changing it. Pending and running tasks are never touched, however old they are.
+
+### Clean up right now
+
+Fixed the bug behind a pile of failed tasks? Clear them without waiting a month. Open **Debug Panel → Queue**, press **Clean up**, and pick what goes:
+
+- **Failed tasks** - only tasks that ran out of attempts.
+- **All finished tasks** - completed and failed tasks.
+
+Either way the tasks are deleted for good, whatever their age, and pending or running tasks stay put. The button needs the `queue → can_clean` staff permission (on top of `queue → can_view`). Each clean-up records a **Cleaned up the queue** entry in the [Activity Logs](/docs/dev/audit-logs) with how many tasks went, and emits [`queue.cleaned`](/docs/dev/events/built-in-events#queue-events).
 
 Every option, type and error is listed in the [queue reference](/docs/dev/advanced/queue-reference).
 

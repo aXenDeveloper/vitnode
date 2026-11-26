@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { AnyRouter } from "@tanstack/react-router";
 import type { PermissionsStaffArgs } from "@vitnode/api/lib/permission-staff";
 import type { SiteStatusUpdate } from "@vitnode/api/lib/site-status";
+import type { QueueCleanScope } from "@vitnode/api/modules/queue/lib/process-queue-tasks";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "@tanstack/react-router";
@@ -13,11 +14,17 @@ import type { DebugSources } from "@/views/admin/views/core/debug/health/health"
 
 import { cronHealthQueryOptions } from "@/views/admin/views/core/advanced/cron/cron-query";
 import {
+  cleanQueueTasks,
+  queueQueryRoot,
+} from "@/views/admin/views/core/advanced/queue/queue-query";
+import {
   debugLogsQueryOptions,
+  debugQueueQueryKey,
   debugQueueQueryOptions,
   fetchDebugLogsPage,
   fetchDebugQueue,
 } from "@/views/admin/views/core/debug/debug-query";
+import { isAdminMutationError } from "@/views/admin/views/core/shared/admin-mutation";
 import {
   ADMIN_DEBUG_PERMISSIONS,
   ADMIN_USER_PERMISSIONS,
@@ -211,6 +218,25 @@ export const useClearAdminCache = (): (() => Promise<void>) => {
       await clearAdminCache(queryClient, router);
     },
     [queryClient, router],
+  );
+};
+
+export const useCleanQueue = () => {
+  const queryClient = useQueryClient();
+
+  return React.useCallback(
+    async (scope: QueueCleanScope) => {
+      const result = await cleanQueueTasks(scope);
+      if (!isAdminMutationError(result)) {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queueQueryRoot }),
+          queryClient.invalidateQueries({ queryKey: debugQueueQueryKey }),
+        ]);
+      }
+
+      return result;
+    },
+    [queryClient],
   );
 };
 

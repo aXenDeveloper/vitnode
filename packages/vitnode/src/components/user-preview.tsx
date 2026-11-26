@@ -9,7 +9,17 @@ import { userProfileQueryOptions } from "@/views/profile/profile-query";
 import type { UserPreviewSurface } from "./user-preview-card";
 
 import { Drawer, DrawerContent, DrawerTrigger } from "./ui/drawer";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
+import {
+  createHoverCardHandle,
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+  HoverCardViewport,
+} from "./ui/hover-card";
+import {
+  UserPreviewHandleContext,
+  type UserPreviewPayload,
+} from "./user-preview-context";
 import { UserPreviewSkeleton } from "./user-preview-skeleton";
 import { userProfileHref } from "./user-profile-href";
 
@@ -59,6 +69,20 @@ const useWarmPreview = (nameCode: string) => {
   };
 };
 
+const UserPreviewPopup = ({ nameCode }: { nameCode: string | undefined }) => (
+  <HoverCardContent
+    align="start"
+    className="w-72 overflow-hidden p-0 sm:w-80"
+    side="bottom"
+  >
+    <HoverCardViewport>
+      {nameCode ? (
+        <PreviewContent key={nameCode} nameCode={nameCode} surface="card" />
+      ) : null}
+    </HoverCardViewport>
+  </HoverCardContent>
+);
+
 const UserPreviewHoverCard = ({
   children,
   className,
@@ -67,38 +91,41 @@ const UserPreviewHoverCard = ({
   style,
   title,
 }: UserPreviewProps) => {
+  const handle = React.use(UserPreviewHandleContext);
   const warmPreview = useWarmPreview(nameCode);
+
+  const trigger = (
+    <HoverCardTrigger
+      closeDelay={150}
+      delay={400}
+      handle={handle ?? undefined}
+      onFocus={warmPreview}
+      onPointerEnter={warmPreview}
+      payload={{ nameCode }}
+      render={
+        <Link
+          aria-hidden={decorative ? true : undefined}
+          className={cn(
+            "focus-visible:ring-ring/50 rounded-sm outline-none focus-visible:ring-3",
+            className,
+          )}
+          style={style}
+          tabIndex={decorative ? -1 : undefined}
+          title={title}
+          to={userProfileHref(nameCode)}
+        />
+      }
+    >
+      {children}
+    </HoverCardTrigger>
+  );
+
+  if (handle) return trigger;
 
   return (
     <HoverCard>
-      <HoverCardTrigger
-        closeDelay={150}
-        delay={400}
-        onFocus={warmPreview}
-        onPointerEnter={warmPreview}
-        render={
-          <Link
-            aria-hidden={decorative ? true : undefined}
-            className={cn(
-              "focus-visible:ring-ring/50 rounded-sm outline-none focus-visible:ring-3",
-              className,
-            )}
-            style={style}
-            tabIndex={decorative ? -1 : undefined}
-            title={title}
-            to={userProfileHref(nameCode)}
-          />
-        }
-      >
-        {children}
-      </HoverCardTrigger>
-      <HoverCardContent
-        align="start"
-        className="w-72 overflow-hidden p-0 sm:w-80"
-        side="bottom"
-      >
-        <PreviewContent nameCode={nameCode} surface="card" />
-      </HoverCardContent>
+      {trigger}
+      <UserPreviewPopup nameCode={nameCode} />
     </HoverCard>
   );
 };
@@ -183,7 +210,9 @@ const UserPreviewSheet = ({
  * touch devices.
  *
  * `UserFormat` with `link` already uses it; reach for it directly to give an
- * avatar or any other element the same preview.
+ * avatar or any other element the same preview. Under a `UserPreviewProvider`
+ * (`VitNodeRootProviders` renders one) the hover card is shared with every
+ * other preview instead of mounted per link.
  *
  * @example
  * ```tsx
@@ -201,3 +230,52 @@ export const UserPreview = (props: UserPreviewProps) =>
   ) : (
     <UserPreviewHoverCard {...props} />
   );
+
+/**
+ * Shares one hover card between every `UserPreview` below it: each preview
+ * becomes a detached trigger that hands the card its `nameCode`, so a feed
+ * with hundreds of names mounts a single card, and moving the pointer from one
+ * name to the next glides the card over and cross-fades to the new member
+ * instead of closing and reopening it. Without a
+ * provider each `UserPreview` falls back to a card of its own.
+ * `VitNodeRootProviders` already renders one around the app; render another
+ * inside a modal dialog or sheet so the card belongs to it and pressing the
+ * card doesn't dismiss the dialog. Universal.
+ *
+ * @example
+ * ```tsx
+ * import { SheetContent } from "@vitnode/core/components/ui/sheet";
+ * import { UserPreviewProvider } from "@vitnode/core/components/user-preview";
+ *
+ * <SheetContent>
+ *   <UserPreviewProvider>{members}</UserPreviewProvider>
+ * </SheetContent>;
+ * ```
+ */
+export const UserPreviewProvider = ({
+  children,
+}: {
+  children: React.ReactNode;
+}) => {
+  const router = useRouter();
+  const [handle] = React.useState(() =>
+    createHoverCardHandle<UserPreviewPayload>(),
+  );
+
+  React.useEffect(
+    () =>
+      router.subscribe("onBeforeNavigate", () => {
+        handle.close();
+      }),
+    [handle, router],
+  );
+
+  return (
+    <UserPreviewHandleContext value={handle}>
+      {children}
+      <HoverCard handle={handle}>
+        {({ payload }) => <UserPreviewPopup nameCode={payload?.nameCode} />}
+      </HoverCard>
+    </UserPreviewHandleContext>
+  );
+};

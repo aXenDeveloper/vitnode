@@ -15,6 +15,7 @@ import { moderationEventDefinitions } from "./events/moderation";
 import { notificationEventDefinitions } from "./events/notifications";
 import { pageEventDefinitions } from "./events/pages";
 import { paymentEventDefinitions } from "./events/payments";
+import { queueEventDefinitions } from "./events/queue";
 import { reactionEventDefinitions } from "./events/reactions";
 import { roleEventDefinitions } from "./events/roles";
 import { siteEventDefinitions } from "./events/site";
@@ -66,6 +67,7 @@ export const newBuildPluginApiCore = buildApiPlugin({
     ...notificationEventDefinitions,
     ...pageEventDefinitions,
     ...paymentEventDefinitions,
+    ...queueEventDefinitions,
     ...reactionEventDefinitions,
     ...roleEventDefinitions,
     ...siteEventDefinitions,

@@ -17,7 +17,7 @@ export const BreadcrumbCrumbItems = ({
 }) => (
   <>
     {crumbs.map((crumb, index) => (
-      <Fragment key={crumb.href}>
+      <Fragment key={crumb.isCurrent ? `${crumb.href}:current` : crumb.href}>
         {index > 0 && <BreadcrumbSeparator />}
         <BreadcrumbItem>
           {crumb.isCurrent ? (

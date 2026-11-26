@@ -13,7 +13,7 @@ An inbox item is unread while it is not archived and the member has not read its
 - `activitySeq` starts at 1 and increases each time a grouped notification joins the item.
 - `readSeq` records how far the member has read.
 
-Opening `/notifications` or the bell never marks anything read. Opening an item, marking it read or **Mark all as read** does.
+Opening the bell or switching its tabs never marks anything read. Opening an item, marking it read or **Mark all as read** does.
 
 When the browser marks an item read, it sends the `activitySeq` it displayed as `throughSeq`. If a fourth reply joined the item after the bell rendered it, the item stays unread, because the member has not seen that reply yet.
 
@@ -52,7 +52,7 @@ When the count changes, open notification lists refresh once per burst: 1 second
 
 When a new notification lands in a member's inbox while a tab is open, it also pops up as a toast: the sender's avatar with a small badge for the kind of notification (@ for a mention, an arrow for a reply, a smile for a reaction), their name, what happened and the text. The whole toast is one button. Clicking it opens the notification and marks it read, just like clicking it in the bell. The server adds the member's own `notificationId` to the `created` message, and the browser fetches that item and shows it if it is still unread.
 
-The same badge marks each item in the bell and on the notifications page. Admin messages skip it, because the AdminCP already sends them as a live toast of their own.
+The same badge marks each item in the bell. Admin messages skip it, because the AdminCP already sends them as a live toast of their own.
 
 Every open tab shows the toast. Without a socket there are no toasts; the count still catches up through `/state`.
 
@@ -66,10 +66,13 @@ Every open tab shows the toast. Without a socket there are no toasts; the count 
 
 ## What core ships in the UI
 
-| Piece                  | Where                                                                                              |
-| ---------------------- | -------------------------------------------------------------------------------------------------- |
-| Bell with unread badge | Site header on every screen size. Loads the recent list only when opened                           |
-| Notifications page     | `/notifications`, a paged table you can sort by date or category and filter by status and category |
-| Preferences            | `/settings/notifications`, see [Preferences](/docs/dev/notifications/preferences)                  |
+| Piece                  | Where                                                                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Bell with unread badge | Site header on every screen size. Loads nothing until opened                                                                  |
+| Bell dropdown          | **Unread** (default), **All** and **Mentions** tabs. Scrolls through the whole inbox, 20 items at a time, as a virtual list |
+| Row actions            | Mark read or unread and archive, on hover or focus, always visible on touch screens                                          |
+| Preferences            | `/settings/notifications`, see [Preferences](/docs/dev/notifications/preferences)                                             |
+
+The dropdown is the only inbox screen; there is no separate notifications page.
 
 A default theme needs no wiring. To build your own bell, call the [member endpoints](/docs/dev/notifications/reference#member-endpoints) and listen to the [realtime channel](/docs/dev/notifications/reference#realtime-channel).

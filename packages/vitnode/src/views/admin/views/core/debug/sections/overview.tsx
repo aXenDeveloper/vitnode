@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ChevronRightIcon, RefreshCwIcon } from "lucide-react";
+import { RefreshCwIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
 
 import type { AdminPluginUpdates } from "@/views/admin/views/core/system/plugins/plugin-updates-query";
@@ -16,7 +16,6 @@ import {
   FrameTitle,
 } from "@/components/ui/frame";
 import { debugTabPath } from "@/tanstack/admin/debug/route-search";
-import { HrefLink } from "@/tanstack/link";
 import { ADMIN_DEBUG_PERMISSIONS } from "@/views/admin/views/core/shared/admin-permissions";
 
 import type { DebugHealth } from "../health/health";
@@ -24,7 +23,7 @@ import type { DebugHealth } from "../health/health";
 import { ClearCacheAction } from "../actions/clear-cache/clear-cache";
 import { DEBUG_TAB_ICONS } from "../nav/debug-nav";
 import { ToneIcon } from "../tone";
-import { FRAME_ACTION_STACKED } from "./frame-row";
+import { FRAME_ACTION_STACKED, IssueRow } from "./frame-row";
 import { PrivacyRequestsFrame } from "./privacy-requests";
 import { SecurityUpdateAlert } from "./security";
 
@@ -91,42 +90,9 @@ export const DebugOverview = ({
         </FrameHeader>
         {health.issues.length > 0 ? (
           <FramePanel>
-            {health.issues.map(issue => {
-              const row = (
-                <>
-                  <ToneIcon tone={issue.tone} />
-                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <span className="text-sm font-medium text-pretty">
-                      {tHealth(issue.message.key, issue.message.values)}
-                    </span>
-                    {issue.detail ? (
-                      <span className="text-muted-foreground truncate text-xs">
-                        {issue.detail}
-                      </span>
-                    ) : null}
-                  </span>
-                  <ChevronRightIcon
-                    aria-hidden
-                    className="text-muted-foreground size-4 shrink-0"
-                  />
-                </>
-              );
-
-              return issue.href ? (
-                <HrefLink className={ROW_LINK} href={issue.href} key={issue.id}>
-                  {row}
-                </HrefLink>
-              ) : (
-                <Link
-                  className={ROW_LINK}
-                  key={issue.id}
-                  resetScroll={false}
-                  to={debugTabPath(issue.tab)}
-                >
-                  {row}
-                </Link>
-              );
-            })}
+            {health.issues.map(issue => (
+              <IssueRow issue={issue} key={issue.id} />
+            ))}
           </FramePanel>
         ) : null}
       </Frame>

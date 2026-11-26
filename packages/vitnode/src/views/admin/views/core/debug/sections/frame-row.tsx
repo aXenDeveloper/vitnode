@@ -1,5 +1,10 @@
+import { Link } from "@tanstack/react-router";
 import { cn } from "cn";
+import { ChevronRightIcon } from "lucide-react";
 import { useTranslations } from "use-intl";
+
+import { debugTabPath } from "@/tanstack/admin/debug/route-search";
+import { HrefLink } from "@/tanstack/link";
 
 import type { DebugCheck } from "../health/health";
 
@@ -57,6 +62,46 @@ export const CheckRow = ({ check }: { check: DebugCheck }) => {
         ) : null}
       </span>
     </FrameRow>
+  );
+};
+
+const ISSUE_ROW_LINK =
+  "hover:bg-muted/50 focus-visible:bg-muted/50 flex items-center gap-3 px-4 py-3 text-start transition-colors outline-none";
+
+export const IssueRow = ({ issue }: { issue: DebugCheck }) => {
+  const t = useTranslations("admin.debug.health");
+  const row = (
+    <>
+      <ToneIcon tone={issue.tone} />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-sm font-medium text-pretty">
+          {t(issue.message.key, issue.message.values)}
+        </span>
+        {issue.detail ? (
+          <span className="text-muted-foreground truncate text-xs">
+            {issue.detail}
+          </span>
+        ) : null}
+      </span>
+      <ChevronRightIcon
+        aria-hidden
+        className="text-muted-foreground size-4 shrink-0"
+      />
+    </>
+  );
+
+  return issue.href ? (
+    <HrefLink className={ISSUE_ROW_LINK} href={issue.href}>
+      {row}
+    </HrefLink>
+  ) : (
+    <Link
+      className={ISSUE_ROW_LINK}
+      resetScroll={false}
+      to={debugTabPath(issue.tab)}
+    >
+      {row}
+    </Link>
   );
 };
 

@@ -6,7 +6,7 @@ export const isPinnedColumn = <T extends DataTableTMin>(column: ColumnDef<T>) =>
   column.id === "actions";
 
 const PINNED_EDGE_CLASS_NAME = cn(
-  "bg-card sticky end-0 z-10 bg-linear-to-r",
+  "bg-card sticky end-0 z-10 bg-linear-to-r from-transparent to-transparent transition-colors",
   "before:pointer-events-none before:absolute before:end-full before:top-0 before:bottom-px before:w-(--scroll-fade-e) before:[background:inherit]",
   "before:[mask-image:linear-gradient(to_left,#000,transparent)] rtl:before:[mask-image:linear-gradient(to_right,#000,transparent)]",
   "before:[--_scroll-fade-size-e:calc(var(--spacing)*10)]",

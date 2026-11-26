@@ -95,9 +95,7 @@ describe("multi-locale nav titles", () => {
     // strings still untranslated. If it fails again, pick a new probe from
     // `en.json` minus `pl.json` rather than changing the expectation.
     // @ts-expect-error - see above.
-    expect(t("admin.system.integrations.content_preview.title")).toBe(
-      "Content Preview",
-    );
+    expect(t("admin.role.form.reactions.allow")).toBe("Can react");
   });
 
   it("still resolves English when that is the locale asked for", async () => {

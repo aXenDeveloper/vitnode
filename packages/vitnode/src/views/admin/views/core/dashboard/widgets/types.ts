@@ -59,6 +59,7 @@ export interface DashboardWidgetOption {
   defaultRows: AdminDashboardWidgetRows;
   defaultSpan: AdminDashboardWidgetSpan;
   desc?: string;
+  flush?: boolean;
   icon?: React.ReactNode;
   id: string;
   minSpan: AdminDashboardWidgetSpan;

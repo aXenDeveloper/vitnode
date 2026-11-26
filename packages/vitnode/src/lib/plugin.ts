@@ -154,6 +154,11 @@ export interface AdminDashboardWidget {
   defaultRows?: AdminDashboardWidgetRows;
   /** Width when first placed. Defaults to `minSpan`. */
   defaultSpan?: AdminDashboardWidgetSpan;
+  /**
+   * Renders the body edge to edge inside the widget's panel, without its
+   * padding, for lists whose rows draw their own dividers. Defaults to `false`.
+   */
+  flush?: boolean;
   icon?: React.ReactNode;
   /** Unique within the plugin; the board namespaces it as `{pluginId}:{id}`. */
   id: string;

@@ -39,16 +39,18 @@ const HeaderSearchSkeleton = () => {
   return (
     <div
       aria-busy
-      className="bg-popover/90 ring-foreground/10 flex h-14 items-center gap-3 rounded-2xl px-4 shadow-2xl ring-1 backdrop-blur-sm sm:h-16 sm:px-5"
+      className="bg-muted ring-border rounded-xl p-1 shadow-2xl ring-1"
     >
-      <SearchIcon
-        aria-hidden
-        className="text-muted-foreground size-5 shrink-0 sm:size-6"
-      />
-      <span className="text-muted-foreground flex-1 truncate text-lg sm:text-xl">
-        {t("search_placeholder")}
-      </span>
-      <Skeleton className="h-5 w-10 rounded-sm max-sm:hidden" />
+      <div className="bg-popover ring-border flex h-14 items-center gap-3 rounded-lg px-4 ring-1 sm:h-16 sm:px-5">
+        <SearchIcon
+          aria-hidden
+          className="text-muted-foreground size-5 shrink-0 sm:size-6"
+        />
+        <span className="text-muted-foreground flex-1 truncate text-lg sm:text-xl">
+          {t("search_placeholder")}
+        </span>
+        <Skeleton className="h-5 w-10 rounded-sm max-sm:hidden" />
+      </div>
     </div>
   );
 };
@@ -58,10 +60,13 @@ type SearchMorphTarget = "dialog" | "trigger";
 const MORPH_DIRECTION_ATTRIBUTE = "data-header-search-morph";
 
 const DIALOG_CLASS_NAME =
-  "top-4 max-h-none origin-top translate-y-0 gap-0 overflow-visible rounded-none border-0 bg-transparent p-0 shadow-none transition-[opacity,scale,translate] outline-none data-ending-style:-translate-y-1 data-ending-style:scale-98 data-starting-style:-translate-y-2 data-starting-style:scale-97 sm:top-24 sm:max-w-2xl starting:-translate-y-2 starting:scale-97";
+  "top-4 max-h-none origin-top translate-y-0 gap-0 overflow-visible rounded-none border-0 bg-transparent p-0 shadow-none ring-0 ring-offset-0 inset-ring-0 transition-[opacity,scale,translate] outline-none data-ending-style:-translate-y-1 data-ending-style:scale-98 data-starting-style:-translate-y-2 data-starting-style:scale-97 sm:top-24 sm:max-w-2xl starting:-translate-y-2 starting:scale-97";
 
 const MORPHING_DIALOG_CLASS_NAME =
   "transition-none *:backdrop-blur-none data-starting-style:translate-y-0 data-starting-style:scale-100 data-starting-style:opacity-100";
+
+const MORPHING_SCRIM_CLASS_NAME =
+  "duration-0 data-closed:duration-0 data-closed:opacity-0";
 
 const canMorph = (): boolean =>
   "startViewTransition" in document &&
@@ -260,6 +265,10 @@ export const HeaderSearch = ({ firstSourceId }: { firstSourceId?: string }) => {
             DIALOG_CLASS_NAME,
             morphTarget && MORPHING_DIALOG_CLASS_NAME,
             morphTarget === "trigger" && "invisible",
+          )}
+          overlayClassName={cn(
+            "supports-backdrop-filter:backdrop-blur-none",
+            morphTarget && MORPHING_SCRIM_CLASS_NAME,
           )}
           showCloseButton={false}
           style={{ viewTransitionName: morphName("dialog", morphTarget) }}

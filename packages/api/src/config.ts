@@ -270,6 +270,7 @@ export function VitNodeAPI({
       ogImage: vitNodeApiConfig.ogImage,
       activityLogs: vitNodeApiConfig.activityLogs,
       payments: vitNodeApiConfig.payments,
+      queue: vitNodeApiConfig.queue,
       search: vitNodeApiConfig.search,
       storage: vitNodeApiConfig.storage,
       updates: vitNodeApiConfig.updates,

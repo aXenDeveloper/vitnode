@@ -63,6 +63,7 @@ export const resolveDashboardWidgets = ({
         icon: widget.icon,
         allowMultiple: widget.allowMultiple,
         defaultEnabled: widget.defaultEnabled,
+        flush: widget.flush,
         minSpan,
         defaultSpan: widget.defaultSpan ?? minSpan,
         defaultRows: widget.defaultRows ?? 1,

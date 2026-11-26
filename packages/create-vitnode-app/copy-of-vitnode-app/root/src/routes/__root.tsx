@@ -18,6 +18,8 @@ import type { Locale } from "@/vitnode.config";
 
 import { vitNodeConfig } from "@/vitnode.config";
 
+import geistLatin from "@fontsource-variable/geist/files/geist-latin-wght-normal.woff2?url";
+
 import appCss from "../styles.css?url";
 
 const { editor, i18n, logo, metadata, theme } = vitNodeConfig;
@@ -40,6 +42,13 @@ export const Route = createRootRouteWithContext<RootRouterContext>()({
   head: () => ({
     links: [
       { href: appCss, rel: "stylesheet" },
+      {
+        as: "font",
+        crossOrigin: "anonymous",
+        href: geistLatin,
+        rel: "preload",
+        type: "font/woff2",
+      },
 
       {
         href: "/favicon.ico",

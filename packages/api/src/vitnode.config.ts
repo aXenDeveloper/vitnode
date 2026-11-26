@@ -209,6 +209,16 @@ export interface VitNodeApiConfig {
   };
   /** The installed plugins' API halves, each a plugin's `buildApiPlugin()` result. Core is added automatically. */
   plugins: BuildPluginApiReturn[];
+  /** Background tasks stored in the `core_queue` table. */
+  queue?: {
+    /**
+     * How many days a finished (completed or failed) task is kept. The hourly
+     * `clean` job deletes older ones, in batches. `0` keeps everything. A whole
+     * number from `0`; anything else falls back to the default. Defaults to
+     * `30`.
+     */
+    retentionDays?: number;
+  };
   /**
    * Request limits per category. `safety` and `auth` are always counted per
    * IP; `read`, `write` and `contentWrite` are counted per signed-in user when

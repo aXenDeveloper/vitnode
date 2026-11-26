@@ -1,14 +1,12 @@
 import type { NotificationEmailMode } from "@vitnode/api/lib/notifications/types";
 
-import { keepPreviousData, queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { manifest } from "@vitnode/api/manifest";
 
-import { DEFAULT_TABLE_PAGE_SIZE } from "@/components/table/url-state";
 import {
   OPERATIONAL_STALE_TIME,
   RECORD_STALE_TIME,
 } from "@/lib/query-freshness";
-import { readFirstValue, readPageSize } from "@/lib/table-params";
 import { fetcher } from "@/tanstack/fetcher";
 
 export interface NotificationActorView {
@@ -59,15 +57,28 @@ export const notificationsListRoot = (userId: number) =>
   [...NOTIFICATIONS_IDENTITY_ROOT, userId, "list"] as const;
 
 export const fetchNotificationsPage = async ({
+  cursor,
   limit,
   signal,
+  type,
+  unread,
 }: {
+  cursor?: string;
   limit: number;
   signal?: AbortSignal;
+  type?: string;
+  unread?: boolean;
 }): Promise<NotificationsPage> => {
   const response = await fetcher({
     plugin: manifest.id,
-    args: { query: { limit } },
+    args: {
+      query: {
+        limit,
+        ...(cursor === undefined ? {} : { cursor }),
+        ...(type === undefined ? {} : { type }),
+        ...(unread ? { unread: "true" as const } : {}),
+      },
+    },
     method: "get",
     module: "notifications",
     options: { signal },
@@ -79,113 +90,40 @@ export const fetchNotificationsPage = async ({
 };
 
 const NOTIFICATIONS_RECENT_SIZE = 8;
-const NOTIFICATIONS_MAX_PAGE_SIZE = 50;
+const NOTIFICATIONS_FEED_PAGE_SIZE = 20;
+const MENTION_NOTIFICATION_TYPE = "core.mention";
 
-export const NOTIFICATIONS_TABLE_ORDER_BY = [
-  "lastActivityAt",
-  "category",
+export const NOTIFICATIONS_FEED_FILTERS = [
+  "unread",
+  "mentions",
+  "all",
 ] as const;
-export type NotificationsTableOrderBy =
-  (typeof NOTIFICATIONS_TABLE_ORDER_BY)[number];
+export type NotificationsFeedFilter =
+  (typeof NOTIFICATIONS_FEED_FILTERS)[number];
 
-export const NOTIFICATIONS_TABLE_STATUSES = ["unread", "read"] as const;
-export type NotificationsTableStatus =
-  (typeof NOTIFICATIONS_TABLE_STATUSES)[number];
-
-const CATEGORY = /^[a-z0-9_-]{1,50}$/;
-
-/** The notifications table's request, as the `/inbox` route reads it. */
-export interface NotificationsTableParams {
-  category?: string;
-  first?: string;
-  order?: "asc" | "desc";
-  orderBy?: NotificationsTableOrderBy;
-  page?: string;
-  status?: NotificationsTableStatus;
-}
-
-export type RawNotificationsTableParams = Partial<
-  Record<keyof NotificationsTableParams, null | string | string[] | undefined>
->;
-
-/** Keeps only the table params the route accepts; page 1 and unknown values are dropped. */
-export const normalizeNotificationsTableParams = (
-  raw: RawNotificationsTableParams = {},
-): NotificationsTableParams => {
-  const params: NotificationsTableParams = {};
-
-  const page = readFirstValue(raw.page);
-  if (/^[1-9]\d{0,8}$/.test(page) && page !== "1") params.page = page;
-
-  params.first =
-    readPageSize(readFirstValue(raw.first), NOTIFICATIONS_MAX_PAGE_SIZE) ??
-    String(DEFAULT_TABLE_PAGE_SIZE);
-
-  const orderBy = readFirstValue(raw.orderBy) as NotificationsTableOrderBy;
-  if (NOTIFICATIONS_TABLE_ORDER_BY.includes(orderBy)) params.orderBy = orderBy;
-
-  const order = readFirstValue(raw.order);
-  if (order === "asc" || order === "desc") params.order = order;
-
-  const status = readFirstValue(raw.status) as NotificationsTableStatus;
-  if (NOTIFICATIONS_TABLE_STATUSES.includes(status)) params.status = status;
-
-  const categories = [
-    ...new Set(
-      readFirstValue(raw.category)
-        .split(",")
-        .filter(value => CATEGORY.test(value)),
-    ),
-  ];
-  if (categories.length > 0) params.category = categories.join(",");
-
-  return params;
-};
-
-export interface NotificationsTablePage {
-  edges: NotificationItemView[];
-  pageInfo: {
-    count: number;
-    currentPage: null | number;
-    endCursor: null | string;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-    pageSize: number;
-    startCursor: null | string;
-    totalCount: number;
-    totalPages: number;
-  };
-}
-
-export const fetchNotificationsTablePage = async (
-  params: NotificationsTableParams,
-  { signal }: { signal?: AbortSignal } = {},
-): Promise<NotificationsTablePage> => {
-  const response = await fetcher({
-    plugin: manifest.id,
-    args: { query: params },
-    method: "get",
-    module: "notifications",
-    options: { signal },
-    path: "/inbox",
-  });
-  if (!response.ok) throw new NotificationsRequestError(response.status);
-
-  return await response.json();
-};
-
-export const notificationsTableQueryOptions = ({
-  params,
+/**
+ * The bell dropdown's infinite feed for one filter: `unread`, `all` or
+ * `mentions`, newest activity first, 20 per page by cursor.
+ */
+export const notificationsFeedQueryOptions = ({
+  filter,
   userId,
 }: {
-  params: NotificationsTableParams;
+  filter: NotificationsFeedFilter;
   userId: number;
 }) =>
-  queryOptions({
-    placeholderData: keepPreviousData,
-    queryFn: async ({ signal }) =>
-      await fetchNotificationsTablePage(params, { signal }),
-    queryKey: [...notificationsListRoot(userId), "table", params] as const,
+  infiniteQueryOptions({
+    getNextPageParam: (last: NotificationsPage) => last.nextCursor,
+    initialPageParam: null as null | string,
+    queryFn: async ({ pageParam, signal }) =>
+      await fetchNotificationsPage({
+        cursor: pageParam ?? undefined,
+        limit: NOTIFICATIONS_FEED_PAGE_SIZE,
+        signal,
+        type: filter === "mentions" ? MENTION_NOTIFICATION_TYPE : undefined,
+        unread: filter === "unread",
+      }),
+    queryKey: [...notificationsListRoot(userId), "feed", filter] as const,
     retry: false,
     staleTime: OPERATIONAL_STALE_TIME,
   });

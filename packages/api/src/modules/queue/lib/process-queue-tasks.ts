@@ -28,7 +28,6 @@ const QUEUE_CONCURRENCY = 5;
 const QUEUE_LOCK_KEY = "queue:process";
 const QUEUE_LOCK_TTL_SECONDS = 55;
 const QUEUE_DRAIN_BUDGET_MS = 45_000;
-const QUEUE_RETENTION_DAYS = 7;
 const DEFAULT_QUEUE_LEASE_SECONDS = 600;
 
 const DEDICATED_QUEUES = ["ai"] as const;
@@ -369,20 +368,37 @@ export const processQueueTasks = async (
 
 const QUEUE_RETENTION_BATCH_SIZE = 1000;
 const QUEUE_RETENTION_MAX_BATCHES = 100;
+const QUEUE_CLEAN_MAX_BATCHES = 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-/**
- * Remove finished tasks older than the retention window, a bounded batch at a
- * time so one hourly run never holds a long lock on a large queue table.
- */
-export const deleteExpiredQueueTasks = async (
-  c: Context<EnvVitNode>,
-): Promise<void> => {
-  const db = c.get("db");
-  const cutoff = new Date(
-    Date.now() - QUEUE_RETENTION_DAYS * 24 * 60 * 60 * 1000,
+export const QUEUE_CLEAN_SCOPES = ["failed", "finished"] as const;
+
+/** `failed` removes failed tasks; `finished` removes completed and failed ones. */
+export type QueueCleanScope = (typeof QUEUE_CLEAN_SCOPES)[number];
+
+const QUEUE_CLEAN_STATUSES: Record<
+  QueueCleanScope,
+  ("completed" | "failed")[]
+> = {
+  failed: ["failed"],
+  finished: ["completed", "failed"],
+};
+
+const deleteFinishedQueueTasks = async (
+  db: EnvVitNode["Variables"]["db"],
+  {
+    finishedBefore,
+    maxBatches,
+    scope,
+  }: { finishedBefore?: Date; maxBatches: number; scope: QueueCleanScope },
+): Promise<number> => {
+  const where = and(
+    inArray(core_queue.status, QUEUE_CLEAN_STATUSES[scope]),
+    finishedBefore ? lt(core_queue.completedAt, finishedBefore) : undefined,
   );
+  let deleted = 0;
 
-  for (let batch = 0; batch < QUEUE_RETENTION_MAX_BATCHES; batch++) {
+  for (let batch = 0; batch < maxBatches; batch++) {
     const rows = await db
       .delete(core_queue)
       .where(
@@ -391,17 +407,46 @@ export const deleteExpiredQueueTasks = async (
           db
             .select({ id: core_queue.id })
             .from(core_queue)
-            .where(
-              and(
-                inArray(core_queue.status, ["completed", "failed"]),
-                lt(core_queue.completedAt, cutoff),
-              ),
-            )
+            .where(where)
             .limit(QUEUE_RETENTION_BATCH_SIZE),
         ),
       )
       .returning({ id: core_queue.id });
 
+    deleted += rows.length;
     if (rows.length < QUEUE_RETENTION_BATCH_SIZE) break;
   }
+
+  return deleted;
 };
+
+/**
+ * Remove finished tasks older than `queue.retentionDays`, a bounded batch at a
+ * time so one hourly run never holds a long lock on a large queue table. A
+ * retention of `0` keeps every task.
+ */
+export const deleteExpiredQueueTasks = async (
+  c: Context<EnvVitNode>,
+): Promise<void> => {
+  const retentionDays = c.get("core").queueRetentionDays;
+  if (retentionDays === 0) return;
+
+  await deleteFinishedQueueTasks(c.get("db"), {
+    finishedBefore: new Date(Date.now() - retentionDays * DAY_MS),
+    maxBatches: QUEUE_RETENTION_MAX_BATCHES,
+    scope: "finished",
+  });
+};
+
+/**
+ * Remove every finished task in `scope` now, whatever its age, and return how
+ * many were deleted. Pending and processing tasks are never touched.
+ */
+export const cleanQueueTasks = async (
+  c: Context<EnvVitNode>,
+  scope: QueueCleanScope,
+): Promise<number> =>
+  await deleteFinishedQueueTasks(c.get("db"), {
+    maxBatches: QUEUE_CLEAN_MAX_BATCHES,
+    scope,
+  });

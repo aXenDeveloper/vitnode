@@ -3,6 +3,7 @@ import React from "react";
 import { useTranslations } from "use-intl";
 
 import type { DataTableNavigation } from "@/components/table/navigation";
+import type { CronHealth } from "@/views/admin/views/core/advanced/cron/cron-query";
 import type { DebugAreaId } from "@/views/admin/views/core/debug/health/health";
 import type { AdminIdentity } from "@/views/admin/views/core/shared/admin-scope";
 
@@ -11,6 +12,7 @@ import {
   useAdminStaffPermission,
 } from "@/components/staff-permission/provider";
 import { DataTableNavigationProvider } from "@/components/table/navigation";
+import { Frame, FramePanel } from "@/components/ui/frame";
 import { cronHealthQueryOptions } from "@/views/admin/views/core/advanced/cron/cron-query";
 import { CronSchedulerStatus } from "@/views/admin/views/core/advanced/cron/cron-scheduler-status";
 import { CronTableContent } from "@/views/admin/views/core/advanced/cron/cron-table-content";
@@ -18,12 +20,17 @@ import { QueueTableContent } from "@/views/admin/views/core/advanced/queue/queue
 import { SearchHeaderActions } from "@/views/admin/views/core/advanced/search/search-header-actions";
 import { SearchIndexContent } from "@/views/admin/views/core/advanced/search/search-index-content";
 import { AiHistoryTableContent } from "@/views/admin/views/core/ai/history/history-table-content";
+import { CleanQueueAction } from "@/views/admin/views/core/debug/actions/clean-queue/clean-queue";
 import { debugHealth } from "@/views/admin/views/core/debug/health/health";
-import { SectionHeader } from "@/views/admin/views/core/debug/sections/frame-row";
+import {
+  IssueRow,
+  SectionHeader,
+} from "@/views/admin/views/core/debug/sections/frame-row";
 import { SystemLogsContent } from "@/views/admin/views/core/debug/system-logs/system-logs-content";
 import { ToneBadge } from "@/views/admin/views/core/debug/tone";
 import { isAdminMutationError } from "@/views/admin/views/core/shared/admin-mutation";
 import {
+  ADMIN_DEBUG_PERMISSIONS,
   ADMIN_SEARCH_PERMISSIONS,
   ADMIN_USER_PERMISSIONS,
 } from "@/views/admin/views/core/shared/admin-permissions";
@@ -76,7 +83,7 @@ import {
   searchIndexSearchParams,
 } from "../search-index/route-search";
 import { invalidateAdminUsers } from "../users/query";
-import { debugLogsQuery, useDebugSources } from "./query";
+import { debugLogsQuery, useCleanQueue, useDebugSources } from "./query";
 import {
   debugCronParams,
   debugDeletionsRouteParams,
@@ -133,15 +140,41 @@ const AreaHeader = ({
   );
 };
 
+const SCHEDULER_CARD_CHECKS = new Set(["cron-overdue", "cron-stopped"]);
+
+const CronIssues = ({ health }: { health: CronHealth }) => {
+  const issues = debugHealth(useDebugSources())
+    .issues.filter(issue => issue.area === "cron")
+    .filter(
+      issue =>
+        !SCHEDULER_CARD_CHECKS.has(issue.id) &&
+        !(issue.id === "cron-secret" && health.secretRejected),
+    );
+  if (issues.length === 0) return null;
+
+  return (
+    <Frame>
+      <FramePanel>
+        {issues.map(issue => (
+          <IssueRow issue={issue} key={issue.id} />
+        ))}
+      </FramePanel>
+    </Frame>
+  );
+};
+
 const DiagnosticHeader = ({
+  action,
   tab,
 }: {
+  action?: React.ReactNode;
   tab: "ai" | "deletions" | "logs" | "queue";
 }) => {
   const t = useTranslations("admin.debug");
 
   return (
     <SectionHeader
+      action={action}
       description={t(`diagnostics.${tab}`)}
       title={t(`nav.${tab}`)}
     />
@@ -170,6 +203,7 @@ export const DebugCronTab = ({
   return (
     <div className="flex flex-col gap-6">
       <AreaHeader tab="cron" />
+      <CronIssues health={health} />
       <CronSchedulerStatus health={health} />
       <DataTableNavigationProvider value={navigation}>
         <CronTableContent data={data} onRun={onRun} />
@@ -264,10 +298,19 @@ export const DebugQueueTab = ({
     navigate,
     searchParams,
   });
+  const queueCounts = useDebugSources().queue?.counts;
+  const onClean = useCleanQueue();
 
   return (
     <div className="flex flex-col gap-6">
-      <DiagnosticHeader tab="queue" />
+      <DiagnosticHeader
+        action={
+          <AdminStaffPermissionGate {...ADMIN_DEBUG_PERMISSIONS.cleanQueue}>
+            <CleanQueueAction counts={queueCounts} onClean={onClean} />
+          </AdminStaffPermissionGate>
+        }
+        tab="queue"
+      />
       <DataTableNavigationProvider value={navigation}>
         <QueueTableContent data={data} />
       </DataTableNavigationProvider>

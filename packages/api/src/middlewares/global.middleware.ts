@@ -117,6 +117,7 @@ import { normalizePermissionStaffModules } from "../lib/permission-staff";
 import { validateReactionsRegistry } from "../lib/reactions/targets";
 import { collectUpdateComponents } from "../lib/updates/components";
 import { resolveUpdatesConfig } from "../lib/updates/config";
+import { resolveQueueRetentionDays } from "../modules/queue/lib/retention";
 
 declare module "hono" {
   // oxlint-disable-next-line typescript/no-empty-object-type
@@ -280,6 +281,8 @@ export interface EnvVariablesVitNode {
     /** Account deletion grace period and IP retention (`users` in the API config). */
     privacy: PrivacySettings;
     queue: QueueTaskConfig[];
+    /** Days a finished queue task is kept (`queue.retentionDays`); `0` keeps everything. */
+    queueRetentionDays: number;
     /** Every reaction target: custom ones and one per content type with `reactions`. */
     reactions: ReactionsRegistry;
     search: { adapter: SearchProviderApiPlugin };
@@ -395,6 +398,7 @@ export const globalMiddleware = ({
   notifications,
   ogImage,
   payments,
+  queue,
   search,
   storage,
   updates,
@@ -418,6 +422,7 @@ export const globalMiddleware = ({
     | "ogImage"
     | "payments"
     | "plugins"
+    | "queue"
     | "search"
     | "storage"
     | "updates"
@@ -427,6 +432,7 @@ export const globalMiddleware = ({
   }) => {
   const notificationWorkers = resolveNotificationWorkerSettings(notifications);
   const auditRetentionDays = resolveAuditRetentionDays(activityLogs);
+  const queueRetentionDays = resolveQueueRetentionDays(queue);
   const pluginsMetadata = plugins.map(plugin => ({
     id: plugin.pluginId,
   }));
@@ -703,6 +709,7 @@ export const globalMiddleware = ({
       aiActions: aiActionsMetadata,
       auditActions: auditActionsMetadata,
       auditRetentionDays,
+      queueRetentionDays,
       i18n: i18nMetadata,
       metadata,
       email,

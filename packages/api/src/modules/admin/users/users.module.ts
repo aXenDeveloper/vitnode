@@ -22,6 +22,7 @@ import { presenceUserAdminRoute } from "./routes/presence.route";
 import { revokeUserDeviceAdminRoute } from "./routes/revoke-device.route";
 import { revokeUserDevicesAdminRoute } from "./routes/revoke-devices.route";
 import { showUserAdminRoute } from "./routes/show.route";
+import { signUpsAdminRoute } from "./routes/sign-ups.route";
 import { disconnectUserSsoAdminRoute } from "./routes/sso-disconnect.route";
 import { updateUserSsoPreferencesAdminRoute } from "./routes/sso-preferences.route";
 import { listUserSsoAdminRoute } from "./routes/sso.route";
@@ -33,6 +34,7 @@ export const usersAdminModule = buildModule({
   name: "users",
   routes: [
     accountDeletionsSummaryAdminRoute,
+    signUpsAdminRoute,
     listAccountDeletionsAdminRoute,
     retryAccountDeletionAdminRoute,
     cancelAccountDeletionAdminRoute,

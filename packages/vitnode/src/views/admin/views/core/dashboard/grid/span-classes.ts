@@ -22,4 +22,4 @@ export const rowsHeightRem: Record<AdminDashboardWidgetRows, number> = {
 };
 
 export const gridClasses =
-  "grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3";
+  "grid grid-cols-1 items-stretch gap-4 md:grid-cols-2 xl:grid-cols-3";

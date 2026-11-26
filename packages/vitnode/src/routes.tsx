@@ -27,7 +27,6 @@ import {
 } from "./tanstack/admin/debug/route-search";
 import { ADMIN_FILES_NAMESPACES } from "./tanstack/admin/files/route";
 import { normalizeAdminFilesRouteSearch } from "./tanstack/admin/files/route-search";
-import { ADMIN_INTEGRATIONS_NAMESPACES } from "./tanstack/admin/integrations/route";
 import { ADMIN_NOTIFICATIONS_NAMESPACES } from "./tanstack/admin/notifications/route";
 import { ADMIN_PLUGINS_NAMESPACES } from "./tanstack/admin/plugins/route";
 import { normalizeQueueRouteSearch } from "./tanstack/admin/queue/route-search";
@@ -72,8 +71,6 @@ import { normalizeModcpApprovalsSearch } from "./tanstack/moderation/approvals-r
 import { MODCP_NAMESPACES } from "./tanstack/moderation/namespaces";
 import { normalizeModcpReportsSearch } from "./tanstack/moderation/route-search";
 import { normalizeModcpWarningsSearch } from "./tanstack/moderation/warnings-route";
-import { NOTIFICATIONS_NAMESPACES } from "./tanstack/notifications/namespaces";
-import { normalizeNotificationsRouteSearch } from "./tanstack/notifications/route-search";
 import {
   AuthPendingSkeleton,
   CardsPendingSkeleton,
@@ -269,16 +266,6 @@ export const routes = defineRoutes([
     ],
   }),
 
-  page("/notifications", {
-    component: lazy(() => import("./pages/notifications")),
-    messages: NOTIFICATIONS_NAMESPACES,
-    pendingComponent: () => (
-      <TablePendingSkeleton className="container mx-auto max-w-6xl" />
-    ),
-    requires: "authenticated",
-    search: normalizeNotificationsRouteSearch,
-  }),
-
   page("/files", {
     component: lazy(() => import("./pages/files")),
     messages: MY_FILES_NAMESPACES,
@@ -377,13 +364,6 @@ export const routes = defineRoutes([
     messages: ADMIN_FILES_NAMESPACES,
     pendingComponent: TablePendingSkeleton,
     search: normalizeAdminFilesRouteSearch,
-  }),
-
-  page("/admin/core/system/integrations", {
-    area: "admin",
-    component: lazy(() => import("./pages/admin/system/integrations")),
-    messages: ADMIN_INTEGRATIONS_NAMESPACES,
-    pendingComponent: CardsPendingSkeleton,
   }),
 
   page("/admin/core/system/plugins", {

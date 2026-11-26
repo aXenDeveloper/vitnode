@@ -164,8 +164,8 @@ export const vitNodeApiConfig = buildApiConfig({
 
 ### Verify it round-trips
 
-Open **AdminCP → Core → System → Integrations** (`/admin/core/system/integrations`)
-and click **Test storage** on the Storage card. It uploads an image through your
+Open **Debug Panel → Services** (`/admin/core/debug/services`)
+and click **Test storage** on the File storage row. It uploads an image through your
 adapter, then the row shows up in **AdminCP → Core → System → Files** with a
 working thumbnail - which is `getUrl` proving itself, since the browser loads
 that URL directly.

@@ -158,6 +158,7 @@ export const CORE_AUDIT_ACTIONS = defineAuditActions([
   { action: "submission.approved", targetType: "submission" },
   { action: "submission.rejected", targetType: "submission" },
   { action: "cron.run", targetType: "cron_job" },
+  { action: "queue.cleaned", targetType: "settings" },
   { action: "payment.created", targetType: "payment" },
   { action: "payment.processing", targetType: "payment" },
   { action: "payment.succeeded", targetType: "payment" },

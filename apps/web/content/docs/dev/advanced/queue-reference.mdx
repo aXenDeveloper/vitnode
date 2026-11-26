@@ -98,6 +98,14 @@ The row is stored under the definition's `pluginId` and `name`, whichever plugin
   }}
 />
 
+## API config
+
+| Option                | Type     | Default | Description                                                                                       |
+| --------------------- | -------- | ------- | ------------------------------------------------------------------------------------------------- |
+| `queue.retentionDays` | `number` | `30`    | Days a completed or failed task is kept before the hourly `clean` job deletes it. `0` keeps all. |
+
+See [Clean up old tasks](/docs/dev/advanced/queue#clean-up-old-tasks).
+
 ## Types
 
 All from `@vitnode/api/lib/queue`, except `QueueDispatchOptions` and `QueueDispatchResult` from `@vitnode/api/models/queue`.

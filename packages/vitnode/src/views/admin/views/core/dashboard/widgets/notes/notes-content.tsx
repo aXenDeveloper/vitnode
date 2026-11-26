@@ -49,7 +49,7 @@ export const NotesContent = ({
   }, [value, widgetId]);
 
   return (
-    <div className="flex h-full flex-col gap-2">
+    <div className="flex flex-1 flex-col gap-2">
       <Textarea
         aria-label={t("title")}
         className="min-h-32 flex-1 resize-none"

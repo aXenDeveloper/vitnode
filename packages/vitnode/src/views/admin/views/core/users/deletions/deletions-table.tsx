@@ -23,7 +23,10 @@ import type { AccountDeletion, AccountDeletionsPage } from "./deletions-query";
 
 import { AccountDeletionActions } from "./deletions-actions";
 import { deletionRef } from "./deletions-attention";
-import { ACCOUNT_DELETION_STATUSES } from "./deletions-query";
+import {
+  ACCOUNT_DELETION_DEFAULT_STATUSES,
+  ACCOUNT_DELETION_STATUSES,
+} from "./deletions-query";
 
 const STATUS_VARIANT = {
   cancelled: "secondary",
@@ -325,6 +328,7 @@ export const AccountDeletionsTable = ({
         edges={data.edges}
         filters={[
           {
+            defaultValues: ACCOUNT_DELETION_DEFAULT_STATUSES,
             id: "status",
             label: t("columns.status"),
             options: ACCOUNT_DELETION_STATUSES.map(status => ({

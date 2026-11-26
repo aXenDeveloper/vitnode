@@ -5,8 +5,15 @@ import { useTranslations } from "use-intl";
 
 import { Button } from "@/components/ui/button";
 import {
+  DialogStackContext,
+  useDialogStack,
+} from "@/components/ui/dialog-stack";
+import {
+  dialogFooterFrameClassName,
+  dialogFrameClassName,
   dialogPopupMotionClassName,
   dialogScrimClassName,
+  dialogStackClassName,
 } from "@/components/ui/modal-scrim";
 
 const AlertDialogContext = React.createContext<{
@@ -94,25 +101,44 @@ function AlertDialogOverlay({
  * `"default"` (max width `lg`) or `"sm"`; defaults to `"default"`.
  */
 function AlertDialogContent({
+  children,
   className,
   size = "default",
+  style,
   ...props
 }: AlertDialogPrimitive.Popup.Props & {
   size?: "default" | "sm";
 }) {
+  const {
+    initialFocus,
+    observePopup,
+    reportNested,
+    style: stackStyle,
+  } = useDialogStack();
+
   return (
     <AlertDialogPortal>
       <AlertDialogOverlay />
       <AlertDialogPrimitive.Popup
         className={cn(
-          "group/alert-dialog-content bg-popover text-popover-foreground fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border p-6 shadow-xl data-[size=default]:sm:max-w-lg data-[size=sm]:sm:max-w-sm",
+          dialogFrameClassName,
+          dialogStackClassName,
+          "group/alert-dialog-content fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-3rem)] -translate-x-1/2 -translate-y-1/2 gap-4 p-6 data-[size=default]:sm:max-w-lg data-[size=sm]:sm:max-w-sm",
           dialogPopupMotionClassName,
           className,
         )}
         data-size={size}
         data-slot="alert-dialog-content"
+        initialFocus={initialFocus}
+        ref={observePopup}
+        style={state => ({
+          ...stackStyle,
+          ...(typeof style === "function" ? style(state) : style),
+        })}
         {...props}
-      />
+      >
+        <DialogStackContext value={reportNested}>{children}</DialogStackContext>
+      </AlertDialogPrimitive.Popup>
     </AlertDialogPortal>
   );
 }
@@ -142,7 +168,8 @@ function AlertDialogFooter({
   return (
     <div
       className={cn(
-        "bg-muted/50 -mx-6 -mb-6 flex flex-col-reverse gap-2 rounded-b-xl border-t px-6 py-4 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
+        dialogFooterFrameClassName,
+        "flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end sm:group-data-[size=default]/alert-dialog-content:[&>:first-child:not(:last-child)]:me-auto",
         className,
       )}
       data-slot="alert-dialog-footer"

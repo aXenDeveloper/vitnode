@@ -3,4 +3,5 @@ export const HOME_NAMESPACES = [
   'site.home.hero',
   'site.home.bento',
   'site.home.faq',
+  'site.home.cta',
 ] as const

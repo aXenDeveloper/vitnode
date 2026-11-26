@@ -54,6 +54,7 @@ export const VITNODE_CLIENT_DEPENDENCIES = [
   "@tanstack/charts/tooltip/portal",
   "@tanstack/react-form",
   "@tanstack/react-query",
+  "@tanstack/react-virtual",
   "@tiptap/extension-audio",
   "@tiptap/extension-drag-handle-react",
   "@tiptap/extension-emoji",

@@ -20,6 +20,7 @@ import {
   NativeSelectOption,
 } from "@/components/ui/native-select";
 import { Switch } from "@/components/ui/switch";
+import { TooltipWithContent } from "@/components/ui/tooltip";
 
 export type NotificationTypePatch = Partial<
   NotificationPreferenceTypeView["value"]
@@ -135,10 +136,23 @@ const NotificationTypeSummary = ({
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <h4 className="flex items-center gap-1.5 text-sm font-medium text-pretty">
           {type.locked ? (
-            <LockIcon
-              aria-label={t("locked")}
-              className="text-muted-foreground size-3.5 shrink-0"
-            />
+            <TooltipWithContent
+              text={type.mandatory ? t("types.mandatory") : t("types.locked")}
+            >
+              <span
+                aria-label={
+                  type.mandatory ? t("types.mandatory") : t("types.locked")
+                }
+                className="focus-visible:ring-ring/50 relative z-10 -m-1 inline-flex cursor-help rounded-sm p-1 outline-none focus-visible:ring-3"
+                role="img"
+                tabIndex={0}
+              >
+                <LockIcon
+                  aria-hidden
+                  className="text-muted-foreground size-3.5 shrink-0"
+                />
+              </span>
+            </TooltipWithContent>
           ) : null}
           <button
             aria-controls={panelId}
