@@ -7,67 +7,109 @@
         "content": {
           "title": "Jeden plik, cała funkcja",
           "desc": "Tabele, typowane API i ekrany AdminCP z jednej definicji.",
-          "features": {
-            "admin": "Ekrany AdminCP",
-            "api": "Typowane API",
-            "database": "Tabela w bazie",
-            "publishing": "Szkice i publikacja",
-            "revisions": "Rewizje",
-            "scheduling": "Harmonogram",
-            "translations": "Tłumaczenia",
-            "search": "Wyszukiwarka",
-            "live": "Wspólna edycja",
-            "comments": "Komentarze",
-            "reactions": "Reakcje",
-            "followers": "Obserwujący"
+          "admin": {
+            "heading": "Artykuły",
+            "create": "Utwórz artykuł",
+            "search": "Szukaj…",
+            "nav": {
+              "group": "Blog",
+              "articles": "Artykuły",
+              "categories": "Kategorie",
+              "core": "Rdzeń",
+              "dashboard": "Pulpit",
+              "users": "Użytkownicy"
+            },
+            "columns": {
+              "title": "Tytuł",
+              "authors": "Autorzy",
+              "status": "Status",
+              "updated": "Zaktualizowano"
+            },
+            "published": "Opublikowany",
+            "draft": "Szkic",
+            "rows": {
+              "fresh": {
+                "title": "Wiosenne menu startuje w poniedziałek",
+                "author": "Ola",
+                "updated": "Przed chwilą"
+              },
+              "recap": {
+                "title": "Podsumowanie letniego spotkania",
+                "author": "Kuba",
+                "updated": "2 dni temu"
+              },
+              "guide": {
+                "title": "Poradnik dla nowych moderatorów",
+                "author": "Marta",
+                "updated": "5 dni temu"
+              },
+              "rules": {
+                "title": "Zasady członkostwa po nowemu",
+                "author": "Ola",
+                "updated": "Tydzień temu"
+              }
+            }
           }
         },
         "notifications": {
           "title": "Wiadomości, które same trafiają do ludzi",
           "desc": "Skrzynka, licznik na żywo i podsumowania e-mailem.",
+          "heading": "Powiadomienia",
+          "tabs": {
+            "unread": "Nieprzeczytane",
+            "mentions": "Wzmianki",
+            "all": "Wszystkie"
+          },
           "mark_all": "Oznacz wszystkie jako przeczytane",
           "items": {
             "reply": {
-              "title": "Kuba odpowiedział w Twoim temacie",
-              "sub": "w „Zdjęcia z letniego spotkania”"
-            },
-            "live": {
-              "title": "Twój artykuł jest opublikowany",
-              "sub": "Podsumowanie letniego spotkania"
+              "who": "Kuba",
+              "action": "odpowiedział w",
+              "target": "Zdjęcia z letniego spotkania",
+              "time": "Przed chwilą"
             },
             "comment": {
-              "title": "Ola dodała komentarz",
-              "sub": "„Wpisz mnie na przyszły rok!”"
+              "who": "Ola",
+              "action": "skomentowała",
+              "target": "Podsumowanie letniego spotkania",
+              "time": "2 min temu"
             },
-            "report": {
-              "title": "Moderator zamknął Twoje zgłoszenie",
-              "sub": "Zgłoszenie #128 · treść ukryta"
+            "mention": {
+              "who": "Marta",
+              "action": "wspomniała o Tobie w",
+              "target": "Poznaj moderatorów",
+              "time": "Godzinę temu"
             }
           }
         },
         "live": {
           "title": "Piszcie razem w czasie rzeczywistym",
           "desc": "Tekst sformatowany przyjmuje kilka kursorów naraz, a każda zmiana zapisuje się sama.",
-          "saving": "Zapisywanie…",
+          "saving": "Zapisuję…",
           "saved": "Zapisano",
           "first": "Czterdziestu dwóch członków spotkało się na",
           "selected": "dachu",
           "first_end": ".",
           "ola": " Pizza skończyła się przed ósmą.",
           "second": "W przyszłym roku rezerwujemy",
-          "kuba": " większą salę i dwa piece więcej."
+          "kuba": " większą salę i dwa piece więcej.",
+          "heading": "Podsumowanie letniego spotkania",
+          "translate": "Tłumacz"
         },
         "ai": {
           "title": "AI, które odwala nudną robotę",
           "desc": "Teksty ALT i tłumaczenia, dowolny dostawca, w ramach budżetu.",
-          "provider": "Dowolny dostawca",
-          "alt": "Tekst ALT",
-          "budget": "{percent}% budżetu"
+          "actions": {
+            "alt": "Generuj tekst ALT obrazu",
+            "translate": "Tłumacz treści",
+            "rewrite": "Przeredaguj zaznaczony tekst",
+            "review": "Sprawdź artykuł przed publikacją"
+          },
+          "budget": "{percent}% miesięcznego budżetu"
         },
         "search": {
           "title": "Znalezione, zanim skończysz pisać",
           "desc": "Podpowiedzi zmieniają się z każdym klawiszem, ułożone według tego, co ludzie czytają.",
-          "tab": "Tab",
           "queries": "s|sp|spr|sp|spo|spot",
           "suggestions": {
             "recap": "Spotkanie letnie 2026",
@@ -76,7 +118,12 @@
             "rules": "Społeczność — zasady",
             "events": "Sport i rekreacja",
             "library": "Sprzedam rower"
-          }
+          },
+          "group": "Podpowiedzi",
+          "navigate": "nawigacja",
+          "open": "otwórz",
+          "close": "zamknij",
+          "esc": "Esc"
         }
       },
       "cta": {
@@ -125,459 +172,51 @@
       "hero": {
         "copied": "Skopiowano",
         "copy_command": "Skopiuj komendę instalacji",
-        "description": "Konta, role, moderacja, wyszukiwarka i panel administratora są w zestawie. Każda funkcja to plugin, więc piszesz tylko to, co wyróżnia Twoją społeczność.",
+        "description": "Dodawaj to, czego potrzebuje Twoja społeczność, gdy rośnie, wszystko na jednym koncie. Każdy użytkownik i każdy zarobiony grosz zostają z Tobą.",
         "explore": "Odkryj, co możesz zbudować",
-        "pages": {
-          "article": {
-            "back": "Wróć do artykułów",
-            "body": "Czterdziestu dwóch członków, jeden dach i zdecydowanie za dużo pizzy. Oto wszystko, co razem zbudowaliśmy, i plany na przyszły rok.",
-            "read": "4 min czytania"
+        "scene": {
+          "all": {
+            "off": "Połącz wszystkie",
+            "on": "Zerwij mosty"
           },
-          "blog": {
-            "all": "Wszystkie artykuły",
-            "articles": {
-              "0": {
-                "date": "18 lis 2026",
-                "title": "Podsumowanie letniego zlotu i zdecydowanie za dużo pizzy"
-              },
-              "1": {
-                "date": "9 lis 2026",
-                "title": "Własny serwer na Raspberry Pi"
-              }
-            },
-            "categories": "Kategorie",
-            "categoryNames": {
-              "0": "Wydarzenia",
-              "1": "Poradniki",
-              "2": "Wydania"
-            },
-            "desc": "Artykuły, poradniki i wiadomości od zespołu, od najnowszych.",
-            "title": "Blog"
+          "bridge": "Most: {name}",
+          "captions": {
+            "blog": "Artykuły z komentarzami. Odpowiedzi i cotygodniowy e-mail sprowadzają czytelników z powrotem, bez płacenia za reklamy.",
+            "booking": "Użytkownicy rezerwują i opłacają Twój czas na wyspie, na którą i tak mogą przejść.",
+            "forum": "Użytkownicy odpowiadają sobie publicznie, a każda odpowiedź to strona, na którą wyszukiwarki kierują nowych ludzi.",
+            "members": "Pobieraj opłaty za wyspę tylko dla członków. Najchętniej dołączą ci, którzy są już jeden most dalej.",
+            "payments": "Wszystko, co zarobią Twoje wyspy, trafia na Twoje konto bankowe. VitNode nie pobiera prowizji.",
+            "people": "Tu mieszkają Twoi użytkownicy. Każda dodana wyspa dostaje most, a oni przechodzą go z kontem, które już mają.",
+            "shop": "Każdy, kto przechodzi przez most, jest już zalogowany, więc do zakupu nie trzeba drugiego konta."
           },
-          "discover": {
-            "commented": "skomentował(a)",
-            "desc": "Zobacz najnowszą aktywność w całej społeczności.",
-            "kind": "Komentarz",
-            "title": "Odkrywaj"
-          },
-          "forum": {
-            "comments": "Komentarze",
-            "desc": "Rozgość się. Pytaj, pokazuj, co budujesz, i pomagaj innym.",
-            "forums": {
-              "0": {
-                "latest": "Wersja 2.0 już jest",
-                "name": "Ogłoszenia"
-              },
-              "1": {
-                "latest": "Notatki do canary 13",
-                "name": "Wydania"
-              },
-              "2": {
-                "desc": "Rozmowy o wszystkim i o niczym.",
-                "latest": "Zdjęcia z letniego zlotu",
-                "name": "Dyskusja ogólna"
-              },
-              "3": {
-                "desc": "Utknąłeś? Ktoś tu już przez to przeszedł.",
-                "latest": "Docker na serwerze NAS",
-                "name": "Pomoc i wsparcie"
-              }
-            },
-            "latest": "Ostatni temat",
-            "newTopic": "Nowy temat",
-            "title": "Forum",
-            "topics": "Tematy",
-            "topicsList": {
-              "0": {
-                "date": "23 lis, 17:02",
-                "title": "Zdjęcia z letniego zlotu, dorzućcie swoje do wątku"
-              },
-              "1": {
-                "date": "22 lis, 9:14",
-                "title": "Na jakiej klawiaturze piszecie?"
-              },
-              "2": {
-                "date": "20 lis, 19:40",
-                "title": "Przedstaw się"
-              },
-              "3": {
-                "date": "18 lis, 13:25",
-                "title": "Pomysły na pluginy do kolejnego wydania"
-              }
-            }
-          },
-          "modcp": {
-            "assigned": "Przypisane",
-            "cards": {
-              "0": {
-                "kind": "#8 · Komentarz",
-                "reason": "Spam",
-                "text": "Świetna wiadomość, bocznica stoi pusta od lat."
-              },
-              "1": {
-                "kind": "#7 · Komentarz",
-                "reason": "Obraźliwa treść",
-                "text": "Ten wątek wykoleił się po drugiej stronie."
-              },
-              "2": {
-                "kind": "#1 · Artykuł",
-                "reason": "Spam",
-                "text": "Własny serwer na Raspberry Pi"
-              }
-            },
-            "columns": {
-              "0": "Nowe",
-              "1": "W toku",
-              "2": "Gotowe"
-            },
-            "crumb": "Panel moderatora",
-            "desc": "Zgłoszenia, którymi możesz się zająć. Przeciągnij kartę do innej kolumny, aby ją przejąć, zamknąć lub odesłać.",
-            "empty": "Nic tu nie ma.",
-            "nav": {
-              "0": "Zgłoszenia",
-              "1": "Akceptacje",
-              "2": "Ostrzeżenia"
-            },
-            "search": "Szukaj po tytule lub #id",
-            "title": "Zgłoszenia"
-          },
-          "nav": {
+          "clear_skies": "Czyste niebo",
+          "cut": "Mosty opadły, a wyspa użytkowników jest wciąż pełna. Nikt nie stracił konta.",
+          "home": "Użytkownicy",
+          "lowered": "Most opada, wyspa tonie w chmurach. Użytkownicy wracają do siebie i zachowują swoje konta.",
+          "parts": {
             "blog": "Blog",
-            "community": "Społeczność",
-            "docs": "Dokumentacja",
-            "login": "Zaloguj się",
-            "plugins": "Wtyczki",
-            "register": "Zarejestruj się",
-            "search": "Szukaj…"
+            "booking": "Rezerwacje",
+            "forum": "Forum",
+            "members": "Członkostwa",
+            "payments": "Płatności",
+            "shop": "Sklep"
           },
-          "notifications": {
-            "items": {
-              "0": {
-                "text": "skomentował temat Zdjęcia z letniego zlotu",
-                "time": "2 minuty temu"
-              },
-              "1": {
-                "text": "zareagowała na Twój artykuł",
-                "time": "godzinę temu"
-              },
-              "2": {
-                "text": "wspomniał o Tobie w Przedstaw się",
-                "time": "4 dni temu"
-              }
-            },
-            "markAll": "Oznacz wszystkie jako przeczytane",
-            "tabs": {
-              "0": "Nieprzeczytane",
-              "1": "Wzmianki",
-              "2": "Wszystkie"
-            },
-            "title": "Powiadomienia"
-          },
-          "payments": {
-            "desc": "Kup jeden produkt w stałej cenie przez zewnętrzną płatność. Zakup liczy się dopiero po potwierdzeniu przez operatora.",
-            "item": "Zestaw naklejek",
-            "itemDesc": "Dwanaście winylowych naklejek na laptopy, bidony i zmęczone monitory.",
-            "owned": "Masz ten produkt",
-            "price": "20,00 zł",
-            "title": "Demo płatności",
-            "view": "Zobacz zakup"
-          },
-          "people": {
-            "0": {
-              "name": "Ola Nowak",
-              "nick": "@ola"
-            },
-            "1": {
-              "name": "Kuba Wiśniewski",
-              "nick": "@kuba"
-            },
-            "2": {
-              "name": "Maya Lindqvist",
-              "nick": "@maya"
-            },
-            "3": {
-              "name": "Jun Sato",
-              "nick": "@jun"
-            }
-          },
-          "profile": {
-            "joined": "15 listopada 2025",
-            "month": "Listopad 2026",
-            "online": "Teraz online",
-            "reacted": "zareagowała na",
-            "reputation": "+128 reputacji",
-            "role": "Administratorka",
-            "timeline": "Oś czasu",
-            "today": "Dzisiaj · 2 pozycje",
-            "weekday": "WT",
-            "weekdayBefore": "PON",
-            "yesterday": "Wczoraj · 14 pozycji"
-          },
-          "search": {
-            "any": "Kiedykolwiek",
-            "content": "Treść",
-            "date": "Data utworzenia",
-            "desc": "Szukaj we wszystkim, co jest w społeczności.",
-            "filters": "Filtry",
-            "kinds": {
-              "0": "Artykuł",
-              "1": "Komentarz",
-              "2": "Temat"
-            },
-            "newest": "Najnowsze",
-            "placeholder": "zlot",
-            "ranges": {
-              "0": "Kiedykolwiek",
-              "1": "Ostatnie 24 godziny",
-              "2": "Ostatni tydzień"
-            },
-            "results": "45 wyników",
-            "title": "Szukaj"
-          },
-          "topic": {
-            "body": "Wrzucajcie tu zdjęcia z dachu. Dodatkowe punkty za wszystko, na czym widać wieżę z pizzy.",
-            "commentCount": "6 komentarzy",
-            "comments": {
-              "0": "Oto moje z dachu. Co za widok!",
-              "1": "Pizza skończyła się przed ósmą. Za rok zamawiamy podwójnie."
-            },
-            "hide": "Ukryj 2 odpowiedzi",
-            "posted": "Opublikowano 23 lis, 17:02",
-            "report": "Zgłoś"
-          }
-        },
-        "rotator": {
-          "lead": "Zbuduj",
-          "spoken": "Zbuduj forum, bloga, sklep, przestrzeń zespołu albo własny pomysł bez zaczynania od zera.",
-          "tail": "bez zaczynania od zera.",
-          "words": {
-            "blog": "bloga",
-            "forum": "forum",
-            "own": "własny pomysł",
-            "shop": "sklep",
-            "team": "przestrzeń zespołu"
+          "react": {
+            "cloud": "Chmura odpływa. Nic nie stoi między Twoimi użytkownikami a kolejną wyspą.",
+            "flock": "Stado użytkowników leci na inną wyspę. Nikt nie potrzebuje nowego konta, żeby wpaść.",
+            "plank": "Deski uginają się pod stopami. Użytkownicy przechodzą z kontem, które już mają, bez drugiej rejestracji.",
+            "walker": "Przechodzi z kontem, które już ma."
           }
         },
         "start": "Zacznij",
+        "title": {
+          "accent": "miejsce, gdzie są u siebie",
+          "lead": "Daj swoim ludziom"
+        },
         "trust": {
           "agents": "Stworzony dla agentów AI do kodowania",
           "license": "Licencja MIT",
           "open_source": "Open source"
-        },
-        "wall": {
-          "ai": {
-            "alt_text": "Teksty alternatywne obrazów",
-            "budget": "Pozostały budżet",
-            "desc": "Punkty wydane przez członków na funkcje AI w tym miesiącu.",
-            "models": "{count, plural, one {# model} few {# modele} many {# modeli} other {# modelu}}",
-            "points": "Wykorzystane punkty",
-            "requests": "Żądania",
-            "summaries": "Podsumowania",
-            "translate": "Tłumaczenie artykułów"
-          },
-          "article": {
-            "back": "Wróć",
-            "choose": "Wybierz plik",
-            "content": "Treść",
-            "content_value": "Czterdziestu dwóch członków, jeden dach i zdecydowanie za dużo pizzy. Oto wszystko, co razem zbudowaliśmy…",
-            "cover": "Obraz okładki",
-            "cover_desc": "JPG, PNG, WEBP, AVIF · maks. 5 MB",
-            "desc": "Dodaj nowy artykuł.",
-            "draft": "Zapisz jako szkic",
-            "drop": "Przeciągnij plik tutaj",
-            "publish": "Opublikuj",
-            "title": "Utwórz artykuł",
-            "title_label": "Tytuł",
-            "title_value": "Podsumowanie letniego spotkania",
-            "url": "Przyjazny adres URL"
-          },
-          "categories": {
-            "announcements": "Ogłoszenia",
-            "count": "{count, plural, one {# artykuł} few {# artykuły} many {# artykułów} other {# artykułu}}",
-            "create": "Nowa kategoria",
-            "desc": "Grupuj artykuły na blogu, aby czytelnicy łatwo trafiali tam, gdzie chcą.",
-            "events": "Wydarzenia",
-            "guides": "Poradniki",
-            "releases": "Informacje o wydaniach",
-            "spotlight": "W centrum społeczności"
-          },
-          "common": {
-            "active": "Aktywna",
-            "english": "Angielski",
-            "optional": "Opcjonalne",
-            "read_more": "Czytaj więcej"
-          },
-          "cron": {
-            "daily": "Codziennie",
-            "desc": "Zadania w tle i czas ich następnego uruchomienia.",
-            "digest": "Wyślij cotygodniowe podsumowanie",
-            "failed": "Błąd",
-            "files": "Usuń skasowane pliki",
-            "healthy": "Działa",
-            "hourly": "Co godzinę",
-            "in_hours": "za {count} godz.",
-            "in_minutes": "za {count} min",
-            "job": "Zadanie",
-            "last_tick": "Ostatnie uruchomienie {count, plural, one {# sekundę} few {# sekundy} many {# sekund} other {# sekundy}} temu",
-            "next_run": "Następne uruchomienie",
-            "running": "W trakcie",
-            "scheduler": "Harmonogram działa",
-            "search": "Przebuduj indeks wyszukiwania",
-            "sessions": "Wyczyść wygasłe sesje",
-            "six_hours": "Co 6 godzin",
-            "status": "Status",
-            "tomorrow": "Jutro",
-            "weekly": "Co tydzień"
-          },
-          "dashboard": {
-            "dev_mode": "Tryb deweloperski",
-            "edit_layout": "Edytuj układ",
-            "message": "Tytuł",
-            "message_value": "Pozdrowienia od administratora 👋",
-            "notes_desc": "Prywatny notatnik. Widzisz go tylko Ty.",
-            "notes_placeholder": "Wszystko, co warto zapamiętać…",
-            "notes_title": "Notatki",
-            "notify_desc": "Wysyła powiadomienie do użytkownika w czasie rzeczywistym, na każdej przeglądarce, na której jest zalogowany.",
-            "notify_title": "Wyślij powiadomienie",
-            "send": "Wyślij",
-            "user_id": "ID użytkownika",
-            "version": "Wersja: {version}"
-          },
-          "files": {
-            "desc": "Wszystko, co przesłali członkowie i zespół.",
-            "upload": "Prześlij"
-          },
-          "integrations": {
-            "ai": "Generowanie tekstu, uporządkowane dane wyjściowe i osadzenia dzięki Vercel AI SDK.",
-            "cron": "Zaplanowane zadania w tle, takie jak czyszczenie wygasłych sesji i tokenów.",
-            "desc": "Status podstawowych usług obsługujących tę instancję.",
-            "email": "Wiadomości transakcyjne, takie jak potwierdzenia rejestracji i resetowanie hasła.",
-            "email_title": "E-mail",
-            "queue": "Zadania w tle umieszczone w kolejce w bazie danych i przetwarzane przez proces cron.",
-            "redis": "Współdzielona pamięć podręczna i magazyn ogranicznika żądań. Przy wyłączeniu przechodzi na pamięć wewnętrzną.",
-            "title": "Integracje",
-            "unreachable": "Nieosiągalna",
-            "websocket": "Aktualizacje na żywo i powiadomienia wysyłane do połączonych klientów w czasie rzeczywistym."
-          },
-          "login": {
-            "desc": "Witaj ponownie! Zaloguj się na swoje konto.",
-            "email": "Adres e-mail",
-            "forgot": "Nie pamiętasz hasła?",
-            "no_account": "Nie masz konta?",
-            "password": "Hasło",
-            "sign_up": "Zarejestruj się.",
-            "submit": "Zaloguj się",
-            "title": "Zaloguj się"
-          },
-          "moderators": {
-            "articles": "Zarządzanie artykułami",
-            "articles_desc": "Tworzenie, edycja i publikowanie artykułów",
-            "desc": "Wybierz, co moderatorzy mogą robić w AdminCP.",
-            "layout": "Edycja układu",
-            "layout_desc": "Zmiana menu i widżetów pulpitu",
-            "members": "Moderowanie członków",
-            "members_desc": "Banowanie, ostrzeganie i edycja profili",
-            "roles": "Zarządzanie rolami",
-            "roles_desc": "Zmiana ról i dostępu zespołu",
-            "usage": "Podgląd użycia AI",
-            "usage_desc": "Punkty i budżety"
-          },
-          "nav": {
-            "admins": "Administratorzy",
-            "advanced": "Zaawansowane",
-            "ai": "Sztuczna Inteligencja (AI)",
-            "ai_actions": "Akcje",
-            "ai_history": "Historia",
-            "ai_overview": "Przegląd",
-            "articles": "Artykuły",
-            "blog": "Blog",
-            "categories": "Kategorie",
-            "core": "Rdzeń",
-            "cron": "Zadania cron",
-            "dashboard": "Pulpit",
-            "files": "Pliki",
-            "integrations": "Integracje",
-            "moderators": "Moderatorzy",
-            "navigation": "Nawigacja",
-            "notifications": "Powiadomienia",
-            "queue": "Zadania w kolejce",
-            "roles": "Role",
-            "search": "Szukaj",
-            "staff": "Zespół",
-            "system": "System",
-            "user_list": "Lista użytkowników",
-            "users": "Użytkownicy"
-          },
-          "navigation": {
-            "add": "Dodaj link",
-            "desc": "Wybierz, do czego prowadzą Twoje menu i w jakiej kolejności.",
-            "discord": "Discord",
-            "home": "Strona główna",
-            "support": "Wesprzyj nas"
-          },
-          "notifications": {
-            "desc": "Co działo się w Twojej społeczności podczas Twojej nieobecności.",
-            "digest": "Wysłano cotygodniowe podsumowanie do {count, number} członków",
-            "hours_ago": "{count, plural, one {# godzinę temu} few {# godziny temu} many {# godzin temu} other {# godziny temu}}",
-            "joined": "{name} dołącza do Twojej społeczności",
-            "mark_all": "Oznacz wszystkie jako przeczytane",
-            "minutes_ago": "{count, plural, one {# minutę temu} few {# minuty temu} many {# minut temu} other {# minuty temu}}",
-            "new": "Nowe: {count}",
-            "published": "{name} publikuje „{title}”",
-            "published_title": "Self-hosting na Raspberry Pi",
-            "role": "{name} aktualizuje rolę Moderator",
-            "translated": "AI przetłumaczyło {count, plural, one {# artykuł} few {# artykuły} many {# artykułów} other {# artykułu}} na polski",
-            "yesterday": "Wczoraj"
-          },
-          "roles": {
-            "administrator": "Administrator",
-            "create": "Utwórz rolę",
-            "desc": "Zarządzaj rolami w swojej aplikacji.",
-            "guest": "Gość",
-            "member": "Członek",
-            "moderator": "Moderator",
-            "role": "Rola",
-            "search": "Szukaj ról po nazwie…",
-            "updated": "Zaktualizowano",
-            "users_count": "Liczba użytkowników"
-          },
-          "search": {
-            "desc": "Wszystko, co mogą znaleźć Twoi członkowie, w jednym indeksie.",
-            "documents": "Zaindeksowane dokumenty",
-            "engine": "Silnik",
-            "engine_value": "Wyszukiwanie pełnotekstowe Postgres",
-            "rebuilt": "Ostatnio przebudowano {count, plural, one {# godzinę} few {# godziny} many {# godzin} other {# godziny}} temu",
-            "reindex": "Przebuduj indeks",
-            "type": "Typ"
-          },
-          "settings": {
-            "active_now": "Aktywne teraz",
-            "ai": "Użycie AI",
-            "days_ago": "{count, plural, one {# dzień temu} few {# dni temu} many {# dni temu} other {# dnia temu}}",
-            "devices": "Urządzenia",
-            "edit_profile": "Edytuj profil",
-            "email": "Adres e-mail",
-            "language": "Język",
-            "member_since": "Członek od {date}",
-            "notifications": "Powiadomienia",
-            "overview": "Przegląd",
-            "role": "Rola",
-            "security": "Bezpieczeństwo",
-            "sign_out": "Wyloguj",
-            "sign_out_all": "Wyloguj ze wszystkich innych urządzeń",
-            "sso": "Połączone konta",
-            "this_device": "To urządzenie",
-            "time_zone": "Strefa czasowa",
-            "time_zone_value": "Europa/Warszawa (GMT+2)",
-            "title": "Ustawienia"
-          },
-          "users": {
-            "add": "Dodaj użytkownika",
-            "desc": "Wszyscy, którzy dołączyli do Twojej społeczności.",
-            "joined": "Dołączył",
-            "search": "Szukaj po nazwie lub adresie e-mail…",
-            "user": "Użytkownik"
-          }
         }
       }
     },

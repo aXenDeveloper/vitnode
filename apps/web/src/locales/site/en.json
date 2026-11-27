@@ -7,41 +7,78 @@
         "content": {
           "title": "One file, a whole feature",
           "desc": "Tables, typed API and AdminCP screens from one definition.",
-          "features": {
-            "admin": "AdminCP screens",
-            "api": "Typed API",
-            "database": "Database table",
-            "publishing": "Drafts and publishing",
-            "revisions": "Revisions",
-            "scheduling": "Scheduling",
-            "translations": "Translations",
-            "search": "Site search",
-            "live": "Live editing",
-            "comments": "Comments",
-            "reactions": "Reactions",
-            "followers": "Followers"
+          "admin": {
+            "heading": "Articles",
+            "create": "Create Article",
+            "search": "Search…",
+            "nav": {
+              "group": "Blog",
+              "articles": "Articles",
+              "categories": "Categories",
+              "core": "Core",
+              "dashboard": "Dashboard",
+              "users": "Users"
+            },
+            "columns": {
+              "title": "Title",
+              "authors": "Authors",
+              "status": "Status",
+              "updated": "Updated"
+            },
+            "published": "Published",
+            "draft": "Draft",
+            "rows": {
+              "fresh": {
+                "title": "Spring menu launches Monday",
+                "author": "Ola",
+                "updated": "Just now"
+              },
+              "recap": {
+                "title": "Our summer meetup recap",
+                "author": "Kuba",
+                "updated": "2 days ago"
+              },
+              "guide": {
+                "title": "A guide for new moderators",
+                "author": "Marta",
+                "updated": "5 days ago"
+              },
+              "rules": {
+                "title": "Membership rules, rewritten",
+                "author": "Ola",
+                "updated": "Last week"
+              }
+            }
           }
         },
         "notifications": {
           "title": "News that finds its people",
           "desc": "An inbox, a live count and email digests.",
+          "heading": "Notifications",
+          "tabs": {
+            "unread": "Unread",
+            "mentions": "Mentions",
+            "all": "All"
+          },
           "mark_all": "Mark all as read",
           "items": {
             "reply": {
-              "title": "Kuba replied to your topic",
-              "sub": "on “Summer meetup photos”"
-            },
-            "live": {
-              "title": "Your article is live",
-              "sub": "Our summer meetup recap"
+              "who": "Kuba",
+              "action": "replied to",
+              "target": "Summer meetup photos",
+              "time": "Just now"
             },
             "comment": {
-              "title": "Ola commented",
-              "sub": "“Count me in for next year!”"
+              "who": "Ola",
+              "action": "commented on",
+              "target": "Our summer meetup recap",
+              "time": "2 min ago"
             },
-            "report": {
-              "title": "A moderator closed your report",
-              "sub": "Report #128 · content hidden"
+            "mention": {
+              "who": "Marta",
+              "action": "mentioned you in",
+              "target": "Meet the moderators",
+              "time": "1 hour ago"
             }
           }
         },
@@ -55,19 +92,24 @@
           "first_end": ".",
           "ola": " The pizza ran out by eight.",
           "second": "Next year we are booking",
-          "kuba": " a bigger venue and two more ovens."
+          "kuba": " a bigger venue and two more ovens.",
+          "heading": "Our summer meetup recap",
+          "translate": "Translate"
         },
         "ai": {
           "title": "AI that does the chores",
           "desc": "ALT text and translations, any provider, on a budget.",
-          "provider": "Any provider",
-          "alt": "ALT text",
-          "budget": "{percent}% of budget"
+          "actions": {
+            "alt": "Generate image ALT text",
+            "translate": "Translate content",
+            "rewrite": "Rewrite selected text",
+            "review": "Review article before publishing"
+          },
+          "budget": "{percent}% of monthly budget"
         },
         "search": {
           "title": "Found before you finish typing",
           "desc": "Suggestions update on every key, ranked by what people read.",
-          "tab": "Tab",
           "queries": "m|me|mem|me|mee|meet",
           "suggestions": {
             "recap": "Meetup recap 2026",
@@ -76,7 +118,12 @@
             "rules": "Membership rules",
             "events": "Mentoring evenings",
             "library": "Media library tips"
-          }
+          },
+          "group": "Suggestions",
+          "navigate": "to navigate",
+          "open": "to open",
+          "close": "to close",
+          "esc": "Esc"
         }
       },
       "cta": {
@@ -125,459 +172,51 @@
       "hero": {
         "copied": "Copied",
         "copy_command": "Copy install command",
-        "description": "Accounts, roles, moderation, search and an admin panel are built in. Every feature is a plugin, so you write only what makes your community different.",
+        "description": "Add whatever your community needs as it grows, all on one account. Every member and every cent you earn stays with you.",
         "explore": "Explore what you can build",
-        "pages": {
-          "article": {
-            "back": "Back to articles",
-            "body": "Forty-two members, one rooftop and far too much pizza. Here is everything we shipped together, and what we are planning for next year.",
-            "read": "4 min read"
+        "scene": {
+          "all": {
+            "off": "Connect them all",
+            "on": "Cut the bridges"
           },
-          "blog": {
-            "all": "All articles",
-            "articles": {
-              "0": {
-                "date": "Nov 18, 2026",
-                "title": "Our summer meetup recap, with far too much pizza"
-              },
-              "1": {
-                "date": "Nov 9, 2026",
-                "title": "Self-hosting on a Raspberry Pi"
-              }
-            },
-            "categories": "Categories",
-            "categoryNames": {
-              "0": "Events",
-              "1": "Guides",
-              "2": "Releases"
-            },
-            "desc": "Articles, guides and news from the team, newest first.",
-            "title": "Blog"
+          "bridge": "Bridge to {name}",
+          "captions": {
+            "blog": "Articles with comments. Replies and the weekly email bring readers back across, with no ad to pay for.",
+            "booking": "Members book and pay for your time on an island they can already walk to.",
+            "forum": "Members answer each other in public, and every answer is a page that search engines send new people to.",
+            "members": "Charge for the members-only island. The people most likely to join are already one bridge away.",
+            "payments": "Everything your islands earn lands in your own bank account. VitNode takes no cut.",
+            "people": "Your members live here. Every island you add gets a bridge, and they cross it with the account they already have.",
+            "shop": "Everyone crossing the bridge is already signed in, so buying takes no second account."
           },
-          "discover": {
-            "commented": "commented on",
-            "desc": "See the latest activity across the community.",
-            "kind": "Comment",
-            "title": "Discover"
-          },
-          "forum": {
-            "comments": "Comments",
-            "desc": "Pull up a chair. Ask questions, share what you built and help each other out.",
-            "forums": {
-              "0": {
-                "latest": "Version 2.0 is here",
-                "name": "Announcements"
-              },
-              "1": {
-                "latest": "Canary 13 notes",
-                "name": "Releases"
-              },
-              "2": {
-                "desc": "Talk about anything and everything.",
-                "latest": "Summer meetup photos",
-                "name": "General discussion"
-              },
-              "3": {
-                "desc": "Stuck? Someone here has been there.",
-                "latest": "Docker setup on a NAS",
-                "name": "Help and support"
-              }
-            },
-            "latest": "Latest topic",
-            "newTopic": "New topic",
-            "title": "Forum",
-            "topics": "Topics",
-            "topicsList": {
-              "0": {
-                "date": "Nov 23, 5:02 PM",
-                "title": "Summer meetup photos, add yours to the thread"
-              },
-              "1": {
-                "date": "Nov 22, 9:14 AM",
-                "title": "Which keyboard are you typing on?"
-              },
-              "2": {
-                "date": "Nov 20, 7:40 PM",
-                "title": "Introduce yourself"
-              },
-              "3": {
-                "date": "Nov 18, 1:25 PM",
-                "title": "Plugin ideas for the next release"
-              }
-            }
-          },
-          "modcp": {
-            "assigned": "Assigned",
-            "cards": {
-              "0": {
-                "kind": "#8 · Comment",
-                "reason": "Spam",
-                "text": "Great news, the rail yard has been empty for years."
-              },
-              "1": {
-                "kind": "#7 · Comment",
-                "reason": "Abusive content",
-                "text": "This thread went off the rails after page two."
-              },
-              "2": {
-                "kind": "#1 · Article",
-                "reason": "Spam",
-                "text": "Self-hosting on a Raspberry Pi"
-              }
-            },
-            "columns": {
-              "0": "New",
-              "1": "In progress",
-              "2": "Done"
-            },
-            "crumb": "Moderator CP",
-            "desc": "Reports you can act on. Drag a card to another column to take it, close it or send it back.",
-            "empty": "Nothing here.",
-            "nav": {
-              "0": "Reports",
-              "1": "Approvals",
-              "2": "Warnings"
-            },
-            "search": "Search by title or #id",
-            "title": "Reports"
-          },
-          "nav": {
+          "clear_skies": "Clear skies",
+          "cut": "The bridges are down and the members' island is still full. Nobody lost their account.",
+          "home": "Members",
+          "lowered": "The bridge comes down and the island sinks. Your members walk home and keep their accounts.",
+          "parts": {
             "blog": "Blog",
-            "community": "Community",
-            "docs": "Docs",
-            "login": "Login",
-            "plugins": "Plugins",
-            "register": "Register",
-            "search": "Search…"
+            "booking": "Bookings",
+            "forum": "Forum",
+            "members": "Memberships",
+            "payments": "Payments",
+            "shop": "Shop"
           },
-          "notifications": {
-            "items": {
-              "0": {
-                "text": "commented on Summer meetup photos",
-                "time": "2 minutes ago"
-              },
-              "1": {
-                "text": "reacted to your article",
-                "time": "1 hour ago"
-              },
-              "2": {
-                "text": "mentioned you in Introduce yourself",
-                "time": "4 days ago"
-              }
-            },
-            "markAll": "Mark all as read",
-            "tabs": {
-              "0": "Unread",
-              "1": "Mentions",
-              "2": "All"
-            },
-            "title": "Notifications"
-          },
-          "payments": {
-            "desc": "Buy one fixed-price item with a hosted checkout. The purchase counts only once the provider confirms the payment.",
-            "item": "Sticker pack",
-            "itemDesc": "Twelve vinyl stickers for laptops, water bottles and tired monitors.",
-            "owned": "You own this item",
-            "price": "$5.00",
-            "title": "Payments demo",
-            "view": "View purchase"
-          },
-          "people": {
-            "0": {
-              "name": "Ola Nowak",
-              "nick": "@ola"
-            },
-            "1": {
-              "name": "Kuba Wiśniewski",
-              "nick": "@kuba"
-            },
-            "2": {
-              "name": "Maya Lindqvist",
-              "nick": "@maya"
-            },
-            "3": {
-              "name": "Jun Sato",
-              "nick": "@jun"
-            }
-          },
-          "profile": {
-            "joined": "November 15, 2025",
-            "month": "November 2026",
-            "online": "Online now",
-            "reacted": "reacted to",
-            "reputation": "+128 reputation",
-            "role": "Administrator",
-            "timeline": "Timeline",
-            "today": "Today · 2 items",
-            "weekday": "TUE",
-            "weekdayBefore": "MON",
-            "yesterday": "Yesterday · 14 items"
-          },
-          "search": {
-            "any": "Any time",
-            "content": "Content",
-            "date": "Date created",
-            "desc": "Search across everything in the community.",
-            "filters": "Filters",
-            "kinds": {
-              "0": "Article",
-              "1": "Comment",
-              "2": "Topic"
-            },
-            "newest": "Newest",
-            "placeholder": "meetup",
-            "ranges": {
-              "0": "Any time",
-              "1": "Past 24 hours",
-              "2": "Past week"
-            },
-            "results": "45 results",
-            "title": "Search"
-          },
-          "topic": {
-            "body": "Drop your photos from the rooftop here. Bonus points for anything with the pizza tower in frame.",
-            "commentCount": "6 comments",
-            "comments": {
-              "0": "Here are mine from the rooftop. What a view!",
-              "1": "The pizza ran out by eight. Next year we order double."
-            },
-            "hide": "Hide 2 replies",
-            "posted": "Posted Nov 23, 5:02 PM",
-            "report": "Report"
-          }
-        },
-        "rotator": {
-          "lead": "Build your",
-          "spoken": "Build your forum, blog, shop, team space or own idea without starting from zero.",
-          "tail": "without starting from zero.",
-          "words": {
-            "blog": "blog",
-            "forum": "forum",
-            "own": "own idea",
-            "shop": "shop",
-            "team": "team space"
+          "react": {
+            "cloud": "A cloud drifts off. Nothing stands between your members and the next island.",
+            "flock": "A flock of members flies to another island. Nobody needs a new account to visit.",
+            "plank": "The planks bounce under their feet. Members cross with the account they already have, no second sign-up.",
+            "walker": "Crossing over with the account they already have."
           }
         },
         "start": "Get started",
+        "title": {
+          "accent": "a place to belong",
+          "lead": "Give your people"
+        },
         "trust": {
           "agents": "Made for AI coding agents",
           "license": "MIT licence",
           "open_source": "Open source"
-        },
-        "wall": {
-          "ai": {
-            "alt_text": "Alt text for images",
-            "budget": "Budget left",
-            "desc": "Points your members spent on AI features this month.",
-            "models": "{count, plural, one {# model} other {# models}}",
-            "points": "Points used",
-            "requests": "Requests",
-            "summaries": "Summaries",
-            "translate": "Translate articles"
-          },
-          "article": {
-            "back": "Back",
-            "choose": "Choose file",
-            "content": "Content",
-            "content_value": "Forty-two members, one rooftop and far too much pizza. Here is everything we shipped together…",
-            "cover": "Cover image",
-            "cover_desc": "JPG, PNG, WEBP, AVIF · max 5 MB",
-            "desc": "Add a new Article.",
-            "draft": "Save as draft",
-            "drop": "Drop a file here",
-            "publish": "Publish",
-            "title": "Create Article",
-            "title_label": "Title",
-            "title_value": "Our summer meetup recap",
-            "url": "Friendly URL"
-          },
-          "categories": {
-            "announcements": "Announcements",
-            "count": "{count, plural, one {# article} other {# articles}}",
-            "create": "New category",
-            "desc": "Group your blog articles so readers find their way.",
-            "events": "Events",
-            "guides": "Guides & tutorials",
-            "releases": "Release notes",
-            "spotlight": "Community spotlight"
-          },
-          "common": {
-            "active": "Active",
-            "english": "English",
-            "optional": "Optional",
-            "read_more": "Read more"
-          },
-          "cron": {
-            "daily": "Daily",
-            "desc": "Background tasks and when they run next.",
-            "digest": "Send weekly digest",
-            "failed": "Failed",
-            "files": "Purge deleted files",
-            "healthy": "Healthy",
-            "hourly": "Every hour",
-            "in_hours": "in {count} h",
-            "in_minutes": "in {count} min",
-            "job": "Job",
-            "last_tick": "Last tick {count, plural, one {# second} other {# seconds}} ago",
-            "next_run": "Next run",
-            "running": "Running",
-            "scheduler": "Scheduler is running",
-            "search": "Rebuild search index",
-            "sessions": "Clear expired sessions",
-            "six_hours": "Every 6 hours",
-            "status": "Status",
-            "tomorrow": "Tomorrow",
-            "weekly": "Weekly"
-          },
-          "dashboard": {
-            "dev_mode": "Development Mode",
-            "edit_layout": "Edit layout",
-            "message": "Title",
-            "message_value": "Hello from the admin 👋",
-            "notes_desc": "A private scratchpad. Only you can see it.",
-            "notes_placeholder": "Anything worth remembering…",
-            "notes_title": "Notes",
-            "notify_desc": "Pushes a toast to the user in real time, on every browser where they are signed in.",
-            "notify_title": "Send a notification",
-            "send": "Send",
-            "user_id": "User ID",
-            "version": "Version: {version}"
-          },
-          "files": {
-            "desc": "Everything your members and staff have uploaded.",
-            "upload": "Upload"
-          },
-          "integrations": {
-            "ai": "Text generation, structured output, and embeddings via the Vercel AI SDK.",
-            "cron": "Scheduled background tasks such as clearing expired sessions and tokens.",
-            "desc": "Status of the core services that power this instance.",
-            "email": "Transactional emails such as sign-up confirmations and password resets.",
-            "email_title": "Email",
-            "queue": "Background jobs enqueued in the database and drained by the cron worker.",
-            "redis": "Shared cache and rate-limiter storage. Falls back to in-memory when off.",
-            "title": "Integrations",
-            "unreachable": "Unreachable",
-            "websocket": "Live updates and notifications pushed to connected clients in real time."
-          },
-          "login": {
-            "desc": "Welcome back! Sign in to your account.",
-            "email": "Email",
-            "forgot": "Forgot password?",
-            "no_account": "Don’t have an account?",
-            "password": "Password",
-            "sign_up": "Sign up.",
-            "submit": "Login",
-            "title": "Login"
-          },
-          "moderators": {
-            "articles": "Manage articles",
-            "articles_desc": "Create, edit and publish articles",
-            "desc": "Choose what moderators can do in the AdminCP.",
-            "layout": "Edit layout",
-            "layout_desc": "Change the menu and dashboard widgets",
-            "members": "Moderate members",
-            "members_desc": "Ban, warn and edit member profiles",
-            "roles": "Manage roles",
-            "roles_desc": "Change roles and staff access",
-            "usage": "View AI usage",
-            "usage_desc": "See points and budgets"
-          },
-          "nav": {
-            "admins": "Administrators",
-            "advanced": "Advanced",
-            "ai": "Artificial Intelligence (AI)",
-            "ai_actions": "Actions",
-            "ai_history": "History",
-            "ai_overview": "Overview",
-            "articles": "Articles",
-            "blog": "Blog",
-            "categories": "Categories",
-            "core": "Core",
-            "cron": "Cron Jobs",
-            "dashboard": "Dashboard",
-            "files": "Files",
-            "integrations": "Integrations",
-            "moderators": "Moderators",
-            "navigation": "Navigation",
-            "notifications": "Notifications",
-            "queue": "Queue Tasks",
-            "roles": "Roles",
-            "search": "Search",
-            "staff": "Staff",
-            "system": "System",
-            "user_list": "User List",
-            "users": "Users"
-          },
-          "navigation": {
-            "add": "Add link",
-            "desc": "Choose where your menu links lead and in what order.",
-            "discord": "Discord",
-            "home": "Home",
-            "support": "Support us"
-          },
-          "notifications": {
-            "desc": "What happened in your community while you were away.",
-            "digest": "Weekly digest sent to {count, number} members",
-            "hours_ago": "{count, plural, one {# hour ago} other {# hours ago}}",
-            "joined": "{name} joined your community",
-            "mark_all": "Mark all as read",
-            "minutes_ago": "{count, plural, one {# minute ago} other {# minutes ago}}",
-            "new": "{count} new",
-            "published": "{name} published “{title}”",
-            "published_title": "Self-hosting on a Raspberry Pi",
-            "role": "Moderator role updated by {name}",
-            "translated": "AI translated {count, plural, one {# article} other {# articles}} into Polish",
-            "yesterday": "Yesterday"
-          },
-          "roles": {
-            "administrator": "Administrator",
-            "create": "Create role",
-            "desc": "Manage the roles of your application.",
-            "guest": "Guest",
-            "member": "Member",
-            "moderator": "Moderator",
-            "role": "Role",
-            "search": "Search roles by name…",
-            "updated": "Updated At",
-            "users_count": "Number of users"
-          },
-          "search": {
-            "desc": "Everything your members can find, kept in one index.",
-            "documents": "Indexed documents",
-            "engine": "Engine",
-            "engine_value": "Postgres full-text",
-            "rebuilt": "Last rebuilt {count, plural, one {# hour} other {# hours}} ago",
-            "reindex": "Rebuild index",
-            "type": "Type"
-          },
-          "settings": {
-            "active_now": "Active now",
-            "ai": "AI usage",
-            "days_ago": "{count, plural, one {# day ago} other {# days ago}}",
-            "devices": "Devices",
-            "edit_profile": "Edit profile",
-            "email": "Email",
-            "language": "Language",
-            "member_since": "Member since {date}",
-            "notifications": "Notifications",
-            "overview": "Overview",
-            "role": "Role",
-            "security": "Security",
-            "sign_out": "Sign out",
-            "sign_out_all": "Sign out of all other devices",
-            "sso": "Connected accounts",
-            "this_device": "This device",
-            "time_zone": "Time zone",
-            "time_zone_value": "Europe/Warsaw (GMT+2)",
-            "title": "Settings"
-          },
-          "users": {
-            "add": "Add user",
-            "desc": "Everyone who has signed up to your community.",
-            "joined": "Joined",
-            "search": "Search by name or email…",
-            "user": "User"
-          }
         }
       }
     },

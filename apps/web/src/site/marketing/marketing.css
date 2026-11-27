@@ -54,80 +54,6 @@
   scroll-margin-top: 5rem;
 }
 
-@keyframes mk-bento-zap {
-  from {
-    stroke-dashoffset: 12;
-  }
-  to {
-    stroke-dashoffset: -100;
-  }
-}
-
-.mk-anim-bento-zap {
-  animation: mk-bento-zap 700ms cubic-bezier(0.45, 0, 0.55, 1) both;
-}
-
-@keyframes mk-bento-trace {
-  0% {
-    stroke-dashoffset: 16px;
-  }
-  62%,
-  100% {
-    stroke-dashoffset: calc(var(--len) * -1px);
-  }
-}
-
-.mk-anim-bento-trace {
-  animation: mk-bento-trace var(--dur, 3s) cubic-bezier(0.45, 0, 0.55, 1)
-    infinite both;
-}
-
-@keyframes mk-bento-bob {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
-.mk-anim-bento-bob {
-  animation: mk-bento-bob 3.4s ease-in-out infinite;
-}
-
-@keyframes mk-bento-swing {
-  0%,
-  100% {
-    transform: rotate(0);
-  }
-  15% {
-    transform: rotate(14deg);
-  }
-  35% {
-    transform: rotate(-12deg);
-  }
-  55% {
-    transform: rotate(8deg);
-  }
-  75% {
-    transform: rotate(-4deg);
-  }
-}
-
-.mk-anim-bento-swing {
-  transform-origin: 50% 2px;
-  animation: mk-bento-swing 900ms ease-in-out both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .mk-anim-bento-trace,
-  .mk-anim-bento-zap {
-    opacity: 0;
-    animation: none;
-  }
-}
-
 [data-offscreen] [class*='mk-anim-'] {
   animation-play-state: paused;
 }
@@ -135,51 +61,6 @@
 @media (prefers-reduced-motion: reduce) {
   [class*='mk-anim-'] {
     animation-play-state: paused;
-  }
-}
-
-@keyframes mk-wall-fade {
-  from {
-    opacity: 0;
-  }
-}
-
-@keyframes mk-wall-rise {
-  from {
-    transform: translateY(4%);
-  }
-
-  to {
-    transform: translateY(-10%);
-  }
-}
-
-@keyframes mk-wall-sink {
-  from {
-    transform: translateY(-8%);
-  }
-
-  to {
-    transform: translateY(6%);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .mk-wall-fade {
-    animation: mk-wall-fade 700ms ease-out both;
-  }
-
-  @supports (animation-timeline: scroll()) {
-    .mk-wall-column {
-      animation: mk-wall-rise linear both;
-      animation-timeline: scroll(root block);
-      animation-range: 0 max(90vh, 360px);
-      will-change: transform;
-    }
-
-    .mk-wall-column:nth-child(even) {
-      animation-name: mk-wall-sink;
-    }
   }
 }
 
@@ -367,24 +248,6 @@
   }
 }
 
-@keyframes mk-hero-word-in {
-  from {
-    opacity: 0;
-    translate: 0 55%;
-  }
-}
-
-@keyframes mk-hero-word-out {
-  to {
-    opacity: 0;
-    translate: 0 -55%;
-  }
-}
-
-.mk-hero-word-out {
-  opacity: 0;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .mk-hero-rise {
     animation: mk-hero-rise 480ms cubic-bezier(0.23, 1, 0.32, 1) both;
@@ -393,15 +256,6 @@
 
   [data-hero-seen] .mk-hero-rise {
     animation: none;
-  }
-
-  .mk-hero-word-in {
-    animation: mk-hero-word-in 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
-  }
-
-  .mk-hero-word-out {
-    animation: mk-hero-word-out 240ms cubic-bezier(0.55, 0, 0.9, 0.4) both;
-    opacity: 1;
   }
 
   .mk-press {
@@ -511,4 +365,922 @@ body:has(.mk-final-cta) .mk-footer-rule {
 
 [data-paused] .mk-anim-dust {
   animation-play-state: paused;
+}
+
+.mk-isles-hero {
+  --mk-isles-cyan: oklch(0.62 0.12 215);
+  --mk-isles-amber: oklch(0.72 0.15 55);
+  --mk-isles-ink: oklch(0.5 0.17 262);
+  --mk-isles-line: rgb(0 0 0 / 0.08);
+  --mk-isles-shadow:
+    0 1px 2px 0 rgb(0 0 0 / 0.04), 0 1px 3px 0 rgb(0 0 0 / 0.05);
+  --mk-isles-ease: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.dark .mk-isles-hero {
+  --mk-isles-cyan: oklch(0.78 0.11 215);
+  --mk-isles-amber: oklch(0.82 0.13 55);
+  --mk-isles-ink: oklch(0.74 0.13 262);
+  --mk-isles-line: var(--border);
+  --mk-isles-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+}
+
+.mk-isles-sky {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--primary) 9%, var(--background)),
+    color-mix(in oklab, var(--mk-isles-cyan) 7%, var(--background)) 55%,
+    var(--background)
+  );
+  pointer-events: none;
+}
+
+.mk-isles {
+  --mk-isles-u: clamp(3rem, 15cqi, 5.6rem);
+  --mk-isles-h: calc(var(--mk-isles-u) * 4.3 + 6rem);
+  --mk-isles-thick: calc(var(--mk-isles-u) * 0.16);
+  --mk-isles-rock: color-mix(in oklab, var(--foreground) 30%, var(--card));
+  --mk-isles-grass-a: color-mix(
+    in oklab,
+    var(--success) 62%,
+    var(--mk-isles-cyan)
+  );
+  --mk-isles-grass-b: color-mix(in oklab, var(--success) 58%, var(--card));
+  --mk-isles-wood: color-mix(
+    in oklab,
+    var(--mk-isles-amber) 52%,
+    color-mix(in oklab, var(--foreground) 44%, var(--card))
+  );
+  --mk-isles-cloud: white;
+  --mk-isles-cloud-shade: color-mix(in oklab, var(--primary) 22%, transparent);
+  container-type: inline-size;
+}
+
+.dark .mk-isles {
+  --mk-isles-cloud: color-mix(in oklab, var(--card) 90%, var(--mk-isles-cyan));
+  --mk-isles-cloud-shade: transparent;
+}
+
+.mk-isles-scene {
+  position: relative;
+  height: var(--mk-isles-h);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mk-isles-stage,
+.mk-isles-walk,
+.mk-isles-chips,
+.mk-isles-clouds {
+  position: absolute;
+  inset: 0;
+}
+
+.mk-isles-stage,
+.mk-isles-walk,
+.mk-isles-chips {
+  pointer-events: none;
+}
+
+.mk-isles-walk {
+  width: 100%;
+  height: 100%;
+}
+
+.mk-isles:not([data-ready]) .mk-isles-spot,
+.mk-isles:not([data-ready]) .mk-isles-chips {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mk-isles-stage,
+  .mk-isles-chips {
+    animation: mk-isles-in 520ms var(--mk-isles-ease) both;
+  }
+
+  [data-hero-seen] .mk-isles-stage,
+  [data-hero-seen] .mk-isles-chips {
+    animation: none;
+  }
+}
+
+@keyframes mk-isles-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.mk-isles-iso,
+.mk-isles-ground {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: rotateX(58deg) rotateZ(-45deg);
+}
+
+.mk-isles-iso {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.mk-isles-cloud {
+  position: absolute;
+  top: var(--cy);
+  left: var(--cx);
+  width: calc(9rem * var(--cs));
+  height: calc(3.5rem * var(--cs));
+  cursor: pointer;
+  will-change: transform;
+}
+
+.mk-isles-cloud i {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      closest-side at 30% 62%,
+      var(--mk-isles-cloud) 72%,
+      transparent
+    ),
+    radial-gradient(
+      closest-side at 54% 40%,
+      var(--mk-isles-cloud) 76%,
+      transparent
+    ),
+    radial-gradient(
+      closest-side at 74% 64%,
+      var(--mk-isles-cloud) 70%,
+      transparent
+    );
+  opacity: 0.95;
+  filter: drop-shadow(0 4px 8px var(--mk-isles-cloud-shade));
+  transition: scale 150ms ease-out;
+}
+
+.mk-isles-cloud:active i {
+  scale: 0.95;
+}
+
+.mk-isles-island {
+  --tone: var(--mk-isles-amber);
+  --s: calc(var(--mk-isles-u) * 0.96);
+  --hh: calc(var(--h) * var(--mk-isles-u));
+  --bw: calc(var(--w) * var(--mk-isles-u));
+  --bd: calc(var(--d) * var(--mk-isles-u));
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.mk-isles-island[data-part='forum'],
+.mk-isles-spot[data-part='forum'] {
+  --tone: var(--mk-isles-cyan);
+}
+
+.mk-isles-island[data-part='blog'],
+.mk-isles-spot[data-part='blog'] {
+  --tone: color-mix(in oklab, var(--primary) 55%, var(--mk-isles-cyan));
+}
+
+.mk-isles-spot {
+  --tone: var(--mk-isles-amber);
+}
+
+.mk-isles-island:not(.mk-isles-island-home):not([data-shown]) {
+  visibility: hidden;
+}
+
+.mk-isles-grass,
+.mk-isles-side,
+.mk-isles-under,
+.mk-isles-wall,
+.mk-isles-island .mk-isles-top,
+.mk-isles-flagboard {
+  opacity: var(--mk-isles-fade, 1);
+}
+
+.mk-isles-isle {
+  --s: calc(var(--mk-isles-u) * 1.05);
+  position: absolute;
+  top: calc(var(--s) / -2);
+  left: calc(var(--s) / -2);
+  width: var(--s);
+  height: var(--s);
+  transform-style: preserve-3d;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.mk-isles-island-home .mk-isles-isle {
+  --s: calc(var(--mk-isles-u) * 1.5);
+}
+
+.mk-isles-grass {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.5rem;
+  background: linear-gradient(
+    135deg,
+    var(--mk-isles-grass-a),
+    var(--mk-isles-grass-b)
+  );
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--mk-isles-grass-a) 70%, white);
+}
+
+.mk-isles-island-home .mk-isles-grass {
+  background: var(--primary);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--primary) 70%, white);
+}
+
+.mk-isles-crowd {
+  position: absolute;
+  inset: 0.5rem;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in oklab, white 88%, transparent) 1.6px,
+    transparent 2.1px
+  );
+  background-size: 0.5625rem 0.5625rem;
+  opacity: 0.85;
+}
+
+.mk-isles-side {
+  position: absolute;
+  background: color-mix(in oklab, var(--mk-isles-rock) 86%, black);
+}
+
+.mk-isles-side-s {
+  top: 100%;
+  right: 0.25rem;
+  left: 0.25rem;
+  height: var(--mk-isles-thick);
+  transform: rotateX(-90deg);
+  transform-origin: top;
+}
+
+.mk-isles-side-w {
+  top: 0.25rem;
+  bottom: 0.25rem;
+  left: 0;
+  width: var(--mk-isles-thick);
+  background: var(--mk-isles-rock);
+  transform: rotateY(90deg);
+  transform-origin: left;
+}
+
+.mk-isles-island-home .mk-isles-side {
+  background: color-mix(in oklab, var(--primary) 62%, black);
+}
+
+.mk-isles-island-home .mk-isles-side-w {
+  background: color-mix(in oklab, var(--primary) 78%, black);
+}
+
+.mk-isles-under {
+  position: absolute;
+  top: 50%;
+  left: calc(50% - var(--s) * 0.707);
+  width: calc(var(--s) * 1.414);
+  height: calc(var(--s) * 0.66);
+  background:
+    linear-gradient(
+      100deg,
+      transparent 40%,
+      color-mix(in oklab, black 14%, transparent) 40% 60%,
+      transparent 60%
+    ),
+    linear-gradient(
+      to bottom,
+      var(--mk-isles-rock),
+      color-mix(in oklab, var(--mk-isles-rock) 60%, black)
+    );
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    95% 20%,
+    86% 38%,
+    78% 52%,
+    66% 72%,
+    54% 100%,
+    44% 86%,
+    34% 70%,
+    22% 52%,
+    13% 36%,
+    5% 18%
+  );
+  transform: translateZ(calc(var(--mk-isles-thick) * -1)) rotateZ(45deg)
+    rotateX(-90deg);
+  transform-origin: top center;
+}
+
+.mk-isles-island-home .mk-isles-under {
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--primary) 50%, var(--mk-isles-rock)),
+    color-mix(in oklab, var(--mk-isles-rock) 60%, black)
+  );
+}
+
+.mk-isles-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mk-isles-ring i {
+  position: absolute;
+  inset: 8%;
+  border: 3px solid var(--tone);
+  border-radius: 0.625rem;
+  opacity: 0;
+}
+
+.mk-isles-ring[data-fire] i {
+  animation: mk-isles-ring 640ms var(--mk-isles-ease) both;
+}
+
+@keyframes mk-isles-ring {
+  from {
+    opacity: 0.75;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+.mk-isles-bld {
+  position: absolute;
+  top: calc((var(--s) - var(--bd)) / 2);
+  left: calc((var(--s) - var(--bw)) / 2);
+  width: var(--bw);
+  height: var(--bd);
+  transform-style: preserve-3d;
+}
+
+.mk-isles-wall {
+  position: absolute;
+  height: var(--hh);
+  background: color-mix(in oklab, var(--tone) 18%, var(--card));
+  box-shadow: inset 0 0 0 1px var(--mk-isles-line);
+}
+
+.mk-isles-wall-s {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  transform: rotateX(-90deg);
+  transform-origin: bottom;
+}
+
+.mk-isles-wall-w {
+  top: calc(var(--hh) * -1);
+  left: 0;
+  width: var(--bd);
+  background: color-mix(
+    in oklab,
+    var(--foreground) 10%,
+    color-mix(in oklab, var(--tone) 18%, var(--card))
+  );
+  transform: rotateZ(90deg) rotateX(-90deg);
+  transform-origin: 0 100%;
+}
+
+.mk-isles-top {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--tone) 8%, var(--card));
+  box-shadow: inset 0 0 0 1px var(--mk-isles-line);
+  transform: translateZ(var(--hh));
+  transform-style: preserve-3d;
+}
+
+.mk-isles-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  gap: 0.25rem;
+  padding: 0.3125rem 0.3125rem 0;
+}
+
+.mk-isles-island[data-part='blog'] .mk-isles-face,
+.mk-isles-island[data-part='booking'] .mk-isles-face {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0.4375rem 0.3125rem 0;
+}
+
+.mk-isles-win {
+  display: grid;
+  flex: 1;
+  grid-template-columns: repeat(var(--c), minmax(0, 1fr));
+  grid-template-rows: repeat(var(--r), minmax(0, 1fr));
+  gap: 0.1875rem;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  padding-bottom: 0.3125rem;
+}
+
+.mk-isles-win i {
+  position: relative;
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--foreground) 16%, transparent);
+}
+
+.mk-isles-win i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: color-mix(in oklab, var(--mk-isles-amber) 82%, white);
+  opacity: 0;
+  transition: opacity 140ms ease-out;
+}
+
+.mk-isles-island[data-up] .mk-isles-win i::after {
+  opacity: 1;
+  transition: opacity 280ms ease-out calc(360ms + var(--k) * 45ms);
+}
+
+.mk-isles-win-line i {
+  align-self: center;
+  height: 0.1875rem;
+}
+
+.mk-isles-win-arch i {
+  border-radius: 999px 999px 1px 1px;
+}
+
+.mk-isles-win-cal {
+  gap: 0.125rem;
+}
+
+.mk-isles-win-front i {
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 30%, transparent);
+}
+
+.mk-isles-win-col {
+  gap: 0.25rem;
+  padding-bottom: 0;
+}
+
+.mk-isles-win-col i {
+  border-radius: 2px 2px 0 0;
+}
+
+.mk-isles-door {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  width: 0.5625rem;
+  height: 0.875rem;
+  border-radius: 2px 2px 0 0;
+  background: color-mix(in oklab, var(--mk-isles-amber) 80%, white);
+}
+
+.mk-isles-island[data-part='blog'] .mk-isles-door,
+.mk-isles-island[data-part='booking'] .mk-isles-door {
+  align-self: center;
+}
+
+.mk-isles-door-panel {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in oklab, var(--foreground) 62%, var(--tone));
+}
+
+.mk-isles-clock {
+  flex: none;
+  align-self: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid color-mix(in oklab, var(--foreground) 55%, var(--tone));
+  border-radius: 50%;
+  background:
+    linear-gradient(
+        color-mix(in oklab, var(--foreground) 70%, transparent),
+        color-mix(in oklab, var(--foreground) 70%, transparent)
+      )
+      50% 28% / 1.5px 34% no-repeat,
+    linear-gradient(
+        color-mix(in oklab, var(--foreground) 70%, transparent),
+        color-mix(in oklab, var(--foreground) 70%, transparent)
+      )
+      66% 50% / 30% 1.5px no-repeat,
+    var(--card);
+}
+
+.mk-isles-awning {
+  position: absolute;
+  top: 100%;
+  right: 4%;
+  left: 4%;
+  height: calc(var(--mk-isles-u) * 0.2);
+  border-radius: 0 0 2px 2px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--mk-isles-amber) 0 0.3125rem,
+    var(--card) 0.3125rem 0.625rem
+  );
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 14%, transparent);
+  opacity: var(--mk-isles-fade, 1);
+  transform: translateZ(calc(var(--hh) * 0.94)) rotateX(-30deg);
+  transform-origin: top;
+}
+
+.mk-isles-board {
+  position: absolute;
+  bottom: 50%;
+  left: calc(50% - 0.875rem);
+  width: 1.75rem;
+  height: 1.75rem;
+  transform: rotateZ(45deg) rotateX(-90deg);
+  transform-origin: bottom center;
+}
+
+.mk-isles-drop {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(-0.875rem);
+  transition:
+    opacity 120ms ease-in,
+    transform 120ms ease-in;
+}
+
+.mk-isles-island[data-up] .mk-isles-drop {
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 220ms ease-out 300ms,
+    transform 380ms var(--mk-isles-ease) 300ms;
+}
+
+.mk-isles-flat {
+  display: grid;
+  place-items: center;
+  transform: translateZ(0.875rem);
+}
+
+.mk-isles-island[data-up] .mk-isles-flat {
+  transform: translateZ(1px);
+}
+
+.mk-isles-bubble {
+  position: absolute;
+  right: 0.125rem;
+  bottom: 0.375rem;
+  left: 0.125rem;
+  height: 1rem;
+  border-radius: 0.3125rem;
+  background:
+    radial-gradient(circle, var(--card) 1.2px, transparent 1.7px) 50% 50% /
+      0.375rem 0.375rem repeat-x,
+    var(--tone);
+}
+
+.mk-isles-bubble::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0.3125rem;
+  width: 0.4375rem;
+  height: 0.375rem;
+  background: var(--tone);
+  clip-path: polygon(0 0, 100% 0, 20% 100%);
+}
+
+.mk-isles-coin {
+  position: absolute;
+  bottom: 0.25rem;
+  left: calc(50% - 0.625rem);
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background:
+    linear-gradient(
+        color-mix(in oklab, var(--foreground) 46%, transparent),
+        color-mix(in oklab, var(--foreground) 46%, transparent)
+      )
+      50% 50% / 2px 44% no-repeat,
+    var(--mk-isles-amber);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--foreground) 22%, transparent),
+    inset 0 0 0 3px color-mix(in oklab, var(--mk-isles-amber) 70%, white);
+}
+
+.mk-isles-page {
+  width: 56%;
+  height: 56%;
+  border-radius: 2px;
+  background:
+    linear-gradient(
+        color-mix(in oklab, var(--foreground) 30%, transparent),
+        color-mix(in oklab, var(--foreground) 30%, transparent)
+      )
+      50% 30% / 60% 1.5px no-repeat,
+    linear-gradient(
+        color-mix(in oklab, var(--foreground) 30%, transparent),
+        color-mix(in oklab, var(--foreground) 30%, transparent)
+      )
+      50% 54% / 60% 1.5px no-repeat,
+    linear-gradient(
+        color-mix(in oklab, var(--foreground) 30%, transparent),
+        color-mix(in oklab, var(--foreground) 30%, transparent)
+      )
+      38% 78% / 36% 1.5px no-repeat,
+    color-mix(in oklab, var(--tone) 30%, var(--card));
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 16%, transparent);
+}
+
+.mk-isles-cap,
+.mk-isles-sign {
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--mk-isles-amber) 70%, var(--card));
+  box-shadow: inset 0 0 0 1px
+    color-mix(in oklab, var(--foreground) 16%, transparent);
+}
+
+.mk-isles-cap {
+  width: 50%;
+  height: 50%;
+}
+
+.mk-isles-sign {
+  width: 62%;
+  height: 34%;
+}
+
+.mk-isles-flagpost {
+  position: absolute;
+  top: 18%;
+  left: 18%;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+
+.mk-isles-flagboard {
+  position: absolute;
+  bottom: 0;
+  left: -0.75rem;
+  width: 1.5rem;
+  height: calc(var(--mk-isles-u) * 0.5);
+  transform: rotateZ(45deg) rotateX(-90deg);
+  transform-origin: bottom center;
+  cursor: pointer;
+  transition: scale 150ms ease-out;
+}
+
+.mk-isles-flagboard::before {
+  content: '';
+  position: absolute;
+  inset: -0.5rem -0.375rem -0.25rem;
+}
+
+.mk-isles-flagboard:active {
+  scale: 0.92;
+}
+
+.mk-isles-pole {
+  position: absolute;
+  bottom: 0;
+  left: 0.5rem;
+  width: 2px;
+  height: 100%;
+  border-radius: 1px;
+  background: color-mix(in oklab, var(--foreground) 55%, transparent);
+}
+
+.mk-isles-flag {
+  position: absolute;
+  top: 0.125rem;
+  left: calc(0.5rem + 2px);
+  width: 0.875rem;
+  height: 0.625rem;
+  background: var(--tone);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  transform-origin: left center;
+}
+
+.mk-isles-flag[data-wave] {
+  animation: mk-isles-flutter 820ms ease-in-out both;
+}
+
+@keyframes mk-isles-flutter {
+  20% {
+    transform: scaleX(0.66) skewY(12deg);
+  }
+
+  40% {
+    transform: scaleX(1.12) skewY(-9deg);
+  }
+
+  60% {
+    transform: scaleX(0.84) skewY(6deg);
+  }
+
+  80% {
+    transform: scaleX(1.04) skewY(-3deg);
+  }
+}
+
+.mk-isles-spot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+}
+
+.mk-isles-spot i {
+  --s: calc(var(--mk-isles-u) * 1.05);
+  position: absolute;
+  top: calc(var(--s) / -2);
+  left: calc(var(--s) / -2);
+  width: var(--s);
+  height: var(--s);
+  border: 2px dashed color-mix(in oklab, var(--foreground) 26%, transparent);
+  border-radius: 0.625rem;
+  background: color-mix(in oklab, var(--tone) 8%, transparent);
+  pointer-events: auto;
+  cursor: pointer;
+  transition:
+    opacity 200ms ease-out,
+    background-color 150ms ease-out,
+    scale 150ms ease-out;
+}
+
+.mk-isles-spot i:active {
+  scale: 0.94;
+}
+
+.mk-isles-spot[data-hidden] i {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mk-isles-planks {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-style: preserve-3d;
+}
+
+.mk-isles-plank {
+  position: absolute;
+  top: calc(var(--mk-isles-u) * -0.04);
+  left: calc(var(--mk-isles-u) * -0.15);
+  width: calc(var(--mk-isles-u) * 0.3);
+  height: calc(var(--mk-isles-u) * 0.08);
+  border-radius: 2px;
+  background: var(--mk-isles-wood);
+  box-shadow: inset 0 -1.5px 0
+    color-mix(in oklab, var(--mk-isles-wood) 60%, black);
+  pointer-events: auto;
+  cursor: pointer;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+
+.mk-isles-plank::before {
+  content: '';
+  position: absolute;
+  inset: -0.3rem -0.1rem;
+}
+
+.mk-isles-plank:active {
+  scale: 0.9;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mk-isles-spot i:hover {
+    background: color-mix(in oklab, var(--tone) 22%, transparent);
+  }
+
+  .mk-isles-plank:hover {
+    background: color-mix(in oklab, var(--mk-isles-wood) 80%, white);
+  }
+
+  .mk-isles-cloud:hover i {
+    opacity: 1;
+  }
+}
+
+.mk-isles-chip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  will-change: transform;
+}
+
+.mk-isles-chip-in {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  height: 1.375rem;
+  padding: 0 0.4375rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--card) 92%, transparent);
+  box-shadow: 0 0 0 1px var(--mk-isles-line);
+  color: var(--foreground);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.mk-isles-chip svg {
+  width: 0.6875rem;
+  height: 0.6875rem;
+  flex: none;
+  color: var(--muted-foreground);
+}
+
+.mk-isles-chip[data-up] .mk-isles-chip-plus {
+  display: none;
+}
+
+.mk-isles-chip-home .mk-isles-chip-in {
+  background: var(--primary);
+  box-shadow: none;
+  color: var(--primary-foreground);
+}
+
+.mk-isles-chip-home svg {
+  color: var(--primary-foreground);
+}
+
+@media (width >= 40rem) {
+  .mk-isles-chip-in {
+    height: 1.5rem;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+  }
+}
+
+.mk-isles-key {
+  border: 0;
+  font-family: inherit;
+  pointer-events: auto;
+  cursor: pointer;
+  transition:
+    scale 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.mk-isles-key:active {
+  scale: 0.94;
+}
+
+.mk-isles-key:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .mk-isles-key:hover {
+    background: var(--muted);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-isles-key,
+  .mk-isles-drop,
+  .mk-isles-island[data-up] .mk-isles-drop,
+  .mk-isles-win i::after,
+  .mk-isles-island[data-up] .mk-isles-win i::after,
+  .mk-isles-spot i,
+  .mk-isles-cloud i,
+  .mk-isles-flagboard {
+    transition: none;
+  }
+
+  .mk-isles-ring[data-fire] i,
+  .mk-isles-flag[data-wave] {
+    animation: none;
+  }
 }

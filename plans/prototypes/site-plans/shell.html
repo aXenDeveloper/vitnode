@@ -1,0 +1,61 @@
+<title>VitNode Site Plans</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300..700&family=Geist+Mono:wght@400..600&display=swap">
+<style>
+/*BASE_CSS*/
+/*VARIANT_CSS*/
+</style>
+
+<div class="page">
+  <header class="viewer-bar">
+    <div class="wrap viewer-bar-row">
+      <p class="viewer-title">
+        <svg viewBox="0 0 375 376" width="22" height="22" aria-hidden="true">
+          <path fill="var(--logo-plate)" d="M169.385 16.196C180.827 9.601 194.923 9.601 206.365 16.196L329.51 87.175C340.952 93.77 348 105.957 348 119.146V261.104C348 274.293 340.952 286.481 329.51 293.075L206.365 364.054C194.923 370.649 180.827 370.649 169.385 364.054L46.24 293.075C34.798 286.481 27.75 274.293 27.75 261.104V119.146C27.75 105.957 34.798 93.77 46.24 87.175L169.385 16.196Z"/>
+          <path fill="var(--primary)" fill-rule="evenodd" clip-rule="evenodd" d="M168.101 5.195C180.105 -1.732 194.895 -1.732 206.899 5.195L336.101 79.745C348.105 86.671 355.5 99.472 355.5 113.325V262.425C355.5 276.278 348.105 289.079 336.101 296.005L206.899 370.555C194.895 377.482 180.105 377.482 168.101 370.555L38.899 296.005C26.895 289.079 19.5 276.278 19.5 262.425V113.325C19.5 99.472 26.895 86.671 38.899 79.745L168.101 5.195ZM109.649 106.082L187.5 61.161L265.351 106.082L187.5 241.071L109.649 106.082ZM77.697 148.394V251.232L166.585 302.521L77.697 148.394ZM208.415 302.521L297.303 251.232V148.394L208.415 302.521Z"/>
+        </svg>
+        Marketing site plans
+      </p>
+      <ul class="viewer-legend" aria-label="Status markers">
+        <li><span class="tag" data-status="exists">On the site</span> page or section exists today</li>
+        <li><span class="tag" data-status="reworked">Reworked</span> exists, changes</li>
+        <li><span class="tag" data-status="new">New</span> to build</li>
+        <li><span class="soon">Planned</span> needs a feature that is not in the repo</li>
+      </ul>
+    </div>
+  </header>
+
+  <main id="stage"></main>
+</div>
+
+<aside class="proto-panel" aria-label="Prototype controls">
+  <button class="proto-panel-toggle" type="button" aria-expanded="false" aria-controls="proto-panel-body">Controls</button>
+  <div class="proto-panel-body" id="proto-panel-body" hidden>
+    <p class="proto-panel-axis" id="proto-axis"></p>
+    <div class="proto-panel-row">
+      <span id="proto-theme-label">Theme</span>
+      <div class="proto-seg" role="group" aria-labelledby="proto-theme-label" data-control="theme">
+        <button type="button" data-value="auto" aria-pressed="true">Auto</button>
+        <button type="button" data-value="light" aria-pressed="false">Light</button>
+        <button type="button" data-value="dark" aria-pressed="false">Dark</button>
+      </div>
+    </div>
+    <div class="proto-panel-row">
+      <span id="proto-outlines-label">Subpage outlines</span>
+      <div class="proto-seg" role="group" aria-labelledby="proto-outlines-label" data-control="outlines">
+        <button type="button" data-value="closed" aria-pressed="true">Closed</button>
+        <button type="button" data-value="open" aria-pressed="false">Open</button>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<nav class="proto-picker" aria-label="Prototype variants">
+  <span class="proto-picker-highlight" aria-hidden="true"></span>
+</nav>
+
+<script>
+const VARIANTS = [];
+/*VARIANTS_JS*/
+/*BASE_JS*/
+</script>

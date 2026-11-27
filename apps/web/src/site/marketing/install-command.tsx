@@ -1,3 +1,4 @@
+import { Card } from '@vitnode/core/components/ui/card'
 import { cn } from 'cn'
 import { Check, Copy } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -40,9 +41,9 @@ export const InstallCommand = ({
   }
 
   return (
-    <div
+    <Card
       className={cn(
-        'bg-muted/60 flex h-11 w-fit max-w-full items-center gap-2 rounded-xl border pr-1 pl-4 font-mono text-sm',
+        'h-11 w-fit max-w-full flex-row items-center gap-2 py-0 pr-1 pl-4 font-mono',
         className,
       )}
     >
@@ -52,7 +53,7 @@ export const InstallCommand = ({
       <code className="truncate">{INSTALL_COMMAND}</code>
       <button
         aria-label={isCopied ? copiedLabel : copyLabel}
-        className="mk-press text-muted-foreground hover:text-foreground hover:bg-background relative flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors before:absolute before:-inset-1"
+        className="mk-press text-muted-foreground hover:text-foreground hover:bg-muted relative flex size-9 shrink-0 items-center justify-center rounded-lg transition-colors before:absolute before:-inset-1"
         onClick={() => void handleCopy()}
         type="button"
       >
@@ -65,6 +66,6 @@ export const InstallCommand = ({
       <span aria-live="polite" className="sr-only">
         {isCopied ? copiedLabel : ''}
       </span>
-    </div>
+    </Card>
   )
 }

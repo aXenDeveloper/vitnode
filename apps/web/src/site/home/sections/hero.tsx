@@ -5,10 +5,8 @@ import { ArrowRight, Bot, CodeXml, Scale } from 'lucide-react'
 import { useEffect } from 'react'
 import { useTranslations } from 'use-intl'
 
-import { HeroWall } from '@/site/home/illustrations/hero-wall/hero-wall'
-import { useWordRotation } from '@/site/home/use-word-rotation'
+import { IslandsScene } from '@/site/home/illustrations/islands/islands-scene'
 import { InstallCommand } from '@/site/marketing/install-command'
-import { ParallaxDust } from '@/site/marketing/parallax-dust'
 import { BUTTON } from '@/site/marketing/shared'
 
 const TRUST = [
@@ -16,10 +14,6 @@ const TRUST = [
   { Icon: Scale, key: 'license' },
   { Icon: Bot, key: 'agents' },
 ] as const
-
-const WORDS = ['forum', 'blog', 'shop', 'team', 'own'] as const
-
-const HOLD_MS = 2200
 
 const INTRO_KEY = 'vitnode-hero-intro'
 
@@ -47,75 +41,39 @@ const useIntroOnce = () => {
 
 export const HeroSection = () => {
   const t = useTranslations('site.home.hero')
-  const { hoverProps, ref, state } = useWordRotation(WORDS.length, HOLD_MS)
-  const { index, previous } = state
-
   useIntroOnce()
 
   return (
     <section
       aria-labelledby="hero-title"
-      className="relative isolate -mt-10 overflow-hidden"
+      className="mk-isles-hero relative isolate -mt-14 overflow-hidden sm:-mt-16 lg:flex lg:min-h-svh lg:items-center"
     >
       <script dangerouslySetInnerHTML={{ __html: INTRO_SCRIPT }} />
-      <ParallaxDust className="mk-dust-fade" />
-      <div
-        className="container mx-auto grid items-center gap-10 px-4 pt-16 sm:px-6 sm:pt-24 lg:grid-cols-2 lg:gap-6 lg:py-16"
-        ref={ref}
-      >
-        <div className="relative z-10 flex flex-col gap-6">
+      <div aria-hidden className="mk-isles-sky" />
+      <div className="container mx-auto grid items-center gap-8 px-4 pt-20 pb-12 sm:px-6 sm:pt-30 lg:grid-cols-2 lg:gap-10 lg:pt-24 lg:pb-8">
+        <div className="relative z-10 flex min-w-0 flex-col gap-6">
           <h1
-            className="text-4xl font-semibold tracking-tight sm:text-5xl xl:text-6xl"
+            className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl xl:text-6xl"
             id="hero-title"
           >
-            <span className="sr-only">{t('rotator.spoken')}</span>
-            <span aria-hidden className="flex flex-col">
-              <span className="mk-hero-rise" style={rise(0)}>
-                {t('rotator.lead')}
-              </span>
-              <span
-                className="mk-hero-rise text-primary -my-1 grid overflow-clip py-1"
-                style={rise(1)}
-                {...hoverProps}
-              >
-                {WORDS.map((word, wordIndex) => (
-                  <span
-                    className={cn(
-                      'col-start-1 row-start-1',
-                      wordIndex === index &&
-                        previous !== null &&
-                        'mk-hero-word-in',
-                      wordIndex === previous && 'mk-hero-word-out',
-                      wordIndex !== index &&
-                        wordIndex !== previous &&
-                        'invisible',
-                    )}
-                    key={
-                      wordIndex === index || wordIndex === previous
-                        ? `${word}-${index}`
-                        : word
-                    }
-                  >
-                    {t(`rotator.words.${word}`)}
-                  </span>
-                ))}
-              </span>
-              <span className="mk-hero-rise text-balance" style={rise(2)}>
-                {t('rotator.tail')}
-              </span>
+            <span className="mk-hero-rise block" style={rise(0)}>
+              {t('title.lead')}
+            </span>{' '}
+            <span className="mk-hero-rise text-primary block" style={rise(1)}>
+              {t('title.accent')}
             </span>
           </h1>
 
           <p
             className="mk-hero-rise text-muted-foreground max-w-xl text-base leading-relaxed text-pretty sm:text-lg"
-            style={rise(3)}
+            style={rise(2)}
           >
             {t('description')}
           </p>
 
           <div
             className="mk-hero-rise flex flex-wrap items-center gap-3"
-            style={rise(4)}
+            style={rise(3)}
           >
             <Link
               className={cn(buttonVariants({ size: 'lg' }), BUTTON, 'mk-press')}
@@ -131,7 +89,7 @@ export const HeroSection = () => {
             />
           </div>
 
-          <div className="mk-hero-rise" style={rise(5)}>
+          <div className="mk-hero-rise" style={rise(4)}>
             <Link
               className="group text-primary inline-flex w-fit items-center gap-1 text-base font-medium underline-offset-4 hover:underline"
               to="/solutions"
@@ -146,7 +104,7 @@ export const HeroSection = () => {
 
           <ul
             className="mk-hero-rise text-muted-foreground flex flex-wrap gap-x-6 gap-y-2 text-sm"
-            style={rise(6)}
+            style={rise(5)}
           >
             {TRUST.map(({ Icon, key }) => (
               <li className="flex items-center gap-2" key={key}>
@@ -157,7 +115,7 @@ export const HeroSection = () => {
           </ul>
         </div>
 
-        <HeroWall />
+        <IslandsScene />
       </div>
     </section>
   )
