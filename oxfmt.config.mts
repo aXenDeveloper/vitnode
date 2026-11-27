@@ -18,6 +18,5 @@ export default defineConfig({
     "packages/create-vitnode-app/copy-of-vitnode-app",
     "packages/vitnode/test-fixtures",
     "**/wrangler.jsonc",
-    "plans/prototypes",
   ],
 });

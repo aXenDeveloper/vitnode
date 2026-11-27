@@ -1,22 +1,22 @@
-import { Button } from "@vitnode/core/components/ui/button";
-import { cn } from "cn";
-import { Link2, Plus, Unlink, Users } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
-import { useTranslations } from "use-intl";
+import { Button } from '@vitnode/core/components/ui/button'
+import { cn } from 'cn'
+import { Link2, Plus, Unlink, Users } from 'lucide-react'
+import { useEffect, useMemo, useRef } from 'react'
+import { useTranslations } from 'use-intl'
 
 import {
   ISLAND_PARTS,
   type IslandPart,
   type IslandsCopy,
   startIslands,
-} from "./engine";
+} from './engine'
 
-type Vars = React.CSSProperties & Record<`--${string}`, number | string>;
+type Vars = React.CSSProperties & Record<`--${string}`, number | string>
 
 const vars = (values: Record<string, number | string>) =>
   Object.fromEntries(
     Object.entries(values).map(([key, value]) => [`--${key}`, value]),
-  ) as Vars;
+  ) as Vars
 
 const SIZE: Record<IslandPart, { d: number; h: number; w: number }> = {
   blog: { d: 0.36, h: 0.78, w: 0.36 },
@@ -25,13 +25,13 @@ const SIZE: Record<IslandPart, { d: number; h: number; w: number }> = {
   members: { d: 0.48, h: 0.42, w: 0.56 },
   payments: { d: 0.46, h: 0.4, w: 0.62 },
   shop: { d: 0.46, h: 0.28, w: 0.64 },
-};
+}
 
 const CLOUDS = [
-  { cs: 1, cx: "-4%", cy: "-2%" },
-  { cs: 0.8, cx: "calc(50% - 3.6rem)", cy: "-4%" },
-  { cs: 1.1, cx: "calc(100% - 9rem)", cy: "calc(100% - 3.5rem)" },
-];
+  { cs: 1, cx: '-4%', cy: '-2%' },
+  { cs: 0.8, cx: 'calc(50% - 3.6rem)', cy: '-4%' },
+  { cs: 1.1, cx: 'calc(100% - 9rem)', cy: 'calc(100% - 3.5rem)' },
+]
 
 const Windows = ({
   cols,
@@ -39,24 +39,24 @@ const Windows = ({
   kind,
   rows,
 }: {
-  cols: number;
-  count: number;
-  kind?: "arch" | "cal" | "col" | "front" | "line" | "wide";
-  rows: number;
+  cols: number
+  count: number
+  kind?: 'arch' | 'cal' | 'col' | 'front' | 'line' | 'wide'
+  rows: number
 }) => (
   <div
-    className={cn("mk-isles-win", kind && `mk-isles-win-${kind}`)}
+    className={cn('mk-isles-win', kind && `mk-isles-win-${kind}`)}
     style={vars({ c: cols, r: rows })}
   >
     {Array.from({ length: count }, (_, k) => (
       <i key={k} style={vars({ k })} />
     ))}
   </div>
-);
+)
 
-const Door = ({ edge }: { edge?: "end" | "start" }) => (
-  <b className={cn("mk-isles-door", edge && `mk-isles-door-${edge}`)} />
-);
+const Door = ({ edge }: { edge?: 'end' | 'start' }) => (
+  <b className={cn('mk-isles-door', edge && `mk-isles-door-${edge}`)} />
+)
 
 const BUILDINGS: Record<
   IslandPart,
@@ -152,7 +152,7 @@ const BUILDINGS: Record<
       </>
     ),
   },
-};
+}
 
 const IslandBase = ({ children }: { children?: React.ReactNode }) => (
   <>
@@ -161,66 +161,66 @@ const IslandBase = ({ children }: { children?: React.ReactNode }) => (
     <div className="mk-isles-side mk-isles-side-w" />
     <div className="mk-isles-grass">{children}</div>
   </>
-);
+)
 
 export const IslandsScene = ({ className }: { className?: string }) => {
-  const t = useTranslations("site.home.hero.scene");
-  const root = useRef<HTMLDivElement>(null);
+  const t = useTranslations('site.home.hero.scene')
+  const root = useRef<HTMLDivElement>(null)
 
   const names = useMemo(
     () =>
       Object.fromEntries(
-        ISLAND_PARTS.map(part => [part, t(`parts.${part}`)]),
+        ISLAND_PARTS.map((part) => [part, t(`parts.${part}`)]),
       ) as Record<IslandPart, string>,
     [t],
-  );
+  )
 
   const copy = useMemo<IslandsCopy>(
     () => ({
-      all: { off: t("all.off"), on: t("all.on") },
-      bridge: name => t("bridge", { name }),
+      all: { off: t('all.off'), on: t('all.on') },
+      bridge: (name) => t('bridge', { name }),
       captions: {
-        blog: t("captions.blog"),
-        booking: t("captions.booking"),
-        forum: t("captions.forum"),
-        members: t("captions.members"),
-        payments: t("captions.payments"),
-        people: t("captions.people"),
-        shop: t("captions.shop"),
+        blog: t('captions.blog'),
+        booking: t('captions.booking'),
+        forum: t('captions.forum'),
+        members: t('captions.members'),
+        payments: t('captions.payments'),
+        people: t('captions.people'),
+        shop: t('captions.shop'),
       },
-      clearSkies: t("clear_skies"),
-      cut: t("cut"),
-      home: t("home"),
-      lowered: t("lowered"),
+      clearSkies: t('clear_skies'),
+      cut: t('cut'),
+      home: t('home'),
+      lowered: t('lowered'),
       names,
       react: {
-        cloud: t("react.cloud"),
-        flock: t("react.flock"),
-        plank: t("react.plank"),
-        walker: t("react.walker"),
+        cloud: t('react.cloud'),
+        flock: t('react.flock'),
+        plank: t('react.plank'),
+        walker: t('react.walker'),
       },
     }),
     [names, t],
-  );
+  )
 
   useEffect(() => {
-    const el = root.current;
+    const el = root.current
 
-    if (!el) return;
+    if (!el) return
 
     return startIslands(el, copy, {
-      skipIntro: "heroSeen" in document.documentElement.dataset,
-    });
-  }, [copy]);
+      skipIntro: 'heroSeen' in document.documentElement.dataset,
+    })
+  }, [copy])
 
   return (
     <div
-      className={cn("mk-isles flex min-w-0 flex-col gap-3", className)}
+      className={cn('mk-isles flex min-w-0 flex-col gap-3', className)}
       ref={root}
     >
       <div className="mk-isles-scene">
         <div className="mk-isles-clouds">
-          {CLOUDS.map(cloud => (
+          {CLOUDS.map((cloud) => (
             <span className="mk-isles-cloud" key={cloud.cx} style={vars(cloud)}>
               <i />
             </span>
@@ -238,8 +238,8 @@ export const IslandsScene = ({ className }: { className?: string }) => {
               </div>
             </div>
 
-            {ISLAND_PARTS.map(part => {
-              const building = BUILDINGS[part];
+            {ISLAND_PARTS.map((part) => {
+              const building = BUILDINGS[part]
 
               return (
                 <div
@@ -266,18 +266,18 @@ export const IslandsScene = ({ className }: { className?: string }) => {
                       <div className="mk-isles-wall mk-isles-wall-s">
                         <div className="mk-isles-face">{building.south}</div>
                       </div>
-                      {part === "shop" ? (
+                      {part === 'shop' ? (
                         <div className="mk-isles-awning" />
                       ) : null}
                       <div className="mk-isles-top">{building.roof}</div>
                     </div>
                   </div>
                 </div>
-              );
+              )
             })}
           </div>
           <div className="mk-isles-ground">
-            {ISLAND_PARTS.map(part => (
+            {ISLAND_PARTS.map((part) => (
               <div className="mk-isles-spot" data-part={part} key={part}>
                 <i />
               </div>
@@ -291,10 +291,10 @@ export const IslandsScene = ({ className }: { className?: string }) => {
           <span aria-hidden className="mk-isles-chip mk-isles-chip-home">
             <span className="mk-isles-chip-in">
               <Users aria-hidden />
-              {t("home")}
+              {t('home')}
             </span>
           </span>
-          {ISLAND_PARTS.map(part => (
+          {ISLAND_PARTS.map((part) => (
             <span className="mk-isles-chip" data-part={part} key={part}>
               <button
                 aria-pressed="false"
@@ -312,8 +312,8 @@ export const IslandsScene = ({ className }: { className?: string }) => {
 
       <div className="flex justify-end">
         <p aria-live="polite" className="sr-only" role="status">
-          <span className="mk-isles-caption-title">{t("home")}</span>{" "}
-          <span className="mk-isles-caption-text">{t("captions.people")}</span>
+          <span className="mk-isles-caption-title">{t('home')}</span>{' '}
+          <span className="mk-isles-caption-text">{t('captions.people')}</span>
         </p>
         <Button
           aria-pressed="false"
@@ -325,9 +325,9 @@ export const IslandsScene = ({ className }: { className?: string }) => {
             aria-hidden
             className="hidden group-aria-pressed/button:block"
           />
-          <span className="mk-isles-all-label">{t("all.off")}</span>
+          <span className="mk-isles-all-label">{t('all.off')}</span>
         </Button>
       </div>
     </div>
-  );
-};
+  )
+}

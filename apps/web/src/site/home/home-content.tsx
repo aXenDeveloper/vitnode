@@ -7,11 +7,15 @@ import { FinalCtaSection } from '@/site/home/sections/final-cta'
 import { HeroSection } from '@/site/home/sections/hero'
 import { IntegrationsSection } from '@/site/home/sections/integrations'
 import { MarketingPage } from '@/site/marketing/marketing-page'
+import { CanaryNotice } from '@/site/marketing/shared'
 
 export const HomeRouteContent = () => (
   <RouteMessages namespaces={HOME_NAMESPACES}>
     <MarketingPage>
       <HeroSection />
+      <div className="container mx-auto px-4 pt-12 sm:px-6">
+        <CanaryNotice />
+      </div>
       <BentoSection />
       <IntegrationsSection />
       <FaqSection />

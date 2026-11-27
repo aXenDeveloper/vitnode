@@ -1,7 +1,7 @@
 import { buttonVariants } from '@vitnode/core/components/ui/button'
 import { cn } from 'cn'
 import { ArrowLeft, ChevronDown, Languages, Save } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslations } from 'use-intl'
 
 import {
@@ -15,6 +15,7 @@ const FADE_AT = 7600
 const IDLE_AFTER = 450
 const SELECT_FROM = 3400
 const SELECT_TO = 3800
+const SELECTION_STEPS = 12
 const REDUCED_MOTION = '(prefers-reduced-motion: reduce)'
 
 const jitter = (index: number, seed: number) => {
@@ -57,7 +58,32 @@ const countAt = (times: readonly number[], t: number) => {
 const isIdle = (times: readonly number[], count: number, t: number) =>
   count === 0 || t - times[count - 1] > IDLE_AFTER
 
-const useAnimationClock = (cycle: number, still: number) => {
+const editorFrame = (
+  t: number,
+  olaTimes: readonly number[],
+  kubaTimes: readonly number[],
+) => {
+  const ola = countAt(olaTimes, t)
+  const kuba = countAt(kubaTimes, t)
+
+  return {
+    fading: t >= FADE_AT,
+    kuba,
+    kubaIdle: isIdle(kubaTimes, kuba, t),
+    ola,
+    olaIdle: isIdle(olaTimes, ola, t),
+    selection: Math.min(
+      1,
+      Math.max(0, (t - SELECT_FROM) / (SELECT_TO - SELECT_FROM)),
+    ),
+  }
+}
+
+const useAnimationClock = (
+  cycle: number,
+  still: number,
+  frameKey: (t: number) => string,
+) => {
   const ref = useRef<HTMLDivElement>(null)
   const [t, setT] = useState(still)
 
@@ -69,10 +95,19 @@ const useAnimationClock = (cycle: number, still: number) => {
     let frame = 0
     let origin = 0
     let elapsed = 0
+    let shownKey = ''
 
     const tick = (now: number) => {
       if (!origin) origin = now - elapsed
-      setT((now - origin) % cycle)
+
+      const next = (now - origin) % cycle
+      const key = frameKey(next)
+
+      if (key !== shownKey) {
+        shownKey = key
+        setT(next)
+      }
+
       frame = requestAnimationFrame(tick)
     }
 
@@ -97,7 +132,7 @@ const useAnimationClock = (cycle: number, still: number) => {
       observer.disconnect()
       cancelAnimationFrame(frame)
     }
-  }, [cycle])
+  }, [cycle, frameKey])
 
   return { ref, t }
 }
@@ -138,16 +173,27 @@ export const EditorScene = () => {
     () => schedule(kubaText, { base: 40, seed: 2, spread: 44, startAt: 1500 }),
     [kubaText],
   )
-  const { ref, t: time } = useAnimationClock(CYCLE, FADE_AT - 1)
-  const ola = countAt(olaTimes, time)
-  const kuba = countAt(kubaTimes, time)
-  const olaIdle = isIdle(olaTimes, ola, time)
-  const kubaIdle = isIdle(kubaTimes, kuba, time)
-  const selection = Math.min(
-    1,
-    Math.max(0, (time - SELECT_FROM) / (SELECT_TO - SELECT_FROM)),
+  const frameKey = useCallback(
+    (at: number) => {
+      const next = editorFrame(at, olaTimes, kubaTimes)
+
+      return [
+        next.ola,
+        next.kuba,
+        next.olaIdle,
+        next.kubaIdle,
+        Math.floor(next.selection * SELECTION_STEPS),
+        next.fading,
+      ].join(':')
+    },
+    [olaTimes, kubaTimes],
   )
-  const fading = time >= FADE_AT
+  const { ref, t: time } = useAnimationClock(CYCLE, FADE_AT - 1, frameKey)
+  const { fading, kuba, kubaIdle, ola, olaIdle, selection } = editorFrame(
+    time,
+    olaTimes,
+    kubaTimes,
+  )
   const saving = !fading && (!olaIdle || !kubaIdle)
 
   return (
