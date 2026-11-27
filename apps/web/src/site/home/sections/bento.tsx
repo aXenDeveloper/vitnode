@@ -1,12 +1,12 @@
 import { cn } from 'cn'
 import { useTranslations } from 'use-intl'
 
-import { AiChipScene } from '@/site/home/illustrations/bento/ai-chip'
-import { BoardScene } from '@/site/home/illustrations/bento/board'
-import { CoTypeScene } from '@/site/home/illustrations/bento/co-type'
-import { DropScene } from '@/site/home/illustrations/bento/drop'
+import { AdminTableScene } from '@/site/home/illustrations/bento/admin-table'
+import { AiActionsScene } from '@/site/home/illustrations/bento/ai-actions'
+import { EditorScene } from '@/site/home/illustrations/bento/editor'
+import { InboxScene } from '@/site/home/illustrations/bento/inbox'
 import { SceneBackdrop } from '@/site/home/illustrations/bento/scene'
-import { SuggestScene } from '@/site/home/illustrations/bento/suggest'
+import { SearchDialogScene } from '@/site/home/illustrations/bento/search-dialog'
 import { MarketingSection, SectionHeading } from '@/site/marketing/shared'
 
 interface Tile {
@@ -16,11 +16,11 @@ interface Tile {
 }
 
 const TILES: readonly Tile[] = [
-  { className: 'md:col-span-2', key: 'content', Scene: BoardScene },
-  { key: 'notifications', Scene: DropScene },
-  { key: 'live', Scene: CoTypeScene },
-  { key: 'ai', Scene: AiChipScene },
-  { key: 'search', Scene: SuggestScene },
+  { className: 'md:col-span-2', key: 'content', Scene: AdminTableScene },
+  { key: 'notifications', Scene: InboxScene },
+  { key: 'live', Scene: EditorScene },
+  { key: 'ai', Scene: AiActionsScene },
+  { key: 'search', Scene: SearchDialogScene },
 ]
 
 export const BentoSection = () => {

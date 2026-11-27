@@ -1,5 +1,3 @@
-import type { LucideIcon } from 'lucide-react'
-
 import { cn } from 'cn'
 
 export const Fit = ({
@@ -28,30 +26,28 @@ export const Fit = ({
   </div>
 )
 
-export const ScenePill = ({
-  children,
+export const SceneAvatar = ({
   className,
-  Icon,
-  style,
+  initial,
 }: {
-  children: React.ReactNode
-  className?: string
-  Icon?: LucideIcon
-  style?: React.CSSProperties
+  className: string
+  initial: string
 }) => (
   <span
     className={cn(
-      'bg-card text-foreground absolute flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap shadow-sm',
+      'flex shrink-0 items-center justify-center rounded-full font-semibold',
       className,
     )}
-    style={style}
   >
-    {Icon ? (
-      <Icon aria-hidden className="text-muted-foreground size-3.5" />
-    ) : null}
-    {children}
+    {initial}
   </span>
 )
+
+export const MEMBER_TONE = {
+  kuba: 'bg-amber-400 text-amber-950',
+  marta: 'bg-emerald-600 text-white',
+  ola: 'bg-primary text-primary-foreground',
+} as const
 
 export const SceneBackdrop = () => (
   <span aria-hidden className="absolute inset-0 -z-10">
@@ -73,22 +69,4 @@ export const SceneBackdrop = () => (
       }}
     />
   </span>
-)
-
-export const GridTexture = ({
-  className,
-  size,
-}: {
-  className?: string
-  size: number
-}) => (
-  <span
-    aria-hidden
-    className={cn('absolute rounded-xl', className)}
-    style={{
-      backgroundImage:
-        'linear-gradient(to right, color-mix(in oklab, var(--foreground) 10%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 10%, transparent) 1px, transparent 1px)',
-      backgroundSize: `${size}px ${size}px`,
-    }}
-  />
 )

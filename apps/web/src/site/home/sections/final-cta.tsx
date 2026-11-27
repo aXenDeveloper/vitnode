@@ -64,7 +64,7 @@ export const FinalCtaSection = () => {
             {t('cta.star')}
           </a>
           <InstallCommand
-            className="border-white/20 bg-white/10 text-white [&_button]:text-white/70 [&_span]:text-white/60"
+            className="bg-white/10 ring-white/20 text-white [&_button]:text-white/70 [&_span]:text-white/60"
             copiedLabel={t('hero.copied')}
             copyLabel={t('hero.copy_command')}
           />

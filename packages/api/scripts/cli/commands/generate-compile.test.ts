@@ -27,7 +27,14 @@ import { createFakeRuntime } from "../testing";
 const packageRoot = API_ROOT;
 const creator = CREATOR_ROOT;
 
+interface TasksModule {
+  hono: {
+    request: (path: string, init?: RequestInit) => Promise<Response>;
+  };
+}
+
 let root: string;
+let tasksModule: TasksModule;
 
 const write = (path: string, content: string) => {
   mkdirSync(dirname(join(root, path)), { recursive: true });
@@ -203,6 +210,15 @@ beforeAll(async () => {
   );
   write("src/fetcher-calls.ts", FETCHER_CALLS);
   write("src/permission-refs.ts", PERMISSION_REFS);
+
+  const jiti = createJiti(import.meta.url, {
+    alias: { "@/": `${join(root, "src")}/` },
+    interopDefault: false,
+    moduleCache: false,
+  });
+  ({ tasksModule } = await jiti.import<{ tasksModule: TasksModule }>(
+    join(root, "src/api/modules/tasks/tasks.module.ts"),
+  ));
 }, 120_000);
 
 afterAll(() => {
@@ -242,19 +258,6 @@ describe("a plugin grown by vitnode generate", () => {
   ])(
     "answers %s %s of a generated resource with 501 until implemented",
     async (method, path) => {
-      const jiti = createJiti(import.meta.url, {
-        alias: { "@/": `${join(root, "src")}/` },
-        interopDefault: false,
-        moduleCache: false,
-      });
-      const { tasksModule } = await jiti.import<{
-        tasksModule: {
-          hono: {
-            request: (path: string, init?: RequestInit) => Promise<Response>;
-          };
-        };
-      }>(join(root, "src/api/modules/tasks/tasks.module.ts"));
-
       const response = await tasksModule.hono.request(path, {
         body:
           method === "post" || method === "patch"
